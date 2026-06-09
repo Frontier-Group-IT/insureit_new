@@ -3,13 +3,21 @@
   "private": true,
   "version": "0.1.0",
   "workspaces": [
-    "apps/web-portal"
+    "apps/web-portal",
+    "apps/mobile-app"
   ],
   "scripts": {
     "dev": "npm --workspace apps/web-portal run dev",
     "build": "npm --workspace apps/web-portal run build",
     "lint": "npm --workspace apps/web-portal run lint",
-    "typecheck": "npm --workspace apps/web-portal run typecheck"
+    "typecheck": "npm --workspace apps/web-portal run typecheck",
+    "dev:web": "npm --workspace apps/web-portal run dev",
+    "build:web": "npm --workspace apps/web-portal run build",
+    "lint:web": "npm --workspace apps/web-portal run lint",
+    "typecheck:web": "npm --workspace apps/web-portal run typecheck",
+    "dev:mobile": "npm --workspace apps/mobile-app run dev",
+    "lint:mobile": "npm --workspace apps/mobile-app run lint",
+    "typecheck:mobile": "npm --workspace apps/mobile-app run typecheck"
   },
   "engines": {
     "node": ">=20.0.0"

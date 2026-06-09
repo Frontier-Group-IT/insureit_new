@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "InsureIt",
+    "slug": "insureit-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "insureit",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": ["**/*"],
+    "android": {
+      "package": "com.insureit.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#0B1F3A"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "InsureIt uses photos you select to attach accident and claim documents."
+        }
+      ],
+      [
+        "expo-document-picker",
+        {
+          "iCloudContainerEnvironment": "Production"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

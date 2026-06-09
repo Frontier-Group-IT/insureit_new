@@ -1,0 +1,102 @@
+export type AppRole =
+  | 'customer'
+  | 'field_executive'
+  | 'claim_processor'
+  | 'manager'
+  | 'admin'
+  | 'super_admin';
+
+export type ClaimStatus =
+  | 'Draft'
+  | 'Accident Reported'
+  | 'Documents Pending'
+  | 'Documents Submitted'
+  | 'Claim Intimated'
+  | 'Surveyor Appointed'
+  | 'Vehicle Inspected'
+  | 'Estimate Submitted'
+  | 'Approval Pending'
+  | 'Repair Started'
+  | 'Repair Completed'
+  | 'Final Bill Submitted'
+  | 'Settlement Under Process'
+  | 'Settled'
+  | 'Rejected'
+  | 'Closed';
+
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+
+type RowBase = { id: string; created_at?: string; updated_at?: string };
+
+type Tables = {
+  profiles: {
+    Row: RowBase & { role: AppRole; full_name: string; phone: string | null; is_active: boolean };
+    Insert: { id: string; role?: AppRole; full_name: string; phone?: string | null; is_active?: boolean };
+    Update: Partial<Tables['profiles']['Insert']>;
+  };
+  customers: {
+    Row: RowBase & { profile_id: string | null; customer_code: string; company_name: string | null; contact_name: string; phone: string; email: string | null; address: string | null; city: string | null; state: string | null; postal_code: string | null; onboarding_status: string; created_by: string | null };
+    Insert: { profile_id?: string | null; customer_code: string; company_name?: string | null; contact_name: string; phone: string; email?: string | null; address?: string | null; city?: string | null; state?: string | null; postal_code?: string | null; onboarding_status?: string; created_by?: string | null };
+    Update: Partial<Tables['customers']['Insert']>;
+  };
+  vehicles: {
+    Row: RowBase & { customer_id: string; vehicle_no: string; vehicle_type: string; make: string | null; model: string | null; year: number | null; chassis_no: string | null; engine_no: string | null; permit_no: string | null };
+    Insert: { customer_id: string; vehicle_no: string; vehicle_type: string; make?: string | null; model?: string | null; year?: number | null; chassis_no?: string | null; engine_no?: string | null; permit_no?: string | null };
+    Update: Partial<Tables['vehicles']['Insert']>;
+  };
+  policies: {
+    Row: RowBase & { customer_id: string; vehicle_id: string; insurance_company_id: string; policy_no: string; policy_type: string; start_date: string; end_date: string; premium_amount: number | null; insured_declared_value: number | null };
+    Insert: { customer_id: string; vehicle_id: string; insurance_company_id: string; policy_no: string; policy_type: string; start_date: string; end_date: string; premium_amount?: number | null; insured_declared_value?: number | null };
+    Update: Partial<Tables['policies']['Insert']>;
+  };
+  insurance_companies: {
+    Row: RowBase & { name: string; branch_name: string | null; contact_email: string | null; contact_phone: string | null; claims_portal_url: string | null };
+    Insert: { name: string; branch_name?: string | null; contact_email?: string | null; contact_phone?: string | null; claims_portal_url?: string | null };
+    Update: Partial<Tables['insurance_companies']['Insert']>;
+  };
+  claims: {
+    Row: RowBase & { claim_no: string; customer_id: string; vehicle_id: string; policy_id: string; insurance_company_id: string | null; garage_id: string | null; surveyor_id: string | null; current_status: ClaimStatus; accident_at: string | null; accident_location: string | null; accident_description: string | null; estimated_loss: number | null; approved_amount: number | null; settlement_amount: number | null; assigned_to: string | null; created_by: string | null };
+    Insert: { claim_no: string; customer_id: string; vehicle_id: string; policy_id: string; insurance_company_id?: string | null; current_status?: ClaimStatus; accident_at?: string | null; accident_location?: string | null; accident_description?: string | null; estimated_loss?: number | null; created_by?: string | null; assigned_to?: string | null };
+    Update: Partial<Tables['claims']['Insert']> & { approved_amount?: number | null; settlement_amount?: number | null };
+  };
+  claim_documents: {
+    Row: RowBase & { claim_id: string; customer_id: string; document_type: string; file_name: string; storage_bucket: string; storage_path: string; mime_type: string | null; file_size: number | null; verification_status: 'pending' | 'verified' | 'rejected'; verified_by: string | null; verified_at: string | null; rejection_reason: string | null; uploaded_by: string | null };
+    Insert: { claim_id: string; customer_id: string; document_type: string; file_name: string; storage_bucket?: string; storage_path: string; mime_type?: string | null; file_size?: number | null; uploaded_by?: string | null };
+    Update: Partial<Tables['claim_documents']['Insert']> & { verification_status?: 'pending' | 'verified' | 'rejected'; verified_by?: string | null; verified_at?: string | null; rejection_reason?: string | null };
+  };
+  claim_status_history: {
+    Row: RowBase & { claim_id: string; from_status: ClaimStatus | null; to_status: ClaimStatus; notes: string | null; changed_by: string | null };
+    Insert: { claim_id: string; from_status?: ClaimStatus | null; to_status: ClaimStatus; notes?: string | null; changed_by?: string | null };
+    Update: Partial<Tables['claim_status_history']['Insert']>;
+  };
+  claim_tasks: {
+    Row: RowBase & { claim_id: string; assigned_to: string | null; title: string; description: string | null; due_date: string | null; status: 'open' | 'in_progress' | 'completed' | 'cancelled'; completed_at: string | null; created_by: string | null };
+    Insert: { claim_id: string; assigned_to?: string | null; title: string; description?: string | null; due_date?: string | null; status?: 'open' | 'in_progress' | 'completed' | 'cancelled'; created_by?: string | null; completed_at?: string | null };
+    Update: Partial<Tables['claim_tasks']['Insert']>;
+  };
+};
+
+export type Database = {
+  public: {
+    Tables: Tables;
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: {
+      app_role: AppRole;
+      claim_status: ClaimStatus;
+      document_status: 'pending' | 'verified' | 'rejected';
+      task_status: 'open' | 'in_progress' | 'completed' | 'cancelled';
+    };
+    CompositeTypes: Record<string, never>;
+  };
+};
+
+export type Profile = Tables['profiles']['Row'];
+export type Customer = Tables['customers']['Row'];
+export type Vehicle = Tables['vehicles']['Row'];
+export type Policy = Tables['policies']['Row'];
+export type Claim = Tables['claims']['Row'];
+export type ClaimDocument = Tables['claim_documents']['Row'];
+export type ClaimHistory = Tables['claim_status_history']['Row'];
+export type ClaimTask = Tables['claim_tasks']['Row'];
+export type InsuranceCompany = Tables['insurance_companies']['Row'];

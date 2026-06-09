@@ -121,3 +121,58 @@ The portal allows only active profiles with one of these roles: `super_admin`, `
 - Configure production environment variables in the hosting provider.
 - Run Supabase migrations against production before enabling production traffic.
 - Keep privileged workflows on trusted server-side infrastructure when they require the service role key.
+
+## Mobile app
+
+`apps/mobile-app` contains the first Android-focused InsureIt mobile app built with Expo React Native, TypeScript, Expo Router, Supabase Auth, and the Supabase JavaScript client.
+
+### Required Expo environment variables
+
+Create `apps/mobile-app/.env` from `apps/mobile-app/.env.example` and set:
+
+```bash
+EXPO_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-public-anon-key
+```
+
+Do **not** add `SUPABASE_SERVICE_ROLE_KEY` to the mobile app. The mobile app must use the public anon key with authenticated access controlled by Supabase policies.
+
+### Run with Expo
+
+From the repository root:
+
+```bash
+npm install
+npm run dev:mobile
+```
+
+The mobile script starts Expo for Android. Open it in an Android emulator or on a physical Android device with Expo Go.
+
+### Android testing notes
+
+- Test on Android first because the initial app configuration is Android-focused.
+- Confirm login and signup with email/password.
+- Confirm image and document selection works for accident photos and claim documents.
+- Confirm uploads target the private `claim-documents` bucket and metadata is written to `claim_documents`.
+- Confirm the existing web portal still runs with `npm run dev:web` and builds with `npm run build:web`.
+
+### Login role routing
+
+After login, the app reads the logged-in user's `profiles` row and routes users as follows:
+
+- `customer` → customer home
+- `field_executive` → field executive/staff dashboard
+- `claim_processor` → claim processor/staff dashboard
+- `manager`, `admin`, `super_admin` → admin mobile dashboard
+
+If the profile is missing, inactive, or has an unsupported role, the app shows an access unavailable screen.
+
+### APK/AAB build next step
+
+After validating the first mobile flow, add EAS project configuration and run:
+
+```bash
+npx eas build --platform android
+```
+
+Use the resulting Android artifact for internal QA before production release.
