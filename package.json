@@ -1,0 +1,17 @@
+{
+  "name": "claimbridge-cv",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/web-portal"
+  ],
+  "scripts": {
+    "dev": "npm --workspace apps/web-portal run dev",
+    "build": "npm --workspace apps/web-portal run build",
+    "lint": "npm --workspace apps/web-portal run lint",
+    "typecheck": "npm --workspace apps/web-portal run typecheck"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
