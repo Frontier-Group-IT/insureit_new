@@ -84,12 +84,12 @@ export function SearchFilterBar({ searchPlaceholder, filterLabel = "Status", act
   );
 }
 
-export function EmptyState({ title, description, action, className = "" }: { title: string; description: string; action?: ReactNode; className?: string }) {
+export function EmptyState({ title, description, action, className = "" }: { title: string; description?: string; action?: ReactNode; className?: string }) {
   return (
     <div className={`rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center ${className}`}>
       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm">□</div>
       <h3 className="mt-4 text-base font-semibold text-navy-900">{title}</h3>
-      <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">{description}</p>
+      {description ? <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">{description}</p> : null}
       {action ? <div className="mt-5">{action}</div> : null}
     </div>
   );

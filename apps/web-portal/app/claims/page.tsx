@@ -31,7 +31,7 @@ export default async function ClaimsPage() {
     <AppShell>
       <PageHeader title="Claims" description="Track accident assistance cases from intake through survey, repair, insurer approval, and settlement." />
       <SearchFilterBar searchPlaceholder="Search claims by number, customer, vehicle, insurer, or assignee" filterLabel="Claim status" />
-      {error ? <DataError message={error.message} /> : <DataTable rows={data ?? []} emptyTitle="No claim cases found" emptyDescription="No claim cases found. Create a claim case when a customer reports an accident or requires claim assistance." columns={[
+      {error ? <DataError message={error.message} /> : <DataTable rows={data ?? []} emptyTitle="No claim cases found" columns={[
         { header: "Claim", cell: (claim) => <Link href={`/claims/${claim.id}`} className="font-semibold text-navy-700">{claim.claim_no}</Link> },
         { header: "Customer", cell: (claim) => claim.customers?.company_name ?? claim.customers?.contact_name ?? "—" },
         { header: "Vehicle", cell: (claim) => <span className="font-mono text-xs">{claim.vehicles?.vehicle_no ?? "—"}</span> },

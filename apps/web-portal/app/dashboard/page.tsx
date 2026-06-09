@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { DataError, DataTable } from "@/components/record-list";
-import { AppShell, Card, PageHeader } from "@/components/shell";
+import { AppShell, PageHeader } from "@/components/shell";
 import { MetricCard, StatusBadge } from "@/components/ui";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 
@@ -24,7 +24,7 @@ export default async function DashboardPage() {
 
   return (
     <AppShell>
-      <PageHeader title="InsureIt Admin Portal" description="Manage customers, commercial vehicles, insurance policies, accident claims, documents, follow-ups, and settlement progress from one place." />
+      <PageHeader title="InsureIt Admin Portal" />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Open claims" value={`${claimsResult.count ?? 0}`} hint="Active claim cases in progress" tone="navy" icon="◆" />
         <MetricCard label="Customers" value={`${customersResult.count ?? 0}`} hint="Customer profiles on record" tone="green" icon="◉" />
@@ -32,17 +32,13 @@ export default async function DashboardPage() {
         <MetricCard label="Open tasks" value={`${tasksResult.count ?? 0}`} hint="Tasks requiring attention" tone="red" icon="!" />
       </div>
       <div className="mt-6">
-        {claimsResult.error ? <DataError message={claimsResult.error.message} /> : <DataTable rows={claimsResult.data ?? []} emptyTitle="No claim cases found" emptyDescription="Create a claim case when a customer reports an accident or requires claim assistance." columns={[
+        {claimsResult.error ? <DataError message={claimsResult.error.message} /> : <DataTable rows={claimsResult.data ?? []} emptyTitle="No claim cases found" columns={[
           { header: "Claim", cell: (claim) => <Link href={`/claims/${claim.id}`} className="font-semibold text-navy-700">{claim.claim_no}</Link> },
           { header: "Customer", cell: (claim) => claim.customers?.company_name ?? claim.customers?.contact_name ?? "—" },
           { header: "Vehicle", cell: (claim) => claim.vehicles?.vehicle_no ?? "—" },
           { header: "Status", cell: (claim) => <StatusBadge status={claim.current_status} /> },
           { header: "Estimated loss", cell: (claim) => claim.estimated_loss == null ? "—" : `₹${claim.estimated_loss}` }
         ]} />}
-      </div>
-      <div className="mt-6 grid gap-6 xl:grid-cols-2">
-        <Card><h3 className="text-lg font-semibold text-navy-900">Protected team access</h3><p className="mt-2 text-sm text-slate-600">Only authorized staff can access customer, vehicle, policy, claim, and settlement information.</p></Card>
-        <Card><h3 className="text-lg font-semibold text-navy-900">Operational readiness</h3><p className="mt-2 text-sm text-slate-600">The portal is ready for daily claim assistance operations as your team adds customer and case records.</p></Card>
       </div>
     </AppShell>
   );

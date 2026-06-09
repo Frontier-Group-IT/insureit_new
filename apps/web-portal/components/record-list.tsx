@@ -22,7 +22,7 @@ export function DataTable<T>({
   rows: T[];
   columns: Array<{ header: string; cell: (row: T) => ReactNode }>;
   emptyTitle: string;
-  emptyDescription: string;
+  emptyDescription?: string;
 }) {
   if (rows.length === 0) {
     return (

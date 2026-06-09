@@ -72,14 +72,13 @@ export function LoginForm() {
     <form className="space-y-4" onSubmit={handleSubmit}>
       <div className="grid gap-2">
         <label htmlFor="email">Email</label>
-        <input id="email" type="email" placeholder="admin@insureit.example" value={email} onChange={(event) => setEmail(event.target.value)} required />
+        <input className={isSubmitting ? "opacity-40 transition-opacity" : "transition-opacity"} id="email" type="email" placeholder="admin@insureit.example" value={email} onChange={(event) => setEmail(event.target.value)} required disabled={isSubmitting} />
       </div>
       <div className="grid gap-2">
         <label htmlFor="password">Password</label>
-        <input id="password" type="password" placeholder="••••••••" value={password} onChange={(event) => setPassword(event.target.value)} required />
+        <input className={isSubmitting ? "opacity-40 transition-opacity" : "transition-opacity"} id="password" type="password" placeholder="••••••••" value={password} onChange={(event) => setPassword(event.target.value)} required disabled={isSubmitting} />
       </div>
       {message ? <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{message}</p> : null}
-      <p className="rounded-xl bg-slate-50 p-3 text-xs text-slate-500">Portal access is limited to authorized team members.</p>
       <button className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-navy-700 px-4 py-3 text-sm font-semibold text-white hover:bg-navy-900 disabled:cursor-not-allowed disabled:opacity-60" type="submit" disabled={isSubmitting}>
         {isSubmitting ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" /> Signing in...</> : "Sign in"}
       </button>
