@@ -23,8 +23,8 @@ export default async function VehiclesPage() {
     .returns<VehicleRow[]>();
 
   return (
-    <AppShell>
-      <PageHeader title="Vehicles" description="Maintain commercial vehicle, permit, and fleet mapping records." action={<Link className="rounded-xl bg-navy-700 px-4 py-2 text-sm font-semibold text-white shadow-sm" href="/vehicles/new">Add vehicle</Link>} />
+    <AppShell title="Vehicles">
+      <PageHeader title="Vehicles" action={<Link className="rounded-xl bg-navy-700 px-4 py-2 text-sm font-semibold text-white shadow-sm" href="/vehicles/new">Add vehicle</Link>} />
       <SearchFilterBar searchPlaceholder="Search vehicles by registration number, customer, permit, or type" filterLabel="Vehicle status" />
       {error ? <DataError message={error.message} /> : <DataTable rows={data ?? []} emptyTitle="No vehicles added yet" emptyDescription="No vehicles added yet. Add a commercial vehicle and link it with a customer profile." columns={[
         { header: "Vehicle", cell: (vehicle) => <><p className="font-mono font-semibold text-navy-900">{vehicle.vehicle_no}</p><p className="text-xs text-slate-500">{vehicle.vehicle_type}</p></> },

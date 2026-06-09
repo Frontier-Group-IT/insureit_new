@@ -41,8 +41,8 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
   }
 
   return (
-    <AppShell>
-      <PageHeader title={`Claim ${claim.claim_no}`} description="Review accident details, documents, insurer coordination, surveyor activity, repair milestones, and settlement values for this claim case." />
+    <AppShell title={`Claim ${claim.claim_no}`}>
+      <PageHeader title={`Claim ${claim.claim_no}`} />
       <div className="grid gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-5">
@@ -72,7 +72,7 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
           </Card>
           <Card>
             <h3 className="text-lg font-semibold text-navy-900">Document checklist</h3>
-            <div className="mt-4 space-y-3">{(documents ?? []).length === 0 ? <EmptyState title="No documents uploaded" description="No documents have been added to this claim case yet." /> : documents?.map((document) => <div className="rounded-xl bg-slate-50 px-3 py-2 text-sm" key={document.id}><div className="flex items-center justify-between gap-3"><span>{document.document_type}</span><StatusBadge status={document.verification_status} /></div><p className="mt-1 text-xs text-slate-500">{document.file_name}</p></div>)}</div>
+            <div className="mt-4 space-y-3">{(documents ?? []).length === 0 ? <EmptyState title="No documents uploaded" /> : documents?.map((document) => <div className="rounded-xl bg-slate-50 px-3 py-2 text-sm" key={document.id}><div className="flex items-center justify-between gap-3"><span>{document.document_type}</span><StatusBadge status={document.verification_status} /></div><p className="mt-1 text-xs text-slate-500">{document.file_name}</p></div>)}</div>
           </Card>
         </div>
       </div>

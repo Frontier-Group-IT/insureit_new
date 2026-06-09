@@ -10,5 +10,5 @@ export default async function NewVehiclePage() {
   const { data: customers } = await supabase.from("customers").select("id, company_name, contact_name").order("created_at", { ascending: false }).returns<CustomerOption[]>();
   const customerOptions = (customers ?? []).map((customer) => ({ value: customer.id, label: customer.company_name ?? customer.contact_name }));
 
-  return <AppShell><PageHeader title="Add vehicle" description="Register a commercial vehicle and attach it to a customer account." /><VehicleForm action={createVehicle} customers={customerOptions} submitLabel="Add record" /></AppShell>;
+  return <AppShell title="Add vehicle"><PageHeader title="Add vehicle" /><VehicleForm action={createVehicle} customers={customerOptions} submitLabel="Add record" /></AppShell>;
 }

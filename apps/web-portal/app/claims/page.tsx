@@ -28,8 +28,8 @@ export default async function ClaimsPage() {
     .returns<ClaimRow[]>();
 
   return (
-    <AppShell>
-      <PageHeader title="Claims" description="Track accident assistance cases from intake through survey, repair, insurer approval, and settlement." />
+    <AppShell title="Claims">
+      <PageHeader title="Claims" />
       <SearchFilterBar searchPlaceholder="Search claims by number, customer, vehicle, insurer, or assignee" filterLabel="Claim status" />
       {error ? <DataError message={error.message} /> : <DataTable rows={data ?? []} emptyTitle="No claim cases found" columns={[
         { header: "Claim", cell: (claim) => <Link href={`/claims/${claim.id}`} className="font-semibold text-navy-700">{claim.claim_no}</Link> },

@@ -1,9 +1,13 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { navItems } from "./data";
-import { LogoutButton } from "./logout-button";
+import { HeaderTitle } from "./header-title";
+import { UserMenu } from "./user-menu";
 
-export function AppShell({ children }: { children: ReactNode }) {
+export async function AppShell({ children, title }: { children: ReactNode; title?: string }) {
+  const accessToken = await getServerAccessToken();
+  const { user, profile } = await getAuthenticatedProfile(accessToken);
   return (
     <div className="min-h-screen bg-slate-100">
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-76 border-r border-white/10 bg-navy-900 text-white shadow-2xl lg:block">
@@ -27,11 +31,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="lg:pl-76">
         <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-4 shadow-sm backdrop-blur lg:px-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="h-10" aria-hidden="true" />
-            <div className="flex items-center gap-3">
-              <LogoutButton />
-              <div className="h-10 w-10 rounded-full bg-navy-700 text-center text-sm font-bold leading-10 text-white">II</div>
-            </div>
+            <HeaderTitle title={title} />
+            <UserMenu profile={profile} user={user ? { id: user.id, email: user.email } : null} />
           </div>
           <nav className="mt-4 flex gap-2 overflow-x-auto pb-1 lg:hidden">
             {navItems.map(([label, href, icon]) => (
@@ -47,17 +48,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
 }
 
-export function PageHeader({ title, description, action }: { title: string; description?: string; action?: ReactNode }) {
-  return (
-    <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-green-700">InsureIt</p>
-        <h2 className="mt-2 text-2xl font-bold tracking-tight text-navy-900 md:text-3xl">{title}</h2>
-        {description ? <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{description}</p> : null}
-      </div>
-      {action}
-    </div>
-  );
+export function PageHeader({ action }: { title: string; description?: string; action?: ReactNode }) {
+  return action ? <div className="mb-6 flex justify-end">{action}</div> : null;
 }
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {

@@ -1,12 +1,12 @@
 export default function Loading() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-100 p-4" aria-live="polite" aria-busy="true">
-      <section className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-2xl">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-navy-700 text-sm font-black text-white">II</div>
-        <div className="mx-auto mt-6 h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-navy-700" />
-        <h1 className="mt-5 text-lg font-semibold text-navy-900">Loading InsureIt</h1>
-        <p className="mt-2 text-sm text-slate-500">Preparing your workspace...</p>
-      </section>
-    </main>
+    <div className="pointer-events-none fixed inset-0 z-50 bg-slate-100/20 backdrop-blur-[1px]" aria-live="polite" aria-busy="true">
+      <div className="absolute inset-x-0 top-4 flex justify-center">
+        <div className="inline-flex items-center gap-3 rounded-full border border-slate-200 bg-white/85 px-4 py-2 text-sm font-semibold text-navy-900 shadow-lg backdrop-blur">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-navy-700" aria-hidden="true" />
+          Loading
+        </div>
+      </div>
+    </div>
   );
 }

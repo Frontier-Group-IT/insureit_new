@@ -27,5 +27,5 @@ export default async function EditCustomerPage({ params }: { params: Promise<{ i
     notFound();
   }
 
-  return <AppShell><PageHeader title="Edit customer" description="Update customer profile information and onboarding status." /><CustomerForm action={updateCustomer.bind(null, id)} values={customer} submitLabel="Save changes" /></AppShell>;
+  return <AppShell title="Edit customer"><PageHeader title="Edit customer" /><CustomerForm action={updateCustomer.bind(null, id)} values={customer} submitLabel="Save changes" /></AppShell>;
 }

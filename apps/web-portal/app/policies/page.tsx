@@ -24,8 +24,8 @@ export default async function PoliciesPage() {
     .returns<PolicyRow[]>();
 
   return (
-    <AppShell>
-      <PageHeader title="Policies" description="Map insurers, policy validity, IDV, customers, and commercial vehicles." action={<Link className="rounded-xl bg-navy-700 px-4 py-2 text-sm font-semibold text-white shadow-sm" href="/policies/new">Add policy</Link>} />
+    <AppShell title="Policies">
+      <PageHeader title="Policies" action={<Link className="rounded-xl bg-navy-700 px-4 py-2 text-sm font-semibold text-white shadow-sm" href="/policies/new">Add policy</Link>} />
       <SearchFilterBar searchPlaceholder="Search policies by number, insurer, vehicle, or customer" filterLabel="Policy status" />
       {error ? <DataError message={error.message} /> : <DataTable rows={data ?? []} emptyTitle="No insurance policies added yet" emptyDescription="No insurance policies added yet. Add policy details to keep claim records complete and accurate." columns={[
         { header: "Policy", cell: (policy) => <><p className="font-semibold text-navy-900">{policy.policy_no}</p><p className="text-xs text-slate-500">{policy.policy_type}</p></> },

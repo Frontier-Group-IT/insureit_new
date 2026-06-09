@@ -23,7 +23,7 @@ export default async function DashboardPage() {
   ]);
 
   return (
-    <AppShell>
+    <AppShell title="InsureIt Admin Portal">
       <PageHeader title="InsureIt Admin Portal" />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Open claims" value={`${claimsResult.count ?? 0}`} hint="Active claim cases in progress" tone="navy" icon="◆" />

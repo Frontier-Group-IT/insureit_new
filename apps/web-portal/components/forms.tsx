@@ -47,7 +47,7 @@ export function CustomerForm({ action, values, submitLabel = "Save record" }: { 
   return (
     <Card>
       <form action={action}>
-        <FormSection title="Customer profile" description="Capture commercial fleet ownership and primary contact information.">
+        <FormSection title="Customer profile">
           <Field label="Contact name" name="contact_name" placeholder="Fleet owner or manager" required defaultValue={values?.contact_name} />
           <Field label="Company name" name="company_name" placeholder="Transport company" defaultValue={values?.company_name} />
           <Field label="Phone" name="phone" placeholder="Primary mobile number" required defaultValue={values?.phone} />
@@ -69,7 +69,7 @@ export function VehicleForm({ action, customers, values, submitLabel = "Save rec
   return (
     <Card>
       <form action={action}>
-        <FormSection title="Vehicle and permit details" description="Maintain registration, commercial permit, chassis, and engine details.">
+        <FormSection title="Vehicle and permit details">
           <Field label="Vehicle number" name="vehicle_no" placeholder="MH12AB1234" required defaultValue={values?.vehicle_no} />
           <SelectField label="Customer" name="customer_id" options={customers} required defaultValue={values?.customer_id} emptyLabel="Select customer" />
           <Field label="Vehicle type" name="vehicle_type" placeholder="Truck / Bus / Taxi / Goods carrier" required defaultValue={values?.vehicle_type} />
@@ -90,7 +90,7 @@ export function PolicyForm({ action, customers, vehicles, insurers, values, subm
   return (
     <Card>
       <form action={action}>
-        <FormSection title="Insurance policy mapping" description="Connect the insurer, policy period, IDV, customer, and vehicle in one record.">
+        <FormSection title="Insurance policy mapping">
           <Field label="Policy number" name="policy_no" placeholder="POL-123456" required defaultValue={values?.policy_no} />
           <SelectField label="Customer" name="customer_id" options={customers} required defaultValue={values?.customer_id} emptyLabel="Select customer" />
           <SelectField label="Vehicle" name="vehicle_id" options={vehicles} required defaultValue={values?.vehicle_id} emptyLabel="Select vehicle" />
@@ -107,12 +107,11 @@ export function PolicyForm({ action, customers, vehicles, insurers, values, subm
   );
 }
 
-function FormSection({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+function FormSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div>
       <div className="mb-5 border-b border-slate-100 pb-4">
         <h3 className="text-lg font-semibold text-navy-900">{title}</h3>
-        <p className="mt-1 text-sm text-slate-500">{description}</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2">{children}</div>
     </div>

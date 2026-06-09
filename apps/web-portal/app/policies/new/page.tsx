@@ -19,5 +19,5 @@ export default async function NewPolicyPage() {
   const vehicleOptions = (vehiclesResult.data ?? []).map((vehicle) => ({ value: vehicle.id, label: `${vehicle.vehicle_no} — ${vehicle.customers?.company_name ?? vehicle.customers?.contact_name ?? "Unassigned customer"}` }));
   const insurerOptions = (insurersResult.data ?? []).map((insurer) => ({ value: insurer.id, label: insurer.name }));
 
-  return <AppShell><PageHeader title="Add policy" description="Attach an insurance policy to a customer and commercial vehicle." /><PolicyForm action={createPolicy} customers={customerOptions} vehicles={vehicleOptions} insurers={insurerOptions} submitLabel="Add record" /></AppShell>;
+  return <AppShell title="Add policy"><PageHeader title="Add policy" /><PolicyForm action={createPolicy} customers={customerOptions} vehicles={vehicleOptions} insurers={insurerOptions} submitLabel="Add record" /></AppShell>;
 }

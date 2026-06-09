@@ -24,8 +24,8 @@ export default async function CustomersPage() {
     .returns<CustomerRow[]>();
 
   return (
-    <AppShell>
-      <PageHeader title="Customers" description="Onboard and manage fleet owners, operators, and commercial vehicle customers." action={<Link className="rounded-xl bg-navy-700 px-4 py-2 text-sm font-semibold text-white shadow-sm" href="/customers/new">Add customer</Link>} />
+    <AppShell title="Customers">
+      <PageHeader title="Customers" action={<Link className="rounded-xl bg-navy-700 px-4 py-2 text-sm font-semibold text-white shadow-sm" href="/customers/new">Add customer</Link>} />
       <SearchFilterBar searchPlaceholder="Search customers by name, code, contact, city, or phone" filterLabel="Customer status" />
       {error ? <DataError message={error.message} /> : <DataTable rows={data ?? []} emptyTitle="No customers added yet" emptyDescription="No customers added yet. Add your first customer to begin managing vehicle insurance claim assistance." columns={[
         { header: "Customer", cell: (customer) => <><p className="font-semibold text-navy-900">{customer.company_name ?? customer.contact_name}</p><p className="text-xs text-slate-500">{customer.customer_code}</p></> },

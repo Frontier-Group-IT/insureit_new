@@ -21,8 +21,8 @@ export default async function DocumentsPage() {
     .returns<DocumentRow[]>();
 
   return (
-    <AppShell>
-      <PageHeader title="Document verification" description="Review claim documents, supporting evidence, and verification status for active cases." />
+    <AppShell title="Document verification">
+      <PageHeader title="Document verification" />
       <SearchFilterBar searchPlaceholder="Search documents by claim no, customer, document type, or status" filterLabel="Document status" />
       {error ? <DataError message={error.message} /> : <DataTable rows={data ?? []} emptyTitle="No documents are pending for review" emptyDescription="No documents are pending for review." columns={[
         { header: "Document", cell: (doc) => <><p className="font-semibold text-navy-900">{doc.document_type}</p><p className="text-xs text-slate-500">{doc.file_name}</p></> },

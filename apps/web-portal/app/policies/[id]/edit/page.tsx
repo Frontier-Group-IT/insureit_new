@@ -40,5 +40,5 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
   const vehicleOptions = (vehiclesResult.data ?? []).map((vehicle) => ({ value: vehicle.id, label: `${vehicle.vehicle_no} — ${vehicle.customers?.company_name ?? vehicle.customers?.contact_name ?? "Unassigned customer"}` }));
   const insurerOptions = (insurersResult.data ?? []).map((insurer) => ({ value: insurer.id, label: insurer.name }));
 
-  return <AppShell><PageHeader title="Edit policy" description="Update policy details, coverage period, insurer, and IDV." /><PolicyForm action={updatePolicy.bind(null, id)} customers={customerOptions} vehicles={vehicleOptions} insurers={insurerOptions} values={policyResult.data} submitLabel="Save changes" /></AppShell>;
+  return <AppShell title="Edit policy"><PageHeader title="Edit policy" /><PolicyForm action={updatePolicy.bind(null, id)} customers={customerOptions} vehicles={vehicleOptions} insurers={insurerOptions} values={policyResult.data} submitLabel="Save changes" /></AppShell>;
 }

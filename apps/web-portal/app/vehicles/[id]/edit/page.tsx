@@ -35,5 +35,5 @@ export default async function EditVehiclePage({ params }: { params: Promise<{ id
 
   const customerOptions = (customersResult.data ?? []).map((customer) => ({ value: customer.id, label: customer.company_name ?? customer.contact_name }));
 
-  return <AppShell><PageHeader title="Edit vehicle" description="Update vehicle registration, permit, and identification details." /><VehicleForm action={updateVehicle.bind(null, id)} customers={customerOptions} values={vehicleResult.data} submitLabel="Save changes" /></AppShell>;
+  return <AppShell title="Edit vehicle"><PageHeader title="Edit vehicle" /><VehicleForm action={updateVehicle.bind(null, id)} customers={customerOptions} values={vehicleResult.data} submitLabel="Save changes" /></AppShell>;
 }
