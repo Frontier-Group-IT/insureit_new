@@ -18,6 +18,7 @@ type CustomerValues = {
   city?: string | null;
   state?: string | null;
   address?: string | null;
+  assigned_agent_id?: string | null;
 };
 
 type VehicleValues = {
@@ -43,7 +44,7 @@ type PolicyValues = {
   end_date?: string | null;
 };
 
-export function CustomerForm({ action, values, submitLabel = "Save record" }: { action: FormAction; values?: CustomerValues; submitLabel?: string }) {
+export function CustomerForm({ action, values, agents = [], submitLabel = "Save record" }: { action: FormAction; values?: CustomerValues; agents?: SelectOption[]; submitLabel?: string }) {
   return (
     <Card>
       <form action={action}>
@@ -52,6 +53,7 @@ export function CustomerForm({ action, values, submitLabel = "Save record" }: { 
           <Field label="Company name" name="company_name" placeholder="Transport company" defaultValue={values?.company_name} />
           <Field label="Phone" name="phone" placeholder="Primary mobile number" required defaultValue={values?.phone} />
           <Field label="Email" name="email" placeholder="billing@example.com" type="email" defaultValue={values?.email} />
+          <SelectField label="Assigned agent" name="assigned_agent_id" options={agents} defaultValue={values?.assigned_agent_id} emptyLabel="No assigned agent" />
           <Field label="City" name="city" placeholder="Mumbai" defaultValue={values?.city} />
           <Field label="State" name="state" placeholder="Maharashtra" defaultValue={values?.state} />
           <div className="grid gap-2 md:col-span-2">

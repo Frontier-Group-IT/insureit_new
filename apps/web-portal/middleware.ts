@@ -11,6 +11,7 @@ const protectedRoutes = [
   "/timeline",
   "/tasks",
   "/reports",
+  "/organization",
   "/users"
 ];
 
@@ -104,5 +105,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login", "/dashboard/:path*", "/customers/:path*", "/vehicles/:path*", "/policies/:path*", "/claims/:path*", "/documents/:path*", "/timeline/:path*", "/tasks/:path*", "/reports/:path*", "/users/:path*"]
+  matcher: ["/", "/login", "/dashboard/:path*", "/customers/:path*", "/vehicles/:path*", "/policies/:path*", "/claims/:path*", "/documents/:path*", "/timeline/:path*", "/tasks/:path*", "/reports/:path*", "/organization/:path*", "/users/:path*"]
 };

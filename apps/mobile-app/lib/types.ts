@@ -1,5 +1,12 @@
 export type AppRole =
   | 'customer'
+  | 'director'
+  | 'sales_head'
+  | 'zonal_head'
+  | 'asm'
+  | 'sales_manager'
+  | 'agent'
+  | 'it_super_user'
   | 'field_executive'
   | 'claim_processor'
   | 'manager'
@@ -30,13 +37,13 @@ type RowBase = { id: string; created_at?: string; updated_at?: string };
 
 type Tables = {
   profiles: {
-    Row: RowBase & { role: AppRole; full_name: string; phone: string | null; is_active: boolean };
-    Insert: { id: string; role?: AppRole; full_name: string; phone?: string | null; is_active?: boolean };
+    Row: RowBase & { role: AppRole; full_name: string; email: string | null; phone: string | null; is_active: boolean; employee_code: string | null; reporting_manager_id: string | null; department: string | null; designation: string | null; created_by: string | null; updated_by: string | null };
+    Insert: { id: string; role?: AppRole; full_name: string; email?: string | null; phone?: string | null; is_active?: boolean; employee_code?: string | null; reporting_manager_id?: string | null; department?: string | null; designation?: string | null; created_by?: string | null; updated_by?: string | null };
     Update: Partial<Tables['profiles']['Insert']>;
   };
   customers: {
-    Row: RowBase & { profile_id: string | null; customer_code: string; company_name: string | null; contact_name: string; phone: string; email: string | null; address: string | null; city: string | null; state: string | null; postal_code: string | null; onboarding_status: string; created_by: string | null };
-    Insert: { profile_id?: string | null; customer_code: string; company_name?: string | null; contact_name: string; phone: string; email?: string | null; address?: string | null; city?: string | null; state?: string | null; postal_code?: string | null; onboarding_status?: string; created_by?: string | null };
+    Row: RowBase & { profile_id: string | null; customer_code: string; company_name: string | null; contact_name: string; phone: string; email: string | null; address: string | null; city: string | null; state: string | null; postal_code: string | null; onboarding_status: string; assigned_agent_id: string | null; created_by: string | null; updated_by: string | null };
+    Insert: { profile_id?: string | null; customer_code: string; company_name?: string | null; contact_name: string; phone: string; email?: string | null; address?: string | null; city?: string | null; state?: string | null; postal_code?: string | null; onboarding_status?: string; assigned_agent_id?: string | null; created_by?: string | null; updated_by?: string | null };
     Update: Partial<Tables['customers']['Insert']>;
   };
   vehicles: {

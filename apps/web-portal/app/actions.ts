@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { claimStatuses } from "@/components/data";
 import { createServerSupabaseClient, getServerAccessToken, getAuthenticatedProfile } from "@/lib/auth-server";
+import { canManageUsers, isAppRole } from "@/lib/roles";
 
 function textValue(formData: FormData, name: string) {
   const value = formData.get(name);
@@ -40,6 +41,7 @@ export async function createCustomer(formData: FormData) {
     address: textValue(formData, "address"),
     city: textValue(formData, "city"),
     state: textValue(formData, "state"),
+    assigned_agent_id: textValue(formData, "assigned_agent_id"),
     created_by: createdBy
   });
 
@@ -68,7 +70,8 @@ export async function updateCustomer(id: string, formData: FormData) {
       email: textValue(formData, "email"),
       address: textValue(formData, "address"),
       city: textValue(formData, "city"),
-      state: textValue(formData, "state")
+      state: textValue(formData, "state"),
+      assigned_agent_id: textValue(formData, "assigned_agent_id")
     })
     .eq("id", id);
 
@@ -245,6 +248,97 @@ export async function updatePolicy(id: string, formData: FormData) {
   }
 
   redirect("/policies");
+}
+
+async function requireUserManager() {
+  const accessToken = await getServerAccessToken();
+  const { profile } = await getAuthenticatedProfile(accessToken);
+  if (!canManageUsers(profile?.role)) {
+    throw new Error("You do not have permission to manage users.");
+  }
+  return profile?.id ?? null;
+}
+
+export async function createProfileRecord(formData: FormData) {
+  const supabase = await createServerSupabaseClient();
+  const createdBy = await requireUserManager();
+  const id = textValue(formData, "id");
+  const fullName = textValue(formData, "full_name");
+  const role = textValue(formData, "role");
+
+  if (!id || !fullName || !isAppRole(role)) {
+    throw new Error("Existing Auth user ID, name, and valid role are required.");
+  }
+
+  const { error } = await supabase.from("profiles").insert({
+    id,
+    full_name: fullName,
+    role,
+    email: textValue(formData, "email"),
+    phone: textValue(formData, "phone"),
+    employee_code: textValue(formData, "employee_code"),
+    reporting_manager_id: textValue(formData, "reporting_manager_id"),
+    department: textValue(formData, "department"),
+    designation: textValue(formData, "designation"),
+    is_active: true,
+    created_by: createdBy,
+    updated_by: createdBy
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/users");
+  revalidatePath("/organization");
+  redirect("/users");
+}
+
+export async function updateProfileRecord(id: string, formData: FormData) {
+  const supabase = await createServerSupabaseClient();
+  const updatedBy = await requireUserManager();
+  const fullName = textValue(formData, "full_name");
+  const role = textValue(formData, "role");
+
+  if (!fullName || !isAppRole(role)) {
+    throw new Error("Name and valid role are required.");
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      full_name: fullName,
+      role,
+      email: textValue(formData, "email"),
+      phone: textValue(formData, "phone"),
+      employee_code: textValue(formData, "employee_code"),
+      reporting_manager_id: textValue(formData, "reporting_manager_id"),
+      department: textValue(formData, "department"),
+      designation: textValue(formData, "designation"),
+      is_active: formData.get("is_active") === "true",
+      updated_by: updatedBy
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/users");
+  revalidatePath("/organization");
+}
+
+export async function setProfileActive(id: string, isActive: boolean) {
+  const supabase = await createServerSupabaseClient();
+  const updatedBy = await requireUserManager();
+  const { error } = await supabase.from("profiles").update({ is_active: isActive, updated_by: updatedBy }).eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/users");
+  revalidatePath("/organization");
 }
 
 export async function updateClaimStatus(id: string, formData: FormData) {

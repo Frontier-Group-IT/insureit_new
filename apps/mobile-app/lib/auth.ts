@@ -3,9 +3,17 @@ import { Router } from 'expo-router';
 
 import { supabase } from './supabase';
 import type { AppRole, Customer, Profile } from './types';
+import { isStaffRole } from './roles';
 
 export const validRoles: AppRole[] = [
   'customer',
+  'director',
+  'sales_head',
+  'zonal_head',
+  'asm',
+  'sales_manager',
+  'agent',
+  'it_super_user',
   'field_executive',
   'claim_processor',
   'manager',
@@ -34,9 +42,8 @@ export const claimStatuses = [
 
 export function routeForRole(role: AppRole) {
   if (role === 'customer') return '/customer/home' as const;
-  if (role === 'field_executive') return '/staff/dashboard' as const;
-  if (role === 'claim_processor') return '/staff/dashboard' as const;
-  if (role === 'manager' || role === 'admin' || role === 'super_admin') return '/staff/dashboard' as const;
+  if (role === 'it_super_user') return '/it/dashboard' as const;
+  if (isStaffRole(role)) return '/staff/dashboard' as const;
   return '/access-denied' as const;
 }
 

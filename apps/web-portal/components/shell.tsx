@@ -4,10 +4,16 @@ import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server
 import { navItems } from "./data";
 import { HeaderTitle } from "./header-title";
 import { UserMenu } from "./user-menu";
+import { canManageUsers, canViewOrganizationTree } from "@/lib/roles";
 
 export async function AppShell({ children, title }: { children: ReactNode; title?: string }) {
   const accessToken = await getServerAccessToken();
   const { user, profile } = await getAuthenticatedProfile(accessToken);
+  const visibleNavItems = navItems.filter(([label]) => {
+    if (label === "Users") return canManageUsers(profile?.role);
+    if (label === "Organization") return canViewOrganizationTree(profile?.role);
+    return true;
+  });
   return (
     <div className="min-h-screen bg-slate-100">
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-76 border-r border-white/10 bg-navy-900 text-white shadow-2xl lg:block">
@@ -20,7 +26,7 @@ export async function AppShell({ children, title }: { children: ReactNode; title
           </div>
         </div>
         <nav className="space-y-1 px-4 py-5">
-          {navItems.map(([label, href, icon]) => (
+          {visibleNavItems.map(([label, href, icon]) => (
             <Link key={href} href={href} className="group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-slate-200 transition hover:bg-white/10 hover:text-white">
               <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-xs text-green-200 group-hover:bg-green-400/20">{icon}</span>
               {label}
@@ -35,7 +41,7 @@ export async function AppShell({ children, title }: { children: ReactNode; title
             <UserMenu profile={profile} user={user ? { id: user.id, email: user.email } : null} />
           </div>
           <nav className="mt-4 flex gap-2 overflow-x-auto pb-1 lg:hidden">
-            {navItems.map(([label, href, icon]) => (
+            {visibleNavItems.map(([label, href, icon]) => (
               <Link key={href} href={href} className="inline-flex whitespace-nowrap rounded-full bg-slate-100 px-3 py-2 text-xs font-medium text-slate-700">
                 <span className="mr-1 text-green-700">{icon}</span>{label}
               </Link>

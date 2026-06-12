@@ -12,9 +12,9 @@ export default function IndexScreen() {
   useEffect(() => {
     async function load() {
       try {
-        const session = await getCurrentSession();
+        const session = await withTimeout(getCurrentSession(), 12000);
         if (session?.user) {
-          await routeSignedInUser(session.user, router);
+          await withTimeout(routeSignedInUser(session.user, router), 12000);
         } else {
           router.replace('/login');
         }
@@ -35,4 +35,13 @@ export default function IndexScreen() {
       <Button label="Sign in" onPress={() => router.replace('/login')} />
     </Screen>
   );
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error('Request timed out')), timeoutMs);
+    }),
+  ]);
 }

@@ -12,6 +12,7 @@ type CustomerValues = {
   city: string | null;
   state: string | null;
   address: string | null;
+  assigned_agent_id: string | null;
 };
 
 export default async function EditCustomerPage({ params }: { params: Promise<{ id: string }> }) {
@@ -19,7 +20,7 @@ export default async function EditCustomerPage({ params }: { params: Promise<{ i
   const supabase = await createServerSupabaseClient();
   const { data: customer, error } = await supabase
     .from("customers")
-    .select("contact_name, company_name, phone, email, city, state, address")
+    .select("contact_name, company_name, phone, email, city, state, address, assigned_agent_id")
     .eq("id", id)
     .maybeSingle<CustomerValues>();
 
@@ -27,5 +28,12 @@ export default async function EditCustomerPage({ params }: { params: Promise<{ i
     notFound();
   }
 
-  return <AppShell title="Edit customer"><PageHeader title="Edit customer" /><CustomerForm action={updateCustomer.bind(null, id)} values={customer} submitLabel="Save changes" /></AppShell>;
+  const { data: agents } = await supabase.from("profiles").select("id, full_name").eq("role", "agent").eq("is_active", true).order("full_name");
+
+  return (
+    <AppShell title="Edit customer">
+      <PageHeader title="Edit customer" />
+      <CustomerForm action={updateCustomer.bind(null, id)} values={customer} agents={(agents ?? []).map((agent) => ({ label: agent.full_name, value: agent.id }))} submitLabel="Save changes" />
+    </AppShell>
+  );
 }
