@@ -69,6 +69,20 @@ export const roleLabels: Record<AppRole, string> = {
   it_super_user: "IT Super User"
 };
 
+export const designationOptions = [
+  "Director",
+  "Sales Head",
+  "Zonal Head",
+  "Area Sales Manager",
+  "Sales Manager",
+  "Agent",
+  "Claims Manager",
+  "Claim Processor",
+  "Field Executive",
+  "IT Super User",
+  "Administrator"
+];
+
 export function isAppRole(role: string | null | undefined): role is AppRole {
   return Boolean(role && appRoles.includes(role as AppRole));
 }

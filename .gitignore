@@ -8,5 +8,6 @@ node_modules
 .DS_Store
 coverage
 .supabase
+supabase/.temp
 
 *.tsbuildinfo

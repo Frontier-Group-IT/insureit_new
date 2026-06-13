@@ -26,7 +26,17 @@ Business data access flows from customer access:
 
 ## Safe User Management
 
-The web and mobile user-management screens create and edit profile records only. They do not create Supabase Auth users and do not use a service role key in frontend/mobile code.
+The web and mobile user-management screens create users through the `create-user` Supabase Edge Function.
+
+The service role key is used only inside the Edge Function. It is not exposed in frontend or mobile code.
+
+Required Edge Function environment variables:
+
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+Only active `it_super_user`, `admin`, and `super_admin` callers can create users.
 
 Default deletion behavior is safe deactivation using `profiles.is_active = false`.
 
@@ -36,6 +46,7 @@ Web:
 
 - `/users` for IT Super User, Admin, and Super Admin.
 - `/organization` for IT Super User, Admin, Super Admin, Director, Sales Head, Zonal Head, ASM, and Sales Manager.
+- `supabase/functions/create-user` creates the Supabase Auth user and matching profile record.
 
 Mobile:
 
@@ -55,7 +66,7 @@ Database/RLS:
 Web:
 
 - IT Super User opens Users page.
-- IT Super User creates/edits/deactivates/reactivates profile records.
+- IT Super User creates login users, edits profile records, and deactivates/reactivates users.
 - IT Super User opens Organization Tree.
 - Restricted hierarchy users cannot see unrelated records.
 

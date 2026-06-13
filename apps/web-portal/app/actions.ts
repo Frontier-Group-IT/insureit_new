@@ -261,6 +261,42 @@ async function requireUserManager() {
 
 export async function createProfileRecord(formData: FormData) {
   const supabase = await createServerSupabaseClient();
+  await requireUserManager();
+  const email = textValue(formData, "email");
+  const password = textValue(formData, "password");
+  const fullName = textValue(formData, "full_name");
+  const role = textValue(formData, "role");
+
+  if (!email || !password || !fullName || !isAppRole(role)) {
+    throw new Error("Email, password, name, and valid role are required.");
+  }
+
+  const { error } = await supabase.functions.invoke("create-user", {
+    body: {
+      email,
+      password,
+      full_name: fullName,
+      role,
+      phone: textValue(formData, "phone"),
+      employee_code: textValue(formData, "employee_code"),
+      reporting_manager_id: textValue(formData, "reporting_manager_id"),
+      department: textValue(formData, "department"),
+      designation: textValue(formData, "designation"),
+      email_confirm: true
+    }
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/users");
+  revalidatePath("/organization");
+  redirect("/users");
+}
+
+export async function createProfileForExistingAuthUser(formData: FormData) {
+  const supabase = await createServerSupabaseClient();
   const createdBy = await requireUserManager();
   const id = textValue(formData, "id");
   const fullName = textValue(formData, "full_name");
