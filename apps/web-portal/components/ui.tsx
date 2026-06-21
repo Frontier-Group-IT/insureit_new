@@ -4,17 +4,37 @@ import type { ClaimStatus } from "./data";
 const statusStyles: Record<string, string> = {
   Draft: "bg-slate-100 text-slate-700 ring-slate-200",
   "Accident Reported": "bg-orange-50 text-orange-700 ring-orange-200",
+  "Initial Documents Pending": "bg-amber-50 text-amber-800 ring-amber-200",
+  "Initial Documents Verification Pending": "bg-cyan-50 text-cyan-800 ring-cyan-200",
+  "Initial Documents Submitted": "bg-cyan-50 text-cyan-800 ring-cyan-200",
+  "Initial Documents Verified": "bg-emerald-50 text-emerald-700 ring-emerald-200",
   "Documents Pending": "bg-amber-50 text-amber-800 ring-amber-200",
-  "Documents Submitted": "bg-sky-50 text-sky-700 ring-sky-200",
+  "Documents Submitted": "bg-cyan-50 text-cyan-800 ring-cyan-200",
   "Claim Intimated": "bg-blue-50 text-blue-700 ring-blue-200",
   "Surveyor Appointed": "bg-indigo-50 text-indigo-700 ring-indigo-200",
   "Vehicle Inspected": "bg-cyan-50 text-cyan-700 ring-cyan-200",
+  "Final Documents Awaited": "bg-amber-50 text-amber-800 ring-amber-200",
+  "Final Documents Verification Pending": "bg-cyan-50 text-cyan-800 ring-cyan-200",
+  "Final Documents Submitted": "bg-cyan-50 text-cyan-800 ring-cyan-200",
+  "Final Documents Verified": "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  "Claim Intimation": "bg-blue-50 text-blue-700 ring-blue-200",
+  "Final Surveyor Details": "bg-indigo-50 text-indigo-700 ring-indigo-200",
+  "Survey Status": "bg-yellow-50 text-yellow-800 ring-yellow-200",
+  "Survey Done": "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  "Work Approval Status": "bg-purple-50 text-purple-700 ring-purple-200",
+  "Work Approval Received": "bg-emerald-50 text-emerald-700 ring-emerald-200",
   "Estimate Submitted": "bg-purple-50 text-purple-700 ring-purple-200",
   "Approval Pending": "bg-yellow-50 text-yellow-800 ring-yellow-200",
   "Repair Started": "bg-teal-50 text-teal-700 ring-teal-200",
+  "Under Repair": "bg-orange-50 text-orange-700 ring-orange-200",
   "Repair Completed": "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  "RA Intimation": "bg-orange-50 text-orange-700 ring-orange-200",
+  "RA Intimation Done": "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  "DO Status": "bg-yellow-50 text-yellow-800 ring-yellow-200",
   "Final Bill Submitted": "bg-lime-50 text-lime-700 ring-lime-200",
+  "Payment Stage": "bg-green-50 text-green-700 ring-green-200",
   "Settlement Under Process": "bg-green-50 text-green-700 ring-green-200",
+  "Claim Complete": "bg-emerald-100 text-emerald-800 ring-emerald-300",
   Settled: "bg-green-100 text-green-800 ring-green-300",
   Rejected: "bg-red-50 text-red-700 ring-red-200",
   Closed: "bg-slate-200 text-slate-700 ring-slate-300",
@@ -67,7 +87,7 @@ export function SearchFilterBar({ searchPlaceholder, filterLabel = "Status", act
     <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="relative flex-1">
-          <span className="pointer-events-none absolute left-3 top-2.5 text-slate-400">⌕</span>
+          <span className="pointer-events-none absolute left-3 top-2.5 text-slate-400">Search</span>
           <input className="w-full pl-9" placeholder={searchPlaceholder} aria-label={searchPlaceholder} />
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -87,7 +107,7 @@ export function SearchFilterBar({ searchPlaceholder, filterLabel = "Status", act
 export function EmptyState({ title, description, action, className = "" }: { title: string; description?: string; action?: ReactNode; className?: string }) {
   return (
     <div className={`rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center ${className}`}>
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm">□</div>
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm">?</div>
       <h3 className="mt-4 text-base font-semibold text-navy-900">{title}</h3>
       {description ? <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">{description}</p> : null}
       {action ? <div className="mt-5">{action}</div> : null}
@@ -116,3 +136,4 @@ export function ErrorState({ title = "Unable to load data", description = "Pleas
     </div>
   );
 }
+

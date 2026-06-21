@@ -6,7 +6,7 @@ function getSupabaseEnvironment() {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL/NEXT_PUBLIC_SUPABASE_ANON_KEY or EXPO_PUBLIC_SUPABASE_URL/EXPO_PUBLIC_SUPABASE_ANON_KEY");
   }
 
   return { supabaseUrl, supabaseAnonKey };
@@ -69,3 +69,4 @@ export async function getAuthenticatedProfile(accessToken?: string) {
 }
 
 export { isAuthorizedProfile };
+

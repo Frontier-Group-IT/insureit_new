@@ -14,6 +14,7 @@ export const validRoles: AppRole[] = [
   'sales_manager',
   'agent',
   'it_super_user',
+  'backoffice_executive',
   'field_executive',
   'claim_processor',
   'manager',
@@ -24,15 +25,38 @@ export const validRoles: AppRole[] = [
 export const claimStatuses = [
   'Draft',
   'Accident Reported',
+  'Initial Documents Pending',
+  'Initial Documents Verification Pending',
+  'Initial Documents Submitted',
+  'Initial Documents Verified',
   'Documents Pending',
   'Documents Submitted',
   'Claim Intimated',
   'Surveyor Appointed',
   'Vehicle Inspected',
+  'Final Documents Awaited',
+  'Final Documents Verification Pending',
+  'Final Documents Submitted',
+  'Final Documents Verified',
+  'Claim Intimation',
+  'Final Surveyor Details',
+  'Survey Status',
+  'Survey Done',
+  'Work Approval Status',
+  'Work Approval Received',
+  'Under Repair',
+  'Repair Done',
+  'RA Intimation',
+  'RA Intimation Done',
+  'DO Status',
+  'Payment Stage',
+  'Claim Completion In Progress',
+  'Claim Complete',
   'Estimate Submitted',
   'Approval Pending',
   'Repair Started',
   'Repair Completed',
+  'DO Submitted',
   'Final Bill Submitted',
   'Settlement Under Process',
   'Settled',
@@ -119,7 +143,11 @@ export async function signUp(email: string, password: string, fullName: string, 
 }
 
 export async function signOut(router: Router) {
-  await supabase.auth.signOut({ scope: 'local' });
+  try {
+    await supabase.auth.signOut({ scope: 'local' });
+  } catch (error) {
+    console.warn('Local sign out failed; returning to login.', error);
+  }
   router.replace('/login');
 }
 
@@ -138,3 +166,6 @@ export function makeClaimNumber() {
   const stamp = date.toISOString().slice(0, 10).replace(/-/g, '');
   return `CLM-${stamp}-${date.getTime().toString().slice(-6)}`;
 }
+
+
+

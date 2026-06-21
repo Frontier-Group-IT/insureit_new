@@ -1,0 +1,62 @@
+
+> @insureit/web-portal@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.5.19
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.19.1:3000
+
+ ✓ Starting...
+ ✓ Ready in 8.8s
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 3.2s (117 modules)
+ ○ Compiling /login ...
+ ✓ Compiled /login in 25.6s (644 modules)
+ GET /login 200 in 612ms
+ GET /login 200 in 610ms
+   Reload env: .env.local
+ ✓ Compiled in 11.6s (761 modules)
+ GET /login 200 in 587ms
+ ✓ Compiled in 1195ms (747 modules)
+ GET /login 200 in 1163ms
+ GET /login 200 in 478ms
+ ○ Compiling /auth/session ...
+ ✓ Compiled /auth/session in 1955ms (649 modules)
+ POST /auth/session 200 in 2543ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 7.6s (774 modules)
+ POST /auth/session 200 in 4557ms
+ GET /dashboard 200 in 8234ms
+ GET /dashboard 200 in 2064ms
+ ○ Compiling /timeline ...
+ ✓ Compiled /timeline in 1134ms (777 modules)
+ ○ Compiling /documents ...
+ GET /timeline 200 in 7899ms
+ ✓ Compiled /customers in 7.2s (787 modules)
+ GET /policies 200 in 8702ms
+ GET /claims 200 in 8483ms
+ GET /vehicles 200 in 8336ms
+ GET /dashboard 200 in 3778ms
+ GET /customers 200 in 9509ms
+ GET /claims?queue=manager-action 200 in 1853ms
+ GET /vehicles 200 in 1869ms
+ GET /customers 200 in 1846ms
+ GET /documents 200 in 13428ms
+ GET /claims?queue=manager-action 200 in 1738ms
+ ○ Compiling /claims/[id] ...
+ ✓ Compiled /claims/[id] in 3.2s (814 modules)
+ GET /claims/3a1f7df1-4c9c-4220-831c-d4cf17854e53 200 in 10390ms
+ GET /claims/3a1f7df1-4c9c-4220-831c-d4cf17854e53 200 in 2207ms
+ POST /claims/3a1f7df1-4c9c-4220-831c-d4cf17854e53 200 in 4584ms
+ GET /login 200 in 2826ms
+ GET /login 200 in 515ms
+ DELETE /auth/session 200 in 279ms
+ ○ Compiling /access-denied ...
+ ✓ Compiled /access-denied in 6.3s (822 modules)
+ GET /access-denied 200 in 8818ms
+ ✓ Compiled in 2.6s (295 modules)
+ GET /login 200 in 415ms
+ GET /login 200 in 202ms
+ GET /login 200 in 570ms
+ POST /auth/session 200 in 133ms
+ GET /dashboard 200 in 2632ms

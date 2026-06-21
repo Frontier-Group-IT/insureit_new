@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { AppSectionHeader } from '@/components/design-system';
 import { Button, Card, LoadingState, Message, Screen, TextField } from '@/components/ui';
 import { getCurrentSession, getProfile, isValidProfile } from '@/lib/auth';
+import { canManageBusinessRecords } from '@/lib/permissions';
 import { supabase } from '@/lib/supabase';
 
 export default function StaffAddInsurerScreen() {
@@ -23,7 +24,7 @@ export default function StaffAddInsurerScreen() {
       const session = await getCurrentSession();
       if (!session?.user) return router.replace('/login');
       const profile = await getProfile(session.user.id);
-      if (!isValidProfile(profile) || profile.role !== 'manager') return router.replace('/access-denied');
+      if (!isValidProfile(profile) || !canManageBusinessRecords(profile.role)) return router.replace('/access-denied');
       setLoading(false);
     }
     void load();

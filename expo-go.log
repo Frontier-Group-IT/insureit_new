@@ -1,0 +1,214 @@
+env: load .env
+env: export EXPO_PUBLIC_SUPABASE_URL EXPO_PUBLIC_SUPABASE_ANON_KEY EXPO_PUBLIC_DEMO_CUSTOMER_EMAIL EXPO_PUBLIC_DEMO_CUSTOMER_PASSWORD
+Starting project at C:\Users\HP\Desktop\Codex-Projects\InsureIT\apps\mobile-app
+Starting Metro Bundler
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+Waiting on http://localhost:8082
+Logs for your project will appear below.
+Android node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android node_modules\expo-router\entry.js ▓▓░░░░░░░░░░░░░░ 16.0% (15/59)
+Android node_modules\expo-router\entry.js ▓▓░░░░░░░░░░░░░░ 16.0% ( 96/277)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓░░░░░░░░░░░ 37.2% (342/561)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 69.9% (652/780)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 79.3% ( 960/1078)
+Android Bundled 20559ms node_modules\expo-router\entry.js (1277 modules)
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+Android node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 84ms node_modules\expo-router\entry.js (1 module)
+Android node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 94ms node_modules\expo-router\entry.js (1 module)
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+Android node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 87ms node_modules\expo-router\entry.js (1 module)
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+Android node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 103ms node_modules\expo-router\entry.js (1 module)
+ ERROR  [TypeError: Cannot read property 'tone' of null] 
+
+Call Stack
+  contactDefinitions.map$argument_0 (apps\mobile-app\app\customer\support.tsx)
+  map (apps\mobile-app\<native>)
+  SupportScreen (apps\mobile-app\app\customer\support.tsx)
+  callComponent.reactStackBottomFrame (apps\mobile-app\node_modules\react-native\Libraries\Renderer\implementations\ReactFabric-dev.js)
+  renderWithHooks (apps\mobile-app\node_modules\react-native\Libraries\Renderer\implementations\ReactFabric-dev.js)
+  updateFunctionComponent (apps\mobile-app\node_modules\react-native\Libraries\Renderer\implementations\ReactFabric-dev.js)
+  beginWork (apps\mobile-app\node_modules\react-native\Libraries\Renderer\implementations\ReactFabric-dev.js)
+  runWithFiberInDEV (apps\mobile-app\node_modules\react-native\Libraries\Renderer\implementations\ReactFabric-dev.js)
+  performUnitOfWork (apps\mobile-app\node_modules\react-native\Libraries\Renderer\implementations\ReactFabric-dev.js)
+  workLoopSync (apps\mobile-app\node_modules\react-native\Libraries\Renderer\implementations\ReactFabric-dev.js)
+  renderRootSync (apps\mobile-app\node_modules\react-native\Libraries\Renderer\implementations\ReactFabric-dev.js)
+  performWorkOnRoot (apps\mobile-app\node_modules\react-native\Libraries\Renderer\implementations\ReactFabric-dev.js)
+  performWorkOnRootViaSchedulerTask (apps\mobile-app\node_modules\react-native\Libraries\Renderer\implementations\ReactFabric-dev.js) 
+
+Call Stack
+  BaseRoute (node_modules\expo-router\build\useScreens.js)
+  SceneView (node_modules\@react-navigation\core\lib\module\SceneView.js)
+  setOptions$argument_0 (node_modules\@react-navigation\core\lib\module\useDescriptors.js)
+  render (node_modules\@react-navigation\core\lib\module\useDescriptors.js)
+  reduce (apps\mobile-app\<native>)
+  render (node_modules\@react-navigation\core\lib\module\useDescriptors.js)
+  useNavigationBuilder (node_modules\@react-navigation\core\lib\module\useNavigationBuilder.js)
+  <global> (node_modules\expo-router\build\fork\native-stack\createNativeStackNavigator.js)
+  <anonymous> (node_modules\expo-router\build\layouts\withLayoutContext.js)
+  filterSingular (node_modules\expo-router\build\layouts\StackClient.js)
+  RootLayout (apps\mobile-app\app\_layout.tsx)
+  BaseRoute (node_modules\expo-router\build\useScreens.js)
+  SceneView (node_modules\@react-navigation\core\lib\module\SceneView.js)
+  setOptions$argument_0 (node_modules\@react-navigation\core\lib\module\useDescriptors.js)
+  render (node_modules\@react-navigation\core\lib\module\useDescriptors.js)
+  reduce (apps\mobile-app\<native>)
+  render (node_modules\@react-navigation\core\lib\module\useDescriptors.js)
+  useNavigationBuilder (node_modules\@react-navigation\core\lib\module\useNavigationBuilder.js)
+  Content (node_modules\expo-router\build\ExpoRoot.js)
+  ContextNavigator (node_modules\expo-router\build\ExpoRoot.js)
+  <anonymous> (node_modules\expo-router\build\ExpoRoot.js)
+  App (node_modules\expo-router\build\qualified-entry.js)
+  WithDevTools (node_modules\expo\src\launch\withDevTools.tsx)
+Android node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 263ms node_modules\expo-router\entry.js (1 module)
+Android node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 183ms node_modules\expo-router\entry.js (1 module)
+Android node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 492ms node_modules\expo-router\entry.js (1 module)
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+Android node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 281ms node_modules\expo-router\entry.js (1 module)
+ ERROR  Claim status history insert failed {"code": "42501", "details": null, "hint": null, "message": "new row violates row-level security policy for table \"claim_status_history\""} 
+
+Call Stack
+  construct (apps\mobile-app\<native>)
+  apply (apps\mobile-app\<native>)
+  _construct (node_modules\@babel\runtime\helpers\construct.js)
+  Wrapper (node_modules\@babel\runtime\helpers\wrapNativeSuper.js)
+  construct (apps\mobile-app\<native>)
+  _callSuper (node_modules\@babel\runtime\helpers\callSuper.js)
+  NamelessError (node_modules\@expo\metro-runtime\src\metroServerLogs.native.ts)
+  captureCurrentStack (node_modules\@expo\metro-runtime\src\metroServerLogs.native.ts)
+  HMRClient.log (node_modules\@expo\metro-runtime\src\metroServerLogs.native.ts)
+  console.level (apps\mobile-app\node_modules\react-native\Libraries\Core\setUpDeveloperTools.js)
+  recordClaimEvent (apps\mobile-app\lib\claim-notifications.ts)
+  next (apps\mobile-app\<native>)
+  asyncGeneratorStep (node_modules\@babel\runtime\helpers\asyncToGenerator.js)
+  _next (node_modules\@babel\runtime\helpers\asyncToGenerator.js)
+  tryCallOne (address at (apps\mobile-app\InternalBytecode.js:1:1180)
+  anonymous (address at (apps\mobile-app\InternalBytecode.js:1:1874)
+ ERROR  Report accident submit failed {"customer": {"address": "HN17 VJ Nagar", "assigned_agent_id": "acb05ddc-7d06-4d45-89bd-9f3bb04a432a", "city": "Jabalpur", "company_name": "Naveen Enterprises", "contact_name": "Naveen Singh", "created_at": "2026-06-18T10:33:35.40387+00:00", "created_by": "749043ed-7854-4fdf-ba97-967e6b79555f", "customer_code": "CUST-1781778815301", "email": "naveens@gmail.com", "id": "dcc8a6d0-3a60-47ad-ba9c-e10757d34d36", "onboarding_status": "active", "phone": "9856321458", "postal_code": "482001", "profile_id": "ed900d5d-e43e-4100-a297-0d5dfd6c45c6", "state": "MP", "updated_at": "2026-06-18T10:33:35.40387+00:00", "updated_by": "749043ed-7854-4fdf-ba97-967e6b79555f"}, "error": {"code": "42501", "details": null, "hint": null, "message": "new row violates row-level security policy for table \"claim_status_history\""}} 
+
+Call Stack
+  construct (apps\mobile-app\<native>)
+  apply (apps\mobile-app\<native>)
+  _construct (node_modules\@babel\runtime\helpers\construct.js)
+  Wrapper (node_modules\@babel\runtime\helpers\wrapNativeSuper.js)
+  construct (apps\mobile-app\<native>)
+  _callSuper (node_modules\@babel\runtime\helpers\callSuper.js)
+  NamelessError (node_modules\@expo\metro-runtime\src\metroServerLogs.native.ts)
+  captureCurrentStack (node_modules\@expo\metro-runtime\src\metroServerLogs.native.ts)
+  HMRClient.log (node_modules\@expo\metro-runtime\src\metroServerLogs.native.ts)
+  console.level (apps\mobile-app\node_modules\react-native\Libraries\Core\setUpDeveloperTools.js)
+  submit (apps\mobile-app\app\customer\report-accident.tsx)
+  throw (apps\mobile-app\<native>)
+  asyncGeneratorStep (node_modules\@babel\runtime\helpers\asyncToGenerator.js)
+  _throw (node_modules\@babel\runtime\helpers\asyncToGenerator.js)
+  tryCallOne (address at (apps\mobile-app\InternalBytecode.js:1:1180)
+  anonymous (address at (apps\mobile-app\InternalBytecode.js:1:1874)
+ ERROR  Claim status history insert failed {"code": "42501", "details": null, "hint": null, "message": "new row violates row-level security policy for table \"claim_status_history\""} 
+
+Call Stack
+  construct (apps\mobile-app\<native>)
+  apply (apps\mobile-app\<native>)
+  _construct (node_modules\@babel\runtime\helpers\construct.js)
+  Wrapper (node_modules\@babel\runtime\helpers\wrapNativeSuper.js)
+  construct (apps\mobile-app\<native>)
+  _callSuper (node_modules\@babel\runtime\helpers\callSuper.js)
+  NamelessError (node_modules\@expo\metro-runtime\src\metroServerLogs.native.ts)
+  captureCurrentStack (node_modules\@expo\metro-runtime\src\metroServerLogs.native.ts)
+  HMRClient.log (node_modules\@expo\metro-runtime\src\metroServerLogs.native.ts)
+  console.level (apps\mobile-app\node_modules\react-native\Libraries\Core\setUpDeveloperTools.js)
+  recordClaimEvent (apps\mobile-app\lib\claim-notifications.ts)
+  next (apps\mobile-app\<native>)
+  asyncGeneratorStep (node_modules\@babel\runtime\helpers\asyncToGenerator.js)
+  _next (node_modules\@babel\runtime\helpers\asyncToGenerator.js)
+  tryCallOne (address at (apps\mobile-app\InternalBytecode.js:1:1180)
+  anonymous (address at (apps\mobile-app\InternalBytecode.js:1:1874)
+ ERROR  Report accident submit failed {"customer": {"address": "HN17 VJ Nagar", "assigned_agent_id": "acb05ddc-7d06-4d45-89bd-9f3bb04a432a", "city": "Jabalpur", "company_name": "Naveen Enterprises", "contact_name": "Naveen Singh", "created_at": "2026-06-18T10:33:35.40387+00:00", "created_by": "749043ed-7854-4fdf-ba97-967e6b79555f", "customer_code": "CUST-1781778815301", "email": "naveens@gmail.com", "id": "dcc8a6d0-3a60-47ad-ba9c-e10757d34d36", "onboarding_status": "active", "phone": "9856321458", "postal_code": "482001", "profile_id": "ed900d5d-e43e-4100-a297-0d5dfd6c45c6", "state": "MP", "updated_at": "2026-06-18T10:33:35.40387+00:00", "updated_by": "749043ed-7854-4fdf-ba97-967e6b79555f"}, "error": {"code": "42501", "details": null, "hint": null, "message": "new row violates row-level security policy for table \"claim_status_history\""}} 
+
+Call Stack
+  construct (apps\mobile-app\<native>)
+  apply (apps\mobile-app\<native>)
+  _construct (node_modules\@babel\runtime\helpers\construct.js)
+  Wrapper (node_modules\@babel\runtime\helpers\wrapNativeSuper.js)
+  construct (apps\mobile-app\<native>)
+  _callSuper (node_modules\@babel\runtime\helpers\callSuper.js)
+  NamelessError (node_modules\@expo\metro-runtime\src\metroServerLogs.native.ts)
+  captureCurrentStack (node_modules\@expo\metro-runtime\src\metroServerLogs.native.ts)
+  HMRClient.log (node_modules\@expo\metro-runtime\src\metroServerLogs.native.ts)
+  console.level (apps\mobile-app\node_modules\react-native\Libraries\Core\setUpDeveloperTools.js)
+  submit (apps\mobile-app\app\customer\report-accident.tsx)
+  throw (apps\mobile-app\<native>)
+  asyncGeneratorStep (node_modules\@babel\runtime\helpers\asyncToGenerator.js)
+  _throw (node_modules\@babel\runtime\helpers\asyncToGenerator.js)
+  tryCallOne (address at (apps\mobile-app\InternalBytecode.js:1:1180)
+  anonymous (address at (apps\mobile-app\InternalBytecode.js:1:1874)
+Android node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 150ms node_modules\expo-router\entry.js (1 module)
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"
+ ERROR  Claim status history insert failed {"code": "42501", "details": null, "hint": null, "message": "new row violates row-level security policy for table \"claim_status_history\""} 
+
+Call Stack
+  construct (apps\mobile-app\<native>)
+  apply (apps\mobile-app\<native>)
+  _construct (node_modules\@babel\runtime\helpers\construct.js)
+  Wrapper (node_modules\@babel\runtime\helpers\wrapNativeSuper.js)
+  construct (apps\mobile-app\<native>)
+  _callSuper (node_modules\@babel\runtime\helpers\callSuper.js)
+  NamelessError (node_modules\@expo\metro-runtime\src\metroServerLogs.native.ts)
+  captureCurrentStack (node_modules\@expo\metro-runtime\src\metroServerLogs.native.ts)
+  HMRClient.log (node_modules\@expo\metro-runtime\src\metroServerLogs.native.ts)
+  console.level (apps\mobile-app\node_modules\react-native\Libraries\Core\setUpDeveloperTools.js)
+  recordClaimEvent (apps\mobile-app\lib\claim-notifications.ts)
+  next (apps\mobile-app\<native>)
+  asyncGeneratorStep (node_modules\@babel\runtime\helpers\asyncToGenerator.js)
+  _next (node_modules\@babel\runtime\helpers\asyncToGenerator.js)
+  tryCallOne (address at (apps\mobile-app\InternalBytecode.js:1:1180)
+  anonymous (address at (apps\mobile-app\InternalBytecode.js:1:1874)
+ WARN  "shield-file-outline" is not a valid icon name for family "material-community"

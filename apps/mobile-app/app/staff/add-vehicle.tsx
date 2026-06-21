@@ -1,10 +1,14 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { AppSearchSelect, AppSectionHeader } from '@/components/design-system';
 import { Button, Card, LoadingState, Message, Row, Screen, TextField } from '@/components/ui';
 import { getCurrentSession, getProfile, isValidProfile } from '@/lib/auth';
+import { canManageBusinessRecords } from '@/lib/permissions';
 import { supabase } from '@/lib/supabase';
+import { palette, radii, roleTheme } from '@/lib/theme';
 import type { Customer } from '@/lib/types';
 
 export default function StaffAddVehicleScreen() {
@@ -26,7 +30,7 @@ export default function StaffAddVehicleScreen() {
       const session = await getCurrentSession();
       if (!session?.user) return router.replace('/login');
       const profile = await getProfile(session.user.id);
-      if (!isValidProfile(profile) || profile.role !== 'manager') return router.replace('/access-denied');
+      if (!isValidProfile(profile) || !canManageBusinessRecords(profile.role)) return router.replace('/access-denied');
       const { data } = await supabase.from('customers').select('*').order('contact_name');
       setCustomers(data ?? []);
       setLoading(false);
@@ -73,6 +77,15 @@ export default function StaffAddVehicleScreen() {
     <Screen title="Add Vehicle" subtitle="Add a vehicle record to a customer profile.">
       {message ? <Message type="error">{message}</Message> : null}
       {success ? <Message type="success">{success}</Message> : null}
+      <View style={styles.setupHero}>
+        <View style={styles.setupIcon}>
+          <MaterialCommunityIcons name="truck-plus-outline" size={24} color={roleTheme.ops.accent} />
+        </View>
+        <View style={styles.setupCopy}>
+          <Text style={styles.setupTitle}>Vehicle record</Text>
+          <Text style={styles.setupText}>Select a customer, register the vehicle, and keep policy setup ready for the next step.</Text>
+        </View>
+      </View>
       <Card>
         <AppSectionHeader title="Customer" />
         <AppSearchSelect
@@ -98,6 +111,14 @@ export default function StaffAddVehicleScreen() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  setupHero: { borderRadius: radii.md, backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.line, padding: 15, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 13, shadowColor: palette.ink, shadowOpacity: 0.04, shadowRadius: 10, elevation: 1 },
+  setupIcon: { width: 48, height: 48, borderRadius: radii.sm, backgroundColor: roleTheme.ops.soft, alignItems: 'center', justifyContent: 'center' },
+  setupCopy: { flex: 1, minWidth: 0 },
+  setupTitle: { color: palette.ink, fontSize: 18, fontWeight: '900', lineHeight: 23 },
+  setupText: { color: palette.slate, fontSize: 13, fontWeight: '500', lineHeight: 18, marginTop: 4 },
+});
 
 function nullable(value: string) {
   const trimmed = value.trim();

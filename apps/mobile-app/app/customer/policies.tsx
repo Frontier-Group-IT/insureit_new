@@ -1,9 +1,12 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { Card, EmptyState, LoadingState, Row, Screen } from '@/components/ui';
+import { EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession, getCustomerForUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
+import { palette, radii } from '@/lib/theme';
 import type { Policy } from '@/lib/types';
 
 export default function PoliciesScreen() {
@@ -28,15 +31,31 @@ export default function PoliciesScreen() {
   if (loading) return <Screen title="My Policies"><LoadingState /></Screen>;
 
   return (
-    <Screen title="My Policies" showLogout>
-      {policies.length === 0 ? <EmptyState title="No policies yet" body="Your assigned team will add policy records for claim support." /> : policies.map((policy) => (
-        <Card key={policy.id}>
-          <Row label="Policy number" value={policy.policy_no} />
-          <Row label="Type" value={policy.policy_type} />
-          <Row label="Start date" value={policy.start_date} />
-          <Row label="End date" value={policy.end_date} />
-        </Card>
+    <Screen title="My Policies" subtitle={`${policies.length} polic${policies.length === 1 ? 'y' : 'ies'}`} showLogout>
+      {policies.length === 0 ? <EmptyState title="No policies yet" body="Policy records will appear here." /> : policies.map((policy) => (
+        <View key={policy.id} style={styles.policyRow}>
+          <View style={styles.policyIcon}>
+            <MaterialCommunityIcons name="shield-outline" size={21} color={palette.emerald} />
+          </View>
+          <View style={styles.policyCopy}>
+            <Text style={styles.policyNo}>{policy.policy_no}</Text>
+            <Text style={styles.policyMeta} numberOfLines={1}>{policy.policy_type || 'Policy'} · Ends {formatDate(policy.end_date)}</Text>
+          </View>
+        </View>
       ))}
     </Screen>
   );
 }
+
+function formatDate(value?: string | null) {
+  if (!value) return '-';
+  return new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+const styles = StyleSheet.create({
+  policyRow: { flexDirection: 'row', alignItems: 'center', gap: 11, backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.line, borderRadius: radii.sm, padding: 11, marginBottom: 8 },
+  policyIcon: { width: 40, height: 40, borderRadius: radii.sm, backgroundColor: palette.emeraldSoft, alignItems: 'center', justifyContent: 'center' },
+  policyCopy: { flex: 1, minWidth: 0 },
+  policyNo: { color: palette.ink, fontSize: 15, fontWeight: '700' },
+  policyMeta: { color: palette.slate, fontSize: 12, fontWeight: '500', marginTop: 3 },
+});

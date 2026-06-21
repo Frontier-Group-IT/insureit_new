@@ -1,0 +1,7 @@
+npm error Lifecycle script `start` failed with error:
+npm error code 4294967295
+npm error path C:\Users\HP\Desktop\Codex-Projects\InsureIT\apps\mobile-app
+npm error workspace @insureit/mobile-app@0.1.0
+npm error location C:\Users\HP\Desktop\Codex-Projects\InsureIT\apps\mobile-app
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c expo start --lan --port 8083 --clear

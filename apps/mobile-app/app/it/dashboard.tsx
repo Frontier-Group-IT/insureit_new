@@ -4,6 +4,7 @@ import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, PressableProps, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BrandLogo } from '@/components/first-look';
 import { LoadingState, Message } from '@/components/ui';
 import { getCurrentSession, getProfile, isValidProfile } from '@/lib/auth';
 import { canManageUsers, roleLabels, salesHierarchyRoles } from '@/lib/roles';
@@ -111,10 +112,7 @@ function Header({ name, onProfile }: { name: string; onProfile: () => void }) {
   return (
     <View style={styles.header}>
       <View style={styles.brandRow}>
-        <View style={styles.logoMark}>
-          <MaterialCommunityIcons name="shield-account" size={23} color="#0B1F3A" />
-        </View>
-        <Text style={styles.brand}>InsureIT</Text>
+        <BrandLogo width={138} style={styles.itLogo} />
         <Pressable accessibilityRole="button" onPress={onProfile} style={styles.avatar}>
           <Text style={styles.avatarText}>{initialFor(name)}</Text>
         </Pressable>
@@ -123,7 +121,7 @@ function Header({ name, onProfile }: { name: string; onProfile: () => void }) {
         <View style={styles.headerGlow} />
         <Text style={styles.headerEyebrow}>IT Super User</Text>
         <Text style={styles.headerTitle}>IT Control Center</Text>
-        <Text style={styles.headerSubtitle}>Manage users, roles, and organization hierarchy</Text>
+        <Text style={styles.headerSubtitle}>Manage access, roles, and service hierarchy</Text>
       </View>
     </View>
   );
@@ -136,7 +134,7 @@ function SummaryCards({ counts }: { counts: Counts }) {
     { label: 'Inactive Users', value: counts.inactiveUsers, icon: 'account-off-outline' as const, color: '#FFF4E5', accent: '#F79009' },
     { label: 'Sales Team', value: counts.salesUsers, icon: 'sitemap-outline' as const, color: '#EEF2FF', accent: '#4057C8' },
     { label: 'Agents', value: counts.agents, icon: 'briefcase-account-outline' as const, color: '#F0FDF4', accent: '#067647' },
-    { label: 'Customers', value: counts.customers, icon: 'card-account-details-outline' as const, color: '#FEEFEF', accent: '#B42318' },
+    { label: 'Customers', value: counts.customers, icon: 'truck-delivery-outline' as const, color: '#E5FAFD', accent: '#10AFC7' },
   ];
 
   return (
@@ -282,41 +280,42 @@ function formatDate(date?: string) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#EEF2F6' },
-  screen: { flex: 1, backgroundColor: '#EEF2F6' },
+  safeArea: { flex: 1, backgroundColor: '#F7FAF8' },
+  screen: { flex: 1, backgroundColor: '#F7FAF8' },
   content: { paddingHorizontal: 16, paddingBottom: 28 },
   header: { paddingTop: 8, marginBottom: 16 },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
   logoMark: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#D8DEE8' },
-  brand: { flex: 1, color: '#0B1F3A', fontSize: 22, fontWeight: '900' },
-  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#0B1F3A', alignItems: 'center', justifyContent: 'center' },
+  itLogo: { flex: 1, alignSelf: 'flex-start' },
+  brand: { flex: 1, color: '#17202F', fontSize: 22, fontWeight: '900' },
+  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#17202F', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#FFFFFF', fontSize: 16, fontWeight: '900' },
-  headerCard: { minHeight: 144, borderRadius: 26, backgroundColor: '#0B1F3A', padding: 18, overflow: 'hidden', shadowColor: '#0B1F3A', shadowOpacity: 0.16, shadowRadius: 16, elevation: 3 },
-  headerGlow: { position: 'absolute', width: 160, height: 160, borderRadius: 80, right: -44, top: -56, backgroundColor: 'rgba(24,160,88,0.28)' },
-  headerEyebrow: { color: '#99F6C8', fontSize: 12, fontWeight: '900', textTransform: 'uppercase', marginBottom: 8 },
-  headerTitle: { color: '#FFFFFF', fontSize: 28, fontWeight: '900', lineHeight: 34 },
-  headerSubtitle: { color: '#C7D7EA', fontSize: 14, lineHeight: 20, marginTop: 7 },
+  headerCard: { minHeight: 132, borderRadius: 26, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE7F0', padding: 18, overflow: 'hidden', shadowColor: '#17202F', shadowOpacity: 0.08, shadowRadius: 16, elevation: 3 },
+  headerGlow: { position: 'absolute', width: 160, height: 160, borderRadius: 80, right: -44, top: -56, backgroundColor: '#EAF3FF' },
+  headerEyebrow: { color: '#59687A', fontSize: 12, fontWeight: '900', textTransform: 'uppercase', marginBottom: 8 },
+  headerTitle: { color: '#17202F', fontSize: 27, fontWeight: '900', lineHeight: 33 },
+  headerSubtitle: { color: '#59687A', fontSize: 14, lineHeight: 20, marginTop: 7 },
   summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10, marginBottom: 16 },
-  summaryCard: { width: '48.3%', minHeight: 118, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8DEE8', padding: 14, shadowColor: '#0B1F3A', shadowOpacity: 0.06, shadowRadius: 12, elevation: 2 },
+  summaryCard: { width: '48.3%', minHeight: 118, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE7F0', padding: 14, shadowColor: '#17202F', shadowOpacity: 0.05, shadowRadius: 12, elevation: 2 },
   summaryIcon: { width: 40, height: 40, borderRadius: 15, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
-  summaryValue: { color: '#0B1F3A', fontSize: 27, fontWeight: '900' },
+  summaryValue: { color: '#17202F', fontSize: 27, fontWeight: '900' },
   summaryLabel: { color: '#667085', fontSize: 12, fontWeight: '800', marginTop: 2 },
   searchCard: { minHeight: 76, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#B9D5FF', padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16, shadowColor: '#0B63CE', shadowOpacity: 0.08, shadowRadius: 14, elevation: 2 },
   searchIcon: { width: 44, height: 44, borderRadius: 16, backgroundColor: '#E8F1FB', alignItems: 'center', justifyContent: 'center' },
   searchCopy: { flex: 1, minWidth: 0 },
-  searchTitle: { color: '#0B1F3A', fontSize: 16, fontWeight: '900' },
+  searchTitle: { color: '#17202F', fontSize: 16, fontWeight: '900' },
   searchText: { color: '#667085', fontSize: 12, marginTop: 3 },
   section: { marginBottom: 16 },
-  sectionTitle: { color: '#0B1F3A', fontSize: 20, fontWeight: '900', marginBottom: 11 },
+  sectionTitle: { color: '#17202F', fontSize: 20, fontWeight: '900', marginBottom: 11 },
   toolGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
   toolSlot: { width: '48.3%' },
-  toolCard: { width: '100%', minHeight: 136, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8DEE8', padding: 14, shadowColor: '#0B1F3A', shadowOpacity: 0.06, shadowRadius: 12, elevation: 2 },
+  toolCard: { width: '100%', minHeight: 136, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE7F0', padding: 14, shadowColor: '#17202F', shadowOpacity: 0.05, shadowRadius: 12, elevation: 2 },
   toolIcon: { width: 42, height: 42, borderRadius: 15, alignItems: 'center', justifyContent: 'center', marginBottom: 11 },
-  toolTitle: { color: '#0B1F3A', fontSize: 14, fontWeight: '900', lineHeight: 18 },
+  toolTitle: { color: '#17202F', fontSize: 14, fontWeight: '900', lineHeight: 18 },
   toolDescription: { color: '#667085', fontSize: 11, lineHeight: 16, marginTop: 5 },
-  card: { borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8DEE8', padding: 16, marginBottom: 16, shadowColor: '#0B1F3A', shadowOpacity: 0.06, shadowRadius: 12, elevation: 2 },
+  card: { borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE7F0', padding: 16, marginBottom: 16, shadowColor: '#17202F', shadowOpacity: 0.05, shadowRadius: 12, elevation: 2 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14 },
-  cardTitle: { color: '#0B1F3A', fontSize: 18, fontWeight: '900' },
+  cardTitle: { color: '#17202F', fontSize: 18, fontWeight: '900' },
   cardText: { color: '#667085', fontSize: 12, marginTop: 3 },
   smallAction: { borderRadius: 14, backgroundColor: '#E8F1FB', minHeight: 38, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' },
   smallActionText: { color: '#0B63CE', fontSize: 12, fontWeight: '900' },
@@ -324,18 +323,18 @@ const styles = StyleSheet.create({
   hierarchyItem: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 30 },
   hierarchyDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#C7D7EA' },
   hierarchyDotActive: { backgroundColor: '#18A058' },
-  hierarchyText: { color: '#0B1F3A', fontSize: 13, fontWeight: '800' },
+  hierarchyText: { color: '#17202F', fontSize: 13, fontWeight: '800' },
   activityList: { gap: 11, marginTop: 12 },
   activityRow: { flexDirection: 'row', alignItems: 'center', gap: 11 },
   activityStatus: { width: 10, height: 38, borderRadius: 5 },
   activityActive: { backgroundColor: '#18A058' },
   activityInactive: { backgroundColor: '#F79009' },
   activityCopy: { flex: 1, minWidth: 0 },
-  activityName: { color: '#0B1F3A', fontSize: 14, fontWeight: '900' },
+  activityName: { color: '#17202F', fontSize: 14, fontWeight: '900' },
   activityMeta: { color: '#667085', fontSize: 12, marginTop: 3 },
   emptyState: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 18, backgroundColor: '#F8FAFC', padding: 14, marginTop: 12 },
   emptyCopy: { flex: 1 },
-  emptyTitle: { color: '#0B1F3A', fontSize: 15, fontWeight: '900' },
+  emptyTitle: { color: '#17202F', fontSize: 15, fontWeight: '900' },
   emptyText: { color: '#667085', fontSize: 12, lineHeight: 17, marginTop: 3 },
   pressed: { opacity: 0.92 },
 });

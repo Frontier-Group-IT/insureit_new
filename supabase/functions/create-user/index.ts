@@ -10,6 +10,7 @@ const appRoles = new Set([
   "super_admin",
   "admin",
   "manager",
+  "backoffice_executive",
   "claim_processor",
   "field_executive",
   "director",
@@ -23,7 +24,7 @@ const appRoles = new Set([
 ]);
 
 const userManagementRoles = new Set(["it_super_user", "admin", "super_admin"]);
-const customerCreatorRoles = new Set(["manager", "it_super_user", "admin", "super_admin"]);
+const customerCreatorRoles = new Set(["manager", "backoffice_executive", "it_super_user", "admin", "super_admin"]);
 
 type CreateUserPayload = {
   email?: string;

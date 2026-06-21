@@ -1,0 +1,106 @@
+env: load .env
+env: export EXPO_PUBLIC_SUPABASE_URL EXPO_PUBLIC_SUPABASE_ANON_KEY EXPO_PUBLIC_DEMO_CUSTOMER_EMAIL EXPO_PUBLIC_DEMO_CUSTOMER_PASSWORD
+Starting project at C:\Users\HP\Desktop\Codex-Projects\InsureIT\apps\mobile-app
+Starting Metro Bundler
+Waiting on http://localhost:8081
+Logs for your project will appear below.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 2944ms node_modules\expo-router\entry.js (977 modules)
+ LOG  [web] Logs will appear in the browser console
+Android node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 94.7% (1186/1219)
+Android Bundled 4137ms node_modules\expo-router\entry.js (1282 modules)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 88ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 76ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 72ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+› Detected a change in metro.config.js. Restart the server to see the new results.
+› Detected a change in metro.config.js. Restart the server to see the new results.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 55ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 231ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 54ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 2803ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 114ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 138ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 79ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 84ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+ ERROR  SyntaxError: C:\Users\HP\Desktop\Codex-Projects\InsureIT\apps\mobile-app\app\staff\update-status.tsx: Unexpected token, expected "," (99:22)
+
+   97 |       const { error } = await supabase.from('claims').update({ current_status: nextStatus }).eq('id', claim.id);
+   98 |       if (error) {
+>  99 |         setMessage(We could not update this claim. );
+      |                       ^
+  100 |         return;
+  101 |       }
+  102 |       try {
+    at constructor (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:365:19)
+    at TypeScriptParserMixin.raise (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:6616:19)
+    at TypeScriptParserMixin.unexpected (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:6636:16)
+    at TypeScriptParserMixin.expect (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:6916:12)
+    at TypeScriptParserMixin.parseCallExpressionArguments (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:11260:14)
+    at TypeScriptParserMixin.parseCoverCallAndAsyncArrowHead (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:11203:29)
+    at TypeScriptParserMixin.parseSubscript (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:11137:19)
+    at TypeScriptParserMixin.parseSubscript (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:9289:18)
+    at TypeScriptParserMixin.parseSubscripts (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:11111:19)
+    at TypeScriptParserMixin.parseExprSubscripts (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:11102:17)
+    at TypeScriptParserMixin.parseUpdate (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:11083:21)
+    at TypeScriptParserMixin.parseMaybeUnary (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:11063:23)
+    at TypeScriptParserMixin.parseMaybeUnary (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:9854:18)
+    at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:10916:61)
+    at TypeScriptParserMixin.parseExprOps (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:10921:23)
+    at TypeScriptParserMixin.parseMaybeConditional (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:10898:23)
+    at TypeScriptParserMixin.parseMaybeAssign (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:10848:21)
+    at TypeScriptParserMixin.parseMaybeAssign (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:9803:20)
+    at TypeScriptParserMixin.parseExpressionBase (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:10801:23)
+    at C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:10797:39
+    at TypeScriptParserMixin.allowInAnd (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:12438:16)
+    at TypeScriptParserMixin.parseExpression (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:10797:17)
+    at TypeScriptParserMixin.parseStatementContent (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:12912:23)
+    at TypeScriptParserMixin.parseStatementContent (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:9525:18)
+    at TypeScriptParserMixin.parseStatementLike (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:12784:17)
+    at TypeScriptParserMixin.parseStatementListItem (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:12764:17)
+    at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:13333:61)
+    at TypeScriptParserMixin.parseBlockBody (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:13326:10)
+    at TypeScriptParserMixin.parseBlock (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:13314:10)
+    at TypeScriptParserMixin.parseStatementContent (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:12875:21)
+    at TypeScriptParserMixin.parseStatementContent (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:9525:18)
+    at TypeScriptParserMixin.parseStatementLike (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:12784:17)
+    at TypeScriptParserMixin.parseStatementOrSloppyAnnexBFunctionDeclaration (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:12774:17)
+    at TypeScriptParserMixin.parseIfStatement (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:13147:28)
+    at TypeScriptParserMixin.parseStatementContent (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:12813:21)
+    at TypeScriptParserMixin.parseStatementContent (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:9525:18)
+    at TypeScriptParserMixin.parseStatementLike (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:12784:17)
+    at TypeScriptParserMixin.parseStatementListItem (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:12764:17)
+    at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:13333:61)
+    at TypeScriptParserMixin.parseBlockBody (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:13326:10)
+    at TypeScriptParserMixin.parseBlock (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:13314:10)
+    at TypeScriptParserMixin.parseTryStatement (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:13222:23)
+    at TypeScriptParserMixin.parseStatementContent (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:12821:21)
+    at TypeScriptParserMixin.parseStatementContent (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:9525:18)
+    at TypeScriptParserMixin.parseStatementLike (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:12784:17)
+    at TypeScriptParserMixin.parseStatementListItem (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:12764:17)
+    at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:13333:61)
+    at TypeScriptParserMixin.parseBlockBody (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:13326:10)
+    at TypeScriptParserMixin.parseBlock (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:13314:10)
+    at TypeScriptParserMixin.parseFunctionBody (C:\Users\HP\Desktop\Codex-Projects\InsureIT\node_modules\@babel\parser\lib\index.js:12117:24)

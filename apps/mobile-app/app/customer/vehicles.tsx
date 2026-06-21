@@ -1,9 +1,13 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Card, EmptyState, LoadingState, Row, Screen } from '@/components/ui';
+import { AppSectionHeader } from '@/components/design-system';
+import { EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession, getCustomerForUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
+import { palette, radii } from '@/lib/theme';
 import type { Vehicle } from '@/lib/types';
 
 export default function VehiclesScreen() {
@@ -28,15 +32,41 @@ export default function VehiclesScreen() {
   if (loading) return <Screen title="My Vehicles"><LoadingState /></Screen>;
 
   return (
-    <Screen title="My Vehicles" showLogout>
-      {vehicles.length === 0 ? <EmptyState title="No vehicles yet" body="Your assigned team will add vehicle records for claim support." /> : vehicles.map((vehicle) => (
-        <Card key={vehicle.id}>
-          <Row label="Vehicle number" value={vehicle.vehicle_no} />
-          <Row label="Type" value={vehicle.vehicle_type} />
-          <Row label="Make and model" value={[vehicle.make, vehicle.model].filter(Boolean).join(' ')} />
-          <Row label="Year" value={vehicle.year} />
-        </Card>
+    <Screen title="My Vehicles" subtitle={`${vehicles.length} vehicle${vehicles.length === 1 ? '' : 's'}`} showLogout>
+      <AppSectionHeader title="Vehicles & policies" />
+      {vehicles.length === 0 ? <EmptyState title="No vehicles yet" body="Vehicle records will appear here." /> : vehicles.map((vehicle) => (
+        <Pressable key={vehicle.id} accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/vehicle-detail', params: { id: vehicle.id } })} style={styles.vehicleRow}>
+          <View style={styles.vehicleWash} />
+          <View style={styles.vehicleIcon}>
+            <MaterialCommunityIcons name={vehicleIcon(vehicle.vehicle_type)} size={24} color={palette.blue} />
+          </View>
+          <View style={styles.vehicleCopy}>
+            <Text style={styles.vehicleNo}>{vehicle.vehicle_no}</Text>
+            <Text style={styles.vehicleMeta} numberOfLines={1}>{[vehicle.make, vehicle.model].filter(Boolean).join(' ') || vehicle.vehicle_type || 'Vehicle'}</Text>
+          </View>
+          {vehicle.year ? <View style={styles.yearPill}><Text style={styles.vehicleYear}>{vehicle.year}</Text></View> : null}
+          <MaterialCommunityIcons name="chevron-right" size={22} color={palette.slate} />
+        </Pressable>
       ))}
     </Screen>
   );
 }
+
+function vehicleIcon(type?: string | null): keyof typeof MaterialCommunityIcons.glyphMap {
+  const normalized = type?.toLowerCase() ?? '';
+  if (normalized.includes('bus')) return 'bus';
+  if (normalized.includes('tanker')) return 'truck-cargo-container';
+  if (normalized.includes('trailer')) return 'truck-trailer';
+  return 'truck-outline';
+}
+
+const styles = StyleSheet.create({
+  vehicleRow: { flexDirection: 'row', alignItems: 'center', gap: 11, backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.line, borderRadius: radii.md, padding: 12, marginBottom: 9, overflow: 'hidden' },
+  vehicleWash: { position: 'absolute', right: -45, top: -52, width: 132, height: 132, borderRadius: 66, backgroundColor: palette.blueSoft },
+  vehicleIcon: { width: 46, height: 46, borderRadius: radii.md, backgroundColor: palette.blueSoft, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#C8DAF2' },
+  vehicleCopy: { flex: 1, minWidth: 0 },
+  vehicleNo: { color: palette.ink, fontSize: 15, fontWeight: '700' },
+  vehicleMeta: { color: palette.slate, fontSize: 12, fontWeight: '500', marginTop: 3 },
+  yearPill: { minHeight: 30, borderRadius: 999, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.line },
+  vehicleYear: { color: palette.slate, fontSize: 12, fontWeight: '700' },
+});

@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { claimStatuses } from "@/components/data";
+import { claimStatuses, finalDocumentTypes, isClaimStatus, managerTransitions, replacementStatusFor, requiredDocumentTypesForStatus, verifiedStatusFor, type ClaimStatus } from "@/lib/claim-workflow";
 import { createServerSupabaseClient, getServerAccessToken, getAuthenticatedProfile } from "@/lib/auth-server";
-import { canManageUsers, isAppRole } from "@/lib/roles";
+import { canManageUsers, canUpdateClaimStage, canVerifyClaimDocuments, isAppRole } from "@/lib/roles";
 
 function textValue(formData: FormData, name: string) {
   const value = formData.get(name);
@@ -426,4 +426,192 @@ export async function updateClaimStatus(id: string, formData: FormData) {
   revalidatePath(`/claims/${id}`);
   revalidatePath("/claims");
   revalidatePath("/timeline");
+}
+type ClaimForWorkflow = {
+  id: string;
+  claim_no: string;
+  customer_id: string;
+  current_status: ClaimStatus;
+};
+
+type ClaimDocumentForWorkflow = {
+  id: string;
+  claim_id: string;
+  document_type: string;
+  verification_status: "pending" | "verified" | "rejected";
+};
+
+async function currentProfile() {
+  const accessToken = await getServerAccessToken();
+  const { profile } = await getAuthenticatedProfile(accessToken);
+  return profile;
+}
+
+async function requireClaimStagePermission() {
+  const profile = await currentProfile();
+  if (!canUpdateClaimStage(profile?.role)) {
+    throw new Error("You do not have permission to update claim workflow stages.");
+  }
+  return profile;
+}
+
+async function requireDocumentReviewPermission() {
+  const profile = await currentProfile();
+  if (!canVerifyClaimDocuments(profile?.role)) {
+    throw new Error("You do not have permission to verify claim documents.");
+  }
+  return profile;
+}
+
+async function insertClaimHistory(claimId: string, fromStatus: ClaimStatus | null, toStatus: ClaimStatus, notes: string | null, changedBy: string | null) {
+  const supabase = await createServerSupabaseClient();
+  const { error } = await supabase.from("claim_status_history").insert({
+    claim_id: claimId,
+    from_status: fromStatus,
+    to_status: toStatus,
+    notes,
+    changed_by: changedBy
+  });
+  if (error) throw new Error(error.message);
+}
+
+async function loadClaimForWorkflow(claimId: string) {
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from("claims")
+    .select("id, claim_no, customer_id, current_status")
+    .eq("id", claimId)
+    .maybeSingle<ClaimForWorkflow>();
+  if (error || !data) throw new Error(error?.message ?? "Claim not found.");
+  if (!isClaimStatus(data.current_status)) throw new Error("Claim has an unsupported status.");
+  return data;
+}
+
+async function loadDocumentsForClaim(claimId: string) {
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from("claim_documents")
+    .select("id, claim_id, document_type, verification_status")
+    .eq("claim_id", claimId)
+    .returns<ClaimDocumentForWorkflow[]>();
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+function allRequiredDocumentsVerified(claim: ClaimForWorkflow, documents: ClaimDocumentForWorkflow[]) {
+  const required = requiredDocumentTypesForStatus(claim.current_status);
+  return required.every((type) => documents.some((document) => document.document_type === type && document.verification_status === "verified"));
+}
+
+export async function reviewClaimDocument(claimId: string, documentId: string, verificationStatus: "verified" | "rejected", formData: FormData) {
+  const profile = await requireDocumentReviewPermission();
+  const supabase = await createServerSupabaseClient();
+  const claim = await loadClaimForWorkflow(claimId);
+  const reason = textValue(formData, "reason");
+
+  const { data: document, error: documentError } = await supabase
+    .from("claim_documents")
+    .select("id, claim_id, document_type, verification_status")
+    .eq("id", documentId)
+    .eq("claim_id", claimId)
+    .maybeSingle<ClaimDocumentForWorkflow>();
+  if (documentError || !document) throw new Error(documentError?.message ?? "Document not found.");
+
+  const { error: reviewError } = await supabase.from("claim_documents").update({
+    verification_status: verificationStatus,
+    verified_by: profile?.id ?? null,
+    verified_at: new Date().toISOString(),
+    rejection_reason: verificationStatus === "rejected" ? reason ?? "Reupload requested by claim desk" : null
+  }).eq("id", documentId);
+  if (reviewError) throw new Error(reviewError.message);
+
+  if (verificationStatus === "rejected") {
+    const nextStatus = replacementStatusFor(claim.current_status);
+    if (nextStatus !== claim.current_status) {
+      const { error } = await supabase.from("claims").update({ current_status: nextStatus }).eq("id", claimId);
+      if (error) throw new Error(error.message);
+      await insertClaimHistory(claimId, claim.current_status, nextStatus, reason ?? `Reupload requested for ${document.document_type}.`, profile?.id ?? null);
+    }
+  } else {
+    const documents = (await loadDocumentsForClaim(claimId)).map((item) => item.id === documentId ? { ...item, verification_status: "verified" as const } : item);
+    const nextStatus = verifiedStatusFor(claim.current_status);
+    if (nextStatus && nextStatus !== claim.current_status && allRequiredDocumentsVerified(claim, documents)) {
+      const { error } = await supabase.from("claims").update({ current_status: nextStatus }).eq("id", claimId);
+      if (error) throw new Error(error.message);
+      await insertClaimHistory(claimId, claim.current_status, nextStatus, "All required documents verified by claim desk.", profile?.id ?? null);
+    }
+  }
+
+  revalidatePath(`/claims/${claimId}`);
+  revalidatePath("/claims");
+  revalidatePath("/dashboard");
+}
+
+export async function requestFinalDocuments(claimId: string, formData: FormData) {
+  const profile = await requireClaimStagePermission();
+  const supabase = await createServerSupabaseClient();
+  const claim = await loadClaimForWorkflow(claimId);
+  const notes = textValue(formData, "notes") ?? "Final documents requested from customer.";
+
+  const { error: taskError } = await supabase.from("claim_tasks").insert(finalDocumentTypes.map((type) => ({
+    claim_id: claimId,
+    title: `Final document: ${type}`,
+    description: "Customer must upload this final claim document.",
+    status: "open" as const,
+    created_by: profile?.id ?? null
+  })));
+  if (taskError) throw new Error(taskError.message);
+
+  const nextStatus: ClaimStatus = "Final Documents Awaited";
+  const { error } = await supabase.from("claims").update({ current_status: nextStatus }).eq("id", claimId);
+  if (error) throw new Error(error.message);
+  await insertClaimHistory(claimId, claim.current_status, nextStatus, notes, profile?.id ?? null);
+
+  revalidatePath(`/claims/${claimId}`);
+  revalidatePath("/claims");
+  revalidatePath("/dashboard");
+}
+
+function stageDetailsFromForm(formData: FormData) {
+  const details: Record<string, string | number> = {};
+  for (const [key, value] of formData.entries()) {
+    if (key === "notes" || key === "next_status" || key === "current_status") continue;
+    if (typeof value !== "string" || !value.trim()) continue;
+    const numericValue = Number(value.replace(/,/g, ""));
+    details[key] = Number.isFinite(numericValue) && /amount|tds|gst|labour|parts|bill|received/i.test(key) ? numericValue : value.trim();
+  }
+  return details;
+}
+
+export async function advanceClaimWorkflow(claimId: string, formData: FormData) {
+  const profile = await requireClaimStagePermission();
+  const supabase = await createServerSupabaseClient();
+  const claim = await loadClaimForWorkflow(claimId);
+  const requestedStatus = textValue(formData, "next_status");
+  const nextStatus = isClaimStatus(requestedStatus) ? requestedStatus : null;
+  const allowedStatus = managerTransitions[claim.current_status];
+  const notes = textValue(formData, "notes") ?? (nextStatus ? `Claim moved to ${nextStatus}.` : null);
+
+  if (!nextStatus || nextStatus !== allowedStatus) {
+    throw new Error("This status change is not allowed for the current claim stage.");
+  }
+
+  const { error } = await supabase.from("claims").update({ current_status: nextStatus }).eq("id", claimId);
+  if (error) throw new Error(error.message);
+
+  const details = stageDetailsFromForm(formData);
+  if (Object.keys(details).length) {
+    const { error: detailError } = await supabase.from("claim_stage_details").insert({
+      claim_id: claimId,
+      stage: nextStatus,
+      details,
+      created_by: profile?.id ?? null
+    });
+    if (detailError) throw new Error(detailError.message);
+  }
+
+  await insertClaimHistory(claimId, claim.current_status, nextStatus, notes, profile?.id ?? null);
+  revalidatePath(`/claims/${claimId}`);
+  revalidatePath("/claims");
+  revalidatePath("/dashboard");
 }

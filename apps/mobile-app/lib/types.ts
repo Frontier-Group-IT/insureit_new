@@ -7,6 +7,7 @@ export type AppRole =
   | 'sales_manager'
   | 'agent'
   | 'it_super_user'
+  | 'backoffice_executive'
   | 'field_executive'
   | 'claim_processor'
   | 'manager'
@@ -16,15 +17,38 @@ export type AppRole =
 export type ClaimStatus =
   | 'Draft'
   | 'Accident Reported'
+  | 'Initial Documents Pending'
+  | 'Initial Documents Verification Pending'
+  | 'Initial Documents Submitted'
+  | 'Initial Documents Verified'
   | 'Documents Pending'
   | 'Documents Submitted'
   | 'Claim Intimated'
   | 'Surveyor Appointed'
   | 'Vehicle Inspected'
+  | 'Final Documents Awaited'
+  | 'Final Documents Verification Pending'
+  | 'Final Documents Submitted'
+  | 'Final Documents Verified'
+  | 'Claim Intimation'
+  | 'Final Surveyor Details'
+  | 'Survey Status'
+  | 'Survey Done'
+  | 'Work Approval Status'
+  | 'Work Approval Received'
+  | 'Under Repair'
+  | 'Repair Done'
+  | 'RA Intimation'
+  | 'RA Intimation Done'
+  | 'DO Status'
+  | 'Payment Stage'
+  | 'Claim Completion In Progress'
+  | 'Claim Complete'
   | 'Estimate Submitted'
   | 'Approval Pending'
   | 'Repair Started'
   | 'Repair Completed'
+  | 'DO Submitted'
   | 'Final Bill Submitted'
   | 'Settlement Under Process'
   | 'Settled'
@@ -71,6 +95,11 @@ type Tables = {
     Insert: { claim_id: string; customer_id: string; document_type: string; file_name: string; storage_bucket?: string; storage_path: string; mime_type?: string | null; file_size?: number | null; uploaded_by?: string | null };
     Update: Partial<Tables['claim_documents']['Insert']> & { verification_status?: 'pending' | 'verified' | 'rejected'; verified_by?: string | null; verified_at?: string | null; rejection_reason?: string | null };
   };
+  claim_stage_details: {
+    Row: RowBase & { claim_id: string; stage: ClaimStatus; details: Json; created_by: string | null };
+    Insert: { claim_id: string; stage: ClaimStatus; details?: Json; created_by?: string | null };
+    Update: Partial<Tables['claim_stage_details']['Insert']>;
+  };
   claim_status_history: {
     Row: RowBase & { claim_id: string; from_status: ClaimStatus | null; to_status: ClaimStatus; notes: string | null; changed_by: string | null };
     Insert: { claim_id: string; from_status?: ClaimStatus | null; to_status: ClaimStatus; notes?: string | null; changed_by?: string | null };
@@ -80,6 +109,11 @@ type Tables = {
     Row: RowBase & { claim_id: string; assigned_to: string | null; title: string; description: string | null; due_date: string | null; status: 'open' | 'in_progress' | 'completed' | 'cancelled'; completed_at: string | null; created_by: string | null };
     Insert: { claim_id: string; assigned_to?: string | null; title: string; description?: string | null; due_date?: string | null; status?: 'open' | 'in_progress' | 'completed' | 'cancelled'; created_by?: string | null; completed_at?: string | null };
     Update: Partial<Tables['claim_tasks']['Insert']>;
+  };
+  notifications: {
+    Row: RowBase & { profile_id: string | null; customer_id: string | null; claim_id: string | null; title: string; message: string; status: 'unread' | 'read' };
+    Insert: { profile_id?: string | null; customer_id?: string | null; claim_id?: string | null; title: string; message: string; status?: 'unread' | 'read' };
+    Update: Partial<Tables['notifications']['Insert']>;
   };
 };
 
@@ -92,6 +126,7 @@ export type Database = {
       app_role: AppRole;
       claim_status: ClaimStatus;
       document_status: 'pending' | 'verified' | 'rejected';
+      notification_status: 'unread' | 'read';
       task_status: 'open' | 'in_progress' | 'completed' | 'cancelled';
     };
     CompositeTypes: Record<string, never>;
@@ -104,6 +139,12 @@ export type Vehicle = Tables['vehicles']['Row'];
 export type Policy = Tables['policies']['Row'];
 export type Claim = Tables['claims']['Row'];
 export type ClaimDocument = Tables['claim_documents']['Row'];
+export type ClaimStageDetail = Tables['claim_stage_details']['Row'];
 export type ClaimHistory = Tables['claim_status_history']['Row'];
 export type ClaimTask = Tables['claim_tasks']['Row'];
+export type Notification = Tables['notifications']['Row'];
 export type InsuranceCompany = Tables['insurance_companies']['Row'];
+
+
+
+

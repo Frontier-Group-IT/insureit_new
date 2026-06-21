@@ -6,14 +6,24 @@
     "orientation": "portrait",
     "scheme": "insureit",
     "userInterfaceStyle": "light",
+    "icon": "./assets/brand/insureit-app-icon-ice.png",
+    "splash": {
+      "image": "./assets/brand/insureit-brand-wave.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#F4F8FC"
+    },
     "assetBundlePatterns": [
       "**/*"
     ],
     "android": {
       "package": "com.insureit.mobile",
       "adaptiveIcon": {
-        "backgroundColor": "#0B1F3A"
-      }
+        "foregroundImage": "./assets/brand/insureit-app-icon-ice.png",
+        "backgroundColor": "#F4F8FC"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -33,6 +43,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "aadcb7a5-072b-4bf9-bc81-c52fabdd5caa"
+      }
+    },
+    "owner": "antnish"
   }
 }

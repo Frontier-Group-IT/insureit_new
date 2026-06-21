@@ -103,3 +103,17 @@ export function canManageUsers(role: string | null | undefined) {
 export function canViewOrganizationTree(role: string | null | undefined) {
   return Boolean(role && isAppRole(role) && organizationTreeRoles.includes(role));
 }
+export const claimWorkflowRoles: AppRole[] = ["manager", "claim_processor"];
+export const claimViewRoles: AppRole[] = ["manager", "claim_processor", "field_executive", "admin", "super_admin"];
+
+export function canUpdateClaimStage(role: string | null | undefined) {
+  return Boolean(role && isAppRole(role) && claimWorkflowRoles.includes(role));
+}
+
+export function canVerifyClaimDocuments(role: string | null | undefined) {
+  return canUpdateClaimStage(role);
+}
+
+export function canViewClaimWorkspace(role: string | null | undefined) {
+  return Boolean(role && isAppRole(role) && (claimViewRoles.includes(role) || portalRoles.includes(role)));
+}

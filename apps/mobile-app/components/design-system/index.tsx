@@ -41,7 +41,10 @@ export function AppBadge({ label, tone = 'neutral' }: { label: string; tone?: 's
 export function AppSectionHeader({ title, actionLabel, onAction }: { title: string; actionLabel?: string; onAction?: () => void }) {
   return (
     <View style={designStyles.sectionHeader}>
-      <Text style={designStyles.sectionTitle}>{title}</Text>
+      <View style={designStyles.sectionTitleWrap}>
+        <Text style={designStyles.sectionTitle}>{title}</Text>
+        <View style={designStyles.sectionUnderline} />
+      </View>
       {actionLabel && onAction ? (
         <Pressable accessibilityRole="button" onPress={onAction} style={designStyles.sectionAction}>
           <Text style={designStyles.sectionActionText}>{actionLabel}</Text>
@@ -160,11 +163,12 @@ export function AppSearchSelect<T extends { id: string }>({
   );
 }
 
-export function AppDatePicker({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+export function AppDatePicker({ label, value, onChange, formatDisplay }: { label: string; value: string; onChange: (value: string) => void; formatDisplay?: (value: string) => string }) {
   const [open, setOpen] = useState(false);
   const [visibleMonth, setVisibleMonth] = useState(() => monthStart(parseDate(value) ?? new Date()));
   const selectedDate = parseDate(value);
   const monthDays = useMemo(() => buildMonthDays(visibleMonth), [visibleMonth]);
+  const displayValue = value ? (formatDisplay?.(value) || formatReadableDate(value)) : '';
 
   function moveMonth(direction: -1 | 1) {
     setVisibleMonth((current) => new Date(current.getFullYear(), current.getMonth() + direction, 1));
@@ -175,8 +179,7 @@ export function AppDatePicker({ label, value, onChange }: { label: string; value
       <Text style={designStyles.label}>{label}</Text>
       <Pressable accessibilityRole="button" onPress={() => setOpen((current) => !current)} style={designStyles.selectButton}>
         <View style={designStyles.selectCopy}>
-          <Text style={[designStyles.selectTitle, !value && designStyles.selectPlaceholder]}>{value ? formatReadableDate(value) : 'Select date'}</Text>
-          {value ? <Text style={designStyles.selectSubtitle}>{value}</Text> : null}
+          <Text style={[designStyles.selectTitle, !value && designStyles.selectPlaceholder]}>{displayValue || 'Select date'}</Text>
         </View>
         <MaterialCommunityIcons name="calendar-month-outline" size={22} color="#667085" />
       </Pressable>
@@ -271,10 +274,10 @@ function formatReadableDate(value: string) {
 
 const designStyles = StyleSheet.create({
   inputWrap: { marginBottom: 12 },
-  label: { color: colors.navy, fontSize: 13, fontWeight: '900', marginBottom: 7 },
-  input: { minHeight: 52, borderRadius: 18, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, color: colors.navy, fontSize: 16, fontWeight: '600' },
-  badge: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
-  badgeText: { fontSize: 12, fontWeight: '900' },
+  label: { color: colors.navy, fontSize: 13, fontWeight: '700', marginBottom: 7 },
+  input: { minHeight: 54, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.9)', borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, color: colors.navy, fontSize: 16, fontWeight: '600' },
+  badge: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.65)' },
+  badgeText: { fontSize: 11, fontWeight: '800' },
   badgeSuccess: { backgroundColor: '#EAF8F0' },
   badgeWarning: { backgroundColor: '#FFF4E5' },
   badgeDanger: { backgroundColor: '#FEEFEF' },
@@ -285,16 +288,18 @@ const designStyles = StyleSheet.create({
   badgeDangerText: { color: colors.danger },
   badgeInfoText: { color: '#0B63CE' },
   badgeNeutralText: { color: colors.grey },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 },
+  sectionTitleWrap: { alignSelf: 'flex-start' },
   sectionTitle: { color: colors.navy, fontSize: 16, fontWeight: '900' },
-  sectionAction: { minHeight: 34, borderRadius: 13, backgroundColor: '#E8F1FB', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' },
-  sectionActionText: { color: '#0B63CE', fontSize: 12, fontWeight: '900' },
+  sectionUnderline: { width: 42, height: 3, borderRadius: 999, backgroundColor: '#10A66F', marginTop: 6 },
+  sectionAction: { minHeight: 34, borderRadius: 14, backgroundColor: '#E8F1FB', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#CFE4FF' },
+  sectionActionText: { color: '#0B63CE', fontSize: 12, fontWeight: '800' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 8, marginBottom: 10 },
-  statCard: { width: '48.4%', minHeight: 86, borderRadius: 18, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, padding: 11, shadowColor: colors.navy, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 },
+  statCard: { width: '48.4%', minHeight: 88, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.92)', borderWidth: 1, borderColor: 'rgba(224,231,240,0.95)', padding: 12, shadowColor: '#0B1220', shadowOpacity: 0.045, shadowRadius: 10, elevation: 1 },
   statTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  statIcon: { width: 34, height: 34, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  statValue: { color: colors.navy, fontSize: 22, fontWeight: '900' },
-  statLabel: { color: colors.grey, fontSize: 11, fontWeight: '800', marginTop: 7 },
+  statIcon: { width: 36, height: 36, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  statValue: { color: colors.navy, fontSize: 22, fontWeight: '800' },
+  statLabel: { color: colors.grey, fontSize: 11, fontWeight: '600', marginTop: 7 },
   timeline: { marginTop: 4 },
   timelineRow: { flexDirection: 'row', minHeight: 54 },
   timelineRail: { width: 28, alignItems: 'center' },
@@ -304,25 +309,25 @@ const designStyles = StyleSheet.create({
   timelineLine: { flex: 1, width: 2, backgroundColor: '#D8DEE8' },
   timelineLineComplete: { backgroundColor: colors.green },
   timelineCopy: { flex: 1, paddingBottom: 14 },
-  timelineTitle: { color: colors.grey, fontSize: 14, fontWeight: '800' },
-  timelineTitleCurrent: { color: colors.navy, fontWeight: '900' },
+  timelineTitle: { color: colors.grey, fontSize: 14, fontWeight: '600' },
+  timelineTitleCurrent: { color: colors.navy, fontWeight: '800' },
   timelineMeta: { color: colors.grey, fontSize: 12, marginTop: 3 },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.navy, alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: colors.white, fontSize: 16, fontWeight: '900' },
-  searchBar: { minHeight: 50, borderRadius: 18, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  searchInput: { flex: 1, color: colors.navy, fontSize: 15, fontWeight: '700' },
+  searchBar: { minHeight: 54, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.92)', borderWidth: 1, borderColor: 'rgba(224,231,240,0.96)', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12, shadowColor: '#0B1220', shadowOpacity: 0.04, shadowRadius: 10, elevation: 1 },
+  searchInput: { flex: 1, color: colors.navy, fontSize: 15, fontWeight: '600' },
   selectWrap: { marginBottom: 9 },
-  selectButton: { minHeight: 48, borderRadius: 15, borderWidth: 1, borderColor: colors.border, backgroundColor: '#F8FAFC', paddingHorizontal: 12, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  selectButton: { minHeight: 50, borderRadius: 17, borderWidth: 1, borderColor: colors.border, backgroundColor: 'rgba(255,255,255,0.92)', paddingHorizontal: 12, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', gap: 10 },
   selectCopy: { flex: 1, minWidth: 0 },
-  selectTitle: { color: colors.navy, fontSize: 15, fontWeight: '900' },
+  selectTitle: { color: colors.navy, fontSize: 15, fontWeight: '700' },
   selectPlaceholder: { color: '#8A94A6' },
   selectSubtitle: { color: colors.grey, fontSize: 12, fontWeight: '700', marginTop: 3 },
-  dropdownPanel: { borderRadius: 18, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white, padding: 10, marginTop: 8, shadowColor: colors.navy, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 },
+  dropdownPanel: { borderRadius: 18, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white, padding: 10, marginTop: 8, shadowColor: colors.navy, shadowOpacity: 0.1, shadowRadius: 14, elevation: 4 },
   dropdownSearch: { minHeight: 44, borderRadius: 15, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  dropdownInput: { flex: 1, color: colors.navy, fontSize: 14, fontWeight: '700' },
+  dropdownInput: { flex: 1, color: colors.navy, fontSize: 14, fontWeight: '500' },
   dropdownOption: { borderRadius: 14, padding: 11, backgroundColor: colors.white },
   dropdownOptionActive: { backgroundColor: '#E8F1FB' },
-  dropdownTitle: { color: colors.navy, fontSize: 14, fontWeight: '900' },
+  dropdownTitle: { color: colors.navy, fontSize: 14, fontWeight: '700' },
   dropdownTitleActive: { color: '#0B63CE' },
   dropdownSubtitle: { color: colors.grey, fontSize: 12, fontWeight: '700', marginTop: 3 },
   dropdownEmpty: { color: colors.grey, fontSize: 13, fontWeight: '800', padding: 12 },
@@ -340,3 +345,5 @@ const designStyles = StyleSheet.create({
   dateTextMuted: { color: colors.grey },
   dateTextSelected: { color: colors.white },
 });
+
+

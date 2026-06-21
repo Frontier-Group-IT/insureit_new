@@ -5,8 +5,9 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Button, EmptyState, LoadingState, Message, Screen } from '@/components/ui';
 import { getCurrentSession, getProfile, isValidProfile } from '@/lib/auth';
-import { canManageUsers, roleLabels } from '@/lib/roles';
+import { canManageUsers, isSalesHierarchyRole, roleLabels } from '@/lib/roles';
 import { supabase } from '@/lib/supabase';
+import { palette, radii } from '@/lib/theme';
 import type { Profile } from '@/lib/types';
 
 type OrgNode = Profile & { children: OrgNode[] };
@@ -23,7 +24,7 @@ export default function ItOrganizationScreen() {
         const session = await getCurrentSession();
         if (!session?.user) return router.replace('/login');
         const profile = await getProfile(session.user.id);
-        if (!isValidProfile(profile) || !canManageUsers(profile.role)) return router.replace('/access-denied');
+        if (!isValidProfile(profile) || (!canManageUsers(profile.role) && !isSalesHierarchyRole(profile.role))) return router.replace('/access-denied');
         const { data, error } = await supabase.from('profiles').select('*').order('full_name');
         if (error) throw error;
         setProfiles(data ?? []);
@@ -48,16 +49,16 @@ export default function ItOrganizationScreen() {
   }
 
   return (
-    <Screen title="Organization Hierarchy" subtitle="Reporting managers and team structure">
+    <Screen title="Organization" subtitle="Reporting structure">
       {message ? <Message type="error">{message}</Message> : null}
       <View style={styles.sectionBadge}>
         <MaterialCommunityIcons name="family-tree" size={22} color="#18A058" />
-        <Text style={styles.sectionBadgeText}>Live reporting map</Text>
+        <Text style={styles.sectionBadgeText}>Reporting map</Text>
       </View>
       {tree.length ? tree.map((node) => <NodeCard key={node.id} node={node} depth={0} />) : (
         <EmptyState title="No profiles found" body="Create users to start building the hierarchy." />
       )}
-      <Button label="Back to control center" variant="secondary" onPress={() => router.replace('/it/dashboard')} />
+      <Button label="Back" variant="secondary" onPress={() => router.back()} />
     </Screen>
   );
 }
@@ -95,17 +96,17 @@ function NodeCard({ node, depth }: { node: OrgNode; depth: number }) {
 }
 
 const styles = StyleSheet.create({
-  sectionBadge: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFFFFF', borderRadius: 20, borderWidth: 1, borderColor: '#D8DEE8', padding: 13, marginBottom: 14 },
-  sectionBadgeText: { color: '#0B1F3A', fontSize: 15, fontWeight: '900' },
-  nodeCard: { backgroundColor: '#FFFFFF', borderRadius: 18, padding: 13, marginBottom: 10, borderWidth: 1, borderColor: '#D8DEE8', shadowColor: '#0B1F3A', shadowOpacity: 0.05, shadowRadius: 10, elevation: 1 },
+  sectionBadge: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: palette.surface, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line, padding: 12, marginBottom: 10 },
+  sectionBadgeText: { color: palette.ink, fontSize: 15, fontWeight: '700' },
+  nodeCard: { backgroundColor: palette.surface, borderRadius: radii.sm, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: palette.line },
   nodeTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   statusDot: { width: 11, height: 11, borderRadius: 6 },
-  activeDot: { backgroundColor: '#18A058' },
-  inactiveDot: { backgroundColor: '#F79009' },
+  activeDot: { backgroundColor: palette.emerald },
+  inactiveDot: { backgroundColor: palette.amber },
   nodeCopy: { flex: 1, minWidth: 0 },
-  nodeName: { color: '#0B1F3A', fontSize: 15, fontWeight: '900' },
-  nodeMeta: { color: '#667085', fontSize: 12, marginTop: 3 },
-  statusText: { fontSize: 11, fontWeight: '900' },
+  nodeName: { color: palette.ink, fontSize: 15, fontWeight: '700' },
+  nodeMeta: { color: palette.slate, fontSize: 12, marginTop: 3 },
+  statusText: { fontSize: 11, fontWeight: '600' },
   activeText: { color: '#067647' },
   inactiveText: { color: '#B54708' },
   children: { marginTop: 10 },

@@ -1,10 +1,14 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { AppDatePicker, AppSearchSelect, AppSectionHeader } from '@/components/design-system';
 import { Button, Card, LoadingState, Message, Row, Screen, TextField } from '@/components/ui';
 import { getCurrentSession, getProfile, isValidProfile } from '@/lib/auth';
+import { canManageBusinessRecords } from '@/lib/permissions';
 import { supabase } from '@/lib/supabase';
+import { palette, radii, roleTheme } from '@/lib/theme';
 import type { Customer, InsuranceCompany, Vehicle } from '@/lib/types';
 
 export default function StaffAddPolicyScreen() {
@@ -32,7 +36,7 @@ export default function StaffAddPolicyScreen() {
       const session = await getCurrentSession();
       if (!session?.user) return router.replace('/login');
       const profile = await getProfile(session.user.id);
-      if (!isValidProfile(profile) || profile.role !== 'manager') return router.replace('/access-denied');
+      if (!isValidProfile(profile) || !canManageBusinessRecords(profile.role)) return router.replace('/access-denied');
       const [customerResult, vehicleResult, companyResult] = await Promise.all([
         supabase.from('customers').select('*').order('contact_name'),
         supabase.from('vehicles').select('*').order('vehicle_no'),
@@ -98,6 +102,15 @@ export default function StaffAddPolicyScreen() {
     <Screen title="Add Policy" subtitle="Add a policy record to a customer vehicle.">
       {message ? <Message type="error">{message}</Message> : null}
       {success ? <Message type="success">{success}</Message> : null}
+      <View style={styles.setupHero}>
+        <View style={styles.setupIcon}>
+          <MaterialCommunityIcons name="shield-plus-outline" size={24} color={roleTheme.ops.accent} />
+        </View>
+        <View style={styles.setupCopy}>
+          <Text style={styles.setupTitle}>Policy setup</Text>
+          <Text style={styles.setupText}>Choose the customer vehicle, insurer, and policy dates so claim intake has complete coverage data.</Text>
+        </View>
+      </View>
       <Card>
         <AppSectionHeader title="Customer" />
         <AppSearchSelect
@@ -150,3 +163,11 @@ export default function StaffAddPolicyScreen() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  setupHero: { borderRadius: radii.md, backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.line, padding: 15, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 13, shadowColor: palette.ink, shadowOpacity: 0.04, shadowRadius: 10, elevation: 1 },
+  setupIcon: { width: 48, height: 48, borderRadius: radii.sm, backgroundColor: roleTheme.ops.soft, alignItems: 'center', justifyContent: 'center' },
+  setupCopy: { flex: 1, minWidth: 0 },
+  setupTitle: { color: palette.ink, fontSize: 18, fontWeight: '900', lineHeight: 23 },
+  setupText: { color: palette.slate, fontSize: 13, fontWeight: '500', lineHeight: 18, marginTop: 4 },
+});

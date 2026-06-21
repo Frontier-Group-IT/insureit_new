@@ -1,0 +1,25 @@
+
+> @insureit/mobile-app@0.1.0 start
+> expo start --tunnel --port 8083 --clear
+
+env: load .env
+env: export EXPO_PUBLIC_SUPABASE_URL EXPO_PUBLIC_SUPABASE_ANON_KEY
+Starting project at C:\Users\HP\Desktop\Codex-Projects\InsureIT\apps\mobile-app
+Starting Metro Bundler
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+Tunnel connected.
+Tunnel ready.
+Waiting on http://localhost:8083
+Logs for your project will appear below.
+Android node_modules\expo-router\entry.js ▓▓░░░░░░░░░░░░░░ 16.0% ( 56/235)
+Android node_modules\expo-router\entry.js ▓▓▓▓░░░░░░░░░░░░ 26.9% (200/389)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 57.9% (560/736)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 73.5% (762/912)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 90.7% (1064/1127)
+Android node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.8% (1265/1266)
+Android Bundled 22391ms node_modules\expo-router\entry.js (1271 modules)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 44.9% (371/564)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 97.3% (933/946)
+Web Bundled 7711ms node_modules\expo-router\entry.js (967 modules)
+ LOG  [web] Logs will appear in the browser console

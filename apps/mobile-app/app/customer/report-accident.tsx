@@ -1,27 +1,27 @@
-import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AppSearchSelect, AppSectionHeader } from '@/components/design-system';
-import { Button, Card, Message, Row, Screen, TextField, colors } from '@/components/ui';
+import { AppDatePicker, AppSearchSelect, AppSectionHeader } from '@/components/design-system';
+import { Button, Card, Message, Row, Screen, TextField } from '@/components/ui';
 import { ensureCustomerForUser, getCurrentSession, getCustomerForUser, makeClaimNumber } from '@/lib/auth';
+import { recordClaimEvent } from '@/lib/claim-notifications';
 import { supabase } from '@/lib/supabase';
+import { palette, radii, roleTheme } from '@/lib/theme';
 import type { Customer, Policy, Vehicle } from '@/lib/types';
-
-type PickedPhoto = { uri: string; name: string; mimeType: string | null; size: number | null };
 
 export default function ReportAccidentScreen() {
   const router = useRouter();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState('');
-  const [accidentAt, setAccidentAt] = useState(() => new Date());
+  const [accidentDate, setAccidentDate] = useState('');
+  const [driverName, setDriverName] = useState('');
+  const [driverPhone, setDriverPhone] = useState('');
   const [location, setLocation] = useState('');
   const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [description, setDescription] = useState('');
-  const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const [message, setMessage] = useState('');
   const [locationMessage, setLocationMessage] = useState('');
   const [loadingLocation, setLoadingLocation] = useState(false);
@@ -44,7 +44,6 @@ export default function ReportAccidentScreen() {
       }
     }
     void load();
-    setAccidentAt(new Date());
     void captureLocation();
   }, [router]);
 
@@ -61,31 +60,19 @@ export default function ReportAccidentScreen() {
     else setMessage('');
   }
 
-  async function takePhoto() {
-    setMessage('');
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (permission.status !== ImagePicker.PermissionStatus.GRANTED) {
-      setMessage('Camera permission is required to take a vehicle photo.');
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 });
-    if (!result.canceled && result.assets[0]) setPhotoFromAsset(result.assets[0], 'vehicle-photo');
-  }
-
-  async function choosePhoto() {
-    setMessage('');
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
-    if (!result.canceled && result.assets[0]) setPhotoFromAsset(result.assets[0], 'vehicle-photo');
-  }
-
   async function submit() {
     setMessage('');
     if (!selectedVehicle || !selectedPolicy) {
       setMessage('Select a vehicle with active policy details.');
       return;
     }
-    if (!photo) {
-      setMessage('Add a vehicle photo to continue.');
+    if (!driverName.trim() || !driverPhone.trim()) {
+      setMessage('Enter driver name and phone number.');
+      return;
+    }
+    const accidentAt = buildAccidentDate(accidentDate);
+    if (!accidentAt) {
+      setMessage('Select the accident date and time.');
       return;
     }
     setSubmitting(true);
@@ -105,10 +92,10 @@ export default function ReportAccidentScreen() {
         vehicle_id: selectedVehicle.id,
         policy_id: selectedPolicy.id,
         insurance_company_id: selectedPolicy.insurance_company_id,
-        current_status: 'Accident Reported' as const,
+        current_status: 'Initial Documents Pending' as const,
         accident_at: accidentAt.toISOString(),
         accident_location: location.trim() || coordinatesToText(coordinates),
-        accident_description: description.trim(),
+        accident_description: buildAccidentDescription({ driverName, driverPhone }),
         estimated_loss: null,
         created_by: session.user.id,
       };
@@ -117,7 +104,19 @@ export default function ReportAccidentScreen() {
         setMessage(mapSubmitError(error));
         return;
       }
-      await uploadClaimFile({ customerId: customer.id, claimId: claim.id, file: photo, documentType: 'Vehicle photo', uploadedBy: session.user.id });
+      try {
+        await recordClaimEvent({
+          claimId: claim.id,
+          customerId: claim.customer_id,
+          fromStatus: null,
+          toStatus: claim.current_status,
+          notes: 'New accident claim reported by customer.',
+          changedBy: session.user.id,
+          title: `New claim ${claim.claim_no}`,
+        });
+      } catch (eventError) {
+        console.warn('Claim event logging skipped after customer claim creation', eventError);
+      }
       router.replace({ pathname: '/customer/upload-documents', params: { claimId: claim.id } });
     } catch (error) {
       console.error('Report accident submit failed', { error, customer });
@@ -128,7 +127,22 @@ export default function ReportAccidentScreen() {
   }
 
   return (
-    <Screen title="Report Accident" subtitle="Capture the accident and linked policy details.">
+    <Screen title="Report Accident" showTitleHeader={false}>
+      <View style={styles.intakeHero}>
+        <View style={styles.heroWash} />
+        <View style={styles.intakeIcon}>
+          <MaterialCommunityIcons name="truck-alert-outline" size={24} color={palette.surface} />
+        </View>
+        <View style={styles.intakeCopy}>
+          <Text style={styles.intakeEyebrow}>Commercial vehicle claim</Text>
+          <Text style={styles.intakeTitle}>Accident report</Text>
+        </View>
+      </View>
+      <View style={styles.stepStrip}>
+        <StepPill done={Boolean(selectedVehicle && selectedPolicy)} label="Vehicle" />
+        <StepPill done={Boolean(driverName && driverPhone && buildAccidentDate(accidentDate))} label="Accident" />
+        <StepPill done={Boolean(location || coordinates)} label="Location" />
+      </View>
       <Card>
         {message ? <Message type="error">{message}</Message> : null}
         <AppSectionHeader title="Vehicle" />
@@ -145,25 +159,22 @@ export default function ReportAccidentScreen() {
         <Row label="Policy period" value={selectedPolicy ? `${formatDate(selectedPolicy.start_date)} to ${formatDate(selectedPolicy.end_date)}` : null} />
       </Card>
       <Card>
-        <AppSectionHeader title="Accident" />
-        <View style={styles.readOnlyField}>
-          <Text style={styles.label}>Accident date and time</Text>
-          <Text style={styles.readOnlyValue}>{formatAccidentDate(accidentAt)}</Text>
-        </View>
+        <AppSectionHeader title="Driver and accident" />
+        <TextField label="Driver name" value={driverName} onChangeText={setDriverName} />
+        <TextField label="Driver phone" keyboardType="phone-pad" value={driverPhone} onChangeText={setDriverPhone} />
+        <AppDatePicker label="Accident date" value={accidentDate} onChange={setAccidentDate} formatDisplay={formatDisplayDate} />
         {locationMessage ? <Message type="info">{locationMessage}</Message> : null}
         <TextField label="Location" value={location} onChangeText={setLocation} />
-        <Pressable accessibilityRole="button" onPress={() => void captureLocation()} disabled={loadingLocation} style={styles.refreshLocationButton}>
-          <Text style={styles.refreshLocationText}>{loadingLocation ? 'Capturing location...' : 'Refresh location'}</Text>
-        </Pressable>
-        <TextField label="What happened" value={description} onChangeText={setDescription} multiline />
-      </Card>
-      <Card>
-        <AppSectionHeader title="Vehicle photo" />
-        <View style={styles.photoActions}>
-          <Button label="Open camera" variant="secondary" onPress={() => void takePhoto()} />
-          <Button label="Choose photo" variant="secondary" onPress={() => void choosePhoto()} />
+        <View style={styles.locationButtons}>
+          <Pressable accessibilityRole="button" onPress={() => void captureLocation()} disabled={loadingLocation} style={styles.refreshLocationButton}>
+            <MaterialCommunityIcons name="crosshairs-gps" size={17} color={roleTheme.customer.accent} />
+            <Text style={styles.refreshLocationText}>{loadingLocation ? 'Capturing...' : 'Refresh location'}</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" onPress={enterLocationManually} style={[styles.refreshLocationButton, styles.manualLocationButton]}>
+            <MaterialCommunityIcons name="map-marker-plus-outline" size={17} color={palette.blue} />
+            <Text style={[styles.refreshLocationText, styles.manualLocationText]}>Enter Manually</Text>
+          </Pressable>
         </View>
-        <Row label="Selected photo" value={photo?.name} />
         <Button label={submitting ? 'Saving claim...' : 'Continue'} onPress={submit} disabled={submitting} />
       </Card>
     </Screen>
@@ -191,35 +202,20 @@ export default function ReportAccidentScreen() {
     }
   }
 
-  function setPhotoFromAsset(asset: ImagePicker.ImagePickerAsset, fallbackName: string) {
-    setPhoto({
-      uri: asset.uri,
-      name: asset.fileName ?? `${fallbackName}-${Date.now()}.jpg`,
-      mimeType: asset.mimeType ?? 'image/jpeg',
-      size: asset.fileSize ?? null,
-    });
+  function enterLocationManually() {
+    setCoordinates(null);
+    setLocation('');
+    setLocationMessage('Type the accident location in the field above.');
   }
 }
 
-async function uploadClaimFile({ customerId, claimId, file, documentType, uploadedBy }: { customerId: string; claimId: string; file: PickedPhoto; documentType: string; uploadedBy: string }) {
-  const extension = file.name.includes('.') ? file.name.split('.').pop() : 'jpg';
-  const storagePath = `${customerId}/${claimId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-  const response = await fetch(file.uri);
-  const body = await response.arrayBuffer();
-  const uploadResult = await supabase.storage.from('claim-documents').upload(storagePath, body, { contentType: file.mimeType ?? 'image/jpeg', upsert: false });
-  if (uploadResult.error) throw uploadResult.error;
-  const { error } = await supabase.from('claim_documents').insert({
-    claim_id: claimId,
-    customer_id: customerId,
-    document_type: documentType,
-    file_name: file.name,
-    storage_bucket: 'claim-documents',
-    storage_path: storagePath,
-    mime_type: file.mimeType,
-    file_size: file.size,
-    uploaded_by: uploadedBy,
-  });
-  if (error) throw error;
+function StepPill({ done, label }: { done: boolean; label: string }) {
+  return (
+    <View style={[styles.stepPill, done && styles.stepPillDone]}>
+      <MaterialCommunityIcons name={done ? 'check-circle' : 'circle-outline'} size={15} color={done ? roleTheme.customer.accent : palette.slate} />
+      <Text style={[styles.stepPillText, done && styles.stepPillTextDone]}>{label}</Text>
+    </View>
+  );
 }
 
 async function reverseGeocode(latitude: number, longitude: number) {
@@ -238,12 +234,29 @@ function coordinatesToText(coordinates: { latitude: number; longitude: number } 
   return `${coordinates.latitude.toFixed(6)}, ${coordinates.longitude.toFixed(6)}`;
 }
 
-function formatAccidentDate(date: Date) {
-  return date.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+function buildAccidentDescription({ driverName, driverPhone }: { driverName: string; driverPhone: string }) {
+  return [
+    `Driver: ${driverName.trim()}`,
+    `Driver phone: ${driverPhone.trim()}`,
+  ].filter(Boolean).join('\n');
 }
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function buildAccidentDate(date: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const [year, month, day] = date.split('-').map(Number);
+  const parsed = new Date(year, month - 1, day, 12, 0, 0, 0);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+}
+
+function formatDisplayDate(value: string) {
+  const parsed = buildAccidentDate(value);
+  if (!parsed) return '';
+  return parsed.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function mapSubmitError(error: unknown) {
@@ -255,10 +268,21 @@ function mapSubmitError(error: unknown) {
 }
 
 const styles = StyleSheet.create({
-  readOnlyField: { marginBottom: 12 },
-  label: { color: colors.navy, fontSize: 14, fontWeight: '700', marginBottom: 6 },
-  readOnlyValue: { minHeight: 50, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: '#F8FAFC', color: colors.navy, fontSize: 16, fontWeight: '700', paddingHorizontal: 14, paddingVertical: 14 },
-  refreshLocationButton: { alignSelf: 'flex-start', minHeight: 38, borderRadius: 12, borderWidth: 1, borderColor: '#B9D5FF', backgroundColor: '#E8F1FB', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14, marginTop: -4, marginBottom: 12 },
-  refreshLocationText: { color: '#0B63CE', fontSize: 13, fontWeight: '800' },
-  photoActions: { gap: 2, marginBottom: 8 },
+  intakeHero: { borderRadius: radii.lg, backgroundColor: palette.blue, borderWidth: 1, borderColor: '#0750C7', padding: 15, marginTop: -8, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12, overflow: 'hidden', shadowColor: palette.blue, shadowOpacity: 0.14, shadowRadius: 14, elevation: 3 },
+  heroWash: { position: 'absolute', right: -54, top: -70, width: 180, height: 180, borderRadius: 90, backgroundColor: 'rgba(255,255,255,0.18)' },
+  intakeIcon: { width: 48, height: 48, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.17)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.32)', alignItems: 'center', justifyContent: 'center' },
+  intakeCopy: { flex: 1, minWidth: 0 },
+  intakeEyebrow: { color: 'rgba(255,255,255,0.78)', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0 },
+  intakeTitle: { color: palette.surface, fontSize: 20, fontWeight: '900', lineHeight: 25, marginTop: 2 },
+  stepStrip: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 12 },
+  stepPill: { minHeight: 34, borderRadius: radii.sm, backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.line, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  stepPillDone: { backgroundColor: roleTheme.customer.soft, borderColor: '#BCE9D2' },
+  stepPillText: { color: palette.slate, fontSize: 12, fontWeight: '600' },
+  stepPillTextDone: { color: roleTheme.customer.accent },
+  label: { color: palette.ink, fontSize: 14, fontWeight: '600', marginBottom: 6 },
+  locationButtons: { flexDirection: 'row', gap: 8, marginTop: -4, marginBottom: 12 },
+  refreshLocationButton: { flex: 1, minHeight: 42, borderRadius: radii.sm, borderWidth: 1, borderColor: '#BCE9D2', backgroundColor: roleTheme.customer.soft, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10, flexDirection: 'row', gap: 7 },
+  manualLocationButton: { borderColor: '#C7DEFF', backgroundColor: palette.blueSoft },
+  refreshLocationText: { color: roleTheme.customer.accent, fontSize: 13, fontWeight: '700' },
+  manualLocationText: { color: palette.blue },
 });

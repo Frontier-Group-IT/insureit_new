@@ -6,6 +6,7 @@ import { Button, Card, LoadingState, Message, Screen, TextField } from '@/compon
 import { getCurrentSession, getProfile, isValidProfile } from '@/lib/auth';
 import { appRoles, canManageUsers, designationOptions, roleLabels } from '@/lib/roles';
 import { supabase } from '@/lib/supabase';
+import { palette, radii } from '@/lib/theme';
 import type { AppRole, Profile } from '@/lib/types';
 
 type EditableProfile = Profile;
@@ -233,11 +234,11 @@ export default function ItUsersScreen() {
   if (loading) return <Screen title="User Management"><LoadingState /></Screen>;
 
   return (
-    <Screen title="User Management" subtitle="Create, edit, deactivate, and reactivate profiles." showLogout>
+    <Screen title="Users" subtitle="Roles and reporting access." showLogout>
       {message ? <Message type={message.includes('could not') ? 'error' : 'success'}>{message}</Message> : null}
       <Card>
-        <Text style={styles.sectionTitle}>{selected ? 'Edit Employee Profile' : 'Create Department User'}</Text>
-        <Text style={styles.helpText}>{selected ? 'Edit role and reporting hierarchy details.' : 'Create internal users such as Director, Sales Head, ASM, Sales Manager, Agent, Claims, Admin, or IT.'}</Text>
+        <Text style={styles.sectionTitle}>{selected ? 'Edit user' : 'Create user'}</Text>
+        <Text style={styles.helpText}>{selected ? 'Role and reporting details.' : 'Internal department profile.'}</Text>
         {selected ? <TextField label="User ID" value={form.id} onChangeText={(value) => setForm((current) => ({ ...current, id: value }))} editable={false} /> : null}
         <TextField label="Full name" value={form.full_name} onChangeText={(value) => setForm((current) => ({ ...current, full_name: value }))} />
         <TextField label="Email" value={form.email} onChangeText={(value) => setForm((current) => ({ ...current, email: value }))} autoCapitalize="none" />
@@ -288,8 +289,8 @@ export default function ItUsersScreen() {
 
       {!selected ? (
         <Card>
-          <Text style={styles.sectionTitle}>Add Customer User</Text>
-          <Text style={styles.helpText}>Customer users must be linked below an active Agent. This creates the customer login, customer profile, and agent assignment together.</Text>
+          <Text style={styles.sectionTitle}>Add customer</Text>
+          <Text style={styles.helpText}>Link the customer to an active agent.</Text>
           <TextField label="Customer name" value={customerForm.full_name} onChangeText={(value) => setCustomerForm((current) => ({ ...current, full_name: value }))} />
           <TextField label="Customer email" value={customerForm.email} onChangeText={(value) => setCustomerForm((current) => ({ ...current, email: value }))} autoCapitalize="none" />
           <TextField label="Temporary password" value={customerForm.password} onChangeText={(value) => setCustomerForm((current) => ({ ...current, password: value }))} secureTextEntry />
@@ -314,7 +315,7 @@ export default function ItUsersScreen() {
         </Card>
       ) : null}
       <Card>
-        <Text style={styles.sectionTitle}>Organization Users</Text>
+        <Text style={styles.sectionTitle}>Directory</Text>
         <TextField label="Search" value={search} onChangeText={setSearch} />
         <OptionSelect
           id="role_filter"
@@ -365,7 +366,7 @@ function SavingPanel({ label }: { label: string }) {
       <ActivityIndicator color="#18A058" />
       <View style={styles.savingCopy}>
         <Text style={styles.savingTitle}>{label}</Text>
-        <Text style={styles.savingText}>Please wait while Supabase creates and links the records.</Text>
+        <Text style={styles.savingText}>Saving records.</Text>
       </View>
     </View>
   );
@@ -398,7 +399,7 @@ function OptionSelect({
       <Text style={styles.selectLabel}>{label}</Text>
       <Pressable accessibilityRole="button" style={styles.selectButton} onPress={() => setOpenSelect(isOpen ? null : id)}>
         <Text style={[styles.selectButtonText, !value && styles.selectPlaceholder]} numberOfLines={2}>{selectedLabel}</Text>
-        <Text style={styles.selectChevron}>{isOpen ? 'Up' : 'Down'}</Text>
+        <Text style={styles.selectChevron}>{isOpen ? '⌃' : '⌄'}</Text>
       </Pressable>
       {isOpen ? (
         <View style={styles.optionsPanel}>
@@ -432,26 +433,26 @@ function OptionSelect({
 }
 
 const styles = StyleSheet.create({
-  sectionTitle: { color: '#0B1F3A', fontSize: 18, fontWeight: '900', marginBottom: 6 },
-  helpText: { color: '#6B7280', fontSize: 13, lineHeight: 19, marginBottom: 10 },
-  savingPanel: { borderRadius: 14, backgroundColor: '#EAF8F0', borderWidth: 1, borderColor: '#BFEBD0', padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  sectionTitle: { color: palette.ink, fontSize: 17, fontWeight: '800', marginBottom: 5 },
+  helpText: { color: palette.slate, fontSize: 13, lineHeight: 18, marginBottom: 10 },
+  savingPanel: { borderRadius: radii.sm, backgroundColor: palette.emeraldSoft, borderWidth: 1, borderColor: '#BFEBD0', padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
   savingCopy: { flex: 1 },
-  savingTitle: { color: '#067647', fontSize: 14, fontWeight: '900' },
+  savingTitle: { color: '#067647', fontSize: 14, fontWeight: '700' },
   savingText: { color: '#367A55', fontSize: 12, lineHeight: 17, marginTop: 2 },
   selectWrap: { marginBottom: 12 },
-  selectLabel: { color: '#0B1F3A', fontSize: 14, fontWeight: '700', marginBottom: 6 },
-  selectButton: { minHeight: 50, borderRadius: 14, borderWidth: 1, borderColor: '#D8DEE8', backgroundColor: '#FFFFFF', paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  selectButtonText: { color: '#0B1F3A', flex: 1, fontSize: 15, fontWeight: '700', lineHeight: 20 },
+  selectLabel: { color: palette.ink, fontSize: 13, fontWeight: '700', marginBottom: 6 },
+  selectButton: { minHeight: 50, borderRadius: radii.sm, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.surface, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  selectButtonText: { color: palette.ink, flex: 1, fontSize: 15, fontWeight: '600', lineHeight: 20 },
   selectPlaceholder: { color: '#8A94A6' },
-  selectChevron: { color: '#18A058', fontSize: 12, fontWeight: '900' },
-  optionsPanel: { borderWidth: 1, borderColor: '#D8DEE8', borderRadius: 14, backgroundColor: '#FFFFFF', marginTop: 6, overflow: 'hidden' },
+  selectChevron: { color: palette.emerald, fontSize: 17, fontWeight: '700' },
+  optionsPanel: { borderWidth: 1, borderColor: palette.line, borderRadius: radii.sm, backgroundColor: palette.surface, marginTop: 6, overflow: 'hidden' },
   optionRow: { borderTopWidth: 1, borderTopColor: '#EEF2F6', paddingHorizontal: 12, paddingVertical: 11 },
   optionRowSelected: { backgroundColor: '#EAF8F0' },
-  optionText: { color: '#0B1F3A', fontSize: 14, fontWeight: '700', lineHeight: 19 },
-  userRow: { borderTopWidth: 1, borderTopColor: '#D8DEE8', paddingVertical: 12, gap: 10 },
+  optionText: { color: palette.ink, fontSize: 14, fontWeight: '600', lineHeight: 19 },
+  userRow: { borderTopWidth: 1, borderTopColor: palette.line, paddingVertical: 12, gap: 10 },
   userText: { gap: 3 },
-  userName: { color: '#0B1F3A', fontSize: 16, fontWeight: '900' },
-  userMeta: { color: '#6B7280', fontSize: 12, lineHeight: 17 },
-  smallButton: { alignSelf: 'flex-start', borderRadius: 12, borderWidth: 1, borderColor: '#0B1F3A', paddingHorizontal: 12, paddingVertical: 8 },
-  smallButtonText: { color: '#0B1F3A', fontSize: 12, fontWeight: '800' },
+  userName: { color: palette.ink, fontSize: 15, fontWeight: '700' },
+  userMeta: { color: palette.slate, fontSize: 12, lineHeight: 17 },
+  smallButton: { alignSelf: 'flex-start', borderRadius: radii.sm, borderWidth: 1, borderColor: palette.lineStrong, paddingHorizontal: 12, paddingVertical: 8 },
+  smallButtonText: { color: palette.ink, fontSize: 12, fontWeight: '700' },
 });
