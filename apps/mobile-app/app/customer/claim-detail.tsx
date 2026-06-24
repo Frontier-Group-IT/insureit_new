@@ -352,16 +352,18 @@ function claimTone(status: ClaimStatus) {
 }
 
 const journey: { label: string; statuses: ClaimStatus[] }[] = [
-  { label: 'Incident Reported', statuses: ['Accident Reported'] },
-  { label: 'Initial Documents', statuses: ['Initial Documents Pending', 'Initial Documents Verification Pending', 'Initial Documents Submitted', 'Initial Documents Verified', 'Documents Submitted', 'Documents Pending'] },
-  { label: 'Surveyor Assigned', statuses: ['Surveyor Appointed'] },
-  { label: 'Survey Completed', statuses: ['Vehicle Inspected'] },
+  { label: 'Loss Report', statuses: ['Accident Reported'] },
+  { label: 'Spot Intimation', statuses: ['Initial Documents Pending', 'Initial Documents Verification Pending', 'Initial Documents Submitted', 'Initial Documents Verified', 'Documents Submitted', 'Documents Pending'] },
+  { label: 'Spot Surveyor Assigned', statuses: ['Surveyor Appointed'] },
+  { label: 'Spot Survey Completed', statuses: ['Vehicle Inspected'] },
   { label: 'Final Documents', statuses: ['Final Documents Awaited', 'Final Documents Verification Pending', 'Final Documents Submitted', 'Final Documents Verified'] },
   { label: 'Claim Intimation', statuses: ['Claim Intimated', 'Claim Intimation'] },
   { label: 'Final Surveyor', statuses: ['Final Surveyor Details', 'Survey Status', 'Survey Done'] },
   { label: 'Work Approval', statuses: ['Work Approval Status', 'Work Approval Received', 'Estimate Submitted', 'Approval Pending'] },
   { label: 'Under Repair', statuses: ['Under Repair', 'Repair Done', 'Repair Started', 'Repair Completed'] },
-  { label: 'RA / DO', statuses: ['RA Intimation', 'RA Intimation Done', 'DO Status', 'DO Submitted', 'Final Bill Submitted'] },
+  { label: 'RI Stage', statuses: ['RA Intimation', 'RA Intimation Done'] },
+  { label: 'DO Stage', statuses: ['DO Status', 'DO Submitted'] },
+  { label: 'Vehicle Release', statuses: ['Final Bill Submitted'] },
   { label: 'Payment Advice Received', statuses: ['Payment Stage', 'Claim Completion In Progress', 'Settlement Under Process'] },
   { label: 'Journey Complete', statuses: ['Claim Complete', 'Settled', 'Closed'] },
 ];
