@@ -262,7 +262,6 @@ export function verifiedStatusFor(status: string): ClaimStatus | null {
 export const managerTransitions: Partial<Record<ClaimStatus, ClaimStatus>> = {
   "Initial Documents Verified": "Surveyor Appointed",
   "Surveyor Appointed": "Vehicle Inspected",
-  "Vehicle Inspected": "Final Documents Awaited",
   "Final Documents Verified": "Claim Intimation",
   "Claim Intimation": "Final Surveyor Details",
   "Final Surveyor Details": "Survey Status",
@@ -291,9 +290,9 @@ export const managerTransitions: Partial<Record<ClaimStatus, ClaimStatus>> = {
 export function actionForStatus(status: string) {
   if (isCustomerActionAwaited(status)) return { title: "Waiting for customer", body: "Customer document upload or correction is pending.", button: null };
   if (isDocumentVerificationPending(status)) return { title: "Verify documents", body: "Review every pending document. The claim will advance automatically after all required documents are verified.", button: null };
+  if (status === "Vehicle Inspected") return { title: "Request final documents", body: "Ask the customer for final claim documents.", button: "Request final documents" };
   const nextStatus = managerTransitions[status as ClaimStatus];
   if (!nextStatus) return null;
-  if (status === "Vehicle Inspected") return { title: "Request final documents", body: "Ask the customer for final claim documents.", button: "Request final documents" };
   return { title: nextStatus, body: `Move this claim from ${status} to ${nextStatus}.`, button: nextStatus };
 }
 
