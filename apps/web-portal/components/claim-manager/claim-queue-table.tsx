@@ -16,12 +16,10 @@ export type QueueClaimRow = {
   assignee?: { full_name: string } | null;
 };
 
-type BrandLogo = {
-  src: string;
-  label: string;
-};
+type BrandLogo = { src: string; label: string };
 
-const PAGE_SIZE = 7;
+const pageSizeOptions = Array.from({ length: 20 }, (_, index) => (index + 1) * 5);
+const insurerLogoUrl = "https://raw.githubusercontent.com/antnish1/insureit_new/main/apps/mobile-app/assets/brand/insureit-stitch-logo.png";
 
 const vehicleBrandLogos: Record<string, BrandLogo> = {
   "ashok leyland": { src: "/assets/vehicle-brands/ashok-leyland.svg", label: "Ashok Leyland" },
@@ -41,19 +39,20 @@ const vehicleBrandLogos: Record<string, BrandLogo> = {
   "hyundai motors": { src: "/assets/vehicle-brands/hyundai.svg", label: "Hyundai" }
 };
 
-export function ClaimQueueTable({ rows, page, baseParams }: { rows: QueueClaimRow[]; page: number; baseParams: Record<string, string> }) {
-  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+export function ClaimQueueTable({ rows, page, pageSize, baseParams }: { rows: QueueClaimRow[]; page: number; pageSize: number; baseParams: Record<string, string> }) {
+  const safePageSize = pageSizeOptions.includes(pageSize) ? pageSize : 10;
+  const totalPages = Math.max(1, Math.ceil(rows.length / safePageSize));
   const safePage = Math.min(Math.max(page, 1), totalPages);
-  const startIndex = (safePage - 1) * PAGE_SIZE;
-  const visibleRows = rows.slice(startIndex, startIndex + PAGE_SIZE);
+  const startIndex = (safePage - 1) * safePageSize;
+  const visibleRows = rows.slice(startIndex, startIndex + safePageSize);
 
   return (
     <>
-      <div className="overflow-hidden rounded-lg border border-[#E1E7F0] bg-white shadow-[0_8px_22px_rgba(7,29,73,0.055)]">
+      <div className="overflow-hidden rounded-lg border border-[#E1E7F0] bg-white shadow-[0_8px_22px_rgba(7,29,73,0.045)]">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1360px] border-separate border-spacing-y-0 text-left text-[13px] leading-tight text-[#071D49]">
+          <table className="w-full min-w-[1320px] border-separate border-spacing-y-0 text-left text-[12px] leading-tight text-[#071D49]">
             <thead>
-              <tr className="bg-[#003A83] text-center text-[12px] font-semibold tracking-[0.01em] text-white">
+              <tr className="bg-[#003A83] text-center text-[11px] font-medium tracking-[0.01em] text-white">
                 <Head className="rounded-tl-lg">Sr. No.</Head>
                 <Head>Customer Name /<br />Mobile No.</Head>
                 <Head>Vehicle No.</Head>
@@ -70,13 +69,13 @@ export function ClaimQueueTable({ rows, page, baseParams }: { rows: QueueClaimRo
             </thead>
             <tbody>
               {visibleRows.length ? visibleRows.map((claim, index) => <ClaimQueueRow key={claim.id} claim={claim} serial={startIndex + index + 1} />) : (
-                <tr><td className="px-3 py-10 text-center text-sm text-slate-500" colSpan={12}>No matching claims found.</td></tr>
+                <tr><td className="px-3 py-8 text-center text-sm text-slate-500" colSpan={12}>No matching claims found.</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
-      <QueuePagination total={rows.length} page={safePage} totalPages={totalPages} baseParams={baseParams} />
+      <QueuePagination total={rows.length} page={safePage} pageSize={safePageSize} totalPages={totalPages} baseParams={baseParams} />
     </>
   );
 }
@@ -86,29 +85,29 @@ function ClaimQueueRow({ claim, serial }: { claim: QueueClaimRow; serial: number
   const customer = claim.customers?.company_name ?? claim.customers?.contact_name ?? "-";
   const manufacturer = claim.vehicles?.make ?? "-";
   return (
-    <tr className="group bg-white align-middle shadow-[0_1px_0_rgba(226,232,240,0.9)] transition hover:bg-[#F8FBFF]">
-      <Cell className="text-center text-[14px] font-medium text-[#111827]">{serial}</Cell>
-      <Cell><span className="block text-[13px] font-semibold text-[#071D49]">{customer}</span><span className="mt-0.5 block text-[12px] font-normal text-[#344256]">{claim.customers?.phone ?? "-"}</span></Cell>
-      <Cell className="text-center text-[13px] font-medium tracking-tight">{claim.vehicles?.vehicle_no ?? "-"}</Cell>
+    <tr className="group bg-white align-middle shadow-[0_1px_0_rgba(226,232,240,0.86)] transition hover:bg-[#F8FBFF]">
+      <Cell className="text-center text-[12px] font-medium text-[#111827]">{serial}</Cell>
+      <Cell><span className="block text-[12px] font-medium text-[#071D49]">{customer}</span><span className="mt-0.5 block text-[11px] font-normal text-[#344256]">{claim.customers?.phone ?? "-"}</span></Cell>
+      <Cell className="text-center text-[12px] font-medium tracking-tight">{claim.vehicles?.vehicle_no ?? "-"}</Cell>
       <Cell className="text-center"><ManufacturerBadge name={manufacturer} /></Cell>
-      <Cell className="text-center text-[13px] font-medium leading-5">{claim.vehicles?.model ?? "-"}</Cell>
-      <Cell className="text-center text-[12px] font-normal text-[#344256]">{formatDate(claim.accident_at ?? claim.created_at)}</Cell>
-      <Cell className="text-center"><div className="inline-flex items-center gap-1.5 font-semibold"><MiniShield />{claim.insurance_companies?.name ?? "InsureIT"}</div></Cell>
-      <Cell className="text-center text-[12px] font-normal text-[#344256]">{claim.policies?.policy_no ?? "-"}</Cell>
-      <Cell className="text-center text-[12px] font-medium">{claim.claim_no}</Cell>
-      <Cell className="text-center text-[12px] font-medium">{claim.insurer_claim_no ?? "-"}</Cell>
+      <Cell className="text-center text-[12px] font-normal leading-4">{claim.vehicles?.model ?? "-"}</Cell>
+      <Cell className="text-center text-[11px] font-normal text-[#344256]">{formatDate(claim.accident_at ?? claim.created_at)}</Cell>
+      <Cell className="text-center"><div className="inline-flex items-center gap-1.5 font-medium"><InsurerLogo />{claim.insurance_companies?.name ?? "InsureIT"}</div></Cell>
+      <Cell className="text-center text-[11px] font-normal text-[#344256]">{claim.policies?.policy_no ?? "-"}</Cell>
+      <Cell className="text-center text-[11px] font-medium">{claim.claim_no}</Cell>
+      <Cell className="text-center text-[11px] font-medium">{claim.insurer_claim_no ?? "-"}</Cell>
       <Cell><ProcessCell label={process?.label ?? claim.current_status} keyName={process?.key ?? "default"} /></Cell>
-      <td className="px-3 py-2.5 text-center"><Link href={`/claims/${claim.id}`} className="inline-flex h-8 items-center justify-center rounded-md bg-[#003A83] px-4 text-[12px] font-medium text-white shadow-[0_3px_8px_rgba(0,58,131,0.18)] transition hover:bg-[#071D49]">Proceed</Link></td>
+      <td className="px-2 py-1.5 text-center"><Link href={`/claims/${claim.id}`} className="inline-flex h-7 items-center justify-center rounded-md bg-[#003A83] px-3 text-[11px] font-medium text-white shadow-[0_2px_6px_rgba(0,58,131,0.16)] transition hover:bg-[#071D49]">Proceed</Link></td>
     </tr>
   );
 }
 
 function Head({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <th className={`px-3 py-3 ${className}`}>{children}</th>;
+  return <th className={`px-2.5 py-2.5 ${className}`}>{children}</th>;
 }
 
 function Cell({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <td className={`border-r border-[#E7ECF3] px-3 py-2.5 ${className}`}>{children}</td>;
+  return <td className={`border-r border-[#E7ECF3] px-2.5 py-1.5 ${className}`}>{children}</td>;
 }
 
 function ManufacturerBadge({ name }: { name: string }) {
@@ -117,28 +116,28 @@ function ManufacturerBadge({ name }: { name: string }) {
   if (brand) {
     return (
       <div className="flex flex-col items-center justify-center gap-0.5">
-        <div className="grid h-9 min-w-12 place-items-center rounded-lg bg-white px-1.5 shadow-[0_0_0_1px_rgba(7,29,73,0.07)]">
-          <img src={brand.src} alt={brand.label} className="max-h-7 max-w-[58px] object-contain" />
+        <div className="grid h-7 min-w-10 place-items-center rounded-md bg-white px-1 shadow-[0_0_0_1px_rgba(7,29,73,0.06)]">
+          <img src={brand.src} alt={brand.label} className="max-h-5 max-w-[44px] object-contain" />
         </div>
-        <span className="max-w-[94px] text-center text-[11px] font-medium leading-3 text-[#27364F]">{brand.label}</span>
+        <span className="max-w-[80px] text-center text-[10px] font-normal leading-3 text-[#27364F]">{brand.label}</span>
       </div>
     );
   }
   const initial = name && name !== "-" ? name.charAt(0).toUpperCase() : "V";
-  return <div className="flex flex-col items-center justify-center gap-0.5"><div className="grid h-9 min-w-12 place-items-center rounded-lg bg-white text-[18px] font-semibold text-[#003A83] shadow-[0_0_0_1px_rgba(7,29,73,0.07)]">{initial}</div><span className="max-w-[94px] text-center text-[11px] font-medium leading-3 text-[#27364F]">{name}</span></div>;
+  return <div className="flex flex-col items-center justify-center gap-0.5"><div className="grid h-7 min-w-10 place-items-center rounded-md bg-white text-[15px] font-semibold text-[#003A83] shadow-[0_0_0_1px_rgba(7,29,73,0.06)]">{initial}</div><span className="max-w-[80px] text-center text-[10px] font-normal leading-3 text-[#27364F]">{name}</span></div>;
 }
 
 function normalizeBrand(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-function MiniShield() {
-  return <span className="grid h-5 w-5 place-items-center rounded-[5px] border border-[#D8A52A] bg-[#071D49] text-[9px] font-semibold text-white">i</span>;
+function InsurerLogo() {
+  return <img src={insurerLogoUrl} alt="InsureIT" className="h-5 w-10 object-contain object-left" />;
 }
 
 function ProcessCell({ label, keyName }: { label: string; keyName: string }) {
   const tone = processTone(keyName);
-  return <div className="flex items-center gap-2"><span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-[16px] ${tone.bg} ${tone.text}`}>{tone.icon}</span><span className="text-[12px] font-medium leading-4 text-[#1C2A3E]">{label}</span></div>;
+  return <div className="flex items-center gap-1.5"><span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-[13px] ${tone.bg} ${tone.text}`}>{tone.icon}</span><span className="text-[11px] font-normal leading-3.5 text-[#1C2A3E]">{label}</span></div>;
 }
 
 function processTone(keyName: string) {
@@ -152,25 +151,33 @@ function processTone(keyName: string) {
   return { icon: "▣", bg: "bg-[#EAF3FF]", text: "text-[#003A83]" };
 }
 
-function QueuePagination({ total, page, totalPages, baseParams }: { total: number; page: number; totalPages: number; baseParams: Record<string, string> }) {
-  const from = total ? (page - 1) * PAGE_SIZE + 1 : 0;
-  const to = Math.min(total, page * PAGE_SIZE);
+function QueuePagination({ total, page, pageSize, totalPages, baseParams }: { total: number; page: number; pageSize: number; totalPages: number; baseParams: Record<string, string> }) {
+  const from = total ? (page - 1) * pageSize + 1 : 0;
+  const to = Math.min(total, page * pageSize);
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E4EAF2] bg-white px-4 py-3 text-[12px] font-normal text-[#344256] shadow-[0_6px_18px_rgba(7,29,73,0.035)]">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E4EAF2] bg-white px-4 py-2.5 text-[11px] font-normal text-[#344256] shadow-[0_6px_18px_rgba(7,29,73,0.03)]">
       <p>Showing {from} to {to} of {total} claims</p>
-      <div className="flex items-center gap-2">
-        <PageLink disabled={page <= 1} page={page - 1} baseParams={baseParams}>‹</PageLink>
-        {paginationItems(page, totalPages).map((item, index) => item === "..." ? <span key={`ellipsis-${index}`} className="grid h-8 min-w-8 place-items-center rounded-md border border-[#DCE4EF] px-2 text-[12px]">...</span> : <PageLink key={item} active={item === page} page={item} baseParams={baseParams}>{item}</PageLink>)}
-        <PageLink disabled={page >= totalPages} page={page + 1} baseParams={baseParams}>›</PageLink>
+      <div className="flex items-center gap-1.5">
+        <PageLink disabled={page <= 1} page={page - 1} pageSize={pageSize} baseParams={baseParams}>‹</PageLink>
+        {paginationItems(page, totalPages).map((item, index) => item === "..." ? <span key={`ellipsis-${index}`} className="grid h-7 min-w-7 place-items-center rounded-md border border-[#DCE4EF] px-2 text-[11px]">...</span> : <PageLink key={item} active={item === page} page={item} pageSize={pageSize} baseParams={baseParams}>{item}</PageLink>)}
+        <PageLink disabled={page >= totalPages} page={page + 1} pageSize={pageSize} baseParams={baseParams}>›</PageLink>
       </div>
-      <div className="flex items-center gap-2"><span>Items per page:</span><span className="flex h-8 min-w-[64px] items-center justify-center gap-1 rounded-md border border-[#DCE4EF] bg-white text-[12px] font-medium">7</span></div>
+      <form action="/claims" className="flex items-center gap-2">
+        {Object.entries(baseParams).filter(([key]) => key !== "page" && key !== "pageSize").map(([key, value]) => <input key={key} type="hidden" name={key} value={value} />)}
+        <input type="hidden" name="page" value="1" />
+        <span>Items per page:</span>
+        <select name="pageSize" defaultValue={String(pageSize)} className="h-7 rounded-md border border-[#DCE4EF] bg-white px-2 text-[11px] font-medium text-[#071D49] outline-none focus:border-[#174EA6]">
+          {pageSizeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+        </select>
+        <button type="submit" className="h-7 rounded-md border border-[#DCE4EF] px-2 text-[11px] font-medium text-[#071D49] hover:border-[#174EA6] hover:bg-[#F2F7FF]">Apply</button>
+      </form>
     </div>
   );
 }
 
-function PageLink({ children, page, baseParams, active = false, disabled = false }: { children: ReactNode; page: number; baseParams: Record<string, string>; active?: boolean; disabled?: boolean }) {
-  const href = disabled ? "#" : `/claims?${new URLSearchParams({ ...baseParams, page: String(page) }).toString()}`;
-  const className = `grid h-8 min-w-8 place-items-center rounded-md border px-2 text-[12px] font-medium ${active ? "border-[#003A83] bg-[#003A83] text-white" : disabled ? "pointer-events-none border-[#E4EAF2] bg-[#F8FAFD] text-[#B6C1D1]" : "border-[#DCE4EF] bg-white text-[#071D49] hover:border-[#174EA6] hover:bg-[#F2F7FF]"}`;
+function PageLink({ children, page, pageSize, baseParams, active = false, disabled = false }: { children: ReactNode; page: number; pageSize: number; baseParams: Record<string, string>; active?: boolean; disabled?: boolean }) {
+  const href = disabled ? "#" : `/claims?${new URLSearchParams({ ...baseParams, page: String(page), pageSize: String(pageSize) }).toString()}`;
+  const className = `grid h-7 min-w-7 place-items-center rounded-md border px-2 text-[11px] font-medium ${active ? "border-[#003A83] bg-[#003A83] text-white" : disabled ? "pointer-events-none border-[#E4EAF2] bg-[#F8FAFD] text-[#B6C1D1]" : "border-[#DCE4EF] bg-white text-[#071D49] hover:border-[#174EA6] hover:bg-[#F2F7FF]"}`;
   return <Link href={href} aria-disabled={disabled} className={className}>{children}</Link>;
 }
 
@@ -181,5 +188,6 @@ function paginationItems(page: number, totalPages: number) {
 }
 
 function formatDate(value?: string | null) {
-  return value ? new Date(value).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "-";
+  if (!value) return "-";
+  return new Date(value).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 }
