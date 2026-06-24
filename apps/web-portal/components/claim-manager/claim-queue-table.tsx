@@ -21,6 +21,8 @@ type BrandLogo = {
   label: string;
 };
 
+const PAGE_SIZE = 7;
+
 const vehicleBrandLogos: Record<string, BrandLogo> = {
   "ashok leyland": { src: "/assets/vehicle-brands/ashok-leyland.svg", label: "Ashok Leyland" },
   leyland: { src: "/assets/vehicle-brands/ashok-leyland.svg", label: "Ashok Leyland" },
@@ -39,16 +41,20 @@ const vehicleBrandLogos: Record<string, BrandLogo> = {
   "hyundai motors": { src: "/assets/vehicle-brands/hyundai.svg", label: "Hyundai" }
 };
 
-export function ClaimQueueTable({ rows }: { rows: QueueClaimRow[] }) {
-  const visibleRows = rows.slice(0, 7);
+export function ClaimQueueTable({ rows, page, baseParams }: { rows: QueueClaimRow[]; page: number; baseParams: Record<string, string> }) {
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const safePage = Math.min(Math.max(page, 1), totalPages);
+  const startIndex = (safePage - 1) * PAGE_SIZE;
+  const visibleRows = rows.slice(startIndex, startIndex + PAGE_SIZE);
+
   return (
     <>
-      <div className="overflow-hidden rounded-t-[8px] bg-white shadow-[0_8px_24px_rgba(7,29,73,0.07)]">
+      <div className="overflow-hidden rounded-lg border border-[#E1E7F0] bg-white shadow-[0_8px_22px_rgba(7,29,73,0.055)]">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1460px] border-separate border-spacing-y-0 text-left text-[15px] text-[#071D49]">
+          <table className="w-full min-w-[1360px] border-separate border-spacing-y-0 text-left text-[13px] leading-tight text-[#071D49]">
             <thead>
-              <tr className="bg-[#003A83] text-center text-[14px] font-black text-white">
-                <Head className="rounded-tl-[8px]">Sr. No.</Head>
+              <tr className="bg-[#003A83] text-center text-[12px] font-semibold tracking-[0.01em] text-white">
+                <Head className="rounded-tl-lg">Sr. No.</Head>
                 <Head>Customer Name /<br />Mobile No.</Head>
                 <Head>Vehicle No.</Head>
                 <Head>Vehicle<br />Manufacturer</Head>
@@ -59,50 +65,50 @@ export function ClaimQueueTable({ rows }: { rows: QueueClaimRow[] }) {
                 <Head>Control Number</Head>
                 <Head>Claim Number</Head>
                 <Head>Process</Head>
-                <Head className="rounded-tr-[8px]">Action</Head>
+                <Head className="rounded-tr-lg">Action</Head>
               </tr>
             </thead>
             <tbody>
-              {visibleRows.length ? visibleRows.map((claim, index) => <ClaimQueueRow key={claim.id} claim={claim} index={index} />) : (
-                <tr><td className="px-4 py-12 text-center text-slate-500" colSpan={12}>No matching claims found.</td></tr>
+              {visibleRows.length ? visibleRows.map((claim, index) => <ClaimQueueRow key={claim.id} claim={claim} serial={startIndex + index + 1} />) : (
+                <tr><td className="px-3 py-10 text-center text-sm text-slate-500" colSpan={12}>No matching claims found.</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
-      <QueuePagination total={rows.length} />
+      <QueuePagination total={rows.length} page={safePage} totalPages={totalPages} baseParams={baseParams} />
     </>
   );
 }
 
-function ClaimQueueRow({ claim, index }: { claim: QueueClaimRow; index: number }) {
+function ClaimQueueRow({ claim, serial }: { claim: QueueClaimRow; serial: number }) {
   const process = operationsQueueForStatus(claim.current_status);
   const customer = claim.customers?.company_name ?? claim.customers?.contact_name ?? "-";
   const manufacturer = claim.vehicles?.make ?? "-";
   return (
-    <tr className="group bg-white align-middle shadow-[0_1px_0_rgba(226,232,240,0.95)] transition hover:bg-[#F8FBFF]">
-      <Cell className="text-center text-[20px] font-semibold text-black">{index + 1}</Cell>
-      <Cell><span className="block text-[17px] font-black">{customer}</span><span className="mt-1 block text-[17px] font-medium">{claim.customers?.phone ?? "-"}</span></Cell>
-      <Cell className="text-center text-[16px] font-bold tracking-tight">{claim.vehicles?.vehicle_no ?? "-"}</Cell>
+    <tr className="group bg-white align-middle shadow-[0_1px_0_rgba(226,232,240,0.9)] transition hover:bg-[#F8FBFF]">
+      <Cell className="text-center text-[14px] font-medium text-[#111827]">{serial}</Cell>
+      <Cell><span className="block text-[13px] font-semibold text-[#071D49]">{customer}</span><span className="mt-0.5 block text-[12px] font-normal text-[#344256]">{claim.customers?.phone ?? "-"}</span></Cell>
+      <Cell className="text-center text-[13px] font-medium tracking-tight">{claim.vehicles?.vehicle_no ?? "-"}</Cell>
       <Cell className="text-center"><ManufacturerBadge name={manufacturer} /></Cell>
-      <Cell className="text-center text-[16px] font-semibold leading-6">{claim.vehicles?.model ?? "-"}</Cell>
-      <Cell className="text-center font-semibold">{formatDate(claim.accident_at ?? claim.created_at)}</Cell>
-      <Cell className="text-center"><div className="inline-flex items-center gap-2 font-black"><MiniShield />{claim.insurance_companies?.name ?? "InsureIT"}</div></Cell>
-      <Cell className="text-center font-semibold">{claim.policies?.policy_no ?? "-"}</Cell>
-      <Cell className="text-center font-semibold">{claim.claim_no}</Cell>
-      <Cell className="text-center font-semibold">{claim.insurer_claim_no ?? "-"}</Cell>
+      <Cell className="text-center text-[13px] font-medium leading-5">{claim.vehicles?.model ?? "-"}</Cell>
+      <Cell className="text-center text-[12px] font-normal text-[#344256]">{formatDate(claim.accident_at ?? claim.created_at)}</Cell>
+      <Cell className="text-center"><div className="inline-flex items-center gap-1.5 font-semibold"><MiniShield />{claim.insurance_companies?.name ?? "InsureIT"}</div></Cell>
+      <Cell className="text-center text-[12px] font-normal text-[#344256]">{claim.policies?.policy_no ?? "-"}</Cell>
+      <Cell className="text-center text-[12px] font-medium">{claim.claim_no}</Cell>
+      <Cell className="text-center text-[12px] font-medium">{claim.insurer_claim_no ?? "-"}</Cell>
       <Cell><ProcessCell label={process?.label ?? claim.current_status} keyName={process?.key ?? "default"} /></Cell>
-      <td className="px-4 py-4 text-center"><Link href={`/claims/${claim.id}`} className="inline-flex h-[36px] items-center justify-center rounded-[5px] bg-[#003A83] px-5 text-[14px] font-bold text-white shadow-[0_4px_10px_rgba(0,58,131,0.22)] transition hover:bg-[#071D49]">Proceed</Link></td>
+      <td className="px-3 py-2.5 text-center"><Link href={`/claims/${claim.id}`} className="inline-flex h-8 items-center justify-center rounded-md bg-[#003A83] px-4 text-[12px] font-medium text-white shadow-[0_3px_8px_rgba(0,58,131,0.18)] transition hover:bg-[#071D49]">Proceed</Link></td>
     </tr>
   );
 }
 
 function Head({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <th className={`px-4 py-4 ${className}`}>{children}</th>;
+  return <th className={`px-3 py-3 ${className}`}>{children}</th>;
 }
 
 function Cell({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <td className={`border-r border-[#E4EAF2] px-4 py-4 ${className}`}>{children}</td>;
+  return <td className={`border-r border-[#E7ECF3] px-3 py-2.5 ${className}`}>{children}</td>;
 }
 
 function ManufacturerBadge({ name }: { name: string }) {
@@ -110,16 +116,16 @@ function ManufacturerBadge({ name }: { name: string }) {
   const brand = vehicleBrandLogos[normalized] ?? Object.entries(vehicleBrandLogos).find(([key]) => normalized.includes(key) || key.includes(normalized))?.[1];
   if (brand) {
     return (
-      <div className="flex flex-col items-center justify-center gap-1">
-        <div className="grid h-12 min-w-16 place-items-center rounded-xl bg-white px-2 shadow-[0_0_0_1px_rgba(7,29,73,0.08)]">
-          <img src={brand.src} alt={brand.label} className="max-h-9 max-w-[74px] object-contain" />
+      <div className="flex flex-col items-center justify-center gap-0.5">
+        <div className="grid h-9 min-w-12 place-items-center rounded-lg bg-white px-1.5 shadow-[0_0_0_1px_rgba(7,29,73,0.07)]">
+          <img src={brand.src} alt={brand.label} className="max-h-7 max-w-[58px] object-contain" />
         </div>
-        <span className="max-w-[120px] text-center text-[13px] font-semibold leading-4">{brand.label}</span>
+        <span className="max-w-[94px] text-center text-[11px] font-medium leading-3 text-[#27364F]">{brand.label}</span>
       </div>
     );
   }
   const initial = name && name !== "-" ? name.charAt(0).toUpperCase() : "V";
-  return <div className="flex flex-col items-center justify-center gap-1"><div className="grid h-12 min-w-16 place-items-center rounded-xl bg-white text-[28px] font-black text-[#003A83] shadow-[0_0_0_1px_rgba(7,29,73,0.08)]">{initial}</div><span className="max-w-[120px] text-center text-[13px] font-semibold leading-4">{name}</span></div>;
+  return <div className="flex flex-col items-center justify-center gap-0.5"><div className="grid h-9 min-w-12 place-items-center rounded-lg bg-white text-[18px] font-semibold text-[#003A83] shadow-[0_0_0_1px_rgba(7,29,73,0.07)]">{initial}</div><span className="max-w-[94px] text-center text-[11px] font-medium leading-3 text-[#27364F]">{name}</span></div>;
 }
 
 function normalizeBrand(value: string) {
@@ -127,12 +133,12 @@ function normalizeBrand(value: string) {
 }
 
 function MiniShield() {
-  return <img src="/assets/brand/insureit-stitch-logo.png" alt="InsureIT" className="h-8 w-8 rounded-md object-contain" />;
+  return <span className="grid h-5 w-5 place-items-center rounded-[5px] border border-[#D8A52A] bg-[#071D49] text-[9px] font-semibold text-white">i</span>;
 }
 
 function ProcessCell({ label, keyName }: { label: string; keyName: string }) {
   const tone = processTone(keyName);
-  return <div className="flex items-center gap-3"><span className={`grid h-[52px] w-[52px] shrink-0 place-items-center rounded-full text-[23px] ${tone.bg} ${tone.text}`}>{tone.icon}</span><span className="text-[14px] font-semibold leading-5">{label}</span></div>;
+  return <div className="flex items-center gap-2"><span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-[16px] ${tone.bg} ${tone.text}`}>{tone.icon}</span><span className="text-[12px] font-medium leading-4 text-[#1C2A3E]">{label}</span></div>;
 }
 
 function processTone(keyName: string) {
@@ -146,13 +152,32 @@ function processTone(keyName: string) {
   return { icon: "▣", bg: "bg-[#EAF3FF]", text: "text-[#003A83]" };
 }
 
-function QueuePagination({ total }: { total: number }) {
-  const pages = Math.max(1, Math.ceil(total / 7));
-  return <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[#E4EAF2] bg-white px-4 py-4 text-[15px] font-medium text-[#1E2A44] shadow-[0_6px_18px_rgba(7,29,73,0.04)]"><p>Showing 1 to {Math.min(total, 7)} of {total} claims</p><div className="flex items-center gap-3"><PageButton disabled>‹</PageButton><PageButton active>1</PageButton><PageButton>2</PageButton><PageButton>3</PageButton><span className="grid h-10 min-w-10 place-items-center rounded-md border border-[#DCE4EF] px-3 font-black">...</span><PageButton>{pages}</PageButton><PageButton>›</PageButton></div><div className="flex items-center gap-3"><span>Items per page:</span><button className="flex h-10 min-w-[84px] items-center justify-center gap-2 rounded-md border border-[#DCE4EF] bg-white font-bold" type="button">7 <span>⌄</span></button></div></div>;
+function QueuePagination({ total, page, totalPages, baseParams }: { total: number; page: number; totalPages: number; baseParams: Record<string, string> }) {
+  const from = total ? (page - 1) * PAGE_SIZE + 1 : 0;
+  const to = Math.min(total, page * PAGE_SIZE);
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E4EAF2] bg-white px-4 py-3 text-[12px] font-normal text-[#344256] shadow-[0_6px_18px_rgba(7,29,73,0.035)]">
+      <p>Showing {from} to {to} of {total} claims</p>
+      <div className="flex items-center gap-2">
+        <PageLink disabled={page <= 1} page={page - 1} baseParams={baseParams}>‹</PageLink>
+        {paginationItems(page, totalPages).map((item, index) => item === "..." ? <span key={`ellipsis-${index}`} className="grid h-8 min-w-8 place-items-center rounded-md border border-[#DCE4EF] px-2 text-[12px]">...</span> : <PageLink key={item} active={item === page} page={item} baseParams={baseParams}>{item}</PageLink>)}
+        <PageLink disabled={page >= totalPages} page={page + 1} baseParams={baseParams}>›</PageLink>
+      </div>
+      <div className="flex items-center gap-2"><span>Items per page:</span><span className="flex h-8 min-w-[64px] items-center justify-center gap-1 rounded-md border border-[#DCE4EF] bg-white text-[12px] font-medium">7</span></div>
+    </div>
+  );
 }
 
-function PageButton({ children, active = false, disabled = false }: { children: ReactNode; active?: boolean; disabled?: boolean }) {
-  return <button className={`grid h-10 min-w-10 place-items-center rounded-md border px-3 font-black ${active ? "border-[#003A83] bg-[#003A83] text-white" : disabled ? "border-[#E4EAF2] bg-[#F8FAFD] text-[#B6C1D1]" : "border-[#DCE4EF] bg-white text-[#071D49]"}`} type="button" disabled={disabled}>{children}</button>;
+function PageLink({ children, page, baseParams, active = false, disabled = false }: { children: ReactNode; page: number; baseParams: Record<string, string>; active?: boolean; disabled?: boolean }) {
+  const href = disabled ? "#" : `/claims?${new URLSearchParams({ ...baseParams, page: String(page) }).toString()}`;
+  const className = `grid h-8 min-w-8 place-items-center rounded-md border px-2 text-[12px] font-medium ${active ? "border-[#003A83] bg-[#003A83] text-white" : disabled ? "pointer-events-none border-[#E4EAF2] bg-[#F8FAFD] text-[#B6C1D1]" : "border-[#DCE4EF] bg-white text-[#071D49] hover:border-[#174EA6] hover:bg-[#F2F7FF]"}`;
+  return <Link href={href} aria-disabled={disabled} className={className}>{children}</Link>;
+}
+
+function paginationItems(page: number, totalPages: number) {
+  if (totalPages <= 5) return Array.from({ length: totalPages }, (_, index) => index + 1);
+  const middle = [Math.max(2, page - 1), page, Math.min(totalPages - 1, page + 1)].filter((value, index, array) => value > 1 && value < totalPages && array.indexOf(value) === index);
+  return [1, ...(middle[0] && middle[0] > 2 ? ["..." as const] : []), ...middle, ...(middle[middle.length - 1] && middle[middle.length - 1] < totalPages - 1 ? ["..." as const] : []), totalPages];
 }
 
 function formatDate(value?: string | null) {
