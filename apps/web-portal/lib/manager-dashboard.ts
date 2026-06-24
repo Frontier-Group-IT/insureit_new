@@ -132,7 +132,6 @@ export async function getManagerDashboardData(supabase: SupabaseClient): Promise
   const claims = claimsResult.data ?? [];
   const activities = activityResult.data ?? [];
   const activeActivities = activities.filter((event) => event.status === "new" || event.status === "in_progress");
-  const todayActivities = activities.filter((event) => isToday(event.created_at));
 
   const journeyKpis = customerJourneyStages.map((stage, index) => {
     const stageClaims = claims.filter((claim) => stage.statuses.includes(claim.current_status));
@@ -210,13 +209,6 @@ function priorityRank(priority: CustomerActivityPriority) {
   if (priority === "high") return 3;
   if (priority === "medium") return 2;
   return 1;
-}
-
-function isToday(value?: string | null) {
-  if (!value) return false;
-  const current = new Date();
-  const date = new Date(value);
-  return date.toDateString() === current.toDateString();
 }
 
 function oldestAgeLabel(claims: ClaimRow[]) {
