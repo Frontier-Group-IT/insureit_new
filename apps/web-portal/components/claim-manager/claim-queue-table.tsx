@@ -20,7 +20,6 @@ export type QueueClaimRow = {
 type BrandLogo = { src: string; label: string };
 
 const pageSizeOptions = [5, 10, 20, 50, 100];
-const insurerLogoUrl = "https://raw.githubusercontent.com/antnish1/insureit_new/main/apps/mobile-app/assets/brand/insureit-stitch-logo.png";
 
 const vehicleBrandLogos: Record<string, BrandLogo> = {
   "ashok leyland": { src: "/assets/vehicle-brands/ashok-leyland.svg", label: "Ashok Leyland" },
@@ -38,6 +37,24 @@ const vehicleBrandLogos: Record<string, BrandLogo> = {
   "tata motors": { src: "/assets/vehicle-brands/tata.svg", label: "Tata Motors" },
   hyundai: { src: "/assets/vehicle-brands/hyundai.svg", label: "Hyundai" },
   "hyundai motors": { src: "/assets/vehicle-brands/hyundai.svg", label: "Hyundai" }
+};
+
+const insurerBrandLogos: Record<string, BrandLogo> = {
+  "bajaj allianz": { src: "/assets/insurers/bajaj-allianz.png", label: "Bajaj Allianz" },
+  bajaj: { src: "/assets/insurers/bajaj-allianz.png", label: "Bajaj Allianz" },
+  "icici lombard": { src: "/assets/insurers/icici-lombard.png", label: "ICICI Lombard" },
+  "hdfc ergo": { src: "/assets/insurers/hdfc-ergo.png", label: "HDFC ERGO" },
+  "tata aig": { src: "/assets/insurers/tata-aig.png", label: "TATA AIG" },
+  "new india": { src: "/assets/insurers/new-india-assurance.png", label: "New India Assurance" },
+  oriental: { src: "/assets/insurers/oriental-insurance.png", label: "Oriental Insurance" },
+  "united india": { src: "/assets/insurers/united-india-insurance.png", label: "United India" },
+  national: { src: "/assets/insurers/national-insurance.png", label: "National Insurance" },
+  reliance: { src: "/assets/insurers/reliance-general.png", label: "Reliance General" },
+  "iffco tokio": { src: "/assets/insurers/iffco-tokio.png", label: "IFFCO Tokio" },
+  "royal sundaram": { src: "/assets/insurers/royal-sundaram.png", label: "Royal Sundaram" },
+  "sbi general": { src: "/assets/insurers/sbi-general.png", label: "SBI General" },
+  "future generali": { src: "/assets/insurers/future-generali.png", label: "Future Generali" },
+  "kotak general": { src: "/assets/insurers/kotak-general.png", label: "Kotak General" }
 };
 
 export function ClaimQueueTable({ rows, page, pageSize, baseParams }: { rows: QueueClaimRow[]; page: number; pageSize: number; baseParams: Record<string, string> }) {
@@ -85,6 +102,7 @@ function ClaimQueueRow({ claim, serial }: { claim: QueueClaimRow; serial: number
   const process = operationsQueueForStatus(claim.current_status);
   const customer = claim.customers?.company_name ?? claim.customers?.contact_name ?? "-";
   const manufacturer = claim.vehicles?.make ?? "-";
+  const insurerName = claim.insurance_companies?.name ?? "InsureIT";
   return (
     <tr className="group bg-white align-middle shadow-[0_1px_0_rgba(226,232,240,0.86)] transition hover:bg-[#F8FBFF]">
       <Cell className="text-center text-[11px] font-medium text-[#111827]">{serial}</Cell>
@@ -93,7 +111,7 @@ function ClaimQueueRow({ claim, serial }: { claim: QueueClaimRow; serial: number
       <Cell className="text-center"><ManufacturerBadge name={manufacturer} /></Cell>
       <Cell className="text-center text-[11px] font-normal leading-4">{claim.vehicles?.model ?? "-"}</Cell>
       <Cell className="text-center text-[10.5px] font-normal text-[#344256]">{formatDate(claim.accident_at ?? claim.created_at)}</Cell>
-      <Cell className="text-center"><div className="inline-flex items-center gap-1.5 font-medium"><InsurerLogo />{claim.insurance_companies?.name ?? "InsureIT"}</div></Cell>
+      <Cell className="text-center"><div className="inline-flex items-center gap-1.5 font-medium"><InsurerLogo name={insurerName} />{insurerName}</div></Cell>
       <Cell className="text-center text-[10.5px] font-normal text-[#344256]">{claim.policies?.policy_no ?? "-"}</Cell>
       <Cell className="text-center text-[10.5px] font-medium">{claim.claim_no}</Cell>
       <Cell className="text-center text-[10.5px] font-medium">{claim.insurer_claim_no ?? "-"}</Cell>
@@ -132,8 +150,11 @@ function normalizeBrand(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-function InsurerLogo() {
-  return <img src={insurerLogoUrl} alt="InsureIT" className="h-4 w-8 object-contain object-left" />;
+function InsurerLogo({ name }: { name: string }) {
+  const normalized = normalizeBrand(name);
+  const brand = insurerBrandLogos[normalized] ?? Object.entries(insurerBrandLogos).find(([key]) => normalized.includes(key) || key.includes(normalized))?.[1];
+  if (!brand) return <span className="inline-flex h-3.5 w-8 shrink-0 items-center justify-center rounded-sm border border-[#D6E0EE] bg-[#F8FBFF] text-[6px] font-semibold uppercase tracking-tight text-[#003A83]">insureit</span>;
+  return <img src={brand.src} alt={brand.label} className="h-4 w-8 shrink-0 object-contain object-left" />;
 }
 
 function ProcessCell({ label, keyName }: { label: string; keyName: string }) {
