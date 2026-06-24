@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Image, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -8,6 +9,8 @@ import { getCurrentSession, getCustomerForUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Claim, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
+
+type PickedEndorsementFile = { name: string; mimeType?: string | null; size?: number | null; uri: string };
 
 const truckImages = [
   require('../../assets/vehicles/truck-blue.png'),
@@ -40,6 +43,8 @@ export default function VehiclesScreen() {
   const [addValue, setAddValue] = useState('');
   const [endorsementOpen, setEndorsementOpen] = useState(false);
   const [endorsementOption, setEndorsementOption] = useState('');
+  const [endorsementFile, setEndorsementFile] = useState<PickedEndorsementFile | null>(null);
+  const [endorsementDetails, setEndorsementDetails] = useState('');
   const [endorsementSuccess, setEndorsementSuccess] = useState(false);
 
   useEffect(() => {
@@ -68,7 +73,6 @@ export default function VehiclesScreen() {
     void load();
   }, [router]);
 
-  const activePolicies = policies.filter((policy) => isPolicyActive(policy)).length;
   const expiringSoon = policies.filter((policy) => {
     const days = daysUntil(policy.end_date);
     return days >= 0 && days <= 30;
@@ -109,12 +113,32 @@ export default function VehiclesScreen() {
 
   function openEndorsement() {
     setEndorsementOption('');
+    setEndorsementFile(null);
+    setEndorsementDetails('');
     setEndorsementOpen(true);
   }
 
   function submitEndorsement() {
+    if (!endorsementOption || !endorsementFile || !endorsementDetails.trim()) return;
     setEndorsementOpen(false);
     setEndorsementSuccess(true);
+  }
+
+  function selectEndorsementOption(option: string) {
+    setEndorsementOption(option);
+    setEndorsementFile(null);
+    setEndorsementDetails('');
+  }
+
+  async function pickEndorsementDocument() {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
+      copyToCacheDirectory: true,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      setEndorsementFile({ name: asset.name, mimeType: asset.mimeType, size: asset.size, uri: asset.uri });
+    }
   }
 
   if (loading) return <Screen title="My Vehicles"><LoadingState /></Screen>;
@@ -247,7 +271,11 @@ export default function VehiclesScreen() {
       <EndorsementModal
         visible={endorsementOpen}
         selected={endorsementOption}
-        onSelect={setEndorsementOption}
+        file={endorsementFile}
+        details={endorsementDetails}
+        onSelect={selectEndorsementOption}
+        onPickDocument={() => void pickEndorsementDocument()}
+        onDetailsChange={setEndorsementDetails}
         onClose={() => setEndorsementOpen(false)}
         onSubmit={submitEndorsement}
       />
@@ -479,17 +507,27 @@ function UploadBox({ label }: { label: string }) {
 function EndorsementModal({
   visible,
   selected,
+  file,
+  details,
   onSelect,
+  onPickDocument,
+  onDetailsChange,
   onClose,
   onSubmit,
 }: {
   visible: boolean;
   selected: string;
+  file: PickedEndorsementFile | null;
+  details: string;
   onSelect: (value: string) => void;
+  onPickDocument: () => void;
+  onDetailsChange: (value: string) => void;
   onClose: () => void;
   onSubmit: () => void;
 }) {
   const options = ['Owner change', 'Make model change', 'Bodytype', 'Wrong GVW', 'Wrong registration number', 'Gst not mention', 'Other'];
+  const requirement = endorsementDocumentRequirement(selected);
+  const canSubmit = Boolean(selected && file && details.trim());
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -515,11 +553,40 @@ function EndorsementModal({
             ))}
           </View>
 
+          {selected ? (
+            <View style={styles.endorsementRequirement}>
+              <Text style={styles.endorsementRequirementLabel}>Required document</Text>
+              <Pressable accessibilityRole="button" onPress={onPickDocument} style={[styles.endorsementUploadBox, file && styles.endorsementUploadBoxDone]}>
+                <View style={styles.endorsementUploadIcon}>
+                  <MaterialCommunityIcons name={file ? 'file-check-outline' : 'cloud-upload-outline'} size={22} color={file ? '#12805C' : '#1254D1'} />
+                </View>
+                <View style={styles.endorsementUploadCopy}>
+                  <Text style={styles.endorsementUploadTitle}>{file ? file.name : `Upload ${requirement}`}</Text>
+                  <Text style={styles.endorsementUploadSub}>{file ? 'Document attached successfully' : 'PDF, JPG, PNG or WEBP up to 5 MB'}</Text>
+                </View>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {selected && file ? (
+            <View style={styles.endorsementDetailsBox}>
+              <Text style={styles.endorsementRequirementLabel}>Exact endorsement request</Text>
+              <TextInput
+                value={details}
+                onChangeText={onDetailsChange}
+                multiline
+                placeholder="Briefly mention the exact correction/change required."
+                placeholderTextColor="#91A3BA"
+                style={styles.endorsementDetailsInput}
+              />
+            </View>
+          ) : null}
+
           <View style={styles.modalActions}>
             <Pressable accessibilityRole="button" onPress={onClose} style={styles.cancelButton}>
               <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
-            <Pressable accessibilityRole="button" disabled={!selected} onPress={onSubmit} style={[styles.submitButton, !selected && styles.submitButtonDisabled]}>
+            <Pressable accessibilityRole="button" disabled={!canSubmit} onPress={onSubmit} style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]}>
               <Text style={styles.submitText}>Submit</Text>
             </Pressable>
           </View>
@@ -527,6 +594,13 @@ function EndorsementModal({
       </View>
     </Modal>
   );
+}
+
+function endorsementDocumentRequirement(option: string) {
+  if (!option) return 'supporting document';
+  if (option === 'Gst not mention') return 'GST certificate';
+  if (option === 'Other') return 'relevant document';
+  return 'RC copy';
 }
 
 function EndorsementSuccessModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
@@ -756,12 +830,22 @@ const styles = StyleSheet.create({
   docsSubmit: { flex: 1, height: 42, borderRadius: 6, backgroundColor: '#0B50D4', alignItems: 'center', justifyContent: 'center' },
   docsSubmitText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
-  endorsementModal: { width: '100%', maxWidth: 360, borderRadius: 18, backgroundColor: '#FFFFFF', paddingHorizontal: 26, paddingTop: 26, paddingBottom: 22, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 14, elevation: 8 },
+  endorsementModal: { width: '100%', maxWidth: 370, borderRadius: 18, backgroundColor: '#FFFFFF', paddingHorizontal: 22, paddingTop: 24, paddingBottom: 20, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 14, elevation: 8 },
   endorsementTitle: { color: palette.navy, fontSize: 17, lineHeight: 22, fontWeight: '900', textAlign: 'center' },
   endorsementSub: { color: palette.slate, fontSize: 12.5, lineHeight: 17, fontWeight: '700', marginTop: 5, marginBottom: 16, textAlign: 'center' },
-  endorsementOptions: { width: '100%', gap: 12, marginBottom: 18 },
+  endorsementOptions: { width: '100%', gap: 10, marginBottom: 14 },
   endorsementOption: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   endorsementOptionText: { color: palette.navy, fontSize: 13.2, fontWeight: '700' },
+  endorsementRequirement: { width: '100%', marginBottom: 12 },
+  endorsementRequirementLabel: { color: palette.slate, fontSize: 10.5, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.35, marginBottom: 7 },
+  endorsementUploadBox: { minHeight: 62, borderRadius: 14, borderWidth: 1.2, borderStyle: 'dashed', borderColor: '#9FC4F5', backgroundColor: '#F8FBFF', padding: 10, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  endorsementUploadBoxDone: { borderStyle: 'solid', borderColor: '#BFEBD0', backgroundColor: '#F7FFFB' },
+  endorsementUploadIcon: { width: 38, height: 38, borderRadius: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center' },
+  endorsementUploadCopy: { flex: 1, minWidth: 0 },
+  endorsementUploadTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
+  endorsementUploadSub: { color: palette.slate, fontSize: 10.5, fontWeight: '700', marginTop: 2 },
+  endorsementDetailsBox: { width: '100%', marginBottom: 13 },
+  endorsementDetailsInput: { minHeight: 76, borderRadius: 13, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#F8FBFF', paddingHorizontal: 11, paddingVertical: 9, color: palette.ink, fontSize: 12.5, fontWeight: '700', textAlignVertical: 'top' },
 
   renewalModal: { width: '100%', maxWidth: 365, borderRadius: 18, backgroundColor: '#FFFFFF', paddingHorizontal: 26, paddingTop: 26, paddingBottom: 24, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 14, elevation: 8 },
   modalClose: { position: 'absolute', right: 16, top: 14, width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },

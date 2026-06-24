@@ -10,5 +10,10 @@ coverage
 .supabase
 supabase/.temp
 .codex-logs/
+_patch-backups/
+outputs/
+expo-*.log
+expo-*.err.log
+.publish-git-temp-*/
 
 *.tsbuildinfo

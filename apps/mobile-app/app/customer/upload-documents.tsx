@@ -3,7 +3,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Message, Screen } from '@/components/ui';
 import { ensureCustomerForUser, getCurrentSession, getCustomerForUser } from '@/lib/auth';
@@ -32,6 +32,7 @@ export default function UploadDocumentsScreen() {
   const [message, setMessage] = useState('');
   const [success, setSuccess] = useState('');
   const [uploadingType, setUploadingType] = useState('');
+  const [submitSuccessOpen, setSubmitSuccessOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -362,12 +363,54 @@ export default function UploadDocumentsScreen() {
       })}
 
       {selectedClaim ? (
-        <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/claim-detail', params: { id: selectedClaim.id } })} style={styles.bottomButton}>
-          <Text style={styles.bottomButtonText}>View Claim Details</Text>
-          <MaterialCommunityIcons name="arrow-right" size={18} color="#FFFFFF" />
+        <Pressable accessibilityRole="button" onPress={() => setSubmitSuccessOpen(true)} style={styles.bottomButton}>
+          <Text style={styles.bottomButtonText}>Submit Claim</Text>
+          <MaterialCommunityIcons name="check-circle-outline" size={18} color="#FFFFFF" />
         </Pressable>
       ) : null}
+
+      <ClaimSubmissionSuccessModal
+        visible={submitSuccessOpen}
+        claim={selectedClaim}
+        vehicleNo={selectedVehicle?.vehicle_no}
+        completionPercent={completionPercent}
+        uploadedCount={completedCount}
+        onClose={() => setSubmitSuccessOpen(false)}
+        onView={() => {
+          if (!selectedClaim) return;
+          setSubmitSuccessOpen(false);
+          router.push({ pathname: '/customer/claim-detail', params: { id: selectedClaim.id } });
+        }}
+      />
     </Screen>
+  );
+}
+
+function ClaimSubmissionSuccessModal({ visible, claim, vehicleNo, completionPercent, uploadedCount, onClose, onView }: { visible: boolean; claim: Claim | null; vehicleNo?: string; completionPercent: number; uploadedCount: number; onClose: () => void; onView: () => void }) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.successOverlay}>
+        <View style={styles.submitSuccessCard}>
+          <Pressable accessibilityRole="button" onPress={onClose} style={styles.submitSuccessClose}>
+            <MaterialCommunityIcons name="close" size={20} color={palette.slate} />
+          </Pressable>
+          <View style={styles.submitSuccessIcon}>
+            <MaterialCommunityIcons name="shield-check-outline" size={30} color="#FFFFFF" />
+          </View>
+          <Text style={styles.submitSuccessTitle}>Claim Submitted</Text>
+          <Text style={styles.submitSuccessBody}>Your claim details and uploaded documents have been shared with the claim desk.</Text>
+          <View style={styles.submitSuccessInfo}>
+            <View style={styles.submitInfoRow}><Text style={styles.submitInfoLabel}>Control No.</Text><Text style={styles.submitInfoValue}>{claim?.claim_no ?? '-'}</Text></View>
+            <View style={styles.submitInfoRow}><Text style={styles.submitInfoLabel}>Vehicle</Text><Text style={styles.submitInfoValue}>{vehicleNo ?? '-'}</Text></View>
+            <View style={styles.submitInfoRow}><Text style={styles.submitInfoLabel}>Documents</Text><Text style={styles.submitInfoValue}>{uploadedCount} uploaded • {completionPercent}% complete</Text></View>
+          </View>
+          <Pressable accessibilityRole="button" onPress={onView} style={styles.viewClaimButton}>
+            <Text style={styles.viewClaimButtonText}>View Claim Details</Text>
+            <MaterialCommunityIcons name="arrow-right" size={17} color="#FFFFFF" />
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -519,4 +562,16 @@ const styles = StyleSheet.create({
 
   bottomButton: { height: 46, borderRadius: 15, backgroundColor: palette.navy, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginBottom: 12 },
   bottomButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
+  successOverlay: { flex: 1, backgroundColor: 'rgba(7, 18, 36, 0.46)', paddingHorizontal: 22, alignItems: 'center', justifyContent: 'center' },
+  submitSuccessCard: { width: '100%', maxWidth: 370, borderRadius: 23, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', paddingHorizontal: 20, paddingTop: 24, paddingBottom: 18, alignItems: 'center', shadowColor: '#071D49', shadowOpacity: 0.22, shadowRadius: 24, elevation: 10 },
+  submitSuccessClose: { position: 'absolute', right: 12, top: 11, width: 34, height: 34, borderRadius: 12, backgroundColor: '#F6FAFF', alignItems: 'center', justifyContent: 'center' },
+  submitSuccessIcon: { width: 60, height: 60, borderRadius: 22, backgroundColor: '#12805C', alignItems: 'center', justifyContent: 'center', shadowColor: '#12805C', shadowOpacity: 0.25, shadowRadius: 12, elevation: 4 },
+  submitSuccessTitle: { color: palette.navy, fontSize: 20, lineHeight: 25, fontWeight: '900', marginTop: 13, textAlign: 'center' },
+  submitSuccessBody: { color: palette.slate, fontSize: 12.5, lineHeight: 18, fontWeight: '700', textAlign: 'center', marginTop: 5 },
+  submitSuccessInfo: { alignSelf: 'stretch', borderRadius: 16, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 11, marginTop: 14, gap: 7 },
+  submitInfoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  submitInfoLabel: { color: palette.slate, fontSize: 10.5, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.3 },
+  submitInfoValue: { color: palette.ink, fontSize: 11.5, fontWeight: '900', flex: 1, textAlign: 'right' },
+  viewClaimButton: { alignSelf: 'stretch', minHeight: 48, borderRadius: 15, backgroundColor: palette.navy, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 15 },
+  viewClaimButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
 });

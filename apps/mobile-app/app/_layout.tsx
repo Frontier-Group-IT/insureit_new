@@ -9,7 +9,7 @@ export default function RootLayout() {
   const [introVisible, setIntroVisible] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIntroVisible(false), 1250);
+    const timer = setTimeout(() => setIntroVisible(false), 1650);
     return () => clearTimeout(timer);
   }, []);
 

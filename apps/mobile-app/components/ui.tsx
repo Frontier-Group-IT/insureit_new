@@ -1,8 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Link, LinkProps, useLocalSearchParams, usePathname, useRouter } from 'expo-router';
-import { PropsWithChildren, useEffect, useState } from 'react';
-import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, PressableProps, ScrollView, StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { PropsWithChildren, isValidElement, useEffect, useRef, useState } from 'react';
+import { Animated, Easing, KeyboardAvoidingView, Platform, Pressable, PressableProps, ScrollView, StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { NotificationBell } from '@/components/realtime-notifications';
 import { BrandLogo } from '@/components/first-look';
@@ -19,11 +19,14 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
   const router = useRouter();
   const pathname = usePathname();
   const routeParams = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
   const [profileInitial, setProfileInitial] = useState('I');
   const [profileRole, setProfileRole] = useState<AppRole | null>(null);
   const showProfile = ['/customer', '/it', '/staff', '/agent', '/hierarchy', '/admin'].some((prefix) => pathname.startsWith(prefix));
   const compactTopSpacing = pathname === '/customer/upload-documents';
   const showBackButton = showProfile && !isRootDashboard(pathname);
+  const loadingOnly = isValidElement(children) && children.type === LoadingState;
+  const tabRole = profileRole ?? (pathname.startsWith('/customer') ? 'customer' : null);
   void showLogout;
 
   useEffect(() => {
@@ -64,16 +67,16 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
 
   const accent = accentForRole(profileRole);
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={[]}>
       <View pointerEvents="none" style={styles.backdropTop} />
       <View pointerEvents="none" style={styles.backdropBand} />
       {showProfile ? (
-        <View style={styles.fixedBrandRow}>
+        <View style={[styles.fixedBrandRow, { top: insets.top }]}>
           {showBackButton ? (
             <Pressable accessibilityRole="button" onPress={openBack} style={styles.backButton}>
               <MaterialCommunityIcons name="chevron-left" size={25} color={palette.ink} />
             </Pressable>
-          ) : null}
+          ) : <View style={styles.backButtonPlaceholder} />}
           <Pressable accessibilityRole="button" onPress={openDashboard} style={styles.brandPressable}>
             <BrandLogo width={158} />
           </Pressable>
@@ -86,7 +89,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboard}>
         <ScrollView
           style={styles.screen}
-          contentContainerStyle={[styles.screenContent, showProfile && styles.screenContentWithTabs, compactTopSpacing && styles.screenContentCompactTop]}
+          contentContainerStyle={[styles.screenContent, showProfile && [styles.screenContentWithTabs, { paddingTop: insets.top + 112 }], !showProfile && { paddingTop: insets.top + 18 }, compactTopSpacing && { paddingTop: insets.top + 106 }, loadingOnly && styles.screenContentLoading]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           automaticallyAdjustKeyboardInsets
@@ -108,7 +111,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
             ) : null}
             </View>
           ) : null}
-          {showTitleHeader ? (
+          {showTitleHeader && !loadingOnly ? (
             <View style={styles.header}>
               <View style={styles.headerTop}>
                 <View style={[styles.headerDot, { backgroundColor: accent }]} />
@@ -120,7 +123,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
           ) : null}
           {children}
         </ScrollView>
-        {showProfile && profileRole ? <BottomTabs role={profileRole} pathname={pathname} /> : null}
+        {showProfile && tabRole ? <BottomTabs role={tabRole} pathname={pathname} bottomInset={insets.bottom} /> : null}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -163,13 +166,37 @@ export function Message({ type = 'info', children }: PropsWithChildren<{ type?: 
   );
 }
 
-export function LoadingState({ label = 'Loading' }: { label?: string }) {
+export function LoadingState({ label }: { label?: string }) {
+  const spin = useRef(new Animated.Value(0)).current;
+  const pulse = useRef(new Animated.Value(0)).current;
+  void label;
+
+  useEffect(() => {
+    const spinLoop = Animated.loop(Animated.timing(spin, { toValue: 1, duration: 1300, easing: Easing.linear, useNativeDriver: true }));
+    const pulseLoop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 760, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0, duration: 760, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+    ]));
+    spinLoop.start();
+    pulseLoop.start();
+    return () => { spinLoop.stop(); pulseLoop.stop(); };
+  }, [pulse, spin]);
+
+  const rotation = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  const haloScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.12] });
+  const haloOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.24, 0.52] });
+
   return (
-    <View style={styles.center}>
-      <View style={styles.loadingBadge}>
-        <ActivityIndicator color={colors.green} />
+    <View style={styles.loaderStage}>
+      <View style={styles.loaderScene}>
+        <Animated.View style={[styles.loaderHalo, { opacity: haloOpacity, transform: [{ scale: haloScale }] }]} />
+        <Animated.View style={[styles.loaderRing, { transform: [{ rotate: rotation }] }]} />
+        <View style={styles.loaderCore}>
+          <MaterialCommunityIcons name="shield-check-outline" size={28} color={roleTheme.customer.accent} />
+        </View>
       </View>
-      <Text style={styles.loadingLabel}>{label}</Text>
+      <Text style={styles.loadingLabel}>Getting things ready</Text>
+      <Text style={styles.loadingHint}>A seamless InsureIT experience is on its way.</Text>
     </View>
   );
 }
@@ -204,11 +231,11 @@ export function NavLink({ href, label }: { href: LinkProps['href']; label: strin
   );
 }
 
-function BottomTabs({ role, pathname }: { role: AppRole; pathname: string }) {
+function BottomTabs({ role, pathname, bottomInset }: { role: AppRole; pathname: string; bottomInset: number }) {
   const router = useRouter();
   const tabs = tabsForRole(role);
   return (
-    <View style={styles.bottomTabsWrap}>
+    <View style={[styles.bottomTabsWrap, { paddingBottom: Math.max(bottomInset, 10) }]}>
       <View style={styles.bottomTabs}>
         {tabs.map((tab) => {
           const active = pathname.startsWith(tab.href);
@@ -403,12 +430,14 @@ export const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#EEF7FF' },
   backdropTop: { position: 'absolute', left: 0, right: 0, top: 0, height: 270, backgroundColor: '#EAF5FF' },
   backdropBand: { position: 'absolute', left: -60, right: -70, top: 170, height: 108, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.72)', transform: [{ rotateZ: '-7deg' }] },
-  screenContent: { flexGrow: 1, paddingHorizontal: 14, paddingBottom: 120, backgroundColor: 'transparent' },
-  screenContentWithTabs: { paddingTop: 122, paddingBottom: 130 },
-  screenContentCompactTop: { paddingTop: 106 },
-  fixedBrandRow: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingTop: 64, paddingBottom: 10, backgroundColor: 'rgba(255,255,255,0.96)', borderBottomWidth: 1, borderBottomColor: 'rgba(207,224,244,0.9)' },
+  screenContent: { flexGrow: 1, paddingHorizontal: 14, paddingBottom: 142, backgroundColor: 'transparent' },
+  screenContentWithTabs: { paddingTop: 92, paddingBottom: 156 },
+  screenContentCompactTop: { paddingTop: 86 },
+  screenContentLoading: { justifyContent: 'center', paddingBottom: 108 },
+  fixedBrandRow: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, height: 78, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: 'rgba(255,255,255,0.98)', borderBottomWidth: 1, borderBottomColor: 'rgba(207,224,244,0.9)' },
   brandRow: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginHorizontal: -14, paddingHorizontal: 14, paddingTop: 24, paddingBottom: 10, marginBottom: 10, backgroundColor: 'transparent', zIndex: 10 },
   backButton: { width: 40, height: 40, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.86)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(191,216,255,0.78)' },
+  backButtonPlaceholder: { width: 40, height: 40 },
   brandPressable: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 },
   brand: { color: palette.ink, fontSize: 21, fontWeight: '800' },
   brandLogo: { width: 150, height: 34 },
@@ -441,8 +470,13 @@ export const styles = StyleSheet.create({
   errorMessageText: { color: colors.danger },
   successMessageText: { color: '#067647' },
   center: { alignItems: 'center', justifyContent: 'center', padding: 26 },
-  loadingBadge: { width: 58, height: 58, borderRadius: radii.lg, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', marginBottom: 12, shadowColor: colors.navy, shadowOpacity: 0.06, shadowRadius: 12, elevation: 2 },
-  loadingLabel: { color: colors.navy, fontSize: 15, fontWeight: '700', lineHeight: 22 },
+  loaderStage: { flex: 1, minHeight: 340, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, paddingBottom: 42 },
+  loaderScene: { width: 114, height: 114, alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
+  loaderHalo: { position: 'absolute', width: 102, height: 102, borderRadius: 51, backgroundColor: '#DDF6EC' },
+  loaderRing: { position: 'absolute', width: 90, height: 90, borderRadius: 45, borderWidth: 4, borderColor: '#CFE8DE', borderTopColor: roleTheme.customer.accent, borderRightColor: '#7ED8B8' },
+  loaderCore: { width: 62, height: 62, borderRadius: 21, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center', shadowColor: palette.ink, shadowOpacity: 0.1, shadowRadius: 13, elevation: 3 },
+  loadingLabel: { color: palette.ink, fontSize: 17, fontWeight: '900', lineHeight: 23, textAlign: 'center' },
+  loadingHint: { color: palette.slate, fontSize: 11.5, lineHeight: 17, fontWeight: '700', textAlign: 'center', marginTop: 5, maxWidth: 250 },
   muted: { color: colors.grey, fontSize: 15, lineHeight: 22 },
   emptyIcon: { width: 44, height: 44, borderRadius: radii.md, backgroundColor: palette.emeraldSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   row: { borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: 8 },
@@ -451,12 +485,12 @@ export const styles = StyleSheet.create({
   navLink: { backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 18, padding: 13, marginBottom: 8, borderWidth: 1, borderColor: 'rgba(224,231,240,0.92)', flexDirection: 'row', alignItems: 'center', gap: 12, shadowColor: '#0B1220', shadowOpacity: 0.04, shadowRadius: 10, elevation: 1 },
   navIcon: { width: 40, height: 40, borderRadius: radii.md, backgroundColor: palette.emeraldSoft, alignItems: 'center', justifyContent: 'center' },
   navLinkText: { color: colors.navy, fontSize: 15, fontWeight: '700', flex: 1 },
-  bottomTabsWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 10, paddingBottom: 6, paddingTop: 5, backgroundColor: 'rgba(238,247,255,0.66)' },
-  bottomTabs: { backgroundColor: 'rgba(255,255,255,0.96)', borderRadius: 18, paddingVertical: 5, paddingHorizontal: 4, flexDirection: 'row', justifyContent: 'space-between', borderWidth: 1, borderColor: 'rgba(198,211,225,0.86)', shadowColor: '#17202F', shadowOpacity: 0.08, shadowRadius: 10, elevation: 4 },
-  bottomTab: { flex: 1, alignItems: 'center', gap: 1, minWidth: 0 },
-  bottomIconShell: { width: 32, height: 27, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'transparent' },
+  bottomTabsWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 10, paddingTop: 8, backgroundColor: 'rgba(238,247,255,0.78)' },
+  bottomTabs: { minHeight: 66, backgroundColor: 'rgba(255,255,255,0.98)', borderRadius: 20, paddingVertical: 7, paddingHorizontal: 4, flexDirection: 'row', justifyContent: 'space-between', borderWidth: 1, borderColor: 'rgba(198,211,225,0.9)', shadowColor: '#17202F', shadowOpacity: 0.1, shadowRadius: 12, elevation: 5 },
+  bottomTab: { flex: 1, minHeight: 50, alignItems: 'center', justifyContent: 'center', gap: 2, minWidth: 0 },
+  bottomIconShell: { width: 35, height: 30, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'transparent' },
   bottomIconShellActive: { backgroundColor: palette.surface, shadowColor: palette.ink, shadowOpacity: 0.08, shadowRadius: 6, elevation: 1 },
-  bottomTabText: { color: colors.grey, fontSize: 9, fontWeight: '900' },
+  bottomTabText: { color: colors.grey, fontSize: 9.5, fontWeight: '900' },
   bottomTabTextActive: { color: colors.navy },
 });
 

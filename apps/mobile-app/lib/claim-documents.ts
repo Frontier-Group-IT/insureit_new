@@ -8,7 +8,7 @@ export type RequiredDocument = {
 };
 
 export const initialClaimDocuments: RequiredDocument[] = [
-  { type: 'Accident photos', title: 'Accident photos', body: 'Damage and number plate', icon: 'camera-burst' },
+  { type: 'Spot Photo', title: 'Spot Photo', body: 'Damage, vehicle position and number plate', icon: 'camera-burst' },
   { type: 'Registration certificate', title: 'Registration certificate', body: 'RC copy', icon: 'card-account-details-outline' },
   { type: 'Driving licence', title: 'Driving licence', body: 'Front and back', icon: 'badge-account-horizontal-outline' },
   { type: 'Policy copy', title: 'Policy copy', body: 'Policy PDF or photo', icon: 'shield-file-outline' },

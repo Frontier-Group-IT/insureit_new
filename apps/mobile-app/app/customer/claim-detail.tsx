@@ -224,9 +224,7 @@ export default function ClaimDetailScreen() {
           </View>
         </Pressable>
 
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: tone.accent }]} />
-        </View>
+        <JourneyChainPreview currentIndex={currentJourneyIndex} accent={tone.accent} soft={tone.soft} />
 
         <View style={[styles.currentStageBox, { backgroundColor: tone.soft, borderColor: tone.border }]}>
           <Text style={[styles.currentStageLabel, { color: tone.accent }]}>You are here</Text>
@@ -234,18 +232,26 @@ export default function ClaimDetailScreen() {
         </View>
 
         {journeyExpanded ? (
-          <View style={styles.journeyList}>
+          <View style={styles.journeyChainList}>
+            <View style={styles.journeyChainLine} />
             {journey.map((step, index) => {
               const complete = index < currentJourneyIndex;
               const current = index === currentJourneyIndex;
               return (
-                <View key={step.label} style={styles.journeyStep}>
-                  <View style={[styles.journeyStepIcon, complete && styles.journeyStepComplete, current && { backgroundColor: tone.accent }]}>
-                    <MaterialCommunityIcons name={complete ? 'check' : current ? 'map-marker' : 'circle-outline'} size={13} color={complete || current ? '#FFFFFF' : palette.slate} />
+                <View key={step.label} style={styles.journeyChainStep}>
+                  <View style={styles.chainNodeWrap}>
+                    <View style={[styles.chainNodeOuter, complete && styles.chainNodeOuterComplete, current && { borderColor: tone.accent, backgroundColor: tone.soft }]}>
+                      <View style={[styles.chainNodeInner, complete && styles.chainNodeInnerComplete, current && { backgroundColor: tone.accent }]}>
+                        <MaterialCommunityIcons name={complete ? 'check' : current ? 'truck-fast-outline' : 'lock-outline'} size={13} color={complete || current ? '#FFFFFF' : palette.slate} />
+                      </View>
+                    </View>
                   </View>
-                  <View style={styles.journeyStepCopy}>
-                    <Text style={[styles.journeyStepTitle, current && { color: tone.accent }]}>{step.label}</Text>
-                    <Text style={styles.journeyStepMeta}>{current ? 'Current stage' : complete ? 'Completed' : 'Pending'}</Text>
+                  <View style={[styles.chainStepCard, current && { borderColor: tone.border, backgroundColor: tone.soft }]}>
+                    <View style={styles.chainStepTop}>
+                      <Text style={[styles.journeyStepTitle, current && { color: tone.accent }]}>{step.label}</Text>
+                      <Text style={[styles.chainStepBadge, complete && styles.chainStepBadgeDone, current && { color: tone.accent, backgroundColor: '#FFFFFF' }]}>{current ? 'Current' : complete ? 'Done' : 'Pending'}</Text>
+                    </View>
+                    <Text style={styles.journeyStepMeta}>{current ? customerStageCopy(claim.current_status) : complete ? 'This stage has been completed.' : 'This stage will unlock as your claim moves ahead.'}</Text>
                   </View>
                 </View>
               );
@@ -255,6 +261,28 @@ export default function ClaimDetailScreen() {
         </View>
       </View>
     </Screen>
+  );
+}
+
+function JourneyChainPreview({ currentIndex, accent, soft }: { currentIndex: number; accent: string; soft: string }) {
+  const visible = journey.filter((_, index) => index === 0 || index === journey.length - 1 || Math.abs(index - currentIndex) <= 1);
+  return (
+    <View style={styles.chainPreview}>
+      {visible.map((step, visibleIndex) => {
+        const index = journey.indexOf(step);
+        const complete = index < currentIndex;
+        const current = index === currentIndex;
+        const skipped = visibleIndex > 0 && journey.indexOf(visible[visibleIndex - 1]) !== index - 1;
+        return (
+          <View key={step.label} style={styles.chainPreviewItem}>
+            {visibleIndex > 0 ? <View style={[styles.chainPreviewLink, complete || current ? { backgroundColor: accent } : null]}><Text style={styles.chainPreviewDots}>{skipped ? '•••' : ''}</Text></View> : null}
+            <View style={[styles.chainPreviewNode, complete && { backgroundColor: '#12805C' }, current && { backgroundColor: accent, shadowColor: accent }, !complete && !current && { backgroundColor: soft }]}>
+              <MaterialCommunityIcons name={complete ? 'check' : current ? 'map-marker' : 'circle-outline'} size={13} color={complete || current ? '#FFFFFF' : palette.slate} />
+            </View>
+          </View>
+        );
+      })}
+    </View>
   );
 }
 
@@ -453,6 +481,11 @@ const styles = StyleSheet.create({
 
   progressTrack: { height: 8, borderRadius: 99, backgroundColor: '#E8EEF7', overflow: 'hidden', marginBottom: 11 },
   progressFill: { height: 8, borderRadius: 99 },
+  chainPreview: { minHeight: 54, borderRadius: 16, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E4ECF7', paddingHorizontal: 11, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 11 },
+  chainPreviewItem: { flexDirection: 'row', alignItems: 'center' },
+  chainPreviewLink: { width: 30, height: 4, borderRadius: 99, backgroundColor: '#D7E2F0', alignItems: 'center', justifyContent: 'center', marginHorizontal: 2 },
+  chainPreviewDots: { color: '#91A3BA', fontSize: 11, lineHeight: 11, fontWeight: '900', marginTop: -10 },
+  chainPreviewNode: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF', shadowColor: palette.ink, shadowOpacity: 0.1, shadowRadius: 7, elevation: 2 },
   stageRail: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   stageRailText: { color: palette.slate, fontSize: 8.5, fontWeight: '900' },
   dotJourney: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 11 },
@@ -488,11 +521,18 @@ const styles = StyleSheet.create({
   historyMeta: { color: palette.slate, fontSize: 11.5, lineHeight: 16, fontWeight: '900', marginTop: 2 },
   historyNote: { color: palette.slate, fontSize: 11.3, lineHeight: 16, fontWeight: '700', marginTop: 2 },
   journeyRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  journeyList: { marginTop: 12, gap: 8 },
-  journeyStep: { flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E5ECF5', borderRadius: 13, padding: 9 },
-  journeyStepIcon: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#E8EEF7', alignItems: 'center', justifyContent: 'center' },
-  journeyStepComplete: { backgroundColor: '#12805C' },
-  journeyStepCopy: { flex: 1 },
+  journeyChainList: { marginTop: 13, gap: 10, position: 'relative', paddingLeft: 2 },
+  journeyChainLine: { position: 'absolute', left: 22, top: 18, bottom: 18, width: 3, borderRadius: 99, backgroundColor: '#D7E2F0' },
+  journeyChainStep: { flexDirection: 'row', alignItems: 'stretch', gap: 10 },
+  chainNodeWrap: { width: 43, alignItems: 'center', paddingTop: 5, zIndex: 2 },
+  chainNodeOuter: { width: 34, height: 34, borderRadius: 17, borderWidth: 2, borderColor: '#D8E2EF', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', shadowColor: palette.ink, shadowOpacity: 0.08, shadowRadius: 8, elevation: 2 },
+  chainNodeOuterComplete: { borderColor: '#12805C', backgroundColor: '#E8F8F0' },
+  chainNodeInner: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#EEF2F7', alignItems: 'center', justifyContent: 'center' },
+  chainNodeInnerComplete: { backgroundColor: '#12805C' },
+  chainStepCard: { flex: 1, borderRadius: 15, borderWidth: 1, borderColor: '#E5ECF5', backgroundColor: '#FFFFFF', paddingHorizontal: 12, paddingVertical: 10 },
+  chainStepTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  chainStepBadge: { color: palette.slate, backgroundColor: '#EEF2F7', borderRadius: 9, paddingHorizontal: 7, paddingVertical: 3, fontSize: 9.5, fontWeight: '900', overflow: 'hidden' },
+  chainStepBadgeDone: { color: '#12805C', backgroundColor: '#E8F8F0' },
   journeyStepTitle: { color: palette.ink, fontSize: 12.5, fontWeight: '900' },
-  journeyStepMeta: { color: palette.slate, fontSize: 10.8, fontWeight: '700', marginTop: 2 },
+  journeyStepMeta: { color: palette.slate, fontSize: 10.8, fontWeight: '700', marginTop: 4, lineHeight: 15 },
 });

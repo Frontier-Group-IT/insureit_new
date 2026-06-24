@@ -4,10 +4,10 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import { Link, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Animated, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AuthGlassPanel, AuthStatusMessage, BrandLogo, PremiumLoginField, SecureActionButton, SignalScene } from '@/components/first-look';
+import { AuthExperience, authExperienceStyles } from '@/components/auth-experience';
+import { AuthGlassPanel, AuthStatusMessage, PremiumLoginField, SecureActionButton } from '@/components/first-look';
 import { routeSignedInUser, signIn } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import type { Session, User } from '@supabase/supabase-js';
@@ -155,83 +155,86 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboard}>
-        <ScrollView
-          style={styles.screen}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          automaticallyAdjustKeyboardInsets
-        >
-          <Animated.View style={[styles.body, { opacity, transform: [{ translateY }] }]}>
-            <SignalScene active={loading || biometricLoading} showLogo={false} />
-
-            <AuthGlassPanel>
-              <BrandLogo width={172} style={styles.panelLogo} />
-              <View style={styles.panelHeader}>
-                <View style={styles.panelCopy}>
-                  <MaterialCommunityIcons name="lock" size={16} color="#0F9F6E" />
-                  <Text style={styles.panelEyebrow}>Secure access</Text>
-                </View>
-              </View>
-
-              {error ? <AuthStatusMessage type="error">{error}</AuthStatusMessage> : null}
-
-              <PremiumLoginField
-                label="Email"
-                icon="email-outline"
-                autoCapitalize="none"
-                keyboardType="email-address"
-                value={email}
-                onChangeText={setEmail}
-                placeholder="name@company.com"
-                editable={!loading && !biometricLoading && !pendingUser}
-                disabled={loading || biometricLoading || Boolean(pendingUser)}
-              />
-              <PremiumLoginField
-                label="Password"
-                icon="lock-outline"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Password"
-                editable={!loading && !biometricLoading && !pendingUser}
-                disabled={loading || biometricLoading || Boolean(pendingUser)}
-              />
-
-              <View style={styles.authActions}>
-                {!pendingUser ? (
-                  <SecureActionButton label={loading ? 'Opening secure session' : 'Login'} loading={loading} disabled={biometricLoading} onPress={submit} />
-                ) : null}
-
-                {biometricReady ? (
-                  <SecureActionButton label={biometricLoading ? 'Unlocking' : 'Login using biometrics'} icon="fingerprint" loading={biometricLoading} disabled={loading} variant="secondary" onPress={unlockWithBiometric} />
-                ) : null}
-              </View>
-
-            </AuthGlassPanel>
-
-            <View style={styles.signupRow}>
-              <Text style={styles.signupText}>New to InsureIT?</Text>
-              <Link href="/signup" asChild>
-                <Pressable accessibilityRole="button" style={styles.signupButton}>
-                  <Text style={styles.signupButtonText}>Sign up</Text>
-                </Pressable>
-              </Link>
+    <>
+      <AuthExperience
+        footer={(
+          <View style={authExperienceStyles.ctaCard}>
+            <View style={authExperienceStyles.ctaIcon}>
+              <MaterialCommunityIcons name="account-plus-outline" size={25} color="#0B63CE" />
             </View>
-          </Animated.View>
-        </ScrollView>
-        <BiometricEnrollmentModal
-          visible={Boolean(pendingUser)}
-          loading={biometricLoading}
-          supported={canEnrollBiometric}
-          onEnable={enableBiometricForPendingUser}
-          onSkip={skipBiometricForPendingUser}
-        />
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+            <View style={authExperienceStyles.ctaCopy}>
+              <Text style={authExperienceStyles.ctaTitle}>New to InsureIT?</Text>
+              <Text style={authExperienceStyles.ctaBody}>Create an account to get started</Text>
+            </View>
+            <Link href="/signup" asChild>
+              <Pressable accessibilityRole="button" style={authExperienceStyles.ctaButton}>
+                <Text style={authExperienceStyles.ctaButtonText}>Sign up</Text>
+              </Pressable>
+            </Link>
+          </View>
+        )}
+      >
+        <Animated.View style={[styles.body, { opacity, transform: [{ translateY }] }]}>
+          <AuthGlassPanel>
+            <View style={authExperienceStyles.secureRow}>
+              <View style={authExperienceStyles.secureCopy}>
+                <MaterialCommunityIcons name="lock" size={16} color="#0F9F6E" />
+                <Text style={authExperienceStyles.secureText}>Secure access</Text>
+              </View>
+            </View>
+
+            {error ? <AuthStatusMessage type="error">{error}</AuthStatusMessage> : null}
+
+            <PremiumLoginField
+              label="Email"
+              icon="email-outline"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="name@company.com"
+              editable={!loading && !biometricLoading && !pendingUser}
+              disabled={loading || biometricLoading || Boolean(pendingUser)}
+            />
+            <PremiumLoginField
+              label="Password"
+              icon="lock-outline"
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Password"
+              editable={!loading && !biometricLoading && !pendingUser}
+              disabled={loading || biometricLoading || Boolean(pendingUser)}
+            />
+
+            <Link href="/forgot-password" asChild>
+              <Pressable accessibilityRole="button" disabled={loading || biometricLoading || Boolean(pendingUser)} style={authExperienceStyles.helperLink}>
+                <Text style={authExperienceStyles.helperLinkText}>Forgot Password?</Text>
+              </Pressable>
+            </Link>
+
+            <View style={styles.authActions}>
+              {!pendingUser ? (
+                <SecureActionButton label={loading ? 'Opening secure session' : 'Login'} loading={loading} disabled={biometricLoading} onPress={submit} />
+              ) : null}
+
+              {biometricReady ? (
+                <SecureActionButton label={biometricLoading ? 'Unlocking' : 'Login using biometrics'} icon="fingerprint" loading={biometricLoading} disabled={loading} variant="secondary" onPress={unlockWithBiometric} />
+              ) : null}
+            </View>
+          </AuthGlassPanel>
+        </Animated.View>
+      </AuthExperience>
+      <BiometricEnrollmentModal
+        visible={Boolean(pendingUser)}
+        loading={biometricLoading}
+        supported={canEnrollBiometric}
+        onEnable={enableBiometricForPendingUser}
+        onSkip={skipBiometricForPendingUser}
+      />
+    </>
   );
+
 }
 
 function authErrorMessage(error: unknown) {

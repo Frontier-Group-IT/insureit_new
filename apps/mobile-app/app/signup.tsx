@@ -1,9 +1,10 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AuthGlassPanel, AuthStatusMessage, BrandLogo, PremiumLoginField, SecureActionButton, SignalScene } from '@/components/first-look';
+import { AuthExperience, authExperienceStyles } from '@/components/auth-experience';
+import { AuthGlassPanel, AuthStatusMessage, PremiumLoginField, SecureActionButton } from '@/components/first-look';
 import { ensureCustomerForUser, routeSignedInUser, signUp } from '@/lib/auth';
 
 export default function SignupScreen() {
@@ -36,42 +37,42 @@ export default function SignupScreen() {
   }
 
   return (
-    <SafeAreaView style={authStyles.safeArea}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={authStyles.keyboard}>
-        <ScrollView
-          style={authStyles.screen}
-          contentContainerStyle={authStyles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          automaticallyAdjustKeyboardInsets
-        >
-          <SignalScene active={loading} showLogo={false} />
-          <AuthGlassPanel>
-            <BrandLogo width={172} style={authStyles.logo} />
-            <View style={authStyles.secureRow}>
-              <Text style={authStyles.secureText}>Create secure access</Text>
-            </View>
-            {error ? <AuthStatusMessage type="error">{error}</AuthStatusMessage> : null}
-            {message ? <AuthStatusMessage type="success">{message}</AuthStatusMessage> : null}
-            <PremiumLoginField label="Full name" icon="account-outline" value={fullName} onChangeText={setFullName} editable={!loading} disabled={loading} />
-            <PremiumLoginField label="Phone" icon="phone-outline" keyboardType="phone-pad" value={phone} onChangeText={setPhone} editable={!loading} disabled={loading} />
-            <PremiumLoginField label="Email" icon="email-outline" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} editable={!loading} disabled={loading} />
-            <PremiumLoginField label="Password" icon="lock-outline" secureTextEntry value={password} onChangeText={setPassword} editable={!loading} disabled={loading} />
-            <View style={authStyles.actions}>
-              <SecureActionButton label={loading ? 'Creating account' : 'Sign up'} loading={loading} disabled={loading} variant="success" onPress={submit} />
-            </View>
-            <View style={authStyles.loginRow}>
-              <Text style={authStyles.loginText}>Already have an account?</Text>
-              <Link href="/login" asChild>
-                <Pressable accessibilityRole="button" style={authStyles.loginButton}>
-                  <Text style={authStyles.loginButtonText}>Login</Text>
-                </Pressable>
-              </Link>
-            </View>
-          </AuthGlassPanel>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+    <AuthExperience
+      footer={(
+        <View style={authExperienceStyles.ctaCard}>
+          <View style={authExperienceStyles.ctaIcon}>
+            <MaterialCommunityIcons name="login" size={24} color="#0B63CE" />
+          </View>
+          <View style={authExperienceStyles.ctaCopy}>
+            <Text style={authExperienceStyles.ctaTitle}>Already protected?</Text>
+            <Text style={authExperienceStyles.ctaBody}>Login to your InsureIT account</Text>
+          </View>
+          <Link href="/login" asChild>
+            <Pressable accessibilityRole="button" style={authExperienceStyles.ctaButton}>
+              <Text style={authExperienceStyles.ctaButtonText}>Login</Text>
+            </Pressable>
+          </Link>
+        </View>
+      )}
+    >
+      <AuthGlassPanel>
+        <View style={authExperienceStyles.secureRow}>
+          <View style={authExperienceStyles.secureCopy}>
+            <MaterialCommunityIcons name="account-lock-outline" size={17} color="#0F9F6E" />
+            <Text style={authExperienceStyles.secureText}>Create secure access</Text>
+          </View>
+        </View>
+        {error ? <AuthStatusMessage type="error">{error}</AuthStatusMessage> : null}
+        {message ? <AuthStatusMessage type="success">{message}</AuthStatusMessage> : null}
+        <PremiumLoginField label="Full name" icon="account-outline" value={fullName} onChangeText={setFullName} placeholder="Your full name" editable={!loading} disabled={loading} />
+        <PremiumLoginField label="Phone" icon="phone-outline" keyboardType="phone-pad" value={phone} onChangeText={setPhone} placeholder="Mobile number" editable={!loading} disabled={loading} />
+        <PremiumLoginField label="Email" icon="email-outline" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="name@company.com" editable={!loading} disabled={loading} />
+        <PremiumLoginField label="Password" icon="lock-outline" secureTextEntry value={password} onChangeText={setPassword} placeholder="Create password" editable={!loading} disabled={loading} />
+        <View style={styles.actions}>
+          <SecureActionButton label={loading ? 'Creating account' : 'Sign up'} loading={loading} disabled={loading} variant="success" onPress={submit} />
+        </View>
+      </AuthGlassPanel>
+    </AuthExperience>
   );
 }
 
@@ -84,17 +85,6 @@ function signupErrorMessage(error: unknown) {
   return 'Account setup could not be completed. Review the details and try again.';
 }
 
-const authStyles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F7FAF8' },
-  keyboard: { flex: 1 },
-  screen: { flex: 1 },
-  content: { flexGrow: 1, paddingHorizontal: 16, paddingBottom: 120 },
-  logo: { alignSelf: 'center', marginBottom: 8 },
-  secureRow: { alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
-  secureText: { color: '#0F9F6E', fontSize: 15, fontWeight: '800' },
+const styles = StyleSheet.create({
   actions: { marginTop: 2 },
-  loginRow: { alignItems: 'center', gap: 6, marginTop: 18 },
-  loginText: { color: '#8290A3', fontSize: 13, fontWeight: '600' },
-  loginButton: { minHeight: 34, justifyContent: 'center' },
-  loginButtonText: { color: '#075EEA', fontSize: 14, fontWeight: '800' },
 });
