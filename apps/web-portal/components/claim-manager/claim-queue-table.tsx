@@ -14,6 +14,29 @@ export type QueueClaimRow = {
   insurance_companies: { name: string } | null;
 };
 
+type BrandLogo = {
+  src: string;
+  label: string;
+};
+
+const vehicleBrandLogos: Record<string, BrandLogo> = {
+  "ashok leyland": { src: "/assets/vehicle-brands/ashok-leyland.svg", label: "Ashok Leyland" },
+  leyland: { src: "/assets/vehicle-brands/ashok-leyland.svg", label: "Ashok Leyland" },
+  honda: { src: "/assets/vehicle-brands/honda.svg", label: "Honda" },
+  toyota: { src: "/assets/vehicle-brands/toyota.svg", label: "Toyota" },
+  kia: { src: "/assets/vehicle-brands/kia.svg", label: "Kia Motors" },
+  "kia motors": { src: "/assets/vehicle-brands/kia.svg", label: "Kia Motors" },
+  maruti: { src: "/assets/vehicle-brands/maruti-suzuki.svg", label: "Maruti Suzuki" },
+  suzuki: { src: "/assets/vehicle-brands/maruti-suzuki.svg", label: "Maruti Suzuki" },
+  "maruti suzuki": { src: "/assets/vehicle-brands/maruti-suzuki.svg", label: "Maruti Suzuki" },
+  mahindra: { src: "/assets/vehicle-brands/mahindra.svg", label: "Mahindra" },
+  "mahindra and mahindra": { src: "/assets/vehicle-brands/mahindra.svg", label: "Mahindra" },
+  tata: { src: "/assets/vehicle-brands/tata.svg", label: "Tata Motors" },
+  "tata motors": { src: "/assets/vehicle-brands/tata.svg", label: "Tata Motors" },
+  hyundai: { src: "/assets/vehicle-brands/hyundai.svg", label: "Hyundai" },
+  "hyundai motors": { src: "/assets/vehicle-brands/hyundai.svg", label: "Hyundai" }
+};
+
 export function ClaimQueueTable({ rows }: { rows: QueueClaimRow[] }) {
   const visibleRows = rows.slice(0, 7);
   return (
@@ -64,8 +87,8 @@ function ClaimQueueRow({ claim, index }: { claim: QueueClaimRow; index: number }
       <Cell className="text-center font-semibold">{formatDate(claim.accident_at ?? claim.created_at)}</Cell>
       <Cell className="text-center"><div className="inline-flex items-center gap-2 font-black"><MiniShield />{claim.insurance_companies?.name ?? "InsureIT"}</div></Cell>
       <Cell className="text-center font-semibold">{claim.policies?.policy_no ?? "-"}</Cell>
-      <Cell className="text-center font-semibold">{controlNumberFor(claim)}</Cell>
       <Cell className="text-center font-semibold">{claim.claim_no}</Cell>
+      <Cell className="text-center font-semibold">{claim.insurer_claim_no ?? "-"}</Cell>
       <Cell><ProcessCell label={process?.label ?? claim.current_status} keyName={process?.key ?? "default"} /></Cell>
       <td className="px-4 py-4 text-center"><Link href={`/claims/${claim.id}`} className="inline-flex h-[36px] items-center justify-center rounded-[5px] bg-[#003A83] px-5 text-[14px] font-bold text-white shadow-[0_4px_10px_rgba(0,58,131,0.22)] transition hover:bg-[#071D49]">Proceed</Link></td>
     </tr>
@@ -81,12 +104,28 @@ function Cell({ children, className = "" }: { children: React.ReactNode; classNa
 }
 
 function ManufacturerBadge({ name }: { name: string }) {
+  const normalized = normalizeBrand(name);
+  const brand = vehicleBrandLogos[normalized] ?? Object.entries(vehicleBrandLogos).find(([key]) => normalized.includes(key) || key.includes(normalized))?.[1];
+  if (brand) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-1">
+        <div className="grid h-12 min-w-16 place-items-center rounded-xl bg-white px-2 shadow-[0_0_0_1px_rgba(7,29,73,0.08)]">
+          <img src={brand.src} alt={brand.label} className="max-h-9 max-w-[74px] object-contain" />
+        </div>
+        <span className="max-w-[120px] text-center text-[13px] font-semibold leading-4">{brand.label}</span>
+      </div>
+    );
+  }
   const initial = name && name !== "-" ? name.charAt(0).toUpperCase() : "V";
-  return <div className="flex flex-col items-center justify-center gap-1"><div className="grid h-10 min-w-12 place-items-center rounded-xl bg-white text-[28px] font-black text-[#003A83] shadow-[0_0_0_1px_rgba(7,29,73,0.08)]">{initial}</div><span className="max-w-[120px] text-center text-[13px] font-semibold leading-4">{name}</span></div>;
+  return <div className="flex flex-col items-center justify-center gap-1"><div className="grid h-12 min-w-16 place-items-center rounded-xl bg-white text-[28px] font-black text-[#003A83] shadow-[0_0_0_1px_rgba(7,29,73,0.08)]">{initial}</div><span className="max-w-[120px] text-center text-[13px] font-semibold leading-4">{name}</span></div>;
+}
+
+function normalizeBrand(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
 function MiniShield() {
-  return <span className="grid h-8 w-8 place-items-center rounded-md border-2 border-[#071D49] bg-[#F4B329] text-[13px] font-black text-[#071D49]">IT</span>;
+  return <img src="/assets/brand/insureit-stitch-logo.png" alt="InsureIT" className="h-8 w-8 rounded-md object-contain" />;
 }
 
 function ProcessCell({ label, keyName }: { label: string; keyName: string }) {
@@ -116,10 +155,4 @@ function PageButton({ children, active = false, disabled = false }: { children: 
 
 function formatDate(value?: string | null) {
   return value ? new Date(value).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "-";
-}
-
-function controlNumberFor(claim: Pick<QueueClaimRow, "insurer_claim_no" | "claim_no">) {
-  if (claim.insurer_claim_no?.trim()) return claim.insurer_claim_no;
-  const suffix = claim.claim_no.replace(/\D/g, "").slice(-5) || claim.claim_no.slice(-5);
-  return `CTRL/${new Date().getFullYear().toString().slice(-2)}/${suffix}`;
 }
