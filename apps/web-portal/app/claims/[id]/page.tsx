@@ -59,24 +59,11 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
     .returns<SpotSurveyVerification[]>();
 
   const queue = operationsQueueForStatus(claim.current_status);
-  const title = titleForWorkspace(queue?.key, queue?.label ?? claim.current_status);
   const backHref = queue ? `/claims?queue=${queue.key}` : "/claims";
 
   return (
-    <ClaimManagerShell title={title} backHref={backHref}>
+    <ClaimManagerShell title="Spot Survey Verification" backHref={backHref}>
       <SpotSurveyWorkspace claim={claim} documents={signedDocs} verifications={verificationRows ?? []} />
     </ClaimManagerShell>
   );
-}
-
-function titleForWorkspace(queueKey?: string, fallback?: string) {
-  if (queueKey === "spot-deputation") return "Spot Survey";
-  if (queueKey === "vehicle-intimation") return "Vehicle Claims Intimated";
-  if (queueKey === "claim-intimation") return "Claim Intimation";
-  if (queueKey === "work-approval") return "Work Approval";
-  if (queueKey === "reinspection") return "Re-Inspection";
-  if (queueKey === "delivery-order") return "Delivery Order";
-  if (queueKey === "payment") return "Payment";
-  if (queueKey === "closed-claims") return "Closed Claim";
-  return fallback ?? "Claim Workspace";
 }
