@@ -117,24 +117,17 @@ function Info({ icon, label, title, subtitle, last = false }: { icon: string; la
 
 function SpotSurveyDetailsPanel({ claimId, driverNumber, lossLocation, driverVerification, locationVerification }: { claimId: string; driverNumber: string | null; lossLocation: string | null; driverVerification?: SpotSurveyVerification; locationVerification?: SpotSurveyVerification }) {
   return (
-    <section className="rounded-2xl border border-[#DFE8F4] bg-white px-4 py-3 shadow-[0_8px_20px_rgba(7,29,73,0.035)]">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-[17px] font-semibold text-[#071D49]">Spot Survey Details</h2>
-          <p className="text-[12px] text-[#68758A]">Non-document information captured during spot survey.</p>
-        </div>
-        <span className="rounded-full bg-[#F4F7FC] px-3 py-1 text-[11px] font-semibold text-[#4B596B]">Details</span>
-      </div>
-      <div className="grid gap-3 lg:grid-cols-2">
-        <SurveyDetailItem icon="👤" title="Driver Details" label="Driver / DL Number" value={driverNumber} verified={Boolean(driverVerification?.is_valid)} verifyButton={<VerifyDetailButton claimId={claimId} detailKey="driver" detailLabel="Driver / DL Number" detailValue={driverNumber ?? ""} disabled={!driverNumber} />} />
-        <SurveyDetailItem icon="📍" title="Loss Location" label="Accident / Loss Location" value={lossLocation} verified={Boolean(locationVerification?.is_valid)} verifyButton={<VerifyDetailButton claimId={claimId} detailKey="location" detailLabel="Loss Location" detailValue={lossLocation ?? ""} disabled={!lossLocation} />} />
+    <section className="rounded-xl border border-[#DFE8F4] bg-white px-3 py-2 shadow-[0_5px_14px_rgba(7,29,73,0.025)]">
+      <div className="grid gap-2 lg:grid-cols-2">
+        <SurveyDetailItem title="Driver / DL Number" value={driverNumber} verified={Boolean(driverVerification?.is_valid)} verifyButton={<VerifyDetailButton claimId={claimId} detailKey="driver" detailLabel="Driver / DL Number" detailValue={driverNumber ?? ""} disabled={!driverNumber} />} />
+        <SurveyDetailItem title="Loss Location" value={lossLocation} verified={Boolean(locationVerification?.is_valid)} verifyButton={<VerifyDetailButton claimId={claimId} detailKey="location" detailLabel="Loss Location" detailValue={lossLocation ?? ""} disabled={!lossLocation} />} />
       </div>
     </section>
   );
 }
 
-function SurveyDetailItem({ icon, title, label, value, verified, verifyButton }: { icon: string; title: string; label: string; value?: string | null; verified: boolean; verifyButton: React.ReactNode }) {
-  return <div className={`flex items-center gap-3 rounded-xl border p-3 ${verified ? "border-green-200 bg-green-50/40" : "border-[#E2EAF4] bg-[#FBFCFE]"}`}><div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#EEF4FC] text-[24px]">{icon}</div><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><p className="text-[14px] font-semibold text-[#071D49]">{title}</p>{verified ? <span className="rounded-full border border-green-200 bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Verified</span> : null}</div><p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.08em] text-[#68758A]">{label}</p><p className="mt-1 line-clamp-2 text-[13px] leading-5 text-[#071D49]">{value || "Not available"}</p>{verified ? <p className="mt-1 text-[11px] font-semibold text-green-700">Verification details saved.</p> : null}</div><div className="w-[96px] shrink-0">{verified ? <button disabled className="h-8 w-full rounded-md border border-green-200 bg-green-100 text-[12px] font-semibold text-green-700">Verified</button> : verifyButton}</div></div>;
+function SurveyDetailItem({ title, value, verified, verifyButton }: { title: string; value?: string | null; verified: boolean; verifyButton: React.ReactNode }) {
+  return <div className={`grid min-h-[46px] grid-cols-[132px_1fr_92px] items-center gap-3 rounded-lg border px-3 py-2 ${verified ? "border-green-200 bg-green-50/40" : "border-[#E2EAF4] bg-[#FBFCFE]"}`}><p className="text-[12px] font-semibold text-[#071D49]">{title}</p><p className="truncate text-[13px] leading-5 text-[#071D49]">{value || "Not available"}</p><div>{verified ? <button disabled className="h-8 w-full rounded-md border border-green-200 bg-green-100 text-[12px] font-semibold text-green-700">Verified</button> : verifyButton}</div></div>;
 }
 
 function DocumentCard({ item, claim, verification }: { item: Item; claim: SpotSurveyClaim; verification?: SpotSurveyVerification }) {
