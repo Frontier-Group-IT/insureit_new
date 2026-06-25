@@ -15,7 +15,7 @@ export function RequestReuploadButton({ claimId, documentId, documentTitle }: { 
   return (
     <>
       <button type="button" onClick={() => { setResult(null); setOpen(true); }} className="h-8 rounded-md border border-[#D08700] bg-white px-2 text-[11px] font-semibold text-[#A35B00] transition hover:bg-[#FFF8E8]">
-        Request Reupload
+        Reupload
       </button>
       {open ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-[#071D49]/45 px-4">
@@ -32,7 +32,7 @@ export function RequestReuploadButton({ claimId, documentId, documentTitle }: { 
             className="w-full max-w-[520px] rounded-2xl bg-white shadow-xl"
           >
             <div className="border-b border-[#E6EEF7] px-5 py-4">
-              <h2 className="text-[18px] font-semibold text-[#071D49]">Request Reupload</h2>
+              <h2 className="text-[18px] font-semibold text-[#071D49]">Reupload Request</h2>
               <p className="mt-1 text-[13px] text-[#4B596B]">Ask the customer to upload a fresh copy of {documentTitle}.</p>
             </div>
             <div className="space-y-3 px-5 py-4">
@@ -44,7 +44,7 @@ export function RequestReuploadButton({ claimId, documentId, documentTitle }: { 
             </div>
             <div className="flex items-center justify-between border-t border-[#E6EEF7] px-5 py-4">
               <button type="button" onClick={() => setOpen(false)} className="h-10 rounded-lg border border-[#B8C5D6] px-6 text-[13px] font-semibold text-[#071D49]">{result?.ok ? "Close" : "Cancel"}</button>
-              <button type="submit" disabled={pending || Boolean(result?.ok)} className="h-10 rounded-lg bg-[#D08700] px-7 text-[13px] font-semibold text-white disabled:opacity-60">{pending ? "Sending..." : result?.ok ? "Requested" : "Send Request"}</button>
+              <button type="submit" disabled={pending || Boolean(result?.ok)} className="h-10 rounded-lg bg-[#D08700] px-7 text-[13px] font-semibold text-white disabled:opacity-60">{pending ? "Sending..." : result?.ok ? "Requested" : "Send Reupload Request"}</button>
             </div>
           </form>
         </div>
