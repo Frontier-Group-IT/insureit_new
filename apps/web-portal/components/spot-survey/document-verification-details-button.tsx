@@ -80,7 +80,7 @@ export function DocumentVerificationDetailsButton({ document, verification, titl
                   {verification.invalid_reason ? <p className="mt-2 text-[12px] font-semibold text-red-700">{verification.invalid_reason}</p> : null}
                 </div>
 
-                {verificationType === "rc" ? <VerificationTable title="RC Validity Check" rows={rcRows} details={details} /> : null}
+                {verificationType === "rc" ? <VerificationTable title="Documents Validity Check" rows={rcRows} details={details} /> : null}
                 {verificationType === "insurance" ? <VerificationTable title="Insurance Verification" rows={insuranceRows} details={details} /> : null}
                 {verificationType !== "rc" && verificationType !== "insurance" ? <GenericDetails details={details} /> : null}
 
