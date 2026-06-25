@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shell";
-import { SpotSurveyWorkspace, type SpotSurveyClaim, type SpotSurveyDocument } from "@/components/spot-survey/spot-survey-workspace-v2";
+import { SpotSurveyWorkspace, type SpotSurveyClaim, type SpotSurveyDocument, type SpotSurveyVerification } from "@/components/spot-survey/spot-survey-workspace-v2";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import type { ClaimStatus } from "@/lib/claim-workflow";
 import { operationsQueueForStatus } from "@/lib/claim-workflow";
@@ -51,13 +51,20 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
     return { ...document, signedUrl: data?.signedUrl ?? null };
   }));
 
+  const { data: verificationRows } = await supabase
+    .from("claim_document_verifications")
+    .select("id, claim_id, document_id, document_type, verification_type, incident_date, is_valid, invalid_reason, details, created_at")
+    .eq("claim_id", id)
+    .order("created_at", { ascending: false })
+    .returns<SpotSurveyVerification[]>();
+
   const queue = operationsQueueForStatus(claim.current_status);
   const title = titleForWorkspace(queue?.key, queue?.label ?? claim.current_status);
   const backHref = queue ? `/claims?queue=${queue.key}` : "/claims";
 
   return (
     <ClaimManagerShell title={title} backHref={backHref}>
-      <SpotSurveyWorkspace claim={claim} documents={signedDocs} />
+      <SpotSurveyWorkspace claim={claim} documents={signedDocs} verifications={verificationRows ?? []} />
     </ClaimManagerShell>
   );
 }
