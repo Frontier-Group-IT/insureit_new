@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
+import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { UserMenu } from "@/components/user-menu";
 
 type Props = {
@@ -10,11 +10,32 @@ type Props = {
   activeNav?: "dashboard" | "claims" | "tasks" | "reports" | "more";
 };
 
+type NotificationRow = {
+  id: string;
+  event_type: string;
+  title: string;
+  priority: "low" | "medium" | "high" | "critical";
+  status: "new" | "seen" | "in_progress" | "handled" | "dismissed";
+  created_at: string;
+};
+
+type NotificationGroup = {
+  key: string;
+  label: string;
+  count: number;
+  urgentCount: number;
+  oldestAt: string;
+  href: string;
+};
+
 const logoUrl = "https://raw.githubusercontent.com/antnish1/insureit_new/main/apps/mobile-app/assets/brand/insureit-stitch-logo.png";
 
 export async function ClaimManagerShell({ title, backHref = "/dashboard", children, activeNav = "claims" }: Props) {
   const accessToken = await getServerAccessToken();
   const { user, profile } = await getAuthenticatedProfile(accessToken);
+  const notificationRows = await getNotificationRows();
+  const notificationGroups = buildNotificationGroups(notificationRows);
+  const notificationCount = notificationRows.length;
 
   return (
     <div className="min-h-screen bg-[#F7FAFE] text-[#071D49]">
@@ -47,13 +68,7 @@ export async function ClaimManagerShell({ title, backHref = "/dashboard", childr
             </div>
 
             <div className="flex h-full shrink-0 items-center gap-5 py-2">
-              <Link href="/notifications" className="group flex h-[52px] flex-col items-center justify-center gap-0.5 text-[#071D49]" aria-label="Notifications">
-                <span className="relative grid h-7 w-7 place-items-center rounded-full bg-white text-[17px] shadow-[0_0_0_1px_rgba(7,29,73,0.08)] transition group-hover:bg-[#F1F6FF]">
-                  ♡
-                  <span className="absolute -right-1 -top-0.5 grid h-4 w-4 place-items-center rounded-full bg-[#E21D35] text-[10px] font-semibold text-white ring-1 ring-white">5</span>
-                </span>
-                <span className="hidden text-[10.5px] font-medium leading-none text-[#1E2A44] sm:block">Notifications</span>
-              </Link>
+              <NotificationMenu groups={notificationGroups} count={notificationCount} />
               <div className="flex h-[52px] flex-col items-center justify-center gap-0.5 text-[10.5px] font-medium text-[#1E2A44]">
                 <div className="scale-[0.82]"><UserMenu profile={profile} user={user ? { id: user.id, email: user.email } : null} /></div>
                 <span className="hidden leading-none sm:block">Profile</span>
@@ -69,6 +84,113 @@ export async function ClaimManagerShell({ title, backHref = "/dashboard", childr
       </div>
     </div>
   );
+}
+
+function NotificationMenu({ groups, count }: { groups: NotificationGroup[]; count: number }) {
+  const displayCount = count > 99 ? "99+" : String(count);
+
+  return (
+    <div className="group/notify relative flex h-[52px] flex-col items-center justify-center gap-0.5 text-[#071D49]">
+      <Link href="/dashboard#manager-action" className="flex flex-col items-center justify-center gap-0.5" aria-label="Notifications">
+        <span className="relative grid h-7 w-7 place-items-center rounded-full bg-white text-[17px] shadow-[0_0_0_1px_rgba(7,29,73,0.08)] transition group-hover/notify:bg-[#F1F6FF]">
+          ▾
+          {count ? <span className="absolute -right-2 -top-1 grid min-h-4 min-w-4 place-items-center rounded-full bg-[#E21D35] px-1 text-[9px] font-semibold text-white ring-1 ring-white">{displayCount}</span> : null}
+        </span>
+        <span className="hidden text-[10.5px] font-medium leading-none text-[#1E2A44] sm:block">Notifications</span>
+      </Link>
+
+      <div className="invisible absolute right-0 top-[54px] z-50 w-[360px] translate-y-1 rounded-2xl border border-[#DCE7F5] bg-white opacity-0 shadow-[0_18px_42px_rgba(7,29,73,0.14)] transition group-hover/notify:visible group-hover/notify:translate-y-0 group-hover/notify:opacity-100 group-focus-within/notify:visible group-focus-within/notify:translate-y-0 group-focus-within/notify:opacity-100">
+        <div className="flex items-center justify-between border-b border-[#E6EEF7] px-4 py-3">
+          <div>
+            <p className="text-[13px] font-semibold text-[#071D49]">Action Inbox</p>
+            <p className="mt-0.5 text-[11px] text-[#68758A]">Grouped pending customer activity</p>
+          </div>
+          <span className="rounded-full bg-[#FFF4E5] px-2.5 py-1 text-[11px] font-semibold text-[#A85D00]">{count} pending</span>
+        </div>
+
+        {groups.length ? (
+          <div className="divide-y divide-[#E8EEF6]">
+            {groups.slice(0, 6).map((group) => (
+              <Link key={group.key} href={group.href} className="flex items-center justify-between gap-3 px-4 py-3 transition hover:bg-[#FAFCFF]">
+                <div className="min-w-0">
+                  <p className="text-[12px] font-semibold text-[#071D49]">{group.label}</p>
+                  <p className="mt-0.5 text-[10.5px] text-[#68758A]">Oldest {relativeTime(group.oldestAt)}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {group.urgentCount ? <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700">{group.urgentCount} urgent</span> : null}
+                  <span className="grid h-7 min-w-7 place-items-center rounded-full bg-[#F2F6FB] px-2 text-[11px] font-semibold text-[#071D49]">{group.count}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="px-4 py-8 text-center">
+            <p className="text-[13px] font-semibold text-[#071D49]">No pending actions</p>
+            <p className="mt-1 text-[11.5px] text-[#7A8797]">New uploads, replies and KYC updates will appear here.</p>
+          </div>
+        )}
+
+        <div className="border-t border-[#E6EEF7] px-4 py-2.5 text-right">
+          <Link href="/dashboard#manager-action" className="text-[11.5px] font-semibold text-[#174EA6] hover:text-[#071D49]">Open dashboard inbox</Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+async function getNotificationRows() {
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("customer_activity_events")
+    .select("id, event_type, title, priority, status, created_at")
+    .in("status", ["new", "in_progress"])
+    .order("created_at", { ascending: false })
+    .limit(80)
+    .returns<NotificationRow[]>();
+
+  return data ?? [];
+}
+
+function buildNotificationGroups(rows: NotificationRow[]): NotificationGroup[] {
+  const groups = new Map<string, NotificationGroup>();
+  for (const row of rows) {
+    const definition = notificationGroupDefinition(row.event_type);
+    const existing = groups.get(definition.key);
+    if (!existing) {
+      groups.set(definition.key, { ...definition, count: 1, urgentCount: isUrgent(row), oldestAt: row.created_at });
+      continue;
+    }
+    existing.count += 1;
+    existing.urgentCount += isUrgent(row);
+    if (Date.parse(row.created_at) < Date.parse(existing.oldestAt)) existing.oldestAt = row.created_at;
+  }
+  return Array.from(groups.values()).sort((a, b) => b.urgentCount - a.urgentCount || b.count - a.count || Date.parse(a.oldestAt) - Date.parse(b.oldestAt));
+}
+
+function notificationGroupDefinition(eventType: string): Pick<NotificationGroup, "key" | "label" | "href"> {
+  if (eventType === "claim_document_reuploaded") return { key: "reupload", label: "Rejected Docs Reuploaded", href: "/dashboard?activity=replacements#manager-action" };
+  if (eventType === "claim_document_uploaded" || eventType === "claim_documents_completed") return { key: "documents", label: "Documents Uploaded", href: "/dashboard?activity=documents#manager-action" };
+  if (eventType.startsWith("support_ticket")) return { key: "support", label: "Support Replies / Tickets", href: "/dashboard?activity=support#manager-action" };
+  if (eventType.startsWith("customer_kyc")) return { key: "kyc", label: "KYC / Profile Updates", href: "/dashboard?activity=kyc#customer-activity" };
+  if (eventType === "roadside_call_started") return { key: "roadside", label: "Roadside Assistance", href: "/dashboard?activity=roadside#manager-action" };
+  return { key: "customer-updates", label: "Customer Updates", href: "/dashboard#manager-action" };
+}
+
+function isUrgent(row: NotificationRow) {
+  return row.priority === "critical" ? 1 : row.priority === "high" ? 1 : 0;
+}
+
+function relativeTime(value: string) {
+  const diffMs = Date.now() - Date.parse(value);
+  if (!Number.isFinite(diffMs)) return "-";
+  const minutes = Math.max(0, Math.floor(diffMs / 60000));
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "1d ago";
+  return `${days}d ago`;
 }
 
 function SideNavItem({ href, icon, label, active }: { href: string; icon: string; label: string; active: boolean }) {
