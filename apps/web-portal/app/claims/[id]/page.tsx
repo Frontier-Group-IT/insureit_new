@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shell";
-import { SpotSurveyWorkspace, type SpotSurveyClaim, type SpotSurveyDocument, type SpotSurveyVerification } from "@/components/spot-survey/spot-survey-workspace-v2";
+import { SpotSurveyWorkspace } from "@/components/spot-survey/spot-survey-workspace-dms";
+import type { SpotSurveyClaim, SpotSurveyDocument, SpotSurveyVerification } from "@/components/spot-survey/spot-survey-workspace-v2";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import type { ClaimStatus } from "@/lib/claim-workflow";
 import { operationsQueueForStatus } from "@/lib/claim-workflow";
