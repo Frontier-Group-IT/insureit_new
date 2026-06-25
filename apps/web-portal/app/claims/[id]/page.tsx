@@ -5,8 +5,6 @@ import { createServerSupabaseClient } from "@/lib/auth-server";
 import type { ClaimStatus } from "@/lib/claim-workflow";
 import { operationsQueueForStatus } from "@/lib/claim-workflow";
 
-const DOCUMENT_SIGNED_URL_EXPIRY_SECONDS = 60 * 60 * 24;
-
 type ClaimDetail = SpotSurveyClaim & {
   customer_id: string;
   current_status: ClaimStatus;
@@ -55,9 +53,9 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
 
   if (error || !claim) notFound();
 
-  const signedDocs: SpotSurveyDocument[] = await Promise.all((documents ?? []).map(async (document) => {
-    const { data } = await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, DOCUMENT_SIGNED_URL_EXPIRY_SECONDS);
-    return { ...document, signedUrl: data?.signedUrl ?? null };
+  const signedDocs: SpotSurveyDocument[] = (documents ?? []).map((document) => ({
+    ...document,
+    signedUrl: `/claim-documents/${document.id}/open`
   }));
 
   const [{ data: verificationRows }, { data: stageRows }] = await Promise.all([
