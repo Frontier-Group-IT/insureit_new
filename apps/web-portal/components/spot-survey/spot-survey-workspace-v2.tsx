@@ -90,19 +90,19 @@ export function SpotSurveyWorkspace({ claim, documents, verifications = [] }: { 
   const driverMobile = extractDriverMobile(claim.accident_description) ?? claim.customers?.phone ?? null;
 
   return (
-    <div className="mx-auto max-w-[1440px] space-y-3 pb-6">
+    <div className="mx-auto max-w-[1440px] space-y-2 pb-4">
       <InfoStrip claim={claim} />
       <SpotSurveyDetailsPanel driverName={driverName} driverMobile={driverMobile} lossLocation={claim.accident_location} />
 
-      <section className="rounded-2xl border border-[#DFE8F4] bg-white px-4 py-4 shadow-[0_10px_24px_rgba(7,29,73,0.04)]">
+      <section className="rounded-2xl border border-[#DFE8F4] bg-white px-4 py-3 shadow-[0_10px_24px_rgba(7,29,73,0.04)]">
         <div className="mb-3 flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-[21px] font-semibold leading-tight tracking-[-0.02em] text-[#071D49]">Document Verification</h1>
-            <p className="mt-1 text-[13px] leading-5 text-[#4B596B]">Verify customer-uploaded documents and request reupload when a file is unclear, expired, or invalid.</p>
+            <h1 className="text-[20px] font-semibold leading-tight tracking-[-0.02em] text-[#071D49]">Document Verification</h1>
+            <p className="mt-0.5 text-[12px] leading-5 text-[#4B596B]">Verify customer-uploaded documents and request reupload when a file is unclear, expired, or invalid.</p>
           </div>
           <div className="rounded-xl bg-[#F4F7FC] px-3 py-2 text-right">
-            <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#68758A]">Documents Verified</p>
-            <p className="text-[18px] font-semibold text-[#071D49]">{verifiedCount}/{items.length}</p>
+            <p className="text-[9px] font-medium uppercase tracking-[0.12em] text-[#68758A]">Documents Verified</p>
+            <p className="text-[17px] font-semibold text-[#071D49]">{verifiedCount}/{items.length}</p>
           </div>
         </div>
 
@@ -110,12 +110,12 @@ export function SpotSurveyWorkspace({ claim, documents, verifications = [] }: { 
           {items.map((item) => <DocumentCard key={item.key} item={item} claim={claim} verification={latestVerificationForItem(item, verifications)} />)}
         </div>
 
-        <div className="mt-4 grid gap-3 rounded-xl border border-[#E4ECF6] bg-[#FBFCFE] p-3 lg:grid-cols-[1fr_220px] lg:items-end">
+        <div className="mt-3 grid gap-3 rounded-xl border border-[#E4ECF6] bg-[#FBFCFE] p-3 lg:grid-cols-[1fr_220px] lg:items-end">
           <label className="block">
             <span className="text-[12px] font-semibold text-[#071D49]">Remarks (Optional)</span>
-            <textarea className="mt-1 h-[44px] w-full resize-none rounded-lg border border-[#C9D4E3] bg-white px-3 py-2 text-[12px] text-[#071D49] outline-none" placeholder="Enter remarks here..." />
+            <textarea className="mt-1 h-[38px] w-full resize-none rounded-lg border border-[#C9D4E3] bg-white px-3 py-2 text-[12px] text-[#071D49] outline-none" placeholder="Enter remarks here..." />
           </label>
-          <button type="button" className="flex h-[44px] items-center justify-center rounded-lg bg-[#071D49] px-4 text-[13px] font-semibold text-white shadow-sm transition hover:bg-[#12356C]">Submit &amp; Proceed</button>
+          <button type="button" className="flex h-[38px] items-center justify-center rounded-lg bg-[#071D49] px-4 text-[13px] font-semibold text-white shadow-sm transition hover:bg-[#12356C]">Submit &amp; Proceed</button>
         </div>
       </section>
     </div>
@@ -160,45 +160,28 @@ function Info({ icon, label, title, subtitle, logo, last = false }: { icon?: str
 function SpotSurveyDetailsPanel({ driverName, driverMobile, lossLocation }: { driverName: string | null; driverMobile: string | null; lossLocation: string | null }) {
   const mapHref = lossLocation ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lossLocation)}` : null;
   return (
-    <section className="grid gap-3 rounded-xl border border-[#DFE8F4] bg-white p-3 shadow-[0_5px_14px_rgba(7,29,73,0.025)] lg:grid-cols-2">
-      <div className="rounded-xl border border-[#E2EAF4] bg-[#FBFCFE] p-3">
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#68758A]">Driver Information</p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <CompactDetail icon="👤" label="Driver Name" value={driverName || "Not available"} />
-          <CompactDetail icon="☎" label="Driver's Mobile No." value={driverMobile || "Not available"} href={driverMobile ? `tel:${driverMobile}` : undefined} />
-        </div>
-      </div>
-      <LocationDetail href={mapHref} value={lossLocation || "Not available"} />
+    <section className="grid min-h-[42px] items-center overflow-hidden rounded-xl border border-[#DFE8F4] bg-white shadow-[0_4px_12px_rgba(7,29,73,0.025)] lg:grid-cols-[220px_220px_1fr]">
+      <StripDetail icon="👤" label="Driver" value={driverName || "Not available"} />
+      <StripDetail icon="☎" label="Mobile" value={driverMobile || "Not available"} href={driverMobile ? `tel:${driverMobile}` : undefined} />
+      <StripDetail icon="📍" label="Loss Location" value={lossLocation || "Not available"} href={mapHref ?? undefined} isLocation />
     </section>
   );
 }
 
-function CompactDetail({ icon, label, value, href }: { icon: string; label: string; value: string; href?: string }) {
+function StripDetail({ icon, label, value, href, isLocation = false }: { icon: string; label: string; value: string; href?: string; isLocation?: boolean }) {
   const content = (
     <>
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#EEF4FC] text-[16px]">{icon}</span>
+      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-[#EEF4FC] text-[13px]">{icon}</span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[10px] font-semibold uppercase tracking-[0.08em] text-[#68758A]">{label}</span>
-        <span className="block whitespace-normal break-words text-[13px] font-semibold leading-5 text-[#071D49]">{value}</span>
+        <span className="mr-1 inline text-[9px] font-semibold uppercase tracking-[0.08em] text-[#68758A]">{label}:</span>
+        <span className={`text-[12px] font-semibold leading-4 text-[#071D49] ${isLocation ? "whitespace-normal break-words" : "truncate"}`}>{value}</span>
       </span>
+      {isLocation ? <span className="ml-2 shrink-0 rounded-full border border-[#BFD3F7] bg-[#EEF4FF] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">Map</span> : null}
     </>
   );
-  if (href) return <a href={href} className="flex min-h-[44px] items-start gap-2 rounded-lg border border-[#E2EAF4] bg-white px-3 py-2 transition hover:border-[#174EA6] hover:bg-[#F4F8FF]">{content}</a>;
-  return <div className="flex min-h-[44px] items-start gap-2 rounded-lg border border-[#E2EAF4] bg-white px-3 py-2">{content}</div>;
-}
-
-function LocationDetail({ href, value }: { href: string | null; value: string }) {
-  const inner = (
-    <>
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEF4FC] text-[17px]">📍</span><p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#68758A]">Loss Location</p></div>
-        <span className="rounded-full border border-[#BFD3F7] bg-[#EEF4FF] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">Map</span>
-      </div>
-      <p className="mt-2 whitespace-normal break-words text-[13px] font-semibold leading-5 text-[#071D49]">{value}</p>
-    </>
-  );
-  if (!href) return <div className="rounded-xl border border-[#E2EAF4] bg-[#FBFCFE] p-3">{inner}</div>;
-  return <a href={href} target="_blank" rel="noreferrer" className="block cursor-pointer rounded-xl border border-[#A9C6F5] bg-[#F4F8FF] p-3 shadow-[0_4px_12px_rgba(23,78,166,0.08)] transition hover:border-[#174EA6] hover:bg-[#EDF5FF] hover:shadow-[0_8px_18px_rgba(23,78,166,0.14)]">{inner}</a>;
+  const className = "flex min-h-[42px] items-center gap-2 border-b border-[#E8EFF8] px-3 py-1.5 transition last:border-b-0 lg:border-b-0 lg:border-r lg:last:border-r-0";
+  if (href) return <a href={href} target={href.startsWith("http") ? "_blank" : undefined} rel={href.startsWith("http") ? "noreferrer" : undefined} className={`${className} ${isLocation ? "cursor-pointer bg-[#F8FBFF] hover:bg-[#F1F7FF]" : "hover:bg-[#F8FBFF]"}`}>{content}</a>;
+  return <div className={className}>{content}</div>;
 }
 
 function DocumentCard({ item, claim, verification }: { item: Item; claim: SpotSurveyClaim; verification?: SpotSurveyVerification }) {
