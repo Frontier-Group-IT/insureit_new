@@ -27,6 +27,19 @@ export type SpotSurveyDocument = {
   signedUrl?: string | null;
 };
 
+export type SpotSurveyVerification = {
+  id: string;
+  claim_id: string;
+  document_id: string | null;
+  document_type: string;
+  verification_type: "rc" | "insurance" | "document" | "detail";
+  incident_date: string | null;
+  is_valid: boolean;
+  invalid_reason: string | null;
+  details: Record<string, unknown> | null;
+  created_at: string;
+};
+
 type Item = {
   key: string;
   number: number;
@@ -48,9 +61,9 @@ const aliases = {
   gr: ["gr copy / road challan", "gr / load challan copy", "road challan", "load challan"]
 };
 
-export function SpotSurveyWorkspace({ claim, documents }: { claim: SpotSurveyClaim; documents: SpotSurveyDocument[] }) {
+export function SpotSurveyWorkspace({ claim, documents, verifications = [] }: { claim: SpotSurveyClaim; documents: SpotSurveyDocument[]; verifications?: SpotSurveyVerification[] }) {
   const items = buildItems(claim, documents);
-  const verifiedCount = items.filter((item) => item.status === "verified" || item.document?.verification_status === "verified").length;
+  const verifiedCount = items.filter((item) => isItemVerified(item, verifications)).length;
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-3 pb-6">
@@ -67,7 +80,7 @@ export function SpotSurveyWorkspace({ claim, documents }: { claim: SpotSurveyCla
           </div>
         </div>
         <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
-          {items.map((item) => item.kind === "document" ? <DocumentCard key={item.key} item={item} claim={claim} /> : <DetailCard key={item.key} item={item} claim={claim} />)}
+          {items.map((item) => item.kind === "document" ? <DocumentCard key={item.key} item={item} claim={claim} verification={latestVerificationForItem(item, verifications)} /> : <DetailCard key={item.key} item={item} claim={claim} verification={latestVerificationForItem(item, verifications)} />)}
         </div>
         <div className="mt-4 grid gap-3 rounded-xl border border-[#E4ECF6] bg-[#FBFCFE] p-3 lg:grid-cols-[1fr_220px] lg:items-end">
           <label className="block"><span className="text-[12px] font-semibold text-[#071D49]">Remarks (Optional)</span><textarea className="mt-1 h-[44px] w-full resize-none rounded-lg border border-[#C9D4E3] bg-white px-3 py-2 text-[12px] text-[#071D49] outline-none" placeholder="Enter remarks here..." /></label>
@@ -89,14 +102,16 @@ function Info({ icon, label, title, subtitle, last = false }: { icon: string; la
   return <div className={`flex min-h-[86px] items-center gap-3 px-5 py-3 ${last ? "" : "border-b border-[#DFE8F4] md:border-b-0 md:border-r"}`}><div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEF4FC] text-[22px]">{icon}</div><div className="min-w-0"><p className="text-[11px] font-medium leading-4 text-[#174EA6]">{label}</p><p className="mt-0.5 truncate text-[15px] font-semibold leading-5 text-[#071D49]">{title}</p>{subtitle ? <p className="truncate text-[13px] leading-5 text-[#071D49]">{subtitle}</p> : null}</div></div>;
 }
 
-function DocumentCard({ item, claim }: { item: Item; claim: SpotSurveyClaim }) {
+function DocumentCard({ item, claim, verification }: { item: Item; claim: SpotSurveyClaim; verification?: SpotSurveyVerification }) {
   const status = item.document?.verification_status ?? "pending";
-  return <article className="rounded-xl border border-[#E2EAF4] bg-white p-3 shadow-[0_6px_16px_rgba(7,29,73,0.028)]"><div className="mb-3 flex items-center gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#F0E9FF] text-[14px] font-semibold text-[#071D49]">{item.number}</span><h2 className="text-[17px] font-semibold leading-tight text-[#071D49]">{item.title}</h2></div><div className="grid grid-cols-[86px_1fr] gap-3"><div className={`grid h-[86px] w-[86px] place-items-center rounded-xl ${item.accent}`}><div className="text-[38px] leading-none">{item.icon}</div></div><div className="min-w-0"><p className="truncate text-[13px] font-medium text-[#071D49]">{item.document?.file_name ?? "Document not uploaded"}</p>{item.document?.signedUrl ? <Link href={item.document.signedUrl} target="_blank" className="mt-0.5 inline-block text-[12px] font-medium text-[#139657]">Preview available</Link> : <p className="mt-0.5 text-[12px] font-medium text-[#8B98A9]">{statusLabel(status)}</p>}<p className="mt-2 text-[11px] leading-4 text-[#4B596B]">Uploaded on<br />{formatDate(item.document?.created_at)}</p></div></div><div className="mt-3 grid grid-cols-3 gap-2">{item.document ? <VerificationActionButton claimId={claim.id} documentId={item.document.id} itemKey={item.key} incidentDate={claim.accident_at} /> : <button disabled className="h-8 rounded-md border border-slate-200 bg-slate-50 text-[12px] font-semibold text-slate-400">Verify</button>}{item.document?.signedUrl ? <Link href={item.document.signedUrl} target="_blank" className="flex h-8 items-center justify-center rounded-md border border-[#4C68A6] bg-white text-[12px] font-semibold text-[#174EA6]">Reload</Link> : <button disabled className="h-8 rounded-md border border-slate-200 bg-slate-50 text-[12px] font-semibold text-slate-400">Reload</button>}<ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentType={item.documentType ?? item.title} label={item.title} /></div></article>;
+  const persistedVerified = Boolean(verification?.is_valid) || status === "verified";
+  const invalidAttempt = verification && !verification.is_valid ? verification : undefined;
+  return <article className={`rounded-xl border p-3 shadow-[0_6px_16px_rgba(7,29,73,0.028)] ${persistedVerified ? "border-green-200 bg-green-50/35" : invalidAttempt ? "border-red-200 bg-red-50/25" : "border-[#E2EAF4] bg-white"}`}><div className="mb-3 flex items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#F0E9FF] text-[14px] font-semibold text-[#071D49]">{item.number}</span><h2 className="text-[17px] font-semibold leading-tight text-[#071D49]">{item.title}</h2></div>{persistedVerified ? <span className="rounded-full border border-green-200 bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Verified</span> : null}</div><div className="grid grid-cols-[86px_1fr] gap-3"><div className={`grid h-[86px] w-[86px] place-items-center rounded-xl ${item.accent}`}><div className="text-[38px] leading-none">{item.icon}</div></div><div className="min-w-0"><p className="truncate text-[13px] font-medium text-[#071D49]">{item.document?.file_name ?? "Document not uploaded"}</p>{item.document?.signedUrl ? <Link href={item.document.signedUrl} target="_blank" className="mt-0.5 inline-block text-[12px] font-medium text-[#139657]">Preview available</Link> : <p className="mt-0.5 text-[12px] font-medium text-[#8B98A9]">{statusLabel(status)}</p>}<p className="mt-2 text-[11px] leading-4 text-[#4B596B]">Uploaded on<br />{formatDate(item.document?.created_at)}</p>{persistedVerified ? <p className="mt-1 text-[11px] font-semibold text-green-700">Verification details saved.</p> : invalidAttempt ? <p className="mt-1 line-clamp-2 text-[11px] font-semibold text-red-700">{invalidAttempt.invalid_reason}</p> : null}</div></div><div className="mt-3 grid grid-cols-3 gap-2">{item.document ? persistedVerified ? <button disabled className="h-8 rounded-md border border-green-200 bg-green-100 text-[12px] font-semibold text-green-700">Verified</button> : <VerificationActionButton claimId={claim.id} documentId={item.document.id} itemKey={item.key} incidentDate={claim.accident_at} /> : <button disabled className="h-8 rounded-md border border-slate-200 bg-slate-50 text-[12px] font-semibold text-slate-400">Verify</button>}{item.document?.signedUrl ? <Link href={item.document.signedUrl} target="_blank" className="flex h-8 items-center justify-center rounded-md border border-[#4C68A6] bg-white text-[12px] font-semibold text-[#174EA6]">Reload</Link> : <button disabled className="h-8 rounded-md border border-slate-200 bg-slate-50 text-[12px] font-semibold text-slate-400">Reload</button>}<ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentType={item.documentType ?? item.title} label={item.title} /></div></article>;
 }
 
-function DetailCard({ item, claim }: { item: Item; claim: SpotSurveyClaim }) {
-  const isVerified = item.status === "verified";
-  return <article className="rounded-xl border border-[#E2EAF4] bg-[#FCFDFE] p-3 shadow-[0_6px_16px_rgba(7,29,73,0.025)]"><div className="mb-3 flex items-center gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#F0E9FF] text-[14px] font-semibold text-[#071D49]">{item.number}</span><h2 className="text-[17px] font-semibold leading-tight text-[#071D49]">{item.title}</h2></div><div className="grid grid-cols-[86px_1fr] gap-3"><div className={`grid h-[86px] w-[86px] place-items-center rounded-xl ${item.accent}`}><div className="text-[38px] leading-none">{item.icon}</div></div><div className="min-w-0"><p className="text-[12px] font-semibold text-[#68758A]">{item.detailLabel}</p><p className="mt-1 line-clamp-3 whitespace-pre-line text-[13px] leading-5 text-[#071D49]">{item.detailValue || "Not available"}</p><p className={`mt-2 text-[12px] font-semibold ${isVerified ? "text-[#139657]" : "text-[#8B98A9]"}`}>{isVerified ? "Verified" : "Pending verification"}</p></div></div><div className="mt-3 grid grid-cols-[1fr_1fr] gap-2"><VerifyDetailButton claimId={claim.id} detailKey={item.key} detailLabel={item.detailLabel ?? item.title} detailValue={item.detailValue ?? ""} disabled={!item.detailValue} /><button type="button" className="h-8 rounded-md border border-[#4C68A6] bg-white text-[12px] font-semibold text-[#174EA6]">Update</button></div></article>;
+function DetailCard({ item, claim, verification }: { item: Item; claim: SpotSurveyClaim; verification?: SpotSurveyVerification }) {
+  const isVerified = item.status === "verified" || Boolean(verification?.is_valid);
+  return <article className={`rounded-xl border p-3 shadow-[0_6px_16px_rgba(7,29,73,0.025)] ${isVerified ? "border-green-200 bg-green-50/35" : "border-[#E2EAF4] bg-[#FCFDFE]"}`}><div className="mb-3 flex items-center gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#F0E9FF] text-[14px] font-semibold text-[#071D49]">{item.number}</span><h2 className="text-[17px] font-semibold leading-tight text-[#071D49]">{item.title}</h2></div><div className="grid grid-cols-[86px_1fr] gap-3"><div className={`grid h-[86px] w-[86px] place-items-center rounded-xl ${item.accent}`}><div className="text-[38px] leading-none">{item.icon}</div></div><div className="min-w-0"><p className="text-[12px] font-semibold text-[#68758A]">{item.detailLabel}</p><p className="mt-1 line-clamp-3 whitespace-pre-line text-[13px] leading-5 text-[#071D49]">{item.detailValue || "Not available"}</p><p className={`mt-2 text-[12px] font-semibold ${isVerified ? "text-[#139657]" : "text-[#8B98A9]"}`}>{isVerified ? "Verified" : "Pending verification"}</p>{isVerified ? <p className="mt-1 text-[11px] font-semibold text-green-700">Verification details saved.</p> : null}</div></div><div className="mt-3 grid grid-cols-[1fr_1fr] gap-2">{isVerified ? <button disabled className="h-8 rounded-md border border-green-200 bg-green-100 text-[12px] font-semibold text-green-700">Verified</button> : <VerifyDetailButton claimId={claim.id} detailKey={item.key} detailLabel={item.detailLabel ?? item.title} detailValue={item.detailValue ?? ""} disabled={!item.detailValue} />}<button type="button" className="h-8 rounded-md border border-[#4C68A6] bg-white text-[12px] font-semibold text-[#174EA6]">Update</button></div></article>;
 }
 
 function buildItems(claim: SpotSurveyClaim, documents: SpotSurveyDocument[]): Item[] {
@@ -104,6 +119,8 @@ function buildItems(claim: SpotSurveyClaim, documents: SpotSurveyDocument[]): It
   return [{ key: "rc", number: 1, title: "RC Copy", icon: "📄", accent: "bg-[#F1ECFF]", documentType: "Registration certificate", document: doc("rc"), kind: "document" }, { key: "insurance", number: 2, title: "Insurance Copy", icon: "📃", accent: "bg-[#FFF3D9]", documentType: "Policy copy", document: doc("insurance"), kind: "document" }, { key: "dl", number: 3, title: "Driving Licence Copy", icon: "🪪", accent: "bg-[#EAF8EF]", documentType: "Driving licence", document: doc("dl"), kind: "document" }, { key: "gr", number: 4, title: "GR / Load Challan Copy", icon: "🚚", accent: "bg-[#FFF1E6]", documentType: "GR Copy / Road Challan", document: doc("gr"), kind: "document" }, { key: "driver", number: 5, title: "Driver Details", icon: "👤", accent: "bg-[#EEF6FF]", detailLabel: "Driver / DL Number", detailValue: extractDriverNumber(claim.accident_description), status: extractDriverNumber(claim.accident_description) ? "verified" : "pending", kind: "detail" }, { key: "location", number: 6, title: "Loss Location", icon: "📍", accent: "bg-[#F2EDFF]", detailLabel: "Location", detailValue: claim.accident_location, status: claim.accident_location ? "verified" : "pending", kind: "detail" }];
 }
 
+function latestVerificationForItem(item: Item, verifications: SpotSurveyVerification[]) { return verifications.find((row) => item.document?.id && row.document_id === item.document.id) ?? verifications.find((row) => row.verification_type === item.key && row.is_valid) ?? verifications.find((row) => row.verification_type === item.key); }
+function isItemVerified(item: Item, verifications: SpotSurveyVerification[]) { return item.status === "verified" || item.document?.verification_status === "verified" || Boolean(latestVerificationForItem(item, verifications)?.is_valid); }
 function extractDriverNumber(value?: string | null) { return value?.match(/[A-Z]{2}\d{2}\s?\d{4}\s?\d{7}/i)?.[0] ?? null; }
 function statusLabel(status: string) { if (status === "verified") return "Verified"; if (status === "rejected") return "Rejected"; return "Pending verification"; }
 function formatDate(value?: string | null) { return value ? new Date(value).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "-"; }
