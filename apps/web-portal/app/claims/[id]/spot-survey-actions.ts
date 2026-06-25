@@ -85,7 +85,7 @@ function applyAutomaticValidity(details: Record<string, string>, incidentDate: s
   }
 
   const isValid = invalidFields.length === 0;
-  const invalidReason = isValid ? null : `Document date is earlier than incident date for: ${invalidFields.map((key) => key.replace(/_/g, " ")).join(", ")}.`;
+  const invalidReason = isValid ? null : `Cannot verify document. Expiry date is earlier than incident date for: ${invalidFields.map((key) => key.replace(/_/g, " ")).join(", ")}.`;
 
   return { finalDetails, isValid, invalidReason };
 }
@@ -95,6 +95,31 @@ function verificationTypeForDocument(documentType: string) {
   if (normalized.includes("registration") || normalized.includes("rc")) return "rc";
   if (normalized.includes("policy") || normalized.includes("insurance")) return "insurance";
   return "document";
+}
+
+async function saveVerificationHistory(params: {
+  claimId: string;
+  documentId: string | null;
+  documentType: string;
+  verificationType: "rc" | "insurance" | "document" | "detail";
+  incidentDate: string | null;
+  isValid: boolean;
+  invalidReason: string | null;
+  details: Record<string, unknown>;
+  verifiedBy: string | null;
+}) {
+  const supabase = await createServerSupabaseClient();
+  await supabase.from("claim_document_verifications").insert({
+    claim_id: params.claimId,
+    document_id: params.documentId,
+    document_type: params.documentType,
+    verification_type: params.verificationType,
+    incident_date: params.incidentDate,
+    is_valid: params.isValid,
+    invalid_reason: params.invalidReason,
+    details: params.details,
+    verified_by: params.verifiedBy
+  });
 }
 
 export async function verifySpotSurveyDocument(formData: FormData): Promise<ActionResult> {
@@ -119,20 +144,6 @@ export async function verifySpotSurveyDocument(formData: FormData): Promise<Acti
     if (documentError || !document) throw new Error(documentError?.message ?? "Document not found.");
 
     const { finalDetails, isValid, invalidReason } = applyAutomaticValidity(rawDetails, incidentDate);
-
-    const { error: reviewError } = await supabase
-      .from("claim_documents")
-      .update({
-        verification_status: "verified",
-        verified_by: profile?.id ?? null,
-        verified_at: new Date().toISOString(),
-        rejection_reason: invalidReason
-      })
-      .eq("id", documentId)
-      .eq("claim_id", claimId);
-
-    if (reviewError) throw new Error(reviewError.message);
-
     const detailsPayload = {
       verification_type: "spot_survey_document",
       document_type: document.document_type,
@@ -141,9 +152,47 @@ export async function verifySpotSurveyDocument(formData: FormData): Promise<Acti
       is_valid: isValid,
       invalid_reason: invalidReason,
       ...finalDetails,
-      verified: true,
+      verified: isValid,
       verified_at: new Date().toISOString()
     };
+
+    if (!isValid) {
+      await saveVerificationHistory({
+        claimId,
+        documentId: document.id,
+        documentType: document.document_type,
+        verificationType: verificationTypeForDocument(document.document_type),
+        incidentDate,
+        isValid: false,
+        invalidReason,
+        details: detailsPayload,
+        verifiedBy: profile?.id ?? null
+      });
+
+      await supabase.from("claim_status_history").insert({
+        claim_id: claimId,
+        from_status: claim.current_status,
+        to_status: claim.current_status,
+        notes: invalidReason,
+        changed_by: profile?.id ?? null
+      });
+
+      revalidatePath(`/claims/${claimId}`);
+      return { ok: false, message: invalidReason ?? "Document cannot be verified because one or more dates are invalid." };
+    }
+
+    const { error: reviewError } = await supabase
+      .from("claim_documents")
+      .update({
+        verification_status: "verified",
+        verified_by: profile?.id ?? null,
+        verified_at: new Date().toISOString(),
+        rejection_reason: null
+      })
+      .eq("id", documentId)
+      .eq("claim_id", claimId);
+
+    if (reviewError) throw new Error(reviewError.message);
 
     await supabase.from("claim_stage_details").insert({
       claim_id: claimId,
@@ -152,30 +201,30 @@ export async function verifySpotSurveyDocument(formData: FormData): Promise<Acti
       created_by: profile?.id ?? null
     });
 
-    await supabase.from("claim_document_verifications").insert({
-      claim_id: claimId,
-      document_id: document.id,
-      document_type: document.document_type,
-      verification_type: verificationTypeForDocument(document.document_type),
-      incident_date: incidentDate,
-      is_valid: isValid,
-      invalid_reason: invalidReason,
+    await saveVerificationHistory({
+      claimId,
+      documentId: document.id,
+      documentType: document.document_type,
+      verificationType: verificationTypeForDocument(document.document_type),
+      incidentDate,
+      isValid: true,
+      invalidReason: null,
       details: detailsPayload,
-      verified_by: profile?.id ?? null
+      verifiedBy: profile?.id ?? null
     });
 
     await supabase.from("claim_status_history").insert({
       claim_id: claimId,
       from_status: claim.current_status,
       to_status: claim.current_status,
-      notes: isValid ? `${document.document_type} verified during spot survey.` : `${document.document_type} verified as invalid during spot survey. ${invalidReason}`,
+      notes: `${document.document_type} verified during spot survey.`,
       changed_by: profile?.id ?? null
     });
 
     revalidatePath(`/claims/${claimId}`);
     revalidatePath("/claims");
     revalidatePath("/dashboard");
-    return { ok: true, message: isValid ? "Document verified successfully." : invalidReason ?? "Document verified as invalid." };
+    return { ok: true, message: "Document verified successfully." };
   } catch (error) {
     console.error("verifySpotSurveyDocument failed", error);
     return { ok: false, message: error instanceof Error ? error.message : "Verification failed." };
@@ -212,16 +261,16 @@ export async function verifySpotSurveyDetail(formData: FormData): Promise<Action
 
     if (detailError) throw new Error(detailError.message);
 
-    await supabase.from("claim_document_verifications").insert({
-      claim_id: claimId,
-      document_id: null,
-      document_type: detailLabel || detailKey,
-      verification_type: "detail",
-      incident_date: incidentDateOnly(claim.accident_at),
-      is_valid: true,
-      invalid_reason: null,
+    await saveVerificationHistory({
+      claimId,
+      documentId: null,
+      documentType: detailLabel || detailKey,
+      verificationType: "detail",
+      incidentDate: incidentDateOnly(claim.accident_at),
+      isValid: true,
+      invalidReason: null,
       details: detailPayload,
-      verified_by: profile?.id ?? null
+      verifiedBy: profile?.id ?? null
     });
 
     await supabase.from("claim_status_history").insert({
