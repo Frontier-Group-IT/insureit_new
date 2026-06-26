@@ -12,7 +12,7 @@ const grRequiredFields = ["gr_gvw_kg", "unladen_weight_kg", "load_weight_kg", "l
 
 type ClaimForVerification = { id: string; customer_id: string; current_status: ClaimStatus; accident_at: string | null };
 type ActionResult = { ok: boolean; message?: string };
-type VerificationType = "rc" | "insurance" | "gr" | "document" | "detail";
+type VerificationType = "rc" | "insurance" | "document" | "detail";
 
 async function currentProfile() {
   const accessToken = await getServerAccessToken();
@@ -52,11 +52,15 @@ function statusFromExpiry(expiryDate: string | undefined, incidentDate: string |
   return expiryDate < incidentDate ? "Invalid" : "Valid";
 }
 
+function isGrDocument(documentType: string) {
+  const normalized = documentType.toLowerCase();
+  return normalized.includes("gr") || normalized.includes("load challan") || normalized.includes("road challan");
+}
+
 function verificationTypeForDocument(documentType: string): VerificationType {
   const normalized = documentType.toLowerCase();
   if (normalized.includes("registration") || normalized.includes("rc")) return "rc";
   if (normalized.includes("policy") || normalized.includes("insurance")) return "insurance";
-  if (normalized.includes("gr") || normalized.includes("load challan") || normalized.includes("road challan")) return "gr";
   return "document";
 }
 
@@ -64,7 +68,7 @@ function requiredFieldsForDocument(documentType: string) {
   const type = verificationTypeForDocument(documentType);
   if (type === "rc") return [...rcDateFields];
   if (type === "insurance") return [...insuranceRequiredFields];
-  if (type === "gr") return [...grRequiredFields];
+  if (isGrDocument(documentType)) return [...grRequiredFields];
   return [];
 }
 
@@ -87,7 +91,7 @@ function applyAutomaticValidity(details: Record<string, string>, incidentDate: s
     invalidFields.push("insurance_start_date");
   }
 
-  if (type === "gr") {
+  if (isGrDocument(documentType)) {
     const gvw = toNumber(details.gr_gvw_kg);
     const unladen = toNumber(details.unladen_weight_kg);
     const load = toNumber(details.load_weight_kg);
