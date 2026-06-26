@@ -288,12 +288,16 @@ function OverdueItemsPanel({ items }: { items: ReturnType<typeof buildOverdueIte
 
 function buildBroadTaskCards(dashboard: Awaited<ReturnType<typeof getManagerDashboardData>>): BroadTaskCard[] {
   const count = journeyCounter(dashboard);
+  const closed = count("journey-complete");
+  const allWorkflowClaims = dashboard.journeyKpis.reduce((total, item) => total + item.count, 0);
+  const openClaims = Math.max(allWorkflowClaims - closed, 0);
+
   return [
-    { key: "vehicle-intimated", label: "Vehicle Claims Intimated", value: count("loss-report", "claim-intimation"), href: "/claims?journey=loss-report", icon: "🚚", tone: "blue", hint: "+ from current workflow" },
-    { key: "spot-deputation", label: "Spot Deputation Pending", value: count("spot-surveyor-assigned"), href: "/claims?journey=spot-surveyor-assigned", icon: "👷", tone: "amber", hint: "survey assignment" },
-    { key: "claim-intimation", label: "Claim Intimation Pending", value: count("claim-intimation"), href: "/claims?journey=claim-intimation", icon: "📋", tone: "purple", hint: "insurer process" },
+    { key: "vehicle-intimated", label: "Vehicle Claims Intimated", value: openClaims, href: "/claims", icon: "🚚", tone: "blue", hint: "+ from current workflow" },
+    { key: "spot-deputation", label: "Spot Deputation Pending", value: count("loss-report", "spot-intimation", "spot-surveyor-assigned", "spot-survey-completed"), href: "/claims?journey=spot-intimation", icon: "👷", tone: "amber", hint: "survey assignment" },
+    { key: "claim-intimation", label: "Claim Intimation Pending", value: count("final-documents", "claim-intimation"), href: "/claims?journey=claim-intimation", icon: "📋", tone: "purple", hint: "insurer process" },
     { key: "work-approval", label: "Work Approval Pending", value: count("work-approval"), href: "/claims?journey=work-approval", icon: "✅", tone: "green", hint: "approval follow-up" },
-    { key: "reinspection", label: "Re-Inspection Pending", value: count("final-surveyor"), href: "/claims?journey=final-surveyor", icon: "🔍", tone: "blue", hint: "survey follow-up" },
+    { key: "reinspection", label: "Re-Inspection Pending", value: count("final-surveyor", "ri-stage"), href: "/claims?journey=final-surveyor", icon: "🔍", tone: "blue", hint: "survey follow-up" },
     { key: "delivery-order", label: "Delivery Order Pending", value: count("do-stage", "vehicle-release"), href: "/claims?journey=do-stage", icon: "📄", tone: "orange", hint: "release stage" },
     { key: "payment", label: "Payment Pending", value: count("payment-advice-received"), href: "/claims?journey=payment-advice-received", icon: "💼", tone: "rose", hint: "settlement stage" }
   ];
@@ -305,8 +309,10 @@ function buildWorkflowGroups(dashboard: Awaited<ReturnType<typeof getManagerDash
   const oldest = (...keys: string[]) => oldestLabel(keys.map((key) => stage(key)?.oldestAgeLabel).filter(Boolean) as string[]);
   return [
     { key: "initial-docs", label: "Initial Documents", count: count("loss-report", "spot-intimation"), oldestLabel: oldest("loss-report", "spot-intimation"), href: "/claims?journey=spot-intimation" },
-    { key: "survey", label: "Survey / Re-Inspection", count: count("spot-surveyor-assigned", "spot-survey-completed", "final-surveyor"), oldestLabel: oldest("spot-surveyor-assigned", "spot-survey-completed", "final-surveyor"), href: "/claims?journey=spot-surveyor-assigned" },
+    { key: "survey", label: "Survey / Re-Inspection", count: count("spot-surveyor-assigned", "spot-survey-completed", "final-surveyor", "ri-stage"), oldestLabel: oldest("spot-surveyor-assigned", "spot-survey-completed", "final-surveyor", "ri-stage"), href: "/claims?journey=spot-surveyor-assigned" },
+    { key: "claim-intimation", label: "Claim Intimation", count: count("final-documents", "claim-intimation"), oldestLabel: oldest("final-documents", "claim-intimation"), href: "/claims?journey=claim-intimation" },
     { key: "approval", label: "Work Approval", count: count("work-approval"), oldestLabel: oldest("work-approval"), href: "/claims?journey=work-approval" },
+    { key: "repair", label: "Repair", count: count("under-repair"), oldestLabel: oldest("under-repair"), href: "/claims?journey=under-repair" },
     { key: "delivery-order", label: "Delivery Order", count: count("do-stage", "vehicle-release"), oldestLabel: oldest("do-stage", "vehicle-release"), href: "/claims?journey=do-stage" },
     { key: "payment", label: "Payment", count: count("payment-advice-received"), oldestLabel: oldest("payment-advice-received"), href: "/claims?journey=payment-advice-received" },
     { key: "closed", label: "Closed", count: count("journey-complete"), oldestLabel: oldest("journey-complete"), href: "/claims?queue=closed" }
