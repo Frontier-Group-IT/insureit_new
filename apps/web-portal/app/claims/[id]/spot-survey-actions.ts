@@ -8,9 +8,11 @@ import { canVerifyClaimDocuments } from "@/lib/roles";
 const bucketName = "claim-documents";
 const rcDateFields = ["fitness_valid_upto", "tax_valid_upto", "insurance_valid_upto", "pucc_valid_upto", "local_permit_valid_upto", "national_permit_valid_upto"] as const;
 const insuranceRequiredFields = ["insurance_start_date", "insurance_end_date", "ncb_verified", "policy_type_check", "gvw_kg"] as const;
+const grRequiredFields = ["gr_gvw_kg", "unladen_weight_kg", "load_weight_kg", "load_difference_kg"] as const;
 
 type ClaimForVerification = { id: string; customer_id: string; current_status: ClaimStatus; accident_at: string | null };
 type ActionResult = { ok: boolean; message?: string };
+type VerificationType = "rc" | "insurance" | "gr" | "document" | "detail";
 
 async function currentProfile() {
   const accessToken = await getServerAccessToken();
@@ -50,10 +52,11 @@ function statusFromExpiry(expiryDate: string | undefined, incidentDate: string |
   return expiryDate < incidentDate ? "Invalid" : "Valid";
 }
 
-function verificationTypeForDocument(documentType: string) {
+function verificationTypeForDocument(documentType: string): VerificationType {
   const normalized = documentType.toLowerCase();
   if (normalized.includes("registration") || normalized.includes("rc")) return "rc";
   if (normalized.includes("policy") || normalized.includes("insurance")) return "insurance";
+  if (normalized.includes("gr") || normalized.includes("load challan") || normalized.includes("road challan")) return "gr";
   return "document";
 }
 
@@ -61,6 +64,7 @@ function requiredFieldsForDocument(documentType: string) {
   const type = verificationTypeForDocument(documentType);
   if (type === "rc") return [...rcDateFields];
   if (type === "insurance") return [...insuranceRequiredFields];
+  if (type === "gr") return [...grRequiredFields];
   return [];
 }
 
@@ -83,19 +87,39 @@ function applyAutomaticValidity(details: Record<string, string>, incidentDate: s
     invalidFields.push("insurance_start_date");
   }
 
+  if (type === "gr") {
+    const gvw = toNumber(details.gr_gvw_kg);
+    const unladen = toNumber(details.unladen_weight_kg);
+    const load = toNumber(details.load_weight_kg);
+    const submittedDifference = toNumber(details.load_difference_kg);
+    const calculatedDifference = gvw - unladen - load;
+    finalDetails.load_difference_kg = String(calculatedDifference);
+    finalDetails.gr_calculation = `(${gvw} - ${unladen}) - ${load} = ${calculatedDifference} kg`;
+    finalDetails.gr_calculation_status = calculatedDifference >= 0 && submittedDifference === calculatedDifference ? "Valid" : "Invalid";
+    if (gvw <= 0) invalidFields.push("gr_gvw_kg");
+    if (unladen < 0) invalidFields.push("unladen_weight_kg");
+    if (load < 0) invalidFields.push("load_weight_kg");
+    if (calculatedDifference < 0 || submittedDifference !== calculatedDifference) invalidFields.push("load_difference_kg");
+  }
+
   const isValid = missingFields.length === 0 && invalidFields.length === 0;
   const messages: string[] = [];
   if (missingFields.length) messages.push(`Please enter required fields: ${missingFields.map(formatFieldName).join(", ")}.`);
-  if (invalidFields.length) messages.push(`Cannot verify document. Invalid field/date found for: ${invalidFields.map(formatFieldName).join(", ")}.`);
+  if (invalidFields.length) messages.push(`Cannot verify document. Invalid field/value found for: ${invalidFields.map(formatFieldName).join(", ")}.`);
   const invalidReason = messages.length ? messages.join(" ") : null;
   return { finalDetails, isValid, invalidReason };
+}
+
+function toNumber(value: string | undefined) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function formatFieldName(key: string) {
   return key.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-async function saveVerificationHistory(params: { claimId: string; documentId: string | null; documentType: string; verificationType: "rc" | "insurance" | "document" | "detail"; incidentDate: string | null; isValid: boolean; invalidReason: string | null; details: Record<string, unknown>; verifiedBy: string | null }) {
+async function saveVerificationHistory(params: { claimId: string; documentId: string | null; documentType: string; verificationType: VerificationType; incidentDate: string | null; isValid: boolean; invalidReason: string | null; details: Record<string, unknown>; verifiedBy: string | null }) {
   const supabase = await createServerSupabaseClient();
   await supabase.from("claim_document_verifications").insert({ claim_id: params.claimId, document_id: params.documentId, document_type: params.documentType, verification_type: params.verificationType, incident_date: params.incidentDate, is_valid: params.isValid, invalid_reason: params.invalidReason, details: params.details, verified_by: params.verifiedBy });
 }
