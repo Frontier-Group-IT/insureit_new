@@ -8,6 +8,7 @@ import { canVerifyClaimDocuments } from "@/lib/roles";
 const bucketName = "claim-documents";
 const rcDateFields = ["fitness_valid_upto", "tax_valid_upto", "insurance_valid_upto", "pucc_valid_upto", "local_permit_valid_upto", "national_permit_valid_upto"] as const;
 const insuranceRequiredFields = ["insurance_start_date", "insurance_end_date", "ncb_verified", "policy_type_check", "gvw_kg"] as const;
+const dlRequiredFields = ["licence_valid_upto", "dl_inbound", "dl_valid_for_loss_vehicle"] as const;
 const grRequiredFields = ["gr_gvw_kg", "unladen_weight_kg", "load_weight_kg", "load_difference_kg"] as const;
 
 type ClaimForVerification = { id: string; customer_id: string; current_status: ClaimStatus; accident_at: string | null };
@@ -52,6 +53,11 @@ function statusFromExpiry(expiryDate: string | undefined, incidentDate: string |
   return expiryDate < incidentDate ? "Invalid" : "Valid";
 }
 
+function isDlDocument(documentType: string) {
+  const normalized = documentType.toLowerCase();
+  return normalized.includes("driving") || normalized.includes("licence") || normalized.includes("license") || normalized.includes("dl");
+}
+
 function isGrDocument(documentType: string) {
   const normalized = documentType.toLowerCase();
   return normalized.includes("gr") || normalized.includes("load challan") || normalized.includes("road challan");
@@ -68,6 +74,7 @@ function requiredFieldsForDocument(documentType: string) {
   const type = verificationTypeForDocument(documentType);
   if (type === "rc") return [...rcDateFields];
   if (type === "insurance") return [...insuranceRequiredFields];
+  if (isDlDocument(documentType)) return [...dlRequiredFields];
   if (isGrDocument(documentType)) return [...grRequiredFields];
   return [];
 }
@@ -87,8 +94,14 @@ function applyAutomaticValidity(details: Record<string, string>, incidentDate: s
     if (autoStatus === "Invalid") invalidFields.push(dateKey);
   }
 
-  if (type === "insurance" && details.insurance_start_date && details.insurance_end_date && details.insurance_start_date > details.insurance_end_date) {
-    invalidFields.push("insurance_start_date");
+  if (type === "insurance" && details.insurance_start_date && details.insurance_end_date && details.insurance_start_date > details.insurance_end_date) invalidFields.push("insurance_start_date");
+
+  if (isDlDocument(documentType)) {
+    const dlStatus = statusFromExpiry(details.licence_valid_upto, incidentDate);
+    finalDetails.dl_validity_status = dlStatus ?? "";
+    finalDetails.dl_overall_status = dlStatus === "Valid" && details.dl_valid_for_loss_vehicle === "Yes" ? "Valid" : "Invalid";
+    if (dlStatus !== "Valid") invalidFields.push("licence_valid_upto");
+    if (details.dl_valid_for_loss_vehicle !== "Yes") invalidFields.push("dl_valid_for_loss_vehicle");
   }
 
   if (isGrDocument(documentType)) {
