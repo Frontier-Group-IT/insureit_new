@@ -110,30 +110,30 @@ export function SpotSurveyWorkspace({ claim, documents, verifications = [], surv
 
 function SurveyorAssignedNotice({ details }: { details?: SurveyorDetails | null }) {
   return (
-    <div className="mt-3 rounded-2xl border border-green-200 bg-green-50 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="mt-3 rounded-2xl border border-[#D9E3F0] bg-[#FBFCFE] p-4 shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E6EEF7] pb-3">
         <div>
-          <h2 className="text-[15px] font-semibold text-green-800">Spot Surveyor Details</h2>
-          <p className="mt-1 text-[12px] text-green-700">Click &apos;Survey Done&apos; to move into next stage.</p>
+          <h2 className="text-[18px] font-semibold tracking-[-0.01em] text-[#071D49]">Spot Surveyor Details</h2>
+          <p className="mt-1 text-[12px] font-medium text-[#526178]">Click &apos;Survey Done&apos; to move into next stage.</p>
         </div>
         <button type="button" className="h-10 rounded-lg bg-[#071D49] px-5 text-[13px] font-semibold text-white shadow-sm transition hover:bg-[#12356C]">
           Survey Done
         </button>
       </div>
-      <div className="mt-4 flex flex-wrap items-center gap-x-8 gap-y-2 rounded-xl border border-green-200 bg-white/80 px-4 py-3 text-[13px] text-[#071D49]">
-        <SurveyorInline label="Surveyor Name" value={details?.name || "Not available"} />
-        <SurveyorInline label="Mobile No." value={details?.mobile || "Not available"} href={details?.mobile ? `tel:${details.mobile}` : undefined} />
-        <SurveyorInline label="Email ID" value={details?.email || "Not available"} href={details?.email ? `mailto:${details.email}` : undefined} />
+      <div className="mt-3 grid overflow-hidden rounded-xl border border-[#E6EEF7] bg-white md:grid-cols-3">
+        <SurveyorColumn label="Surveyor Name" value={details?.name || "Not available"} />
+        <SurveyorColumn label="Mobile No." value={details?.mobile || "Not available"} href={details?.mobile ? `tel:${details.mobile}` : undefined} />
+        <SurveyorColumn label="Email ID" value={details?.email || "Not available"} href={details?.email ? `mailto:${details.email}` : undefined} last />
       </div>
-      {details?.deputedAt ? <p className="mt-2 text-right text-[11px] font-semibold text-green-700">Deputed on {formatDateShort(details.deputedAt)}</p> : null}
+      {details?.deputedAt ? <p className="mt-2 text-right text-[11px] font-semibold text-[#526178]">Deputed on {formatDateShort(details.deputedAt)}</p> : null}
     </div>
   );
 }
 
-function SurveyorInline({ label, value, href }: { label: string; value: string; href?: string }) {
-  const content = <><span className="font-semibold uppercase tracking-[0.06em] text-green-700">{label}</span><span className="text-[#8EA0B8]">-</span><span className="font-semibold text-[#071D49]">{value}</span></>;
-  const className = "inline-flex min-w-0 items-center gap-2";
-  return href ? <a href={href} className={`${className} hover:text-[#174EA6]`}>{content}</a> : <span className={className}>{content}</span>;
+function SurveyorColumn({ label, value, href, last = false }: { label: string; value: string; href?: string; last?: boolean }) {
+  const content = <><span className="block text-[10px] font-semibold uppercase tracking-[0.11em] text-[#68758A]">{label}</span><span className="mt-1 block truncate text-[15px] font-semibold tracking-[-0.01em] text-[#071D49]">{value}</span></>;
+  const className = `min-w-0 px-4 py-3 ${last ? "" : "border-b border-[#E6EEF7] md:border-b-0 md:border-r"}`;
+  return href ? <a href={href} className={`${className} transition hover:bg-[#F7FAFF]`}>{content}</a> : <div className={className}>{content}</div>;
 }
 
 function InfoStrip({ claim }: { claim: SpotSurveyClaim }) { const customerName = claim.customers?.company_name || claim.customers?.contact_name || "-"; const insurer = claim.insurance_companies?.name || "-"; const insurerRef = claim.insurer_claim_no || claim.policies?.policy_no || claim.claim_no; const make = claim.vehicles?.make || "-"; const model = claim.vehicles?.model || "-"; return <section className="grid overflow-hidden rounded-2xl border border-[#DFE8F4] bg-[#F8FBFF] shadow-[0_6px_18px_rgba(7,29,73,0.03)] md:grid-cols-3 xl:grid-cols-5"><Info icon="👤" label="Customer" title={customerName} subtitle={claim.customers?.phone ?? "-"} /><Info icon="🚗" label="Vehicle No." title={claim.vehicles?.vehicle_no ?? "-"} /><Info label="Make & Model" title={make} subtitle={model} logo={<ManufacturerLogo name={make} />} /><Info label="Insurer" title={insurer} subtitle={insurerRef} logo={<InsurerLogo name={insurer} />} /><Info icon="📅" label="Loss Date" title={formatDateShort(claim.accident_at)} /><Info icon="🧾" label="Policy No." title={claim.policies?.policy_no ?? "-"} /><Info icon="#" label="Control No." title={claim.claim_no} /><Info icon="▣" label="Claim No." title={claim.insurer_claim_no ?? "-"} /><Info icon="✓" label="Claim Status" title={claim.current_status ?? "-"} last /></section>; }
