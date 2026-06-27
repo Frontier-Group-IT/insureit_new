@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shell";
-import { SpotSurveyWorkspace, type SpotSurveyClaim, type SpotSurveyDocument, type SpotSurveyVerification } from "@/components/spot-survey/spot-survey-workspace-v2";
+import { SpotSurveyWorkspace, type SpotSurveyClaim, type SpotSurveyDocument, type SpotSurveyVerification, type SurveyorDetails } from "@/components/spot-survey/spot-survey-workspace-v2";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import type { ClaimStatus } from "@/lib/claim-workflow";
 import { operationsQueueForStatus } from "@/lib/claim-workflow";
@@ -93,6 +93,7 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
       };
     });
 
+  const surveyorDetails = extractSurveyorDetails(stageRows ?? []);
   const mergedVerifications = [...(verificationRows ?? []), ...stageVerifications];
   const queue = operationsQueueForStatus(claim.current_status);
   const backHref = queue ? `/claims?queue=${queue.key}` : "/claims";
@@ -100,9 +101,20 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
 
   return (
     <ClaimManagerShell title={title} backHref={backHref}>
-      <SpotSurveyWorkspace claim={claim} documents={signedDocs} verifications={mergedVerifications} />
+      <SpotSurveyWorkspace claim={claim} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} />
     </ClaimManagerShell>
   );
+}
+
+function extractSurveyorDetails(rows: StageDetailRow[]): SurveyorDetails | null {
+  const row = rows.find((item) => item.details?.verification_type === "spot_surveyor_deputation");
+  if (!row?.details) return null;
+  const name = typeof row.details.surveyor_name === "string" ? row.details.surveyor_name : "";
+  const mobile = typeof row.details.surveyor_number === "string" ? row.details.surveyor_number : "";
+  const email = typeof row.details.surveyor_email === "string" ? row.details.surveyor_email : "";
+  const deputedAt = typeof row.details.deputed_at === "string" ? row.details.deputed_at : row.created_at;
+  if (!name && !mobile && !email) return null;
+  return { name, mobile, email, deputedAt };
 }
 
 function verificationTypeFromDocument(documentType: string): "rc" | "insurance" | "document" | "detail" {
