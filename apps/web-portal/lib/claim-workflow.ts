@@ -90,13 +90,7 @@ export const initialDocumentTypes = initialClaimDocuments.map((document) => docu
 export const finalDocumentTypes = finalClaimDocuments.map((document) => document.type);
 
 export const customerActionAwaitedStatuses: ClaimStatus[] = ["Initial Documents Pending", "Documents Pending", "Final Documents Awaited"];
-export const documentVerificationStatuses: ClaimStatus[] = [
-  "Initial Documents Verification Pending",
-  "Initial Documents Submitted",
-  "Documents Submitted",
-  "Final Documents Verification Pending",
-  "Final Documents Submitted"
-];
+export const documentVerificationStatuses: ClaimStatus[] = ["Initial Documents Verification Pending", "Initial Documents Submitted", "Documents Submitted", "Final Documents Verification Pending", "Final Documents Submitted"];
 export const terminalClaimStatuses: ClaimStatus[] = ["Settled", "Rejected", "Closed"];
 
 export const claimQueueDefinitions = [
@@ -163,32 +157,7 @@ export const managerTransitions: Partial<Record<ClaimStatus, ClaimStatus>> = {
   Settled: "Closed"
 };
 
-const finalDocumentPhaseStatuses: ClaimStatus[] = [
-  "Spot Survey Completed",
-  "Final Documents Awaited",
-  "Final Documents Verification Pending",
-  "Final Documents Submitted",
-  "Final Documents Verified",
-  "Claim Intimation",
-  "Final Surveyor Details",
-  "Survey Status",
-  "Survey Done",
-  "Work Approval Status",
-  "Work Approval Received",
-  "Under Repair",
-  "Repair Done",
-  "RA Intimation",
-  "RA Intimation Done",
-  "DO Status",
-  "Payment Stage",
-  "Claim Completion In Progress",
-  "Claim Complete",
-  "DO Submitted",
-  "Final Bill Submitted",
-  "Settlement Under Process",
-  "Settled",
-  "Closed"
-];
+const finalDocumentPhaseStatuses: ClaimStatus[] = ["Spot Survey Completed", "Final Documents Awaited", "Final Documents Verification Pending", "Final Documents Submitted", "Final Documents Verified", "Claim Intimation", "Final Surveyor Details", "Survey Status", "Survey Done", "Work Approval Status", "Work Approval Received", "Under Repair", "Repair Done", "RA Intimation", "RA Intimation Done", "DO Status", "Payment Stage", "Claim Completion In Progress", "Claim Complete", "DO Submitted", "Final Bill Submitted", "Settlement Under Process", "Settled", "Closed"];
 
 export function isClaimStatus(value: string | null | undefined): value is ClaimStatus {
   return Boolean(value && claimStatuses.includes(value as ClaimStatus));
@@ -249,4 +218,17 @@ export function verifiedStatusFor(status: ClaimStatus) {
   if (["Initial Documents Verification Pending", "Initial Documents Submitted", "Documents Submitted"].includes(status)) return "Initial Documents Verified" as ClaimStatus;
   if (["Final Documents Verification Pending", "Final Documents Submitted"].includes(status)) return "Final Documents Verified" as ClaimStatus;
   return status;
+}
+
+export function stageAgeLabel(value?: string | null) {
+  if (!value) return "No date available";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "No date available";
+  const diffMs = Date.now() - date.getTime();
+  const minutes = Math.max(0, Math.floor(diffMs / 60000));
+  if (minutes < 60) return `${minutes}m in stage`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h in stage`;
+  const days = Math.floor(hours / 24);
+  return `${days}d in stage`;
 }
