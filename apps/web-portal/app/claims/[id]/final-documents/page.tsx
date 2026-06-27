@@ -92,6 +92,7 @@ export default async function FinalDocumentsPage({ params }: { params: Promise<{
       name: document.title,
       documentId: uploaded?.id ?? null,
       fileName: uploaded?.file_name ?? null,
+      viewUrl: uploaded?.id ? `/claim-documents/${uploaded.id}/open` : null,
       status: uploaded?.verification_status === "verified" ? "Verified" : uploaded ? "Uploaded" : "Pending"
     };
   });
