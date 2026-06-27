@@ -2,6 +2,10 @@ import { DocumentVerificationModalButton } from "./document-verification-modal-v
 import { VerifyDocumentButton } from "./verify-buttons";
 
 export function VerificationActionButton({ claimId, documentId, itemKey, incidentDate, policyStartDate, policyEndDate }: { claimId: string; documentId: string; itemKey: string; incidentDate?: string | null; policyStartDate?: string | null; policyEndDate?: string | null }) {
+  if (itemKey === "spot") {
+    return <DocumentVerificationModalButton claimId={claimId} documentId={documentId} modalType="spot" incidentDate={incidentDate} />;
+  }
+
   if (itemKey === "rc") {
     return <DocumentVerificationModalButton claimId={claimId} documentId={documentId} modalType="rc" incidentDate={incidentDate} />;
   }
