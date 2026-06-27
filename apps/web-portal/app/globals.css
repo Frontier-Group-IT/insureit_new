@@ -27,3 +27,43 @@ textarea {
 label {
   @apply text-sm font-medium text-slate-700;
 }
+
+@keyframes insureit-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes insureit-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.88);
+    opacity: 0.72;
+  }
+}
+
+@keyframes insureit-blip {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0.55;
+  }
+}
+
+@keyframes insureit-progress {
+  0% {
+    transform: translateX(-110%);
+  }
+  55% {
+    transform: translateX(45%);
+  }
+  100% {
+    transform: translateX(220%);
+  }
+}
