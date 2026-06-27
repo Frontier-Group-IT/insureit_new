@@ -45,7 +45,10 @@ export function SurveyorDeputationForm({ claimId, variant = "launcher", backHref
           formData.set("claimId", claimId);
           const response = await deputeSpotSurveyor(formData);
           setResult(response);
-          if (response.ok) router.refresh();
+          if (response.ok) {
+            router.push(`/claims/${claimId}`);
+            router.refresh();
+          }
         });
       }}
       className="rounded-2xl border border-[#DFE8F4] bg-white p-5 shadow-[0_10px_24px_rgba(7,29,73,0.04)]"
