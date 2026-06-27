@@ -6,6 +6,7 @@ import type { ClaimStatus } from "@/lib/claim-workflow";
 import { canVerifyClaimDocuments } from "@/lib/roles";
 
 const bucketName = "claim-documents";
+const spotRequiredFields = ["spot_axle_status", "spot_overturned"] as const;
 const rcDateFields = ["fitness_valid_upto", "tax_valid_upto", "insurance_valid_upto", "pucc_valid_upto", "local_permit_valid_upto", "national_permit_valid_upto"] as const;
 const insuranceRequiredFields = ["insurance_start_date", "insurance_end_date", "ncb_verified", "policy_type_check", "gvw_kg"] as const;
 const dlRequiredFields = ["licence_valid_upto", "dl_inbound", "dl_valid_for_loss_vehicle"] as const;
@@ -53,6 +54,11 @@ function statusFromExpiry(expiryDate: string | undefined, incidentDate: string |
   return expiryDate < incidentDate ? "Invalid" : "Valid";
 }
 
+function isSpotDocument(documentType: string) {
+  const normalized = documentType.toLowerCase();
+  return normalized.includes("spot") || normalized.includes("accident photo") || normalized.includes("loss photo") || normalized.includes("vehicle photo");
+}
+
 function isDlDocument(documentType: string) {
   const normalized = documentType.toLowerCase();
   return normalized.includes("driving") || normalized.includes("licence") || normalized.includes("license") || normalized.includes("dl");
@@ -72,6 +78,7 @@ function verificationTypeForDocument(documentType: string): VerificationType {
 
 function requiredFieldsForDocument(documentType: string) {
   const type = verificationTypeForDocument(documentType);
+  if (isSpotDocument(documentType)) return [...spotRequiredFields];
   if (type === "rc") return [...rcDateFields];
   if (type === "insurance") return [...insuranceRequiredFields];
   if (isDlDocument(documentType)) return [...dlRequiredFields];
@@ -86,6 +93,10 @@ function applyAutomaticValidity(details: Record<string, string>, incidentDate: s
   const dateStatusPairs = [["fitness_valid_upto", "fitness_status"], ["tax_valid_upto", "tax_status"], ["insurance_valid_upto", "insurance_status"], ["pucc_valid_upto", "pucc_status"], ["local_permit_valid_upto", "local_permit_status"], ["national_permit_valid_upto", "national_permit_status"], ["insurance_end_date", "policy_status"]] as const;
   const invalidFields: string[] = [];
   const finalDetails = { ...details };
+
+  if (isSpotDocument(documentType)) {
+    finalDetails.spot_photo_status = missingFields.length === 0 ? "Verified" : "Incomplete";
+  }
 
   for (const [dateKey, statusKey] of dateStatusPairs) {
     const autoStatus = statusFromExpiry(finalDetails[dateKey], incidentDate);
