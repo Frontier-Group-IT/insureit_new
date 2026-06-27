@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { deputeSpotSurveyor } from "@/app/claims/[id]/surveyor-actions";
+import { InsureItButtonLoader } from "@/components/loading/insureit-loader";
 
 type Result = { ok: boolean; message?: string };
 
@@ -27,7 +28,7 @@ export function SurveyorDeputationForm({ claimId, variant = "launcher", backHref
             <h2 className="text-[16px] font-semibold text-[#071D49]">All documents verified successfully</h2>
             <p className="mt-1 text-[12px] text-[#526178]">You can now depute the spot surveyor for this claim.</p>
           </div>
-          <Link href={`/claims/${claimId}/spot-surveyor`} className="inline-flex h-10 items-center rounded-lg bg-[#071D49] px-5 text-[13px] font-semibold text-white shadow-sm transition hover:bg-[#12356C]">
+          <Link href={`/claims/${claimId}/spot-surveyor`} data-loading-label="Opening spot surveyor deputation" className="inline-flex h-10 items-center rounded-lg bg-[#071D49] px-5 text-[13px] font-semibold text-white shadow-sm transition hover:bg-[#12356C]">
             Depute Spot Surveyor
           </Link>
         </div>
@@ -37,6 +38,7 @@ export function SurveyorDeputationForm({ claimId, variant = "launcher", backHref
 
   return (
     <form
+      data-loading-label="Saving spot surveyor details"
       action={(formData) => {
         if (!canSubmit) return;
         startTransition(async () => {
@@ -73,9 +75,9 @@ export function SurveyorDeputationForm({ claimId, variant = "launcher", backHref
       {result ? <p className={`mt-4 rounded-lg border px-3 py-2 text-[12px] font-semibold ${result.ok ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>{result.message}</p> : null}
 
       <div className="mt-5 flex items-center justify-between border-t border-[#E6EEF7] pt-4">
-        <Link href={backHref ?? `/claims/${claimId}`} className="inline-flex h-10 items-center rounded-lg border border-[#B8C5D6] px-6 text-[13px] font-semibold text-[#071D49] transition hover:border-[#174EA6] hover:bg-[#F7FAFF]">Cancel</Link>
-        <button type="submit" disabled={pending || !canSubmit || result?.ok} className="h-10 rounded-lg bg-[#071D49] px-8 text-[13px] font-semibold text-white shadow-sm transition hover:bg-[#12356C] disabled:cursor-not-allowed disabled:bg-[#A9B4C5] disabled:opacity-70">
-          {pending ? "Submitting..." : result?.ok ? "Submitted" : "Submit"}
+        <Link href={backHref ?? `/claims/${claimId}`} data-loading-label="Returning to claim verification" className="inline-flex h-10 items-center rounded-lg border border-[#B8C5D6] px-6 text-[13px] font-semibold text-[#071D49] transition hover:border-[#174EA6] hover:bg-[#F7FAFF]">Cancel</Link>
+        <button type="submit" disabled={pending || !canSubmit || result?.ok} className="h-10 min-w-[116px] rounded-lg bg-[#071D49] px-8 text-[13px] font-semibold text-white shadow-sm transition hover:bg-[#12356C] disabled:cursor-not-allowed disabled:bg-[#A9B4C5] disabled:opacity-70">
+          {pending ? <InsureItButtonLoader label="Submitting" /> : result?.ok ? "Submitted" : "Submit"}
         </button>
       </div>
     </form>
