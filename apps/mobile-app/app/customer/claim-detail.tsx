@@ -25,6 +25,7 @@ export default function ClaimDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [documentsExpanded, setDocumentsExpanded] = useState(false);
   const [journeyExpanded, setJourneyExpanded] = useState(false);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -120,7 +121,7 @@ export default function ClaimDetailScreen() {
           </View>
 
           <View style={[styles.focusStatusBadge, { backgroundColor: tone.soft, borderColor: tone.border }]}>
-            <Text style={[styles.focusStatusText, { color: tone.accent }]} numberOfLines={2}>{claim.current_status}</Text>
+            <Text style={[styles.focusStatusText, { color: tone.accent }]} numberOfLines={2}>{statusBadgeLabel(claim.current_status)}</Text>
           </View>
         </View>
 
@@ -200,25 +201,30 @@ export default function ClaimDetailScreen() {
         </View>
 
         <View style={styles.sectionCard}>
-        <View style={styles.sectionTop}>
+        <Pressable accessibilityRole="button" onPress={() => setHistoryExpanded((expanded) => !expanded)} style={styles.sectionTop}>
           <View>
             <Text style={styles.sectionTitle}>Status History</Text>
-            <Text style={styles.sectionSub}>All claim movement records</Text>
+            <Text style={styles.sectionSub}>{history.length ? `${history.length} claim movement records` : 'No timeline updates yet'}</Text>
           </View>
-        </View>
+          <MaterialCommunityIcons name={historyExpanded ? 'chevron-up' : 'chevron-down'} size={22} color={palette.slate} />
+        </Pressable>
 
-        {history.length ? null : <Text style={styles.emptyText}>No timeline updates yet.</Text>}
-
-        {history.map((item) => (
-          <View key={item.id} style={styles.historyRow}>
-            <View style={[styles.historyDot, { backgroundColor: claimTone(item.to_status).accent }]} />
-            <View style={styles.historyCopy}>
-              <Text style={styles.historyStatus}>{item.to_status}</Text>
-              <Text style={styles.historyMeta}>{formatDateTime(item.created_at)}</Text>
-              {item.notes ? <Text style={styles.historyNote}>{item.notes}</Text> : null}
+        {historyExpanded ? (
+          <View style={styles.historyList}>
+            {history.length ? history.map((item) => (
+              <View key={item.id} style={styles.historyRow}>
+                <View style={[styles.historyDot, { backgroundColor: claimTone(item.to_status).accent }]} />
+                <View style={styles.historyCopy}>
+                  <Text style={styles.historyStatus}>{item.to_status}</Text>
+                  <Text style={styles.historyMeta}>{formatDateTime(item.created_at)}</Text>
+                  {item.notes ? <Text style={styles.historyNote}>{item.notes}</Text> : null}
+                </View>
+              </View>
+            )) : (
+              <Text style={styles.emptyText}>No timeline updates yet.</Text>
+            )}
             </View>
-          </View>
-        ))}
+        ) : null}
         </View>
 
         <View style={styles.sectionCard}>
@@ -353,6 +359,14 @@ function claimStageLabel(status: ClaimStatus) {
   if (status.includes('Payment') || status.includes('Settlement')) return 'PAYMENT STAGE';
   if (status === 'Closed' || status === 'Settled') return 'COMPLETED';
   return 'CLAIM STAGE';
+}
+
+function statusBadgeLabel(status: ClaimStatus) {
+  if (status === 'Initial Documents Verification Pending' || status === 'Initial Documents Submitted' || status === 'Documents Submitted') {
+    return 'Initial Documents Uploaded';
+  }
+
+  return status;
 }
 
 function claimTone(status: ClaimStatus) {
@@ -549,6 +563,7 @@ const styles = StyleSheet.create({
   emptyTitle: { color: palette.ink, fontSize: 13, fontWeight: '900' },
   emptyText: { color: palette.slate, fontSize: 12, fontWeight: '700', lineHeight: 17 },
 
+  historyList: { marginTop: 11 },
   historyRow: { flexDirection: 'row', gap: 10, paddingVertical: 9, borderTopWidth: 1, borderTopColor: '#E5ECF5' },
   historyDot: { width: 10, height: 10, borderRadius: 5, marginTop: 4 },
   historyCopy: { flex: 1 },

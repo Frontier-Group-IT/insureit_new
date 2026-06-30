@@ -55,7 +55,7 @@ export const initialClaimDocuments: RequiredDocument[] = [
   { type: "Registration certificate", title: "Registration certificate", body: "RC copy", icon: "card-account-details-outline" },
   { type: "Driving licence", title: "Driving licence", body: "Front and back", icon: "badge-account-horizontal-outline" },
   { type: "Policy copy", title: "Policy copy", body: "Policy PDF or photo", icon: "shield-file-outline" },
-  { type: "GR Copy / Road Challan", title: "GR Copy / Road Challan", body: "Goods receipt or road challan", icon: "file-document-multiple-outline" }
+  { type: "GR Copy / Load Challan", title: "GR Copy / Load Challan", body: "Goods receipt or load challan", icon: "file-document-multiple-outline" }
 ];
 
 export const finalClaimDocuments: RequiredDocument[] = [

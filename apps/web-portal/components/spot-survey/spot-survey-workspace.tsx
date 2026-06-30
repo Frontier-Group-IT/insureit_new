@@ -43,7 +43,7 @@ const documentAliases: Record<string, string[]> = {
   rc: ["RC Copy", "Registration certificate", "Registration Certificate"],
   insurance: ["Insurance Copy", "Policy copy", "Policy Copy"],
   dl: ["Driving licence", "Driving Licence", "Driving Licence Copy", "DL Copy"],
-  gr: ["GR Copy / Road Challan", "GR / Load Challan Copy", "Road Challan", "Load Challan"]
+  gr: ["GR Copy / Load Challan", "GR / Load Challan Copy", "Road Challan", "Load Challan"]
 };
 
 export function SpotSurveyWorkspace({ claim, documents }: { claim: SpotSurveyClaim; documents: SpotSurveyDocument[] }) {
@@ -176,7 +176,7 @@ function buildItems(claim: SpotSurveyClaim, documents: SpotSurveyDocument[]): Ve
     { key: "rc", number: 1, title: "RC Copy", icon: "📄", accent: "bg-[#F1ECFF]", documentType: "Registration certificate", document: doc("rc"), kind: "document" },
     { key: "insurance", number: 2, title: "Insurance Copy", icon: "📃", accent: "bg-[#FFF3D9]", documentType: "Policy copy", document: doc("insurance"), kind: "document" },
     { key: "dl", number: 3, title: "Driving Licence Copy", icon: "🪪", accent: "bg-[#EAF8EF]", documentType: "Driving licence", document: doc("dl"), kind: "document" },
-    { key: "gr", number: 4, title: "GR / Load Challan Copy", icon: "🚚", accent: "bg-[#FFF1E6]", documentType: "GR Copy / Road Challan", document: doc("gr"), kind: "document" },
+    { key: "gr", number: 4, title: "GR / Load Challan Copy", icon: "🚚", accent: "bg-[#FFF1E6]", documentType: "GR Copy / Load Challan", document: doc("gr"), kind: "document" },
     { key: "driver", number: 5, title: "Driver Details", icon: "👤", accent: "bg-[#EEF6FF]", detailLabel: "Driver / DL Number", detailValue: extractDriverNumber(claim.accident_description), status: extractDriverNumber(claim.accident_description) ? "verified" : "pending", kind: "detail" },
     { key: "location", number: 6, title: "Loss Location", icon: "📍", accent: "bg-[#F2EDFF]", detailLabel: "Location", detailValue: claim.accident_location, status: claim.accident_location ? "verified" : "pending", kind: "detail" }
   ];

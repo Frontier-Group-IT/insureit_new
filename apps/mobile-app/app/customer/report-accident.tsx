@@ -146,6 +146,11 @@ export default function ReportAccidentScreen() {
       return;
     }
 
+    if (isFutureIncidentDate(incidentAt)) {
+      setMessage('Loss date cannot be in the future. Select today or a past date.');
+      return;
+    }
+
     if (!addressText) {
       setMessage('Enter the complete incident address.');
       return;
@@ -314,7 +319,7 @@ export default function ReportAccidentScreen() {
         <View style={styles.fieldStack}>
           <TextField label="Driver Name" value={driverName} onChangeText={setDriverName} />
           <TextField label="Driver Mobile No." keyboardType="phone-pad" value={driverPhone} onChangeText={setDriverPhone} />
-          <AppDatePicker label="Incident Date" value={incidentDate} onChange={setIncidentDate} formatDisplay={formatDisplayDate} />
+          <AppDatePicker label="Incident Date" value={incidentDate} onChange={setIncidentDate} formatDisplay={formatDisplayDate} maxDate={todayIsoDate()} />
         </View>
       </View>
 
@@ -520,6 +525,20 @@ function buildIncidentDate(date: string) {
   const parsed = new Date(year, month - 1, day, 12, 0, 0, 0);
   if (Number.isNaN(parsed.getTime())) return null;
   return parsed;
+}
+
+function isFutureIncidentDate(date: Date) {
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+  return date.getTime() > todayEnd.getTime();
+}
+
+function todayIsoDate() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function formatDisplayDate(value: string) {

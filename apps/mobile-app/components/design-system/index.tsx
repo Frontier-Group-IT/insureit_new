@@ -163,10 +163,23 @@ export function AppSearchSelect<T extends { id: string }>({
   );
 }
 
-export function AppDatePicker({ label, value, onChange, formatDisplay }: { label: string; value: string; onChange: (value: string) => void; formatDisplay?: (value: string) => string }) {
+export function AppDatePicker({
+  label,
+  value,
+  onChange,
+  formatDisplay,
+  maxDate,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  formatDisplay?: (value: string) => string;
+  maxDate?: string | Date;
+}) {
   const [open, setOpen] = useState(false);
   const [visibleMonth, setVisibleMonth] = useState(() => monthStart(parseDate(value) ?? new Date()));
   const selectedDate = parseDate(value);
+  const maxSelectableDate = normalizeDateLimit(maxDate);
   const monthDays = useMemo(() => buildMonthDays(visibleMonth), [visibleMonth]);
   const displayValue = value ? (formatDisplay?.(value) || formatReadableDate(value)) : '';
 
@@ -200,17 +213,20 @@ export function AppDatePicker({ label, value, onChange, formatDisplay }: { label
           <View style={designStyles.dateGrid}>
             {monthDays.map((day, index) => {
               const isSelected = Boolean(selectedDate && sameDate(selectedDate, day.date));
+              const isDisabled = Boolean(maxSelectableDate && day.date.getTime() > maxSelectableDate.getTime());
               return (
                 <Pressable
                   key={`${day.date.toISOString()}-${index}`}
                   accessibilityRole="button"
+                  disabled={isDisabled}
                   onPress={() => {
+                    if (isDisabled) return;
                     onChange(formatIsoDate(day.date));
                     setOpen(false);
                   }}
-                  style={[designStyles.dateCell, !day.inMonth && designStyles.dateCellMuted, isSelected && designStyles.dateCellSelected]}
+                  style={[designStyles.dateCell, !day.inMonth && designStyles.dateCellMuted, isDisabled && designStyles.dateCellDisabled, isSelected && designStyles.dateCellSelected]}
                 >
-                  <Text style={[designStyles.dateText, !day.inMonth && designStyles.dateTextMuted, isSelected && designStyles.dateTextSelected]}>{day.date.getDate()}</Text>
+                  <Text style={[designStyles.dateText, !day.inMonth && designStyles.dateTextMuted, isDisabled && designStyles.dateTextDisabled, isSelected && designStyles.dateTextSelected]}>{day.date.getDate()}</Text>
                 </Pressable>
               );
             })}
@@ -239,6 +255,13 @@ function parseDate(value: string) {
   const parsed = new Date(year, month - 1, day);
   if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) return null;
   return parsed;
+}
+
+function normalizeDateLimit(value?: string | Date) {
+  if (!value) return null;
+  const parsed = value instanceof Date ? value : parseDate(value);
+  if (!parsed || Number.isNaN(parsed.getTime())) return null;
+  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 23, 59, 59, 999);
 }
 
 function monthStart(date: Date) {
@@ -340,9 +363,11 @@ const designStyles = StyleSheet.create({
   dateGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   dateCell: { width: `${100 / 7}%`, aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 14 },
   dateCellMuted: { opacity: 0.42 },
+  dateCellDisabled: { opacity: 0.22 },
   dateCellSelected: { backgroundColor: colors.green },
   dateText: { color: colors.navy, fontSize: 14, fontWeight: '900' },
   dateTextMuted: { color: colors.grey },
+  dateTextDisabled: { color: '#98A2B3' },
   dateTextSelected: { color: colors.white },
 });
 

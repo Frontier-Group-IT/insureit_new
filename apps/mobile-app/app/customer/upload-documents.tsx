@@ -7,7 +7,7 @@ import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { Message, Screen } from '@/components/ui';
 import { ensureCustomerForUser, getCurrentSession, getCustomerForUser } from '@/lib/auth';
-import { documentDrivenStatusFor, documentStatusLabel, requiredDocumentsForStatus } from '@/lib/claim-documents';
+import { documentDrivenStatusFor, documentStatusLabel, finalDocumentGroups, requiredDocumentsForStatus } from '@/lib/claim-documents';
 import { recordClaimEvent } from '@/lib/claim-notifications';
 import { customerStageCopy } from '@/lib/claim-workflow';
 import { supabase } from '@/lib/supabase';
@@ -33,6 +33,7 @@ export default function UploadDocumentsScreen() {
   const [success, setSuccess] = useState('');
   const [uploadingType, setUploadingType] = useState('');
   const [submitSuccessOpen, setSubmitSuccessOpen] = useState(false);
+  const [finalStepIndex, setFinalStepIndex] = useState(0);
 
   useEffect(() => {
     async function load() {
@@ -66,6 +67,10 @@ export default function UploadDocumentsScreen() {
     void load();
   }, [claimId, router]);
 
+  useEffect(() => {
+    setFinalStepIndex(0);
+  }, [selectedClaimId]);
+
   const selectedClaim = useMemo(() => claims.find((item) => item.id === selectedClaimId) ?? null, [claims, selectedClaimId]);
   const selectedVehicle = useMemo(() => selectedClaim ? vehicles.find((item) => item.id === selectedClaim.vehicle_id) ?? null : null, [selectedClaim, vehicles]);
   const selectedPolicy = useMemo(() => selectedClaim ? policies.find((item) => item.id === selectedClaim.policy_id) ?? null : null, [policies, selectedClaim]);
@@ -76,7 +81,20 @@ export default function UploadDocumentsScreen() {
 
   const selectedDocuments = useMemo(() => selectedClaim ? documents.filter((item) => item.claim_id === selectedClaim.id) : [], [documents, selectedClaim]);
   const requestedFinalDocumentTypes = useMemo(() => selectedClaim ? requestedFinalDocumentTypesFor(selectedClaim.id, tasks) : [], [selectedClaim, tasks]);
-  const documentSections = useMemo(() => requiredDocumentsForStatus(selectedClaim?.current_status, requestedFinalDocumentTypes), [selectedClaim?.current_status, requestedFinalDocumentTypes]);
+  const isFinalDocumentsAwaited = selectedClaim?.current_status === 'Final Documents Awaited';
+  const effectiveRequestedFinalDocumentTypes = isFinalDocumentsAwaited ? [] : requestedFinalDocumentTypes;
+  const documentSections = useMemo(() => requiredDocumentsForStatus(selectedClaim?.current_status, effectiveRequestedFinalDocumentTypes), [selectedClaim?.current_status, effectiveRequestedFinalDocumentTypes]);
+  const finalChecklistGroups = useMemo(() => {
+    if (!isFinalDocumentsAwaited) return [];
+    return finalDocumentGroups;
+  }, [isFinalDocumentsAwaited]);
+  const activeFinalGroup = finalChecklistGroups[Math.min(finalStepIndex, Math.max(finalChecklistGroups.length - 1, 0))];
+
+  useEffect(() => {
+    if (finalStepIndex >= finalChecklistGroups.length && finalChecklistGroups.length > 0) {
+      setFinalStepIndex(finalChecklistGroups.length - 1);
+    }
+  }, [finalChecklistGroups.length, finalStepIndex]);
 
   const completedCount = documentSections.filter((section) => selectedDocuments.some((item) => item.document_type === section.type && item.verification_status !== 'rejected')).length;
   const verifiedCount = selectedDocuments.filter((item) => item.verification_status === 'verified').length;
@@ -206,7 +224,7 @@ export default function UploadDocumentsScreen() {
           const nextDocuments = [data, ...documents];
           setDocuments(nextDocuments);
 
-          const nextStatus = await advanceAfterUpload(selectedClaim, nextDocuments, session.user.id, requestedFinalDocumentTypes);
+          const nextStatus = await advanceAfterUpload(selectedClaim, nextDocuments, session.user.id, effectiveRequestedFinalDocumentTypes);
           if (nextStatus) {
             setClaims((current) => current.map((claim) => claim.id === selectedClaim.id ? { ...claim, current_status: nextStatus } : claim));
           }
@@ -311,7 +329,97 @@ export default function UploadDocumentsScreen() {
         </View>
       ) : null}
 
-      {documentSections.map((section) => {
+      {isFinalDocumentsAwaited && activeFinalGroup ? (
+        <View style={styles.finalChecklistCard}>
+          <Text style={styles.finalChecklistTitle}>Check List For - GCCV Motor Claim</Text>
+
+          <View style={styles.finalStepTabs}>
+            {finalChecklistGroups.map((group, index) => {
+              const active = index === finalStepIndex;
+              return (
+                <Pressable key={group.key} accessibilityRole="button" onPress={() => setFinalStepIndex(index)} style={[styles.finalStepTab, active && styles.finalStepTabActive]}>
+                  <View style={[styles.finalStepNumber, active && styles.finalStepNumberActive]}>
+                    <Text style={[styles.finalStepNumberText, active && styles.finalStepNumberTextActive]}>{index + 1}</Text>
+                  </View>
+                  <Text style={[styles.finalStepLabel, active && styles.finalStepLabelActive]} numberOfLines={2}>{group.title}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <View style={styles.finalTable}>
+            <View style={styles.finalTableHeader}>
+              <Text style={[styles.finalHeaderText, styles.finalSrCell]}>Sr.</Text>
+              <Text style={[styles.finalHeaderText, styles.finalNameCell]}>Document Name</Text>
+              <Text style={[styles.finalHeaderText, styles.finalUploadCell]}>Upload</Text>
+              <Text style={[styles.finalHeaderText, styles.finalStatusCell]}>Status</Text>
+            </View>
+
+            {activeFinalGroup.documents.map((section, index) => {
+              const file = files[section.type];
+              const uploaded = selectedDocuments.filter((item) => item.document_type === section.type);
+              const acceptedDocuments = uploaded.filter((item) => item.verification_status !== 'rejected');
+              const rejectedDocuments = uploaded.filter((item) => item.verification_status === 'rejected');
+              const isComplete = acceptedDocuments.length > 0;
+              const displayDocument = acceptedDocuments[0] ?? rejectedDocuments[0] ?? null;
+              const verified = displayDocument?.verification_status === 'verified';
+              const statusLabel = verified ? 'Verified' : isComplete ? 'Uploaded' : rejectedDocuments.length ? 'Rejected' : 'Pending';
+              const statusTone = verified ? styles.finalStatusVerified : isComplete ? styles.finalStatusUploaded : rejectedDocuments.length ? styles.finalStatusRejected : styles.finalStatusPending;
+
+              return (
+                <View key={section.type} style={styles.finalTableRow}>
+                  <Text style={[styles.finalCellText, styles.finalSrCell]}>{index + 1}</Text>
+                  <View style={styles.finalNameCell}>
+                    <Text style={styles.finalDocumentName}>{section.title}</Text>
+                    {displayDocument ? <Text style={styles.finalDocumentFile} numberOfLines={1}>{displayDocument.file_name}</Text> : null}
+                    {!isComplete && rejectedDocuments[0]?.rejection_reason ? <Text style={styles.finalRejectionText} numberOfLines={2}>{rejectedDocuments[0].rejection_reason}</Text> : null}
+                    {file ? <Text style={styles.finalDocumentFile} numberOfLines={1}>{uploadingType === section.type ? `Uploading ${file.name}` : file.name}</Text> : null}
+                  </View>
+                  <View style={styles.finalUploadCell}>
+                    {!isComplete ? (
+                      <Pressable accessibilityRole="button" onPress={() => void pickDocument(section.type)} style={styles.finalUploadButton}>
+                        <MaterialCommunityIcons name="upload-outline" size={15} color={palette.navy} />
+                        <Text style={styles.finalUploadText}>{uploadingType === section.type ? 'Uploading' : 'Upload'}</Text>
+                      </Pressable>
+                    ) : displayDocument ? (
+                      <Pressable accessibilityRole="button" onPress={() => void openDocument(displayDocument)} style={styles.finalOpenButton}>
+                        <MaterialCommunityIcons name="open-in-new" size={15} color={palette.navy} />
+                      </Pressable>
+                    ) : null}
+                  </View>
+                  <View style={styles.finalStatusCell}>
+                    <View style={[styles.finalStatusPill, statusTone]}>
+                      <Text style={styles.finalStatusText}>{statusLabel}</Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+
+          <View style={styles.finalNavigation}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={finalStepIndex === 0}
+              onPress={() => setFinalStepIndex((index) => Math.max(0, index - 1))}
+              style={[styles.finalNavButton, finalStepIndex === 0 && styles.finalNavButtonDisabled]}
+            >
+              <MaterialCommunityIcons name="chevron-left" size={18} color={finalStepIndex === 0 ? '#98A2B3' : palette.navy} />
+              <Text style={[styles.finalNavButtonText, finalStepIndex === 0 && styles.finalNavButtonTextDisabled]}>Previous</Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              disabled={finalStepIndex >= finalChecklistGroups.length - 1}
+              onPress={() => setFinalStepIndex((index) => Math.min(finalChecklistGroups.length - 1, index + 1))}
+              style={[styles.finalNextButton, finalStepIndex >= finalChecklistGroups.length - 1 && styles.finalNavButtonDisabled]}
+            >
+              <Text style={[styles.finalNextButtonText, finalStepIndex >= finalChecklistGroups.length - 1 && styles.finalNavButtonTextDisabled]}>Next</Text>
+              <MaterialCommunityIcons name="chevron-right" size={18} color={finalStepIndex >= finalChecklistGroups.length - 1 ? '#98A2B3' : '#FFFFFF'} />
+            </Pressable>
+          </View>
+        </View>
+      ) : documentSections.map((section) => {
         const file = files[section.type];
         const uploaded = selectedDocuments.filter((item) => item.document_type === section.type);
         const acceptedDocuments = uploaded.filter((item) => item.verification_status !== 'rejected');
@@ -377,7 +485,7 @@ export default function UploadDocumentsScreen() {
         );
       })}
 
-      {selectedClaim ? (
+      {selectedClaim && !isFinalDocumentsAwaited ? (
         <Pressable accessibilityRole="button" onPress={() => setSubmitSuccessOpen(true)} style={styles.bottomButton}>
           <Text style={styles.bottomButtonText}>Submit Claim</Text>
           <MaterialCommunityIcons name="check-circle-outline" size={18} color="#FFFFFF" />
@@ -567,6 +675,46 @@ const styles = StyleSheet.create({
   statBox: { flex: 1, borderRadius: 12, paddingVertical: 8, alignItems: 'center' },
   statValue: { fontSize: 14, fontWeight: '900' },
   statLabel: { color: palette.slate, fontSize: 9.2, fontWeight: '800', marginTop: 2 },
+
+  finalChecklistCard: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', borderRadius: 18, padding: 12, marginBottom: 12 },
+  finalChecklistTitle: { color: palette.navy, fontSize: 16, lineHeight: 21, fontWeight: '900', marginBottom: 10 },
+  finalStepTabs: { flexDirection: 'row', gap: 5, marginBottom: 11 },
+  finalStepTab: { flex: 1, minHeight: 58, borderRadius: 11, borderWidth: 1, borderColor: '#E5ECF5', backgroundColor: '#F8FBFF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, paddingVertical: 6 },
+  finalStepTabActive: { backgroundColor: palette.navy, borderColor: palette.navy },
+  finalStepNumber: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#E8EEF7', alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  finalStepNumberActive: { backgroundColor: '#FFFFFF' },
+  finalStepNumberText: { color: palette.navy, fontSize: 11, fontWeight: '900' },
+  finalStepNumberTextActive: { color: palette.navy },
+  finalStepLabel: { color: palette.navy, fontSize: 9.7, lineHeight: 12, fontWeight: '900', textAlign: 'center' },
+  finalStepLabelActive: { color: '#FFFFFF' },
+  finalTable: { borderWidth: 1, borderColor: '#E5ECF5', borderRadius: 13, overflow: 'hidden', backgroundColor: '#FFFFFF' },
+  finalTableHeader: { minHeight: 38, backgroundColor: palette.navy, flexDirection: 'row', alignItems: 'center' },
+  finalHeaderText: { color: '#FFFFFF', fontSize: 10.8, lineHeight: 14, fontWeight: '900' },
+  finalTableRow: { minHeight: 62, borderTopWidth: 1, borderTopColor: '#E5ECF5', flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF' },
+  finalSrCell: { width: 34, textAlign: 'center' },
+  finalNameCell: { flex: 1.5, minWidth: 0, paddingHorizontal: 8 },
+  finalUploadCell: { flex: 1, minWidth: 78, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  finalStatusCell: { flex: 0.9, minWidth: 72, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  finalCellText: { color: palette.navy, fontSize: 12, fontWeight: '900' },
+  finalDocumentName: { color: palette.navy, fontSize: 11.7, lineHeight: 15, fontWeight: '900' },
+  finalDocumentFile: { color: palette.slate, fontSize: 9.8, lineHeight: 13, fontWeight: '700', marginTop: 2 },
+  finalRejectionText: { color: '#B42318', fontSize: 9.7, lineHeight: 13, fontWeight: '800', marginTop: 2 },
+  finalUploadButton: { minHeight: 34, minWidth: 76, borderRadius: 10, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 7 },
+  finalUploadText: { color: palette.navy, fontSize: 11, fontWeight: '900' },
+  finalOpenButton: { width: 34, height: 34, borderRadius: 11, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  finalStatusPill: { minWidth: 64, borderRadius: 9, paddingHorizontal: 7, paddingVertical: 5, alignItems: 'center' },
+  finalStatusPending: { backgroundColor: '#FFF1D6' },
+  finalStatusUploaded: { backgroundColor: '#E8F8F0' },
+  finalStatusVerified: { backgroundColor: '#DFF7EA' },
+  finalStatusRejected: { backgroundColor: '#FFF0F6' },
+  finalStatusText: { color: palette.navy, fontSize: 10.2, fontWeight: '900' },
+  finalNavigation: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, gap: 10 },
+  finalNavButton: { minWidth: 112, height: 44, borderRadius: 12, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  finalNextButton: { minWidth: 112, height: 44, borderRadius: 12, backgroundColor: palette.navy, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  finalNavButtonDisabled: { backgroundColor: '#F2F4F7', borderColor: '#EAECF0' },
+  finalNavButtonText: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
+  finalNextButtonText: { color: '#FFFFFF', fontSize: 12.5, fontWeight: '900' },
+  finalNavButtonTextDisabled: { color: '#98A2B3' },
 
   documentTile: { borderWidth: 1, borderRadius: 17, padding: 12, paddingLeft: 16, marginBottom: 10, overflow: 'hidden' },
   tileAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5 },

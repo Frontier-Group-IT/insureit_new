@@ -354,7 +354,7 @@ Initial claim documents:
 - `Registration certificate`
 - `Driving licence`
 - `Policy copy`
-- `GR Copy / Road Challan`
+- `GR Copy / Load Challan`
 
 Final claim documents include:
 

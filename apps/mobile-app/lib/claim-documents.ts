@@ -7,41 +7,78 @@ export type RequiredDocument = {
   icon: string;
 };
 
+export type FinalDocumentGroup = {
+  key: string;
+  title: string;
+  documents: RequiredDocument[];
+};
+
 export const initialClaimDocuments: RequiredDocument[] = [
   { type: 'Spot Photo', title: 'Spot Photo', body: 'Damage, vehicle position and number plate', icon: 'camera-burst' },
   { type: 'Registration certificate', title: 'Registration certificate', body: 'RC copy', icon: 'card-account-details-outline' },
   { type: 'Driving licence', title: 'Driving licence', body: 'Front and back', icon: 'badge-account-horizontal-outline' },
   { type: 'Policy copy', title: 'Policy copy', body: 'Policy PDF or photo', icon: 'shield-file-outline' },
-  { type: 'GR Copy / Road Challan', title: 'GR Copy / Road Challan', body: 'Goods receipt or road challan', icon: 'file-document-multiple-outline' },
+  { type: 'GR Copy / Load Challan', title: 'GR Copy / Load Challan', body: 'Goods receipt or load challan', icon: 'file-document-multiple-outline' },
 ];
 
-export const finalClaimDocuments: RequiredDocument[] = [
-  { type: 'Repair estimate', title: 'Repair estimate', body: 'Workshop repair estimate', icon: 'receipt-text-outline' },
-  { type: 'Claim form', title: 'Claim form', body: 'Duly filled and signed claim form', icon: 'file-sign' },
-  { type: 'Driver KYC', title: 'Driver KYC', body: 'Driver Aadhaar card or KYC document', icon: 'card-account-details-outline' },
-  { type: 'Tax paid receipt', title: 'Tax paid receipt', body: 'Valid tax paid receipt', icon: 'receipt-text-outline' },
-  { type: 'Permit copy A', title: 'Permit copy A', body: 'Permit copy A', icon: 'file-certificate-outline' },
-  { type: 'Permit copy B', title: 'Permit copy B', body: 'Permit copy B', icon: 'file-certificate-outline' },
-  { type: 'Permit authorization letter', title: 'Permit authorization letter', body: 'Permit authorization letter', icon: 'file-document-outline' },
-  { type: 'Vehicle fitness certificate', title: 'Vehicle fitness certificate', body: 'Valid vehicle fitness certificate', icon: 'file-certificate-outline' },
-  { type: 'Pollution certificate', title: 'Pollution certificate', body: 'Pollution certificate', icon: 'file-certificate-outline' },
-  { type: 'Insured CKYC documents', title: 'Insured CKYC documents', body: 'CKYC form and insured/firm KYC documents', icon: 'card-account-details-outline' },
-  { type: 'FIR / Police report', title: 'FIR / Police report', body: 'FIR, police intimation, or GD report if any', icon: 'file-document-outline' },
-  { type: 'Affidavit if no FIR', title: 'Affidavit if no FIR', body: 'Affidavit on stamp paper when FIR is not lodged', icon: 'file-sign' },
-  { type: 'MLC report', title: 'MLC report', body: 'Required for injury or death cases', icon: 'file-document-outline' },
-  { type: 'Driver fitness report', title: 'Driver fitness report', body: 'Required when MLC report is not available', icon: 'file-document-outline' },
-  { type: 'Fastag summary report', title: 'Fastag summary report', body: 'Fastag summary report', icon: 'file-document-outline' },
-  { type: 'ETP clarification', title: 'ETP clarification', body: 'Electronic transit pass clarification if expired at accident time', icon: 'file-document-outline' },
-  { type: 'Final tax invoice', title: 'Final tax invoice', body: 'Final tax invoice copy with seal and signature', icon: 'receipt-text-outline' },
-  { type: 'Workshop KYC documents', title: 'Workshop KYC documents', body: 'Workshop PAN, GST, and cancelled cheque copy', icon: 'card-account-details-outline' },
-  { type: 'Towing NOC and bill', title: 'Towing NOC and bill', body: 'Customer NOC, towing bill, and towing photos if applicable', icon: 'file-document-multiple-outline' },
-  { type: 'Discharge / Satisfaction voucher', title: 'Discharge / Satisfaction voucher', body: 'Discharge voucher or satisfaction voucher', icon: 'file-certificate-outline' },
-  { type: 'Previous year policy for NCB', title: 'Previous year policy for NCB', body: 'Previous policy document for NCB confirmation', icon: 'shield-file-outline' },
-  { type: 'New vehicle purchase invoice', title: 'New vehicle purchase invoice', body: 'Purchase tax invoice with delivery gate pass', icon: 'receipt-text-outline' },
-  { type: 'Highway report', title: 'Highway report', body: 'NHAI highway report for major accidents', icon: 'file-document-outline' },
-  { type: 'GPS tracking details', title: 'GPS tracking details', body: 'Vehicle GPS tracking details', icon: 'crosshairs-gps' },
-  { type: 'Insurer additional documents', title: 'Insurer additional documents', body: 'Any additional documents requested by insurer', icon: 'file-document-multiple-outline' },
+export const finalDocumentGroups: FinalDocumentGroup[] = [
+  {
+    key: 'forms',
+    title: 'Forms',
+    documents: [
+      { type: 'Claim Form', title: 'Claim Form', body: 'Signed claim form', icon: 'file-sign' },
+      { type: 'TP Affidavit', title: 'TP Affidavit', body: 'Third-party affidavit', icon: 'file-document-edit-outline' },
+      { type: 'Towing Bill', title: 'Towing Bill', body: 'Towing bill copy', icon: 'tow-truck' },
+      { type: 'Repair estimate', title: 'Repair estimate', body: 'Workshop repair estimate', icon: 'receipt-text-outline' },
+      { type: 'NCB VERIFICATION', title: 'NCB VERIFICATION', body: 'NCB verification document', icon: 'shield-check-outline' },
+    ],
+  },
+  {
+    key: 'permit-tax',
+    title: 'Permit / Tax',
+    documents: [
+      { type: 'Road Tax', title: 'Road Tax', body: 'Road tax receipt', icon: 'receipt-text-outline' },
+      { type: 'Local permit A', title: 'Local permit A', body: 'Local permit A copy', icon: 'file-certificate-outline' },
+      { type: 'LOCAL PERMIT B', title: 'LOCAL PERMIT B', body: 'Local permit B copy', icon: 'file-certificate-outline' },
+      { type: 'National Permit', title: 'National Permit', body: 'National permit copy', icon: 'file-certificate-outline' },
+      { type: 'Authorization letter', title: 'Authorization letter', body: 'Authorization letter copy', icon: 'file-document-outline' },
+    ],
+  },
+  {
+    key: 'spots-papers',
+    title: 'Spots Papers',
+    documents: [
+      { type: 'RC Copy', title: 'RC Copy', body: 'Registration certificate copy', icon: 'card-account-details-outline' },
+      { type: 'Insurance copy', title: 'Insurance copy', body: 'Insurance policy copy', icon: 'shield-file-outline' },
+      { type: 'Fitness copy', title: 'Fitness copy', body: 'Vehicle fitness copy', icon: 'file-certificate-outline' },
+      { type: 'GR/Load bill', title: 'GR/Load bill', body: 'GR or load bill copy', icon: 'file-document-multiple-outline' },
+      { type: 'Fasttag report last 15 days', title: 'Fasttag report last 15 days', body: 'Fastag report for last 15 days', icon: 'file-document-outline' },
+    ],
+  },
+  {
+    key: 'driver-docs',
+    title: 'Driver Docs',
+    documents: [
+      { type: 'Driver Licence', title: 'Driver Licence', body: 'Driver licence copy', icon: 'badge-account-horizontal-outline' },
+      { type: 'Driver Aadharcard front', title: 'Driver Aadharcard front', body: 'Driver Aadhaar front side', icon: 'card-account-details-outline' },
+      { type: 'Driver Aadharcard Back', title: 'Driver Aadharcard Back', body: 'Driver Aadhaar back side', icon: 'card-account-details-outline' },
+      { type: 'Driver Statement', title: 'Driver Statement', body: 'Driver statement document', icon: 'file-document-edit-outline' },
+    ],
+  },
+  {
+    key: 'kyc-dealership',
+    title: 'KYC DEALERSHIP',
+    documents: [
+      { type: 'Aadharcard', title: 'Aadharcard', body: 'Aadhaar card copy', icon: 'card-account-details-outline' },
+      { type: 'Pancard', title: 'Pancard', body: 'PAN card copy', icon: 'card-account-details-outline' },
+      { type: 'GST', title: 'GST', body: 'GST certificate', icon: 'file-certificate-outline' },
+      { type: 'Cancel Cheque', title: 'Cancel Cheque', body: 'Cancelled cheque copy', icon: 'checkbook' },
+      { type: 'KYC FORM', title: 'KYC FORM', body: 'KYC form copy', icon: 'file-sign' },
+    ],
+  },
 ];
+
+export const finalClaimDocuments: RequiredDocument[] = finalDocumentGroups.flatMap((group) => group.documents);
 
 const finalDocumentStatuses: ClaimStatus[] = ['Final Documents Awaited', 'Final Documents Verification Pending', 'Final Documents Submitted', 'Final Documents Verified', 'Claim Intimation', 'Final Surveyor Details', 'Survey Status', 'Survey Done', 'Work Approval Status', 'Work Approval Received', 'Under Repair', 'Repair Done', 'RA Intimation', 'RA Intimation Done', 'DO Status', 'Payment Stage', 'Claim Completion In Progress', 'Claim Complete', 'DO Submitted', 'Settlement Under Process', 'Settled', 'Closed'];
 
