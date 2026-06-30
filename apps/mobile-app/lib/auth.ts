@@ -1,5 +1,6 @@
 import type { Session, User } from '@supabase/supabase-js';
 import { Router } from 'expo-router';
+import * as Linking from 'expo-linking';
 
 import { supabase } from './supabase';
 import type { AppRole, Customer, Profile } from './types';
@@ -127,10 +128,12 @@ export async function signIn(email: string, password: string) {
 }
 
 export async function signUp(email: string, password: string, fullName: string, phone?: string) {
+  const emailRedirectTo = Linking.createURL('/login');
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
+      emailRedirectTo,
       data: {
         full_name: fullName,
         phone,
