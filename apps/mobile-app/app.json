@@ -6,6 +6,12 @@
     "orientation": "portrait",
     "scheme": "insureit",
     "userInterfaceStyle": "light",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/aadcb7a5-072b-4bf9-bc81-c52fabdd5caa"
+    },
     "icon": "./assets/brand/insureit-app-icon-ice.png",
     "splash": {
       "image": "./assets/brand/insureit-brand-wave.png",

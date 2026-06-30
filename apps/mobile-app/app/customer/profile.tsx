@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Image, Linking, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { LoadingState, Message, Screen } from '@/components/ui';
-import { getCurrentSession, getCustomerForUser, getProfile, signOut } from '@/lib/auth';
+import { ensureCustomerForUser, getCurrentSession, getProfile, signOut } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { palette, roleTheme } from '@/lib/theme';
 import type { Claim, Customer, CustomerDocument, Policy, Profile, SupportTicket, Vehicle } from '@/lib/types';
@@ -45,22 +45,27 @@ export default function ProfileScreen() {
   useEffect(() => {
     let active = true;
     async function load() {
-      const session = await getCurrentSession();
-      if (!session?.user) return router.replace('/login');
-      const [nextProfile, nextCustomer] = await Promise.all([getProfile(session.user.id), getCustomerForUser(session.user.id)]);
-      if (!nextCustomer || !active) return router.replace('/customer/home');
-      const [vehicleResult, policyResult, claimResult, documentResult, ticketResult] = await Promise.all([
-        supabase.from('vehicles').select('*').eq('customer_id', nextCustomer.id).order('created_at', { ascending: false }),
-        supabase.from('policies').select('*').eq('customer_id', nextCustomer.id).order('created_at', { ascending: false }),
-        supabase.from('claims').select('*').eq('customer_id', nextCustomer.id).order('updated_at', { ascending: false }),
-        supabase.from('customer_documents').select('*').eq('customer_id', nextCustomer.id).order('created_at', { ascending: false }),
-        supabase.from('support_tickets').select('*').eq('customer_id', nextCustomer.id).order('created_at', { ascending: false }),
-      ]);
-      if (!active) return;
-      setProfile(nextProfile); setCustomer(nextCustomer); setVehicles(vehicleResult.data ?? []); setPolicies(policyResult.data ?? []); setClaims(claimResult.data ?? []); setDocuments(documentResult.data ?? []); setTickets(ticketResult.data ?? []);
-      setDraft({ name: nextCustomer.contact_name ?? nextProfile?.full_name ?? '', phone: nextCustomer.phone ?? nextProfile?.phone ?? '', email: nextCustomer.email ?? nextProfile?.email ?? '', address: formatAddress(nextCustomer) });
-      if (ticketResult.error) setMessage('Support ticket summary is temporarily unavailable.');
-      setLoading(false);
+      try {
+        const session = await getCurrentSession();
+        if (!session?.user) return router.replace('/login');
+        const [nextProfile, nextCustomer] = await Promise.all([getProfile(session.user.id), ensureCustomerForUser(session.user)]);
+        if (!nextCustomer || !active) return router.replace('/customer/home');
+        const [vehicleResult, policyResult, claimResult, documentResult, ticketResult] = await Promise.all([
+          supabase.from('vehicles').select('*').eq('customer_id', nextCustomer.id).order('created_at', { ascending: false }),
+          supabase.from('policies').select('*').eq('customer_id', nextCustomer.id).order('created_at', { ascending: false }),
+          supabase.from('claims').select('*').eq('customer_id', nextCustomer.id).order('updated_at', { ascending: false }),
+          supabase.from('customer_documents').select('*').eq('customer_id', nextCustomer.id).order('created_at', { ascending: false }),
+          supabase.from('support_tickets').select('*').eq('customer_id', nextCustomer.id).order('created_at', { ascending: false }),
+        ]);
+        if (!active) return;
+        setProfile(nextProfile); setCustomer(nextCustomer); setVehicles(vehicleResult.data ?? []); setPolicies(policyResult.data ?? []); setClaims(claimResult.data ?? []); setDocuments(documentResult.data ?? []); setTickets(ticketResult.data ?? []);
+        setDraft({ name: nextCustomer.contact_name ?? nextProfile?.full_name ?? '', phone: nextCustomer.phone ?? nextProfile?.phone ?? '', email: nextCustomer.email ?? nextProfile?.email ?? '', address: formatAddress(nextCustomer) });
+        if (ticketResult.error) setMessage('Support ticket summary is temporarily unavailable.');
+      } catch {
+        if (active) setMessage('We could not load your profile. Please try again.');
+      } finally {
+        if (active) setLoading(false);
+      }
     }
     void load();
     return () => { active = false; };

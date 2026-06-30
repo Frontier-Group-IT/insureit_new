@@ -8,7 +8,7 @@ import { BottomNavigation } from '@/components/customer-dashboard';
 import { BrandLogo } from '@/components/first-look';
 import { NotificationBell } from '@/components/realtime-notifications';
 import { LoadingState } from '@/components/ui';
-import { getCurrentSession, getCustomerForUser, getProfile, isValidProfile, signOut } from '@/lib/auth';
+import { ensureCustomerForUser, getCurrentSession, getProfile, isValidProfile, signOut } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Claim, ClaimTask, Customer, Policy, Profile, Vehicle } from '@/lib/types';
@@ -37,7 +37,7 @@ export default function CustomerMockupHomeScreen() {
         if (!session?.user) return router.replace('/login');
         const nextProfile = await getProfile(session.user.id);
         if (!isValidProfile(nextProfile) || nextProfile.role !== 'customer') return router.replace('/access-denied');
-        const nextCustomer = await getCustomerForUser(session.user.id);
+        const nextCustomer = await ensureCustomerForUser(session.user);
         if (!mounted) return;
         setProfile(nextProfile); setCustomer(nextCustomer);
         if (nextCustomer) {
