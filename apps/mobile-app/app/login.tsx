@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
-import { Link, useRouter } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -18,7 +18,8 @@ const legacyBiometricSessionKey = 'insureit.biometric.session';
 const supportsSecureBiometric = Platform.OS !== 'web';
 export default function LoginScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const params = useLocalSearchParams<{ email?: string; signup?: string }>();
+  const [email, setEmail] = useState(params.email ?? '');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [biometricReady, setBiometricReady] = useState(false);
@@ -27,6 +28,7 @@ export default function LoginScreen() {
   const [pendingUser, setPendingUser] = useState<User | null>(null);
   const [pendingSession, setPendingSession] = useState<Session | null>(null);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState(() => signupMessage(params.signup));
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(18)).current;
 
@@ -36,6 +38,11 @@ export default function LoginScreen() {
       Animated.spring(translateY, { toValue: 0, useNativeDriver: true, speed: 12, bounciness: 4 }),
     ]).start();
   }, [opacity, translateY]);
+
+  useEffect(() => {
+    if (params.email) setEmail(params.email);
+    setMessage(signupMessage(params.signup));
+  }, [params.email, params.signup]);
 
   useEffect(() => {
     let active = true;
@@ -72,6 +79,7 @@ export default function LoginScreen() {
     if (loading) return;
     setLoading(true);
     setError('');
+    setMessage('');
     try {
       const data = await signIn(email.trim(), password);
       if (data.user) {
@@ -184,6 +192,7 @@ export default function LoginScreen() {
             </View>
 
             {error ? <AuthStatusMessage type="error">{error}</AuthStatusMessage> : null}
+            {message ? <AuthStatusMessage type="success">{message}</AuthStatusMessage> : null}
 
             <PremiumLoginField
               label="Email"
@@ -246,6 +255,12 @@ function authErrorMessage(error: unknown) {
   if (message) return message;
   if (lowerMessage.includes('email')) return message;
   return 'Login could not be completed. Please check the details and try again.';
+}
+
+function signupMessage(value?: string) {
+  if (value === 'complete') return 'Account created. Login with the email and password you just used.';
+  if (value === 'confirm') return 'Account created. Confirm your email, then login with the same email and password.';
+  return '';
 }
 
 async function saveSessionForBiometric(session: Session | null) {

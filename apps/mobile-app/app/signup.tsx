@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AuthExperience, authExperienceStyles } from '@/components/auth-experience';
 import { AuthGlassPanel, AuthStatusMessage, PremiumLoginField, SecureActionButton } from '@/components/first-look';
-import { ensureCustomerForUser, routeSignedInUser, signUp } from '@/lib/auth';
+import { ensureCustomerForUser, signUp } from '@/lib/auth';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -25,9 +25,9 @@ export default function SignupScreen() {
       const data = await signUp(email.trim(), password, fullName.trim(), phone.trim());
       if (data.user && data.session) {
         await ensureCustomerForUser(data.user);
-        await routeSignedInUser(data.user, router);
+        router.replace({ pathname: '/login', params: { email: email.trim(), signup: 'complete' } });
       } else {
-        setMessage('Account created. Please confirm the email address before signing in.');
+        router.replace({ pathname: '/login', params: { email: email.trim(), signup: 'confirm' } });
       }
     } catch (nextError) {
       setError(signupErrorMessage(nextError));
