@@ -31,6 +31,13 @@
         "android.permission.RECORD_AUDIO"
       ]
     },
+    "ios": {
+      "bundleIdentifier": "com.insureit.mobile",
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
     "plugins": [
       "expo-router",
       [
