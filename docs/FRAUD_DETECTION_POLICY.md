@@ -1,6 +1,10 @@
 # Fraud Detection and Monitoring Policy
 
 **Company:** Sankalp Insurance Brokers Private Limited  
+**CIN:** U66220HR2025PTC137800  
+**ROC:** RoC-Delhi  
+**Company Status:** Active  
+**Registered Office:** A-1414, DLF City Ph I, Golf Course Road DLF QE, Gurgaon, Haryana, India - 122002  
 **Brand/App:** InsureIT  
 **Effective date:** 04 July 2026  
 **Last updated:** 04 July 2026
@@ -222,10 +226,11 @@ Any employee, customer, vendor, service provider, or other stakeholder who becom
 
 **Fraud Reporting Contact:**  
 **Company:** Sankalp Insurance Brokers Private Limited  
+**CIN:** U66220HR2025PTC137800  
 **Brand/App:** InsureIT  
 **Email:** To be updated  
 **Phone:** To be updated  
-**Address:** To be updated
+**Registered Office:** A-1414, DLF City Ph I, Golf Course Road DLF QE, Gurgaon, Haryana, India - 122002
 
 Reports should include as much detail as possible, such as:
 
