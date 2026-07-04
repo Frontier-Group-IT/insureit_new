@@ -3,6 +3,15 @@
 **Effective date:** 04 July 2026  
 **Last updated:** 04 July 2026
 
+**Company legal details:**
+
+- **Company Name:** Sankalp Insurance Brokers Private Limited
+- **CIN:** U66220HR2025PTC137800
+- **ROC:** RoC-Delhi
+- **Company Status:** Active
+- **Registered Office:** A-1414, DLF City Ph I, Golf Course Road DLF QE, Gurgaon, Haryana, India - 122002
+- **Brand/App:** InsureIT
+
 Welcome to **InsureIT**, a commercial vehicle insurance and claim assistance platform operated by **Sankalp Insurance Brokers Private Limited**.
 
 These Terms of Use govern your access to and use of the InsureIT website, mobile application, web portal, claim assistance platform, dashboards, support tools, document upload features, notification services, and related services collectively referred to as the **Platform**.
@@ -281,11 +290,12 @@ Subject to applicable law, the courts having jurisdiction over the registered of
 If you have any grievance, complaint, question, or request relating to the Platform or these Terms of Use, you may contact:
 
 **Sankalp Insurance Brokers Private Limited**  
+**CIN:** U66220HR2025PTC137800  
 **Brand/App:** InsureIT  
 **Grievance Officer:** To be updated  
 **Email:** To be updated  
 **Phone:** To be updated  
-**Address:** To be updated
+**Registered Office:** A-1414, DLF City Ph I, Golf Course Road DLF QE, Gurgaon, Haryana, India - 122002
 
 Please include your name, contact details, account details if applicable, and a clear description of the issue. We may ask for additional information to verify your identity and process your request.
 
