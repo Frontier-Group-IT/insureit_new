@@ -4,6 +4,15 @@
 
 Sankalp Insurance Brokers Private Limited, operating the InsureIT Platform, takes the security, confidentiality, integrity, and availability of customer information very seriously.
 
+**Company legal details:**
+
+- **Company Name:** Sankalp Insurance Brokers Private Limited
+- **CIN:** U66220HR2025PTC137800
+- **ROC:** RoC-Delhi
+- **Company Status:** Active
+- **Registered Office:** A-1414, DLF City Ph I, Golf Course Road DLF QE, Gurgaon, Haryana, India - 122002
+- **Brand/App:** InsureIT
+
 InsureIT is a commercial vehicle insurance and claim assistance platform. It may process sensitive information such as customer details, vehicle records, policy information, claim documents, accident photographs, support tickets, staff workflows, and operational records. Protecting this information is an important responsibility for us.
 
 If you are a security researcher, information security professional, developer, or user and you believe you have found a security vulnerability in the InsureIT website, mobile application, web portal, APIs, cloud configuration, authentication flow, storage rules, or related services, we request that you disclose it to us responsibly.
@@ -16,9 +25,11 @@ Please report suspected security vulnerabilities to:
 
 **Security Contact:** To be updated  
 **Company:** Sankalp Insurance Brokers Private Limited  
+**CIN:** U66220HR2025PTC137800  
 **Brand/App:** InsureIT  
 **Email:** To be updated  
-**Phone:** To be updated
+**Phone:** To be updated  
+**Registered Office:** A-1414, DLF City Ph I, Golf Course Road DLF QE, Gurgaon, Haryana, India - 122002
 
 Until the official security email is updated, please do not publish vulnerability details publicly. Contact the Company through an authorized business contact or repository maintainer.
 
