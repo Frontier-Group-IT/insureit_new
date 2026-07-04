@@ -214,7 +214,7 @@ If you have questions about our use of cookies or this Cookie Policy, please con
 **Sankalp Insurance Brokers Private Limited**  
 **CIN:** U66220HR2025PTC137800  
 **Brand/App:** InsureIT  
-**Email:** To be updated  
+**Email:** insureit@frontiergroup.in  
 **Phone:** To be updated  
 **Registered Office:** A-1414, DLF City Ph I, Golf Course Road DLF QE, Gurgaon, Haryana, India - 122002
 
