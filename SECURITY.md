@@ -23,15 +23,15 @@ We appreciate responsible reports that help us identify and fix security issues 
 
 Please report suspected security vulnerabilities to:
 
-**Security Contact:** To be updated  
+**Security Contact:** insureit@frontiergroup.in  
 **Company:** Sankalp Insurance Brokers Private Limited  
 **CIN:** U66220HR2025PTC137800  
 **Brand/App:** InsureIT  
-**Email:** To be updated  
+**Email:** insureit@frontiergroup.in  
 **Phone:** To be updated  
 **Registered Office:** A-1414, DLF City Ph I, Golf Course Road DLF QE, Gurgaon, Haryana, India - 122002
 
-Until the official security email is updated, please do not publish vulnerability details publicly. Contact the Company through an authorized business contact or repository maintainer.
+Please do not publish vulnerability details publicly before the Company has had a reasonable opportunity to investigate and remediate the issue.
 
 When reporting a vulnerability, please include as much detail as possible, such as:
 
