@@ -1,13 +1,15 @@
-# InsureIT Privacy Policy
+# Sankalp Insurance Brokers Private Limited Privacy Policy
 
 **Effective date:** 04 July 2026  
 **Last updated:** 04 July 2026
 
-This Privacy Policy explains how InsureIT collects, uses, stores, shares, and protects personal information when a user accesses or uses the InsureIT website, mobile application, web portal, claim assistance platform, or related services collectively referred to as the **Platform**.
+This Privacy Policy explains how **Sankalp Insurance Brokers Private Limited**, operating the Platform under the brand name **InsureIT**, collects, uses, stores, shares, and protects personal information when a user accesses or uses the InsureIT website, mobile application, web portal, claim assistance platform, or related services collectively referred to as the **Platform**.
 
-InsureIT is a commercial vehicle insurance and claim assistance platform designed to help customers, vehicle owners, claim processors, field executives, managers, and administrators manage commercial vehicle insurance support, policy records, claim cases, accident reporting, claim documents, follow-up tasks, communication, and support workflows.
+In this Privacy Policy, **“Sankalp Insurance Brokers Private Limited”**, **“Company”**, **“we”**, **“us”**, and **“our”** refer to Sankalp Insurance Brokers Private Limited. **“InsureIT”** refers to the brand name, website, mobile application, web portal, and digital platform through which the Company provides its services.
 
-By using the Platform, creating an account, submitting a claim, uploading documents, requesting insurance assistance, or communicating with us, you agree to the collection and use of information as described in this Privacy Policy.
+InsureIT is a commercial vehicle insurance and claim assistance platform by Sankalp Insurance Brokers Private Limited, designed to help customers, vehicle owners, claim processors, field executives, managers, and administrators manage commercial vehicle insurance support, policy records, claim cases, accident reporting, claim documents, follow-up tasks, communication, and support workflows.
+
+By using the Platform, creating an account, submitting a claim, uploading documents, requesting insurance assistance, or communicating with Sankalp Insurance Brokers Private Limited through InsureIT, you agree to the collection and use of information as described in this Privacy Policy.
 
 This Privacy Policy is intended to be read together with any applicable terms of use, consent forms, insurance proposal forms, claim declarations, service agreements, and any notices shown inside the Platform.
 
@@ -58,7 +60,7 @@ We may collect:
 
 ### 2.3 Vehicle Information
 
-Because InsureIT focuses on commercial vehicle insurance and claims, we may collect:
+Because the InsureIT Platform of Sankalp Insurance Brokers Private Limited focuses on commercial vehicle insurance and claims, we may collect:
 
 - vehicle registration number;
 - chassis number;
@@ -135,7 +137,7 @@ We may collect:
 - staff assignment details;
 - task allocation and action history.
 
-Passwords are not stored in plain text by InsureIT.
+Passwords are not stored in plain text by Sankalp Insurance Brokers Private Limited or the InsureIT Platform.
 
 ### 2.8 Device, Technical, and Usage Information
 
@@ -231,7 +233,7 @@ We may collect technical, device, usage, and log information automatically when 
 
 ## 4. How We Use Your Information
 
-We use personal information for lawful, specific, and necessary purposes, including:
+Sankalp Insurance Brokers Private Limited uses personal information for lawful, specific, and necessary purposes, including:
 
 ### 4.1 Account and Platform Operations
 
@@ -312,7 +314,7 @@ We process personal information based on one or more of the following grounds:
 
 ## 6. Sharing of Information
 
-We do not sell your personal information. We may share information only where necessary for the purposes described in this Privacy Policy.
+Sankalp Insurance Brokers Private Limited does not sell your personal information. We may share information only where necessary for the purposes described in this Privacy Policy.
 
 Information may be shared with:
 
@@ -342,7 +344,7 @@ Where required by law, court order, government authority, regulator, law enforce
 
 ### 6.7 Business Transfer
 
-If InsureIT is involved in a merger, acquisition, restructuring, financing, sale of assets, or transfer of business, personal information may be transferred as part of that transaction, subject to appropriate confidentiality and data protection safeguards.
+If Sankalp Insurance Brokers Private Limited or the InsureIT Platform is involved in a merger, acquisition, restructuring, financing, sale of assets, or transfer of business, personal information may be transferred as part of that transaction, subject to appropriate confidentiality and data protection safeguards.
 
 ## 7. Data Storage and Processing Location
 
@@ -445,7 +447,7 @@ You should read the privacy policy of any third-party service before providing i
 
 ## 16. Data Breach Notification
 
-If a data breach occurs that is likely to affect your personal information, we will take appropriate steps to investigate, contain, and remediate the breach. Where required by applicable law, we will notify affected users and relevant authorities within the prescribed timelines.
+If a data breach occurs that is likely to affect your personal information, Sankalp Insurance Brokers Private Limited will take appropriate steps to investigate, contain, and remediate the breach. Where required by applicable law, we will notify affected users and relevant authorities within the prescribed timelines.
 
 Such notice may include:
 
@@ -462,7 +464,7 @@ If you have questions, concerns, complaints, or requests regarding this Privacy 
 
 **Grievance Contact:**  
 **Name:** To be updated  
-**Company/App:** InsureIT  
+**Company/App:** Sankalp Insurance Brokers Private Limited / InsureIT  
 **Email:** To be updated  
 **Phone:** To be updated  
 **Address:** To be updated
@@ -473,7 +475,7 @@ If required under applicable law, unresolved complaints may be escalated to the 
 
 ## 18. Changes to This Privacy Policy
 
-We may update this Privacy Policy from time to time to reflect changes in law, business practices, Platform features, technology, security measures, or service offerings.
+Sankalp Insurance Brokers Private Limited may update this Privacy Policy from time to time to reflect changes in law, business practices, Platform features, technology, security measures, or service offerings.
 
 When we make material changes, we may notify users through the Platform, email, app notification, or other appropriate means. The updated Privacy Policy will be effective from the date shown at the top unless otherwise stated.
 
@@ -483,11 +485,12 @@ You are encouraged to review this Privacy Policy periodically.
 
 For privacy-related questions, requests, or complaints, contact:
 
-**InsureIT Privacy Team**  
+**Sankalp Insurance Brokers Private Limited Privacy Team**  
+**Brand/App:** InsureIT  
 **Email:** To be updated  
 **Phone:** To be updated  
 **Address:** To be updated
 
 ## 20. Important Note
 
-This Privacy Policy is a working legal document for the InsureIT Platform. It should be reviewed and finalized by a qualified legal professional before public release, especially before publishing the app on Google Play Store, Apple App Store, a public website, or using it for live insurance, claim, payment, or customer data processing.
+This Privacy Policy is a working legal document for Sankalp Insurance Brokers Private Limited and the InsureIT Platform. It should be reviewed and finalized by a qualified legal professional before public release, especially before publishing the app on Google Play Store, Apple App Store, a public website, or using it for live insurance, claim, payment, or customer data processing.
