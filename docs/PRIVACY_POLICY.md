@@ -3,6 +3,15 @@
 **Effective date:** 04 July 2026  
 **Last updated:** 04 July 2026
 
+**Company legal details:**
+
+- **Company Name:** Sankalp Insurance Brokers Private Limited
+- **CIN:** U66220HR2025PTC137800
+- **ROC:** RoC-Delhi
+- **Company Status:** Active
+- **Registered Office:** A-1414, DLF City Ph I, Golf Course Road DLF QE, Gurgaon, Haryana, India - 122002
+- **Brand/App:** InsureIT
+
 This Privacy Policy explains how **Sankalp Insurance Brokers Private Limited**, operating the Platform under the brand name **InsureIT**, collects, uses, stores, shares, and protects personal information when a user accesses or uses the InsureIT website, mobile application, web portal, claim assistance platform, or related services collectively referred to as the **Platform**.
 
 In this Privacy Policy, **“Sankalp Insurance Brokers Private Limited”**, **“Company”**, **“we”**, **“us”**, and **“our”** refer to Sankalp Insurance Brokers Private Limited. **“InsureIT”** refers to the brand name, website, mobile application, web portal, and digital platform through which the Company provides its services.
@@ -465,9 +474,10 @@ If you have questions, concerns, complaints, or requests regarding this Privacy 
 **Grievance Contact:**  
 **Name:** To be updated  
 **Company/App:** Sankalp Insurance Brokers Private Limited / InsureIT  
+**CIN:** U66220HR2025PTC137800  
 **Email:** To be updated  
 **Phone:** To be updated  
-**Address:** To be updated
+**Registered Office:** A-1414, DLF City Ph I, Golf Course Road DLF QE, Gurgaon, Haryana, India - 122002
 
 When submitting a complaint, please include your name, contact details, account details if available, and a clear description of the concern. We may request additional information to verify your identity and process your request.
 
@@ -486,10 +496,11 @@ You are encouraged to review this Privacy Policy periodically.
 For privacy-related questions, requests, or complaints, contact:
 
 **Sankalp Insurance Brokers Private Limited Privacy Team**  
+**CIN:** U66220HR2025PTC137800  
 **Brand/App:** InsureIT  
 **Email:** To be updated  
 **Phone:** To be updated  
-**Address:** To be updated
+**Registered Office:** A-1414, DLF City Ph I, Golf Course Road DLF QE, Gurgaon, Haryana, India - 122002
 
 ## 20. Important Note
 
