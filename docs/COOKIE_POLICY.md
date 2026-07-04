@@ -1,6 +1,10 @@
 # Cookie Policy
 
 **Company:** Sankalp Insurance Brokers Private Limited  
+**CIN:** U66220HR2025PTC137800  
+**ROC:** RoC-Delhi  
+**Company Status:** Active  
+**Registered Office:** A-1414, DLF City Ph I, Golf Course Road DLF QE, Gurgaon, Haryana, India - 122002  
 **Brand/App:** InsureIT  
 **Effective date:** 04 July 2026  
 **Last updated:** 04 July 2026
@@ -208,10 +212,11 @@ The updated Cookie Policy will be effective from the date shown at the top unles
 If you have questions about our use of cookies or this Cookie Policy, please contact:
 
 **Sankalp Insurance Brokers Private Limited**  
+**CIN:** U66220HR2025PTC137800  
 **Brand/App:** InsureIT  
 **Email:** To be updated  
 **Phone:** To be updated  
-**Address:** To be updated
+**Registered Office:** A-1414, DLF City Ph I, Golf Course Road DLF QE, Gurgaon, Haryana, India - 122002
 
 For more information about how we collect, use, store, share, and protect personal information, please refer to our Privacy Policy.
 
