@@ -74,13 +74,7 @@ export default function CustomerMockupHomeScreen() {
   return <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
     <View style={styles.header}>
       <Pressable onPress={() => router.replace('/customer/home')} style={styles.brand}><BrandLogo width={158} /></Pressable>
-      <Pressable onPress={() => router.push('/customer/notifications')} style={styles.iconCircle}><NotificationBell /></Pressable><ActionTile
-  icon="file-document-outline"
-  title="Get Quote"
-  body="Get a quote for new insurance"
-  onPress={() => router.push('/customer/support')}
-  tone="blue"
-/>
+      <Pressable onPress={() => router.push('/customer/notifications')} style={styles.iconCircle}><NotificationBell /></Pressable>
       <Pressable onPress={() => router.push('/customer/profile')} style={styles.avatar}><Text style={styles.avatarText}>{initialFor(name)}</Text></Pressable>
     </View>
     <ScrollView style={styles.scroll} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
@@ -119,4 +113,3 @@ const styles = StyleSheet.create({
   claimCard: { minHeight: 157, borderRadius: 17, backgroundColor: palette.navy, padding: 13, overflow: 'hidden' }, claimHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 }, claimIcon: { width: 38, height: 38, borderRadius: 12, borderWidth: 1.5, borderColor: '#F5B700', alignItems: 'center', justifyContent: 'center' }, claimTitle: { color: '#FFFFFF', fontSize: 15.5, fontWeight: '900' }, claimMetrics: { flex: 1, flexDirection: 'row', marginTop: 9 }, claimMetric: { flex: 1, alignItems: 'center', justifyContent: 'center', minWidth: 0 }, claimMetricLined: { borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.32)' }, claimMetricLabel: { color: '#FFFFFF', fontSize: 11, fontWeight: '500', textAlign: 'center' }, claimMetricValue: { color: '#FFFFFF', fontSize: 28, lineHeight: 32, fontWeight: '900', marginTop: 5 }, claimMetricDetailLabel: { color: '#FFFFFF', fontSize: 9.5, lineHeight: 11, fontWeight: '500', marginTop: 1, textAlign: 'center' }, claimMetricDetail: { color: '#F6C33B', fontSize: 15, lineHeight: 18, fontWeight: '900', marginTop: 1, textAlign: 'center' }, claimMetricDetailGreen: { color: '#68BF5B' },
   supportCard: { minHeight: 60, borderRadius: 17, backgroundColor: '#FFFFFF', paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 11, shadowColor: '#122544', shadowOpacity: 0.05, shadowRadius: 9, elevation: 2 }, supportCopy: { flex: 1 }, supportTitle: { color: palette.navy, fontSize: 15, fontWeight: '900' }, supportText: { color: palette.navy, fontSize: 11.5, fontWeight: '500', marginTop: 1 }, nav: { minHeight: 82, paddingHorizontal: 10, paddingTop: 8, paddingBottom: 8, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E3E8F0' },
 });
-
