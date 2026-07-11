@@ -47,31 +47,31 @@ export default async function CustomersPage() {
 
   return (
     <AppShell title="Customers">
-      <div className="space-y-4 pb-8">
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="space-y-3 pb-5">
+        <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_auto]">
           <SummaryCard label="Total Customers" value={rows.length} />
           <SummaryCard label="Active" value={activeCount} />
           <SummaryCard label="Onboarding Pending" value={pendingCount} />
           <Link
             href="/customers/new"
-            className="flex min-h-[98px] items-center justify-center rounded-2xl bg-[#0B4C8C] px-5 text-center text-sm font-semibold text-white shadow-[0_8px_22px_rgba(7,29,73,0.08)] transition hover:bg-[#083B6D]"
+            className="inline-flex min-h-[66px] min-w-[210px] items-center justify-center rounded-xl bg-[#0B4C8C] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#083B6D]"
           >
             + Add New Customer
           </Link>
         </section>
 
-        <section className="rounded-2xl border border-[#DCE7F5] bg-white p-4 shadow-[0_8px_22px_rgba(7,29,73,0.04)]">
+        <section className="rounded-2xl border border-[#DCE7F5] bg-white p-3 shadow-[0_6px_18px_rgba(7,29,73,0.035)]">
           <SearchFilterBar searchPlaceholder="Search by customer, code, mobile or city" filterLabel="Customer status" />
-          <div className="mt-4">
-            {error ? <DataError message={error.message} /> : <DataTable rows={rows} emptyTitle="No customers added yet" emptyDescription="Add your first customer to begin onboarding and fleet management." columns={[
-              { header: "Customer", cell: (customer) => <><p className="font-semibold text-[#071D49]">{customer.company_name ?? customer.contact_name}</p><p className="text-xs text-[#7A8797]">{customer.customer_code}</p></> },
+          <div className="mt-2">
+            {error ? <DataError message={error.message} /> : <DataTable compact rows={rows} emptyTitle="No customers added yet" emptyDescription="Add your first customer to begin onboarding and fleet management." columns={[
+              { header: "Customer", cell: (customer) => <><p className="font-semibold leading-5 text-[#071D49]">{customer.company_name ?? customer.contact_name}</p><p className="text-[11px] leading-4 text-[#7A8797]">{customer.customer_code}</p></> },
               { header: "Partner Type", cell: (customer) => customer.partner_type ? partnerLabels[customer.partner_type] ?? customer.partner_type : "—" },
               { header: "Mobile", cell: (customer) => customer.phone },
               { header: "City", cell: (customer) => customer.city ?? "—" },
               { header: "Fleet", cell: (customer) => customer.fleet_size_band ? fleetLabels[customer.fleet_size_band] ?? customer.fleet_size_band : "—" },
               { header: "Vehicles", cell: (customer) => <span className="font-semibold">{customer.vehicles?.[0]?.count ?? 0}</span> },
               { header: "Status", cell: (customer) => <StatusBadge status={customer.onboarding_status} /> },
-              { header: "", cell: (customer) => <Link className="font-semibold text-[#174EA6] hover:text-[#071D49]" href={`/customers/${customer.id}/edit`}>View / Edit</Link> }
+              { header: "", cell: (customer) => <Link className="whitespace-nowrap font-semibold text-[#174EA6] hover:text-[#071D49]" href={`/customers/${customer.id}/edit`}>View / Edit</Link> }
             ]} />}
           </div>
         </section>
@@ -81,5 +81,10 @@ export default async function CustomersPage() {
 }
 
 function SummaryCard({ label, value }: { label: string; value: number }) {
-  return <div className="rounded-2xl border border-[#DCE7F5] bg-white px-4 py-3 shadow-[0_6px_18px_rgba(7,29,73,0.035)]"><p className="text-[11.5px] font-medium text-[#68758A]">{label}</p><p className="mt-1 text-2xl font-semibold text-[#071D49]">{value}</p></div>;
+  return (
+    <div className="flex min-h-[66px] items-center justify-between rounded-xl border border-[#DCE7F5] bg-white px-4 py-2.5 shadow-[0_4px_12px_rgba(7,29,73,0.025)]">
+      <p className="text-[11.5px] font-medium text-[#68758A]">{label}</p>
+      <p className="text-xl font-semibold text-[#071D49]">{value}</p>
+    </div>
+  );
 }
