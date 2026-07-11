@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "InsureIt",
+    "name": "insureit",
     "slug": "insureit-mobile",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -12,7 +12,7 @@
     "updates": {
       "url": "https://u.expo.dev/aadcb7a5-072b-4bf9-bc81-c52fabdd5caa"
     },
-    "icon": "./assets/brand/insureit-app-icon-ice.png",
+    "icon": "./assets/brand/insureit-app-icon.png",
     "splash": {
       "image": "./assets/brand/insureit-brand-wave.png",
       "resizeMode": "cover",
@@ -24,7 +24,7 @@
     "android": {
       "package": "com.insureit.mobile",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/brand/insureit-app-icon-ice.png",
+        "foregroundImage": "./assets/brand/insureit-adaptive-foreground.png",
         "backgroundColor": "#F4F8FC"
       },
       "permissions": [
@@ -37,6 +37,11 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/brand/insureit-app-icon.png"
     },
     "plugins": [
       "expo-router",

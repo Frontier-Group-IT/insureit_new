@@ -1,90 +1,276 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
+import type { Href } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { AuthExperience, authExperienceStyles } from '@/components/auth-experience';
-import { AuthGlassPanel, AuthStatusMessage, PremiumLoginField, SecureActionButton } from '@/components/first-look';
-import { ensureCustomerForUser, signUp } from '@/lib/auth';
+import { AuthExperience, LoginPromptCard } from '@/components/auth-experience';
+import { AuthGlassPanel, AuthStatusMessage, SecureActionButton } from '@/components/first-look';
+import { routeSignedInUser, sendPhoneSignupOtp, syncCustomerSignupDetails, verifyPhoneOtp } from '@/lib/auth';
+
+const countryCode = '+91';
+const termsHref = '/legal/terms-of-use' as Href;
+const privacyHref = '/legal/privacy-policy' as Href;
 
 export default function SignupScreen() {
   const router = useRouter();
   const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
+  const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  async function submit() {
-    setLoading(true);
+  const trimmedName = fullName.trim();
+  const trimmedEmail = email.trim();
+  const normalizedMobile = normalizeMobile(mobile);
+  const fullPhone = `${countryCode}${normalizedMobile}`;
+  const mobileValid = normalizedMobile.length === 10;
+  const nameValid = trimmedName.length >= 2;
+  const emailValid = !trimmedEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
+  const otpValid = otp.length >= 4;
+
+  async function requestOtp() {
+    if (loading) return;
     setError('');
     setMessage('');
+
+    if (!nameValid) {
+      setError('Enter your full name.');
+      return;
+    }
+    if (!mobileValid) {
+      setError('Enter a valid 10 digit mobile number.');
+      return;
+    }
+    if (!emailValid) {
+      setError('Enter a valid email address, or leave it blank.');
+      return;
+    }
+
+    setLoading(true);
     try {
-      const data = await signUp(email.trim(), password, fullName.trim(), phone.trim());
-      if (data.user && data.session) {
-        await ensureCustomerForUser(data.user);
-        router.replace({ pathname: '/login', params: { email: email.trim(), signup: 'complete' } });
-      } else {
-        router.replace({ pathname: '/login', params: { email: email.trim(), signup: 'confirm' } });
-      }
+      await sendPhoneSignupOtp({
+        phone: fullPhone,
+        fullName: trimmedName,
+        email: trimmedEmail || undefined,
+      });
+      Keyboard.dismiss();
+      setOtpSent(true);
+      setMessage(`OTP sent to ${countryCode} ${formatMobile(normalizedMobile)}.`);
     } catch (nextError) {
-      setError(signupErrorMessage(nextError));
+      setError(signupErrorMessage(nextError, 'send'));
     } finally {
       setLoading(false);
     }
   }
 
+  async function verifyOtp() {
+    if (loading) return;
+    setError('');
+    setMessage('');
+
+    if (!otpValid) {
+      setError('Enter the OTP sent to your mobile number.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const data = await verifyPhoneOtp(fullPhone, otp);
+      if (!data.user) {
+        setError('OTP verification did not return an active account.');
+        return;
+      }
+      await syncCustomerSignupDetails(data.user, {
+        fullName: trimmedName,
+        phone: fullPhone,
+        email: trimmedEmail || undefined,
+      });
+      await routeSignedInUser(data.user, router);
+    } catch (nextError) {
+      setError(signupErrorMessage(nextError, 'verify'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function editDetails() {
+    if (loading) return;
+    setOtpSent(false);
+    setOtp('');
+    setMessage('');
+    setError('');
+  }
+
   return (
     <AuthExperience
+      showLegal={false}
       footer={(
-        <View style={authExperienceStyles.ctaCard}>
-          <View style={authExperienceStyles.ctaIcon}>
-            <MaterialCommunityIcons name="login" size={24} color="#0B63CE" />
-          </View>
-          <View style={authExperienceStyles.ctaCopy}>
-            <Text style={authExperienceStyles.ctaTitle}>Already protected?</Text>
-            <Text style={authExperienceStyles.ctaBody}>Login to your InsureIT account</Text>
-          </View>
-          <Link href="/login" asChild>
-            <Pressable accessibilityRole="button" style={authExperienceStyles.ctaButton}>
-              <Text style={authExperienceStyles.ctaButtonText}>Login</Text>
-            </Pressable>
-          </Link>
-        </View>
+        <Link href="/login" asChild>
+          <Pressable accessibilityRole="button">
+            <LoginPromptCard />
+          </Pressable>
+        </Link>
       )}
     >
       <AuthGlassPanel>
-        <View style={authExperienceStyles.secureRow}>
-          <View style={authExperienceStyles.secureCopy}>
-            <MaterialCommunityIcons name="account-lock-outline" size={17} color="#0F9F6E" />
-            <Text style={authExperienceStyles.secureText}>Create secure access</Text>
+        <View style={styles.secureRow}>
+          <View style={styles.secureIcon}>
+            <MaterialCommunityIcons name="account-lock-outline" size={19} color="#0F9F6E" />
+          </View>
+          <View style={styles.secureCopy}>
+            <Text style={styles.secureTitle}>Create customer account</Text>
           </View>
         </View>
+
         {error ? <AuthStatusMessage type="error">{error}</AuthStatusMessage> : null}
         {message ? <AuthStatusMessage type="success">{message}</AuthStatusMessage> : null}
-        <PremiumLoginField label="Full name" icon="account-outline" value={fullName} onChangeText={setFullName} placeholder="Your full name" editable={!loading} disabled={loading} />
-        <PremiumLoginField label="Phone" icon="phone-outline" keyboardType="phone-pad" value={phone} onChangeText={setPhone} placeholder="Mobile number" editable={!loading} disabled={loading} />
-        <PremiumLoginField label="Email" icon="email-outline" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="name@company.com" editable={!loading} disabled={loading} />
-        <PremiumLoginField label="Password" icon="lock-outline" secureTextEntry value={password} onChangeText={setPassword} placeholder="Create password" editable={!loading} disabled={loading} />
-        <View style={styles.actions}>
-          <SecureActionButton label={loading ? 'Creating account' : 'Sign up'} loading={loading} disabled={loading} variant="success" onPress={submit} />
+
+        <View style={styles.fieldWrap}>
+          <Text style={styles.fieldLabel}>Full name</Text>
+          <View style={[styles.inputShell, otpSent && styles.fieldDisabled]}>
+            <MaterialCommunityIcons name="account-outline" size={20} color="#1F6FEB" />
+            <TextInput
+              value={fullName}
+              onChangeText={setFullName}
+              editable={!otpSent && !loading}
+              autoCapitalize="words"
+              placeholder="Your full name"
+              placeholderTextColor="#B7C1CF"
+              style={styles.textInput}
+            />
+          </View>
         </View>
+
+        <View style={styles.fieldWrap}>
+          <Text style={styles.fieldLabel}>Mobile number</Text>
+          <View style={[styles.phoneShell, otpSent && styles.fieldDisabled]}>
+            <View style={styles.countryPill}>
+              <Text style={styles.countryText}>{countryCode}</Text>
+            </View>
+            <TextInput
+              value={mobile}
+              onChangeText={(value) => setMobile(normalizeMobile(value))}
+              editable={!otpSent && !loading}
+              keyboardType="number-pad"
+              maxLength={10}
+              placeholder="98765 43210"
+              placeholderTextColor="#B7C1CF"
+              style={styles.phoneInput}
+            />
+            {otpSent ? (
+              <Pressable accessibilityRole="button" onPress={editDetails} style={styles.editButton}>
+                <Text style={styles.editButtonText}>Edit</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+
+        <View style={styles.fieldWrap}>
+          <Text style={styles.fieldLabel}>Email optional</Text>
+          <View style={[styles.inputShell, otpSent && styles.fieldDisabled]}>
+            <MaterialCommunityIcons name="email-outline" size={20} color="#1F6FEB" />
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              editable={!otpSent && !loading}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              placeholder="name@example.com"
+              placeholderTextColor="#B7C1CF"
+              style={styles.textInput}
+            />
+          </View>
+        </View>
+
+        {otpSent ? (
+          <View style={styles.fieldWrap}>
+            <Text style={styles.fieldLabel}>Enter OTP</Text>
+            <View style={styles.otpShell}>
+              <MaterialCommunityIcons name="shield-key-outline" size={20} color="#1F6FEB" />
+              <TextInput
+                value={otp}
+                onChangeText={(value) => setOtp(value.replace(/\D/g, '').slice(0, 6))}
+                keyboardType="number-pad"
+                maxLength={6}
+                placeholder="6 digit code"
+                placeholderTextColor="#B7C1CF"
+                style={styles.otpInput}
+              />
+            </View>
+            <Pressable accessibilityRole="button" disabled={loading} onPress={requestOtp} style={styles.resendButton}>
+              <Text style={styles.resendText}>Resend OTP</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        <View style={styles.authActions}>
+          <SecureActionButton
+            label={otpSent ? (loading ? 'Verifying OTP' : 'Verify OTP') : (loading ? 'Sending OTP' : 'Get OTP')}
+            icon={otpSent ? 'shield-check-outline' : 'message-text-lock-outline'}
+            loading={loading}
+            disabled={otpSent ? !otpValid : (!nameValid || !mobileValid || !emailValid)}
+            variant="success"
+            onPress={otpSent ? verifyOtp : requestOtp}
+          />
+        </View>
+
+        <Text style={styles.legalText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+          By continuing, you agree to our{' '}
+          <Text style={styles.legalLink} onPress={() => router.push(termsHref)}>Terms & Conditions</Text>
+          {' '}and{' '}
+          <Text style={styles.legalLink} onPress={() => router.push(privacyHref)}>Privacy Policy</Text>
+        </Text>
       </AuthGlassPanel>
     </AuthExperience>
   );
 }
 
-function signupErrorMessage(error: unknown) {
+function normalizeMobile(value: string) {
+  return value.replace(/\D/g, '').slice(0, 10);
+}
+
+function formatMobile(value: string) {
+  if (value.length <= 5) return value;
+  return `${value.slice(0, 5)} ${value.slice(5)}`;
+}
+
+function signupErrorMessage(error: unknown, action: 'send' | 'verify') {
   const message = error instanceof Error ? error.message : '';
   const lowerMessage = message.toLowerCase();
-  if (lowerMessage.includes('email address') || lowerMessage.includes('email')) return message;
-  if (lowerMessage.includes('password')) return message;
-  if (lowerMessage.includes('already registered')) return 'This email is already registered. Please sign in instead.';
-  return 'Account setup could not be completed. Review the details and try again.';
+  if (lowerMessage.includes('unsupported phone provider')) return 'Phone OTP is not fully enabled in Supabase. Please check the SMS provider settings and try again.';
+  if (lowerMessage.includes('rate') || lowerMessage.includes('too many')) return 'Too many OTP attempts. Please wait a moment and try again.';
+  if (lowerMessage.includes('already registered') || lowerMessage.includes('already exists')) return 'This mobile number is already registered. Please login instead.';
+  if (lowerMessage.includes('invalid') || lowerMessage.includes('expired')) return 'The OTP is invalid or expired. Please request a new code.';
+  if (lowerMessage.includes('network') || lowerMessage.includes('fetch')) return 'Could not reach the InsureIT server. Check internet access and try again.';
+  if (message) return message;
+  return action === 'send' ? 'Could not send OTP. Please try again.' : 'Could not verify OTP. Please try again.';
 }
 
 const styles = StyleSheet.create({
-  actions: { marginTop: 2 },
+  secureRow: { flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 18 },
+  secureIcon: { width: 44, height: 44, borderRadius: 16, backgroundColor: '#E8F8F0', alignItems: 'center', justifyContent: 'center' },
+  secureCopy: { flex: 1, minWidth: 0 },
+  secureTitle: { color: '#071D49', fontSize: 17, fontWeight: '700' },
+  fieldWrap: { marginBottom: 14 },
+  fieldLabel: { color: '#17202F', fontSize: 14.2, fontWeight: '600', marginBottom: 8 },
+  inputShell: { minHeight: 58, borderRadius: 13, borderWidth: 1, borderColor: '#E1E6ED', backgroundColor: '#FFFFFF', paddingLeft: 15, paddingRight: 8, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  fieldDisabled: { opacity: 0.72 },
+  textInput: { flex: 1, minHeight: 52, color: '#17202F', fontSize: 16, fontWeight: '400' },
+  phoneShell: { minHeight: 58, borderRadius: 13, borderWidth: 1, borderColor: '#E1E6ED', backgroundColor: '#FFFFFF', paddingLeft: 9, paddingRight: 8, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  countryPill: { minWidth: 56, height: 40, borderRadius: 12, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#CFE2FF' },
+  countryText: { color: '#071D49', fontSize: 14, fontWeight: '700' },
+  phoneInput: { flex: 1, minHeight: 52, color: '#17202F', fontSize: 17, fontWeight: '400' },
+  editButton: { minHeight: 36, borderRadius: 12, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F9FF' },
+  editButtonText: { color: '#1F6FEB', fontSize: 12, fontWeight: '700' },
+  otpShell: { minHeight: 58, borderRadius: 13, borderWidth: 1, borderColor: '#E1E6ED', backgroundColor: '#FFFFFF', paddingLeft: 15, paddingRight: 8, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  otpInput: { flex: 1, minHeight: 52, color: '#17202F', fontSize: 17, fontWeight: '400', letterSpacing: 1.4 },
+  resendButton: { alignSelf: 'flex-end', minHeight: 34, justifyContent: 'center', marginTop: 4 },
+  resendText: { color: '#0B63CE', fontSize: 13, fontWeight: '700' },
+  authActions: { gap: 8, marginTop: 2 },
+  legalText: { color: '#59687A', fontSize: 9.8, lineHeight: 13, fontWeight: '500', textAlign: 'center', marginTop: 12 },
+  legalLink: { color: '#0B63CE', fontWeight: '700' },
 });

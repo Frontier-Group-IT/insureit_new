@@ -512,10 +512,10 @@ function progressIndex(status: Claim['current_status']) {
 
 const styles = StyleSheet.create({
   animatedBody: { width: '100%' },
-  header: { marginHorizontal: -16, paddingHorizontal: 16, paddingBottom: 10, marginBottom: 0, paddingTop: 8, backgroundColor: 'transparent', zIndex: 10, overflow: 'hidden' },
+  header: { marginHorizontal: -16, paddingHorizontal: 8, paddingBottom: 10, marginBottom: 0, paddingTop: 4, backgroundColor: 'transparent', zIndex: 10, overflow: 'hidden' },
   headerWash: { position: 'absolute', left: -70, top: -88, width: 210, height: 210, borderRadius: 105, backgroundColor: palette.emeraldSoft },
   headerGlow: { position: 'absolute', right: -38, top: -52, width: 150, height: 150, borderRadius: 75, backgroundColor: palette.blueSoft },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   brandHome: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   logoMark: { width: 38, height: 38, borderRadius: radii.sm, backgroundColor: palette.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: palette.line },
   headerLogo: { alignSelf: 'flex-start' },

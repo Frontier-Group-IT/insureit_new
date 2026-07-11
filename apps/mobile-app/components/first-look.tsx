@@ -1,8 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ReactNode, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Easing, Image, ImageStyle, Pressable, StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Image, Pressable, StyleProp, StyleSheet, Text, TextInput, TextInputProps, View, ViewStyle } from 'react-native';
 
-const stitchLogo = require('../assets/brand/insureit-stitch-logo.png');
+const primaryLogo = require('../assets/brand/insureit-primary-logo-clean.png');
 
 export function BrandMark({ size = 52, compact = false }: { size?: number; compact?: boolean }) {
   void compact;
@@ -13,8 +13,20 @@ export function BrandMark({ size = 52, compact = false }: { size?: number; compa
     </View>
   );
 }
-export function BrandLogo({ width = 208, style }: { width?: number; style?: ImageStyle }) {
-  return <Image source={stitchLogo} resizeMode="contain" style={[styles.stitchLogo, { width, height: Math.round(width * 0.389) }, style]} />;
+export function BrandLogo({ width = 208, style }: { width?: number; style?: StyleProp<ViewStyle> }) {
+  const markSize = Math.round(width * 0.29);
+  const gap = Math.max(6, Math.round(width * 0.03));
+  const nameSize = Math.round(width * 0.145);
+  const taglineSize = Math.max(5, Math.round(width * 0.04));
+  return (
+    <View style={[styles.brandLogo, { width, minHeight: markSize }, style]}>
+      <Image source={primaryLogo} resizeMode="contain" style={{ width: markSize, height: markSize }} />
+      <View style={[styles.brandLogoCopy, { marginLeft: gap }]}>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={[styles.brandLogoName, { fontSize: nameSize, lineHeight: Math.round(nameSize * 1.1) }]}>insureit</Text>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.48} style={[styles.brandLogoTagline, { fontSize: taglineSize, lineHeight: Math.max(7, Math.round(taglineSize * 1.3)) }]}>YOUR SAFETY, OUR PROMISE</Text>
+      </View>
+    </View>
+  );
 }
 
 export function SplashIntro() {
@@ -52,7 +64,7 @@ export function SplashIntro() {
       <View style={styles.splashAuroraBottom} />
       <Animated.View style={[styles.splashHalo, { opacity: pulseOpacity, transform: [{ scale: pulseScale }] }]} />
       <Animated.View style={[styles.splashContent, { opacity, transform: [{ scale }] }]}>
-        <View style={styles.splashLogoCard}><BrandLogo width={210} /></View>
+        <View style={styles.splashLogoCard}><BrandLogo width={232} style={styles.splashBrandLogo} /></View>
         <Text style={styles.splashTagline}>Protection that keeps moving.</Text>
         <View style={styles.splashLoaderScene}>
           <Animated.View style={[styles.splashLoaderRing, { transform: [{ rotate: routeRotate }] }]} />
@@ -207,7 +219,10 @@ export function AuthGlassPanel({ children }: { children: ReactNode }) {
 const styles = StyleSheet.create({
   nativeMark: { backgroundColor: '#F4F8FC', borderWidth: 1, borderColor: '#C9DCF0', alignItems: 'center', justifyContent: 'center', position: 'relative' },
   nativeMarkDot: { position: 'absolute', right: 8, top: 8, width: 6, height: 6, borderRadius: 3, backgroundColor: '#C98918' },
-  stitchLogo: { alignSelf: 'flex-start' },
+  brandLogo: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center' },
+  brandLogoCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
+  brandLogoName: { color: '#071D49', fontWeight: '900', letterSpacing: 0, includeFontPadding: false },
+  brandLogoTagline: { color: '#071D49', fontWeight: '900', letterSpacing: 0, includeFontPadding: false, marginTop: 1 },
   logoShield: { backgroundColor: '#F4F8FC', borderWidth: 1, borderColor: '#C9DCF0', alignItems: 'center', justifyContent: 'center', position: 'relative' },
   logoAmberDot: { position: 'absolute', width: 5, height: 5, borderRadius: 3, right: 4, top: 5, backgroundColor: '#C98918' },
   logoWord: { color: '#071D49', fontFamily: 'serif', fontWeight: '700', includeFontPadding: false },
@@ -217,8 +232,9 @@ const styles = StyleSheet.create({
   splashAuroraBottom: { position: 'absolute', bottom: -170, left: -150, width: 410, height: 300, borderRadius: 180, backgroundColor: '#DDF6EC', transform: [{ rotateZ: '-12deg' }] },
   splashHalo: { position: 'absolute', width: 248, height: 248, borderRadius: 124, backgroundColor: 'rgba(134, 217, 192, 0.42)' },
   splashContent: { alignItems: 'center', width: '100%', paddingHorizontal: 28 },
-  splashLogoCard: { width: 244, height: 112, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.9)', borderWidth: 1, borderColor: '#D7E6F5', alignItems: 'center', justifyContent: 'center', shadowColor: '#0B3769', shadowOpacity: 0.09, shadowRadius: 22, elevation: 5 },
-  splashTagline: { color: '#52647B', fontSize: 13, fontWeight: '800', marginTop: 15, letterSpacing: 0.1 },
+  splashLogoCard: { width: 286, height: 118, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.92)', borderWidth: 1, borderColor: '#D7E6F5', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, shadowColor: '#0B3769', shadowOpacity: 0.09, shadowRadius: 22, elevation: 5 },
+  splashBrandLogo: { alignSelf: 'center' },
+  splashTagline: { color: '#52647B', fontSize: 13, fontWeight: '800', marginTop: 15, letterSpacing: 0.1, textAlign: 'center' },
   splashLoaderScene: { width: 104, height: 104, alignItems: 'center', justifyContent: 'center', marginTop: 38 },
   splashLoaderRing: { position: 'absolute', width: 96, height: 96, borderRadius: 48, borderWidth: 5, borderColor: '#D2E6DD', borderTopColor: '#087F5B', borderRightColor: '#4DBB94' },
   splashLoaderCore: { width: 64, height: 64, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center', shadowColor: '#0B3769', shadowOpacity: 0.13, shadowRadius: 12, elevation: 4 },

@@ -1,398 +1,231 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as LocalAuthentication from 'expo-local-authentication';
-import * as SecureStore from 'expo-secure-store';
-import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
+import type { Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { AuthExperience, authExperienceStyles } from '@/components/auth-experience';
-import { AuthGlassPanel, AuthStatusMessage, PremiumLoginField, SecureActionButton } from '@/components/first-look';
-import { routeSignedInUser, signIn } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
-import type { Session, User } from '@supabase/supabase-js';
+import { AuthExperience, SignupPromptCard } from '@/components/auth-experience';
+import { AuthGlassPanel, AuthStatusMessage, SecureActionButton } from '@/components/first-look';
+import { routeSignedInUser, sendPhoneOtp, verifyPhoneOtp } from '@/lib/auth';
 
-const biometricUserKey = 'insureit.biometric.user-id';
-const biometricEmailKey = 'insureit.biometric.email';
-const biometricPasswordKey = 'insureit.biometric.password';
-const biometricRefreshTokenKey = 'insureit.biometric.refresh-token';
-const legacyBiometricSessionKey = 'insureit.biometric.session';
-const supportsSecureBiometric = Platform.OS !== 'web';
+const countryCode = '+91';
+const termsHref = '/legal/terms-of-use' as Href;
+const privacyHref = '/legal/privacy-policy' as Href;
+
 export default function LoginScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ email?: string; signup?: string }>();
-  const [email, setEmail] = useState(params.email ?? '');
-  const [password, setPassword] = useState('');
+  const [mobile, setMobile] = useState('');
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [biometricReady, setBiometricReady] = useState(false);
-  const [biometricLoading, setBiometricLoading] = useState(false);
-  const [canEnrollBiometric, setCanEnrollBiometric] = useState(false);
-  const [pendingUser, setPendingUser] = useState<User | null>(null);
-  const [pendingSession, setPendingSession] = useState<Session | null>(null);
-  const [pendingCredentials, setPendingCredentials] = useState<{ email: string; password: string } | null>(null);
   const [error, setError] = useState('');
-  const [message, setMessage] = useState(() => signupMessage(params.signup));
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(18)).current;
+  const [message, setMessage] = useState('');
+  const opacity = useRef(new Animated.Value(1)).current;
+  const inputPulse = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 420, useNativeDriver: true }),
-      Animated.spring(translateY, { toValue: 0, useNativeDriver: true, speed: 12, bounciness: 4 }),
-    ]).start();
-  }, [opacity, translateY]);
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(inputPulse, { toValue: 1, duration: 1600, useNativeDriver: false }),
+        Animated.timing(inputPulse, { toValue: 0, duration: 1600, useNativeDriver: false }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [inputPulse]);
 
-  useEffect(() => {
-    if (params.email) setEmail(params.email);
-    setMessage(signupMessage(params.signup));
-  }, [params.email, params.signup]);
+  const normalizedMobile = normalizeMobile(mobile);
+  const fullPhone = `${countryCode}${normalizedMobile}`;
+  const mobileValid = normalizedMobile.length === 10;
+  const otpValid = otp.length >= 4;
+  const phoneBorderColor = inputPulse.interpolate({ inputRange: [0, 1], outputRange: ['#CFE2FF', '#8BBDF8'] });
+  const phoneShadowOpacity = inputPulse.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.18] });
 
-  useEffect(() => {
-    let active = true;
-    async function checkBiometric() {
-      try {
-        if (!supportsSecureBiometric) {
-          if (active) {
-            setCanEnrollBiometric(false);
-            setBiometricReady(false);
-          }
-          return;
-        }
-        const [compatible, enrolled, savedUserId, savedEmail, savedPassword, savedRefreshToken] = await Promise.all([
-          LocalAuthentication.hasHardwareAsync(),
-          LocalAuthentication.isEnrolledAsync(),
-          AsyncStorage.getItem(biometricUserKey),
-          SecureStore.getItemAsync(biometricEmailKey),
-          SecureStore.getItemAsync(biometricPasswordKey),
-          SecureStore.getItemAsync(biometricRefreshTokenKey),
-        ]);
-        if (active) {
-          setCanEnrollBiometric(Boolean(compatible && enrolled));
-          setBiometricReady(Boolean(compatible && enrolled && savedUserId && ((savedEmail && savedPassword) || savedRefreshToken)));
-        }
-      } catch {
-        if (active) setBiometricReady(false);
-      }
-    }
-    void checkBiometric();
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  async function submit() {
+  async function requestOtp() {
     if (loading) return;
-    setLoading(true);
     setError('');
     setMessage('');
+    if (!mobileValid) {
+      setError('Enter a valid 10 digit mobile number.');
+      return;
+    }
+    setLoading(true);
     try {
-      const data = await signIn(email.trim(), password);
-      if (data.user) {
-        if (!supportsSecureBiometric) {
-          await routeSignedInUser(data.user, router);
-          return;
-        }
-        const normalizedEmail = email.trim();
-        const [compatible, enrolled, savedUserId, savedEmail, savedPassword] = await Promise.all([
-          LocalAuthentication.hasHardwareAsync(),
-          LocalAuthentication.isEnrolledAsync(),
-          AsyncStorage.getItem(biometricUserKey),
-          SecureStore.getItemAsync(biometricEmailKey),
-          SecureStore.getItemAsync(biometricPasswordKey),
-        ]);
-        setCanEnrollBiometric(Boolean(compatible && enrolled));
-        if (compatible && enrolled && (savedUserId !== data.user.id || savedEmail !== normalizedEmail || !savedPassword)) {
-          setPendingUser(data.user);
-          setPendingSession(data.session);
-          setPendingCredentials({ email: normalizedEmail, password });
-          return;
-        }
-        if (compatible && enrolled && savedUserId === data.user.id) {
-          await saveBiometricLogin(data.user.id, normalizedEmail, password, data.session);
-          setBiometricReady(true);
-        }
-        await routeSignedInUser(data.user, router);
-      }
+      await sendPhoneOtp(fullPhone);
+      setOtpSent(true);
+      setMessage(`OTP sent to ${countryCode} ${formatMobile(normalizedMobile)}.`);
     } catch (nextError) {
-      console.error('Login failed', nextError);
-      setError(authErrorMessage(nextError));
+      setError(phoneAuthErrorMessage(nextError, 'send'));
     } finally {
       setLoading(false);
     }
   }
 
-  async function enableBiometricForPendingUser() {
-    if (!pendingUser || biometricLoading) return;
-    setBiometricLoading(true);
+  async function verifyOtp() {
+    if (loading) return;
     setError('');
-    try {
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Enable InsureIT biometric login',
-        cancelLabel: 'Skip',
-        disableDeviceFallback: false,
-      });
-        if (result.success) {
-          if (!pendingCredentials) throw new Error('Missing biometric credentials.');
-          await saveBiometricLogin(pendingUser.id, pendingCredentials.email, pendingCredentials.password, pendingSession);
-          const saved = await hasSavedBiometricLogin();
-          if (!saved) throw new Error('Biometric credentials were not saved.');
-          setBiometricReady(true);
-          setMessage('Biometric login is enabled on this device.');
-        }
-      await routeSignedInUser(pendingUser, router);
-    } catch {
-      setError('Biometric setup failed.');
-    } finally {
-      setBiometricLoading(false);
+    setMessage('');
+    if (!mobileValid) {
+      setError('Enter a valid 10 digit mobile number.');
+      return;
     }
-  }
-
-  async function skipBiometricForPendingUser() {
-    if (!pendingUser) return;
-    await clearBiometricSession();
-    setBiometricReady(false);
-    await routeSignedInUser(pendingUser, router);
-  }
-
-  async function unlockWithBiometric() {
-    if (biometricLoading || loading) return;
-    setBiometricLoading(true);
-    setError('');
+    if (!otpValid) {
+      setError('Enter the OTP sent to your mobile number.');
+      return;
+    }
+    setLoading(true);
     try {
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'InsureIT',
-        cancelLabel: 'Cancel',
-        disableDeviceFallback: false,
-      });
-      if (!result.success) return;
-      const restoredUser = await restoreBiometricLogin();
-      if (!restoredUser) {
-        await clearBiometricSession();
-        setBiometricReady(false);
-        setError('Biometric login is not saved on this device. Login with password, then tap Enable biometrics.');
+      const data = await verifyPhoneOtp(fullPhone, otp);
+      if (!data.user) {
+        setError('OTP verification did not return an active account.');
         return;
       }
-      await routeSignedInUser(restoredUser, router);
-    } catch {
-      setError('Biometric unlock failed.');
+      await routeSignedInUser(data.user, router);
+    } catch (nextError) {
+      setError(phoneAuthErrorMessage(nextError, 'verify'));
     } finally {
-      setBiometricLoading(false);
+      setLoading(false);
     }
   }
 
-  async function resetBiometricSetup() {
-    await clearBiometricSession();
-    setBiometricReady(false);
+  function editMobile() {
+    if (loading) return;
+    setOtpSent(false);
+    setOtp('');
+    setMessage('');
     setError('');
-    setMessage('Biometric setup was reset. Login with password, then enable biometrics again.');
   }
 
   return (
-    <>
-      <AuthExperience
-        footer={(
-          <View style={authExperienceStyles.ctaCard}>
-            <View style={authExperienceStyles.ctaIcon}>
-              <MaterialCommunityIcons name="account-plus-outline" size={25} color="#0B63CE" />
+    <AuthExperience
+      showLegal={false}
+      footer={(
+        <Link href="/signup" asChild>
+          <Pressable accessibilityRole="button">
+            <SignupPromptCard />
+          </Pressable>
+        </Link>
+      )}
+    >
+      <Animated.View style={[styles.body, { opacity }]}>
+        <AuthGlassPanel>
+          <View style={styles.secureRow}>
+            <View style={styles.secureIcon}>
+              <MaterialCommunityIcons name="cellphone-lock" size={19} color="#0F9F6E" />
             </View>
-            <View style={authExperienceStyles.ctaCopy}>
-              <Text style={authExperienceStyles.ctaTitle}>New to InsureIT?</Text>
-              <Text style={authExperienceStyles.ctaBody}>Create an account to get started</Text>
-            </View>
-            <Link href="/signup" asChild>
-              <Pressable accessibilityRole="button" style={authExperienceStyles.ctaButton}>
-                <Text style={authExperienceStyles.ctaButtonText}>Sign up</Text>
-              </Pressable>
-            </Link>
+            <Text style={styles.secureTitle}>Login with mobile OTP</Text>
           </View>
-        )}
-      >
-        <Animated.View style={[styles.body, { opacity, transform: [{ translateY }] }]}>
-          <AuthGlassPanel>
-            <View style={authExperienceStyles.secureRow}>
-              <View style={authExperienceStyles.secureCopy}>
-                <MaterialCommunityIcons name="lock" size={16} color="#0F9F6E" />
-                <Text style={authExperienceStyles.secureText}>Secure access</Text>
+
+          {error ? <AuthStatusMessage type="error">{error}</AuthStatusMessage> : null}
+          {message ? <AuthStatusMessage type="success">{message}</AuthStatusMessage> : null}
+
+          <View style={styles.fieldWrap}>
+            <Text style={styles.fieldLabel}>Mobile number</Text>
+            <Animated.View style={[styles.phoneShell, { borderColor: phoneBorderColor, shadowOpacity: phoneShadowOpacity }, otpSent && styles.fieldDisabled]}>
+              <View style={styles.countryPill}>
+                <Text style={styles.countryText}>{countryCode}</Text>
               </View>
-            </View>
-
-            {error ? <AuthStatusMessage type="error">{error}</AuthStatusMessage> : null}
-            {error.toLowerCase().includes('biometric login is not saved') ? (
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => void resetBiometricSetup()}
-                style={authExperienceStyles.helperLink}
-              >
-                <Text style={authExperienceStyles.helperLinkText}>Reset biometric setup</Text>
-              </Pressable>
-            ) : null}
-            {message ? <AuthStatusMessage type="success">{message}</AuthStatusMessage> : null}
-
-            <PremiumLoginField
-              label="Email"
-              icon="email-outline"
-              autoCapitalize="none"
-              keyboardType="email-address"
-              value={email}
-              onChangeText={setEmail}
-              placeholder="name@company.com"
-              editable={!loading && !biometricLoading && !pendingUser}
-              disabled={loading || biometricLoading || Boolean(pendingUser)}
-            />
-            <PremiumLoginField
-              label="Password"
-              icon="lock-outline"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Password"
-              editable={!loading && !biometricLoading && !pendingUser}
-              disabled={loading || biometricLoading || Boolean(pendingUser)}
-            />
-
-            <Link href="/forgot-password" asChild>
-              <Pressable accessibilityRole="button" disabled={loading || biometricLoading || Boolean(pendingUser)} style={authExperienceStyles.helperLink}>
-                <Text style={authExperienceStyles.helperLinkText}>Forgot Password?</Text>
-              </Pressable>
-            </Link>
-
-            <View style={styles.authActions}>
-              {!pendingUser ? (
-                <SecureActionButton label={loading ? 'Opening secure session' : 'Login'} loading={loading} disabled={biometricLoading} onPress={submit} />
+              <TextInput
+                value={mobile}
+                onChangeText={(value) => setMobile(normalizeMobile(value))}
+                editable={!otpSent && !loading}
+                keyboardType="number-pad"
+                maxLength={10}
+                placeholder="98765 43210"
+                placeholderTextColor="#B7C1CF"
+                style={styles.phoneInput}
+              />
+              {otpSent ? (
+                <Pressable accessibilityRole="button" onPress={editMobile} style={styles.editButton}>
+                  <Text style={styles.editButtonText}>Edit</Text>
+                </Pressable>
               ) : null}
+            </Animated.View>
+          </View>
 
-              {biometricReady ? (
-                <SecureActionButton label={biometricLoading ? 'Unlocking' : 'Login using biometrics'} icon="fingerprint" loading={biometricLoading} disabled={loading} variant="secondary" onPress={unlockWithBiometric} />
-              ) : null}
+          {otpSent ? (
+            <View style={styles.fieldWrap}>
+              <Text style={styles.fieldLabel}>Enter OTP</Text>
+              <View style={styles.otpShell}>
+                <MaterialCommunityIcons name="shield-key-outline" size={20} color="#1F6FEB" />
+                <TextInput
+                  value={otp}
+                  onChangeText={(value) => setOtp(value.replace(/\D/g, '').slice(0, 6))}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  placeholder="6 digit code"
+                  placeholderTextColor="#B7C1CF"
+                  style={styles.otpInput}
+                />
+              </View>
+              <Pressable accessibilityRole="button" disabled={loading} onPress={requestOtp} style={styles.resendButton}>
+                <Text style={styles.resendText}>Resend OTP</Text>
+              </Pressable>
             </View>
-          </AuthGlassPanel>
-        </Animated.View>
-      </AuthExperience>
-      <BiometricEnrollmentModal
-        visible={Boolean(pendingUser)}
-        loading={biometricLoading}
-        supported={canEnrollBiometric}
-        onEnable={enableBiometricForPendingUser}
-        onSkip={skipBiometricForPendingUser}
-      />
-    </>
+          ) : null}
+
+          <View style={styles.authActions}>
+            <SecureActionButton
+              label={otpSent ? (loading ? 'Verifying OTP' : 'Verify OTP') : (loading ? 'Sending OTP' : 'Get OTP')}
+              icon={otpSent ? 'shield-check-outline' : 'message-text-lock-outline'}
+              loading={loading}
+              disabled={otpSent ? !otpValid : !mobileValid}
+              onPress={otpSent ? verifyOtp : requestOtp}
+            />
+          </View>
+
+          <Text style={styles.legalText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+            By continuing, you agree to our{' '}
+            <Text style={styles.legalLink} onPress={() => router.push(termsHref)}>Terms & Conditions</Text>
+            {' '}and{' '}
+            <Text style={styles.legalLink} onPress={() => router.push(privacyHref)}>Privacy Policy</Text>
+          </Text>
+        </AuthGlassPanel>
+      </Animated.View>
+    </AuthExperience>
   );
-
 }
-function authErrorMessage(error: unknown) {
+
+function normalizeMobile(value: string) {
+  return value.replace(/\D/g, '').slice(0, 10);
+}
+
+function formatMobile(value: string) {
+  if (value.length <= 5) return value;
+  return `${value.slice(0, 5)} ${value.slice(5)}`;
+}
+
+function phoneAuthErrorMessage(error: unknown, action: 'send' | 'verify') {
   const message = error instanceof Error ? error.message : '';
   const lowerMessage = message.toLowerCase();
-  if (lowerMessage.includes('failed to fetch') || lowerMessage.includes('network')) return 'Could not reach the InsureIT server from this browser. Check internet access, then try again.';
-  if (lowerMessage.includes('email not confirmed')) return 'Please confirm your email address before logging in.';
-  if (lowerMessage.includes('invalid login credentials')) return 'Invalid email or password. If you just signed up, confirm your email first.';
+  if (lowerMessage.includes('unsupported phone provider')) return 'Phone OTP is not fully enabled in Supabase. Please check the SMS provider settings and try again.';
+  if (lowerMessage.includes('rate') || lowerMessage.includes('too many')) return 'Too many OTP attempts. Please wait a moment and try again.';
+  if (lowerMessage.includes('invalid') || lowerMessage.includes('expired')) return 'The OTP is invalid or expired. Please request a new code.';
+  if (lowerMessage.includes('not found') || lowerMessage.includes('signup')) return 'This mobile number is not registered with InsureIT.';
+  if (lowerMessage.includes('network') || lowerMessage.includes('fetch')) return 'Could not reach the InsureIT server. Check internet access and try again.';
   if (message) return message;
-  if (lowerMessage.includes('email')) return message;
-  return 'Login could not be completed. Please check the details and try again.';
-}
-
-function signupMessage(value?: string) {
-  if (value === 'complete') return 'Account created. Login with the email and password you just used.';
-  if (value === 'confirm') return 'Account created. Confirm your email, then login with the same email and password.';
-  return '';
-}
-
-async function saveBiometricLogin(userId: string, email: string, password: string, session: Session | null) {
-  if (!supportsSecureBiometric) throw new Error('Biometric login is not available on web.');
-  await AsyncStorage.setItem(biometricUserKey, userId);
-  await SecureStore.setItemAsync(biometricEmailKey, email);
-  await SecureStore.setItemAsync(biometricPasswordKey, password);
-  if (session?.refresh_token) await SecureStore.setItemAsync(biometricRefreshTokenKey, session.refresh_token);
-  await SecureStore.deleteItemAsync(legacyBiometricSessionKey).catch(() => undefined);
-}
-
-async function clearBiometricSession() {
-  await AsyncStorage.removeItem(biometricUserKey);
-  await SecureStore.deleteItemAsync(biometricEmailKey).catch(() => undefined);
-  await SecureStore.deleteItemAsync(biometricPasswordKey).catch(() => undefined);
-  await SecureStore.deleteItemAsync(biometricRefreshTokenKey).catch(() => undefined);
-  await SecureStore.deleteItemAsync(legacyBiometricSessionKey).catch(() => undefined);
-}
-
-async function hasSavedBiometricLogin() {
-  const [savedUserId, savedEmail, savedPassword] = await Promise.all([
-    AsyncStorage.getItem(biometricUserKey),
-    SecureStore.getItemAsync(biometricEmailKey),
-    SecureStore.getItemAsync(biometricPasswordKey),
-  ]);
-  return Boolean(savedUserId && savedEmail && savedPassword);
-}
-
-async function restoreBiometricLogin() {
-  if (!supportsSecureBiometric) return null;
-  const [savedUserId, savedEmail, savedPassword] = await Promise.all([
-    AsyncStorage.getItem(biometricUserKey),
-    SecureStore.getItemAsync(biometricEmailKey),
-    SecureStore.getItemAsync(biometricPasswordKey),
-  ]);
-  if (savedEmail && savedPassword) {
-    const { data, error } = await supabase.auth.signInWithPassword({ email: savedEmail, password: savedPassword });
-    if (error || !data.user) return null;
-    await saveBiometricLogin(data.user.id, savedEmail, savedPassword, data.session);
-    return data.user;
-  }
-
-  const refreshToken = await SecureStore.getItemAsync(biometricRefreshTokenKey);
-  if (!refreshToken) return null;
-  const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
-  if (error || !data.session?.user) return null;
-  if (savedUserId && data.session.user.id !== savedUserId) return null;
-  return data.session.user;
-}
-
-function BiometricEnrollmentModal({ visible, loading, supported, onEnable, onSkip }: { visible: boolean; loading: boolean; supported: boolean; onEnable: () => void; onSkip: () => void }) {
-  return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={loading ? undefined : onSkip}>
-      <View style={styles.enrollBackdrop}>
-        <View style={styles.enrollCard}>
-          <View style={styles.enrollIconRing}>
-            <View style={styles.enrollIcon}>
-              <MaterialCommunityIcons name={supported ? 'fingerprint' : 'lock-check-outline'} size={34} color={supported ? '#075EEA' : '#8290A3'} />
-            </View>
-          </View>
-          <View style={styles.enrollCopy}>
-            <Text style={styles.enrollTitle}>{supported ? 'Enable biometric command access' : 'Device lock unavailable'}</Text>
-            <Text style={styles.enrollText}>
-              {supported
-                ? 'Use this device lock to open your InsureIT account faster after this login.'
-                : 'This device does not have an active biometric lock. You can continue without enabling it.'}
-            </Text>
-          </View>
-          <View style={styles.enrollActions}>
-            {supported ? <SecureActionButton label={loading ? 'Opening device lock' : 'Enable biometrics'} icon="fingerprint" loading={loading} onPress={onEnable} /> : null}
-            <SecureActionButton label="Continue without it" icon="arrow-right" disabled={loading} variant="secondary" onPress={onSkip} />
-          </View>
-      </View>
-      </View>
-    </Modal>
-  );
+  return action === 'send' ? 'Could not send OTP. Please try again.' : 'Could not verify OTP. Please try again.';
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
-  keyboard: { flex: 1 },
-  screen: { flex: 1 },
-  content: { flexGrow: 1, paddingHorizontal: 16, paddingTop: 0, paddingBottom: 120 },
   body: { gap: 12 },
-  panelLogo: { alignSelf: 'center', marginBottom: 8 },
-  panelHeader: { alignItems: 'center', justifyContent: 'center', marginBottom: 26 },
-  panelCopy: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  panelEyebrow: { color: '#0F9F6E', fontSize: 17, fontWeight: '900', letterSpacing: 0 },
-  authActions: { gap: 8, marginTop: 2 },
-  enrollBackdrop: { flex: 1, backgroundColor: 'rgba(12, 21, 34, 0.48)', paddingHorizontal: 22, alignItems: 'center', justifyContent: 'center' },
-  enrollCard: { width: '100%', maxWidth: 390, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E8F0', paddingHorizontal: 22, paddingTop: 24, paddingBottom: 20, alignItems: 'center', shadowColor: '#17202F', shadowOpacity: 0.18, shadowRadius: 28, elevation: 12 },
-  enrollIconRing: { width: 84, height: 84, borderRadius: 42, backgroundColor: '#EEF6FF', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  enrollIcon: { width: 62, height: 62, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CFE2FF', alignItems: 'center', justifyContent: 'center' },
-  enrollCopy: { gap: 8, alignItems: 'center', marginBottom: 8 },
-  enrollTitle: { color: '#17202F', fontSize: 20, fontWeight: '900', textAlign: 'center' },
-  enrollText: { color: '#59687A', fontSize: 14, lineHeight: 20, fontWeight: '600', textAlign: 'center' },
-  enrollActions: { alignSelf: 'stretch', gap: 2, marginTop: 6 },
-  signupRow: { minHeight: 58, borderRadius: 22, borderWidth: 1, borderColor: '#E1E8F0', backgroundColor: '#FFFFFF', paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 0, shadowColor: '#17202F', shadowOpacity: 0.08, shadowRadius: 10, elevation: 2 },
-  signupText: { flex: 1, color: '#59687A', fontSize: 15, fontWeight: '800' },
-  signupButton: { minHeight: 44, borderRadius: 17, paddingHorizontal: 18, backgroundColor: '#EAF3FF', flexDirection: 'row', alignItems: 'center' },
-  signupButtonText: { color: '#1F6FEB', fontSize: 14, fontWeight: '900', textTransform: 'uppercase' },
+  secureRow: { minHeight: 58, marginHorizontal: -22, marginTop: -20, marginBottom: 18, borderTopLeftRadius: 27, borderTopRightRadius: 27, borderBottomWidth: 1, borderBottomColor: '#E1E8F0', backgroundColor: '#F3F6FA', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, paddingHorizontal: 16 },
+  secureIcon: { width: 32, height: 32, borderRadius: 12, backgroundColor: '#E8F8F0', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#CDEEDC' },
+  secureTitle: { color: '#071D49', fontSize: 15.2, fontWeight: '700', textAlign: 'center' },
+  fieldWrap: { marginBottom: 14 },
+  fieldLabel: { color: '#17202F', fontSize: 15, fontWeight: '600', marginBottom: 10 },
+  phoneShell: { minHeight: 66, borderRadius: 17, borderWidth: 1.4, backgroundColor: '#F8FBFF', paddingLeft: 10, paddingRight: 8, flexDirection: 'row', alignItems: 'center', gap: 12, shadowColor: '#0B63CE', shadowRadius: 13, elevation: 2 },
+  fieldDisabled: { opacity: 0.72 },
+  countryPill: { minWidth: 62, height: 48, borderRadius: 14, backgroundColor: '#F1F6FF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#D8E7FF' },
+  countryText: { color: '#071D49', fontSize: 15, fontWeight: '700' },
+  phoneInput: { flex: 1, minHeight: 56, color: '#17202F', fontSize: 18, fontWeight: '400' },
+  editButton: { minHeight: 36, borderRadius: 12, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F9FF' },
+  editButtonText: { color: '#1F6FEB', fontSize: 12, fontWeight: '700' },
+  otpShell: { minHeight: 58, borderRadius: 13, borderWidth: 1, borderColor: '#E1E6ED', backgroundColor: '#FFFFFF', paddingLeft: 15, paddingRight: 8, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  otpInput: { flex: 1, minHeight: 52, color: '#17202F', fontSize: 17, fontWeight: '400', letterSpacing: 1.4 },
+  resendButton: { alignSelf: 'flex-end', minHeight: 34, justifyContent: 'center', marginTop: 4 },
+  resendText: { color: '#0B63CE', fontSize: 13, fontWeight: '700' },
+  authActions: { gap: 8, marginTop: 6 },
+  legalText: { color: '#59687A', fontSize: 9.8, lineHeight: 13, fontWeight: '500', textAlign: 'center', marginTop: 12 },
+  legalLink: { color: '#0B63CE', fontWeight: '700' },
 });

@@ -24,6 +24,8 @@
     "lint:web": "npm --workspace apps/web-portal run lint",
     "typecheck:web": "npm --workspace apps/web-portal run typecheck",
     "dev:mobile": "npm --workspace apps/mobile-app run dev",
+    "dev:mobile:web": "npm --workspace apps/mobile-app run web",
+    "build:mobile:web": "npm --workspace apps/mobile-app run build:web",
     "lint:mobile": "npm --workspace apps/mobile-app run lint",
     "typecheck:mobile": "npm --workspace apps/mobile-app run typecheck"
   },

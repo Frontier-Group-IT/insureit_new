@@ -50,8 +50,17 @@ export function RealtimeNotificationProvider({ children }: PropsWithChildren) {
         }
         return;
       }
-      const nextProfile = await getProfile(userId);
-      if (active) setProfile(isValidProfile(nextProfile) ? nextProfile : null);
+      try {
+        const nextProfile = await getProfile(userId);
+        if (active) setProfile(isValidProfile(nextProfile) ? nextProfile : null);
+      } catch (error) {
+        console.warn('Realtime profile lookup failed.', error);
+        if (active) {
+          setProfile(null);
+          setLatest(null);
+          setUnreadCount(0);
+        }
+      }
     }
 
     supabase.auth.getSession().then(({ data }) => loadProfile(data.session?.user.id)).catch(() => loadProfile());

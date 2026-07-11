@@ -97,22 +97,45 @@ export async function getCustomerForUser(userId: string): Promise<Customer | nul
   return data;
 }
 
-export async function ensureCustomerForUser(user: User): Promise<Customer | null> {
+export async function ensureCustomerForUser(
+  user: User,
+  fallback?: { fullName?: string; phone?: string; email?: string },
+): Promise<Customer | null> {
   const existing = await getCustomerForUser(user.id);
-  if (existing) return existing;
+  if (existing) {
+    const nextContactName = fallback?.fullName?.trim();
+    const nextPhone = fallback?.phone?.trim();
+    const nextEmail = fallback?.email?.trim();
+    const patch = {
+      ...(nextContactName && existing.contact_name !== nextContactName ? { contact_name: nextContactName } : {}),
+      ...(nextPhone && existing.phone !== nextPhone ? { phone: nextPhone } : {}),
+      ...(nextEmail && existing.email !== nextEmail ? { email: nextEmail } : {}),
+    };
+    if (Object.keys(patch).length === 0) return existing;
+
+    const { data, error } = await supabase
+      .from('customers')
+      .update(patch)
+      .eq('profile_id', user.id)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
 
   const profile = await getProfile(user.id);
   if (!isValidProfile(profile) || profile.role !== 'customer') return null;
 
-  const fallbackName = profile.full_name && profile.full_name !== 'New user' ? profile.full_name : 'Customer';
+  const fallbackName = fallback?.fullName?.trim() || (profile.full_name && profile.full_name !== 'New user' ? profile.full_name : 'Customer');
   const { data, error } = await supabase
     .from('customers')
     .insert({
       profile_id: user.id,
       customer_code: `CUST-${Date.now()}`,
       contact_name: fallbackName,
-      phone: profile.phone ?? '',
-      email: user.email ?? null,
+      phone: fallback?.phone?.trim() || profile.phone || user.phone || '',
+      email: fallback?.email?.trim() || profile.email || user.email || null,
     })
     .select('*')
     .single();
@@ -123,6 +146,81 @@ export async function ensureCustomerForUser(user: User): Promise<Customer | null
 
 export async function signIn(email: string, password: string) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data;
+}
+
+export async function syncCustomerSignupDetails(
+  user: User,
+  details: { fullName: string; phone: string; email?: string },
+) {
+  const fullName = details.fullName.trim();
+  const phone = details.phone.trim();
+  const email = details.email?.trim() || null;
+
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({
+      full_name: fullName,
+      phone,
+      email,
+      role: 'customer',
+    })
+    .eq('id', user.id);
+
+  if (profileError) throw profileError;
+
+  return ensureCustomerForUser(user, {
+    fullName,
+    phone,
+    email: email ?? undefined,
+  });
+}
+
+export async function sendPhoneOtp(phone: string) {
+  const { data, error } = await supabase.auth.signInWithOtp({
+    phone,
+    options: {
+      channel: 'sms',
+      shouldCreateUser: false,
+    },
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function sendPhoneSignupOtp({
+  phone,
+  fullName,
+  email,
+}: {
+  phone: string;
+  fullName: string;
+  email?: string;
+}) {
+  const { data, error } = await supabase.auth.signInWithOtp({
+    phone,
+    options: {
+      channel: 'sms',
+      shouldCreateUser: true,
+      data: {
+        app_role: 'customer',
+        full_name: fullName,
+        phone,
+        ...(email ? { email } : {}),
+      },
+    },
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function verifyPhoneOtp(phone: string, token: string) {
+  const { data, error } = await supabase.auth.verifyOtp({
+    phone,
+    token,
+    type: 'sms',
+  });
   if (error) throw error;
   return data;
 }

@@ -24,6 +24,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
   const [profileRole, setProfileRole] = useState<AppRole | null>(null);
   const showProfile = ['/customer', '/it', '/staff', '/agent', '/hierarchy', '/admin'].some((prefix) => pathname.startsWith(prefix));
   const compactTopSpacing = pathname === '/customer/upload-documents';
+  const legalTopSpacing = pathname.startsWith('/customer/legal');
   const showBackButton = showProfile && !isRootDashboard(pathname);
   const loadingOnly = isValidElement(children) && children.type === LoadingState;
   const tabRole = profileRole ?? (pathname.startsWith('/customer') ? 'customer' : null);
@@ -76,7 +77,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
             <Pressable accessibilityRole="button" onPress={openBack} style={styles.backButton}>
               <MaterialCommunityIcons name="chevron-left" size={25} color={palette.ink} />
             </Pressable>
-          ) : <View style={styles.backButtonPlaceholder} />}
+          ) : null}
           <Pressable accessibilityRole="button" onPress={openDashboard} style={styles.brandPressable}>
             <BrandLogo width={158} />
           </Pressable>
@@ -89,7 +90,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboard}>
         <ScrollView
           style={styles.screen}
-          contentContainerStyle={[styles.screenContent, showProfile && [styles.screenContentWithTabs, { paddingTop: insets.top + 112 }], !showProfile && { paddingTop: insets.top + 18 }, compactTopSpacing && { paddingTop: insets.top + 106 }, loadingOnly && styles.screenContentLoading]}
+          contentContainerStyle={[styles.screenContent, showProfile && [styles.screenContentWithTabs, { paddingTop: insets.top + 112 }], !showProfile && { paddingTop: insets.top + 18 }, compactTopSpacing && { paddingTop: insets.top + 106 }, legalTopSpacing && { paddingTop: insets.top + 88 }, loadingOnly && styles.screenContentLoading]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           automaticallyAdjustKeyboardInsets
@@ -402,6 +403,7 @@ function backTargetFor(pathname: string, params: Record<string, string | string[
   if (pathname === '/customer/report-accident') return '/customer/home';
   if (pathname === '/customer/add-vehicle') return '/customer/vehicles';
   if (pathname === '/customer/add-policy') return '/customer/policies';
+  if (pathname.startsWith('/customer/legal')) return '/customer/insurance-quote';
   if (['/customer/claims', '/customer/vehicles', '/customer/policies', '/customer/support', '/customer/profile'].includes(pathname)) return '/customer/home';
 
   if (pathname === '/staff/update-status') {
@@ -434,10 +436,9 @@ export const styles = StyleSheet.create({
   screenContentWithTabs: { paddingTop: 92, paddingBottom: 156 },
   screenContentCompactTop: { paddingTop: 86 },
   screenContentLoading: { justifyContent: 'center', paddingBottom: 108 },
-  fixedBrandRow: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, height: 78, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: 'rgba(255,255,255,0.98)', borderBottomWidth: 1, borderBottomColor: 'rgba(207,224,244,0.9)' },
+  fixedBrandRow: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, height: 66, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4, paddingVertical: 6, backgroundColor: 'rgba(255,255,255,0.98)', borderBottomWidth: 1, borderBottomColor: 'rgba(207,224,244,0.9)' },
   brandRow: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginHorizontal: -14, paddingHorizontal: 14, paddingTop: 24, paddingBottom: 10, marginBottom: 10, backgroundColor: 'transparent', zIndex: 10 },
   backButton: { width: 40, height: 40, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.86)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(191,216,255,0.78)' },
-  backButtonPlaceholder: { width: 40, height: 40 },
   brandPressable: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 },
   brand: { color: palette.ink, fontSize: 21, fontWeight: '800' },
   brandLogo: { width: 150, height: 34 },

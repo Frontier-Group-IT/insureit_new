@@ -26,7 +26,7 @@ export default function RootLayout() {
     <>
       <StatusBar style="dark" />
       <RealtimeNotificationProvider>
-        <Stack screenOptions={{ headerShown: false }} />
+        <Stack screenOptions={{ headerShown: false, animation: 'none' }} />
       </RealtimeNotificationProvider>
     </>
   );

@@ -14,6 +14,10 @@ _patch-backups/
 outputs/
 expo-*.log
 expo-*.err.log
+pwa-preview.log
+pwa-preview.err.log
 .publish-git-temp-*/
+apps/mobile-app/dist-web/
+apps/mobile-app/dist/
 
 *.tsbuildinfo
