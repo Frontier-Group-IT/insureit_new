@@ -4,12 +4,15 @@ import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server
 import { navItems } from "./data";
 import { HeaderTitle } from "./header-title";
 import { UserMenu } from "./user-menu";
-import { canManageUsers, canViewOrganizationTree } from "@/lib/roles";
+import { canManageMasterData, canManageUsers, canViewOrganizationTree } from "@/lib/roles";
+
+const masterDataLabels = new Set(["Customers", "Vehicles", "Policies"]);
 
 export async function AppShell({ children, title }: { children: ReactNode; title?: string }) {
   const accessToken = await getServerAccessToken();
   const { user, profile } = await getAuthenticatedProfile(accessToken);
   const visibleNavItems = navItems.filter(([label]) => {
+    if (masterDataLabels.has(label)) return canManageMasterData(profile?.role);
     if (label === "Users") return canManageUsers(profile?.role);
     if (label === "Organization") return canViewOrganizationTree(profile?.role);
     return true;

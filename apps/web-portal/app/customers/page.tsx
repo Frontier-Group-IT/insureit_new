@@ -3,6 +3,7 @@ import { DataError, DataTable } from "@/components/record-list";
 import { AppShell, PageHeader } from "@/components/shell";
 import { SearchFilterBar, StatusBadge } from "@/components/ui";
 import { createServerSupabaseClient } from "@/lib/auth-server";
+import { requireMasterDataManager } from "@/lib/master-data-server";
 
 type CustomerRow = {
   id: string;
@@ -16,6 +17,7 @@ type CustomerRow = {
 };
 
 export default async function CustomersPage() {
+  await requireMasterDataManager();
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("customers")
