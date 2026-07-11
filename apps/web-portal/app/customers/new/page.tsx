@@ -1,15 +1,16 @@
-import { createCustomer } from "@/app/actions";
-import { CustomerForm } from "@/components/forms";
-import { AppShell, PageHeader } from "@/components/shell";
-import { createServerSupabaseClient } from "@/lib/auth-server";
+import { AppShell } from "@/components/shell";
+import { createCustomerOnboarding } from "../actions";
+import { CustomerOnboardingForm } from "../customer-onboarding-form";
 
-export default async function NewCustomerPage() {
-  const supabase = await createServerSupabaseClient();
-  const { data: agents } = await supabase.from("profiles").select("id, full_name").eq("role", "agent").eq("is_active", true).order("full_name");
+export default function NewCustomerPage() {
   return (
-    <AppShell title="Add customer">
-      <PageHeader title="Add customer" />
-      <CustomerForm action={createCustomer} agents={(agents ?? []).map((agent) => ({ label: agent.full_name, value: agent.id }))} submitLabel="Add record" />
+    <AppShell title="Add New Customer">
+      <div className="mb-4 rounded-2xl border border-[#DCE7F5] bg-white px-5 py-4 shadow-[0_8px_22px_rgba(7,29,73,0.04)]">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#4773A8]">Master Data · Customers</p>
+        <h1 className="mt-1 text-[22px] font-semibold tracking-tight text-[#071D49]">Add New Customer</h1>
+        <p className="mt-1 text-[12.5px] text-[#68758A]">Onboard a customer partner and prepare their profile for mobile OTP access.</p>
+      </div>
+      <CustomerOnboardingForm action={createCustomerOnboarding} />
     </AppShell>
   );
 }
