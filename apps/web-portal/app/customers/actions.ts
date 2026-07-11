@@ -4,6 +4,10 @@ import { createHash } from "node:crypto";
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 
+export type CustomerOnboardingState = {
+  error: string | null;
+};
+
 function textValue(formData: FormData, name: string) {
   const value = formData.get(name);
   return typeof value === "string" && value.trim() ? value.trim() : null;
@@ -17,7 +21,10 @@ function normalizeIndianPhone(value: string) {
   return null;
 }
 
-export async function createCustomerOnboarding(formData: FormData) {
+export async function createCustomerOnboarding(
+  _previousState: CustomerOnboardingState,
+  formData: FormData
+): Promise<CustomerOnboardingState> {
   const partnerType = textValue(formData, "partner_type");
   const contactName = textValue(formData, "contact_name");
   const rawPhone = textValue(formData, "phone");
@@ -34,24 +41,46 @@ export async function createCustomerOnboarding(formData: FormData) {
   const gstNumber = textValue(formData, "gst_number")?.toUpperCase() ?? null;
 
   if (partnerType !== "individual_proprietor") {
-    throw new Error("Only the Individual / Proprietor workflow is available in this release.");
+    return { error: "Only the Individual / Proprietor workflow is available in this release." };
   }
   if (!contactName || !phone || !locationId || !city || !state || !postalCode || !panNumber || !aadhaarNumber || !fleetSizeBand) {
-    throw new Error("Please complete all required customer onboarding fields.");
+    return { error: "Please complete all required customer onboarding fields and select a city from the suggestions." };
   }
-  if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(panNumber)) throw new Error("Enter a valid PAN number.");
-  if (!/^[0-9]{12}$/.test(aadhaarNumber)) throw new Error("Enter a valid 12-digit Aadhaar number.");
-  if (isGstRegistered && (!legalTradeName || !gstNumber)) throw new Error("Legal Trade Name and GST Number are required for GST-registered customers.");
+  if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(panNumber)) {
+    return { error: "Enter a valid PAN number." };
+  }
+  if (!/^[0-9]{12}$/.test(aadhaarNumber)) {
+    return { error: "Enter a valid 12-digit Aadhaar number." };
+  }
+  if (isGstRegistered && (!legalTradeName || !gstNumber)) {
+    return { error: "Legal Trade Name and GST Number are required for GST-registered customers." };
+  }
 
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
+  if (!profile?.id) {
+    return { error: "Your login session could not be verified. Please sign in again." };
+  }
+
   const supabase = await createServerSupabaseClient();
 
-  const { data: duplicatePhone } = await supabase.from("customers").select("id").eq("phone", phone).maybeSingle<{ id: string }>();
-  if (duplicatePhone) throw new Error("A customer with this mobile number already exists.");
+  const { data: duplicatePhone, error: phoneLookupError } = await supabase
+    .from("customers")
+    .select("id")
+    .eq("phone", phone)
+    .limit(1)
+    .maybeSingle<{ id: string }>();
+  if (phoneLookupError) return { error: `Unable to validate mobile number: ${phoneLookupError.message}` };
+  if (duplicatePhone) return { error: "A customer with this mobile number already exists." };
 
-  const { data: duplicatePan } = await supabase.from("customers").select("id").eq("pan_number", panNumber).maybeSingle<{ id: string }>();
-  if (duplicatePan) throw new Error("A customer with this PAN number already exists.");
+  const { data: duplicatePan, error: panLookupError } = await supabase
+    .from("customers")
+    .select("id")
+    .eq("pan_number", panNumber)
+    .limit(1)
+    .maybeSingle<{ id: string }>();
+  if (panLookupError) return { error: `Unable to validate PAN number: ${panLookupError.message}` };
+  if (duplicatePan) return { error: "A customer with this PAN number already exists." };
 
   const customerCode = `CUST-${Date.now().toString().slice(-9)}`;
   const aadhaarHash = createHash("sha256").update(aadhaarNumber).digest("hex");
@@ -81,11 +110,13 @@ export async function createCustomerOnboarding(formData: FormData) {
     gst_number: isGstRegistered ? gstNumber : null,
     fleet_size_band: fleetSizeBand,
     onboarding_status: "documents_pending",
-    created_by: profile?.id ?? null,
-    updated_by: profile?.id ?? null
+    created_by: profile.id,
+    updated_by: profile.id
   });
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    return { error: `Customer could not be created: ${error.message}` };
+  }
 
   redirect("/customers");
 }
