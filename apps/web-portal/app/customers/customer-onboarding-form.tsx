@@ -238,7 +238,7 @@ function Field({ label, name, type = "text", required = false, placeholder = "",
   return <div><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} type={type} required={required} placeholder={placeholder} value={value} readOnly={readOnly} className={`${inputClass} ${readOnly ? "bg-[#F4F7FA] text-[#68758A]" : ""}`} {...props} /></div>;
 }
 
-function FileField({ label, name, required = false }: { label: string; name: string; required?: boolean }) {
+function FileField({ label, name, required = false, compact = false }: { label: string; name: string; required?: boolean; compact?: boolean }) {
   return (
     <div>
       <label className={labelClass} htmlFor={name}>📎 {label}{required ? " *" : ""}</label>
