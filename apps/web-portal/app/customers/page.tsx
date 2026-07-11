@@ -48,21 +48,16 @@ export default async function CustomersPage() {
   return (
     <AppShell title="Customers">
       <div className="space-y-4 pb-8">
-        <section className="rounded-2xl border border-[#DCE7F5] bg-white px-5 py-4 shadow-[0_8px_22px_rgba(7,29,73,0.04)]">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#4773A8]">Master Data</p>
-              <h1 className="mt-1 text-[22px] font-semibold tracking-tight text-[#071D49]">Customers</h1>
-              <p className="mt-1 text-[12.5px] text-[#68758A]">Add, review and maintain customer partner records.</p>
-            </div>
-            <Link href="/customers/new" className="inline-flex h-10 items-center justify-center rounded-xl bg-[#0B4C8C] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#083B6D]">+ Add New Customer</Link>
-          </div>
-        </section>
-
-        <section className="grid gap-3 sm:grid-cols-3">
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <SummaryCard label="Total Customers" value={rows.length} />
           <SummaryCard label="Active" value={activeCount} />
           <SummaryCard label="Onboarding Pending" value={pendingCount} />
+          <Link
+            href="/customers/new"
+            className="flex min-h-[98px] items-center justify-center rounded-2xl bg-[#0B4C8C] px-5 text-center text-sm font-semibold text-white shadow-[0_8px_22px_rgba(7,29,73,0.08)] transition hover:bg-[#083B6D]"
+          >
+            + Add New Customer
+          </Link>
         </section>
 
         <section className="rounded-2xl border border-[#DCE7F5] bg-white p-4 shadow-[0_8px_22px_rgba(7,29,73,0.04)]">
