@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { FormSubmitButton } from "@/components/form-submit-button";
+import type { CustomerOnboardingState } from "./actions";
 
 type LocationOption = {
   id: string;
@@ -13,13 +14,14 @@ type LocationOption = {
 };
 
 type Props = {
-  action: (formData: FormData) => void | Promise<void>;
+  action: (previousState: CustomerOnboardingState, formData: FormData) => Promise<CustomerOnboardingState>;
 };
 
 const inputClass = "h-11 w-full rounded-xl border border-[#D8E2EE] bg-white px-3.5 text-sm text-[#071D49] outline-none transition placeholder:text-[#9AA7B8] focus:border-[#2D69B3] focus:ring-4 focus:ring-[#E8F2FF]";
 const labelClass = "mb-1.5 block text-[12px] font-semibold text-[#344256]";
 
 export function CustomerOnboardingForm({ action }: Props) {
+  const [formState, formAction] = useActionState(action, { error: null });
   const [partnerType, setPartnerType] = useState("");
   const [gstRegistered, setGstRegistered] = useState(false);
   const [cityQuery, setCityQuery] = useState("");
@@ -34,10 +36,15 @@ export function CustomerOnboardingForm({ action }: Props) {
 
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
-      const response = await fetch(`/api/india-locations?query=${encodeURIComponent(cityQuery.trim())}`, { signal: controller.signal });
-      if (!response.ok) return;
-      const data = (await response.json()) as { locations?: LocationOption[] };
-      setLocations(data.locations ?? []);
+      try {
+        const response = await fetch(`/api/india-locations?query=${encodeURIComponent(cityQuery.trim())}`, { signal: controller.signal });
+        if (!response.ok) return;
+        const data = (await response.json()) as { locations?: LocationOption[] };
+        setLocations(data.locations ?? []);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        console.error("City search failed", error);
+      }
     }, 250);
 
     return () => {
@@ -49,7 +56,13 @@ export function CustomerOnboardingForm({ action }: Props) {
   const isIndividual = partnerType === "individual_proprietor";
 
   return (
-    <form action={action} className="space-y-4 pb-10">
+    <form action={formAction} className="space-y-4 pb-10">
+      {formState.error ? (
+        <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          {formState.error}
+        </div>
+      ) : null}
+
       <section className="rounded-2xl border border-[#DCE7F5] bg-white px-5 py-4 shadow-[0_8px_22px_rgba(7,29,73,0.04)]">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
