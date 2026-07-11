@@ -7,7 +7,7 @@ type Props = {
   title: string;
   backHref?: string;
   children: ReactNode;
-  activeNav?: "dashboard" | "claims" | "tasks" | "reports" | "more";
+  activeNav?: "dashboard" | "claims" | "master-data" | "tasks" | "reports";
 };
 
 type NotificationRow = {
@@ -47,9 +47,9 @@ export async function ClaimManagerShell({ title, backHref = "/dashboard", childr
         <nav className="mt-3 space-y-1 px-2 text-sm">
           <SideNavItem href="/dashboard" icon="▦" label="Dashboard" active={activeNav === "dashboard"} />
           <SideNavItem href="/claims" icon="▤" label="Claims" active={activeNav === "claims"} />
+          <MasterDataNav active={activeNav === "master-data"} />
           <SideNavItem href="/tasks" icon="☑" label="Tasks" active={activeNav === "tasks"} />
           <SideNavItem href="/reports" icon="▥" label="Reports" active={activeNav === "reports"} />
-          <SideNavItem href="#" icon="••" label="More" active={activeNav === "more"} />
         </nav>
       </aside>
 
@@ -83,6 +83,33 @@ export async function ClaimManagerShell({ title, backHref = "/dashboard", childr
         <main className="mx-auto max-w-[1580px] px-5 py-2 lg:px-6">{children}</main>
       </div>
     </div>
+  );
+}
+
+function MasterDataNav({ active }: { active: boolean }) {
+  return (
+    <details className="group/master" open={active}>
+      <summary className={`flex h-10 cursor-pointer list-none items-center gap-3 rounded-xl px-3 transition [&::-webkit-details-marker]:hidden ${active ? "bg-[#EAF3FF] text-[#003A83]" : "text-[#344256] hover:bg-[#F5F8FC] hover:text-[#003A83]"}`}>
+        <span className="grid h-6 w-6 shrink-0 place-items-center text-[17px] leading-none">▦</span>
+        <span className="flex min-w-0 flex-1 items-center justify-between gap-2 whitespace-nowrap text-[13px] font-medium opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+          <span>Master Data</span>
+          <span className="text-[11px] transition-transform group-open/master:rotate-90">›</span>
+        </span>
+      </summary>
+      <div className="ml-9 mt-1 space-y-1 border-l border-[#E2E8F0] pl-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+        <MasterDataLink href="/customers" label="Customers" />
+        <MasterDataLink href="/vehicles" label="Vehicles" />
+        <MasterDataLink href="/policies" label="Policies" />
+      </div>
+    </details>
+  );
+}
+
+function MasterDataLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link href={href} className="block rounded-lg px-3 py-2 text-[12px] font-medium text-[#526174] transition hover:bg-[#F1F6FF] hover:text-[#003A83]">
+      {label}
+    </Link>
   );
 }
 
