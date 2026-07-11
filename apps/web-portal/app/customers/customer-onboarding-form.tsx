@@ -121,13 +121,13 @@ export function CustomerOnboardingForm({ action }: Props) {
             <input type="hidden" name="postal_code" value={selectedLocation?.pincode ?? ""} />
           </Section>
 
-          <Section step="3" title="Document Details" description="Identity and tax registration information.">
+          <Section step="3" title="Document Details" description="Upload PDF, JPG or PNG files up to 5 MB each.">
             <Field label="PAN Number" name="pan_number" required placeholder="ABCDE1234F" maxLength={10} />
-            <UploadPlaceholder label="Upload PAN Copy" />
+            <FileField label="Upload PAN Copy" name="pan_copy" required />
             <Field label="Aadhaar Number" name="aadhaar_number" required placeholder="12-digit Aadhaar number" inputMode="numeric" pattern="[0-9]{12}" maxLength={12} />
-            <UploadPlaceholder label="Upload Aadhaar Front" />
+            <FileField label="Upload Aadhaar Front" name="aadhaar_front" required />
             <div />
-            <UploadPlaceholder label="Upload Aadhaar Back" />
+            <FileField label="Upload Aadhaar Back" name="aadhaar_back" required />
             <div className="md:col-span-2 rounded-xl border border-[#E2EAF4] bg-[#F8FBFF] px-4 py-3">
               <label className="flex items-center gap-3 text-sm font-semibold text-[#071D49]">
                 <input type="checkbox" name="is_gst_registered" value="true" checked={gstRegistered} onChange={(event) => setGstRegistered(event.target.checked)} className="h-4 w-4 rounded border-[#AFC0D5]" />
@@ -137,7 +137,7 @@ export function CustomerOnboardingForm({ action }: Props) {
             </div>
             <Field label="Legal Trade Name" name="legal_trade_name" required={gstRegistered} placeholder={gstRegistered ? "As registered under GST" : "Optional"} />
             {gstRegistered ? <Field label="GST Number" name="gst_number" required placeholder="22AAAAA0000A1Z5" maxLength={15} /> : <div />}
-            {gstRegistered ? <UploadPlaceholder label="Upload GST Copy" /> : null}
+            {gstRegistered ? <FileField label="Upload GST Copy" name="gst_copy" required /> : null}
           </Section>
 
           <Section step="4" title="Fleet Details" description="Current commercial vehicle fleet size.">
@@ -154,7 +154,7 @@ export function CustomerOnboardingForm({ action }: Props) {
           </Section>
 
           <div className="flex flex-col-reverse gap-3 rounded-2xl border border-[#DCE7F5] bg-white px-5 py-4 shadow-[0_8px_22px_rgba(7,29,73,0.04)] sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-[11.5px] text-[#68758A]">The customer will be prepared for mobile OTP access. Secure document uploads are enabled in the next backend step.</p>
+            <p className="text-[11.5px] text-[#68758A]">Submitting creates the customer’s mobile OTP account and stores KYC documents in private storage.</p>
             <div className="flex gap-3">
               <Link href="/customers" className="rounded-xl border border-[#D5E0EC] px-5 py-2.5 text-sm font-semibold text-[#344256] hover:bg-[#F7FAFE]">Cancel</Link>
               <FormSubmitButton label="Create Customer" />
@@ -182,6 +182,18 @@ function Field({ label, name, type = "text", required = false, placeholder = "",
   return <div><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} type={type} required={required} placeholder={placeholder} value={value} readOnly={readOnly} className={`${inputClass} ${readOnly ? "bg-[#F4F7FA] text-[#68758A]" : ""}`} {...props} /></div>;
 }
 
-function UploadPlaceholder({ label }: { label: string }) {
-  return <div><span className={labelClass}>{label}</span><div className="flex h-11 items-center justify-between rounded-xl border border-dashed border-[#B7C8DB] bg-[#FAFCFF] px-3.5 text-xs text-[#738196]"><span>Secure upload setup pending</span><span className="font-semibold text-[#2D69B3]">Coming next</span></div></div>;
+function FileField({ label, name, required = false }: { label: string; name: string; required?: boolean }) {
+  return (
+    <div>
+      <label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label>
+      <input
+        id={name}
+        name={name}
+        type="file"
+        required={required}
+        accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+        className="block h-11 w-full rounded-xl border border-dashed border-[#B7C8DB] bg-[#FAFCFF] px-3 py-2 text-xs text-[#536274] file:mr-3 file:rounded-lg file:border-0 file:bg-[#EAF3FF] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-[#245A9A]"
+      />
+    </div>
+  );
 }
