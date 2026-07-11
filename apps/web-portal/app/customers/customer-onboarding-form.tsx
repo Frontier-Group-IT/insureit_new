@@ -124,10 +124,13 @@ export function CustomerOnboardingForm({ action }: Props) {
           <Section step="3" title="Document Details" description="Upload PDF, JPG or PNG files up to 5 MB each.">
             <Field label="PAN Number" name="pan_number" required placeholder="ABCDE1234F" maxLength={10} />
             <FileField label="Upload PAN Copy" name="pan_copy" required />
-            <Field label="Aadhaar Number" name="aadhaar_number" required placeholder="12-digit Aadhaar number" inputMode="numeric" pattern="[0-9]{12}" maxLength={12} />
-            <FileField label="Upload Aadhaar Front" name="aadhaar_front" required />
-            <div />
-            <FileField label="Upload Aadhaar Back" name="aadhaar_back" required />
+            <div className="md:col-span-2">
+              <Field label="Aadhaar Number" name="aadhaar_number" required placeholder="12-digit Aadhaar number" inputMode="numeric" pattern="[0-9]{12}" maxLength={12} />
+            </div>
+            <div className="grid gap-3 md:col-span-2 sm:grid-cols-2">
+              <FileField label="Aadhaar Front" name="aadhaar_front" required compact />
+              <FileField label="Aadhaar Back" name="aadhaar_back" required compact />
+            </div>
             <div className="md:col-span-2 rounded-xl border border-[#E2EAF4] bg-[#F8FBFF] px-4 py-3">
               <label className="flex items-center gap-3 text-sm font-semibold text-[#071D49]">
                 <input type="checkbox" name="is_gst_registered" value="true" checked={gstRegistered} onChange={(event) => setGstRegistered(event.target.checked)} className="h-4 w-4 rounded border-[#AFC0D5]" />
@@ -182,9 +185,9 @@ function Field({ label, name, type = "text", required = false, placeholder = "",
   return <div><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} type={type} required={required} placeholder={placeholder} value={value} readOnly={readOnly} className={`${inputClass} ${readOnly ? "bg-[#F4F7FA] text-[#68758A]" : ""}`} {...props} /></div>;
 }
 
-function FileField({ label, name, required = false }: { label: string; name: string; required?: boolean }) {
+function FileField({ label, name, required = false, compact = false }: { label: string; name: string; required?: boolean; compact?: boolean }) {
   return (
-    <div>
+    <div className="min-w-0">
       <label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label>
       <input
         id={name}
@@ -192,7 +195,9 @@ function FileField({ label, name, required = false }: { label: string; name: str
         type="file"
         required={required}
         accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-        className="block h-11 w-full rounded-xl border border-dashed border-[#B7C8DB] bg-[#FAFCFF] px-3 py-2 text-xs text-[#536274] file:mr-3 file:rounded-lg file:border-0 file:bg-[#EAF3FF] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-[#245A9A]"
+        className={compact
+          ? "block h-10 w-full min-w-0 rounded-xl border border-dashed border-[#B7C8DB] bg-[#FAFCFF] px-2 py-1.5 text-[11px] text-[#536274] file:mr-2 file:rounded-md file:border-0 file:bg-[#EAF3FF] file:px-2.5 file:py-1 file:text-[11px] file:font-semibold file:text-[#245A9A]"
+          : "block h-11 w-full rounded-xl border border-dashed border-[#B7C8DB] bg-[#FAFCFF] px-3 py-2 text-xs text-[#536274] file:mr-3 file:rounded-lg file:border-0 file:bg-[#EAF3FF] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-[#245A9A]"}
       />
     </div>
   );
