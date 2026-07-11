@@ -86,9 +86,8 @@ export function SearchFilterBar({ searchPlaceholder, filterLabel = "Status", act
   return (
     <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="relative flex-1">
-          <span className="pointer-events-none absolute left-3 top-2.5 text-slate-400">Search</span>
-          <input className="w-full pl-9" placeholder={searchPlaceholder} aria-label={searchPlaceholder} />
+        <div className="flex-1">
+          <input className="w-full px-3.5" placeholder={searchPlaceholder} aria-label={searchPlaceholder} />
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <select className="min-w-40" aria-label={filterLabel} defaultValue="all">
@@ -136,4 +135,3 @@ export function ErrorState({ title = "Unable to load data", description = "Pleas
     </div>
   );
 }
-
