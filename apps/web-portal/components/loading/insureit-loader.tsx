@@ -1,18 +1,29 @@
 export function InsureItLoader({ label = "Loading", sublabel = "", compact = false }: { label?: string; sublabel?: string; compact?: boolean }) {
   return (
-    <div className={`flex flex-col items-center justify-center text-center ${compact ? "gap-2" : "gap-3"}`} role="status" aria-live="polite">
-      <div className={`relative ${compact ? "h-12 w-12" : "h-16 w-16"}`}>
-        <div className="absolute inset-0 rounded-2xl bg-[#071D49] shadow-[0_18px_42px_rgba(7,29,73,0.18)]" />
-        <div className="absolute inset-0 rounded-2xl border-2 border-transparent border-t-[#F59E0B] border-r-[#20C997] animate-[insureit-orbit_0.9s_linear_infinite]" />
-        <div className="absolute left-1/2 top-1/2 grid h-8 w-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-xl bg-white text-[15px] font-black text-[#071D49]">
-          I
+    <div className={`flex items-center justify-center text-left ${compact ? "gap-3" : "flex-col gap-3 text-center"}`} role="status" aria-live="polite">
+      <div className={`relative overflow-hidden ${compact ? "h-10 w-28" : "h-16 w-44"}`}>
+        <div className="absolute inset-x-0 bottom-2 h-[2px] rounded-full bg-[#AFC0D5]" />
+        <div className="absolute inset-x-0 bottom-[5px] flex justify-around opacity-70">
+          <span className="h-0.5 w-5 rounded bg-white" />
+          <span className="h-0.5 w-5 rounded bg-white" />
+          <span className="h-0.5 w-5 rounded bg-white" />
+          <span className="h-0.5 w-5 rounded bg-white" />
+        </div>
+        <div className="absolute bottom-3 left-0 animate-[insureit-truck_1.8s_ease-in-out_infinite]">
+          <div className="relative h-7 w-14">
+            <div className="absolute bottom-1 left-0 h-4 w-8 rounded-sm bg-[#0B4C8C] shadow-sm" />
+            <div className="absolute bottom-1 left-8 h-5 w-5 rounded-r-md rounded-t-md bg-[#F59E0B] shadow-sm" />
+            <div className="absolute bottom-[11px] left-[36px] h-2 w-3 rounded-sm bg-[#DFF3FF]" />
+            <div className="absolute bottom-0 left-2 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#071D49] shadow" />
+            <div className="absolute bottom-0 left-10 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#071D49] shadow" />
+            <div className="absolute bottom-3 -right-2 h-1 w-1 rounded-full bg-[#20C997] animate-[insureit-blip_0.8s_ease-in-out_infinite]" />
+          </div>
         </div>
       </div>
       <div>
-        <p className={`${compact ? "text-[13px]" : "text-[15px]"} font-semibold text-[#071D49]`}>{label}</p>
-        {!compact && sublabel ? <p className="mt-1 text-[12px] text-[#526178]">{sublabel}</p> : null}
+        <p className={`${compact ? "text-[11px]" : "text-[14px]"} font-semibold text-[#071D49]`}>{label}</p>
+        {!compact && sublabel ? <p className="mt-1 text-[11px] text-[#526178]">{sublabel}</p> : null}
       </div>
-      {!compact ? <div className="h-1 w-40 overflow-hidden rounded-full bg-[#E8EFF8]"><div className="h-full w-1/2 rounded-full bg-gradient-to-r from-[#071D49] to-[#20C997] animate-[insureit-progress_1.05s_ease-in-out_infinite]" /></div> : null}
     </div>
   );
 }
@@ -20,9 +31,11 @@ export function InsureItLoader({ label = "Loading", sublabel = "", compact = fal
 export function InsureItButtonLoader({ label = "Working" }: { label?: string }) {
   return (
     <span className="inline-flex items-center gap-2">
-      <span className="relative h-4 w-4 rounded-md bg-white/15">
-        <span className="absolute inset-0 rounded-md border border-white/30 border-t-white animate-[insureit-orbit_0.75s_linear_infinite]" />
-        <span className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-sm bg-white" />
+      <span className="relative h-4 w-7 overflow-hidden">
+        <span className="absolute bottom-0 left-0 h-2.5 w-4 rounded-sm bg-white/90" />
+        <span className="absolute bottom-0 left-4 h-3 w-2.5 rounded-r-sm rounded-t-sm bg-white" />
+        <span className="absolute bottom-[-1px] left-1 h-1.5 w-1.5 rounded-full bg-[#071D49]" />
+        <span className="absolute bottom-[-1px] left-5 h-1.5 w-1.5 rounded-full bg-[#071D49]" />
       </span>
       <span>{label}</span>
     </span>
