@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AppShell } from "@/components/shell";
 import { DataError } from "@/components/record-list";
 import { createServerSupabaseClient } from "@/lib/auth-server";
@@ -30,6 +31,9 @@ export default async function CustomersPage() {
 
   return (
     <AppShell title="Customers">
+      <div className="mb-2 flex justify-end">
+        <Link href="/customers/dealership-type" className="inline-flex h-9 items-center justify-center rounded-md border border-[#C7D2FE] bg-[#EEF2FF] px-4 text-[11px] font-semibold text-[#4338CA] hover:bg-[#E0E7FF]">+ Add Dealership</Link>
+      </div>
       <div className="pb-3">
         {error ? <DataError message={error.message} /> : <CustomerWorkspace rows={rows} />}
       </div>

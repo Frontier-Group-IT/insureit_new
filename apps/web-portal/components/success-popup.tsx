@@ -7,6 +7,7 @@ const successMessages: Record<string, { title: string; message: string }> = {
   customer_created: { title: "Customer onboarded", message: "The new customer profile has been created successfully." },
   customer_updated: { title: "Customer updated", message: "The customer profile changes have been saved successfully." },
   documents_uploaded: { title: "Documents uploaded", message: "The customer documents have been uploaded and saved successfully." },
+  dealership_created: { title: "Dealership onboarded", message: "The dealership and representative details have been saved successfully." },
   vehicle_created: { title: "Vehicle added", message: "The vehicle record has been created successfully." },
   vehicle_updated: { title: "Vehicle updated", message: "The vehicle details have been saved successfully." },
   policy_created: { title: "Policy added", message: "The insurance policy has been created successfully." },
@@ -44,10 +45,7 @@ function SuccessPopupInner() {
       <div className={`w-full max-w-sm overflow-hidden rounded-2xl border bg-white shadow-[0_24px_70px_rgba(15,23,42,0.22)] ${isError ? "border-red-200" : "border-emerald-200"}`}>
         <div className="flex items-start gap-3 p-4">
           <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-lg font-bold ${isError ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>{isError ? "!" : "✓"}</div>
-          <div className="min-w-0 flex-1">
-            <h2 className="text-[14px] font-semibold text-[#0F172A]">{popup.title}</h2>
-            <p className="mt-1 text-[11px] leading-5 text-[#64748B]">{popup.message}</p>
-          </div>
+          <div className="min-w-0 flex-1"><h2 className="text-[14px] font-semibold text-[#0F172A]">{popup.title}</h2><p className="mt-1 text-[11px] leading-5 text-[#64748B]">{popup.message}</p></div>
           <button type="button" onClick={() => setOpen(false)} className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-[16px] text-[#64748B] hover:bg-[#F1F5F9]" aria-label="Close message">×</button>
         </div>
         <div className={`h-1 w-full ${isError ? "bg-red-500" : "bg-emerald-500"}`} />
@@ -56,6 +54,4 @@ function SuccessPopupInner() {
   );
 }
 
-export function SuccessPopup() {
-  return <Suspense fallback={null}><SuccessPopupInner /></Suspense>;
-}
+export function SuccessPopup() { return <Suspense fallback={null}><SuccessPopupInner /></Suspense>; }
