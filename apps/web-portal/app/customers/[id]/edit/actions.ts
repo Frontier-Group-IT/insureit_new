@@ -11,27 +11,35 @@ const DOCUMENT_BUCKET = "customer-documents";
 const ALLOWED_FILE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const documentTypes = ["pan_copy", "aadhaar_front", "aadhaar_back", "gst_copy"] as const;
+const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 
 function textValue(formData: FormData, name: string) { const value = formData.get(name); return typeof value === "string" && value.trim() ? value.trim() : null; }
 function fileValue(formData: FormData, name: string) { const value = formData.get(name); return value instanceof File && value.size > 0 ? value : null; }
 function safeExtension(file: File) { if (file.type === "application/pdf") return "pdf"; if (file.type === "image/png") return "png"; return "jpg"; }
+function editErrorUrl(id: string, message: string, field?: string) { const params = new URLSearchParams({ error: message }); if (field) params.set("field", field); return `/customers/${id}/edit?${params.toString()}`; }
 
 export async function updateCustomerProfile(id: string, formData: FormData) {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!profile?.id || !canManageMasterData(profile.role)) throw new Error("You are not authorized to update customers.");
-  const contactName = textValue(formData, "contact_name");
-  if (!contactName) throw new Error("Customer name is required.");
+  if (!profile?.id || !canManageMasterData(profile.role)) redirect(editErrorUrl(id, "You are not authorized to update customers."));
 
-  const admin = createSupabaseAdminClient();
+  const contactName = textValue(formData, "contact_name");
+  if (!contactName) redirect(editErrorUrl(id, "Customer name is required.", "contact_name"));
+
   const isGstRegistered = formData.get("is_gst_registered") === "true";
-  const panNumber = textValue(formData, "pan_number")?.toUpperCase() ?? null;
+  const legalTradeName = textValue(formData, "legal_trade_name");
+  const panNumber = textValue(formData, "pan_number")?.replace(/\s/g, "").toUpperCase() ?? null;
   const gstNumber = textValue(formData, "gst_number")?.replace(/\s/g, "").toUpperCase() ?? null;
 
+  if (isGstRegistered && !legalTradeName) redirect(editErrorUrl(id, "Enter the Legal Trade Name before marking the customer as GST Registered.", "legal_trade_name"));
+  if (isGstRegistered && !gstNumber) redirect(editErrorUrl(id, "Enter the GST Number before marking the customer as GST Registered.", "gst_number"));
+  if (isGstRegistered && gstNumber && !GSTIN_PATTERN.test(gstNumber)) redirect(editErrorUrl(id, "Enter a valid 15-character GSTIN, for example 22AAAAA0000A1Z5.", "gst_number"));
+
+  const admin = createSupabaseAdminClient();
   const { error } = await admin.from("customers").update({
     contact_name: contactName,
-    company_name: textValue(formData, "legal_trade_name"),
-    legal_trade_name: textValue(formData, "legal_trade_name"),
+    company_name: legalTradeName,
+    legal_trade_name: legalTradeName,
     email: textValue(formData, "email"),
     address_street: textValue(formData, "address_street"),
     address_locality: textValue(formData, "address_locality"),
@@ -48,13 +56,17 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
     assigned_agent_id: textValue(formData, "assigned_agent_id"),
     updated_by: profile.id
   }).eq("id", id);
-  if (error) throw new Error(error.message);
+
+  if (error) {
+    if (error.message.includes("customers_gst_number_format_check")) redirect(editErrorUrl(id, "Enter a valid 15-character GSTIN, for example 22AAAAA0000A1Z5.", "gst_number"));
+    redirect(editErrorUrl(id, `Customer could not be saved: ${error.message}`));
+  }
 
   for (const documentType of documentTypes) {
     const file = fileValue(formData, documentType);
     if (!file) continue;
-    if (!ALLOWED_FILE_TYPES.has(file.type)) throw new Error(`${documentType.replaceAll("_", " ")} must be PDF, JPG or PNG.`);
-    if (file.size > MAX_FILE_SIZE) throw new Error(`${documentType.replaceAll("_", " ")} must be 5 MB or smaller.`);
+    if (!ALLOWED_FILE_TYPES.has(file.type)) redirect(editErrorUrl(id, `${documentType.replaceAll("_", " ")} must be PDF, JPG or PNG.`, documentType));
+    if (file.size > MAX_FILE_SIZE) redirect(editErrorUrl(id, `${documentType.replaceAll("_", " ")} must be 5 MB or smaller.`, documentType));
 
     const { data: oldDocuments } = await admin.from("customer_documents").select("id, storage_path").eq("customer_id", id).eq("document_type", documentType);
     const oldPaths = (oldDocuments ?? []).map((row: { storage_path: string | null }) => row.storage_path).filter((path: string | null): path is string => Boolean(path));
@@ -63,7 +75,7 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
 
     const storagePath = `${id}/${documentType}/${randomUUID()}.${safeExtension(file)}`;
     const { error: uploadError } = await admin.storage.from(DOCUMENT_BUCKET).upload(storagePath, new Uint8Array(await file.arrayBuffer()), { contentType: file.type, upsert: false });
-    if (uploadError) throw new Error(uploadError.message);
+    if (uploadError) redirect(editErrorUrl(id, `Document upload failed: ${uploadError.message}`, documentType));
 
     const { error: metadataError } = await admin.from("customer_documents").insert({
       customer_id: id,
@@ -75,13 +87,13 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
       file_size: file.size,
       verification_status: "verified",
       upload_source: "manager_portal",
+      uploaded_by: profile.id,
       verified_by: profile.id,
-      verified_at: new Date().toISOString(),
-      uploaded_by: profile.id
+      verified_at: new Date().toISOString()
     });
     if (metadataError) {
       await admin.storage.from(DOCUMENT_BUCKET).remove([storagePath]);
-      throw new Error(`Document metadata could not be saved: ${metadataError.message}`);
+      redirect(editErrorUrl(id, `Document record could not be saved: ${metadataError.message}`, documentType));
     }
   }
 
@@ -90,10 +102,7 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
   const savedTypes = new Set((savedDocuments ?? []).map((row: { document_type: string }) => row.document_type));
   const hasAllRequiredDocuments = requiredTypes.every((type) => savedTypes.has(type));
 
-  await admin.from("customers").update({
-    onboarding_status: hasAllRequiredDocuments ? "active" : "documents_pending",
-    updated_by: profile.id
-  }).eq("id", id);
+  await admin.from("customers").update({ onboarding_status: hasAllRequiredDocuments ? "active" : "documents_pending", updated_by: profile.id }).eq("id", id);
 
   revalidatePath("/customers");
   revalidatePath(`/customers/${id}/edit`, "page");
