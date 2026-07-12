@@ -24,6 +24,11 @@ textarea {
   @apply rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-navy-500 focus:ring-4 focus:ring-navy-100;
 }
 
+input[name="pan_number"],
+input[name="gst_number"] {
+  text-transform: uppercase;
+}
+
 label {
   @apply text-sm font-medium text-slate-700;
 }
