@@ -27,7 +27,7 @@ export function FeedbackToast({
     if (!onClose) return;
     const timer = window.setTimeout(onClose, 6500);
     return () => window.clearTimeout(timer);
-  }, [onClose]);
+  }, [message, onClose]);
 
   return (
     <div className="fixed right-4 top-20 z-[80] w-[min(390px,calc(100vw-2rem))] animate-[fadeIn_.18s_ease-out]">
@@ -38,6 +38,56 @@ export function FeedbackToast({
           <p className="mt-0.5 text-[12.5px] font-medium leading-5">{message}</p>
         </div>
         {onClose ? <button type="button" onClick={onClose} aria-label="Close notification" className="rounded-md px-1.5 py-0.5 text-sm text-[#7A8797] hover:bg-slate-100">×</button> : null}
+      </div>
+    </div>
+  );
+}
+
+export function AlertModal({
+  open,
+  title = "Action required",
+  message,
+  buttonLabel = "Go to field",
+  onClose,
+  autoCloseMs = 5000
+}: {
+  open: boolean;
+  title?: string;
+  message: string;
+  buttonLabel?: string;
+  onClose: () => void;
+  autoCloseMs?: number;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const timer = window.setTimeout(onClose, autoCloseMs);
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [autoCloseMs, message, onClose, open]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[95] flex items-center justify-center bg-[#071D49]/35 p-4 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-labelledby="alert-title">
+      <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-red-100 bg-white shadow-[0_24px_70px_rgba(7,29,73,0.25)]">
+        <div className="border-b border-[#F3E5E5] px-5 py-4">
+          <div className="flex items-start gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-50 text-lg font-bold text-red-600">!</span>
+            <div>
+              <h2 id="alert-title" className="text-sm font-semibold text-[#071D49]">{title}</h2>
+              <p className="mt-1 text-xs leading-5 text-[#68758A]">{message}</p>
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end bg-[#F8FAFD] px-5 py-3">
+          <button type="button" onClick={onClose} className="rounded-lg bg-[#0B4C8C] px-4 py-2 text-xs font-semibold text-white hover:bg-[#083B6D]">{buttonLabel}</button>
+        </div>
       </div>
     </div>
   );
