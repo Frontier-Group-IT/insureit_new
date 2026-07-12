@@ -47,33 +47,28 @@ export default async function CustomersPage() {
 
   return (
     <AppShell title="Customers">
-      <div className="space-y-3 pb-5">
-        <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_auto]">
+      <div className="space-y-2 pb-3">
+        <section className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_auto]">
           <SummaryCard label="Total Customers" value={rows.length} />
           <SummaryCard label="Active" value={activeCount} />
           <SummaryCard label="Onboarding Pending" value={pendingCount} />
-          <Link
-            href="/customers/new"
-            className="inline-flex min-h-[66px] min-w-[210px] items-center justify-center rounded-xl bg-[#0B4C8C] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#083B6D]"
-          >
+          <Link href="/customers/new" className="inline-flex h-11 min-w-[185px] items-center justify-center rounded-lg bg-[#0B4C8C] px-4 text-[12px] font-semibold text-white shadow-sm transition hover:bg-[#083B6D]">
             + Add New Customer
           </Link>
         </section>
 
-        <section className="rounded-2xl border border-[#DCE7F5] bg-white p-3 shadow-[0_6px_18px_rgba(7,29,73,0.035)]">
-          <SearchFilterBar searchPlaceholder="Search by customer, code, mobile or city" filterLabel="Customer status" />
-          <div className="mt-2">
-            {error ? <DataError message={error.message} /> : <DataTable compact rows={rows} emptyTitle="No customers added yet" emptyDescription="Add your first customer to begin onboarding and fleet management." columns={[
-              { header: "Customer", cell: (customer) => <><p className="font-semibold leading-5 text-[#071D49]">{customer.company_name ?? customer.contact_name}</p><p className="text-[11px] leading-4 text-[#7A8797]">{customer.customer_code}</p></> },
-              { header: "Partner Type", cell: (customer) => customer.partner_type ? partnerLabels[customer.partner_type] ?? customer.partner_type : "—" },
-              { header: "Mobile", cell: (customer) => customer.phone },
-              { header: "City", cell: (customer) => customer.city ?? "—" },
-              { header: "Fleet", cell: (customer) => customer.fleet_size_band ? fleetLabels[customer.fleet_size_band] ?? customer.fleet_size_band : "—" },
-              { header: "Vehicles", cell: (customer) => <span className="font-semibold">{customer.vehicles?.[0]?.count ?? 0}</span> },
-              { header: "Status", cell: (customer) => <StatusBadge status={customer.onboarding_status} /> },
-              { header: "", cell: (customer) => <Link className="whitespace-nowrap font-semibold text-[#174EA6] hover:text-[#071D49]" href={`/customers/${customer.id}/edit`}>View / Edit</Link> }
-            ]} />}
-          </div>
+        <section className="rounded-xl border border-[#DCE7F5] bg-white p-2 shadow-[0_4px_14px_rgba(7,29,73,0.025)]">
+          <SearchFilterBar compact searchPlaceholder="Search by customer, code, mobile or city" filterLabel="Customer status" />
+          {error ? <DataError message={error.message} /> : <DataTable compact rows={rows} emptyTitle="No customers added yet" emptyDescription="Add your first customer to begin onboarding and fleet management." columns={[
+            { header: "Customer", cell: (customer) => <><p className="font-semibold leading-4 text-[#071D49]">{customer.company_name ?? customer.contact_name}</p><p className="text-[9.5px] leading-3 text-[#7A8797]">{customer.customer_code}</p></> },
+            { header: "Partner Type", cell: (customer) => customer.partner_type ? partnerLabels[customer.partner_type] ?? customer.partner_type : "—" },
+            { header: "Mobile", cell: (customer) => customer.phone },
+            { header: "City", cell: (customer) => customer.city ?? "—" },
+            { header: "Fleet", cell: (customer) => customer.fleet_size_band ? fleetLabels[customer.fleet_size_band] ?? customer.fleet_size_band : "—" },
+            { header: "Vehicles", cell: (customer) => <span className="font-semibold">{customer.vehicles?.[0]?.count ?? 0}</span> },
+            { header: "Status", cell: (customer) => <StatusBadge status={customer.onboarding_status} /> },
+            { header: "", cell: (customer) => <Link className="whitespace-nowrap text-[11px] font-semibold text-[#174EA6] hover:text-[#071D49]" href={`/customers/${customer.id}/edit`}>View / Edit</Link> }
+          ]} />}
         </section>
       </div>
     </AppShell>
@@ -82,9 +77,9 @@ export default async function CustomersPage() {
 
 function SummaryCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="flex min-h-[66px] items-center justify-between rounded-xl border border-[#DCE7F5] bg-white px-4 py-2.5 shadow-[0_4px_12px_rgba(7,29,73,0.025)]">
-      <p className="text-[11.5px] font-medium text-[#68758A]">{label}</p>
-      <p className="text-xl font-semibold text-[#071D49]">{value}</p>
+    <div className="flex h-11 items-center justify-between rounded-lg border border-[#DCE7F5] bg-white px-3 shadow-[0_3px_10px_rgba(7,29,73,0.02)]">
+      <p className="text-[10.5px] font-medium text-[#68758A]">{label}</p>
+      <p className="text-[17px] font-semibold text-[#071D49]">{value}</p>
     </div>
   );
 }
