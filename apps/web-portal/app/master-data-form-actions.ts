@@ -87,31 +87,58 @@ export async function saveVehicle(id: string, formData: FormData) {
 
 export async function createInsuranceCompany(formData: FormData): Promise<{ ok: boolean; insurer?: { value: string; label: string }; error?: string }> {
   await requireMasterDataManager();
+
   const name = requiredText(formData, "name");
+  const branchName = requiredText(formData, "branch_name");
+  const contactEmail = requiredText(formData, "contact_email")?.toLowerCase() ?? null;
+  const contactPhone = requiredText(formData, "contact_phone")?.replace(/\D/g, "") ?? null;
+  const portalInput = requiredText(formData, "claims_portal_url");
+
   if (!name) return { ok: false, error: "Enter the insurance company name." };
+  if (!branchName) return { ok: false, error: "Enter the branch name." };
+  if (!contactEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) return { ok: false, error: "Enter a valid contact email." };
+  if (!contactPhone || contactPhone.length < 10 || contactPhone.length > 12) return { ok: false, error: "Enter a valid contact phone number." };
+  if (!portalInput) return { ok: false, error: "Enter the claims portal URL." };
+
+  const claimsPortalUrl = /^https?:\/\//i.test(portalInput) ? portalInput : `https://${portalInput}`;
+  try { new URL(claimsPortalUrl); } catch { return { ok: false, error: "Enter a valid claims portal URL." }; }
 
   const admin = createSupabaseAdminClient();
-  const { data: existing, error: lookupError } = await admin.from("insurance_companies").select("id, name").ilike("name", name).limit(1).maybeSingle<{ id: string; name: string }>();
-  if (lookupError) return { ok: false, error: lookupError.message };
-  if (existing) return { ok: true, insurer: { value: existing.id, label: existing.name } };
+  const { data: existing, error: lookupError } = await admin
+    .from("insurance_companies")
+    .select("id, name")
+    .ilike("name", name)
+    .ilike("branch_name", branchName)
+    .limit(1)
+    .maybeSingle<{ id: string; name: string }>();
 
-  const { data, error } = await admin.from("insurance_companies").insert({ name }).select("id, name").single<{ id: string; name: string }>();
+  if (lookupError) return { ok: false, error: lookupError.message };
+
+  const profile = {
+    name,
+    branch_name: branchName,
+    contact_email: contactEmail,
+    contact_phone: contactPhone,
+    claims_portal_url: claimsPortalUrl,
+    updated_at: new Date().toISOString()
+  };
+
+  if (existing) {
+    const { data, error } = await admin.from("insurance_companies").update(profile).eq("id", existing.id).select("id, name").single<{ id: string; name: string }>();
+    if (error || !data) return { ok: false, error: error?.message ?? "Unable to update insurance company." };
+    revalidatePath("/policies/new");
+    return { ok: true, insurer: { value: data.id, label: `${data.name} — ${branchName}` } };
+  }
+
+  const { data, error } = await admin.from("insurance_companies").insert(profile).select("id, name").single<{ id: string; name: string }>();
   if (error || !data) return { ok: false, error: error?.message ?? "Unable to create insurance company." };
   revalidatePath("/policies/new");
-  return { ok: true, insurer: { value: data.id, label: data.name } };
+  return { ok: true, insurer: { value: data.id, label: `${data.name} — ${branchName}` } };
 }
 
 async function resolveInsurerId(formData: FormData) {
-  const admin = createSupabaseAdminClient();
   const existingId = requiredText(formData, "insurance_company_id");
-  if (existingId) return existingId;
-  const newName = requiredText(formData, "insurance_company_name");
-  if (!newName) return null;
-  const { data: existing } = await admin.from("insurance_companies").select("id").ilike("name", newName).limit(1).maybeSingle<{ id: string }>();
-  if (existing?.id) return existing.id;
-  const { data, error } = await admin.from("insurance_companies").insert({ name: newName }).select("id").single<{ id: string }>();
-  if (error) throw new Error(error.message);
-  return data.id;
+  return existingId ?? null;
 }
 
 async function savePolicyRecord(id: string | null, formData: FormData) {
@@ -129,8 +156,7 @@ async function savePolicyRecord(id: string | null, formData: FormData) {
   const { data: vehicle, error: vehicleError } = await admin.from("vehicles").select("id, customer_id").eq("id", vehicleId).eq("customer_id", customerId).maybeSingle<{ id: string; customer_id: string }>();
   if (vehicleError || !vehicle) redirect(errorUrl(basePath, vehicleError?.message ?? "The selected vehicle does not belong to the selected customer."));
 
-  let insurerId: string | null = null;
-  try { insurerId = await resolveInsurerId(formData); } catch (error) { redirect(errorUrl(basePath, error instanceof Error ? error.message : "Unable to save insurer.")); }
+  const insurerId = await resolveInsurerId(formData);
   if (!insurerId) redirect(errorUrl(basePath, "Select an insurance company."));
 
   const payload = {
