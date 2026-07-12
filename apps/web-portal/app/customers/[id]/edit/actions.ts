@@ -64,6 +64,7 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
     const storagePath = `${id}/${documentType}/${randomUUID()}.${safeExtension(file)}`;
     const { error: uploadError } = await admin.storage.from(DOCUMENT_BUCKET).upload(storagePath, new Uint8Array(await file.arrayBuffer()), { contentType: file.type, upsert: false });
     if (uploadError) throw new Error(uploadError.message);
+
     const { error: metadataError } = await admin.from("customer_documents").insert({
       customer_id: id,
       document_type: documentType,
@@ -73,9 +74,15 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
       mime_type: file.type,
       file_size: file.size,
       verification_status: "verified",
+      upload_source: "manager_portal",
+      verified_by: profile.id,
+      verified_at: new Date().toISOString(),
       uploaded_by: profile.id
     });
-    if (metadataError) throw new Error(metadataError.message);
+    if (metadataError) {
+      await admin.storage.from(DOCUMENT_BUCKET).remove([storagePath]);
+      throw new Error(`Document metadata could not be saved: ${metadataError.message}`);
+    }
   }
 
   const requiredTypes = isGstRegistered ? documentTypes : documentTypes.filter((type) => type !== "gst_copy");
