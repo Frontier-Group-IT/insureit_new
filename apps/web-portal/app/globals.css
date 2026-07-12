@@ -14,6 +14,11 @@
   --brand-rail: #15183b;
   --brand-accent: #7067e8;
   --brand-accent-soft: #e9ebff;
+  --accent: var(--brand-accent);
+  --accent-strong: #5d55d6;
+  --border: var(--border-subtle);
+  --text: var(--text-primary);
+  --muted: var(--text-secondary);
   --radius-control: 6px;
   --radius-panel: 8px;
   --shadow-panel: 0 2px 8px rgba(16, 24, 40, 0.035);
