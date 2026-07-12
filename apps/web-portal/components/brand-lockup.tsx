@@ -17,19 +17,19 @@ export function BrandLockup({ compact = false, inverse = false, className = "", 
   const isCompact = resolvedSize === "compact";
 
   return (
-    <div className={`flex min-w-0 items-center ${isHero ? "gap-4" : isCompact ? "gap-2" : "gap-2.5"} ${className}`}>
+    <div className={`flex min-w-0 items-center ${isHero ? "gap-4" : isCompact ? "gap-2.5" : "gap-3"} ${className}`}>
       <Image
         src={markUrl}
         alt="InsureIT"
-        width={isHero ? 76 : isCompact ? 34 : 42}
-        height={isHero ? 76 : isCompact ? 34 : 42}
-        className={`${isHero ? "h-[76px] w-[76px]" : isCompact ? "h-8.5 w-8.5" : "h-10.5 w-10.5"} shrink-0 object-contain`}
+        width={isHero ? 76 : isCompact ? 38 : 44}
+        height={isHero ? 76 : isCompact ? 38 : 44}
+        className={`${isHero ? "h-[76px] w-[76px]" : isCompact ? "h-[38px] w-[38px]" : "h-11 w-11"} shrink-0 object-contain`}
         unoptimized
         priority
       />
-      <div className={`${isHero ? "w-[250px]" : "min-w-0"} leading-none`}>
-        <div className={`${isHero ? "text-[49px] leading-[0.88]" : isCompact ? "text-[19px]" : "text-[23px]"} truncate font-black tracking-[-0.055em] ${nameColor}`}>insureit</div>
-        <div className={`${isHero ? "mt-2 text-[12px] tracking-[0.055em]" : isCompact ? "mt-0.5 text-[6.5px]" : "mt-1 text-[7.5px]"} truncate font-black uppercase ${taglineColor}`}>YOUR SAFETY, OUR PROMISE</div>
+      <div className={`${isHero ? "w-[250px]" : isCompact ? "w-[142px]" : "w-[158px]"} leading-none`}>
+        <div className={`${isHero ? "text-[49px] leading-[0.88]" : isCompact ? "text-[29px] leading-[0.9]" : "text-[32px] leading-[0.9]"} whitespace-nowrap font-black tracking-[-0.065em] ${nameColor}`}>insureit</div>
+        <div className={`${isHero ? "mt-2 text-[12px] tracking-[0.055em]" : isCompact ? "mt-1.5 text-[6.5px] tracking-[0.015em]" : "mt-1.5 text-[7px] tracking-[0.02em]"} whitespace-nowrap font-black uppercase ${taglineColor}`}>YOUR SAFETY, OUR PROMISE</div>
       </div>
     </div>
   );
