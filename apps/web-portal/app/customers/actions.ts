@@ -133,7 +133,17 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
     const { error: uploadError } = await admin.storage.from(DOCUMENT_BUCKET).upload(storagePath, bytes, { contentType: file.type, upsert: false });
     if (uploadError) { if (uploadedPaths.length) await admin.storage.from(DOCUMENT_BUCKET).remove(uploadedPaths); if (createdCustomer) await admin.from("customers").delete().eq("id", customer.id); if (createdAuthUserId && createdCustomer) await admin.auth.admin.deleteUser(createdAuthUserId); return failure(`${labels[input.type]} upload failed: ${uploadError.message}`, input.field); }
     uploadedPaths.push(storagePath);
-    const { error: metadataError } = await admin.from("customer_documents").insert({ customer_id: customer.id, document_type: input.type, file_name: file.name, storage_bucket: DOCUMENT_BUCKET, storage_path: storagePath, mime_type: file.type, file_size: file.size, verification_status: "pending", uploaded_by: profile.id });
+    const { error: metadataError } = await admin.from("customer_documents").insert({
+      customer_id: customer.id,
+      document_type: input.type,
+      file_name: file.name,
+      storage_bucket: DOCUMENT_BUCKET,
+      storage_path: storagePath,
+      mime_type: file.type,
+      file_size: file.size,
+      verification_status: "verified",
+      uploaded_by: profile.id
+    });
     if (metadataError) { await admin.storage.from(DOCUMENT_BUCKET).remove(uploadedPaths); if (createdCustomer) await admin.from("customers").delete().eq("id", customer.id); if (createdAuthUserId && createdCustomer) await admin.auth.admin.deleteUser(createdAuthUserId); return failure(`Document record could not be saved: ${metadataError.message}`, input.field); }
   }
 
