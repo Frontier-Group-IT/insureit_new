@@ -68,10 +68,17 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
     if (metadataError) throw new Error(metadataError.message);
   }
 
-  const { count } = await admin.from("customer_documents").select("id", { count: "exact", head: true }).eq("customer_id", id);
-  await admin.from("customers").update({ onboarding_status: (count ?? 0) >= (isGstRegistered ? 4 : 3) ? "active" : "documents_pending", updated_by: profile.id }).eq("id", id);
+  const requiredTypes = isGstRegistered ? documentTypes : documentTypes.filter((type) => type !== "gst_copy");
+  const { data: savedDocuments } = await admin.from("customer_documents").select("document_type").eq("customer_id", id).in("document_type", [...requiredTypes]);
+  const savedTypes = new Set((savedDocuments ?? []).map((row: { document_type: string }) => row.document_type));
+  const hasAllRequiredDocuments = requiredTypes.every((type) => savedTypes.has(type));
+
+  await admin.from("customers").update({
+    onboarding_status: hasAllRequiredDocuments ? "active" : "documents_pending",
+    updated_by: profile.id
+  }).eq("id", id);
 
   revalidatePath("/customers");
-  revalidatePath(`/customers/${id}/edit`);
-  redirect("/customers");
+  revalidatePath(`/customers/${id}/edit`, "page");
+  redirect(`/customers/${id}/edit?updated=${Date.now()}#documents`);
 }
