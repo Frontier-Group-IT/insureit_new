@@ -36,14 +36,14 @@ export function DataTable<T>({
 
   return (
     <Card className={compact ? "border-0 p-0 shadow-none" : ""}>
-      <div className={`overflow-hidden border border-slate-200 ${compact ? "rounded-xl" : "rounded-2xl"}`}>
+      <div className={`overflow-hidden border border-slate-200 ${compact ? "rounded-lg" : "rounded-2xl"}`}>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-              <tr>{columns.map((column) => <th className={compact ? "px-3 py-2.5" : "px-4 py-3"} key={column.header}>{column.header}</th>)}</tr>
+          <table className={`w-full min-w-[760px] text-left ${compact ? "text-[12px]" : "text-sm"}`}>
+            <thead className="bg-slate-50 uppercase tracking-wide text-slate-500">
+              <tr>{columns.map((column) => <th className={compact ? "px-2.5 py-1.5 text-[10px]" : "px-4 py-3 text-xs"} key={column.header}>{column.header}</th>)}</tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
-              {rows.map((row, index) => <tr className="hover:bg-slate-50" key={index}>{columns.map((column) => <td className={compact ? "px-3 py-2.5 align-middle" : "px-4 py-4"} key={column.header}>{column.cell(row)}</td>)}</tr>)}
+              {rows.map((row, index) => <tr className="hover:bg-slate-50" key={index}>{columns.map((column) => <td className={compact ? "px-2.5 py-1.5 align-middle" : "px-4 py-4"} key={column.header}>{column.cell(row)}</td>)}</tr>)}
             </tbody>
           </table>
         </div>
