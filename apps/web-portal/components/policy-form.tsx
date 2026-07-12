@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { InputHTMLAttributes, ReactNode } from "react";
 import { useMemo, useState, useTransition } from "react";
 import { FormSubmitButton } from "./form-submit-button";
 
@@ -49,8 +50,9 @@ export function PolicyForm({ action, createInsurerAction, customers, vehicles, i
     startTransition(async () => {
       const result = await createInsurerAction(formData);
       if (!result.ok || !result.insurer) { setInsurerError(result.error ?? "Unable to add insurance company."); return; }
-      setInsurers((current) => [...current.filter((item) => item.value !== result.insurer!.value), result.insurer!].sort((a, b) => a.label.localeCompare(b.label)));
-      setInsurerId(result.insurer.value);
+      const insurer = result.insurer;
+      setInsurers((current) => [...current.filter((item) => item.value !== insurer.value), insurer].sort((a, b) => a.label.localeCompare(b.label)));
+      setInsurerId(insurer.value);
       setInsurerName("");
       setModalOpen(false);
     });
@@ -74,6 +76,6 @@ export function PolicyForm({ action, createInsurerAction, customers, vehicles, i
   </>;
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) { return <section className="border-b border-[#E2E8F0] px-5 py-4"><h3 className="mb-3 text-[13px] font-semibold text-[#0F172A]">{title}</h3><div className="grid gap-x-3 gap-y-3 md:grid-cols-2 xl:grid-cols-3">{children}</div></section>; }
-function Field({ label, name, placeholder = "", type = "text", required = false, defaultValue, uppercase = false, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; name: string; uppercase?: boolean }) { return <div><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} type={type} placeholder={placeholder} required={required} defaultValue={defaultValue ?? ""} className={`${inputClass} ${uppercase ? "uppercase" : ""}`} {...props} /></div>; }
+function Section({ title, children }: { title: string; children: ReactNode }) { return <section className="border-b border-[#E2E8F0] px-5 py-4"><h3 className="mb-3 text-[13px] font-semibold text-[#0F172A]">{title}</h3><div className="grid gap-x-3 gap-y-3 md:grid-cols-2 xl:grid-cols-3">{children}</div></section>; }
+function Field({ label, name, placeholder = "", type = "text", required = false, defaultValue, uppercase = false, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; name: string; uppercase?: boolean }) { return <div><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} type={type} placeholder={placeholder} required={required} defaultValue={defaultValue ?? ""} className={`${inputClass} ${uppercase ? "uppercase" : ""}`} {...props} /></div>; }
 function Select({ label, name, options, value, onChange, emptyLabel, required = false, disabled = false }: { label: string; name: string; options: SelectOption[]; value: string; onChange: (value: string) => void; emptyLabel: string; required?: boolean; disabled?: boolean }) { return <div><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><select id={name} name={name} className={inputClass} required={required} disabled={disabled} value={value} onChange={(event) => onChange(event.target.value)}><option value="">{emptyLabel}</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>; }
