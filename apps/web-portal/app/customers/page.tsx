@@ -60,7 +60,7 @@ export default async function CustomersPage() {
         <section className="rounded-xl border border-[#DCE7F5] bg-white p-2 shadow-[0_4px_14px_rgba(7,29,73,0.025)]">
           <SearchFilterBar compact searchPlaceholder="Search by customer, code, mobile or city" filterLabel="Customer status" />
           {error ? <DataError message={error.message} /> : <DataTable compact rows={rows} emptyTitle="No customers added yet" emptyDescription="Add your first customer to begin onboarding and fleet management." columns={[
-            { header: "Customer", cell: (customer) => <><p className="font-semibold leading-4 text-[#071D49]">{customer.company_name ?? customer.contact_name}</p><p className="text-[9.5px] leading-3 text-[#7A8797]">{customer.customer_code}</p></> },
+            { header: "Customer", cell: (customer) => <><p className="font-semibold leading-4 text-[#071D49]">{customer.contact_name}</p>{customer.company_name ? <p className="text-[9.5px] leading-3 text-[#536274]">{customer.company_name}</p> : null}<p className="text-[9.5px] leading-3 text-[#7A8797]">{customer.customer_code}</p></> },
             { header: "Partner Type", cell: (customer) => customer.partner_type ? partnerLabels[customer.partner_type] ?? customer.partner_type : "—" },
             { header: "Mobile", cell: (customer) => customer.phone },
             { header: "City", cell: (customer) => customer.city ?? "—" },
