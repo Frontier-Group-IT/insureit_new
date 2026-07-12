@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { ConfirmModal, FeedbackToast } from "@/components/ui-feedback";
 import type { CustomerOnboardingState } from "./actions";
@@ -19,8 +19,9 @@ type Props = {
 };
 
 type PartnerType = "individual_proprietor" | "dealership" | "corporate" | "group";
+type FormSnapshot = Record<string, string | boolean>;
 
-const inputClass = "h-8 w-full rounded-md border border-[#D8E2EE] bg-white px-2.5 text-[12px] text-[#071D49] outline-none transition placeholder:text-[#9AA7B8] focus:border-[#2D69B3] focus:ring-2 focus:ring-[#E8F2FF]";
+const inputClass = "h-8 w-full rounded-md border bg-white px-2.5 text-[12px] text-[#071D49] outline-none transition placeholder:text-[#9AA7B8] focus:ring-2";
 const labelClass = "mb-0.5 block text-[10.5px] font-semibold text-[#344256]";
 const unsavedMessage = "Leaving or changing the partner type will discard the customer details you entered.";
 
@@ -32,7 +33,7 @@ const partnerOptions: Array<{ value: PartnerType; label: string }> = [
 ];
 
 export function CustomerOnboardingForm({ action }: Props) {
-  const [formState, formAction] = useActionState(action, { error: null });
+  const [formState, formAction] = useActionState(action, { error: null, field: null });
   const [partnerType, setPartnerType] = useState<PartnerType | "">("");
   const [gstRegistered, setGstRegistered] = useState(false);
   const [cityQuery, setCityQuery] = useState("");
@@ -42,10 +43,34 @@ export function CustomerOnboardingForm({ action }: Props) {
   const [pendingPartner, setPendingPartner] = useState<PartnerType | null>(null);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const [showError, setShowError] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const snapshotRef = useRef<FormSnapshot>({});
 
   useEffect(() => {
     setShowError(Boolean(formState.error));
-  }, [formState.error]);
+    if (!formState.error || !formRef.current) return;
+
+    const form = formRef.current;
+    for (const [name, value] of Object.entries(snapshotRef.current)) {
+      const element = form.elements.namedItem(name);
+      if (element instanceof HTMLInputElement) {
+        if (element.type === "checkbox") element.checked = Boolean(value);
+        else if (element.type !== "file" && element.type !== "radio") element.value = String(value);
+      } else if (element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement) {
+        element.value = String(value);
+      }
+    }
+
+    if (formState.field) {
+      requestAnimationFrame(() => {
+        const field = form.elements.namedItem(formState.field ?? "");
+        if (field instanceof HTMLElement) {
+          field.focus({ preventScroll: true });
+          field.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      });
+    }
+  }, [formState.error, formState.field]);
 
   useEffect(() => {
     if (!isDirty) return;
@@ -96,12 +121,14 @@ export function CustomerOnboardingForm({ action }: Props) {
 
   const isIndividual = partnerType === "individual_proprietor";
   const modalOpen = Boolean(pendingPartner || pendingHref);
+  const errorField = formState.field;
 
   function resetPartnerData() {
     setGstRegistered(false);
     setCityQuery("");
     setSelectedLocation(null);
     setLocations([]);
+    formRef.current?.reset();
   }
 
   function selectPartner(nextPartner: PartnerType) {
@@ -133,6 +160,19 @@ export function CustomerOnboardingForm({ action }: Props) {
     }
   }
 
+  function captureForm(form: HTMLFormElement) {
+    const snapshot: FormSnapshot = {};
+    for (const element of Array.from(form.elements)) {
+      if (element instanceof HTMLInputElement) {
+        if (!element.name || element.type === "file" || element.type === "radio") continue;
+        snapshot[element.name] = element.type === "checkbox" ? element.checked : element.value;
+      } else if (element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement) {
+        if (element.name) snapshot[element.name] = element.value;
+      }
+    }
+    snapshotRef.current = snapshot;
+  }
+
   return (
     <>
       {formState.error && showError ? <FeedbackToast message={formState.error} tone="error" onClose={() => setShowError(false)} /> : null}
@@ -147,6 +187,7 @@ export function CustomerOnboardingForm({ action }: Props) {
       />
 
       <form
+        ref={formRef}
         action={formAction}
         className="space-y-2 pb-4"
         onChange={(event) => {
@@ -155,14 +196,18 @@ export function CustomerOnboardingForm({ action }: Props) {
             if (target.name !== "partner_type") setIsDirty(true);
           }
         }}
-        onSubmit={() => setIsDirty(false)}
+        onSubmit={(event) => {
+          captureForm(event.currentTarget);
+          setIsDirty(true);
+        }}
       >
         <section className="rounded-lg border border-[#DCE7F5] bg-white p-2.5 shadow-[0_3px_10px_rgba(7,29,73,0.025)]">
           <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
             {partnerOptions.map((option) => {
               const selected = partnerType === option.value;
+              const hasError = errorField === "partner_type";
               return (
-                <label key={option.value} className={`flex h-8 cursor-pointer items-center gap-2 rounded-md border px-2.5 text-[11px] font-semibold transition ${selected ? "border-[#2D69B3] bg-[#EEF5FF] text-[#174EA6]" : "border-[#D8E2EE] bg-white text-[#344256] hover:bg-[#F7FAFE]"}`}>
+                <label key={option.value} className={`flex h-8 cursor-pointer items-center gap-2 rounded-md border px-2.5 text-[11px] font-semibold transition ${hasError ? "border-red-400 bg-red-50" : selected ? "border-[#2D69B3] bg-[#EEF5FF] text-[#174EA6]" : "border-[#D8E2EE] bg-white text-[#344256] hover:bg-[#F7FAFE]"}`}>
                   <input type="radio" name="partner_type" value={option.value} checked={selected} onChange={() => selectPartner(option.value)} className="h-3 w-3 accent-[#174EA6]" />
                   {option.label}
                 </label>
@@ -180,14 +225,14 @@ export function CustomerOnboardingForm({ action }: Props) {
         {isIndividual ? (
           <>
             <Section step="1" title="Personal Information">
-              <Field label="Name" name="contact_name" required placeholder="Customer or proprietor name" />
-              <Field label="Mobile Number" name="phone" required placeholder="10-digit mobile number" inputMode="tel" pattern="[0-9+ ]{10,14}" />
+              <Field label="Name" name="contact_name" error={errorField === "contact_name"} required placeholder="Customer or proprietor name" />
+              <Field label="Mobile Number" name="phone" error={errorField === "phone"} required placeholder="10-digit mobile number" inputMode="tel" pattern="[0-9+ ]{10,14}" />
               <Field label="Email ID" name="email" type="email" placeholder="Optional email" />
               <Field label="Street" name="address_street" required placeholder="House, building or street" />
               <Field label="Locality" name="address_locality" placeholder="Area or locality" />
               <div className="relative">
                 <label className={labelClass} htmlFor="city_search">City *</label>
-                <input id="city_search" className={inputClass} value={cityQuery} required autoComplete="off" placeholder="Start typing a city" onChange={(event) => { setCityQuery(event.target.value); setSelectedLocation(null); }} />
+                <input id="city_search" name="city_search" className={fieldClass(errorField === "city_search")} value={cityQuery} required autoComplete="off" placeholder="Start typing a city" onChange={(event) => { setCityQuery(event.target.value); setSelectedLocation(null); }} />
                 {locations.length ? (
                   <div className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-md border border-[#D8E2EE] bg-white p-1 shadow-xl">
                     {locations.map((location) => (
@@ -207,43 +252,58 @@ export function CustomerOnboardingForm({ action }: Props) {
               <input type="hidden" name="postal_code" value={selectedLocation?.pincode ?? ""} />
             </Section>
 
-            <Section step="2" title="Document Details">
-              <Field label="PAN Number" name="pan_number" required placeholder="ABCDE1234F" maxLength={10} />
-              <FileField label="PAN Copy" name="pan_copy" required />
-              <Field label="Aadhaar Number" name="aadhaar_number" required placeholder="12-digit Aadhaar number" inputMode="numeric" pattern="[0-9]{12}" maxLength={12} />
-              <FileField label="Aadhaar Front" name="aadhaar_front" required />
-              <FileField label="Aadhaar Back" name="aadhaar_back" required />
-              <label className="flex h-8 items-center gap-2 rounded-md border border-[#E2EAF4] bg-[#F8FBFF] px-2.5 text-[11px] font-semibold text-[#071D49]">
-                <input type="checkbox" name="is_gst_registered" value="true" checked={gstRegistered} onChange={(event) => setGstRegistered(event.target.checked)} className="h-3 w-3 rounded border-[#AFC0D5]" />
-                GST Registered
-              </label>
-              <Field label="Legal Trade Name" name="legal_trade_name" required={gstRegistered} placeholder={gstRegistered ? "As per GST" : "Optional"} />
-              {gstRegistered ? <Field label="GST Number" name="gst_number" required placeholder="22AAAAA0000A1Z5" maxLength={15} /> : null}
-              {gstRegistered ? <FileField label="GST Copy" name="gst_copy" required /> : null}
-            </Section>
-
-            <Section step="3" title="Fleet Details">
-              <div>
-                <label className={labelClass} htmlFor="fleet_size_band">Fleet Size *</label>
-                <select id="fleet_size_band" name="fleet_size_band" required className={inputClass}>
-                  <option value="">Select fleet size</option>
-                  <option value="less_than_5">Less than 5</option>
-                  <option value="5_to_20">5–20</option>
-                  <option value="20_to_50">20–50</option>
-                  <option value="more_than_50">More than 50</option>
-                </select>
+            <section className="rounded-lg border border-[#DCE7F5] bg-white p-2.5 shadow-[0_3px_10px_rgba(7,29,73,0.025)]">
+              <div className="mb-1.5 flex items-center justify-between border-b border-[#E8EEF6] pb-1.5">
+                <h3 className="text-[12px] font-semibold text-[#071D49]">Document Details</h3>
+                <span className="rounded-full bg-[#EEF5FF] px-1.5 py-0.5 text-[9px] font-semibold text-[#245A9A]">2</span>
               </div>
-            </Section>
+              <div className="grid gap-x-2 gap-y-1.5 md:grid-cols-2 xl:grid-cols-4">
+                <Field label="PAN Number" name="pan_number" error={errorField === "pan_number"} required placeholder="ABCDE1234F" maxLength={10} />
+                <FileField label="PAN Copy" name="pan_copy" error={errorField === "pan_copy"} required />
+                <Field label="Aadhaar Number" name="aadhaar_number" error={errorField === "aadhaar_number"} required placeholder="12-digit Aadhaar number" inputMode="numeric" pattern="[0-9]{12}" maxLength={12} />
+                <label className={`mt-[15px] flex h-8 items-center gap-2 rounded-md border px-2.5 text-[11px] font-semibold text-[#071D49] ${errorField === "is_gst_registered" ? "border-red-400 bg-red-50" : "border-[#D8E2EE] bg-[#F8FBFF]"}`}>
+                  <input type="checkbox" name="is_gst_registered" value="true" checked={gstRegistered} onChange={(event) => setGstRegistered(event.target.checked)} className="h-3 w-3 rounded border-[#AFC0D5]" />
+                  GST Registered
+                </label>
+                <FileField label="Aadhaar Front" name="aadhaar_front" error={errorField === "aadhaar_front"} required />
+                <FileField label="Aadhaar Back" name="aadhaar_back" error={errorField === "aadhaar_back"} required />
+                <Field label="Legal Trade Name" name="legal_trade_name" error={errorField === "legal_trade_name"} required={gstRegistered} placeholder={gstRegistered ? "As per GST" : "Optional"} />
+                {gstRegistered ? <Field label="GST Number" name="gst_number" error={errorField === "gst_number"} required placeholder="22AAAAA0000A1Z5" maxLength={15} /> : <div />}
+                {gstRegistered ? <FileField label="GST Copy" name="gst_copy" error={errorField === "gst_copy"} required /> : null}
+              </div>
+            </section>
 
-            <div className="flex justify-end gap-2 rounded-lg border border-[#DCE7F5] bg-white px-2.5 py-2">
-              <Link href="/customers" className="rounded-md border border-[#D5E0EC] px-3.5 py-1.5 text-center text-[11px] font-semibold text-[#344256] hover:bg-[#F7FAFE]">Cancel</Link>
-              <FormSubmitButton label="Create Customer" />
-            </div>
+            <section className="rounded-lg border border-[#DCE7F5] bg-white p-2.5 shadow-[0_3px_10px_rgba(7,29,73,0.025)]">
+              <div className="mb-1.5 flex items-center justify-between border-b border-[#E8EEF6] pb-1.5">
+                <h3 className="text-[12px] font-semibold text-[#071D49]">Fleet Details</h3>
+                <span className="rounded-full bg-[#EEF5FF] px-1.5 py-0.5 text-[9px] font-semibold text-[#245A9A]">3</span>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div className="w-full sm:max-w-xs">
+                  <label className={labelClass} htmlFor="fleet_size_band">Fleet Size *</label>
+                  <select id="fleet_size_band" name="fleet_size_band" required className={fieldClass(errorField === "fleet_size_band")}>
+                    <option value="">Select fleet size</option>
+                    <option value="less_than_5">Less than 5</option>
+                    <option value="5_to_20">5–20</option>
+                    <option value="20_to_50">20–50</option>
+                    <option value="more_than_50">More than 50</option>
+                  </select>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Link href="/customers" className="rounded-md border border-[#D5E0EC] px-3.5 py-1.5 text-center text-[11px] font-semibold text-[#344256] hover:bg-[#F7FAFE]">Cancel</Link>
+                  <FormSubmitButton label="Create Customer" />
+                </div>
+              </div>
+            </section>
           </>
         ) : null}
       </form>
     </>
   );
+}
+
+function fieldClass(error = false, readOnly = false) {
+  return `${inputClass} ${error ? "border-red-400 bg-red-50/40 focus:border-red-500 focus:ring-red-100" : "border-[#D8E2EE] focus:border-[#2D69B3] focus:ring-[#E8F2FF]"} ${readOnly ? "bg-[#F4F7FA] text-[#68758A]" : ""}`;
 }
 
 function Section({ step, title, children }: { step: string; title: string; children: React.ReactNode }) {
@@ -258,15 +318,21 @@ function Section({ step, title, children }: { step: string; title: string; child
   );
 }
 
-function Field({ label, name, type = "text", required = false, placeholder = "", value, readOnly = false, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; name: string }) {
-  return <div><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} type={type} required={required} placeholder={placeholder} value={value} readOnly={readOnly} className={`${inputClass} ${readOnly ? "bg-[#F4F7FA] text-[#68758A]" : ""}`} {...props} /></div>;
+function Field({ label, name, type = "text", required = false, placeholder = "", value, readOnly = false, error = false, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; name: string; error?: boolean }) {
+  return <div><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} type={type} required={required} placeholder={placeholder} value={value} readOnly={readOnly} aria-invalid={error || undefined} className={fieldClass(error, readOnly)} {...props} /></div>;
 }
 
-function FileField({ label, name, required = false }: { label: string; name: string; required?: boolean }) {
+function FileField({ label, name, required = false, error = false }: { label: string; name: string; required?: boolean; error?: boolean }) {
+  const [fileName, setFileName] = useState("");
   return (
     <div>
-      <label className={labelClass} htmlFor={name}>↥ {label}{required ? " *" : ""}</label>
-      <input id={name} name={name} type="file" required={required} accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" className="block h-8 w-full rounded-md border border-dashed border-[#B7C8DB] bg-[#FAFCFF] px-1.5 py-0.5 text-[9px] text-[#536274] file:mr-1.5 file:rounded file:border-0 file:bg-[#EAF3FF] file:px-2 file:py-1 file:text-[9px] file:font-semibold file:text-[#245A9A]" />
+      <span className={labelClass}>{label}{required ? " *" : ""}</span>
+      <label htmlFor={name} className={`flex h-8 cursor-pointer items-center gap-2 rounded-md border px-2.5 text-[10px] transition ${error ? "border-red-400 bg-red-50/50 text-red-700" : "border-dashed border-[#B7C8DB] bg-[#FAFCFF] text-[#536274] hover:border-[#2D69B3] hover:bg-[#F4F8FE]"}`}>
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-[#EAF3FF] font-bold text-[#245A9A]">↥</span>
+        <span className="min-w-0 flex-1 truncate">{fileName || "Choose file"}</span>
+        <span className="text-[9px] text-[#8794A5]">PDF/JPG/PNG</span>
+      </label>
+      <input id={name} name={name} type="file" required={required} accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" aria-invalid={error || undefined} className="sr-only" onChange={(event) => setFileName(event.target.files?.[0]?.name ?? "")} />
     </div>
   );
 }
