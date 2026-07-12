@@ -1,9 +1,12 @@
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/shell";
-import { createServerSupabaseClient } from "@/lib/auth-server";
 import { requireMasterDataManager } from "@/lib/master-data-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { CustomerProfileEditor } from "./customer-profile-editor";
 import { updateCustomerProfile } from "./actions";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 type Customer = {
   id: string;
@@ -47,19 +50,19 @@ type AgentRow = { id: string; full_name: string };
 export default async function EditCustomerPage({ params }: { params: Promise<{ id: string }> }) {
   await requireMasterDataManager();
   const { id } = await params;
-  const supabase = await createServerSupabaseClient();
+  const admin = createSupabaseAdminClient();
 
   const [{ data: customer, error }, { data: documents }, { data: vehicles }, { data: agents }] = await Promise.all([
-    supabase.from("customers").select("id, customer_code, contact_name, company_name, phone, email, partner_type, address_street, address_locality, address, city, state, postal_code, pan_number, aadhaar_last_four, legal_trade_name, is_gst_registered, gst_number, fleet_size_band, onboarding_status, assigned_agent_id, created_at, updated_at").eq("id", id).maybeSingle<Customer>(),
-    supabase.from("customer_documents").select("id, document_type, file_name, storage_bucket, storage_path, verification_status, created_at").eq("customer_id", id).order("created_at", { ascending: false }).returns<DocumentRow[]>(),
-    supabase.from("vehicles").select("id, vehicle_no, vehicle_type, make, model").eq("customer_id", id).order("created_at", { ascending: false }).returns<VehicleRow[]>(),
-    supabase.from("profiles").select("id, full_name").eq("role", "agent").eq("is_active", true).order("full_name").returns<AgentRow[]>()
+    admin.from("customers").select("id, customer_code, contact_name, company_name, phone, email, partner_type, address_street, address_locality, address, city, state, postal_code, pan_number, aadhaar_last_four, legal_trade_name, is_gst_registered, gst_number, fleet_size_band, onboarding_status, assigned_agent_id, created_at, updated_at").eq("id", id).maybeSingle<Customer>(),
+    admin.from("customer_documents").select("id, document_type, file_name, storage_bucket, storage_path, verification_status, created_at").eq("customer_id", id).order("created_at", { ascending: false }).returns<DocumentRow[]>(),
+    admin.from("vehicles").select("id, vehicle_no, vehicle_type, make, model").eq("customer_id", id).order("created_at", { ascending: false }).returns<VehicleRow[]>(),
+    admin.from("profiles").select("id, full_name").eq("role", "agent").eq("is_active", true).order("full_name").returns<AgentRow[]>()
   ]);
 
   if (error || !customer) notFound();
 
   const documentsWithUrls = await Promise.all((documents ?? []).map(async (document) => {
-    const { data } = await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 600);
+    const { data } = await admin.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 600);
     return { ...document, signedUrl: data?.signedUrl ?? null };
   }));
 
