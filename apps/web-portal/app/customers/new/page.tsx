@@ -6,6 +6,8 @@ import { createCustomerOnboarding } from "../actions";
 import { CustomerOnboardingForm } from "../customer-onboarding-form";
 import { createDealershipOnboarding } from "../dealership-actions";
 import { DealershipOnboardingForm } from "../dealership-onboarding-form";
+import { createGroupOnboarding } from "../group-actions";
+import { GroupOnboardingForm } from "../group-onboarding-form";
 
 const supportedPartnerTypes = new Set(["individual_proprietor", "dealership", "corporate", "group"]);
 
@@ -34,6 +36,15 @@ export default async function NewCustomerPage({ searchParams }: { searchParams: 
     return (
       <AppShell title={`Add ${dealershipType.toUpperCase()} Dealership`}>
         <DealershipOnboardingForm action={createDealershipOnboarding} dealershipType={dealershipType} oems={oems} />
+      </AppShell>
+    );
+  }
+
+  if (partnerType === "group") {
+    await requireMasterDataManager();
+    return (
+      <AppShell title="Add Group">
+        <GroupOnboardingForm action={createGroupOnboarding} />
       </AppShell>
     );
   }
