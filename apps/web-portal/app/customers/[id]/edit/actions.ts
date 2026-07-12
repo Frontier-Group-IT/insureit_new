@@ -80,5 +80,5 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
 
   revalidatePath("/customers");
   revalidatePath(`/customers/${id}/edit`, "page");
-  redirect(`/customers/${id}/edit?updated=${Date.now()}#documents`);
+  redirect("/customers");
 }
