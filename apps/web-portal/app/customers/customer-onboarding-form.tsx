@@ -150,8 +150,10 @@ export function CustomerOnboardingForm({ action }: Props) {
         action={formAction}
         className="space-y-2 pb-4"
         onChange={(event) => {
-          const target = event.target as HTMLInputElement;
-          if (target.name !== "partner_type") setIsDirty(true);
+          const target = event.target;
+          if (target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement) {
+            if (target.name !== "partner_type") setIsDirty(true);
+          }
         }}
         onSubmit={() => setIsDirty(false)}
       >
