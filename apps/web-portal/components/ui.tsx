@@ -56,7 +56,6 @@ export function PriorityBadge({ priority }: { priority: "High" | "Medium" | "Low
     Medium: "bg-amber-50 text-amber-800 ring-amber-200",
     Low: "bg-slate-50 text-slate-600 ring-slate-200"
   }[priority];
-
   return <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ring-1 ring-inset ${styles}`}>{priority}</span>;
 }
 
@@ -67,14 +66,10 @@ export function MetricCard({ label, value, hint, tone = "navy", icon }: { label:
     amber: "from-amber-500 to-orange-500 text-white",
     red: "from-red-600 to-rose-500 text-white"
   };
-
   return (
     <section className={`overflow-hidden rounded-3xl bg-gradient-to-br p-5 shadow-soft ${tones[tone]}`}>
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-white/75">{label}</p>
-          <p className="mt-3 text-3xl font-bold tracking-tight">{value}</p>
-        </div>
+        <div><p className="text-sm font-medium text-white/75">{label}</p><p className="mt-3 text-3xl font-bold tracking-tight">{value}</p></div>
         <span className="rounded-2xl bg-white/15 px-3 py-2 text-xl">{icon}</span>
       </div>
       <p className="mt-5 text-sm font-medium text-white/80">{hint}</p>
@@ -82,15 +77,15 @@ export function MetricCard({ label, value, hint, tone = "navy", icon }: { label:
   );
 }
 
-export function SearchFilterBar({ searchPlaceholder, filterLabel = "Status", action }: { searchPlaceholder: string; filterLabel?: string; action?: ReactNode }) {
+export function SearchFilterBar({ searchPlaceholder, filterLabel = "Status", action, compact = false }: { searchPlaceholder: string; filterLabel?: string; action?: ReactNode; compact?: boolean }) {
   return (
-    <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div className={`${compact ? "mb-2 rounded-lg border border-slate-200 bg-white p-2" : "mb-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"}`}>
+      <div className={`flex flex-col md:flex-row md:items-center md:justify-between ${compact ? "gap-2" : "gap-3"}`}>
         <div className="flex-1">
-          <input className="w-full px-3.5" placeholder={searchPlaceholder} aria-label={searchPlaceholder} />
+          <input className={`${compact ? "h-8 w-full rounded-md px-2.5 text-xs" : "w-full px-3.5"}`} placeholder={searchPlaceholder} aria-label={searchPlaceholder} />
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <select className="min-w-40" aria-label={filterLabel} defaultValue="all">
+        <div className={`flex flex-col sm:flex-row sm:items-center ${compact ? "gap-2" : "gap-3"}`}>
+          <select className={`${compact ? "h-8 min-w-36 rounded-md px-2.5 text-xs" : "min-w-40"}`} aria-label={filterLabel} defaultValue="all">
             <option value="all">All {filterLabel.toLowerCase()}</option>
             <option value="active">Active</option>
             <option value="attention">Needs attention</option>
@@ -117,21 +112,12 @@ export function EmptyState({ title, description, action, className = "" }: { tit
 export function LoadingState({ label = "Loading claim workspace...", className = "" }: { label?: string; className?: string }) {
   return (
     <div className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${className}`} aria-live="polite">
-      <div className="animate-pulse space-y-3">
-        <div className="h-4 w-36 rounded bg-slate-200" />
-        <div className="h-8 w-full rounded bg-slate-100" />
-        <div className="h-8 w-2/3 rounded bg-slate-100" />
-      </div>
+      <div className="animate-pulse space-y-3"><div className="h-4 w-36 rounded bg-slate-200" /><div className="h-8 w-full rounded bg-slate-100" /><div className="h-8 w-2/3 rounded bg-slate-100" /></div>
       <p className="mt-4 text-sm text-slate-500">{label}</p>
     </div>
   );
 }
 
 export function ErrorState({ title = "Unable to load data", description = "Please refresh or try again. Contact an administrator if the issue continues.", className = "" }: { title?: string; description?: string; className?: string }) {
-  return (
-    <div className={`rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700 ${className}`}>
-      <p className="font-semibold">{title}</p>
-      <p className="mt-1 text-red-600">{description}</p>
-    </div>
-  );
+  return <div className={`rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700 ${className}`}><p className="font-semibold">{title}</p><p className="mt-1 text-red-600">{description}</p></div>;
 }
