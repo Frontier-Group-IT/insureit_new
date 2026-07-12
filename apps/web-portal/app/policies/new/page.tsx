@@ -1,6 +1,6 @@
 import { addPolicy } from "@/app/master-data-form-actions";
 import { PolicyForm } from "@/components/forms";
-import { AppShell, PageHeader } from "@/components/shell";
+import { AppShell } from "@/components/shell";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { requireMasterDataManager } from "@/lib/master-data-server";
 
@@ -21,5 +21,5 @@ export default async function NewPolicyPage() {
   const vehicleOptions = (vehiclesResult.data ?? []).map((vehicle) => ({ value: vehicle.id, label: `${vehicle.vehicle_no} — ${vehicle.customers?.company_name ?? vehicle.customers?.contact_name ?? "Unassigned customer"}` }));
   const insurerOptions = (insurersResult.data ?? []).map((insurer) => ({ value: insurer.id, label: insurer.name }));
 
-  return <AppShell title="Add policy"><PageHeader title="Add policy" /><PolicyForm action={addPolicy} customers={customerOptions} vehicles={vehicleOptions} insurers={insurerOptions} submitLabel="Add record" /></AppShell>;
+  return <AppShell title="Add Policy"><PolicyForm action={addPolicy} customers={customerOptions} vehicles={vehicleOptions} insurers={insurerOptions} submitLabel="Create Policy" /></AppShell>;
 }
