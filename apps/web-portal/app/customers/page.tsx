@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AppShell } from "@/components/shell";
 import { DataError } from "@/components/record-list";
 import { createServerSupabaseClient } from "@/lib/auth-server";
@@ -37,7 +38,12 @@ export default async function CustomersPage() {
           <Metric label="Total" value={rows.length} />
           <Metric label="Active" value={activeCount} tone="success" />
           <Metric label="Onboarding" value={pendingCount} tone="warning" />
-          <span className="ml-auto hidden text-[10px] text-[var(--muted)] md:inline">Customer master · compact list view</span>
+          <Link
+            href="/customers/new"
+            className="ml-auto inline-flex h-7 items-center justify-center rounded-md bg-[var(--accent)] px-3 text-[10.5px] font-semibold text-white transition hover:bg-[var(--accent-strong)]"
+          >
+            + Add New Customer
+          </Link>
         </section>
 
         {error ? <DataError message={error.message} /> : <CustomerWorkspace rows={rows} />}
