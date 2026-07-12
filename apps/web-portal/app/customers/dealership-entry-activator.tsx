@@ -3,7 +3,9 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-export function DealershipEntryActivator() {
+type DealershipTypeMap = Record<string, "posp" | "misp">;
+
+export function DealershipEntryActivator({ dealershipTypes = {} }: { dealershipTypes?: DealershipTypeMap }) {
   const router = useRouter();
 
   useEffect(() => {
@@ -18,26 +20,39 @@ export function DealershipEntryActivator() {
         return value.startsWith("dealership") && value.includes("vehicle dealer or service partner");
       });
 
-      if (!dealershipButton || dealershipButton.dataset.dealershipEnabled === "true") return;
-      dealershipButton.disabled = false;
-      dealershipButton.dataset.dealershipEnabled = "true";
-      dealershipButton.className = "group rounded-xl border border-[#CBD5E1] bg-white p-4 text-left transition hover:border-[#6366F1] hover:bg-[#F8FAFF]";
-      dealershipButton.setAttribute("aria-label", "Open dealership onboarding");
+      if (dealershipButton && dealershipButton.dataset.dealershipEnabled !== "true") {
+        dealershipButton.disabled = false;
+        dealershipButton.dataset.dealershipEnabled = "true";
+        dealershipButton.className = "group rounded-xl border border-[#CBD5E1] bg-white p-4 text-left transition hover:border-[#6366F1] hover:bg-[#F8FAFF]";
+        dealershipButton.setAttribute("aria-label", "Open dealership onboarding");
 
-      const badge = Array.from(dealershipButton.querySelectorAll<HTMLElement>("span")).find((element) => element.textContent?.trim().toLowerCase() === "coming soon");
-      if (badge) {
-        badge.textContent = "Available";
-        badge.className = "rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-semibold text-emerald-700";
+        const badge = Array.from(dealershipButton.querySelectorAll<HTMLElement>("span")).find((element) => element.textContent?.trim().toLowerCase() === "coming soon");
+        if (badge) {
+          badge.textContent = "Available";
+          badge.className = "rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-semibold text-emerald-700";
+        }
+
+        dealershipButton.addEventListener("click", () => router.push("/customers/dealership-type"), { once: true });
       }
 
-      dealershipButton.addEventListener("click", () => router.push("/customers/dealership-type"), { once: true });
+      for (const [customerId, dealershipType] of Object.entries(dealershipTypes)) {
+        const customerLink = document.querySelector<HTMLAnchorElement>(`a[href="/customers/${customerId}/edit"]`);
+        const row = customerLink?.closest("tr");
+        if (!row) continue;
+
+        const partnerCell = Array.from(row.querySelectorAll<HTMLTableCellElement>("td")).find((cell) => cell.textContent?.trim() === "Dealership");
+        if (!partnerCell) continue;
+
+        partnerCell.textContent = `Dealership · ${dealershipType.toUpperCase()}`;
+        partnerCell.dataset.dealershipType = dealershipType;
+      }
     };
 
     activateEntries();
     const observer = new MutationObserver(activateEntries);
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
-  }, [router]);
+  }, [dealershipTypes, router]);
 
   return null;
 }

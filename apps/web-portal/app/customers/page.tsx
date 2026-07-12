@@ -16,6 +16,7 @@ type CustomerRow = {
   fleet_size_band: string | null;
   onboarding_status: string;
   vehicles: { count: number }[];
+  dealership_profiles: { dealership_type: "posp" | "misp" }[];
 };
 
 export default async function CustomersPage() {
@@ -23,14 +24,21 @@ export default async function CustomersPage() {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("customers")
-    .select("id, customer_code, partner_type, company_name, contact_name, phone, city, fleet_size_band, onboarding_status, vehicles(count)")
+    .select("id, customer_code, partner_type, company_name, contact_name, phone, city, fleet_size_band, onboarding_status, vehicles(count), dealership_profiles(dealership_type)")
     .order("created_at", { ascending: false })
     .returns<CustomerRow[]>();
 
+  const rows = data ?? [];
+  const dealershipTypes = Object.fromEntries(
+    rows
+      .filter((row) => row.partner_type === "dealership" && row.dealership_profiles?.[0]?.dealership_type)
+      .map((row) => [row.id, row.dealership_profiles[0].dealership_type])
+  ) as Record<string, "posp" | "misp">;
+
   return (
     <AppShell title="Customers">
-      <DealershipEntryActivator />
-      <div className="pb-3">{error ? <DataError message={error.message} /> : <CustomerWorkspace rows={data ?? []} />}</div>
+      <DealershipEntryActivator dealershipTypes={dealershipTypes} />
+      <div className="pb-3">{error ? <DataError message={error.message} /> : <CustomerWorkspace rows={rows} />}</div>
     </AppShell>
   );
 }
