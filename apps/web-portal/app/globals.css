@@ -107,3 +107,21 @@ summary {
     transform: translateX(220%);
   }
 }
+
+@keyframes insureit-truck {
+  0% {
+    transform: translateX(-8px) translateY(0);
+  }
+  22% {
+    transform: translateX(18px) translateY(-1px);
+  }
+  48% {
+    transform: translateX(42px) translateY(0);
+  }
+  72% {
+    transform: translateX(66px) translateY(-1px);
+  }
+  100% {
+    transform: translateX(88px) translateY(0);
+  }
+}
