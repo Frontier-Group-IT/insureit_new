@@ -4,6 +4,7 @@ import { DataError } from "@/components/record-list";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { requireMasterDataManager } from "@/lib/master-data-server";
 import { CustomerWorkspace } from "./customer-workspace";
+import { DealershipEntryActivator } from "./dealership-entry-activator";
 
 type CustomerRow = {
   id: string;
@@ -31,6 +32,7 @@ export default async function CustomersPage() {
 
   return (
     <AppShell title="Customers">
+      <DealershipEntryActivator />
       <div className="mb-2 flex justify-end">
         <Link href="/customers/dealership-type" className="inline-flex h-9 items-center justify-center rounded-md border border-[#C7D2FE] bg-[#EEF2FF] px-4 text-[11px] font-semibold text-[#4338CA] hover:bg-[#E0E7FF]">+ Add Dealership</Link>
       </div>
