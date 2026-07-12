@@ -18,12 +18,29 @@ export default async function NewCustomerPage({ searchParams }: { searchParams: 
 
   if (partnerType === "dealership") {
     await requireMasterDataManager();
-    if (dealershipType !== "posp" && dealershipType !== "misp") redirect("/customers?choose_partner=1&choose_dealership=1");
+    if (dealershipType !== "posp" && dealershipType !== "misp") redirect("/customers/dealership-type");
+
     const admin = createSupabaseAdminClient();
-    const { data: manufacturers } = await admin.from("vehicle_manufacturers").select("name").eq("is_active", true).order("sort_order", { ascending: true }).order("name", { ascending: true }).returns<Array<{ name: string }>>();
+    const { data: manufacturers } = await admin
+      .from("vehicle_manufacturers")
+      .select("name")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true })
+      .returns<Array<{ name: string }>>();
+
     const oems = (manufacturers ?? []).map((manufacturer) => ({ value: manufacturer.name, label: manufacturer.name }));
-    return <AppShell title={`Add ${dealershipType.toUpperCase()} Dealership`}><DealershipOnboardingForm action={createDealershipOnboarding} dealershipType={dealershipType} oems={oems} /></AppShell>;
+
+    return (
+      <AppShell title={`Add ${dealershipType.toUpperCase()} Dealership`}>
+        <DealershipOnboardingForm action={createDealershipOnboarding} dealershipType={dealershipType} oems={oems} />
+      </AppShell>
+    );
   }
 
-  return <AppShell title="Add New Customer"><CustomerOnboardingForm action={createCustomerOnboarding} partnerType={partnerType} /></AppShell>;
+  return (
+    <AppShell title="Add New Customer">
+      <CustomerOnboardingForm action={createCustomerOnboarding} partnerType={partnerType} />
+    </AppShell>
+  );
 }
