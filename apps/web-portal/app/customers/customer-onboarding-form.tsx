@@ -19,7 +19,9 @@ type Props = {
 };
 
 type PartnerType = "individual_proprietor" | "dealership" | "corporate" | "group";
+type DocumentField = "pan_copy" | "aadhaar_front" | "aadhaar_back" | "gst_copy";
 type FormSnapshot = Record<string, string | boolean>;
+type DocumentFiles = Partial<Record<DocumentField, File>>;
 
 const inputClass = "h-8 w-full rounded-md border bg-white px-2.5 text-[12px] text-[#071D49] outline-none transition placeholder:text-[#9AA7B8] focus:ring-2";
 const labelClass = "mb-0.5 block text-[10.5px] font-semibold text-[#344256]";
@@ -39,6 +41,7 @@ export function CustomerOnboardingForm({ action }: Props) {
   const [cityQuery, setCityQuery] = useState("");
   const [locations, setLocations] = useState<LocationOption[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<LocationOption | null>(null);
+  const [documentFiles, setDocumentFiles] = useState<DocumentFiles>({});
   const [isDirty, setIsDirty] = useState(false);
   const [pendingPartner, setPendingPartner] = useState<PartnerType | null>(null);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
@@ -128,6 +131,7 @@ export function CustomerOnboardingForm({ action }: Props) {
     setCityQuery("");
     setSelectedLocation(null);
     setLocations([]);
+    setDocumentFiles({});
     formRef.current?.reset();
   }
 
@@ -173,6 +177,23 @@ export function CustomerOnboardingForm({ action }: Props) {
     snapshotRef.current = snapshot;
   }
 
+  function submitWithCachedFiles(formData: FormData) {
+    for (const [field, file] of Object.entries(documentFiles) as Array<[DocumentField, File]>) {
+      formData.set(field, file, file.name);
+    }
+    formAction(formData);
+  }
+
+  function updateDocument(field: DocumentField, file: File | null) {
+    setDocumentFiles((current) => {
+      const next = { ...current };
+      if (file) next[field] = file;
+      else delete next[field];
+      return next;
+    });
+    setIsDirty(true);
+  }
+
   return (
     <>
       {formState.error && showError ? <FeedbackToast message={formState.error} tone="error" onClose={() => setShowError(false)} /> : null}
@@ -188,7 +209,7 @@ export function CustomerOnboardingForm({ action }: Props) {
 
       <form
         ref={formRef}
-        action={formAction}
+        action={submitWithCachedFiles}
         className="space-y-2 pb-4"
         onChange={(event) => {
           const target = event.target;
@@ -259,17 +280,17 @@ export function CustomerOnboardingForm({ action }: Props) {
               </div>
               <div className="grid gap-x-2 gap-y-1.5 md:grid-cols-2 xl:grid-cols-4">
                 <Field label="PAN Number" name="pan_number" error={errorField === "pan_number"} required placeholder="ABCDE1234F" maxLength={10} />
-                <FileField label="PAN Copy" name="pan_copy" error={errorField === "pan_copy"} required />
+                <FileField label="PAN Copy" name="pan_copy" file={documentFiles.pan_copy} error={errorField === "pan_copy"} required onFileChange={(file) => updateDocument("pan_copy", file)} />
                 <Field label="Aadhaar Number" name="aadhaar_number" error={errorField === "aadhaar_number"} required placeholder="12-digit Aadhaar number" inputMode="numeric" pattern="[0-9]{12}" maxLength={12} />
                 <label className={`mt-[15px] flex h-8 items-center gap-2 rounded-md border px-2.5 text-[11px] font-semibold text-[#071D49] ${errorField === "is_gst_registered" ? "border-red-400 bg-red-50" : "border-[#D8E2EE] bg-[#F8FBFF]"}`}>
                   <input type="checkbox" name="is_gst_registered" value="true" checked={gstRegistered} onChange={(event) => setGstRegistered(event.target.checked)} className="h-3 w-3 rounded border-[#AFC0D5]" />
                   GST Registered
                 </label>
-                <FileField label="Aadhaar Front" name="aadhaar_front" error={errorField === "aadhaar_front"} required />
-                <FileField label="Aadhaar Back" name="aadhaar_back" error={errorField === "aadhaar_back"} required />
+                <FileField label="Aadhaar Front" name="aadhaar_front" file={documentFiles.aadhaar_front} error={errorField === "aadhaar_front"} required onFileChange={(file) => updateDocument("aadhaar_front", file)} />
+                <FileField label="Aadhaar Back" name="aadhaar_back" file={documentFiles.aadhaar_back} error={errorField === "aadhaar_back"} required onFileChange={(file) => updateDocument("aadhaar_back", file)} />
                 <Field label="Legal Trade Name" name="legal_trade_name" error={errorField === "legal_trade_name"} required={gstRegistered} placeholder={gstRegistered ? "As per GST" : "Optional"} />
-                {gstRegistered ? <Field label="GST Number" name="gst_number" error={errorField === "gst_number"} required placeholder="22AAAAA0000A1Z5" maxLength={15} /> : <div />}
-                {gstRegistered ? <FileField label="GST Copy" name="gst_copy" error={errorField === "gst_copy"} required /> : null}
+                {gstRegistered ? <Field label="GST Number" name="gst_number" error={errorField === "gst_number"} required placeholder="22AAAAA0000A1Z5" maxLength={15} pattern="[0-9]{2}[A-Za-z]{5}[0-9]{4}[A-Za-z][1-9A-Za-z]Z[0-9A-Za-z]" /> : <div />}
+                {gstRegistered ? <FileField label="GST Copy" name="gst_copy" file={documentFiles.gst_copy} error={errorField === "gst_copy"} required onFileChange={(file) => updateDocument("gst_copy", file)} /> : null}
               </div>
             </section>
 
@@ -322,17 +343,24 @@ function Field({ label, name, type = "text", required = false, placeholder = "",
   return <div><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} type={type} required={required} placeholder={placeholder} value={value} readOnly={readOnly} aria-invalid={error || undefined} className={fieldClass(error, readOnly)} {...props} /></div>;
 }
 
-function FileField({ label, name, required = false, error = false }: { label: string; name: string; required?: boolean; error?: boolean }) {
-  const [fileName, setFileName] = useState("");
+function FileField({ label, name, file, required = false, error = false, onFileChange }: { label: string; name: DocumentField; file?: File; required?: boolean; error?: boolean; onFileChange: (file: File | null) => void }) {
   return (
     <div>
       <span className={labelClass}>{label}{required ? " *" : ""}</span>
-      <label htmlFor={name} className={`flex h-8 cursor-pointer items-center gap-2 rounded-md border px-2.5 text-[10px] transition ${error ? "border-red-400 bg-red-50/50 text-red-700" : "border-dashed border-[#B7C8DB] bg-[#FAFCFF] text-[#536274] hover:border-[#2D69B3] hover:bg-[#F4F8FE]"}`}>
+      <label htmlFor={name} className={`flex h-8 cursor-pointer items-center gap-2 rounded-md border px-2.5 text-[10px] transition ${error ? "border-red-400 bg-red-50/50 text-red-700" : file ? "border-[#8EB5E2] bg-[#F1F7FF] text-[#174EA6]" : "border-dashed border-[#B7C8DB] bg-[#FAFCFF] text-[#536274] hover:border-[#2D69B3] hover:bg-[#F4F8FE]"}`}>
         <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-[#EAF3FF] font-bold text-[#245A9A]">↥</span>
-        <span className="min-w-0 flex-1 truncate">{fileName || "Choose file"}</span>
-        <span className="text-[9px] text-[#8794A5]">PDF/JPG/PNG</span>
+        <span className="min-w-0 flex-1 truncate">{file?.name ?? "Choose file"}</span>
+        <span className="text-[9px] text-[#8794A5]">{file ? "Attached" : "PDF/JPG/PNG"}</span>
       </label>
-      <input id={name} name={name} type="file" required={required} accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" aria-invalid={error || undefined} className="sr-only" onChange={(event) => setFileName(event.target.files?.[0]?.name ?? "")} />
+      <input
+        id={name}
+        name={name}
+        type="file"
+        accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+        aria-invalid={error || undefined}
+        className="sr-only"
+        onChange={(event) => onFileChange(event.target.files?.[0] ?? null)}
+      />
     </div>
   );
 }
