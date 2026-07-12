@@ -9,47 +9,20 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 type Customer = {
-  id: string;
-  customer_code: string;
-  contact_name: string;
-  company_name: string | null;
-  phone: string;
-  email: string | null;
-  partner_type: string | null;
-  address_street: string | null;
-  address_locality: string | null;
-  address: string | null;
-  city: string | null;
-  state: string | null;
-  postal_code: string | null;
-  pan_number: string | null;
-  aadhaar_last_four: string | null;
-  legal_trade_name: string | null;
-  is_gst_registered: boolean;
-  gst_number: string | null;
-  fleet_size_band: string | null;
-  onboarding_status: string;
-  assigned_agent_id: string | null;
-  created_at: string;
-  updated_at: string;
+  id: string; customer_code: string; contact_name: string; company_name: string | null; phone: string; email: string | null;
+  partner_type: string | null; address_street: string | null; address_locality: string | null; address: string | null;
+  city: string | null; state: string | null; postal_code: string | null; pan_number: string | null; aadhaar_last_four: string | null;
+  legal_trade_name: string | null; is_gst_registered: boolean; gst_number: string | null; fleet_size_band: string | null;
+  onboarding_status: string; assigned_agent_id: string | null; created_at: string; updated_at: string;
 };
 
-type DocumentRow = {
-  id: string;
-  document_type: string;
-  file_name: string;
-  storage_bucket: string;
-  storage_path: string;
-  verification_status: string;
-  created_at: string;
-};
-
+type DocumentRow = { id: string; document_type: string; file_name: string; storage_bucket: string; storage_path: string; verification_status: string; created_at: string };
 type VehicleRow = { id: string; vehicle_no: string; vehicle_type: string; make: string | null; model: string | null };
 type AgentRow = { id: string; full_name: string };
 
-export default async function EditCustomerPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditCustomerPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; field?: string }> }) {
   await requireMasterDataManager();
-  const { id } = await params;
+  const [{ id }, query] = await Promise.all([params, searchParams]);
   const admin = createSupabaseAdminClient();
 
   const [{ data: customer, error }, { data: documents }, { data: vehicles }, { data: agents }] = await Promise.all([
@@ -74,6 +47,8 @@ export default async function EditCustomerPage({ params }: { params: Promise<{ i
         vehicles={vehicles ?? []}
         agents={agents ?? []}
         action={updateCustomerProfile.bind(null, id)}
+        errorMessage={query.error ?? null}
+        errorField={query.field ?? null}
       />
     </AppShell>
   );
