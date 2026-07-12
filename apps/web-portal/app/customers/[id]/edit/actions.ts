@@ -30,6 +30,7 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
   const legalTradeName = textValue(formData, "legal_trade_name");
   const panNumber = textValue(formData, "pan_number")?.replace(/\s/g, "").toUpperCase() ?? null;
   const gstNumber = textValue(formData, "gst_number")?.replace(/\s/g, "").toUpperCase() ?? null;
+  const uploadedDocumentCount = documentTypes.reduce((count, type) => count + (fileValue(formData, type) ? 1 : 0), 0);
 
   if (isGstRegistered && !legalTradeName) redirect(editErrorUrl(id, "Enter the Legal Trade Name before marking the customer as GST Registered.", "legal_trade_name"));
   if (isGstRegistered && !gstNumber) redirect(editErrorUrl(id, "Enter the GST Number before marking the customer as GST Registered.", "gst_number"));
@@ -106,5 +107,5 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
 
   revalidatePath("/customers");
   revalidatePath(`/customers/${id}/edit`, "page");
-  redirect("/customers");
+  redirect(`/customers?success=${uploadedDocumentCount > 0 ? "documents_uploaded" : "customer_updated"}`);
 }

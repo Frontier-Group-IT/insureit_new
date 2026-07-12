@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Inter } from "next/font/google";
 import { GlobalNavigationLoader } from "@/components/loading/global-navigation-loader";
+import { SuccessPopup } from "@/components/success-popup";
 import "./globals.css";
 
 const inter = Inter({
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" className={inter.variable}>
       <body>
         {children}
+        <SuccessPopup />
         <GlobalNavigationLoader />
       </body>
     </html>

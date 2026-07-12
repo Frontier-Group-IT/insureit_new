@@ -142,10 +142,13 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
       mime_type: file.type,
       file_size: file.size,
       verification_status: "verified",
-      uploaded_by: profile.id
+      upload_source: "manager_portal",
+      uploaded_by: profile.id,
+      verified_by: profile.id,
+      verified_at: new Date().toISOString()
     });
     if (metadataError) { await admin.storage.from(DOCUMENT_BUCKET).remove(uploadedPaths); if (createdCustomer) await admin.from("customers").delete().eq("id", customer.id); if (createdAuthUserId && createdCustomer) await admin.auth.admin.deleteUser(createdAuthUserId); return failure(`Document record could not be saved: ${metadataError.message}`, input.field); }
   }
 
-  redirect("/customers");
+  redirect(`/customers?success=${createdCustomer ? "customer_created" : "customer_updated"}`);
 }
