@@ -8,6 +8,7 @@ const successMessages: Record<string, { title: string; message: string }> = {
   customer_updated: { title: "Customer updated", message: "The customer profile changes have been saved successfully." },
   documents_uploaded: { title: "Documents uploaded", message: "The customer documents have been uploaded and saved successfully." },
   dealership_created: { title: "Dealership onboarded", message: "The dealership and representative details have been saved successfully." },
+  dealership_updated: { title: "Dealership updated", message: "The dealership profile, contacts and document changes have been saved successfully." },
   vehicle_created: { title: "Vehicle added", message: "The vehicle record has been created successfully." },
   vehicle_updated: { title: "Vehicle updated", message: "The vehicle details have been saved successfully." },
   policy_created: { title: "Policy added", message: "The insurance policy has been created successfully." },
