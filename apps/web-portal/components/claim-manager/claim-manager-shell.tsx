@@ -28,7 +28,47 @@ type NotificationGroup = {
   href: string;
 };
 
+type SecondaryItem = { href: string; label: string };
+
 const logoUrl = "https://raw.githubusercontent.com/antnish1/insureit_new/main/apps/mobile-app/assets/brand/insureit-stitch-logo.png";
+
+const secondaryNavigation: Partial<Record<NonNullable<Props["activeNav"]>, { title: string; items: SecondaryItem[] }>> = {
+  claims: {
+    title: "Claims",
+    items: [
+      { href: "/claims", label: "All Claims" },
+      { href: "/claims?stage=documents", label: "Documents" },
+      { href: "/claims?stage=verification", label: "Verification" },
+      { href: "/claims?stage=survey", label: "Survey" },
+      { href: "/claims?stage=repair", label: "Repair" },
+      { href: "/claims?stage=settlement", label: "Settlement" }
+    ]
+  },
+  "master-data": {
+    title: "Master Data",
+    items: [
+      { href: "/customers", label: "Customers" },
+      { href: "/vehicles", label: "Vehicles" },
+      { href: "/policies", label: "Policies" }
+    ]
+  },
+  tasks: {
+    title: "Tasks",
+    items: [
+      { href: "/tasks", label: "My Tasks" },
+      { href: "/tasks?view=team", label: "Team Tasks" },
+      { href: "/tasks?status=completed", label: "Completed" }
+    ]
+  },
+  reports: {
+    title: "Reports",
+    items: [
+      { href: "/reports", label: "Overview" },
+      { href: "/reports?view=claims", label: "Claims Reports" },
+      { href: "/reports?view=operations", label: "Operations" }
+    ]
+  }
+};
 
 export async function ClaimManagerShell({ title, backHref = "/dashboard", children, activeNav = "claims" }: Props) {
   const accessToken = await getServerAccessToken();
@@ -36,80 +76,105 @@ export async function ClaimManagerShell({ title, backHref = "/dashboard", childr
   const notificationRows = await getNotificationRows();
   const notificationGroups = buildNotificationGroups(notificationRows);
   const notificationCount = notificationRows.length;
+  const secondary = secondaryNavigation[activeNav];
+  const hasSecondary = Boolean(secondary);
 
   return (
-    <div className="min-h-screen bg-[#F7FAFE] text-[#071D49]">
-      <aside className="group fixed left-0 top-0 z-50 h-screen w-[56px] overflow-hidden border-r border-[#DFE7F2] bg-white shadow-[3px_0_18px_rgba(7,29,73,0.05)] transition-all duration-200 hover:w-[220px] focus-within:w-[220px]">
-        <div className="flex h-14 items-center gap-3 border-b border-[#E7EDF5] px-3">
-          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#071D49] text-xs font-semibold text-white">IT</div>
-          <span className="whitespace-nowrap text-sm font-semibold opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">Claim Manager</span>
-        </div>
-        <nav className="mt-3 space-y-1 px-2 text-sm">
-          <SideNavItem href="/dashboard" icon="▦" label="Dashboard" active={activeNav === "dashboard"} />
-          <SideNavItem href="/claims" icon="▤" label="Claims" active={activeNav === "claims"} />
-          <MasterDataNav active={activeNav === "master-data"} />
-          <SideNavItem href="/tasks" icon="☑" label="Tasks" active={activeNav === "tasks"} />
-          <SideNavItem href="/reports" icon="▥" label="Reports" active={activeNav === "reports"} />
+    <div className="min-h-screen bg-[#F4F6FA] text-[#101828]">
+      <aside className="fixed inset-y-0 left-0 z-50 hidden w-16 border-r border-white/10 bg-[#15183B] text-white lg:flex lg:flex-col">
+        <Link href="/dashboard" className="grid h-14 place-items-center border-b border-white/10" aria-label="InsureIt home">
+          <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/12 text-[11px] font-bold tracking-wide">IT</span>
+        </Link>
+        <nav className="flex flex-1 flex-col items-center gap-1.5 px-2 py-3">
+          <RailItem href="/dashboard" icon="⌂" label="Dashboard" active={activeNav === "dashboard"} />
+          <RailItem href="/claims" icon="▤" label="Claims" active={activeNav === "claims"} />
+          <RailItem href="/customers" icon="▦" label="Master Data" active={activeNav === "master-data"} />
+          <RailItem href="/tasks" icon="✓" label="Tasks" active={activeNav === "tasks"} />
+          <RailItem href="/reports" icon="▥" label="Reports" active={activeNav === "reports"} />
         </nav>
+        <div className="border-t border-white/10 px-2 py-3">
+          <RailItem href="/settings" icon="⚙" label="Settings" active={false} />
+        </div>
       </aside>
 
-      <div className="pl-[56px]">
-        <header className="sticky top-0 z-30 border-b border-[#DFE7F2] bg-white/95 shadow-[0_2px_12px_rgba(7,29,73,0.035)] backdrop-blur">
-          <div className="mx-auto flex h-[68px] max-w-[1580px] items-center justify-between px-5 lg:px-6">
+      {secondary ? (
+        <aside className="fixed inset-y-0 left-16 z-40 hidden w-48 border-r border-[#D9E0EA] bg-[#E9EBFF] lg:block">
+          <div className="flex h-14 items-center border-b border-[#D3D7EF] px-4">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#454A76]">{secondary.title}</p>
+          </div>
+          <nav className="space-y-1 px-3 py-4">
+            {secondary.items.map((item) => (
+              <SecondaryNavItem key={item.href} href={item.href} label={item.label} active={matchesTitle(title, item.label)} />
+            ))}
+          </nav>
+        </aside>
+      ) : null}
+
+      <div className={hasSecondary ? "lg:pl-64" : "lg:pl-16"}>
+        <header className="sticky top-0 z-30 border-b border-[#DDE3EC] bg-white/95 backdrop-blur">
+          <div className="flex h-14 items-center justify-between gap-4 px-4 lg:px-5">
             <div className="flex min-w-0 items-center gap-3">
-              <Link href={backHref} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[24px] font-light leading-none text-[#071D49] transition hover:bg-[#F1F6FF]" aria-label="Back">‹</Link>
-              <div className="flex shrink-0 items-center pr-1"><img src={logoUrl} alt="InsureIT" className="h-[38px] w-[142px] object-contain object-left" /></div>
-              <div className="hidden h-8 w-px bg-[#D7DEE9] md:block" />
-              <h1 className="hidden truncate text-[17px] font-semibold tracking-tight text-[#071D49] md:block">{title}</h1>
+              <Link href={backHref} className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-[#E1E6EE] text-lg text-[#344054] transition hover:bg-[#F6F8FB]" aria-label="Back">‹</Link>
+              <img src={logoUrl} alt="InsureIT" className="h-8 w-[118px] shrink-0 object-contain object-left" />
+              <div className="hidden h-6 w-px bg-[#E3E7EE] sm:block" />
+              <h1 className="truncate text-[16px] font-semibold tracking-tight text-[#17203A]">{title}</h1>
             </div>
-            <div className="flex h-full shrink-0 items-center gap-5 py-2">
+
+            <div className="flex items-center gap-2">
+              <label className="relative hidden md:block">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[#98A2B3]">⌕</span>
+                <input aria-label="Global search" placeholder="Search" className="h-8 w-56 rounded-md border border-[#D8DEE8] bg-[#FAFBFC] py-1 pl-8 pr-3 text-[12px] focus:border-[#5965C8] focus:ring-2 focus:ring-[#E3E6FF]" />
+              </label>
               <NotificationMenu groups={notificationGroups} count={notificationCount} />
-              <div className="flex h-[52px] flex-col items-center justify-center gap-0.5 text-[10.5px] font-medium text-[#1E2A44]">
-                <div className="scale-[0.82]"><UserMenu profile={profile} user={user ? { id: user.id, email: user.email } : null} /></div>
-                <span className="hidden leading-none sm:block">Profile</span>
+              <div className="ml-1 border-l border-[#E4E7EC] pl-2">
+                <UserMenu profile={profile} user={user ? { id: user.id, email: user.email } : null} />
               </div>
             </div>
           </div>
-          <div className="mx-auto block max-w-[1580px] px-5 pb-1 md:hidden"><h1 className="truncate text-base font-semibold text-[#071D49]">{title}</h1></div>
         </header>
-        <main className="mx-auto max-w-[1580px] px-5 py-2 lg:px-6">{children}</main>
+
+        <main className="min-h-[calc(100vh-56px)] px-3 py-3 sm:px-4 lg:px-5">{children}</main>
       </div>
     </div>
   );
 }
 
-function MasterDataNav({ active }: { active: boolean }) {
+function matchesTitle(title: string, label: string) {
+  const normalizedTitle = title.toLowerCase();
+  const normalizedLabel = label.toLowerCase();
+  if (normalizedLabel === "all claims") return normalizedTitle.includes("claim");
+  if (normalizedLabel === "my tasks") return normalizedTitle.includes("task");
+  if (normalizedLabel === "overview") return normalizedTitle.includes("report");
+  return normalizedTitle.includes(normalizedLabel.replace(/s$/, ""));
+}
+
+function RailItem({ href, icon, label, active }: { href: string; icon: string; label: string; active: boolean }) {
   return (
-    <details className="group/master" open={active}>
-      <summary className={`flex h-10 cursor-pointer list-none items-center gap-3 rounded-xl px-3 transition [&::-webkit-details-marker]:hidden ${active ? "bg-[#EAF3FF] text-[#003A83]" : "text-[#344256] hover:bg-[#F5F8FC] hover:text-[#003A83]"}`}>
-        <span className="grid h-6 w-6 shrink-0 place-items-center text-[17px] leading-none">⌘</span>
-        <span className="flex min-w-0 flex-1 items-center justify-between gap-2 whitespace-nowrap text-[13px] font-medium opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">Master Data <span className="text-[11px] transition group-open/master:rotate-90">›</span></span>
-      </summary>
-      <div className="ml-9 mt-1 hidden space-y-1 group-hover:block group-focus-within:block group-open/master:block">
-        <SubNavItem href="/customers" label="Customers" />
-        <SubNavItem href="/vehicles" label="Vehicles" />
-        <SubNavItem href="/policies" label="Policies" />
-      </div>
-    </details>
+    <Link href={href} title={label} aria-label={label} className={`group relative grid h-10 w-10 place-items-center rounded-lg text-[17px] transition ${active ? "bg-[#7067E8] text-white shadow-[0_5px_16px_rgba(74,65,190,0.35)]" : "text-white/68 hover:bg-white/10 hover:text-white"}`}>
+      {icon}
+      <span className="pointer-events-none absolute left-12 z-50 hidden whitespace-nowrap rounded-md bg-[#10132F] px-2 py-1 text-[10px] font-medium text-white shadow-lg group-hover:block">{label}</span>
+    </Link>
   );
 }
 
-function SubNavItem({ href, label }: { href: string; label: string }) {
-  return <Link href={href} className="block rounded-lg px-3 py-2 text-[12px] font-medium text-[#526176] transition hover:bg-[#F1F6FF] hover:text-[#003A83]">{label}</Link>;
+function SecondaryNavItem({ href, label, active }: { href: string; label: string; active: boolean }) {
+  return <Link href={href} className={`block rounded-md px-3 py-2 text-[12px] font-medium transition ${active ? "bg-[#242653] text-white shadow-sm" : "text-[#454A68] hover:bg-white/70 hover:text-[#242653]"}`}>{label}</Link>;
 }
 
 function NotificationMenu({ groups, count }: { groups: NotificationGroup[]; count: number }) {
   const displayCount = count > 99 ? "99+" : String(count);
   return (
-    <details className="relative flex h-[52px] flex-col items-center justify-center gap-0.5 text-[#071D49]">
-      <summary className="flex cursor-pointer list-none flex-col items-center justify-center gap-0.5 [&::-webkit-details-marker]:hidden" aria-label="Open action inbox">
-        <span className="relative grid h-7 w-7 place-items-center rounded-full bg-white text-[16px] shadow-[0_0_0_1px_rgba(7,29,73,0.08)] transition hover:bg-[#F1F6FF]">🔔{count ? <span className="absolute -right-2 -top-1 grid min-h-4 min-w-4 place-items-center rounded-full bg-[#E21D35] px-1 text-[9px] font-semibold text-white ring-1 ring-white">{displayCount}</span> : null}</span>
-        <span className="hidden text-[10.5px] font-medium leading-none text-[#1E2A44] sm:block">Notifications</span>
+    <details className="relative">
+      <summary className="relative grid h-8 w-8 cursor-pointer list-none place-items-center rounded-md border border-[#E1E6EE] bg-white text-[14px] text-[#344054] transition hover:bg-[#F6F8FB] [&::-webkit-details-marker]:hidden" aria-label="Open action inbox">
+        ♧
+        {count ? <span className="absolute -right-1.5 -top-1.5 grid min-h-4 min-w-4 place-items-center rounded-full bg-[#E5484D] px-1 text-[8px] font-bold text-white ring-2 ring-white">{displayCount}</span> : null}
       </summary>
-      <div className="absolute right-0 top-[54px] z-50 w-[360px] rounded-2xl border border-[#DCE7F5] bg-white shadow-[0_18px_42px_rgba(7,29,73,0.14)]">
-        <div className="flex items-center justify-between border-b border-[#E6EEF7] px-4 py-3"><div><p className="text-[13px] font-semibold text-[#071D49]">Action Inbox</p><p className="mt-0.5 text-[11px] text-[#68758A]">New, seen and in-progress customer actions</p></div><span className="rounded-full bg-[#FFF4E5] px-2.5 py-1 text-[11px] font-semibold text-[#A85D00]">{count} pending</span></div>
-        {groups.length ? <div className="divide-y divide-[#E8EEF6]">{groups.slice(0, 6).map((group) => <Link key={group.key} href={group.href} className="flex items-center justify-between gap-3 px-4 py-3 transition hover:bg-[#FAFCFF]"><div className="min-w-0"><p className="text-[12px] font-semibold text-[#071D49]">{group.label}</p><p className="mt-0.5 text-[10.5px] text-[#68758A]">Oldest {relativeTime(group.oldestAt)}</p></div><div className="flex shrink-0 items-center gap-1.5">{group.urgentCount ? <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700">{group.urgentCount} urgent</span> : null}<span className="grid h-7 min-w-7 place-items-center rounded-full bg-[#F2F6FB] px-2 text-[11px] font-semibold text-[#071D49]">{group.count}</span></div></Link>)}</div> : <div className="px-4 py-8 text-center"><p className="text-[13px] font-semibold text-[#071D49]">No pending actions</p><p className="mt-1 text-[11.5px] text-[#7A8797]">New uploads, replies and KYC updates will appear here.</p></div>}
-        <div className="border-t border-[#E6EEF7] px-4 py-2.5 text-right"><Link href="/claims" className="text-[11.5px] font-semibold text-[#174EA6] hover:text-[#071D49]">Open claims queue</Link></div>
+      <div className="absolute right-0 top-10 z-50 w-[350px] overflow-hidden rounded-xl border border-[#DCE3EC] bg-white shadow-[0_18px_45px_rgba(16,24,40,0.16)]">
+        <div className="flex items-center justify-between border-b border-[#E7ECF2] px-4 py-3">
+          <div><p className="text-[12px] font-semibold text-[#17203A]">Action Inbox</p><p className="mt-0.5 text-[10px] text-[#667085]">Items requiring attention</p></div>
+          <span className="rounded-full bg-[#FFF3E8] px-2 py-0.5 text-[10px] font-semibold text-[#A45A08]">{count} pending</span>
+        </div>
+        {groups.length ? <div className="divide-y divide-[#EDF0F4]">{groups.slice(0, 6).map((group) => <Link key={group.key} href={group.href} className="flex items-center justify-between gap-3 px-4 py-2.5 transition hover:bg-[#F8FAFC]"><div className="min-w-0"><p className="text-[11px] font-semibold text-[#17203A]">{group.label}</p><p className="mt-0.5 text-[9.5px] text-[#7A8699]">Oldest {relativeTime(group.oldestAt)}</p></div><div className="flex shrink-0 items-center gap-1.5">{group.urgentCount ? <span className="rounded-full bg-red-50 px-2 py-0.5 text-[9px] font-semibold text-red-700">{group.urgentCount} urgent</span> : null}<span className="grid h-6 min-w-6 place-items-center rounded-full bg-[#EEF1F5] px-1.5 text-[10px] font-semibold text-[#344054]">{group.count}</span></div></Link>)}</div> : <div className="px-4 py-7 text-center"><p className="text-[12px] font-semibold text-[#17203A]">No pending actions</p><p className="mt-1 text-[10px] text-[#7A8699]">New customer and claim updates will appear here.</p></div>}
       </div>
     </details>
   );
@@ -145,7 +210,3 @@ function notificationGroupDefinition(eventType: string): Pick<NotificationGroup,
 
 function isUrgent(row: NotificationRow) { return row.priority === "critical" || row.priority === "high" ? 1 : 0; }
 function relativeTime(value: string) { const diffMs = Date.now() - Date.parse(value); if (!Number.isFinite(diffMs)) return "-"; const minutes = Math.max(0, Math.floor(diffMs / 60000)); if (minutes < 1) return "just now"; if (minutes < 60) return `${minutes}m ago`; const hours = Math.floor(minutes / 60); if (hours < 24) return `${hours}h ago`; const days = Math.floor(hours / 24); return days === 1 ? "1d ago" : `${days}d ago`; }
-
-function SideNavItem({ href, icon, label, active }: { href: string; icon: string; label: string; active: boolean }) {
-  return <Link href={href} className={`flex h-10 items-center gap-3 rounded-xl px-3 transition ${active ? "bg-[#EAF3FF] text-[#003A83]" : "text-[#344256] hover:bg-[#F5F8FC] hover:text-[#003A83]"}`}><span className="grid h-6 w-6 shrink-0 place-items-center text-[17px] leading-none">{icon}</span><span className="whitespace-nowrap text-[13px] font-medium opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">{label}</span></Link>;
-}
