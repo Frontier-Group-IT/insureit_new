@@ -14,6 +14,7 @@ export type CustomerOnboardingState = {
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 const DOCUMENT_BUCKET = "customer-documents";
+const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 
 type DocumentInput = {
   field: string;
@@ -74,7 +75,7 @@ export async function createCustomerOnboarding(
   const fleetSizeBand = textValue(formData, "fleet_size_band");
   const isGstRegistered = formData.get("is_gst_registered") === "true";
   const legalTradeName = textValue(formData, "legal_trade_name");
-  const gstNumber = textValue(formData, "gst_number")?.toUpperCase() ?? null;
+  const gstNumber = textValue(formData, "gst_number")?.replace(/\s/g, "").toUpperCase() ?? null;
 
   if (partnerType !== "individual_proprietor") {
     return failure("Only the Individual / Proprietor workflow is available in this release.", "partner_type");
@@ -96,6 +97,9 @@ export async function createCustomerOnboarding(
   }
   if (isGstRegistered && !gstNumber) {
     return failure("GST Number is required for a GST-registered customer.", "gst_number");
+  }
+  if (isGstRegistered && gstNumber && !GSTIN_PATTERN.test(gstNumber)) {
+    return failure("Enter a valid 15-character GSTIN, for example 22AAAAA0000A1Z5.", "gst_number");
   }
 
   const accessToken = await getServerAccessToken();
@@ -225,6 +229,9 @@ export async function createCustomerOnboarding(
 
   if (customerError || !customer) {
     if (createdAuthUserId) await admin.auth.admin.deleteUser(createdAuthUserId);
+    if (customerError?.message.includes("customers_gst_number_format_check")) {
+      return failure("Enter a valid 15-character GSTIN, for example 22AAAAA0000A1Z5.", "gst_number");
+    }
     return failure(`Customer could not be created: ${customerError?.message ?? "Unknown database error"}`);
   }
 
