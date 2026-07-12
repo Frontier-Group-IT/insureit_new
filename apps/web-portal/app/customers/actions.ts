@@ -22,6 +22,14 @@ type DocumentInput = {
   required: boolean;
 };
 
+type ExistingCustomer = {
+  id: string;
+  profile_id: string | null;
+  phone: string;
+  pan_number: string | null;
+  onboarding_status: string;
+};
+
 function failure(error: string, field: string | null = null): CustomerOnboardingState {
   return { error, field };
 }
@@ -70,7 +78,7 @@ export async function createCustomerOnboarding(
   const city = textValue(formData, "city");
   const state = textValue(formData, "state");
   const postalCode = textValue(formData, "postal_code");
-  const panNumber = textValue(formData, "pan_number")?.toUpperCase() ?? null;
+  const panNumber = textValue(formData, "pan_number")?.replace(/\s/g, "").toUpperCase() ?? null;
   const aadhaarNumber = textValue(formData, "aadhaar_number")?.replace(/\D/g, "") ?? null;
   const fleetSizeBand = textValue(formData, "fleet_size_band");
   const isGstRegistered = formData.get("is_gst_registered") === "true";
@@ -102,12 +110,6 @@ export async function createCustomerOnboarding(
     return failure("Enter a valid 15-character GSTIN, for example 22AAAAA0000A1Z5.", "gst_number");
   }
 
-  const accessToken = await getServerAccessToken();
-  const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!profile?.id || !canManageMasterData(profile.role)) {
-    return failure("You are not authorized to onboard customers.");
-  }
-
   const documentInputs: DocumentInput[] = [
     { field: "pan_copy", type: "pan_copy", required: true },
     { field: "aadhaar_front", type: "aadhaar_front", required: true },
@@ -125,6 +127,12 @@ export async function createCustomerOnboarding(
     if (validationError) return failure(validationError, input.field);
   }
 
+  const accessToken = await getServerAccessToken();
+  const { profile } = await getAuthenticatedProfile(accessToken);
+  if (!profile?.id || !canManageMasterData(profile.role)) {
+    return failure("You are not authorized to onboard customers.");
+  }
+
   let admin;
   try {
     admin = createSupabaseAdminClient();
@@ -132,25 +140,7 @@ export async function createCustomerOnboarding(
     return failure(error instanceof Error ? error.message : "Supabase Admin configuration is missing.");
   }
 
-  const { data: duplicatePhone, error: phoneLookupError } = await admin
-    .from("customers")
-    .select("id")
-    .eq("phone", phone)
-    .limit(1)
-    .maybeSingle<{ id: string }>();
-  if (phoneLookupError) return failure(`Unable to validate mobile number: ${phoneLookupError.message}`, "phone");
-  if (duplicatePhone) return failure("A customer with this mobile number already exists.", "phone");
-
-  const { data: duplicatePan, error: panLookupError } = await admin
-    .from("customers")
-    .select("id")
-    .eq("pan_number", panNumber)
-    .limit(1)
-    .maybeSingle<{ id: string }>();
-  if (panLookupError) return failure(`Unable to validate PAN number: ${panLookupError.message}`, "pan_number");
-  if (duplicatePan) return failure("A customer with this PAN number already exists.", "pan_number");
-
-  let profileId: string | null = null;
+  let profileId: string;
   let createdAuthUserId: string | null = null;
 
   const { data: existingProfile, error: existingProfileError } = await admin
@@ -190,49 +180,117 @@ export async function createCustomerOnboarding(
     }
   }
 
+  const { data: matchingCustomers, error: matchingCustomerError } = await admin
+    .from("customers")
+    .select("id, profile_id, phone, pan_number, onboarding_status")
+    .or(`profile_id.eq.${profileId},phone.eq.${phone}`)
+    .order("created_at", { ascending: true })
+    .limit(3)
+    .returns<ExistingCustomer[]>();
+
+  if (matchingCustomerError) {
+    if (createdAuthUserId) await admin.auth.admin.deleteUser(createdAuthUserId);
+    return failure(`Unable to check the existing customer record: ${matchingCustomerError.message}`, "phone");
+  }
+
+  if ((matchingCustomers?.length ?? 0) > 1) {
+    return failure("More than one customer record already exists for this mobile number. Run the duplicate-customer repair migration before retrying.", "phone");
+  }
+
+  const existingCustomer = matchingCustomers?.[0] ?? null;
+
+  const { data: duplicatePan, error: panLookupError } = await admin
+    .from("customers")
+    .select("id")
+    .eq("pan_number", panNumber)
+    .limit(2)
+    .returns<Array<{ id: string }>>();
+  if (panLookupError) return failure(`Unable to validate PAN number: ${panLookupError.message}`, "pan_number");
+  if ((duplicatePan ?? []).some((row) => row.id !== existingCustomer?.id)) {
+    return failure("A different customer already uses this PAN number.", "pan_number");
+  }
+
   const customerCode = `CUST-${Date.now().toString().slice(-9)}`;
   const aadhaarHash = createHash("sha256").update(aadhaarNumber).digest("hex");
   const addressStreet = textValue(formData, "address_street");
   const addressLocality = textValue(formData, "address_locality");
   const address = [addressStreet, addressLocality, city, state, postalCode].filter(Boolean).join(", ");
+  const customerPayload = {
+    profile_id: profileId,
+    partner_type: partnerType,
+    contact_name: contactName,
+    company_name: legalTradeName,
+    phone,
+    email,
+    address,
+    address_street: addressStreet,
+    address_locality: addressLocality,
+    india_location_id: locationId,
+    city,
+    state,
+    postal_code: postalCode,
+    pan_number: panNumber,
+    aadhaar_last_four: aadhaarNumber.slice(-4),
+    aadhaar_hash: aadhaarHash,
+    legal_trade_name: legalTradeName,
+    is_gst_registered: isGstRegistered,
+    gst_number: isGstRegistered ? gstNumber : null,
+    fleet_size_band: fleetSizeBand,
+    onboarding_status: "documents_pending",
+    updated_by: profile.id
+  };
 
-  const { data: customer, error: customerError } = await admin
-    .from("customers")
-    .insert({
-      profile_id: profileId,
-      customer_code: customerCode,
-      partner_type: partnerType,
-      contact_name: contactName,
-      company_name: legalTradeName,
-      phone,
-      email,
-      address,
-      address_street: addressStreet,
-      address_locality: addressLocality,
-      india_location_id: locationId,
-      city,
-      state,
-      postal_code: postalCode,
-      pan_number: panNumber,
-      aadhaar_last_four: aadhaarNumber.slice(-4),
-      aadhaar_hash: aadhaarHash,
-      legal_trade_name: legalTradeName,
-      is_gst_registered: isGstRegistered,
-      gst_number: isGstRegistered ? gstNumber : null,
-      fleet_size_band: fleetSizeBand,
-      onboarding_status: "documents_pending",
-      created_by: profile.id,
-      updated_by: profile.id
-    })
-    .select("id")
-    .single<{ id: string }>();
+  let customer: { id: string } | null = null;
+  let customerError: { message: string } | null = null;
+  let createdCustomer = false;
+
+  if (existingCustomer) {
+    const result = await admin
+      .from("customers")
+      .update(customerPayload)
+      .eq("id", existingCustomer.id)
+      .select("id")
+      .single<{ id: string }>();
+    customer = result.data;
+    customerError = result.error;
+  } else {
+    const result = await admin
+      .from("customers")
+      .insert({ ...customerPayload, customer_code: customerCode, created_by: profile.id })
+      .select("id")
+      .single<{ id: string }>();
+    customer = result.data;
+    customerError = result.error;
+    createdCustomer = Boolean(result.data);
+  }
 
   if (customerError || !customer) {
     if (createdAuthUserId) await admin.auth.admin.deleteUser(createdAuthUserId);
     if (customerError?.message.includes("customers_gst_number_format_check")) {
       return failure("Enter a valid 15-character GSTIN, for example 22AAAAA0000A1Z5.", "gst_number");
     }
-    return failure(`Customer could not be created: ${customerError?.message ?? "Unknown database error"}`);
+    if (customerError?.message.includes("customers_phone_normalized_uidx") || customerError?.message.includes("customers_profile_id_uidx")) {
+      return failure("A customer record already exists for this mobile login. Refresh the Customers page and edit that record instead.", "phone");
+    }
+    return failure(`Customer could not be saved: ${customerError?.message ?? "Unknown database error"}`);
+  }
+
+  const { data: oldDocuments } = await admin
+    .from("customer_documents")
+    .select("id, storage_path, document_type")
+    .eq("customer_id", customer.id)
+    .in("document_type", documentInputs.map((item) => item.type));
+
+  const oldPaths = (oldDocuments ?? [])
+    .map((document: { storage_path: string | null }) => document.storage_path)
+    .filter((path: string | null): path is string => Boolean(path));
+  if (oldPaths.length) await admin.storage.from(DOCUMENT_BUCKET).remove(oldPaths);
+  if ((oldDocuments?.length ?? 0) > 0) {
+    await admin
+      .from("customer_documents")
+      .delete()
+      .eq("customer_id", customer.id)
+      .in("document_type", documentInputs.map((item) => item.type));
   }
 
   const uploadedPaths: string[] = [];
@@ -248,8 +306,8 @@ export async function createCustomerOnboarding(
 
     if (uploadError) {
       if (uploadedPaths.length) await admin.storage.from(DOCUMENT_BUCKET).remove(uploadedPaths);
-      await admin.from("customers").delete().eq("id", customer.id);
-      if (createdAuthUserId) await admin.auth.admin.deleteUser(createdAuthUserId);
+      if (createdCustomer) await admin.from("customers").delete().eq("id", customer.id);
+      if (createdAuthUserId && createdCustomer) await admin.auth.admin.deleteUser(createdAuthUserId);
       return failure(`${labels[input.type]} upload failed: ${uploadError.message}`, input.field);
     }
     uploadedPaths.push(storagePath);
@@ -268,8 +326,8 @@ export async function createCustomerOnboarding(
 
     if (metadataError) {
       await admin.storage.from(DOCUMENT_BUCKET).remove(uploadedPaths);
-      await admin.from("customers").delete().eq("id", customer.id);
-      if (createdAuthUserId) await admin.auth.admin.deleteUser(createdAuthUserId);
+      if (createdCustomer) await admin.from("customers").delete().eq("id", customer.id);
+      if (createdAuthUserId && createdCustomer) await admin.auth.admin.deleteUser(createdAuthUserId);
       return failure(`Document record could not be saved: ${metadataError.message}`, input.field);
     }
   }
@@ -280,7 +338,7 @@ export async function createCustomerOnboarding(
     .eq("id", customer.id);
 
   if (completionError) {
-    return failure(`Customer was created, but onboarding could not be completed: ${completionError.message}`);
+    return failure(`Customer was saved, but onboarding could not be completed: ${completionError.message}`);
   }
 
   redirect("/customers");
