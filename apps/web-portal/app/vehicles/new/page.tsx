@@ -24,7 +24,7 @@ export default async function NewVehiclePage({ searchParams }: { searchParams: P
 
   const customerOptions = (customersResult.data ?? []).map((customer) => ({
     value: customer.id,
-    label: customer.company_name ?? customer.contact_name
+    label: customer.contact_name
   }));
   const manufacturerOptions = (manufacturersResult.data ?? []).map((manufacturer) => ({
     value: manufacturer.name,
