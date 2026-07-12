@@ -43,7 +43,7 @@ function FormSection({ title, children, columns = "three" }: { title: string; ch
 }
 
 function Field({ label, name, placeholder = "", type = "text", required = false, defaultValue, uppercase = false, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; name: string; uppercase?: boolean }) {
-  return <div><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} type={type} placeholder={placeholder} required={required} defaultValue={defaultValue ?? ""} className={`${inputClass} ${uppercase ? "uppercase" : ""}`} onInput={uppercase ? (event) => { event.currentTarget.value = event.currentTarget.value.toUpperCase(); } : undefined} {...props} /></div>;
+  return <div><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} type={type} placeholder={placeholder} required={required} defaultValue={defaultValue ?? ""} className={`${inputClass} ${uppercase ? "uppercase" : ""}`} {...props} /></div>;
 }
 
 function SelectField({ label, name, options, emptyLabel, required = false, defaultValue }: { label: string; name: string; options: SelectOption[]; emptyLabel: string; required?: boolean; defaultValue?: string | null }) {
