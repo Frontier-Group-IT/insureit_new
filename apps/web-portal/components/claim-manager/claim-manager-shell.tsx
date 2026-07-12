@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { UserMenu } from "@/components/user-menu";
@@ -18,7 +18,7 @@ export async function ClaimManagerShell({ title, backHref = "/dashboard", childr
   const notificationGroups = buildNotificationGroups(notificationRows);
 
   return <div className="min-h-screen bg-[#F4F6FA] text-[#101828]">
-    <AppNavigation activeNav={activeNav} customerCount={customerCount ?? 0} />
+    <Suspense fallback={<div className="fixed inset-y-0 left-0 hidden w-[244px] bg-[#15183B] lg:block" />}><AppNavigation activeNav={activeNav} customerCount={customerCount ?? 0} /></Suspense>
     <div className="lg:pl-[244px]"><header className="sticky top-0 z-30 border-b border-[#DDE3EC] bg-white/95 backdrop-blur"><div className="flex h-14 items-center justify-between gap-4 px-4 lg:px-5"><div className="flex min-w-0 items-center gap-3"><HistoryBackButton fallbackHref={backHref} /><img src={logoUrl} alt="InsureIT" className="h-8 w-[118px] shrink-0 object-contain object-left" /><div className="hidden h-6 w-px bg-[#E3E7EE] sm:block" /><h1 className="truncate text-[16px] font-semibold tracking-tight text-[#17203A]">{title}</h1></div><div className="flex items-center gap-2"><label className="relative hidden md:block"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[#98A2B3]">⌕</span><input aria-label="Global search" placeholder="Search" className="h-8 w-56 rounded-md border border-[#D8DEE8] bg-[#FAFBFC] py-1 pl-8 pr-3 text-[12px]" /></label><NotificationMenu groups={notificationGroups} count={notificationRows.length} /><div className="ml-1 border-l border-[#E4E7EC] pl-2"><UserMenu profile={profile} user={user ? { id: user.id, email: user.email } : null} /></div></div></div></header><main className="min-h-[calc(100vh-56px)] px-3 py-3 sm:px-4 lg:px-5">{children}</main></div>
   </div>;
 }
