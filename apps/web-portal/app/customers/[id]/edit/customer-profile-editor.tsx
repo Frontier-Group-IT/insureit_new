@@ -12,12 +12,23 @@ type Props = { customer: Customer; documents: DocumentRow[]; vehicles: VehicleRo
 
 const inputClass = "h-8 w-full rounded-md border border-[var(--border)] bg-white px-2.5 text-[11.5px] text-[var(--text)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[#E8E8FF]";
 const labelClass = "mb-1 block text-[9.5px] font-semibold uppercase tracking-[0.04em] text-[#68758A]";
-const allDocumentTypes = ["pan_copy", "aadhaar_front", "aadhaar_back", "gst_copy"];
+const allDocumentTypes = ["pan_copy", "aadhaar_front", "aadhaar_back", "gst_copy"] as const;
+type DocumentType = (typeof allDocumentTypes)[number];
 
 export function CustomerProfileEditor({ customer, documents, vehicles, agents, action }: Props) {
   const [gstRegistered, setGstRegistered] = useState(customer.is_gst_registered);
+  const [selectedFileNames, setSelectedFileNames] = useState<Partial<Record<DocumentType, string>>>({});
   const requiredTypes = gstRegistered ? allDocumentTypes : allDocumentTypes.filter((type) => type !== "gst_copy");
   const documentMap = new Map(documents.map((document) => [document.document_type, document]));
+
+  function handleDocumentSelection(type: DocumentType, file: File | null) {
+    setSelectedFileNames((current) => {
+      const next = { ...current };
+      if (file) next[type] = file.name;
+      else delete next[type];
+      return next;
+    });
+  }
 
   return (
     <form action={action} encType="multipart/form-data" className="space-y-2 pb-5">
@@ -38,7 +49,25 @@ export function CustomerProfileEditor({ customer, documents, vehicles, agents, a
             <div className="space-y-2">
               {requiredTypes.map((type) => {
                 const document = documentMap.get(type);
-                return <div key={type} className="rounded-md border border-[#E3E9F1] bg-[#FAFBFD] p-2"><div className="flex items-center gap-2"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-[#ECEEFF] text-[12px]">↥</span><div className="min-w-0 flex-1"><p className="truncate text-[10.5px] font-semibold text-[var(--text)]">{documentLabel(type)}</p><p className="truncate text-[9px] text-[var(--muted)]">{document?.file_name ?? "Not uploaded"}</p></div>{document ? <div className="text-right"><DocumentStatus status={document.verification_status} />{document.signedUrl ? <a href={document.signedUrl} target="_blank" rel="noreferrer" className="mt-1 block text-[9px] font-semibold text-[var(--accent)]">Open</a> : null}</div> : <span className="rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[8px] font-semibold text-amber-700">Missing</span>}</div><label className="mt-2 flex h-7 cursor-pointer items-center justify-center rounded-md border border-dashed border-[#C8D2E0] bg-white text-[9.5px] font-semibold text-[#475569] hover:border-[#6366F1] hover:text-[#4F46E5]">{document ? "Replace document" : "Upload document"}<input type="file" name={type} accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" className="sr-only" /></label></div>;
+                const selectedFileName = selectedFileNames[type];
+                const displayedFileName = selectedFileName ?? document?.file_name ?? "Not uploaded";
+                return (
+                  <div key={type} className="rounded-md border border-[#E3E9F1] bg-[#FAFBFD] p-2">
+                    <div className="flex items-center gap-2">
+                      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-[#ECEEFF] text-[12px]">↥</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[10.5px] font-semibold text-[var(--text)]">{documentLabel(type)}</p>
+                        <p className={`truncate text-[9px] ${selectedFileName ? "font-semibold text-[#4F46E5]" : "text-[var(--muted)]"}`}>{displayedFileName}</p>
+                        {selectedFileName ? <p className="mt-0.5 text-[8px] font-semibold text-amber-700">Selected · save changes to upload</p> : null}
+                      </div>
+                      {selectedFileName ? <span className="rounded-full border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[8px] font-semibold text-indigo-700">Ready</span> : document ? <div className="text-right"><DocumentStatus status={document.verification_status} />{document.signedUrl ? <a href={document.signedUrl} target="_blank" rel="noreferrer" className="mt-1 block text-[9px] font-semibold text-[var(--accent)]">Open</a> : null}</div> : <span className="rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[8px] font-semibold text-amber-700">Missing</span>}
+                    </div>
+                    <label className="mt-2 flex h-7 cursor-pointer items-center justify-center rounded-md border border-dashed border-[#C8D2E0] bg-white text-[9.5px] font-semibold text-[#475569] hover:border-[#6366F1] hover:text-[#4F46E5]">
+                      {selectedFileName ? "Change selected file" : document ? "Replace document" : "Upload document"}
+                      <input type="file" name={type} accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" className="sr-only" onChange={(event) => handleDocumentSelection(type, event.target.files?.[0] ?? null)} />
+                    </label>
+                  </div>
+                );
               })}
             </div>
           </Panel>
