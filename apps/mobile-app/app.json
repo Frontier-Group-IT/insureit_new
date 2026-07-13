@@ -10,7 +10,9 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/aadcb7a5-072b-4bf9-bc81-c52fabdd5caa"
+      "url": "https://u.expo.dev/aadcb7a5-072b-4bf9-bc81-c52fabdd5caa",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 10000
     },
     "icon": "./assets/brand/insureit-app-icon.png",
     "splash": {
