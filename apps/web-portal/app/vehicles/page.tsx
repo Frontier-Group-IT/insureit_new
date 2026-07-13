@@ -1,8 +1,6 @@
-import Link from "next/link";
-import { DataError, DataTable } from "@/components/record-list";
-import { AppShell, PageHeader } from "@/components/shell";
-import { SearchFilterBar } from "@/components/ui";
+import { AppShell } from "@/components/shell";
 import { createServerSupabaseClient } from "@/lib/auth-server";
+import { VehicleWorkspace } from "./vehicle-workspace";
 
 type VehicleRow = {
   id: string;
@@ -24,15 +22,7 @@ export default async function VehiclesPage() {
 
   return (
     <AppShell title="Vehicles">
-      <PageHeader title="Vehicles" action={<Link className="rounded-xl bg-navy-700 px-4 py-2 text-sm font-semibold text-white shadow-sm" href="/vehicles/new">Add vehicle</Link>} />
-      <SearchFilterBar searchPlaceholder="Search vehicles by registration number, customer, permit, or type" filterLabel="Vehicle status" />
-      {error ? <DataError message={error.message} /> : <DataTable rows={data ?? []} emptyTitle="No vehicles added yet" emptyDescription="No vehicles added yet. Add a commercial vehicle and link it with a customer profile." columns={[
-        { header: "Vehicle", cell: (vehicle) => <><p className="font-mono font-semibold text-navy-900">{vehicle.vehicle_no}</p><p className="text-xs text-slate-500">{vehicle.vehicle_type}</p></> },
-        { header: "Customer", cell: (vehicle) => vehicle.customers?.company_name ?? vehicle.customers?.contact_name ?? "—" },
-        { header: "Make / model", cell: (vehicle) => [vehicle.make, vehicle.model].filter(Boolean).join(" ") || "—" },
-        { header: "Permit", cell: (vehicle) => vehicle.permit_no ?? "—" },
-        { header: "", cell: (vehicle) => <Link className="font-semibold text-navy-700" href={`/vehicles/${vehicle.id}/edit`}>Edit</Link> }
-      ]} />}
+      {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[11px] font-medium text-red-700">{error.message}</div> : <VehicleWorkspace rows={data ?? []} />}
     </AppShell>
   );
 }
