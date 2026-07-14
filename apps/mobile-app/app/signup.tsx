@@ -84,12 +84,12 @@ export default function SignupScreen() {
         setError('OTP verification did not return an active account.');
         return;
       }
-      await syncCustomerSignupDetails(data.user, {
+      const profile = await syncCustomerSignupDetails(data.user, {
         fullName: trimmedName,
         phone: fullPhone,
         email: trimmedEmail || undefined,
       });
-      await routeSignedInUser(data.user, router);
+      await routeSignedInUser(data.user, router, profile);
     } catch (nextError) {
       setError(signupErrorMessage(nextError, 'verify'));
     } finally {
