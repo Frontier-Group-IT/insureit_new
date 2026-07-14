@@ -55,7 +55,7 @@ export default function PartnerTypeScreen() {
 
   async function saveSelection() {
     if (!selected || saving) return;
-    if (selected !== 'individual_proprietor') {
+    if (selected !== 'individual_proprietor' && selected !== 'group') {
       setError(`${partnerOptions.find((option) => option.value === selected)?.label ?? 'This'} onboarding form will be added in the next workflow update.`);
       return;
     }
@@ -65,7 +65,7 @@ export default function PartnerTypeScreen() {
       const session = await getCurrentSession();
       if (!session?.user || session.user.id !== userId) return router.replace('/login');
       await startCustomerOnboarding(session.user, selected);
-      router.replace('/customer/kyc/individual');
+      router.replace(selected === 'group' ? '/customer/kyc/group' : '/customer/kyc/individual');
     } catch {
       setError('Your partner type could not be saved. Please try again.');
     } finally {
