@@ -1,4 +1,4 @@
-import { Slot, usePathname, useRouter } from 'expo-router';
+import { Stack, usePathname, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
@@ -55,7 +55,14 @@ export default function CustomerKycLayout() {
     );
   }
 
-  return <Slot />;
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="partner-type" />
+      <Stack.Screen name="individual" />
+      <Stack.Screen name="corporate" />
+      <Stack.Screen name="group" />
+    </Stack>
+  );
 }
 
 const styles = StyleSheet.create({
