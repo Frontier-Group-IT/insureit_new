@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { requireMasterDataManager } from "@/lib/master-data-server";
-import { approveMobileGroupApplication, approveMobileIndividualApplication, requestMobileApplicationChanges } from "../actions";
+import { approveMobileIndividualApplication, requestMobileApplicationChanges } from "../actions";
 import { approveMobileCorporateApplication } from "../corporate-actions";
+import { approveMobileGroupApplication } from "../group-actions";
 
 type PageProps = { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; success?: string }> };
 type Application = { id: string; partner_type: string | null; status: string; applicant_phone: string | null; applicant_email: string | null; draft_data: Record<string, unknown> | null; created_at: string; updated_at: string; customer_id: string | null };
