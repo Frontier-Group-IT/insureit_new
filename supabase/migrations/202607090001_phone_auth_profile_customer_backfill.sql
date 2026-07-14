@@ -54,6 +54,26 @@ set
   phone = coalesce(nullif(public.profiles.phone, ''), excluded.phone),
   email = coalesce(public.profiles.email, excluded.email);
 
+-- Reuse an existing customer with the same normalized mobile before attempting
+-- to create a new row. This keeps auth/profile backfills compatible with the
+-- single-customer-per-mobile constraint.
+update public.customers c
+set
+  profile_id = p.id,
+  contact_name = case when c.contact_name in ('', 'Customer', 'New user') then coalesce(nullif(p.full_name, ''), c.contact_name) else c.contact_name end,
+  phone = coalesce(nullif(c.phone, ''), p.phone, u.phone, ''),
+  email = coalesce(c.email, p.email, u.email, nullif(u.raw_user_meta_data ->> 'email', '')),
+  updated_at = now()
+from public.profiles p
+join auth.users u on u.id = p.id
+where p.role = 'customer'
+  and c.profile_id is null
+  and length(regexp_replace(coalesce(c.phone, ''), '\D', '', 'g')) >= 10
+  and right(regexp_replace(c.phone, '\D', '', 'g'), 10) = right(regexp_replace(coalesce(p.phone, u.phone, ''), '\D', '', 'g'), 10)
+  and not exists (
+    select 1 from public.customers linked where linked.profile_id = p.id
+  );
+
 insert into public.customers (profile_id, customer_code, contact_name, phone, email)
 select
   p.id,
@@ -68,6 +88,12 @@ where p.role = 'customer'
     select 1
     from public.customers c
     where c.profile_id = p.id
+  )
+  and not exists (
+    select 1
+    from public.customers c
+    where length(regexp_replace(coalesce(c.phone, ''), '\D', '', 'g')) >= 10
+      and right(regexp_replace(c.phone, '\D', '', 'g'), 10) = right(regexp_replace(coalesce(p.phone, u.phone, ''), '\D', '', 'g'), 10)
   );
 
 update public.customers c

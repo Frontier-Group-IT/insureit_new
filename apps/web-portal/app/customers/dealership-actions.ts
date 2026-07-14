@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { canManageMasterData } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { approvePortalOnboardingApplication, beginPortalOnboardingApplication, markPortalOnboardingForCorrection } from "./onboarding-applications";
 
 export type DealershipOnboardingState = { error: string | null; field: string | null };
 
@@ -71,6 +72,20 @@ export async function createDealershipOnboarding(_state: DealershipOnboardingSta
   const addressLocality = text(formData, "address_locality");
   const address = [addressStreet, addressLocality, city, state, postalCode].filter(Boolean).join(", ");
 
+  let application: { id: string };
+  try {
+    application = await beginPortalOnboardingApplication(admin, {
+      initiatedBy: profile.id,
+      partnerType: "dealership",
+      phone,
+      email,
+      draftData: { dealership_type: dealershipType, dealership_name: dealershipName, owner_name: ownerName, city, state, postal_code: postalCode, oem_name: oemName, yearly_sales_band: yearlySalesBand, is_gst_registered: isGstRegistered }
+    });
+  } catch (error) {
+    return fail(`Onboarding application could not be prepared: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+  const correction = async (message: string) => { await markPortalOnboardingForCorrection(admin, application.id, message); };
+
   const { data: customer, error: customerError } = await admin.from("customers").insert({
     customer_code: `CUST-${Date.now().toString().slice(-9)}`,
     partner_type: "dealership",
@@ -92,11 +107,11 @@ export async function createDealershipOnboarding(_state: DealershipOnboardingSta
     created_by: profile.id,
     updated_by: profile.id
   }).select("id").single<{ id: string }>();
-  if (customerError || !customer) return fail(`Dealership could not be saved: ${customerError?.message ?? "Unknown error"}`);
+  if (customerError || !customer) { await correction(customerError?.message ?? "Dealership could not be saved."); return fail(`Dealership could not be saved: ${customerError?.message ?? "Unknown error"}`); }
 
   const cleanup = async () => { await admin.from("customers").delete().eq("id", customer.id); };
   const { error: dealershipError } = await admin.from("dealership_profiles").insert({ customer_id: customer.id, dealership_type: dealershipType, dealership_name: dealershipName, owner_name: ownerName, oem_name: oemName, yearly_sales_band: yearlySalesBand });
-  if (dealershipError) { await cleanup(); return fail(`Dealership profile could not be saved: ${dealershipError.message}`); }
+  if (dealershipError) { await cleanup(); await correction(dealershipError.message); return fail(`Dealership profile could not be saved: ${dealershipError.message}`); }
 
   const { error: representativeError } = await admin.from("dealership_representatives").insert({
     customer_id: customer.id,
@@ -108,12 +123,12 @@ export async function createDealershipOnboarding(_state: DealershipOnboardingSta
     aadhaar_hash: createHash("sha256").update(aadhaarNumber).digest("hex"),
     pan_number: panNumber
   });
-  if (representativeError) { await cleanup(); return fail(`Representative details could not be saved: ${representativeError.message}`); }
+  if (representativeError) { await cleanup(); await correction(representativeError.message); return fail(`Representative details could not be saved: ${representativeError.message}`); }
 
   const roles = ["sales_head", "bodyshop_head", "insurance_head", "insurance_spoc"] as const;
   const contacts = roles.map((role) => ({ customer_id: customer.id, contact_role: role, contact_name: text(formData, `${role}_name`), mobile: normalizePhone(text(formData, `${role}_mobile`)), email: text(formData, `${role}_email`) }));
   const { error: contactsError } = await admin.from("dealership_contacts").insert(contacts);
-  if (contactsError) { await cleanup(); return fail(`Additional contacts could not be saved: ${contactsError.message}`); }
+  if (contactsError) { await cleanup(); await correction(contactsError.message); return fail(`Additional contacts could not be saved: ${contactsError.message}`); }
 
   const documentMap: Array<[string, string]> = [
     ["gst_copy", "gst_copy"],
@@ -126,11 +141,14 @@ export async function createDealershipOnboarding(_state: DealershipOnboardingSta
     const selected = file(formData, field); if (!selected) continue;
     const storagePath = `${customer.id}/dealership/${field}/${randomUUID()}.${extension(selected)}`;
     const { error: uploadError } = await admin.storage.from(DOCUMENT_BUCKET).upload(storagePath, new Uint8Array(await selected.arrayBuffer()), { contentType: selected.type, upsert: false });
-    if (uploadError) { if (uploaded.length) await admin.storage.from(DOCUMENT_BUCKET).remove(uploaded); await cleanup(); return fail(`Document upload failed: ${uploadError.message}`, field); }
+    if (uploadError) { if (uploaded.length) await admin.storage.from(DOCUMENT_BUCKET).remove(uploaded); await cleanup(); await correction(uploadError.message); return fail(`Document upload failed: ${uploadError.message}`, field); }
     uploaded.push(storagePath);
     const { error: metadataError } = await admin.from("customer_documents").insert({ customer_id: customer.id, document_type: documentType, file_name: selected.name, storage_bucket: DOCUMENT_BUCKET, storage_path: storagePath, mime_type: selected.type, file_size: selected.size, verification_status: "verified", upload_source: "manager_portal", uploaded_by: profile.id, verified_by: profile.id, verified_at: new Date().toISOString() });
-    if (metadataError) { await admin.storage.from(DOCUMENT_BUCKET).remove(uploaded); await cleanup(); return fail(`Document record could not be saved: ${metadataError.message}`, field); }
+    if (metadataError) { await admin.storage.from(DOCUMENT_BUCKET).remove(uploaded); await cleanup(); await correction(metadataError.message); return fail(`Document record could not be saved: ${metadataError.message}`, field); }
   }
+
+  try { await approvePortalOnboardingApplication(admin, application.id, customer.id, profile.id); }
+  catch (error) { return fail(`Dealership was created, but its onboarding application could not be completed: ${error instanceof Error ? error.message : "Unknown error"}`); }
 
   redirect("/customers?success=dealership_created");
 }

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { canManageMasterData } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { approvePortalOnboardingApplication, beginPortalOnboardingApplication, markPortalOnboardingForCorrection } from "./onboarding-applications";
 
 export type GroupOnboardingState = { error: string | null; field: string | null };
 const BUCKET = "customer-documents";
@@ -62,6 +63,21 @@ export async function createGroupOnboarding(_state: GroupOnboardingState, data: 
   const street = text(data, "address_street");
   const locality = text(data, "address_locality");
   const address = [street, locality, city, state, postalCode].filter(Boolean).join(", ");
+
+  let application: { id: string };
+  try {
+    application = await beginPortalOnboardingApplication(admin, {
+      initiatedBy: profile.id,
+      partnerType: "group",
+      phone: contactNumber,
+      email: text(data, "email"),
+      draftData: { group_name: groupName, owner_name: ownerName, company_name: companyName, city, state, postal_code: postalCode, fleet_size_band: fleetSize, has_owner_kyc: Boolean(ownerPan || ownerAadhaar), has_gst: Boolean(gstNumber) }
+    });
+  } catch (error) {
+    return fail(`Onboarding application could not be prepared: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+  const correction = async (message: string) => { await markPortalOnboardingForCorrection(admin, application.id, message); };
+
   const { data: customer, error: customerError } = await admin.from("customers").insert({
     customer_code: `CUST-${Date.now().toString().slice(-9)}`, partner_type: "group", contact_name: ownerName,
     company_name: groupName, legal_trade_name: companyName, phone: contactNumber, email: text(data, "email"),
@@ -70,16 +86,16 @@ export async function createGroupOnboarding(_state: GroupOnboardingState, data: 
     aadhaar_last_four: ownerAadhaar ? ownerAadhaar.slice(-4) : null, fleet_size_band: fleetSize,
     onboarding_status: "active", created_by: profile.id, updated_by: profile.id
   }).select("id").single<{ id: string }>();
-  if (customerError || !customer) return fail(`Group could not be saved: ${customerError?.message ?? "Unknown error"}`);
+  if (customerError || !customer) { await correction(customerError?.message ?? "Group could not be saved."); return fail(`Group could not be saved: ${customerError?.message ?? "Unknown error"}`); }
 
   const cleanup = async () => { await admin.from("customers").delete().eq("id", customer.id); };
   const { error: groupError } = await admin.from("group_profiles").insert({ customer_id: customer.id, group_name: groupName, owner_name: ownerName, company_name: companyName, company_pan_number: companyPan });
-  if (groupError) { await cleanup(); return fail(`Group profile could not be saved: ${groupError.message}`); }
+  if (groupError) { await cleanup(); await correction(groupError.message); return fail(`Group profile could not be saved: ${groupError.message}`); }
 
   const roles = ["ceo_head", "admin_head", "dedicated_spoc"] as const;
   const contacts = roles.map((role) => ({ customer_id: customer.id, contact_role: role, contact_name: text(data, `${role}_name`), mobile: phone(text(data, `${role}_mobile`)), email: text(data, `${role}_email`) }));
   const { error: contactsError } = await admin.from("group_contacts").insert(contacts);
-  if (contactsError) { await cleanup(); return fail(`Additional contacts could not be saved: ${contactsError.message}`); }
+  if (contactsError) { await cleanup(); await correction(contactsError.message); return fail(`Additional contacts could not be saved: ${contactsError.message}`); }
 
   const documentMap: Array<[string,string]> = [["owner_pan_copy","group_owner_pan_copy"],["owner_aadhaar_front","group_owner_aadhaar_front"],["owner_aadhaar_back","group_owner_aadhaar_back"],["gst_copy","gst_copy"],["company_pan_copy","group_company_pan_copy"]];
   const uploadedPaths: string[] = [];
@@ -87,11 +103,14 @@ export async function createGroupOnboarding(_state: GroupOnboardingState, data: 
     const selected = upload(data, field); if (!selected) continue;
     const path = `${customer.id}/group/${field}/${randomUUID()}.${ext(selected)}`;
     const { error: storageError } = await admin.storage.from(BUCKET).upload(path, new Uint8Array(await selected.arrayBuffer()), { contentType: selected.type, upsert: false });
-    if (storageError) { if (uploadedPaths.length) await admin.storage.from(BUCKET).remove(uploadedPaths); await cleanup(); return fail(`Document upload failed: ${storageError.message}`, field); }
+    if (storageError) { if (uploadedPaths.length) await admin.storage.from(BUCKET).remove(uploadedPaths); await cleanup(); await correction(storageError.message); return fail(`Document upload failed: ${storageError.message}`, field); }
     uploadedPaths.push(path);
     const { error: recordError } = await admin.from("customer_documents").insert({ customer_id: customer.id, document_type: documentType, file_name: selected.name, storage_bucket: BUCKET, storage_path: path, mime_type: selected.type, file_size: selected.size, verification_status: "verified", upload_source: "manager_portal", uploaded_by: profile.id, verified_by: profile.id, verified_at: new Date().toISOString() });
-    if (recordError) { await admin.storage.from(BUCKET).remove(uploadedPaths); await cleanup(); return fail(`Document record could not be saved: ${recordError.message}`, field); }
+    if (recordError) { await admin.storage.from(BUCKET).remove(uploadedPaths); await cleanup(); await correction(recordError.message); return fail(`Document record could not be saved: ${recordError.message}`, field); }
   }
+
+  try { await approvePortalOnboardingApplication(admin, application.id, customer.id, profile.id); }
+  catch (error) { return fail(`Group was created, but its onboarding application could not be completed: ${error instanceof Error ? error.message : "Unknown error"}`); }
 
   redirect("/customers?success=group_created");
 }

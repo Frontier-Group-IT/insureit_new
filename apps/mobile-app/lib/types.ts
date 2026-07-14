@@ -57,6 +57,17 @@ export type ClaimStatus =
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
+export type PartnerType = 'individual_proprietor' | 'dealership' | 'corporate' | 'group';
+export type CustomerOnboardingStatus =
+  | 'not_started'
+  | 'in_progress'
+  | 'submitted'
+  | 'under_review'
+  | 'changes_requested'
+  | 'approved'
+  | 'rejected'
+  | 'cancelled';
+
 type RowBase = { id: string; created_at?: string; updated_at?: string };
 
 type Tables = {
@@ -69,6 +80,41 @@ type Tables = {
     Row: RowBase & { profile_id: string | null; customer_code: string; company_name: string | null; contact_name: string; phone: string; email: string | null; address: string | null; city: string | null; state: string | null; postal_code: string | null; onboarding_status: string; assigned_agent_id: string | null; created_by: string | null; updated_by: string | null };
     Insert: { profile_id?: string | null; customer_code: string; company_name?: string | null; contact_name: string; phone: string; email?: string | null; address?: string | null; city?: string | null; state?: string | null; postal_code?: string | null; onboarding_status?: string; assigned_agent_id?: string | null; created_by?: string | null; updated_by?: string | null };
     Update: Partial<Tables['customers']['Insert']>;
+  };
+  customer_onboarding_applications: {
+    Row: RowBase & {
+      profile_id: string | null;
+      initiated_by: string | null;
+      source: 'customer_app' | 'manager_portal';
+      partner_type: PartnerType | null;
+      status: CustomerOnboardingStatus;
+      current_step: number;
+      applicant_phone: string | null;
+      applicant_email: string | null;
+      draft_data: Json;
+      customer_id: string | null;
+      submitted_at: string | null;
+      reviewed_by: string | null;
+      reviewed_at: string | null;
+      completed_at: string | null;
+    };
+    Insert: {
+      profile_id?: string | null;
+      initiated_by?: string | null;
+      source: 'customer_app' | 'manager_portal';
+      partner_type?: PartnerType | null;
+      status?: CustomerOnboardingStatus;
+      current_step?: number;
+      applicant_phone?: string | null;
+      applicant_email?: string | null;
+      draft_data?: Json;
+      customer_id?: string | null;
+      submitted_at?: string | null;
+      reviewed_by?: string | null;
+      reviewed_at?: string | null;
+      completed_at?: string | null;
+    };
+    Update: Partial<Tables['customer_onboarding_applications']['Insert']>;
   };
   vehicles: {
     Row: RowBase & { customer_id: string; vehicle_no: string; vehicle_type: string; make: string | null; model: string | null; year: number | null; chassis_no: string | null; engine_no: string | null; permit_no: string | null };
@@ -160,6 +206,7 @@ export type Database = {
 
 export type Profile = Tables['profiles']['Row'];
 export type Customer = Tables['customers']['Row'];
+export type CustomerOnboardingApplication = Tables['customer_onboarding_applications']['Row'];
 export type Vehicle = Tables['vehicles']['Row'];
 export type Policy = Tables['policies']['Row'];
 export type Claim = Tables['claims']['Row'];

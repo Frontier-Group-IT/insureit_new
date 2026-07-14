@@ -2,18 +2,17 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Image, ImageSourcePropType, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, ImageSourcePropType, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomNavigation } from '@/components/customer-dashboard';
 import { BrandLogo } from '@/components/first-look';
 import { NotificationBell } from '@/components/realtime-notifications';
 import { LoadingState } from '@/components/ui';
-import { ensureCustomerForUser, getCurrentSession, getProfile, isValidProfile, signOut } from '@/lib/auth';
+import { getCurrentSession, getCustomerForUser, getOnboardingApplicationForUser, getProfile, isValidProfile, signOut } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
-import type { User } from '@supabase/supabase-js';
-import type { Claim, ClaimTask, Customer, Policy, Profile, Vehicle } from '@/lib/types';
+import type { Claim, ClaimTask, Customer, CustomerOnboardingApplication, Profile, Vehicle } from '@/lib/types';
 
 const fleetSketch = require('../../assets/brand/customer-fleet-sketch.png');
 const exchangeVehicleIcon = require('../../assets/brand/exchange-vehicle-icon.png');
@@ -24,8 +23,8 @@ export default function CustomerMockupHomeScreen() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [onboarding, setOnboarding] = useState<CustomerOnboardingApplication | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [policies, setPolicies] = useState<Policy[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [tasks, setTasks] = useState<ClaimTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,19 +38,21 @@ export default function CustomerMockupHomeScreen() {
         if (!session?.user) return router.replace('/login');
         const nextProfile = await waitForCustomerProfile(session.user.id);
         if (!isValidProfile(nextProfile) || nextProfile.role !== 'customer') return router.replace('/access-denied');
-        const nextCustomer = await waitForCustomer(session.user);
+        const [nextCustomer, nextOnboarding] = await Promise.all([
+          getCustomerForUser(session.user.id),
+          getOnboardingApplicationForUser(session.user.id),
+        ]);
         if (!mounted) return;
-        setProfile(nextProfile); setCustomer(nextCustomer);
+        setProfile(nextProfile); setCustomer(nextCustomer); setOnboarding(nextOnboarding);
         if (nextCustomer) {
-          const [vehicleResult, policyResult, claimResult, taskResult] = await Promise.all([
+          const [vehicleResult, claimResult, taskResult] = await Promise.all([
             supabase.from('vehicles').select('*').eq('customer_id', nextCustomer.id),
-            supabase.from('policies').select('*').eq('customer_id', nextCustomer.id),
             supabase.from('claims').select('*').eq('customer_id', nextCustomer.id),
             supabase.from('claim_tasks').select('*').eq('status', 'open').order('created_at', { ascending: false }),
           ]);
           if (!mounted) return;
           const nextClaims = claimResult.data ?? [];
-          setVehicles(vehicleResult.data ?? []); setPolicies(policyResult.data ?? []); setClaims(nextClaims);
+          setVehicles(vehicleResult.data ?? []); setClaims(nextClaims);
           setTasks((taskResult.data ?? []).filter((task) => nextClaims.some((claim) => claim.id === task.claim_id)));
         }
       } catch { if (mounted) setError('We could not load your test dashboard.'); }
@@ -93,7 +94,36 @@ export default function CustomerMockupHomeScreen() {
       <Pressable onPress={() => router.push('/customer/support')} style={styles.supportCard}><MaterialCommunityIcons name="headset" size={33} color={palette.navy} /><View style={styles.supportCopy}><Text style={styles.supportTitle}>Need Help?</Text><Text style={styles.supportText}>Contact our support team</Text></View><MaterialCommunityIcons name="chevron-right" size={28} color={palette.navy} /></Pressable>
     </ScrollView>
     <View style={styles.nav}><BottomNavigation onClaims={() => router.push('/customer/claims')} onVehicles={() => router.push('/customer/vehicles')} onSupport={() => router.push('/customer/support')} onProfile={() => router.push('/customer/profile')} /></View>
+    <KycRequiredModal
+      visible={!customer}
+      application={onboarding}
+      onStart={() => router.push('/customer/kyc/partner-type' as Href)}
+      onSignOut={() => void signOut(router)}
+    />
   </SafeAreaView>;
+}
+
+function KycRequiredModal({ visible, application, onStart, onSignOut }: { visible: boolean; application: CustomerOnboardingApplication | null; onStart: () => void; onSignOut: () => void }) {
+  const awaitingReview = application?.status === 'submitted' || application?.status === 'under_review';
+  const started = Boolean(application?.partner_type);
+  return (
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={() => undefined}>
+      <View style={styles.kycBackdrop}>
+        <View accessibilityRole="alert" style={styles.kycModal}>
+          <View style={styles.kycArtwork}>
+            <MaterialCommunityIcons name="clipboard-account-outline" size={67} color="#1597E5" />
+            <View style={styles.kycCheck}><MaterialCommunityIcons name="check" size={22} color="#FFFFFF" /></View>
+          </View>
+          <Text style={styles.kycTitle}>{awaitingReview ? 'KYC submitted' : 'Kindly complete your KYC'}</Text>
+          <Text style={styles.kycBody}>{awaitingReview ? 'Your details are being reviewed. We will notify you when your account is ready.' : 'Please complete your KYC to access all features and services.'}</Text>
+          <Pressable accessibilityRole="button" disabled={awaitingReview} onPress={onStart} style={[styles.kycButton, awaitingReview && styles.kycButtonDisabled]}>
+            <Text style={styles.kycButtonText}>{awaitingReview ? 'Under review' : started ? 'Continue KYC' : 'Start'}</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" onPress={onSignOut} style={styles.kycSignOut}><Text style={styles.kycSignOutText}>Sign out</Text></Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
 }
 
 function ActionTile({ icon, imageSource, title, body, onPress, tone }: { icon?: keyof typeof MaterialCommunityIcons.glyphMap; imageSource?: ImageSourcePropType; title: string; body: string; onPress: () => void; tone: 'orange' | 'blue' | 'green' | 'teal' }) {
@@ -119,16 +149,6 @@ async function waitForCustomerProfile(userId: string) {
   return getProfile(userId);
 }
 
-async function waitForCustomer(user: User) {
-  const startedAt = Date.now();
-  while (Date.now() - startedAt < 9000) {
-    const customer = await ensureCustomerForUser(user);
-    if (customer) return customer;
-    await delay(650);
-  }
-  return ensureCustomerForUser(user);
-}
-
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -142,4 +162,15 @@ const styles = StyleSheet.create({
   actionCard: { minHeight: 134, borderRadius: 17, backgroundColor: '#FFFFFF', flexDirection: 'row', flexWrap: 'wrap', padding: 8, gap: 6, borderWidth: 1, borderColor: '#D9E8F8', shadowColor: '#0B63CE', shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }, actionTile: { width: '49%', minHeight: 57, borderRadius: 13, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#DCEBFA', alignItems: 'center', paddingHorizontal: 6, paddingVertical: 6, shadowColor: '#0A43A3', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }, actionIcon: { width: 29, height: 29, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }, actionImageIcon: { width: 26, height: 26 }, actionTitleRow: { minHeight: 18, marginTop: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }, actionTitle: { flex: 1, color: palette.navy, fontSize: 10.8, fontWeight: '900', textAlign: 'center' }, actionBody: { color: palette.navy, fontSize: 8.8, lineHeight: 10.5, fontWeight: '600', textAlign: 'center' },
   claimCard: { minHeight: 157, borderRadius: 17, backgroundColor: palette.navy, padding: 13, overflow: 'hidden' }, claimHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 }, claimIcon: { width: 38, height: 38, borderRadius: 12, borderWidth: 1.5, borderColor: '#F5B700', alignItems: 'center', justifyContent: 'center' }, claimTitle: { color: '#FFFFFF', fontSize: 15.5, fontWeight: '900' }, claimMetrics: { flex: 1, flexDirection: 'row', marginTop: 9 }, claimMetric: { flex: 1, alignItems: 'center', justifyContent: 'center', minWidth: 0 }, claimMetricLined: { borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.32)' }, claimMetricLabel: { color: '#FFFFFF', fontSize: 11, fontWeight: '500', textAlign: 'center' }, claimMetricValue: { color: '#FFFFFF', fontSize: 28, lineHeight: 32, fontWeight: '900', marginTop: 5 }, claimMetricDetailLabel: { color: '#FFFFFF', fontSize: 9.5, lineHeight: 11, fontWeight: '500', marginTop: 1, textAlign: 'center' }, claimMetricDetail: { color: '#F6C33B', fontSize: 15, lineHeight: 18, fontWeight: '900', marginTop: 1, textAlign: 'center' }, claimMetricDetailGreen: { color: '#68BF5B' },
   supportCard: { minHeight: 60, borderRadius: 17, backgroundColor: '#FFFFFF', paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 11, shadowColor: '#122544', shadowOpacity: 0.05, shadowRadius: 9, elevation: 2 }, supportCopy: { flex: 1 }, supportTitle: { color: palette.navy, fontSize: 15, fontWeight: '900' }, supportText: { color: palette.navy, fontSize: 11.5, fontWeight: '500', marginTop: 1 }, nav: { minHeight: 82, paddingHorizontal: 10, paddingTop: 8, paddingBottom: 8, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E3E8F0' },
+  kycBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, backgroundColor: 'rgba(10,18,31,0.66)' },
+  kycModal: { width: '100%', maxWidth: 410, borderRadius: 20, backgroundColor: '#FFFFFF', paddingHorizontal: 24, paddingTop: 25, paddingBottom: 16, alignItems: 'center', shadowColor: '#071D49', shadowOpacity: 0.24, shadowRadius: 24, elevation: 12 },
+  kycArtwork: { width: 116, height: 103, borderRadius: 52, backgroundColor: '#EFF8FF', alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  kycCheck: { position: 'absolute', right: 8, bottom: 8, width: 38, height: 38, borderRadius: 19, backgroundColor: '#42C77A', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#FFFFFF' },
+  kycTitle: { marginTop: 16, color: palette.navy, fontSize: 20, lineHeight: 25, fontWeight: '800', textAlign: 'center' },
+  kycBody: { marginTop: 8, maxWidth: 310, color: '#4B5B70', fontSize: 14, lineHeight: 20, fontWeight: '400', textAlign: 'center' },
+  kycButton: { width: '100%', minHeight: 54, marginTop: 20, borderRadius: 12, backgroundColor: '#0A3B8F', alignItems: 'center', justifyContent: 'center' },
+  kycButtonDisabled: { backgroundColor: '#8A98AC' },
+  kycButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  kycSignOut: { minHeight: 36, paddingHorizontal: 14, marginTop: 5, alignItems: 'center', justifyContent: 'center' },
+  kycSignOutText: { color: '#667085', fontSize: 12, fontWeight: '600' },
 });

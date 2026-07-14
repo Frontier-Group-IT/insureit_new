@@ -3,7 +3,7 @@ import { Router } from 'expo-router';
 import * as Linking from 'expo-linking';
 
 import { supabase } from './supabase';
-import type { AppRole, Customer, Profile } from './types';
+import type { AppRole, Customer, CustomerOnboardingApplication, PartnerType, Profile } from './types';
 import { isSalesHierarchyRole, isStaffRole } from './roles';
 
 export const validRoles: AppRole[] = [
@@ -124,22 +124,55 @@ export async function ensureCustomerForUser(
     return data;
   }
 
-  const profile = await getProfile(user.id);
-  if (!isValidProfile(profile) || profile.role !== 'customer') return null;
+  return null;
+}
 
-  const fallbackName = fallback?.fullName?.trim() || (profile.full_name && profile.full_name !== 'New user' ? profile.full_name : 'Customer');
+export async function getOnboardingApplicationForUser(userId: string): Promise<CustomerOnboardingApplication | null> {
   const { data, error } = await supabase
-    .from('customers')
+    .from('customer_onboarding_applications')
+    .select('*')
+    .eq('profile_id', userId)
+    .not('status', 'in', '(approved,rejected,cancelled)')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function startCustomerOnboarding(user: User, partnerType: PartnerType) {
+  const existing = await getOnboardingApplicationForUser(user.id);
+  if (existing) {
+    const { data, error } = await supabase
+      .from('customer_onboarding_applications')
+      .update({
+        partner_type: partnerType,
+        status: 'in_progress',
+        current_step: 1,
+        applicant_phone: user.phone ?? existing.applicant_phone,
+        applicant_email: user.email ?? existing.applicant_email,
+      })
+      .eq('id', existing.id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  const { data, error } = await supabase
+    .from('customer_onboarding_applications')
     .insert({
       profile_id: user.id,
-      customer_code: `CUST-${Date.now()}`,
-      contact_name: fallbackName,
-      phone: fallback?.phone?.trim() || profile.phone || user.phone || '',
-      email: fallback?.email?.trim() || profile.email || user.email || null,
+      initiated_by: user.id,
+      source: 'customer_app',
+      partner_type: partnerType,
+      status: 'in_progress',
+      current_step: 1,
+      applicant_phone: user.phone ?? null,
+      applicant_email: user.email ?? null,
     })
     .select('*')
     .single();
-
   if (error) throw error;
   return data;
 }
@@ -170,11 +203,7 @@ export async function syncCustomerSignupDetails(
 
   if (profileError) throw profileError;
 
-  return ensureCustomerForUser(user, {
-    fullName,
-    phone,
-    email: email ?? undefined,
-  });
+  return getProfile(user.id);
 }
 
 export async function sendPhoneOtp(phone: string) {

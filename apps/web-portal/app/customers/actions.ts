@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { canManageMasterData } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { approvePortalOnboardingApplication, beginPortalOnboardingApplication, markPortalOnboardingForCorrection } from "./onboarding-applications";
 
 export type CustomerOnboardingState = { error: string | null; field: string | null };
 
@@ -21,7 +22,7 @@ function textValue(formData: FormData, name: string) { const value = formData.ge
 function fileValue(formData: FormData, name: string) { const value = formData.get(name); return value instanceof File && value.size > 0 ? value : null; }
 function normalizeIndianPhone(value: string) { const digits = value.replace(/\D/g, ""); if (digits.length === 10) return `+91${digits}`; if (digits.length === 12 && digits.startsWith("91")) return `+${digits}`; if (digits.length === 13 && digits.startsWith("091")) return `+${digits.slice(1)}`; return null; }
 function safeExtension(file: File) { if (file.type === "application/pdf") return "pdf"; if (file.type === "image/png") return "png"; return "jpg"; }
-function validateDocument(file: File | null, label: string) { if (!file) return null; if (!ALLOWED_FILE_TYPES.has(file.type)) return `${label} must be a PDF, JPG or PNG file.`; if (file.size > MAX_FILE_SIZE) return `${label} must be 5 MB or smaller.`; return null; }
+function validateDocument(file: File | null, label: string, required = false) { if (!file) return required ? `${label} is required.` : null; if (!ALLOWED_FILE_TYPES.has(file.type)) return `${label} must be a PDF, JPG or PNG file.`; if (file.size > MAX_FILE_SIZE) return `${label} must be 5 MB or smaller.`; return null; }
 
 export async function createCustomerOnboarding(_previousState: CustomerOnboardingState, formData: FormData): Promise<CustomerOnboardingState> {
   const partnerType = textValue(formData, "partner_type");
@@ -58,7 +59,8 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
     { field: "gst_copy", type: "gst_copy" }
   ];
   const labels: Record<DocumentInput["type"], string> = { pan_copy: "PAN copy", aadhaar_front: "Aadhaar front", aadhaar_back: "Aadhaar back", gst_copy: "GST copy" };
-  for (const input of documentInputs) { const validationError = validateDocument(fileValue(formData, input.field), labels[input.type]); if (validationError) return failure(validationError, input.field); }
+  const requiredDocumentTypes = isGstRegistered ? new Set(["pan_copy", "aadhaar_front", "aadhaar_back", "gst_copy"]) : new Set(["pan_copy", "aadhaar_front", "aadhaar_back"]);
+  for (const input of documentInputs) { const validationError = validateDocument(fileValue(formData, input.field), labels[input.type], requiredDocumentTypes.has(input.type)); if (validationError) return failure(validationError, input.field); }
 
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
@@ -97,16 +99,26 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
   const addressStreet = textValue(formData, "address_street");
   const addressLocality = textValue(formData, "address_locality");
   const address = [addressStreet, addressLocality, city, state, postalCode].filter(Boolean).join(", ");
-  const suppliedDocumentTypes = documentInputs.filter((item) => fileValue(formData, item.field)).map((item) => item.type);
-  const requiredDocumentTypes = isGstRegistered ? ["pan_copy", "aadhaar_front", "aadhaar_back", "gst_copy"] : ["pan_copy", "aadhaar_front", "aadhaar_back"];
-  const hasAllDocuments = requiredDocumentTypes.every((type) => suppliedDocumentTypes.includes(type as DocumentInput["type"]));
+  let application: { id: string };
+  try {
+    application = await beginPortalOnboardingApplication(admin, {
+      profileId,
+      initiatedBy: profile.id,
+      partnerType: "individual_proprietor",
+      phone,
+      email,
+      draftData: { contact_name: contactName, city, state, postal_code: postalCode, is_gst_registered: isGstRegistered, fleet_size_band: fleetSizeBand }
+    });
+  } catch (error) {
+    return failure(`Onboarding application could not be prepared: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
 
   const customerPayload = {
     profile_id: profileId, partner_type: partnerType, contact_name: contactName, company_name: legalTradeName, phone, email, address,
     address_street: addressStreet, address_locality: addressLocality, india_location_id: locationId, city, state, postal_code: postalCode,
     pan_number: panNumber, aadhaar_last_four: aadhaarNumber.slice(-4), aadhaar_hash: aadhaarHash, legal_trade_name: legalTradeName,
     is_gst_registered: isGstRegistered, gst_number: isGstRegistered ? gstNumber : null, fleet_size_band: fleetSizeBand,
-    onboarding_status: hasAllDocuments ? "active" : "documents_pending", onboarding_completed_at: hasAllDocuments ? new Date().toISOString() : null, updated_by: profile.id
+    onboarding_status: "active", onboarding_completed_at: new Date().toISOString(), updated_by: profile.id
   };
 
   let customer: { id: string } | null = null;
@@ -119,7 +131,7 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
   }
 
   if (customerError || !customer) {
-    if (createdAuthUserId) await admin.auth.admin.deleteUser(createdAuthUserId);
+    await markPortalOnboardingForCorrection(admin, application.id, customerError?.message ?? "Customer record could not be created.");
     if (customerError?.message.includes("customers_gst_number_format_check")) return failure("Enter a valid 15-character GSTIN, for example 22AAAAA0000A1Z5.", "gst_number");
     if (customerError?.message.includes("customers_phone_normalized_uidx") || customerError?.message.includes("customers_profile_id_uidx")) return failure("A customer record already exists for this mobile login. Refresh the Customers page and edit that record instead.", "phone");
     return failure(`Customer could not be saved: ${customerError?.message ?? "Unknown database error"}`);
@@ -131,7 +143,7 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
     const storagePath = `${customer.id}/${input.type}/${randomUUID()}.${safeExtension(file)}`;
     const bytes = new Uint8Array(await file.arrayBuffer());
     const { error: uploadError } = await admin.storage.from(DOCUMENT_BUCKET).upload(storagePath, bytes, { contentType: file.type, upsert: false });
-    if (uploadError) { if (uploadedPaths.length) await admin.storage.from(DOCUMENT_BUCKET).remove(uploadedPaths); if (createdCustomer) await admin.from("customers").delete().eq("id", customer.id); if (createdAuthUserId && createdCustomer) await admin.auth.admin.deleteUser(createdAuthUserId); return failure(`${labels[input.type]} upload failed: ${uploadError.message}`, input.field); }
+    if (uploadError) { if (uploadedPaths.length) await admin.storage.from(DOCUMENT_BUCKET).remove(uploadedPaths); if (createdCustomer) await admin.from("customers").delete().eq("id", customer.id); await markPortalOnboardingForCorrection(admin, application.id, uploadError.message); return failure(`${labels[input.type]} upload failed: ${uploadError.message}`, input.field); }
     uploadedPaths.push(storagePath);
     const { error: metadataError } = await admin.from("customer_documents").insert({
       customer_id: customer.id,
@@ -147,8 +159,11 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
       verified_by: profile.id,
       verified_at: new Date().toISOString()
     });
-    if (metadataError) { await admin.storage.from(DOCUMENT_BUCKET).remove(uploadedPaths); if (createdCustomer) await admin.from("customers").delete().eq("id", customer.id); if (createdAuthUserId && createdCustomer) await admin.auth.admin.deleteUser(createdAuthUserId); return failure(`Document record could not be saved: ${metadataError.message}`, input.field); }
+    if (metadataError) { await admin.storage.from(DOCUMENT_BUCKET).remove(uploadedPaths); if (createdCustomer) await admin.from("customers").delete().eq("id", customer.id); await markPortalOnboardingForCorrection(admin, application.id, metadataError.message); return failure(`Document record could not be saved: ${metadataError.message}`, input.field); }
   }
+
+  try { await approvePortalOnboardingApplication(admin, application.id, customer.id, profile.id); }
+  catch (error) { return failure(`Customer was created, but the onboarding application could not be completed: ${error instanceof Error ? error.message : "Unknown error"}`); }
 
   redirect(`/customers?success=${createdCustomer ? "customer_created" : "customer_updated"}`);
 }
