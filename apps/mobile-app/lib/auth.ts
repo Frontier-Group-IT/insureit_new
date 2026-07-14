@@ -191,19 +191,29 @@ export async function syncCustomerSignupDetails(
   const phone = details.phone.trim();
   const email = details.email?.trim() || null;
 
-  const { error: profileError } = await supabase
-    .from('profiles')
-    .update({
-      full_name: fullName,
-      phone,
-      email,
-      role: 'customer',
+  return ensureCustomerSignupProfile(user, { fullName, phone, email });
+}
+
+async function ensureCustomerSignupProfile(
+  user: User,
+  details?: { fullName?: string; phone?: string; email?: string | null },
+): Promise<Profile> {
+  const metadata = user.user_metadata ?? {};
+  const fullName = details?.fullName?.trim() || metadata.full_name?.trim() || 'New user';
+  const phone = details?.phone?.trim() || user.phone || metadata.phone || '';
+  const email = details?.email?.trim() || user.email || metadata.email || null;
+
+  const { data, error } = await supabase
+    .rpc('ensure_customer_signup_profile', {
+      p_full_name: fullName,
+      p_phone: phone,
+      p_email: email,
     })
-    .eq('id', user.id);
+    .single();
 
-  if (profileError) throw profileError;
-
-  return getProfile(user.id);
+  if (error) throw error;
+  if (!data) throw new Error('Customer profile setup did not return a profile.');
+  return data as Profile;
 }
 
 export async function sendPhoneOtp(phone: string) {
@@ -282,7 +292,11 @@ export async function signOut(router: Router) {
 }
 
 export async function routeSignedInUser(user: User, router: Router) {
-  const profile = await getProfile(user.id);
+  let profile = await getProfile(user.id);
+  const metadataRole = user.app_metadata?.app_role ?? user.user_metadata?.app_role;
+  if (!profile && metadataRole === 'customer') {
+    profile = await ensureCustomerSignupProfile(user);
+  }
   if (!isValidProfile(profile)) {
     router.replace('/access-denied');
     return profile;

@@ -192,7 +192,16 @@ export type Database = {
   public: {
     Tables: Tables;
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      ensure_customer_signup_profile: {
+        Args: {
+          p_full_name: string;
+          p_phone: string;
+          p_email?: string | null;
+        };
+        Returns: Tables['profiles']['Row'];
+      };
+    };
     Enums: {
       app_role: AppRole;
       claim_status: ClaimStatus;

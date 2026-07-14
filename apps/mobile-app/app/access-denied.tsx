@@ -30,7 +30,10 @@ export default function AccessDeniedScreen() {
         if (!nextProfile) setReason('Your login exists, but no app profile is linked to it yet.');
         else if (!nextProfile.is_active) setReason('Your profile is currently inactive.');
         else if (!isValidProfile(nextProfile)) setReason('Your app profile is not enabled for this build.');
-        else setReason('This section is not available for your role.');
+        else {
+          router.replace(routeForRole(nextProfile.role));
+          return;
+        }
       } catch {
         if (active) setReason('We could not read your app profile. Please sign in again or contact support.');
       } finally {
@@ -41,7 +44,7 @@ export default function AccessDeniedScreen() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [router]);
 
   if (loading) return <Screen title="Access unavailable" subtitle="Checking your account."><LoadingState label="Checking access" /></Screen>;
 
