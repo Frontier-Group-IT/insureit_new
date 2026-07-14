@@ -4,6 +4,8 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { requireMasterDataManager } from "@/lib/master-data-server";
 import { createCustomerOnboarding } from "../actions";
 import { CustomerOnboardingForm } from "../customer-onboarding-form";
+import { createCorporateOnboarding } from "../corporate-actions";
+import { CorporateOnboardingForm } from "../corporate-onboarding-form";
 import { createDealershipOnboarding } from "../dealership-actions";
 import { DealershipOnboardingForm } from "../dealership-onboarding-form";
 import { createGroupOnboarding } from "../group-actions";
@@ -36,6 +38,15 @@ export default async function NewCustomerPage({ searchParams }: { searchParams: 
     return (
       <AppShell title={`Add ${dealershipType.toUpperCase()} Dealership`}>
         <DealershipOnboardingForm action={createDealershipOnboarding} dealershipType={dealershipType} oems={oems} />
+      </AppShell>
+    );
+  }
+
+  if (partnerType === "corporate") {
+    await requireMasterDataManager();
+    return (
+      <AppShell title="Add Corporate Customer">
+        <CorporateOnboardingForm action={createCorporateOnboarding} />
       </AppShell>
     );
   }

@@ -69,32 +69,11 @@ export async function approveMobileIndividualApplication(formData: FormData) {
 
   const now = new Date().toISOString();
   const { error: customerError } = await admin.from("customers").insert({
-    id: customerId,
-    profile_id: application.profile_id,
-    customer_code: `CUST-${Date.now().toString().slice(-9)}`,
-    partner_type: "individual_proprietor",
-    contact_name: contactName,
-    company_name: legalTradeName,
-    phone,
-    email,
-    address: [street, locality, city, state, postalCode].filter(Boolean).join(", "),
-    address_street: street,
-    address_locality: locality,
-    india_location_id: locationId,
-    city,
-    state,
-    postal_code: postalCode,
-    pan_number: panNumber,
-    aadhaar_last_four: aadhaarLastFour,
-    aadhaar_hash: aadhaarHash,
-    legal_trade_name: legalTradeName,
-    is_gst_registered: isGstRegistered,
-    gst_number: isGstRegistered ? gstNumber : null,
-    fleet_size_band: fleetSizeBand,
-    onboarding_status: "active",
-    onboarding_completed_at: now,
-    created_by: reviewer.id,
-    updated_by: reviewer.id
+    id: customerId, profile_id: application.profile_id, customer_code: `CUST-${Date.now().toString().slice(-9)}`, partner_type: "individual_proprietor", contact_name: contactName,
+    company_name: legalTradeName, phone, email, address: [street, locality, city, state, postalCode].filter(Boolean).join(", "), address_street: street,
+    address_locality: locality, india_location_id: locationId, city, state, postal_code: postalCode, pan_number: panNumber, aadhaar_last_four: aadhaarLastFour,
+    aadhaar_hash: aadhaarHash, legal_trade_name: legalTradeName, is_gst_registered: isGstRegistered, gst_number: isGstRegistered ? gstNumber : null,
+    fleet_size_band: fleetSizeBand, onboarding_status: "active", onboarding_completed_at: now, created_by: reviewer.id, updated_by: reviewer.id
   });
   if (customerError) {
     await admin.storage.from("customer-documents").remove(copiedPaths);
@@ -108,10 +87,68 @@ export async function approveMobileIndividualApplication(formData: FormData) {
     redirect(`/customers/applications/${applicationId}?error=document_records_failed`);
   }
   await admin.from("customer_onboarding_documents").update({ verification_status: "verified", verified_by: reviewer.id, verified_at: now, rejection_reason: null }).eq("application_id", applicationId);
+  await admin.from("customer_memberships").upsert({ customer_id: customerId, profile_id: application.profile_id, membership_role: "owner", is_primary: true, status: "active", created_by: reviewer.id }, { onConflict: "customer_id,profile_id" });
   await approvePortalOnboardingApplication(admin, applicationId, customerId, reviewer.id);
   revalidatePath("/customers");
   revalidatePath("/customers/applications");
   redirect(`/customers/${customerId}/edit?success=kyc_approved`);
+}
+
+export async function approveMobileGroupApplication(formData: FormData) {
+  const applicationId = value(formData, "application_id");
+  if (!applicationId) redirect("/customers/applications?error=missing_application");
+  const reviewer = await requireMasterDataManager();
+  if (!reviewer?.id) redirect(`/customers/applications/${applicationId}?error=unauthorized`);
+  const admin = await createServerSupabaseClient();
+  const { data: application, error } = await admin.from("customer_onboarding_applications").select("id, profile_id, partner_type, status, applicant_phone, applicant_email, draft_data").eq("id", applicationId).single<Application>();
+  if (error || !application) redirect(`/customers/applications/${applicationId}?error=application_not_found`);
+  if (!application.profile_id || application.partner_type !== "group" || !["submitted", "under_review"].includes(application.status)) redirect(`/customers/applications/${applicationId}?error=application_not_ready`);
+
+  const draft = application.draft_data ?? {};
+  const groupName = text(draft.group_name);
+  const ownerName = text(draft.owner_name);
+  const phone = application.applicant_phone;
+  const email = text(draft.email) ?? application.applicant_email;
+  if (!groupName || !ownerName || !phone) redirect(`/customers/applications/${applicationId}?error=incomplete_application`);
+
+  const { data: duplicate } = await admin.from("customers").select("id").or(`profile_id.eq.${application.profile_id},phone.eq.${phone}`).limit(1).maybeSingle<{ id: string }>();
+  if (duplicate) redirect(`/customers/applications/${applicationId}?error=customer_already_exists`);
+
+  const customerId = randomUUID();
+  const now = new Date().toISOString();
+  const { error: customerError } = await admin.from("customers").insert({
+    id: customerId,
+    profile_id: application.profile_id,
+    customer_code: `CUST-${Date.now().toString().slice(-9)}`,
+    partner_type: "group",
+    contact_name: ownerName,
+    company_name: groupName,
+    phone,
+    email,
+    onboarding_status: "active",
+    onboarding_completed_at: now,
+    created_by: reviewer.id,
+    updated_by: reviewer.id,
+  });
+  if (customerError) redirect(`/customers/applications/${applicationId}?error=customer_create_failed`);
+
+  const { error: groupError } = await admin.from("group_profiles").insert({ customer_id: customerId, group_name: groupName, owner_name: ownerName, company_name: null, company_pan_number: null });
+  if (groupError) {
+    await admin.from("customers").delete().eq("id", customerId);
+    redirect(`/customers/applications/${applicationId}?error=group_profile_failed`);
+  }
+
+  const { error: membershipError } = await admin.from("customer_memberships").insert({ customer_id: customerId, profile_id: application.profile_id, invited_phone: phone, invited_email: email, membership_role: "group_owner", is_primary: true, status: "active", created_by: reviewer.id });
+  if (membershipError) {
+    await admin.from("customers").delete().eq("id", customerId);
+    redirect(`/customers/applications/${applicationId}?error=membership_create_failed`);
+  }
+
+  await admin.from("customer_onboarding_contacts").update({ linked_profile_id: application.profile_id, membership_status: "active", updated_at: now }).eq("application_id", applicationId).eq("contact_role", "group_owner");
+  await approvePortalOnboardingApplication(admin, applicationId, customerId, reviewer.id);
+  revalidatePath("/customers");
+  revalidatePath("/customers/applications");
+  redirect(`/customers/${customerId}/edit?success=group_kyc_approved`);
 }
 
 export async function requestMobileApplicationChanges(formData: FormData) {
