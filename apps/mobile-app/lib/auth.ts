@@ -1,6 +1,7 @@
 import type { Session, User } from '@supabase/supabase-js';
 import { Router } from 'expo-router';
 import * as Linking from 'expo-linking';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { supabase } from './supabase';
 import type { AppRole, Customer, CustomerOnboardingApplication, CustomerOnboardingDocument, Json, PartnerType, Profile } from './types';
@@ -92,7 +93,13 @@ export async function getProfile(userId: string): Promise<Profile | null> {
 }
 
 export async function getCustomerForUser(userId: string): Promise<Customer | null> {
-  const { data, error } = await supabase.from('customers').select('*').eq('profile_id', userId).maybeSingle();
+  const { data, error } = await supabase
+    .from('customers')
+    .select('*')
+    .eq('profile_id', userId)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
   if (error) throw error;
   return data;
 }
@@ -353,8 +360,25 @@ export async function signOut(router: Router) {
     await supabase.auth.signOut({ scope: 'local' });
   } catch (error) {
     console.warn('Local sign out failed; returning to login.', error);
+  } finally {
+    await clearStoredAuthSession();
   }
   router.replace('/login');
+}
+
+export async function resetLocalAuthState(router: Router) {
+  await clearStoredAuthSession();
+  router.replace('/login');
+}
+
+async function clearStoredAuthSession() {
+  try {
+    const keys = await AsyncStorage.getAllKeys();
+    const authKeys = keys.filter((key) => key.startsWith('sb-') || key.toLowerCase().includes('supabase'));
+    if (authKeys.length) await AsyncStorage.multiRemove(authKeys);
+  } catch (error) {
+    console.warn('Stored auth cleanup failed', error);
+  }
 }
 
 export async function routeSignedInUser(user: User, router: Router, knownProfile?: Profile | null) {

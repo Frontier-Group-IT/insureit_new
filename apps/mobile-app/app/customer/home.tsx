@@ -10,7 +10,7 @@ import { BottomNavigation } from '@/components/customer-dashboard';
 import { BrandLogo } from '@/components/first-look';
 import { NotificationBell } from '@/components/realtime-notifications';
 import { LoadingState } from '@/components/ui';
-import { getCurrentSession, getCustomerForUser, getOnboardingApplicationForUser, getProfile, isValidProfile, signOut } from '@/lib/auth';
+import { getCurrentSession, getCustomerForUser, getOnboardingApplicationForUser, getProfile, isValidProfile, resetLocalAuthState, signOut } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Claim, ClaimTask, Customer, CustomerOnboardingApplication, Profile, Vehicle } from '@/lib/types';
@@ -46,7 +46,7 @@ export default function CustomerMockupHomeScreen() {
         ]);
         if (!mounted) return;
         setProfile(nextProfile); setCustomer(nextCustomer); setOnboarding(nextOnboarding);
-        const promptDismissed = await AsyncStorage.getItem(`insureit:kyc-prompt-dismissed:${session.user.id}`);
+        const promptDismissed = await getKycPromptDismissed(session.user.id);
         if (mounted) setKycPromptDismissed(Boolean(promptDismissed) || Boolean(nextCustomer) || nextOnboarding?.status === 'submitted' || nextOnboarding?.status === 'under_review');
         if (nextCustomer) {
           const [vehicleResult, claimResult, taskResult] = await Promise.all([
@@ -55,11 +55,17 @@ export default function CustomerMockupHomeScreen() {
             supabase.from('claim_tasks').select('*').eq('status', 'open').order('created_at', { ascending: false }),
           ]);
           if (!mounted) return;
+          if (vehicleResult.error) console.warn('Customer vehicles load failed', vehicleResult.error.message);
+          if (claimResult.error) console.warn('Customer claims load failed', claimResult.error.message);
+          if (taskResult.error) console.warn('Customer claim tasks load failed', taskResult.error.message);
           const nextClaims = claimResult.data ?? [];
           setVehicles(vehicleResult.data ?? []); setClaims(nextClaims);
           setTasks((taskResult.data ?? []).filter((task) => nextClaims.some((claim) => claim.id === task.claim_id)));
         }
-      } catch { if (mounted) setError('We could not load your test dashboard.'); }
+      } catch (nextError) {
+        console.warn('Customer dashboard load failed', nextError);
+        if (mounted) setError(dashboardLoadErrorMessage(nextError));
+      }
       finally { if (mounted) setLoading(false); }
     }
     void load(); return () => { mounted = false; };
@@ -106,8 +112,8 @@ export default function CustomerMockupHomeScreen() {
     if (profile?.id) await AsyncStorage.setItem(`insureit:kyc-prompt-dismissed:${profile.id}`, 'true');
   }
 
-  if (loading) return <View style={styles.loading}><LoadingState label="Opening test dashboard" /></View>;
-  if (error) return <View style={styles.loading}><Text style={styles.error}>{error}</Text><Pressable onPress={() => router.replace('/customer/home')}><Text style={styles.retry}>Try again</Text></Pressable><Pressable onPress={() => void signOut(router)}><Text style={styles.retry}>Sign out</Text></Pressable></View>;
+  if (loading) return <View style={styles.loading}><LoadingState label="Opening dashboard" /></View>;
+  if (error) return <View style={styles.loading}><Text style={styles.error}>{error}</Text><Pressable onPress={() => router.replace('/customer/home')}><Text style={styles.retry}>Try again</Text></Pressable><Pressable onPress={() => void resetLocalAuthState(router)}><Text style={styles.retry}>Reset login</Text></Pressable><Pressable onPress={() => void signOut(router)}><Text style={styles.retry}>Sign out</Text></Pressable></View>;
 
   return <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
     <View style={styles.header}>
@@ -194,6 +200,27 @@ async function waitForCustomerProfile(userId: string) {
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function getKycPromptDismissed(userId: string) {
+  try {
+    return await AsyncStorage.getItem(`insureit:kyc-prompt-dismissed:${userId}`);
+  } catch (error) {
+    console.warn('KYC prompt preference load failed', error);
+    return null;
+  }
+}
+
+function dashboardLoadErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : '';
+  const lowerMessage = message.toLowerCase();
+  if (lowerMessage.includes('network') || lowerMessage.includes('fetch') || lowerMessage.includes('timeout')) {
+    return 'Could not reach the InsureIT server. Check internet access and try again.';
+  }
+  if (lowerMessage.includes('multiple') && lowerMessage.includes('rows')) {
+    return 'Your account has duplicate customer records. Please contact support to merge them.';
+  }
+  return 'We could not load your dashboard. Please try again.';
 }
 
 const styles = StyleSheet.create({
