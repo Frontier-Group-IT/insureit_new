@@ -86,6 +86,41 @@ on public.customer_memberships for select
 to authenticated
 using (profile_id = auth.uid());
 
+-- KYC/master-data managers can administer memberships, hierarchy links and onboarding contacts.
+drop policy if exists customer_memberships_manage_staff on public.customer_memberships;
+create policy customer_memberships_manage_staff
+on public.customer_memberships for all
+to authenticated
+using (
+  public.current_app_role()::text in (
+    'super_admin', 'admin', 'manager', 'it_super_user',
+    'sales_operations_head', 'backoffice_executive'
+  )
+)
+with check (
+  public.current_app_role()::text in (
+    'super_admin', 'admin', 'manager', 'it_super_user',
+    'sales_operations_head', 'backoffice_executive'
+  )
+);
+
+drop policy if exists customer_relationships_manage_staff on public.customer_relationships;
+create policy customer_relationships_manage_staff
+on public.customer_relationships for all
+to authenticated
+using (
+  public.current_app_role()::text in (
+    'super_admin', 'admin', 'manager', 'it_super_user',
+    'sales_operations_head', 'backoffice_executive'
+  )
+)
+with check (
+  public.current_app_role()::text in (
+    'super_admin', 'admin', 'manager', 'it_super_user',
+    'sales_operations_head', 'backoffice_executive'
+  )
+);
+
 -- Applicants can read the contacts attached to their own onboarding application.
 drop policy if exists onboarding_contacts_read_applicant on public.customer_onboarding_contacts;
 create policy onboarding_contacts_read_applicant
@@ -97,6 +132,23 @@ using (
     from public.customer_onboarding_applications application
     where application.id = customer_onboarding_contacts.application_id
       and application.profile_id = auth.uid()
+  )
+);
+
+drop policy if exists onboarding_contacts_manage_staff on public.customer_onboarding_contacts;
+create policy onboarding_contacts_manage_staff
+on public.customer_onboarding_contacts for all
+to authenticated
+using (
+  public.current_app_role()::text in (
+    'super_admin', 'admin', 'manager', 'it_super_user',
+    'sales_operations_head', 'backoffice_executive'
+  )
+)
+with check (
+  public.current_app_role()::text in (
+    'super_admin', 'admin', 'manager', 'it_super_user',
+    'sales_operations_head', 'backoffice_executive'
   )
 );
 
