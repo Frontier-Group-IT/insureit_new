@@ -357,10 +357,12 @@ export async function signOut(router: Router) {
   router.replace('/login');
 }
 
-export async function routeSignedInUser(user: User, router: Router) {
-  let profile = await getProfile(user.id);
+export async function routeSignedInUser(user: User, router: Router, knownProfile?: Profile | null) {
+  let profile = knownProfile ?? await getProfile(user.id);
   const metadataRole = user.app_metadata?.app_role ?? user.user_metadata?.app_role;
-  if (!profile && metadataRole === 'customer') {
+  const looksLikeCustomerSignup = metadataRole === 'customer' || Boolean(user.phone && !metadataRole);
+
+  if (!profile && looksLikeCustomerSignup) {
     profile = await ensureCustomerSignupProfile(user);
   }
   if (!isValidProfile(profile)) {
@@ -376,6 +378,3 @@ export function makeClaimNumber() {
   const stamp = date.toISOString().slice(0, 10).replace(/-/g, '');
   return `CLM-${stamp}-${date.getTime().toString().slice(-6)}`;
 }
-
-
-
