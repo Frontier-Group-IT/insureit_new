@@ -116,6 +116,37 @@ type Tables = {
     };
     Update: Partial<Tables['customer_onboarding_applications']['Insert']>;
   };
+  customer_onboarding_documents: {
+    Row: RowBase & {
+      application_id: string;
+      document_type: 'pan_copy' | 'aadhaar_front' | 'aadhaar_back' | 'gst_copy';
+      file_name: string;
+      storage_bucket: string;
+      storage_path: string;
+      mime_type: string | null;
+      file_size: number | null;
+      verification_status: 'pending' | 'verified' | 'rejected';
+      rejection_reason: string | null;
+      uploaded_by: string | null;
+      verified_by: string | null;
+      verified_at: string | null;
+    };
+    Insert: {
+      application_id: string;
+      document_type: 'pan_copy' | 'aadhaar_front' | 'aadhaar_back' | 'gst_copy';
+      file_name: string;
+      storage_bucket?: string;
+      storage_path: string;
+      mime_type?: string | null;
+      file_size?: number | null;
+      verification_status?: 'pending' | 'verified' | 'rejected';
+      rejection_reason?: string | null;
+      uploaded_by?: string | null;
+      verified_by?: string | null;
+      verified_at?: string | null;
+    };
+    Update: Partial<Tables['customer_onboarding_documents']['Insert']>;
+  };
   vehicles: {
     Row: RowBase & { customer_id: string; vehicle_no: string; vehicle_type: string; make: string | null; model: string | null; year: number | null; chassis_no: string | null; engine_no: string | null; permit_no: string | null };
     Insert: { customer_id: string; vehicle_no: string; vehicle_type: string; make?: string | null; model?: string | null; year?: number | null; chassis_no?: string | null; engine_no?: string | null; permit_no?: string | null };
@@ -201,6 +232,26 @@ export type Database = {
         };
         Returns: Tables['profiles']['Row'];
       };
+      submit_individual_onboarding_application: {
+        Args: {
+          p_application_id: string;
+          p_contact_name: string;
+          p_email: string;
+          p_pan_number: string;
+          p_aadhaar_number: string;
+          p_address_street: string;
+          p_address_locality?: string | null;
+          p_india_location_id: string;
+          p_city: string;
+          p_state: string;
+          p_postal_code: string;
+          p_legal_trade_name?: string | null;
+          p_is_gst_registered: boolean;
+          p_gst_number?: string | null;
+          p_fleet_size_band: 'less_than_5' | '5_to_20' | '20_to_50' | 'more_than_50';
+        };
+        Returns: Tables['customer_onboarding_applications']['Row'];
+      };
     };
     Enums: {
       app_role: AppRole;
@@ -216,6 +267,7 @@ export type Database = {
 export type Profile = Tables['profiles']['Row'];
 export type Customer = Tables['customers']['Row'];
 export type CustomerOnboardingApplication = Tables['customer_onboarding_applications']['Row'];
+export type CustomerOnboardingDocument = Tables['customer_onboarding_documents']['Row'];
 export type Vehicle = Tables['vehicles']['Row'];
 export type Policy = Tables['policies']['Row'];
 export type Claim = Tables['claims']['Row'];

@@ -5,10 +5,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Image, Linking, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { LoadingState, Message, Screen } from '@/components/ui';
-import { ensureCustomerForUser, getCurrentSession, getProfile, signOut } from '@/lib/auth';
+import { ensureCustomerForUser, getCurrentSession, getOnboardingApplicationForUser, getProfile, signOut } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { palette, roleTheme } from '@/lib/theme';
-import type { Customer, CustomerDocument, Profile } from '@/lib/types';
+import type { Customer, CustomerDocument, CustomerOnboardingApplication, Profile } from '@/lib/types';
 
 const avatarIllustration = require('../../assets/profile/customer-avatar-illustration.png');
 const kycDocumentTypes = ['PAN Card', 'Aadhaar Card', 'GST Certificate', 'RC Copy', 'Address Proof', 'Other'];
@@ -17,6 +17,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [onboarding, setOnboarding] = useState<CustomerOnboardingApplication | null>(null);
   const [documents, setDocuments] = useState<CustomerDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -44,14 +45,14 @@ export default function ProfileScreen() {
       try {
         const session = await getCurrentSession();
         if (!session?.user) return router.replace('/login');
-        const [nextProfile, nextCustomer] = await Promise.all([getProfile(session.user.id), ensureCustomerForUser(session.user)]);
-        if (!nextCustomer || !active) return router.replace('/customer/home');
-        const [documentResult] = await Promise.all([
-          supabase.from('customer_documents').select('*').eq('customer_id', nextCustomer.id).order('created_at', { ascending: false }),
-        ]);
+        const [nextProfile, nextCustomer, nextOnboarding] = await Promise.all([getProfile(session.user.id), ensureCustomerForUser(session.user), getOnboardingApplicationForUser(session.user.id)]);
         if (!active) return;
-        setProfile(nextProfile); setCustomer(nextCustomer); setDocuments(documentResult.data ?? []);
-        setDraft({ name: nextCustomer.contact_name ?? nextProfile?.full_name ?? '', phone: nextCustomer.phone ?? nextProfile?.phone ?? '', email: nextCustomer.email ?? nextProfile?.email ?? '', address: formatAddress(nextCustomer) });
+        const documentResult = nextCustomer
+          ? await supabase.from('customer_documents').select('*').eq('customer_id', nextCustomer.id).order('created_at', { ascending: false })
+          : { data: [] };
+        if (!active) return;
+        setProfile(nextProfile); setCustomer(nextCustomer); setOnboarding(nextOnboarding); setDocuments(documentResult.data ?? []);
+        setDraft({ name: nextCustomer?.contact_name ?? nextProfile?.full_name ?? '', phone: nextCustomer?.phone ?? nextProfile?.phone ?? '', email: nextCustomer?.email ?? nextProfile?.email ?? '', address: formatAddress(nextCustomer) });
       } catch {
         if (active) setMessage('We could not load your profile. Please try again.');
       } finally {
@@ -66,10 +67,19 @@ export default function ProfileScreen() {
   const avatarLift = float.interpolate({ inputRange: [0, 1], outputRange: [0, -5] });
   const avatarScale = float.interpolate({ inputRange: [0, 1], outputRange: [1, 1.025] });
   const profileAddress = useMemo(() => formatAddress(customer), [customer]);
+  const kycAwaitingReview = onboarding?.status === 'submitted' || onboarding?.status === 'under_review';
+  const kycRoute = onboarding?.partner_type === 'individual_proprietor' ? '/customer/kyc/individual' : '/customer/kyc/partner-type';
 
   async function saveContactDetails() {
-    if (!customer || !profile) return;
+    if (!profile) return;
     setSaving(true); setMessage('');
+    if (!customer) {
+      const profileResult = await supabase.from('profiles').update({ full_name: draft.name.trim(), phone: draft.phone.trim() || null, email: draft.email.trim() || null }).eq('id', profile.id).select('*').single();
+      if (profileResult.error) setMessage('Your contact details could not be saved.');
+      else { setProfile(profileResult.data); setEditing(false); setMessage('Contact details saved.'); }
+      setSaving(false);
+      return;
+    }
     const [customerResult, profileResult] = await Promise.all([
       supabase.from('customers').update({ contact_name: draft.name.trim(), phone: draft.phone.trim(), email: draft.email.trim() || null, address: draft.address.trim() || null }).eq('id', customer.id).select('*').single(),
       supabase.from('profiles').update({ full_name: draft.name.trim(), phone: draft.phone.trim() || null, email: draft.email.trim() || null }).eq('id', profile.id).select('*').single(),
@@ -163,14 +173,16 @@ export default function ProfileScreen() {
       <View style={styles.hero}>
         <View style={styles.heroShield}><MaterialCommunityIcons name="shield-check-outline" size={72} color="rgba(255,255,255,0.13)" /></View>
         <Animated.View style={[styles.avatarShell, { transform: [{ translateY: avatarLift }, { scale: avatarScale }] }]}><Image source={avatarIllustration} style={styles.avatarImage} resizeMode="cover" /></Animated.View>
-        <View style={styles.identity}><Text style={styles.customerName}>{displayName}</Text><Text style={styles.customerId}>Customer ID: {customer?.customer_code ?? 'INSUREIT'}</Text><View style={styles.verified}><MaterialCommunityIcons name="check-circle" size={15} color="#69D6BA" /><Text style={styles.verifiedText}>Verified account</Text></View></View>
+        <View style={styles.identity}><Text style={styles.customerName}>{displayName}</Text><Text style={styles.customerId}>{customer ? `Customer ID: ${customer.customer_code}` : 'Customer profile not activated'}</Text><View style={[styles.verified, !customer && styles.pendingVerification]}><MaterialCommunityIcons name={customer ? 'check-circle' : 'clock-outline'} size={15} color={customer ? '#69D6BA' : '#FFD27A'} /><Text style={[styles.verifiedText, !customer && styles.pendingVerificationText]}>{customer ? 'Verified account' : kycAwaitingReview ? 'KYC under review' : 'KYC pending'}</Text></View></View>
       </View>
 
+      {!customer ? <Pressable accessibilityRole="button" disabled={kycAwaitingReview} onPress={() => router.push(kycRoute)} style={styles.kycActionCard}><View style={styles.kycActionIcon}><MaterialCommunityIcons name={kycAwaitingReview ? 'clipboard-clock-outline' : 'shield-account-outline'} size={25} color="#0A43A3" /></View><View style={styles.kycActionCopy}><Text style={styles.kycActionTitle}>{kycAwaitingReview ? 'Verification in progress' : onboarding?.partner_type ? 'Continue KYC' : 'Complete your KYC'}</Text><Text style={styles.kycActionText}>{kycAwaitingReview ? 'Your submitted details are being reviewed.' : 'Complete identity and business details to activate your customer profile.'}</Text></View>{kycAwaitingReview ? <View style={styles.reviewPill}><Text style={styles.reviewPillText}>Submitted</Text></View> : <MaterialCommunityIcons name="chevron-right" size={23} color="#0A43A3" />}</Pressable> : null}
+
       <Section title="Contact Information" icon="account-outline" action={editing ? undefined : 'Edit'} onAction={() => setEditing(true)}>
-        {editing ? <View style={styles.editForm}><TextField label="Full name" value={draft.name} onChangeText={(name) => setDraft((current) => ({ ...current, name }))} /><TextField label="Mobile number" value={draft.phone} keyboardType="phone-pad" onChangeText={(phone) => setDraft((current) => ({ ...current, phone }))} /><TextField label="Email address" value={draft.email} keyboardType="email-address" autoCapitalize="none" onChangeText={(email) => setDraft((current) => ({ ...current, email }))} /><TextField label="Address" value={draft.address} multiline onChangeText={(address) => setDraft((current) => ({ ...current, address }))} /><Pressable accessibilityRole="button" disabled={saving} onPress={() => void saveContactDetails()} style={[styles.saveButton, saving && styles.disabled]}><Text style={styles.saveButtonText}>{saving ? 'Saving…' : 'Save changes'}</Text></Pressable></View> : <><ActionRow icon="phone-outline" label={customer?.phone ?? profile?.phone ?? 'Add mobile number'} onPress={() => void call(customer?.phone ?? profile?.phone)} /><ActionRow icon="email-outline" label={customer?.email ?? profile?.email ?? 'Add email address'} onPress={() => void email(customer?.email ?? profile?.email)} /><ActionRow icon="map-marker-outline" label={profileAddress || 'Add your address'} onPress={() => void openMap(profileAddress)} /></>}
+        {editing ? <View style={styles.editForm}><TextField label="Full name" value={draft.name} onChangeText={(name) => setDraft((current) => ({ ...current, name }))} /><TextField label="Mobile number" value={draft.phone} keyboardType="phone-pad" onChangeText={(phone) => setDraft((current) => ({ ...current, phone }))} /><TextField label="Email address" value={draft.email} keyboardType="email-address" autoCapitalize="none" onChangeText={(email) => setDraft((current) => ({ ...current, email }))} />{customer ? <TextField label="Address" value={draft.address} multiline onChangeText={(address) => setDraft((current) => ({ ...current, address }))} /> : null}<Pressable accessibilityRole="button" disabled={saving} onPress={() => void saveContactDetails()} style={[styles.saveButton, saving && styles.disabled]}><Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save changes'}</Text></Pressable></View> : <><ActionRow icon="phone-outline" label={customer?.phone ?? profile?.phone ?? 'Add mobile number'} onPress={() => void call(customer?.phone ?? profile?.phone)} /><ActionRow icon="email-outline" label={customer?.email ?? profile?.email ?? 'Add email address'} onPress={() => void email(customer?.email ?? profile?.email)} />{customer ? <ActionRow icon="map-marker-outline" label={profileAddress || 'Add your address'} onPress={() => void openMap(profileAddress)} /> : null}</>}
       </Section>
 
-      <View style={styles.kycVaultCard}>
+      {customer ? <View style={styles.kycVaultCard}>
         <Pressable accessibilityRole="button" onPress={() => setDocumentsOpen((current) => !current)} style={styles.kycVaultHeader}>
           <View style={styles.kycVaultIcon}><MaterialCommunityIcons name="shield-account-outline" size={22} color="#0B63CE" /></View>
           <View style={styles.kycVaultCopy}>
@@ -232,7 +244,7 @@ export default function ProfileScreen() {
             )}
           </View>
         </> : null}
-      </View>
+      </View> : null}
 
       <Section title="Preferences" icon="cog-outline"><ActionRow icon="bell-outline" label="Notifications" value="All notifications" onPress={() => router.push('/customer/notifications')} /><ActionRow icon="translate" label="Language" value="English" onPress={() => setMessage('English is currently selected.')} /><View style={styles.preferenceToggle}><View style={styles.preferenceLeft}><View style={styles.rowIcon}><MaterialCommunityIcons name="weather-night" size={19} color={roleTheme.customer.accent} /></View><Text style={styles.rowLabel}>Dark Mode</Text></View><Switch value={darkMode} onValueChange={setDarkMode} trackColor={{ false: '#DCE4ED', true: '#8ACDB7' }} thumbColor={darkMode ? roleTheme.customer.accent : '#FFFFFF'} /></View></Section>
 
@@ -252,7 +264,8 @@ async function openMap(address?: string) { if (address) await Linking.openURL(`h
 
 const styles = StyleSheet.create({
   pageHeading: { marginTop: -34, marginBottom: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, pageTitle: { color: palette.ink, fontSize: 18, lineHeight: 23, fontWeight: '900' },
-  hero: { minHeight: 177, marginHorizontal: -14, marginTop: 0, paddingHorizontal: 22, paddingTop: 28, paddingBottom: 16, backgroundColor: '#061D43', overflow: 'hidden', flexDirection: 'row', alignItems: 'center', gap: 14 }, heroShield: { position: 'absolute', right: 18, top: 23 }, avatarShell: { width: 112, height: 112, borderRadius: 56, backgroundColor: '#FFFFFF', borderWidth: 3, borderColor: '#EAF2FF', overflow: 'hidden', shadowColor: '#000000', shadowOpacity: .3, shadowRadius: 12, elevation: 5 }, avatarImage: { width: '100%', height: '100%', transform: [{ scale: 1.24 }, { translateY: 11 }] }, identity: { flex: 1, minWidth: 0 }, customerName: { color: '#FFFFFF', fontSize: 21, fontWeight: '900' }, customerId: { color: '#BDD2F2', fontSize: 11.5, fontWeight: '700', marginTop: 4 }, verified: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10, borderRadius: 99, backgroundColor: 'rgba(52,183,139,.16)', paddingHorizontal: 8, paddingVertical: 5 }, verifiedText: { color: '#A5E5CD', fontSize: 10.5, fontWeight: '900' },
+  hero: { minHeight: 177, marginHorizontal: -14, marginTop: 0, paddingHorizontal: 22, paddingTop: 28, paddingBottom: 16, backgroundColor: '#061D43', overflow: 'hidden', flexDirection: 'row', alignItems: 'center', gap: 14 }, heroShield: { position: 'absolute', right: 18, top: 23 }, avatarShell: { width: 112, height: 112, borderRadius: 56, backgroundColor: '#FFFFFF', borderWidth: 3, borderColor: '#EAF2FF', overflow: 'hidden', shadowColor: '#000000', shadowOpacity: .3, shadowRadius: 12, elevation: 5 }, avatarImage: { width: '100%', height: '100%', transform: [{ scale: 1.24 }, { translateY: 11 }] }, identity: { flex: 1, minWidth: 0 }, customerName: { color: '#FFFFFF', fontSize: 21, fontWeight: '900' }, customerId: { color: '#BDD2F2', fontSize: 11.5, fontWeight: '700', marginTop: 4 }, verified: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10, borderRadius: 99, backgroundColor: 'rgba(52,183,139,.16)', paddingHorizontal: 8, paddingVertical: 5 }, verifiedText: { color: '#A5E5CD', fontSize: 10.5, fontWeight: '900' }, pendingVerification: { backgroundColor: 'rgba(238,172,55,.17)' }, pendingVerificationText: { color: '#FFDFA0' },
+  kycActionCard: { minHeight: 74, marginTop: 10, borderRadius: 16, backgroundColor: '#F1F7FF', borderWidth: 1, borderColor: '#CFE1F7', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }, kycActionIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D4E6FA', alignItems: 'center', justifyContent: 'center' }, kycActionCopy: { flex: 1, minWidth: 0 }, kycActionTitle: { color: palette.navy, fontSize: 13.5, fontWeight: '800' }, kycActionText: { color: '#5E6E82', fontSize: 9.8, lineHeight: 14, marginTop: 3 }, reviewPill: { borderRadius: 99, backgroundColor: '#FFF3D6', paddingHorizontal: 8, paddingVertical: 5 }, reviewPillText: { color: '#875B0E', fontSize: 8.8, fontWeight: '700' },
   section: { borderRadius: 17, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', marginTop: 10, overflow: 'hidden', shadowColor: palette.ink, shadowOpacity: .035, shadowRadius: 8, elevation: 1 }, sectionHeader: { minHeight: 48, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#E8EEF5' }, sectionTitleWrap: { flexDirection: 'row', alignItems: 'center', gap: 9 }, sectionIcon: { width: 28, height: 28, borderRadius: 9, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' }, sectionTitle: { color: palette.navy, fontSize: 14, fontWeight: '900' }, sectionAction: { minHeight: 30, paddingHorizontal: 5, justifyContent: 'center' }, sectionActionText: { color: '#0B63CE', fontSize: 11, fontWeight: '900' },
   actionRow: { minHeight: 48, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 9, borderBottomWidth: 1, borderBottomColor: '#EEF2F6' }, rowIcon: { width: 27, alignItems: 'center' }, rowLabel: { flex: 1, color: palette.ink, fontSize: 11.8, fontWeight: '700' }, rowValue: { maxWidth: 105, color: palette.slate, fontSize: 10.5, fontWeight: '800', textAlign: 'right' },
   editForm: { padding: 12 }, field: { marginBottom: 10 }, fieldLabel: { color: palette.slate, fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: .3, marginBottom: 5 }, fieldInput: { minHeight: 42, borderRadius: 11, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#F8FBFF', color: palette.ink, paddingHorizontal: 10, fontSize: 12, fontWeight: '700' }, saveButton: { height: 42, borderRadius: 12, backgroundColor: roleTheme.customer.accent, alignItems: 'center', justifyContent: 'center', marginTop: 2 }, saveButtonText: { color: '#FFFFFF', fontSize: 12, fontWeight: '900' }, disabled: { opacity: .6 },

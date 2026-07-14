@@ -55,13 +55,17 @@ export default function PartnerTypeScreen() {
 
   async function saveSelection() {
     if (!selected || saving) return;
+    if (selected !== 'individual_proprietor') {
+      setError(`${partnerOptions.find((option) => option.value === selected)?.label ?? 'This'} onboarding form will be added in the next workflow update.`);
+      return;
+    }
     setSaving(true);
     setError('');
     try {
       const session = await getCurrentSession();
       if (!session?.user || session.user.id !== userId) return router.replace('/login');
       await startCustomerOnboarding(session.user, selected);
-      router.replace('/customer/home');
+      router.replace('/customer/kyc/individual');
     } catch {
       setError('Your partner type could not be saved. Please try again.');
     } finally {

@@ -3,7 +3,7 @@ import { Router } from 'expo-router';
 import * as Linking from 'expo-linking';
 
 import { supabase } from './supabase';
-import type { AppRole, Customer, CustomerOnboardingApplication, PartnerType, Profile } from './types';
+import type { AppRole, Customer, CustomerOnboardingApplication, CustomerOnboardingDocument, Json, PartnerType, Profile } from './types';
 import { isSalesHierarchyRole, isStaffRole } from './roles';
 
 export const validRoles: AppRole[] = [
@@ -143,12 +143,14 @@ export async function getOnboardingApplicationForUser(userId: string): Promise<C
 export async function startCustomerOnboarding(user: User, partnerType: PartnerType) {
   const existing = await getOnboardingApplicationForUser(user.id);
   if (existing) {
+    const partnerChanged = existing.partner_type !== null && existing.partner_type !== partnerType;
     const { data, error } = await supabase
       .from('customer_onboarding_applications')
       .update({
         partner_type: partnerType,
         status: 'in_progress',
-        current_step: 1,
+        current_step: partnerChanged ? 1 : existing.current_step,
+        draft_data: partnerChanged ? {} : existing.draft_data,
         applicant_phone: user.phone ?? existing.applicant_phone,
         applicant_email: user.email ?? existing.applicant_email,
       })
@@ -175,6 +177,70 @@ export async function startCustomerOnboarding(user: User, partnerType: PartnerTy
     .single();
   if (error) throw error;
   return data;
+}
+
+export async function getOnboardingDocuments(applicationId: string): Promise<CustomerOnboardingDocument[]> {
+  const { data, error } = await supabase
+    .from('customer_onboarding_documents')
+    .select('*')
+    .eq('application_id', applicationId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function saveOnboardingDraft(applicationId: string, draftData: Json, currentStep = 2) {
+  const { data, error } = await supabase
+    .from('customer_onboarding_applications')
+    .update({ status: 'in_progress', current_step: currentStep, draft_data: draftData })
+    .eq('id', applicationId)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export type IndividualOnboardingSubmission = {
+  applicationId: string;
+  contactName: string;
+  email: string;
+  panNumber: string;
+  aadhaarNumber: string;
+  addressStreet: string;
+  addressLocality?: string;
+  indiaLocationId: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  legalTradeName?: string;
+  isGstRegistered: boolean;
+  gstNumber?: string;
+  fleetSizeBand: 'less_than_5' | '5_to_20' | '20_to_50' | 'more_than_50';
+};
+
+export async function submitIndividualOnboarding(input: IndividualOnboardingSubmission) {
+  const { data, error } = await supabase
+    .rpc('submit_individual_onboarding_application', {
+      p_application_id: input.applicationId,
+      p_contact_name: input.contactName,
+      p_email: input.email,
+      p_pan_number: input.panNumber,
+      p_aadhaar_number: input.aadhaarNumber,
+      p_address_street: input.addressStreet,
+      p_address_locality: input.addressLocality ?? null,
+      p_india_location_id: input.indiaLocationId,
+      p_city: input.city,
+      p_state: input.state,
+      p_postal_code: input.postalCode,
+      p_legal_trade_name: input.legalTradeName ?? null,
+      p_is_gst_registered: input.isGstRegistered,
+      p_gst_number: input.gstNumber ?? null,
+      p_fleet_size_band: input.fleetSizeBand,
+    })
+    .single();
+  if (error) throw error;
+  if (!data) throw new Error('KYC submission did not return an application.');
+  return data as CustomerOnboardingApplication;
 }
 
 export async function signIn(email: string, password: string) {
