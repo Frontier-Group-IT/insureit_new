@@ -12,16 +12,17 @@ type Item = { href: string; label: string; count?: number };
 type Props = {
   activeNav: ActiveNav;
   customerCount: number;
+  kycApplicationCount: number;
 };
 
 const sections: Array<{ key: SectionKey; label: string; icon: string; items: Item[] }> = [
   { key: "claims", label: "Claims", icon: "▤", items: [{ href: "/claims", label: "All Claims" }, { href: "/claims?stage=documents", label: "Documents" }, { href: "/claims?stage=verification", label: "Verification" }, { href: "/claims?stage=survey", label: "Survey" }, { href: "/claims?stage=repair", label: "Repair" }, { href: "/claims?stage=settlement", label: "Settlement" }] },
-  { key: "master-data", label: "Master Data", icon: "▦", items: [{ href: "/customers", label: "Customers" }, { href: "/vehicles", label: "Vehicles" }, { href: "/policies", label: "Policies" }] },
+  { key: "master-data", label: "Master Data", icon: "▦", items: [{ href: "/customers", label: "Customers" }, { href: "/customers/applications", label: "KYC Applications" }, { href: "/vehicles", label: "Vehicles" }, { href: "/policies", label: "Policies" }] },
   { key: "tasks", label: "Tasks", icon: "✓", items: [{ href: "/tasks", label: "My Tasks" }, { href: "/tasks?view=team", label: "Team Tasks" }, { href: "/tasks?status=completed", label: "Completed" }] },
   { key: "reports", label: "Reports", icon: "▥", items: [{ href: "/reports", label: "Overview" }, { href: "/reports?view=claims", label: "Claims Reports" }, { href: "/reports?view=operations", label: "Operations" }] }
 ];
 
-export function AppNavigation({ activeNav, customerCount }: Props) {
+export function AppNavigation({ activeNav, customerCount, kycApplicationCount }: Props) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [openSection, setOpenSection] = useState<SectionKey | null>(activeNav === "dashboard" || activeNav === "none" ? null : activeNav);
@@ -57,7 +58,7 @@ export function AppNavigation({ activeNav, customerCount }: Props) {
                 </button>
                 {open ? <div className="space-y-0.5 px-2 pb-2 pl-11">
                   {section.items.map((item) => {
-                    const count = item.href === "/customers" ? customerCount : item.count;
+                    const count = item.href === "/customers" ? customerCount : item.href === "/customers/applications" ? kycApplicationCount : item.count;
                     const itemActive = isCurrent(item.href, pathname, currentQuery);
                     return <Link key={item.href} href={item.href} className={`flex min-h-8 items-center justify-between rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition ${itemActive ? "bg-[#071D49] text-white shadow-sm" : "text-[#59687A] hover:bg-[#EAF3FF] hover:text-[#071D49]"}`}>
                       <span>{item.label}</span>{typeof count === "number" ? <span className={`rounded-full px-1.5 py-0.5 text-[8.5px] font-bold ${itemActive ? "bg-white/15 text-white" : "bg-white text-[#0B63CE]"}`}>{count}</span> : null}

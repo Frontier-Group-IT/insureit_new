@@ -5,7 +5,7 @@ export async function AppShell({ children, title }: { children: ReactNode; title
   const resolvedTitle = title ?? "InsureIt";
   const normalizedTitle = resolvedTitle.toLowerCase();
 
-  const activeNav = normalizedTitle.includes("customer") || normalizedTitle.includes("vehicle") || normalizedTitle.includes("polic")
+  const activeNav = normalizedTitle.includes("customer") || normalizedTitle.includes("kyc") || normalizedTitle.includes("vehicle") || normalizedTitle.includes("polic")
     ? "master-data"
     : normalizedTitle.includes("claim")
       ? "claims"

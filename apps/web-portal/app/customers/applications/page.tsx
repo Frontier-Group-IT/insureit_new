@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { AppShell } from "@/components/shell";
 import { DataError } from "@/components/record-list";
+import { createServerSupabaseClient } from "@/lib/auth-server";
 import { requireMasterDataManager } from "@/lib/master-data-server";
-import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type ApplicationRow = {
   id: string;
@@ -41,8 +41,8 @@ export const revalidate = 0;
 
 export default async function CustomerApplicationsPage() {
   await requireMasterDataManager();
-  const admin = createSupabaseAdminClient();
-  const { data, error } = await admin
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase
     .from("customer_onboarding_applications")
     .select("id, partner_type, source, status, current_step, applicant_phone, applicant_email, draft_data, customer_id, created_at, updated_at")
     .order("updated_at", { ascending: false })
@@ -50,7 +50,7 @@ export default async function CustomerApplicationsPage() {
 
   const applicationIds = (data ?? []).map((application) => application.id);
   const { data: documentRows } = applicationIds.length
-    ? await admin.from("customer_onboarding_documents").select("application_id").in("application_id", applicationIds).returns<Array<{ application_id: string }>>()
+    ? await supabase.from("customer_onboarding_documents").select("application_id").in("application_id", applicationIds).returns<Array<{ application_id: string }>>()
     : { data: [] as Array<{ application_id: string }> };
   const documentCounts = new Map<string, number>();
   for (const document of documentRows ?? []) documentCounts.set(document.application_id, (documentCounts.get(document.application_id) ?? 0) + 1);

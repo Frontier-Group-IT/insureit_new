@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/shell";
+import { createServerSupabaseClient } from "@/lib/auth-server";
 import { requireMasterDataManager } from "@/lib/master-data-server";
-import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { approveMobileIndividualApplication, requestMobileApplicationChanges } from "../actions";
 
 type PageProps = { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; success?: string }> };
@@ -15,11 +15,11 @@ export default async function ApplicationReviewPage({ params, searchParams }: Pa
   await requireMasterDataManager();
   const { id } = await params;
   const query = await searchParams;
-  const admin = createSupabaseAdminClient();
-  const { data: application } = await admin.from("customer_onboarding_applications").select("id, partner_type, status, applicant_phone, applicant_email, draft_data, created_at, updated_at, customer_id").eq("id", id).maybeSingle<Application>();
+  const supabase = await createServerSupabaseClient();
+  const { data: application } = await supabase.from("customer_onboarding_applications").select("id, partner_type, status, applicant_phone, applicant_email, draft_data, created_at, updated_at, customer_id").eq("id", id).maybeSingle<Application>();
   if (!application) notFound();
-  const { data: documents } = await admin.from("customer_onboarding_documents").select("id, document_type, file_name, storage_bucket, storage_path, verification_status").eq("application_id", id).order("created_at").returns<Document[]>();
-  const previews = await Promise.all((documents ?? []).map(async (document) => ({ ...document, url: (await admin.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 900)).data?.signedUrl ?? null })));
+  const { data: documents } = await supabase.from("customer_onboarding_documents").select("id, document_type, file_name, storage_bucket, storage_path, verification_status").eq("application_id", id).order("created_at").returns<Document[]>();
+  const previews = await Promise.all((documents ?? []).map(async (document) => ({ ...document, url: (await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 900)).data?.signedUrl ?? null })));
   const draft = application.draft_data ?? {};
   const canReview = application.partner_type === "individual_proprietor" && ["submitted", "under_review"].includes(application.status) && !application.customer_id;
   const fields = [["Full name", draft.contact_name], ["Mobile", application.applicant_phone], ["Email", draft.email ?? application.applicant_email], ["PAN", draft.pan_number], ["Aadhaar", draft.aadhaar_last_four ? `Ends in ${draft.aadhaar_last_four}` : null], ["Address", [draft.address_street, draft.address_locality].filter(Boolean).join(", ")], ["Location", [draft.city, draft.state, draft.postal_code].filter(Boolean).join(", ")], ["Fleet size", labelValue(draft.fleet_size_band)], ["GST registered", draft.is_gst_registered === true ? "Yes" : "No"], ["Legal trade name", draft.legal_trade_name], ["GSTIN", draft.gst_number]];

@@ -3,8 +3,8 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { createServerSupabaseClient } from "@/lib/auth-server";
 import { requireMasterDataManager } from "@/lib/master-data-server";
-import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { approvePortalOnboardingApplication } from "../onboarding-applications";
 
 type Draft = Record<string, unknown>;
@@ -16,7 +16,7 @@ export async function approveMobileIndividualApplication(formData: FormData) {
   if (!applicationId) redirect("/customers/applications?error=missing_application");
   const reviewer = await requireMasterDataManager();
   if (!reviewer?.id) redirect(`/customers/applications/${applicationId}?error=unauthorized`);
-  const admin = createSupabaseAdminClient();
+  const admin = await createServerSupabaseClient();
   const { data: application, error: applicationError } = await admin.from("customer_onboarding_applications").select("id, profile_id, partner_type, status, applicant_phone, applicant_email, draft_data").eq("id", applicationId).single<Application>();
   if (applicationError || !application) redirect(`/customers/applications/${applicationId}?error=application_not_found`);
   if (!application.profile_id || application.partner_type !== "individual_proprietor" || !["submitted", "under_review"].includes(application.status)) redirect(`/customers/applications/${applicationId}?error=application_not_ready`);
@@ -121,7 +121,7 @@ export async function requestMobileApplicationChanges(formData: FormData) {
   const reviewer = await requireMasterDataManager();
   if (!reviewer?.id) redirect(`/customers/applications/${applicationId}?error=unauthorized`);
   if (!reason || reason.length < 8) redirect(`/customers/applications/${applicationId}?error=reason_required`);
-  const admin = createSupabaseAdminClient();
+  const admin = await createServerSupabaseClient();
   const { data } = await admin.from("customer_onboarding_applications").select("draft_data").eq("id", applicationId).single<{ draft_data: Draft | null }>();
   await admin.from("customer_onboarding_applications").update({ status: "changes_requested", reviewed_by: reviewer.id, reviewed_at: new Date().toISOString(), draft_data: { ...(data?.draft_data ?? {}), review_notes: reason } }).eq("id", applicationId).in("status", ["submitted", "under_review"]);
   revalidatePath("/customers/applications");

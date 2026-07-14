@@ -14,11 +14,15 @@ export async function ClaimManagerShell({ title, backHref = "/dashboard", childr
   const accessToken = await getServerAccessToken();
   const { user, profile } = await getAuthenticatedProfile(accessToken);
   const supabase = await createServerSupabaseClient();
-  const [{ count: customerCount }, notificationRows] = await Promise.all([supabase.from("customers").select("id", { count: "exact", head: true }), getNotificationRows(supabase)]);
+  const [{ count: customerCount }, { count: kycApplicationCount }, notificationRows] = await Promise.all([
+    supabase.from("customers").select("id", { count: "exact", head: true }),
+    supabase.from("customer_onboarding_applications").select("id", { count: "exact", head: true }).in("status", ["submitted", "under_review", "changes_requested"]),
+    getNotificationRows(supabase),
+  ]);
   const notificationGroups = buildNotificationGroups(notificationRows);
 
   return <div className="min-h-screen bg-[#F4F9FF] text-[#101828]">
-    <Suspense fallback={<div className="fixed inset-y-0 left-0 hidden w-[244px] bg-[#F4F9FF] lg:block" />}><AppNavigation activeNav={activeNav} customerCount={customerCount ?? 0} /></Suspense>
+    <Suspense fallback={<div className="fixed inset-y-0 left-0 hidden w-[244px] bg-[#F4F9FF] lg:block" />}><AppNavigation activeNav={activeNav} customerCount={customerCount ?? 0} kycApplicationCount={kycApplicationCount ?? 0} /></Suspense>
     <div className="lg:pl-[244px]"><header className="sticky top-0 z-30 border-b border-[#D7E6F5] bg-white/95 backdrop-blur"><div className="flex h-14 items-center justify-between gap-4 px-4 lg:px-5"><div className="flex min-w-0 items-center gap-3"><HistoryBackButton fallbackHref={backHref} /><div className="hidden sm:block lg:hidden"><BrandLockup compact /></div><div className="hidden h-6 w-px bg-[#D7E6F5] sm:block" /><h1 className="truncate text-[16px] font-bold tracking-tight text-[#071D49]">{title}</h1></div><div className="flex items-center gap-2"><label className="relative hidden md:block"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[#98A2B3]">⌕</span><input aria-label="Global search" placeholder="Search" className="h-8 w-56 rounded-md border border-[#D7E6F5] bg-[#F8FBFF] py-1 pl-8 pr-3 text-[12px] text-[#071D49]" /></label><NotificationMenu groups={notificationGroups} count={notificationRows.length} /><div className="ml-1 border-l border-[#D7E6F5] pl-2"><UserMenu profile={profile} user={user ? { id: user.id, email: user.email } : null} /></div></div></div></header><main className="min-h-[calc(100vh-56px)] px-3 py-3 sm:px-4 lg:px-5">{children}</main></div>
   </div>;
 }

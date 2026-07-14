@@ -75,6 +75,31 @@ export default function CustomerMockupHomeScreen() {
   const estimate = active.reduce((total, claim) => total + (claim.estimated_loss ?? 0), 0);
   const invoices = settled.reduce((total, claim) => total + (claim.settlement_amount ?? claim.approved_amount ?? 0), 0);
   const kycRoute = onboarding?.partner_type === 'individual_proprietor' ? '/customer/kyc/individual' : '/customer/kyc/partner-type';
+  const kycAwaitingReview = onboarding?.status === 'submitted' || onboarding?.status === 'under_review';
+  const kycChangesRequested = onboarding?.status === 'changes_requested';
+  const kycReviewNotes = onboardingReviewNotes(onboarding);
+  const pendingTitle = !customer
+    ? kycAwaitingReview ? 'KYC verification pending' : kycChangesRequested ? 'KYC update required' : 'KYC pending'
+    : 'Pending Action';
+  const pendingText = !customer
+    ? kycAwaitingReview
+      ? 'Your details are with our verification team.'
+      : kycChangesRequested
+        ? kycReviewNotes || 'Please update and resubmit your KYC details.'
+        : 'Complete your KYC to activate your customer profile.'
+    : pendingActionCount
+      ? `You have ${pendingActionCount} pending action${pendingActionCount === 1 ? '' : 's'} in your claim.`
+      : 'No pending action in your claim.';
+
+  function openPendingAction() {
+    if (!customer) {
+      if (kycAwaitingReview) router.push('/customer/profile');
+      else router.push(kycRoute as Href);
+      return;
+    }
+    if (pendingTask) router.push({ pathname: '/customer/upload-documents', params: { claimId: pendingTask.claim_id } });
+    else router.push('/customer/claims');
+  }
 
   async function dismissKycPrompt() {
     setKycPromptDismissed(true);
@@ -92,8 +117,7 @@ export default function CustomerMockupHomeScreen() {
     </View>
     <ScrollView style={styles.scroll} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
       <View style={styles.greetingBlock}><Text style={styles.greeting}>{timeGreeting()}, {firstName}</Text><Text style={styles.subGreeting}>Manage your vehicles, renewals and claims</Text><Text style={styles.subGreeting}>all in one place.</Text></View>
-      {!customer ? <KycDashboardCard application={onboarding} onPress={() => router.push(kycRoute as Href)} /> : null}
-      <Pressable onPress={() => pendingTask ? router.push({ pathname: '/customer/upload-documents', params: { claimId: pendingTask.claim_id } }) : router.push('/customer/claims')} style={styles.pendingCard}><View style={styles.pendingIcon}><MaterialCommunityIcons name="alert-circle" size={28} color="#FFFFFF" /></View><View style={styles.pendingCopy}><Text style={styles.pendingTitle}>Pending Action</Text><Text style={styles.pendingText}>{pendingActionCount ? `You have ${pendingActionCount} pending action${pendingActionCount === 1 ? '' : 's'} in your claim.` : 'No pending action in your claim.'}</Text></View><MaterialCommunityIcons name="chevron-right" size={28} color="#7A3A00" /></Pressable>
+      <Pressable onPress={openPendingAction} style={[styles.pendingCard, !customer && styles.pendingCardKyc]}><View style={[styles.pendingIcon, !customer && styles.pendingIconKyc]}><MaterialCommunityIcons name={!customer ? kycAwaitingReview ? 'clipboard-clock-outline' : kycChangesRequested ? 'file-edit-outline' : 'shield-account-outline' : 'alert-circle'} size={28} color="#FFFFFF" /></View><View style={styles.pendingCopy}><Text style={[styles.pendingTitle, !customer && styles.pendingTitleKyc]}>{pendingTitle}</Text><Text style={styles.pendingText} numberOfLines={2}>{pendingText}</Text></View><MaterialCommunityIcons name="chevron-right" size={28} color={!customer ? '#0A43A3' : '#7A3A00'} /></Pressable>
       <Pressable onPress={() => router.push('/customer/vehicles')} style={styles.vehicleCard}><View style={styles.vehicleLeft}><View style={styles.vehicleIcon}><MaterialCommunityIcons name="car" size={25} color="#0A43A3" /></View><View style={styles.vehicleTextBlock}><Text style={styles.vehicleTitle}>My Vehicles</Text><Text style={styles.vehicleNumber}>{vehicles.length}</Text><Text style={styles.vehicleLabel}>Vehicles</Text></View></View><Image source={fleetSketch} style={styles.fleetImage} resizeMode="contain" /><MaterialCommunityIcons name="chevron-right" size={28} color="#7A3A00" /></Pressable>
       <View style={styles.actionCard}>
         <ActionTile icon="calendar-month-outline" title="Renewal Dues" body="View policy renewals" onPress={() => router.push('/customer/policies')} tone="orange" />
@@ -113,12 +137,6 @@ export default function CustomerMockupHomeScreen() {
       onSignOut={() => void signOut(router)}
     />
   </SafeAreaView>;
-}
-
-function KycDashboardCard({ application, onPress }: { application: CustomerOnboardingApplication | null; onPress: () => void }) {
-  const awaitingReview = application?.status === 'submitted' || application?.status === 'under_review';
-  const started = Boolean(application?.partner_type);
-  return <Pressable accessibilityRole="button" disabled={awaitingReview} onPress={onPress} style={styles.kycDashboardCard}><View style={styles.kycDashboardIcon}><MaterialCommunityIcons name={awaitingReview ? 'clock-check-outline' : 'shield-account-outline'} size={24} color="#0A43A3" /></View><View style={styles.kycDashboardCopy}><Text style={styles.kycDashboardTitle}>{awaitingReview ? 'KYC verification pending' : started ? 'Continue your KYC' : 'Complete your KYC'}</Text><Text style={styles.kycDashboardBody}>{awaitingReview ? 'Your application is with our verification team.' : 'Finish your profile to activate all services.'}</Text></View>{awaitingReview ? <View style={styles.kycPendingPill}><Text style={styles.kycPendingText}>Submitted</Text></View> : <MaterialCommunityIcons name="chevron-right" size={23} color="#0A43A3" />}</Pressable>;
 }
 
 function KycRequiredModal({ visible, application, onStart, onDismiss, onSignOut }: { visible: boolean; application: CustomerOnboardingApplication | null; onStart: () => void; onDismiss: () => void; onSignOut: () => void }) {
@@ -158,6 +176,12 @@ function ClaimMetric({ label, value, detailLabel, detail, lined, green }: { labe
 function timeGreeting() { const hour = new Date().getHours(); if (hour < 12) return 'Good Morning'; if (hour < 17) return 'Good Afternoon'; return 'Good Evening'; }
 function initialFor(name: string) { return (name.trim()[0] || 'U').toUpperCase(); }
 function money(value: number) { return Math.round(value).toLocaleString('en-IN'); }
+function onboardingReviewNotes(application: CustomerOnboardingApplication | null) {
+  const draft = application?.draft_data;
+  if (!draft || typeof draft !== 'object' || Array.isArray(draft)) return null;
+  const notes = draft.review_notes;
+  return typeof notes === 'string' && notes.trim() ? notes.trim() : null;
+}
 async function waitForCustomerProfile(userId: string) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < 9000) {
@@ -176,8 +200,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F7F9FD' }, loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F9FD', gap: 14 }, error: { color: palette.navy, fontWeight: '900' }, retry: { color: palette.navy, fontWeight: '900' },
   header: { height: 66, paddingHorizontal: 4, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.98)', borderBottomWidth: 1, borderBottomColor: '#E1E7F0' }, brand: { flex: 1, alignItems: 'flex-start', justifyContent: 'center' }, iconCircle: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' }, avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: palette.ink, borderWidth: 2, borderColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' }, avatarText: { color: '#FFFFFF', fontWeight: '900', fontSize: 17 },
   scroll: { flex: 1 }, body: { flexGrow: 1, justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 13, paddingBottom: 2, gap: 10 }, greetingBlock: { marginBottom: 0 }, greeting: { color: palette.navy, fontSize: 13, lineHeight: 16, fontWeight: '900' }, subGreeting: { color: palette.navy, fontSize: 13, lineHeight: 17, fontWeight: '500' },
-  pendingCard: { minHeight: 58, borderRadius: 15, backgroundColor: '#FFF8EF', borderWidth: 1, borderColor: '#F3DDBD', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 10 }, pendingIcon: { width: 43, height: 43, borderRadius: 11, backgroundColor: '#DD7300', alignItems: 'center', justifyContent: 'center' }, pendingCopy: { flex: 1, minWidth: 0 }, pendingTitle: { color: '#834100', fontSize: 15, fontWeight: '900' }, pendingText: { color: palette.navy, fontSize: 11.5, fontWeight: '600', marginTop: 2 },
-  kycDashboardCard: { minHeight: 68, borderRadius: 15, backgroundColor: '#F1F7FF', borderWidth: 1, borderColor: '#CFE1F7', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }, kycDashboardIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D4E6FA', alignItems: 'center', justifyContent: 'center' }, kycDashboardCopy: { flex: 1, minWidth: 0 }, kycDashboardTitle: { color: palette.navy, fontSize: 13, fontWeight: '800' }, kycDashboardBody: { color: '#5E6E82', fontSize: 9.8, lineHeight: 13, marginTop: 2 }, kycPendingPill: { borderRadius: 99, backgroundColor: '#FFF4D9', paddingHorizontal: 8, paddingVertical: 5 }, kycPendingText: { color: '#8A5D10', fontSize: 8.8, fontWeight: '700' },
+  pendingCard: { minHeight: 58, borderRadius: 15, backgroundColor: '#FFF8EF', borderWidth: 1, borderColor: '#F3DDBD', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 10 }, pendingCardKyc: { backgroundColor: '#F1F7FF', borderColor: '#CFE1F7' }, pendingIcon: { width: 43, height: 43, borderRadius: 11, backgroundColor: '#DD7300', alignItems: 'center', justifyContent: 'center' }, pendingIconKyc: { backgroundColor: '#0A43A3' }, pendingCopy: { flex: 1, minWidth: 0 }, pendingTitle: { color: '#834100', fontSize: 15, fontWeight: '900' }, pendingTitleKyc: { color: '#0A3B8F' }, pendingText: { color: palette.navy, fontSize: 11.5, lineHeight: 15, fontWeight: '600', marginTop: 2 },
   vehicleCard: { minHeight: 126, borderRadius: 17, backgroundColor: '#FFFFFF', paddingLeft: 13, paddingRight: 6, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', shadowColor: '#122544', shadowOpacity: 0.07, shadowRadius: 10, elevation: 2 }, vehicleLeft: { width: 138, zIndex: 2, flexDirection: 'row', alignItems: 'flex-start', gap: 8 }, vehicleTextBlock: { flex: 1, paddingTop: 1 }, vehicleIcon: { width: 40, height: 40, borderRadius: 11, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center', marginTop: 0 }, vehicleTitle: { color: palette.navy, fontSize: 15, fontWeight: '900' }, vehicleNumber: { color: palette.navy, fontSize: 28, lineHeight: 32, fontWeight: '900', marginTop: 2 }, vehicleLabel: { color: palette.navy, fontSize: 12, fontWeight: '700' }, fleetImage: { flex: 1, height: 116, marginLeft: -14, marginRight: -12 },
   actionCard: { minHeight: 134, borderRadius: 17, backgroundColor: '#FFFFFF', flexDirection: 'row', flexWrap: 'wrap', padding: 8, gap: 6, borderWidth: 1, borderColor: '#D9E8F8', shadowColor: '#0B63CE', shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }, actionTile: { width: '49%', minHeight: 57, borderRadius: 13, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#DCEBFA', alignItems: 'center', paddingHorizontal: 6, paddingVertical: 6, shadowColor: '#0A43A3', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }, actionIcon: { width: 29, height: 29, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }, actionImageIcon: { width: 26, height: 26 }, actionTitleRow: { minHeight: 18, marginTop: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }, actionTitle: { flex: 1, color: palette.navy, fontSize: 10.8, fontWeight: '900', textAlign: 'center' }, actionBody: { color: palette.navy, fontSize: 8.8, lineHeight: 10.5, fontWeight: '600', textAlign: 'center' },
   claimCard: { minHeight: 157, borderRadius: 17, backgroundColor: palette.navy, padding: 13, overflow: 'hidden' }, claimHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 }, claimIcon: { width: 38, height: 38, borderRadius: 12, borderWidth: 1.5, borderColor: '#F5B700', alignItems: 'center', justifyContent: 'center' }, claimTitle: { color: '#FFFFFF', fontSize: 15.5, fontWeight: '900' }, claimMetrics: { flex: 1, flexDirection: 'row', marginTop: 9 }, claimMetric: { flex: 1, alignItems: 'center', justifyContent: 'center', minWidth: 0 }, claimMetricLined: { borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.32)' }, claimMetricLabel: { color: '#FFFFFF', fontSize: 11, fontWeight: '500', textAlign: 'center' }, claimMetricValue: { color: '#FFFFFF', fontSize: 28, lineHeight: 32, fontWeight: '900', marginTop: 5 }, claimMetricDetailLabel: { color: '#FFFFFF', fontSize: 9.5, lineHeight: 11, fontWeight: '500', marginTop: 1, textAlign: 'center' }, claimMetricDetail: { color: '#F6C33B', fontSize: 15, lineHeight: 18, fontWeight: '900', marginTop: 1, textAlign: 'center' }, claimMetricDetailGreen: { color: '#68BF5B' },
