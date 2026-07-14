@@ -14,6 +14,13 @@ const PAN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const GST = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 const CONTACT_ROLES = ["ceo_head", "admin_head", "dedicated_spoc"] as const;
 
+type ValidCorporateContact = {
+  role: (typeof CONTACT_ROLES)[number];
+  name: string;
+  phone: string;
+  email: string | null;
+};
+
 function fail(error: string, field: string | null = null): CorporateOnboardingState { return { error, field }; }
 function text(data: FormData, name: string) { const value = data.get(name); return typeof value === "string" && value.trim() ? value.trim() : null; }
 function upload(data: FormData, name: string) { const value = data.get(name); return value instanceof File && value.size > 0 ? value : null; }
@@ -48,18 +55,28 @@ export async function createCorporateOnboarding(_state: CorporateOnboardingState
   const gstFileError = checkFile(gstCopy, "GST certificate", Boolean(gstNumber));
   if (gstFileError) return fail(gstFileError, "gst_copy");
 
-  const contacts = CONTACT_ROLES.map((role) => ({
+  const rawContacts = CONTACT_ROLES.map((role) => ({
     role,
     name: text(data, `${role}_name`),
     phone: phone(text(data, `${role}_mobile`)),
     email: text(data, `${role}_email`)
   }));
 
-  for (const contact of contacts) {
+  for (const contact of rawContacts) {
     if (!contact.name) return fail(`Enter the ${contact.role.replaceAll("_", " ")} name.`, `${contact.role}_name`);
     if (!contact.phone) return fail(`Enter a valid 10-digit mobile for ${contact.role.replaceAll("_", " ")}.`, `${contact.role}_mobile`);
   }
+
+  const contacts: ValidCorporateContact[] = rawContacts.map((contact) => ({
+    role: contact.role,
+    name: contact.name!,
+    phone: contact.phone!,
+    email: contact.email
+  }));
   if (new Set(contacts.map((contact) => contact.phone)).size !== contacts.length) return fail("Each corporate login contact must use a different mobile number.", "ceo_head_mobile");
+
+  const dedicatedSpoc = contacts.find((contact) => contact.role === "dedicated_spoc");
+  if (!dedicatedSpoc) return fail("Dedicated SPOC contact is required.", "dedicated_spoc_name");
 
   const admin = createSupabaseAdminClient();
   let application: { id: string };
@@ -67,8 +84,8 @@ export async function createCorporateOnboarding(_state: CorporateOnboardingState
     application = await beginPortalOnboardingApplication(admin, {
       initiatedBy: profile.id,
       partnerType: "corporate",
-      phone: contacts[2].phone,
-      email: contacts[2].email,
+      phone: dedicatedSpoc.phone,
+      email: dedicatedSpoc.email,
       draftData: { company_name: companyName, city, state, postal_code: postalCode, fleet_size_band: fleetSize, has_gst: Boolean(gstNumber), login_contact_count: 3 }
     });
   } catch (error) {
@@ -83,11 +100,11 @@ export async function createCorporateOnboarding(_state: CorporateOnboardingState
   const { data: customer, error: customerError } = await admin.from("customers").insert({
     customer_code: `CUST-${Date.now().toString().slice(-9)}`,
     partner_type: "corporate",
-    contact_name: contacts[2].name,
+    contact_name: dedicatedSpoc.name,
     company_name: companyName,
     legal_trade_name: companyName,
-    phone: contacts[2].phone,
-    email: contacts[2].email,
+    phone: dedicatedSpoc.phone,
+    email: dedicatedSpoc.email,
     address,
     address_street: street,
     address_locality: locality,
