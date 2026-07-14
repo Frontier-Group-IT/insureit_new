@@ -2,7 +2,7 @@ import { Stack, usePathname, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
-import { getCurrentSession, getOnboardingApplicationForUser } from '@/lib/auth';
+import { getCurrentSession } from '@/lib/auth';
 
 const detailRoutes = new Set([
   '/customer/kyc/individual',
@@ -28,12 +28,6 @@ export default function CustomerKycLayout() {
         const session = await getCurrentSession();
         if (!session?.user) {
           router.replace('/login');
-          return;
-        }
-
-        const application = await getOnboardingApplicationForUser(session.user.id);
-        if (!application || application.current_step < 2) {
-          router.replace('/customer/kyc/partner-type');
           return;
         }
       } finally {
