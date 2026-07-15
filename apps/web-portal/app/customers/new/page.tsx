@@ -13,6 +13,8 @@ import { GroupOnboardingForm } from "../group-onboarding-form";
 
 const supportedPartnerTypes = new Set(["individual_proprietor", "dealership", "corporate", "group"]);
 
+type GroupOption = { value: string; label: string };
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -20,11 +22,13 @@ export default async function NewCustomerPage({ searchParams }: { searchParams: 
   const { partner_type: partnerType, dealership_type: dealershipType } = await searchParams;
   if (!partnerType || !supportedPartnerTypes.has(partnerType)) redirect("/customers?choose_partner=1");
 
+  await requireMasterDataManager();
+  const admin = createSupabaseAdminClient();
+  const groupOptions = partnerType === "group" ? [] : await loadActiveGroups(admin);
+
   if (partnerType === "dealership") {
-    await requireMasterDataManager();
     if (dealershipType !== "posp" && dealershipType !== "misp") redirect("/customers/dealership-type");
 
-    const admin = createSupabaseAdminClient();
     const { data: manufacturers } = await admin
       .from("vehicle_manufacturers")
       .select("name")
@@ -37,22 +41,20 @@ export default async function NewCustomerPage({ searchParams }: { searchParams: 
 
     return (
       <AppShell title={`Add ${dealershipType.toUpperCase()} Dealership`}>
-        <DealershipOnboardingForm action={createDealershipOnboarding} dealershipType={dealershipType} oems={oems} />
+        <DealershipOnboardingForm action={createDealershipOnboarding} dealershipType={dealershipType} oems={oems} groups={groupOptions} />
       </AppShell>
     );
   }
 
   if (partnerType === "corporate") {
-    await requireMasterDataManager();
     return (
       <AppShell title="Add Corporate Customer">
-        <CorporateOnboardingForm action={createCorporateOnboarding} />
+        <CorporateOnboardingForm action={createCorporateOnboarding} groups={groupOptions} />
       </AppShell>
     );
   }
 
   if (partnerType === "group") {
-    await requireMasterDataManager();
     return (
       <AppShell title="Add Group">
         <GroupOnboardingForm action={createGroupOnboarding} />
@@ -62,7 +64,22 @@ export default async function NewCustomerPage({ searchParams }: { searchParams: 
 
   return (
     <AppShell title="Add New Customer">
-      <CustomerOnboardingForm action={createCustomerOnboarding} partnerType={partnerType} />
+      <CustomerOnboardingForm action={createCustomerOnboarding} partnerType={partnerType} groups={groupOptions} />
     </AppShell>
   );
+}
+
+async function loadActiveGroups(admin: ReturnType<typeof createSupabaseAdminClient>): Promise<GroupOption[]> {
+  const { data } = await admin
+    .from("customers")
+    .select("id,customer_code,company_name,contact_name")
+    .eq("partner_type", "group")
+    .eq("onboarding_status", "active")
+    .order("company_name", { ascending: true })
+    .returns<Array<{ id: string; customer_code: string; company_name: string | null; contact_name: string }>>();
+
+  return (data ?? []).map((group) => ({
+    value: group.id,
+    label: `${group.company_name?.trim() || group.contact_name} · ${group.customer_code}`,
+  }));
 }
