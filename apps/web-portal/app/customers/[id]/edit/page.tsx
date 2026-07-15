@@ -10,6 +10,8 @@ import { CorporateProfileEditor } from "./corporate-profile-editor";
 import { updateCorporateProfile } from "./corporate-actions";
 import { GroupAffiliationEditor } from "./group-affiliation-editor";
 import { updateGroupAffiliation } from "./group-affiliation-actions";
+import { GroupProfileEditor } from "./group-profile-editor";
+import { addGroupMember, removeGroupMember, updateGroupProfile } from "./group-profile-actions";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -25,6 +27,9 @@ type CorporateContact = { contact_role:string; full_name:string; phone:string; e
 type Manufacturer = { name:string };
 type GroupOption = { id:string; customer_code:string; company_name:string|null; contact_name:string };
 type GroupRelationship = { parent_customer_id:string };
+type ChildRelationship = { child_customer_id:string };
+type GroupProfile = { group_name:string; owner_name:string; company_name:string|null };
+type MemberCustomer = { id:string; customer_code:string; partner_type:string; company_name:string|null; contact_name:string; city:string|null };
 
 export default async function EditCustomerPage({ params, searchParams }: { params:Promise<{id:string}>; searchParams:Promise<{error?:string;field?:string;success?:string}> }) {
   await requireMasterDataManager();
@@ -38,6 +43,18 @@ export default async function EditCustomerPage({ params, searchParams }: { param
   ]);
   if(error||!customer) notFound();
   const documentsWithUrls=await Promise.all((documents??[]).map(async(document)=>({...document,signedUrl:(await admin.storage.from(document.storage_bucket).createSignedUrl(document.storage_path,600)).data?.signedUrl??null})));
+
+  if(customer.partner_type==="group"){
+    const [{data:groupProfile},{data:relationships},{data:eligibleCustomers}] = await Promise.all([
+      admin.from("group_profiles").select("group_name,owner_name,company_name").eq("customer_id",id).maybeSingle<GroupProfile>(),
+      admin.from("customer_relationships").select("child_customer_id").eq("parent_customer_id",id).eq("relationship_type","group_member").eq("is_active",true).eq("status","active").returns<ChildRelationship[]>(),
+      admin.from("customers").select("id,customer_code,partner_type,company_name,contact_name,city").in("partner_type",["corporate","individual_proprietor","dealership"]).eq("onboarding_status","active").order("company_name",{ascending:true}).returns<MemberCustomer[]>()
+    ]);
+    const memberIds=(relationships??[]).map((row)=>row.child_customer_id);
+    const members=(eligibleCustomers??[]).filter((item)=>memberIds.includes(item.id));
+    const candidates=(eligibleCustomers??[]).filter((item)=>!memberIds.includes(item.id));
+    return <AppShell title="Group Profile"><GroupProfileEditor customer={customer} profile={groupProfile??null} members={members} candidates={candidates} updateAction={updateGroupProfile.bind(null,id)} addMemberAction={addGroupMember.bind(null,id)} removeMemberAction={removeGroupMember.bind(null,id)} errorMessage={query.error??null} successMessage={query.success??null}/></AppShell>;
+  }
 
   if(customer.partner_type==="corporate"){
     const [{data:contacts},{data:groups},{data:relationship}] = await Promise.all([
