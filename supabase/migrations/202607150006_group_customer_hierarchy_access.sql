@@ -42,36 +42,63 @@ declare
   parent_type text;
   child_type text;
 begin
-  if new.relationship_type <> 'group_member' then return new; end if;
+  if new.relationship_type <> 'group_member' then
+    return new;
+  end if;
 
-  select partner_type::text into parent_type from public.customers where id = new.parent_customer_id;
-  select partner_type::text into child_type from public.customers where id = new.child_customer_id;
+  select partner_type::text into parent_type
+  from public.customers
+  where id = new.parent_customer_id;
+
+  select partner_type::text into child_type
+  from public.customers
+  where id = new.child_customer_id;
 
   if parent_type is distinct from 'group' then
     raise exception 'Only an active Group customer can be selected as the parent.';
   end if;
+
   if child_type not in ('corporate', 'individual_proprietor', 'dealership') then
     raise exception 'Only Corporate, Individual/Proprietor or Dealership customers can be linked below a Group.';
   end if;
-  if exists (select 1 from public.customers where id = new.parent_customer_id and coalesce(onboarding_status, '') <> 'active') then
+
+  if exists (
+    select 1
+    from public.customers parent_customer
+    where parent_customer.id = new.parent_customer_id
+      and coalesce(parent_customer.onboarding_status, '') <> 'active'
+  ) then
     raise exception 'The selected Group customer is not active.';
   end if;
-  if exists (select 1 from public.customers where id = new.child_customer_id and coalesce(onboarding_status, '') <> 'active') then
+
+  if exists (
+    select 1
+    from public.customers child_customer
+    where child_customer.id = new.child_customer_id
+      and coalesce(child_customer.onboarding_status, '') <> 'active'
+  ) then
     raise exception 'The selected child customer is not active.';
   end if;
 
   new.is_active := new.status = 'active';
   new.updated_at := now();
-  if new.status <> 'active' and new.effective_to is null then new.effective_to := now(); end if;
+  if new.status <> 'active' and new.effective_to is null then
+    new.effective_to := now();
+  end if;
   return new;
 end;
 $$;
 
-drop trigger if exists validate_group_customer_relationship_trigger on public.customer_relationships;
+drop trigger if exists validate_group_customer_relationship_trigger
+  on public.customer_relationships;
+
 create trigger validate_group_customer_relationship_trigger
 before insert or update on public.customer_relationships
 for each row execute function public.validate_group_customer_relationship();
 
+-- Central access decision used by mobile and portal RLS.
+-- Direct members can view their own customer. Any active member of a Group can
+-- also view every active child customer linked below that Group.
 create or replace function public.can_access_customer(target_customer_id uuid)
 returns boolean
 language sql
@@ -79,64 +106,89 @@ stable
 security definer
 set search_path = public
 as $$
-  select auth.uid() is not null and (
-    exists (
-      select 1 from public.customer_memberships direct_membership
-      where direct_membership.customer_id = target_customer_id
-        and direct_membership.profile_id = auth.uid()
-        and direct_membership.status = 'active'
-    )
-    or exists (
-      select 1
-      from public.customer_relationships relationship
-      join public.customer_memberships group_membership
-        on group_membership.customer_id = relationship.parent_customer_id
-      where relationship.child_customer_id = target_customer_id
-        and relationship.relationship_type = 'group_member'
-        and relationship.is_active
-        and relationship.status = 'active'
-        and group_membership.profile_id = auth.uid()
-        and group_membership.status = 'active'
-    )
-  );
+  select
+    auth.uid() is not null
+    and (
+      exists (
+        select 1
+        from public.customer_memberships direct_membership
+        where direct_membership.customer_id = target_customer_id
+          and direct_membership.profile_id = auth.uid()
+          and direct_membership.status = 'active'
+      )
+      or exists (
+        select 1
+        from public.customer_relationships relationship
+        join public.customer_memberships group_membership
+          on group_membership.customer_id = relationship.parent_customer_id
+        where relationship.child_customer_id = target_customer_id
+          and relationship.relationship_type = 'group_member'
+          and relationship.is_active
+          and relationship.status = 'active'
+          and group_membership.profile_id = auth.uid()
+          and group_membership.status = 'active'
+      )
+    );
 $$;
 
 revoke all on function public.can_access_customer(uuid) from public;
 grant execute on function public.can_access_customer(uuid) to authenticated;
 
+-- Group users can see hierarchy rows for their Group and child users can see
+-- the Group affiliation of their own customer.
 drop policy if exists customer_relationships_read_accessible on public.customer_relationships;
-create policy customer_relationships_read_accessible on public.customer_relationships
-for select to authenticated
-using (public.can_access_customer(parent_customer_id) or public.can_access_customer(child_customer_id));
+create policy customer_relationships_read_accessible
+on public.customer_relationships for select
+to authenticated
+using (
+  public.can_access_customer(parent_customer_id)
+  or public.can_access_customer(child_customer_id)
+);
 
+-- Additive read policies. Existing staff and direct-customer policies remain in place.
 drop policy if exists customers_read_accessible_customer on public.customers;
-create policy customers_read_accessible_customer on public.customers
-for select to authenticated using (public.can_access_customer(id));
+create policy customers_read_accessible_customer
+on public.customers for select
+to authenticated
+using (public.can_access_customer(id));
 
 drop policy if exists vehicles_read_accessible_customer on public.vehicles;
-create policy vehicles_read_accessible_customer on public.vehicles
-for select to authenticated using (public.can_access_customer(customer_id));
+create policy vehicles_read_accessible_customer
+on public.vehicles for select
+to authenticated
+using (public.can_access_customer(customer_id));
 
 drop policy if exists policies_read_accessible_customer on public.policies;
-create policy policies_read_accessible_customer on public.policies
-for select to authenticated using (public.can_access_customer(customer_id));
+create policy policies_read_accessible_customer
+on public.policies for select
+to authenticated
+using (public.can_access_customer(customer_id));
 
 drop policy if exists claims_read_accessible_customer on public.claims;
-create policy claims_read_accessible_customer on public.claims
-for select to authenticated using (public.can_access_customer(customer_id));
+create policy claims_read_accessible_customer
+on public.claims for select
+to authenticated
+using (public.can_access_customer(customer_id));
 
 drop policy if exists customer_documents_read_accessible_customer on public.customer_documents;
-create policy customer_documents_read_accessible_customer on public.customer_documents
-for select to authenticated using (public.can_access_customer(customer_id));
+create policy customer_documents_read_accessible_customer
+on public.customer_documents for select
+to authenticated
+using (public.can_access_customer(customer_id));
 
 drop policy if exists claim_documents_read_accessible_customer on public.claim_documents;
-create policy claim_documents_read_accessible_customer on public.claim_documents
-for select to authenticated using (public.can_access_customer(customer_id));
+create policy claim_documents_read_accessible_customer
+on public.claim_documents for select
+to authenticated
+using (public.can_access_customer(customer_id));
 
 drop policy if exists support_tickets_read_accessible_customer on public.support_tickets;
-create policy support_tickets_read_accessible_customer on public.support_tickets
-for select to authenticated using (public.can_access_customer(customer_id));
+create policy support_tickets_read_accessible_customer
+on public.support_tickets for select
+to authenticated
+using (public.can_access_customer(customer_id));
 
+-- Account context source for the mobile account switcher and partner-specific dashboard.
 create or replace function public.get_accessible_customer_contexts()
 returns table (
   customer_id uuid,
@@ -175,7 +227,8 @@ as $$
       and parent_relationship.is_active
       and parent_relationship.status = 'active'
     left join public.customers parent_group on parent_group.id = parent_relationship.parent_customer_id
-    where membership.profile_id = auth.uid() and membership.status = 'active'
+    where membership.profile_id = auth.uid()
+      and membership.status = 'active'
   ), group_children as (
     select
       child.id as customer_id,
@@ -202,15 +255,26 @@ as $$
   )
   select * from direct_accounts
   union all
-  select child.* from group_children child
-  where not exists (select 1 from direct_accounts direct where direct.customer_id = child.customer_id)
-  order by case when access_source = 'direct' then 0 else 1 end, company_name nulls last, contact_name;
+  select child.*
+  from group_children child
+  where not exists (
+    select 1 from direct_accounts direct
+    where direct.customer_id = child.customer_id
+  )
+  order by
+    case when access_source = 'direct' then 0 else 1 end,
+    company_name nulls last,
+    contact_name;
 $$;
 
 revoke all on function public.get_accessible_customer_contexts() from public;
 grant execute on function public.get_accessible_customer_contexts() to authenticated;
 
-create or replace function public.link_customer_to_group(p_group_customer_id uuid, p_child_customer_id uuid)
+-- Staff-only hierarchy management. Re-linking ends any prior active Group link.
+create or replace function public.link_customer_to_group(
+  p_group_customer_id uuid,
+  p_child_customer_id uuid
+)
 returns public.customer_relationships
 language plpgsql
 security definer
@@ -230,19 +294,40 @@ begin
   set status = 'ended', is_active = false, effective_to = now(), updated_at = now()
   where child_customer_id = p_child_customer_id
     and relationship_type = 'group_member'
-    and is_active and status = 'active';
+    and is_active
+    and status = 'active';
 
   insert into public.customer_relationships (
-    parent_customer_id, child_customer_id, relationship_type, is_active, status,
-    effective_from, effective_to, created_by, approved_by, updated_at
+    parent_customer_id,
+    child_customer_id,
+    relationship_type,
+    is_active,
+    status,
+    effective_from,
+    effective_to,
+    created_by,
+    approved_by,
+    updated_at
   ) values (
-    p_group_customer_id, p_child_customer_id, 'group_member', true, 'active',
-    now(), null, auth.uid(), auth.uid(), now()
+    p_group_customer_id,
+    p_child_customer_id,
+    'group_member',
+    true,
+    'active',
+    now(),
+    null,
+    auth.uid(),
+    auth.uid(),
+    now()
   )
   on conflict (parent_customer_id, child_customer_id, relationship_type)
   do update set
-    is_active = true, status = 'active', effective_from = now(), effective_to = null,
-    approved_by = auth.uid(), updated_at = now()
+    is_active = true,
+    status = 'active',
+    effective_from = now(),
+    effective_to = null,
+    approved_by = auth.uid(),
+    updated_at = now()
   returning * into result;
 
   return result;
@@ -267,7 +352,8 @@ begin
   set status = 'ended', is_active = false, effective_to = now(), updated_at = now()
   where child_customer_id = p_child_customer_id
     and relationship_type = 'group_member'
-    and is_active and status = 'active';
+    and is_active
+    and status = 'active';
 end;
 $$;
 

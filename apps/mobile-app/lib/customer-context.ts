@@ -51,6 +51,9 @@ export async function clearSelectedCustomerContext() {
 }
 
 export function customerAccountTitle(context: CustomerAccountContext) {
+  if (context.partner_type === 'individual_proprietor') {
+    return context.company_name?.trim() || context.contact_name;
+  }
   return context.company_name?.trim() || context.contact_name;
 }
 
