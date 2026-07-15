@@ -13,7 +13,7 @@ type PartnerOption = { value: PartnerType; label: string; description: string; i
 const partnerOptions: PartnerOption[] = [
   { value: 'individual_proprietor', label: 'Individual / Proprietor', description: 'Personal or proprietor account', icon: 'account-outline', available: true },
   { value: 'dealership', label: 'Dealership', description: 'Vehicle dealer or service partner', icon: 'storefront-outline', available: false },
-  { value: 'corporate', label: 'Corporate', description: 'Registered company with three login contacts', icon: 'office-building-outline', available: true },
+  { value: 'corporate', label: 'Corporate', description: 'Registered company with four login profiles', icon: 'office-building-outline', available: true },
   { value: 'group', label: 'Group', description: 'Multiple linked entities under one group', icon: 'account-group-outline', available: true },
 ];
 const routes: Partial<Record<PartnerType, '/customer/kyc/individual' | '/customer/kyc/corporate' | '/customer/kyc/group'>> = { individual_proprietor: '/customer/kyc/individual', corporate: '/customer/kyc/corporate', group: '/customer/kyc/group' };

@@ -6,7 +6,7 @@ import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server
 import { canManageMasterData } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-const ROLES = ["ceo_head", "admin_head", "dedicated_spoc"] as const;
+const ROLES = ["corporate_creator", "ceo_head", "admin_head", "dedicated_spoc"] as const;
 const PAN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const GST = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 function text(data: FormData, name: string) { const value = data.get(name); return typeof value === "string" && value.trim() ? value.trim() : null; }
@@ -27,7 +27,7 @@ export async function updateCorporateProfile(customerId: string, formData: FormD
   if (!companyName || !pan || !PAN.test(pan) || (gst && !GST.test(gst)) || !street || !city || !state || !postalCode || !locationId || !fleet) redirect(`/customers/${customerId}/edit?error=invalid_corporate_details`);
 
   const contacts = ROLES.map((role) => ({ role, name: text(formData, `${role}_name`), phone: phone(text(formData, `${role}_mobile`)), email: text(formData, `${role}_email`) }));
-  if (contacts.some((contact) => !contact.name || !contact.phone) || new Set(contacts.map((contact) => contact.phone)).size !== 3) redirect(`/customers/${customerId}/edit?error=invalid_contacts`);
+  if (contacts.some((contact) => !contact.name || !contact.phone) || new Set(contacts.map((contact) => contact.phone)).size !== contacts.length) redirect(`/customers/${customerId}/edit?error=invalid_contacts`);
   const spoc = contacts.find((contact) => contact.role === "dedicated_spoc")!;
   const admin = createSupabaseAdminClient();
 

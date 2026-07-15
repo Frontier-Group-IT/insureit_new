@@ -12,7 +12,7 @@ const BUCKET = "customer-documents";
 const ALLOWED = new Set(["application/pdf", "image/jpeg", "image/png"]);
 const PAN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const GST = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
-const CONTACT_ROLES = ["ceo_head", "admin_head", "dedicated_spoc"] as const;
+const CONTACT_ROLES = ["corporate_creator", "ceo_head", "admin_head", "dedicated_spoc"] as const;
 
 type ValidCorporateContact = { role: (typeof CONTACT_ROLES)[number]; name: string; phone: string; email: string | null };
 function fail(error: string, field: string | null = null): CorporateOnboardingState { return { error, field }; }
@@ -46,7 +46,7 @@ export async function createCorporateOnboarding(_state: CorporateOnboardingState
   const rawContacts = CONTACT_ROLES.map((role) => ({ role, name: text(data, `${role}_name`), phone: phone(text(data, `${role}_mobile`)), email: text(data, `${role}_email`) }));
   for (const contact of rawContacts) { if (!contact.name) return fail(`Enter the ${contact.role.replaceAll("_", " ")} name.`, `${contact.role}_name`); if (!contact.phone) return fail(`Enter a valid 10-digit mobile for ${contact.role.replaceAll("_", " ")}.`, `${contact.role}_mobile`); }
   const contacts: ValidCorporateContact[] = rawContacts.map((contact) => ({ role: contact.role, name: contact.name!, phone: contact.phone!, email: contact.email }));
-  if (new Set(contacts.map((contact) => contact.phone)).size !== contacts.length) return fail("Each corporate login contact must use a different mobile number.", "ceo_head_mobile");
+  if (new Set(contacts.map((contact) => contact.phone)).size !== contacts.length) return fail("Each corporate login contact must use a different mobile number.", "corporate_creator_mobile");
   const dedicatedSpoc = contacts.find((contact) => contact.role === "dedicated_spoc");
   if (!dedicatedSpoc) return fail("Dedicated SPOC contact is required.", "dedicated_spoc_name");
 
@@ -57,7 +57,7 @@ export async function createCorporateOnboarding(_state: CorporateOnboardingState
   }
 
   let application: { id: string };
-  try { application = await beginPortalOnboardingApplication(admin, { initiatedBy: profile.id, partnerType: "corporate", phone: dedicatedSpoc.phone, email: dedicatedSpoc.email, draftData: { company_name: companyName, city, state, postal_code: postalCode, fleet_size_band: fleetSize, has_gst: Boolean(gstNumber), login_contact_count: 3, group_customer_id: groupCustomerId } }); }
+  try { application = await beginPortalOnboardingApplication(admin, { initiatedBy: profile.id, partnerType: "corporate", phone: dedicatedSpoc.phone, email: dedicatedSpoc.email, draftData: { company_name: companyName, city, state, postal_code: postalCode, fleet_size_band: fleetSize, has_gst: Boolean(gstNumber), login_contact_count: 4, group_customer_id: groupCustomerId } }); }
   catch (error) { return fail(`Onboarding application could not be prepared: ${error instanceof Error ? error.message : "Unknown error"}`); }
 
   const correction = async (message: string) => { await markPortalOnboardingForCorrection(admin, application.id, message); };
