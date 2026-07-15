@@ -33,6 +33,7 @@ export function DealershipEntryActivator({ dealershipTypes = {} }: { dealershipT
       if (addCustomerButton) addCustomerButton.textContent = "+ Add New";
 
       enablePartnerButton(buttons, "dealership", "/customers/dealership-type", "Open dealership onboarding");
+      enablePartnerButton(buttons, "corporate", "/customers/new?partner_type=corporate", "Open corporate onboarding");
       enablePartnerButton(buttons, "group", "/customers/new?partner_type=group", "Open group onboarding");
 
       for (const [customerId, dealershipType] of Object.entries(dealershipTypes)) {
