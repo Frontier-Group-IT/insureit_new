@@ -32,6 +32,7 @@ export async function createCorporateOnboarding(_state: CorporateOnboardingState
   const gstNumber = text(data, "gst_number")?.replace(/\s/g, "").toUpperCase() ?? null;
   const city = text(data, "city"); const state = text(data, "state"); const postalCode = text(data, "postal_code");
   const locationId = text(data, "india_location_id"); const fleetSize = text(data, "fleet_size_band");
+  const groupCustomerId = text(data, "group_customer_id");
   if (!companyName) return fail("Enter the company name.", "company_name");
   if (!companyPan || !PAN.test(companyPan)) return fail("Enter a valid company PAN number.", "company_pan");
   if (gstNumber && !GST.test(gstNumber)) return fail("Enter a valid GST number.", "gst_number");
@@ -49,8 +50,14 @@ export async function createCorporateOnboarding(_state: CorporateOnboardingState
   const dedicatedSpoc = contacts.find((contact) => contact.role === "dedicated_spoc");
   if (!dedicatedSpoc) return fail("Dedicated SPOC contact is required.", "dedicated_spoc_name");
 
-  const admin = createSupabaseAdminClient(); let application: { id: string };
-  try { application = await beginPortalOnboardingApplication(admin, { initiatedBy: profile.id, partnerType: "corporate", phone: dedicatedSpoc.phone, email: dedicatedSpoc.email, draftData: { company_name: companyName, city, state, postal_code: postalCode, fleet_size_band: fleetSize, has_gst: Boolean(gstNumber), login_contact_count: 3 } }); }
+  const admin = createSupabaseAdminClient();
+  if (groupCustomerId) {
+    const { data: group } = await admin.from("customers").select("id").eq("id", groupCustomerId).eq("partner_type", "group").eq("onboarding_status", "active").maybeSingle<{ id: string }>();
+    if (!group) return fail("Select an active Group customer.", "group_customer_id");
+  }
+
+  let application: { id: string };
+  try { application = await beginPortalOnboardingApplication(admin, { initiatedBy: profile.id, partnerType: "corporate", phone: dedicatedSpoc.phone, email: dedicatedSpoc.email, draftData: { company_name: companyName, city, state, postal_code: postalCode, fleet_size_band: fleetSize, has_gst: Boolean(gstNumber), login_contact_count: 3, group_customer_id: groupCustomerId } }); }
   catch (error) { return fail(`Onboarding application could not be prepared: ${error instanceof Error ? error.message : "Unknown error"}`); }
 
   const correction = async (message: string) => { await markPortalOnboardingForCorrection(admin, application.id, message); };
@@ -58,6 +65,11 @@ export async function createCorporateOnboarding(_state: CorporateOnboardingState
   const { data: customer, error: customerError } = await admin.from("customers").insert({ customer_code: `CUST-${Date.now().toString().slice(-9)}`, partner_type: "corporate", contact_name: dedicatedSpoc.name, company_name: companyName, legal_trade_name: companyName, phone: dedicatedSpoc.phone, email: dedicatedSpoc.email, address, address_street: street, address_locality: locality, india_location_id: locationId, city, state, postal_code: postalCode, is_gst_registered: Boolean(gstNumber), gst_number: gstNumber, pan_number: companyPan, fleet_size_band: fleetSize, onboarding_status: "active", created_by: profile.id, updated_by: profile.id }).select("id").single<{ id: string }>();
   if (customerError || !customer) { await correction(customerError?.message ?? "Corporate customer could not be saved."); return fail(`Corporate customer could not be saved: ${customerError?.message ?? "Unknown error"}`); }
   const cleanup = async () => { await admin.from("customers").delete().eq("id", customer.id); };
+
+  if (groupCustomerId) {
+    const { error: relationshipError } = await admin.from("customer_relationships").insert({ parent_customer_id: groupCustomerId, child_customer_id: customer.id, relationship_type: "group_member", is_active: true, status: "active", created_by: profile.id, approved_by: profile.id });
+    if (relationshipError) { await cleanup(); await correction(relationshipError.message); return fail(`Group affiliation could not be saved: ${relationshipError.message}`, "group_customer_id"); }
+  }
 
   const { error: contactError } = await admin.from("customer_onboarding_contacts").insert(contacts.map((contact) => ({ application_id: application.id, contact_role: contact.role, full_name: contact.name, phone: contact.phone, email: contact.email, login_required: true })));
   if (contactError) { await cleanup(); await correction(contactError.message); return fail(`Corporate contacts could not be saved: ${contactError.message}`); }
