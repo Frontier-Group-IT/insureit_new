@@ -93,15 +93,35 @@ export async function getProfile(userId: string): Promise<Profile | null> {
 }
 
 export async function getCustomerForUser(userId: string): Promise<Customer | null> {
-  const { data, error } = await supabase
+  const direct = await supabase
     .from('customers')
     .select('*')
     .eq('profile_id', userId)
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) throw error;
-  return data;
+  if (direct.error) throw direct.error;
+  if (direct.data) return direct.data;
+
+  const membership = await supabase
+    .from('customer_memberships')
+    .select('customer_id')
+    .eq('profile_id', userId)
+    .eq('status', 'active')
+    .order('is_primary', { ascending: false })
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle<{ customer_id: string }>();
+  if (membership.error) throw membership.error;
+  if (!membership.data?.customer_id) return null;
+
+  const customer = await supabase
+    .from('customers')
+    .select('*')
+    .eq('id', membership.data.customer_id)
+    .maybeSingle();
+  if (customer.error) throw customer.error;
+  return customer.data;
 }
 
 export async function ensureCustomerForUser(
@@ -388,6 +408,11 @@ async function clearStoredAuthSession() {
   }
 }
 
+export async function claimPendingCustomerMemberships() {
+  const { error } = await supabase.rpc('claim_pending_customer_memberships');
+  if (error) throw error;
+}
+
 export async function routeSignedInUser(user: User, router: Router, knownProfile?: Profile | null) {
   let profile = knownProfile ?? await getProfile(user.id);
   const metadataRole = user.app_metadata?.app_role ?? user.user_metadata?.app_role;
@@ -399,6 +424,9 @@ export async function routeSignedInUser(user: User, router: Router, knownProfile
   if (!isValidProfile(profile)) {
     router.replace('/access-denied');
     return profile;
+  }
+  if (profile.role === 'customer') {
+    await claimPendingCustomerMemberships();
   }
   router.replace(routeForRole(profile.role));
   return profile;
