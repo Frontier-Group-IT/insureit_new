@@ -1,6 +1,23 @@
--- Standalone correction for PostgreSQL UNION ordering in
--- public.get_accessible_customer_contexts().
--- Safe to run after a partially attempted hierarchy migration.
+-- Self-contained repair for the Group hierarchy context function.
+-- This can be run even when migration 202607150006 failed and rolled back.
+
+alter table public.customer_relationships
+  add column if not exists status text not null default 'active',
+  add column if not exists effective_from timestamptz not null default now(),
+  add column if not exists effective_to timestamptz,
+  add column if not exists approved_by uuid references public.profiles(id),
+  add column if not exists updated_at timestamptz not null default now();
+
+update public.customer_relationships
+set status = case when is_active then 'active' else 'inactive' end
+where status is distinct from case when is_active then 'active' else 'inactive' end;
+
+alter table public.customer_relationships
+  drop constraint if exists customer_relationships_status_check;
+
+alter table public.customer_relationships
+  add constraint customer_relationships_status_check
+  check (status in ('active', 'inactive', 'ended'));
 
 create or replace function public.get_accessible_customer_contexts()
 returns table (
