@@ -41,10 +41,10 @@ export function GroupOnboardingForm({ action }: Props) {
           <section className="px-5 py-5">
             <div className="mb-4">
               <h3 className="text-[13px] font-semibold text-[#0F172A]">Group Details</h3>
-              <p className="mt-1 text-[10.5px] text-[#64748B]">Create the umbrella customer first. Corporate, dealership and individual customers can be linked below this group afterward.</p>
+              <p className="mt-1 text-[10.5px] text-[#64748B]">Create the Group customer first. Corporate, dealership and individual customers can be linked to this Group afterward.</p>
             </div>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <Field label="Group Name" name="group_name" required placeholder="Group or umbrella name" />
+              <Field label="Group Name" name="group_name" required placeholder="Registered Group name" />
               <Field label="Owner Name" name="owner_name" required placeholder="Owner or promoter" />
               <Field label="Contact Number" name="phone" required inputMode="tel" maxLength={10} placeholder="10-digit mobile" />
               <Field label="Email ID" name="email" type="email" placeholder="Optional email" />
