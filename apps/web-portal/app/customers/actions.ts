@@ -8,12 +8,10 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { approvePortalOnboardingApplication, beginPortalOnboardingApplication, markPortalOnboardingForCorrection } from "./onboarding-applications";
 
 export type CustomerOnboardingState = { error: string | null; field: string | null };
-
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 const DOCUMENT_BUCKET = "customer-documents";
 const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
-
 type DocumentInput = { field: string; type: "pan_copy" | "aadhaar_front" | "aadhaar_back" | "gst_copy" };
 type ExistingCustomer = { id: string; profile_id: string | null; phone: string; pan_number: string | null; onboarding_status: string };
 
@@ -37,6 +35,7 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
   const panNumber = textValue(formData, "pan_number")?.replace(/\s/g, "").toUpperCase() ?? null;
   const aadhaarNumber = textValue(formData, "aadhaar_number")?.replace(/\D/g, "") ?? null;
   const fleetSizeBand = textValue(formData, "fleet_size_band");
+  const groupCustomerId = textValue(formData, "group_customer_id");
   const isGstRegistered = formData.get("is_gst_registered") === "true";
   const legalTradeName = textValue(formData, "legal_trade_name");
   const gstNumber = textValue(formData, "gst_number")?.replace(/\s/g, "").toUpperCase() ?? null;
@@ -52,12 +51,7 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
   if (isGstRegistered && !gstNumber) return failure("GST Number is required for a GST-registered customer.", "gst_number");
   if (isGstRegistered && gstNumber && !GSTIN_PATTERN.test(gstNumber)) return failure("Enter a valid 15-character GSTIN, for example 22AAAAA0000A1Z5.", "gst_number");
 
-  const documentInputs: DocumentInput[] = [
-    { field: "pan_copy", type: "pan_copy" },
-    { field: "aadhaar_front", type: "aadhaar_front" },
-    { field: "aadhaar_back", type: "aadhaar_back" },
-    { field: "gst_copy", type: "gst_copy" }
-  ];
+  const documentInputs: DocumentInput[] = [{ field: "pan_copy", type: "pan_copy" }, { field: "aadhaar_front", type: "aadhaar_front" }, { field: "aadhaar_back", type: "aadhaar_back" }, { field: "gst_copy", type: "gst_copy" }];
   const labels: Record<DocumentInput["type"], string> = { pan_copy: "PAN copy", aadhaar_front: "Aadhaar front", aadhaar_back: "Aadhaar back", gst_copy: "GST copy" };
   const requiredDocumentTypes = isGstRegistered ? new Set(["pan_copy", "aadhaar_front", "aadhaar_back", "gst_copy"]) : new Set(["pan_copy", "aadhaar_front", "aadhaar_back"]);
   for (const input of documentInputs) { const validationError = validateDocument(fileValue(formData, input.field), labels[input.type], requiredDocumentTypes.has(input.type)); if (validationError) return failure(validationError, input.field); }
@@ -68,6 +62,10 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
 
   let admin;
   try { admin = createSupabaseAdminClient(); } catch (error) { return failure(error instanceof Error ? error.message : "Supabase Admin configuration is missing."); }
+  if (groupCustomerId) {
+    const { data: group } = await admin.from("customers").select("id").eq("id", groupCustomerId).eq("partner_type", "group").eq("onboarding_status", "active").maybeSingle<{ id: string }>();
+    if (!group) return failure("Select a valid active Group customer.", "group_customer_id");
+  }
 
   let profileId: string;
   let createdAuthUserId: string | null = null;
@@ -101,40 +99,27 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
   const address = [addressStreet, addressLocality, city, state, postalCode].filter(Boolean).join(", ");
   let application: { id: string };
   try {
-    application = await beginPortalOnboardingApplication(admin, {
-      profileId,
-      initiatedBy: profile.id,
-      partnerType: "individual_proprietor",
-      phone,
-      email,
-      draftData: { contact_name: contactName, city, state, postal_code: postalCode, is_gst_registered: isGstRegistered, fleet_size_band: fleetSizeBand }
-    });
-  } catch (error) {
-    return failure(`Onboarding application could not be prepared: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
+    application = await beginPortalOnboardingApplication(admin, { profileId, initiatedBy: profile.id, partnerType: "individual_proprietor", phone, email, draftData: { contact_name: contactName, city, state, postal_code: postalCode, is_gst_registered: isGstRegistered, fleet_size_band: fleetSizeBand, group_customer_id: groupCustomerId } });
+  } catch (error) { return failure(`Onboarding application could not be prepared: ${error instanceof Error ? error.message : "Unknown error"}`); }
 
-  const customerPayload = {
-    profile_id: profileId, partner_type: partnerType, contact_name: contactName, company_name: legalTradeName, phone, email, address,
-    address_street: addressStreet, address_locality: addressLocality, india_location_id: locationId, city, state, postal_code: postalCode,
-    pan_number: panNumber, aadhaar_last_four: aadhaarNumber.slice(-4), aadhaar_hash: aadhaarHash, legal_trade_name: legalTradeName,
-    is_gst_registered: isGstRegistered, gst_number: isGstRegistered ? gstNumber : null, fleet_size_band: fleetSizeBand,
-    onboarding_status: "active", onboarding_completed_at: new Date().toISOString(), updated_by: profile.id
-  };
-
+  const customerPayload = { profile_id: profileId, partner_type: partnerType, contact_name: contactName, company_name: legalTradeName, phone, email, address, address_street: addressStreet, address_locality: addressLocality, india_location_id: locationId, city, state, postal_code: postalCode, pan_number: panNumber, aadhaar_last_four: aadhaarNumber.slice(-4), aadhaar_hash: aadhaarHash, legal_trade_name: legalTradeName, is_gst_registered: isGstRegistered, gst_number: isGstRegistered ? gstNumber : null, fleet_size_band: fleetSizeBand, onboarding_status: "active", onboarding_completed_at: new Date().toISOString(), updated_by: profile.id };
   let customer: { id: string } | null = null;
   let customerError: { message: string } | null = null;
   let createdCustomer = false;
-  if (existingCustomer) {
-    const result = await admin.from("customers").update(customerPayload).eq("id", existingCustomer.id).select("id").single<{ id: string }>(); customer = result.data; customerError = result.error;
-  } else {
-    const result = await admin.from("customers").insert({ ...customerPayload, customer_code: customerCode, created_by: profile.id }).select("id").single<{ id: string }>(); customer = result.data; customerError = result.error; createdCustomer = Boolean(result.data);
-  }
+  if (existingCustomer) { const result = await admin.from("customers").update(customerPayload).eq("id", existingCustomer.id).select("id").single<{ id: string }>(); customer = result.data; customerError = result.error; }
+  else { const result = await admin.from("customers").insert({ ...customerPayload, customer_code: customerCode, created_by: profile.id }).select("id").single<{ id: string }>(); customer = result.data; customerError = result.error; createdCustomer = Boolean(result.data); }
 
   if (customerError || !customer) {
     await markPortalOnboardingForCorrection(admin, application.id, customerError?.message ?? "Customer record could not be created.");
     if (customerError?.message.includes("customers_gst_number_format_check")) return failure("Enter a valid 15-character GSTIN, for example 22AAAAA0000A1Z5.", "gst_number");
     if (customerError?.message.includes("customers_phone_normalized_uidx") || customerError?.message.includes("customers_profile_id_uidx")) return failure("A customer record already exists for this mobile login. Refresh the Customers page and edit that record instead.", "phone");
     return failure(`Customer could not be saved: ${customerError?.message ?? "Unknown database error"}`);
+  }
+
+  await admin.from("customer_relationships").update({ status: "ended", is_active: false, effective_to: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("child_customer_id", customer.id).eq("relationship_type", "group_member").eq("is_active", true);
+  if (groupCustomerId) {
+    const { error: relationshipError } = await admin.from("customer_relationships").upsert({ parent_customer_id: groupCustomerId, child_customer_id: customer.id, relationship_type: "group_member", is_active: true, status: "active", effective_from: new Date().toISOString(), effective_to: null, created_by: profile.id, approved_by: profile.id, updated_at: new Date().toISOString() }, { onConflict: "parent_customer_id,child_customer_id,relationship_type" });
+    if (relationshipError) { if (createdCustomer) await admin.from("customers").delete().eq("id", customer.id); await markPortalOnboardingForCorrection(admin, application.id, relationshipError.message); return failure(`Group affiliation could not be saved: ${relationshipError.message}`, "group_customer_id"); }
   }
 
   const uploadedPaths: string[] = [];
@@ -145,25 +130,11 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
     const { error: uploadError } = await admin.storage.from(DOCUMENT_BUCKET).upload(storagePath, bytes, { contentType: file.type, upsert: false });
     if (uploadError) { if (uploadedPaths.length) await admin.storage.from(DOCUMENT_BUCKET).remove(uploadedPaths); if (createdCustomer) await admin.from("customers").delete().eq("id", customer.id); await markPortalOnboardingForCorrection(admin, application.id, uploadError.message); return failure(`${labels[input.type]} upload failed: ${uploadError.message}`, input.field); }
     uploadedPaths.push(storagePath);
-    const { error: metadataError } = await admin.from("customer_documents").insert({
-      customer_id: customer.id,
-      document_type: input.type,
-      file_name: file.name,
-      storage_bucket: DOCUMENT_BUCKET,
-      storage_path: storagePath,
-      mime_type: file.type,
-      file_size: file.size,
-      verification_status: "verified",
-      upload_source: "manager_portal",
-      uploaded_by: profile.id,
-      verified_by: profile.id,
-      verified_at: new Date().toISOString()
-    });
+    const { error: metadataError } = await admin.from("customer_documents").insert({ customer_id: customer.id, document_type: input.type, file_name: file.name, storage_bucket: DOCUMENT_BUCKET, storage_path: storagePath, mime_type: file.type, file_size: file.size, verification_status: "verified", upload_source: "manager_portal", uploaded_by: profile.id, verified_by: profile.id, verified_at: new Date().toISOString() });
     if (metadataError) { await admin.storage.from(DOCUMENT_BUCKET).remove(uploadedPaths); if (createdCustomer) await admin.from("customers").delete().eq("id", customer.id); await markPortalOnboardingForCorrection(admin, application.id, metadataError.message); return failure(`Document record could not be saved: ${metadataError.message}`, input.field); }
   }
 
   try { await approvePortalOnboardingApplication(admin, application.id, customer.id, profile.id); }
   catch (error) { return failure(`Customer was created, but the onboarding application could not be completed: ${error instanceof Error ? error.message : "Unknown error"}`); }
-
   redirect(`/customers?success=${createdCustomer ? "customer_created" : "customer_updated"}`);
 }
