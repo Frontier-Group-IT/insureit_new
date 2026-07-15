@@ -4,9 +4,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
-import { getCurrentSession } from '@/lib/auth';
-import { customerAccountTitle, type CustomerAccountContext } from '@/lib/customer-context';
-import { getSelectedCustomerRecord, selectedAccountScreenTitle } from '@/lib/selected-customer';
+import { getCurrentSession, getCustomerForUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { palette, radii } from '@/lib/theme';
 import type { Policy } from '@/lib/types';
@@ -14,17 +12,15 @@ import type { Policy } from '@/lib/types';
 export default function PoliciesScreen() {
   const router = useRouter();
   const [policies, setPolicies] = useState<Policy[]>([]);
-  const [context, setContext] = useState<CustomerAccountContext | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       const session = await getCurrentSession();
       if (!session?.user) return router.replace('/login');
-      const selected = await getSelectedCustomerRecord();
-      setContext(selected?.context ?? null);
-      if (selected) {
-        const { data } = await supabase.from('policies').select('*').eq('customer_id', selected.customer.id).order('end_date', { ascending: true });
+      const customer = await getCustomerForUser(session.user.id);
+      if (customer) {
+        const { data } = await supabase.from('policies').select('*').eq('customer_id', customer.id).order('end_date', { ascending: true });
         setPolicies(data ?? []);
       }
       setLoading(false);
@@ -32,12 +28,11 @@ export default function PoliciesScreen() {
     void load();
   }, [router]);
 
-  const title = selectedAccountScreenTitle(context, 'My Policies');
-  if (loading) return <Screen title={title}><LoadingState /></Screen>;
+  if (loading) return <Screen title="My Policies"><LoadingState /></Screen>;
 
   return (
-    <Screen title={title} subtitle={`${context ? customerAccountTitle(context) : 'Selected account'} · ${policies.length} polic${policies.length === 1 ? 'y' : 'ies'}`} showLogout>
-      {policies.length === 0 ? <EmptyState title="No policies yet" body="Policy records for the selected account will appear here." /> : policies.map((policy) => (
+    <Screen title="My Policies" subtitle={`${policies.length} polic${policies.length === 1 ? 'y' : 'ies'}`} showLogout>
+      {policies.length === 0 ? <EmptyState title="No policies yet" body="Policy records will appear here." /> : policies.map((policy) => (
         <View key={policy.id} style={styles.policyRow}>
           <View style={styles.policyIcon}>
             <MaterialCommunityIcons name="shield-outline" size={21} color={palette.emerald} />

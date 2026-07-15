@@ -5,9 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppSearchBar } from '@/components/design-system';
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
-import { getCurrentSession } from '@/lib/auth';
-import { customerAccountTitle, type CustomerAccountContext } from '@/lib/customer-context';
-import { getSelectedCustomerRecord, selectedAccountScreenTitle } from '@/lib/selected-customer';
+import { getCurrentSession, getCustomerForUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Claim, ClaimStatus, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
@@ -20,7 +18,6 @@ export default function ClaimsScreen() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [insurers, setInsurers] = useState<InsuranceCompany[]>([]);
-  const [context, setContext] = useState<CustomerAccountContext | null>(null);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<ClaimFilter>('All');
   const [loading, setLoading] = useState(true);
@@ -30,13 +27,12 @@ export default function ClaimsScreen() {
       const session = await getCurrentSession();
       if (!session?.user) return router.replace('/login');
 
-      const selected = await getSelectedCustomerRecord();
-      setContext(selected?.context ?? null);
-      if (selected) {
+      const customer = await getCustomerForUser(session.user.id);
+      if (customer) {
         const [claimResult, vehicleResult, policyResult, insurerResult] = await Promise.all([
-          supabase.from('claims').select('*').eq('customer_id', selected.customer.id).order('created_at', { ascending: false }),
-          supabase.from('vehicles').select('*').eq('customer_id', selected.customer.id),
-          supabase.from('policies').select('*').eq('customer_id', selected.customer.id),
+          supabase.from('claims').select('*').eq('customer_id', customer.id).order('created_at', { ascending: false }),
+          supabase.from('vehicles').select('*').eq('customer_id', customer.id),
+          supabase.from('policies').select('*').eq('customer_id', customer.id),
           supabase.from('insurance_companies').select('*'),
         ]);
 
@@ -79,12 +75,10 @@ export default function ClaimsScreen() {
     });
   }, [claims, filter, insurers, policies, query, vehicles]);
 
-  const title = selectedAccountScreenTitle(context, 'My Claims');
-  if (loading) return <Screen title={title}><LoadingState /></Screen>;
+  if (loading) return <Screen title="My Claims"><LoadingState /></Screen>;
 
   return (
-    <Screen title={title} showLogout showTitleHeader={false}>
-      <View style={styles.accountLine}><Text style={styles.accountLineText}>{context ? customerAccountTitle(context) : 'Selected account'}</Text></View>
+    <Screen title="My Claims" showLogout showTitleHeader={false}>
       <View style={styles.searchSection}>
         <Text style={styles.searchHeading}>Find your claim</Text>
         <AppSearchBar value={query} onChangeText={setQuery} placeholder="Search vehicle, policy, control or claim no." />
@@ -98,7 +92,7 @@ export default function ClaimsScreen() {
         ))}
       </ScrollView>
 
-      {claims.length === 0 ? <EmptyState title="No claims yet" body="Claims for the selected account will appear here." /> : null}
+      {claims.length === 0 ? <EmptyState title="No claims yet" body="Reported claims will appear here." /> : null}
 
       {filteredClaims.map((claim) => {
         const vehicle = vehicles.find((item) => item.id === claim.vehicle_id);
@@ -238,16 +232,16 @@ function policyExpiryEndOfDay(value?: string | null) {
 }
 
 const styles = StyleSheet.create({
-  accountLine: { marginTop: -22, marginBottom: 8 },
-  accountLineText: { color: palette.slate, fontSize: 10.5, fontWeight: '800' },
-  searchSection: { marginBottom: 10 },
+  searchSection: { marginTop: -22, marginBottom: 10 },
   searchHeading: { color: palette.navy, fontSize: 13, fontWeight: '900', marginBottom: 7 },
+
   filterScroller: { maxHeight: 42, marginBottom: 12 },
   filterWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 14 },
   filterChip: { height: 34, borderRadius: 999, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center' },
   filterChipActive: { backgroundColor: palette.navy, borderColor: palette.navy },
   filterText: { color: palette.slate, fontSize: 11.5, fontWeight: '900' },
   filterTextActive: { color: '#FFFFFF' },
+
   claimCard: { borderWidth: 1, borderRadius: 18, padding: 12, paddingLeft: 17, marginBottom: 10, overflow: 'hidden', shadowColor: palette.ink, shadowOpacity: 0.055, shadowRadius: 10, elevation: 2 },
   accentBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5 },
   claimTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -257,10 +251,12 @@ const styles = StyleSheet.create({
   vehicleNo: { color: palette.ink, fontSize: 17, fontWeight: '900', marginTop: 1 },
   statusBadge: { maxWidth: 126, minHeight: 34, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
   statusBadgeText: { color: '#FFFFFF', fontSize: 10.2, lineHeight: 13, fontWeight: '900', textAlign: 'center' },
+
   numberRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
   numberBox: { flex: 1, backgroundColor: 'rgba(255,255,255,0.82)', borderWidth: 1, borderColor: '#DCE8F4', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 7 },
   numberLabel: { color: palette.slate, fontSize: 9.3, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.4 },
   numberValue: { color: palette.ink, fontSize: 11.7, lineHeight: 15, fontWeight: '900', marginTop: 2 },
+
   infoBox: { marginTop: 10, paddingTop: 9, borderTopWidth: 1, borderTopColor: '#E5ECF5', gap: 5 },
   infoPairRow: { flexDirection: 'row', gap: 8 },
   infoPairHalf: { flex: 1, minWidth: 0 },
@@ -268,6 +264,7 @@ const styles = StyleSheet.create({
   infoPairLabel: { color: palette.slate, fontSize: 10.2, fontWeight: '900' },
   expiredClaimWarning: { marginTop: 9, borderRadius: 12, borderWidth: 1, borderColor: '#FDA29B', backgroundColor: '#FEF3F2', paddingHorizontal: 9, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 7 },
   expiredClaimWarningText: { color: '#B42318', fontSize: 10.8, fontWeight: '900', flex: 1 },
+
   cardFooter: { marginTop: 10, paddingTop: 9, borderTopWidth: 1, borderTopColor: '#E5ECF5', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   footerHint: { color: palette.slate, fontSize: 11.5, fontWeight: '900' },
 });
