@@ -1,3 +1,3 @@
-import { GroupProfileScreen } from '@/components/group/group-management-screens';
+import { GroupProfileScreen } from '@/components/group/group-profile-screen';
 
 export default GroupProfileScreen;
