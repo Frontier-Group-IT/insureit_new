@@ -8,6 +8,8 @@ import { DealershipProfileEditor } from "./dealership-profile-editor";
 import { updateDealershipProfile } from "./dealership-actions";
 import { CorporateProfileEditor } from "./corporate-profile-editor";
 import { updateCorporateProfile } from "./corporate-actions";
+import { GroupAffiliationEditor } from "./group-affiliation-editor";
+import { updateGroupAffiliation } from "./group-affiliation-actions";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -46,6 +48,14 @@ export default async function EditCustomerPage({ params, searchParams }: { param
     return <AppShell title="Corporate Profile"><CorporateProfileEditor customer={customer} contacts={contacts??[]} groups={groups??[]} currentGroupId={relationship?.parent_customer_id??null} action={updateCorporateProfile.bind(null,id)} errorMessage={query.error??null} successMessage={query.success??null}/></AppShell>;
   }
 
+  const supportsGroupAffiliation = customer.partner_type === "dealership" || customer.partner_type === "individual_proprietor";
+  const [{data:groups},{data:relationship}] = supportsGroupAffiliation ? await Promise.all([
+    admin.from("customers").select("id,customer_code,company_name,contact_name").eq("partner_type","group").eq("onboarding_status","active").order("company_name",{ascending:true}).returns<GroupOption[]>(),
+    admin.from("customer_relationships").select("parent_customer_id").eq("child_customer_id",id).eq("relationship_type","group_member").eq("is_active",true).eq("status","active").maybeSingle<GroupRelationship>()
+  ]) : [{data:[] as GroupOption[]},{data:null as GroupRelationship|null}];
+
+  const affiliation = supportsGroupAffiliation ? <GroupAffiliationEditor groups={groups??[]} currentGroupId={relationship?.parent_customer_id??null} action={updateGroupAffiliation.bind(null,id)} successMessage={query.success??null} errorMessage={query.error??null}/> : null;
+
   if(customer.partner_type==="dealership"){
     const [{data:dealership},{data:representative},{data:contacts},{data:manufacturers}]=await Promise.all([
       admin.from("dealership_profiles").select("dealership_type, dealership_name, owner_name, oem_name, yearly_sales_band").eq("customer_id",id).maybeSingle<DealershipProfile>(),
@@ -55,8 +65,8 @@ export default async function EditCustomerPage({ params, searchParams }: { param
     ]);
     if(!dealership||!representative) notFound();
     const oems=(manufacturers??[]).map((item)=>({value:item.name,label:item.name}));
-    return <AppShell title="Dealership Profile"><DealershipProfileEditor action={updateDealershipProfile.bind(null,id)} values={{dealership_type:dealership.dealership_type,dealership_name:dealership.dealership_name,owner_name:dealership.owner_name,phone:customer.phone,email:customer.email,address_street:customer.address_street,address_locality:customer.address_locality,city:customer.city,state:customer.state,postal_code:customer.postal_code,india_location_id:customer.india_location_id,oem_name:dealership.oem_name,yearly_sales_band:dealership.yearly_sales_band,is_gst_registered:customer.is_gst_registered,gst_number:customer.gst_number,representative_name:representative.representative_name,representative_mobile:representative.mobile,representative_email:representative.email,representative_pan:representative.pan_number,aadhaar_last_four:representative.aadhaar_last_four}} contacts={contacts??[]} documents={documentsWithUrls} oems={oems}/></AppShell>;
+    return <AppShell title="Dealership Profile"><div className="mx-auto max-w-[1240px]">{affiliation}</div><DealershipProfileEditor action={updateDealershipProfile.bind(null,id)} values={{dealership_type:dealership.dealership_type,dealership_name:dealership.dealership_name,owner_name:dealership.owner_name,phone:customer.phone,email:customer.email,address_street:customer.address_street,address_locality:customer.address_locality,city:customer.city,state:customer.state,postal_code:customer.postal_code,india_location_id:customer.india_location_id,oem_name:dealership.oem_name,yearly_sales_band:dealership.yearly_sales_band,is_gst_registered:customer.is_gst_registered,gst_number:customer.gst_number,representative_name:representative.representative_name,representative_mobile:representative.mobile,representative_email:representative.email,representative_pan:representative.pan_number,aadhaar_last_four:representative.aadhaar_last_four}} contacts={contacts??[]} documents={documentsWithUrls} oems={oems}/></AppShell>;
   }
 
-  return <AppShell title="Customer Profile"><CustomerProfileEditor customer={customer} documents={documentsWithUrls} vehicles={vehicles??[]} agents={agents??[]} action={updateCustomerProfile.bind(null,id)} errorMessage={query.error??null} errorField={query.field??null}/></AppShell>;
+  return <AppShell title="Customer Profile"><div className="mx-auto max-w-[1240px]">{affiliation}</div><CustomerProfileEditor customer={customer} documents={documentsWithUrls} vehicles={vehicles??[]} agents={agents??[]} action={updateCustomerProfile.bind(null,id)} errorMessage={query.error??null} errorField={query.field??null}/></AppShell>;
 }
