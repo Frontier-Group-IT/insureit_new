@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BrandLogo } from '@/components/first-look';
 import {
   getCurrentSession,
-  getOnboardingApplicationForUser,
+  ensureCustomerOnboardingForPartner,
   getOnboardingDocuments,
   getProfile,
   saveOnboardingDraft,
@@ -71,10 +71,13 @@ export default function IndividualKycScreen() {
         if (!session?.user) return router.replace('/login');
         const [nextProfile, nextApplication] = await Promise.all([
           getProfile(session.user.id),
-          getOnboardingApplicationForUser(session.user.id),
+          ensureCustomerOnboardingForPartner(session.user, 'individual_proprietor'),
         ]);
-        if (!nextApplication || nextApplication.partner_type !== 'individual_proprietor') return router.replace('/customer/kyc/partner-type');
         if (nextApplication.status === 'submitted' || nextApplication.status === 'under_review') return router.replace('/customer/home');
+        if (nextApplication.partner_type !== 'individual_proprietor') {
+          if (active) setError('Your KYC type could not be opened. Go back and choose the partner type again.');
+          return;
+        }
         const nextDocuments = await getOnboardingDocuments(nextApplication.id);
         if (!active) return;
         const draft = asDraft(nextApplication.draft_data);

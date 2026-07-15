@@ -186,6 +186,13 @@ export async function startCustomerOnboarding(user: User, partnerType: PartnerTy
   return data;
 }
 
+export async function ensureCustomerOnboardingForPartner(user: User, partnerType: PartnerType) {
+  const existing = await getOnboardingApplicationForUser(user.id);
+  if (existing?.partner_type === partnerType) return existing;
+  if (existing && ['submitted', 'under_review'].includes(existing.status)) return existing;
+  return startCustomerOnboarding(user, partnerType);
+}
+
 export async function getOnboardingDocuments(applicationId: string): Promise<CustomerOnboardingDocument[]> {
   const { data, error } = await supabase
     .from('customer_onboarding_documents')

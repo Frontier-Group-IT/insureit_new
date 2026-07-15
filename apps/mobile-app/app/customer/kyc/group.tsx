@@ -5,7 +5,7 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, Text
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandLogo } from '@/components/first-look';
-import { getCurrentSession, getOnboardingApplicationForUser, getProfile, saveOnboardingDraft } from '@/lib/auth';
+import { ensureCustomerOnboardingForPartner, getCurrentSession, getProfile, saveOnboardingDraft } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { CustomerOnboardingApplication, Json, Profile } from '@/lib/types';
@@ -30,10 +30,13 @@ export default function GroupKycScreen() {
         if (!session?.user) return router.replace('/login');
         const [nextProfile, nextApplication] = await Promise.all([
           getProfile(session.user.id),
-          getOnboardingApplicationForUser(session.user.id),
+          ensureCustomerOnboardingForPartner(session.user, 'group'),
         ]);
-        if (!nextApplication || nextApplication.partner_type !== 'group') return router.replace('/customer/kyc/partner-type');
         if (nextApplication.status === 'submitted' || nextApplication.status === 'under_review') return router.replace('/customer/home');
+        if (nextApplication.partner_type !== 'group') {
+          if (active) setError('Your Group KYC could not be opened. Go back and choose the partner type again.');
+          return;
+        }
         if (!active) return;
         const draft = asDraft(nextApplication.draft_data);
         setProfile(nextProfile);
