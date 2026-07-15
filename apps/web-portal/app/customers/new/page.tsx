@@ -41,7 +41,7 @@ export default async function NewCustomerPage({ searchParams }: { searchParams: 
 
     return (
       <AppShell title={`Add ${dealershipType.toUpperCase()} Dealership`}>
-        <DealershipOnboardingForm action={createDealershipOnboarding} dealershipType={dealershipType} oems={oems} />
+        <DealershipOnboardingForm action={createDealershipOnboarding} dealershipType={dealershipType} oems={oems} groups={groupOptions} />
       </AppShell>
     );
   }
@@ -64,7 +64,7 @@ export default async function NewCustomerPage({ searchParams }: { searchParams: 
 
   return (
     <AppShell title="Add New Customer">
-      <CustomerOnboardingForm action={createCustomerOnboarding} partnerType={partnerType} />
+      <CustomerOnboardingForm action={createCustomerOnboarding} partnerType={partnerType} groups={groupOptions} />
     </AppShell>
   );
 }
