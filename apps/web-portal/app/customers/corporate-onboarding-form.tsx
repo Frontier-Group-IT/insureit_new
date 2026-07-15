@@ -7,13 +7,14 @@ import { FeedbackToast } from "@/components/ui-feedback";
 import type { CorporateOnboardingState } from "./corporate-actions";
 
 type LocationOption = { id: string; city_name: string; district: string | null; state_name: string; pincode: string };
+type Option = { value: string; label: string };
 type FileKey = "gst_copy" | "company_pan_copy";
-type Props = { action: (state: CorporateOnboardingState, formData: FormData) => Promise<CorporateOnboardingState> };
+type Props = { action: (state: CorporateOnboardingState, formData: FormData) => Promise<CorporateOnboardingState>; groups: Option[] };
 
 const inputClass = "h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
 const labelClass = "mb-1 block text-[10.5px] font-semibold text-[#344054]";
 
-export function CorporateOnboardingForm({ action }: Props) {
+export function CorporateOnboardingForm({ action, groups }: Props) {
   const [state, formAction] = useActionState(action, { error: null, field: null });
   const [showError, setShowError] = useState(false);
   const [cityQuery, setCityQuery] = useState("");
@@ -77,6 +78,7 @@ export function CorporateOnboardingForm({ action }: Props) {
         </div></section>
 
         <Section title="Fleet Profile"><Select label="Fleet Size" name="fleet_size_band" required options={[{value:"less_than_5",label:"Less than 5"},{value:"5_to_20",label:"5–20"},{value:"20_to_50",label:"20–50"},{value:"more_than_50",label:"More than 50"}]} /></Section>
+        <Section title="Group Affiliation"><Select label="Parent Group" name="group_customer_id" options={groups} emptyLabel="Not linked to a Group" /><div className="xl:col-span-3 flex items-end"><p className="pb-2 text-[10px] text-[#64748B]">Optional. The Corporate remains a separate customer while every active Group login can view it.</p></div></Section>
 
         <section className="border-b border-[#E2E8F0] px-5 py-4"><div className="mb-3"><h3 className="text-[13px] font-semibold text-[#0F172A]">Login Contacts</h3><p className="mt-1 text-[10px] text-[#64748B]">Each contact receives separate mobile OTP access to this corporate account.</p></div><div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-[11px]"><thead className="bg-[#F8FAFC] text-[9.5px] uppercase tracking-[0.04em] text-[#64748B]"><tr><th className="px-3 py-2">Role</th><th className="px-3 py-2">Name</th><th className="px-3 py-2">Mobile</th><th className="px-3 py-2">Email</th></tr></thead><tbody className="divide-y divide-[#EEF2F6]">{[["ceo_head","CEO / Head"],["admin_head","Admin Head"],["dedicated_spoc","Dedicated SPOC"]].map(([key,label]) => <tr key={key}><td className="px-3 py-2 font-semibold text-[#334155]">{label}</td><td className="px-3 py-2"><input name={`${key}_name`} required className={inputClass} placeholder="Full name" /></td><td className="px-3 py-2"><input name={`${key}_mobile`} required className={inputClass} inputMode="tel" maxLength={10} placeholder="10-digit mobile" /></td><td className="px-3 py-2"><input name={`${key}_email`} className={inputClass} type="email" placeholder="Optional email" /></td></tr>)}</tbody></table></div></section>
 
@@ -88,5 +90,5 @@ export function CorporateOnboardingForm({ action }: Props) {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) { return <section className="border-b border-[#E2E8F0] px-5 py-4"><h3 className="mb-3 text-[13px] font-semibold text-[#0F172A]">{title}</h3><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">{children}</div></section>; }
 function Field({ label, name, required = false, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; name: string }) { return <div><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} required={required} className={inputClass} {...props} /></div>; }
-function Select({ label, name, options, required = false }: { label: string; name: string; options: Array<{value:string;label:string}>; required?: boolean }) { return <div><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><select id={name} name={name} required={required} className={inputClass}><option value="">Select</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>; }
+function Select({ label, name, options, required = false, emptyLabel = "Select" }: { label: string; name: string; options: Array<{value:string;label:string}>; required?: boolean; emptyLabel?: string }) { return <div><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><select id={name} name={name} required={required} className={inputClass}><option value="">{emptyLabel}</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>; }
 function FileField({ label, name, file, required = false, onChange }: { label: string; name: FileKey; file?: File; required?: boolean; onChange: (file: File | null) => void }) { return <div><span className={labelClass}>{label}{required ? " *" : ""}</span><label htmlFor={name} className={`flex h-9 cursor-pointer items-center gap-2 rounded-md border px-2.5 text-[10.5px] ${file ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-dashed border-[#CBD5E1] bg-[#F8FAFC] text-[#64748B]"}`}><span>{file ? "✓" : "↥"}</span><span className="min-w-0 flex-1 truncate">{file?.name ?? "Choose file"}</span></label><input id={name} name={name} type="file" required={required && !file} accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" className="sr-only" onChange={(event) => onChange(event.target.files?.[0] ?? null)} /></div>; }
