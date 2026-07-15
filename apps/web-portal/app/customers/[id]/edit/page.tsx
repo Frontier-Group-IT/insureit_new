@@ -21,6 +21,8 @@ type Representative = { representative_name:string; mobile:string; email:string|
 type DealershipContact = { contact_role:string; contact_name:string|null; mobile:string|null; email:string|null };
 type CorporateContact = { contact_role:string; full_name:string; phone:string; email:string|null; access_status:string; profile_id:string|null };
 type Manufacturer = { name:string };
+type GroupOption = { id:string; customer_code:string; company_name:string|null; contact_name:string };
+type GroupRelationship = { parent_customer_id:string };
 
 export default async function EditCustomerPage({ params, searchParams }: { params:Promise<{id:string}>; searchParams:Promise<{error?:string;field?:string;success?:string}> }) {
   await requireMasterDataManager();
@@ -36,8 +38,12 @@ export default async function EditCustomerPage({ params, searchParams }: { param
   const documentsWithUrls=await Promise.all((documents??[]).map(async(document)=>({...document,signedUrl:(await admin.storage.from(document.storage_bucket).createSignedUrl(document.storage_path,600)).data?.signedUrl??null})));
 
   if(customer.partner_type==="corporate"){
-    const {data:contacts}=await admin.from("customer_contacts").select("contact_role,full_name,phone,email,access_status,profile_id").eq("customer_id",id).order("contact_role").returns<CorporateContact[]>();
-    return <AppShell title="Corporate Profile"><CorporateProfileEditor customer={customer} contacts={contacts??[]} action={updateCorporateProfile.bind(null,id)} errorMessage={query.error??null} successMessage={query.success??null}/></AppShell>;
+    const [{data:contacts},{data:groups},{data:relationship}] = await Promise.all([
+      admin.from("customer_contacts").select("contact_role,full_name,phone,email,access_status,profile_id").eq("customer_id",id).order("contact_role").returns<CorporateContact[]>(),
+      admin.from("customers").select("id,customer_code,company_name,contact_name").eq("partner_type","group").eq("onboarding_status","active").order("company_name",{ascending:true}).returns<GroupOption[]>(),
+      admin.from("customer_relationships").select("parent_customer_id").eq("child_customer_id",id).eq("relationship_type","group_member").eq("is_active",true).eq("status","active").maybeSingle<GroupRelationship>()
+    ]);
+    return <AppShell title="Corporate Profile"><CorporateProfileEditor customer={customer} contacts={contacts??[]} groups={groups??[]} currentGroupId={relationship?.parent_customer_id??null} action={updateCorporateProfile.bind(null,id)} errorMessage={query.error??null} successMessage={query.success??null}/></AppShell>;
   }
 
   if(customer.partner_type==="dealership"){

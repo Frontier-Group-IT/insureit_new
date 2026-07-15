@@ -23,12 +23,18 @@ export async function updateCorporateProfile(customerId: string, formData: FormD
   const street = text(formData, "address_street"); const locality = text(formData, "address_locality");
   const city = text(formData, "city"); const state = text(formData, "state"); const postalCode = text(formData, "postal_code");
   const locationId = text(formData, "india_location_id"); const fleet = text(formData, "fleet_size_band");
+  const parentGroupId = text(formData, "parent_group_id");
   if (!companyName || !pan || !PAN.test(pan) || (gst && !GST.test(gst)) || !street || !city || !state || !postalCode || !locationId || !fleet) redirect(`/customers/${customerId}/edit?error=invalid_corporate_details`);
 
   const contacts = ROLES.map((role) => ({ role, name: text(formData, `${role}_name`), phone: phone(text(formData, `${role}_mobile`)), email: text(formData, `${role}_email`) }));
   if (contacts.some((contact) => !contact.name || !contact.phone) || new Set(contacts.map((contact) => contact.phone)).size !== 3) redirect(`/customers/${customerId}/edit?error=invalid_contacts`);
   const spoc = contacts.find((contact) => contact.role === "dedicated_spoc")!;
   const admin = createSupabaseAdminClient();
+
+  if (parentGroupId) {
+    const { data: group } = await admin.from("customers").select("id").eq("id", parentGroupId).eq("partner_type", "group").eq("onboarding_status", "active").maybeSingle<{ id:string }>();
+    if (!group) redirect(`/customers/${customerId}/edit?error=invalid_group`);
+  }
 
   const { error: customerError } = await admin.from("customers").update({ company_name: companyName, legal_trade_name: companyName, contact_name: spoc.name, phone: spoc.phone, email: spoc.email, pan_number: pan, is_gst_registered: Boolean(gst), gst_number: gst, address: [street, locality, city, state, postalCode].filter(Boolean).join(", "), address_street: street, address_locality: locality, india_location_id: locationId, city, state, postal_code: postalCode, fleet_size_band: fleet, updated_by: profile.id }).eq("id", customerId).eq("partner_type", "corporate");
   if (customerError) redirect(`/customers/${customerId}/edit?error=customer_update_failed`);
@@ -39,6 +45,15 @@ export async function updateCorporateProfile(customerId: string, formData: FormD
     const membership = await admin.from("customer_memberships").select("id,profile_id,status").eq("customer_id", customerId).eq("membership_role", contact.role).maybeSingle<{ id:string; profile_id:string|null; status:string }>();
     if (membership.data) await admin.from("customer_memberships").update({ invited_phone: contact.phone, invited_email: contact.email, is_primary: contact.role === "dedicated_spoc", updated_at: new Date().toISOString() }).eq("id", membership.data.id);
     else await admin.from("customer_memberships").insert({ customer_id: customerId, invited_phone: contact.phone, invited_email: contact.email, membership_role: contact.role, is_primary: contact.role === "dedicated_spoc", status: "pending", created_by: profile.id });
+  }
+
+  const now = new Date().toISOString();
+  const { error: endError } = await admin.from("customer_relationships").update({ status: "ended", is_active: false, effective_to: now, updated_at: now }).eq("child_customer_id", customerId).eq("relationship_type", "group_member").eq("is_active", true);
+  if (endError) redirect(`/customers/${customerId}/edit?error=group_update_failed`);
+
+  if (parentGroupId) {
+    const { error: groupError } = await admin.from("customer_relationships").upsert({ parent_customer_id: parentGroupId, child_customer_id: customerId, relationship_type: "group_member", is_active: true, status: "active", effective_from: now, effective_to: null, created_by: profile.id, approved_by: profile.id, updated_at: now }, { onConflict: "parent_customer_id,child_customer_id,relationship_type" });
+    if (groupError) redirect(`/customers/${customerId}/edit?error=group_update_failed`);
   }
 
   revalidatePath(`/customers/${customerId}/edit`);
