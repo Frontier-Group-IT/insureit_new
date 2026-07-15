@@ -67,7 +67,7 @@ export async function createCorporateOnboarding(_state: CorporateOnboardingState
   const cleanup = async () => { await admin.from("customers").delete().eq("id", customer.id); };
 
   if (groupCustomerId) {
-    const { error: relationshipError } = await admin.from("customer_relationships").insert({ parent_customer_id: groupCustomerId, child_customer_id: customer.id, relationship_type: "group_member", is_active: true, status: "active", created_by: profile.id, approved_by: profile.id });
+    const { error: relationshipError } = await admin.rpc("link_customer_to_group", { p_group_customer_id: groupCustomerId, p_child_customer_id: customer.id, p_actor_profile_id: profile.id });
     if (relationshipError) { await cleanup(); await correction(relationshipError.message); return fail(`Group affiliation could not be saved: ${relationshipError.message}`, "group_customer_id"); }
   }
 

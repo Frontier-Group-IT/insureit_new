@@ -47,12 +47,11 @@ export async function updateCorporateProfile(customerId: string, formData: FormD
     else await admin.from("customer_memberships").insert({ customer_id: customerId, invited_phone: contact.phone, invited_email: contact.email, membership_role: contact.role, is_primary: contact.role === "dedicated_spoc", status: "pending", created_by: profile.id });
   }
 
-  const now = new Date().toISOString();
-  const { error: endError } = await admin.from("customer_relationships").update({ status: "ended", is_active: false, effective_to: now, updated_at: now }).eq("child_customer_id", customerId).eq("relationship_type", "group_member").eq("is_active", true);
-  if (endError) redirect(`/customers/${customerId}/edit?error=group_update_failed`);
-
   if (parentGroupId) {
-    const { error: groupError } = await admin.from("customer_relationships").upsert({ parent_customer_id: parentGroupId, child_customer_id: customerId, relationship_type: "group_member", is_active: true, status: "active", effective_from: now, effective_to: null, created_by: profile.id, approved_by: profile.id, updated_at: now }, { onConflict: "parent_customer_id,child_customer_id,relationship_type" });
+    const { error: groupError } = await admin.rpc("link_customer_to_group", { p_group_customer_id: parentGroupId, p_child_customer_id: customerId, p_actor_profile_id: profile.id });
+    if (groupError) redirect(`/customers/${customerId}/edit?error=group_update_failed`);
+  } else {
+    const { error: groupError } = await admin.rpc("unlink_customer_from_group", { p_child_customer_id: customerId, p_actor_profile_id: profile.id });
     if (groupError) redirect(`/customers/${customerId}/edit?error=group_update_failed`);
   }
 
