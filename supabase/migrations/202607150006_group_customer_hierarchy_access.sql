@@ -253,18 +253,21 @@ as $$
       and group_membership.status = 'active'
       and parent.partner_type::text = 'group'
   )
-  select * from direct_accounts
-  union all
-  select child.*
-  from group_children child
-  where not exists (
-    select 1 from direct_accounts direct
-    where direct.customer_id = child.customer_id
-  )
+  select contexts.*
+  from (
+    select * from direct_accounts
+    union all
+    select child.* from group_children child
+    where not exists (
+      select 1
+      from direct_accounts direct
+      where direct.customer_id = child.customer_id
+    )
+  ) contexts
   order by
-    case when access_source = 'direct' then 0 else 1 end,
-    company_name nulls last,
-    contact_name;
+    case when contexts.access_source = 'direct' then 0 else 1 end,
+    contexts.company_name nulls last,
+    contexts.contact_name;
 $$;
 
 revoke all on function public.get_accessible_customer_contexts() from public;
