@@ -1,3 +1,3 @@
-import { AddAssociatedAccountScreen } from '@/components/group/group-management-screens';
+import { GroupAddAccountScreen } from '@/components/group/group-add-account-screen';
 
-export default AddAssociatedAccountScreen;
+export default GroupAddAccountScreen;
