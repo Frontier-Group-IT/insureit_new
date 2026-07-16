@@ -1,9 +1,9 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useLoadingRouter, usePageLoading } from '@/components/app-loading';
 import { BrandLogo } from '@/components/first-look';
 import { NotificationBell } from '@/components/realtime-notifications';
 import { palette } from '@/lib/theme';
@@ -17,8 +17,10 @@ type Props = {
   loading?: boolean;
 };
 
-export function GroupPageShell({ title, subtitle, icon = 'account-group-outline', children, rightAction }: Props) {
-  const router = useRouter();
+export function GroupPageShell({ title, subtitle, icon = 'account-group-outline', children, rightAction, loading = false }: Props) {
+  const router = useLoadingRouter();
+  usePageLoading(loading, `Loading ${title}`);
+
   return <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
     <View style={styles.brandHeader}>
       <Pressable onPress={() => router.replace('/customer/home')} style={styles.brand}><BrandLogo width={158} /></Pressable>
