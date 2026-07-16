@@ -6,10 +6,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Message, Screen } from '@/components/ui';
-import { ensureCustomerForUser, getCurrentSession, getCustomerForUser } from '@/lib/auth';
+import { getCurrentSession } from '@/lib/auth';
 import { documentDrivenStatusFor, documentStatusLabel, finalDocumentGroups, requiredDocumentsForStatus } from '@/lib/claim-documents';
 import { recordClaimEvent } from '@/lib/claim-notifications';
 import { customerStageCopy } from '@/lib/claim-workflow';
+import { getOperationalCustomerContexts } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette, roleTheme } from '@/lib/theme';
 import type { Claim, ClaimDocument, ClaimTask, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
@@ -40,15 +41,16 @@ export default function UploadDocumentsScreen() {
       const session = await getCurrentSession();
       if (!session?.user) return router.replace('/login');
 
-      const customer = await getCustomerForUser(session.user.id);
-      if (!customer) return;
+      const contexts = await getOperationalCustomerContexts();
+      const ids = contexts.map((context) => context.customer_id);
+      if (!ids.length) return;
 
       const [claimsResult, documentsResult, tasksResult, vehicleResult, policyResult, insurerResult] = await Promise.all([
-        supabase.from('claims').select('*').eq('customer_id', customer.id).order('created_at', { ascending: false }),
-        supabase.from('claim_documents').select('*').eq('customer_id', customer.id).order('created_at', { ascending: false }),
+        supabase.from('claims').select('*').in('customer_id', ids).order('created_at', { ascending: false }),
+        supabase.from('claim_documents').select('*').in('customer_id', ids).order('created_at', { ascending: false }),
         supabase.from('claim_tasks').select('*').order('created_at', { ascending: false }),
-        supabase.from('vehicles').select('*').eq('customer_id', customer.id),
-        supabase.from('policies').select('*').eq('customer_id', customer.id),
+        supabase.from('vehicles').select('*').in('customer_id', ids),
+        supabase.from('policies').select('*').in('customer_id', ids),
         supabase.from('insurance_companies').select('*'),
       ]);
 
@@ -181,12 +183,10 @@ export default function UploadDocumentsScreen() {
       const session = await getCurrentSession();
       if (!session?.user) return router.replace('/login');
 
-      const customer = await ensureCustomerForUser(session.user);
-      if (!customer) return setMessage('Your customer profile is not ready yet. Please contact support.');
       if (!selectedClaim) return setMessage('Select a claim and attach a file.');
 
       const extension = pickedFile.name.includes('.') ? pickedFile.name.split('.').pop() : 'bin';
-      const storagePath = `${customer.id}/${selectedClaim.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+      const storagePath = `${selectedClaim.customer_id}/${selectedClaim.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
 
       const response = await fetch(pickedFile.uri);
       const body = await response.arrayBuffer();
@@ -205,7 +205,7 @@ export default function UploadDocumentsScreen() {
 
       const { data, error } = await supabase.from('claim_documents').insert({
         claim_id: selectedClaim.id,
-        customer_id: customer.id,
+        customer_id: selectedClaim.customer_id,
         document_type: documentType,
         file_name: pickedFile.name,
         storage_bucket: 'claim-documents',

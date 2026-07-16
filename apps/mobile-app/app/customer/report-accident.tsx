@@ -6,16 +6,19 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppDatePicker } from '@/components/design-system';
 import { Message, Screen, TextField } from '@/components/ui';
-import { ensureCustomerForUser, getCurrentSession, getCustomerForUser, makeClaimNumber } from '@/lib/auth';
+import { getCurrentSession, makeClaimNumber } from '@/lib/auth';
 import { recordClaimEvent } from '@/lib/claim-notifications';
+import { customerAccountTitle, getOperationalCustomerContexts, partnerTypeLabel, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette, roleTheme } from '@/lib/theme';
-import type { Customer, IndiaLocation, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
+import type { IndiaLocation, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
 
 export default function ReportAccidentScreen() {
   const router = useRouter();
   const { vehicleId } = useLocalSearchParams<{ vehicleId?: string }>();
 
+  const [contexts, setContexts] = useState<CustomerAccountContext[]>([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [insurers, setInsurers] = useState<InsuranceCompany[]>([]);
@@ -47,11 +50,14 @@ export default function ReportAccidentScreen() {
       const session = await getCurrentSession();
       if (!session?.user) return router.replace('/login');
 
-      const customer = await getCustomerForUser(session.user.id);
-      if (customer) {
+      const nextContexts = await getOperationalCustomerContexts();
+      const ids = nextContexts.map((context) => context.customer_id);
+      setContexts(nextContexts);
+      setSelectedCustomerId(nextContexts[0]?.customer_id ?? '');
+      if (ids.length) {
         const [vehicleResult, policyResult, insurerResult] = await Promise.all([
-          supabase.from('vehicles').select('*').eq('customer_id', customer.id).order('vehicle_no'),
-          supabase.from('policies').select('*').eq('customer_id', customer.id).order('end_date', { ascending: false }),
+          supabase.from('vehicles').select('*').in('customer_id', ids).order('vehicle_no'),
+          supabase.from('policies').select('*').in('customer_id', ids).order('end_date', { ascending: false }),
           supabase.from('insurance_companies').select('*'),
         ]);
 
@@ -61,9 +67,12 @@ export default function ReportAccidentScreen() {
         setInsurers(insurerResult.data ?? []);
 
         if (vehicleId && nextVehicles.some((vehicle) => vehicle.id === vehicleId)) {
+          const routeVehicle = nextVehicles.find((vehicle) => vehicle.id === vehicleId);
+          setSelectedCustomerId(routeVehicle?.customer_id ?? nextContexts[0]?.customer_id ?? '');
           setSelectedVehicleId(vehicleId);
         } else if (!vehicleId && nextVehicles.length === 1) {
           setSelectedVehicleId(nextVehicles[0].id);
+          setSelectedCustomerId(nextVehicles[0].customer_id);
         }
       }
     }
@@ -108,7 +117,8 @@ export default function ReportAccidentScreen() {
     };
   }, [city, selectedLocation]);
 
-  const selectedVehicle = useMemo(() => vehicles.find((item) => item.id === selectedVehicleId) ?? null, [selectedVehicleId, vehicles]);
+  const accountVehicles = useMemo(() => vehicles.filter((item) => item.customer_id === selectedCustomerId), [selectedCustomerId, vehicles]);
+  const selectedVehicle = useMemo(() => accountVehicles.find((item) => item.id === selectedVehicleId) ?? null, [accountVehicles, selectedVehicleId]);
 
   const selectedPolicy = useMemo(() => {
     if (!selectedVehicle) return null;
@@ -126,6 +136,19 @@ export default function ReportAccidentScreen() {
 
   const showLocationSuggestions = city.trim().length >= 2 && !(selectedLocation && selectedLocation.city_name === city);
   const addressText = buildAddress({ address1, street, city, stateName, pinCode });
+  const selectedContext = useMemo(() => contexts.find((context) => context.customer_id === selectedCustomerId) ?? null, [contexts, selectedCustomerId]);
+
+  function selectAccount(customerId: string) {
+    setSelectedCustomerId(customerId);
+    const firstVehicle = vehicles.find((vehicle) => vehicle.customer_id === customerId);
+    setSelectedVehicleId(firstVehicle?.id ?? '');
+  }
+
+  function selectVehicle(vehicleIdValue: string) {
+    setSelectedVehicleId(vehicleIdValue);
+    const vehicle = vehicles.find((item) => item.id === vehicleIdValue);
+    if (vehicle) setSelectedCustomerId(vehicle.customer_id);
+  }
 
   async function submit(options?: { allowExpiredPolicy?: boolean }) {
     setMessage('');
@@ -162,22 +185,20 @@ export default function ReportAccidentScreen() {
       return;
     }
 
+    if (!selectedContext) {
+      setMessage('Select the customer account for this claim.');
+      return;
+    }
+
     setSubmitting(true);
-    let customer: Customer | null = null;
 
     try {
       const session = await getCurrentSession();
       if (!session?.user) return router.replace('/login');
 
-      customer = await ensureCustomerForUser(session.user);
-      if (!customer) {
-        setMessage('Your customer profile is not ready yet. Please contact support.');
-        return;
-      }
-
       const payload = {
         claim_no: makeClaimNumber(),
-        customer_id: customer.id,
+        customer_id: selectedContext.customer_id,
         vehicle_id: selectedVehicle.id,
         policy_id: selectedPolicy.id,
         insurance_company_id: selectedPolicy.insurance_company_id,
@@ -219,7 +240,7 @@ export default function ReportAccidentScreen() {
 
       router.replace({ pathname: '/customer/upload-documents', params: { claimId: claim.id } });
     } catch (error) {
-      console.error('Report incident submit failed', { error, customer });
+      console.error('Report incident submit failed', { error, selectedContext });
       setMessage('We could not submit the incident report right now. Please try again.');
     } finally {
       setSubmitting(false);
@@ -285,6 +306,22 @@ export default function ReportAccidentScreen() {
       </View>
 
       {message ? <Message type="error">{message}</Message> : null}
+
+      {contexts.length > 1 ? <AccountSelector contexts={contexts} selectedCustomerId={selectedCustomerId} onSelect={selectAccount} /> : null}
+
+      {accountVehicles.length > 1 ? (
+        <View style={styles.vehiclePicker}>
+          <Text style={styles.pickerLabel}>Vehicle</Text>
+          {accountVehicles.map((vehicle) => {
+            const active = vehicle.id === selectedVehicleId;
+            return (
+              <Pressable key={vehicle.id} accessibilityRole="button" onPress={() => selectVehicle(vehicle.id)} style={[styles.vehicleOption, active && styles.vehicleOptionActive]}>
+                <Text style={[styles.vehicleOptionText, active && styles.vehicleOptionTextActive]}>{vehicle.vehicle_no}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
 
       {selectedVehicle ? (
         <View style={styles.vehicleSummary}>
@@ -438,6 +475,26 @@ function SectionHeader({ icon, title, subtitle }: { icon: keyof typeof MaterialC
   );
 }
 
+function AccountSelector({ contexts, selectedCustomerId, onSelect }: { contexts: CustomerAccountContext[]; selectedCustomerId: string; onSelect: (customerId: string) => void }) {
+  return (
+    <View style={styles.accountBlock}>
+      <Text style={styles.pickerLabel}>Report for</Text>
+      {contexts.map((context) => {
+        const active = context.customer_id === selectedCustomerId;
+        return (
+          <Pressable key={context.customer_id} accessibilityRole="button" onPress={() => onSelect(context.customer_id)} style={[styles.accountOption, active && styles.accountOptionActive]}>
+            <View style={styles.accountCopy}>
+              <Text style={[styles.accountTitle, active && styles.accountTitleActive]} numberOfLines={1}>{customerAccountTitle(context)}</Text>
+              <Text style={[styles.accountMeta, active && styles.accountMetaActive]}>{context.access_source === 'group_child' ? 'Associated account' : 'Parent account'} - {partnerTypeLabel(context.partner_type)}</Text>
+            </View>
+            <View style={[styles.radio, active && styles.radioActive]} />
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 function InfoPair({ leftLabel, leftValue, rightLabel, rightValue }: { leftLabel: string; leftValue: string; rightLabel: string; rightValue: string }) {
   return (
     <View style={styles.infoPairRow}>
@@ -564,6 +621,23 @@ const styles = StyleSheet.create({
   pageIndicator: { marginTop: -18, marginBottom: 8 },
   pageTitle: { color: palette.navy, fontSize: 18, fontWeight: '900' },
   pageSub: { color: palette.slate, fontSize: 11.5, fontWeight: '800', marginTop: 2 },
+
+  accountBlock: { gap: 8, marginBottom: 10 },
+  pickerLabel: { color: palette.slate, fontSize: 11.5, fontWeight: '900' },
+  accountOption: { minHeight: 58, borderRadius: 14, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', padding: 11, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  accountOptionActive: { borderColor: palette.navy, backgroundColor: '#EEF5FF' },
+  accountCopy: { flex: 1, minWidth: 0 },
+  accountTitle: { color: palette.ink, fontSize: 13, fontWeight: '900' },
+  accountTitleActive: { color: palette.navy },
+  accountMeta: { color: palette.slate, fontSize: 10.5, fontWeight: '700', marginTop: 2 },
+  accountMetaActive: { color: '#315C99' },
+  radio: { width: 17, height: 17, borderRadius: 9, borderWidth: 2, borderColor: '#B7C5D8' },
+  radioActive: { borderColor: palette.navy, backgroundColor: palette.navy },
+  vehiclePicker: { borderRadius: 16, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', padding: 11, marginBottom: 10, gap: 8 },
+  vehicleOption: { minHeight: 38, borderRadius: 12, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#F8FBFF', paddingHorizontal: 11, justifyContent: 'center' },
+  vehicleOptionActive: { borderColor: palette.navy, backgroundColor: '#EEF5FF' },
+  vehicleOptionText: { color: palette.ink, fontSize: 12, fontWeight: '900' },
+  vehicleOptionTextActive: { color: palette.navy },
 
   vehicleSummary: { backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#CFE0FF', borderRadius: 16, padding: 12, paddingLeft: 16, marginBottom: 10, overflow: 'hidden', shadowColor: palette.ink, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 },
   summaryAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5, backgroundColor: palette.navy },

@@ -90,6 +90,16 @@ export async function getGroupAssociatedAccountDetail(input: {
   } as GroupAssociatedAccountDetail;
 }
 
+export async function getOperationalCustomerContexts(): Promise<CustomerAccountContext[]> {
+  const selected = await getSelectedCustomerContext();
+  if (!selected) return [];
+  if (selected.partner_type !== 'group') return [selected];
+
+  const contexts = await getAccessibleCustomerContexts();
+  const children = contexts.filter((context) => context.access_source === 'group_child' && context.group_customer_id === selected.customer_id);
+  return [selected, ...children];
+}
+
 export function groupChildAccountTitle(account: Pick<GroupChildAccountOverview, 'company_name' | 'contact_name'>) {
   return account.company_name?.trim() || account.contact_name?.trim() || 'Pending customer';
 }

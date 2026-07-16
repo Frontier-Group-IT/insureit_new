@@ -63,7 +63,11 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
   }
 
   function openBack() {
-    router.replace(backTargetFor(pathname, routeParams, profileRole));
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace(backTargetFor(pathname, routeParams, profileRole));
+    }
   }
 
   const accent = accentForRole(profileRole);

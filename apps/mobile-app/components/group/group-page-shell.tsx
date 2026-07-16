@@ -21,8 +21,19 @@ export function GroupPageShell({ title, subtitle, icon = 'account-group-outline'
   const router = useLoadingRouter();
   usePageLoading(loading, `Loading ${title}`);
 
+  function goBack() {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/customer/home');
+    }
+  }
+
   return <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
     <View style={styles.brandHeader}>
+      <Pressable accessibilityRole="button" onPress={goBack} style={styles.backButton}>
+        <MaterialCommunityIcons name="chevron-left" size={25} color={palette.ink} />
+      </Pressable>
       <Pressable onPress={() => router.replace('/customer/home')} style={styles.brand}><BrandLogo width={158} /></Pressable>
       <Pressable onPress={() => router.push('/customer/notifications')} style={styles.headerButton}><NotificationBell /></Pressable>
       <Pressable onPress={() => router.push('/customer/group/profile')} style={styles.avatar}><MaterialCommunityIcons name="account-outline" size={21} color="#FFFFFF" /></Pressable>
@@ -54,6 +65,7 @@ function NavItem({ icon, label, onPress }: { icon: keyof typeof MaterialCommunit
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F7F9FD' },
   brandHeader: { height: 66, paddingHorizontal: 4, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E1E7F0' },
+  backButton: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFD', borderWidth: 1, borderColor: '#E1E7F0' },
   brand: { flex: 1, justifyContent: 'center' }, headerButton: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' }, avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: palette.navy, alignItems: 'center', justifyContent: 'center' },
   scroll: { flex: 1 }, content: { paddingHorizontal: 14, paddingTop: 6, paddingBottom: 14, gap: 10 },
   titlePanel: { minHeight: 82, borderRadius: 17, paddingHorizontal: 14, paddingVertical: 12, backgroundColor: palette.navy, flexDirection: 'row', alignItems: 'center', gap: 11, overflow: 'hidden' },
