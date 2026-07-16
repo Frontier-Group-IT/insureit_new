@@ -3,9 +3,16 @@ import { usePathname, useRouter } from 'expo-router';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, InteractionManager, StyleSheet, Text, View } from 'react-native';
 
+import {
+  beginTrackedLoading,
+  endTrackedLoading,
+  getTrackedLoadingEntries,
+  subscribeTrackedLoading,
+  withTrackedLoading,
+  type TrackedLoadingEntry,
+} from '@/lib/loading-tracker';
 import { palette } from '@/lib/theme';
 
-type LoaderEntry = { id: string; label: string };
 type LoadingContextValue = {
   begin: (label?: string) => string;
   end: (id: string) => void;
@@ -20,8 +27,7 @@ const settleDelayMs = 160;
 
 export function AppLoadingProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [entries, setEntries] = useState<LoaderEntry[]>([]);
-  const sequence = useRef(0);
+  const [entries, setEntries] = useState<TrackedLoadingEntry[]>(getTrackedLoadingEntries());
   const mounted = useRef(false);
   const previousPath = useRef(pathname);
   const navigationId = useRef<string | null>(null);
@@ -29,15 +35,10 @@ export function AppLoadingProvider({ children }: { children: ReactNode }) {
   const fallbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const samePathTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const begin = useCallback((label = 'Loading') => {
-    const id = `loader-${Date.now()}-${sequence.current++}`;
-    setEntries((current) => [...current, { id, label }]);
-    return id;
-  }, []);
+  const begin = useCallback((label = 'Loading') => beginTrackedLoading(label), []);
+  const end = useCallback((id: string) => endTrackedLoading(id), []);
 
-  const end = useCallback((id: string) => {
-    setEntries((current) => current.filter((entry) => entry.id !== id));
-  }, []);
+  useEffect(() => subscribeTrackedLoading(setEntries), []);
 
   const clearNavigationTimers = useCallback(() => {
     if (fallbackTimer.current) clearTimeout(fallbackTimer.current);
@@ -74,14 +75,7 @@ export function AppLoadingProvider({ children }: { children: ReactNode }) {
     }, noRouteChangeFallbackMs);
   }, [begin, clearNavigationTimers, end, finishNavigation, pathname]);
 
-  const runWithLoader = useCallback(async <T,>(task: () => Promise<T>, label = 'Processing request') => {
-    const id = begin(label);
-    try {
-      return await task();
-    } finally {
-      end(id);
-    }
-  }, [begin, end]);
+  const runWithLoader = useCallback(<T,>(task: () => Promise<T>, label = 'Processing request') => withTrackedLoading(task, label), []);
 
   useEffect(() => {
     if (!mounted.current) {
