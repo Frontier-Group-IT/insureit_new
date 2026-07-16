@@ -8,12 +8,69 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { approvePortalOnboardingApplication } from "../onboarding-applications";
 
 type Draft = Record<string, unknown>;
-type Application = { id:string; profile_id:string|null; partner_type:string|null; status:string; applicant_phone:string|null; applicant_email:string|null; group_customer_id:string|null; draft_data:Draft|null };
+type Application = { id:string; profile_id:string|null; partner_type:string|null; status:string; applicant_phone:string|null; applicant_email:string|null; group_customer_id:string|null; customer_id?:string|null; draft_data:Draft|null };
 type Contact = { contact_role:string; full_name:string; phone:string; email:string|null };
 type Document = { document_type:string; file_name:string; storage_bucket:string; storage_path:string; mime_type:string|null; file_size:number|null };
 type Profile = { full_name:string|null };
 const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const GST_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+const CONTACT_ROLES = ["corporate_creator","ceo_head","admin_head","dedicated_spoc"] as const;
+
+export async function updateMobileCorporateApplicationDraft(formData: FormData) {
+  const applicationId = value(formData,"application_id");
+  if (!applicationId) redirect("/customers/applications?error=missing_application");
+  const reviewer = await requireMasterDataManager();
+  if (!reviewer?.id) redirect(`/customers/applications/${applicationId}?error=unauthorized`);
+  const admin = createSupabaseAdminClient();
+  const { data: application, error: applicationError } = await admin.from("customer_onboarding_applications").select("id,profile_id,partner_type,status,applicant_phone,applicant_email,customer_id,draft_data").eq("id",applicationId).single<Application>();
+  if (applicationError || !application?.profile_id || application.partner_type !== "corporate" || !["submitted","under_review"].includes(application.status) || application.customer_id) redirect(`/customers/applications/${applicationId}?error=application_not_ready`);
+
+  const companyName = value(formData,"company_name");
+  const pan = normalizeTaxId(value(formData,"company_pan"));
+  const gst = normalizeTaxId(value(formData,"gst_number"));
+  const street = value(formData,"address_street");
+  const locality = value(formData,"address_locality");
+  const locationId = value(formData,"india_location_id");
+  const city = value(formData,"city");
+  const state = value(formData,"state");
+  const postalCode = value(formData,"postal_code");
+  const fleet = value(formData,"fleet_size_band");
+
+  if (!companyName || !pan || !street || !locationId || !city || !state || !postalCode || !fleet) redirect(`/customers/applications/${applicationId}?error=incomplete_application`);
+  if (!PAN_PATTERN.test(pan) || (gst && !GST_PATTERN.test(gst))) redirect(`/customers/applications/${applicationId}?error=invalid_corporate_details`);
+
+  const contacts = CONTACT_ROLES.map((role) => {
+    const phone = normalizePhoneForStorage(value(formData,`${role}_phone`));
+    return { application_id: applicationId, contact_role: role, full_name: value(formData,`${role}_name`) ?? "", phone, email: normalizeEmail(value(formData,`${role}_email`)), login_required: true, updated_at: new Date().toISOString() };
+  });
+  if (contacts.some((contact)=>!contact.full_name || !contact.phone)) redirect(`/customers/applications/${applicationId}?error=contacts_incomplete`);
+  if (new Set(contacts.map((contact)=>normalizePhone(contact.phone))).size !== contacts.length) redirect(`/customers/applications/${applicationId}?error=contacts_incomplete`);
+
+  const nextDraft = {
+    ...(application.draft_data ?? {}),
+    company_name: companyName,
+    company_pan: pan,
+    gst_number: gst,
+    address_street: street,
+    address_locality: locality,
+    india_location_id: locationId,
+    city,
+    state,
+    postal_code: postalCode,
+    fleet_size_band: fleet,
+    reviewer_corrected_at: new Date().toISOString(),
+    reviewer_corrected_by: reviewer.id,
+  };
+  const creator = contacts.find((contact)=>contact.contact_role==="corporate_creator")!;
+  const updateResult = await admin.from("customer_onboarding_applications").update({ applicant_phone: creator.phone, applicant_email: creator.email, draft_data: nextDraft, updated_at: new Date().toISOString() }).eq("id",applicationId);
+  if (updateResult.error) { console.error("Corporate application correction failed", updateResult.error); redirect(`/customers/applications/${applicationId}?error=corporate_update_failed`); }
+  const contactResult = await admin.from("customer_onboarding_contacts").upsert(contacts,{onConflict:"application_id,contact_role"});
+  if (contactResult.error) { console.error("Corporate contact correction failed", contactResult.error); redirect(`/customers/applications/${applicationId}?error=corporate_update_failed`); }
+
+  revalidatePath("/customers/applications");
+  revalidatePath(`/customers/applications/${applicationId}`);
+  redirect(`/customers/applications/${applicationId}?success=corporate_updated`);
+}
 
 export async function approveMobileCorporateApplication(formData: FormData) {
   const applicationId = value(formData,"application_id");
@@ -82,4 +139,4 @@ export async function approveMobileCorporateApplication(formData: FormData) {
   revalidatePath("/customers"); revalidatePath("/customers/applications");
   redirect(`/customers/${customerId}/edit?success=corporate_kyc_approved`);
 }
-function value(data:FormData,name:string){const item=data.get(name);return typeof item==="string"&&item.trim()?item.trim():null;} function text(input:unknown){return typeof input==="string"&&input.trim()?input.trim():null;} function normalizeTaxId(input:unknown){return typeof input==="string"&&input.trim()?input.replace(/\s/g,"").toUpperCase():null;} function extension(document:Document){if(document.mime_type==="application/pdf")return"pdf";if(document.mime_type==="image/png")return"png";return"jpg";} function normalizePhone(value:string|null){return(value??"").replace(/\D/g,"").slice(-10);} function samePhone(left:string|null,right:string|null){const a=normalizePhone(left);const b=normalizePhone(right);return a.length===10&&a===b;}
+function value(data:FormData,name:string){const item=data.get(name);return typeof item==="string"&&item.trim()?item.trim():null;} function text(input:unknown){return typeof input==="string"&&input.trim()?input.trim():null;} function normalizeTaxId(input:unknown){return typeof input==="string"&&input.trim()?input.replace(/\s/g,"").toUpperCase():null;} function normalizeEmail(input:string|null){return input?.trim()?input.trim().toLowerCase():null;} function normalizePhoneForStorage(input:string|null){const digits=normalizePhone(input);return digits.length===10?`+91${digits}`:null;} function extension(document:Document){if(document.mime_type==="application/pdf")return"pdf";if(document.mime_type==="image/png")return"png";return"jpg";} function normalizePhone(value:string|null){return(value??"").replace(/\D/g,"").slice(-10);} function samePhone(left:string|null,right:string|null){const a=normalizePhone(left);const b=normalizePhone(right);return a.length===10&&a===b;}
