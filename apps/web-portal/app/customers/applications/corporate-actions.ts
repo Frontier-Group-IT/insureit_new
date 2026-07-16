@@ -12,6 +12,8 @@ type Application = { id:string; profile_id:string|null; partner_type:string|null
 type Contact = { contact_role:string; full_name:string; phone:string; email:string|null };
 type Document = { document_type:string; file_name:string; storage_bucket:string; storage_path:string; mime_type:string|null; file_size:number|null };
 type Profile = { full_name:string|null };
+const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+const GST_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 
 export async function approveMobileCorporateApplication(formData: FormData) {
   const applicationId = value(formData,"application_id");
@@ -22,10 +24,11 @@ export async function approveMobileCorporateApplication(formData: FormData) {
   const { data: application } = await admin.from("customer_onboarding_applications").select("id,profile_id,partner_type,status,applicant_phone,applicant_email,group_customer_id,draft_data").eq("id",applicationId).single<Application>();
   if (!application?.profile_id || application.partner_type !== "corporate" || !["submitted","under_review"].includes(application.status)) redirect(`/customers/applications/${applicationId}?error=application_not_ready`);
   const draft = application.draft_data ?? {};
-  const companyName = text(draft.company_name); const pan = text(draft.company_pan); const gst = text(draft.gst_number);
+  const companyName = text(draft.company_name); const pan = normalizeTaxId(draft.company_pan); const gst = normalizeTaxId(draft.gst_number);
   const street = text(draft.address_street); const locality = text(draft.address_locality); const locationId = text(draft.india_location_id);
   const city = text(draft.city); const state = text(draft.state); const postalCode = text(draft.postal_code); const fleet = text(draft.fleet_size_band);
   if (!companyName || !pan || !street || !locationId || !city || !state || !postalCode || !fleet) redirect(`/customers/applications/${applicationId}?error=incomplete_application`);
+  if (!PAN_PATTERN.test(pan) || (gst && !GST_PATTERN.test(gst))) redirect(`/customers/applications/${applicationId}?error=invalid_corporate_details`);
   const { data: contacts } = await admin.from("customer_onboarding_contacts").select("contact_role,full_name,phone,email").eq("application_id",applicationId).returns<Contact[]>();
   const roles = ["ceo_head","admin_head","dedicated_spoc"];
   if (roles.some((role)=>!(contacts??[]).some((contact)=>contact.contact_role===role))) redirect(`/customers/applications/${applicationId}?error=contacts_incomplete`);
@@ -36,14 +39,26 @@ export async function approveMobileCorporateApplication(formData: FormData) {
   if (!samePhone(creatorContact.phone, application.applicant_phone)) redirect(`/customers/applications/${applicationId}?error=applicant_contact_mismatch`);
   const loginContacts = [creatorContact, ...(contacts??[]).filter((contact)=>contact.contact_role!=="corporate_creator")];
   if (new Set(loginContacts.map((contact)=>normalizePhone(contact.phone))).size !== loginContacts.length) redirect(`/customers/applications/${applicationId}?error=contacts_incomplete`);
+  const spocPhoneDigits = normalizePhone(spoc.phone);
+  if (spocPhoneDigits.length !== 10) redirect(`/customers/applications/${applicationId}?error=contacts_incomplete`);
+  const spocPhone = `+91${spocPhoneDigits}`;
   const { data: documents } = await admin.from("customer_onboarding_documents").select("document_type,file_name,storage_bucket,storage_path,mime_type,file_size").eq("application_id",applicationId).returns<Document[]>();
   if (!(documents??[]).some((document)=>document.document_type==="company_pan_copy")) redirect(`/customers/applications/${applicationId}?error=documents_incomplete`);
   if (gst && !(documents??[]).some((document)=>document.document_type==="gst_copy")) redirect(`/customers/applications/${applicationId}?error=documents_incomplete`);
-  const { data: duplicate } = await admin.from("customers").select("id").or(`pan_number.eq.${pan},phone.eq.${spoc.phone}`).limit(1).maybeSingle<{id:string}>();
-  if (duplicate) redirect(`/customers/applications/${applicationId}?error=customer_already_exists`);
+  const phoneCandidates = Array.from(new Set([spoc.phone, spocPhone, spocPhoneDigits].filter(Boolean)));
+  const [{ data: duplicatePan }, { data: duplicatePhones }] = await Promise.all([
+    admin.from("customers").select("id").eq("pan_number",pan).limit(1).maybeSingle<{id:string}>(),
+    admin.from("customers").select("id,phone").in("phone",phoneCandidates).limit(5).returns<Array<{id:string;phone:string|null}>>()
+  ]);
+  if (duplicatePan || (duplicatePhones??[]).some((customer)=>normalizePhone(customer.phone)===spocPhoneDigits)) redirect(`/customers/applications/${applicationId}?error=customer_already_exists`);
   const customerId = randomUUID(); const now = new Date().toISOString();
-  const { error: customerError } = await admin.from("customers").insert({ id:customerId, profile_id:null, customer_code:`CUST-${Date.now().toString().slice(-9)}`, partner_type:"corporate", contact_name:spoc.full_name, company_name:companyName, legal_trade_name:companyName, phone:spoc.phone, email:spoc.email, address:[street,locality,city,state,postalCode].filter(Boolean).join(", "), address_street:street, address_locality:locality, india_location_id:locationId, city, state, postal_code:postalCode, pan_number:pan, is_gst_registered:Boolean(gst), gst_number:gst, fleet_size_band:fleet, onboarding_status:"active", onboarding_completed_at:now, created_by:reviewer.id, updated_by:reviewer.id });
-  if (customerError) redirect(`/customers/applications/${applicationId}?error=customer_create_failed`);
+  const { error: customerError } = await admin.from("customers").insert({ id:customerId, profile_id:null, customer_code:`CUST-${Date.now().toString().slice(-9)}`, partner_type:"corporate", contact_name:spoc.full_name, company_name:companyName, legal_trade_name:companyName, phone:spocPhone, email:spoc.email, address:[street,locality,city,state,postalCode].filter(Boolean).join(", "), address_street:street, address_locality:locality, india_location_id:locationId, city, state, postal_code:postalCode, pan_number:pan, is_gst_registered:Boolean(gst), gst_number:gst, fleet_size_band:fleet, onboarding_status:"active", onboarding_completed_at:now, created_by:reviewer.id, updated_by:reviewer.id });
+  if (customerError) {
+    console.error("Corporate customer create failed", customerError);
+    if (customerError.code === "23505") redirect(`/customers/applications/${applicationId}?error=customer_already_exists`);
+    if (customerError.code === "23514" || customerError.code === "23503") redirect(`/customers/applications/${applicationId}?error=invalid_corporate_details`);
+    redirect(`/customers/applications/${applicationId}?error=customer_create_failed`);
+  }
 
   const memberships = loginContacts.map((contact)=>({ customer_id:customerId, profile_id:contact.contact_role==="corporate_creator"?application.profile_id:null, invited_phone:contact.phone, invited_email:contact.email, membership_role:contact.contact_role, is_primary:contact.contact_role==="dedicated_spoc", status:contact.contact_role==="corporate_creator"?"active":"pending", created_by:reviewer.id }));
   const { error: membershipError } = await admin.from("customer_memberships").insert(memberships);
@@ -67,4 +82,4 @@ export async function approveMobileCorporateApplication(formData: FormData) {
   revalidatePath("/customers"); revalidatePath("/customers/applications");
   redirect(`/customers/${customerId}/edit?success=corporate_kyc_approved`);
 }
-function value(data:FormData,name:string){const item=data.get(name);return typeof item==="string"&&item.trim()?item.trim():null;} function text(input:unknown){return typeof input==="string"&&input.trim()?input.trim():null;} function extension(document:Document){if(document.mime_type==="application/pdf")return"pdf";if(document.mime_type==="image/png")return"png";return"jpg";} function normalizePhone(value:string|null){return(value??"").replace(/\D/g,"").slice(-10);} function samePhone(left:string|null,right:string|null){const a=normalizePhone(left);const b=normalizePhone(right);return a.length===10&&a===b;}
+function value(data:FormData,name:string){const item=data.get(name);return typeof item==="string"&&item.trim()?item.trim():null;} function text(input:unknown){return typeof input==="string"&&input.trim()?input.trim():null;} function normalizeTaxId(input:unknown){return typeof input==="string"&&input.trim()?input.replace(/\s/g,"").toUpperCase():null;} function extension(document:Document){if(document.mime_type==="application/pdf")return"pdf";if(document.mime_type==="image/png")return"png";return"jpg";} function normalizePhone(value:string|null){return(value??"").replace(/\D/g,"").slice(-10);} function samePhone(left:string|null,right:string|null){const a=normalizePhone(left);const b=normalizePhone(right);return a.length===10&&a===b;}
