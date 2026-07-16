@@ -18,10 +18,38 @@ export type CustomerAccountContext = {
   group_name: string | null;
 };
 
+export type GroupChildAccountOverview = {
+  row_id: string;
+  customer_id: string | null;
+  application_id: string | null;
+  customer_code: string | null;
+  partner_type: PartnerType;
+  company_name: string | null;
+  contact_name: string | null;
+  phone: string | null;
+  city: string | null;
+  state: string | null;
+  onboarding_status: string;
+  application_status: string | null;
+  account_source: 'linked_customer' | 'onboarding_application';
+  created_at: string | null;
+  updated_at: string | null;
+};
+
 export async function getAccessibleCustomerContexts(): Promise<CustomerAccountContext[]> {
   const { data, error } = await supabase.rpc('get_accessible_customer_contexts');
   if (error) throw error;
   return (data ?? []) as CustomerAccountContext[];
+}
+
+export async function getGroupChildAccountOverview(groupCustomerId: string): Promise<GroupChildAccountOverview[]> {
+  const { data, error } = await (supabase.rpc as any)('get_group_child_account_overview', { p_group_customer_id: groupCustomerId });
+  if (error) throw error;
+  return (data ?? []) as GroupChildAccountOverview[];
+}
+
+export function groupChildAccountTitle(account: Pick<GroupChildAccountOverview, 'company_name' | 'contact_name'>) {
+  return account.company_name?.trim() || account.contact_name?.trim() || 'Pending customer';
 }
 
 export async function getSelectedCustomerContext(): Promise<CustomerAccountContext | null> {
