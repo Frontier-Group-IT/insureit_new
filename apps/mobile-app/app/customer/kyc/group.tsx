@@ -32,7 +32,7 @@ export default function GroupKycScreen() {
           getProfile(session.user.id),
           ensureCustomerOnboardingForPartner(session.user, 'group'),
         ]);
-        if (nextApplication.status === 'submitted' || nextApplication.status === 'under_review') return router.replace('/customer/home');
+        if (nextApplication.status === 'submitted' || nextApplication.status === 'under_review') return router.replace('/customer/group/under-review');
         if (nextApplication.partner_type !== 'group') {
           if (active) setError('Your Group KYC could not be opened. Go back and choose the partner type again.');
           return;
@@ -106,7 +106,7 @@ export default function GroupKycScreen() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <Text style={styles.screenTitle}>Complete Your KYC</Text>
         <View style={styles.partnerSummary}><View style={styles.partnerIcon}><MaterialCommunityIcons name="account-group-outline" size={23} color="#0A43A3" /></View><View style={styles.partnerCopy}><Text style={styles.partnerEyebrow}>Partner type</Text><Text style={styles.partnerTitle}>Group</Text></View><MaterialCommunityIcons name="check-circle" size={21} color="#21A66B" /></View>
-        <Text style={styles.intro}>Create the umbrella Group first. Corporate, Dealership and Individual customers can be linked below it after verification.</Text>
+        <Text style={styles.intro}>Create the umbrella Group first. Corporate, Dealership and Individual customers can be associated after verification.</Text>
         {error ? <View style={styles.errorBox}><MaterialCommunityIcons name="alert-circle-outline" size={18} color="#B42318" /><Text style={styles.errorText}>{error}</Text></View> : null}
         <View style={styles.card}>
           <Field label="Group name" required value={groupName} onChangeText={setGroupName} placeholder="Group or umbrella name" autoCapitalize="words" />
@@ -116,8 +116,8 @@ export default function GroupKycScreen() {
         </View>
       </ScrollView>
       <View style={styles.footer}><Pressable accessibilityRole="button" disabled={submitting} onPress={submit} style={[styles.submitButton, submitting && styles.submitDisabled]}>{submitting ? <ActivityIndicator color="#FFFFFF" /> : <><Text style={styles.submitText}>Submit Group KYC</Text><MaterialCommunityIcons name="arrow-right" size={20} color="#FFFFFF" /></>}</Pressable></View>
-      <Modal visible={successVisible} transparent animationType="fade" onRequestClose={() => router.replace('/customer/home')}>
-        <View style={styles.modalBackdrop}><View style={styles.modalCard}><View style={styles.successIcon}><MaterialCommunityIcons name="check" size={34} color="#FFFFFF" /></View><Text style={styles.modalTitle}>KYC submitted</Text><Text style={styles.modalText}>Your Group details are ready for portal verification.</Text><Pressable onPress={() => router.replace('/customer/home')} style={styles.modalButton}><Text style={styles.modalButtonText}>Return to dashboard</Text></Pressable></View></View>
+      <Modal visible={successVisible} transparent animationType="fade" onRequestClose={() => router.replace('/customer/group/under-review')}>
+        <View style={styles.modalBackdrop}><View style={styles.modalCard}><View style={styles.successIcon}><MaterialCommunityIcons name="check" size={34} color="#FFFFFF" /></View><Text style={styles.modalTitle}>KYC submitted</Text><Text style={styles.modalText}>Your Group details have been submitted for verification. You can now explore the Group dashboard.</Text><Pressable onPress={() => router.replace('/customer/group/under-review')} style={styles.modalButton}><Text style={styles.modalButtonText}>Open Group dashboard</Text></Pressable></View></View>
       </Modal>
     </SafeAreaView>
   );
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F6F8FC' },
   header: { height: 66, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
   backButton: { width: 42, height: 42, borderRadius: 12, borderWidth: 1, borderColor: '#D8E2EE', alignItems: 'center', justifyContent: 'center' },
-  headerSpacer: { width: 42 }, content: { padding: 16, paddingBottom: 30 }, screenTitle: { color: palette.navy, fontSize: 22, fontWeight: '800', marginBottom: 18 },
+  headerSpacer: { width: 42 }, content: { paddingHorizontal: 16, paddingTop: 6, paddingBottom: 30 }, screenTitle: { color: palette.navy, fontSize: 22, fontWeight: '800', marginBottom: 12 },
   partnerSummary: { flexDirection: 'row', alignItems: 'center', gap: 11, borderRadius: 14, borderWidth: 1, borderColor: '#D8E2EE', backgroundColor: '#FFFFFF', padding: 13 }, partnerIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' }, partnerCopy: { flex: 1 }, partnerEyebrow: { color: '#7A8798', fontSize: 10.5 }, partnerTitle: { color: palette.navy, fontSize: 15, fontWeight: '800', marginTop: 2 },
   intro: { color: '#59687A', fontSize: 12.5, lineHeight: 19, marginVertical: 15 }, errorBox: { borderRadius: 11, backgroundColor: '#FEF3F2', padding: 11, flexDirection: 'row', gap: 8, marginBottom: 13 }, errorText: { flex: 1, color: '#B42318', fontSize: 12, lineHeight: 17 },
   card: { borderRadius: 16, borderWidth: 1, borderColor: '#D9E2ED', backgroundColor: '#FFFFFF', padding: 16 }, field: { marginBottom: 15 }, label: { color: palette.navy, fontSize: 12.5, fontWeight: '700', marginBottom: 7 }, required: { color: '#D92D20' }, inputShell: { minHeight: 54, borderRadius: 12, borderWidth: 1, borderColor: '#D4DDE8', backgroundColor: '#FFFFFF', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 9 }, input: { flex: 1, minHeight: 50, color: '#17202F', fontSize: 15 },

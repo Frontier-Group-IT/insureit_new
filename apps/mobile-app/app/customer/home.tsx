@@ -8,9 +8,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomNavigation } from '@/components/customer-dashboard';
 import { BrandLogo } from '@/components/first-look';
+import { GroupHomeScreen } from '@/components/group/group-home-screen';
 import { NotificationBell } from '@/components/realtime-notifications';
 import { LoadingState } from '@/components/ui';
 import { getCurrentSession, getCustomerForUser, getOnboardingApplicationForUser, getProfile, isValidProfile, resetLocalAuthState, signOut } from '@/lib/auth';
+import { getSelectedCustomerContext, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Claim, ClaimTask, Customer, CustomerOnboardingApplication, Profile, Vehicle } from '@/lib/types';
@@ -24,6 +26,7 @@ export default function CustomerMockupHomeScreen() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [groupContext, setGroupContext] = useState<CustomerAccountContext | null>(null);
   const [onboarding, setOnboarding] = useState<CustomerOnboardingApplication | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
@@ -40,15 +43,16 @@ export default function CustomerMockupHomeScreen() {
         if (!session?.user) return router.replace('/login');
         const nextProfile = await waitForCustomerProfile(session.user.id);
         if (!isValidProfile(nextProfile) || nextProfile.role !== 'customer') return router.replace('/access-denied');
-        const [nextCustomer, nextOnboarding] = await Promise.all([
+        const [nextCustomer, nextOnboarding, selectedContext] = await Promise.all([
           getCustomerForUser(session.user.id),
           getOnboardingApplicationForUser(session.user.id),
+          getSelectedCustomerContext(),
         ]);
         if (!mounted) return;
-        setProfile(nextProfile); setCustomer(nextCustomer); setOnboarding(nextOnboarding);
+        setProfile(nextProfile); setCustomer(nextCustomer); setOnboarding(nextOnboarding); setGroupContext(selectedContext?.partner_type === 'group' ? selectedContext : null);
         const promptDismissed = await getKycPromptDismissed(session.user.id);
         if (mounted) setKycPromptDismissed(Boolean(promptDismissed) || Boolean(nextCustomer) || nextOnboarding?.status === 'submitted' || nextOnboarding?.status === 'under_review');
-        if (nextCustomer) {
+        if (nextCustomer && selectedContext?.partner_type !== 'group') {
           const [vehicleResult, claimResult, taskResult] = await Promise.all([
             supabase.from('vehicles').select('*').eq('customer_id', nextCustomer.id),
             supabase.from('claims').select('*').eq('customer_id', nextCustomer.id),
@@ -114,6 +118,7 @@ export default function CustomerMockupHomeScreen() {
 
   if (loading) return <View style={styles.loading}><LoadingState label="Opening dashboard" /></View>;
   if (error) return <View style={styles.loading}><Text style={styles.error}>{error}</Text><Pressable onPress={() => router.replace('/customer/home')}><Text style={styles.retry}>Try again</Text></Pressable><Pressable onPress={() => void resetLocalAuthState(router)}><Text style={styles.retry}>Reset login</Text></Pressable><Pressable onPress={() => void signOut(router)}><Text style={styles.retry}>Sign out</Text></Pressable></View>;
+  if (profile && groupContext) return <GroupHomeScreen profile={profile} groupContext={groupContext} />;
 
   return <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
     <View style={styles.header}>
@@ -198,28 +203,18 @@ async function waitForCustomerProfile(userId: string) {
   return getProfile(userId);
 }
 
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+function delay(ms: number) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
 async function getKycPromptDismissed(userId: string) {
-  try {
-    return await AsyncStorage.getItem(`insureit:kyc-prompt-dismissed:${userId}`);
-  } catch (error) {
-    console.warn('KYC prompt preference load failed', error);
-    return null;
-  }
+  try { return await AsyncStorage.getItem(`insureit:kyc-prompt-dismissed:${userId}`); }
+  catch (error) { console.warn('KYC prompt preference load failed', error); return null; }
 }
 
 function dashboardLoadErrorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : '';
   const lowerMessage = message.toLowerCase();
-  if (lowerMessage.includes('network') || lowerMessage.includes('fetch') || lowerMessage.includes('timeout')) {
-    return 'Could not reach the InsureIT server. Check internet access and try again.';
-  }
-  if (lowerMessage.includes('multiple') && lowerMessage.includes('rows')) {
-    return 'Your account has duplicate customer records. Please contact support to merge them.';
-  }
+  if (lowerMessage.includes('network') || lowerMessage.includes('fetch') || lowerMessage.includes('timeout')) return 'Could not reach the InsureIT server. Check internet access and try again.';
+  if (lowerMessage.includes('multiple') && lowerMessage.includes('rows')) return 'Your account has duplicate customer records. Please contact support to merge them.';
   return 'We could not load your dashboard. Please try again.';
 }
 
@@ -232,17 +227,5 @@ const styles = StyleSheet.create({
   actionCard: { minHeight: 134, borderRadius: 17, backgroundColor: '#FFFFFF', flexDirection: 'row', flexWrap: 'wrap', padding: 8, gap: 6, borderWidth: 1, borderColor: '#D9E8F8', shadowColor: '#0B63CE', shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }, actionTile: { width: '49%', minHeight: 57, borderRadius: 13, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#DCEBFA', alignItems: 'center', paddingHorizontal: 6, paddingVertical: 6, shadowColor: '#0A43A3', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }, actionIcon: { width: 29, height: 29, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }, actionImageIcon: { width: 26, height: 26 }, actionTitleRow: { minHeight: 18, marginTop: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }, actionTitle: { flex: 1, color: palette.navy, fontSize: 10.8, fontWeight: '900', textAlign: 'center' }, actionBody: { color: palette.navy, fontSize: 8.8, lineHeight: 10.5, fontWeight: '600', textAlign: 'center' },
   claimCard: { minHeight: 157, borderRadius: 17, backgroundColor: palette.navy, padding: 13, overflow: 'hidden' }, claimHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 }, claimIcon: { width: 38, height: 38, borderRadius: 12, borderWidth: 1.5, borderColor: '#F5B700', alignItems: 'center', justifyContent: 'center' }, claimTitle: { color: '#FFFFFF', fontSize: 15.5, fontWeight: '900' }, claimMetrics: { flex: 1, flexDirection: 'row', marginTop: 9 }, claimMetric: { flex: 1, alignItems: 'center', justifyContent: 'center', minWidth: 0 }, claimMetricLined: { borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.32)' }, claimMetricLabel: { color: '#FFFFFF', fontSize: 11, fontWeight: '500', textAlign: 'center' }, claimMetricValue: { color: '#FFFFFF', fontSize: 28, lineHeight: 32, fontWeight: '900', marginTop: 5 }, claimMetricDetailLabel: { color: '#FFFFFF', fontSize: 9.5, lineHeight: 11, fontWeight: '500', marginTop: 1, textAlign: 'center' }, claimMetricDetail: { color: '#F6C33B', fontSize: 15, lineHeight: 18, fontWeight: '900', marginTop: 1, textAlign: 'center' }, claimMetricDetailGreen: { color: '#68BF5B' },
   supportCard: { minHeight: 60, borderRadius: 17, backgroundColor: '#FFFFFF', paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 11, shadowColor: '#122544', shadowOpacity: 0.05, shadowRadius: 9, elevation: 2 }, supportCopy: { flex: 1 }, supportTitle: { color: palette.navy, fontSize: 15, fontWeight: '900' }, supportText: { color: palette.navy, fontSize: 11.5, fontWeight: '500', marginTop: 1 }, nav: { minHeight: 82, paddingHorizontal: 10, paddingTop: 8, paddingBottom: 8, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E3E8F0' },
-  kycBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, backgroundColor: 'rgba(10,18,31,0.66)' },
-  kycModal: { width: '100%', maxWidth: 410, borderRadius: 20, backgroundColor: '#FFFFFF', paddingHorizontal: 24, paddingTop: 25, paddingBottom: 16, alignItems: 'center', shadowColor: '#071D49', shadowOpacity: 0.24, shadowRadius: 24, elevation: 12 },
-  kycArtwork: { width: 116, height: 103, borderRadius: 52, backgroundColor: '#EFF8FF', alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  kycCheck: { position: 'absolute', right: 8, bottom: 8, width: 38, height: 38, borderRadius: 19, backgroundColor: '#42C77A', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#FFFFFF' },
-  kycTitle: { marginTop: 16, color: palette.navy, fontSize: 20, lineHeight: 25, fontWeight: '800', textAlign: 'center' },
-  kycBody: { marginTop: 8, maxWidth: 310, color: '#4B5B70', fontSize: 14, lineHeight: 20, fontWeight: '400', textAlign: 'center' },
-  kycButton: { width: '100%', minHeight: 54, marginTop: 20, borderRadius: 12, backgroundColor: '#0A3B8F', alignItems: 'center', justifyContent: 'center' },
-  kycButtonDisabled: { backgroundColor: '#8A98AC' },
-  kycButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
-  kycExplore: { width: '100%', minHeight: 45, marginTop: 8, borderRadius: 12, borderWidth: 1, borderColor: '#D8E2EE', alignItems: 'center', justifyContent: 'center' },
-  kycExploreText: { color: palette.navy, fontSize: 13, fontWeight: '700' },
-  kycSignOut: { minHeight: 32, paddingHorizontal: 14, marginTop: 2, alignItems: 'center', justifyContent: 'center' },
-  kycSignOutText: { color: '#667085', fontSize: 12, fontWeight: '600' },
+  kycBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, backgroundColor: 'rgba(10,18,31,0.66)' }, kycModal: { width: '100%', maxWidth: 410, borderRadius: 20, backgroundColor: '#FFFFFF', paddingHorizontal: 24, paddingTop: 25, paddingBottom: 16, alignItems: 'center', shadowColor: '#071D49', shadowOpacity: 0.24, shadowRadius: 24, elevation: 12 }, kycArtwork: { width: 116, height: 103, borderRadius: 52, backgroundColor: '#EFF8FF', alignItems: 'center', justifyContent: 'center', position: 'relative' }, kycCheck: { position: 'absolute', right: 8, bottom: 8, width: 38, height: 38, borderRadius: 19, backgroundColor: '#42C77A', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#FFFFFF' }, kycTitle: { marginTop: 16, color: palette.navy, fontSize: 20, lineHeight: 25, fontWeight: '800', textAlign: 'center' }, kycBody: { marginTop: 8, maxWidth: 310, color: '#4B5B70', fontSize: 14, lineHeight: 20, fontWeight: '400', textAlign: 'center' }, kycButton: { width: '100%', minHeight: 54, marginTop: 20, borderRadius: 12, backgroundColor: '#0A3B8F', alignItems: 'center', justifyContent: 'center' }, kycButtonDisabled: { backgroundColor: '#8A98AC' }, kycButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' }, kycExplore: { width: '100%', minHeight: 45, marginTop: 8, borderRadius: 12, borderWidth: 1, borderColor: '#D8E2EE', alignItems: 'center', justifyContent: 'center' }, kycExploreText: { color: palette.navy, fontSize: 13, fontWeight: '700' }, kycSignOut: { minHeight: 32, paddingHorizontal: 14, marginTop: 2, alignItems: 'center', justifyContent: 'center' }, kycSignOutText: { color: '#667085', fontSize: 12, fontWeight: '600' },
 });

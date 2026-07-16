@@ -8,7 +8,7 @@ import { requireMasterDataManager } from "@/lib/master-data-server";
 import { approvePortalOnboardingApplication } from "../onboarding-applications";
 
 type Draft = Record<string, unknown>;
-type Application = { id:string; profile_id:string|null; partner_type:string|null; status:string; applicant_phone:string|null; applicant_email:string|null; draft_data:Draft|null };
+type Application = { id:string; profile_id:string|null; partner_type:string|null; status:string; applicant_phone:string|null; applicant_email:string|null; group_customer_id:string|null; draft_data:Draft|null };
 type Contact = { contact_role:string; full_name:string; phone:string; email:string|null };
 type Document = { document_type:string; file_name:string; storage_bucket:string; storage_path:string; mime_type:string|null; file_size:number|null };
 type Profile = { full_name:string|null };
@@ -19,7 +19,7 @@ export async function approveMobileCorporateApplication(formData: FormData) {
   const reviewer = await requireMasterDataManager();
   if (!reviewer?.id) redirect(`/customers/applications/${applicationId}?error=unauthorized`);
   const admin = await createServerSupabaseClient();
-  const { data: application } = await admin.from("customer_onboarding_applications").select("id,profile_id,partner_type,status,applicant_phone,applicant_email,draft_data").eq("id",applicationId).single<Application>();
+  const { data: application } = await admin.from("customer_onboarding_applications").select("id,profile_id,partner_type,status,applicant_phone,applicant_email,group_customer_id,draft_data").eq("id",applicationId).single<Application>();
   if (!application?.profile_id || application.partner_type !== "corporate" || !["submitted","under_review"].includes(application.status)) redirect(`/customers/applications/${applicationId}?error=application_not_ready`);
   const draft = application.draft_data ?? {};
   const companyName = text(draft.company_name); const pan = text(draft.company_pan); const gst = text(draft.gst_number);
@@ -52,6 +52,11 @@ export async function approveMobileCorporateApplication(formData: FormData) {
   const permanentContacts = loginContacts.map((contact)=>({ customer_id:customerId, contact_role:contact.contact_role, full_name:contact.full_name, phone:contact.phone, email:contact.email, profile_id:contact.contact_role==="corporate_creator"?application.profile_id:null, login_required:true, access_status:contact.contact_role==="corporate_creator"?"active":"pending", created_by:reviewer.id }));
   const { error: contactError } = await admin.from("customer_contacts").insert(permanentContacts);
   if (contactError) { await admin.from("customers").delete().eq("id",customerId); redirect(`/customers/applications/${applicationId}?error=contacts_create_failed`); }
+
+  if (application.group_customer_id) {
+    const { error: relationshipError } = await admin.rpc("link_customer_to_group", { p_group_customer_id: application.group_customer_id, p_child_customer_id: customerId, p_actor_profile_id: reviewer.id });
+    if (relationshipError) { await admin.from("customers").delete().eq("id",customerId); redirect(`/customers/applications/${applicationId}?error=group_link_failed`); }
+  }
 
   const copiedPaths:string[]=[]; const permanent:Record<string,unknown>[]=[];
   for (const document of documents??[]) { const download=await admin.storage.from(document.storage_bucket).download(document.storage_path); if(download.error||!download.data) redirect(`/customers/applications/${applicationId}?error=document_copy_failed`); const path=`${customerId}/${document.document_type}/${randomUUID()}.${extension(document)}`; const upload=await admin.storage.from("customer-documents").upload(path,new Uint8Array(await download.data.arrayBuffer()),{contentType:document.mime_type??"application/octet-stream",upsert:false}); if(upload.error) redirect(`/customers/applications/${applicationId}?error=document_copy_failed`); copiedPaths.push(path); permanent.push({customer_id:customerId,document_type:document.document_type,file_name:document.file_name,storage_bucket:"customer-documents",storage_path:path,mime_type:document.mime_type,file_size:document.file_size,verification_status:"verified",upload_source:"customer_app",uploaded_by:application.profile_id,verified_by:reviewer.id,verified_at:now}); }
