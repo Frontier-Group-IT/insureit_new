@@ -25,7 +25,7 @@ export function GroupRecordsScreen({ mode }: { mode: Mode }) {
     try {
       const selectedGroup = await getSelectedCustomerContext();
       if (!selectedGroup || selectedGroup.partner_type !== 'group') { if (active) setRows([]); return; }
-      const associated = (await getAccessibleCustomerContexts()).filter((item) => item.access_source === 'group_child' && item.group_customer_id === selectedGroup.customer_id);
+      const associated = (await getAccessibleCustomerContexts()).filter((item) => item.customer_id !== selectedGroup.customer_id && item.group_customer_id === selectedGroup.customer_id);
       const portfolioContexts = [selectedGroup, ...associated];
       const ids = Array.from(new Set(portfolioContexts.map((item) => item.customer_id)));
       if (!active) return;

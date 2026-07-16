@@ -96,7 +96,7 @@ export async function getOperationalCustomerContexts(): Promise<CustomerAccountC
   if (selected.partner_type !== 'group') return [selected];
 
   const contexts = await getAccessibleCustomerContexts();
-  const children = contexts.filter((context) => context.access_source === 'group_child' && context.group_customer_id === selected.customer_id);
+  const children = contexts.filter((context) => context.customer_id !== selected.customer_id && context.group_customer_id === selected.customer_id);
   return [selected, ...children];
 }
 
