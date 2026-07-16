@@ -47,7 +47,7 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
     async function load() {
       try {
         const associated = await getGroupChildAccountOverview(selectedGroupContext.customer_id);
-        const accountIds = associated.map((item) => item.customer_id).filter((id): id is string => Boolean(id));
+        const accountIds = Array.from(new Set([selectedGroupContext.customer_id, ...associated.map((item) => item.customer_id).filter((id): id is string => Boolean(id))]));
         if (!accountIds.length) {
           if (active) setData({ associated, vehicles: [], policies: [], claims: [] });
           return;
@@ -143,8 +143,7 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
         </View>
         {recentAccounts.length ? <View style={styles.accountPreviewList}>{recentAccounts.map((account) => {
           const title = groupChildAccountTitle(account);
-          const canOpen = account.account_source === 'linked_customer' && Boolean(account.customer_id);
-          return <Pressable key={account.row_id} disabled={!canOpen} onPress={() => account.customer_id && router.push({ pathname: '/customer/group/account-detail', params: { id: account.customer_id } })} style={styles.accountPreview}><View style={styles.accountAvatar}><Text style={styles.accountAvatarText}>{initialFor(title)}</Text></View><View style={styles.accountPreviewCopy}><Text style={styles.accountName} numberOfLines={1}>{title}</Text><Text style={styles.accountMeta}>{partnerTypeLabel(account.partner_type)} · {statusLabel(account.onboarding_status)}</Text></View><StatusChip status={account.onboarding_status} /></Pressable>;
+          return <Pressable key={account.row_id} onPress={() => router.push({ pathname: '/customer/group/account-detail', params: { id: account.customer_id ?? '', applicationId: account.application_id ?? '' } })} style={styles.accountPreview}><View style={styles.accountAvatar}><Text style={styles.accountAvatarText}>{initialFor(title)}</Text></View><View style={styles.accountPreviewCopy}><Text style={styles.accountName} numberOfLines={1}>{title}</Text><Text style={styles.accountMeta}>{partnerTypeLabel(account.partner_type)} - {statusLabel(account.onboarding_status)}</Text></View><StatusChip status={account.onboarding_status} /></Pressable>;
         })}</View> : <View style={styles.accountEmpty}><MaterialCommunityIcons name="account-multiple-plus-outline" size={24} color="#0A43A3" /><Text style={styles.accountEmptyText}>{underReview ? 'Associated accounts will appear after approval.' : 'Add your first associated business to build the Group portfolio.'}</Text></View>}
       </AnimatedCard>
 

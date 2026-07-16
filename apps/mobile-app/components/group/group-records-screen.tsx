@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 
 import { GroupPageShell } from '@/components/group/group-page-shell';
 import { EmptyState, LoadingState } from '@/components/ui';
-import { customerAccountTitle, getAccessibleCustomerContexts, type CustomerAccountContext } from '@/lib/customer-context';
+import { customerAccountTitle, getAccessibleCustomerContexts, getSelectedCustomerContext, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Claim, Policy, Vehicle } from '@/lib/types';
@@ -23,12 +23,15 @@ export function GroupRecordsScreen({ mode }: { mode: Mode }) {
 
   useEffect(() => { let active = true; void (async () => {
     try {
-      const associated = (await getAccessibleCustomerContexts()).filter((item) => item.access_source === 'group_child');
-      const ids = associated.map((item) => item.customer_id);
+      const selectedGroup = await getSelectedCustomerContext();
+      if (!selectedGroup || selectedGroup.partner_type !== 'group') { if (active) setRows([]); return; }
+      const associated = (await getAccessibleCustomerContexts()).filter((item) => item.access_source === 'group_child' && item.group_customer_id === selectedGroup.customer_id);
+      const portfolioContexts = [selectedGroup, ...associated];
+      const ids = Array.from(new Set(portfolioContexts.map((item) => item.customer_id)));
       if (!active) return;
-      setContexts(associated);
+      setContexts(portfolioContexts);
       if (!ids.length) { setRows([]); return; }
-      const accountNames = new Map(associated.map((item) => [item.customer_id, customerAccountTitle(item)]));
+      const accountNames = new Map(portfolioContexts.map((item) => [item.customer_id, customerAccountTitle(item)]));
       if (mode === 'fleet') {
         const [{ data: vehicles }, { data: policies }, { data: claims }] = await Promise.all([
           supabase.from('vehicles').select('*').in('customer_id', ids).order('created_at', { ascending: false }),
