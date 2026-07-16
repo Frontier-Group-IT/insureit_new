@@ -307,7 +307,14 @@ function f(name:string,label:string,required=false,keyboardType:FieldDef['keyboa
 function file(name:string,label:string,required=false):FieldDef{return{name,label,required,kind:'file'};}
 function choice(name:string,label:string,options:readonly (readonly [string,string])[],required=false):FieldDef{return{name,label,required,kind:'choice',options};}
 function sw(name:string,label:string):FieldDef{return{name,label,kind:'switch'};}
-function normalize(name:string,value:string){if(name.includes('mobile')||name==='phone'||name.includes('aadhaar')||name==='postal_code')return value.replace(/\D/g,'').slice(0,name.includes('aadhaar')?12:name==='postal_code'?6:10);if(name.includes('pan')||name==='gst_number')return value.replace(/[^a-z0-9]/gi,'').toUpperCase().slice(0,name.includes('gst')?15:10);return value;}
+function normalize(name:string,value:string){
+  if (name.includes('mobile') || name === 'phone') return value.replace(/\D/g, '').slice(0, 10);
+  if (name.includes('aadhaar')) return value.replace(/\D/g, '').slice(0, 12);
+  if (name === 'postal_code') return value.replace(/\D/g, '').slice(0, 6);
+  if (name === 'company_pan' || name === 'pan_number' || name === 'representative_pan') return value.replace(/[^a-z0-9]/gi, '').toUpperCase().slice(0, 10);
+  if (name === 'gst_number') return value.replace(/[^a-z0-9]/gi, '').toUpperCase().slice(0, 15);
+  return value;
+}
 
 async function uploadDocument(applicationId:string,type:string,file:PickedFile){const session=await getCurrentSession();if(!session?.user)throw new Error('Your session expired.');const response=await fetch(file.uri);const body=await response.arrayBuffer();const ext=file.mimeType==='application/pdf'?'pdf':file.mimeType==='image/png'?'png':'jpg';const path=`${applicationId}/${type}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;const upload=await supabase.storage.from('customer-documents').upload(path,body,{contentType:file.mimeType??'application/octet-stream'});if(upload.error)throw upload.error;const result=await (supabase.from('customer_onboarding_documents') as any).upsert({application_id:applicationId,document_type:type,file_name:file.name,storage_bucket:'customer-documents',storage_path:path,mime_type:file.mimeType,file_size:file.size??body.byteLength,verification_status:'pending',uploaded_by:session.user.id},{onConflict:'application_id,document_type'});if(result.error)throw result.error;}
 function Field({ label, required, ...props }: React.ComponentProps<typeof TextInput> & { label:string; required?:boolean }) { return <View style={styles.field}><Text style={styles.fieldLabel}>{label}{required?<Text style={styles.required}> *</Text>:null}</Text><TextInput placeholderTextColor="#9AA7B8" style={[styles.input,props.editable===false&&styles.inputLocked]} {...props} /></View>; }
