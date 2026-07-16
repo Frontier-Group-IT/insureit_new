@@ -3,8 +3,8 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createServerSupabaseClient } from "@/lib/auth-server";
 import { requireMasterDataManager } from "@/lib/master-data-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { approvePortalOnboardingApplication } from "../onboarding-applications";
 
 type Draft = Record<string, unknown>;
@@ -18,7 +18,7 @@ export async function approveMobileCorporateApplication(formData: FormData) {
   if (!applicationId) redirect("/customers/applications?error=missing_application");
   const reviewer = await requireMasterDataManager();
   if (!reviewer?.id) redirect(`/customers/applications/${applicationId}?error=unauthorized`);
-  const admin = await createServerSupabaseClient();
+  const admin = createSupabaseAdminClient();
   const { data: application } = await admin.from("customer_onboarding_applications").select("id,profile_id,partner_type,status,applicant_phone,applicant_email,group_customer_id,draft_data").eq("id",applicationId).single<Application>();
   if (!application?.profile_id || application.partner_type !== "corporate" || !["submitted","under_review"].includes(application.status)) redirect(`/customers/applications/${applicationId}?error=application_not_ready`);
   const draft = application.draft_data ?? {};
@@ -55,7 +55,7 @@ export async function approveMobileCorporateApplication(formData: FormData) {
 
   if (application.group_customer_id) {
     const { error: relationshipError } = await admin.rpc("link_customer_to_group", { p_group_customer_id: application.group_customer_id, p_child_customer_id: customerId, p_actor_profile_id: reviewer.id });
-    if (relationshipError) { await admin.from("customers").delete().eq("id",customerId); redirect(`/customers/applications/${applicationId}?error=group_link_failed`); }
+    if (relationshipError) { console.error("Group Corporate approval link failed", relationshipError); await admin.from("customers").delete().eq("id",customerId); redirect(`/customers/applications/${applicationId}?error=group_link_failed`); }
   }
 
   const copiedPaths:string[]=[]; const permanent:Record<string,unknown>[]=[];
