@@ -24,21 +24,51 @@ const LoadingContext = createContext<LoadingContextValue | null>(null);
 const navigationFallbackMs = 12000;
 const noRouteChangeFallbackMs = 1600;
 const settleDelayMs = 160;
+const minimumVisibleMs = 420;
+const quietPeriodMs = 220;
 
 export function AppLoadingProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [entries, setEntries] = useState<TrackedLoadingEntry[]>(getTrackedLoadingEntries());
+  const [overlayVisible, setOverlayVisible] = useState(entries.length > 0);
+  const [overlayLabel, setOverlayLabel] = useState(entries[entries.length - 1]?.label || 'Loading');
   const mounted = useRef(false);
   const previousPath = useRef(pathname);
   const navigationId = useRef<string | null>(null);
   const navigationStartPath = useRef(pathname);
   const fallbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const samePathTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const overlayShownAt = useRef(entries.length > 0 ? Date.now() : 0);
+  const overlayVisibleRef = useRef(entries.length > 0);
 
   const begin = useCallback((label = 'Loading') => beginTrackedLoading(label), []);
   const end = useCallback((id: string) => endTrackedLoading(id), []);
 
   useEffect(() => subscribeTrackedLoading(setEntries), []);
+
+  useEffect(() => {
+    if (entries.length > 0) {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+      hideTimer.current = null;
+      setOverlayLabel(entries[entries.length - 1]?.label || 'Loading');
+      if (!overlayVisibleRef.current) {
+        overlayVisibleRef.current = true;
+        overlayShownAt.current = Date.now();
+        setOverlayVisible(true);
+      }
+      return;
+    }
+
+    if (!overlayVisibleRef.current) return;
+    const elapsed = Date.now() - overlayShownAt.current;
+    const delay = Math.max(quietPeriodMs, minimumVisibleMs - elapsed);
+    hideTimer.current = setTimeout(() => {
+      overlayVisibleRef.current = false;
+      setOverlayVisible(false);
+      hideTimer.current = null;
+    }, delay);
+  }, [entries]);
 
   const clearNavigationTimers = useCallback(() => {
     if (fallbackTimer.current) clearTimeout(fallbackTimer.current);
@@ -94,15 +124,14 @@ export function AppLoadingProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => () => {
     clearNavigationTimers();
+    if (hideTimer.current) clearTimeout(hideTimer.current);
   }, [clearNavigationTimers]);
 
   const value = useMemo<LoadingContextValue>(() => ({ begin, end, beginNavigation, runWithLoader }), [begin, beginNavigation, end, runWithLoader]);
-  const active = entries.length > 0;
-  const label = entries[entries.length - 1]?.label || 'Loading';
 
   return <LoadingContext.Provider value={value}>
     {children}
-    {active ? <AppLoadingOverlay label={label} /> : null}
+    {overlayVisible ? <AppLoadingOverlay label={overlayLabel} /> : null}
   </LoadingContext.Provider>;
 }
 
