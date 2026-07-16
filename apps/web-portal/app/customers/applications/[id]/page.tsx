@@ -54,6 +54,7 @@ export default async function ApplicationReviewPage({ params, searchParams }: Pa
   const supportedPartner = ["individual_proprietor","group","corporate"].includes(application.partner_type??"");
   const canReview = supportedPartner && ["submitted", "under_review"].includes(application.status) && !application.customer_id;
   const isCorporate = application.partner_type === "corporate";
+  const pageError = query.error === "application_not_ready" && !canReview ? null : query.error;
   const contactByRole = new Map((contacts ?? []).map((contact) => [contact.contact_role, contact]));
   const approveAction = application.partner_type === "group" ? approveMobileGroupApplication : isCorporate ? approveMobileCorporateApplication : approveMobileIndividualApplication;
   const fields = application.partner_type === "group" ? [["Group name", draft.group_name], ["Owner / promoter", draft.owner_name], ["Mobile", application.applicant_phone], ["Email", draft.email ?? application.applicant_email]] : isCorporate ? [["Company name",draft.company_name],["Company PAN",draft.company_pan],["GSTIN",draft.gst_number],["Address",[draft.address_street,draft.address_locality].filter(Boolean).join(", ")],["Location",[draft.city,draft.state,draft.postal_code].filter(Boolean).join(", ")],["Fleet size",labelValue(draft.fleet_size_band)]] : [["Full name", draft.contact_name], ["Mobile", application.applicant_phone], ["Email", draft.email ?? application.applicant_email], ["PAN", draft.pan_number], ["Aadhaar", draft.aadhaar_last_four ? `Ends in ${draft.aadhaar_last_four}` : null], ["Address", [draft.address_street, draft.address_locality].filter(Boolean).join(", ")], ["Location", [draft.city, draft.state, draft.postal_code].filter(Boolean).join(", ")], ["Fleet size", labelValue(draft.fleet_size_band)], ["GST registered", draft.is_gst_registered === true ? "Yes" : "No"], ["Legal trade name", draft.legal_trade_name], ["GSTIN", draft.gst_number]];
@@ -68,7 +69,7 @@ export default async function ApplicationReviewPage({ params, searchParams }: Pa
             <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-semibold text-amber-700">{application.status.replaceAll("_", " ")}</span>
           </div>
         </div>
-        {query.error ? <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-medium text-red-700">{errors[query.error] ?? "The action could not be completed."}</div> : null}
+        {pageError ? <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-medium text-red-700">{errors[pageError] ?? "The action could not be completed."}</div> : null}
         {query.success ? <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-medium text-emerald-700">{successes[query.success] ?? "Saved successfully."}</div> : null}
 
         <div className="grid gap-4 lg:grid-cols-[1.25fr_.75fr]">
@@ -78,23 +79,23 @@ export default async function ApplicationReviewPage({ params, searchParams }: Pa
               <h2 className="mt-1 text-base font-semibold text-[#0F172A]">{isCorporate ? "Corporate application details" : "Applicant details"}</h2>
             </div>
             {isCorporate ? (
-              <form action={updateMobileCorporateApplicationDraft} className="p-5">
+              <form action={canReview ? updateMobileCorporateApplicationDraft : undefined} className="p-5">
                 <input type="hidden" name="application_id" value={id}/>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Field name="company_name" label="Company name" defaultValue={textValue(draft.company_name)} required/>
-                  <Field name="company_pan" label="Company PAN" defaultValue={textValue(draft.company_pan)} required/>
-                  <Field name="gst_number" label="GSTIN" defaultValue={textValue(draft.gst_number)}/>
-                  <SelectField name="fleet_size_band" label="Fleet size" defaultValue={textValue(draft.fleet_size_band)} required/>
+                  <Field name="company_name" label="Company name" defaultValue={textValue(draft.company_name)} required disabled={!canReview}/>
+                  <Field name="company_pan" label="Company PAN" defaultValue={textValue(draft.company_pan)} required disabled={!canReview}/>
+                  <Field name="gst_number" label="GSTIN" defaultValue={textValue(draft.gst_number)} disabled={!canReview}/>
+                  <SelectField name="fleet_size_band" label="Fleet size" defaultValue={textValue(draft.fleet_size_band)} required disabled={!canReview}/>
                 </div>
                 <div className="mt-5 border-t border-[#E2E8F0] pt-5">
                   <h3 className="text-sm font-semibold text-[#0F172A]">Registered address</h3>
                   <div className="mt-3 grid gap-4 md:grid-cols-2">
-                    <Field name="address_street" label="Street" defaultValue={textValue(draft.address_street)} required/>
-                    <Field name="address_locality" label="Locality" defaultValue={textValue(draft.address_locality)}/>
-                    <Field name="city" label="City" defaultValue={textValue(draft.city)} required/>
-                    <Field name="state" label="State" defaultValue={textValue(draft.state)} required/>
-                    <Field name="postal_code" label="PIN code" defaultValue={textValue(draft.postal_code)} required/>
-                    <Field name="india_location_id" label="Location ID" defaultValue={textValue(draft.india_location_id)} required/>
+                    <Field name="address_street" label="Street" defaultValue={textValue(draft.address_street)} required disabled={!canReview}/>
+                    <Field name="address_locality" label="Locality" defaultValue={textValue(draft.address_locality)} disabled={!canReview}/>
+                    <Field name="city" label="City" defaultValue={textValue(draft.city)} required disabled={!canReview}/>
+                    <Field name="state" label="State" defaultValue={textValue(draft.state)} required disabled={!canReview}/>
+                    <Field name="postal_code" label="PIN code" defaultValue={textValue(draft.postal_code)} required disabled={!canReview}/>
+                    <Field name="india_location_id" label="Location ID" defaultValue={textValue(draft.india_location_id)} required disabled={!canReview}/>
                   </div>
                 </div>
                 <div className="mt-5 border-t border-[#E2E8F0] pt-5">
@@ -108,9 +109,9 @@ export default async function ApplicationReviewPage({ params, searchParams }: Pa
                         <div key={role} className="rounded-xl border border-[#E2E8F0] bg-[#FBFDFF] p-4">
                           <p className="text-xs font-semibold text-[#0F172A]">{label}</p>
                           <div className="mt-3 space-y-3">
-                            <Field name={`${role}_name`} label="Full name" defaultValue={contact?.full_name ?? ""} required/>
-                            <Field name={`${role}_phone`} label="Mobile number" defaultValue={contact?.phone ?? fallbackPhone ?? ""} required/>
-                            <Field name={`${role}_email`} label="Email" defaultValue={contact?.email ?? fallbackEmail ?? ""}/>
+                            <Field name={`${role}_name`} label="Full name" defaultValue={contact?.full_name ?? ""} required disabled={!canReview}/>
+                            <Field name={`${role}_phone`} label="Mobile number" defaultValue={contact?.phone ?? fallbackPhone ?? ""} required disabled={!canReview}/>
+                            <Field name={`${role}_email`} label="Email" defaultValue={contact?.email ?? fallbackEmail ?? ""} disabled={!canReview}/>
                           </div>
                         </div>
                       );
@@ -122,7 +123,11 @@ export default async function ApplicationReviewPage({ params, searchParams }: Pa
                     <p className="text-[11px] text-[#64748B]">Save corrections before approving if the submitted data does not match the uploaded documents.</p>
                     <button className="rounded-md bg-[#0F2A55] px-4 py-2 text-[11px] font-semibold text-white">Save corrections</button>
                   </div>
-                ) : null}
+                ) : (
+                  <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[11px] font-medium text-emerald-800">
+                    This application is already {application.status.replaceAll("_", " ")}. The submitted KYC record is locked here; edit the activated customer profile for post-approval changes.
+                  </div>
+                )}
               </form>
             ) : (
               <div className="grid gap-px bg-[#E8EEF5] sm:grid-cols-2">
@@ -163,11 +168,11 @@ export default async function ApplicationReviewPage({ params, searchParams }: Pa
   );
 }
 
-function Field({ name, label, defaultValue, required }: { name:string; label:string; defaultValue:string; required?:boolean }) {
-  return <label className="block text-[11px] font-semibold text-[#0F172A]">{label}{required ? " *" : ""}<input name={name} defaultValue={defaultValue} required={required} className="mt-1 h-10 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-[12px] font-medium text-[#0F172A] outline-none focus:border-[#1D4ED8] focus:ring-2 focus:ring-blue-100"/></label>;
+function Field({ name, label, defaultValue, required, disabled }: { name:string; label:string; defaultValue:string; required?:boolean; disabled?:boolean }) {
+  return <label className="block text-[11px] font-semibold text-[#0F172A]">{label}{required ? " *" : ""}<input name={name} defaultValue={defaultValue} required={required} disabled={disabled} className="mt-1 h-10 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-[12px] font-medium text-[#0F172A] outline-none focus:border-[#1D4ED8] focus:ring-2 focus:ring-blue-100 disabled:bg-[#F8FAFC] disabled:text-[#475569]"/></label>;
 }
-function SelectField({ name, label, defaultValue, required }: { name:string; label:string; defaultValue:string; required?:boolean }) {
-  return <label className="block text-[11px] font-semibold text-[#0F172A]">{label}{required ? " *" : ""}<select name={name} defaultValue={defaultValue} required={required} className="mt-1 h-10 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-[12px] font-medium text-[#0F172A] outline-none focus:border-[#1D4ED8] focus:ring-2 focus:ring-blue-100"><option value="">Select fleet size</option><option value="less_than_5">Less than 5</option><option value="5_to_20">5 to 20</option><option value="20_to_50">20 to 50</option><option value="more_than_50">More than 50</option></select></label>;
+function SelectField({ name, label, defaultValue, required, disabled }: { name:string; label:string; defaultValue:string; required?:boolean; disabled?:boolean }) {
+  return <label className="block text-[11px] font-semibold text-[#0F172A]">{label}{required ? " *" : ""}<select name={name} defaultValue={defaultValue} required={required} disabled={disabled} className="mt-1 h-10 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-[12px] font-medium text-[#0F172A] outline-none focus:border-[#1D4ED8] focus:ring-2 focus:ring-blue-100 disabled:bg-[#F8FAFC] disabled:text-[#475569]"><option value="">Select fleet size</option><option value="less_than_5">Less than 5</option><option value="5_to_20">5 to 20</option><option value="20_to_50">20 to 50</option><option value="more_than_50">More than 50</option></select></label>;
 }
 function display(value: unknown) { if (typeof value === "string" && value.trim()) return value; if (typeof value === "number") return String(value); return "-"; }
 function textValue(value: unknown) { return typeof value === "string" ? value : ""; }
