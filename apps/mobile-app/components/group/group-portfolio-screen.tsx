@@ -1,8 +1,9 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { useAppLoading, useLoadingRouter } from '@/components/app-loading';
 import { GroupPageShell } from '@/components/group/group-page-shell';
 import { EmptyState, LoadingState } from '@/components/ui';
 import { customerAccountTitle, getAccessibleCustomerContexts, partnerTypeLabel, selectCustomerContext, type CustomerAccountContext } from '@/lib/customer-context';
@@ -13,13 +14,13 @@ import type { Claim, Policy, Vehicle } from '@/lib/types';
 type PortfolioRow = CustomerAccountContext & { vehicles: number; policies: number; claims: number; city: string | null; status: string };
 
 export function GroupAccountsScreen() {
-  const router = useRouter();
+  const router = useLoadingRouter();
   const [rows, setRows] = useState<PortfolioRow[]>([]);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'corporate' | 'individual_proprietor' | 'dealership'>('all');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { let active = true; void (async () => {
+  useEffect(() => { let active = true; setLoading(true); void (async () => {
     try {
       const contexts = (await getAccessibleCustomerContexts()).filter((item) => item.access_source === 'group_child');
       const ids = contexts.map((item) => item.customer_id);
@@ -39,7 +40,7 @@ export function GroupAccountsScreen() {
   const filtered = useMemo(() => rows.filter((row) => { if (filter !== 'all' && row.partner_type !== filter) return false; const haystack = `${customerAccountTitle(row)} ${row.customer_code} ${row.city ?? ''} ${row.contact_name}`.toLowerCase(); return !query.trim() || haystack.includes(query.trim().toLowerCase()); }), [filter, query, rows]);
   const addAction = <Pressable onPress={() => router.push('/customer/group/add-account')} style={styles.addButton}><MaterialCommunityIcons name="plus" size={17} color="#FFFFFF" /><Text style={styles.addButtonText}>Add</Text></Pressable>;
 
-  return <GroupPageShell title="Associated Customers" subtitle={`${rows.length} account${rows.length === 1 ? '' : 's'} in the Group portfolio`} icon="account-multiple-outline" rightAction={addAction}>
+  return <GroupPageShell title="Associated Customers" subtitle={`${rows.length} account${rows.length === 1 ? '' : 's'} in the Group portfolio`} icon="account-multiple-outline" rightAction={addAction} loading={loading}>
     {loading ? <LoadingState /> : <>
       <View style={styles.searchBox}><MaterialCommunityIcons name="magnify" size={20} color="#7A8799" /><TextInput value={query} onChangeText={setQuery} placeholder="Search company, contact, mobile or city" placeholderTextColor="#9AA6B6" style={styles.searchInput} /></View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>{([['all','All'],['corporate','Corporate'],['individual_proprietor','Individual'],['dealership','Dealership']] as const).map(([value,label]) => <Pressable key={value} onPress={() => setFilter(value)} style={[styles.filterChip, filter === value && styles.filterChipActive]}><Text style={[styles.filterText, filter === value && styles.filterTextActive]}>{label}</Text></Pressable>)}</ScrollView>
@@ -53,7 +54,8 @@ export function GroupAccountsScreen() {
 }
 
 export function GroupAccountDetailScreen() {
-  const router = useRouter();
+  const router = useLoadingRouter();
+  const { runWithLoader } = useAppLoading();
   const params = useLocalSearchParams<{ id?: string }>();
   const id = typeof params.id === 'string' ? params.id : '';
   const [context, setContext] = useState<CustomerAccountContext | null>(null);
@@ -63,7 +65,7 @@ export function GroupAccountDetailScreen() {
   const [claims, setClaims] = useState<Claim[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { let active = true; void (async () => {
+  useEffect(() => { let active = true; setLoading(true); void (async () => {
     try {
       const contexts = await getAccessibleCustomerContexts();
       const next = contexts.find((item) => item.customer_id === id && item.access_source === 'group_child') ?? null;
@@ -74,13 +76,13 @@ export function GroupAccountDetailScreen() {
     } finally { if (active) setLoading(false); }
   })(); return () => { active = false; }; }, [id]);
 
-  if (loading) return <GroupPageShell title="Account Details" subtitle="Loading associated account" icon="office-building-outline"><LoadingState /></GroupPageShell>;
+  if (loading) return <GroupPageShell title="Account Details" subtitle="Loading associated account" icon="office-building-outline" loading><LoadingState /></GroupPageShell>;
   if (!context || !customer) return <GroupPageShell title="Account Details" subtitle="Associated account unavailable" icon="office-building-outline"><EmptyState title="Account unavailable" body="This account is not available in the Group portfolio." /></GroupPageShell>;
   const selectedContext = context;
   const openClaims = claims.filter((claim) => !['Closed','Settled','Rejected','Claim Complete'].includes(claim.current_status));
   const activePolicies = policies.filter((policy) => new Date(policy.end_date).getTime() >= Date.now());
   const groupName = selectedContext.group_name || 'Group Account';
-  async function openAsSelectedAccount() { await selectCustomerContext(selectedContext.customer_id); router.replace('/customer/home'); }
+  function openAsSelectedAccount() { void runWithLoader(async () => { await selectCustomerContext(selectedContext.customer_id); router.replace('/customer/home'); }, 'Opening associated account'); }
 
   return <GroupPageShell title={customerAccountTitle(selectedContext)} subtitle={`Associated with ${groupName}`} icon="office-building-outline">
     <View style={styles.detailMetrics}><LargeMetric label="Vehicles" value={vehicles.length} /><LargeMetric label="Policies" value={activePolicies.length} lined /><LargeMetric label="Open Claims" value={openClaims.length} lined /></View>
@@ -100,5 +102,5 @@ const styles = StyleSheet.create({
   addButton: { minHeight: 36, borderRadius: 11, backgroundColor: '#0A43A3', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 5 }, addButtonText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
   searchBox: { minHeight: 48, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE6F0', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 8 }, searchInput: { flex: 1, minHeight: 44, color: palette.navy, fontSize: 13, fontWeight: '600' }, filterRow: { gap: 7, paddingBottom: 2 }, filterChip: { height: 34, borderRadius: 999, borderWidth: 1, borderColor: '#D8E3EF', backgroundColor: '#FFFFFF', paddingHorizontal: 13, justifyContent: 'center' }, filterChipActive: { backgroundColor: palette.navy, borderColor: palette.navy }, filterText: { color: '#65758B', fontSize: 11, fontWeight: '800' }, filterTextActive: { color: '#FFFFFF' },
   customerCard: { borderRadius: 17, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 12, shadowColor: '#122544', shadowOpacity: 0.05, shadowRadius: 9, elevation: 2 }, cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 }, businessIcon: { width: 43, height: 43, borderRadius: 12, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' }, cardCopy: { flex: 1, minWidth: 0 }, customerName: { color: palette.navy, fontSize: 14.5, fontWeight: '900' }, customerMeta: { color: '#0A43A3', fontSize: 10, fontWeight: '800', marginTop: 2 }, customerLocation: { color: '#65758B', fontSize: 10.5, fontWeight: '600', marginTop: 2 }, statusPill: { borderRadius: 999, backgroundColor: '#E8F8F0', paddingHorizontal: 8, paddingVertical: 4 }, statusPillMuted: { backgroundColor: '#F2F4F7' }, statusText: { color: '#12805C', fontSize: 9, fontWeight: '900' }, cardMetrics: { minHeight: 60, borderRadius: 13, backgroundColor: '#F7FAFE', flexDirection: 'row', marginTop: 11, paddingVertical: 8 }, smallMetric: { flex: 1, alignItems: 'center', justifyContent: 'center' }, smallMetricLined: { borderLeftWidth: 1, borderLeftColor: '#DDE6F0' }, smallMetricValue: { color: palette.navy, fontSize: 18, fontWeight: '900' }, smallMetricLabel: { color: '#65758B', fontSize: 9.5, fontWeight: '700', marginTop: 1 }, cardFooter: { marginTop: 9, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#E8EDF3', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, contactText: { color: '#65758B', fontSize: 10, fontWeight: '600' },
-  detailMetrics: { minHeight: 78, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', flexDirection: 'row', paddingVertical: 10 }, largeMetric: { flex: 1, alignItems: 'center', justifyContent: 'center' }, largeMetricLined: { borderLeftWidth: 1, borderLeftColor: '#E2E8F0' }, largeMetricValue: { color: palette.navy, fontSize: 24, fontWeight: '900' }, largeMetricLabel: { color: '#65758B', fontSize: 9.5, fontWeight: '700', marginTop: 2 }, infoCard: { borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', paddingHorizontal: 13 }, infoRow: { minHeight: 45, borderBottomWidth: 1, borderBottomColor: '#EEF2F6', flexDirection: 'row', alignItems: 'center', gap: 10 }, infoLabel: { width: 105, color: '#65758B', fontSize: 10.5, fontWeight: '700' }, infoValue: { flex: 1, color: palette.navy, fontSize: 11.5, fontWeight: '800' }, sectionTitle: { color: palette.navy, fontSize: 14, fontWeight: '900' }, actionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, detailAction: { width: '48.5%', minHeight: 70, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 10, flexDirection: 'row', alignItems: 'center', gap: 9 }, detailActionIcon: { width: 37, height: 37, borderRadius: 11, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' }, detailActionText: { color: palette.navy, fontSize: 11, fontWeight: '900' }, noteCard: { borderRadius: 14, backgroundColor: '#EEF5FF', borderWidth: 1, borderColor: '#CFE0F8', padding: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 9 }, noteText: { flex: 1, color: '#315277', fontSize: 10.5, lineHeight: 15, fontWeight: '600' },
+  detailMetrics: { minHeight: 78, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', flexDirection: 'row', paddingVertical: 10 }, largeMetric: { flex: 1, alignItems: 'center', justifyContent: 'center' }, largeMetricLined: { borderLeftWidth: 1, borderLeftColor: '#E2E8F0' }, largeMetricValue: { color: palette.navy, fontSize: 24, fontWeight: '900' }, largeMetricLabel: { color: '#65758B', fontSize: 9.5, fontWeight: '700', marginTop: 2 }, infoCard: { borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', paddingHorizontal: 13 }, infoRow: { minHeight: 45, borderBottomWidth: 1, borderBottomColor: '#EEF2F6', flexDirection: 'row', alignItems: 'center', gap: 10 }, infoLabel: { width: 105, color: '#65758B', fontSize: 10.5, fontWeight: '700' }, infoValue: { flex: 1, color: palette.navy, fontSize: 11.5, fontWeight: '800' }, sectionTitle: { color: palette.navy, fontSize: 14, fontWeight: '900' }, actionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, detailAction: { width: '48%', minHeight: 78, borderRadius: 15, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center', padding: 8 }, detailActionIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' }, detailActionText: { color: palette.navy, fontSize: 10.5, fontWeight: '800', marginTop: 5 }, noteCard: { borderRadius: 14, backgroundColor: '#EEF5FF', borderWidth: 1, borderColor: '#CFE0F8', padding: 11, flexDirection: 'row', alignItems: 'center', gap: 8 }, noteText: { flex: 1, color: '#526278', fontSize: 9.8, lineHeight: 14, fontWeight: '600' },
 });
