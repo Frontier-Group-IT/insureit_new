@@ -1,8 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { useLoadingRouter } from '@/components/app-loading';
 import { GroupPageShell } from '@/components/group/group-page-shell';
 import { EmptyState, LoadingState } from '@/components/ui';
 import { customerAccountTitle, getAccessibleCustomerContexts, type CustomerAccountContext } from '@/lib/customer-context';
@@ -14,14 +14,14 @@ type Mode = 'fleet' | 'policies' | 'claims';
 type RecordRow = { id: string; customerId: string; accountName: string; title: string; subtitle: string; meta: string; status: string; tone: 'blue' | 'green' | 'orange' | 'red' };
 
 export function GroupRecordsScreen({ mode }: { mode: Mode }) {
-  const router = useRouter();
+  const router = useLoadingRouter();
   const [contexts, setContexts] = useState<CustomerAccountContext[]>([]);
   const [rows, setRows] = useState<RecordRow[]>([]);
   const [query, setQuery] = useState('');
   const [accountId, setAccountId] = useState('all');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { let active = true; void (async () => {
+  useEffect(() => { let active = true; setLoading(true); void (async () => {
     try {
       const associated = (await getAccessibleCustomerContexts()).filter((item) => item.access_source === 'group_child');
       const ids = associated.map((item) => item.customer_id);
@@ -59,7 +59,7 @@ export function GroupRecordsScreen({ mode }: { mode: Mode }) {
   const summary = mode === 'fleet' ? `${rows.length} vehicles across ${contexts.length} accounts` : mode === 'policies' ? `${rows.length} policies across the Group portfolio` : `${rows.length} claims across the Group portfolio`;
   const icon = mode === 'fleet' ? 'truck-outline' : mode === 'policies' ? 'file-document-outline' : 'shield-check-outline';
 
-  return <GroupPageShell title={title} subtitle={summary} icon={icon}>
+  return <GroupPageShell title={title} subtitle={summary} icon={icon} loading={loading}>
     {loading ? <LoadingState /> : <>
       <View style={styles.searchBox}><MaterialCommunityIcons name="magnify" size={20} color="#7A8799" /><TextInput value={query} onChangeText={setQuery} placeholder={`Search ${mode === 'fleet' ? 'vehicle or customer' : mode === 'policies' ? 'policy or customer' : 'claim, vehicle or customer'}`} placeholderTextColor="#9AA6B6" style={styles.searchInput} /></View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.accountFilters}><Pressable onPress={() => setAccountId('all')} style={[styles.filterChip, accountId === 'all' && styles.filterChipActive]}><Text style={[styles.filterText, accountId === 'all' && styles.filterTextActive]}>All Accounts</Text></Pressable>{contexts.map((context) => <Pressable key={context.customer_id} onPress={() => setAccountId(context.customer_id)} style={[styles.filterChip, accountId === context.customer_id && styles.filterChipActive]}><Text numberOfLines={1} style={[styles.filterText, accountId === context.customer_id && styles.filterTextActive]}>{customerAccountTitle(context)}</Text></Pressable>)}</ScrollView>
