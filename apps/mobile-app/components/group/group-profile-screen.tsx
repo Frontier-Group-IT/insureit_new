@@ -1,8 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useAppLoading, useLoadingRouter } from '@/components/app-loading';
 import { GroupPageShell } from '@/components/group/group-page-shell';
 import { LoadingState } from '@/components/ui';
 import { customerAccountTitle, getAccessibleCustomerContexts, getSelectedCustomerContext, membershipRoleLabel, type CustomerAccountContext } from '@/lib/customer-context';
@@ -12,14 +12,15 @@ import { palette } from '@/lib/theme';
 import type { Profile } from '@/lib/types';
 
 export function GroupProfileScreen() {
-  const router = useRouter();
+  const router = useLoadingRouter();
+  const { runWithLoader } = useAppLoading();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [context, setContext] = useState<CustomerAccountContext | null>(null);
   const [customer, setCustomer] = useState<any>(null);
   const [associatedCount, setAssociatedCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { let active = true; void (async () => {
+  useEffect(() => { let active = true; setLoading(true); void (async () => {
     try {
       const session = await getCurrentSession();
       if (!session?.user) return router.replace('/login');
@@ -32,14 +33,16 @@ export function GroupProfileScreen() {
   })(); return () => { active = false; }; }, [router]);
 
   const groupName = context ? customerAccountTitle(context) : 'Group Account';
-  return <GroupPageShell title="Group Profile" subtitle={groupName} icon="account-circle-outline">
+  const signOutNow = () => void runWithLoader(() => signOut(router), 'Signing out');
+
+  return <GroupPageShell title="Group Profile" subtitle={groupName} icon="account-circle-outline" loading={loading}>
     {loading ? <LoadingState /> : <>
       <View style={styles.identityCard}><View style={styles.profileAvatar}><Text style={styles.profileInitial}>{(profile?.full_name?.[0] || 'U').toUpperCase()}</Text></View><View style={styles.identityCopy}><Text style={styles.profileName}>{profile?.full_name || 'Group User'}</Text><Text style={styles.profileRole}>{context ? membershipRoleLabel(context.membership_role) : 'Group Member'}</Text><Text style={styles.profileAccount}>{groupName}</Text></View><View style={styles.verifiedBadge}><MaterialCommunityIcons name="check-decagram" size={15} color="#087443" /><Text style={styles.verifiedText}>Verified</Text></View></View>
       <Text style={styles.sectionTitle}>Signed-in User</Text>
       <View style={styles.profileCard}><ProfileRow icon="account-outline" label="Name" value={profile?.full_name || '—'} /><ProfileRow icon="phone-outline" label="Mobile" value={profile?.phone || '—'} /><ProfileRow icon="email-outline" label="Email" value={profile?.email || '—'} /><ProfileRow icon="account-key-outline" label="Role" value={context ? membershipRoleLabel(context.membership_role) : '—'} /></View>
       <Text style={styles.sectionTitle}>Group Account</Text>
       <View style={styles.profileCard}><ProfileRow icon="office-building-outline" label="Group Name" value={groupName} /><ProfileRow icon="identifier" label="Customer Code" value={context?.customer_code || '—'} /><ProfileRow icon="account-group-outline" label="Associated Customers" value={String(associatedCount)} /><ProfileRow icon="check-decagram-outline" label="Status" value={customer?.onboarding_status === 'active' ? 'Active' : customer?.onboarding_status || '—'} /><ProfileRow icon="map-marker-outline" label="Location" value={[customer?.city, customer?.state].filter(Boolean).join(', ') || '—'} /></View>
-      <View style={styles.profileMenu}><MenuRow icon="account-multiple-outline" title="Associated Customers" onPress={() => router.push('/customer/group/accounts')} /><MenuRow icon="bell-outline" title="Notification Preferences" onPress={() => router.push('/customer/notifications')} /><MenuRow icon="headset" title="Support" onPress={() => router.push('/customer/support')} /><MenuRow icon="logout" title="Sign out" danger onPress={() => void signOut(router)} /></View>
+      <View style={styles.profileMenu}><MenuRow icon="account-multiple-outline" title="Associated Customers" onPress={() => router.push('/customer/group/accounts')} /><MenuRow icon="bell-outline" title="Notification Preferences" onPress={() => router.push('/customer/notifications')} /><MenuRow icon="headset" title="Support" onPress={() => router.push('/customer/support')} /><MenuRow icon="logout" title="Sign out" danger onPress={signOutNow} /></View>
     </>}
   </GroupPageShell>;
 }
