@@ -1,10 +1,8 @@
 import * as Updates from 'expo-updates';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 type UpdateStatus = 'idle' | 'checking' | 'downloading' | 'restarting';
-
-const CHECK_INTERVAL_MS = 5 * 60 * 1000;
 
 const statusCopy: Record<Exclude<UpdateStatus, 'idle'>, string> = {
   checking: 'Checking for app update',
@@ -14,20 +12,13 @@ const statusCopy: Record<Exclude<UpdateStatus, 'idle'>, string> = {
 
 export function AppUpdateManager() {
   const [status, setStatus] = useState<UpdateStatus>('idle');
-  const lastCheckAt = useRef(0);
   const isChecking = useRef(false);
 
-  const checkForUpdates = useCallback(async (force = false) => {
+  const checkForUpdates = useCallback(async () => {
     if (__DEV__ || !Updates.isEnabled || isChecking.current) {
       return;
     }
 
-    const now = Date.now();
-    if (!force && now - lastCheckAt.current < CHECK_INTERVAL_MS) {
-      return;
-    }
-
-    lastCheckAt.current = now;
     isChecking.current = true;
 
     try {
@@ -53,15 +44,7 @@ export function AppUpdateManager() {
   }, []);
 
   useEffect(() => {
-    void checkForUpdates(true);
-
-    const subscription = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active') {
-        void checkForUpdates();
-      }
-    });
-
-    return () => subscription.remove();
+    void checkForUpdates();
   }, [checkForUpdates]);
 
   if (__DEV__ || status === 'idle') {
