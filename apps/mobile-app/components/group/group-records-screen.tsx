@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -15,6 +16,7 @@ type RecordRow = { id: string; customerId: string; accountName: string; title: s
 
 export function GroupRecordsScreen({ mode }: { mode: Mode }) {
   const router = useLoadingRouter();
+  const params = useLocalSearchParams<{ accountId?: string }>();
   const [contexts, setContexts] = useState<CustomerAccountContext[]>([]);
   const [rows, setRows] = useState<RecordRow[]>([]);
   const [query, setQuery] = useState('');
@@ -30,6 +32,8 @@ export function GroupRecordsScreen({ mode }: { mode: Mode }) {
       const ids = Array.from(new Set(portfolioContexts.map((item) => item.customer_id)));
       if (!active) return;
       setContexts(portfolioContexts);
+      const requestedAccountId = typeof params.accountId === 'string' ? params.accountId : '';
+      if (requestedAccountId && portfolioContexts.some((context) => context.customer_id === requestedAccountId)) setAccountId(requestedAccountId);
       if (!ids.length) { setRows([]); return; }
       const accountNames = new Map(portfolioContexts.map((item) => [item.customer_id, customerAccountTitle(item)]));
       if (mode === 'fleet') {
@@ -46,8 +50,12 @@ export function GroupRecordsScreen({ mode }: { mode: Mode }) {
         });
         if (active) setRows(next);
       } else if (mode === 'policies') {
-        const { data } = await supabase.from('policies').select('*').in('customer_id', ids).order('end_date', { ascending: true });
-        const next = ((data ?? []) as Policy[]).map((policy) => { const days = Math.ceil((new Date(policy.end_date).getTime() - Date.now()) / 86400000); return { id: policy.id, customerId: policy.customer_id, accountName: accountNames.get(policy.customer_id) ?? 'Associated Account', title: policy.policy_no, subtitle: policy.policy_type || 'Insurance Policy', meta: `Valid until ${formatDate(policy.end_date)}`, status: days < 0 ? 'Expired' : days <= 30 ? 'Renewal Due' : 'Active', tone: days < 0 ? 'red' : days <= 30 ? 'orange' : 'green' } as RecordRow; });
+        const [{ data }, { data: vehicles }] = await Promise.all([
+          supabase.from('policies').select('*').in('customer_id', ids).order('end_date', { ascending: true }),
+          supabase.from('vehicles').select('*').in('customer_id', ids),
+        ]);
+        const vehicleNumbers = new Map(((vehicles ?? []) as Vehicle[]).map((vehicle) => [vehicle.id, vehicle.vehicle_no]));
+        const next = ((data ?? []) as Policy[]).map((policy) => { const days = Math.ceil((new Date(policy.end_date).getTime() - Date.now()) / 86400000); const vehicleNo = vehicleNumbers.get(policy.vehicle_id) ?? 'Vehicle unavailable'; return { id: policy.id, customerId: policy.customer_id, accountName: accountNames.get(policy.customer_id) ?? 'Associated Account', title: policy.policy_no, subtitle: `${vehicleNo} - ${policy.policy_type || 'Insurance Policy'}`, meta: `Valid until ${formatDate(policy.end_date)}`, status: days < 0 ? 'Expired' : days <= 30 ? 'Renewal Due' : 'Active', tone: days < 0 ? 'red' : days <= 30 ? 'orange' : 'green' } as RecordRow; });
         if (active) setRows(next);
       } else {
         const { data } = await supabase.from('claims').select('*').in('customer_id', ids).order('created_at', { ascending: false });
@@ -55,7 +63,7 @@ export function GroupRecordsScreen({ mode }: { mode: Mode }) {
         if (active) setRows(next);
       }
     } finally { if (active) setLoading(false); }
-  })(); return () => { active = false; }; }, [mode]);
+  })(); return () => { active = false; }; }, [mode, params.accountId]);
 
   const filtered = useMemo(() => rows.filter((row) => (accountId === 'all' || row.customerId === accountId) && (!query.trim() || `${row.title} ${row.subtitle} ${row.meta} ${row.accountName}`.toLowerCase().includes(query.trim().toLowerCase()))), [accountId, query, rows]);
   const title = mode === 'fleet' ? 'Group Fleet' : mode === 'policies' ? 'Group Policies' : 'Group Claims';

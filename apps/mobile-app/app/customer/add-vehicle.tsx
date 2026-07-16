@@ -1,6 +1,7 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Button, Card, Message, Screen, TextField } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
@@ -13,6 +14,8 @@ export default function AddVehicleScreen() {
   const [contexts, setContexts] = useState<CustomerAccountContext[]>([]);
   const [manufacturers, setManufacturers] = useState<string[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [makeQuery, setMakeQuery] = useState('');
   const [vehicleNo, setVehicleNo] = useState('');
   const [vehicleType, setVehicleType] = useState('Commercial Vehicle');
   const [make, setMake] = useState('');
@@ -51,7 +54,9 @@ export default function AddVehicleScreen() {
         setManufacturers([]);
         return;
       }
-      setManufacturers((data ?? []).map((item) => item.name).filter(Boolean));
+      const nextManufacturers = (data ?? []).map((item) => item.name).filter(Boolean);
+      setManufacturers(nextManufacturers);
+      setMake((current) => current || nextManufacturers[0] || '');
     }
     void loadManufacturers();
     return () => {
@@ -87,13 +92,14 @@ export default function AddVehicleScreen() {
   }
 
   return (
-    <Screen title="Add Vehicle" showLogout>
-      <Card>
+    <Screen title="Add Vehicle" showLogout showTitleHeader={false}>
+      <Text style={styles.compactTitle}>Add Vehicle</Text>
+      <Card style={styles.formCard}>
         {message ? <Message type="error">{message}</Message> : null}
-        {contexts.length > 1 ? <AccountSelector contexts={contexts} selectedCustomerId={selectedCustomerId} onSelect={setSelectedCustomerId} /> : null}
-        <TextField label="Vehicle number" value={vehicleNo} onChangeText={setVehicleNo} autoCapitalize="characters" />
+        {contexts.length > 1 ? <AccountDropdown contexts={contexts} selectedCustomerId={selectedCustomerId} open={accountOpen} onToggle={() => setAccountOpen((value) => !value)} onSelect={(customerId) => { setSelectedCustomerId(customerId); setAccountOpen(false); }} /> : null}
+        <TextField label="Vehicle number" value={vehicleNo} onChangeText={(value) => setVehicleNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" />
         <TextField label="Vehicle type" value={vehicleType} onChangeText={setVehicleType} />
-        <ManufacturerSelector manufacturers={manufacturers} selectedMake={make} onSelect={setMake} />
+        <ManufacturerSelector manufacturers={manufacturers} selectedMake={make} query={makeQuery} onQueryChange={setMakeQuery} onSelect={setMake} />
         <TextField label="Model" value={model} onChangeText={setModel} />
         <TextField label="Year" keyboardType="number-pad" value={year} onChangeText={setYear} />
         <Button label={saving ? 'Saving vehicle...' : 'Save vehicle'} onPress={save} disabled={saving} />
@@ -103,33 +109,42 @@ export default function AddVehicleScreen() {
   );
 }
 
-function AccountSelector({ contexts, selectedCustomerId, onSelect }: { contexts: CustomerAccountContext[]; selectedCustomerId: string; onSelect: (customerId: string) => void }) {
+function AccountDropdown({ contexts, selectedCustomerId, open, onToggle, onSelect }: { contexts: CustomerAccountContext[]; selectedCustomerId: string; open: boolean; onToggle: () => void; onSelect: (customerId: string) => void }) {
+  const selected = contexts.find((context) => context.customer_id === selectedCustomerId);
   return (
     <View style={styles.accountBlock}>
       <Text style={styles.accountLabel}>Add for</Text>
-      {contexts.map((context) => {
+      <Pressable accessibilityRole="button" onPress={onToggle} style={styles.dropdownButton}>
+        <View style={styles.accountCopy}>
+          <Text style={styles.accountTitle} numberOfLines={1}>{selected ? customerAccountTitle(selected) : 'Select customer'}</Text>
+          <Text style={styles.accountMeta}>{selected ? `${selected.access_source === 'group_child' ? 'Associated account' : 'Parent account'} - ${partnerTypeLabel(selected.partner_type)}` : 'Choose where this vehicle belongs'}</Text>
+        </View>
+        <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={22} color={palette.navy} />
+      </Pressable>
+      {open ? <View style={styles.dropdownMenu}>{contexts.map((context) => {
         const active = context.customer_id === selectedCustomerId;
-        return (
-          <Pressable key={context.customer_id} accessibilityRole="button" onPress={() => onSelect(context.customer_id)} style={[styles.accountOption, active && styles.accountOptionActive]}>
+        return <Pressable key={context.customer_id} accessibilityRole="button" onPress={() => onSelect(context.customer_id)} style={[styles.dropdownItem, active && styles.dropdownItemActive]}>
             <View style={styles.accountCopy}>
               <Text style={[styles.accountTitle, active && styles.accountTitleActive]} numberOfLines={1}>{customerAccountTitle(context)}</Text>
               <Text style={[styles.accountMeta, active && styles.accountMetaActive]}>{context.access_source === 'group_child' ? 'Associated account' : 'Parent account'} - {partnerTypeLabel(context.partner_type)}</Text>
             </View>
-            <View style={[styles.radio, active && styles.radioActive]} />
-          </Pressable>
-        );
-      })}
+            {active ? <MaterialCommunityIcons name="check-circle" size={19} color={palette.navy} /> : null}
+          </Pressable>;
+      })}</View> : null}
     </View>
   );
 }
 
-function ManufacturerSelector({ manufacturers, selectedMake, onSelect }: { manufacturers: string[]; selectedMake: string; onSelect: (make: string) => void }) {
+function ManufacturerSelector({ manufacturers, selectedMake, query, onQueryChange, onSelect }: { manufacturers: string[]; selectedMake: string; query: string; onQueryChange: (value: string) => void; onSelect: (make: string) => void }) {
+  const visibleManufacturers = manufacturers.filter((manufacturer) => !query.trim() || manufacturer.toLowerCase().includes(query.trim().toLowerCase())).slice(0, 12);
   return (
     <View style={styles.manufacturerBlock}>
       <Text style={styles.accountLabel}>Make</Text>
       {manufacturers.length ? (
-        <View style={styles.manufacturerGrid}>
-          {manufacturers.map((manufacturer) => {
+        <View style={styles.makePanel}>
+          <View style={styles.makeSearch}><MaterialCommunityIcons name="magnify" size={18} color="#7A8799" /><TextInput value={query} onChangeText={onQueryChange} placeholder="Search manufacturer" placeholderTextColor="#8A94A6" style={styles.makeSearchInput} /></View>
+          <View style={styles.manufacturerGrid}>
+          {visibleManufacturers.map((manufacturer) => {
             const active = manufacturer === selectedMake;
             return (
               <Pressable key={manufacturer} accessibilityRole="button" onPress={() => onSelect(manufacturer)} style={[styles.manufacturerChip, active && styles.manufacturerChipActive]}>
@@ -137,6 +152,7 @@ function ManufacturerSelector({ manufacturers, selectedMake, onSelect }: { manuf
               </Pressable>
             );
           })}
+          </View>
         </View>
       ) : (
         <TextField label="Make" value={selectedMake} onChangeText={onSelect} />
@@ -146,20 +162,25 @@ function ManufacturerSelector({ manufacturers, selectedMake, onSelect }: { manuf
 }
 
 const styles = StyleSheet.create({
+  compactTitle: { color: palette.navy, fontSize: 18, fontWeight: '900', marginBottom: 6, marginTop: -6 },
+  formCard: { borderRadius: 18 },
   accountBlock: { gap: 8, marginBottom: 10 },
   accountLabel: { color: palette.slate, fontSize: 12, fontWeight: '800' },
-  accountOption: { minHeight: 58, borderRadius: 14, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#F8FBFF', padding: 11, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  accountOptionActive: { borderColor: palette.navy, backgroundColor: '#EEF5FF' },
+  dropdownButton: { minHeight: 58, borderRadius: 15, borderWidth: 1, borderColor: '#CFE0F8', backgroundColor: '#F8FBFF', padding: 11, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  dropdownMenu: { borderRadius: 15, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', overflow: 'hidden' },
+  dropdownItem: { minHeight: 56, paddingHorizontal: 11, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#EEF2F6', flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dropdownItemActive: { backgroundColor: '#EEF5FF' },
   accountCopy: { flex: 1, minWidth: 0 },
   accountTitle: { color: palette.ink, fontSize: 13, fontWeight: '900' },
   accountTitleActive: { color: palette.navy },
   accountMeta: { color: palette.slate, fontSize: 10.5, fontWeight: '700', marginTop: 2 },
   accountMetaActive: { color: '#315C99' },
-  radio: { width: 17, height: 17, borderRadius: 9, borderWidth: 2, borderColor: '#B7C5D8' },
-  radioActive: { borderColor: palette.navy, backgroundColor: palette.navy },
   manufacturerBlock: { marginBottom: 12 },
+  makePanel: { borderRadius: 16, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#F8FBFF', padding: 10, gap: 9 },
+  makeSearch: { minHeight: 42, borderRadius: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  makeSearchInput: { flex: 1, minHeight: 40, color: palette.navy, fontSize: 13, fontWeight: '700' },
   manufacturerGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  manufacturerChip: { maxWidth: '48%', minHeight: 38, borderRadius: 12, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', paddingHorizontal: 11, alignItems: 'center', justifyContent: 'center' },
+  manufacturerChip: { maxWidth: '48%', minHeight: 38, borderRadius: 999, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', paddingHorizontal: 11, alignItems: 'center', justifyContent: 'center' },
   manufacturerChipActive: { borderColor: palette.navy, backgroundColor: '#EEF5FF' },
   manufacturerText: { color: palette.slate, fontSize: 11.5, fontWeight: '800' },
   manufacturerTextActive: { color: palette.navy },
