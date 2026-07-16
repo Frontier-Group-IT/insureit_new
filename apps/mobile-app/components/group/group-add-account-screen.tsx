@@ -225,25 +225,18 @@ export function GroupAddAccountScreen() {
         group_name: customerAccountTitle(groupContext),
         initiated_from: 'group_mobile',
       };
-      const insert = await (supabase.from('customer_onboarding_applications') as any)
-        .insert({
-          profile_id: session.user.id,
-          initiated_by: session.user.id,
-          source: 'customer_app',
-          partner_type: type,
-          status: 'in_progress',
-          current_step: steps.length,
-          applicant_phone: profile.phone,
-          applicant_email: profile.email,
-          group_customer_id: groupContext.customer_id,
-          draft_data: draft,
-        })
-        .select('*')
-        .single();
-      if (insert.error || !insert.data) throw insert.error ?? new Error('Application could not be created.');
+      const insert = await (supabase.rpc as any)('start_group_associated_onboarding_application', {
+        p_group_customer_id: groupContext.customer_id,
+        p_partner_type: type,
+        p_current_step: steps.length,
+        p_applicant_phone: profile.phone,
+        p_applicant_email: profile.email,
+        p_draft_data: draft,
+      });
+      if (insert.error || !insert.data) throw new Error(insert.error?.message || 'Application could not be created.');
       for (const [documentType, file] of Object.entries(files)) if (file) await uploadDocument(insert.data.id, documentType, file);
       const submitted = await (supabase.rpc as any)('submit_group_associated_onboarding_application', { p_application_id: insert.data.id, p_draft_data: draft });
-      if (submitted.error) throw submitted.error;
+      if (submitted.error) throw new Error(submitted.error.message || 'The onboarding application could not be submitted.');
       setSuccess(true);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'The onboarding application could not be submitted.');

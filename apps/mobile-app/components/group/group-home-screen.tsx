@@ -43,10 +43,11 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
       return;
     }
     let active = true;
+    const selectedGroupContext = groupContext;
     async function load() {
       try {
         const contexts = await getAccessibleCustomerContexts();
-        const associated = contexts.filter((item) => item.access_source === 'group_child' && item.group_customer_id === groupContext.customer_id);
+        const associated = contexts.filter((item) => item.access_source === 'group_child' && item.group_customer_id === selectedGroupContext.customer_id);
         const accountIds = associated.map((item) => item.customer_id);
         if (!accountIds.length) {
           if (active) setData({ associated, vehicles: [], policies: [], claims: [] });

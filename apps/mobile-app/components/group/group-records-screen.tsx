@@ -57,7 +57,7 @@ export function GroupRecordsScreen({ mode }: { mode: Mode }) {
   const filtered = useMemo(() => rows.filter((row) => (accountId === 'all' || row.customerId === accountId) && (!query.trim() || `${row.title} ${row.subtitle} ${row.meta} ${row.accountName}`.toLowerCase().includes(query.trim().toLowerCase()))), [accountId, query, rows]);
   const title = mode === 'fleet' ? 'Group Fleet' : mode === 'policies' ? 'Group Policies' : 'Group Claims';
   const summary = mode === 'fleet' ? `${rows.length} vehicles across ${contexts.length} accounts` : mode === 'policies' ? `${rows.length} policies across the Group portfolio` : `${rows.length} claims across the Group portfolio`;
-  const icon = mode === 'fleet' ? 'truck-outline' : mode === 'policies' ? 'file-document-outline' : 'shield-search-outline';
+  const icon = mode === 'fleet' ? 'truck-outline' : mode === 'policies' ? 'file-document-outline' : 'shield-check-outline';
 
   return <GroupPageShell title={title} subtitle={summary} icon={icon}>
     {loading ? <LoadingState /> : <>

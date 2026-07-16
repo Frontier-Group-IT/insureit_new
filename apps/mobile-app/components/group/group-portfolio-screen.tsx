@@ -76,16 +76,17 @@ export function GroupAccountDetailScreen() {
 
   if (loading) return <GroupPageShell title="Account Details" subtitle="Loading associated account" icon="office-building-outline"><LoadingState /></GroupPageShell>;
   if (!context || !customer) return <GroupPageShell title="Account Details" subtitle="Associated account unavailable" icon="office-building-outline"><EmptyState title="Account unavailable" body="This account is not available in the Group portfolio." /></GroupPageShell>;
+  const selectedContext = context;
   const openClaims = claims.filter((claim) => !['Closed','Settled','Rejected','Claim Complete'].includes(claim.current_status));
   const activePolicies = policies.filter((policy) => new Date(policy.end_date).getTime() >= Date.now());
-  const groupName = context.group_name || 'Group Account';
-  async function openAsSelectedAccount() { await selectCustomerContext(context.customer_id); router.replace('/customer/home'); }
+  const groupName = selectedContext.group_name || 'Group Account';
+  async function openAsSelectedAccount() { await selectCustomerContext(selectedContext.customer_id); router.replace('/customer/home'); }
 
-  return <GroupPageShell title={customerAccountTitle(context)} subtitle={`Associated with ${groupName}`} icon="office-building-outline">
+  return <GroupPageShell title={customerAccountTitle(selectedContext)} subtitle={`Associated with ${groupName}`} icon="office-building-outline">
     <View style={styles.detailMetrics}><LargeMetric label="Vehicles" value={vehicles.length} /><LargeMetric label="Policies" value={activePolicies.length} lined /><LargeMetric label="Open Claims" value={openClaims.length} lined /></View>
-    <View style={styles.infoCard}><Info label="Customer Code" value={context.customer_code} /><Info label="Contact Person" value={customer.contact_name || '—'} /><Info label="Mobile" value={customer.phone || '—'} /><Info label="Email" value={customer.email || '—'} /><Info label="Location" value={[customer.city, customer.state].filter(Boolean).join(', ') || '—'} /></View>
+    <View style={styles.infoCard}><Info label="Customer Code" value={selectedContext.customer_code} /><Info label="Contact Person" value={customer.contact_name || '—'} /><Info label="Mobile" value={customer.phone || '—'} /><Info label="Email" value={customer.email || '—'} /><Info label="Location" value={[customer.city, customer.state].filter(Boolean).join(', ') || '—'} /></View>
     <Text style={styles.sectionTitle}>Account Actions</Text>
-    <View style={styles.actionGrid}><DetailAction icon="truck-outline" title="Vehicles" onPress={openAsSelectedAccount} /><DetailAction icon="file-document-outline" title="Policies" onPress={openAsSelectedAccount} /><DetailAction icon="shield-search-outline" title="Claims" onPress={openAsSelectedAccount} /><DetailAction icon="account-switch-outline" title="Open Account" onPress={openAsSelectedAccount} /></View>
+    <View style={styles.actionGrid}><DetailAction icon="truck-outline" title="Vehicles" onPress={openAsSelectedAccount} /><DetailAction icon="file-document-outline" title="Policies" onPress={openAsSelectedAccount} /><DetailAction icon="shield-check-outline" title="Claims" onPress={openAsSelectedAccount} /><DetailAction icon="account-switch-outline" title="Open Account" onPress={openAsSelectedAccount} /></View>
     <View style={styles.noteCard}><MaterialCommunityIcons name="information-outline" size={20} color="#0A43A3" /><Text style={styles.noteText}>Opening this account switches the app context while keeping your Group access active.</Text></View>
   </GroupPageShell>;
 }
