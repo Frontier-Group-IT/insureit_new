@@ -95,16 +95,19 @@ as $$
      and application.group_customer_id = p_group_customer_id
      and application.status not in ('approved', 'cancelled')
   )
-  select * from linked_customers
-  union all
-  select application.*
-  from onboarding_applications application
-  where not exists (
-    select 1
-    from linked_customers linked
-    where linked.application_id = application.application_id
-       or linked.customer_id = application.customer_id
-  )
+  select *
+  from (
+    select * from linked_customers
+    union all
+    select application.*
+    from onboarding_applications application
+    where not exists (
+      select 1
+      from linked_customers linked
+      where linked.application_id = application.application_id
+         or linked.customer_id = application.customer_id
+    )
+  ) overview_rows
   order by
     case when account_source = 'linked_customer' then 0 else 1 end,
     updated_at desc nulls last,
