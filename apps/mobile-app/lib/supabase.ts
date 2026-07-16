@@ -4,6 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { createClient } from '@supabase/supabase-js';
 
+import { beginTrackedLoading, endTrackedLoading } from '@/lib/loading-tracker';
+
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -24,10 +26,49 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 function platformFetch(input: RequestInfo | URL, init?: RequestInit) {
-  if (Platform.OS === 'web' && typeof XMLHttpRequest !== 'undefined') {
-    return xhrFetch(input, init);
-  }
-  return fetch(input, init);
+  const url = requestUrl(input);
+  const method = requestMethod(input, init);
+  const tracked = shouldTrackRequest(url, method);
+  const token = tracked ? beginTrackedLoading(requestLabel(url, method)) : null;
+  const request = Platform.OS === 'web' && typeof XMLHttpRequest !== 'undefined'
+    ? xhrFetch(input, init)
+    : fetch(input, init);
+
+  return request.finally(() => {
+    if (!token) return;
+    setTimeout(() => endTrackedLoading(token), 140);
+  });
+}
+
+function requestUrl(input: RequestInfo | URL) {
+  if (typeof input === 'string') return input;
+  if (input instanceof URL) return input.toString();
+  return input.url;
+}
+
+function requestMethod(input: RequestInfo | URL, init?: RequestInit) {
+  if (init?.method) return init.method.toUpperCase();
+  if (typeof Request !== 'undefined' && input instanceof Request) return input.method.toUpperCase();
+  return 'GET';
+}
+
+function shouldTrackRequest(url: string, method: string) {
+  if (method === 'OPTIONS' || method === 'HEAD') return false;
+  if (url.includes('/auth/v1/token') && url.includes('grant_type=refresh_token')) return false;
+  if (url.includes('/auth/v1/health')) return false;
+  if (url.includes('/rest/v1/india_locations')) return false;
+  if (url.includes('/rest/v1/notifications')) return false;
+  return url.startsWith(supabaseUrl!);
+}
+
+function requestLabel(url: string, method: string) {
+  if (url.includes('/storage/v1/object') && method !== 'GET') return 'Uploading document';
+  if (url.includes('/rpc/')) return 'Processing request';
+  if (url.includes('/auth/v1/')) return method === 'GET' ? 'Checking your session' : 'Signing you in';
+  if (method === 'GET') return 'Loading page data';
+  if (method === 'DELETE') return 'Deleting record';
+  if (method === 'PATCH' || method === 'PUT') return 'Saving changes';
+  return 'Processing request';
 }
 
 function xhrFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
