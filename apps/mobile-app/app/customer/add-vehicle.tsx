@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button, Card, Message, Screen, TextField } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
@@ -11,12 +11,14 @@ import { palette } from '@/lib/theme';
 export default function AddVehicleScreen() {
   const router = useRouter();
   const [contexts, setContexts] = useState<CustomerAccountContext[]>([]);
+  const [manufacturers, setManufacturers] = useState<string[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [vehicleNo, setVehicleNo] = useState('');
   const [vehicleType, setVehicleType] = useState('Commercial Vehicle');
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
   const [year, setYear] = useState('');
+  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -35,14 +37,52 @@ export default function AddVehicleScreen() {
     };
   }, [router]);
 
+  useEffect(() => {
+    let active = true;
+    async function loadManufacturers() {
+      const { data, error } = await supabase
+        .from('vehicle_manufacturers')
+        .select('name')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true });
+      if (!active) return;
+      if (error) {
+        setManufacturers([]);
+        return;
+      }
+      setManufacturers((data ?? []).map((item) => item.name).filter(Boolean));
+    }
+    void loadManufacturers();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   async function save() {
     setMessage('');
+    if (saving) return;
     const session = await getCurrentSession();
     if (!session?.user) return router.replace('/login');
     const target = contexts.find((context) => context.customer_id === selectedCustomerId);
     if (!target) return setMessage('Select the customer account for this vehicle.');
-    const { error } = await supabase.from('vehicles').insert({ customer_id: target.customer_id, vehicle_no: vehicleNo.trim().toUpperCase(), vehicle_type: vehicleType.trim(), make: make.trim() || null, model: model.trim() || null, year: year ? Number(year) : null });
-    if (error) setMessage('We could not save this vehicle. Please try again.');
+    if (!vehicleNo.trim()) return setMessage('Enter the vehicle number.');
+    if (!vehicleType.trim()) return setMessage('Enter the vehicle type.');
+    if (!make.trim()) return setMessage('Select the vehicle manufacturer.');
+    const parsedYear = year ? Number(year) : null;
+    if (parsedYear !== null && (!Number.isInteger(parsedYear) || parsedYear < 1950 || parsedYear > new Date().getFullYear() + 1)) return setMessage('Enter a valid manufacturing year.');
+
+    setSaving(true);
+    const { error } = await (supabase.rpc as any)('create_customer_vehicle', {
+      p_customer_id: target.customer_id,
+      p_vehicle_no: vehicleNo.trim().toUpperCase(),
+      p_vehicle_type: vehicleType.trim(),
+      p_make: make.trim(),
+      p_model: model.trim() || null,
+      p_year: parsedYear,
+    });
+    setSaving(false);
+    if (error) setMessage(error.message || 'We could not save this vehicle. Please try again.');
     else router.replace(contexts[0]?.partner_type === 'group' ? '/customer/group/fleet' : '/customer/vehicles');
   }
 
@@ -53,10 +93,11 @@ export default function AddVehicleScreen() {
         {contexts.length > 1 ? <AccountSelector contexts={contexts} selectedCustomerId={selectedCustomerId} onSelect={setSelectedCustomerId} /> : null}
         <TextField label="Vehicle number" value={vehicleNo} onChangeText={setVehicleNo} autoCapitalize="characters" />
         <TextField label="Vehicle type" value={vehicleType} onChangeText={setVehicleType} />
-        <TextField label="Make" value={make} onChangeText={setMake} />
+        <ManufacturerSelector manufacturers={manufacturers} selectedMake={make} onSelect={setMake} />
         <TextField label="Model" value={model} onChangeText={setModel} />
         <TextField label="Year" keyboardType="number-pad" value={year} onChangeText={setYear} />
-        <Button label="Save vehicle" onPress={save} />
+        <Button label={saving ? 'Saving vehicle...' : 'Save vehicle'} onPress={save} disabled={saving} />
+        {saving ? <ActivityIndicator color={palette.navy} /> : null}
       </Card>
     </Screen>
   );
@@ -82,6 +123,28 @@ function AccountSelector({ contexts, selectedCustomerId, onSelect }: { contexts:
   );
 }
 
+function ManufacturerSelector({ manufacturers, selectedMake, onSelect }: { manufacturers: string[]; selectedMake: string; onSelect: (make: string) => void }) {
+  return (
+    <View style={styles.manufacturerBlock}>
+      <Text style={styles.accountLabel}>Make</Text>
+      {manufacturers.length ? (
+        <View style={styles.manufacturerGrid}>
+          {manufacturers.map((manufacturer) => {
+            const active = manufacturer === selectedMake;
+            return (
+              <Pressable key={manufacturer} accessibilityRole="button" onPress={() => onSelect(manufacturer)} style={[styles.manufacturerChip, active && styles.manufacturerChipActive]}>
+                <Text style={[styles.manufacturerText, active && styles.manufacturerTextActive]} numberOfLines={1}>{manufacturer}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : (
+        <TextField label="Make" value={selectedMake} onChangeText={onSelect} />
+      )}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   accountBlock: { gap: 8, marginBottom: 10 },
   accountLabel: { color: palette.slate, fontSize: 12, fontWeight: '800' },
@@ -94,4 +157,10 @@ const styles = StyleSheet.create({
   accountMetaActive: { color: '#315C99' },
   radio: { width: 17, height: 17, borderRadius: 9, borderWidth: 2, borderColor: '#B7C5D8' },
   radioActive: { borderColor: palette.navy, backgroundColor: palette.navy },
+  manufacturerBlock: { marginBottom: 12 },
+  manufacturerGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  manufacturerChip: { maxWidth: '48%', minHeight: 38, borderRadius: 12, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', paddingHorizontal: 11, alignItems: 'center', justifyContent: 'center' },
+  manufacturerChipActive: { borderColor: palette.navy, backgroundColor: '#EEF5FF' },
+  manufacturerText: { color: palette.slate, fontSize: 11.5, fontWeight: '800' },
+  manufacturerTextActive: { color: palette.navy },
 });
