@@ -30,7 +30,9 @@ export function getTrackedLoadingEntries() {
 export function subscribeTrackedLoading(listener: Listener) {
   listeners.add(listener);
   listener(entries);
-  return () => listeners.delete(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 export async function withTrackedLoading<T>(task: () => Promise<T>, label = 'Processing request') {
