@@ -58,10 +58,19 @@ export async function getSelectedCustomerContext(): Promise<CustomerAccountConte
 
   const storedCustomerId = await AsyncStorage.getItem(selectedCustomerKey);
   const selected = contexts.find((context) => context.customer_id === storedCustomerId);
-  if (selected) return selected;
+  const directGroup = contexts.find((context) => context.access_source === 'direct' && context.partner_type === 'group');
+
+  if (selected) {
+    if (selected.access_source === 'group_child' || selected.partner_type === 'group' || !directGroup) {
+      return selected;
+    }
+
+    await AsyncStorage.setItem(selectedCustomerKey, directGroup.customer_id);
+    return directGroup;
+  }
 
   const directPrimary = contexts.find((context) => context.access_source === 'direct');
-  const fallback = directPrimary ?? contexts[0];
+  const fallback = directGroup ?? directPrimary ?? contexts[0];
   await AsyncStorage.setItem(selectedCustomerKey, fallback.customer_id);
   return fallback;
 }
