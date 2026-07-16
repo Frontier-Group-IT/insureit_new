@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppLoadingProvider, useAppLoading } from '@/components/app-loading';
+import { AppUpdateManager } from '@/components/app-update-manager';
 import { SplashIntro } from '@/components/first-look';
 import { RealtimeNotificationProvider } from '@/components/realtime-notifications';
 
@@ -27,6 +28,7 @@ function RootApplication() {
     <>
       <StatusBar style={introVisible ? 'light' : 'dark'} />
       <RealtimeNotificationProvider>
+        <AppUpdateManager />
         <Stack
           screenOptions={{ headerShown: false, animation: 'none' }}
           screenListeners={{ state: () => beginNavigation('Loading page') }}
