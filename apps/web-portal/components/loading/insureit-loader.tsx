@@ -1,6 +1,11 @@
 export function InsureItLoader({ label = "Loading", sublabel = "", compact = false }: { label?: string; sublabel?: string; compact?: boolean }) {
   return (
-    <div className={`flex items-center justify-center text-left ${compact ? "gap-3" : "flex-col gap-3 text-center"}`} role="status" aria-live="polite">
+    <div
+      className={`flex items-center justify-center text-left ${compact ? "gap-3" : "flex-col gap-3 text-center"}`}
+      role="status"
+      aria-live="polite"
+      data-insureit-loader="true"
+    >
       <div className={`relative overflow-hidden ${compact ? "h-10 w-28" : "h-16 w-44"}`}>
         <div className="absolute inset-x-0 bottom-2 h-[2px] rounded-full bg-[#AFC0D5]" />
         <div className="absolute inset-x-0 bottom-[5px] flex justify-around opacity-70">
@@ -30,7 +35,7 @@ export function InsureItLoader({ label = "Loading", sublabel = "", compact = fal
 
 export function InsureItButtonLoader({ label = "Working" }: { label?: string }) {
   return (
-    <span className="inline-flex items-center gap-2">
+    <span className="inline-flex items-center gap-2" data-insureit-loader="true">
       <span className="relative h-4 w-7 overflow-hidden">
         <span className="absolute bottom-0 left-0 h-2.5 w-4 rounded-sm bg-white/90" />
         <span className="absolute bottom-0 left-4 h-3 w-2.5 rounded-r-sm rounded-t-sm bg-white" />
