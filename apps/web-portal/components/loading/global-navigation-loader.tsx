@@ -109,6 +109,7 @@ function GlobalNavigationLoaderInner() {
   const startedAtRef = useRef(Date.now());
   const activeRequestsRef = useRef(0);
   const routePendingRef = useRef(false);
+  const routeStartUrlRef = useRef("");
   const intentRef = useRef<LoadingIntent | null>(null);
   const settleVersionRef = useRef(0);
   const safetyTimerRef = useRef<number | null>(null);
@@ -140,6 +141,7 @@ function GlobalNavigationLoaderInner() {
     clearSafetyTimer();
     clearRouteFallback();
     routePendingRef.current = false;
+    routeStartUrlRef.current = "";
     intentRef.current = null;
     loadingRef.current = false;
     if (mountedRef.current) setLoading(false);
@@ -191,20 +193,30 @@ function GlobalNavigationLoaderInner() {
 
   const beginRoute = useCallback((nextLabel = "Loading page") => {
     const startingUrl = window.location.href;
+    routeStartUrlRef.current = startingUrl;
     armIntent(nextLabel);
     clearRouteFallback();
     routePendingRef.current = true;
     showLoader(nextLabel);
-    routeFallbackTimerRef.current = window.setTimeout(() => {
-      if (window.location.href !== startingUrl || activeRequestsRef.current > 0) return;
+
+    const confirmRoute = () => {
+      if (!routePendingRef.current || window.location.href !== startingUrl) return;
+      if (activeRequestsRef.current > 0) {
+        routeFallbackTimerRef.current = window.setTimeout(confirmRoute, 300);
+        return;
+      }
       routePendingRef.current = false;
+      routeStartUrlRef.current = "";
       void settleLoader();
-    }, routeConfirmationMs);
+    };
+
+    routeFallbackTimerRef.current = window.setTimeout(confirmRoute, routeConfirmationMs);
   }, [armIntent, clearRouteFallback, settleLoader, showLoader]);
 
   useEffect(() => {
     clearRouteFallback();
     routePendingRef.current = false;
+    routeStartUrlRef.current = "";
     void settleLoader();
   }, [clearRouteFallback, pathname, searchKey, settleLoader]);
 
@@ -280,11 +292,18 @@ function GlobalNavigationLoaderInner() {
       if (!button || button.dataset.noLoader === "true" || button.getAttribute("aria-disabled") === "true" || button.hasAttribute("disabled")) return;
       const nativeButton = button as HTMLButtonElement;
       const type = nativeButton.type?.toLowerCase();
-      if (type === "submit") return;
+      if (type === "submit" && nativeButton.form) return;
 
       const nextLabel = button.dataset.loadingLabel ?? button.getAttribute("aria-label") ?? "Loading";
       armIntent(nextLabel);
       if (button.dataset.showLoader === "true" || button.dataset.loadingLabel) showLoader(nextLabel);
+    }
+
+    function handleChange(event: Event) {
+      const control = event.target as HTMLElement | null;
+      if (!control || control.dataset.noLoader === "true") return;
+      if (!control.matches("select, input[type='checkbox'], input[type='radio']")) return;
+      armIntent(control.dataset.loadingLabel ?? "Updating");
     }
 
     function handleSubmit(event: SubmitEvent) {
@@ -309,11 +328,13 @@ function GlobalNavigationLoaderInner() {
 
     function handlePageShow() {
       routePendingRef.current = false;
+      routeStartUrlRef.current = "";
       showLoader("Loading page");
       void settleLoader();
     }
 
     document.addEventListener("click", handleClick, true);
+    document.addEventListener("change", handleChange, true);
     document.addEventListener("submit", handleSubmit, true);
     window.addEventListener("popstate", handlePopState);
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -325,6 +346,7 @@ function GlobalNavigationLoaderInner() {
       window.history.pushState = originalPushState;
       window.history.replaceState = originalReplaceState;
       document.removeEventListener("click", handleClick, true);
+      document.removeEventListener("change", handleChange, true);
       document.removeEventListener("submit", handleSubmit, true);
       window.removeEventListener("popstate", handlePopState);
       window.removeEventListener("beforeunload", handleBeforeUnload);
