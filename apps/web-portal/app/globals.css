@@ -73,6 +73,14 @@ summary {
   color: #15183b;
 }
 
+html[data-insureit-global-loading="true"] [data-insureit-loader="true"] {
+  visibility: hidden;
+}
+
+html[data-insureit-global-loading="true"] [data-insureit-global-loader="true"] [data-insureit-loader="true"] {
+  visibility: visible;
+}
+
 @keyframes insureit-orbit {
   to {
     transform: rotate(360deg);
@@ -128,5 +136,11 @@ summary {
   }
   100% {
     transform: translateX(88px) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-insureit-loader="true"] * {
+    animation-duration: 3.6s !important;
   }
 }
