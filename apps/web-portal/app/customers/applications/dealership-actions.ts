@@ -273,15 +273,15 @@ export async function approveMobileDealershipApplication(formData: FormData) {
     redirect(`/customers/applications/${applicationId}?error=documents_incomplete`);
   }
 
-  const duplicateQueries = [
-    admin.from("customers").select("id").eq("phone", ownerPhone).limit(1).maybeSingle<{ id: string }>(),
+  // The same authenticated Group user can own several associated accounts. Their
+  // owner phone therefore must not be treated as a duplicate customer identity.
+  const [duplicateRepresentative, duplicateGst] = await Promise.all([
     admin.from("dealership_representatives").select("id").eq("pan_number", representativePan).limit(1).maybeSingle<{ id: string }>(),
     isGstRegistered && gstNumber
       ? admin.from("customers").select("id").eq("gst_number", gstNumber).limit(1).maybeSingle<{ id: string }>()
-      : Promise.resolve({ data: null, error: null }),
-  ];
-  const [duplicatePhone, duplicateRepresentative, duplicateGst] = await Promise.all(duplicateQueries);
-  if (duplicatePhone.data || duplicateRepresentative.data || duplicateGst.data) {
+      : Promise.resolve({ data: null as { id: string } | null, error: null }),
+  ]);
+  if (duplicateRepresentative.data || duplicateGst.data) {
     redirect(`/customers/applications/${applicationId}?error=customer_already_exists`);
   }
 
