@@ -72,9 +72,10 @@ export default async function CustomerApplicationsPage() {
                 <tbody className="divide-y divide-[#EEF2F6]">
                   {(data ?? []).map((application) => {
                     const draft = application.draft_data ?? {};
-                    const name = textValue(draft.contact_name);
+                    const name = applicationName(application.partner_type, draft);
                     const city = textValue(draft.city);
                     const state = textValue(draft.state);
+                    const totalSteps = stepTotal(application.partner_type);
                     return (
                       <tr key={application.id} className="hover:bg-[#FAFCFF]">
                         <td className="px-3 py-3"><p className="font-semibold text-[#0F172A]">{name ?? application.applicant_phone ?? "-"}</p><p className="mt-0.5 text-[9.5px] text-[#64748B]">{application.applicant_phone ?? application.applicant_email ?? "-"}</p></td>
@@ -82,7 +83,7 @@ export default async function CustomerApplicationsPage() {
                         <td className="px-3 py-3">{[city, state].filter(Boolean).join(", ") || "-"}</td>
                         <td className="px-3 py-3">{documentCounts.get(application.id) ?? 0}</td>
                         <td className="px-3 py-3">{application.source === "customer_app" ? "Mobile app" : "Manager portal"}</td>
-                        <td className="px-3 py-3">Step {application.current_step} of 4</td>
+                        <td className="px-3 py-3">Step {application.current_step} of {totalSteps}</td>
                         <td className="px-3 py-3"><StatusPill status={application.status} /></td>
                         <td className="px-3 py-3 text-[#64748B]">{new Date(application.updated_at).toLocaleString("en-IN")}</td>
                         <td className="px-3 py-3">{application.customer_id ? <Link href={`/customers/${application.customer_id}/edit`} className="font-semibold text-[#4F46E5] hover:underline">Open customer</Link> : <Link href={`/customers/applications/${application.id}`} className="font-semibold text-[#4F46E5] hover:underline">Review</Link>}</td>
@@ -101,6 +102,17 @@ export default async function CustomerApplicationsPage() {
 }
 
 function textValue(value: unknown) { return typeof value === "string" && value.trim() ? value.trim() : null; }
+function applicationName(partnerType: string | null, draft: Record<string, unknown>) {
+  if (partnerType === "dealership") return textValue(draft.dealership_name) ?? textValue(draft.owner_name);
+  if (partnerType === "corporate") return textValue(draft.company_name);
+  if (partnerType === "group") return textValue(draft.group_name) ?? textValue(draft.owner_name);
+  return textValue(draft.contact_name);
+}
+function stepTotal(partnerType: string | null) {
+  if (partnerType === "dealership") return 7;
+  if (partnerType === "individual_proprietor") return 5;
+  return 4;
+}
 
 function StatusPill({ status }: { status: string }) {
   const complete = status === "approved";
