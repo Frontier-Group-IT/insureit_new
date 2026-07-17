@@ -8,7 +8,8 @@ const minimumVisibleMs = 360;
 const networkQuietMs = 220;
 const domQuietMs = 180;
 const safetyTimeoutMs = 20000;
-const userIntentWindowMs = 900;
+const userIntentWindowMs = 1200;
+const routeConfirmationMs = 1500;
 
 type LoadingIntent = {
   label: string;
@@ -111,6 +112,7 @@ function GlobalNavigationLoaderInner() {
   const intentRef = useRef<LoadingIntent | null>(null);
   const settleVersionRef = useRef(0);
   const safetyTimerRef = useRef<number | null>(null);
+  const routeFallbackTimerRef = useRef<number | null>(null);
   const mountedRef = useRef(true);
 
   const setDocumentBusy = useCallback((busy: boolean) => {
@@ -128,15 +130,21 @@ function GlobalNavigationLoaderInner() {
     safetyTimerRef.current = null;
   }, []);
 
+  const clearRouteFallback = useCallback(() => {
+    if (routeFallbackTimerRef.current) window.clearTimeout(routeFallbackTimerRef.current);
+    routeFallbackTimerRef.current = null;
+  }, []);
+
   const hideLoader = useCallback(() => {
     settleVersionRef.current += 1;
     clearSafetyTimer();
+    clearRouteFallback();
     routePendingRef.current = false;
     intentRef.current = null;
     loadingRef.current = false;
     if (mountedRef.current) setLoading(false);
     setDocumentBusy(false);
-  }, [clearSafetyTimer, setDocumentBusy]);
+  }, [clearRouteFallback, clearSafetyTimer, setDocumentBusy]);
 
   const showLoader = useCallback((nextLabel = "Loading page") => {
     settleVersionRef.current += 1;
@@ -172,19 +180,33 @@ function GlobalNavigationLoaderInner() {
   }, [hideLoader]);
 
   const armIntent = useCallback((nextLabel: string) => {
-    intentRef.current = { label: nextLabel, expiresAt: Date.now() + userIntentWindowMs };
-  }, []);
+    const intent = { label: nextLabel, expiresAt: Date.now() + userIntentWindowMs };
+    intentRef.current = intent;
+    window.setTimeout(() => {
+      if (intentRef.current !== intent) return;
+      intentRef.current = null;
+      if (!routePendingRef.current && activeRequestsRef.current === 0) void settleLoader();
+    }, userIntentWindowMs + 50);
+  }, [settleLoader]);
 
   const beginRoute = useCallback((nextLabel = "Loading page") => {
+    const startingUrl = window.location.href;
     armIntent(nextLabel);
+    clearRouteFallback();
     routePendingRef.current = true;
     showLoader(nextLabel);
-  }, [armIntent, showLoader]);
+    routeFallbackTimerRef.current = window.setTimeout(() => {
+      if (window.location.href !== startingUrl || activeRequestsRef.current > 0) return;
+      routePendingRef.current = false;
+      void settleLoader();
+    }, routeConfirmationMs);
+  }, [armIntent, clearRouteFallback, settleLoader, showLoader]);
 
   useEffect(() => {
+    clearRouteFallback();
     routePendingRef.current = false;
     void settleLoader();
-  }, [pathname, searchKey, settleLoader]);
+  }, [clearRouteFallback, pathname, searchKey, settleLoader]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -308,9 +330,10 @@ function GlobalNavigationLoaderInner() {
       window.removeEventListener("beforeunload", handleBeforeUnload);
       window.removeEventListener("pageshow", handlePageShow);
       clearSafetyTimer();
+      clearRouteFallback();
       setDocumentBusy(false);
     };
-  }, [armIntent, beginRoute, clearSafetyTimer, setDocumentBusy, settleLoader, showLoader]);
+  }, [armIntent, beginRoute, clearRouteFallback, clearSafetyTimer, setDocumentBusy, settleLoader, showLoader]);
 
   if (!loading) return null;
 
