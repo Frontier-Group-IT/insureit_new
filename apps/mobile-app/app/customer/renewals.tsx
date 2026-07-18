@@ -69,26 +69,35 @@ export default function ComplianceRenewalsScreen() {
     customerNames: data.accountNames,
   }), [data]);
 
-  if (loading) return <Screen title="Pending Renewals"><LoadingState /></Screen>;
+  const expiredCount = renewals.summaries.reduce((total, item) => total + item.expired, 0);
+  const dueCount = renewals.summaries.reduce((total, item) => total + item.due, 0);
+
+  if (loading) return <Screen title="Renewals" showTitleHeader={false}><LoadingState /></Screen>;
 
   return (
-    <Screen title="Pending Renewals" subtitle={`Due within ${RENEWAL_DUE_WINDOW_DAYS} days, expired and total pending`} showLogout>
-      {message ? <View style={styles.errorCard}><MaterialCommunityIcons name="alert-circle-outline" size={18} color="#B42318" /><Text style={styles.errorText}>{message}</Text></View> : null}
-
-      <View style={styles.heroCard}>
-        <View>
-          <Text style={styles.heroLabel}>Total pending</Text>
-          <Text style={styles.heroValue}>{renewals.totalPending}</Text>
+    <Screen title="Renewals" showLogout showTitleHeader={false}>
+      <View style={styles.focusPanel}>
+        <View style={styles.focusTop}>
+          <View style={styles.focusCopy}>
+            <Text style={styles.pageTitle}>Pending Renewals</Text>
+            <Text style={styles.pageSubtitle}>Compliance documents due within {RENEWAL_DUE_WINDOW_DAYS} days.</Text>
+          </View>
+          <View style={styles.totalBadge}>
+            <Text style={styles.totalValue}>{renewals.totalPending}</Text>
+            <Text style={styles.totalLabel}>pending</Text>
+          </View>
         </View>
-        <View style={styles.heroMeta}>
-          <Text style={styles.heroMetaText}>Expired {renewals.summaries.reduce((total, item) => total + item.expired, 0)}</Text>
-          <Text style={styles.heroMetaText}>Due {renewals.summaries.reduce((total, item) => total + item.due, 0)}</Text>
+        <View style={styles.kpiRow}>
+          <Kpi label="Total documents" value={renewals.totalPending} tone="navy" />
+          <Kpi label="Expired" value={expiredCount} tone="red" />
+          <Kpi label="Due in 45 days" value={dueCount} tone="amber" />
         </View>
       </View>
+      {message ? <View style={styles.errorCard}><MaterialCommunityIcons name="alert-circle-outline" size={18} color="#B42318" /><Text style={styles.errorText}>{message}</Text></View> : null}
 
       <View style={styles.summaryGrid}>
         {renewals.summaries.map((summary) => (
-          <View key={summary.key} style={[styles.summaryCard, !summary.tracked && styles.summaryCardDisabled]}>
+          <View key={summary.key} style={[styles.summaryCard, summary.key === 'dl' && styles.summaryCardWide, !summary.tracked && styles.summaryCardDisabled]}>
             <View style={styles.summaryTop}>
               <View style={[styles.summaryIcon, summary.totalPending > 0 && styles.summaryIconHot]}>
                 <MaterialCommunityIcons name={iconFor[summary.key]} size={18} color={summary.totalPending > 0 ? '#C43D2D' : '#0A43A3'} />
@@ -137,20 +146,41 @@ function Metric({ label, value, tone }: { label: string; value: number; tone: 'a
   return <View style={styles.metric}><Text style={[styles.metricValue, textStyle]}>{value}</Text><Text style={styles.metricLabel}>{label}</Text></View>;
 }
 
+function Kpi({ label, value, tone }: { label: string; value: number; tone: 'amber' | 'red' | 'navy' }) {
+  const textStyle = tone === 'red' ? styles.kpiRed : tone === 'amber' ? styles.kpiAmber : styles.kpiNavy;
+  return (
+    <View style={styles.kpiCard}>
+      <Text style={[styles.kpiValue, textStyle]}>{value}</Text>
+      <Text style={styles.kpiLabel}>{label}</Text>
+    </View>
+  );
+}
+
 function formatDate(value: string) {
   return new Date(`${value}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 const styles = StyleSheet.create({
+  focusPanel: { borderRadius: 18, borderWidth: 1, borderColor: '#CFE0F8', backgroundColor: '#FFFFFF', padding: 12, marginTop: -6, marginBottom: 9, shadowColor: palette.ink, shadowOpacity: 0.05, shadowRadius: 12, elevation: 2 },
+  focusTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  focusCopy: { flex: 1, minWidth: 0 },
+  pageTitle: { color: palette.navy, fontSize: 16, lineHeight: 20, fontWeight: '900' },
+  pageSubtitle: { color: palette.slate, fontSize: 11, lineHeight: 15, fontWeight: '700', marginTop: 2 },
+  totalBadge: { minWidth: 70, borderRadius: 15, backgroundColor: palette.navy, paddingHorizontal: 11, paddingVertical: 8, alignItems: 'center' },
+  totalValue: { color: '#FFFFFF', fontSize: 22, lineHeight: 25, fontWeight: '900' },
+  totalLabel: { color: '#D8E7FF', fontSize: 9.5, fontWeight: '800', marginTop: 1 },
+  kpiRow: { flexDirection: 'row', gap: 7, marginTop: 10 },
+  kpiCard: { flex: 1, minHeight: 54, borderRadius: 13, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E3ECF7', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
+  kpiValue: { fontSize: 18, lineHeight: 21, fontWeight: '900' },
+  kpiNavy: { color: palette.navy },
+  kpiRed: { color: '#C43D2D' },
+  kpiAmber: { color: '#B7791F' },
+  kpiLabel: { color: '#667085', fontSize: 8.5, lineHeight: 11, fontWeight: '800', textAlign: 'center', marginTop: 2 },
   errorCard: { borderRadius: 12, borderWidth: 1, borderColor: '#FECDCA', backgroundColor: '#FEF3F2', padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   errorText: { flex: 1, color: '#B42318', fontSize: 11, fontWeight: '700' },
-  heroCard: { borderRadius: 17, backgroundColor: palette.navy, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroLabel: { color: '#C9D7EF', fontSize: 11, fontWeight: '800' },
-  heroValue: { color: '#FFFFFF', fontSize: 34, lineHeight: 38, fontWeight: '900', marginTop: 2 },
-  heroMeta: { gap: 5, alignItems: 'flex-end' },
-  heroMetaText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
-  summaryGrid: { gap: 8 },
-  summaryCard: { borderRadius: 15, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', padding: 10 },
+  summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  summaryCard: { width: '48.8%', borderRadius: 15, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', padding: 10 },
+  summaryCardWide: { width: '100%' },
   summaryCardDisabled: { backgroundColor: '#F8FAFC' },
   summaryTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   summaryIcon: { width: 32, height: 32, borderRadius: 11, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' },

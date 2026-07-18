@@ -52,7 +52,7 @@ const trackedDocuments: Array<{
 
 const allDocuments: Array<{ key: ComplianceDocumentKey; title: string; tracked: boolean }> = [
   ...trackedDocuments.map((document) => ({ key: document.key, title: document.title, tracked: true })),
-  { key: 'dl', title: 'DL', tracked: false },
+  { key: 'dl', title: "Driver's Licence", tracked: false },
 ];
 
 export function buildComplianceRenewals(input: {

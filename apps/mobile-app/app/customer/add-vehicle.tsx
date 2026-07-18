@@ -99,8 +99,7 @@ export default function AddVehicleScreen() {
     const invalidDate = dateFields.find(([, value]) => value.trim() && !isDateOnly(value.trim()));
     if (invalidDate) return setMessage(`Enter ${invalidDate[0]} as YYYY-MM-DD.`);
 
-    setSaving(true);
-    const { error } = await (supabase.rpc as any)('create_customer_vehicle', {
+    const rpcPayload = {
       p_customer_id: target.customer_id,
       p_vehicle_no: vehicleNo.trim().toUpperCase(),
       p_vehicle_type: vehicleType.trim(),
@@ -117,7 +116,22 @@ export default function AddVehicleScreen() {
       p_road_tax_expiry_date: cleanDate(roadTaxExpiryDate),
       p_national_permit_expiry_date: cleanDate(nationalPermitExpiryDate),
       p_local_permit_expiry_date: cleanDate(localPermitExpiryDate),
-    });
+    };
+
+    setSaving(true);
+    let { error } = await (supabase.rpc as any)('create_customer_vehicle', rpcPayload);
+    if (isMissingVehicleRpcSignature(error)) {
+      console.warn('create_customer_vehicle extended signature is unavailable; retrying legacy signature');
+      const fallback = await (supabase.rpc as any)('create_customer_vehicle', {
+        p_customer_id: rpcPayload.p_customer_id,
+        p_vehicle_no: rpcPayload.p_vehicle_no,
+        p_vehicle_type: rpcPayload.p_vehicle_type,
+        p_make: rpcPayload.p_make,
+        p_model: rpcPayload.p_model,
+        p_year: rpcPayload.p_year,
+      });
+      error = fallback.error;
+    }
     setSaving(false);
     if (error) setMessage(error.message || 'We could not save this vehicle. Please try again.');
     else router.replace(contexts[0]?.partner_type === 'group' ? '/customer/group/fleet' : '/customer/vehicles');
@@ -226,6 +240,11 @@ function isDateOnly(value: string) {
   const [year, month, day] = value.split('-').map(Number);
   const date = new Date(year, month - 1, day);
   return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+}
+
+function isMissingVehicleRpcSignature(error: { code?: string; message?: string } | null | undefined) {
+  const message = error?.message?.toLowerCase() ?? '';
+  return error?.code === 'PGRST202' || (message.includes('create_customer_vehicle') && (message.includes('schema cache') || message.includes('could not find the function')));
 }
 
 const styles = StyleSheet.create({
