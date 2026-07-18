@@ -8,6 +8,7 @@ import { BottomNavigation } from '@/components/customer-dashboard';
 import { BrandLogo } from '@/components/first-look';
 import { NotificationBell } from '@/components/realtime-notifications';
 import { LoadingState } from '@/components/ui';
+import { buildComplianceRenewals } from '@/lib/compliance-renewals';
 import { customerAccountTitle, getGroupChildAccountOverview, membershipRoleLabel, type CustomerAccountContext, type GroupChildAccountOverview } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
@@ -81,9 +82,10 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
   const now = Date.now();
   const activePolicies = useMemo(() => data.policies.filter((policy) => new Date(policy.end_date).getTime() >= now), [data.policies, now]);
   const expiredPolicies = useMemo(() => data.policies.filter((policy) => new Date(policy.end_date).getTime() < now), [data.policies, now]);
+  const complianceRenewals = useMemo(() => buildComplianceRenewals({ vehicles: data.vehicles, policies: data.policies }), [data.vehicles, data.policies]);
   const expiringSoon = useMemo(() => data.policies.filter((policy) => {
     const days = Math.ceil((new Date(policy.end_date).getTime() - now) / 86400000);
-    return days >= 0 && days <= 30;
+    return days >= 0 && days <= 45;
   }), [data.policies, now]);
   const openClaims = useMemo(() => data.claims.filter((claim) => !closedStatuses.has(claim.current_status)), [data.claims]);
   const settled = useMemo(() => data.claims.filter((claim) => claim.current_status === 'Closed' || claim.current_status === 'Settled'), [data.claims]);
@@ -114,10 +116,10 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
       {error ? <View style={styles.errorCard}><MaterialCommunityIcons name="alert-circle-outline" size={19} color="#B42318" /><Text style={styles.errorText}>{error}</Text></View> : null}
 
       <AttentionStrip
-        renewals={expiringSoon.length}
+        renewals={complianceRenewals.totalPending}
         claims={actionRequired.length}
         disabled={underReview}
-        onRenewals={() => router.push('/customer/group/policies')}
+        onRenewals={() => router.push('/customer/renewals' as any)}
         onClaims={() => router.push('/customer/group/claims')}
       />
 
@@ -169,7 +171,7 @@ function AttentionStrip({ renewals, claims, disabled, onRenewals, onClaims }: { 
       <View style={styles.attentionStripIcon}><MaterialCommunityIcons name="bell-alert-outline" size={17} color="#0A43A3" /></View>
       <View style={styles.attentionStripCopy}>
         <Text style={styles.attentionStripTitle}>Needs Your Attention</Text>
-        <Text style={styles.attentionStripText}>Follow up on renewals and claims that may need action.</Text>
+        <Text style={styles.attentionStripText}>Track expiring policies, permits and claims that need action.</Text>
       </View>
     </View>
     <View style={styles.attentionPills}>
