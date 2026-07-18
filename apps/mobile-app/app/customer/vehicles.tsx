@@ -5,7 +5,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Image, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
-import { getCurrentSession, getCustomerForUser } from '@/lib/auth';
+import { getCurrentSession } from '@/lib/auth';
+import { getOperationalCustomerContexts } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Claim, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
@@ -52,12 +53,13 @@ export default function VehiclesScreen() {
       const session = await getCurrentSession();
       if (!session?.user) return router.replace('/login');
 
-      const customer = await getCustomerForUser(session.user.id);
-      if (customer) {
+      const contexts = await getOperationalCustomerContexts();
+      const ids = contexts.map((context) => context.customer_id);
+      if (ids.length) {
         const [vehicleResult, policyResult, claimResult, insurerResult] = await Promise.all([
-          supabase.from('vehicles').select('*').eq('customer_id', customer.id).order('created_at', { ascending: false }),
-          supabase.from('policies').select('*').eq('customer_id', customer.id),
-          supabase.from('claims').select('*').eq('customer_id', customer.id),
+          supabase.from('vehicles').select('*').in('customer_id', ids).order('created_at', { ascending: false }),
+          supabase.from('policies').select('*').in('customer_id', ids),
+          supabase.from('claims').select('*').in('customer_id', ids),
           supabase.from('insurance_companies').select('*'),
         ]);
 
@@ -173,7 +175,7 @@ export default function VehiclesScreen() {
         const insurerLogo = insurerImage(insurer?.name);
 
         return (
-          <View key={vehicle.id} style={styles.vehicleCard}>
+          <Pressable key={vehicle.id} onPress={() => router.push({ pathname: '/customer/vehicle-detail', params: { id: vehicle.id } })} style={({ pressed }) => [styles.vehicleCard, pressed && styles.vehicleCardPressed]}>
             <View style={styles.cardMain}>
               <View style={styles.leftPane}>
                 <View style={styles.chipRow}>
@@ -236,7 +238,7 @@ export default function VehiclesScreen() {
               <ActionButton icon="shield-check-outline" title="Endorsement" subtitle="Update policy details" tone="green" onPress={openEndorsement} />
               <ActionButton icon="file-plus-outline" title="Register Claim" subtitle={openClaims ? `${openClaims} open claim${openClaims === 1 ? '' : 's'}` : 'Initiate a new claim'} tone="orange" onPress={() => router.push({ pathname: '/customer/report-accident', params: { vehicleId: vehicle.id } })} />
             </View>
-          </View>
+          </Pressable>
         );
       })}
 
@@ -883,6 +885,7 @@ const styles = StyleSheet.create({
   addButtonText: { color: '#FFFFFF', fontSize: 12, fontWeight: '900' },
 
   vehicleCard: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', borderRadius: 16, marginBottom: 14, padding: 13, shadowColor: palette.ink, shadowOpacity: 0.055, shadowRadius: 10, elevation: 2 },
+  vehicleCardPressed: { opacity: 0.88, transform: [{ scale: 0.99 }] },
   cardMain: { flexDirection: 'row', gap: 13 },
   leftPane: { width: 178, paddingRight: 6 },
   chipRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 7 },

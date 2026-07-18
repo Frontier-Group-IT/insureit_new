@@ -21,6 +21,16 @@ export default function AddVehicleScreen() {
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
   const [year, setYear] = useState('');
+  const [chassisNo, setChassisNo] = useState('');
+  const [engineNo, setEngineNo] = useState('');
+  const [permitNo, setPermitNo] = useState('');
+  const [gvwKg, setGvwKg] = useState('');
+  const [registrationDate, setRegistrationDate] = useState('');
+  const [fitnessExpiryDate, setFitnessExpiryDate] = useState('');
+  const [pucExpiryDate, setPucExpiryDate] = useState('');
+  const [roadTaxExpiryDate, setRoadTaxExpiryDate] = useState('');
+  const [nationalPermitExpiryDate, setNationalPermitExpiryDate] = useState('');
+  const [localPermitExpiryDate, setLocalPermitExpiryDate] = useState('');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -76,6 +86,18 @@ export default function AddVehicleScreen() {
     if (!make.trim()) return setMessage('Select the vehicle manufacturer.');
     const parsedYear = year ? Number(year) : null;
     if (parsedYear !== null && (!Number.isInteger(parsedYear) || parsedYear < 1950 || parsedYear > new Date().getFullYear() + 1)) return setMessage('Enter a valid manufacturing year.');
+    const parsedGvw = gvwKg ? Number(gvwKg) : null;
+    if (parsedGvw !== null && (!Number.isFinite(parsedGvw) || parsedGvw <= 0)) return setMessage('Enter a valid GVW.');
+    const dateFields = [
+      ['registration date', registrationDate],
+      ['fitness expiry date', fitnessExpiryDate],
+      ['PUC expiry date', pucExpiryDate],
+      ['road tax expiry date', roadTaxExpiryDate],
+      ['national permit expiry date', nationalPermitExpiryDate],
+      ['local permit expiry date', localPermitExpiryDate],
+    ] as const;
+    const invalidDate = dateFields.find(([, value]) => value.trim() && !isDateOnly(value.trim()));
+    if (invalidDate) return setMessage(`Enter ${invalidDate[0]} as YYYY-MM-DD.`);
 
     setSaving(true);
     const { error } = await (supabase.rpc as any)('create_customer_vehicle', {
@@ -85,6 +107,16 @@ export default function AddVehicleScreen() {
       p_make: make.trim(),
       p_model: model.trim() || null,
       p_year: parsedYear,
+      p_chassis_no: cleanCode(chassisNo),
+      p_engine_no: cleanCode(engineNo),
+      p_permit_no: cleanCode(permitNo),
+      p_gvw_kg: parsedGvw,
+      p_registration_date: cleanDate(registrationDate),
+      p_fitness_expiry_date: cleanDate(fitnessExpiryDate),
+      p_puc_expiry_date: cleanDate(pucExpiryDate),
+      p_road_tax_expiry_date: cleanDate(roadTaxExpiryDate),
+      p_national_permit_expiry_date: cleanDate(nationalPermitExpiryDate),
+      p_local_permit_expiry_date: cleanDate(localPermitExpiryDate),
     });
     setSaving(false);
     if (error) setMessage(error.message || 'We could not save this vehicle. Please try again.');
@@ -102,6 +134,24 @@ export default function AddVehicleScreen() {
         <ManufacturerSelector manufacturers={manufacturers} selectedMake={make} query={makeQuery} onQueryChange={setMakeQuery} onSelect={setMake} />
         <TextField label="Model" value={model} onChangeText={setModel} />
         <TextField label="Year" keyboardType="number-pad" value={year} onChangeText={setYear} />
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Vehicle identity</Text>
+          <Text style={styles.sectionHint}>Optional registration identifiers for claims and compliance.</Text>
+        </View>
+        <TextField label="Chassis number" value={chassisNo} onChangeText={(value) => setChassisNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" />
+        <TextField label="Engine number" value={engineNo} onChangeText={(value) => setEngineNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" />
+        <TextField label="Permit number" value={permitNo} onChangeText={(value) => setPermitNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" />
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Operational details</Text>
+          <Text style={styles.sectionHint}>Optional fields used for fleet compliance tracking.</Text>
+        </View>
+        <TextField label="GVW (kg)" keyboardType="decimal-pad" value={gvwKg} onChangeText={(value) => setGvwKg(value.replace(/[^0-9.]/g, ''))} />
+        <TextField label="Registration date" placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" value={registrationDate} onChangeText={setRegistrationDate} />
+        <TextField label="Fitness expiry" placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" value={fitnessExpiryDate} onChangeText={setFitnessExpiryDate} />
+        <TextField label="PUC expiry" placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" value={pucExpiryDate} onChangeText={setPucExpiryDate} />
+        <TextField label="Road tax expiry" placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" value={roadTaxExpiryDate} onChangeText={setRoadTaxExpiryDate} />
+        <TextField label="National permit expiry" placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" value={nationalPermitExpiryDate} onChangeText={setNationalPermitExpiryDate} />
+        <TextField label="Local permit expiry" placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" value={localPermitExpiryDate} onChangeText={setLocalPermitExpiryDate} />
         <Button label={saving ? 'Saving vehicle...' : 'Save vehicle'} onPress={save} disabled={saving} />
         {saving ? <ActivityIndicator color={palette.navy} /> : null}
       </Card>
@@ -161,6 +211,23 @@ function ManufacturerSelector({ manufacturers, selectedMake, query, onQueryChang
   );
 }
 
+function cleanDate(value: string) {
+  const next = value.trim();
+  return next ? next : null;
+}
+
+function cleanCode(value: string) {
+  const next = value.replace(/\s/g, '').toUpperCase();
+  return next ? next : null;
+}
+
+function isDateOnly(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+}
+
 const styles = StyleSheet.create({
   compactTitle: { color: palette.navy, fontSize: 18, fontWeight: '900', marginBottom: 6, marginTop: -6 },
   formCard: { borderRadius: 18 },
@@ -184,4 +251,7 @@ const styles = StyleSheet.create({
   manufacturerChipActive: { borderColor: palette.navy, backgroundColor: '#EEF5FF' },
   manufacturerText: { color: palette.slate, fontSize: 11.5, fontWeight: '800' },
   manufacturerTextActive: { color: palette.navy },
+  sectionHeader: { marginTop: 4, marginBottom: 4 },
+  sectionTitle: { color: palette.navy, fontSize: 14, fontWeight: '900' },
+  sectionHint: { color: palette.slate, fontSize: 11, fontWeight: '700', marginTop: 2 },
 });

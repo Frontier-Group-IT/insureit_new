@@ -7,6 +7,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { NotificationBell } from '@/components/realtime-notifications';
 import { BrandLogo } from '@/components/first-look';
 import { getCurrentSession, getProfile, isValidProfile, routeForRole } from '@/lib/auth';
+import { getSelectedCustomerContext, type CustomerAccountContext } from '@/lib/customer-context';
 import { canVerifyDocument } from '@/lib/permissions';
 import { isSalesHierarchyRole } from '@/lib/roles';
 import { colors, palette, radii, roleTheme } from '@/lib/theme';
@@ -22,6 +23,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
   const insets = useSafeAreaInsets();
   const [profileInitial, setProfileInitial] = useState('I');
   const [profileRole, setProfileRole] = useState<AppRole | null>(null);
+  const [customerContext, setCustomerContext] = useState<CustomerAccountContext | null>(null);
   const showProfile = ['/customer', '/it', '/staff', '/agent', '/hierarchy', '/admin'].some((prefix) => pathname.startsWith(prefix));
   const compactTopSpacing = pathname === '/customer/upload-documents';
   const legalTopSpacing = pathname.startsWith('/customer/legal');
@@ -40,6 +42,10 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
         if (!active) return;
         setProfileInitial(initialFor(profile?.full_name ?? session.user.email ?? 'InsureIT'));
         setProfileRole(isValidProfile(profile) ? profile.role : null);
+        if (pathname.startsWith('/customer')) {
+          const context = await getSelectedCustomerContext();
+          if (active) setCustomerContext(context);
+        }
       } catch {
         if (active) setProfileInitial('I');
       }
@@ -48,7 +54,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
     return () => {
       active = false;
     };
-  }, []);
+  }, [pathname]);
 
   function openProfile() {
     if (pathname.startsWith('/customer')) return router.push('/customer/profile');
@@ -128,7 +134,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
           ) : null}
           {children}
         </ScrollView>
-        {showProfile && tabRole ? <BottomTabs role={tabRole} pathname={pathname} bottomInset={insets.bottom} /> : null}
+        {showProfile && tabRole ? <BottomTabs role={tabRole} pathname={pathname} bottomInset={insets.bottom} customerContext={customerContext} /> : null}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -236,9 +242,9 @@ export function NavLink({ href, label }: { href: LinkProps['href']; label: strin
   );
 }
 
-function BottomTabs({ role, pathname, bottomInset }: { role: AppRole; pathname: string; bottomInset: number }) {
+function BottomTabs({ role, pathname, bottomInset, customerContext }: { role: AppRole; pathname: string; bottomInset: number; customerContext?: CustomerAccountContext | null }) {
   const router = useRouter();
-  const tabs = tabsForRole(role);
+  const tabs = tabsForRole(role, customerContext);
   return (
     <View style={[styles.bottomTabsWrap, { paddingBottom: Math.max(bottomInset, 10) }]}>
       <View style={styles.bottomTabs}>
@@ -260,7 +266,7 @@ function BottomTabs({ role, pathname, bottomInset }: { role: AppRole; pathname: 
 
 type BottomTabItem = { label: string; href: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; accent: string; soft: string };
 
-function tabsForRole(role: AppRole): BottomTabItem[] {
+function tabsForRole(role: AppRole, customerContext?: CustomerAccountContext | null): BottomTabItem[] {
   const customer = roleTheme.customer;
   const ops = roleTheme.ops;
   const agent = roleTheme.agent;
@@ -271,6 +277,13 @@ function tabsForRole(role: AppRole): BottomTabItem[] {
   const agentTone = navTone(agent);
   const managementTone = navTone(management);
   const itTone = navTone(it);
+  if (role === 'customer' && customerContext?.partner_type === 'group') return [
+    { label: 'Home', href: '/customer/home', icon: 'home-variant', ...customerTone },
+    { label: 'Accounts', href: '/customer/group/accounts', icon: 'account-multiple-outline', ...customerTone },
+    { label: 'Fleet', href: '/customer/group/fleet', icon: 'truck-outline', ...customerTone },
+    { label: 'Claims', href: '/customer/group/claims', icon: 'shield-check-outline', ...customerTone },
+    { label: 'Profile', href: '/customer/group/profile', icon: 'account-outline', ...customerTone },
+  ];
   if (role === 'customer') return [
     { label: 'Home', href: '/customer/home', icon: 'home-variant', ...customerTone },
     { label: 'Claims', href: '/customer/claims', icon: 'file-document-check-outline', ...customerTone },
@@ -339,6 +352,7 @@ function tabTone(label: string, fallback: { accent: string; soft: string }) {
     case 'Claims':
     case 'Docs':
       return { accent: palette.blue, soft: palette.blueSoft };
+    case 'Accounts':
     case 'Vehicles':
     case 'Vehicle':
       return { accent: palette.cyan, soft: palette.cyanSoft };
@@ -401,6 +415,7 @@ function backTargetFor(pathname: string, params: Record<string, string | string[
   const claimId = routeParam(params, 'claimId');
 
   if (pathname === '/customer/claim-detail') return '/customer/claims';
+  if (pathname === '/customer/policy-detail') return '/customer/policies';
   if (pathname === '/customer/upload-documents') {
     return claimId ? { pathname: '/customer/claim-detail', params: { id: claimId } } : '/customer/home';
   }

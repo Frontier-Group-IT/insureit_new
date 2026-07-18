@@ -16,6 +16,10 @@ function numberValue(formData: FormData, name: string) {
   return value ? Number(value) : null;
 }
 
+function dateValue(formData: FormData, name: string) {
+  return requiredText(formData, name);
+}
+
 function errorUrl(path: string, message: string) {
   const separator = path.includes("?") ? "&" : "?";
   return `${path}${separator}error=${encodeURIComponent(message)}`;
@@ -51,7 +55,14 @@ export async function addVehicle(formData: FormData) {
     year: numberValue(formData, "year"),
     chassis_no: requiredText(formData, "chassis_no")?.toUpperCase() ?? null,
     engine_no: requiredText(formData, "engine_no")?.toUpperCase() ?? null,
-    permit_no: requiredText(formData, "permit_no")?.toUpperCase() ?? null
+    permit_no: requiredText(formData, "permit_no")?.toUpperCase() ?? null,
+    gvw_kg: numberValue(formData, "gvw_kg"),
+    registration_date: dateValue(formData, "registration_date"),
+    fitness_expiry_date: dateValue(formData, "fitness_expiry_date"),
+    puc_expiry_date: dateValue(formData, "puc_expiry_date"),
+    road_tax_expiry_date: dateValue(formData, "road_tax_expiry_date"),
+    national_permit_expiry_date: dateValue(formData, "national_permit_expiry_date"),
+    local_permit_expiry_date: dateValue(formData, "local_permit_expiry_date")
   });
   if (error) redirect(errorUrl("/vehicles/new", `Vehicle could not be saved: ${error.message}`));
 
@@ -76,7 +87,14 @@ export async function saveVehicle(id: string, formData: FormData) {
     year: numberValue(formData, "year"),
     chassis_no: requiredText(formData, "chassis_no")?.toUpperCase() ?? null,
     engine_no: requiredText(formData, "engine_no")?.toUpperCase() ?? null,
-    permit_no: requiredText(formData, "permit_no")?.toUpperCase() ?? null
+    permit_no: requiredText(formData, "permit_no")?.toUpperCase() ?? null,
+    gvw_kg: numberValue(formData, "gvw_kg"),
+    registration_date: dateValue(formData, "registration_date"),
+    fitness_expiry_date: dateValue(formData, "fitness_expiry_date"),
+    puc_expiry_date: dateValue(formData, "puc_expiry_date"),
+    road_tax_expiry_date: dateValue(formData, "road_tax_expiry_date"),
+    national_permit_expiry_date: dateValue(formData, "national_permit_expiry_date"),
+    local_permit_expiry_date: dateValue(formData, "local_permit_expiry_date")
   }).eq("id", id);
   if (error) redirect(errorUrl(`/vehicles/${id}/edit`, `Vehicle could not be updated: ${error.message}`));
 

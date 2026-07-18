@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandLogo } from '@/components/first-look';
@@ -240,7 +240,8 @@ export default function IndividualKycScreen() {
         <BrandLogo width={145} />
         <View style={styles.headerSpacer} />
       </View>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboard}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} automaticallyAdjustKeyboardInsets keyboardDismissMode="interactive">
         <Text style={styles.screenTitle}>Complete Your KYC</Text>
         <KycStepper />
         <View style={styles.partnerSummary}><View style={styles.partnerIcon}><MaterialCommunityIcons name="account-outline" size={21} color="#0A43A3" /></View><View style={styles.partnerCopy}><Text style={styles.partnerEyebrow}>Partner type</Text><Text style={styles.partnerTitle}>Individual / Proprietor</Text></View><MaterialCommunityIcons name="check-circle" size={21} color="#21A66B" /></View>
@@ -251,7 +252,7 @@ export default function IndividualKycScreen() {
           <Field label="Full name" required value={fullName} onChangeText={setFullName} placeholder="Your full legal name" autoCapitalize="words" />
           <Field label="Mobile number" required value={phone} editable={false} icon="lock-outline" />
           <Field label="Email address" required value={email} onChangeText={setEmail} placeholder="name@example.com" keyboardType="email-address" autoCapitalize="none" />
-          <Field label="PAN number" required value={panNumber} onChangeText={(value) => setPanNumber(value.replace(/[^a-z0-9]/gi, '').toUpperCase().slice(0, 10))} placeholder="ABCDE1234F" autoCapitalize="characters" />
+          <Field label="PAN number" required value={panNumber} onChangeText={(value) => setPanNumber(normalizePan(value))} placeholder="ABCDE1234F" autoCapitalize="none" autoCorrect={false} />
           <Field label="Aadhaar number" required value={aadhaarNumber} onChangeText={(value) => setAadhaarNumber(value.replace(/\D/g, '').slice(0, 12))} placeholder="12-digit Aadhaar number" keyboardType="number-pad" secureTextEntry />
           <Text style={styles.privacyNote}>Your Aadhaar number is verified during submission. Only a protected hash and the last four digits are retained.</Text>
         </FormSection>
@@ -280,6 +281,7 @@ export default function IndividualKycScreen() {
         <View style={styles.consent}><MaterialCommunityIcons name="shield-lock-outline" size={20} color="#0F8060" /><Text style={styles.consentText}>Your information is encrypted in transit and will be reviewed only for onboarding and compliance.</Text></View>
       </ScrollView>
       <View style={styles.footer}><Pressable accessibilityRole="button" disabled={submitting} onPress={() => void submit()} style={[styles.submitButton, submitting && styles.submitDisabled]}>{submitting ? <><ActivityIndicator color="#FFFFFF" /><Text style={styles.submitText}>Submitting securely</Text></> : <><Text style={styles.submitText}>Review & Submit</Text><MaterialCommunityIcons name="arrow-right" size={20} color="#FFFFFF" /></>}</Pressable></View>
+      </KeyboardAvoidingView>
       <SuccessModal visible={successVisible} onDone={() => router.replace('/customer/home')} />
     </SafeAreaView>
   );
@@ -344,13 +346,16 @@ function SuccessModal({ visible, onDone }: { visible: boolean; onDone: () => voi
 function asDraft(value: Json): Record<string, Json | undefined> { return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, Json | undefined> : {}; }
 function textDraft(draft: Record<string, Json | undefined>, key: string) { return typeof draft[key] === 'string' ? draft[key] as string : ''; }
 function safeExtension(file: PickedFile) { if (file.mimeType === 'application/pdf') return 'pdf'; if (file.mimeType === 'image/png') return 'png'; return 'jpg'; }
+function normalizePan(value: string) { const cleaned = value.replace(/[^a-z0-9]/gi, '').toUpperCase(); return collapseDoubledTyping(cleaned).slice(0, 10); }
+function collapseDoubledTyping(value: string) { if (value.length >= 4 && value.length % 2 === 0) { let collapsed = ''; for (let index = 0; index < value.length; index += 2) { if (value[index] !== value[index + 1]) return value; collapsed += value[index]; } return collapsed; } return value; }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F5F8FC' },
+  keyboard: { flex: 1 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 }, loadingText: { color: '#5E6D80', fontSize: 13 },
   header: { height: 66, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#DFE6EF' },
   backButton: { width: 42, height: 42, borderRadius: 12, borderWidth: 1, borderColor: '#D7E1EC', alignItems: 'center', justifyContent: 'center' }, headerSpacer: { width: 42 },
-  content: { paddingHorizontal: 15, paddingTop: 16, paddingBottom: 28 }, screenTitle: { color: palette.navy, fontSize: 21, fontWeight: '800' },
+  content: { paddingHorizontal: 15, paddingTop: 16, paddingBottom: 110 }, screenTitle: { color: palette.navy, fontSize: 21, fontWeight: '800' },
   stepper: { flexDirection: 'row', marginTop: 19, marginBottom: 20 }, stepItem: { flex: 1, alignItems: 'center', position: 'relative' }, stepCircle: { width: 31, height: 31, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#CBD5E1', alignItems: 'center', justifyContent: 'center', zIndex: 2 }, stepActive: { backgroundColor: '#0A3B8F', borderColor: '#0A3B8F' }, stepNumber: { color: '#8491A3', fontSize: 12, fontWeight: '700' }, stepNumberActive: { color: '#FFFFFF' }, stepLabel: { marginTop: 6, color: '#8793A4', fontSize: 9.5 }, stepLabelActive: { color: palette.navy, fontWeight: '700' }, stepLine: { position: 'absolute', left: '66%', top: 15, width: '68%', height: 2, backgroundColor: '#D9E1EA' }, stepLineActive: { backgroundColor: '#7FA8E3' },
   partnerSummary: { minHeight: 66, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D9E4F0', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 12 }, partnerIcon: { width: 39, height: 39, borderRadius: 12, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' }, partnerCopy: { flex: 1 }, partnerEyebrow: { color: '#708096', fontSize: 9.5, textTransform: 'uppercase' }, partnerTitle: { color: palette.navy, fontSize: 14, fontWeight: '700', marginTop: 2 },
   errorBox: { borderRadius: 12, backgroundColor: '#FEF3F2', borderWidth: 1, borderColor: '#FECDCA', padding: 11, flexDirection: 'row', gap: 8, marginBottom: 12 }, errorText: { flex: 1, color: '#B42318', fontSize: 11.5, lineHeight: 16 },

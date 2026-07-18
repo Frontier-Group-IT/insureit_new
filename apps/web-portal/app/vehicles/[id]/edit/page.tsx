@@ -17,6 +17,13 @@ type VehicleValues = {
   engine_no: string | null;
   permit_no: string | null;
   year: number | null;
+  gvw_kg: number | null;
+  registration_date: string | null;
+  fitness_expiry_date: string | null;
+  puc_expiry_date: string | null;
+  road_tax_expiry_date: string | null;
+  national_permit_expiry_date: string | null;
+  local_permit_expiry_date: string | null;
 };
 
 export const dynamic = "force-dynamic";
@@ -28,7 +35,7 @@ export default async function EditVehiclePage({ params }: { params: Promise<{ id
   const admin = createSupabaseAdminClient();
 
   const [vehicleResult, customersResult, manufacturersResult] = await Promise.all([
-    admin.from("vehicles").select("customer_id, vehicle_no, vehicle_type, make, model, chassis_no, engine_no, permit_no, year").eq("id", id).maybeSingle<VehicleValues>(),
+    admin.from("vehicles").select("customer_id, vehicle_no, vehicle_type, make, model, chassis_no, engine_no, permit_no, year, gvw_kg, registration_date, fitness_expiry_date, puc_expiry_date, road_tax_expiry_date, national_permit_expiry_date, local_permit_expiry_date").eq("id", id).maybeSingle<VehicleValues>(),
     admin.from("customers").select("id, company_name, contact_name").order("created_at", { ascending: false }).returns<CustomerOption[]>(),
     admin.from("vehicle_manufacturers").select("name").eq("is_active", true).order("sort_order", { ascending: true }).order("name", { ascending: true }).returns<ManufacturerOption[]>()
   ]);

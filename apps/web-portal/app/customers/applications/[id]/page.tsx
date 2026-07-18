@@ -94,7 +94,7 @@ export default async function ApplicationReviewPage({ params, searchParams }: Pa
         ? approveMobileDealershipApplication
         : approveMobileIndividualApplication;
   const fields = application.partner_type === "group"
-    ? [["Group name", draft.group_name], ["Owner / promoter", draft.owner_name], ["Mobile", application.applicant_phone], ["Email", draft.email ?? application.applicant_email]]
+    ? [["Group name", draft.group_name], ["Owner / promoter", draft.owner_name], ["Login mobile", application.applicant_phone], ["Owner contact mobile", draft.owner_phone ?? application.applicant_phone], ["Email", draft.email ?? application.applicant_email]]
     : isCorporate
       ? [["Company name",draft.company_name],["Company PAN",draft.company_pan],["GSTIN",draft.gst_number],["Address",[draft.address_street,draft.address_locality].filter(Boolean).join(", ")],["Location",[draft.city,draft.state,draft.postal_code].filter(Boolean).join(", ")],["Fleet size",labelValue(draft.fleet_size_band)]]
       : isDealership

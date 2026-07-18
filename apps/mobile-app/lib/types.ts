@@ -148,8 +148,8 @@ type Tables = {
     Update: Partial<Tables['customer_onboarding_documents']['Insert']>;
   };
   vehicles: {
-    Row: RowBase & { customer_id: string; vehicle_no: string; vehicle_type: string; make: string | null; model: string | null; year: number | null; chassis_no: string | null; engine_no: string | null; permit_no: string | null };
-    Insert: { customer_id: string; vehicle_no: string; vehicle_type: string; make?: string | null; model?: string | null; year?: number | null; chassis_no?: string | null; engine_no?: string | null; permit_no?: string | null };
+    Row: RowBase & { customer_id: string; vehicle_no: string; vehicle_type: string; make: string | null; model: string | null; year: number | null; chassis_no: string | null; engine_no: string | null; permit_no: string | null; gvw_kg: number | null; registration_date: string | null; fitness_expiry_date: string | null; puc_expiry_date: string | null; road_tax_expiry_date: string | null; national_permit_expiry_date: string | null; local_permit_expiry_date: string | null };
+    Insert: { customer_id: string; vehicle_no: string; vehicle_type: string; make?: string | null; model?: string | null; year?: number | null; chassis_no?: string | null; engine_no?: string | null; permit_no?: string | null; gvw_kg?: number | null; registration_date?: string | null; fitness_expiry_date?: string | null; puc_expiry_date?: string | null; road_tax_expiry_date?: string | null; national_permit_expiry_date?: string | null; local_permit_expiry_date?: string | null };
     Update: Partial<Tables['vehicles']['Insert']>;
   };
   policies: {

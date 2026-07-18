@@ -43,14 +43,15 @@ export async function approveMobileGroupApplication(formData: FormData) {
   const draft = application.draft_data ?? {};
   const groupName = text(draft.group_name);
   const ownerName = text(draft.owner_name);
-  const phone = application.applicant_phone;
+  const loginPhone = application.applicant_phone;
+  const ownerPhone = text(draft.owner_phone) ?? loginPhone;
   const email = text(draft.email) ?? application.applicant_email;
-  if (!groupName || !ownerName || !phone) redirect(`/customers/applications/${applicationId}?error=incomplete_application`);
+  if (!groupName || !ownerName || !loginPhone || !ownerPhone) redirect(`/customers/applications/${applicationId}?error=incomplete_application`);
 
   const { data: duplicate } = await admin
     .from("customers")
     .select("id")
-    .or(`profile_id.eq.${application.profile_id},phone.eq.${phone}`)
+    .or(`profile_id.eq.${application.profile_id},phone.eq.${ownerPhone}`)
     .limit(1)
     .maybeSingle<{ id: string }>();
   if (duplicate) redirect(`/customers/applications/${applicationId}?error=customer_already_exists`);
@@ -64,7 +65,7 @@ export async function approveMobileGroupApplication(formData: FormData) {
     partner_type: "group",
     contact_name: ownerName,
     company_name: groupName,
-    phone,
+    phone: ownerPhone,
     email,
     onboarding_status: "active",
     onboarding_completed_at: now,
@@ -87,7 +88,7 @@ export async function approveMobileGroupApplication(formData: FormData) {
   const { error: membershipError } = await admin.from("customer_memberships").insert({
     customer_id: customerId,
     profile_id: application.profile_id,
-    invited_phone: phone,
+    invited_phone: loginPhone,
     invited_email: email,
     membership_role: "group_owner",
     is_primary: true,

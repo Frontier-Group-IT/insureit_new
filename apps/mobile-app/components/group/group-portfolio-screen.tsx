@@ -13,13 +13,22 @@ import type { Claim, Policy, Vehicle } from '@/lib/types';
 
 type PortfolioRow = GroupChildAccountOverview & { vehicles: number; policies: number; claims: number };
 type ActivityRow = { id: string; event_type: string; title: string | null; message: string | null; priority: string; status: string; created_at: string };
+type AccountFilter = 'all' | 'corporate' | 'individual_proprietor' | 'dealership';
+const accountFilters: AccountFilter[] = ['all', 'corporate', 'individual_proprietor', 'dealership'];
 
 export function GroupAccountsScreen() {
   const router = useLoadingRouter();
+  const params = useLocalSearchParams<{ filter?: string }>();
   const [rows, setRows] = useState<PortfolioRow[]>([]);
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<'all' | 'corporate' | 'individual_proprietor' | 'dealership'>('all');
+  const [filter, setFilter] = useState<AccountFilter>('all');
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (typeof params.filter === 'string' && accountFilters.includes(params.filter as AccountFilter)) {
+      setFilter(params.filter as AccountFilter);
+    }
+  }, [params.filter]);
 
   useEffect(() => { let active = true; setLoading(true); void (async () => {
     try {
@@ -103,6 +112,7 @@ export function GroupAccountDetailScreen() {
   const accountFilter = currentDetail.customer_id ? { accountId: currentDetail.customer_id } : undefined;
 
   return <GroupPageShell title={currentDetail.account_title} subtitle={`${partnerTypeLabel(currentDetail.partner_type)} - ${statusLabel(currentDetail.onboarding_status)}`} icon="office-building-outline" rightAction={<StatusPill status={currentDetail.onboarding_status} />}>
+    <AccountSummaryCard detail={currentDetail} />
     <View style={styles.detailMetrics}>
       <LargeMetric icon="truck-outline" label="Vehicles" value={vehicles.length || currentDetail.vehicle_count} onPress={() => accountFilter && router.push({ pathname: '/customer/group/fleet', params: accountFilter })} />
       <LargeMetric icon="file-document-outline" label="Policies" value={activePolicies.length || currentDetail.active_policy_count} onPress={() => accountFilter && router.push({ pathname: '/customer/group/policies', params: accountFilter })} />
@@ -117,11 +127,33 @@ export function GroupAccountDetailScreen() {
 
 function SmallMetric({ label, value, lined }: { label: string; value: number; lined?: boolean }) { return <View style={[styles.smallMetric, lined && styles.smallMetricLined]}><Text style={styles.smallMetricValue}>{value}</Text><Text style={styles.smallMetricLabel}>{label}</Text></View>; }
 function LargeMetric({ icon, label, value, onPress }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; value: number; onPress: () => void }) { return <Pressable onPress={onPress} style={({ pressed }) => [styles.largeMetric, pressed && styles.largeMetricPressed]}><View style={styles.largeMetricIcon}><MaterialCommunityIcons name={icon} size={19} color="#0A43A3" /></View><Text style={styles.largeMetricValue}>{value}</Text><Text style={styles.largeMetricLabel}>{label}</Text><MaterialCommunityIcons name="chevron-right" size={16} color="#8EA0B8" /></Pressable>; }
+function AccountSummaryCard({ detail }: { detail: GroupAssociatedAccountDetail }) {
+  const details = detail.details;
+  const location = [textValue(details.city), textValue(details.state)].filter((item) => item !== '-').join(', ') || 'Location not available';
+  const contact = [textValue(details.contact_name), textValue(details.phone)].filter((item) => item !== '-').join(' - ') || 'Contact pending';
+  return <View style={styles.summaryCard}>
+    <View style={styles.summaryTop}>
+      <View style={styles.summaryIcon}><MaterialCommunityIcons name={detail.partner_type === 'dealership' ? 'storefront-outline' : detail.partner_type === 'corporate' ? 'office-building-outline' : 'account-outline'} size={25} color="#FFFFFF" /></View>
+      <View style={styles.summaryCopy}>
+        <Text style={styles.summaryEyebrow}>{partnerTypeLabel(detail.partner_type)}</Text>
+        <Text style={styles.summaryName} numberOfLines={2}>{detail.account_title}</Text>
+        <Text style={styles.summaryMeta} numberOfLines={1}>{location}</Text>
+      </View>
+      <StatusPill status={detail.onboarding_status} />
+    </View>
+    <View style={styles.summaryFacts}>
+      <SummaryFact icon="account-tie-outline" label="Primary contact" value={contact} />
+      <SummaryFact icon="identifier" label="Customer code" value={textValue(details.customer_code)} />
+      <SummaryFact icon="card-account-details-outline" label="PAN / GST" value={[textValue(details.company_pan), textValue(details.gst_number)].filter((item) => item !== '-').join(' / ') || '-'} />
+    </View>
+  </View>;
+}
+function SummaryFact({ icon, label, value }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; value: string }) { return <View style={styles.summaryFact}><View style={styles.summaryFactIcon}><MaterialCommunityIcons name={icon} size={15} color="#0A43A3" /></View><View style={styles.summaryFactCopy}><Text style={styles.summaryFactLabel}>{label}</Text><Text style={styles.summaryFactValue} numberOfLines={1}>{value}</Text></View></View>; }
 function SectionCard({ title, icon, children }: { title: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; children: ReactNode }) { return <View style={styles.sectionCard}><View style={styles.sectionHeader}><View style={styles.sectionIcon}><MaterialCommunityIcons name={icon} size={18} color="#0A43A3" /></View><Text style={styles.sectionTitle}>{title}</Text></View><View style={styles.infoCard}>{children}</View></View>; }
 function Info({ label, value }: { label: string; value: string }) { return <View style={styles.infoRow}><Text style={styles.infoLabel}>{label}</Text><Text style={styles.infoValue} numberOfLines={2}>{value}</Text></View>; }
-function ContactInfo({ contact }: { contact: Record<string, unknown> }) { return <View style={styles.infoRow}><Text style={styles.infoLabel}>{roleLabel(textValue(contact.role))}</Text><View style={styles.infoStack}><Text style={styles.infoValue} numberOfLines={1}>{textValue(contact.name)}</Text><Text style={styles.infoSubValue} numberOfLines={1}>{[textValue(contact.phone), textValue(contact.email), statusLabel(textValue(contact.status))].filter((item) => item !== '-').join(' - ') || '-'}</Text></View></View>; }
-function DocumentInfo({ document }: { document: Record<string, unknown> }) { return <View style={styles.infoRow}><Text style={styles.infoLabel}>{documentLabel(textValue(document.type))}</Text><View style={styles.infoStack}><Text style={styles.infoValue} numberOfLines={1}>{textValue(document.file_name)}</Text><Text style={styles.infoSubValue}>{statusLabel(textValue(document.status))}</Text></View></View>; }
-function ActivityInfo({ activity }: { activity: ActivityRow }) { return <View style={styles.activityRow}><View style={styles.activityDot}><MaterialCommunityIcons name={activityIcon(activity.event_type)} size={15} color="#0A43A3" /></View><View style={styles.infoStack}><Text style={styles.infoValue} numberOfLines={1}>{activity.title || eventLabel(activity.event_type)}</Text><Text style={styles.infoSubValue} numberOfLines={2}>{activity.message || formatDate(activity.created_at)}</Text></View><Text style={styles.activityTime}>{shortDate(activity.created_at)}</Text></View>; }
+function ContactInfo({ contact }: { contact: Record<string, unknown> }) { return <View style={styles.contactCard}><View style={styles.contactIcon}><MaterialCommunityIcons name="account-circle-outline" size={19} color="#0A43A3" /></View><View style={styles.infoStack}><Text style={styles.contactRole}>{roleLabel(textValue(contact.role))}</Text><Text style={styles.infoValue} numberOfLines={1}>{textValue(contact.name)}</Text><Text style={styles.infoSubValue} numberOfLines={1}>{[textValue(contact.phone), textValue(contact.email)].filter((item) => item !== '-').join(' - ') || '-'}</Text></View><StatusPill status={textValue(contact.status)} /></View>; }
+function DocumentInfo({ document }: { document: Record<string, unknown> }) { return <View style={styles.documentCard}><View style={styles.documentIcon}><MaterialCommunityIcons name="file-document-check-outline" size={18} color="#0A43A3" /></View><View style={styles.infoStack}><Text style={styles.infoValue} numberOfLines={1}>{documentLabel(textValue(document.type))}</Text><Text style={styles.infoSubValue} numberOfLines={1}>{textValue(document.file_name)}</Text></View><StatusPill status={textValue(document.status)} /></View>; }
+function ActivityInfo({ activity }: { activity: ActivityRow }) { return <View style={styles.timelineRow}><View style={styles.timelineRail}><View style={styles.activityDot}><MaterialCommunityIcons name={activityIcon(activity.event_type)} size={15} color="#0A43A3" /></View></View><View style={styles.timelineBody}><View style={styles.timelineTop}><Text style={styles.infoValue} numberOfLines={1}>{activity.title || eventLabel(activity.event_type)}</Text><Text style={styles.activityTime}>{shortDate(activity.created_at)}</Text></View><Text style={styles.infoSubValue} numberOfLines={2}>{activity.message || formatDate(activity.created_at)}</Text></View></View>; }
 function StatusPill({ status }: { status: string }) { const active = status === 'active' || status === 'approved'; const review = ['submitted','under_review','in_progress'].includes(status); return <View style={[styles.statusPill, active ? styles.statusPillActive : review ? styles.statusPillReview : styles.statusPillMuted]}><Text style={[styles.statusText, active ? styles.statusTextActive : review ? styles.statusTextReview : styles.statusTextMuted]}>{statusLabel(status)}</Text></View>; }
 function statusLabel(status: string) { if (status === 'active' || status === 'approved') return 'Verified'; if (status === 'under_review') return 'Under review'; if (status === 'submitted') return 'Submitted'; if (status === 'changes_requested') return 'Changes requested'; if (status === 'in_progress') return 'In progress'; return status.replace(/_/g, ' '); }
 function textValue(value: unknown) { return typeof value === 'string' && value.trim() ? value.trim() : '-'; }
@@ -137,6 +169,19 @@ const styles = StyleSheet.create({
   addButton: { minHeight: 36, borderRadius: 11, backgroundColor: '#0A43A3', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 5 }, addButtonText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
   searchBox: { minHeight: 48, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE6F0', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 8 }, searchInput: { flex: 1, minHeight: 44, color: palette.navy, fontSize: 13, fontWeight: '600' }, filterRow: { gap: 7, paddingBottom: 2 }, filterChip: { height: 34, borderRadius: 999, borderWidth: 1, borderColor: '#D8E3EF', backgroundColor: '#FFFFFF', paddingHorizontal: 13, justifyContent: 'center' }, filterChipActive: { backgroundColor: palette.navy, borderColor: palette.navy }, filterText: { color: '#65758B', fontSize: 11, fontWeight: '800' }, filterTextActive: { color: '#FFFFFF' },
   customerCard: { borderRadius: 17, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 12, shadowColor: '#122544', shadowOpacity: 0.05, shadowRadius: 9, elevation: 2 }, customerCardPending: { borderStyle: 'dashed', backgroundColor: '#FBFDFF' }, cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 }, businessIcon: { width: 43, height: 43, borderRadius: 12, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' }, cardCopy: { flex: 1, minWidth: 0 }, customerName: { color: palette.navy, fontSize: 14.5, fontWeight: '900' }, customerMeta: { color: '#0A43A3', fontSize: 10, fontWeight: '800', marginTop: 2 }, customerLocation: { color: '#65758B', fontSize: 10.5, fontWeight: '600', marginTop: 2 }, statusPill: { borderRadius: 999, backgroundColor: '#E8F8F0', paddingHorizontal: 8, paddingVertical: 4 }, statusPillActive: { backgroundColor: '#E8F8F0' }, statusPillReview: { backgroundColor: '#FFF4E2' }, statusPillMuted: { backgroundColor: '#F2F4F7' }, statusText: { color: '#12805C', fontSize: 9, fontWeight: '900' }, statusTextActive: { color: '#12805C' }, statusTextReview: { color: '#B7791F' }, statusTextMuted: { color: '#667085' }, cardMetrics: { minHeight: 60, borderRadius: 13, backgroundColor: '#F7FAFE', flexDirection: 'row', marginTop: 11, paddingVertical: 8 }, smallMetric: { flex: 1, alignItems: 'center', justifyContent: 'center' }, smallMetricLined: { borderLeftWidth: 1, borderLeftColor: '#DDE6F0' }, smallMetricValue: { color: palette.navy, fontSize: 18, fontWeight: '900' }, smallMetricLabel: { color: '#65758B', fontSize: 9.5, fontWeight: '700', marginTop: 1 }, cardFooter: { marginTop: 9, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#E8EDF3', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, contactText: { color: '#65758B', fontSize: 10, fontWeight: '600' }, pendingText: { color: '#0A43A3', fontSize: 10, fontWeight: '900' },
+  summaryCard: { borderRadius: 20, backgroundColor: palette.navy, padding: 14, overflow: 'hidden', shadowColor: '#122544', shadowOpacity: 0.12, shadowRadius: 12, elevation: 3 },
+  summaryTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  summaryIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
+  summaryCopy: { flex: 1, minWidth: 0 },
+  summaryEyebrow: { color: '#AFC2E6', fontSize: 9.5, fontWeight: '900', textTransform: 'uppercase' },
+  summaryName: { color: '#FFFFFF', fontSize: 18, lineHeight: 22, fontWeight: '900', marginTop: 2 },
+  summaryMeta: { color: '#C9D7EF', fontSize: 10.5, fontWeight: '700', marginTop: 3 },
+  summaryFacts: { marginTop: 13, gap: 8 },
+  summaryFact: { minHeight: 46, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  summaryFactIcon: { width: 30, height: 30, borderRadius: 10, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' },
+  summaryFactCopy: { flex: 1, minWidth: 0 },
+  summaryFactLabel: { color: '#AFC2E6', fontSize: 9, fontWeight: '800' },
+  summaryFactValue: { color: '#FFFFFF', fontSize: 11.5, fontWeight: '900', marginTop: 1 },
   detailMetrics: { flexDirection: 'row', gap: 8 },
   largeMetric: { flex: 1, minHeight: 104, borderRadius: 17, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center', padding: 9, shadowColor: '#122544', shadowOpacity: 0.06, shadowRadius: 9, elevation: 2 },
   largeMetricPressed: { transform: [{ scale: 0.97 }], backgroundColor: '#F6FAFF' },
@@ -147,12 +192,21 @@ const styles = StyleSheet.create({
   sectionHeader: { minHeight: 52, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#F8FBFF', borderBottomWidth: 1, borderBottomColor: '#E8EEF6' },
   sectionIcon: { width: 32, height: 32, borderRadius: 11, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' },
   sectionTitle: { color: palette.navy, fontSize: 14, fontWeight: '900' },
-  infoCard: { paddingHorizontal: 13, backgroundColor: '#FFFFFF' },
+  infoCard: { paddingHorizontal: 13, paddingVertical: 5, backgroundColor: '#FFFFFF' },
   infoRow: { minHeight: 48, borderBottomWidth: 1, borderBottomColor: '#EEF2F6', flexDirection: 'row', alignItems: 'center', gap: 10 },
   infoLabel: { width: 108, color: '#65758B', fontSize: 10.4, fontWeight: '800' },
   infoStack: { flex: 1, minWidth: 0 },
   infoValue: { flex: 1, color: palette.navy, fontSize: 11.8, fontWeight: '800' },
   infoSubValue: { color: '#65758B', fontSize: 10.3, fontWeight: '700', marginTop: 2 },
+  contactCard: { minHeight: 62, borderRadius: 15, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E3EBF5', paddingHorizontal: 10, marginVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  contactIcon: { width: 34, height: 34, borderRadius: 12, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' },
+  contactRole: { color: '#0A43A3', fontSize: 9.5, fontWeight: '900', textTransform: 'uppercase', marginBottom: 1 },
+  documentCard: { minHeight: 58, borderRadius: 15, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E3EBF5', paddingHorizontal: 10, marginVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  documentIcon: { width: 34, height: 34, borderRadius: 12, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' },
+  timelineRow: { minHeight: 64, flexDirection: 'row', gap: 10, paddingVertical: 7 },
+  timelineRail: { width: 31, alignItems: 'center' },
+  timelineBody: { flex: 1, minWidth: 0, borderBottomWidth: 1, borderBottomColor: '#EEF2F6', paddingBottom: 8 },
+  timelineTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   activityRow: { minHeight: 58, borderBottomWidth: 1, borderBottomColor: '#EEF2F6', flexDirection: 'row', alignItems: 'center', gap: 10 },
   activityDot: { width: 31, height: 31, borderRadius: 11, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' },
   activityTime: { color: '#7A8799', fontSize: 9.5, fontWeight: '900' },

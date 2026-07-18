@@ -9,7 +9,7 @@ import { EmptyState, LoadingState } from '@/components/ui';
 import { customerAccountTitle, getAccessibleCustomerContexts, getSelectedCustomerContext, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
-import type { Claim, Policy, Vehicle } from '@/lib/types';
+import type { Claim, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
 
 type Mode = 'fleet' | 'policies' | 'claims';
 type RecordRow = { id: string; customerId: string; accountName: string; title: string; subtitle: string; meta: string; status: string; tone: 'blue' | 'green' | 'orange' | 'red' };
@@ -50,12 +50,14 @@ export function GroupRecordsScreen({ mode }: { mode: Mode }) {
         });
         if (active) setRows(next);
       } else if (mode === 'policies') {
-        const [{ data }, { data: vehicles }] = await Promise.all([
+        const [{ data }, { data: vehicles }, { data: companies }] = await Promise.all([
           supabase.from('policies').select('*').in('customer_id', ids).order('end_date', { ascending: true }),
           supabase.from('vehicles').select('*').in('customer_id', ids),
+          supabase.from('insurance_companies').select('*'),
         ]);
         const vehicleNumbers = new Map(((vehicles ?? []) as Vehicle[]).map((vehicle) => [vehicle.id, vehicle.vehicle_no]));
-        const next = ((data ?? []) as Policy[]).map((policy) => { const days = Math.ceil((new Date(policy.end_date).getTime() - Date.now()) / 86400000); const vehicleNo = vehicleNumbers.get(policy.vehicle_id) ?? 'Vehicle unavailable'; return { id: policy.id, customerId: policy.customer_id, accountName: accountNames.get(policy.customer_id) ?? 'Associated Account', title: policy.policy_no, subtitle: `${vehicleNo} - ${policy.policy_type || 'Insurance Policy'}`, meta: `Valid until ${formatDate(policy.end_date)}`, status: days < 0 ? 'Expired' : days <= 30 ? 'Renewal Due' : 'Active', tone: days < 0 ? 'red' : days <= 30 ? 'orange' : 'green' } as RecordRow; });
+        const companyNames = new Map(((companies ?? []) as InsuranceCompany[]).map((company) => [company.id, company.name]));
+        const next = ((data ?? []) as Policy[]).map((policy) => { const days = Math.ceil((new Date(policy.end_date).getTime() - Date.now()) / 86400000); const vehicleNo = vehicleNumbers.get(policy.vehicle_id) ?? 'Vehicle unavailable'; const insurer = companyNames.get(policy.insurance_company_id) ?? 'Insurer pending'; return { id: policy.id, customerId: policy.customer_id, accountName: accountNames.get(policy.customer_id) ?? 'Associated Account', title: vehicleNo, subtitle: insurer, meta: `${policy.policy_no} - ${policy.policy_type || 'Insurance Policy'} - Valid until ${formatDate(policy.end_date)}`, status: days < 0 ? 'Expired' : days <= 30 ? 'Renewal Due' : 'Active', tone: days < 0 ? 'red' : days <= 30 ? 'orange' : 'green' } as RecordRow; });
         if (active) setRows(next);
       } else {
         const { data } = await supabase.from('claims').select('*').in('customer_id', ids).order('created_at', { ascending: false });
@@ -75,7 +77,7 @@ export function GroupRecordsScreen({ mode }: { mode: Mode }) {
     {loading ? <LoadingState /> : <>
       <View style={styles.searchBox}><MaterialCommunityIcons name="magnify" size={20} color="#7A8799" /><TextInput value={query} onChangeText={setQuery} placeholder={`Search ${mode === 'fleet' ? 'vehicle or customer' : mode === 'policies' ? 'policy or customer' : 'claim, vehicle or customer'}`} placeholderTextColor="#9AA6B6" style={styles.searchInput} /></View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.accountFilters}><Pressable onPress={() => setAccountId('all')} style={[styles.filterChip, accountId === 'all' && styles.filterChipActive]}><Text style={[styles.filterText, accountId === 'all' && styles.filterTextActive]}>All Accounts</Text></Pressable>{contexts.map((context) => <Pressable key={context.customer_id} onPress={() => setAccountId(context.customer_id)} style={[styles.filterChip, accountId === context.customer_id && styles.filterChipActive]}><Text numberOfLines={1} style={[styles.filterText, accountId === context.customer_id && styles.filterTextActive]}>{customerAccountTitle(context)}</Text></Pressable>)}</ScrollView>
-      {!filtered.length ? <EmptyState title={`No ${mode}`} body={`No matching ${mode} records were found for this Group portfolio.`} /> : filtered.map((row) => <Pressable key={row.id} onPress={() => mode === 'claims' ? router.push({ pathname: '/customer/claim-detail', params: { id: row.id } }) : undefined} style={styles.recordCard}>
+      {!filtered.length ? <EmptyState title={`No ${mode}`} body={`No matching ${mode} records were found for this Group portfolio.`} /> : filtered.map((row) => <Pressable key={row.id} onPress={() => openRecord(router, mode, row.id)} style={({ pressed }) => [styles.recordCard, pressed && styles.recordCardPressed]}>
         <View style={[styles.accent, { backgroundColor: tone(row.tone).accent }]} />
         <View style={[styles.recordIcon, { backgroundColor: tone(row.tone).soft }]}><MaterialCommunityIcons name={mode === 'fleet' ? 'truck-outline' : mode === 'policies' ? 'file-document-outline' : 'shield-check-outline'} size={23} color={tone(row.tone).accent} /></View>
         <View style={styles.recordCopy}><Text style={styles.accountName} numberOfLines={1}>{row.accountName}</Text><Text style={styles.recordTitle} numberOfLines={1}>{row.title}</Text><Text style={styles.recordSubtitle} numberOfLines={1}>{row.subtitle}</Text><Text style={styles.recordMeta} numberOfLines={2}>{row.meta}</Text></View>
@@ -85,11 +87,17 @@ export function GroupRecordsScreen({ mode }: { mode: Mode }) {
   </GroupPageShell>;
 }
 
+function openRecord(router: ReturnType<typeof useLoadingRouter>, mode: Mode, id: string) {
+  if (mode === 'claims') return router.push({ pathname: '/customer/claim-detail', params: { id } });
+  if (mode === 'fleet') return router.push({ pathname: '/customer/vehicle-detail', params: { id } });
+  return router.push({ pathname: '/customer/policy-detail', params: { id } } as any);
+}
+
 function tone(value: RecordRow['tone']) { if (value === 'green') return { accent: '#12805C', soft: '#E8F8F0' }; if (value === 'orange') return { accent: '#B7791F', soft: '#FFF4E2' }; if (value === 'red') return { accent: '#C43838', soft: '#FDECEC' }; return { accent: '#0B63CE', soft: '#EEF5FF' }; }
 function formatDate(value?: string | null) { if (!value) return '—'; return new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }
 
 const styles = StyleSheet.create({
   headerAction: { minHeight: 36, maxWidth: 112, borderRadius: 12, backgroundColor: '#FFFFFF', paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
   headerActionText: { color: palette.navy, fontSize: 9.5, fontWeight: '900' },
-  searchBox: { minHeight: 48, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE6F0', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 8 }, searchInput: { flex: 1, minHeight: 44, color: palette.navy, fontSize: 13, fontWeight: '600' }, accountFilters: { gap: 7, paddingBottom: 2 }, filterChip: { maxWidth: 180, height: 34, borderRadius: 999, borderWidth: 1, borderColor: '#D8E3EF', backgroundColor: '#FFFFFF', paddingHorizontal: 12, justifyContent: 'center' }, filterChipActive: { backgroundColor: palette.navy, borderColor: palette.navy }, filterText: { color: '#65758B', fontSize: 10.5, fontWeight: '800' }, filterTextActive: { color: '#FFFFFF' }, recordCard: { minHeight: 105, borderRadius: 17, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 12, paddingLeft: 16, flexDirection: 'row', alignItems: 'center', gap: 10, overflow: 'hidden', shadowColor: '#122544', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }, accent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5 }, recordIcon: { width: 45, height: 45, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }, recordCopy: { flex: 1, minWidth: 0 }, accountName: { color: '#0A43A3', fontSize: 9.5, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.3 }, recordTitle: { color: palette.navy, fontSize: 15.5, fontWeight: '900', marginTop: 2 }, recordSubtitle: { color: '#334155', fontSize: 10.5, fontWeight: '700', marginTop: 2 }, recordMeta: { color: '#65758B', fontSize: 9.8, lineHeight: 13, fontWeight: '600', marginTop: 2 }, statusPill: { maxWidth: 88, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 5 }, statusText: { fontSize: 8.8, lineHeight: 11, fontWeight: '900', textAlign: 'center' },
+  searchBox: { minHeight: 48, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE6F0', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 8 }, searchInput: { flex: 1, minHeight: 44, color: palette.navy, fontSize: 13, fontWeight: '600' }, accountFilters: { gap: 7, paddingBottom: 2 }, filterChip: { maxWidth: 180, height: 34, borderRadius: 999, borderWidth: 1, borderColor: '#D8E3EF', backgroundColor: '#FFFFFF', paddingHorizontal: 12, justifyContent: 'center' }, filterChipActive: { backgroundColor: palette.navy, borderColor: palette.navy }, filterText: { color: '#65758B', fontSize: 10.5, fontWeight: '800' }, filterTextActive: { color: '#FFFFFF' }, recordCard: { minHeight: 105, borderRadius: 17, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 12, paddingLeft: 16, flexDirection: 'row', alignItems: 'center', gap: 10, overflow: 'hidden', shadowColor: '#122544', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }, recordCardPressed: { opacity: 0.86, transform: [{ scale: 0.985 }] }, accent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5 }, recordIcon: { width: 45, height: 45, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }, recordCopy: { flex: 1, minWidth: 0 }, accountName: { color: '#0A43A3', fontSize: 9.5, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.3 }, recordTitle: { color: palette.navy, fontSize: 15.5, fontWeight: '900', marginTop: 2 }, recordSubtitle: { color: '#334155', fontSize: 10.5, fontWeight: '700', marginTop: 2 }, recordMeta: { color: '#65758B', fontSize: 9.8, lineHeight: 13, fontWeight: '600', marginTop: 2 }, statusPill: { maxWidth: 88, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 5 }, statusText: { fontSize: 8.8, lineHeight: 11, fontWeight: '900', textAlign: 'center' },
 });

@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -12,6 +12,7 @@ import type { InsuranceCompany, Vehicle } from '@/lib/types';
 
 export default function AddPolicyScreen() {
   const router = useRouter();
+  const { vehicleId } = useLocalSearchParams<{ vehicleId?: string }>();
   const [contexts, setContexts] = useState<CustomerAccountContext[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [accountOpen, setAccountOpen] = useState(false);
@@ -42,14 +43,19 @@ export default function AddPolicyScreen() {
         supabase.from('insurance_companies').select('*').order('name'),
       ]);
       if (!active) return;
+      const routeVehicle = vehicleId ? ((vehicleResult.data ?? []) as Vehicle[]).find((vehicle) => vehicle.id === vehicleId) : null;
       setContexts(nextContexts);
-      setSelectedCustomerId(nextContexts[0]?.customer_id ?? '');
+      setSelectedCustomerId(routeVehicle?.customer_id ?? nextContexts[0]?.customer_id ?? '');
       setVehicles((vehicleResult.data ?? []) as Vehicle[]);
       setCompanies(companyResult.data ?? []);
+      if (routeVehicle) {
+        setSelectedVehicleId(routeVehicle.id);
+        setVehicleQuery(routeVehicle.vehicle_no);
+      }
     }
     void load();
     return () => { active = false; };
-  }, [router]);
+  }, [router, vehicleId]);
 
   const accountVehicles = useMemo(() => vehicles.filter((vehicle) => vehicle.customer_id === selectedCustomerId), [selectedCustomerId, vehicles]);
   const filteredVehicles = useMemo(() => accountVehicles.filter((vehicle) => {

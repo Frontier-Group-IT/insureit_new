@@ -16,6 +16,10 @@ function numberValue(formData: FormData, name: string) {
   return value ? Number(value) : null;
 }
 
+function dateValue(formData: FormData, name: string) {
+  return textValue(formData, name);
+}
+
 async function currentProfileId() {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
@@ -101,7 +105,14 @@ export async function createVehicle(formData: FormData) {
     year: numberValue(formData, "year"),
     chassis_no: textValue(formData, "chassis_no"),
     engine_no: textValue(formData, "engine_no"),
-    permit_no: textValue(formData, "permit_no")
+    permit_no: textValue(formData, "permit_no"),
+    gvw_kg: numberValue(formData, "gvw_kg"),
+    registration_date: dateValue(formData, "registration_date"),
+    fitness_expiry_date: dateValue(formData, "fitness_expiry_date"),
+    puc_expiry_date: dateValue(formData, "puc_expiry_date"),
+    road_tax_expiry_date: dateValue(formData, "road_tax_expiry_date"),
+    national_permit_expiry_date: dateValue(formData, "national_permit_expiry_date"),
+    local_permit_expiry_date: dateValue(formData, "local_permit_expiry_date")
   });
 
   if (error) {
@@ -132,7 +143,14 @@ export async function updateVehicle(id: string, formData: FormData) {
       year: numberValue(formData, "year"),
       chassis_no: textValue(formData, "chassis_no"),
       engine_no: textValue(formData, "engine_no"),
-      permit_no: textValue(formData, "permit_no")
+      permit_no: textValue(formData, "permit_no"),
+      gvw_kg: numberValue(formData, "gvw_kg"),
+      registration_date: dateValue(formData, "registration_date"),
+      fitness_expiry_date: dateValue(formData, "fitness_expiry_date"),
+      puc_expiry_date: dateValue(formData, "puc_expiry_date"),
+      road_tax_expiry_date: dateValue(formData, "road_tax_expiry_date"),
+      national_permit_expiry_date: dateValue(formData, "national_permit_expiry_date"),
+      local_permit_expiry_date: dateValue(formData, "local_permit_expiry_date")
     })
     .eq("id", id);
 

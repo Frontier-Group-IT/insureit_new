@@ -25,6 +25,7 @@
     ],
     "android": {
       "package": "com.insureit.mobile",
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/brand/insureit-adaptive-foreground.png",
         "backgroundColor": "#F4F8FC"
