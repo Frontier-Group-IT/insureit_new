@@ -15,6 +15,7 @@ type PortfolioRow = GroupChildAccountOverview & { vehicles: number; policies: nu
 type ActivityRow = { id: string; event_type: string; title: string | null; message: string | null; priority: string; status: string; created_at: string };
 type AccountFilter = 'all' | 'corporate' | 'individual_proprietor' | 'dealership';
 const accountFilters: AccountFilter[] = ['all', 'corporate', 'individual_proprietor', 'dealership'];
+const manageableParentTypes = new Set(['group', 'corporate', 'dealership']);
 
 export function GroupAccountsScreen() {
   const router = useLoadingRouter();
@@ -33,7 +34,7 @@ export function GroupAccountsScreen() {
   useEffect(() => { let active = true; setLoading(true); void (async () => {
     try {
       const groupContext = await getSelectedCustomerContext();
-      if (!groupContext || groupContext.partner_type !== 'group') { if (active) setRows([]); return; }
+      if (!groupContext || !manageableParentTypes.has(groupContext.partner_type)) { if (active) setRows([]); return; }
       const contexts = await getGroupChildAccountOverview(groupContext.customer_id);
       const ids = contexts.map((item) => item.customer_id).filter((id): id is string => Boolean(id));
       const [vehicleResult, policyResult, claimResult] = ids.length ? await Promise.all([
@@ -58,7 +59,7 @@ export function GroupAccountsScreen() {
   }), [filter, query, rows]);
   const addAction = <Pressable onPress={() => router.push('/customer/group/add-account')} style={styles.addButton}><MaterialCommunityIcons name="plus" size={17} color="#FFFFFF" /><Text style={styles.addButtonText}>Add</Text></Pressable>;
 
-  return <GroupPageShell title="Associated Customers" subtitle={`${rows.length} account${rows.length === 1 ? '' : 's'} in the Group portfolio`} icon="account-multiple-outline" rightAction={addAction} loading={loading}>
+  return <GroupPageShell title="Associated Customers" subtitle={`${rows.length} account${rows.length === 1 ? '' : 's'} under this account`} icon="account-multiple-outline" rightAction={addAction} loading={loading}>
     {loading ? <LoadingState /> : <>
       <View style={styles.searchBox}><MaterialCommunityIcons name="magnify" size={20} color="#7A8799" /><TextInput value={query} onChangeText={setQuery} placeholder="Search company, contact, mobile or city" placeholderTextColor="#9AA6B6" style={styles.searchInput} /></View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>{([['all','All'],['corporate','Corporate'],['individual_proprietor','Individual'],['dealership','Dealership']] as const).map(([value,label]) => <Pressable key={value} onPress={() => setFilter(value)} style={[styles.filterChip, filter === value && styles.filterChipActive]}><Text style={[styles.filterText, filter === value && styles.filterTextActive]}>{label}</Text></Pressable>)}</ScrollView>
@@ -88,7 +89,7 @@ export function GroupAccountDetailScreen() {
   useEffect(() => { let active = true; setLoading(true); void (async () => {
     try {
       const groupContext = await getSelectedCustomerContext();
-      if (!groupContext || groupContext.partner_type !== 'group') return;
+      if (!groupContext || !manageableParentTypes.has(groupContext.partner_type)) return;
       const next = await getGroupAssociatedAccountDetail({ groupCustomerId: groupContext.customer_id, customerId: id || null, applicationId: applicationId || null });
       if (!next) return;
       const childCustomerId = next.customer_id;
@@ -104,7 +105,7 @@ export function GroupAccountDetailScreen() {
   })(); return () => { active = false; }; }, [applicationId, id]);
 
   if (loading) return <GroupPageShell title="Account Details" subtitle="Loading associated account" icon="office-building-outline" loading><LoadingState /></GroupPageShell>;
-  if (!detail) return <GroupPageShell title="Account Details" subtitle="Associated account unavailable" icon="office-building-outline"><EmptyState title="Account unavailable" body="This account is not available in the Group portfolio." /></GroupPageShell>;
+  if (!detail) return <GroupPageShell title="Account Details" subtitle="Associated account unavailable" icon="office-building-outline"><EmptyState title="Account unavailable" body="This account is not available under the selected parent account." /></GroupPageShell>;
   const currentDetail = detail;
   const details = currentDetail.details;
   const openClaims = claims.filter((claim) => !['Closed','Settled','Rejected','Claim Complete'].includes(claim.current_status));

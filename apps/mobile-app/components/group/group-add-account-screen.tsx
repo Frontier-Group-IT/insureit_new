@@ -23,6 +23,12 @@ const fieldLabels: Record<string, string> = {
   company_name: 'Company Name', company_pan: 'Company PAN', gst_number: 'GST Number', address_street: 'Street', address_locality: 'Locality', city: 'City', state: 'State', postal_code: 'PIN Code', fleet_size_band: 'Fleet Size', contact_name: 'Customer / Proprietor Name', phone: 'Mobile Number', email: 'Email ID', pan_number: 'PAN Number', aadhaar_number: 'Aadhaar Number', legal_trade_name: 'Legal Trade Name', dealership_type: 'Dealership Type', dealership_name: 'Dealership Name', owner_name: 'Owner Name', oem_name: 'Dealership OEM', yearly_sales_band: 'Yearly Sales', representative_name: 'Representative Name', representative_mobile: 'Representative Mobile', representative_email: 'Representative Email', representative_aadhaar: 'Representative Aadhaar', representative_pan: 'Representative PAN',
 };
 
+const accountTypeOptions = [
+  ['corporate','office-building-outline','Corporate','Company details, fleet profile and four login contacts'],
+  ['individual_proprietor','account-outline','Individual / Proprietor','Personal KYC, GST, documents and fleet size'],
+  ['dealership','storefront-outline','Dealership','POSP or MISP, OEM profile, representative KYC and contacts'],
+] as const;
+
 export function GroupAddAccountScreen() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -58,8 +64,8 @@ export function GroupAddAccountScreen() {
           supabase.from('vehicle_manufacturers').select('name').eq('is_active', true).order('sort_order', { ascending: true }).order('name', { ascending: true }),
         ]);
         if (!active) return;
-        if (!context || context.partner_type !== 'group') {
-          setMessage('Open your Group account before adding an associated customer.');
+        if (!context || !canManageAssociatedAccounts(context.partner_type)) {
+          setMessage('Open a Group, Corporate or Dealership account before adding an associated customer.');
           return;
         }
         setProfile(nextProfile);
@@ -237,7 +243,10 @@ export function GroupAddAccountScreen() {
         dealership_type: type === 'dealership' ? dealershipType : null,
         is_gst_registered: gstRegistered,
         group_customer_id: groupContext.customer_id,
+        parent_customer_id: groupContext.customer_id,
         group_name: customerAccountTitle(groupContext),
+        parent_name: customerAccountTitle(groupContext),
+        parent_partner_type: groupContext.partner_type,
         initiated_from: 'group_mobile',
       };
       const insert = await (supabase.rpc as any)('start_group_associated_onboarding_application', {
@@ -262,13 +271,14 @@ export function GroupAddAccountScreen() {
 
   if (loading) return <GroupPageShell title="Add Associated Customer" subtitle="Preparing onboarding" icon="account-plus-outline"><ActivityIndicator size="large" color="#0A43A3" /></GroupPageShell>;
 
+  const parentTitle = groupContext ? customerAccountTitle(groupContext) : 'Parent Account';
   return <GroupPageShell title="Add Associated Customer" subtitle={type ? `${partnerTypeLabel(type)} onboarding` : 'Choose the partner type to begin'} icon="account-plus-outline">
-    {!type ? <PartnerTypePicker onSelect={selectPartnerType} /> : <>
+    {!type ? <PartnerTypePicker parentType={groupContext?.partner_type ?? 'group'} onSelect={selectPartnerType} /> : <>
       <View style={styles.contextCard}><MaterialCommunityIcons name="account-group-outline" size={20} color="#0A43A3" /><View style={styles.flex}><Text style={styles.contextLabel}>Associated with</Text><Text style={styles.contextValue}>{groupContext ? customerAccountTitle(groupContext) : 'Group Account'}</Text></View><Pressable onPress={leavePartnerType}><Text style={styles.changeText}>Change</Text></Pressable></View>
       <View style={styles.stepTrack}>{steps.map((item, index) => <View key={item.title} style={[styles.stepDot, index <= step && styles.stepDotActive]} />)}</View>
       {message ? <View style={styles.errorBox}><MaterialCommunityIcons name="alert-circle-outline" size={18} color="#B42318" /><Text style={styles.errorText}>{message}</Text></View> : null}
       {current ? <View style={styles.section}><Text style={styles.sectionTitle}>{current.title}</Text><Text style={styles.sectionText}>{current.subtitle}</Text>
-        {current.fields.length === 0 ? <ReviewPanel type={type} dealershipType={dealershipType} groupName={groupContext ? customerAccountTitle(groupContext) : 'Group Account'} values={values} files={files} gstRegistered={gstRegistered} /> : current.fields.map((field) => {
+        {current.fields.length === 0 ? <ReviewPanel type={type} dealershipType={dealershipType} groupName={parentTitle} values={values} files={files} gstRegistered={gstRegistered} /> : current.fields.map((field) => {
           if (field.kind === 'switch') return <View key={field.name} style={styles.switchRow}><View style={styles.flex}><Text style={styles.fieldLabel}>{field.label}</Text><Text style={styles.switchHint}>Enable when applicable.</Text></View><Switch value={gstRegistered} onValueChange={setGstRegistered} /></View>;
           if (field.kind === 'choice') return <ChoiceField key={field.name} label={field.label} value={values[field.name] || ''} options={field.options || []} onChange={(value) => { setValue(field.name, value); if (field.name === 'dealership_type') setDealershipType(value as 'posp' | 'misp'); }} />;
           if (field.kind === 'file') return <DocumentField key={field.name} label={field.label} file={files[field.name]} required={field.required} onPress={() => void chooseFile(field.name)} />;
@@ -280,16 +290,24 @@ export function GroupAddAccountScreen() {
       </View> : null}
       <View style={styles.footerActions}><Pressable disabled={submitting} onPress={() => step > 0 ? setStep((value) => value - 1) : leavePartnerType()} style={styles.secondaryButton}><Text style={styles.secondaryButtonText}>Back</Text></Pressable><Pressable disabled={submitting} onPress={() => void next()} style={[styles.primaryButton, submitting && styles.disabled]}>{submitting ? <ActivityIndicator color="#FFFFFF" /> : <><Text style={styles.primaryButtonText}>{step === steps.length - 1 ? 'Submit for Verification' : 'Continue'}</Text><MaterialCommunityIcons name="arrow-right" size={17} color="#FFFFFF" /></>}</Pressable></View>
     </>}
-    <Modal visible={success} transparent animationType="fade"><View style={styles.modalBackdrop}><View style={styles.modalCard}><View style={styles.successIcon}><MaterialCommunityIcons name="check" size={34} color="#FFFFFF" /></View><Text style={styles.modalTitle}>Onboarding submitted</Text><Text style={styles.modalText}>The new associated customer is now queued for verification under your Group account.</Text><Pressable onPress={() => router.replace('/customer/group/accounts')} style={styles.modalButton}><Text style={styles.modalButtonText}>View Associated Customers</Text></Pressable></View></View></Modal>
+    <Modal visible={success} transparent animationType="fade"><View style={styles.modalBackdrop}><View style={styles.modalCard}><View style={styles.successIcon}><MaterialCommunityIcons name="check" size={34} color="#FFFFFF" /></View><Text style={styles.modalTitle}>Onboarding submitted</Text><Text style={styles.modalText}>The new associated customer is now queued for verification under {parentTitle}.</Text><Pressable onPress={() => router.replace('/customer/home')} style={styles.modalButton}><Text style={styles.modalButtonText}>Return to Dashboard</Text></Pressable></View></View></Modal>
   </GroupPageShell>;
 }
 
-function PartnerTypePicker({ onSelect }: { onSelect: (type: AccountType) => void }) {
-  return <View style={styles.section}><Text style={styles.sectionTitle}>Select partner type</Text><Text style={styles.sectionText}>The mobile flow follows the same onboarding format as the website.</Text>{([
-    ['corporate','office-building-outline','Corporate','Company details, fleet profile and four login contacts'],
-    ['individual_proprietor','account-outline','Individual / Proprietor','Personal KYC, GST, documents and fleet size'],
-    ['dealership','storefront-outline','Dealership','POSP or MISP, OEM profile, representative KYC and contacts'],
-  ] as const).map(([value,icon,title,body]) => <Pressable key={value} onPress={() => onSelect(value)} style={styles.typeCard}><View style={styles.typeIcon}><MaterialCommunityIcons name={icon} size={25} color="#0A43A3" /></View><View style={styles.typeCopy}><Text style={styles.typeTitle}>{title}</Text><Text style={styles.typeBody}>{body}</Text></View><MaterialCommunityIcons name="chevron-right" size={23} color="#7A8799" /></Pressable>)}</View>;
+function PartnerTypePicker({ parentType, onSelect }: { parentType: PartnerType; onSelect: (type: AccountType) => void }) {
+  const options = accountTypeOptions.filter(([value]) => allowedChildTypes(parentType).includes(value));
+  return <View style={styles.section}><Text style={styles.sectionTitle}>Select partner type</Text><Text style={styles.sectionText}>Only customer types allowed under this parent account are shown.</Text>{options.map(([value,icon,title,body]) => <Pressable key={value} onPress={() => onSelect(value)} style={styles.typeCard}><View style={styles.typeIcon}><MaterialCommunityIcons name={icon} size={25} color="#0A43A3" /></View><View style={styles.typeCopy}><Text style={styles.typeTitle}>{title}</Text><Text style={styles.typeBody}>{body}</Text></View><MaterialCommunityIcons name="chevron-right" size={23} color="#7A8799" /></Pressable>)}</View>;
+}
+
+function canManageAssociatedAccounts(parentType: PartnerType) {
+  return ['group', 'corporate', 'dealership'].includes(parentType);
+}
+
+function allowedChildTypes(parentType: PartnerType): AccountType[] {
+  if (parentType === 'corporate') return ['individual_proprietor'];
+  if (parentType === 'dealership') return ['corporate', 'individual_proprietor'];
+  if (parentType === 'group') return ['corporate', 'individual_proprietor', 'dealership'];
+  return [];
 }
 
 type FieldDef = { name: string; label: string; required?: boolean; kind?: 'text'|'file'|'choice'|'switch'; options?: readonly (readonly [string,string])[]; keyboardType?: 'default'|'phone-pad'|'email-address'|'number-pad'; locked?: boolean };

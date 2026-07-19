@@ -93,7 +93,7 @@ export async function getGroupAssociatedAccountDetail(input: {
 export async function getOperationalCustomerContexts(): Promise<CustomerAccountContext[]> {
   const selected = await getSelectedCustomerContext();
   if (!selected) return [];
-  if (selected.partner_type !== 'group') return [selected];
+  if (!['group', 'corporate', 'dealership'].includes(selected.partner_type)) return [selected];
 
   const contexts = await getAccessibleCustomerContexts();
   const children = contexts.filter((context) => context.customer_id !== selected.customer_id && context.group_customer_id === selected.customer_id);
