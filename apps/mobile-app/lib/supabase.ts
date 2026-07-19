@@ -54,6 +54,7 @@ function requestMethod(input: RequestInfo | URL, init?: RequestInit) {
 
 function shouldTrackRequest(url: string, method: string) {
   if (method === 'OPTIONS' || method === 'HEAD') return false;
+  if (method === 'GET') return false;
   if (url.includes('/auth/v1/token') && url.includes('grant_type=refresh_token')) return false;
   if (url.includes('/auth/v1/health')) return false;
   if (url.includes('/rest/v1/india_locations')) return false;

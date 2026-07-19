@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { AppLoadingProvider, useAppLoading } from '@/components/app-loading';
+import { AppLoadingProvider } from '@/components/app-loading';
 import { AppUpdateManager } from '@/components/app-update-manager';
 import { SplashIntro } from '@/components/first-look';
 import { RealtimeNotificationProvider } from '@/components/realtime-notifications';
@@ -14,7 +14,6 @@ export default function RootLayout() {
 
 function RootApplication() {
   const navigationState = useRootNavigationState();
-  const { beginNavigation } = useAppLoading();
   const [minimumIntroComplete, setMinimumIntroComplete] = useState(false);
 
   useEffect(() => {
@@ -31,7 +30,6 @@ function RootApplication() {
         <AppUpdateManager />
         <Stack
           screenOptions={{ headerShown: false, animation: 'none' }}
-          screenListeners={{ state: () => beginNavigation('Loading page') }}
         />
       </RealtimeNotificationProvider>
       {introVisible ? <View style={styles.introOverlay}><SplashIntro /></View> : null}

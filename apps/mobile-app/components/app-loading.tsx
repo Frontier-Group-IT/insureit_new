@@ -142,55 +142,13 @@ export function useAppLoading() {
 }
 
 export function usePageLoading(loading: boolean, label = 'Loading page') {
-  const { begin, end } = useAppLoading();
-  const token = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (loading && !token.current) token.current = begin(label);
-    if (!loading && token.current) {
-      end(token.current);
-      token.current = null;
-    }
-    return () => {
-      if (token.current) {
-        end(token.current);
-        token.current = null;
-      }
-    };
-  }, [begin, end, label, loading]);
+  void loading;
+  void label;
 }
 
 export function useLoadingRouter(): ReturnType<typeof useRouter> {
   const router = useRouter();
-  const { beginNavigation } = useAppLoading();
-
-  return useMemo(() => ({
-    ...router,
-    push: ((...args: Parameters<typeof router.push>) => {
-      beginNavigation('Opening page');
-      return router.push(...args);
-    }) as typeof router.push,
-    replace: ((...args: Parameters<typeof router.replace>) => {
-      beginNavigation('Opening page');
-      return router.replace(...args);
-    }) as typeof router.replace,
-    navigate: ((...args: Parameters<typeof router.navigate>) => {
-      beginNavigation('Opening page');
-      return router.navigate(...args);
-    }) as typeof router.navigate,
-    back: (() => {
-      beginNavigation('Returning');
-      return router.back();
-    }) as typeof router.back,
-    dismiss: ((...args: Parameters<typeof router.dismiss>) => {
-      beginNavigation('Returning');
-      return router.dismiss(...args);
-    }) as typeof router.dismiss,
-    dismissAll: (() => {
-      beginNavigation('Returning');
-      return router.dismissAll();
-    }) as typeof router.dismissAll,
-  }) as ReturnType<typeof useRouter>, [beginNavigation, router]);
+  return router;
 }
 
 function AppLoadingOverlay({ label }: { label: string }) {
