@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, Image, Pressable, StyleProp, StyleSheet, Text, TextInput, TextInputProps, View, ViewStyle } from 'react-native';
 
-const primaryLogo = require('../assets/brand/insureit-primary-logo-clean.png');
+const primaryLogo = require('../assets/brand/logo (2).png');
 
 export function BrandMark({ size = 52, compact = false }: { size?: number; compact?: boolean }) {
   void compact;
@@ -14,10 +14,17 @@ export function BrandMark({ size = 52, compact = false }: { size?: number; compa
   );
 }
 export function BrandLogo({ width = 208, style }: { width?: number; style?: StyleProp<ViewStyle> }) {
-  const markSize = Math.min(92, Math.round(width * 0.42));
+  const markSize = Math.round(width * 0.29);
+  const gap = Math.max(6, Math.round(width * 0.03));
+  const nameSize = Math.round(width * 0.145);
+  const taglineSize = Math.max(5, Math.round(width * 0.04));
   return (
     <View style={[styles.brandLogo, { width, minHeight: markSize }, style]}>
       <Image source={primaryLogo} resizeMode="contain" style={{ width: markSize, height: markSize }} />
+      <View style={[styles.brandLogoCopy, { marginLeft: gap }]}>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={[styles.brandLogoName, { fontSize: nameSize, lineHeight: Math.round(nameSize * 1.1) }]}>insureit</Text>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.48} style={[styles.brandLogoTagline, { fontSize: taglineSize, lineHeight: Math.max(7, Math.round(taglineSize * 1.3)) }]}>YOUR SAFETY, OUR PROMISE</Text>
+      </View>
     </View>
   );
 }
