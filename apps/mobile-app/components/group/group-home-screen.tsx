@@ -9,7 +9,7 @@ import { BrandLogo } from '@/components/first-look';
 import { NotificationBell } from '@/components/realtime-notifications';
 import { LoadingState } from '@/components/ui';
 import { buildComplianceRenewals } from '@/lib/compliance-renewals';
-import { customerAccountTitle, getGroupChildAccountOverview, membershipRoleLabel, type CustomerAccountContext, type GroupChildAccountOverview } from '@/lib/customer-context';
+import { customerAccountTitle, getAccessibleCustomerContexts, getGroupChildAccountOverview, membershipRoleLabel, partnerTypeLabel, type CustomerAccountContext, type GroupChildAccountOverview } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Claim, CustomerOnboardingApplication, Policy, Profile, Vehicle } from '@/lib/types';
@@ -47,7 +47,11 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
     const selectedGroupContext = groupContext;
     async function load() {
       try {
-        const associated = await getGroupChildAccountOverview(selectedGroupContext.customer_id);
+        const associated = selectedGroupContext.partner_type === 'group'
+          ? await getGroupChildAccountOverview(selectedGroupContext.customer_id)
+          : (await getAccessibleCustomerContexts())
+            .filter((item) => item.customer_id !== selectedGroupContext.customer_id && item.group_customer_id === selectedGroupContext.customer_id)
+            .map(contextToOverview);
         const accountIds = Array.from(new Set([selectedGroupContext.customer_id, ...associated.map((item) => item.customer_id).filter((id): id is string => Boolean(id))]));
         if (!accountIds.length) {
           if (active) setData({ associated, vehicles: [], policies: [], claims: [] });
@@ -61,8 +65,8 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
         if (vehicleResult.error || policyResult.error || claimResult.error) throw vehicleResult.error ?? policyResult.error ?? claimResult.error;
         if (active) setData({ associated, vehicles: vehicleResult.data ?? [], policies: policyResult.data ?? [], claims: claimResult.data ?? [] });
       } catch (nextError) {
-        console.warn('Group dashboard load failed', nextError);
-        if (active) setError('We could not load the Group overview. Please try again.');
+        console.warn('Portfolio dashboard load failed', nextError);
+        if (active) setError('We could not load the portfolio overview. Please try again.');
       } finally {
         if (active) setLoading(false);
       }
@@ -77,6 +81,7 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
   const draftGroupName = typeof draft.group_name === 'string' ? draft.group_name : '';
   const groupName = groupContext ? customerAccountTitle(groupContext) : draftGroupName || 'Your Group Account';
   const firstName = (profile.full_name || groupContext?.contact_name || 'Customer').split(' ')[0];
+  const portfolioLabel = groupContext ? partnerTypeLabel(groupContext.partner_type) : 'Group';
   const roleLabel = groupContext ? membershipRoleLabel(groupContext.membership_role) : 'Group Owner';
 
   const now = Date.now();
@@ -90,7 +95,7 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
   const openClaims = useMemo(() => data.claims.filter((claim) => !closedStatuses.has(claim.current_status)), [data.claims]);
   const settled = useMemo(() => data.claims.filter((claim) => claim.current_status === 'Closed' || claim.current_status === 'Settled'), [data.claims]);
   const actionRequired = useMemo(() => openClaims.filter((claim) => /pending|awaited|document/i.test(claim.current_status)), [openClaims]);
-  if (loading) return <View style={styles.loading}><LoadingState label="Opening Group dashboard" /></View>;
+  if (loading) return <View style={styles.loading}><LoadingState label={`Opening ${portfolioLabel} dashboard`} /></View>;
 
   return <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
     <View style={styles.header}>
@@ -105,6 +110,7 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
           <Text style={styles.greeting}>{timeGreeting()}, {firstName}</Text>
           <Text style={styles.groupName} numberOfLines={1}>{groupName}</Text>
           <View style={styles.roleRow}><View style={styles.roleDot} /><Text style={styles.roleText}>{roleLabel}</Text></View>
+          {groupContext?.group_name ? <Text style={styles.parentCompany}>Associated with {groupContext.group_name}</Text> : null}
         </View>
         <View style={[styles.statusBadge, underReview && styles.statusBadgeReview]}>
           <MaterialCommunityIcons name={underReview ? 'clock-outline' : 'check-decagram'} size={14} color={underReview ? '#9A6700' : '#087443'} />
@@ -124,7 +130,7 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
       />
 
       <Pressable onPress={() => router.push('/customer/group/fleet')} style={({ pressed }) => [styles.fleetCard, pressed && styles.cardPressed]}>
-        <View style={styles.fleetLeft}><View style={styles.fleetIcon}><MaterialCommunityIcons name="truck-outline" size={24} color="#0A43A3" /></View><View style={styles.fleetCopy}><Text style={styles.fleetTitle}>Group Fleet</Text><Text style={styles.fleetNumber}>{data.vehicles.length}</Text><Text style={styles.fleetLabel}>Vehicles across associated accounts</Text><View style={styles.viewLink}><Text style={styles.viewLinkText}>Open fleet workspace</Text><MaterialCommunityIcons name="arrow-right" size={14} color="#0A43A3" /></View></View></View>
+        <View style={styles.fleetLeft}><View style={styles.fleetIcon}><MaterialCommunityIcons name="truck-outline" size={24} color="#0A43A3" /></View><View style={styles.fleetCopy}><Text style={styles.fleetTitle}>{portfolioLabel} Fleet</Text><Text style={styles.fleetNumber}>{data.vehicles.length}</Text><Text style={styles.fleetLabel}>Vehicles across accessible accounts</Text><View style={styles.viewLink}><Text style={styles.viewLinkText}>Open fleet workspace</Text><MaterialCommunityIcons name="arrow-right" size={14} color="#0A43A3" /></View></View></View>
         <Image source={fleetSketch} style={styles.fleetImage} resizeMode="contain" />
       </Pressable>
 
@@ -184,6 +190,25 @@ function AttentionPill({ icon, value, label, tone, soft, onPress, disabled = fal
   return <Pressable disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.attentionPill, { backgroundColor: soft }, disabled && styles.disabledAction, pressed && styles.cardPressed]}><MaterialCommunityIcons name={icon} size={15} color={tone} /><Text style={[styles.attentionPillValue, { color: tone }]}>{value}</Text><Text style={styles.attentionPillLabel}>{label}</Text></Pressable>;
 }
 function QuickAction({ icon, label, onPress, disabled = false }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; onPress: () => void; disabled?: boolean }) { return <Pressable disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.quickAction, disabled && styles.disabledAction, pressed && styles.cardPressed]}><View style={styles.quickActionIcon}><MaterialCommunityIcons name={icon} size={20} color={disabled ? '#98A2B3' : '#0A43A3'} /></View><Text style={[styles.quickActionLabel, disabled && styles.disabledText]}>{label}</Text></Pressable>; }
+function contextToOverview(context: CustomerAccountContext): GroupChildAccountOverview {
+  return {
+    row_id: context.customer_id,
+    customer_id: context.customer_id,
+    application_id: null,
+    customer_code: context.customer_code,
+    partner_type: context.partner_type,
+    company_name: context.company_name,
+    contact_name: context.contact_name,
+    phone: null,
+    city: null,
+    state: null,
+    onboarding_status: 'active',
+    application_status: null,
+    account_source: 'linked_customer',
+    created_at: null,
+    updated_at: null,
+  };
+}
 function timeGreeting() { const hour = new Date().getHours(); if (hour < 12) return 'Good Morning'; if (hour < 17) return 'Good Afternoon'; return 'Good Evening'; }
 function initialFor(name: string) { return (name.trim()[0] || 'U').toUpperCase(); }
 
@@ -191,7 +216,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F7F9FD' }, loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F9FD' },
   header: { height: 66, paddingHorizontal: 4, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.98)', borderBottomWidth: 1, borderBottomColor: '#E1E7F0' }, brand: { flex: 1, alignItems: 'flex-start', justifyContent: 'center' }, iconCircle: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' }, avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: palette.ink, borderWidth: 2, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }, avatarText: { color: '#FFFFFF', fontWeight: '900', fontSize: 17 },
   scroll: { flex: 1 }, body: { paddingHorizontal: 13, paddingTop: 9, paddingBottom: 10, gap: 11 },
-  greetingBlock: { minHeight: 66, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E7F0', paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 9 }, greetingCopy: { flex: 1, minWidth: 0 }, greeting: { color: '#607089', fontSize: 11, lineHeight: 14, fontWeight: '700' }, groupName: { color: palette.navy, fontSize: 16.5, lineHeight: 20, fontWeight: '900', marginTop: 1 }, roleRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }, roleDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#21A66B' }, roleText: { color: '#62728A', fontSize: 9.5, fontWeight: '800' }, statusBadge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 6, backgroundColor: '#ECFDF3', flexDirection: 'row', alignItems: 'center', gap: 4 }, statusBadgeReview: { backgroundColor: '#FFF7E8' }, statusText: { color: '#087443', fontSize: 9, fontWeight: '900' }, statusTextReview: { color: '#9A6700' },
+  greetingBlock: { minHeight: 66, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E7F0', paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 9 }, greetingCopy: { flex: 1, minWidth: 0 }, greeting: { color: '#607089', fontSize: 11, lineHeight: 14, fontWeight: '700' }, groupName: { color: palette.navy, fontSize: 16.5, lineHeight: 20, fontWeight: '900', marginTop: 1 }, roleRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }, roleDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#21A66B' }, roleText: { color: '#62728A', fontSize: 9.5, fontWeight: '800' }, parentCompany: { color: '#0A43A3', fontSize: 9.5, lineHeight: 12, fontWeight: '800', marginTop: 2 }, statusBadge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 6, backgroundColor: '#ECFDF3', flexDirection: 'row', alignItems: 'center', gap: 4 }, statusBadgeReview: { backgroundColor: '#FFF7E8' }, statusText: { color: '#087443', fontSize: 9, fontWeight: '900' }, statusTextReview: { color: '#9A6700' },
   reviewBanner: { borderRadius: 13, backgroundColor: '#FFF8EF', borderWidth: 1, borderColor: '#F3DDBD', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }, reviewIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#D99012', alignItems: 'center', justifyContent: 'center' }, reviewCopy: { flex: 1 }, reviewTitle: { color: '#834100', fontSize: 12.5, fontWeight: '900' }, reviewText: { color: '#5E4B35', fontSize: 9.5, lineHeight: 12, fontWeight: '600', marginTop: 1 }, errorCard: { borderRadius: 12, borderWidth: 1, borderColor: '#FECDCA', backgroundColor: '#FEF3F2', padding: 9, flexDirection: 'row', alignItems: 'center', gap: 7 }, errorText: { flex: 1, color: '#B42318', fontSize: 10.5, fontWeight: '700' },
   attentionStrip: { borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 10, shadowColor: '#122544', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 },
   attentionStripHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },

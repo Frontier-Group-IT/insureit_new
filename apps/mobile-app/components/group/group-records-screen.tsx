@@ -6,7 +6,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { useLoadingRouter } from '@/components/app-loading';
 import { GroupPageShell } from '@/components/group/group-page-shell';
 import { EmptyState, LoadingState } from '@/components/ui';
-import { customerAccountTitle, getAccessibleCustomerContexts, getSelectedCustomerContext, type CustomerAccountContext } from '@/lib/customer-context';
+import { customerAccountTitle, getAccessibleCustomerContexts, getSelectedCustomerContext, partnerTypeLabel, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Claim, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
@@ -20,6 +20,7 @@ export function GroupRecordsScreen({ mode }: { mode: Mode }) {
   const router = useLoadingRouter();
   const params = useLocalSearchParams<{ accountId?: string }>();
   const [contexts, setContexts] = useState<CustomerAccountContext[]>([]);
+  const [ownerContext, setOwnerContext] = useState<CustomerAccountContext | null>(null);
   const [rows, setRows] = useState<RecordRow[]>([]);
   const [query, setQuery] = useState('');
   const [accountId, setAccountId] = useState('all');
@@ -27,15 +28,19 @@ export function GroupRecordsScreen({ mode }: { mode: Mode }) {
 
   useEffect(() => { let active = true; setLoading(true); void (async () => {
     try {
-      const selectedGroup = await getSelectedCustomerContext();
-      if (!selectedGroup || selectedGroup.partner_type !== 'group') { if (active) setRows([]); return; }
-      const associated = (await getAccessibleCustomerContexts()).filter((item) => item.customer_id !== selectedGroup.customer_id && item.group_customer_id === selectedGroup.customer_id);
-      const portfolioContexts = [selectedGroup, ...associated];
+      const selectedContext = await getSelectedCustomerContext();
+      if (!selectedContext || !['group', 'corporate', 'dealership'].includes(selectedContext.partner_type)) { if (active) setRows([]); return; }
+      const associated = (await getAccessibleCustomerContexts()).filter((item) => item.customer_id !== selectedContext.customer_id && item.group_customer_id === selectedContext.customer_id);
+      const showOnlyChildren = mode === 'fleet' && selectedContext.partner_type === 'group';
+      const portfolioContexts = showOnlyChildren ? associated : [selectedContext, ...associated];
       const ids = Array.from(new Set(portfolioContexts.map((item) => item.customer_id)));
       if (!active) return;
+      setOwnerContext(selectedContext);
       setContexts(portfolioContexts);
       const requestedAccountId = typeof params.accountId === 'string' ? params.accountId : '';
-      if (requestedAccountId && portfolioContexts.some((context) => context.customer_id === requestedAccountId)) setAccountId(requestedAccountId);
+      if (showOnlyChildren) setAccountId(requestedAccountId && portfolioContexts.some((context) => context.customer_id === requestedAccountId) ? requestedAccountId : portfolioContexts[0]?.customer_id ?? '');
+      else if (requestedAccountId && portfolioContexts.some((context) => context.customer_id === requestedAccountId)) setAccountId(requestedAccountId);
+      else setAccountId('all');
       if (!ids.length) { setRows([]); return; }
       const accountNames = new Map(portfolioContexts.map((item) => [item.customer_id, customerAccountTitle(item)]));
       if (mode === 'fleet') {
@@ -69,17 +74,19 @@ export function GroupRecordsScreen({ mode }: { mode: Mode }) {
     } finally { if (active) setLoading(false); }
   })(); return () => { active = false; }; }, [mode, params.accountId]);
 
-  const filtered = useMemo(() => rows.filter((row) => (accountId === 'all' || row.customerId === accountId) && (!query.trim() || `${row.title} ${row.subtitle} ${row.meta} ${row.accountName}`.toLowerCase().includes(query.trim().toLowerCase()))), [accountId, query, rows]);
-  const title = mode === 'fleet' ? 'Group Fleet' : mode === 'policies' ? 'Group Policies' : 'Group Claims';
-  const summary = mode === 'fleet' ? `${rows.length} vehicles across ${contexts.length} accounts` : mode === 'policies' ? `${rows.length} policies across the Group portfolio` : `${rows.length} claims across the Group portfolio`;
+  const showAllFilter = !(mode === 'fleet' && ownerContext?.partner_type === 'group');
+  const filtered = useMemo(() => rows.filter((row) => ((showAllFilter && accountId === 'all') || row.customerId === accountId) && (!query.trim() || `${row.title} ${row.subtitle} ${row.meta} ${row.accountName}`.toLowerCase().includes(query.trim().toLowerCase()))), [accountId, query, rows, showAllFilter]);
+  const portfolioLabel = ownerContext ? partnerTypeLabel(ownerContext.partner_type) : 'Customer';
+  const title = mode === 'fleet' ? `${portfolioLabel} Fleet` : mode === 'policies' ? `${portfolioLabel} Policies` : `${portfolioLabel} Claims`;
+  const summary = mode === 'fleet' ? `${rows.length} vehicles across ${contexts.length} account${contexts.length === 1 ? '' : 's'}` : mode === 'policies' ? `${rows.length} policies across the portfolio` : `${rows.length} claims across the portfolio`;
   const icon = mode === 'fleet' ? 'truck-outline' : mode === 'policies' ? 'file-document-outline' : 'shield-check-outline';
   const action = mode === 'fleet' ? { label: 'Add Vehicle', icon: 'truck-plus-outline' as const, href: '/customer/add-vehicle' as const } : mode === 'policies' ? { label: 'Add Policy', icon: 'shield-plus-outline' as const, href: '/customer/add-policy' as const } : { label: 'Add Claim', icon: 'file-plus-outline' as const, href: '/customer/report-accident' as const };
 
   return <GroupPageShell title={title} subtitle={summary} icon={icon} loading={loading} rightAction={<Pressable accessibilityRole="button" onPress={() => router.push(action.href)} style={styles.headerAction}><MaterialCommunityIcons name={action.icon} size={16} color={palette.navy} /><Text style={styles.headerActionText}>{action.label}</Text></Pressable>}>
     {loading ? <LoadingState /> : <>
       <View style={styles.searchBox}><MaterialCommunityIcons name="magnify" size={20} color="#7A8799" /><TextInput value={query} onChangeText={setQuery} placeholder={`Search ${mode === 'fleet' ? 'vehicle or customer' : mode === 'policies' ? 'policy or customer' : 'claim, vehicle or customer'}`} placeholderTextColor="#9AA6B6" style={styles.searchInput} /></View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.accountFilters}><Pressable onPress={() => setAccountId('all')} style={[styles.filterChip, accountId === 'all' && styles.filterChipActive]}><Text style={[styles.filterText, accountId === 'all' && styles.filterTextActive]}>All Accounts</Text></Pressable>{contexts.map((context) => <Pressable key={context.customer_id} onPress={() => setAccountId(context.customer_id)} style={[styles.filterChip, accountId === context.customer_id && styles.filterChipActive]}><Text numberOfLines={1} style={[styles.filterText, accountId === context.customer_id && styles.filterTextActive]}>{customerAccountTitle(context)}</Text></Pressable>)}</ScrollView>
-      {!filtered.length ? <EmptyState title={`No ${mode}`} body={`No matching ${mode} records were found for this Group portfolio.`} /> : filtered.map((row) => <Pressable key={row.id} onPress={() => openRecord(router, mode, row.id)} style={({ pressed }) => [styles.recordCard, pressed && styles.recordCardPressed]}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.accountFilters}>{showAllFilter ? <Pressable onPress={() => setAccountId('all')} style={[styles.filterChip, accountId === 'all' && styles.filterChipActive]}><Text style={[styles.filterText, accountId === 'all' && styles.filterTextActive]}>All Accounts</Text></Pressable> : null}{contexts.map((context) => <Pressable key={context.customer_id} onPress={() => setAccountId(context.customer_id)} style={[styles.filterChip, accountId === context.customer_id && styles.filterChipActive]}><Text numberOfLines={1} style={[styles.filterText, accountId === context.customer_id && styles.filterTextActive]}>{customerAccountTitle(context)}</Text></Pressable>)}</ScrollView>
+      {!filtered.length ? <EmptyState title={`No ${mode}`} body={`No matching ${mode} records were found for this portfolio.`} /> : filtered.map((row) => <Pressable key={row.id} onPress={() => openRecord(router, mode, row.id)} style={({ pressed }) => [styles.recordCard, pressed && styles.recordCardPressed]}>
         <View style={[styles.accent, { backgroundColor: tone(row.tone).accent }]} />
         {mode === 'fleet' ? <Image source={fleetSketch} resizeMode="contain" style={styles.fleetCardImage} /> : null}
         <View style={[styles.recordIcon, { backgroundColor: tone(row.tone).soft }]}><MaterialCommunityIcons name={mode === 'fleet' ? 'truck-outline' : mode === 'policies' ? 'file-document-outline' : 'shield-check-outline'} size={23} color={tone(row.tone).accent} /></View>

@@ -39,7 +39,11 @@ export default function AddVehicleScreen() {
     async function loadContexts() {
       const session = await getCurrentSession();
       if (!session?.user) return router.replace('/login');
-      const nextContexts = await getOperationalCustomerContexts();
+      const operationalContexts = await getOperationalCustomerContexts();
+      const groupParent = operationalContexts.find((context) => context.partner_type === 'group' && context.access_source === 'direct');
+      const nextContexts = groupParent
+        ? operationalContexts.filter((context) => context.customer_id !== groupParent.customer_id)
+        : operationalContexts;
       if (!active) return;
       setContexts(nextContexts);
       setSelectedCustomerId(nextContexts[0]?.customer_id ?? '');
