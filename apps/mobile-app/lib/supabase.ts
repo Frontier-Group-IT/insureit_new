@@ -53,22 +53,13 @@ function requestMethod(input: RequestInfo | URL, init?: RequestInit) {
 }
 
 function shouldTrackRequest(url: string, method: string) {
-  if (method === 'OPTIONS' || method === 'HEAD') return false;
-  if (method === 'GET') return false;
-  if (url.includes('/auth/v1/token') && url.includes('grant_type=refresh_token')) return false;
-  if (url.includes('/auth/v1/health')) return false;
-  if (url.includes('/rest/v1/india_locations')) return false;
-  if (url.includes('/rest/v1/notifications')) return false;
-  return url.startsWith(supabaseUrl!);
+  if (!url.startsWith(supabaseUrl!)) return false;
+  if (method === 'GET' || method === 'OPTIONS' || method === 'HEAD') return false;
+  return url.includes('/storage/v1/object');
 }
 
 function requestLabel(url: string, method: string) {
   if (url.includes('/storage/v1/object') && method !== 'GET') return 'Uploading document';
-  if (url.includes('/rpc/')) return 'Processing request';
-  if (url.includes('/auth/v1/')) return method === 'GET' ? 'Checking your session' : 'Signing you in';
-  if (method === 'GET') return 'Loading page data';
-  if (method === 'DELETE') return 'Deleting record';
-  if (method === 'PATCH' || method === 'PUT') return 'Saving changes';
   return 'Processing request';
 }
 
