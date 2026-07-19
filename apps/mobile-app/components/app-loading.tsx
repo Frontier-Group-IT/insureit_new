@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { usePathname, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, InteractionManager, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import {
   beginTrackedLoading,
@@ -21,23 +21,13 @@ type LoadingContextValue = {
 };
 
 const LoadingContext = createContext<LoadingContextValue | null>(null);
-const navigationFallbackMs = 12000;
-const noRouteChangeFallbackMs = 1600;
-const settleDelayMs = 160;
 const minimumVisibleMs = 420;
 const quietPeriodMs = 220;
 
 export function AppLoadingProvider({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
   const [entries, setEntries] = useState<TrackedLoadingEntry[]>(getTrackedLoadingEntries());
   const [overlayVisible, setOverlayVisible] = useState(entries.length > 0);
   const [overlayLabel, setOverlayLabel] = useState(entries[entries.length - 1]?.label || 'Loading');
-  const mounted = useRef(false);
-  const previousPath = useRef(pathname);
-  const navigationId = useRef<string | null>(null);
-  const navigationStartPath = useRef(pathname);
-  const fallbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const samePathTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const overlayShownAt = useRef(entries.length > 0 ? Date.now() : 0);
   const overlayVisibleRef = useRef(entries.length > 0);
@@ -70,62 +60,15 @@ export function AppLoadingProvider({ children }: { children: ReactNode }) {
     }, delay);
   }, [entries]);
 
-  const clearNavigationTimers = useCallback(() => {
-    if (fallbackTimer.current) clearTimeout(fallbackTimer.current);
-    if (samePathTimer.current) clearTimeout(samePathTimer.current);
-    fallbackTimer.current = null;
-    samePathTimer.current = null;
-  }, []);
-
-  const finishNavigation = useCallback(() => {
-    const id = navigationId.current;
-    navigationId.current = null;
-    clearNavigationTimers();
-    if (id) end(id);
-  }, [clearNavigationTimers, end]);
-
-  const settleAfterRender = useCallback(() => {
-    InteractionManager.runAfterInteractions(() => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setTimeout(finishNavigation, settleDelayMs);
-        });
-      });
-    });
-  }, [finishNavigation]);
-
   const beginNavigation = useCallback((label = 'Opening page') => {
-    if (navigationId.current) end(navigationId.current);
-    clearNavigationTimers();
-    navigationStartPath.current = pathname;
-    navigationId.current = begin(label);
-    fallbackTimer.current = setTimeout(finishNavigation, navigationFallbackMs);
-    samePathTimer.current = setTimeout(() => {
-      if (navigationStartPath.current === previousPath.current) finishNavigation();
-    }, noRouteChangeFallbackMs);
-  }, [begin, clearNavigationTimers, end, finishNavigation, pathname]);
+    void label;
+  }, []);
 
   const runWithLoader = useCallback(<T,>(task: () => Promise<T>, label = 'Processing request') => withTrackedLoading(task, label), []);
 
-  useEffect(() => {
-    if (!mounted.current) {
-      mounted.current = true;
-      previousPath.current = pathname;
-      return;
-    }
-    if (previousPath.current === pathname) return;
-    previousPath.current = pathname;
-    if (!navigationId.current) {
-      navigationId.current = begin('Loading page');
-      fallbackTimer.current = setTimeout(finishNavigation, navigationFallbackMs);
-    }
-    settleAfterRender();
-  }, [begin, finishNavigation, pathname, settleAfterRender]);
-
   useEffect(() => () => {
-    clearNavigationTimers();
     if (hideTimer.current) clearTimeout(hideTimer.current);
-  }, [clearNavigationTimers]);
+  }, []);
 
   const value = useMemo<LoadingContextValue>(() => ({ begin, end, beginNavigation, runWithLoader }), [begin, beginNavigation, end, runWithLoader]);
 
