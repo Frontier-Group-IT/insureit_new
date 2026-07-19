@@ -14,7 +14,7 @@
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 10000
     },
-    "icon": "./assets/brand/insureit-app-icon.png",
+    "icon": "./assets/brand/insureit-app-icon-ice.png",
     "splash": {
       "image": "./assets/brand/insureit-brand-wave.png",
       "resizeMode": "cover",
@@ -27,7 +27,7 @@
       "package": "com.insureit.mobile",
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/brand/insureit-adaptive-foreground.png",
+        "foregroundImage": "./assets/brand/insureit-app-icon-ice.png",
         "backgroundColor": "#F4F8FC"
       },
       "permissions": [
@@ -44,7 +44,7 @@
     "web": {
       "bundler": "metro",
       "output": "single",
-      "favicon": "./assets/brand/insureit-app-icon.png"
+      "favicon": "./assets/brand/insureit-app-icon-ice.png"
     },
     "plugins": [
       "expo-router",
