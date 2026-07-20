@@ -82,7 +82,7 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
   const groupName = groupContext ? customerAccountTitle(groupContext) : draftGroupName || 'Your Group Account';
   const firstName = (profile.full_name || groupContext?.contact_name || 'Customer').split(' ')[0];
   const portfolioLabel = groupContext ? partnerTypeLabel(groupContext.partner_type) : 'Group';
-  const roleLabel = groupContext ? membershipRoleLabel(groupContext.membership_role) : 'Group Owner';
+  const roleLabel = groupContext ? dashboardAccountRoleLabel(groupContext) : 'Group Owner';
 
   const now = Date.now();
   const activePolicies = useMemo(() => data.policies.filter((policy) => new Date(policy.end_date).getTime() >= now), [data.policies, now]);
@@ -211,6 +211,11 @@ function contextToOverview(context: CustomerAccountContext): GroupChildAccountOv
 }
 function timeGreeting() { const hour = new Date().getHours(); if (hour < 12) return 'Good Morning'; if (hour < 17) return 'Good Afternoon'; return 'Good Evening'; }
 function initialFor(name: string) { return (name.trim()[0] || 'U').toUpperCase(); }
+function dashboardAccountRoleLabel(context: CustomerAccountContext) {
+  if (context.partner_type === 'corporate') return 'Corporate Account';
+  if (context.partner_type === 'dealership') return 'Dealership';
+  return membershipRoleLabel(context.membership_role);
+}
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F7F9FD' }, loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F9FD' },

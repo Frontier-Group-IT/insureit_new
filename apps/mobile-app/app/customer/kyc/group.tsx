@@ -21,6 +21,7 @@ export default function GroupKycScreen() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [errorField, setErrorField] = useState('');
   const [successVisible, setSuccessVisible] = useState(false);
 
   useEffect(() => {
@@ -61,20 +62,24 @@ export default function GroupKycScreen() {
   const phone = application?.applicant_phone ?? profile?.phone ?? '';
 
   function validate() {
-    if (groupName.trim().length < 2) return 'Enter the Group name.';
-    if (ownerName.trim().length < 2) return 'Enter the owner or promoter name.';
-    if (!/^\d{10}$/.test(ownerPhone)) return 'Enter the owner contact mobile number.';
-    if (email.trim() && !/^\S+@\S+\.\S+$/.test(email.trim())) return 'Enter a valid email address or leave it blank.';
-    if (!phone) return 'Your mobile number is missing. Please sign out and register again.';
-    return '';
+    if (groupName.trim().length < 2) return { message: 'Enter the Group name.', field: 'group_name' };
+    if (ownerName.trim().length < 2) return { message: 'Enter the owner or promoter name.', field: 'owner_name' };
+    if (!/^\d{10}$/.test(ownerPhone)) return { message: 'Enter the owner contact mobile number.', field: 'owner_phone' };
+    if (email.trim() && !/^\S+@\S+\.\S+$/.test(email.trim())) return { message: 'Enter a valid email address or leave it blank.', field: 'email' };
+    if (!phone) return { message: 'Your mobile number is missing. Please sign out and register again.', field: '' };
+    return { message: '', field: '' };
   }
 
   async function submit() {
     if (!application || submitting) return;
     const validationError = validate();
-    if (validationError) return setError(validationError);
+    if (validationError.message) {
+      setErrorField(validationError.field);
+      return setError(validationError.message);
+    }
     setSubmitting(true);
     setError('');
+    setErrorField('');
     try {
       const draft: Json = {
         group_name: groupName.trim(),
@@ -113,15 +118,14 @@ export default function GroupKycScreen() {
         <Text style={styles.screenTitle}>Complete Your KYC</Text>
         <View style={styles.partnerSummary}><View style={styles.partnerIcon}><MaterialCommunityIcons name="account-group-outline" size={23} color="#0A43A3" /></View><View style={styles.partnerCopy}><Text style={styles.partnerEyebrow}>Partner type</Text><Text style={styles.partnerTitle}>Group</Text></View><MaterialCommunityIcons name="check-circle" size={21} color="#21A66B" /></View>
         <Text style={styles.intro}>Create the umbrella Group first. Corporate, Dealership and Individual customers can be associated after verification.</Text>
-        {error ? <View style={styles.errorBox}><MaterialCommunityIcons name="alert-circle-outline" size={18} color="#B42318" /><Text style={styles.errorText}>{error}</Text></View> : null}
         <View style={styles.card}>
-          <Field label="Group name" required value={groupName} onChangeText={setGroupName} placeholder="Group or umbrella name" autoCapitalize="words" />
-          <Field label="Owner / promoter name" required value={ownerName} onChangeText={setOwnerName} placeholder="Full name" autoCapitalize="words" />
-          <Field label="Owner contact mobile" required value={ownerPhone} onChangeText={(value) => setOwnerPhone(normalizeMobile(value))} placeholder="10-digit owner contact number" keyboardType="number-pad" />
-          <Field label="Email address" value={email} onChangeText={setEmail} placeholder="Optional email" keyboardType="email-address" autoCapitalize="none" />
+          <Field label="Group name" required value={groupName} error={errorField === 'group_name'} onChangeText={(value) => { setGroupName(value); if (errorField === 'group_name' && value.trim().length >= 2) setErrorField(''); }} placeholder="Group or umbrella name" autoCapitalize="words" />
+          <Field label="Owner / promoter name" required value={ownerName} error={errorField === 'owner_name'} onChangeText={(value) => { setOwnerName(value); if (errorField === 'owner_name' && value.trim().length >= 2) setErrorField(''); }} placeholder="Full name" autoCapitalize="words" />
+          <Field label="Owner contact mobile" required value={ownerPhone} error={errorField === 'owner_phone'} onChangeText={(value) => { const nextValue = normalizeMobile(value); setOwnerPhone(nextValue); if (errorField === 'owner_phone' && /^\d{10}$/.test(nextValue)) setErrorField(''); }} placeholder="10-digit owner contact number" keyboardType="number-pad" />
+          <Field label="Email address" value={email} error={errorField === 'email'} onChangeText={(value) => { setEmail(value); if (errorField === 'email' && (!value.trim() || /^\S+@\S+\.\S+$/.test(value.trim()))) setErrorField(''); }} placeholder="Optional email" keyboardType="email-address" autoCapitalize="none" />
         </View>
       </ScrollView>
-      <View style={styles.footer}><Pressable accessibilityRole="button" disabled={submitting} onPress={submit} style={[styles.submitButton, submitting && styles.submitDisabled]}>{submitting ? <ActivityIndicator color="#FFFFFF" /> : <><Text style={styles.submitText}>Submit Group KYC</Text><MaterialCommunityIcons name="arrow-right" size={20} color="#FFFFFF" /></>}</Pressable></View>
+      <View style={styles.footer}>{error ? <View style={styles.errorBox}><MaterialCommunityIcons name="alert-circle-outline" size={18} color="#B42318" /><Text style={styles.errorText}>{error}</Text></View> : null}<Pressable accessibilityRole="button" disabled={submitting} onPress={submit} style={[styles.submitButton, submitting && styles.submitDisabled]}>{submitting ? <ActivityIndicator color="#FFFFFF" /> : <><Text style={styles.submitText}>Submit Group KYC</Text><MaterialCommunityIcons name="arrow-right" size={20} color="#FFFFFF" /></>}</Pressable></View>
       </KeyboardAvoidingView>
       <Modal visible={successVisible} transparent animationType="fade" onRequestClose={() => router.replace('/customer/group/under-review')}>
         <View style={styles.modalBackdrop}><View style={styles.modalCard}><View style={styles.successIcon}><MaterialCommunityIcons name="check" size={34} color="#FFFFFF" /></View><Text style={styles.modalTitle}>KYC submitted</Text><Text style={styles.modalText}>Your Group details have been submitted for verification. You can now explore the Group dashboard.</Text><Pressable onPress={() => router.replace('/customer/group/under-review')} style={styles.modalButton}><Text style={styles.modalButtonText}>Open Group dashboard</Text></Pressable></View></View>
@@ -130,8 +134,8 @@ export default function GroupKycScreen() {
   );
 }
 
-function Field({ label, required = false, icon, ...props }: React.ComponentProps<typeof TextInput> & { label: string; required?: boolean; icon?: keyof typeof MaterialCommunityIcons.glyphMap }) {
-  return <View style={styles.field}><Text style={styles.label}>{label}{required ? <Text style={styles.required}> *</Text> : null}</Text><View style={styles.inputShell}>{icon ? <MaterialCommunityIcons name={icon} size={18} color="#7A8798" /> : null}<TextInput placeholderTextColor="#9AA7B8" style={styles.input} {...props} /></View></View>;
+function Field({ label, required = false, icon, error, ...props }: React.ComponentProps<typeof TextInput> & { label: string; required?: boolean; icon?: keyof typeof MaterialCommunityIcons.glyphMap; error?: boolean }) {
+  return <View style={styles.field}><Text style={styles.label}>{label}{required ? <Text style={styles.required}> *</Text> : null}</Text><View style={[styles.inputShell, error && styles.inputShellError]}>{icon ? <MaterialCommunityIcons name={icon} size={18} color="#7A8798" /> : null}<TextInput placeholderTextColor="#9AA7B8" style={styles.input} {...props} /></View></View>;
 }
 function asDraft(value: Json | null): Record<string, Json | undefined> { return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, Json | undefined> : {}; }
 function textDraft(draft: Record<string, Json | undefined>, key: string) { const value = draft[key]; return typeof value === 'string' ? value : ''; }
@@ -145,7 +149,7 @@ const styles = StyleSheet.create({
   headerSpacer: { width: 42 }, content: { paddingHorizontal: 16, paddingTop: 6, paddingBottom: 110 }, screenTitle: { color: palette.navy, fontSize: 22, fontWeight: '800', marginBottom: 12 },
   partnerSummary: { flexDirection: 'row', alignItems: 'center', gap: 11, borderRadius: 14, borderWidth: 1, borderColor: '#D8E2EE', backgroundColor: '#FFFFFF', padding: 13 }, partnerIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' }, partnerCopy: { flex: 1 }, partnerEyebrow: { color: '#7A8798', fontSize: 10.5 }, partnerTitle: { color: palette.navy, fontSize: 15, fontWeight: '800', marginTop: 2 },
   intro: { color: '#59687A', fontSize: 12.5, lineHeight: 19, marginVertical: 15 }, errorBox: { borderRadius: 11, backgroundColor: '#FEF3F2', padding: 11, flexDirection: 'row', gap: 8, marginBottom: 13 }, errorText: { flex: 1, color: '#B42318', fontSize: 12, lineHeight: 17 },
-  card: { borderRadius: 16, borderWidth: 1, borderColor: '#D9E2ED', backgroundColor: '#FFFFFF', padding: 16 }, field: { marginBottom: 15 }, label: { color: palette.navy, fontSize: 12.5, fontWeight: '700', marginBottom: 7 }, required: { color: '#D92D20' }, inputShell: { minHeight: 54, borderRadius: 12, borderWidth: 1, borderColor: '#D4DDE8', backgroundColor: '#FFFFFF', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 9 }, input: { flex: 1, minHeight: 50, color: '#17202F', fontSize: 15 },
-  footer: { paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E2E8F0' }, submitButton: { minHeight: 54, borderRadius: 12, backgroundColor: '#0A3B8F', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 }, submitDisabled: { opacity: 0.65 }, submitText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+  card: { borderRadius: 16, borderWidth: 1, borderColor: '#D9E2ED', backgroundColor: '#FFFFFF', padding: 16 }, field: { marginBottom: 15 }, label: { color: palette.navy, fontSize: 12.5, fontWeight: '700', marginBottom: 7 }, required: { color: '#D92D20' }, inputShell: { minHeight: 54, borderRadius: 12, borderWidth: 1, borderColor: '#D4DDE8', backgroundColor: '#FFFFFF', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 9 }, inputShellError: { borderColor: '#D92D20', backgroundColor: '#FFF8F7' }, input: { flex: 1, minHeight: 50, color: '#17202F', fontSize: 15 },
+  footer: { paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E2E8F0', gap: 10 }, submitButton: { minHeight: 54, borderRadius: 12, backgroundColor: '#0A3B8F', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 }, submitDisabled: { opacity: 0.65 }, submitText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 }, loadingText: { color: '#59687A' }, modalBackdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,.45)', alignItems: 'center', justifyContent: 'center', padding: 24 }, modalCard: { width: '100%', maxWidth: 390, borderRadius: 20, backgroundColor: '#FFFFFF', padding: 24, alignItems: 'center' }, successIcon: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#21A66B', alignItems: 'center', justifyContent: 'center' }, modalTitle: { marginTop: 16, color: palette.navy, fontSize: 20, fontWeight: '800' }, modalText: { marginTop: 8, color: '#59687A', textAlign: 'center', lineHeight: 20 }, modalButton: { marginTop: 20, minHeight: 48, borderRadius: 12, backgroundColor: '#0A3B8F', paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center' }, modalButtonText: { color: '#FFFFFF', fontWeight: '800' },
 });

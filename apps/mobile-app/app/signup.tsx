@@ -190,7 +190,7 @@ export default function SignupScreen() {
         {otpSent ? (
           <View style={styles.fieldWrap}>
             <Text style={styles.fieldLabel}>Enter OTP</Text>
-            <OtpDotsInput value={otp} onChangeText={setOtp} disabled={loading} />
+            <OtpDotsInput value={otp} onChangeText={setOtp} disabled={loading} autoFocus={otpSent} highlighted={otpSent} />
             <Pressable accessibilityRole="button" disabled={loading} onPress={requestOtp} style={styles.resendButton}>
               <Text style={styles.resendText}>Resend OTP</Text>
             </Pressable>
