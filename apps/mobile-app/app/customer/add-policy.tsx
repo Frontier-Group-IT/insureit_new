@@ -5,7 +5,7 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, Text
 
 import { Button, Card, Message, Screen, TextField } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
-import { customerAccountTitle, getOperationalCustomerContexts, partnerTypeLabel, type CustomerAccountContext } from '@/lib/customer-context';
+import { customerAccountTitle, getOperationalCustomerContexts, isPortfolioCustomerContext, partnerTypeLabel, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
@@ -92,7 +92,7 @@ export default function AddPolicyScreen() {
     });
     setSaving(false);
     if (error) setMessage(error.message || 'We could not save this policy. Please try again.');
-    else router.replace(contexts[0]?.partner_type === 'group' ? '/customer/group/policies' : '/customer/policies');
+    else router.replace(contexts.some(isPortfolioCustomerContext) ? '/customer/group/policies' : '/customer/policies');
   }
 
   return (

@@ -7,7 +7,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { NotificationBell } from '@/components/realtime-notifications';
 import { BrandLogo } from '@/components/first-look';
 import { getCurrentSession, getProfile, isValidProfile, routeForRole } from '@/lib/auth';
-import { getSelectedCustomerContext, type CustomerAccountContext } from '@/lib/customer-context';
+import { getSelectedCustomerContext, isPortfolioCustomerContext, type CustomerAccountContext } from '@/lib/customer-context';
 import { canVerifyDocument } from '@/lib/permissions';
 import { isSalesHierarchyRole } from '@/lib/roles';
 import { colors, palette, radii, roleTheme } from '@/lib/theme';
@@ -23,7 +23,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
   const insets = useSafeAreaInsets();
   const [profileInitial, setProfileInitial] = useState('I');
   const [profileRole, setProfileRole] = useState<AppRole | null>(null);
-  const [customerContext, setCustomerContext] = useState<CustomerAccountContext | null>(null);
+  const [customerContext, setCustomerContext] = useState<CustomerAccountContext | null | undefined>(pathname.startsWith('/customer') ? undefined : null);
   const showProfile = ['/customer', '/it', '/staff', '/agent', '/hierarchy', '/admin'].some((prefix) => pathname.startsWith(prefix));
   const compactTopSpacing = pathname === '/customer/upload-documents';
   const legalTopSpacing = pathname.startsWith('/customer/legal');
@@ -45,9 +45,12 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
         if (pathname.startsWith('/customer')) {
           const context = await getSelectedCustomerContext();
           if (active) setCustomerContext(context);
+        } else if (active) {
+          setCustomerContext(null);
         }
       } catch {
         if (active) setProfileInitial('I');
+        if (active && pathname.startsWith('/customer')) setCustomerContext(null);
       }
     }
     void loadProfileInitial();
@@ -57,7 +60,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
   }, [pathname]);
 
   function openProfile() {
-    if (pathname.startsWith('/customer')) return router.push('/customer/profile');
+    if (pathname.startsWith('/customer')) return router.push(isPortfolioCustomerContext(customerContext) ? '/customer/group/profile' : '/customer/profile');
     if (pathname.startsWith('/it')) return router.push('/it/profile');
     if (pathname.startsWith('/staff') || pathname.startsWith('/agent') || pathname.startsWith('/hierarchy') || pathname.startsWith('/admin')) return router.push('/staff/profile');
     return router.push('/login');
@@ -72,7 +75,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace(backTargetFor(pathname, routeParams, profileRole));
+      router.replace(backTargetFor(pathname, routeParams, profileRole, customerContext));
     }
   }
 
@@ -134,7 +137,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
           ) : null}
           {children}
         </ScrollView>
-        {showProfile && tabRole ? <BottomTabs role={tabRole} pathname={pathname} bottomInset={insets.bottom} customerContext={customerContext} /> : null}
+        {showProfile && tabRole && (!pathname.startsWith('/customer') || customerContext !== undefined) ? <BottomTabs role={tabRole} pathname={pathname} bottomInset={insets.bottom} customerContext={customerContext} /> : null}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -277,7 +280,7 @@ function tabsForRole(role: AppRole, customerContext?: CustomerAccountContext | n
   const agentTone = navTone(agent);
   const managementTone = navTone(management);
   const itTone = navTone(it);
-  if (role === 'customer' && customerContext?.partner_type === 'group') return [
+  if (role === 'customer' && isPortfolioCustomerContext(customerContext)) return [
     { label: 'Home', href: '/customer/home', icon: 'home-variant', ...customerTone },
     { label: 'Accounts', href: '/customer/group/accounts', icon: 'account-multiple-outline', ...customerTone },
     { label: 'Fleet', href: '/customer/group/fleet', icon: 'truck-outline', ...customerTone },
@@ -410,18 +413,20 @@ function routeParam(params: Record<string, string | string[]>, key: string) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function backTargetFor(pathname: string, params: Record<string, string | string[]>, role: AppRole | null): LinkProps['href'] {
+function backTargetFor(pathname: string, params: Record<string, string | string[]>, role: AppRole | null, customerContext?: CustomerAccountContext | null): LinkProps['href'] {
   const id = routeParam(params, 'id');
   const claimId = routeParam(params, 'claimId');
+  const usePortfolioRoutes = isPortfolioCustomerContext(customerContext);
 
-  if (pathname === '/customer/claim-detail') return '/customer/claims';
-  if (pathname === '/customer/policy-detail') return '/customer/policies';
+  if (pathname === '/customer/claim-detail') return usePortfolioRoutes ? '/customer/group/claims' : '/customer/claims';
+  if (pathname === '/customer/policy-detail') return usePortfolioRoutes ? '/customer/group/policies' : '/customer/policies';
+  if (pathname === '/customer/vehicle-detail') return usePortfolioRoutes ? '/customer/group/fleet' : '/customer/vehicles';
   if (pathname === '/customer/upload-documents') {
     return claimId ? { pathname: '/customer/claim-detail', params: { id: claimId } } : '/customer/home';
   }
-  if (pathname === '/customer/report-accident') return '/customer/home';
-  if (pathname === '/customer/add-vehicle') return '/customer/vehicles';
-  if (pathname === '/customer/add-policy') return '/customer/policies';
+  if (pathname === '/customer/report-accident') return usePortfolioRoutes ? '/customer/group/claims' : '/customer/home';
+  if (pathname === '/customer/add-vehicle') return usePortfolioRoutes ? '/customer/group/fleet' : '/customer/vehicles';
+  if (pathname === '/customer/add-policy') return usePortfolioRoutes ? '/customer/group/policies' : '/customer/policies';
   if (pathname.startsWith('/customer/legal')) return '/customer/insurance-quote';
   if (['/customer/claims', '/customer/vehicles', '/customer/policies', '/customer/support', '/customer/profile'].includes(pathname)) return '/customer/home';
 

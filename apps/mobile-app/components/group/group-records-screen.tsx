@@ -11,7 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Claim, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
 
-const fleetSketch = require('../../assets/vehicles/truck sketch.jpeg');
+const fleetSketch = require('../../assets/vehicles/truck sketch.png');
 
 type Mode = 'fleet' | 'policies' | 'claims';
 type RecordRow = { id: string; customerId: string; accountName: string; title: string; subtitle: string; meta: string; status: string; tone: 'blue' | 'green' | 'orange' | 'red' };

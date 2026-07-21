@@ -1,5 +1,5 @@
-import { GroupRecordsScreen } from '@/components/group/group-records-screen';
+import VehiclesScreen from '@/app/customer/vehicles';
 
 export default function GroupFleetRoute() {
-  return <GroupRecordsScreen mode="fleet" />;
+  return <VehiclesScreen />;
 }

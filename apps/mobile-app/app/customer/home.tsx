@@ -43,13 +43,21 @@ export default function CustomerMockupHomeScreen() {
         if (!session?.user) return router.replace('/login');
         const nextProfile = await waitForCustomerProfile(session.user.id);
         if (!isValidProfile(nextProfile) || nextProfile.role !== 'customer') return router.replace('/access-denied');
-        const [nextCustomer, nextOnboarding, selectedContext] = await Promise.all([
-          getCustomerForUser(session.user.id),
+        const [nextOnboarding, selectedContext] = await Promise.all([
           getOnboardingApplicationForUser(session.user.id),
           getSelectedCustomerContext(),
         ]);
+        const nextCustomer = selectedContext
+          ? await getCustomerByContext(selectedContext)
+          : await getCustomerForUser(session.user.id);
         if (!mounted) return;
-        setProfile(nextProfile); setCustomer(nextCustomer); setOnboarding(nextOnboarding); setSelectedContext(selectedContext);
+        setProfile(nextProfile);
+        setCustomer(nextCustomer);
+        setOnboarding(nextOnboarding);
+        setSelectedContext(selectedContext);
+        setVehicles([]);
+        setClaims([]);
+        setTasks([]);
         const promptDismissed = await getKycPromptDismissed(session.user.id);
         if (mounted) setKycPromptDismissed(Boolean(promptDismissed) || Boolean(nextCustomer) || nextOnboarding?.status === 'submitted' || nextOnboarding?.status === 'under_review');
         if (nextCustomer && !isPortfolioDashboardContext(selectedContext)) {
@@ -189,6 +197,11 @@ function initialFor(name: string) { return (name.trim()[0] || 'U').toUpperCase()
 function money(value: number) { return Math.round(value).toLocaleString('en-IN'); }
 function isPortfolioDashboardContext(context: CustomerAccountContext | null) {
   return Boolean(context && ['group', 'corporate', 'dealership'].includes(context.partner_type));
+}
+async function getCustomerByContext(context: CustomerAccountContext) {
+  const { data, error } = await supabase.from('customers').select('*').eq('id', context.customer_id).maybeSingle();
+  if (error) throw error;
+  return data;
 }
 function onboardingReviewNotes(application: CustomerOnboardingApplication | null) {
   const draft = application?.draft_data;

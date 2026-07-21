@@ -1,23 +1,20 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { Image, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Image, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
-import { getOperationalCustomerContexts } from '@/lib/customer-context';
+import { getOperationalCustomerContexts, isPortfolioCustomerContext, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Claim, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
 
 type PickedEndorsementFile = { name: string; mimeType?: string | null; size?: number | null; uri: string };
 
-const truckImages = [
-  require('../../assets/vehicles/truck-blue.png'),
-  require('../../assets/vehicles/truck-white.png'),
-  require('../../assets/vehicles/truck-orange.png'),
-];
+const truckSketch = require('../../assets/vehicles/truck sketch.png');
+const carSketch = require('../../assets/vehicles/car sketch.png');
 
 const insurerLogos = {
   hdfc: require('../../assets/vehicles/hdfc-ergo.png'),
@@ -31,6 +28,10 @@ export default function VehiclesScreen() {
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [insurers, setInsurers] = useState<InsuranceCompany[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
+  const [contexts, setContexts] = useState<CustomerAccountContext[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [companyFilterId, setCompanyFilterId] = useState('all');
+  const [companyFilterOpen, setCompanyFilterOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [renewalVehicleId, setRenewalVehicleId] = useState<string | null>(null);
   const [ownerChange, setOwnerChange] = useState<'yes' | 'no' | ''>('');
@@ -55,6 +56,7 @@ export default function VehiclesScreen() {
 
       const contexts = await getOperationalCustomerContexts();
       const ids = contexts.map((context) => context.customer_id);
+      setContexts(contexts);
       if (ids.length) {
         const [vehicleResult, policyResult, claimResult, insurerResult] = await Promise.all([
           supabase.from('vehicles').select('*').in('customer_id', ids).order('created_at', { ascending: false }),
@@ -84,6 +86,32 @@ export default function VehiclesScreen() {
     if (expiringSoon > 0) return `${expiringSoon} policy${expiringSoon === 1 ? '' : 'ies'} need attention soon`;
     return 'Renew your policy on time and keep your vehicles protected';
   }, [expiringSoon]);
+  const isPortfolioFleet = contexts.some(isPortfolioCustomerContext);
+  const companyOptions = useMemo(() => {
+    const options = contexts
+      .filter((context) => vehicleCompanyName(context.customer_id, contexts))
+      .map((context) => ({ id: context.customer_id, name: vehicleCompanyName(context.customer_id, contexts) }));
+    return Array.from(new Map(options.map((item) => [item.id, item])).values());
+  }, [contexts]);
+  const selectedCompanyLabel = companyFilterId === 'all'
+    ? 'All companies'
+    : companyOptions.find((item) => item.id === companyFilterId)?.name ?? 'All companies';
+  const filteredVehicles = useMemo(() => vehicles.filter((vehicle) => {
+    if (companyFilterId !== 'all' && vehicle.customer_id !== companyFilterId) return false;
+    const policy = latestPolicyFor(vehicle.id, policies);
+    const insurer = policy ? insurers.find((item) => item.id === policy.insurance_company_id) : null;
+    const company = vehicleCompanyName(vehicle.customer_id, contexts);
+    const haystack = [
+      vehicle.vehicle_no,
+      vehicle.make,
+      vehicle.model,
+      vehicle.year ? String(vehicle.year) : '',
+      policy?.policy_no,
+      insurer?.name,
+      company,
+    ].filter(Boolean).join(' ').toLowerCase();
+    return !searchQuery.trim() || haystack.includes(searchQuery.trim().toLowerCase());
+  }), [companyFilterId, contexts, insurers, policies, searchQuery, vehicles]);
 
   function openRenewal(vehicleId: string) {
     setRenewalVehicleId(vehicleId);
@@ -98,6 +126,10 @@ export default function VehiclesScreen() {
   }
 
   function openAddVehicle() {
+    if (isPortfolioFleet) {
+      router.push('/customer/add-vehicle');
+      return;
+    }
     setAddMethod('vehicle');
     setAddValue('');
     setAddVehicleOpen(true);
@@ -164,40 +196,72 @@ export default function VehiclesScreen() {
         </Pressable>
       </View>
 
-      {vehicles.length === 0 ? <EmptyState title="No vehicles yet" body="Vehicle records will appear here." /> : null}
+      {vehicles.length ? (
+        <View style={styles.filterPanel}>
+          <View style={styles.filterRow}>
+            <View style={styles.globalSearch}>
+              <MaterialCommunityIcons name="magnify" size={17} color="#0A43A3" />
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Search"
+                placeholderTextColor="#7F8EA4"
+                style={styles.globalSearchInput}
+              />
+              {searchQuery ? (
+                <Pressable accessibilityRole="button" onPress={() => setSearchQuery('')} style={styles.clearSearch}>
+                  <MaterialCommunityIcons name="close" size={14} color="#7A8799" />
+                </Pressable>
+              ) : null}
+            </View>
+            <Pressable accessibilityRole="button" onPress={() => setCompanyFilterOpen((value) => !value)} style={styles.companyDropdown}>
+              <Text style={styles.companyDropdownText} numberOfLines={1}>{selectedCompanyLabel}</Text>
+              <MaterialCommunityIcons name={companyFilterOpen ? 'chevron-up' : 'chevron-down'} size={18} color={palette.navy} />
+            </Pressable>
+          </View>
+          {companyFilterOpen ? (
+            <View style={styles.companyMenu}>
+              <Pressable onPress={() => { setCompanyFilterId('all'); setCompanyFilterOpen(false); }} style={[styles.companyOption, companyFilterId === 'all' && styles.companyOptionActive]}>
+                <Text style={[styles.companyOptionText, companyFilterId === 'all' && styles.companyOptionTextActive]}>All companies</Text>
+              </Pressable>
+              {companyOptions.map((company) => (
+                <Pressable key={company.id} onPress={() => { setCompanyFilterId(company.id); setCompanyFilterOpen(false); }} style={[styles.companyOption, companyFilterId === company.id && styles.companyOptionActive]}>
+                  <Text style={[styles.companyOptionText, companyFilterId === company.id && styles.companyOptionTextActive]} numberOfLines={1}>{company.name}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
 
-      {vehicles.map((vehicle) => {
+      {vehicles.length === 0 ? <EmptyState title="No vehicles yet" body="Vehicle records will appear here." /> : null}
+      {vehicles.length > 0 && filteredVehicles.length === 0 ? <EmptyState title="No matching vehicles" body="Try a different search or company filter." /> : null}
+
+      {filteredVehicles.map((vehicle) => {
         const policy = latestPolicyFor(vehicle.id, policies);
         const insurer = policy ? insurers.find((item) => item.id === policy.insurance_company_id) : null;
         const active = Boolean(policy && isPolicyActive(policy));
-        const openClaims = claims.filter((claim) => claim.vehicle_id === vehicle.id && !['Closed', 'Settled', 'Rejected'].includes(claim.current_status)).length;
-        const truckImage = vehicleImage(vehicle.id);
         const insurerLogo = insurerImage(insurer?.name);
+        const vehicleDescriptor = [vehicle.make, vehicle.model, vehicle.year ? String(vehicle.year) : null].filter(Boolean).join(' - ') || 'Vehicle details pending';
+        const accountName = vehicleCompanyName(vehicle.customer_id, contexts);
+        const vehicleImage = isPrivateVehicle(vehicle) ? carSketch : truckSketch;
+        const health = vehicleComplianceHealth(vehicle, policy);
 
         return (
           <Pressable key={vehicle.id} onPress={() => router.push({ pathname: '/customer/vehicle-detail', params: { id: vehicle.id } })} style={({ pressed }) => [styles.vehicleCard, pressed && styles.vehicleCardPressed]}>
             <View style={styles.cardMain}>
               <View style={styles.leftPane}>
+                {accountName ? <Text style={styles.accountName} numberOfLines={1}>{accountName}</Text> : null}
                 <View style={styles.chipRow}>
                   <View style={styles.vehicleNoChip}>
                     <Text style={styles.vehicleNoText}>{vehicle.vehicle_no}</Text>
                     <MaterialCommunityIcons name="content-copy" size={13} color={palette.navy} />
                   </View>
-                  <View style={[styles.activeChip, !active && styles.inactiveChip]}>
-                    <View style={[styles.activeDot, !active && styles.inactiveDot]} />
-                    <Text style={[styles.activeText, !active && styles.inactiveText]}>{active ? 'Active' : 'Inactive'}</Text>
-                  </View>
                 </View>
 
-                <Image source={truckImage} style={styles.truckImage} resizeMode="contain" />
+                <Image source={vehicleImage} style={styles.truckImage} resizeMode="contain" />
 
-                <Text style={styles.vehicleMake} numberOfLines={1}>{vehicle.make || 'Vehicle'}</Text>
-                <Text style={styles.vehicleModel} numberOfLines={1}>{vehicle.model || vehicle.vehicle_type || '-'}</Text>
-
-                <View style={styles.tagRow}>
-                  <Text style={styles.smallTag}>{vehicle.vehicle_type || 'Commercial'}</Text>
-                  <Text style={styles.smallTag}>{vehicle.year ? String(vehicle.year) : '-'}</Text>
-                </View>
+                <Text style={styles.vehicleMake} numberOfLines={1}>{vehicleDescriptor}</Text>
               </View>
 
               <View style={styles.rightPane}>
@@ -210,11 +274,12 @@ export default function VehiclesScreen() {
                   logo={insurerLogo}
                 />
                 <InfoBlock
-                  icon="calendar-start"
-                  iconBg="#EAF3FF"
-                  iconColor="#2563EB"
-                  label="Policy Start Date"
-                  value={policy ? formatDate(policy.start_date) : '-'}
+                  icon="file-document-outline"
+                  iconBg="#EAF8F1"
+                  iconColor="#12805C"
+                  label="Policy Number"
+                  value={policy?.policy_no ?? '-'}
+                  statusActive={active}
                 />
                 <InfoBlock
                   icon="calendar-alert"
@@ -223,21 +288,23 @@ export default function VehiclesScreen() {
                   label="Policy Expiry Date"
                   value={policy ? formatDate(policy.end_date) : '-'}
                 />
-                <InfoBlock
-                  icon="file-document-outline"
-                  iconBg="#EAF8F1"
-                  iconColor="#12805C"
-                  label="Policy Number"
-                  value={policy?.policy_no ?? '-'}
-                />
+                {!policy ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={(event) => {
+                      event.stopPropagation();
+                      router.push({ pathname: '/customer/add-policy', params: { vehicleId: vehicle.id } });
+                    }}
+                    style={styles.inlineAddPolicy}
+                  >
+                    <MaterialCommunityIcons name="shield-plus-outline" size={14} color="#0A43A3" />
+                    <Text style={styles.inlineAddPolicyText}>Add policy</Text>
+                  </Pressable>
+                ) : null}
               </View>
             </View>
 
-            <View style={styles.actionRow}>
-              <ActionButton icon="refresh" title="Renew Policy" subtitle="Get renewal quotes" tone="blue" onPress={() => openRenewal(vehicle.id)} />
-              <ActionButton icon="shield-check-outline" title="Endorsement" subtitle="Update policy details" tone="green" onPress={openEndorsement} />
-              <ActionButton icon="file-plus-outline" title="Register Claim" subtitle={openClaims ? `${openClaims} open claim${openClaims === 1 ? '' : 's'}` : 'Initiate a new claim'} tone="orange" onPress={() => router.push({ pathname: '/customer/report-accident', params: { vehicleId: vehicle.id } })} />
-            </View>
+            <ComplianceHealthRow health={health} />
           </Pressable>
         );
       })}
@@ -292,7 +359,7 @@ export default function VehiclesScreen() {
           <Text style={styles.bannerTitle}>Stay Protected, Always!</Text>
           <Text style={styles.bannerText}>{renewalMessage}</Text>
         </View>
-        <Pressable accessibilityRole="button" onPress={() => router.push('/customer/policies')} style={styles.viewRenewals}>
+        <Pressable accessibilityRole="button" onPress={() => router.push(isPortfolioFleet ? '/customer/group/policies' : '/customer/policies')} style={styles.viewRenewals}>
           <Text style={styles.viewRenewalsText}>View Renewals</Text>
           <MaterialCommunityIcons name="arrow-right" size={16} color={palette.navy} />
         </Pressable>
@@ -728,7 +795,7 @@ function RenewalSuccessModal({ visible, onClose }: { visible: boolean; onClose: 
   );
 }
 
-function InfoBlock({ icon, iconBg, iconColor, label, value, logo }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; iconBg: string; iconColor: string; label: string; value: string; logo?: number | null }) {
+function InfoBlock({ icon, iconBg, iconColor, label, value, logo, statusActive }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; iconBg: string; iconColor: string; label: string; value: string; logo?: number | null; statusActive?: boolean }) {
   return (
     <View style={styles.infoBlock}>
       <View style={[styles.infoIcon, { backgroundColor: iconBg }]}>
@@ -736,28 +803,133 @@ function InfoBlock({ icon, iconBg, iconColor, label, value, logo }: { icon: keyo
       </View>
       <View style={styles.infoCopy}>
         <Text style={styles.infoLabel}>{label}</Text>
-        <Text style={styles.infoValue} numberOfLines={2}>{value}</Text>
+        <View style={styles.infoValueRow}>
+          {typeof statusActive === 'boolean' ? <BlinkingPolicyDot active={statusActive} /> : null}
+          <Text style={styles.infoValue} numberOfLines={2}>{value}</Text>
+        </View>
       </View>
     </View>
   );
 }
 
-function ActionButton({ icon, title, subtitle, tone, onPress }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; title: string; subtitle: string; tone: 'blue' | 'green' | 'orange'; onPress: () => void }) {
+function BlinkingPolicyDot({ active }: { active: boolean }) {
+  const opacity = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(opacity, { toValue: 0.28, duration: 720, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: 720, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [opacity]);
+
+  return <Animated.View style={[styles.policyStatusDot, active ? styles.policyStatusDotActive : styles.policyStatusDotInactive, { opacity }]} />;
+}
+
+type ComplianceHealth = {
+  tone: 'green' | 'yellow' | 'red' | 'grey';
+  title: string;
+  detail: string;
+  due: number;
+  expired: number;
+};
+
+function ComplianceHealthRow({ health }: { health: ComplianceHealth }) {
   const config = {
-    blue: { bg: '#F2F7FF', border: '#CFE0FF', color: '#2563EB' },
-    green: { bg: '#F0FBF6', border: '#C7F0DA', color: '#12805C' },
-    orange: { bg: '#FFF7EF', border: '#F6D7B5', color: '#C95E16' },
-  }[tone];
+    green: { icon: 'shield-check-outline' as const, color: '#12805C' },
+    yellow: { icon: 'calendar-alert-outline' as const, color: '#B7791F' },
+    red: { icon: 'alert-circle-outline' as const, color: '#C43D2D' },
+    grey: { icon: 'file-search-outline' as const, color: '#667085' },
+  }[health.tone];
 
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={[styles.actionButton, { backgroundColor: config.bg, borderColor: config.border }]}>
-      <MaterialCommunityIcons name={icon} size={20} color={config.color} />
-      <View style={styles.actionCopy}>
-        <Text style={[styles.actionTitle, { color: config.color }]} numberOfLines={1}>{title}</Text>
-        <Text style={styles.actionSub} numberOfLines={1}>{subtitle}</Text>
-      </View>
-    </Pressable>
+    <View style={styles.complianceHealth}>
+      <MaterialCommunityIcons name={config.icon} size={15} color={config.color} />
+      <Text style={styles.complianceHealthLabel}>Compliance</Text>
+      <View style={styles.complianceHealthDivider} />
+      <HealthDot tone={health.tone} />
+      <Text style={[styles.complianceHealthTitle, { color: config.color }]} numberOfLines={1}>{health.title}</Text>
+    </View>
   );
+}
+
+function HealthDot({ tone }: { tone: ComplianceHealth['tone'] }) {
+  if (tone === 'red' || tone === 'yellow') return <PulsingHealthDot tone={tone} />;
+  return <View style={[styles.healthDot, tone === 'green' ? styles.healthDotGreen : styles.healthDotGrey]} />;
+}
+
+function PulsingHealthDot({ tone }: { tone: 'red' | 'yellow' }) {
+  const opacity = useRef(new Animated.Value(1)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.parallel([
+        Animated.timing(opacity, { toValue: 0.35, duration: 680, useNativeDriver: true }),
+        Animated.timing(scale, { toValue: 1.35, duration: 680, useNativeDriver: true }),
+      ]),
+      Animated.parallel([
+        Animated.timing(opacity, { toValue: 1, duration: 680, useNativeDriver: true }),
+        Animated.timing(scale, { toValue: 1, duration: 680, useNativeDriver: true }),
+      ]),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [opacity, scale]);
+
+  return <Animated.View style={[styles.healthDot, tone === 'red' ? styles.healthDotRed : styles.healthDotYellow, { opacity, transform: [{ scale }] }]} />;
+}
+
+function vehicleComplianceHealth(vehicle: Vehicle, policy?: Policy): ComplianceHealth {
+  const documents = [
+    { key: 'policy', date: policy?.end_date ?? null },
+    { key: 'puc', date: vehicle.puc_expiry_date },
+    ...(isPrivateVehicle(vehicle) ? [] : [
+      { key: 'fitness', date: vehicle.fitness_expiry_date },
+      { key: 'road_tax', date: vehicle.road_tax_expiry_date },
+      { key: 'national_permit', date: vehicle.national_permit_expiry_date },
+      { key: 'local_permit', date: vehicle.local_permit_expiry_date },
+    ]),
+  ];
+  const tracked = documents.filter((item) => item.date);
+
+  if (!tracked.length) {
+    return { tone: 'grey', title: 'Details pending', detail: 'Add policy and compliance expiry dates', due: 0, expired: 0 };
+  }
+
+  const expired = tracked.filter((item) => daysUntil(item.date as string) < 0).length;
+  const due = tracked.filter((item) => {
+    const days = daysUntil(item.date as string);
+    return days >= 0 && days <= 45;
+  }).length;
+
+  if (expired) {
+    return {
+      tone: 'red',
+      title: `${expired} expired${due ? `, ${due} due soon` : ''}`,
+      detail: 'Open details to review document dates',
+      due,
+      expired,
+    };
+  }
+  if (due) {
+    return {
+      tone: 'yellow',
+      title: `${due} due within 45 days`,
+      detail: 'Renew upcoming documents before expiry',
+      due,
+      expired,
+    };
+  }
+
+  return {
+    tone: 'green',
+    title: 'All documents up to date',
+    detail: `${tracked.length} tracked document${tracked.length === 1 ? '' : 's'} clear`,
+    due,
+    expired,
+  };
 }
 
 function latestPolicyFor(vehicleId: string, policies: Policy[]) {
@@ -768,13 +940,19 @@ function isPolicyActive(policy: Policy) {
   return new Date(policy.end_date).getTime() >= Date.now();
 }
 
+function isPrivateVehicle(vehicle: Vehicle) {
+  return (vehicle.vehicle_type ?? '').toLowerCase().includes('private');
+}
+
 function daysUntil(date: string) {
   return Math.ceil((new Date(date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
-function vehicleImage(id: string) {
-  const index = id.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) % truckImages.length;
-  return truckImages[index];
+function vehicleCompanyName(customerId: string, contexts: CustomerAccountContext[]) {
+  const context = contexts.find((item) => item.customer_id === customerId);
+  if (!context?.company_name?.trim()) return '';
+  if (!['corporate', 'dealership', 'individual_proprietor'].includes(context.partner_type)) return '';
+  return context.company_name.trim();
 }
 
 function insurerImage(name?: string | null) {
@@ -883,37 +1061,56 @@ const styles = StyleSheet.create({
   pageSub: { color: palette.slate, fontSize: 12, fontWeight: '700', marginTop: 3 },
   addButton: { height: 40, borderRadius: 8, backgroundColor: palette.navy, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   addButtonText: { color: '#FFFFFF', fontSize: 12, fontWeight: '900' },
+  filterPanel: { marginTop: -2, marginBottom: 10, gap: 7, zIndex: 20 },
+  filterRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  globalSearch: { flex: 1.25, height: 42, borderRadius: 13, borderWidth: 1.4, borderColor: '#9FC4F5', backgroundColor: '#F3F8FF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, shadowColor: '#0A43A3', shadowOpacity: 0.08, shadowRadius: 8, elevation: 1 },
+  globalSearchInput: { flex: 1, height: 38, color: palette.navy, fontSize: 12, fontWeight: '700' },
+  clearSearch: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
+  companyDropdown: { flex: 0.9, height: 42, borderRadius: 13, borderWidth: 1.2, borderColor: '#B8D4F7', backgroundColor: '#FFFFFF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
+  companyDropdownText: { flex: 1, color: palette.navy, fontSize: 11.2, fontWeight: '800' },
+  companyMenu: { borderRadius: 13, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', overflow: 'hidden', shadowColor: palette.ink, shadowOpacity: 0.07, shadowRadius: 8, elevation: 3 },
+  companyOption: { minHeight: 36, paddingHorizontal: 11, justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: '#EEF2F6' },
+  companyOptionActive: { backgroundColor: '#EEF5FF' },
+  companyOptionText: { color: '#65758B', fontSize: 11, fontWeight: '800' },
+  companyOptionTextActive: { color: palette.navy },
 
-  vehicleCard: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', borderRadius: 16, marginBottom: 14, padding: 13, shadowColor: palette.ink, shadowOpacity: 0.055, shadowRadius: 10, elevation: 2 },
+  vehicleCard: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', borderRadius: 16, marginBottom: 10, padding: 10, shadowColor: palette.ink, shadowOpacity: 0.055, shadowRadius: 10, elevation: 2 },
   vehicleCardPressed: { opacity: 0.88, transform: [{ scale: 0.99 }] },
-  cardMain: { flexDirection: 'row', gap: 13 },
-  leftPane: { width: 178, paddingRight: 6 },
-  chipRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 7 },
-  vehicleNoChip: { height: 30, borderRadius: 7, backgroundColor: '#EAF3FF', paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  vehicleNoText: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
-  activeChip: { height: 30, borderRadius: 7, backgroundColor: '#EAF3FF', paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  inactiveChip: { backgroundColor: '#FFF0F6' },
-  activeDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#19A7F2' },
-  inactiveDot: { backgroundColor: '#C83272' },
-  activeText: { color: palette.navy, fontSize: 11, fontWeight: '900' },
-  inactiveText: { color: '#C83272' },
-  truckImage: { width: 162, height: 104, marginTop: 2, alignSelf: 'center' },
-  vehicleMake: { color: palette.navy, fontSize: 15, lineHeight: 18, fontWeight: '900', marginTop: 6 },
-  vehicleModel: { color: palette.ink, fontSize: 13, lineHeight: 16, fontWeight: '800', marginTop: 1 },
-  tagRow: { flexDirection: 'row', gap: 6, marginTop: 8 },
-  smallTag: { color: palette.slate, fontSize: 10.5, fontWeight: '800', backgroundColor: '#F1F5F9', borderRadius: 7, paddingHorizontal: 8, paddingVertical: 4 },
+  cardMain: { flexDirection: 'row', gap: 10 },
+  leftPane: { width: 164, paddingRight: 4 },
+  accountName: { color: '#0A43A3', fontSize: 10.8, lineHeight: 13, fontWeight: '900', marginBottom: 3, textTransform: 'uppercase' },
+  chipRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  vehicleNoChip: { minHeight: 31, borderRadius: 8, backgroundColor: '#EAF3FF', paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  vehicleNoText: { color: palette.navy, fontSize: 15.2, lineHeight: 18, fontWeight: '900' },
+  truckImage: { width: 148, height: 78, marginTop: 0, alignSelf: 'center', borderRadius: 10 },
+  vehicleMake: { color: palette.navy, fontSize: 12.4, lineHeight: 15, fontWeight: '900', marginTop: 5 },
 
-  rightPane: { flex: 1, minWidth: 0, borderLeftWidth: 1, borderLeftColor: '#E5ECF5', paddingLeft: 12, position: 'relative' },
-  infoBlock: { minHeight: 55, flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: 1, borderBottomColor: '#E5ECF5' },
-  infoIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  insurerLogo: { width: 27, height: 27 },
+  rightPane: { flex: 1, minWidth: 0, borderLeftWidth: 1, borderLeftColor: '#E5ECF5', paddingLeft: 10, position: 'relative' },
+  infoBlock: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: 1, borderBottomColor: '#E5ECF5' },
+  infoIcon: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  insurerLogo: { width: 24, height: 24 },
   infoCopy: { flex: 1, minWidth: 0 },
-  infoLabel: { color: palette.slate, fontSize: 10.5, fontWeight: '800' },
-  infoValue: { color: palette.navy, fontSize: 12.5, lineHeight: 16, fontWeight: '900', marginTop: 2 },
+  infoLabel: { color: palette.slate, fontSize: 9.8, fontWeight: '800' },
+  infoValueRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 1 },
+  infoValue: { color: palette.navy, fontSize: 11.4, lineHeight: 14, fontWeight: '900', marginTop: 1 },
+  policyStatusDot: { width: 8, height: 8, borderRadius: 4 },
+  policyStatusDotActive: { backgroundColor: '#12B76A' },
+  policyStatusDotInactive: { backgroundColor: '#D92D20' },
+  inlineAddPolicy: { alignSelf: 'flex-end', minHeight: 24, borderRadius: 8, borderWidth: 1, borderColor: '#B8D4F7', backgroundColor: '#F2F7FF', paddingHorizontal: 7, flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
+  inlineAddPolicyText: { color: '#0A43A3', fontSize: 9.4, lineHeight: 12, fontWeight: '900' },
   dropdownButton: { position: 'absolute', right: 0, top: 0, width: 34, height: 34, borderRadius: 8, borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
 
-  actionRow: { flexDirection: 'row', gap: 5, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#E5ECF5' },
-  actionButton: { flex: 1, minHeight: 50, borderRadius: 10, borderWidth: 1, paddingHorizontal: 5, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  complianceHealth: { minHeight: 28, marginTop: 8, paddingTop: 7, borderTopWidth: 1, borderTopColor: '#E5ECF5', flexDirection: 'row', alignItems: 'center', gap: 6 },
+  complianceHealthLabel: { color: '#667085', fontSize: 10.5, lineHeight: 13, fontWeight: '800' },
+  complianceHealthDivider: { width: 1, height: 13, backgroundColor: '#DCE8F4', marginHorizontal: 1 },
+  complianceHealthTitle: { flex: 1, fontSize: 11.2, lineHeight: 14, fontWeight: '800' },
+  healthDot: { width: 8, height: 8, borderRadius: 4 },
+  healthDotGreen: { backgroundColor: '#12B76A' },
+  healthDotYellow: { backgroundColor: '#F6C33B' },
+  healthDotRed: { backgroundColor: '#D92D20' },
+  healthDotGrey: { backgroundColor: '#98A2B3' },
+  actionRow: { flexDirection: 'row', gap: 5, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#E5ECF5' },
+  actionButton: { flex: 1, minHeight: 44, borderRadius: 10, borderWidth: 1, paddingHorizontal: 5, flexDirection: 'row', alignItems: 'center', gap: 4 },
   actionCopy: { flex: 1, minWidth: 0 },
   actionTitle: { fontSize: 9.2, lineHeight: 11, fontWeight: '900' },
   actionSub: { color: palette.slate, fontSize: 7.7, lineHeight: 9, fontWeight: '700', marginTop: 1 },

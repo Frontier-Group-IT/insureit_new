@@ -15,7 +15,7 @@ const quickHelp = [
   { title: 'Claim Support', body: 'Track claims, status, and settlement help', icon: 'shield-check-outline' as const, category: 'claim' },
   { title: 'Policy Support', body: 'Policy details, changes, and endorsements', icon: 'file-document-edit-outline' as const, category: 'policy' },
   { title: 'Upload Help', body: 'Documents and file upload assistance', icon: 'cloud-upload-outline' as const, category: 'documents' },
-  { title: 'Roadside Help', body: '24 × 7 emergency roadside support', icon: 'phone-in-talk-outline' as const, category: 'roadside' },
+  { title: 'Endorsement', body: 'Request policy detail or ownership changes', icon: 'shield-edit-outline' as const, category: 'policy' },
 ];
 
 export default function SupportScreen() {
@@ -89,7 +89,7 @@ export default function SupportScreen() {
 
       <View style={styles.quickGrid}>
         {quickHelp.map((item) => (
-          <Pressable key={item.title} accessibilityRole="button" onPress={() => item.category === 'roadside' ? void callPhone(fallbackPhone) : router.push({ pathname: '/customer/raise-support-ticket', params: { category: item.category } })} style={styles.quickTile}>
+          <Pressable key={item.title} accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/raise-support-ticket', params: { category: item.category } })} style={styles.quickTile}>
             <View style={styles.quickIcon}><MaterialCommunityIcons name={item.icon} size={21} color={roleTheme.customer.accent} /></View>
             <Text style={styles.quickTitle}>{item.title}</Text>
             <Text style={styles.quickBody} numberOfLines={2}>{item.body}</Text>
