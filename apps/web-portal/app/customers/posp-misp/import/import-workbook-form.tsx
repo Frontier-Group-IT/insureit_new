@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { FormSubmitButton } from "@/components/form-submit-button";
+import { BlockingWorkPanel } from "@/components/loading/insureit-loader";
 import { FeedbackToast } from "@/components/ui-feedback";
 import type { PospMispState } from "../actions";
 
@@ -29,12 +31,19 @@ export function ImportWorkbookForm({ action }: Props) {
             <span className="mt-1 text-[10.5px] text-[#64748B]">Accepts .xlsx workbooks with POSP and MISP tabs.</span>
           </label>
           <input id="workbook" name="workbook" type="file" required accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" className="sr-only" onChange={(event) => setFileName(event.target.files?.[0]?.name ?? "")} />
+          <WorkbookPendingPanel />
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-[#E2E8F0] bg-white px-5 py-3">
           <Link href="/customers/posp-misp" className="rounded-md border border-[#CBD5E1] px-4 py-2 text-[11px] font-semibold text-[#334155]">Cancel</Link>
-          <FormSubmitButton label="Parse Workbook" />
+          <FormSubmitButton label="Parse Workbook" pendingLabel="Parsing" />
         </div>
       </form>
     </>
   );
+}
+
+function WorkbookPendingPanel() {
+  const { pending } = useFormStatus();
+  if (!pending) return null;
+  return <BlockingWorkPanel title="Reading workbook" detail="Validating POSP and MISP rows for review." />;
 }

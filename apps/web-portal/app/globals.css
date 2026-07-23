@@ -131,8 +131,44 @@ summary {
   }
 }
 
+@keyframes insureit-route-rail {
+  0% {
+    transform: translateX(-105%);
+  }
+  58% {
+    transform: translateX(72vw);
+  }
+  100% {
+    transform: translateX(112vw);
+  }
+}
+
+@keyframes insureit-work-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.72);
+    opacity: 0.55;
+  }
+}
+
+@keyframes insureit-sheen {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(160%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-insureit-loader="true"] * {
+    animation-duration: 3.6s !important;
+  }
+
+  [data-insureit-progress="true"] * {
     animation-duration: 3.6s !important;
   }
 }
