@@ -273,7 +273,7 @@ function profileDraft(row: NormalizedRow, documentStatuses: Record<string, strin
     gst_number: row.gst_number,
     education_status: row.education_status,
     bank_name: row.bank_name,
-    bank_account_number: row.bank_account_number,
+    bank_account_last_four: row.bank_account_number?.replace(/\s/g, "").slice(-4) ?? null,
     bank_ifsc_code: row.bank_ifsc_code,
     iib_remarks: row.iib_remarks,
     iib_upload_status: row.iib_upload_status,
@@ -282,7 +282,7 @@ function profileDraft(row: NormalizedRow, documentStatuses: Record<string, strin
     training_credentials_shared: row.training_credentials_shared,
     training_credentials_shared_flag: row.training_credentials_shared_flag,
     training_login_id: row.training_login_id,
-    training_password: row.training_password,
+    training_password_on_file: Boolean(row.training_password),
     training_start_date: row.training_start_date,
     training_end_date: row.training_end_date,
     training_status: row.training_status,
@@ -295,6 +295,27 @@ function profileDraft(row: NormalizedRow, documentStatuses: Record<string, strin
     dp_email: row.dp_email,
     dp_pan_number: row.dp_pan_number,
     document_statuses: documentStatuses
+  };
+}
+
+function sanitizeSourceData(source: Record<string, unknown>) {
+  const sanitized = { ...source };
+  const account = cell(source, "Account Number");
+  delete sanitized["Aadhar Number"];
+  delete sanitized["Account Number"];
+  delete sanitized["Training Password"];
+  sanitized["Aadhaar"] = source["Aadhar Number"] ? "Stored separately" : null;
+  sanitized["Account Last Four"] = account?.replace(/\s/g, "").slice(-4) ?? null;
+  sanitized["Training Password"] = source["Training Password"] ? "Stored separately" : null;
+  return sanitized;
+}
+
+function sanitizeSubmittedRow(row: NormalizedRow) {
+  return {
+    ...row,
+    bank_account_number: row.bank_account_number ? `•••• ${row.bank_account_number.replace(/\s/g, "").slice(-4)}` : null,
+    training_password: row.training_password ? "Stored separately" : null,
+    aadhaar_hash: row.aadhaar_hash ? "Stored separately" : null
   };
 }
 
@@ -712,7 +733,7 @@ export async function uploadPospMispWorkbook(_state: PospMispState, data: FormDa
     jsonRows.forEach((source, index) => {
       if (!Object.values(source).some((value) => value !== null && String(value).trim())) return;
       const normalized = normalizeExcelRow(partnerType, source, salesManagers, manufacturerNames);
-      rows.push({ partner_type: partnerType, sheet_name: sheetName, row_number: index + 2, source_data: source, normalized_data: normalized, validation_errors: validateRow(normalized) });
+      rows.push({ partner_type: partnerType, sheet_name: sheetName, row_number: index + 2, source_data: sanitizeSourceData(source), normalized_data: normalized, validation_errors: validateRow(normalized) });
     });
   }
 
@@ -861,7 +882,12 @@ export async function submitPospMispImportBatch(data: FormData) {
         rawData: row.source_data,
         initiatedBy: manager.id
       });
-      await admin.from("posp_misp_import_rows").update({ status: "submitted", application_id: application.id, error_message: null }).eq("id", row.id);
+      await admin.from("posp_misp_import_rows").update({
+        status: "submitted",
+        application_id: application.id,
+        error_message: null,
+        normalized_data: sanitizeSubmittedRow(row.normalized_data)
+      }).eq("id", row.id);
     } catch (creationError) {
       await admin.from("posp_misp_import_rows").update({ status: "failed", error_message: creationError instanceof Error ? creationError.message : "Unknown error" }).eq("id", row.id);
     }
