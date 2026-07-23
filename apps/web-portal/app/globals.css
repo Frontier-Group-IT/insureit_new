@@ -73,14 +73,6 @@ summary {
   color: #15183b;
 }
 
-html[data-insureit-global-loading="true"] [data-insureit-loader="true"] {
-  visibility: hidden;
-}
-
-html[data-insureit-global-loading="true"] [data-insureit-global-loader="true"] [data-insureit-loader="true"] {
-  visibility: visible;
-}
-
 @keyframes insureit-orbit {
   to {
     transform: rotate(360deg);
