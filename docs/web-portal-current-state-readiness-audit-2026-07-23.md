@@ -38,10 +38,16 @@ Completed on `work/posp-misp-web-onboarding`:
 - Replaced the access-denied login loop with an explicit sign-out-and-switch-account flow.
 - Corrected broken notification customer/support destinations and invalid claim sidebar filters.
 - Made Tasks and Timeline search/status controls functional and removed unsupported report filters.
+- Added transaction-safe POSP/MISP approval with one or two customer logins based on distinct MISP mobile numbers.
+- Removed bank account and training password values from general review payloads and masked historical review values.
+- Added truthful POSP/MISP batch states and counts, failed-row retry, concurrency-safe row claiming, and safe failure references.
+- Added row-level import document uploads and made education/marksheet status derive from the attached certificate.
+- Enforced optional external onboarding IDs in `SIB/YYYY/MM/NNNN` format with concurrency-safe duplicate protection.
 
 Still open:
 
-- POSP/MISP sensitive-data encryption, import sanitization, and approval workflow.
+- Managed encryption and audited reveal access for POSP/MISP credentials and bank account numbers.
+- Replacement or isolation of the legacy Excel parser and formal import-file retention rules.
 - Server pagination and indexed search for large queues.
 - Claim workflow consolidation, transaction hardening, automated tests, CI, and observability.
 

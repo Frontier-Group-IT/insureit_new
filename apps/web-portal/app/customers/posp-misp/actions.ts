@@ -89,8 +89,8 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const GST_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+const EXTERNAL_ID_PATTERN = /^SIB\/[0-9]{4}\/(0[1-9]|1[0-2])\/[0-9]{4}$/;
 const IIB_REMARK_OPTIONS = new Set(["Matching Record Found In DataBase", "No Data Found In POS System"]);
-const RECEIVED_WORDS = /\b(received|downloaded|yes|done|available|submitted|ok|complete|completed)\b/i;
 const DOCUMENT_FIELDS: Array<{ key: DocumentKey; label: string }> = [
   { key: "aadhaar_front", label: "Aadhaar front" },
   { key: "aadhaar_back", label: "Aadhaar back" },
@@ -190,10 +190,6 @@ function documentStatusesFromForm(data: FormData) {
 
 function normalizeBoolean(value: string | null) {
   return /^(true|yes|y|1|uploaded|shared|done|complete|completed)$/i.test(value ?? "");
-}
-
-function normalizeEducationStatus(value: string | null) {
-  return RECEIVED_WORDS.test(value ?? "") ? "received" : "not_received";
 }
 
 function normalizeIibRemark(value: string | null) {
@@ -330,6 +326,7 @@ function validateRow(row: NormalizedRow) {
   if (row.pan_number && !PAN_PATTERN.test(row.pan_number)) errors.push("PAN number is invalid.");
   if (row.dp_pan_number && !PAN_PATTERN.test(row.dp_pan_number)) errors.push("DP PAN number is invalid.");
   if (row.gst_number && !GST_PATTERN.test(row.gst_number)) errors.push("GST number is invalid.");
+  if (row.external_onboarding_id && !EXTERNAL_ID_PATTERN.test(row.external_onboarding_id.toUpperCase())) errors.push("External ID must use SIB/YYYY/MM/NNNN format.");
   if (row.iib_remarks && !IIB_REMARK_OPTIONS.has(row.iib_remarks)) errors.push("Choose a valid IIB remark.");
   if (row.partner_type === "misp" && !row.oem_name) errors.push("Select a valid OEM.");
   return errors;
@@ -347,7 +344,7 @@ function rowFromForm(data: FormData, salesManagers: SalesManagerOption[], manufa
     associate_profile_id: associate?.id ?? null,
     associate_name: managerName(associate),
     associate_id: managerCode(associate),
-    external_onboarding_id: text(data, "external_onboarding_id"),
+    external_onboarding_id: text(data, "external_onboarding_id")?.toUpperCase() ?? null,
     document_received_at: text(data, "document_received_at"),
     pos_name: partnerType === "posp" ? text(data, "pos_name") : null,
     misp_name: partnerType === "misp" ? text(data, "misp_name") : null,
@@ -400,7 +397,7 @@ function rowFromImportEditForm(data: FormData, existing: NormalizedRow, salesMan
     associate_profile_id: associate?.id ?? null,
     associate_name: managerName(associate),
     associate_id: managerCode(associate),
-    external_onboarding_id: text(data, "external_onboarding_id"),
+    external_onboarding_id: text(data, "external_onboarding_id")?.toUpperCase() ?? null,
     document_received_at: text(data, "document_received_at"),
     pos_name: partnerType === "posp" ? text(data, "pos_name") : null,
     misp_name: partnerType === "misp" ? text(data, "misp_name") : null,
@@ -451,7 +448,7 @@ function normalizeExcelRow(partnerType: PartnerType, source: Record<string, unkn
     associate_profile_id: associate?.id ?? null,
     associate_name: managerName(associate) ?? cell(source, "Associate Name"),
     associate_id: managerCode(associate) ?? cell(source, "Associate ID"),
-    external_onboarding_id: cell(source, partnerType === "posp" ? "Onboarding ID" : "MISP ID"),
+    external_onboarding_id: cell(source, partnerType === "posp" ? "Onboarding ID" : "MISP ID")?.toUpperCase() ?? null,
     document_received_at: normalizeDate(source["Document Recv Date"]),
     pos_name: partnerType === "posp" ? cell(source, "POS Name") : null,
     misp_name: partnerType === "misp" ? cell(source, "MISP Name") : null,
@@ -466,7 +463,7 @@ function normalizeExcelRow(partnerType: PartnerType, source: Record<string, unkn
     aadhaar_hash: aadhaar.hash,
     date_of_birth: normalizeDate(source[partnerType === "posp" ? "D.O.B" : "Date of Birth"]),
     gst_number: normalizeGst(cell(source, partnerType === "posp" ? "GST Number( Optional)" : "GST No")),
-    education_status: normalizeEducationStatus(cell(source, partnerType === "posp" ? "Marsheet" : "10th/12th Certificate")),
+    education_status: "not_received",
     bank_name: cell(source, "Bank Name"),
     bank_account_number: cell(source, "Account Number"),
     bank_ifsc_code: cell(source, "IFSC Code")?.toUpperCase() ?? null,
@@ -739,12 +736,27 @@ export async function uploadPospMispWorkbook(_state: PospMispState, data: FormDa
 
   if (!rows.length) return fail("The workbook does not contain POSP or MISP rows.", "workbook");
 
+  const externalIdCounts = new Map<string, number>();
+  for (const row of rows) {
+    const externalId = row.normalized_data.external_onboarding_id;
+    if (externalId) externalIdCounts.set(externalId, (externalIdCounts.get(externalId) ?? 0) + 1);
+  }
+  for (const row of rows) {
+    const externalId = row.normalized_data.external_onboarding_id;
+    if (externalId && (externalIdCounts.get(externalId) ?? 0) > 1) {
+      row.validation_errors.push("External ID is duplicated in this workbook.");
+    }
+  }
+
   const { data: batch, error: batchError } = await admin.from("posp_misp_import_batches").insert({
     file_name: selected.name,
     uploaded_by: manager.id,
     total_rows: rows.length,
     valid_rows: rows.filter((row) => !row.validation_errors.length).length,
     invalid_rows: rows.filter((row) => row.validation_errors.length).length,
+    pending_rows: rows.filter((row) => !row.validation_errors.length).length,
+    submitted_rows: 0,
+    failed_rows: 0,
     status: "parsed"
   }).select("id").single<{ id: string }>();
   if (batchError || !batch) return fail(`Import batch could not be created: ${batchError?.message ?? "Unknown error"}`);
@@ -772,17 +784,105 @@ async function refreshImportBatchCounts(admin: ReturnType<typeof createSupabaseA
     .returns<Array<{ status: string }>>();
   if (error) throw error;
   const activeRows = rows ?? [];
-  const invalidRows = activeRows.filter((row) => row.status === "invalid" || row.status === "failed").length;
+  const invalidRows = activeRows.filter((row) => row.status === "invalid").length;
   const validRows = activeRows.filter((row) => row.status === "parsed").length;
+  const pendingRows = activeRows.filter((row) => row.status === "parsed" || row.status === "processing").length;
+  const submittedRows = activeRows.filter((row) => row.status === "submitted").length;
+  const failedRows = activeRows.filter((row) => row.status === "failed").length;
+  const processingRows = activeRows.filter((row) => row.status === "processing").length;
+  const status = processingRows
+    ? "processing"
+    : activeRows.length > 0 && submittedRows === activeRows.length
+      ? "submitted"
+      : submittedRows > 0
+        ? "partially_submitted"
+        : failedRows > 0 && validRows === 0
+          ? "failed"
+          : "parsed";
   const { error: updateError } = await admin
     .from("posp_misp_import_batches")
-    .update({ total_rows: activeRows.length, valid_rows: validRows, invalid_rows: invalidRows })
+    .update({
+      total_rows: activeRows.length,
+      valid_rows: validRows,
+      invalid_rows: invalidRows,
+      pending_rows: pendingRows,
+      submitted_rows: submittedRows,
+      failed_rows: failedRows,
+      status,
+      submitted_at: status === "submitted" || status === "partially_submitted" ? new Date().toISOString() : null
+    })
     .eq("id", batchId);
   if (updateError) throw updateError;
 }
 
+async function saveImportRowDocuments(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  batchId: string,
+  rowId: string,
+  data: FormData,
+  uploadedBy: string
+) {
+  const selectedDocuments = DOCUMENT_FIELDS
+    .map((document) => ({ ...document, file: formFile(data, document.key) }))
+    .filter((document): document is typeof document & { file: File } => Boolean(document.file));
+
+  for (const document of selectedDocuments) {
+    const validationError = validateFile(document.file, document.label);
+    if (validationError) throw new Error(validationError);
+  }
+
+  const { data: existingDocuments, error: existingError } = await admin
+    .from("posp_misp_import_row_documents")
+    .select("id, document_type, storage_bucket, storage_path")
+    .eq("import_row_id", rowId)
+    .returns<Array<{ id: string; document_type: string; storage_bucket: string; storage_path: string }>>();
+  if (existingError) throw existingError;
+
+  const existingByType = new Map((existingDocuments ?? []).map((document) => [document.document_type, document]));
+  for (const document of selectedDocuments) {
+    const path = `posp-misp-imports/${batchId}/${rowId}/${document.key}/${randomUUID()}.${extension(document.file)}`;
+    const { error: uploadError } = await admin.storage
+      .from(DOCUMENT_BUCKET)
+      .upload(path, new Uint8Array(await document.file.arrayBuffer()), {
+        contentType: document.file.type,
+        upsert: false
+      });
+    if (uploadError) throw uploadError;
+
+    const { error: recordError } = await admin
+      .from("posp_misp_import_row_documents")
+      .upsert({
+        import_row_id: rowId,
+        document_type: document.key,
+        file_name: document.file.name,
+        storage_bucket: DOCUMENT_BUCKET,
+        storage_path: path,
+        mime_type: document.file.type,
+        file_size: document.file.size,
+        uploaded_by: uploadedBy
+      }, { onConflict: "import_row_id,document_type" });
+    if (recordError) {
+      await admin.storage.from(DOCUMENT_BUCKET).remove([path]);
+      throw recordError;
+    }
+
+    const previous = existingByType.get(document.key);
+    if (previous?.storage_path && previous.storage_path !== path) {
+      await admin.storage.from(previous.storage_bucket).remove([previous.storage_path]);
+    }
+    existingByType.set(document.key, {
+      id: previous?.id ?? "",
+      document_type: document.key,
+      storage_bucket: DOCUMENT_BUCKET,
+      storage_path: path
+    });
+  }
+
+  return new Set(existingByType.keys());
+}
+
 export async function updatePospMispImportRow(data: FormData) {
-  await currentManager();
+  const manager = await currentManager();
   const rowId = text(data, "row_id");
   const batchId = text(data, "batch_id");
   if (!rowId || !batchId) redirect("/customers/posp-misp/import?error=row_missing");
@@ -795,7 +895,7 @@ export async function updatePospMispImportRow(data: FormData) {
     .eq("import_batch_id", batchId)
     .maybeSingle<{ id: string; import_batch_id: string; partner_type: PartnerType; status: string; normalized_data: NormalizedRow }>();
   if (rowError || !existingRow) redirect(`/customers/posp-misp/import/${batchId}?error=row_missing`);
-  if (existingRow.status === "submitted") redirect(`/customers/posp-misp/import/${batchId}?error=row_locked`);
+  if (existingRow.status === "submitted" || existingRow.status === "processing") redirect(`/customers/posp-misp/import/${batchId}?error=row_locked`);
 
   let salesManagers: SalesManagerOption[];
   let manufacturerNames: Set<string>;
@@ -808,7 +908,18 @@ export async function updatePospMispImportRow(data: FormData) {
     redirect(`/customers/posp-misp/import/${batchId}?error=master_data`);
   }
 
-  const normalized = rowFromImportEditForm(data, existingRow.normalized_data, salesManagers, manufacturerNames);
+  let documentTypes: Set<string>;
+  try {
+    documentTypes = await saveImportRowDocuments(admin, batchId, rowId, data, manager.id);
+  } catch (error) {
+    console.error("Import-row document upload failed", error);
+    redirect(`/customers/posp-misp/import/${batchId}?error=document_upload_failed`);
+  }
+
+  const normalized = {
+    ...rowFromImportEditForm(data, existingRow.normalized_data, salesManagers, manufacturerNames),
+    education_status: documentTypes.has("education_certificate") ? "received" : "not_received"
+  };
   const validationErrors = validateRow(normalized);
   const { error: updateError } = await admin
     .from("posp_misp_import_rows")
@@ -841,7 +952,13 @@ export async function deletePospMispImportRow(data: FormData) {
     .eq("import_batch_id", batchId)
     .maybeSingle<{ id: string; status: string }>();
   if (!existingRow) redirect(`/customers/posp-misp/import/${batchId}?error=row_missing`);
-  if (existingRow.status === "submitted") redirect(`/customers/posp-misp/import/${batchId}?error=row_locked`);
+  if (existingRow.status === "submitted" || existingRow.status === "processing") redirect(`/customers/posp-misp/import/${batchId}?error=row_locked`);
+
+  const { data: rowDocuments } = await admin
+    .from("posp_misp_import_row_documents")
+    .select("storage_bucket, storage_path")
+    .eq("import_row_id", rowId)
+    .returns<Array<{ storage_bucket: string; storage_path: string }>>();
 
   const { error: deleteError } = await admin
     .from("posp_misp_import_rows")
@@ -849,6 +966,14 @@ export async function deletePospMispImportRow(data: FormData) {
     .eq("id", rowId)
     .eq("import_batch_id", batchId);
   if (deleteError) redirect(`/customers/posp-misp/import/${batchId}?error=row_delete_failed`);
+
+  const documentsByBucket = new Map<string, string[]>();
+  for (const document of rowDocuments ?? []) {
+    documentsByBucket.set(document.storage_bucket, [...(documentsByBucket.get(document.storage_bucket) ?? []), document.storage_path]);
+  }
+  await Promise.allSettled(
+    [...documentsByBucket].map(([bucket, paths]) => admin.storage.from(bucket).remove(paths))
+  );
 
   await refreshImportBatchCounts(admin, batchId);
   revalidatePath(`/customers/posp-misp/import/${batchId}`);
@@ -858,23 +983,56 @@ export async function deletePospMispImportRow(data: FormData) {
 export async function submitPospMispImportBatch(data: FormData) {
   const manager = await currentManager();
   const batchId = text(data, "batch_id");
+  const retryFailed = data.get("retry_failed") === "true";
   if (!batchId) redirect("/customers/posp-misp/import?error=batch_missing");
   const admin = createSupabaseAdminClient();
-  const { data: rows, error } = await admin
+  let rowsQuery = admin
     .from("posp_misp_import_rows")
     .select("id, row_number, partner_type, source_data, normalized_data")
     .eq("import_batch_id", batchId)
-    .eq("status", "parsed")
+    .order("row_number", { ascending: true });
+  rowsQuery = retryFailed ? rowsQuery.eq("status", "failed") : rowsQuery.eq("status", "parsed");
+  const { data: rows, error } = await rowsQuery
     .returns<Array<{ id: string; row_number: number; partner_type: PartnerType; source_data: Record<string, unknown>; normalized_data: NormalizedRow }>>();
   if (error || !rows?.length) redirect(`/customers/posp-misp/import/${batchId}?error=no_valid_rows`);
 
   for (const row of rows) {
+    const expectedStatus = retryFailed ? "failed" : "parsed";
+    const { data: claimedRow } = await admin
+      .from("posp_misp_import_rows")
+      .update({ status: "processing", error_message: null })
+      .eq("id", row.id)
+      .eq("status", expectedStatus)
+      .select("id")
+      .maybeSingle<{ id: string }>();
+    if (!claimedRow) continue;
+
     try {
+      const { data: rowDocuments, error: documentsError } = await admin
+        .from("posp_misp_import_row_documents")
+        .select("document_type, file_name, storage_bucket, storage_path, mime_type, file_size, uploaded_by")
+        .eq("import_row_id", row.id)
+        .returns<Array<{
+          document_type: DocumentKey;
+          file_name: string;
+          storage_bucket: string;
+          storage_path: string;
+          mime_type: string | null;
+          file_size: number | null;
+          uploaded_by: string | null;
+        }>>();
+      if (documentsError) throw documentsError;
+
+      const attachedDocumentTypes = new Set((rowDocuments ?? []).map((document) => document.document_type));
+      const derivedRow = {
+        ...row.normalized_data,
+        education_status: attachedDocumentTypes.has("education_certificate") ? "received" : "not_received"
+      };
       const application = await createSubmittedApplication({
-        row: row.normalized_data,
+        row: derivedRow,
         documentStatuses: Object.fromEntries(DOCUMENT_FIELDS.map(({ key }) => [
           key,
-          key === "education_certificate" ? row.normalized_data.education_status ?? "not_received" : "not_received"
+          attachedDocumentTypes.has(key) ? "received" : "not_received"
         ])),
         source: "excel_import",
         importBatchId: batchId,
@@ -882,17 +1040,40 @@ export async function submitPospMispImportBatch(data: FormData) {
         rawData: row.source_data,
         initiatedBy: manager.id
       });
+
+      if (rowDocuments?.length) {
+        const { error: documentLinkError } = await admin
+          .from("customer_onboarding_documents")
+          .upsert(rowDocuments.map((document) => ({
+            application_id: application.id,
+            document_type: document.document_type,
+            file_name: document.file_name,
+            storage_bucket: document.storage_bucket,
+            storage_path: document.storage_path,
+            mime_type: document.mime_type,
+            file_size: document.file_size,
+            verification_status: "pending",
+            uploaded_by: document.uploaded_by ?? manager.id
+          })), { onConflict: "application_id,document_type" });
+        if (documentLinkError) throw documentLinkError;
+      }
+
       await admin.from("posp_misp_import_rows").update({
         status: "submitted",
         application_id: application.id,
         error_message: null,
-        normalized_data: sanitizeSubmittedRow(row.normalized_data)
+        normalized_data: sanitizeSubmittedRow(derivedRow)
       }).eq("id", row.id);
     } catch (creationError) {
-      await admin.from("posp_misp_import_rows").update({ status: "failed", error_message: creationError instanceof Error ? creationError.message : "Unknown error" }).eq("id", row.id);
+      const reference = randomUUID().slice(0, 8);
+      console.error(`POSP/MISP import row failed [${reference}]`, creationError);
+      await admin.from("posp_misp_import_rows").update({
+        status: "failed",
+        error_message: `Submission failed. Reference ${reference}.`
+      }).eq("id", row.id);
     }
   }
 
-  await admin.from("posp_misp_import_batches").update({ status: "submitted", submitted_at: new Date().toISOString() }).eq("id", batchId);
-  redirect(`/customers/posp-misp/import/${batchId}?success=submitted`);
+  await refreshImportBatchCounts(admin, batchId);
+  redirect(`/customers/posp-misp/import/${batchId}?success=${retryFailed ? "retried" : "submitted"}`);
 }

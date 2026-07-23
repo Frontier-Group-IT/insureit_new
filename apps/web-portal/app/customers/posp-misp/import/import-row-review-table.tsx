@@ -15,6 +15,7 @@ type ImportRow = {
   status: string;
   application_id: string | null;
   error_message: string | null;
+  documents: Array<{ document_type: string; file_name: string }>;
 };
 
 type Props = {
@@ -28,10 +29,21 @@ type Props = {
 const inputClass = "h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
 const labelClass = "mb-1 block text-[10.5px] font-semibold text-[#344054]";
 const iibRemarks = ["Matching Record Found In DataBase", "No Data Found In POS System"];
+const documentFields = [
+  ["aadhaar_front", "Aadhaar front"],
+  ["aadhaar_back", "Aadhaar back"],
+  ["pan_copy", "PAN copy"],
+  ["education_certificate", "10th / 12th certificate"],
+  ["cancelled_cheque", "Cancelled cheque"],
+  ["photograph", "Photograph"],
+  ["registration_form", "Registration form"],
+  ["agreement_copy", "Agreement copy"],
+  ["gst_copy", "GST certificate"]
+] as const;
 
 export function ImportRowReviewTable({ batchId, batchStatus, rows, salesManagers, oems }: Props) {
   const [editingRow, setEditingRow] = useState<ImportRow | null>(null);
-  const canEditBatch = batchStatus === "parsed";
+  const canEditBatch = ["parsed", "partially_submitted", "failed"].includes(batchStatus);
 
   return (
     <>
@@ -39,13 +51,13 @@ export function ImportRowReviewTable({ batchId, batchStatus, rows, salesManagers
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1220px] text-left text-[11px]">
             <thead className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[9.5px] uppercase tracking-[0.04em] text-[#64748B]">
-              <tr><th className="px-3 py-2.5">Row</th><th className="px-3 py-2.5">Sheet</th><th className="px-3 py-2.5">Name</th><th className="px-3 py-2.5">Mobile</th><th className="px-3 py-2.5">PAN</th><th className="px-3 py-2.5">Training</th><th className="px-3 py-2.5">Validation</th><th className="px-3 py-2.5">Status</th><th className="px-3 py-2.5">Actions</th></tr>
+              <tr><th className="px-3 py-2.5">Row</th><th className="px-3 py-2.5">Sheet</th><th className="px-3 py-2.5">Name</th><th className="px-3 py-2.5">Mobile</th><th className="px-3 py-2.5">PAN</th><th className="px-3 py-2.5">Documents</th><th className="px-3 py-2.5">Training</th><th className="px-3 py-2.5">Validation</th><th className="px-3 py-2.5">Status</th><th className="px-3 py-2.5">Actions</th></tr>
             </thead>
             <tbody className="divide-y divide-[#EEF2F6]">
               {rows.map((row) => {
                 const normalized = row.normalized_data ?? {};
                 const name = stringValue(row.partner_type === "posp" ? normalized.pos_name : normalized.misp_name);
-                const editable = canEditBatch && row.status !== "submitted";
+                const editable = canEditBatch && !["submitted", "processing"].includes(row.status);
                 return (
                   <tr key={row.id} className="hover:bg-[#FAFCFF]">
                     <td className="px-3 py-3 tabular-nums">{row.row_number}</td>
@@ -53,9 +65,10 @@ export function ImportRowReviewTable({ batchId, batchStatus, rows, salesManagers
                     <td className="px-3 py-3 font-semibold text-[#0F172A]">{name ?? "-"}</td>
                     <td className="px-3 py-3 tabular-nums">{stringValue(normalized.applicant_phone) ?? "-"}</td>
                     <td className="px-3 py-3">{stringValue(normalized.pan_number) ?? "-"}</td>
+                    <td className="px-3 py-3"><span className={row.documents.length ? "font-semibold text-emerald-700" : "text-amber-700"}>{row.documents.length} attached</span></td>
                     <td className="px-3 py-3">{stringValue(normalized.training_status) ?? "-"}</td>
                     <td className="max-w-[280px] px-3 py-3">{row.validation_errors?.length ? <span className="text-red-700">{row.validation_errors.join(" ")}</span> : <span className="text-emerald-700">Ready</span>}</td>
-                    <td className="px-3 py-3">{row.error_message ?? row.status.replaceAll("_", " ")}</td>
+                    <td className="px-3 py-3">{rowStatus(row)}</td>
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-2">
                         {row.application_id ? <Link href={`/customers/applications/${row.application_id}`} className="font-semibold text-[#4F46E5] hover:underline">Review</Link> : null}
@@ -80,7 +93,7 @@ export function ImportRowReviewTable({ batchId, batchStatus, rows, salesManagers
         <EditRowModal
           batchId={batchId}
           row={editingRow}
-          editable={canEditBatch && editingRow.status !== "submitted"}
+          editable={canEditBatch && !["submitted", "processing"].includes(editingRow.status)}
           salesManagers={salesManagers}
           oems={oems}
           onClose={() => setEditingRow(null)}
@@ -143,7 +156,7 @@ function EditRowModal({ batchId, row, editable, salesManagers, oems, onClose }: 
           ) : null}
 
           <Section title="Bank and IIB Details">
-            <SelectField label="Education / Marksheet Status" name="education_status" defaultValue={stringValue(data.education_status) ?? "not_received"} disabled={!editable} options={[{ value: "received", label: "Received" }, { value: "not_received", label: "Not received" }]} placeholder="Select status" />
+            <ReadOnlyValue label="Education / Marksheet Status" value={row.documents.some((document) => document.document_type === "education_certificate") ? "Received" : "Not received"} />
             <Field label="Bank Name" name="bank_name" defaultValue={stringValue(data.bank_name) ?? ""} disabled={!editable} />
             <Field label="Account Number" name="bank_account_number" defaultValue={stringValue(data.bank_account_number) ?? ""} disabled={!editable} />
             <Field label="IFSC Code" name="bank_ifsc_code" defaultValue={stringValue(data.bank_ifsc_code) ?? ""} disabled={!editable} />
@@ -152,10 +165,29 @@ function EditRowModal({ batchId, row, editable, salesManagers, oems, onClose }: 
             <Field label="IIB Upload Date" name="iib_uploaded_at" type="date" defaultValue={stringValue(data.iib_uploaded_at) ?? ""} disabled={!editable} />
           </Section>
 
+          <section className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-5 py-4">
+            <div className="mb-3">
+              <h3 className="text-[13px] font-semibold text-[#0F172A]">Supporting Documents</h3>
+              <p className="mt-1 text-[10.5px] text-[#64748B]">Upload or replace files here. Document statuses are calculated from the files actually attached to this row.</p>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {documentFields.map(([key, label]) => {
+                const current = row.documents.find((document) => document.document_type === key);
+                return (
+                  <label key={key} className="rounded-lg border border-[#DCE5EF] bg-white p-3">
+                    <span className="block text-[10.5px] font-semibold text-[#344054]">{label}</span>
+                    <span className={`mt-1 block truncate text-[9.5px] ${current ? "text-emerald-700" : "text-[#64748B]"}`}>{current ? current.file_name : "Not received"}</span>
+                    {editable ? <input name={key} type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" className="mt-2 block w-full text-[10px] text-[#475569] file:mr-2 file:rounded-md file:border-0 file:bg-[#EEF2FF] file:px-2.5 file:py-1.5 file:text-[9.5px] file:font-semibold file:text-[#4338CA]" /> : null}
+                  </label>
+                );
+              })}
+            </div>
+          </section>
+
           <Section title="Training and Exam Credentials">
             <CheckboxField label="Credentials shared" name="training_credentials_shared_flag" defaultChecked={data.training_credentials_shared_flag === true} disabled={!editable} />
             <Field label="Training Login ID" name="training_login_id" defaultValue={stringValue(data.training_login_id) ?? ""} disabled={!editable} />
-            <Field label="Training Password" name="training_password" defaultValue={stringValue(data.training_password) ?? ""} disabled={!editable} />
+            <Field label="Training Password" name="training_password" type="password" defaultValue={stringValue(data.training_password) ?? ""} disabled={!editable} />
             <Field label="Training Start Date" name="training_start_date" type="date" defaultValue={stringValue(data.training_start_date) ?? ""} disabled={!editable} />
             <Field label="Training End Date" name="training_end_date" type="date" defaultValue={stringValue(data.training_end_date) ?? ""} disabled={!editable} />
             <Field label="Training Status" name="training_status" defaultValue={stringValue(data.training_status) ?? ""} disabled={!editable} />
@@ -196,4 +228,10 @@ function ReadOnlyValue({ label, value }: { label: string; value: string }) {
 
 function stringValue(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function rowStatus(row: ImportRow) {
+  if (row.status !== "failed") return row.status.replaceAll("_", " ");
+  const reference = row.error_message?.match(/Reference ([A-Za-z0-9-]+)/)?.[1];
+  return reference ? `Failed · Ref ${reference}` : "Failed · review or retry";
 }

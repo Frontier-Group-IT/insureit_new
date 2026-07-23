@@ -7,7 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { ImportRowReviewTable } from "../import-row-review-table";
 import { submitPospMispImportBatch } from "../../actions";
 
-type Batch = { id: string; file_name: string; total_rows: number; valid_rows: number; invalid_rows: number; status: string; created_at: string };
+type Batch = { id: string; file_name: string; total_rows: number; valid_rows: number; invalid_rows: number; pending_rows: number; submitted_rows: number; failed_rows: number; status: string; created_at: string };
 type ImportRow = {
   id: string;
   row_number: number;
@@ -18,7 +18,9 @@ type ImportRow = {
   status: string;
   application_id: string | null;
   error_message: string | null;
+  documents?: Array<{ document_type: string; file_name: string }>;
 };
+type RowDocument = { import_row_id: string; document_type: string; file_name: string };
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -30,11 +32,20 @@ export default async function PospMispImportBatchPage({ params, searchParams }: 
   const supabase = await createServerSupabaseClient();
   const admin = createSupabaseAdminClient();
   const [{ data: batch, error: batchError }, { data: rows, error: rowsError }, salesManagers, oems] = await Promise.all([
-    supabase.from("posp_misp_import_batches").select("id, file_name, total_rows, valid_rows, invalid_rows, status, created_at").eq("id", batchId).maybeSingle<Batch>(),
+    supabase.from("posp_misp_import_batches").select("id, file_name, total_rows, valid_rows, invalid_rows, pending_rows, submitted_rows, failed_rows, status, created_at").eq("id", batchId).maybeSingle<Batch>(),
     supabase.from("posp_misp_import_rows").select("id, row_number, sheet_name, partner_type, normalized_data, validation_errors, status, application_id, error_message").eq("import_batch_id", batchId).order("row_number", { ascending: true }).returns<ImportRow[]>(),
     loadSalesManagers(admin),
     loadVehicleManufacturers(admin)
   ]);
+  const rowIds = (rows ?? []).map((row) => row.id);
+  const { data: rowDocuments, error: documentsError } = rowIds.length
+    ? await supabase.from("posp_misp_import_row_documents").select("import_row_id, document_type, file_name").in("import_row_id", rowIds).returns<RowDocument[]>()
+    : { data: [] as RowDocument[], error: null };
+  const documentsByRow = new Map<string, RowDocument[]>();
+  for (const document of rowDocuments ?? []) {
+    documentsByRow.set(document.import_row_id, [...(documentsByRow.get(document.import_row_id) ?? []), document]);
+  }
+  const rowsWithDocuments = (rows ?? []).map((row) => ({ ...row, documents: documentsByRow.get(row.id) ?? [] }));
 
   return (
     <AppShell title="POSP / MISP Import Review">
@@ -45,25 +56,36 @@ export default async function PospMispImportBatchPage({ params, searchParams }: 
             <h1 className="mt-2 text-lg font-semibold text-[#0F172A]">{batch?.file_name ?? "Import batch"}</h1>
             <p className="mt-1 text-[11px] text-[#64748B]">Review, correct or remove parsed rows before submitting valid rows as onboarding applications.</p>
           </div>
-          {batch && batch.status === "parsed" && batch.valid_rows > 0 ? (
-            <form action={submitPospMispImportBatch}>
-              <input type="hidden" name="batch_id" value={batch.id} />
-              <button className="rounded-md bg-[#4F46E5] px-4 py-2 text-[11px] font-semibold text-white">Submit Valid Rows</button>
-            </form>
-          ) : null}
+          <div className="flex items-center gap-2">
+            {batch && batch.status !== "processing" && batch.valid_rows > 0 ? (
+              <form action={submitPospMispImportBatch}>
+                <input type="hidden" name="batch_id" value={batch.id} />
+                <button className="rounded-md bg-[#4F46E5] px-4 py-2 text-[11px] font-semibold text-white">Submit Ready Rows</button>
+              </form>
+            ) : null}
+            {batch && batch.status !== "processing" && batch.failed_rows > 0 ? (
+              <form action={submitPospMispImportBatch}>
+                <input type="hidden" name="batch_id" value={batch.id} />
+                <input type="hidden" name="retry_failed" value="true" />
+                <button className="rounded-md border border-amber-300 bg-amber-50 px-4 py-2 text-[11px] font-semibold text-amber-800">Retry Failed Rows</button>
+              </form>
+            ) : null}
+          </div>
         </div>
 
         {query.error ? <DataError message={errorMessage(query.error)} /> : null}
         {query.success ? <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-semibold text-emerald-700">{successMessage(query.success)}</div> : null}
-        {batchError || rowsError || !batch ? <DataError message={batchError?.message ?? rowsError?.message ?? "Import batch not found."} /> : (
+        {batchError || rowsError || documentsError || !batch ? <DataError message={batch ? "Import batch data could not be loaded." : "Import batch not found."} /> : (
           <>
-            <section className="grid gap-3 md:grid-cols-4">
+            <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
               <Metric label="Total Rows" value={batch.total_rows} />
-              <Metric label="Valid Rows" value={batch.valid_rows} tone="success" />
+              <Metric label="Ready" value={batch.valid_rows} tone="success" />
               <Metric label="Invalid Rows" value={batch.invalid_rows} tone="warning" />
+              <Metric label="Submitted" value={batch.submitted_rows} tone="success" />
+              <Metric label="Failed" value={batch.failed_rows} tone="danger" />
               <Metric label="Status" value={batch.status.replaceAll("_", " ")} />
             </section>
-            <ImportRowReviewTable batchId={batch.id} batchStatus={batch.status} rows={rows ?? []} salesManagers={salesManagers} oems={oems} />
+            <ImportRowReviewTable batchId={batch.id} batchStatus={batch.status} rows={rowsWithDocuments} salesManagers={salesManagers} oems={oems} />
           </>
         )}
       </div>
@@ -71,8 +93,8 @@ export default async function PospMispImportBatchPage({ params, searchParams }: 
   );
 }
 
-function Metric({ label, value, tone = "default" }: { label: string; value: string | number; tone?: "default" | "success" | "warning" }) {
-  const color = tone === "success" ? "text-emerald-700" : tone === "warning" ? "text-amber-700" : "text-[#0F172A]";
+function Metric({ label, value, tone = "default" }: { label: string; value: string | number; tone?: "default" | "success" | "warning" | "danger" }) {
+  const color = tone === "success" ? "text-emerald-700" : tone === "warning" ? "text-amber-700" : tone === "danger" ? "text-red-700" : "text-[#0F172A]";
   return <div className="rounded-xl border border-[#E2E8F0] bg-white p-4 shadow-sm"><p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[#64748B]">{label}</p><p className={`mt-1 text-xl font-semibold capitalize ${color}`}>{value}</p></div>;
 }
 
@@ -109,6 +131,7 @@ function errorMessage(error: string) {
     row_locked: "This row has already been submitted and cannot be edited.",
     row_update_failed: "The row could not be updated.",
     row_delete_failed: "The row could not be removed.",
+    document_upload_failed: "The document could not be uploaded. Use a PDF, JPG or PNG file no larger than 5 MB.",
     master_data: "Sales Manager or OEM master data could not be loaded."
   };
   return messages[error] ?? "The batch could not be updated.";
@@ -116,7 +139,8 @@ function errorMessage(error: string) {
 
 function successMessage(success: string) {
   const messages: Record<string, string> = {
-    submitted: "Valid rows were submitted to KYC applications.",
+    submitted: "Ready rows were processed. Any failures remain available for correction or retry.",
+    retried: "Failed rows were retried. Review the updated row and batch statuses.",
     row_updated: "Parsed row was updated and revalidated.",
     row_removed: "Parsed row was removed from this batch."
   };
