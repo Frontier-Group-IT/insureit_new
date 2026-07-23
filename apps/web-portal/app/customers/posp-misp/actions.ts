@@ -3,8 +3,8 @@
 import { createHash, randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import * as XLSX from "xlsx";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
+import { parsePospMispWorkbook, WorkbookValidationError } from "@/lib/posp-misp-workbook";
 import { canManageMasterData } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { beginPortalOnboardingApplication } from "../onboarding-applications";
@@ -150,9 +150,8 @@ function normalizeAadhaar(value: string | null) {
 function normalizeDate(value: unknown) {
   if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString().slice(0, 10);
   if (typeof value === "number") {
-    const parsed = XLSX.SSF.parse_date_code(value);
-    if (!parsed) return null;
-    return new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d)).toISOString().slice(0, 10);
+    if (!Number.isFinite(value) || value < 1 || value > 2958465) return null;
+    return new Date(Date.UTC(1899, 11, 30) + value * 86_400_000).toISOString().slice(0, 10);
   }
   if (typeof value !== "string") return null;
   const trimmed = value.trim().replaceAll("'", " ");
@@ -646,7 +645,9 @@ export async function createPospMispOnboarding(_state: PospMispState, data: Form
       loadManufacturerNames(admin)
     ]);
   } catch (error) {
-    return fail(`Master data could not be loaded: ${error instanceof Error ? error.message : "Unknown error"}`);
+    const reference = randomUUID().slice(0, 8);
+    console.error(`POSP/MISP onboarding master data failed [${reference}]`, error);
+    return fail(`Required master data could not be loaded. Reference ${reference}.`);
   }
 
   const row = rowFromForm(data, salesManagers, manufacturerNames);
@@ -716,19 +717,27 @@ export async function uploadPospMispWorkbook(_state: PospMispState, data: FormDa
       loadManufacturerNames(admin)
     ]);
   } catch (error) {
-    return fail(`Master data could not be loaded: ${error instanceof Error ? error.message : "Unknown error"}`);
+    const reference = randomUUID().slice(0, 8);
+    console.error(`POSP/MISP import master data failed [${reference}]`, error);
+    return fail(`Required master data could not be loaded. Reference ${reference}.`);
   }
-  const bytes = await selected.arrayBuffer();
-  const workbook = XLSX.read(bytes, { cellDates: true });
+  let workbookSheets;
+  try {
+    workbookSheets = await parsePospMispWorkbook(selected);
+  } catch (error) {
+    if (error instanceof WorkbookValidationError) return fail(error.message, "workbook");
+    const reference = randomUUID().slice(0, 8);
+    console.error(`POSP/MISP workbook parsing failed [${reference}]`, error);
+    return fail(`The workbook could not be processed. Reference ${reference}.`, "workbook");
+  }
+
   const rows: Array<{ partner_type: PartnerType; sheet_name: string; row_number: number; source_data: Record<string, unknown>; normalized_data: NormalizedRow; validation_errors: string[] }> = [];
 
   for (const partnerType of ["posp", "misp"] as const) {
     const sheetName = partnerType.toUpperCase();
-    const sheet = workbook.Sheets[sheetName];
+    const sheet = workbookSheets.find((entry) => entry.name === sheetName);
     if (!sheet) continue;
-    const jsonRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null, raw: false });
-    jsonRows.forEach((source, index) => {
-      if (!Object.values(source).some((value) => value !== null && String(value).trim())) return;
+    sheet.rows.forEach((source, index) => {
       const normalized = normalizeExcelRow(partnerType, source, salesManagers, manufacturerNames);
       rows.push({ partner_type: partnerType, sheet_name: sheetName, row_number: index + 2, source_data: sanitizeSourceData(source), normalized_data: normalized, validation_errors: validateRow(normalized) });
     });
@@ -759,7 +768,11 @@ export async function uploadPospMispWorkbook(_state: PospMispState, data: FormDa
     failed_rows: 0,
     status: "parsed"
   }).select("id").single<{ id: string }>();
-  if (batchError || !batch) return fail(`Import batch could not be created: ${batchError?.message ?? "Unknown error"}`);
+  if (batchError || !batch) {
+    const reference = randomUUID().slice(0, 8);
+    console.error(`POSP/MISP import batch creation failed [${reference}]`, batchError);
+    return fail(`The import batch could not be created. Reference ${reference}.`);
+  }
 
   const { error: rowError } = await admin.from("posp_misp_import_rows").insert(rows.map((row) => ({
     import_batch_id: batch.id,
@@ -771,7 +784,12 @@ export async function uploadPospMispWorkbook(_state: PospMispState, data: FormDa
     validation_errors: row.validation_errors,
     status: row.validation_errors.length ? "invalid" : "parsed"
   })));
-  if (rowError) return fail(`Import rows could not be saved: ${rowError.message}`);
+  if (rowError) {
+    const reference = randomUUID().slice(0, 8);
+    console.error(`POSP/MISP import row save failed [${reference}]`, rowError);
+    await admin.from("posp_misp_import_batches").delete().eq("id", batch.id);
+    return fail(`The parsed rows could not be saved. Reference ${reference}.`);
+  }
 
   redirect(`/customers/posp-misp/import/${batch.id}`);
 }

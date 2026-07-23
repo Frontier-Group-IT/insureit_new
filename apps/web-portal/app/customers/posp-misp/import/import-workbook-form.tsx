@@ -28,9 +28,9 @@ export function ImportWorkbookForm({ action }: Props) {
         <div className="space-y-4 p-5">
           <label htmlFor="workbook" className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#CBD5E1] bg-[#F8FAFC] px-4 py-6 text-center hover:border-[#6366F1]">
             <span className="text-[13px] font-semibold text-[#0F172A]">{fileName || "Choose Excel file"}</span>
-            <span className="mt-1 text-[10.5px] text-[#64748B]">Accepts .xlsx workbooks with POSP and MISP tabs.</span>
+            <span className="mt-1 text-[10.5px] text-[#64748B]">Secure .xlsx only, up to 5 MB, with POSP and MISP tabs.</span>
           </label>
-          <input id="workbook" name="workbook" type="file" required accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" className="sr-only" onChange={(event) => setFileName(event.target.files?.[0]?.name ?? "")} />
+          <input id="workbook" name="workbook" type="file" required accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="sr-only" onChange={(event) => setFileName(event.target.files?.[0]?.name ?? "")} />
           <WorkbookPendingPanel />
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-[#E2E8F0] bg-white px-5 py-3">

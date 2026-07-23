@@ -6,7 +6,7 @@ Scope:
 
 - `apps/web-portal`
 - Web-facing Supabase migrations, policies, storage, and server actions
-- Current branch: `work/posp-misp-web-onboarding`
+- Current branch: `work/posp-misp-approval`
 - Mobile application excluded
 
 ## Executive Verdict
@@ -44,11 +44,14 @@ Completed on `work/posp-misp-web-onboarding`:
 - Added row-level import document uploads and made education/marksheet status derive from the attached certificate.
 - Enforced optional external onboarding IDs in `SIB/YYYY/MM/NNNN` format with concurrency-safe duplicate protection.
 - Replaced full-table KYC and POSP/MISP queues with indexed server-side search, filters, grouped document counts, ageing and pagination.
+- Replaced the legacy Excel parser with a maintained `.xlsx` reader and strict archive, file-size, row, column, and cell limits.
+- Rejected workbook formulas, macros, unsafe archive paths, and external workbook links before parsing.
+- Patched Next.js to `15.5.21`, restored a clean reproducible dependency lock, and aligned the portal lint toolchain.
 
 Still open:
 
 - Managed encryption and audited reveal access for POSP/MISP credentials and bank account numbers.
-- Replacement or isolation of the legacy Excel parser and formal import-file retention rules.
+- Formal import-file retention rules and asynchronous worker isolation for unusually large future import volumes.
 - Server pagination and indexed search for the remaining customer, vehicle, policy, document, task and timeline queues.
 - Claim workflow consolidation, transaction hardening, automated tests, CI, and observability.
 
@@ -58,13 +61,13 @@ Still open:
 | --- | --- | --- |
 | TypeScript | Pass | Keep as a required CI check. |
 | Next.js production build | Pass | Keep as a required CI check. |
-| ESLint | Fail before linting | Align Next/ESLint/typescript-eslint versions and remove `ignoreDuringBuilds`. |
-| Production dependency audit | 6 high severity advisories | Upgrade or replace Next, `xlsx`, `sharp`, PostCSS, js-yaml, and brace-expansion dependency paths. |
+| ESLint | Pass | Keep as a required CI check. |
+| Production dependency audit | Direct Next and `xlsx` findings resolved; 3 transitive advisories remain | Track patched Next releases for bundled PostCSS and Sharp updates. |
 | Automated tests | None found | Add unit, database/RLS, integration, and Playwright suites. |
 | Route loading/error boundaries | None found | Add scoped `loading.tsx`, `error.tsx`, and `not-found.tsx`. |
 | CI workflows | No `.github` directory | Add required GitHub Actions checks before merge/deploy. |
 | Observability | No instrumentation found | Add structured logs, error tracking, metrics, and correlation IDs. |
-| Build workspace detection | Warning | Set `outputFileTracingRoot` and resolve the unrelated user-level lockfile. |
+| Build workspace detection | Pass | Keep the workspace tracing root configuration. |
 
 ## P0: Security And Data Protection
 
