@@ -22,7 +22,9 @@ const partnerLabels: Record<string, string> = {
   individual_proprietor: "Individual / Proprietor",
   dealership: "Dealership",
   corporate: "Corporate",
-  group: "Group"
+  group: "Group",
+  posp: "POSP",
+  misp: "MISP"
 };
 
 const statusLabels: Record<string, string> = {
@@ -106,10 +108,13 @@ function applicationName(partnerType: string | null, draft: Record<string, unkno
   if (partnerType === "dealership") return textValue(draft.dealership_name) ?? textValue(draft.owner_name);
   if (partnerType === "corporate") return textValue(draft.company_name);
   if (partnerType === "group") return textValue(draft.group_name) ?? textValue(draft.owner_name);
+  if (partnerType === "posp") return textValue(draft.pos_name) ?? textValue(draft.associate_name);
+  if (partnerType === "misp") return textValue(draft.misp_name) ?? textValue(draft.dp_name);
   return textValue(draft.contact_name);
 }
 function stepTotal(partnerType: string | null) {
   if (partnerType === "dealership") return 7;
+  if (partnerType === "posp" || partnerType === "misp") return 4;
   if (partnerType === "individual_proprietor") return 5;
   return 4;
 }
