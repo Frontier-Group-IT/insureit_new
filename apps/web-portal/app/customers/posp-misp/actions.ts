@@ -1,6 +1,7 @@
 "use server";
 
 import { createHash, randomUUID } from "node:crypto";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import * as XLSX from "xlsx";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
@@ -366,6 +367,59 @@ function rowFromForm(data: FormData, salesManagers: SalesManagerOption[], manufa
   };
 }
 
+function rowFromImportEditForm(data: FormData, existing: NormalizedRow, salesManagers: SalesManagerOption[], manufacturerNames: Set<string>): NormalizedRow {
+  const partnerType = text(data, "partner_type") === "misp" ? "misp" : "posp";
+  const aadhaarText = text(data, "aadhaar_number");
+  const aadhaar = aadhaarText ? normalizeAadhaar(aadhaarText) : { lastFour: existing.aadhaar_last_four, hash: existing.aadhaar_hash };
+  const associate = resolveSalesManagerByProfileId(salesManagers, text(data, "associate_profile_id"));
+  const iibUploaded = data.get("iib_uploaded") === "true";
+  const credentialsShared = data.get("training_credentials_shared_flag") === "true";
+  return {
+    partner_type: partnerType,
+    associate_profile_id: associate?.id ?? null,
+    associate_name: managerName(associate),
+    associate_id: managerCode(associate),
+    external_onboarding_id: text(data, "external_onboarding_id"),
+    document_received_at: text(data, "document_received_at"),
+    pos_name: partnerType === "posp" ? text(data, "pos_name") : null,
+    misp_name: partnerType === "misp" ? text(data, "misp_name") : null,
+    applicant_phone: normalizePhone(text(data, "applicant_phone")),
+    applicant_email: text(data, "applicant_email")?.toLowerCase() ?? null,
+    city: text(data, "city"),
+    state: text(data, "state"),
+    postal_code: text(data, "postal_code"),
+    address: text(data, "address"),
+    pan_number: normalizePan(text(data, "pan_number")),
+    aadhaar_last_four: aadhaar.lastFour,
+    aadhaar_hash: aadhaar.hash,
+    date_of_birth: text(data, "date_of_birth"),
+    gst_number: normalizeGst(text(data, "gst_number")),
+    education_status: text(data, "education_status") === "received" ? "received" : "not_received",
+    bank_name: text(data, "bank_name"),
+    bank_account_number: text(data, "bank_account_number"),
+    bank_ifsc_code: text(data, "bank_ifsc_code")?.toUpperCase() ?? null,
+    iib_remarks: normalizeIibRemark(text(data, "iib_remarks")),
+    iib_upload_status: iibUploaded ? "uploaded" : "pending",
+    iib_uploaded: iibUploaded,
+    iib_uploaded_at: text(data, "iib_uploaded_at"),
+    training_credentials_shared: credentialsShared ? "yes" : "no",
+    training_credentials_shared_flag: credentialsShared,
+    training_login_id: text(data, "training_login_id"),
+    training_password: text(data, "training_password"),
+    training_start_date: text(data, "training_start_date"),
+    training_end_date: text(data, "training_end_date"),
+    training_status: text(data, "training_status"),
+    training_certificate_number: text(data, "training_certificate_number"),
+    exam_status: text(data, "exam_status"),
+    onboarding_date: text(data, "onboarding_date"),
+    oem_name: partnerType === "misp" ? normalizeOem(text(data, "oem_name"), manufacturerNames) : null,
+    dp_name: text(data, "dp_name"),
+    dp_phone: normalizePhone(text(data, "dp_phone")),
+    dp_email: text(data, "dp_email")?.toLowerCase() ?? null,
+    dp_pan_number: normalizePan(text(data, "dp_pan_number"))
+  };
+}
+
 function normalizeExcelRow(partnerType: PartnerType, source: Record<string, unknown>, salesManagers: SalesManagerOption[], manufacturerNames: Set<string>): NormalizedRow {
   const aadhaar = normalizeAadhaar(cell(source, partnerType === "posp" ? "Aadhar Number" : "Aadhar Number"));
   const associate = resolveSalesManagerFromExcel(salesManagers, cell(source, "Associate Name"), cell(source, "Associate ID"));
@@ -687,6 +741,97 @@ export async function uploadPospMispWorkbook(_state: PospMispState, data: FormDa
   if (rowError) return fail(`Import rows could not be saved: ${rowError.message}`);
 
   redirect(`/customers/posp-misp/import/${batch.id}`);
+}
+
+async function refreshImportBatchCounts(admin: ReturnType<typeof createSupabaseAdminClient>, batchId: string) {
+  const { data: rows, error } = await admin
+    .from("posp_misp_import_rows")
+    .select("status")
+    .eq("import_batch_id", batchId)
+    .returns<Array<{ status: string }>>();
+  if (error) throw error;
+  const activeRows = rows ?? [];
+  const invalidRows = activeRows.filter((row) => row.status === "invalid" || row.status === "failed").length;
+  const validRows = activeRows.filter((row) => row.status === "parsed").length;
+  const { error: updateError } = await admin
+    .from("posp_misp_import_batches")
+    .update({ total_rows: activeRows.length, valid_rows: validRows, invalid_rows: invalidRows })
+    .eq("id", batchId);
+  if (updateError) throw updateError;
+}
+
+export async function updatePospMispImportRow(data: FormData) {
+  await currentManager();
+  const rowId = text(data, "row_id");
+  const batchId = text(data, "batch_id");
+  if (!rowId || !batchId) redirect("/customers/posp-misp/import?error=row_missing");
+
+  const admin = createSupabaseAdminClient();
+  const { data: existingRow, error: rowError } = await admin
+    .from("posp_misp_import_rows")
+    .select("id, import_batch_id, partner_type, status, normalized_data")
+    .eq("id", rowId)
+    .eq("import_batch_id", batchId)
+    .maybeSingle<{ id: string; import_batch_id: string; partner_type: PartnerType; status: string; normalized_data: NormalizedRow }>();
+  if (rowError || !existingRow) redirect(`/customers/posp-misp/import/${batchId}?error=row_missing`);
+  if (existingRow.status === "submitted") redirect(`/customers/posp-misp/import/${batchId}?error=row_locked`);
+
+  let salesManagers: SalesManagerOption[];
+  let manufacturerNames: Set<string>;
+  try {
+    [salesManagers, manufacturerNames] = await Promise.all([
+      loadSalesManagers(admin),
+      loadManufacturerNames(admin)
+    ]);
+  } catch {
+    redirect(`/customers/posp-misp/import/${batchId}?error=master_data`);
+  }
+
+  const normalized = rowFromImportEditForm(data, existingRow.normalized_data, salesManagers, manufacturerNames);
+  const validationErrors = validateRow(normalized);
+  const { error: updateError } = await admin
+    .from("posp_misp_import_rows")
+    .update({
+      normalized_data: normalized,
+      validation_errors: validationErrors,
+      status: validationErrors.length ? "invalid" : "parsed",
+      error_message: null
+    })
+    .eq("id", rowId)
+    .eq("import_batch_id", batchId);
+  if (updateError) redirect(`/customers/posp-misp/import/${batchId}?error=row_update_failed`);
+
+  await refreshImportBatchCounts(admin, batchId);
+  revalidatePath(`/customers/posp-misp/import/${batchId}`);
+  redirect(`/customers/posp-misp/import/${batchId}?success=row_updated`);
+}
+
+export async function deletePospMispImportRow(data: FormData) {
+  await currentManager();
+  const rowId = text(data, "row_id");
+  const batchId = text(data, "batch_id");
+  if (!rowId || !batchId) redirect("/customers/posp-misp/import?error=row_missing");
+
+  const admin = createSupabaseAdminClient();
+  const { data: existingRow } = await admin
+    .from("posp_misp_import_rows")
+    .select("id, status")
+    .eq("id", rowId)
+    .eq("import_batch_id", batchId)
+    .maybeSingle<{ id: string; status: string }>();
+  if (!existingRow) redirect(`/customers/posp-misp/import/${batchId}?error=row_missing`);
+  if (existingRow.status === "submitted") redirect(`/customers/posp-misp/import/${batchId}?error=row_locked`);
+
+  const { error: deleteError } = await admin
+    .from("posp_misp_import_rows")
+    .delete()
+    .eq("id", rowId)
+    .eq("import_batch_id", batchId);
+  if (deleteError) redirect(`/customers/posp-misp/import/${batchId}?error=row_delete_failed`);
+
+  await refreshImportBatchCounts(admin, batchId);
+  revalidatePath(`/customers/posp-misp/import/${batchId}`);
+  redirect(`/customers/posp-misp/import/${batchId}?success=row_removed`);
 }
 
 export async function submitPospMispImportBatch(data: FormData) {
