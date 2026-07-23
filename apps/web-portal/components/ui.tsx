@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import type { ClaimStatus } from "./data";
 
@@ -77,24 +78,43 @@ export function MetricCard({ label, value, hint, tone = "navy", icon }: { label:
   );
 }
 
-export function SearchFilterBar({ searchPlaceholder, filterLabel = "Status", action, compact = false }: { searchPlaceholder: string; filterLabel?: string; action?: ReactNode; compact?: boolean }) {
+export function SearchFilterBar({
+  searchPlaceholder,
+  filterLabel = "Status",
+  filterName = "status",
+  filterOptions = [],
+  defaultSearch = "",
+  defaultFilter = "all",
+  action,
+  compact = false
+}: {
+  searchPlaceholder: string;
+  filterLabel?: string;
+  filterName?: string;
+  filterOptions?: Array<{ value: string; label: string }>;
+  defaultSearch?: string;
+  defaultFilter?: string;
+  action?: ReactNode;
+  compact?: boolean;
+}) {
+  const hasFilters = Boolean(defaultSearch || defaultFilter !== "all");
   return (
-    <div className={`${compact ? "mb-2 rounded-lg border border-slate-200 bg-white p-2" : "mb-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"}`}>
+    <form method="get" className={`${compact ? "mb-2 rounded-lg border border-slate-200 bg-white p-2" : "mb-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"}`}>
       <div className={`flex flex-col md:flex-row md:items-center md:justify-between ${compact ? "gap-2" : "gap-3"}`}>
         <div className="flex-1">
-          <input className={`${compact ? "h-8 w-full rounded-md px-2.5 text-xs" : "w-full px-3.5"}`} placeholder={searchPlaceholder} aria-label={searchPlaceholder} />
+          <input name="q" defaultValue={defaultSearch} className={`${compact ? "h-8 w-full rounded-md px-2.5 text-xs" : "w-full px-3.5"}`} placeholder={searchPlaceholder} aria-label={searchPlaceholder} />
         </div>
         <div className={`flex flex-col sm:flex-row sm:items-center ${compact ? "gap-2" : "gap-3"}`}>
-          <select className={`${compact ? "h-8 min-w-36 rounded-md px-2.5 text-xs" : "min-w-40"}`} aria-label={filterLabel} defaultValue="all">
+          <select name={filterName} className={`${compact ? "h-8 min-w-36 rounded-md px-2.5 text-xs" : "min-w-40"}`} aria-label={filterLabel} defaultValue={defaultFilter}>
             <option value="all">All {filterLabel.toLowerCase()}</option>
-            <option value="active">Active</option>
-            <option value="attention">Needs attention</option>
-            <option value="closed">Closed</option>
+            {filterOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
+          <button type="submit" className={`${compact ? "h-8 rounded-md px-3 text-xs" : "h-10 rounded-lg px-4 text-sm"} bg-navy-700 font-semibold text-white transition hover:bg-navy-900`}>Apply</button>
+          {hasFilters ? <Link href="?" className={`${compact ? "h-8 rounded-md px-3 text-xs" : "h-10 rounded-lg px-4 text-sm"} inline-flex items-center justify-center border border-slate-200 font-semibold text-slate-600 transition hover:bg-slate-50`}>Clear</Link> : null}
           {action}
         </div>
       </div>
-    </div>
+    </form>
   );
 }
 

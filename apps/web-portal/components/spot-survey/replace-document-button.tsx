@@ -66,7 +66,11 @@ export function ReplaceDocumentButton({ claimId, customerId, documentType, label
                   <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-[#DCE7F5] bg-[#F8FBFF] p-3">
                     <div className="flex min-w-0 items-center gap-3">
                       <div className="grid h-14 w-20 shrink-0 place-items-center overflow-hidden rounded-md border border-[#DCE7F5] bg-white">
-                        {previewUrl ? <img src={previewUrl} alt="Selected file preview" className="h-full w-full object-cover" /> : <span className="text-[24px]">📄</span>}
+                        {previewUrl ? (
+                          // Blob URLs are local, short-lived previews and cannot use the Next image optimizer.
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={previewUrl} alt="Selected file preview" className="h-full w-full object-cover" />
+                        ) : <span className="text-[24px]">📄</span>}
                       </div>
                       <div className="min-w-0">
                         <p className="truncate text-[13px] font-semibold text-[#071D49]">{selectedFile.name}</p>

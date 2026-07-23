@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { DashboardActivityRow } from "@/lib/manager-dashboard";
+import { claimPath, customerEditPath } from "@/lib/portal-routes";
 import { ActivityHandledButton, ActivitySeenButton, ActivityWorkButton } from "../dashboard/activity-status-buttons";
 
 export function ActivityCenter({ activeRows, recentRows }: { activeRows: DashboardActivityRow[]; recentRows: DashboardActivityRow[] }) {
@@ -85,7 +86,7 @@ function StatusBadge({ status }: { status: DashboardActivityRow["status"] }) {
 }
 
 function customerName(row: DashboardActivityRow) { return row.customers?.company_name || row.customers?.contact_name || "Customer"; }
-function actionHref(row: DashboardActivityRow) { if (row.claim_id) return `/claims/${row.claim_id}`; if (row.support_ticket_id) return `/support/${row.support_ticket_id}`; if (row.customer_id) return `/customers/${row.customer_id}`; return "/notifications"; }
+function actionHref(row: DashboardActivityRow) { if (row.claim_id) return claimPath(row.claim_id); if (row.customer_id) return customerEditPath(row.customer_id); return "/notifications"; }
 function eventLabel(eventType: DashboardActivityRow["event_type"]) { return eventType.split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" "); }
 function activityIcon(eventType: DashboardActivityRow["event_type"]) { if (eventType.includes("document")) return "D"; if (eventType.includes("support")) return "S"; if (eventType.includes("kyc")) return "K"; if (eventType.includes("roadside")) return "R"; return "C"; }
 function relativeTime(value: string) { const diffMs = Date.now() - Date.parse(value); if (!Number.isFinite(diffMs)) return "-"; const minutes = Math.max(0, Math.floor(diffMs / 60000)); if (minutes < 1) return "Just now"; if (minutes < 60) return `${minutes}m ago`; const hours = Math.floor(minutes / 60); if (hours < 24) return `${hours}h ago`; const days = Math.floor(hours / 24); if (days === 1) return "1d ago"; return `${days}d ago`; }
