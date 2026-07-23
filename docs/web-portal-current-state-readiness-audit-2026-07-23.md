@@ -43,12 +43,13 @@ Completed on `work/posp-misp-web-onboarding`:
 - Added truthful POSP/MISP batch states and counts, failed-row retry, concurrency-safe row claiming, and safe failure references.
 - Added row-level import document uploads and made education/marksheet status derive from the attached certificate.
 - Enforced optional external onboarding IDs in `SIB/YYYY/MM/NNNN` format with concurrency-safe duplicate protection.
+- Replaced full-table KYC and POSP/MISP queues with indexed server-side search, filters, grouped document counts, ageing and pagination.
 
 Still open:
 
 - Managed encryption and audited reveal access for POSP/MISP credentials and bank account numbers.
 - Replacement or isolation of the legacy Excel parser and formal import-file retention rules.
-- Server pagination and indexed search for large queues.
+- Server pagination and indexed search for the remaining customer, vehicle, policy, document, task and timeline queues.
 - Claim workflow consolidation, transaction hardening, automated tests, CI, and observability.
 
 ## Validation Results
