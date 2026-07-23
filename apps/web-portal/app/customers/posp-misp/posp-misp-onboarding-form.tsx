@@ -21,10 +21,16 @@ type DocumentKey =
 type Props = {
   action: (state: PospMispState, data: FormData) => Promise<PospMispState>;
   partnerType: PartnerType;
+  salesManagers: Array<{ id: string; fullName: string; employeeCode: string | null }>;
+  oems: Array<{ value: string; label: string }>;
 };
 
 const inputClass = "h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
 const labelClass = "mb-1 block text-[10.5px] font-semibold text-[#344054]";
+const iibRemarks = [
+  "Matching Record Found In DataBase",
+  "No Data Found In POS System"
+];
 const documentFields: Array<{ key: DocumentKey; label: string }> = [
   { key: "aadhaar_front", label: "Aadhaar front" },
   { key: "aadhaar_back", label: "Aadhaar back" },
@@ -37,12 +43,14 @@ const documentFields: Array<{ key: DocumentKey; label: string }> = [
   { key: "gst_copy", label: "GST certificate" }
 ];
 
-export function PospMispOnboardingForm({ action, partnerType }: Props) {
+export function PospMispOnboardingForm({ action, partnerType, salesManagers, oems }: Props) {
   const [state, formAction] = useActionState(action, { error: null, field: null });
   const [showError, setShowError] = useState(false);
   const [files, setFiles] = useState<Partial<Record<DocumentKey, File>>>({});
+  const [associateId, setAssociateId] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
   const isMisp = partnerType === "misp";
+  const selectedAssociate = salesManagers.find((manager) => manager.id === associateId);
 
   useEffect(() => {
     setShowError(Boolean(state.error));
@@ -89,13 +97,24 @@ export function PospMispOnboardingForm({ action, partnerType }: Props) {
           <input type="hidden" name="partner_type" value={partnerType} />
 
           <Section title={isMisp ? "MISP Business Details" : "POSP Details"}>
-            <Field label="Associate Name" name="associate_name" placeholder="Associate name" />
-            <Field label="Associate ID" name="associate_id" placeholder="Associate ID" />
+            <SelectField
+              label="Associate Name"
+              name="associate_profile_id"
+              value={associateId}
+              onChange={(event) => setAssociateId(event.target.value)}
+              required
+              options={salesManagers.map((manager) => ({
+                value: manager.id,
+                label: `${manager.fullName}${manager.employeeCode ? ` - ${manager.employeeCode}` : ""}`
+              }))}
+              placeholder="Select Sales Manager"
+            />
+            <ReadOnlyValue label="Associate ID" value={selectedAssociate?.employeeCode ?? "Auto-filled from selected Sales Manager"} />
             <Field label={isMisp ? "MISP ID" : "Onboarding ID"} name="external_onboarding_id" placeholder="External onboarding ID" />
             <Field label="Document Received Date" name="document_received_at" type="date" />
             {isMisp ? <Field label="MISP Name" name="misp_name" required placeholder="MISP name" /> : <Field label="POS Name" name="pos_name" required placeholder="POS name" />}
             {isMisp ? <Field label="MISP PAN" name="pan_number" maxLength={10} placeholder="ABCDE1234F" /> : <Field label="PAN Number" name="pan_number" maxLength={10} placeholder="ABCDE1234F" />}
-            {isMisp ? <Field label="OEM Name" name="oem_name" placeholder="OEM name" /> : null}
+            {isMisp ? <SelectField label="OEM Name" name="oem_name" required options={oems} placeholder="Select OEM" /> : null}
             <Field label="GST Number" name="gst_number" maxLength={15} placeholder="Optional GSTIN" />
           </Section>
 
@@ -120,17 +139,17 @@ export function PospMispOnboardingForm({ action, partnerType }: Props) {
           ) : null}
 
           <Section title="Bank and IIB Details">
-            <Field label="Education / Marksheet Status" name="education_status" placeholder="Received / pending" />
+            <ReadOnlyValue label="Education / Marksheet Status" value={files.education_certificate ? "Received" : "Not received"} />
             <Field label="Bank Name" name="bank_name" placeholder="Bank name" />
             <Field label="Account Number" name="bank_account_number" placeholder="Account number" />
             <Field label="IFSC Code" name="bank_ifsc_code" placeholder="IFSC" />
-            <Field label="IIB Remarks" name="iib_remarks" placeholder="IIB remarks" />
-            <Field label="IIB Upload Status" name="iib_upload_status" placeholder="Uploaded / pending" />
+            <SelectField label="IIB Remarks" name="iib_remarks" options={iibRemarks.map((remark) => ({ value: remark, label: remark }))} placeholder="Select IIB remark" />
+            <CheckboxField label="IIB uploaded" name="iib_uploaded" helper="Status becomes Uploaded when checked." />
             <Field label="IIB Upload Date" name="iib_uploaded_at" type="date" />
           </Section>
 
           <Section title="Training and Exam Credentials">
-            <Field label="Credentials Shared" name="training_credentials_shared" placeholder="Yes / No / date" />
+            <CheckboxField label="Credentials shared" name="training_credentials_shared_flag" helper="Marks login details as shared." />
             <Field label="Training Login ID" name="training_login_id" placeholder="Real login ID" />
             <Field label="Training Password" name="training_password" placeholder="Real password" />
             <Field label="Training Start Date" name="training_start_date" type="date" />
@@ -169,6 +188,39 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Field({ label, name, required = false, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; name: string }) {
   return <div><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} required={required} className={inputClass} {...props} /></div>;
+}
+
+function SelectField({ label, name, required = false, options, placeholder, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { label: string; name: string; options: Array<{ value: string; label: string }>; placeholder: string }) {
+  return (
+    <div>
+      <label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label>
+      <select id={name} name={name} required={required} className={inputClass} {...props}>
+        <option value="">{placeholder}</option>
+        {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+      </select>
+    </div>
+  );
+}
+
+function CheckboxField({ label, name, helper }: { label: string; name: string; helper: string }) {
+  return (
+    <label className="flex h-9 items-center gap-3 rounded-md border border-[#CBD5E1] bg-[#F8FAFC] px-3 text-[11px] font-semibold text-[#17203A]">
+      <input type="checkbox" name={name} value="true" className="h-4 w-4 rounded border-[#CBD5E1] text-[#4F46E5]" />
+      <span className="min-w-0">
+        <span className="block">{label}</span>
+        <span className="block truncate text-[9px] font-medium text-[#64748B]">{helper}</span>
+      </span>
+    </label>
+  );
+}
+
+function ReadOnlyValue({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <span className={labelClass}>{label}</span>
+      <div className="flex h-9 items-center rounded-md border border-[#E2E8F0] bg-[#F8FAFC] px-3 text-[11px] font-semibold text-[#475569]">{value}</div>
+    </div>
+  );
 }
 
 function FileField({ label, name, file, onChange }: { label: string; name: DocumentKey; file?: File; onChange: (file: File | null) => void }) {

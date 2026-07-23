@@ -24,6 +24,7 @@ type DocumentKey =
 
 type NormalizedRow = {
   partner_type: PartnerType;
+  associate_profile_id: string | null;
   associate_name: string | null;
   associate_id: string | null;
   external_onboarding_id: string | null;
@@ -47,8 +48,10 @@ type NormalizedRow = {
   bank_ifsc_code: string | null;
   iib_remarks: string | null;
   iib_upload_status: string | null;
+  iib_uploaded: boolean;
   iib_uploaded_at: string | null;
   training_credentials_shared: string | null;
+  training_credentials_shared_flag: boolean;
   training_login_id: string | null;
   training_password: string | null;
   training_start_date: string | null;
@@ -74,11 +77,19 @@ type ContactPayload = {
   membership_status: string;
 };
 
+type SalesManagerOption = {
+  id: string;
+  full_name: string | null;
+  employee_code: string | null;
+};
+
 const DOCUMENT_BUCKET = "customer-documents";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const GST_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+const IIB_REMARK_OPTIONS = new Set(["Matching Record Found In DataBase", "No Data Found In POS System"]);
+const RECEIVED_WORDS = /\b(received|downloaded|yes|done|available|submitted|ok|complete|completed)\b/i;
 const DOCUMENT_FIELDS: Array<{ key: DocumentKey; label: string }> = [
   { key: "aadhaar_front", label: "Aadhaar front" },
   { key: "aadhaar_back", label: "Aadhaar back" },
@@ -176,9 +187,73 @@ function documentStatusesFromForm(data: FormData) {
   return Object.fromEntries(DOCUMENT_FIELDS.map(({ key }) => [key, formFile(data, key) ? "received" : "not_received"]));
 }
 
+function normalizeBoolean(value: string | null) {
+  return /^(true|yes|y|1|uploaded|shared|done|complete|completed)$/i.test(value ?? "");
+}
+
+function normalizeEducationStatus(value: string | null) {
+  return RECEIVED_WORDS.test(value ?? "") ? "received" : "not_received";
+}
+
+function normalizeIibRemark(value: string | null) {
+  return value?.trim() || null;
+}
+
+function resolveSalesManagerByProfileId(managers: SalesManagerOption[], profileId: string | null) {
+  if (!profileId) return null;
+  return managers.find((manager) => manager.id === profileId) ?? null;
+}
+
+function resolveSalesManagerFromExcel(managers: SalesManagerOption[], associateName: string | null, associateId: string | null) {
+  const normalizedId = associateId?.trim().toLowerCase();
+  const normalizedName = associateName?.trim().toLowerCase();
+  return managers.find((manager) => manager.employee_code?.trim().toLowerCase() === normalizedId)
+    ?? managers.find((manager) => manager.full_name?.trim().toLowerCase() === normalizedName)
+    ?? null;
+}
+
+function managerName(manager: SalesManagerOption | null) {
+  return manager?.full_name?.trim() || null;
+}
+
+function managerCode(manager: SalesManagerOption | null) {
+  return manager?.employee_code?.trim() || null;
+}
+
+async function loadSalesManagers(admin: ReturnType<typeof createSupabaseAdminClient>) {
+  const { data, error } = await admin
+    .from("profiles")
+    .select("id, full_name, employee_code")
+    .eq("role", "sales_manager")
+    .eq("is_active", true)
+    .order("full_name", { ascending: true })
+    .returns<SalesManagerOption[]>();
+  if (error) throw error;
+  return data ?? [];
+}
+
+async function loadManufacturerNames(admin: ReturnType<typeof createSupabaseAdminClient>) {
+  const { data, error } = await admin
+    .from("vehicle_manufacturers")
+    .select("name")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true })
+    .returns<Array<{ name: string }>>();
+  if (error) throw error;
+  return new Set((data ?? []).map((row) => row.name.trim()).filter(Boolean));
+}
+
+function normalizeOem(value: string | null, manufacturerNames: Set<string>) {
+  if (!value) return null;
+  const match = [...manufacturerNames].find((name) => name.toLowerCase() === value.trim().toLowerCase());
+  return match ?? null;
+}
+
 function profileDraft(row: NormalizedRow, documentStatuses: Record<string, string>) {
   return {
     partner_type: row.partner_type,
+    associate_profile_id: row.associate_profile_id,
     associate_name: row.associate_name,
     associate_id: row.associate_id,
     external_onboarding_id: row.external_onboarding_id,
@@ -201,8 +276,10 @@ function profileDraft(row: NormalizedRow, documentStatuses: Record<string, strin
     bank_ifsc_code: row.bank_ifsc_code,
     iib_remarks: row.iib_remarks,
     iib_upload_status: row.iib_upload_status,
+    iib_uploaded: row.iib_uploaded,
     iib_uploaded_at: row.iib_uploaded_at,
     training_credentials_shared: row.training_credentials_shared,
+    training_credentials_shared_flag: row.training_credentials_shared_flag,
     training_login_id: row.training_login_id,
     training_password: row.training_password,
     training_start_date: row.training_start_date,
@@ -222,6 +299,7 @@ function profileDraft(row: NormalizedRow, documentStatuses: Record<string, strin
 
 function validateRow(row: NormalizedRow) {
   const errors: string[] = [];
+  if (!row.associate_profile_id) errors.push("Select a valid Sales Manager as Associate.");
   if (row.partner_type === "posp" && !row.pos_name) errors.push("POS name is required.");
   if (row.partner_type === "misp" && !row.misp_name) errors.push("MISP name is required.");
   if (!row.applicant_phone) errors.push("Valid primary mobile is required.");
@@ -230,16 +308,23 @@ function validateRow(row: NormalizedRow) {
   if (row.pan_number && !PAN_PATTERN.test(row.pan_number)) errors.push("PAN number is invalid.");
   if (row.dp_pan_number && !PAN_PATTERN.test(row.dp_pan_number)) errors.push("DP PAN number is invalid.");
   if (row.gst_number && !GST_PATTERN.test(row.gst_number)) errors.push("GST number is invalid.");
+  if (row.iib_remarks && !IIB_REMARK_OPTIONS.has(row.iib_remarks)) errors.push("Choose a valid IIB remark.");
+  if (row.partner_type === "misp" && !row.oem_name) errors.push("Select a valid OEM.");
   return errors;
 }
 
-function rowFromForm(data: FormData): NormalizedRow {
+function rowFromForm(data: FormData, salesManagers: SalesManagerOption[], manufacturerNames: Set<string>): NormalizedRow {
   const partnerType = text(data, "partner_type") === "misp" ? "misp" : "posp";
   const aadhaar = normalizeAadhaar(text(data, "aadhaar_number"));
+  const associate = resolveSalesManagerByProfileId(salesManagers, text(data, "associate_profile_id"));
+  const educationStatus = formFile(data, "education_certificate") ? "received" : "not_received";
+  const iibUploaded = data.get("iib_uploaded") === "true";
+  const credentialsShared = data.get("training_credentials_shared_flag") === "true";
   return {
     partner_type: partnerType,
-    associate_name: text(data, "associate_name"),
-    associate_id: text(data, "associate_id"),
+    associate_profile_id: associate?.id ?? null,
+    associate_name: managerName(associate),
+    associate_id: managerCode(associate),
     external_onboarding_id: text(data, "external_onboarding_id"),
     document_received_at: text(data, "document_received_at"),
     pos_name: partnerType === "posp" ? text(data, "pos_name") : null,
@@ -255,14 +340,16 @@ function rowFromForm(data: FormData): NormalizedRow {
     aadhaar_hash: aadhaar.hash,
     date_of_birth: text(data, "date_of_birth"),
     gst_number: normalizeGst(text(data, "gst_number")),
-    education_status: text(data, "education_status"),
+    education_status: educationStatus,
     bank_name: text(data, "bank_name"),
     bank_account_number: text(data, "bank_account_number"),
     bank_ifsc_code: text(data, "bank_ifsc_code")?.toUpperCase() ?? null,
-    iib_remarks: text(data, "iib_remarks"),
-    iib_upload_status: text(data, "iib_upload_status"),
+    iib_remarks: normalizeIibRemark(text(data, "iib_remarks")),
+    iib_upload_status: iibUploaded ? "uploaded" : "pending",
+    iib_uploaded: iibUploaded,
     iib_uploaded_at: text(data, "iib_uploaded_at"),
-    training_credentials_shared: text(data, "training_credentials_shared"),
+    training_credentials_shared: credentialsShared ? "yes" : "no",
+    training_credentials_shared_flag: credentialsShared,
     training_login_id: text(data, "training_login_id"),
     training_password: text(data, "training_password"),
     training_start_date: text(data, "training_start_date"),
@@ -271,7 +358,7 @@ function rowFromForm(data: FormData): NormalizedRow {
     training_certificate_number: text(data, "training_certificate_number"),
     exam_status: text(data, "exam_status"),
     onboarding_date: text(data, "onboarding_date"),
-    oem_name: text(data, "oem_name"),
+    oem_name: partnerType === "misp" ? normalizeOem(text(data, "oem_name"), manufacturerNames) : null,
     dp_name: text(data, "dp_name"),
     dp_phone: normalizePhone(text(data, "dp_phone")),
     dp_email: text(data, "dp_email")?.toLowerCase() ?? null,
@@ -279,12 +366,16 @@ function rowFromForm(data: FormData): NormalizedRow {
   };
 }
 
-function normalizeExcelRow(partnerType: PartnerType, source: Record<string, unknown>): NormalizedRow {
+function normalizeExcelRow(partnerType: PartnerType, source: Record<string, unknown>, salesManagers: SalesManagerOption[], manufacturerNames: Set<string>): NormalizedRow {
   const aadhaar = normalizeAadhaar(cell(source, partnerType === "posp" ? "Aadhar Number" : "Aadhar Number"));
+  const associate = resolveSalesManagerFromExcel(salesManagers, cell(source, "Associate Name"), cell(source, "Associate ID"));
+  const iibUploaded = normalizeBoolean(cell(source, "IIB Upload"));
+  const credentialsShared = normalizeBoolean(cell(source, "Training ID/Password SHARED"));
   return {
     partner_type: partnerType,
-    associate_name: cell(source, "Associate Name"),
-    associate_id: cell(source, "Associate ID"),
+    associate_profile_id: associate?.id ?? null,
+    associate_name: managerName(associate) ?? cell(source, "Associate Name"),
+    associate_id: managerCode(associate) ?? cell(source, "Associate ID"),
     external_onboarding_id: cell(source, partnerType === "posp" ? "Onboarding ID" : "MISP ID"),
     document_received_at: normalizeDate(source["Document Recv Date"]),
     pos_name: partnerType === "posp" ? cell(source, "POS Name") : null,
@@ -300,14 +391,16 @@ function normalizeExcelRow(partnerType: PartnerType, source: Record<string, unkn
     aadhaar_hash: aadhaar.hash,
     date_of_birth: normalizeDate(source[partnerType === "posp" ? "D.O.B" : "Date of Birth"]),
     gst_number: normalizeGst(cell(source, partnerType === "posp" ? "GST Number( Optional)" : "GST No")),
-    education_status: cell(source, partnerType === "posp" ? "Marsheet" : "10th/12th Certificate"),
+    education_status: normalizeEducationStatus(cell(source, partnerType === "posp" ? "Marsheet" : "10th/12th Certificate")),
     bank_name: cell(source, "Bank Name"),
     bank_account_number: cell(source, "Account Number"),
     bank_ifsc_code: cell(source, "IFSC Code")?.toUpperCase() ?? null,
-    iib_remarks: cell(source, partnerType === "posp" ? "IIB Remarks POSP/ PARTNER" : "IIB Remarks MISP"),
-    iib_upload_status: cell(source, "IIB Upload"),
+    iib_remarks: normalizeIibRemark(cell(source, partnerType === "posp" ? "IIB Remarks POSP/ PARTNER" : "IIB Remarks MISP")),
+    iib_upload_status: iibUploaded ? "uploaded" : "pending",
+    iib_uploaded: iibUploaded,
     iib_uploaded_at: normalizeDate(source["IIB Upload date"]),
-    training_credentials_shared: cell(source, "Training ID/Password SHARED"),
+    training_credentials_shared: credentialsShared ? "yes" : "no",
+    training_credentials_shared_flag: credentialsShared,
     training_login_id: cell(source, "Training ID"),
     training_password: cell(source, "Training Password"),
     training_start_date: normalizeDate(source["Training Start Date"]),
@@ -316,7 +409,7 @@ function normalizeExcelRow(partnerType: PartnerType, source: Record<string, unkn
     training_certificate_number: cell(source, "Training Certificate Number"),
     exam_status: cell(source, "Exam Status"),
     onboarding_date: normalizeDate(source["Onboarding Date"]),
-    oem_name: cell(source, "OEM Name"),
+    oem_name: partnerType === "misp" ? normalizeOem(cell(source, "OEM Name"), manufacturerNames) : null,
     dp_name: cell(source, "DP Name"),
     dp_phone: normalizePhone(cell(source, "DP Contact")),
     dp_email: (cell(source, "DP Email") ?? "").toLowerCase() || null,
@@ -353,6 +446,7 @@ async function createSubmittedApplication(params: {
   const profilePayload = {
     application_id: application.id,
     partner_type: params.row.partner_type,
+    associate_profile_id: params.row.associate_profile_id,
     external_onboarding_id: params.row.external_onboarding_id,
     associate_name: params.row.associate_name,
     associate_id: params.row.associate_id,
@@ -376,8 +470,10 @@ async function createSubmittedApplication(params: {
     bank_ifsc_code: params.row.bank_ifsc_code,
     iib_remarks: params.row.iib_remarks,
     iib_upload_status: params.row.iib_upload_status,
+    iib_uploaded: params.row.iib_uploaded,
     iib_uploaded_at: params.row.iib_uploaded_at,
     training_credentials_shared: params.row.training_credentials_shared,
+    training_credentials_shared_flag: params.row.training_credentials_shared_flag,
     training_login_id: params.row.training_login_id,
     training_password: params.row.training_password,
     training_start_date: params.row.training_start_date,
@@ -469,9 +565,21 @@ export async function createPospMispOnboarding(_state: PospMispState, data: Form
     return fail(error instanceof Error ? error.message : "You are not authorized.");
   }
 
-  const row = rowFromForm(data);
+  const admin = createSupabaseAdminClient();
+  let salesManagers: SalesManagerOption[];
+  let manufacturerNames: Set<string>;
+  try {
+    [salesManagers, manufacturerNames] = await Promise.all([
+      loadSalesManagers(admin),
+      loadManufacturerNames(admin)
+    ]);
+  } catch (error) {
+    return fail(`Master data could not be loaded: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+
+  const row = rowFromForm(data, salesManagers, manufacturerNames);
   const errors = validateRow(row);
-  if (errors.length) return fail(errors[0], errors[0].includes("DP") ? "dp_phone" : "applicant_phone");
+  if (errors.length) return fail(errors[0], errors[0].includes("Associate") ? "associate_profile_id" : errors[0].includes("OEM") ? "oem_name" : errors[0].includes("DP") ? "dp_phone" : "applicant_phone");
 
   for (const { key, label } of DOCUMENT_FIELDS) {
     const error = validateFile(formFile(data, key), label);
@@ -486,7 +594,6 @@ export async function createPospMispOnboarding(_state: PospMispState, data: Form
     return fail(`Application could not be submitted: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
 
-  const admin = createSupabaseAdminClient();
   const uploadedPaths: string[] = [];
   for (const { key } of DOCUMENT_FIELDS) {
     const selected = formFile(data, key);
@@ -529,6 +636,16 @@ export async function uploadPospMispWorkbook(_state: PospMispState, data: FormDa
   const selected = formFile(data, "workbook");
   if (!selected) return fail("Choose the POSP/MISP Excel workbook.", "workbook");
   const admin = createSupabaseAdminClient();
+  let salesManagers: SalesManagerOption[];
+  let manufacturerNames: Set<string>;
+  try {
+    [salesManagers, manufacturerNames] = await Promise.all([
+      loadSalesManagers(admin),
+      loadManufacturerNames(admin)
+    ]);
+  } catch (error) {
+    return fail(`Master data could not be loaded: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
   const bytes = await selected.arrayBuffer();
   const workbook = XLSX.read(bytes, { cellDates: true });
   const rows: Array<{ partner_type: PartnerType; sheet_name: string; row_number: number; source_data: Record<string, unknown>; normalized_data: NormalizedRow; validation_errors: string[] }> = [];
@@ -540,7 +657,7 @@ export async function uploadPospMispWorkbook(_state: PospMispState, data: FormDa
     const jsonRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null, raw: false });
     jsonRows.forEach((source, index) => {
       if (!Object.values(source).some((value) => value !== null && String(value).trim())) return;
-      const normalized = normalizeExcelRow(partnerType, source);
+      const normalized = normalizeExcelRow(partnerType, source, salesManagers, manufacturerNames);
       rows.push({ partner_type: partnerType, sheet_name: sheetName, row_number: index + 2, source_data: source, normalized_data: normalized, validation_errors: validateRow(normalized) });
     });
   }
@@ -589,7 +706,10 @@ export async function submitPospMispImportBatch(data: FormData) {
     try {
       const application = await createSubmittedApplication({
         row: row.normalized_data,
-        documentStatuses: Object.fromEntries(DOCUMENT_FIELDS.map(({ key }) => [key, "not_received"])),
+        documentStatuses: Object.fromEntries(DOCUMENT_FIELDS.map(({ key }) => [
+          key,
+          key === "education_certificate" ? row.normalized_data.education_status ?? "not_received" : "not_received"
+        ])),
         source: "excel_import",
         importBatchId: batchId,
         importRowNumber: row.row_number,
