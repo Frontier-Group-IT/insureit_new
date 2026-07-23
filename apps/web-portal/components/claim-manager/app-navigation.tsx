@@ -16,10 +16,10 @@ type Props = {
 };
 
 const sections: Array<{ key: SectionKey; label: string; icon: string; items: Item[] }> = [
-  { key: "claims", label: "Claims", icon: "▤", items: [{ href: "/claims", label: "All Claims" }, { href: "/claims?stage=documents", label: "Documents" }, { href: "/claims?stage=verification", label: "Verification" }, { href: "/claims?stage=survey", label: "Survey" }, { href: "/claims?stage=repair", label: "Repair" }, { href: "/claims?stage=settlement", label: "Settlement" }] },
+  { key: "claims", label: "Claims", icon: "▤", items: [{ href: "/claims", label: "All Claims" }, { href: "/claims?queue=documents", label: "Documents" }, { href: "/claims?journey=spot-intimation", label: "Verification" }, { href: "/claims?journey=spot-surveyor-assigned", label: "Survey" }, { href: "/claims?journey=under-repair", label: "Repair" }, { href: "/claims?journey=payment-advice-received", label: "Settlement" }] },
   { key: "master-data", label: "Master Data", icon: "▦", items: [{ href: "/customers", label: "Customers" }, { href: "/customers/applications", label: "KYC Applications" }, { href: "/vehicles", label: "Vehicles" }, { href: "/policies", label: "Policies" }] },
-  { key: "tasks", label: "Tasks", icon: "✓", items: [{ href: "/tasks", label: "My Tasks" }, { href: "/tasks?view=team", label: "Team Tasks" }, { href: "/tasks?status=completed", label: "Completed" }] },
-  { key: "reports", label: "Reports", icon: "▥", items: [{ href: "/reports", label: "Overview" }, { href: "/reports?view=claims", label: "Claims Reports" }, { href: "/reports?view=operations", label: "Operations" }] }
+  { key: "tasks", label: "Tasks", icon: "✓", items: [{ href: "/tasks", label: "All Tasks" }, { href: "/tasks?status=open", label: "Open" }, { href: "/tasks?status=in_progress", label: "In Progress" }, { href: "/tasks?status=completed", label: "Completed" }] },
+  { key: "reports", label: "Reports", icon: "▥", items: [{ href: "/reports", label: "Portfolio Overview" }] }
 ];
 
 export function AppNavigation({ activeNav, customerCount, kycApplicationCount }: Props) {

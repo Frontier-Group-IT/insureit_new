@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { isAllowedAdminRole } from "@/lib/auth-config";
+import { safePortalReturnPath } from "@/lib/portal-routes";
 import { createClient } from "@/lib/supabase";
 
 export function LoginForm() {
@@ -12,7 +13,7 @@ export function LoginForm() {
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get("next") ?? "/dashboard";
+  const nextPath = safePortalReturnPath(searchParams.get("next"));
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -65,7 +66,7 @@ export function LoginForm() {
     }
 
     setIsSubmitting(false);
-    window.location.href = nextPath.startsWith("/") ? nextPath : "/dashboard";
+    window.location.replace(nextPath);
   }
 
   return (

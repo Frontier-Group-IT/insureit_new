@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { AccessDeniedActions } from "@/components/access-denied-actions";
 
 export default function AccessDeniedPage() {
   return (
@@ -10,10 +10,7 @@ export default function AccessDeniedPage() {
         <p className="mt-3 text-sm leading-6 text-slate-600">
           Your account is not currently authorized for the InsureIt admin portal. Contact an administrator to review your access permissions.
         </p>
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Link className="rounded-xl bg-navy-700 px-5 py-3 text-sm font-semibold text-white" href="/login">Back to login</Link>
-          <a className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700" href="mailto:admin@example.com">Contact administrator</a>
-        </div>
+        <AccessDeniedActions />
       </section>
     </main>
   );

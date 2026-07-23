@@ -24,6 +24,27 @@ The most serious blockers are:
 7. There are no automated tests or CI checks, and production builds explicitly skip lint.
 8. Most large lists load the full dataset into memory and will degrade as records grow.
 
+## Stabilization Progress
+
+Completed on `work/posp-misp-web-onboarding`:
+
+- Replaced the claims-only dashboard with an RLS-scoped operations overview backed by a database aggregation RPC and indexed fallback queries.
+- Restored lint as a production build gate and aligned the TypeScript ESLint packages.
+- Configured the correct Next.js output tracing root.
+- Protected notifications, settings, and claim-document routes in middleware.
+- Added refresh-token rotation and clean expired-session recovery.
+- Restricted login return URLs to known internal portal routes.
+- Added baseline CSP, HSTS, clickjacking, MIME-sniffing, referrer, and permissions headers.
+- Replaced the access-denied login loop with an explicit sign-out-and-switch-account flow.
+- Corrected broken notification customer/support destinations and invalid claim sidebar filters.
+- Made Tasks and Timeline search/status controls functional and removed unsupported report filters.
+
+Still open:
+
+- POSP/MISP sensitive-data encryption, import sanitization, and approval workflow.
+- Server pagination and indexed search for large queues.
+- Claim workflow consolidation, transaction hardening, automated tests, CI, and observability.
+
 ## Validation Results
 
 | Check | Result | Required action |
