@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 import type { AppRole, Customer, CustomerOnboardingApplication, CustomerOnboardingDocument, Json, PartnerType, Profile } from './types';
 import { isSalesHierarchyRole, isStaffRole } from './roles';
+import { clearSelectedCustomerContext } from './customer-context';
 
 export const validRoles: AppRole[] = [
   'customer',
@@ -403,6 +404,7 @@ async function clearStoredAuthSession() {
     const keys = await AsyncStorage.getAllKeys();
     const authKeys = keys.filter((key) => key.startsWith('sb-') || key.toLowerCase().includes('supabase'));
     if (authKeys.length) await AsyncStorage.multiRemove(authKeys);
+    await clearSelectedCustomerContext();
   } catch (error) {
     console.warn('Stored auth cleanup failed', error);
   }
@@ -426,6 +428,7 @@ export async function routeSignedInUser(user: User, router: Router, knownProfile
     return profile;
   }
   if (profile.role === 'customer') {
+    await clearSelectedCustomerContext();
     await claimPendingCustomerMemberships();
   }
   router.replace(routeForRole(profile.role));

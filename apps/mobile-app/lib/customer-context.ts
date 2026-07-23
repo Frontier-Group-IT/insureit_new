@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 import type { PartnerType } from './types';
 
-const selectedCustomerKey = 'insureit:selected-customer-id';
+const selectedCustomerKeyPrefix = 'insureit:selected-customer-id';
 
 export type CustomerAccountContext = {
   customer_id: string;
@@ -93,7 +93,7 @@ export async function getGroupAssociatedAccountDetail(input: {
 export async function getOperationalCustomerContexts(): Promise<CustomerAccountContext[]> {
   const selected = await getSelectedCustomerContext();
   if (!selected) return [];
-  if (selected.partner_type !== 'group') return [selected];
+  if (!isPortfolioOwnerPartnerType(selected.partner_type)) return [selected];
 
   const contexts = await getAccessibleCustomerContexts();
   const children = contexts.filter((context) => context.customer_id !== selected.customer_id && context.group_customer_id === selected.customer_id);
@@ -108,22 +108,23 @@ export async function getSelectedCustomerContext(): Promise<CustomerAccountConte
   const contexts = await getAccessibleCustomerContexts();
   if (!contexts.length) return null;
 
-  const storedCustomerId = await AsyncStorage.getItem(selectedCustomerKey);
+  const storageKey = await selectedCustomerStorageKey();
+  const storedCustomerId = storageKey ? await AsyncStorage.getItem(storageKey) : null;
   const selected = contexts.find((context) => context.customer_id === storedCustomerId);
-  const directGroup = contexts.find((context) => context.access_source === 'direct' && context.partner_type === 'group');
+  const directPortfolioAccount = bestDirectPortfolioContext(contexts);
 
   if (selected) {
-    if (selected.access_source === 'group_child' || selected.partner_type === 'group' || !directGroup) {
+    if (isPortfolioCustomerContext(selected) || !directPortfolioAccount) {
       return selected;
     }
 
-    await AsyncStorage.setItem(selectedCustomerKey, directGroup.customer_id);
-    return directGroup;
+    if (storageKey) await AsyncStorage.setItem(storageKey, directPortfolioAccount.customer_id);
+    return directPortfolioAccount;
   }
 
   const directPrimary = contexts.find((context) => context.access_source === 'direct');
-  const fallback = directGroup ?? directPrimary ?? contexts[0];
-  await AsyncStorage.setItem(selectedCustomerKey, fallback.customer_id);
+  const fallback = directPortfolioAccount ?? directPrimary ?? contexts[0];
+  if (storageKey) await AsyncStorage.setItem(storageKey, fallback.customer_id);
   return fallback;
 }
 
@@ -131,12 +132,15 @@ export async function selectCustomerContext(customerId: string): Promise<Custome
   const contexts = await getAccessibleCustomerContexts();
   const selected = contexts.find((context) => context.customer_id === customerId);
   if (!selected) throw new Error('This customer account is not available to the signed-in user.');
-  await AsyncStorage.setItem(selectedCustomerKey, selected.customer_id);
+  const storageKey = await selectedCustomerStorageKey();
+  if (storageKey) await AsyncStorage.setItem(storageKey, selected.customer_id);
   return selected;
 }
 
 export async function clearSelectedCustomerContext() {
-  await AsyncStorage.removeItem(selectedCustomerKey);
+  const keys = await AsyncStorage.getAllKeys();
+  const selectedKeys = keys.filter((key) => key === selectedCustomerKeyPrefix || key.startsWith(`${selectedCustomerKeyPrefix}:`));
+  if (selectedKeys.length) await AsyncStorage.multiRemove(selectedKeys);
 }
 
 export function customerAccountTitle(context: CustomerAccountContext) {
@@ -153,6 +157,37 @@ export function partnerTypeLabel(partnerType: PartnerType) {
     case 'group': return 'Group';
     default: return 'Individual / Proprietor';
   }
+}
+
+export function isPortfolioCustomerContext(context?: CustomerAccountContext | null) {
+  return Boolean(context && (context.access_source === 'group_child' || isPortfolioOwnerPartnerType(context.partner_type)));
+}
+
+export function isPortfolioOwnerPartnerType(partnerType?: PartnerType | null) {
+  return partnerType === 'group' || partnerType === 'corporate' || partnerType === 'dealership';
+}
+
+function bestDirectPortfolioContext(contexts: CustomerAccountContext[]) {
+  return contexts
+    .filter((context) => context.access_source === 'direct' && isPortfolioOwnerPartnerType(context.partner_type))
+    .sort((left, right) => portfolioPriority(left.partner_type) - portfolioPriority(right.partner_type))[0] ?? null;
+}
+
+function portfolioPriority(partnerType: PartnerType) {
+  switch (partnerType) {
+    case 'group': return 0;
+    case 'dealership': return 1;
+    case 'corporate': return 2;
+    default: return 3;
+  }
+}
+
+async function selectedCustomerStorageKey() {
+  const { data } = await supabase.auth.getSession();
+  const userId = data.session?.user?.id;
+  if (!userId) return null;
+  await AsyncStorage.removeItem(selectedCustomerKeyPrefix);
+  return `${selectedCustomerKeyPrefix}:${userId}`;
 }
 
 export function membershipRoleLabel(role: string) {

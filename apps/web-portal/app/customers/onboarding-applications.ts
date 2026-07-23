@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-type PartnerType = "individual_proprietor" | "dealership" | "corporate" | "group";
+type PartnerType = "individual_proprietor" | "dealership" | "corporate" | "group" | "posp" | "misp";
 
 type BeginApplicationInput = {
   profileId?: string | null;

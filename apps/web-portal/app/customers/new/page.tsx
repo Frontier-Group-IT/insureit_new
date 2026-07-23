@@ -10,8 +10,10 @@ import { createDealershipOnboarding } from "../dealership-actions";
 import { DealershipOnboardingForm } from "../dealership-onboarding-form";
 import { createGroupOnboarding } from "../group-actions";
 import { GroupOnboardingForm } from "../group-onboarding-form";
+import { createPospMispOnboarding } from "../posp-misp/actions";
+import { PospMispOnboardingForm } from "../posp-misp/posp-misp-onboarding-form";
 
-const supportedPartnerTypes = new Set(["individual_proprietor", "dealership", "corporate", "group"]);
+const supportedPartnerTypes = new Set(["individual_proprietor", "dealership", "corporate", "group", "posp", "misp"]);
 
 type GroupOption = { value: string; label: string };
 
@@ -58,6 +60,14 @@ export default async function NewCustomerPage({ searchParams }: { searchParams: 
     return (
       <AppShell title="Add Group">
         <GroupOnboardingForm action={createGroupOnboarding} />
+      </AppShell>
+    );
+  }
+
+  if (partnerType === "posp" || partnerType === "misp") {
+    return (
+      <AppShell title={`Add ${partnerType.toUpperCase()} Application`}>
+        <PospMispOnboardingForm action={createPospMispOnboarding} partnerType={partnerType} />
       </AppShell>
     );
   }

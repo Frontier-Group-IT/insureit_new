@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-const markUrl = "https://raw.githubusercontent.com/antnish1/insureit_new/main/apps/mobile-app/assets/brand/insureit-primary-logo-clean.png";
+const markUrl = "https://raw.githubusercontent.com/Frontier-Group-IT/insureit_new/main/apps/mobile-app/assets/brand/insureit-primary-logo-clean.png";
 
 type Props = {
   compact?: boolean;

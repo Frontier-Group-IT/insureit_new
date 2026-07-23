@@ -6,6 +6,7 @@ import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-na
 
 import { AuthExperience, LoginPromptCard } from '@/components/auth-experience';
 import { AuthGlassPanel, AuthStatusMessage, SecureActionButton } from '@/components/first-look';
+import { OtpDotsInput } from '@/components/otp-dots-input';
 import { routeSignedInUser, sendPhoneSignupOtp, syncCustomerSignupDetails, verifyPhoneOtp } from '@/lib/auth';
 
 const countryCode = '+91';
@@ -30,7 +31,7 @@ export default function SignupScreen() {
   const mobileValid = normalizedMobile.length === 10;
   const nameValid = trimmedName.length >= 2;
   const emailValid = !trimmedEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
-  const otpValid = otp.length >= 4;
+  const otpValid = otp.length === 6;
 
   async function requestOtp() {
     if (loading) return;
@@ -189,18 +190,7 @@ export default function SignupScreen() {
         {otpSent ? (
           <View style={styles.fieldWrap}>
             <Text style={styles.fieldLabel}>Enter OTP</Text>
-            <View style={styles.otpShell}>
-              <MaterialCommunityIcons name="shield-key-outline" size={20} color="#1F6FEB" />
-              <TextInput
-                value={otp}
-                onChangeText={(value) => setOtp(value.replace(/\D/g, '').slice(0, 6))}
-                keyboardType="number-pad"
-                maxLength={6}
-                placeholder="6 digit code"
-                placeholderTextColor="#B7C1CF"
-                style={styles.otpInput}
-              />
-            </View>
+            <OtpDotsInput value={otp} onChangeText={setOtp} disabled={loading} autoFocus={otpSent} highlighted={otpSent} />
             <Pressable accessibilityRole="button" disabled={loading} onPress={requestOtp} style={styles.resendButton}>
               <Text style={styles.resendText}>Resend OTP</Text>
             </Pressable>
@@ -266,8 +256,6 @@ const styles = StyleSheet.create({
   phoneInput: { flex: 1, minHeight: 52, color: '#17202F', fontSize: 17, fontWeight: '400' },
   editButton: { minHeight: 36, borderRadius: 12, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F9FF' },
   editButtonText: { color: '#1F6FEB', fontSize: 12, fontWeight: '700' },
-  otpShell: { minHeight: 58, borderRadius: 13, borderWidth: 1, borderColor: '#E1E6ED', backgroundColor: '#FFFFFF', paddingLeft: 15, paddingRight: 8, flexDirection: 'row', alignItems: 'center', gap: 14 },
-  otpInput: { flex: 1, minHeight: 52, color: '#17202F', fontSize: 17, fontWeight: '400', letterSpacing: 1.4 },
   resendButton: { alignSelf: 'flex-end', minHeight: 34, justifyContent: 'center', marginTop: 4 },
   resendText: { color: '#0B63CE', fontSize: 13, fontWeight: '700' },
   authActions: { gap: 8, marginTop: 2 },

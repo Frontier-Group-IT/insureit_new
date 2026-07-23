@@ -1,7 +1,7 @@
 # InsureIT Mobile App and Web Portal Continuation Handoff
 
 Last updated: 2026-07-14
-Repo: `https://github.com/antnish1/insureit_new`
+Repo: `https://github.com/Frontier-Group-IT/insureit_new`
 Current branch: `main`
 Current HEAD: `1078b66 Expose mobile KYC applications in portal`
 

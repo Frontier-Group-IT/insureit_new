@@ -22,6 +22,11 @@ const labels: Record<string, string> = {
   representative_aadhaar_front: "Representative Aadhaar front",
   representative_aadhaar_back: "Representative Aadhaar back",
   representative_pan_copy: "Representative PAN copy",
+  education_certificate: "10th / 12th certificate",
+  cancelled_cheque: "Cancelled cheque",
+  photograph: "Photograph",
+  registration_form: "Registration form",
+  agreement_copy: "Agreement copy",
 };
 const errors: Record<string, string> = {
   incomplete_application: "The application is missing required details.",
@@ -84,15 +89,9 @@ export default async function ApplicationReviewPage({ params, searchParams }: Pa
   const canReview = supportedPartner && ["submitted", "under_review"].includes(application.status) && !application.customer_id;
   const isCorporate = application.partner_type === "corporate";
   const isDealership = application.partner_type === "dealership";
+  const isPospMisp = application.partner_type === "posp" || application.partner_type === "misp";
   const pageError = query.error === "application_not_ready" && !canReview ? null : query.error;
   const contactByRole = new Map((contacts ?? []).map((contact) => [contact.contact_role, contact]));
-  const approveAction = application.partner_type === "group"
-    ? approveMobileGroupApplication
-    : isCorporate
-      ? approveMobileCorporateApplication
-      : isDealership
-        ? approveMobileDealershipApplication
-        : approveMobileIndividualApplication;
   const fields = application.partner_type === "group"
     ? [["Group name", draft.group_name], ["Owner / promoter", draft.owner_name], ["Login mobile", application.applicant_phone], ["Owner contact mobile", draft.owner_phone ?? application.applicant_phone], ["Email", draft.email ?? application.applicant_email]]
     : isCorporate
@@ -100,6 +99,16 @@ export default async function ApplicationReviewPage({ params, searchParams }: Pa
       : isDealership
         ? [["Dealership name", draft.dealership_name], ["Owner", draft.owner_name], ["Mobile", draft.phone ?? application.applicant_phone], ["Location", [draft.city,draft.state,draft.postal_code].filter(Boolean).join(", ")], ["OEM", draft.oem_name], ["Yearly sales", salesLabel(draft.yearly_sales_band)]]
         : [["Full name", draft.contact_name], ["Mobile", application.applicant_phone], ["Email", draft.email ?? application.applicant_email], ["PAN", draft.pan_number], ["Aadhaar", draft.aadhaar_last_four ? `Ends in ${draft.aadhaar_last_four}` : null], ["Address", [draft.address_street, draft.address_locality].filter(Boolean).join(", ")], ["Location", [draft.city, draft.state, draft.postal_code].filter(Boolean).join(", ")], ["Fleet size", labelValue(draft.fleet_size_band)], ["GST registered", draft.is_gst_registered === true ? "Yes" : "No"], ["Legal trade name", draft.legal_trade_name], ["GSTIN", draft.gst_number]];
+  const reviewFields = isPospMisp
+    ? [["Name", application.partner_type === "posp" ? draft.pos_name : draft.misp_name], ["Partner type", application.partner_type?.toUpperCase()], ["Associate", [draft.associate_name, draft.associate_id].filter(Boolean).join(" - ")], ["External ID", draft.external_onboarding_id], ["Primary mobile", application.applicant_phone], ["Email", draft.applicant_email ?? application.applicant_email], ["PAN", draft.pan_number], ["Aadhaar", draft.aadhaar_last_four ? `Ends in ${draft.aadhaar_last_four}` : null], ["GSTIN", draft.gst_number], ["Location", [draft.city,draft.state,draft.postal_code].filter(Boolean).join(", ")], ["Bank", draft.bank_name], ["Account number", draft.bank_account_number], ["IFSC", draft.bank_ifsc_code], ["IIB remarks", draft.iib_remarks], ["IIB upload", [draft.iib_upload_status, draft.iib_uploaded_at].filter(Boolean).join(" - ")], ["Training credentials", [draft.training_login_id, draft.training_password].filter(Boolean).join(" / ")], ["Training period", [draft.training_start_date, draft.training_end_date].filter(Boolean).join(" to ")], ["Training status", draft.training_status], ["Certificate number", draft.training_certificate_number], ["Exam status", draft.exam_status], ["Onboarding date", draft.onboarding_date], ["OEM", draft.oem_name], ["DP name", draft.dp_name], ["DP mobile", draft.dp_phone], ["DP email", draft.dp_email], ["DP PAN", draft.dp_pan_number]]
+    : fields;
+  const effectiveApproveAction = application.partner_type === "group"
+    ? approveMobileGroupApplication
+    : isCorporate
+      ? approveMobileCorporateApplication
+      : isDealership
+        ? approveMobileDealershipApplication
+        : approveMobileIndividualApplication;
 
   return (
     <AppShell title="Review KYC Application">
@@ -118,7 +127,7 @@ export default async function ApplicationReviewPage({ params, searchParams }: Pa
           <section className="overflow-hidden rounded-xl border border-[#DCE5EF] bg-white shadow-sm">
             <div className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-5 py-4">
               <p className="text-[10px] font-semibold uppercase tracking-[.08em] text-[#64748B]">Review workspace</p>
-              <h2 className="mt-1 text-base font-semibold text-[#0F172A]">{isCorporate ? "Corporate application details" : isDealership ? "Dealership application details" : "Applicant details"}</h2>
+              <h2 className="mt-1 text-base font-semibold text-[#0F172A]">{isCorporate ? "Corporate application details" : isDealership ? "Dealership application details" : isPospMisp ? "POSP / MISP application details" : "Applicant details"}</h2>
             </div>
             {isCorporate ? (
               <form action={canReview ? updateMobileCorporateApplicationDraft : undefined} className="p-5">
@@ -236,7 +245,7 @@ export default async function ApplicationReviewPage({ params, searchParams }: Pa
               </form>
             ) : (
               <div className="grid gap-px bg-[#E8EEF5] sm:grid-cols-2">
-                {fields.map(([label, fieldValue]) => <div key={String(label)} className="bg-white px-4 py-3"><p className="text-[9px] font-semibold uppercase tracking-[.06em] text-[#64748B]">{String(label)}</p><p className="mt-1 text-[11.5px] font-medium text-[#0F172A]">{display(fieldValue)}</p></div>)}
+                {reviewFields.map(([label, fieldValue]) => <div key={String(label)} className="bg-white px-4 py-3"><p className="text-[9px] font-semibold uppercase tracking-[.06em] text-[#64748B]">{String(label)}</p><p className="mt-1 text-[11.5px] font-medium text-[#0F172A]">{display(fieldValue)}</p></div>)}
               </div>
             )}
           </section>
@@ -252,7 +261,7 @@ export default async function ApplicationReviewPage({ params, searchParams }: Pa
             {canReview ? (
               <section className="rounded-xl border border-[#DCE5EF] bg-white p-4 shadow-sm">
                 <h2 className="text-sm font-semibold text-[#0F172A]">Decision</h2>
-                <form action={approveAction} className="mt-3 rounded-lg border border-emerald-100 bg-emerald-50 p-3">
+                <form action={effectiveApproveAction} className="mt-3 rounded-lg border border-emerald-100 bg-emerald-50 p-3">
                   <input type="hidden" name="application_id" value={id}/>
                   <p className="text-[11px] font-semibold text-emerald-900">Approve and activate</p>
                   <p className="mt-1 text-[10px] text-emerald-800">Creates the customer, account access, permanent documents and Group association.</p>
@@ -309,4 +318,4 @@ function textValue(value: unknown) { return typeof value === "string" ? value : 
 function labelValue(value: unknown) { const values: Record<string, string> = { less_than_5: "Less than 5", "5_to_20": "5 to 20", "20_to_50": "20 to 50", more_than_50: "More than 50" }; return typeof value === "string" ? values[value] ?? value : null; }
 function salesLabel(value: unknown) { const values: Record<string, string> = { less_than_500: "Less than 500", "500_to_1000": "500 to 1000", more_than_1000: "More than 1000" }; return typeof value === "string" ? values[value] ?? value : null; }
 function maskedAadhaar(value: unknown) { const digits = typeof value === "string" ? value.replace(/\D/g, "") : ""; return digits.length === 12 ? `XXXX XXXX ${digits.slice(-4)}` : "Not available"; }
-function partnerLabel(value: string | null) { const values: Record<string, string> = { individual_proprietor: "Individual / Proprietor", group: "Group", corporate: "Corporate", dealership: "Dealership" }; return value ? values[value] ?? value : "Unknown"; }
+function partnerLabel(value: string | null) { const values: Record<string, string> = { individual_proprietor: "Individual / Proprietor", group: "Group", corporate: "Corporate", dealership: "Dealership", posp: "POSP", misp: "MISP" }; return value ? values[value] ?? value : "Unknown"; }

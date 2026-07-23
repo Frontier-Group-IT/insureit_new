@@ -9,7 +9,7 @@ import { BrandLogo } from '@/components/first-look';
 import { NotificationBell } from '@/components/realtime-notifications';
 import { LoadingState } from '@/components/ui';
 import { buildComplianceRenewals } from '@/lib/compliance-renewals';
-import { customerAccountTitle, getGroupChildAccountOverview, membershipRoleLabel, type CustomerAccountContext, type GroupChildAccountOverview } from '@/lib/customer-context';
+import { customerAccountTitle, getAccessibleCustomerContexts, getGroupChildAccountOverview, membershipRoleLabel, partnerTypeLabel, type CustomerAccountContext, type GroupChildAccountOverview } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Claim, CustomerOnboardingApplication, Policy, Profile, Vehicle } from '@/lib/types';
@@ -47,7 +47,11 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
     const selectedGroupContext = groupContext;
     async function load() {
       try {
-        const associated = await getGroupChildAccountOverview(selectedGroupContext.customer_id);
+        const associated = selectedGroupContext.partner_type === 'group'
+          ? await getGroupChildAccountOverview(selectedGroupContext.customer_id)
+          : (await getAccessibleCustomerContexts())
+            .filter((item) => item.customer_id !== selectedGroupContext.customer_id && item.group_customer_id === selectedGroupContext.customer_id)
+            .map(contextToOverview);
         const accountIds = Array.from(new Set([selectedGroupContext.customer_id, ...associated.map((item) => item.customer_id).filter((id): id is string => Boolean(id))]));
         if (!accountIds.length) {
           if (active) setData({ associated, vehicles: [], policies: [], claims: [] });
@@ -61,8 +65,8 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
         if (vehicleResult.error || policyResult.error || claimResult.error) throw vehicleResult.error ?? policyResult.error ?? claimResult.error;
         if (active) setData({ associated, vehicles: vehicleResult.data ?? [], policies: policyResult.data ?? [], claims: claimResult.data ?? [] });
       } catch (nextError) {
-        console.warn('Group dashboard load failed', nextError);
-        if (active) setError('We could not load the Group overview. Please try again.');
+        console.warn('Portfolio dashboard load failed', nextError);
+        if (active) setError('We could not load the portfolio overview. Please try again.');
       } finally {
         if (active) setLoading(false);
       }
@@ -77,7 +81,8 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
   const draftGroupName = typeof draft.group_name === 'string' ? draft.group_name : '';
   const groupName = groupContext ? customerAccountTitle(groupContext) : draftGroupName || 'Your Group Account';
   const firstName = (profile.full_name || groupContext?.contact_name || 'Customer').split(' ')[0];
-  const roleLabel = groupContext ? membershipRoleLabel(groupContext.membership_role) : 'Group Owner';
+  const portfolioLabel = groupContext ? partnerTypeLabel(groupContext.partner_type) : 'Group';
+  const roleLabel = groupContext ? dashboardAccountRoleLabel(groupContext) : 'Group Owner';
 
   const now = Date.now();
   const activePolicies = useMemo(() => data.policies.filter((policy) => new Date(policy.end_date).getTime() >= now), [data.policies, now]);
@@ -90,7 +95,7 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
   const openClaims = useMemo(() => data.claims.filter((claim) => !closedStatuses.has(claim.current_status)), [data.claims]);
   const settled = useMemo(() => data.claims.filter((claim) => claim.current_status === 'Closed' || claim.current_status === 'Settled'), [data.claims]);
   const actionRequired = useMemo(() => openClaims.filter((claim) => /pending|awaited|document/i.test(claim.current_status)), [openClaims]);
-  if (loading) return <View style={styles.loading}><LoadingState label="Opening Group dashboard" /></View>;
+  if (loading) return <View style={styles.loading}><LoadingState label={`Opening ${portfolioLabel} dashboard`} /></View>;
 
   return <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
     <View style={styles.header}>
@@ -105,6 +110,7 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
           <Text style={styles.greeting}>{timeGreeting()}, {firstName}</Text>
           <Text style={styles.groupName} numberOfLines={1}>{groupName}</Text>
           <View style={styles.roleRow}><View style={styles.roleDot} /><Text style={styles.roleText}>{roleLabel}</Text></View>
+          {groupContext?.group_name ? <Text style={styles.parentCompany}>Associated with {groupContext.group_name}</Text> : null}
         </View>
         <View style={[styles.statusBadge, underReview && styles.statusBadgeReview]}>
           <MaterialCommunityIcons name={underReview ? 'clock-outline' : 'check-decagram'} size={14} color={underReview ? '#9A6700' : '#087443'} />
@@ -124,24 +130,32 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
       />
 
       <Pressable onPress={() => router.push('/customer/group/fleet')} style={({ pressed }) => [styles.fleetCard, pressed && styles.cardPressed]}>
-        <View style={styles.fleetLeft}><View style={styles.fleetIcon}><MaterialCommunityIcons name="truck-outline" size={24} color="#0A43A3" /></View><View style={styles.fleetCopy}><Text style={styles.fleetTitle}>Group Fleet</Text><Text style={styles.fleetNumber}>{data.vehicles.length}</Text><Text style={styles.fleetLabel}>Vehicles across associated accounts</Text><View style={styles.viewLink}><Text style={styles.viewLinkText}>Open fleet workspace</Text><MaterialCommunityIcons name="arrow-right" size={14} color="#0A43A3" /></View></View></View>
+        <View style={styles.fleetLeft}><View style={styles.fleetIcon}><MaterialCommunityIcons name="truck-outline" size={24} color="#0A43A3" /></View><View style={styles.fleetCopy}><Text style={styles.fleetTitle}>{portfolioLabel} Fleet</Text><Text style={styles.fleetNumber}>{data.vehicles.length}</Text><Text style={styles.fleetLabel}>Vehicles across accessible accounts</Text><View style={styles.viewLink}><Text style={styles.viewLinkText}>Open fleet workspace</Text><MaterialCommunityIcons name="arrow-right" size={14} color="#0A43A3" /></View></View></View>
         <Image source={fleetSketch} style={styles.fleetImage} resizeMode="contain" />
       </Pressable>
 
       <View style={styles.twoColumnRow}>
         <Pressable onPress={() => router.push('/customer/group/policies')} style={({ pressed }) => [styles.operationCard, pressed && styles.cardPressed]}>
-          <View style={[styles.operationIcon, { backgroundColor: '#FFF7EA' }]}><MaterialCommunityIcons name="file-document-outline" size={21} color="#D99012" /></View>
-          <Text style={styles.operationTitle}>Policies</Text>
-          <Text style={styles.operationPrimary}>{activePolicies.length} active</Text>
+          <View style={styles.operationTop}>
+            <View style={[styles.operationIcon, { backgroundColor: '#FFF7EA' }]}><MaterialCommunityIcons name="file-document-outline" size={28} color="#D99012" /></View>
+            <View style={styles.operationHeading}>
+              <Text style={styles.operationTitle}>Policies</Text>
+              <Text style={styles.operationPrimary}>{activePolicies.length} active</Text>
+            </View>
+          </View>
           <View style={styles.operationRow}><Text style={styles.operationLabel}>Expiring soon</Text><Text style={styles.operationValue}>{expiringSoon.length}</Text></View>
           <View style={styles.operationRow}><Text style={styles.operationLabel}>Expired</Text><Text style={[styles.operationValue, styles.operationDanger]}>{expiredPolicies.length}</Text></View>
           <Text style={styles.operationCta}>Review renewals</Text>
         </Pressable>
 
         <Pressable onPress={() => router.push('/customer/group/claims')} style={({ pressed }) => [styles.operationCard, styles.claimOperationCard, pressed && styles.cardPressed]}>
-          <View style={[styles.operationIcon, styles.claimOperationIcon]}><MaterialCommunityIcons name="shield-check-outline" size={21} color="#F5B700" /></View>
-          <Text style={[styles.operationTitle, styles.claimOperationText]}>Claims</Text>
-          <Text style={[styles.operationPrimary, styles.claimOperationText]}>{openClaims.length} active</Text>
+          <View style={styles.operationTop}>
+            <View style={[styles.operationIcon, styles.claimOperationIcon]}><MaterialCommunityIcons name="shield-check-outline" size={28} color="#F5B700" /></View>
+            <View style={styles.operationHeading}>
+              <Text style={[styles.operationTitle, styles.claimOperationText]}>Claims</Text>
+              <Text style={[styles.operationPrimary, styles.claimOperationText]}>{openClaims.length} active</Text>
+            </View>
+          </View>
           <View style={styles.operationRow}><Text style={styles.claimOperationLabel}>Need action</Text><Text style={styles.claimOperationValue}>{actionRequired.length}</Text></View>
           <View style={styles.operationRow}><Text style={styles.claimOperationLabel}>Settled</Text><Text style={[styles.claimOperationValue, styles.claimSettled]}>{settled.length}</Text></View>
           <Text style={styles.claimOperationCta}>Open workspace</Text>
@@ -184,14 +198,38 @@ function AttentionPill({ icon, value, label, tone, soft, onPress, disabled = fal
   return <Pressable disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.attentionPill, { backgroundColor: soft }, disabled && styles.disabledAction, pressed && styles.cardPressed]}><MaterialCommunityIcons name={icon} size={15} color={tone} /><Text style={[styles.attentionPillValue, { color: tone }]}>{value}</Text><Text style={styles.attentionPillLabel}>{label}</Text></Pressable>;
 }
 function QuickAction({ icon, label, onPress, disabled = false }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; onPress: () => void; disabled?: boolean }) { return <Pressable disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.quickAction, disabled && styles.disabledAction, pressed && styles.cardPressed]}><View style={styles.quickActionIcon}><MaterialCommunityIcons name={icon} size={20} color={disabled ? '#98A2B3' : '#0A43A3'} /></View><Text style={[styles.quickActionLabel, disabled && styles.disabledText]}>{label}</Text></Pressable>; }
+function contextToOverview(context: CustomerAccountContext): GroupChildAccountOverview {
+  return {
+    row_id: context.customer_id,
+    customer_id: context.customer_id,
+    application_id: null,
+    customer_code: context.customer_code,
+    partner_type: context.partner_type,
+    company_name: context.company_name,
+    contact_name: context.contact_name,
+    phone: null,
+    city: null,
+    state: null,
+    onboarding_status: 'active',
+    application_status: null,
+    account_source: 'linked_customer',
+    created_at: null,
+    updated_at: null,
+  };
+}
 function timeGreeting() { const hour = new Date().getHours(); if (hour < 12) return 'Good Morning'; if (hour < 17) return 'Good Afternoon'; return 'Good Evening'; }
 function initialFor(name: string) { return (name.trim()[0] || 'U').toUpperCase(); }
+function dashboardAccountRoleLabel(context: CustomerAccountContext) {
+  if (context.partner_type === 'corporate') return 'Corporate Account';
+  if (context.partner_type === 'dealership') return 'Dealership';
+  return membershipRoleLabel(context.membership_role);
+}
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F7F9FD' }, loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F9FD' },
   header: { height: 66, paddingHorizontal: 4, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.98)', borderBottomWidth: 1, borderBottomColor: '#E1E7F0' }, brand: { flex: 1, alignItems: 'flex-start', justifyContent: 'center' }, iconCircle: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' }, avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: palette.ink, borderWidth: 2, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }, avatarText: { color: '#FFFFFF', fontWeight: '900', fontSize: 17 },
   scroll: { flex: 1 }, body: { paddingHorizontal: 13, paddingTop: 9, paddingBottom: 10, gap: 11 },
-  greetingBlock: { minHeight: 66, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E7F0', paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 9 }, greetingCopy: { flex: 1, minWidth: 0 }, greeting: { color: '#607089', fontSize: 11, lineHeight: 14, fontWeight: '700' }, groupName: { color: palette.navy, fontSize: 16.5, lineHeight: 20, fontWeight: '900', marginTop: 1 }, roleRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }, roleDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#21A66B' }, roleText: { color: '#62728A', fontSize: 9.5, fontWeight: '800' }, statusBadge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 6, backgroundColor: '#ECFDF3', flexDirection: 'row', alignItems: 'center', gap: 4 }, statusBadgeReview: { backgroundColor: '#FFF7E8' }, statusText: { color: '#087443', fontSize: 9, fontWeight: '900' }, statusTextReview: { color: '#9A6700' },
+  greetingBlock: { minHeight: 66, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E7F0', paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 9 }, greetingCopy: { flex: 1, minWidth: 0 }, greeting: { color: '#607089', fontSize: 11, lineHeight: 14, fontWeight: '700' }, groupName: { color: palette.navy, fontSize: 16.5, lineHeight: 20, fontWeight: '900', marginTop: 1 }, roleRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }, roleDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#21A66B' }, roleText: { color: '#62728A', fontSize: 9.5, fontWeight: '800' }, parentCompany: { color: '#0A43A3', fontSize: 9.5, lineHeight: 12, fontWeight: '800', marginTop: 2 }, statusBadge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 6, backgroundColor: '#ECFDF3', flexDirection: 'row', alignItems: 'center', gap: 4 }, statusBadgeReview: { backgroundColor: '#FFF7E8' }, statusText: { color: '#087443', fontSize: 9, fontWeight: '900' }, statusTextReview: { color: '#9A6700' },
   reviewBanner: { borderRadius: 13, backgroundColor: '#FFF8EF', borderWidth: 1, borderColor: '#F3DDBD', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }, reviewIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#D99012', alignItems: 'center', justifyContent: 'center' }, reviewCopy: { flex: 1 }, reviewTitle: { color: '#834100', fontSize: 12.5, fontWeight: '900' }, reviewText: { color: '#5E4B35', fontSize: 9.5, lineHeight: 12, fontWeight: '600', marginTop: 1 }, errorCard: { borderRadius: 12, borderWidth: 1, borderColor: '#FECDCA', backgroundColor: '#FEF3F2', padding: 9, flexDirection: 'row', alignItems: 'center', gap: 7 }, errorText: { flex: 1, color: '#B42318', fontSize: 10.5, fontWeight: '700' },
   attentionStrip: { borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 10, shadowColor: '#122544', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 },
   attentionStripHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -211,6 +249,6 @@ const styles = StyleSheet.create({
   primaryAddText: { color: '#C9D7EF', fontSize: 10.2, lineHeight: 13, fontWeight: '700', marginTop: 2 },
   fleetCard: { minHeight: 111, borderRadius: 16, backgroundColor: '#FFFFFF', paddingLeft: 12, paddingRight: 6, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', borderWidth: 1, borderColor: '#DCE8F4', shadowColor: '#122544', shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }, fleetLeft: { width: 150, zIndex: 2, flexDirection: 'row', alignItems: 'flex-start', gap: 7 }, fleetIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' }, fleetCopy: { flex: 1 }, fleetTitle: { color: palette.navy, fontSize: 14.5, fontWeight: '900' }, fleetNumber: { color: palette.navy, fontSize: 27, lineHeight: 29, fontWeight: '900', marginTop: 1 }, fleetLabel: { maxWidth: 112, color: '#62728A', fontSize: 8.8, lineHeight: 11.5, fontWeight: '600' }, viewLink: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 }, viewLinkText: { color: '#0A43A3', fontSize: 8.5, fontWeight: '800' }, fleetImage: { flex: 1, height: 108, marginLeft: -18, marginRight: -6 },
   quickActionCard: { borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 10 }, quickActionTitle: { color: palette.navy, fontSize: 13.2, fontWeight: '900' }, quickActionGrid: { flexDirection: 'row', gap: 7, marginTop: 8 }, quickAction: { flex: 1, minHeight: 65, borderRadius: 12, backgroundColor: '#F7FAFE', borderWidth: 1, borderColor: '#E3EAF3', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }, quickActionIcon: { width: 31, height: 31, borderRadius: 10, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' }, quickActionLabel: { color: palette.navy, fontSize: 8.5, lineHeight: 10.7, fontWeight: '800', textAlign: 'center', marginTop: 4 },
-  twoColumnRow: { flexDirection: 'row', gap: 8 }, operationCard: { flex: 1, minHeight: 143, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 10 }, operationIcon: { width: 33, height: 33, borderRadius: 11, alignItems: 'center', justifyContent: 'center' }, operationTitle: { color: palette.navy, fontSize: 13.5, fontWeight: '900', marginTop: 7 }, operationPrimary: { color: '#0A43A3', fontSize: 19, fontWeight: '900', marginTop: 2 }, operationRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }, operationLabel: { color: '#667085', fontSize: 8.6, fontWeight: '600' }, operationValue: { color: palette.navy, fontSize: 10.5, fontWeight: '900' }, operationDanger: { color: '#C43D2D' }, operationCta: { color: '#D99012', fontSize: 8.8, fontWeight: '900', marginTop: 'auto' }, claimOperationCard: { backgroundColor: palette.navy, borderColor: palette.navy }, claimOperationIcon: { backgroundColor: 'rgba(245,183,0,0.12)', borderWidth: 1, borderColor: '#F5B700' }, claimOperationText: { color: '#FFFFFF' }, claimOperationLabel: { color: '#C9D7EF', fontSize: 8.6, fontWeight: '600' }, claimOperationValue: { color: '#F6C33B', fontSize: 10.5, fontWeight: '900' }, claimSettled: { color: '#68BF5B' }, claimOperationCta: { color: '#F6C33B', fontSize: 8.8, fontWeight: '900', marginTop: 'auto' },
+  twoColumnRow: { flexDirection: 'row', gap: 8 }, operationCard: { flex: 1, minHeight: 143, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: palette.navy, padding: 10 }, operationTop: { minHeight: 50, flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 9 }, operationIcon: { width: 48, height: 48, borderRadius: 15, alignItems: 'center', justifyContent: 'center' }, operationHeading: { flex: 1, minWidth: 0, alignItems: 'flex-start', justifyContent: 'center' }, operationTitle: { color: palette.navy, fontSize: 15.5, lineHeight: 19, fontWeight: '900' }, operationPrimary: { color: '#0A43A3', fontSize: 21, lineHeight: 25, fontWeight: '900', marginTop: 1 }, operationRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 7 }, operationLabel: { color: '#526278', fontSize: 11.2, lineHeight: 14, fontWeight: '700' }, operationValue: { color: palette.navy, fontSize: 13.5, lineHeight: 17, fontWeight: '900' }, operationDanger: { color: '#C43D2D' }, operationCta: { color: '#D99012', fontSize: 11.2, lineHeight: 14, fontWeight: '900', marginTop: 'auto' }, claimOperationCard: { backgroundColor: palette.navy, borderColor: palette.navy }, claimOperationIcon: { backgroundColor: 'rgba(245,183,0,0.12)', borderWidth: 1.2, borderColor: '#F5B700' }, claimOperationText: { color: '#FFFFFF' }, claimOperationLabel: { color: '#D8E4F5', fontSize: 11.2, lineHeight: 14, fontWeight: '700' }, claimOperationValue: { color: '#F6C33B', fontSize: 13.5, lineHeight: 17, fontWeight: '900' }, claimSettled: { color: '#68BF5B' }, claimOperationCta: { color: '#F6C33B', fontSize: 11.2, lineHeight: 14, fontWeight: '900', marginTop: 'auto' },
   supportCard: { minHeight: 52, borderRadius: 15, backgroundColor: '#FFFFFF', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 9, shadowColor: '#122544', shadowOpacity: 0.04, shadowRadius: 7, elevation: 1 }, supportCopy: { flex: 1 }, supportTitle: { color: palette.navy, fontSize: 13.5, fontWeight: '900' }, supportText: { color: palette.navy, fontSize: 9.5, fontWeight: '500', marginTop: 1 }, nav: { minHeight: 76, paddingHorizontal: 10, paddingTop: 5, paddingBottom: 5, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E3E8F0' },
 });
