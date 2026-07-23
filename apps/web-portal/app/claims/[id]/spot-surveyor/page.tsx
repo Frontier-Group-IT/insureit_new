@@ -1,9 +1,9 @@
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shell";
 import { SurveyorDeputationForm } from "@/components/spot-survey/surveyor-deputation-form";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import type { ClaimStatus } from "@/lib/claim-workflow";
-import { operationsQueueForStatus } from "@/lib/claim-workflow";
 
 type ClaimDetail = {
   id: string;
@@ -54,8 +54,6 @@ export default async function SpotSurveyorPage({ params }: { params: Promise<{ i
 
   if (error || !claim) notFound();
 
-  const queue = operationsQueueForStatus(claim.current_status);
-  const backHref = queue ? `/claims?queue=${queue.key}` : "/claims";
   const title = `Depute Spot Surveyor - ${claim.claim_no}${claim.insurer_claim_no ? ` / ${claim.insurer_claim_no}` : ""}`;
 
   return (
@@ -110,13 +108,13 @@ function StripDetail({ icon, label, value, href, isLocation = false }: { icon: s
 function ManufacturerLogo({ name }: { name: string }) {
   const brand = findBrand(name, vehicleBrandLogos);
   if (!brand) return <span className="text-[14px] font-bold text-[#003A83]">{name && name !== "-" ? name.charAt(0).toUpperCase() : "V"}</span>;
-  return <img src={brand.src} alt={brand.label} className="max-h-6 max-w-9 object-contain" />;
+  return <Image src={brand.src} alt={brand.label} width={36} height={24} className="max-h-6 max-w-9 object-contain" />;
 }
 
 function InsurerLogo({ name }: { name: string }) {
   const brand = findBrand(name, insurerBrandLogos);
   if (!brand) return <span className="text-[8px] font-bold uppercase text-[#003A83]">ins</span>;
-  return <img src={brand.src} alt={brand.label} className="max-h-6 max-w-9 object-contain" />;
+  return <Image src={brand.src} alt={brand.label} width={36} height={24} className="max-h-6 max-w-9 object-contain" />;
 }
 
 function findBrand(name: string, logos: Record<string, BrandLogo>) {

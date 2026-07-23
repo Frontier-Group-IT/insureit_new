@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { PageSizeSelect } from "@/components/claim-manager/page-size-select";
 import { operationsQueueForStatus, type ClaimStatus } from "@/lib/claim-workflow";
@@ -136,7 +137,7 @@ function ManufacturerBadge({ name }: { name: string }) {
     return (
       <div className="flex flex-col items-center justify-center gap-0.5">
         <div className="grid h-6 min-w-9 place-items-center rounded-md bg-white px-1 shadow-[0_0_0_1px_rgba(7,29,73,0.06)]">
-          <img src={brand.src} alt={brand.label} className="max-h-4 max-w-[36px] object-contain" />
+          <Image src={brand.src} alt={brand.label} width={36} height={16} className="max-h-4 max-w-[36px] object-contain" />
         </div>
         <span className="max-w-[74px] text-center text-[9.5px] font-normal leading-3 text-[#27364F]">{brand.label}</span>
       </div>
@@ -154,7 +155,7 @@ function InsurerLogo({ name }: { name: string }) {
   const normalized = normalizeBrand(name);
   const brand = insurerBrandLogos[normalized] ?? Object.entries(insurerBrandLogos).find(([key]) => normalized.includes(key) || key.includes(normalized))?.[1];
   if (!brand) return <span className="inline-flex h-3.5 w-8 shrink-0 items-center justify-center rounded-sm border border-[#D6E0EE] bg-[#F8FBFF] text-[6px] font-semibold uppercase tracking-tight text-[#003A83]">insureit</span>;
-  return <img src={brand.src} alt={brand.label} className="h-4 w-8 shrink-0 object-contain object-left" />;
+  return <Image src={brand.src} alt={brand.label} width={32} height={16} className="h-4 w-8 shrink-0 object-contain object-left" />;
 }
 
 function ProcessCell({ label, keyName }: { label: string; keyName: string }) {

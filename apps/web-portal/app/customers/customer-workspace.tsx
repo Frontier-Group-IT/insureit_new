@@ -47,7 +47,7 @@ export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
   const allPageSelected = pageRows.length > 0 && pageRows.every((row) => selectedIds.has(row.id));
   const somePageSelected = pageRows.some((row) => selectedIds.has(row.id));
 
-  function toggleRow(id: string) { setSelectedIds((current) => { const next = new Set(current); next.has(id) ? next.delete(id) : next.add(id); return next; }); }
+  function toggleRow(id: string) { setSelectedIds((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; }); }
   function toggleCurrentPage() { setSelectedIds((current) => { const next = new Set(current); pageRows.forEach((row) => allPageSelected ? next.delete(row.id) : next.add(row.id)); return next; }); }
   function exportSelected() {
     if (!selectedRows.length) return;
