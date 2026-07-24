@@ -17,7 +17,7 @@ type Props = {
 
 const sections: Array<{ key: SectionKey; label: string; icon: string; items: Item[] }> = [
   { key: "claims", label: "Claims", icon: "▤", items: [{ href: "/claims", label: "All Claims" }, { href: "/claims?queue=documents", label: "Documents" }, { href: "/claims?journey=spot-intimation", label: "Verification" }, { href: "/claims?journey=spot-surveyor-assigned", label: "Survey" }, { href: "/claims?journey=under-repair", label: "Repair" }, { href: "/claims?journey=payment-advice-received", label: "Settlement" }] },
-  { key: "master-data", label: "Master Data", icon: "▦", items: [{ href: "/customers", label: "Customers" }, { href: "/customers/applications", label: "KYC Applications" }, { href: "/vehicles", label: "Vehicles" }, { href: "/policies", label: "Policies" }] },
+  { key: "master-data", label: "Master Data", icon: "▦", items: [{ href: "/employees", label: "Employees" }, { href: "/customers", label: "Customers" }, { href: "/customers/applications", label: "KYC Applications" }, { href: "/customers/posp-misp", label: "POSP / MISP Onboarding" }, { href: "/vehicles", label: "Vehicles" }, { href: "/policies", label: "Policies" }] },
   { key: "tasks", label: "Tasks", icon: "✓", items: [{ href: "/tasks", label: "All Tasks" }, { href: "/tasks?status=open", label: "Open" }, { href: "/tasks?status=in_progress", label: "In Progress" }, { href: "/tasks?status=completed", label: "Completed" }] },
   { key: "reports", label: "Reports", icon: "▥", items: [{ href: "/reports", label: "Portfolio Overview" }] }
 ];
@@ -80,8 +80,14 @@ export function AppNavigation({ activeNav, customerCount, kycApplicationCount }:
 
 function isCurrent(href: string, pathname: string, currentQuery: string) {
   const [targetPath, targetQuery = ""] = href.split("?");
-  if (pathname !== targetPath) return false;
-  if (!targetQuery) return !currentQuery;
+  const nestedWorkspaces = ["/employees", "/customers/applications", "/customers/posp-misp"];
+  const nestedMatch = !targetQuery
+    && nestedWorkspaces.includes(targetPath)
+    && (pathname === targetPath || pathname.startsWith(`${targetPath}/`));
+  if (pathname !== targetPath && !nestedMatch) return false;
+  if (!targetQuery) {
+    return nestedMatch || !currentQuery;
+  }
   const expected = new URLSearchParams(targetQuery);
   const current = new URLSearchParams(currentQuery);
   return Array.from(expected.entries()).every(([key, value]) => current.get(key) === value);

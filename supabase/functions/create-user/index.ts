@@ -10,6 +10,8 @@ const appRoles = new Set([
   "super_admin",
   "admin",
   "manager",
+  "claims_head",
+  "sales_operations_head",
   "backoffice_executive",
   "claim_processor",
   "field_executive",
