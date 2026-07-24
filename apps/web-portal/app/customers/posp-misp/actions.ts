@@ -9,6 +9,7 @@ import { canManageMasterData } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { beginPortalOnboardingApplication } from "../onboarding-applications";
 import { normalizeImportedDate } from "@/lib/indian-date";
+import { encryptSensitiveValue } from "@/lib/sensitive-data";
 
 export type PospMispState = { error: string | null; field: string | null };
 
@@ -44,6 +45,7 @@ type NormalizedRow = {
   pan_number: string | null;
   aadhaar_last_four: string | null;
   aadhaar_hash: string | null;
+  aadhaar_number_encrypted: string | null;
   date_of_birth: string | null;
   gst_number: string | null;
   education_status: string | null;
@@ -101,8 +103,8 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const GST_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
-const EXTERNAL_ID_PATTERN = /^SIB\/[0-9]{4}\/(0[1-9]|1[0-2])\/[0-9]{4}$/;
 const IIB_REMARK_OPTIONS = new Set(["Matching Record Found In DataBase", "No Data Found In POS System"]);
+const TRAINING_STATUS_OPTIONS = new Set(["completed", "pending"]);
 const PRE_IIB_DOCUMENT_FIELDS: Array<{ key: DocumentKey; label: string }> = [
   { key: "aadhaar_front", label: "Aadhaar front" },
   { key: "aadhaar_back", label: "Aadhaar back" },
@@ -179,12 +181,16 @@ function normalizeGst(value: string | null) {
 
 function normalizeAadhaar(value: string | null) {
   const digits = value?.replace(/\D/g, "") ?? "";
-  if (!/^[0-9]{12}$/.test(digits)) return { lastFour: null, hash: null };
-  return { lastFour: digits.slice(-4), hash: createHash("sha256").update(digits).digest("hex") };
+  if (!/^[0-9]{12}$/.test(digits)) return { lastFour: null, hash: null, encrypted: null };
+  return {
+    lastFour: digits.slice(-4),
+    hash: createHash("sha256").update(digits).digest("hex"),
+    encrypted: encryptSensitiveValue(digits)
+  };
 }
 
 function normalizeDate(value: unknown) {
-  return normalizeImportedDate(value);
+  return normalizeImportedDate(value, { ambiguousExcelDatesAreDayFirst: true });
 }
 
 function extension(value: File) {
@@ -231,6 +237,14 @@ function normalizeIibRemark(value: string | null) {
     return "No Data Found In POS System";
   }
   return value?.trim() || null;
+}
+
+function normalizeTrainingStatus(value: string | null) {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized.startsWith("completed") || normalized === "complete" || normalized === "done") return "completed";
+  if (normalized.includes("pending")) return "pending";
+  return normalized;
 }
 
 function resolveSalesManagerByProfileId(managers: SalesManagerOption[], profileId: string | null) {
@@ -407,13 +421,15 @@ function validateRow(row: NormalizedRow) {
   if (row.dp_pan_number && !PAN_PATTERN.test(row.dp_pan_number)) errors.push("DP PAN number is invalid.");
   if (row.gst_number && !GST_PATTERN.test(row.gst_number)) errors.push("GST number is invalid.");
   if (!row.bank_id) errors.push("Select a bank from the approved bank master.");
-  if (row.external_onboarding_id && !EXTERNAL_ID_PATTERN.test(row.external_onboarding_id.toUpperCase())) errors.push("External ID must use SIB/YYYY/MM/NNNN format.");
   if (row.iib_remarks && !IIB_REMARK_OPTIONS.has(row.iib_remarks)) errors.push("Choose a valid IIB remark.");
   if (row.iib_uploaded && (!row.iib_remarks || !row.iib_uploaded_at)) {
     errors.push("IIB remarks and upload date are required when IIB is uploaded.");
   }
   if (row.training_end_date && row.training_start_date && row.training_end_date < row.training_start_date) {
     errors.push("Training end date cannot be before the start date.");
+  }
+  if (row.training_status && !TRAINING_STATUS_OPTIONS.has(row.training_status)) {
+    errors.push("Training status must be Completed or Pending.");
   }
   if (row.onboarding_date && (!row.training_login_id || !row.training_password || !row.training_start_date || !row.training_end_date || !row.training_status || !row.exam_status)) {
     errors.push("Complete the training credentials, dates, status and exam result for an onboarded record.");
@@ -465,6 +481,7 @@ function rowFromForm(data: FormData, salesManagers: SalesManagerOption[], manufa
     pan_number: normalizePan(text(data, "pan_number")),
     aadhaar_last_four: aadhaar.lastFour,
     aadhaar_hash: aadhaar.hash,
+    aadhaar_number_encrypted: aadhaar.encrypted,
     date_of_birth: text(data, "date_of_birth"),
     gst_number: normalizeGst(text(data, "gst_number")),
     education_status: educationStatus,
@@ -482,7 +499,7 @@ function rowFromForm(data: FormData, salesManagers: SalesManagerOption[], manufa
     training_password: text(data, "training_password"),
     training_start_date: text(data, "training_start_date"),
     training_end_date: text(data, "training_end_date"),
-    training_status: text(data, "training_status"),
+    training_status: normalizeTrainingStatus(text(data, "training_status")),
     training_certificate_number: text(data, "training_certificate_number"),
     exam_status: text(data, "exam_status"),
     onboarding_date: text(data, "onboarding_date"),
@@ -497,7 +514,13 @@ function rowFromForm(data: FormData, salesManagers: SalesManagerOption[], manufa
 function rowFromImportEditForm(data: FormData, existing: NormalizedRow, salesManagers: SalesManagerOption[], manufacturerNames: Set<string>, banks: BankOption[]): NormalizedRow {
   const partnerType = text(data, "partner_type") === "misp" ? "misp" : "posp";
   const aadhaarText = text(data, "aadhaar_number");
-  const aadhaar = aadhaarText ? normalizeAadhaar(aadhaarText) : { lastFour: existing.aadhaar_last_four, hash: existing.aadhaar_hash };
+  const aadhaar = aadhaarText
+    ? normalizeAadhaar(aadhaarText)
+    : {
+      lastFour: existing.aadhaar_last_four,
+      hash: existing.aadhaar_hash,
+      encrypted: existing.aadhaar_number_encrypted
+    };
   const associate = resolveSalesManagerByProfileId(salesManagers, text(data, "associate_profile_id"));
   const iibUploaded = data.get("iib_uploaded") === "true";
   const credentialsShared = data.get("training_credentials_shared_flag") === "true";
@@ -520,6 +543,7 @@ function rowFromImportEditForm(data: FormData, existing: NormalizedRow, salesMan
     pan_number: normalizePan(text(data, "pan_number")),
     aadhaar_last_four: aadhaar.lastFour,
     aadhaar_hash: aadhaar.hash,
+    aadhaar_number_encrypted: aadhaar.encrypted,
     date_of_birth: text(data, "date_of_birth"),
     gst_number: normalizeGst(text(data, "gst_number")),
     education_status: existing.education_status === "received" ? "received" : "not_received",
@@ -537,7 +561,7 @@ function rowFromImportEditForm(data: FormData, existing: NormalizedRow, salesMan
     training_password: text(data, "training_password"),
     training_start_date: text(data, "training_start_date"),
     training_end_date: text(data, "training_end_date"),
-    training_status: text(data, "training_status"),
+    training_status: normalizeTrainingStatus(text(data, "training_status")),
     training_certificate_number: text(data, "training_certificate_number"),
     exam_status: text(data, "exam_status"),
     onboarding_date: text(data, "onboarding_date"),
@@ -573,6 +597,7 @@ function normalizeExcelRow(partnerType: PartnerType, source: Record<string, unkn
     pan_number: normalizePan(cell(source, partnerType === "posp" ? "Pan Number" : "MISP PAN")),
     aadhaar_last_four: aadhaar.lastFour,
     aadhaar_hash: aadhaar.hash,
+    aadhaar_number_encrypted: aadhaar.encrypted,
     date_of_birth: normalizeDate(source[partnerType === "posp" ? "D.O.B" : "Date of Birth"]),
     gst_number: normalizeGst(cell(source, partnerType === "posp" ? "GST Number( Optional)" : "GST No")),
     education_status: normalizeEducationStatus(cell(source, "Marsheet") ?? cell(source, "Marksheet")),
@@ -590,7 +615,7 @@ function normalizeExcelRow(partnerType: PartnerType, source: Record<string, unkn
     training_password: cell(source, "Training Password"),
     training_start_date: normalizeDate(source["Training Start Date"]),
     training_end_date: normalizeDate(source["Training End Date"]),
-    training_status: cell(source, "Trainings Status"),
+    training_status: normalizeTrainingStatus(cell(source, "Trainings Status")),
     training_certificate_number: cell(source, "Training Certificate Number"),
     exam_status: cell(source, "Exam Status"),
     onboarding_date: normalizeDate(source["Onboarding Date"]),
@@ -655,6 +680,7 @@ async function createSubmittedApplication(params: {
     pan_number: params.row.pan_number,
     aadhaar_last_four: params.row.aadhaar_last_four,
     aadhaar_hash: params.row.aadhaar_hash,
+    aadhaar_number_encrypted: params.row.aadhaar_number_encrypted,
     date_of_birth: params.row.date_of_birth,
     gst_number: params.row.gst_number,
     education_status: params.row.education_status,

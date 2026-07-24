@@ -85,7 +85,7 @@ export default async function PospMispPage({ searchParams }: { searchParams: Pro
                       <td className="px-3 py-3">{row.source === "manager_portal" ? "Manager portal" : "Mobile app"}</td>
                       <td className="px-3 py-3"><span className={row.age_days >= 7 ? "font-semibold text-red-700" : row.age_days >= 3 ? "font-semibold text-amber-700" : "text-[#64748B]"}>{row.age_days === 0 ? "Today" : `${row.age_days}d`}</span></td>
                       <td className="px-3 py-3"><StatusPill status={row.status} /></td>
-                      <td className="px-3 py-3"><Link href={`/customers/applications/${row.id}`} className="font-semibold text-[#4F46E5] hover:underline">{row.status === "approved" ? "View" : "Review"}</Link></td>
+                      <td className="px-3 py-3"><Link href={`/customers/applications/${row.id}`} className="font-semibold text-[#4F46E5] hover:underline">{row.status === "approved" || row.status === "rejected" ? "View" : "Edit / Review"}</Link></td>
                     </tr>
                   ))}
                 </tbody>

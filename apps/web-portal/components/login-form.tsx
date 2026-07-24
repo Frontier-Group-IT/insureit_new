@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { isAllowedAdminRole } from "@/lib/auth-config";
 import { safePortalReturnPath } from "@/lib/portal-routes";
 import { createClient } from "@/lib/supabase";
+import { BlockingWorkPanel, InsureItButtonLoader } from "@/components/loading/insureit-loader";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -65,7 +66,6 @@ export function LoginForm() {
       return;
     }
 
-    setIsSubmitting(false);
     window.location.replace(nextPath);
   }
 
@@ -79,9 +79,10 @@ export function LoginForm() {
         <label htmlFor="password">Password</label>
         <input className={isSubmitting ? "opacity-40 transition-opacity" : "transition-opacity"} id="password" type="password" placeholder="••••••••" value={password} onChange={(event) => setPassword(event.target.value)} required disabled={isSubmitting} />
       </div>
+      {isSubmitting ? <BlockingWorkPanel title="Signing you in" detail="Preparing your secure operations workspace." /> : null}
       {message ? <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{message}</p> : null}
       <button className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-navy-700 px-4 py-3 text-sm font-semibold text-white hover:bg-navy-900 disabled:cursor-not-allowed disabled:opacity-60" type="submit" disabled={isSubmitting}>
-        {isSubmitting ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" /> Signing in...</> : "Sign in"}
+        {isSubmitting ? <InsureItButtonLoader label="Signing in" /> : "Sign in"}
       </button>
     </form>
   );

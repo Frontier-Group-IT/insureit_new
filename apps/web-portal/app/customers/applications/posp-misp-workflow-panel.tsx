@@ -50,7 +50,7 @@ export function PospMispWorkflowPanel({ applicationId, profile }: { applicationI
         <form action={savePospMispIibOutcome} className="space-y-3 px-4 py-3">
           <input type="hidden" name="application_id" value={applicationId} />
           <Select label="IIB Remarks" name="iib_remarks" defaultValue={profile.iib_remarks ?? ""} options={["Matching Record Found In DataBase", "No Data Found In POS System"]} />
-          <label className="flex items-center gap-2 rounded-md border border-[#CBD5E1] bg-[#F8FAFC] px-3 py-2 text-[10.5px] font-semibold text-[#344054]">
+          <label className="flex w-fit items-center gap-2 py-1 text-[10.5px] font-semibold text-[#344054]">
             <input type="checkbox" name="iib_uploaded" value="true" defaultChecked={profile.iib_uploaded} className="h-4 w-4" />
             Details uploaded to IIB
           </label>
@@ -67,7 +67,7 @@ export function PospMispWorkflowPanel({ applicationId, profile }: { applicationI
             <Field label="Training Password" name="training_password" type="password" required />
             <IndianDateField label="Training Start Date" name="training_start_date" defaultValue={profile.training_start_date} required />
             <IndianDateField label="Training End Date" name="training_end_date" defaultValue={profile.training_end_date} required />
-            <Field label="Training Status" name="training_status" defaultValue={profile.training_status ?? ""} required />
+            <SelectValues label="Training Status" name="training_status" defaultValue={profile.training_status ?? ""} options={[["completed", "Completed"], ["pending", "Pending"]]} />
             <Field label="Certificate Number" name="training_certificate_number" defaultValue={profile.training_certificate_number ?? ""} />
             <Field label="Exam Status" name="exam_status" defaultValue={profile.exam_status ?? ""} required />
             <IndianDateField label="Onboarding Date" name="onboarding_date" defaultValue={profile.onboarding_date} required />
@@ -95,6 +95,10 @@ function Field({ label, name, ...props }: React.InputHTMLAttributes<HTMLInputEle
 
 function Select({ label, name, options, defaultValue }: { label: string; name: string; options: string[]; defaultValue: string }) {
   return <div><label className={labelClass} htmlFor={name}>{label} *</label><select id={name} name={name} required defaultValue={defaultValue} className={inputClass}><option value="">Select IIB remark</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>;
+}
+
+function SelectValues({ label, name, options, defaultValue }: { label: string; name: string; options: Array<[string, string]>; defaultValue: string }) {
+  return <div><label className={labelClass} htmlFor={name}>{label} *</label><select id={name} name={name} required defaultValue={defaultValue} className={inputClass}><option value="">Select {label.toLowerCase()}</option>{options.map(([value, optionLabel]) => <option key={value} value={value}>{optionLabel}</option>)}</select></div>;
 }
 
 function stageLabel(stage: PospMispWorkflowProfile["workflow_stage"]) {

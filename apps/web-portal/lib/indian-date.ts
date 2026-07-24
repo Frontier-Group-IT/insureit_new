@@ -37,8 +37,15 @@ export function maskIndianDate(value: string) {
   return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
 }
 
-export function normalizeImportedDate(value: unknown) {
+export function normalizeImportedDate(value: unknown, options?: { ambiguousExcelDatesAreDayFirst?: boolean }) {
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    if (options?.ambiguousExcelDatesAreDayFirst) {
+      const excelMonth = value.getUTCMonth() + 1;
+      const excelDay = value.getUTCDate();
+      if (excelDay <= 12) {
+        return `${value.getUTCFullYear()}-${String(excelDay).padStart(2, "0")}-${String(excelMonth).padStart(2, "0")}`;
+      }
+    }
     return value.toISOString().slice(0, 10);
   }
   if (typeof value === "number") {

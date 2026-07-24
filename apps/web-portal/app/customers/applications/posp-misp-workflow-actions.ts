@@ -8,6 +8,7 @@ import { canManageMasterData } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const IIB_REMARKS = new Set(["Matching Record Found In DataBase", "No Data Found In POS System"]);
+const TRAINING_STATUSES = new Set(["completed", "pending"]);
 const ALLOWED_FILE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
@@ -75,6 +76,7 @@ export async function completePospMispTraining(data: FormData) {
   if (!loginId || !password || !startDate || !endDate || !trainingStatus || !examStatus || !onboardingDate) {
     redirectTo(applicationId, "training_incomplete");
   }
+  if (!TRAINING_STATUSES.has(trainingStatus)) redirectTo(applicationId, "training_incomplete");
   if (endDate < startDate) redirectTo(applicationId, "training_dates_invalid");
   if (!credentialsShared) redirectTo(applicationId, "credentials_required");
 

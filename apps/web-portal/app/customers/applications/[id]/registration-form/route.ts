@@ -3,6 +3,7 @@ import { canManageMasterData } from "@/lib/roles";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { formatIndianDate } from "@/lib/indian-date";
+import { decryptSensitiveValue } from "@/lib/sensitive-data";
 
 const FORM_VERSION = "POSP-MISP-2026.1";
 
@@ -25,6 +26,7 @@ type Profile = {
   date_of_birth: string | null;
   pan_number: string | null;
   aadhaar_last_four: string | null;
+  aadhaar_number_encrypted: string | null;
   address: string | null;
   city: string | null;
   state: string | null;
@@ -58,7 +60,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       .maybeSingle<Application>(),
     admin
       .from("posp_misp_onboarding_profiles")
-      .select("associate_name, associate_id, external_onboarding_id, document_received_at, pos_name, misp_name, applicant_phone, applicant_email, date_of_birth, pan_number, aadhaar_last_four, address, city, state, postal_code, gst_number, bank_name, bank_account_number, bank_ifsc_code, oem_name, dp_name, dp_phone, dp_email, dp_pan_number")
+      .select("associate_name, associate_id, external_onboarding_id, document_received_at, pos_name, misp_name, applicant_phone, applicant_email, date_of_birth, pan_number, aadhaar_last_four, aadhaar_number_encrypted, address, city, state, postal_code, gst_number, bank_name, bank_account_number, bank_ifsc_code, oem_name, dp_name, dp_phone, dp_email, dp_pan_number")
       .eq("application_id", id)
       .maybeSingle<Profile>()
   ]);
@@ -92,7 +94,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       ["Email", onboarding.applicant_email ?? application.applicant_email],
       ["Date of Birth", formatIndianDate(onboarding.date_of_birth)],
       ["PAN Number", onboarding.pan_number],
-      ["Aadhaar", onboarding.aadhaar_last_four ? `Ending ${onboarding.aadhaar_last_four}` : null],
+      ["Aadhaar", decryptSensitiveValue(onboarding.aadhaar_number_encrypted) ?? (onboarding.aadhaar_last_four ? `Ending ${onboarding.aadhaar_last_four}` : null)],
       ["GST Number", onboarding.gst_number],
       ["Address", [onboarding.address, onboarding.city, onboarding.state, onboarding.postal_code].filter(Boolean).join(", ")]
     ]],

@@ -49,6 +49,10 @@ const educationDocumentOptions = [
   { value: "education_post_graduation_marksheet", label: "Post Graduation Marksheet" }
 ];
 const educationDocumentTypes = new Set(educationDocumentOptions.map((option) => option.value));
+const trainingStatusOptions = [
+  { value: "completed", label: "Completed" },
+  { value: "pending", label: "Pending" }
+];
 
 export function ImportRowReviewTable({ batchId, batchStatus, rows, salesManagers, oems, banks }: Props) {
   const [editingRow, setEditingRow] = useState<ImportRow | null>(null);
@@ -158,7 +162,15 @@ function EditRowModal({ batchId, row, editable, salesManagers, oems, banks, onCl
             <Field label="Mobile Number" name="applicant_phone" required inputMode="tel" defaultValue={stringValue(data.applicant_phone) ?? ""} disabled={!editable} />
             <Field label="Email" name="applicant_email" type="email" defaultValue={stringValue(data.applicant_email) ?? ""} disabled={!editable} />
             <IndianDateField label="Date of Birth" name="date_of_birth" defaultValue={stringValue(data.date_of_birth)} disabled={!editable} />
-            <Field label="Replace Aadhaar Number" name="aadhaar_number" inputMode="numeric" maxLength={12} placeholder={stringValue(data.aadhaar_last_four) ? `Stored ending ${stringValue(data.aadhaar_last_four)}` : "Optional"} disabled={!editable} />
+            <Field
+              label="Aadhaar Number"
+              name="aadhaar_number"
+              inputMode="numeric"
+              maxLength={12}
+              defaultValue={stringValue(data.aadhaar_number) ?? ""}
+              placeholder={stringValue(data.aadhaar_last_four) ? `Full number unavailable; stored ending ${stringValue(data.aadhaar_last_four)}` : "12-digit Aadhaar"}
+              disabled={!editable}
+            />
             <Field label="Address" name="address" defaultValue={stringValue(data.address) ?? ""} disabled={!editable} />
             <Field label="City" name="city" defaultValue={stringValue(data.city) ?? ""} disabled={!editable} />
             <Field label="State" name="state" defaultValue={stringValue(data.state) ?? ""} disabled={!editable} />
@@ -237,7 +249,7 @@ function EditRowModal({ batchId, row, editable, salesManagers, oems, banks, onCl
             <Field label="Training Password" name="training_password" type="password" defaultValue={stringValue(data.training_password) ?? ""} disabled={!editable} />
             <IndianDateField label="Training Start Date" name="training_start_date" defaultValue={stringValue(data.training_start_date)} disabled={!editable} />
             <IndianDateField label="Training End Date" name="training_end_date" defaultValue={stringValue(data.training_end_date)} disabled={!editable} />
-            <Field label="Training Status" name="training_status" defaultValue={stringValue(data.training_status) ?? ""} disabled={!editable} />
+            <SelectField label="Training Status" name="training_status" defaultValue={stringValue(data.training_status) ?? ""} disabled={!editable} options={trainingStatusOptions} placeholder="Select training status" />
             <Field label="Training Certificate No." name="training_certificate_number" defaultValue={stringValue(data.training_certificate_number) ?? ""} disabled={!editable} />
             <Field label="Exam Status" name="exam_status" defaultValue={stringValue(data.exam_status) ?? ""} disabled={!editable} />
             <IndianDateField label="Onboarding Date" name="onboarding_date" defaultValue={stringValue(data.onboarding_date)} disabled={!editable} />

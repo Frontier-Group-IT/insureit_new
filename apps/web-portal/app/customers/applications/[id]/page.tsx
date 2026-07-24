@@ -11,6 +11,9 @@ import { approveMobileGroupApplication } from "../group-actions";
 import { approvePospMispApplication } from "../posp-misp-actions";
 import { PospMispWorkflowPanel, type PospMispWorkflowProfile } from "../posp-misp-workflow-panel";
 import { formatIndianDate } from "@/lib/indian-date";
+import { PospMispApplicationEditor, type PospMispEditProfile } from "../posp-misp-application-editor";
+import { decryptSensitiveValue } from "@/lib/sensitive-data";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type PageProps = { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; success?: string }> };
 type Application = { id: string; partner_type: string | null; status: string; applicant_phone: string | null; applicant_email: string | null; draft_data: Record<string, unknown> | null; created_at: string; updated_at: string; customer_id: string | null };
@@ -77,7 +80,14 @@ const errors: Record<string, string> = {
   agreement_required: "Upload the agreement copy before completing training.",
   agreement_invalid: "Agreement copy must be a PDF, JPG or PNG no larger than 5 MB.",
   agreement_upload_failed: "The agreement copy could not be uploaded.",
-  workflow_save_failed: "The workflow update could not be saved. Refresh the page and try again."
+  workflow_save_failed: "The workflow update could not be saved. Refresh the page and try again.",
+  posp_misp_edit_locked: "This POSP/MISP application can no longer be edited from the submission workspace.",
+  posp_misp_edit_invalid: "Complete the required POSP/MISP, contact, associate and bank details.",
+  posp_misp_aadhaar_invalid: "Enter a valid 12-digit Aadhaar number.",
+  posp_misp_edit_failed: "The submitted POSP/MISP details could not be updated.",
+  posp_misp_marksheet_type_required: "Select the marksheet type before uploading its replacement.",
+  posp_misp_document_invalid: "Replacement documents must be PDF, JPG or PNG and no larger than 5 MB.",
+  posp_misp_document_failed: "A replacement document could not be saved."
 };
 const successes: Record<string, string> = {
   corporate_updated: "Corporate application details were saved.",
@@ -87,6 +97,7 @@ const successes: Record<string, string> = {
   iib_started: "The application moved to IIB processing.",
   iib_completed: "IIB processing completed. Training details are now available.",
   training_completed: "Training and post-IIB documentation completed.",
+  posp_misp_updated: "POSP/MISP application details and replacement documents were saved.",
 };
 const corporateContactRoles = [
   ["corporate_creator", "Corporate Creator"],
@@ -106,6 +117,7 @@ export default async function ApplicationReviewPage({ params, searchParams }: Pa
   const { id } = await params;
   const query = await searchParams;
   const supabase = await createServerSupabaseClient();
+  const admin = createSupabaseAdminClient();
   const { data: application } = await supabase.from("customer_onboarding_applications").select("id, partner_type, status, applicant_phone, applicant_email, draft_data, created_at, updated_at, customer_id").eq("id", id).maybeSingle<Application>();
   if (!application) notFound();
   const { data: documents } = await supabase.from("customer_onboarding_documents").select("id, document_type, file_name, storage_bucket, storage_path, verification_status").eq("application_id", id).order("created_at").returns<Document[]>();
@@ -113,17 +125,36 @@ export default async function ApplicationReviewPage({ params, searchParams }: Pa
   const previews = await Promise.all((documents ?? []).map(async (document) => ({ ...document, url: (await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 900)).data?.signedUrl ?? null })));
   const draft = application.draft_data ?? {};
   const supportedPartner = ["individual_proprietor","group","corporate","dealership","posp","misp"].includes(application.partner_type??"");
-  const canReview = supportedPartner && ["submitted", "under_review"].includes(application.status) && !application.customer_id;
+  const canReview = supportedPartner && ["submitted", "under_review", "changes_requested"].includes(application.status) && !application.customer_id;
   const isCorporate = application.partner_type === "corporate";
   const isDealership = application.partner_type === "dealership";
   const isPospMisp = application.partner_type === "posp" || application.partner_type === "misp";
   const { data: pospMispProfile } = isPospMisp
     ? await supabase
       .from("posp_misp_onboarding_profiles")
-      .select("workflow_stage, iib_remarks, iib_uploaded, iib_uploaded_at, training_login_id, training_credentials_shared_flag, training_start_date, training_end_date, training_status, training_certificate_number, exam_status, onboarding_date")
+      .select("partner_type, associate_profile_id, external_onboarding_id, document_received_at, pos_name, misp_name, applicant_phone, applicant_email, date_of_birth, aadhaar_last_four, aadhaar_number_encrypted, pan_number, gst_number, address, city, state, postal_code, bank_id, bank_account_number, bank_ifsc_code, oem_name, dp_name, dp_phone, dp_email, dp_pan_number, workflow_stage, iib_remarks, iib_uploaded, iib_uploaded_at, training_login_id, training_credentials_shared_flag, training_start_date, training_end_date, training_status, training_certificate_number, exam_status, onboarding_date")
       .eq("application_id", id)
-      .maybeSingle<PospMispWorkflowProfile>()
+      .maybeSingle<PospMispWorkflowProfile & Omit<PospMispEditProfile, "aadhaar_number"> & { aadhaar_number_encrypted: string | null }>()
     : { data: null };
+  const [{ data: salesManagerRows }, { data: bankRows }, { data: oemRows }] = isPospMisp
+    ? await Promise.all([
+      admin.from("profiles").select("id, full_name, employee_code").eq("role", "sales_manager").eq("is_active", true).order("full_name"),
+      admin.from("banks").select("id, name").eq("is_active", true).order("name"),
+      admin.from("vehicle_manufacturers").select("name").eq("is_active", true).order("sort_order").order("name")
+    ])
+    : [{ data: [] }, { data: [] }, { data: [] }];
+  const pospMispEditProfile: PospMispEditProfile | null = pospMispProfile
+    ? {
+      ...pospMispProfile,
+      aadhaar_number: decryptSensitiveValue(pospMispProfile.aadhaar_number_encrypted)
+    }
+    : null;
+  const salesManagerOptions = (salesManagerRows ?? []).map((manager) => ({
+    value: String(manager.id),
+    label: `${manager.full_name || "Unnamed Sales Manager"}${manager.employee_code ? ` - ${manager.employee_code}` : ""}`
+  }));
+  const bankOptions = (bankRows ?? []).map((bank) => ({ value: String(bank.id), label: String(bank.name) }));
+  const oemOptions = (oemRows ?? []).map((manufacturer) => ({ value: String(manufacturer.name), label: String(manufacturer.name) }));
   const canApprove = canReview && (!isPospMisp || pospMispProfile?.workflow_stage === "completed");
   const pageError = query.error === "application_not_ready" && !canReview ? null : query.error;
   const contactByRole = new Map((contacts ?? []).map((contact) => [contact.contact_role, contact]));
@@ -280,6 +311,16 @@ export default async function ApplicationReviewPage({ params, searchParams }: Pa
                 </div>
                 <SaveCorrections canReview={canReview} status={application.status} />
               </form>
+            ) : isPospMisp && pospMispEditProfile ? (
+              <PospMispApplicationEditor
+                applicationId={id}
+                profile={pospMispEditProfile}
+                editable={canReview}
+                salesManagers={salesManagerOptions}
+                banks={bankOptions}
+                oems={oemOptions}
+                documents={(documents ?? []).map((document) => ({ document_type: document.document_type, file_name: document.file_name }))}
+              />
             ) : (
               <div className="grid gap-px bg-[#E8EEF5] sm:grid-cols-2">
                 {reviewFields.map(([label, fieldValue]) => <div key={String(label)} className="bg-white px-4 py-3"><p className="text-[9px] font-semibold uppercase tracking-[.06em] text-[#64748B]">{String(label)}</p><p className="mt-1 text-[11.5px] font-medium text-[#0F172A]">{display(fieldValue)}</p></div>)}

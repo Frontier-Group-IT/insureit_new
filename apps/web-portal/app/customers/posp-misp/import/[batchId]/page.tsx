@@ -7,6 +7,7 @@ import { requireMasterDataManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { ImportRowReviewTable } from "../import-row-review-table";
 import { submitPospMispImportBatch } from "../../actions";
+import { decryptSensitiveValue } from "@/lib/sensitive-data";
 
 type Batch = { id: string; file_name: string; total_rows: number; valid_rows: number; invalid_rows: number; pending_rows: number; submitted_rows: number; failed_rows: number; status: string; created_at: string };
 type ImportRow = {
@@ -48,7 +49,18 @@ export default async function PospMispImportBatchPage({ params, searchParams }: 
   for (const document of rowDocuments ?? []) {
     documentsByRow.set(document.import_row_id, [...(documentsByRow.get(document.import_row_id) ?? []), document]);
   }
-  const rowsWithDocuments = (rows ?? []).map((row) => ({ ...row, documents: documentsByRow.get(row.id) ?? [] }));
+  const rowsWithDocuments = (rows ?? []).map((row) => ({
+    ...row,
+    normalized_data: {
+      ...row.normalized_data,
+      aadhaar_number: decryptSensitiveValue(
+        typeof row.normalized_data.aadhaar_number_encrypted === "string"
+          ? row.normalized_data.aadhaar_number_encrypted
+          : null
+      )
+    },
+    documents: documentsByRow.get(row.id) ?? []
+  }));
 
   return (
     <AppShell title="POSP / MISP Import Review">
