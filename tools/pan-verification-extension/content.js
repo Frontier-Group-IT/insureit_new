@@ -21,6 +21,7 @@ chrome.runtime.onMessage.addListener((message) => {
     renderOverlay(message.runtime);
     if (message.runtime.running && !message.runtime.paused) ensureAutomation();
   }
+  if (message?.type === "WAKE_UP") ensureAutomation();
 });
 
 init();
