@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
-import { canManageMasterData } from "@/lib/roles";
+import { canManagePospMispOnboarding } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const IIB_REMARKS = new Set(["Matching Record Found In DataBase", "No Data Found In POS System"]);
@@ -146,7 +146,7 @@ async function context(data: FormData) {
   if (!applicationId) redirect("/customers/applications");
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!profile?.id || !canManageMasterData(profile.role)) redirect("/access-denied");
+  if (!profile?.id || !canManagePospMispOnboarding(profile.role)) redirect("/access-denied");
   return { actorId: profile.id, applicationId, admin: createSupabaseAdminClient() };
 }
 

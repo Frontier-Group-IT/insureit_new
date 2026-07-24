@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { createServerSupabaseClient } from "@/lib/auth-server";
-import { requireMasterDataManager } from "@/lib/master-data-server";
+import { requireApplicationReviewer } from "@/lib/master-data-server";
 import { approveMobileIndividualApplication, requestMobileApplicationChanges } from "../actions";
 import { approveMobileCorporateApplication, updateMobileCorporateApplicationDraft } from "../corporate-actions";
 import { approveMobileDealershipApplication, updateMobileDealershipApplicationDraft } from "../dealership-actions";
@@ -113,8 +113,8 @@ const dealershipContactRoles = [
 ] as const;
 
 export default async function ApplicationReviewPage({ params, searchParams }: PageProps) {
-  await requireMasterDataManager();
   const { id } = await params;
+  await requireApplicationReviewer(id);
   const query = await searchParams;
   const supabase = await createServerSupabaseClient();
   const admin = createSupabaseAdminClient();

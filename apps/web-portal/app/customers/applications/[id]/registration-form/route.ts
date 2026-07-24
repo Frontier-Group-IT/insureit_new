@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { canManageMasterData } from "@/lib/roles";
+import { canManageMasterData, canManagePospMispOnboarding } from "@/lib/roles";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { formatIndianDate } from "@/lib/indian-date";
@@ -43,13 +43,10 @@ type Profile = {
 };
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const accessToken = await getServerAccessToken();
   const { profile: actor } = await getAuthenticatedProfile(accessToken);
-  if (!actor?.id || !canManageMasterData(actor.role)) {
-    return new Response("You are not authorized to download this form.", { status: 403 });
-  }
 
-  const { id } = await params;
   const admin = createSupabaseAdminClient();
   const [{ data: application }, { data: onboarding }] = await Promise.all([
     admin
@@ -66,6 +63,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   ]);
 
   if (!application || !onboarding) return new Response("POSP/MISP application not found.", { status: 404 });
+  if (!actor?.id || (!canManageMasterData(actor.role) && !canManagePospMispOnboarding(actor.role))) {
+    return new Response("You are not authorized to download this form.", { status: 403 });
+  }
 
   const pdf = await PDFDocument.create();
   const page = pdf.addPage([595.28, 841.89]);

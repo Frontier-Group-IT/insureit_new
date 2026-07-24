@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/shell";
 import { DataError } from "@/components/record-list";
 import { createServerSupabaseClient } from "@/lib/auth-server";
-import { requireMasterDataManager } from "@/lib/master-data-server";
+import { requirePospMispManager } from "@/lib/master-data-server";
 
 type QueueRow = {
   id: string;
@@ -25,7 +25,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function PospMispPage({ searchParams }: { searchParams: Promise<{ q?: string; type?: string; status?: string; page?: string }> }) {
-  await requireMasterDataManager();
+  await requirePospMispManager();
   const query = await searchParams;
   const q = query.q?.trim().slice(0, 100) || null;
   const partnerType = query.type === "posp" || query.type === "misp" ? query.type : "posp_misp";

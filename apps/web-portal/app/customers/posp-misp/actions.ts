@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { parsePospMispWorkbook, WorkbookValidationError } from "@/lib/posp-misp-workbook";
-import { canManageMasterData } from "@/lib/roles";
+import { canManagePospMispOnboarding } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { beginPortalOnboardingApplication } from "../onboarding-applications";
 import { normalizeImportedDate } from "@/lib/indian-date";
@@ -630,7 +630,7 @@ function normalizeExcelRow(partnerType: PartnerType, source: Record<string, unkn
 async function currentManager() {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!profile?.id || !canManageMasterData(profile.role)) throw new Error("You are not authorized to manage POSP/MISP onboarding.");
+  if (!profile?.id || !canManagePospMispOnboarding(profile.role)) throw new Error("You are not authorized to manage POSP/MISP onboarding.");
   return profile;
 }
 

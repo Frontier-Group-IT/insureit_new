@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
-import { requireMasterDataManager } from "@/lib/master-data-server";
+import { requirePospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createPospMispOnboarding } from "../actions";
 import { PospMispOnboardingForm } from "../posp-misp-onboarding-form";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function NewPospMispPage({ searchParams }: { searchParams: Promise<{ partner_type?: string }> }) {
-  await requireMasterDataManager();
+  await requirePospMispManager();
   const { partner_type: partnerType } = await searchParams;
   if (partnerType !== "posp" && partnerType !== "misp") redirect("/customers/posp-misp");
   const admin = createSupabaseAdminClient();

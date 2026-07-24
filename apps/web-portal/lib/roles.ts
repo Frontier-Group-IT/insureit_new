@@ -48,6 +48,15 @@ export const portalRoles: AppRole[] = [
 
 export const userManagementRoles: AppRole[] = ["it_super_user", "admin", "super_admin"];
 export const masterDataManagementRoles: AppRole[] = ["manager", "it_super_user", "admin", "super_admin"];
+export const pospMispManagementRoles: AppRole[] = [
+  "manager",
+  "it_super_user",
+  "admin",
+  "super_admin",
+  "sales_head",
+  "sales_operations_head",
+  "backoffice_executive"
+];
 
 export const organizationTreeRoles: AppRole[] = [
   "it_super_user",
@@ -112,6 +121,10 @@ export function canManageUsers(role: string | null | undefined) {
 
 export function canManageMasterData(role: string | null | undefined) {
   return Boolean(role && isAppRole(role) && masterDataManagementRoles.includes(role));
+}
+
+export function canManagePospMispOnboarding(role: string | null | undefined) {
+  return Boolean(role && isAppRole(role) && pospMispManagementRoles.includes(role));
 }
 
 export function canViewOrganizationTree(role: string | null | undefined) {

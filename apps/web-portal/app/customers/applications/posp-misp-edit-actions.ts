@@ -3,7 +3,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireMasterDataManager } from "@/lib/master-data-server";
+import { requirePospMispManager } from "@/lib/master-data-server";
 import { encryptSensitiveValue } from "@/lib/sensitive-data";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -27,7 +27,7 @@ const DOCUMENT_FIELDS = [
 ] as const;
 
 export async function updateSubmittedPospMispApplication(data: FormData) {
-  const reviewer = await requireMasterDataManager();
+  const reviewer = await requirePospMispManager();
   const applicationId = value(data, "application_id");
   if (!applicationId || !reviewer?.id) redirect("/customers/posp-misp");
 

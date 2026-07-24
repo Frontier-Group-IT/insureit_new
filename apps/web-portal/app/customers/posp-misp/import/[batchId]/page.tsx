@@ -3,7 +3,7 @@ import { AppShell } from "@/components/shell";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { DataError } from "@/components/record-list";
 import { createServerSupabaseClient } from "@/lib/auth-server";
-import { requireMasterDataManager } from "@/lib/master-data-server";
+import { requirePospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { ImportRowReviewTable } from "../import-row-review-table";
 import { submitPospMispImportBatch } from "../../actions";
@@ -29,7 +29,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function PospMispImportBatchPage({ params, searchParams }: { params: Promise<{ batchId: string }>; searchParams: Promise<{ error?: string; success?: string }> }) {
-  await requireMasterDataManager();
+  await requirePospMispManager();
   const { batchId } = await params;
   const query = await searchParams;
   const supabase = await createServerSupabaseClient();
