@@ -142,7 +142,6 @@ export function PospMispOnboardingForm({ action, partnerType, salesManagers, oem
           ) : null}
 
           <Section title="Bank Details">
-            <ReadOnlyValue label="Education / Marksheet Status" value={marksheetFile ? "Received" : "Not received"} />
             <SelectField label="Bank Name" name="bank_id" required options={banks} placeholder="Select bank" />
             <Field label="Account Number" name="bank_account_number" placeholder="Account number" />
             <Field label="IFSC Code" name="bank_ifsc_code" placeholder="IFSC" />
@@ -211,15 +210,6 @@ function SelectField({ label, name, required = false, options, placeholder, ...p
         <option value="">{placeholder}</option>
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
-    </div>
-  );
-}
-
-function ReadOnlyValue({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <span className={labelClass}>{label}</span>
-      <div className="flex h-9 items-center rounded-md border border-[#E2E8F0] bg-[#F8FAFC] px-3 text-[11px] font-semibold text-[#475569]">{value}</div>
     </div>
   );
 }

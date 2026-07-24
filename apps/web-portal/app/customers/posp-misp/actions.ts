@@ -214,7 +214,22 @@ function normalizeBoolean(value: string | null) {
   return /^(true|yes|y|1|uploaded|shared|done|complete|completed)$/i.test(value ?? "");
 }
 
+function normalizeEducationStatus(value: string | null) {
+  if (!value) return "not_received";
+  return /^(not[\s_-]*received|pending|no|n\/?a|nil)$/i.test(value.trim())
+    ? "not_received"
+    : "received";
+}
+
 function normalizeIibRemark(value: string | null) {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized === "matching record found in database" || normalized === "matching record found") {
+    return "Matching Record Found In DataBase";
+  }
+  if (normalized === "no data found in pos system" || normalized === "no data found") {
+    return "No Data Found In POS System";
+  }
   return value?.trim() || null;
 }
 
@@ -507,7 +522,7 @@ function rowFromImportEditForm(data: FormData, existing: NormalizedRow, salesMan
     aadhaar_hash: aadhaar.hash,
     date_of_birth: text(data, "date_of_birth"),
     gst_number: normalizeGst(text(data, "gst_number")),
-    education_status: text(data, "education_status") === "received" ? "received" : "not_received",
+    education_status: existing.education_status === "received" ? "received" : "not_received",
     bank_id: bank?.id ?? null,
     bank_name: bank?.name ?? null,
     bank_account_number: text(data, "bank_account_number"),
@@ -560,7 +575,7 @@ function normalizeExcelRow(partnerType: PartnerType, source: Record<string, unkn
     aadhaar_hash: aadhaar.hash,
     date_of_birth: normalizeDate(source[partnerType === "posp" ? "D.O.B" : "Date of Birth"]),
     gst_number: normalizeGst(cell(source, partnerType === "posp" ? "GST Number( Optional)" : "GST No")),
-    education_status: "not_received",
+    education_status: normalizeEducationStatus(cell(source, "Marsheet") ?? cell(source, "Marksheet")),
     bank_id: bank?.id ?? null,
     bank_name: bank?.name ?? cell(source, "Bank Name"),
     bank_account_number: cell(source, "Account Number"),
@@ -1142,10 +1157,17 @@ export async function updatePospMispImportRow(data: FormData) {
   const admin = createSupabaseAdminClient();
   const { data: existingRow, error: rowError } = await admin
     .from("posp_misp_import_rows")
-    .select("id, import_batch_id, partner_type, status, normalized_data")
+    .select("id, import_batch_id, partner_type, status, source_data, normalized_data")
     .eq("id", rowId)
     .eq("import_batch_id", batchId)
-    .maybeSingle<{ id: string; import_batch_id: string; partner_type: PartnerType; status: string; normalized_data: NormalizedRow }>();
+    .maybeSingle<{
+      id: string;
+      import_batch_id: string;
+      partner_type: PartnerType;
+      status: string;
+      source_data: Record<string, unknown>;
+      normalized_data: NormalizedRow;
+    }>();
   if (rowError || !existingRow) redirect(`/customers/posp-misp/import/${batchId}?error=row_missing`);
   if (existingRow.status === "submitted" || existingRow.status === "processing") redirect(`/customers/posp-misp/import/${batchId}?error=row_locked`);
 
@@ -1175,7 +1197,11 @@ export async function updatePospMispImportRow(data: FormData) {
 
   const normalized = {
     ...rowFromImportEditForm(data, existingRow.normalized_data, salesManagers, manufacturerNames, banks),
-    education_status: [...EDUCATION_DOCUMENT_KEYS].some((key) => documentTypes.has(key)) ? "received" : "not_received"
+    education_status: [...EDUCATION_DOCUMENT_KEYS].some((key) => documentTypes.has(key))
+      || existingRow.normalized_data.education_status === "received"
+      || normalizeEducationStatus(cell(existingRow.source_data, "Marsheet") ?? cell(existingRow.source_data, "Marksheet")) === "received"
+      ? "received"
+      : "not_received"
   };
   const validationErrors = validateRow(normalized);
   const { error: updateError } = await admin
@@ -1283,7 +1309,11 @@ export async function submitPospMispImportBatch(data: FormData) {
       const attachedDocumentTypes = new Set((rowDocuments ?? []).map((document) => document.document_type));
       const derivedRow = {
         ...row.normalized_data,
-        education_status: [...EDUCATION_DOCUMENT_KEYS].some((key) => attachedDocumentTypes.has(key)) ? "received" : "not_received"
+        education_status: [...EDUCATION_DOCUMENT_KEYS].some((key) => attachedDocumentTypes.has(key))
+          || row.normalized_data.education_status === "received"
+          || normalizeEducationStatus(cell(row.source_data, "Marsheet") ?? cell(row.source_data, "Marksheet")) === "received"
+          ? "received"
+          : "not_received"
       };
       const application = await createSubmittedApplication({
         row: derivedRow,

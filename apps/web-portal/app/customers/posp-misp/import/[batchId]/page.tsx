@@ -14,6 +14,7 @@ type ImportRow = {
   row_number: number;
   sheet_name: string;
   partner_type: "posp" | "misp";
+  source_data: Record<string, unknown>;
   normalized_data: Record<string, unknown>;
   validation_errors: string[] | null;
   status: string;
@@ -34,7 +35,7 @@ export default async function PospMispImportBatchPage({ params, searchParams }: 
   const admin = createSupabaseAdminClient();
   const [{ data: batch, error: batchError }, { data: rows, error: rowsError }, salesManagers, oems, banks] = await Promise.all([
     supabase.from("posp_misp_import_batches").select("id, file_name, total_rows, valid_rows, invalid_rows, pending_rows, submitted_rows, failed_rows, status, created_at").eq("id", batchId).maybeSingle<Batch>(),
-    supabase.from("posp_misp_import_rows").select("id, row_number, sheet_name, partner_type, normalized_data, validation_errors, status, application_id, error_message").eq("import_batch_id", batchId).order("row_number", { ascending: true }).returns<ImportRow[]>(),
+    supabase.from("posp_misp_import_rows").select("id, row_number, sheet_name, partner_type, source_data, normalized_data, validation_errors, status, application_id, error_message").eq("import_batch_id", batchId).order("row_number", { ascending: true }).returns<ImportRow[]>(),
     loadSalesManagers(admin),
     loadVehicleManufacturers(admin),
     loadBanks(admin)

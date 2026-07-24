@@ -12,6 +12,7 @@ type ImportRow = {
   row_number: number;
   sheet_name: string;
   partner_type: PartnerType;
+  source_data: Record<string, unknown>;
   normalized_data: Record<string, unknown>;
   validation_errors: string[] | null;
   status: string;
@@ -123,6 +124,9 @@ function EditRowModal({ batchId, row, editable, salesManagers, oems, banks, onCl
   const isMisp = row.partner_type === "misp";
   const selectedManagerId = stringValue(data.associate_profile_id) ?? "";
   const currentEducationDocument = row.documents.find((document) => educationDocumentTypes.has(document.document_type));
+  const educationReceived = data.education_status === "received"
+    || Boolean(currentEducationDocument)
+    || educationStatusFromSource(row.source_data) === "received";
 
   return (
     <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-[#0F172A]/40 px-4 py-8 backdrop-blur-[2px]" role="dialog" aria-modal="true">
@@ -171,7 +175,6 @@ function EditRowModal({ batchId, row, editable, salesManagers, oems, banks, onCl
           ) : null}
 
           <Section title="Bank Details">
-            <ReadOnlyValue label="Education / Marksheet Status" value={row.documents.some((document) => educationDocumentTypes.has(document.document_type)) ? "Received" : "Not received"} />
             <SelectField label="Bank Name" name="bank_id" required defaultValue={stringValue(data.bank_id) ?? ""} disabled={!editable} options={banks} placeholder="Select bank" />
             <Field label="Account Number" name="bank_account_number" defaultValue={stringValue(data.bank_account_number) ?? ""} disabled={!editable} />
             <Field label="IFSC Code" name="bank_ifsc_code" defaultValue={stringValue(data.bank_ifsc_code) ?? ""} disabled={!editable} />
@@ -184,9 +187,14 @@ function EditRowModal({ batchId, row, editable, salesManagers, oems, banks, onCl
           </Section>
 
           <section className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-5 py-4">
-            <div className="mb-3">
-              <h3 className="text-[13px] font-semibold text-[#0F172A]">Pre-IIB Documents</h3>
-              <p className="mt-1 text-[10.5px] text-[#64748B]">Documents collected before IIB submission. Education status is calculated from the marksheets attached here.</p>
+            <div className="mb-3 flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-[13px] font-semibold text-[#0F172A]">Pre-IIB Documents</h3>
+                <p className="mt-1 text-[10.5px] text-[#64748B]">Documents collected before IIB submission.</p>
+              </div>
+              <div className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${educationReceived ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
+                Marksheet: {educationReceived ? "Received" : "Not received"}
+              </div>
             </div>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               <div className="rounded-lg border border-[#DCE5EF] bg-white p-3">
@@ -269,15 +277,29 @@ function SelectField({ label, name, required = false, options, placeholder, disa
 }
 
 function CheckboxField({ label, name, defaultChecked, disabled }: { label: string; name: string; defaultChecked?: boolean; disabled?: boolean }) {
-  return <label className="flex h-9 items-center gap-3 rounded-md border border-[#CBD5E1] bg-[#F8FAFC] px-3 text-[11px] font-semibold text-[#17203A]"><input type="checkbox" name={name} value="true" defaultChecked={defaultChecked} disabled={disabled} className="h-4 w-4 rounded border-[#CBD5E1] text-[#4F46E5]" /><span>{label}</span></label>;
-}
-
-function ReadOnlyValue({ label, value }: { label: string; value: string }) {
-  return <div><span className={labelClass}>{label}</span><div className="flex h-9 items-center rounded-md border border-[#E2E8F0] bg-[#F8FAFC] px-3 text-[11px] font-semibold text-[#475569]">{value}</div></div>;
+  return (
+    <label className="flex h-9 w-fit min-w-0 items-center gap-2 self-end text-[11px] font-semibold text-[#17203A]">
+      <input
+        type="checkbox"
+        name={name}
+        value="true"
+        defaultChecked={defaultChecked}
+        disabled={disabled}
+        className="h-4 w-4 shrink-0 cursor-pointer rounded border-[#94A3B8] text-[#4F46E5] focus:ring-2 focus:ring-[#C7D2FE] disabled:cursor-not-allowed"
+      />
+      <span>{label}</span>
+    </label>
+  );
 }
 
 function stringValue(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function educationStatusFromSource(source: Record<string, unknown>) {
+  const value = stringValue(source.Marsheet) ?? stringValue(source.Marksheet);
+  if (!value || /^(not[\s_-]*received|pending|no|n\/?a|nil)$/i.test(value)) return "not_received";
+  return "received";
 }
 
 function rowStatus(row: ImportRow) {
