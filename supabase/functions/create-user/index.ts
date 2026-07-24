@@ -15,6 +15,7 @@ const appRoles = new Set([
   "backoffice_executive",
   "claim_processor",
   "field_executive",
+  "relationship_manager",
   "director",
   "sales_head",
   "zonal_head",
