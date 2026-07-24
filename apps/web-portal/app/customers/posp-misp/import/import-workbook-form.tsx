@@ -23,7 +23,7 @@ export function ImportWorkbookForm({ action }: Props) {
       <form action={formAction} className="mx-auto max-w-3xl overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
         <div className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-5 py-4">
           <h2 className="text-[15px] font-semibold text-[#0F172A]">Upload POSP / MISP workbook</h2>
-          <p className="mt-1 text-[11px] text-[#64748B]">The POSP and MISP sheets are parsed into a review batch before applications are submitted.</p>
+          <p className="mt-1 text-[11px] text-[#64748B]"></p>
         </div>
         <div className="space-y-4 p-5">
           <label htmlFor="workbook" className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#CBD5E1] bg-[#F8FAFC] px-4 py-6 text-center hover:border-[#6366F1]">
@@ -35,7 +35,7 @@ export function ImportWorkbookForm({ action }: Props) {
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-[#E2E8F0] bg-white px-5 py-3">
           <Link href="/customers/posp-misp" className="rounded-md border border-[#CBD5E1] px-4 py-2 text-[11px] font-semibold text-[#334155]">Cancel</Link>
-          <FormSubmitButton label="Parse Workbook" pendingLabel="Parsing" />
+          <FormSubmitButton label="Review & Submit" pendingLabel="Reviewing workbook" />
         </div>
       </form>
     </>

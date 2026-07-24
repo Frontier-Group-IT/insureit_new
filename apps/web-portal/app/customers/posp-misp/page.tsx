@@ -46,9 +46,9 @@ export default async function PospMispPage({ searchParams }: { searchParams: Pro
         <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-4 bg-gradient-to-r from-[#071D49] via-[#0F2A55] to-[#163B70] px-5 py-5 text-white">
             <div>
-              <p className="text-[9.5px] font-semibold uppercase tracking-[0.12em] text-white/65">Operations workspace</p>
-              <h1 className="mt-1 text-xl font-semibold">POSP / MISP onboarding register</h1>
-              <p className="mt-1 max-w-2xl text-[10.5px] leading-5 text-white/75">Track every onboarding file from submission through IIB, training, verification and final activation.</p>
+              <p className="text-[9.5px] font-semibold uppercase tracking-[0.12em] text-white/65"></p>
+              <h1 className="mt-1 text-xl font-semibold"></h1>
+              <p className="mt-1 max-w-2xl text-[10.5px] leading-5 text-white/75"></p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Link href="/customers/posp-misp/import" className="rounded-lg border border-white/25 bg-white/10 px-3.5 py-2 text-[10.5px] font-semibold text-white hover:bg-white/15">Import Excel</Link>

@@ -136,9 +136,9 @@ export default async function DashboardPage() {
       <div className="mx-auto max-w-[1500px] space-y-4 pb-8">
         <section className="flex flex-col gap-4 border-b border-[#D7E6F5] pb-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#175CD3]">Business overview</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#175CD3]"></p>
             <h1 className="mt-1 text-[24px] font-semibold leading-8 text-[#0F172A]">Good {dayPeriod()}, {displayName}</h1>
-            <p className="mt-1 text-[12px] text-[#64748B]">Portfolio health, pending work and recent operational movement.</p>
+            <p className="mt-1 text-[12px] text-[#64748B]"></p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="inline-flex h-9 items-center gap-2 rounded-md border border-[#D7E6F5] bg-white px-3 text-[11px] font-medium text-[#475467]">
