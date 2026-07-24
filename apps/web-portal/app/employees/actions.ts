@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { isAppRole } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -21,6 +22,19 @@ function friendlyError(message: string) {
   if (message.includes("employees_phone_key")) return "That mobile number is already assigned to another employee.";
   if (message.includes("User already registered")) return "A portal login already exists for this email.";
   return message;
+}
+
+async function getInviteRedirectUrl() {
+  const configuredUrl = process.env.NEXT_PUBLIC_PORTAL_URL ?? process.env.NEXT_PUBLIC_SITE_URL;
+  if (configuredUrl) return `${configuredUrl.replace(/\/$/, "")}/invite`;
+
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+  if (!host) return "http://localhost:3000/invite";
+
+  const forwardedProto = requestHeaders.get("x-forwarded-proto");
+  const protocol = forwardedProto ?? (host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https");
+  return `${protocol}://${host}/invite`;
 }
 
 async function requireEmployeeManager() {
@@ -81,6 +95,7 @@ export async function createEmployee(
     if (createPortalAccess && email && portalRole) {
       const admin = createSupabaseAdminClient();
       const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
+        redirectTo: await getInviteRedirectUrl(),
         data: {
           full_name: fullName,
           phone: employee.phone,
