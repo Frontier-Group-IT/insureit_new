@@ -1,9 +1,17 @@
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { IndianDateField } from "@/components/indian-date-field";
-import { completePospMispTraining, movePospMispToIib, savePospMispIibOutcome } from "./posp-misp-workflow-actions";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import {
+  completePospMispTraining,
+  movePospMispToIib,
+  queuePospMispPanVerification,
+  retryPospMispPanVerification,
+  savePospMispIibOutcome
+} from "./posp-misp-workflow-actions";
 
 export type PospMispWorkflowProfile = {
   workflow_stage: "pre_iib" | "iib_processing" | "training" | "completed";
+  pan_number: string | null;
   iib_remarks: string | null;
   iib_uploaded: boolean;
   iib_uploaded_at: string | null;
@@ -17,11 +25,30 @@ export type PospMispWorkflowProfile = {
   onboarding_date: string | null;
 };
 
+type PanVerificationJob = {
+  status: "pending" | "queued" | "checking" | "matched" | "not_found" | "invalid" | "failed" | "manual_review";
+  result_message: string | null;
+  requested_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  attempt_count: number;
+  last_error: string | null;
+  checked_by_device: string | null;
+};
+
 const inputClass = "h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-[11px] text-[#17203A] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
 const labelClass = "mb-1 block text-[10px] font-semibold text-[#344054]";
 
-export function PospMispWorkflowPanel({ applicationId, profile }: { applicationId: string; profile: PospMispWorkflowProfile }) {
+export async function PospMispWorkflowPanel({ applicationId, profile }: { applicationId: string; profile: PospMispWorkflowProfile }) {
   const stage = profile.workflow_stage;
+  const admin = createSupabaseAdminClient();
+  const { data: panJob } = await admin
+    .from("pan_verification_jobs")
+    .select("status, result_message, requested_at, started_at, completed_at, attempt_count, last_error, checked_by_device")
+    .eq("application_id", applicationId)
+    .maybeSingle<PanVerificationJob>();
+  const panReady = panJob?.status === "not_found";
+
   return (
     <section className="overflow-hidden rounded-xl border border-[#DCE5EF] bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3">
@@ -32,6 +59,8 @@ export function PospMispWorkflowPanel({ applicationId, profile }: { applicationI
         <span className="rounded-full border border-[#C7D2FE] bg-[#EEF2FF] px-2.5 py-1 text-[9.5px] font-semibold text-[#4338CA]">{stage.replaceAll("_", " ")}</span>
       </div>
 
+      <PanVerificationCard applicationId={applicationId} panNumber={profile.pan_number} job={panJob} stage={stage} />
+
       <div className="border-b border-[#E2E8F0] px-4 py-3">
         <p className="text-[10.5px] font-medium text-[#475569]">Registration form</p>
         <p className="mt-1 text-[9.5px] text-[#64748B]">Download the prefilled form generated from the saved onboarding record.</p>
@@ -41,8 +70,8 @@ export function PospMispWorkflowPanel({ applicationId, profile }: { applicationI
       {stage === "pre_iib" ? (
         <form action={movePospMispToIib} className="px-4 py-3">
           <input type="hidden" name="application_id" value={applicationId} />
-          <p className="text-[10px] leading-4 text-[#64748B]">Confirm the pre-IIB information and documents before handing the case to the IIB portal workflow.</p>
-          <FormSubmitButton label="Start IIB Processing" pendingLabel="Starting" className="mt-3 inline-flex w-full items-center justify-center rounded-md bg-[#4F46E5] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-70" />
+          <p className="text-[10px] leading-4 text-[#64748B]">PAN must return “No Data Found In POS System” before the case can move to IIB processing.</p>
+          <FormSubmitButton label={panReady ? "Start IIB Processing" : "Complete PAN Verification First"} pendingLabel="Starting" disabled={!panReady} className="mt-3 inline-flex w-full items-center justify-center rounded-md bg-[#4F46E5] px-4 py-2 text-[11px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-[#A5B4FC] disabled:opacity-80" />
         </form>
       ) : null}
 
@@ -89,6 +118,40 @@ export function PospMispWorkflowPanel({ applicationId, profile }: { applicationI
   );
 }
 
+function PanVerificationCard({ applicationId, panNumber, job, stage }: { applicationId: string; panNumber: string | null; job: PanVerificationJob | null; stage: PospMispWorkflowProfile["workflow_stage"] }) {
+  const status = job?.status ?? "not_queued";
+  const tone = status === "not_found"
+    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+    : status === "matched" || status === "invalid" || status === "manual_review"
+      ? "border-red-200 bg-red-50 text-red-800"
+      : status === "failed"
+        ? "border-amber-200 bg-amber-50 text-amber-800"
+        : "border-blue-200 bg-blue-50 text-blue-800";
+  const canQueue = stage === "pre_iib" && (!job || ["failed", "invalid", "matched", "manual_review"].includes(job.status));
+  const action = job ? retryPospMispPanVerification : queuePospMispPanVerification;
+
+  return (
+    <div className="border-b border-[#E2E8F0] px-4 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[9px] font-semibold uppercase tracking-[.08em] text-[#64748B]">Automated PAN verification</p>
+          <p className="mt-1 text-[11px] font-semibold text-[#0F172A]">{maskPan(panNumber)}</p>
+        </div>
+        <span className={`rounded-full border px-2.5 py-1 text-[9px] font-semibold ${tone}`}>{panStatusLabel(status)}</span>
+      </div>
+      <p className="mt-2 text-[10px] leading-4 text-[#475569]">{panStatusMessage(status, job)}</p>
+      {job?.checked_by_device ? <p className="mt-1 text-[9px] text-[#64748B]">Checked by {job.checked_by_device} · Attempt {job.attempt_count}</p> : null}
+      {canQueue ? (
+        <form action={action} className="mt-3">
+          <input type="hidden" name="application_id" value={applicationId} />
+          <FormSubmitButton label={job ? "Retry PAN Verification" : "Queue PAN Verification"} pendingLabel="Queuing" className="inline-flex w-full items-center justify-center rounded-md bg-[#0F2A55] px-3 py-2 text-[10.5px] font-semibold text-white disabled:opacity-70" />
+        </form>
+      ) : null}
+      {status === "pending" || status === "queued" || status === "checking" ? <p className="mt-2 text-[9px] font-medium text-blue-700">The N.M. desktop checker will update this card automatically after processing.</p> : null}
+    </div>
+  );
+}
+
 function Field({ label, name, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; name: string }) {
   return <div><label className={labelClass} htmlFor={name}>{label}{props.required ? " *" : ""}</label><input id={name} name={name} className={inputClass} {...props} /></div>;
 }
@@ -106,4 +169,35 @@ function stageLabel(stage: PospMispWorkflowProfile["workflow_stage"]) {
   if (stage === "iib_processing") return "IIB portal processing";
   if (stage === "training") return "Training and post-IIB documents";
   return "Operational onboarding complete";
+}
+
+function maskPan(value: string | null) {
+  const pan = value?.trim().toUpperCase() ?? "";
+  return pan.length === 10 ? `${pan.slice(0, 2)}***${pan.slice(5, 8)}${pan.slice(-1)}` : "PAN unavailable";
+}
+
+function panStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    not_queued: "Not queued",
+    pending: "Pending",
+    queued: "Queued",
+    checking: "Checking",
+    matched: "Matching record found",
+    not_found: "No record found",
+    invalid: "Invalid PAN",
+    failed: "Check failed",
+    manual_review: "Manual review"
+  };
+  return labels[status] ?? status.replaceAll("_", " ");
+}
+
+function panStatusMessage(status: string, job: PanVerificationJob | null) {
+  if (status === "not_found") return job?.result_message ?? "No Data Found In POS System. The application may continue to IIB processing.";
+  if (status === "matched") return job?.result_message ?? "Matching Record Found In DataBase. Review the existing POS record before proceeding.";
+  if (status === "checking") return "The N.M. desktop checker is querying the IIB POS portal now.";
+  if (status === "pending" || status === "queued") return "This PAN is waiting for the authorised N.M. desktop checker.";
+  if (status === "failed") return job?.last_error ?? "The previous verification attempt failed. Queue it again when the checker is available.";
+  if (status === "invalid") return "The PAN format is invalid. Correct the PAN in the application before retrying.";
+  if (status === "manual_review") return "This PAN requires an authorised manual review before onboarding can continue.";
+  return "Queue this PAN for verification before starting IIB processing.";
 }

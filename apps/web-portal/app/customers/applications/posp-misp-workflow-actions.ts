@@ -11,6 +11,48 @@ const IIB_REMARKS = new Set(["Matching Record Found In DataBase", "No Data Found
 const TRAINING_STATUSES = new Set(["completed", "pending"]);
 const ALLOWED_FILE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+
+export async function queuePospMispPanVerification(data: FormData) {
+  const { actorId, applicationId, admin } = await context(data);
+  const { data: profile } = await admin
+    .from("posp_misp_onboarding_profiles")
+    .select("id, partner_type, pan_number, workflow_stage")
+    .eq("application_id", applicationId)
+    .maybeSingle<{ id: string; partner_type: "posp" | "misp"; pan_number: string | null; workflow_stage: string }>();
+
+  const panNumber = profile?.pan_number?.trim().toUpperCase() ?? "";
+  if (!profile?.id || !PAN_PATTERN.test(panNumber)) redirectTo(applicationId, "pan_verification_invalid");
+  if (profile.workflow_stage !== "pre_iib") redirectTo(applicationId, "stage_locked");
+
+  const { error } = await admin.from("pan_verification_jobs").upsert({
+    application_id: applicationId,
+    onboarding_profile_id: profile.id,
+    partner_type: profile.partner_type,
+    pan_number: panNumber,
+    status: "pending",
+    result_code: null,
+    result_message: null,
+    requested_at: new Date().toISOString(),
+    started_at: null,
+    completed_at: null,
+    last_error: null,
+    checked_by_device: null,
+    requested_by: actorId,
+    override_reason: null,
+    overridden_by: null,
+    overridden_at: null,
+    updated_at: new Date().toISOString()
+  }, { onConflict: "application_id" });
+
+  if (error) redirectTo(applicationId, "pan_verification_queue_failed");
+  revalidatePath(`/customers/applications/${applicationId}`);
+  redirect(`/customers/applications/${applicationId}?success=pan_verification_queued`);
+}
+
+export async function retryPospMispPanVerification(data: FormData) {
+  return queuePospMispPanVerification(data);
+}
 
 export async function movePospMispToIib(data: FormData) {
   const { actorId, applicationId, admin } = await context(data);
@@ -21,6 +63,15 @@ export async function movePospMispToIib(data: FormData) {
     .maybeSingle<{ id: string; bank_id: string | null; workflow_stage: string }>();
   if (!profile?.id || !profile.bank_id) redirectTo(applicationId, "pre_iib_incomplete");
   if (profile.workflow_stage !== "pre_iib") redirectTo(applicationId, "stage_locked");
+
+  const { data: verification } = await admin
+    .from("pan_verification_jobs")
+    .select("status")
+    .eq("application_id", applicationId)
+    .maybeSingle<{ status: string }>();
+  if (!verification || verification.status !== "not_found") {
+    redirectTo(applicationId, verification?.status === "matched" ? "pan_match_found" : "pan_verification_required");
+  }
 
   const { data: updated, error } = await admin
     .from("posp_misp_onboarding_profiles")
