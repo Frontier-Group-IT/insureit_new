@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>N.M. PAN Checker</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <p class="eyebrow">INSUREIT CONNECTED MODE</p>
+        <h1>IIB POS PAN Checker</h1>
+      </div>
+      <span class="badge">N.M.</span>
+    </header>
+
+    <section class="status-card">
+      <div class="status-line"><span id="status-dot" class="dot"></span><strong id="runtime-status">Idle</strong></div>
+      <div class="metrics">
+        <div><span>Processed</span><strong id="processed">0</strong></div>
+        <div><span>Queued</span><strong id="queued">0</strong></div>
+        <div><span>Current</span><strong id="current-pan">—</strong></div>
+      </div>
+    </section>
+
+    <section class="actions">
+      <button id="start" class="primary">Start checking</button>
+      <button id="pause">Pause</button>
+      <button id="stop" class="danger">Stop</button>
+    </section>
+
+    <details id="settings-panel">
+      <summary>Connection & credentials</summary>
+      <form id="settings-form">
+        <label>InsureIt URL<input id="insureit-url" type="url" placeholder="https://your-app.vercel.app" required /></label>
+        <label>Worker key<input id="worker-key" type="password" required /></label>
+        <label>IIB user ID<input id="iib-user-id" type="text" required /></label>
+        <label>IIB password<input id="iib-password" type="password" required /></label>
+        <label>Device name<input id="device-name" type="text" value="N.M. PAN Checker" /></label>
+        <label>Batch size<input id="batch-size" type="number" min="1" max="100" value="20" /></label>
+        <button type="submit" class="save">Save settings</button>
+      </form>
+    </details>
+
+    <p id="message" class="message"></p>
+    <p class="note">Complete CAPTCHA manually in the IIB POS tab. The extension never bypasses CAPTCHA.</p>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>
