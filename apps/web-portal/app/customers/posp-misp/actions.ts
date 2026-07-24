@@ -94,6 +94,8 @@ type BankOption = {
   normalized_name: string;
 };
 
+type WorkflowStage = "pre_iib" | "iib_processing" | "training" | "completed";
+
 const DOCUMENT_BUCKET = "customer-documents";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
@@ -602,6 +604,7 @@ async function createSubmittedApplication(params: {
   initiatedBy: string;
 }) {
   const admin = createSupabaseAdminClient();
+  await assertCompatibleExistingProfile(admin, params.row);
   const draftData = profileDraft(params.row, params.documentStatuses);
   const application = await beginPortalOnboardingApplication(admin, {
     initiatedBy: params.initiatedBy,
@@ -611,6 +614,13 @@ async function createSubmittedApplication(params: {
     draftData
   });
 
+  const requestedWorkflowStage: WorkflowStage = params.row.onboarding_date && params.documentStatuses.agreement_copy === "received"
+    ? "completed"
+    : params.row.iib_uploaded
+      ? "training"
+      : params.row.iib_remarks
+        ? "iib_processing"
+        : "pre_iib";
   const profilePayload = {
     application_id: application.id,
     partner_type: params.row.partner_type,
@@ -656,13 +666,7 @@ async function createSubmittedApplication(params: {
     dp_phone: params.row.dp_phone,
     dp_email: params.row.dp_email,
     dp_pan_number: params.row.dp_pan_number,
-    workflow_stage: params.row.onboarding_date && params.documentStatuses.agreement_copy === "received"
-      ? "completed"
-      : params.row.iib_uploaded
-        ? "training"
-        : params.row.iib_remarks
-          ? "iib_processing"
-          : "pre_iib",
+    workflow_stage: requestedWorkflowStage,
     pre_iib_submitted_at: new Date().toISOString(),
     iib_completed_at: params.row.iib_uploaded ? new Date().toISOString() : null,
     training_completed_at: params.row.onboarding_date && params.documentStatuses.agreement_copy === "received"
@@ -676,9 +680,50 @@ async function createSubmittedApplication(params: {
     updated_by: params.initiatedBy
   };
 
-  const { error: profileError } = await admin
+  const { data: existingProfile, error: profileLookupError } = await admin
     .from("posp_misp_onboarding_profiles")
-    .upsert(profilePayload, { onConflict: "application_id" });
+    .select("id, external_onboarding_id, source, import_batch_id, import_row_number, workflow_stage, pre_iib_submitted_at, iib_completed_at, training_completed_at, created_by")
+    .eq("application_id", application.id)
+    .maybeSingle<{
+      id: string;
+      external_onboarding_id: string | null;
+      source: "manual" | "excel_import";
+      import_batch_id: string | null;
+      import_row_number: number | null;
+      workflow_stage: WorkflowStage;
+      pre_iib_submitted_at: string | null;
+      iib_completed_at: string | null;
+      training_completed_at: string | null;
+      created_by: string | null;
+    }>();
+  if (profileLookupError) throw profileLookupError;
+  if (
+    existingProfile?.external_onboarding_id
+    && params.row.external_onboarding_id
+    && existingProfile.external_onboarding_id !== params.row.external_onboarding_id
+  ) {
+    throw new Error("The mobile number already belongs to an application with a different onboarding ID.");
+  }
+
+  const { error: profileError } = existingProfile
+    ? await admin
+      .from("posp_misp_onboarding_profiles")
+      .update({
+        ...profilePayload,
+        external_onboarding_id: params.row.external_onboarding_id ?? existingProfile.external_onboarding_id,
+        source: existingProfile.source,
+        import_batch_id: existingProfile.import_batch_id,
+        import_row_number: existingProfile.import_row_number,
+        workflow_stage: laterWorkflowStage(existingProfile.workflow_stage, requestedWorkflowStage),
+        pre_iib_submitted_at: existingProfile.pre_iib_submitted_at ?? profilePayload.pre_iib_submitted_at,
+        iib_completed_at: existingProfile.iib_completed_at ?? profilePayload.iib_completed_at,
+        training_completed_at: existingProfile.training_completed_at ?? profilePayload.training_completed_at,
+        created_by: existingProfile.created_by ?? params.initiatedBy
+      })
+      .eq("id", existingProfile.id)
+    : await admin
+      .from("posp_misp_onboarding_profiles")
+      .insert(profilePayload);
   if (profileError) throw profileError;
 
   const contacts = contactPayloads(application.id, params.row);
@@ -688,6 +733,50 @@ async function createSubmittedApplication(params: {
   }
 
   return application;
+}
+
+function laterWorkflowStage(current: WorkflowStage, requested: WorkflowStage) {
+  const stages: WorkflowStage[] = ["pre_iib", "iib_processing", "training", "completed"];
+  return stages.indexOf(current) >= stages.indexOf(requested) ? current : requested;
+}
+
+async function assertCompatibleExistingProfile(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  row: NormalizedRow
+) {
+  if (row.external_onboarding_id) {
+    const { data: idOwner, error } = await admin
+      .from("posp_misp_onboarding_profiles")
+      .select("partner_type, applicant_phone")
+      .eq("external_onboarding_id", row.external_onboarding_id)
+      .maybeSingle<{ partner_type: PartnerType; applicant_phone: string | null }>();
+    if (error) throw error;
+    if (
+      idOwner
+      && (idOwner.partner_type !== row.partner_type || idOwner.applicant_phone !== row.applicant_phone)
+    ) {
+      throw new Error("External onboarding ID already exists for another application.");
+    }
+  }
+
+  if (row.applicant_phone) {
+    const { data: phoneOwner, error } = await admin
+      .from("posp_misp_onboarding_profiles")
+      .select("external_onboarding_id")
+      .eq("partner_type", row.partner_type)
+      .eq("applicant_phone", row.applicant_phone)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ external_onboarding_id: string | null }>();
+    if (error) throw error;
+    if (
+      phoneOwner?.external_onboarding_id
+      && row.external_onboarding_id
+      && phoneOwner.external_onboarding_id !== row.external_onboarding_id
+    ) {
+      throw new Error("The mobile number already belongs to an application with a different onboarding ID.");
+    }
+  }
 }
 
 function contactPayloads(applicationId: string, row: NormalizedRow): ContactPayload[] {
@@ -1226,22 +1315,41 @@ export async function submitPospMispImportBatch(data: FormData) {
         if (documentLinkError) throw documentLinkError;
       }
 
-      await admin.from("posp_misp_import_rows").update({
+      const { error: submittedRowError } = await admin.from("posp_misp_import_rows").update({
         status: "submitted",
         application_id: application.id,
         error_message: null,
         normalized_data: sanitizeSubmittedRow(derivedRow)
       }).eq("id", row.id);
+      if (submittedRowError) throw submittedRowError;
     } catch (creationError) {
       const reference = randomUUID().slice(0, 8);
       console.error(`POSP/MISP import row failed [${reference}]`, creationError);
       await admin.from("posp_misp_import_rows").update({
         status: "failed",
-        error_message: `Submission failed. Reference ${reference}.`
+        error_message: importSubmissionError(creationError, reference)
       }).eq("id", row.id);
     }
   }
 
   await refreshImportBatchCounts(admin, batchId);
   redirect(`/customers/posp-misp/import/${batchId}?success=${retryFailed ? "retried" : "submitted"}`);
+}
+
+function importSubmissionError(error: unknown, reference: string) {
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === "object" && error && "message" in error
+      ? String(error.message)
+      : "";
+  if (/different onboarding ID/i.test(message)) {
+    return `This mobile number is already linked to a different onboarding ID. Reference ${reference}.`;
+  }
+  if (/External onboarding ID already exists/i.test(message)) {
+    return `This onboarding ID is already linked to another application. Reference ${reference}.`;
+  }
+  if (/duplicate key|unique constraint/i.test(message)) {
+    return `A matching onboarding record already exists. Review the mobile number and onboarding ID. Reference ${reference}.`;
+  }
+  return `Submission failed. Reference ${reference}.`;
 }
