@@ -6,8 +6,8 @@ import { InsureItButtonLoader } from "@/components/loading/insureit-loader";
 const defaultClassName = "inline-flex items-center justify-center gap-2 rounded-md bg-[var(--brand-accent)] px-4 py-2 text-[11px] font-semibold text-white shadow-sm hover:bg-[#5D55D8] disabled:cursor-not-allowed disabled:opacity-80";
 
 export function FormSubmitButton({
-  label = "Save record",
-  pendingLabel = "Saving",
+  label = "Save changes",
+  pendingLabel = "Saving changes",
   className = defaultClassName,
   disabled = false,
 }: {
@@ -24,6 +24,7 @@ export function FormSubmitButton({
       type="submit"
       disabled={disabled || pending}
       aria-busy={pending}
+      aria-live="polite"
     >
       {pending ? <InsureItButtonLoader label={pendingLabel} /> : label}
     </button>

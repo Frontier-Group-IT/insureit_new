@@ -6,400 +6,78 @@ import { createServerSupabaseClient } from "@/lib/auth-server";
 import { requireApplicationReviewer } from "@/lib/master-data-server";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { approveMobileIndividualApplication, requestMobileApplicationChanges } from "../actions";
-import { approveMobileCorporateApplication, updateMobileCorporateApplicationDraft } from "../corporate-actions";
-import { approveMobileDealershipApplication, updateMobileDealershipApplicationDraft } from "../dealership-actions";
+import { approveMobileCorporateApplication } from "../corporate-actions";
+import { approveMobileDealershipApplication } from "../dealership-actions";
 import { approveMobileGroupApplication } from "../group-actions";
 import { approvePospMispApplication } from "../posp-misp-actions";
 import { PospMispWorkflowPanel, type PospMispWorkflowProfile } from "../posp-misp-workflow-panel";
-import { formatIndianDate } from "@/lib/indian-date";
 import { PospMispApplicationEditor, type PospMispEditProfile } from "../posp-misp-application-editor";
+import { CorporateReviewWorkspace, DealershipReviewWorkspace, SummaryReviewWorkspace, type ReviewContact } from "../review-workspaces";
 import { decryptSensitiveValue } from "@/lib/sensitive-data";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-type PageProps = { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; success?: string }> };
-type Application = { id: string; partner_type: string | null; status: string; applicant_phone: string | null; applicant_email: string | null; draft_data: Record<string, unknown> | null; created_at: string; updated_at: string; customer_id: string | null };
-type Document = { id: string; document_type: string; file_name: string; storage_bucket: string; storage_path: string; verification_status: string };
-type Contact = { contact_role:string; full_name:string; phone:string; email:string|null };
+type PageProps={params:Promise<{id:string}>;searchParams:Promise<{error?:string;success?:string}>};
+type Application={id:string;partner_type:string|null;status:string;applicant_phone:string|null;applicant_email:string|null;draft_data:Record<string,unknown>|null;created_at:string;updated_at:string;customer_id:string|null};
+type Document={id:string;document_type:string;file_name:string;storage_bucket:string;storage_path:string;verification_status:string};
 
-const labels: Record<string, string> = {
-  pan_copy: "PAN card",
-  company_pan_copy: "Company PAN copy",
-  aadhaar_front: "Aadhaar front",
-  aadhaar_back: "Aadhaar back",
-  gst_copy: "GST certificate",
-  representative_aadhaar_front: "Representative Aadhaar front",
-  representative_aadhaar_back: "Representative Aadhaar back",
-  representative_pan_copy: "Representative PAN copy",
-  education_certificate: "10th / 12th certificate",
-  education_10th_marksheet: "10th Marksheet",
-  education_12th_marksheet: "12th Marksheet",
-  education_graduation_marksheet: "Graduation Marksheet",
-  education_post_graduation_marksheet: "Post Graduation Marksheet",
-  cancelled_cheque: "Cancelled cheque",
-  photograph: "Photograph",
-  registration_form: "Registration form",
-  agreement_copy: "Agreement copy",
-};
-const errors: Record<string, string> = {
-  incomplete_application: "The application is missing required details.",
-  invalid_corporate_details: "Enter a valid Company PAN/GSTIN and complete the required Corporate details.",
-  contacts_incomplete:"Corporate creator, CEO, Admin Head and Dedicated SPOC must use four different login numbers.",
-  applicant_contact_mismatch:"The Corporate creator login does not match the applicant phone.",
-  incomplete_dealership_application: "Complete the Dealership, address, OEM and yearly-sales details.",
-  invalid_dealership_details: "Enter a valid Dealership type, GSTIN and business profile.",
-  representative_incomplete: "Complete the POSP / DP representative details with valid Aadhaar and PAN information.",
-  invalid_dealership_contact: "An additional Dealership contact has an invalid mobile number.",
-  documents_incomplete: "Required KYC documents are missing.",
-  documents_unavailable: "Documents could not be loaded.",
-  document_copy_failed: "A document could not be copied into the customer vault.",
-  customer_already_exists: "A customer already uses this profile, phone, GST, PAN, or Aadhaar identity.",
-  customer_create_failed: "The customer record could not be created.",
-  document_records_failed: "Permanent document records could not be created.",
-  group_profile_failed: "The Group profile could not be created.",
-  group_link_failed: "The Group affiliation could not be saved. Apply the latest Group hierarchy migration and try approval again.",
-  membership_create_failed: "Customer login memberships could not be created.",
-  contacts_create_failed: "Permanent customer contacts could not be created.",
-  corporate_update_failed: "The Corporate application corrections could not be saved.",
-  dealership_update_failed: "The Dealership application corrections could not be saved.",
-  dealership_profile_failed: "The Dealership profile could not be created.",
-  representative_create_failed: "The POSP / DP representative profile could not be created.",
-  dealership_contacts_failed: "The additional Dealership contacts could not be created.",
-  application_complete_failed: "The customer was prepared, but the onboarding application could not be completed.",
-  incomplete_posp_misp_application: "Complete the required POSP/MISP identity and login details before approval.",
-  posp_misp_profile_missing: "The POSP/MISP operational profile could not be loaded.",
-  posp_misp_login_failed: "One of the customer login profiles could not be prepared. Check the mobile numbers and try again.",
-  posp_misp_approval_failed: "The POSP/MISP application could not be activated. No partial customer record was retained.",
-  reason_required: "Enter a clear correction reason of at least 8 characters.",
-  application_not_ready: "This application is not ready for approval.",
-  pre_iib_incomplete: "Complete the bank and pre-IIB details before starting IIB processing.",
-  stage_locked: "This workflow stage has already been completed.",
-  iib_remarks_required: "Select the IIB result before completing this stage.",
-  iib_upload_required: "Confirm the IIB upload and enter its date.",
-  training_incomplete: "Complete all required training, exam and onboarding details.",
-  training_dates_invalid: "Training end date cannot be before the start date.",
-  credentials_required: "Confirm that the training credentials were shared.",
-  agreement_required: "Upload the agreement copy before completing training.",
-  agreement_invalid: "Agreement copy must be a PDF, JPG or PNG no larger than 5 MB.",
-  agreement_upload_failed: "The agreement copy could not be uploaded.",
-  workflow_save_failed: "The workflow update could not be saved. Refresh the page and try again.",
-  posp_misp_edit_locked: "This POSP/MISP application can no longer be edited from the submission workspace.",
-  posp_misp_edit_invalid: "Complete the required POSP/MISP, contact, associate and bank details.",
-  posp_misp_aadhaar_invalid: "Enter a valid 12-digit Aadhaar number.",
-  posp_misp_edit_failed: "The submitted POSP/MISP details could not be updated.",
-  posp_misp_marksheet_type_required: "Select the marksheet type before uploading its replacement.",
-  posp_misp_document_invalid: "Replacement documents must be PDF, JPG or PNG and no larger than 5 MB.",
-  posp_misp_document_failed: "A replacement document could not be saved."
-};
-const successes: Record<string, string> = {
-  corporate_updated: "Corporate application details were saved.",
-  dealership_updated: "Dealership application details were saved.",
-  changes_requested: "Correction request was sent to the customer.",
-  posp_misp_submitted: "Pre-IIB application saved. Download the registration form and continue the operational workflow.",
-  iib_started: "The application moved to IIB processing.",
-  iib_completed: "IIB processing completed. Training details are now available.",
-  training_completed: "Training and post-IIB documentation completed.",
-  posp_misp_updated: "POSP/MISP application details and replacement documents were saved.",
-};
-const corporateContactRoles = [
-  ["corporate_creator", "Corporate Creator"],
-  ["ceo_head", "CEO / Head"],
-  ["admin_head", "Admin Head"],
-  ["dedicated_spoc", "Dedicated SPOC"],
-] as const;
-const dealershipContactRoles = [
-  ["sales_head", "Sales Head"],
-  ["bodyshop_head", "Bodyshop Head"],
-  ["insurance_head", "Insurance Head"],
-  ["insurance_spoc", "Insurance SPOC"],
-] as const;
+const labels:Record<string,string>={pan_copy:"PAN card",company_pan_copy:"Company PAN copy",aadhaar_front:"Aadhaar front",aadhaar_back:"Aadhaar back",gst_copy:"GST certificate",representative_aadhaar_front:"Representative Aadhaar front",representative_aadhaar_back:"Representative Aadhaar back",representative_pan_copy:"Representative PAN copy",education_certificate:"10th / 12th certificate",education_10th_marksheet:"10th Marksheet",education_12th_marksheet:"12th Marksheet",education_graduation_marksheet:"Graduation Marksheet",education_post_graduation_marksheet:"Post Graduation Marksheet",cancelled_cheque:"Cancelled cheque",photograph:"Photograph",registration_form:"Registration form",agreement_copy:"Agreement copy"};
+const errors:Record<string,string>={incomplete_application:"The application is missing required details.",invalid_corporate_details:"Enter a valid Company PAN/GSTIN and complete the required Corporate details.",contacts_incomplete:"Corporate creator, CEO, Admin Head and Dedicated SPOC must use four different login numbers.",applicant_contact_mismatch:"The Corporate creator login does not match the applicant phone.",incomplete_dealership_application:"Complete the Dealership, address, OEM and yearly-sales details.",invalid_dealership_details:"Enter a valid Dealership type, GSTIN and business profile.",representative_incomplete:"Complete the POSP / DP representative details with valid Aadhaar and PAN information.",invalid_dealership_contact:"An additional Dealership contact has an invalid mobile number.",documents_incomplete:"Required KYC documents are missing.",documents_unavailable:"Documents could not be loaded.",document_copy_failed:"A document could not be copied into the customer vault.",customer_already_exists:"A customer already uses this profile, phone, GST, PAN, or Aadhaar identity.",customer_create_failed:"The customer record could not be created.",document_records_failed:"Permanent document records could not be created.",group_profile_failed:"The Group profile could not be created.",group_link_failed:"The Group affiliation could not be saved.",membership_create_failed:"Customer login memberships could not be created.",contacts_create_failed:"Permanent customer contacts could not be created.",corporate_update_failed:"The Corporate application corrections could not be saved.",dealership_update_failed:"The Dealership application corrections could not be saved.",dealership_profile_failed:"The Dealership profile could not be created.",representative_create_failed:"The POSP / DP representative profile could not be created.",dealership_contacts_failed:"The additional Dealership contacts could not be created.",application_complete_failed:"The customer was prepared, but the onboarding application could not be completed.",incomplete_posp_misp_application:"Complete the required POSP/MISP identity and login details before approval.",posp_misp_profile_missing:"The POSP/MISP operational profile could not be loaded.",posp_misp_login_failed:"One of the customer login profiles could not be prepared.",posp_misp_approval_failed:"The POSP/MISP application could not be activated.",reason_required:"Enter a clear correction reason of at least 8 characters.",application_not_ready:"This application is not ready for approval.",pre_iib_incomplete:"Complete the bank and pre-IIB details before starting IIB processing.",stage_locked:"This workflow stage has already been completed.",iib_remarks_required:"Select the IIB result before completing this stage.",iib_upload_required:"Confirm the IIB upload and enter its date.",training_incomplete:"Complete all required training, exam and onboarding details.",training_dates_invalid:"Training end date cannot be before the start date.",credentials_required:"Confirm that the training credentials were shared.",agreement_required:"Upload the agreement copy before completing training.",agreement_invalid:"Agreement copy must be a PDF, JPG or PNG no larger than 5 MB.",agreement_upload_failed:"The agreement copy could not be uploaded.",workflow_save_failed:"The workflow update could not be saved.",posp_misp_edit_locked:"This POSP/MISP application can no longer be edited.",posp_misp_edit_invalid:"Complete the required POSP/MISP, contact, associate and bank details.",posp_misp_aadhaar_invalid:"Enter a valid 12-digit Aadhaar number.",posp_misp_edit_failed:"The submitted POSP/MISP details could not be updated.",posp_misp_marksheet_type_required:"Select the marksheet type.",posp_misp_document_invalid:"Replacement documents must be PDF, JPG or PNG and no larger than 5 MB.",posp_misp_document_failed:"A replacement document could not be saved."};
+const successes:Record<string,string>={corporate_updated:"Corporate application details were saved.",dealership_updated:"Dealership application details were saved.",changes_requested:"Correction request was sent to the customer.",posp_misp_submitted:"Pre-IIB application saved.",iib_started:"The application moved to IIB processing.",iib_completed:"IIB processing completed.",training_completed:"Training and post-IIB documentation completed.",posp_misp_updated:"POSP/MISP application details and replacement documents were saved."};
 
-export default async function ApplicationReviewPage({ params, searchParams }: PageProps) {
-  const { id } = await params;
+export default async function ApplicationReviewPage({params,searchParams}:PageProps){
+  const {id}=await params;
   await requireApplicationReviewer(id);
-  const query = await searchParams;
-  const supabase = await createServerSupabaseClient();
-  const admin = createSupabaseAdminClient();
-  const { data: application } = await supabase.from("customer_onboarding_applications").select("id, partner_type, status, applicant_phone, applicant_email, draft_data, created_at, updated_at, customer_id").eq("id", id).maybeSingle<Application>();
-  if (!application) notFound();
-  const { data: documents } = await supabase.from("customer_onboarding_documents").select("id, document_type, file_name, storage_bucket, storage_path, verification_status").eq("application_id", id).order("created_at").returns<Document[]>();
-  const { data: contacts } = await supabase.from("customer_onboarding_contacts").select("contact_role,full_name,phone,email").eq("application_id",id).order("contact_role").returns<Contact[]>();
-  const previews = await Promise.all((documents ?? []).map(async (document) => ({ ...document, url: (await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 900)).data?.signedUrl ?? null })));
-  const draft = application.draft_data ?? {};
-  const supportedPartner = ["individual_proprietor","group","corporate","dealership","posp","misp"].includes(application.partner_type??"");
-  const canReview = supportedPartner && ["submitted", "under_review", "changes_requested"].includes(application.status) && !application.customer_id;
-  const isCorporate = application.partner_type === "corporate";
-  const isDealership = application.partner_type === "dealership";
-  const isPospMisp = application.partner_type === "posp" || application.partner_type === "misp";
-  const { data: pospMispProfile } = isPospMisp
-    ? await supabase
-      .from("posp_misp_onboarding_profiles")
-      .select("partner_type, associate_employee_id, associate_profile_id, external_onboarding_id, document_received_at, pos_name, misp_name, applicant_phone, applicant_email, date_of_birth, aadhaar_last_four, aadhaar_number_encrypted, pan_number, gst_number, address, city, state, postal_code, bank_id, bank_account_number, bank_ifsc_code, oem_name, dp_name, dp_phone, dp_email, dp_pan_number, workflow_stage, iib_remarks, iib_uploaded, iib_uploaded_at, training_login_id, training_credentials_shared_flag, training_start_date, training_end_date, training_status, training_certificate_number, exam_status, onboarding_date")
-      .eq("application_id", id)
-      .maybeSingle<PospMispWorkflowProfile & Omit<PospMispEditProfile, "aadhaar_number"> & { aadhaar_number_encrypted: string | null }>()
-    : { data: null };
-  const [salesManagerRows, { data: bankRows }, { data: oemRows }] = isPospMisp
-    ? await Promise.all([
-      loadPospMispAssociates(admin),
-      admin.from("banks").select("id, name").eq("is_active", true).order("name"),
-      admin.from("vehicle_manufacturers").select("name").eq("is_active", true).order("sort_order").order("name")
-    ])
-    : [[], { data: [] }, { data: [] }];
-  const pospMispEditProfile: PospMispEditProfile | null = pospMispProfile
-    ? {
-      ...pospMispProfile,
-      aadhaar_number: decryptSensitiveValue(pospMispProfile.aadhaar_number_encrypted)
-    }
-    : null;
-  const salesManagerOptions = (salesManagerRows ?? []).map((manager) => ({
-    value: String(manager.id),
-    label: `${manager.full_name || "Unnamed Sales Employee"}${manager.employee_code ? ` - ${manager.employee_code}` : ""}`
-  }));
-  const bankOptions = (bankRows ?? []).map((bank) => ({ value: String(bank.id), label: String(bank.name) }));
-  const oemOptions = (oemRows ?? []).map((manufacturer) => ({ value: String(manufacturer.name), label: String(manufacturer.name) }));
-  const canApprove = canReview && (!isPospMisp || pospMispProfile?.workflow_stage === "completed");
-  const pageError = query.error === "application_not_ready" && !canReview ? null : query.error;
-  const contactByRole = new Map((contacts ?? []).map((contact) => [contact.contact_role, contact]));
-  const fields = application.partner_type === "group"
-    ? [["Group name", draft.group_name], ["Owner / promoter", draft.owner_name], ["Login mobile", application.applicant_phone], ["Owner contact mobile", draft.owner_phone ?? application.applicant_phone], ["Email", draft.email ?? application.applicant_email]]
-    : isCorporate
-      ? [["Company name",draft.company_name],["Company PAN",draft.company_pan],["GSTIN",draft.gst_number],["Address",[draft.address_street,draft.address_locality].filter(Boolean).join(", ")],["Location",[draft.city,draft.state,draft.postal_code].filter(Boolean).join(", ")],["Fleet size",labelValue(draft.fleet_size_band)]]
-      : isDealership
-        ? [["Dealership name", draft.dealership_name], ["Owner", draft.owner_name], ["Mobile", draft.phone ?? application.applicant_phone], ["Location", [draft.city,draft.state,draft.postal_code].filter(Boolean).join(", ")], ["OEM", draft.oem_name], ["Yearly sales", salesLabel(draft.yearly_sales_band)]]
-        : [["Full name", draft.contact_name], ["Mobile", application.applicant_phone], ["Email", draft.email ?? application.applicant_email], ["PAN", draft.pan_number], ["Aadhaar", draft.aadhaar_last_four ? `Ends in ${draft.aadhaar_last_four}` : null], ["Address", [draft.address_street, draft.address_locality].filter(Boolean).join(", ")], ["Location", [draft.city, draft.state, draft.postal_code].filter(Boolean).join(", ")], ["Fleet size", labelValue(draft.fleet_size_band)], ["GST registered", draft.is_gst_registered === true ? "Yes" : "No"], ["Legal trade name", draft.legal_trade_name], ["GSTIN", draft.gst_number]];
-  const reviewFields = isPospMisp
-    ? [["Name", application.partner_type === "posp" ? draft.pos_name : draft.misp_name], ["Partner type", application.partner_type?.toUpperCase()], ["Associate", [draft.associate_name, draft.associate_id].filter(Boolean).join(" - ")], ["External ID", draft.external_onboarding_id], ["Primary mobile", application.applicant_phone], ["Email", draft.applicant_email ?? application.applicant_email], ["Date of birth", formatIndianDate(textValue(draft.date_of_birth))], ["Document received", formatIndianDate(textValue(draft.document_received_at))], ["PAN", draft.pan_number], ["Aadhaar", draft.aadhaar_last_four ? `Ends in ${draft.aadhaar_last_four}` : null], ["GSTIN", draft.gst_number], ["Location", [draft.city,draft.state,draft.postal_code].filter(Boolean).join(", ")], ["Education / marksheet", draft.education_status], ["Bank", draft.bank_name], ["Account number", maskAccountNumber(draft.bank_account_number ?? draft.bank_account_last_four)], ["IFSC", draft.bank_ifsc_code], ["IIB remarks", pospMispProfile?.iib_remarks ?? draft.iib_remarks], ["IIB upload", [pospMispProfile?.iib_uploaded ? "uploaded" : draft.iib_upload_status, formatIndianDate(pospMispProfile?.iib_uploaded_at ?? textValue(draft.iib_uploaded_at))].filter(Boolean).join(" - ")], ["Credentials shared", pospMispProfile?.training_credentials_shared_flag === true ? "Yes" : "No"], ["Training login ID", pospMispProfile?.training_login_id ?? draft.training_login_id], ["Training password", pospMispProfile?.training_login_id || draft.training_password || draft.training_password_on_file === true ? "Stored - value hidden" : "Not provided"], ["Training period", [formatIndianDate(pospMispProfile?.training_start_date ?? textValue(draft.training_start_date)), formatIndianDate(pospMispProfile?.training_end_date ?? textValue(draft.training_end_date))].filter(Boolean).join(" to ")], ["Training status", pospMispProfile?.training_status ?? draft.training_status], ["Certificate number", pospMispProfile?.training_certificate_number ?? draft.training_certificate_number], ["Exam status", pospMispProfile?.exam_status ?? draft.exam_status], ["Onboarding date", formatIndianDate(pospMispProfile?.onboarding_date ?? textValue(draft.onboarding_date))], ["OEM", draft.oem_name], ["DP name", draft.dp_name], ["DP mobile", draft.dp_phone], ["DP email", draft.dp_email], ["DP PAN", draft.dp_pan_number]]
-    : fields;
-  const effectiveApproveAction = application.partner_type === "group"
-    ? approveMobileGroupApplication
-    : isCorporate
-      ? approveMobileCorporateApplication
-      : isDealership
-        ? approveMobileDealershipApplication
-        : isPospMisp
-          ? approvePospMispApplication
-          : approveMobileIndividualApplication;
+  const query=await searchParams;
+  const supabase=await createServerSupabaseClient();
+  const admin=createSupabaseAdminClient();
+  const {data:application}=await supabase.from("customer_onboarding_applications").select("id,partner_type,status,applicant_phone,applicant_email,draft_data,created_at,updated_at,customer_id").eq("id",id).maybeSingle<Application>();
+  if(!application)notFound();
+  const [{data:documents},{data:contacts}]=await Promise.all([
+    supabase.from("customer_onboarding_documents").select("id,document_type,file_name,storage_bucket,storage_path,verification_status").eq("application_id",id).order("created_at").returns<Document[]>(),
+    supabase.from("customer_onboarding_contacts").select("contact_role,full_name,phone,email").eq("application_id",id).order("contact_role").returns<ReviewContact[]>()
+  ]);
+  const previews=await Promise.all((documents??[]).map(async document=>({...document,url:(await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path,900)).data?.signedUrl??null})));
+  const draft=application.draft_data??{};
+  const isCorporate=application.partner_type==="corporate";
+  const isDealership=application.partner_type==="dealership";
+  const isPospMisp=application.partner_type==="posp"||application.partner_type==="misp";
+  const supported=["individual_proprietor","group","corporate","dealership","posp","misp"].includes(application.partner_type??"");
+  const canReview=supported&&["submitted","under_review","changes_requested"].includes(application.status)&&!application.customer_id;
+  const {data:pospMispProfile}=isPospMisp?await supabase.from("posp_misp_onboarding_profiles").select("partner_type,associate_employee_id,associate_profile_id,external_onboarding_id,document_received_at,pos_name,misp_name,applicant_phone,applicant_email,date_of_birth,aadhaar_last_four,aadhaar_number_encrypted,pan_number,gst_number,address,city,state,postal_code,bank_id,bank_account_number,bank_ifsc_code,oem_name,dp_name,dp_phone,dp_email,dp_pan_number,workflow_stage,iib_remarks,iib_uploaded,iib_uploaded_at,training_login_id,training_credentials_shared_flag,training_start_date,training_end_date,training_status,training_certificate_number,exam_status,onboarding_date").eq("application_id",id).maybeSingle<PospMispWorkflowProfile&Omit<PospMispEditProfile,"aadhaar_number">&{aadhaar_number_encrypted:string|null}>():{data:null};
+  const [associates,{data:bankRows},{data:oemRows}]=isPospMisp?await Promise.all([loadPospMispAssociates(admin),admin.from("banks").select("id,name").eq("is_active",true).order("name"),admin.from("vehicle_manufacturers").select("name").eq("is_active",true).order("sort_order").order("name")]):[[],{data:[]},{data:[]}];
+  const pospMispEditProfile:PospMispEditProfile|null=pospMispProfile?{...pospMispProfile,aadhaar_number:decryptSensitiveValue(pospMispProfile.aadhaar_number_encrypted)}:null;
+  const salesManagerOptions=(associates??[]).map(manager=>({value:String(manager.id),label:`${manager.full_name||"Unnamed Sales Employee"}${manager.employee_code?` - ${manager.employee_code}`:""}`}));
+  const bankOptions=(bankRows??[]).map(bank=>({value:String(bank.id),label:String(bank.name)}));
+  const oemOptions=(oemRows??[]).map(manufacturer=>({value:String(manufacturer.name),label:String(manufacturer.name)}));
+  const canApprove=canReview&&(!isPospMisp||pospMispProfile?.workflow_stage==="completed");
+  const pageError=query.error==="application_not_ready"&&!canReview?null:query.error;
+  const summaryFields=summaryFor(application.partner_type,draft,application);
+  const effectiveApproveAction=application.partner_type==="group"?approveMobileGroupApplication:isCorporate?approveMobileCorporateApplication:isDealership?approveMobileDealershipApplication:isPospMisp?approvePospMispApplication:approveMobileIndividualApplication;
+  const title=primaryName(application.partner_type,draft)||"KYC application";
 
-  return (
-    <AppShell title="Review KYC Application">
-      <div className="mx-auto max-w-6xl pb-8">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <Link href="/customers/applications" className="text-[11px] font-semibold text-[#4F46E5]">Back to applications</Link>
-          <div className="flex items-center gap-2">
-            <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-semibold text-slate-600">{partnerLabel(application.partner_type)}</span>
-            <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-semibold text-amber-700">{application.status.replaceAll("_", " ")}</span>
-          </div>
-        </div>
-        {pageError ? <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-medium text-red-700">{errors[pageError] ?? "The action could not be completed."}</div> : null}
-        {query.success ? <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-medium text-emerald-700">{successes[query.success] ?? "Saved successfully."}</div> : null}
+  return <AppShell title="Review KYC Application"><div className="mx-auto max-w-[1280px] space-y-4 pb-8">
+    <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-4 bg-gradient-to-r from-[#071D49] via-[#0F2A55] to-[#163B70] px-5 py-5 text-white"><div><Link href="/customers/applications" className="text-[9.5px] font-semibold text-white/70">← Back to applications</Link><p className="mt-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/60">Official onboarding file</p><h1 className="mt-1 text-xl font-semibold">{title}</h1><p className="mt-1 text-[10px] text-white/70">Reference {id.slice(0,8).toUpperCase()} · Updated {new Date(application.updated_at).toLocaleDateString("en-IN")}</p></div><div className="flex gap-2"><Pill>{partnerLabel(application.partner_type)}</Pill><Pill tone="gold">{application.status.replaceAll("_"," ")}</Pill></div></div>
+      <div className="grid gap-px bg-[#E2E8F0] sm:grid-cols-4"><FileMetric label="Partner type" value={partnerLabel(application.partner_type)}/><FileMetric label="Source status" value={application.status.replaceAll("_"," ")}/><FileMetric label="Documents" value={String(previews.length)}/><FileMetric label="Review mode" value={canReview?"Editable":"Read only"}/></div>
+    </section>
+    {pageError?<div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10.5px] font-medium text-red-700">{errors[pageError]??"The action could not be completed."}</div>:null}
+    {query.success?<div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10.5px] font-medium text-emerald-700">{successes[query.success]??"Saved successfully."}</div>:null}
 
-        <div className="grid gap-4 lg:grid-cols-[1.25fr_.75fr]">
-          <section className="overflow-hidden rounded-xl border border-[#DCE5EF] bg-white shadow-sm">
-            <div className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-5 py-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[.08em] text-[#64748B]">Review workspace</p>
-              <h2 className="mt-1 text-base font-semibold text-[#0F172A]">{isCorporate ? "Corporate application details" : isDealership ? "Dealership application details" : isPospMisp ? "POSP / MISP application details" : "Applicant details"}</h2>
-            </div>
-            {isCorporate ? (
-              <form action={canReview ? updateMobileCorporateApplicationDraft : undefined} className="p-5">
-                <input type="hidden" name="application_id" value={id}/>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Field name="company_name" label="Company name" defaultValue={textValue(draft.company_name)} required disabled={!canReview}/>
-                  <Field name="company_pan" label="Company PAN" defaultValue={textValue(draft.company_pan)} required disabled={!canReview}/>
-                  <Field name="gst_number" label="GSTIN" defaultValue={textValue(draft.gst_number)} disabled={!canReview}/>
-                  <SelectOptionsField name="fleet_size_band" label="Fleet size" defaultValue={textValue(draft.fleet_size_band)} options={fleetOptions} required disabled={!canReview}/>
-                </div>
-                <div className="mt-5 border-t border-[#E2E8F0] pt-5">
-                  <h3 className="text-sm font-semibold text-[#0F172A]">Registered address</h3>
-                  <div className="mt-3 grid gap-4 md:grid-cols-2">
-                    <Field name="address_street" label="Street" defaultValue={textValue(draft.address_street)} required disabled={!canReview}/>
-                    <Field name="address_locality" label="Locality" defaultValue={textValue(draft.address_locality)} disabled={!canReview}/>
-                    <Field name="city" label="City" defaultValue={textValue(draft.city)} required disabled={!canReview}/>
-                    <Field name="state" label="State" defaultValue={textValue(draft.state)} required disabled={!canReview}/>
-                    <Field name="postal_code" label="PIN code" defaultValue={textValue(draft.postal_code)} required disabled={!canReview}/>
-                    <Field name="india_location_id" label="Location ID" defaultValue={textValue(draft.india_location_id)} required disabled={!canReview}/>
-                  </div>
-                </div>
-                <div className="mt-5 border-t border-[#E2E8F0] pt-5">
-                  <h3 className="text-sm font-semibold text-[#0F172A]">Corporate login contacts</h3>
-                  <div className="mt-3 grid gap-3 md:grid-cols-2">
-                    {corporateContactRoles.map(([role, label]) => {
-                      const contact = contactByRole.get(role);
-                      const fallbackPhone = role === "corporate_creator" ? application.applicant_phone : null;
-                      const fallbackEmail = role === "corporate_creator" ? application.applicant_email : null;
-                      return (
-                        <div key={role} className="rounded-xl border border-[#E2E8F0] bg-[#FBFDFF] p-4">
-                          <p className="text-xs font-semibold text-[#0F172A]">{label}</p>
-                          <div className="mt-3 space-y-3">
-                            <Field name={`${role}_name`} label="Full name" defaultValue={contact?.full_name ?? ""} required disabled={!canReview}/>
-                            <Field name={`${role}_phone`} label="Mobile number" defaultValue={contact?.phone ?? fallbackPhone ?? ""} required disabled={!canReview}/>
-                            <Field name={`${role}_email`} label="Email" defaultValue={contact?.email ?? fallbackEmail ?? ""} disabled={!canReview}/>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                <SaveCorrections canReview={canReview} status={application.status} />
-              </form>
-            ) : isDealership ? (
-              <form action={canReview ? updateMobileDealershipApplicationDraft : undefined} className="p-5">
-                <input type="hidden" name="application_id" value={id}/>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <SelectOptionsField name="dealership_type" label="Dealership type" defaultValue={textValue(draft.dealership_type)} options={dealershipTypeOptions} required disabled={!canReview}/>
-                  <Field name="dealership_name" label="Dealership name" defaultValue={textValue(draft.dealership_name)} required disabled={!canReview}/>
-                  <Field name="owner_name" label="Owner name" defaultValue={textValue(draft.owner_name)} required disabled={!canReview}/>
-                  <Field name="phone" label="Owner mobile number" defaultValue={textValue(draft.phone) || application.applicant_phone || ""} required disabled={!canReview}/>
-                  <Field name="email" label="Owner email" defaultValue={textValue(draft.email) || application.applicant_email || ""} disabled={!canReview}/>
-                  <Field name="oem_name" label="Dealership OEM" defaultValue={textValue(draft.oem_name)} required disabled={!canReview}/>
-                  <SelectOptionsField name="yearly_sales_band" label="Yearly sales" defaultValue={textValue(draft.yearly_sales_band)} options={salesOptions} required disabled={!canReview}/>
-                </div>
-
-                <div className="mt-5 border-t border-[#E2E8F0] pt-5">
-                  <h3 className="text-sm font-semibold text-[#0F172A]">Registered address</h3>
-                  <div className="mt-3 grid gap-4 md:grid-cols-2">
-                    <Field name="address_street" label="Street" defaultValue={textValue(draft.address_street)} required disabled={!canReview}/>
-                    <Field name="address_locality" label="Locality" defaultValue={textValue(draft.address_locality)} disabled={!canReview}/>
-                    <Field name="city" label="City" defaultValue={textValue(draft.city)} required disabled={!canReview}/>
-                    <Field name="state" label="State" defaultValue={textValue(draft.state)} required disabled={!canReview}/>
-                    <Field name="postal_code" label="PIN code" defaultValue={textValue(draft.postal_code)} required disabled={!canReview}/>
-                    <Field name="india_location_id" label="Location ID" defaultValue={textValue(draft.india_location_id)} required disabled={!canReview}/>
-                  </div>
-                </div>
-
-                <div className="mt-5 border-t border-[#E2E8F0] pt-5">
-                  <h3 className="text-sm font-semibold text-[#0F172A]">GST details</h3>
-                  <label className="mt-3 flex items-center gap-3 rounded-xl border border-[#E2E8F0] bg-[#FBFDFF] px-4 py-3 text-[11px] font-semibold text-[#0F172A]">
-                    <input type="checkbox" name="is_gst_registered" value="true" defaultChecked={draft.is_gst_registered === true} disabled={!canReview} className="h-4 w-4"/>
-                    GST registered
-                  </label>
-                  <div className="mt-3">
-                    <Field name="gst_number" label="GSTIN" defaultValue={textValue(draft.gst_number)} disabled={!canReview}/>
-                  </div>
-                </div>
-
-                <div className="mt-5 border-t border-[#E2E8F0] pt-5">
-                  <h3 className="text-sm font-semibold text-[#0F172A]">POSP / DP representative</h3>
-                  <div className="mt-3 grid gap-4 md:grid-cols-2">
-                    <Field name="representative_name" label="Representative name" defaultValue={textValue(draft.representative_name)} required disabled={!canReview}/>
-                    <Field name="representative_mobile" label="Representative mobile" defaultValue={textValue(draft.representative_mobile)} required disabled={!canReview}/>
-                    <Field name="representative_email" label="Representative email" defaultValue={textValue(draft.representative_email)} disabled={!canReview}/>
-                    <Field name="representative_pan" label="Representative PAN" defaultValue={textValue(draft.representative_pan)} required disabled={!canReview}/>
-                  </div>
-                  <div className="mt-4 grid gap-4 md:grid-cols-2">
-                    <div className="rounded-xl border border-[#E2E8F0] bg-[#FBFDFF] p-4">
-                      <p className="text-[10px] font-semibold uppercase tracking-[.06em] text-[#64748B]">Submitted Aadhaar</p>
-                      <p className="mt-1 text-sm font-semibold text-[#0F172A]">{maskedAadhaar(draft.representative_aadhaar)}</p>
-                      <p className="mt-2 text-[10px] leading-4 text-[#64748B]">The full Aadhaar number is never rendered on the review page.</p>
-                    </div>
-                    <Field name="representative_aadhaar" label="Replace Aadhaar number (optional)" defaultValue="" disabled={!canReview}/>
-                  </div>
-                </div>
-
-                <div className="mt-5 border-t border-[#E2E8F0] pt-5">
-                  <h3 className="text-sm font-semibold text-[#0F172A]">Additional Dealership contacts</h3>
-                  <p className="mt-1 text-[10px] text-[#64748B]">These roles are optional and follow the website Dealership onboarding format.</p>
-                  <div className="mt-3 grid gap-3 md:grid-cols-2">
-                    {dealershipContactRoles.map(([role, label]) => (
-                      <div key={role} className="rounded-xl border border-[#E2E8F0] bg-[#FBFDFF] p-4">
-                        <p className="text-xs font-semibold text-[#0F172A]">{label}</p>
-                        <div className="mt-3 space-y-3">
-                          <Field name={`${role}_name`} label="Full name" defaultValue={textValue(draft[`${role}_name`])} disabled={!canReview}/>
-                          <Field name={`${role}_mobile`} label="Mobile number" defaultValue={textValue(draft[`${role}_mobile`])} disabled={!canReview}/>
-                          <Field name={`${role}_email`} label="Email" defaultValue={textValue(draft[`${role}_email`])} disabled={!canReview}/>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <SaveCorrections canReview={canReview} status={application.status} />
-              </form>
-            ) : isPospMisp && pospMispEditProfile ? (
-              <PospMispApplicationEditor
-                applicationId={id}
-                profile={pospMispEditProfile}
-                editable={canReview}
-                salesManagers={salesManagerOptions}
-                banks={bankOptions}
-                oems={oemOptions}
-                documents={(documents ?? []).map((document) => ({ document_type: document.document_type, file_name: document.file_name }))}
-              />
-            ) : (
-              <div className="grid gap-px bg-[#E8EEF5] sm:grid-cols-2">
-                {reviewFields.map(([label, fieldValue]) => <div key={String(label)} className="bg-white px-4 py-3"><p className="text-[9px] font-semibold uppercase tracking-[.06em] text-[#64748B]">{String(label)}</p><p className="mt-1 text-[11.5px] font-medium text-[#0F172A]">{display(fieldValue)}</p></div>)}
-              </div>
-            )}
-          </section>
-
-          <aside className="space-y-4">
-            {isPospMisp && pospMispProfile ? <PospMispWorkflowPanel applicationId={id} profile={pospMispProfile} /> : null}
-            <section className="rounded-xl border border-[#DCE5EF] bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-[#0F172A]">Documents</h2>
-              <div className="mt-3 space-y-2">
-                {previews.map((document)=><div key={document.id} className="flex items-center justify-between gap-3 rounded-lg border border-[#E2E8F0] px-3 py-2"><div className="min-w-0"><p className="text-[11px] font-semibold">{labels[document.document_type]??document.document_type.replaceAll("_", " ")}</p><p className="truncate text-[9.5px] text-[#64748B]">{document.file_name}</p></div>{document.url?<a href={document.url} target="_blank" rel="noreferrer" className="rounded-md border px-2 py-1 text-[9.5px] font-semibold">Open</a>:null}</div>)}
-                {!previews.length?<p className="text-[11px] text-[#64748B]">No documents uploaded.</p>:null}
-              </div>
-            </section>
-            {canReview ? (
-              <section className="rounded-xl border border-[#DCE5EF] bg-white p-4 shadow-sm">
-                <h2 className="text-sm font-semibold text-[#0F172A]">Decision</h2>
-                <form action={effectiveApproveAction} className="mt-3 rounded-lg border border-emerald-100 bg-emerald-50 p-3">
-                  <input type="hidden" name="application_id" value={id}/>
-                  <p className="text-[11px] font-semibold text-emerald-900">Approve and activate</p>
-                  <p className="mt-1 text-[10px] text-emerald-800">{isPospMisp ? application.partner_type === "misp" ? "Creates the MISP customer and one login per distinct primary/DP mobile number." : "Creates the POSP customer and activates its mobile login." : "Creates the customer, account access, permanent documents and Group association."}</p>
-                  <FormSubmitButton label={canApprove ? "Approve KYC" : "Complete operational stages first"} pendingLabel="Approving" disabled={!canApprove} className="mt-3 inline-flex w-full items-center justify-center rounded-md bg-emerald-700 px-4 py-2 text-[11px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-emerald-300 disabled:opacity-70" />
-                </form>
-                <form action={requestMobileApplicationChanges} className="mt-3 rounded-lg border border-red-100 bg-red-50 p-3">
-                  <input type="hidden" name="application_id" value={id}/>
-                  <label className="text-[11px] font-semibold text-red-900" htmlFor="reason">Request corrections</label>
-                  <textarea id="reason" name="reason" required minLength={8} className="mt-2 min-h-20 w-full rounded-md border border-red-100 bg-white p-2 text-[11px]"/>
-                  <FormSubmitButton label="Send back" pendingLabel="Sending" className="mt-2 inline-flex w-full items-center justify-center rounded-md border border-red-200 bg-white px-4 py-2 text-[11px] font-semibold text-red-700 disabled:cursor-not-allowed disabled:opacity-70" />
-                </form>
-              </section>
-            ) : null}
-          </aside>
-        </div>
-      </div>
-    </AppShell>
-  );
-}
-
-const fleetOptions = [
-  ["less_than_5", "Less than 5"],
-  ["5_to_20", "5 to 20"],
-  ["20_to_50", "20 to 50"],
-  ["more_than_50", "More than 50"],
-] as const;
-const dealershipTypeOptions = [["posp", "POSP"], ["misp", "MISP"]] as const;
-const salesOptions = [
-  ["less_than_500", "Less than 500"],
-  ["500_to_1000", "500 to 1000"],
-  ["more_than_1000", "More than 1000"],
-] as const;
-
-function SaveCorrections({ canReview, status }: { canReview: boolean; status: string }) {
-  return canReview ? (
-    <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#DCE5EF] bg-[#F8FAFC] px-4 py-3">
-      <p className="text-[11px] text-[#64748B]">Save corrections before approving if the submitted data does not match the uploaded documents.</p>
-      <FormSubmitButton label="Save corrections" pendingLabel="Saving" className="inline-flex items-center justify-center rounded-md bg-[#0F2A55] px-4 py-2 text-[11px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70" />
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <main className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
+        {isCorporate?<CorporateReviewWorkspace applicationId={id} draft={draft} canReview={canReview} status={application.status} contacts={contacts??[]} applicantPhone={application.applicant_phone} applicantEmail={application.applicant_email}/>:isDealership?<DealershipReviewWorkspace applicationId={id} draft={draft} canReview={canReview} status={application.status}/>:isPospMisp&&pospMispEditProfile?<PospMispApplicationEditor applicationId={id} profile={pospMispEditProfile} editable={canReview} salesManagers={salesManagerOptions} banks={bankOptions} oems={oemOptions} documents={(documents??[]).map(document=>({document_type:document.document_type,file_name:document.file_name}))}/>:<SummaryReviewWorkspace fields={summaryFields}/>} 
+      </main>
+      <aside className="space-y-4">
+        {isPospMisp&&pospMispProfile?<PospMispWorkflowPanel applicationId={id} profile={pospMispProfile}/>:null}
+        <section className="rounded-2xl border border-[#DCE5EF] bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><h2 className="text-[12px] font-semibold text-[#0F172A]">Verification documents</h2><span className="text-[9px] font-semibold text-[#64748B]">{previews.length} files</span></div><div className="mt-3 space-y-2">{previews.map(document=><div key={document.id} className="flex items-center justify-between gap-3 rounded-xl border border-[#E2E8F0] bg-[#FBFDFF] px-3 py-2.5"><div className="min-w-0"><p className="text-[10.5px] font-semibold text-[#0F172A]">{labels[document.document_type]??document.document_type.replaceAll("_"," ")}</p><p className="truncate text-[9px] text-[#64748B]">{document.file_name}</p></div>{document.url?<a href={document.url} target="_blank" rel="noreferrer" className="rounded-md border border-[#CBD5E1] bg-white px-2 py-1 text-[9px] font-semibold text-[#334155]">Open</a>:null}</div>)}{!previews.length?<p className="rounded-lg bg-[#F8FAFC] px-3 py-4 text-center text-[10px] text-[#64748B]">No documents uploaded.</p>:null}</div></section>
+        {canReview?<section className="rounded-2xl border border-[#DCE5EF] bg-white p-4 shadow-sm"><h2 className="text-[12px] font-semibold text-[#0F172A]">Verification decision</h2><form action={effectiveApproveAction} className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3"><input type="hidden" name="application_id" value={id}/><p className="text-[10.5px] font-semibold text-emerald-900">Approve and activate</p><p className="mt-1 text-[9.5px] leading-4 text-emerald-800">Creates the customer, access records and verified document file.</p><FormSubmitButton label={canApprove?"Approve KYC":"Complete operational stages first"} pendingLabel="Approving KYC" disabled={!canApprove} className="mt-3 inline-flex w-full items-center justify-center rounded-lg bg-emerald-700 px-4 py-2 text-[10.5px] font-semibold text-white disabled:bg-emerald-300"/></form><form action={requestMobileApplicationChanges} className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3"><input type="hidden" name="application_id" value={id}/><label className="text-[10.5px] font-semibold text-red-900" htmlFor="reason">Request corrections</label><textarea id="reason" name="reason" required minLength={8} className="mt-2 min-h-20 w-full rounded-lg border border-red-200 bg-white p-2 text-[10.5px]"/><FormSubmitButton label="Send correction request" pendingLabel="Sending correction request" className="mt-2 inline-flex w-full items-center justify-center rounded-lg border border-red-200 bg-white px-4 py-2 text-[10.5px] font-semibold text-red-700"/></form></section>:null}
+      </aside>
     </div>
-  ) : (
-    <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[11px] font-medium text-emerald-800">
-      This application is already {status.replaceAll("_", " ")}. The submitted KYC record is locked here; edit the activated customer profile for post-approval changes.
-    </div>
-  );
+  </div></AppShell>;
 }
-function Field({ name, label, defaultValue, required, disabled }: { name:string; label:string; defaultValue:string; required?:boolean; disabled?:boolean }) {
-  return <label className="block text-[11px] font-semibold text-[#0F172A]">{label}{required ? " *" : ""}<input name={name} defaultValue={defaultValue} required={required} disabled={disabled} className="mt-1 h-10 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-[12px] font-medium text-[#0F172A] outline-none focus:border-[#1D4ED8] focus:ring-2 focus:ring-blue-100 disabled:bg-[#F8FAFC] disabled:text-[#475569]"/></label>;
-}
-function SelectOptionsField({ name, label, defaultValue, options, required, disabled }: { name:string; label:string; defaultValue:string; options: readonly (readonly [string,string])[]; required?:boolean; disabled?:boolean }) {
-  return <label className="block text-[11px] font-semibold text-[#0F172A]">{label}{required ? " *" : ""}<select name={name} defaultValue={defaultValue} required={required} disabled={disabled} className="mt-1 h-10 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-[12px] font-medium text-[#0F172A] outline-none focus:border-[#1D4ED8] focus:ring-2 focus:ring-blue-100 disabled:bg-[#F8FAFC] disabled:text-[#475569]"><option value="">Select {label.toLowerCase()}</option>{options.map(([value, optionLabel]) => <option key={value} value={value}>{optionLabel}</option>)}</select></label>;
-}
-function display(value: unknown) { if (typeof value === "string" && value.trim()) return value; if (typeof value === "number") return String(value); return "-"; }
-function textValue(value: unknown) { return typeof value === "string" ? value : ""; }
-function maskAccountNumber(value: unknown) {
-  const text = typeof value === "string" ? value.replace(/\s/g, "") : "";
-  return text ? `•••• ${text.slice(-4)}` : null;
-}
-function labelValue(value: unknown) { const values: Record<string, string> = { less_than_5: "Less than 5", "5_to_20": "5 to 20", "20_to_50": "20 to 50", more_than_50: "More than 50" }; return typeof value === "string" ? values[value] ?? value : null; }
-function salesLabel(value: unknown) { const values: Record<string, string> = { less_than_500: "Less than 500", "500_to_1000": "500 to 1000", more_than_1000: "More than 1000" }; return typeof value === "string" ? values[value] ?? value : null; }
-function maskedAadhaar(value: unknown) { const digits = typeof value === "string" ? value.replace(/\D/g, "") : ""; return digits.length === 12 ? `XXXX XXXX ${digits.slice(-4)}` : "Not available"; }
-function partnerLabel(value: string | null) { const values: Record<string, string> = { individual_proprietor: "Individual / Proprietor", group: "Group", corporate: "Corporate", dealership: "Dealership", posp: "POSP", misp: "MISP" }; return value ? values[value] ?? value : "Unknown"; }
+
+function summaryFor(type:string|null,draft:Record<string,unknown>,application:Application):Array<[string,unknown]>{if(type==="group")return[["Group name",draft.group_name],["Owner / promoter",draft.owner_name],["Login mobile",application.applicant_phone],["Owner contact mobile",draft.owner_phone??application.applicant_phone],["Email",draft.email??application.applicant_email]];if(type==="individual_proprietor")return[["Full name",draft.contact_name],["Mobile",application.applicant_phone],["Email",draft.email??application.applicant_email],["PAN",draft.pan_number],["Aadhaar",draft.aadhaar_last_four?`Ends in ${draft.aadhaar_last_four}`:null],["Address",[draft.address_street,draft.address_locality].filter(Boolean).join(", ")],["Location",[draft.city,draft.state,draft.postal_code].filter(Boolean).join(", ")],["Fleet size",draft.fleet_size_band],["GST registered",draft.is_gst_registered===true?"Yes":"No"],["Legal trade name",draft.legal_trade_name],["GSTIN",draft.gst_number]];return[["Application",primaryName(type,draft)],["Mobile",application.applicant_phone],["Email",application.applicant_email]]}
+function primaryName(type:string|null,draft:Record<string,unknown>){const value=type==="corporate"?draft.company_name:type==="dealership"?draft.dealership_name:type==="group"?draft.group_name:type==="posp"?draft.pos_name:type==="misp"?draft.misp_name:draft.contact_name;return typeof value==="string"&&value.trim()?value.trim():null}
+function partnerLabel(value:string|null){const values:Record<string,string>={individual_proprietor:"Individual / Proprietor",group:"Group",corporate:"Corporate",dealership:"Dealership",posp:"POSP",misp:"MISP"};return value?values[value]??value:"Unknown"}
+function Pill({children,tone}:{children:React.ReactNode;tone?:"gold"}){return <span className={`rounded-full border px-3 py-1 text-[9.5px] font-semibold capitalize ${tone==="gold"?"border-[#D8A31A]/50 bg-[#D8A31A]/20 text-[#FFE89B]":"border-white/25 bg-white/10 text-white"}`}>{children}</span>}
+function FileMetric({label,value}:{label:string;value:string}){return <div className="bg-white px-4 py-3"><p className="text-[8.5px] font-semibold uppercase tracking-[0.06em] text-[#64748B]">{label}</p><p className="mt-1 text-[11px] font-semibold capitalize text-[#071D49]">{value}</p></div>}

@@ -20,7 +20,6 @@ type QueueRow = {
 };
 
 const PAGE_SIZE = 20;
-
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -32,93 +31,81 @@ export default async function PospMispPage({ searchParams }: { searchParams: Pro
   const status = ["submitted", "under_review", "changes_requested", "approved", "rejected"].includes(query.status ?? "") ? query.status! : null;
   const page = Math.max(1, Number.parseInt(query.page ?? "1", 10) || 1);
   const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase.rpc("get_kyc_application_queue", {
-    p_query: q,
-    p_partner_type: partnerType,
-    p_status: status,
-    p_source: null,
-    p_page: page,
-    p_page_size: PAGE_SIZE
-  });
-
+  const { data, error } = await supabase.rpc("get_kyc_application_queue", { p_query: q, p_partner_type: partnerType, p_status: status, p_source: null, p_page: page, p_page_size: PAGE_SIZE });
   const rows = (Array.isArray(data) ? data : []) as QueueRow[];
   const total = Number(rows[0]?.total_count ?? 0);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const counts = rows.reduce((summary, row) => {
+    summary[row.status] = (summary[row.status] ?? 0) + 1;
+    return summary;
+  }, {} as Record<string, number>);
 
   return (
     <AppShell title="POSP / MISP Onboarding">
-      <div className="mx-auto max-w-[1440px] space-y-3 pb-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-[11px] text-[#64748B]">Manage manually entered and Excel-sourced applications through verification.</p>
-            <p className="mt-1 text-[10px] font-medium text-[#475569]">{total} matching application{total === 1 ? "" : "s"}</p>
+      <div className="mx-auto max-w-[1480px] space-y-4 pb-5">
+        <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-4 bg-gradient-to-r from-[#071D49] via-[#0F2A55] to-[#163B70] px-5 py-5 text-white">
+            <div>
+              <p className="text-[9.5px] font-semibold uppercase tracking-[0.12em] text-white/65">Operations workspace</p>
+              <h1 className="mt-1 text-xl font-semibold">POSP / MISP onboarding register</h1>
+              <p className="mt-1 max-w-2xl text-[10.5px] leading-5 text-white/75">Track every onboarding file from submission through IIB, training, verification and final activation.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/customers/posp-misp/import" className="rounded-lg border border-white/25 bg-white/10 px-3.5 py-2 text-[10.5px] font-semibold text-white hover:bg-white/15">Import Excel</Link>
+              <Link href="/customers/posp-misp/new?partner_type=posp" className="rounded-lg bg-white px-3.5 py-2 text-[10.5px] font-semibold text-[#071D49]">Add POSP</Link>
+              <Link href="/customers/posp-misp/new?partner_type=misp" className="rounded-lg bg-[#D8A31A] px-3.5 py-2 text-[10.5px] font-semibold text-[#071D49]">Add MISP</Link>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Link href="/customers/posp-misp/import" className="rounded-md border border-[#CBD5E1] bg-white px-3 py-2 text-[10.5px] font-semibold text-[#334155]">Import Excel</Link>
-            <Link href="/customers/posp-misp/new?partner_type=posp" className="rounded-md bg-[#4F46E5] px-3 py-2 text-[10.5px] font-semibold text-white">Add POSP</Link>
-            <Link href="/customers/posp-misp/new?partner_type=misp" className="rounded-md bg-[#0F172A] px-3 py-2 text-[10.5px] font-semibold text-white">Add MISP</Link>
+          <div className="grid gap-px bg-[#E2E8F0] sm:grid-cols-2 lg:grid-cols-5">
+            <Metric label="Matching files" value={total} />
+            <Metric label="Submitted" value={counts.submitted ?? 0} />
+            <Metric label="Under review" value={counts.under_review ?? 0} />
+            <Metric label="Corrections" value={counts.changes_requested ?? 0} attention={Boolean(counts.changes_requested)} />
+            <Metric label="Approved" value={counts.approved ?? 0} complete={Boolean(counts.approved)} />
           </div>
-        </div>
+        </section>
 
-        <form method="get" className="grid gap-2 rounded-xl border border-[#DCE5EF] bg-white p-3 shadow-sm sm:grid-cols-[minmax(220px,1fr)_150px_180px_auto]">
-          <input name="q" defaultValue={q ?? ""} aria-label="Search POSP or MISP applications" placeholder="Search name, mobile or external ID" className="h-9 rounded-md border border-[#CBD5E1] bg-[#F8FAFC] px-3 text-[11.5px] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]" />
-          <select name="type" defaultValue={partnerType === "posp_misp" ? "" : partnerType} aria-label="Partner type" className="h-9 rounded-md border border-[#CBD5E1] bg-white px-2.5 text-[11px]"><option value="">POSP & MISP</option><option value="posp">POSP</option><option value="misp">MISP</option></select>
-          <select name="status" defaultValue={status ?? ""} aria-label="Application status" className="h-9 rounded-md border border-[#CBD5E1] bg-white px-2.5 text-[11px]"><option value="">All statuses</option><option value="submitted">Submitted</option><option value="under_review">Under review</option><option value="changes_requested">Changes requested</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select>
-          <div className="flex gap-2"><button className="h-9 rounded-md bg-[#0F2A55] px-4 text-[10.5px] font-semibold text-white">Apply</button>{q || partnerType !== "posp_misp" || status ? <Link href="/customers/posp-misp" className="grid h-9 place-items-center rounded-md border border-[#CBD5E1] px-3 text-[10.5px] font-semibold text-[#475569]">Clear</Link> : null}</div>
+        <form method="get" className="grid gap-2 rounded-xl border border-[#DCE5EF] bg-white p-3 shadow-sm sm:grid-cols-[minmax(260px,1fr)_150px_180px_auto]">
+          <input name="q" defaultValue={q ?? ""} aria-label="Search POSP or MISP applications" placeholder="Search name, mobile or onboarding ID" className="h-10 rounded-lg border border-[#CBD5E1] bg-[#F8FAFC] px-3 text-[11.5px] outline-none focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#DBEAFE]" />
+          <select name="type" defaultValue={partnerType === "posp_misp" ? "" : partnerType} aria-label="Partner type" className="h-10 rounded-lg border border-[#CBD5E1] bg-white px-2.5 text-[11px]"><option value="">POSP & MISP</option><option value="posp">POSP</option><option value="misp">MISP</option></select>
+          <select name="status" defaultValue={status ?? ""} aria-label="Application status" className="h-10 rounded-lg border border-[#CBD5E1] bg-white px-2.5 text-[11px]"><option value="">All statuses</option><option value="submitted">Submitted</option><option value="under_review">Under review</option><option value="changes_requested">Changes requested</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select>
+          <div className="flex gap-2"><button className="h-10 rounded-lg bg-[#0F2A55] px-4 text-[10.5px] font-semibold text-white">Apply filters</button>{q || partnerType !== "posp_misp" || status ? <Link href="/customers/posp-misp" className="grid h-10 place-items-center rounded-lg border border-[#CBD5E1] px-3 text-[10.5px] font-semibold text-[#475569]">Clear</Link> : null}</div>
         </form>
 
-        {error ? <DataError message="The POSP/MISP queue could not be loaded." /> : (
-          <div className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
+        {error ? <DataError message="The POSP/MISP register could not be loaded." /> : (
+          <div className="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3"><div><h2 className="text-[12px] font-semibold text-[#0F172A]">Application register</h2><p className="mt-0.5 text-[9.5px] text-[#64748B]">Oldest pending files are highlighted for attention.</p></div><span className="rounded-full border border-[#DCE5EF] bg-white px-2.5 py-1 text-[9.5px] font-semibold text-[#475569]">Page {Math.min(page, totalPages)} of {totalPages}</span></div>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[980px] text-left text-[11px]">
-                <thead className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[9.5px] uppercase tracking-[0.04em] text-[#64748B]">
-                  <tr><th className="px-3 py-2.5">Name</th><th className="px-3 py-2.5">Type</th><th className="px-3 py-2.5">Mobile</th><th className="px-3 py-2.5">City</th><th className="px-3 py-2.5">Documents</th><th className="px-3 py-2.5">Source</th><th className="px-3 py-2.5">Age</th><th className="px-3 py-2.5">Status</th><th className="px-3 py-2.5">Action</th></tr>
-                </thead>
+              <table className="w-full min-w-[1080px] text-left text-[11px]">
+                <thead className="border-b border-[#E2E8F0] bg-white text-[9px] uppercase tracking-[0.06em] text-[#64748B]"><tr><th className="px-4 py-3">Application file</th><th className="px-3 py-3">Type</th><th className="px-3 py-3">Contact</th><th className="px-3 py-3">Location</th><th className="px-3 py-3">Documents</th><th className="px-3 py-3">Source</th><th className="px-3 py-3">Pending age</th><th className="px-3 py-3">Status</th><th className="px-4 py-3 text-right">Action</th></tr></thead>
                 <tbody className="divide-y divide-[#EEF2F6]">
                   {rows.map((row) => (
-                    <tr key={row.id} className="hover:bg-[#FAFCFF]">
-                      <td className="px-3 py-3"><p className="font-semibold text-[#0F172A]">{row.applicant_name ?? "-"}</p><p className="mt-0.5 text-[9.5px] text-[#64748B]">{row.external_onboarding_id ?? "External ID not assigned"}</p></td>
-                      <td className="px-3 py-3">{row.partner_type.toUpperCase()}</td>
+                    <tr key={row.id} className={row.age_days >= 7 && !["approved","rejected"].includes(row.status) ? "bg-red-50/40 hover:bg-red-50/70" : "hover:bg-[#FAFCFF]"}>
+                      <td className="px-4 py-3"><p className="font-semibold text-[#0F172A]">{row.applicant_name ?? "Name pending verification"}</p><p className="mt-0.5 text-[9.5px] text-[#64748B]">{row.external_onboarding_id ?? `Ref ${row.id.slice(0,8).toUpperCase()}`}</p></td>
+                      <td className="px-3 py-3"><span className={`rounded-full px-2 py-1 text-[9px] font-bold ${row.partner_type === "misp" ? "bg-[#FFF7D6] text-[#8A6500]" : "bg-[#E8F0FF] text-[#174EA6]"}`}>{row.partner_type.toUpperCase()}</span></td>
                       <td className="px-3 py-3 tabular-nums">{row.applicant_phone ?? "-"}</td>
                       <td className="px-3 py-3">{row.city ?? "-"}</td>
-                      <td className="px-3 py-3 font-semibold tabular-nums">{row.document_count}</td>
+                      <td className="px-3 py-3"><span className={row.document_count ? "font-semibold text-emerald-700" : "font-semibold text-amber-700"}>{row.document_count} received</span></td>
                       <td className="px-3 py-3">{row.source === "manager_portal" ? "Manager portal" : "Mobile app"}</td>
-                      <td className="px-3 py-3"><span className={row.age_days >= 7 ? "font-semibold text-red-700" : row.age_days >= 3 ? "font-semibold text-amber-700" : "text-[#64748B]"}>{row.age_days === 0 ? "Today" : `${row.age_days}d`}</span></td>
+                      <td className="px-3 py-3"><AgeBadge days={row.age_days} status={row.status} /></td>
                       <td className="px-3 py-3"><StatusPill status={row.status} /></td>
-                      <td className="px-3 py-3"><Link href={`/customers/applications/${row.id}`} className="font-semibold text-[#4F46E5] hover:underline">{row.status === "approved" || row.status === "rejected" ? "View" : "Edit / Review"}</Link></td>
+                      <td className="px-4 py-3 text-right"><Link href={`/customers/applications/${row.id}`} className="inline-flex rounded-lg border border-[#C7D2FE] bg-[#EEF2FF] px-3 py-1.5 text-[9.5px] font-semibold text-[#4338CA]">{row.status === "approved" || row.status === "rejected" ? "Open file" : "Review file"}</Link></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              {!rows.length ? <div className="px-4 py-14 text-center text-[11px] text-[#64748B]">No POSP/MISP applications match these filters.</div> : null}
+              {!rows.length ? <div className="px-4 py-16 text-center"><p className="text-[12px] font-semibold text-[#334155]">No applications found</p><p className="mt-1 text-[10px] text-[#64748B]">Adjust the filters or create a new POSP/MISP file.</p></div> : null}
             </div>
           </div>
         )}
 
-        {!error && totalPages > 1 ? (
-          <div className="flex items-center justify-between rounded-xl border border-[#E2E8F0] bg-white px-3 py-2">
-            <Link href={pageHref(q, partnerType, status, Math.max(1, page - 1))} className={`rounded-md border px-3 py-1.5 text-[10.5px] font-semibold ${page <= 1 ? "pointer-events-none text-[#94A3B8]" : "text-[#334155]"}`}>Previous</Link>
-            <span className="text-[10.5px] font-semibold text-[#475569]">Page {Math.min(page, totalPages)} of {totalPages}</span>
-            <Link href={pageHref(q, partnerType, status, Math.min(totalPages, page + 1))} className={`rounded-md border px-3 py-1.5 text-[10.5px] font-semibold ${page >= totalPages ? "pointer-events-none text-[#94A3B8]" : "text-[#334155]"}`}>Next</Link>
-          </div>
-        ) : null}
+        {!error && totalPages > 1 ? <div className="flex items-center justify-between rounded-xl border border-[#E2E8F0] bg-white px-3 py-2"><Link href={pageHref(q, partnerType, status, Math.max(1, page - 1))} className={`rounded-md border px-3 py-1.5 text-[10.5px] font-semibold ${page <= 1 ? "pointer-events-none text-[#94A3B8]" : "text-[#334155]"}`}>Previous</Link><span className="text-[10.5px] font-semibold text-[#475569]">Page {Math.min(page, totalPages)} of {totalPages}</span><Link href={pageHref(q, partnerType, status, Math.min(totalPages, page + 1))} className={`rounded-md border px-3 py-1.5 text-[10.5px] font-semibold ${page >= totalPages ? "pointer-events-none text-[#94A3B8]" : "text-[#334155]"}`}>Next</Link></div> : null}
       </div>
     </AppShell>
   );
 }
 
-function StatusPill({ status }: { status: string }) {
-  const complete = status === "approved";
-  const attention = status === "changes_requested" || status === "rejected";
-  const className = complete ? "border-emerald-200 bg-emerald-50 text-emerald-700" : attention ? "border-red-200 bg-red-50 text-red-700" : "border-amber-200 bg-amber-50 text-amber-700";
-  return <span className={`inline-flex rounded-full border px-2 py-0.5 text-[9.5px] font-semibold ${className}`}>{status.replaceAll("_", " ")}</span>;
-}
-
-function pageHref(q: string | null, partnerType: string, status: string | null, page: number) {
-  const params = new URLSearchParams();
-  if (q) params.set("q", q);
-  if (partnerType !== "posp_misp") params.set("type", partnerType);
-  if (status) params.set("status", status);
-  if (page > 1) params.set("page", String(page));
-  return `/customers/posp-misp${params.size ? `?${params.toString()}` : ""}`;
-}
+function Metric({ label, value, attention, complete }: { label: string; value: number; attention?: boolean; complete?: boolean }) { return <div className="bg-white px-4 py-3"><p className="text-[9px] font-semibold uppercase tracking-[0.06em] text-[#64748B]">{label}</p><p className={`mt-1 text-xl font-semibold ${attention ? "text-red-700" : complete ? "text-emerald-700" : "text-[#071D49]"}`}>{value}</p></div>; }
+function StatusPill({ status }: { status: string }) { const complete = status === "approved"; const attention = status === "changes_requested" || status === "rejected"; const className = complete ? "border-emerald-200 bg-emerald-50 text-emerald-700" : attention ? "border-red-200 bg-red-50 text-red-700" : status === "under_review" ? "border-blue-200 bg-blue-50 text-blue-700" : "border-amber-200 bg-amber-50 text-amber-700"; return <span className={`inline-flex rounded-full border px-2 py-0.5 text-[9px] font-semibold capitalize ${className}`}>{status.replaceAll("_", " ")}</span>; }
+function AgeBadge({ days, status }: { days: number; status: string }) { if (["approved","rejected"].includes(status)) return <span className="text-[#94A3B8]">Closed</span>; const className = days >= 7 ? "bg-red-100 text-red-700" : days >= 3 ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600"; return <span className={`rounded-full px-2 py-1 text-[9px] font-semibold ${className}`}>{days === 0 ? "Today" : `${days} days`}</span>; }
+function pageHref(q: string | null, partnerType: string, status: string | null, page: number) { const params = new URLSearchParams(); if (q) params.set("q", q); if (partnerType !== "posp_misp") params.set("type", partnerType); if (status) params.set("status", status); if (page > 1) params.set("page", String(page)); return `/customers/posp-misp${params.size ? `?${params.toString()}` : ""}`; }
