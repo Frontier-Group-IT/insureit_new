@@ -43,9 +43,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams?: P
         <section className="rounded-lg border border-[#D7E6F5] bg-white p-4 shadow-[0_3px_12px_rgba(7,29,73,0.05)]">
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#E7EEF6] pb-3">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#0B63CE]"></p>
               <h1 className="mt-1 text-[20px] font-bold text-[#071D49]">Employee onboarding</h1>
-              <p className="mt-1 text-[11px] text-[#667085]"></p>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center">
               <Summary value={employees.length} label="Listed" />

@@ -151,7 +151,6 @@ export function PospMispOnboardingForm({ action, partnerType, salesManagers, oem
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-[13px] font-semibold text-[#0F172A]">Pre-IIB Documents</h3>
-                <p className="mt-1 text-[10px] text-[#64748B]"></p>
               </div>
             </div>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">

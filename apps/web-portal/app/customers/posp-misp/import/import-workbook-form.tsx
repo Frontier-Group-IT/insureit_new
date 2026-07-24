@@ -23,7 +23,6 @@ export function ImportWorkbookForm({ action }: Props) {
       <form action={formAction} className="mx-auto max-w-3xl overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
         <div className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-5 py-4">
           <h2 className="text-[15px] font-semibold text-[#0F172A]">Upload POSP / MISP workbook</h2>
-          <p className="mt-1 text-[11px] text-[#64748B]"></p>
         </div>
         <div className="space-y-4 p-5">
           <label htmlFor="workbook" className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#CBD5E1] bg-[#F8FAFC] px-4 py-6 text-center hover:border-[#6366F1]">
