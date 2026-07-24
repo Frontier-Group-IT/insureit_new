@@ -10,9 +10,23 @@ const DEFAULT_STATE = {
   queue: []
 };
 
+const HEARTBEAT_ALARM = "nm-pan-heartbeat";
+const HEARTBEAT_MINUTES = 0.5;
+let claimInFlight = null;
+
 chrome.runtime.onInstalled.addListener(async () => {
   const stored = await chrome.storage.local.get(["runtime"]);
   if (!stored.runtime) await chrome.storage.local.set({ runtime: DEFAULT_STATE });
+  if (stored.runtime?.running) await ensureHeartbeat();
+});
+
+chrome.runtime.onStartup.addListener(async () => {
+  const runtime = await getRuntime();
+  if (runtime.running) await ensureHeartbeat();
+});
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === HEARTBEAT_ALARM) heartbeat().catch(() => {});
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -27,8 +41,14 @@ async function handleMessage(message, sender) {
     case "GET_ALL_STATE": return getAllState();
     case "SAVE_CONFIG": return saveConfig(message.config);
     case "START": return startChecker();
+    case "CHECK_NOW": return heartbeat(true);
     case "PAUSE": return updateRuntime({ paused: true, status: "Paused" });
-    case "RESUME": return updateRuntime({ paused: false, status: "Resuming" });
+    case "RESUME": {
+      const result = await updateRuntime({ paused: false, status: "Resuming" });
+      await ensureHeartbeat();
+      await heartbeat(true);
+      return result;
+    }
     case "STOP": return stopChecker();
     case "GET_RUNTIME": return { ok: true, ...(await getRuntime()) };
     case "CLAIM_MORE": return claimMoreJobs();
@@ -63,24 +83,65 @@ async function saveConfig(config) {
 }
 
 async function startChecker() {
-  const { config } = await getAllState();
+  const { config, runtime } = await getAllState();
   validateConfig(config);
-  await chrome.storage.local.set({ runtime: { ...DEFAULT_STATE, running: true, status: "Claiming queued PANs" } });
-  const claim = await claimMoreJobs();
-  const tab = await findOrOpenIibTab();
-  await updateRuntime({ activeTabId: tab.id, status: claim.jobs.length ? "Opening IIB POS" : "No pending PANs" });
-  return { ok: true, jobs: claim.jobs.length };
+  if (!runtime.running) {
+    await chrome.storage.local.set({ runtime: { ...DEFAULT_STATE, running: true, status: "Claiming queued PANs" } });
+  }
+  await ensureHeartbeat();
+  return heartbeat(true);
 }
 
 async function stopChecker() {
   const runtime = await getRuntime();
   const next = { ...runtime, running: false, paused: false, status: "Stopped", currentPan: null, queue: [] };
   await chrome.storage.local.set({ runtime: next });
+  await chrome.alarms.clear(HEARTBEAT_ALARM);
   broadcastRuntime(next);
   return { ok: true, ...next };
 }
 
+async function ensureHeartbeat() {
+  const existing = await chrome.alarms.get(HEARTBEAT_ALARM);
+  if (!existing) {
+    await chrome.alarms.create(HEARTBEAT_ALARM, {
+      delayInMinutes: HEARTBEAT_MINUTES,
+      periodInMinutes: HEARTBEAT_MINUTES
+    });
+  }
+}
+
+async function heartbeat(force = false) {
+  const runtime = await getRuntime();
+  if (!runtime.running) return { ok: true, jobs: 0, skipped: true };
+  if (runtime.paused && !force) return { ok: true, jobs: 0, skipped: true };
+
+  let claim = { ok: true, jobs: [] };
+  if (!runtime.queue?.length || force) claim = await claimMoreJobs();
+  const latest = await getRuntime();
+
+  if (latest.queue?.length) {
+    const tab = await findOrOpenIibTab();
+    await updateRuntime({ activeTabId: tab.id, status: latest.status === "No pending PANs" ? "PANs ready" : latest.status });
+    try {
+      await chrome.tabs.sendMessage(tab.id, { type: "WAKE_UP" });
+    } catch (_) {
+      try { await chrome.tabs.reload(tab.id); } catch (_) {}
+    }
+  } else if (force) {
+    await updateRuntime({ status: "No pending PANs. Waiting for new work..." });
+  }
+
+  return { ok: true, jobs: Array.isArray(claim.jobs) ? claim.jobs.length : 0 };
+}
+
 async function claimMoreJobs() {
+  if (claimInFlight) return claimInFlight;
+  claimInFlight = doClaimMoreJobs().finally(() => { claimInFlight = null; });
+  return claimInFlight;
+}
+
+async function doClaimMoreJobs() {
   const { config, runtime } = await getAllState();
   validateConfig(config);
   if (!runtime.running) return { ok: true, jobs: [] };
@@ -100,7 +161,7 @@ async function claimMoreJobs() {
   await updateRuntime({
     queue: merged,
     totalClaimed: (current.totalClaimed || 0) + jobs.length,
-    status: merged.length ? "PANs ready" : "No pending PANs"
+    status: merged.length ? "PANs ready" : "No pending PANs. Waiting for new work..."
   });
   return { ok: true, jobs };
 }
@@ -147,6 +208,7 @@ async function completeJob(payload) {
   };
   await updateRuntime(next);
   await refreshOpenInsureitTabs(config.insureitUrl, body.applicationId);
+  await ensureHeartbeat();
   return { ok: true, applicationId: body.applicationId };
 }
 
@@ -168,7 +230,6 @@ async function findOrOpenIibTab() {
   const tabs = await chrome.tabs.query({ url: "https://pos.iib.gov.in/*" });
   if (tabs.length) {
     const tab = tabs[0];
-    await chrome.tabs.update(tab.id, { active: true });
     return tab;
   }
   return chrome.tabs.create({ url: "https://pos.iib.gov.in/", active: true });
