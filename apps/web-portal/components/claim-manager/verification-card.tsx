@@ -1,6 +1,7 @@
 import { reviewClaimDocument } from "@/app/actions";
 import { VerificationModalLauncher } from "@/components/claim-manager/verification-modal";
 import { saveClaimDocumentVerification } from "@/app/claims/[id]/verification-actions";
+import { FormSubmitButton } from "@/components/form-submit-button";
 
 export type VerificationDocument = {
   id: string;
@@ -68,14 +69,14 @@ function VerifyAction({ claimId, document, kind, canReview, isVerified, title }:
     return <VerificationModalLauncher kind={kind} title={title} action={saveClaimDocumentVerification.bind(null, claimId, document.id, kind)} />;
   }
   if (canReview && document && !isVerified) {
-    return <form action={reviewClaimDocument.bind(null, claimId, document.id, "verified")}><button className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm font-black text-emerald-700" type="submit">Verify</button></form>;
+    return <form action={reviewClaimDocument.bind(null, claimId, document.id, "verified")}><FormSubmitButton label="Verify" pendingLabel="Verifying" className="inline-flex w-full items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm font-black text-emerald-700 disabled:cursor-not-allowed disabled:opacity-70" /></form>;
   }
   return <button className="rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2.5 text-sm font-black text-emerald-700" type="button" disabled>{isVerified ? "Verified" : "Verify"}</button>;
 }
 
 function ReplaceAction({ claimId, document, canReview, isVerified }: { claimId: string; document?: VerificationDocument; canReview: boolean; isVerified: boolean }) {
   if (canReview && document && !isVerified) {
-    return <form action={reviewClaimDocument.bind(null, claimId, document.id, "rejected")}><input type="hidden" name="reason" value={`Replacement requested for ${document.document_type}.`} /><button className="w-full rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-black text-red-700" type="submit">Replace</button></form>;
+    return <form action={reviewClaimDocument.bind(null, claimId, document.id, "rejected")}><input type="hidden" name="reason" value={`Replacement requested for ${document.document_type}.`} /><FormSubmitButton label="Replace" pendingLabel="Requesting" className="inline-flex w-full items-center justify-center rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-black text-red-700 disabled:cursor-not-allowed disabled:opacity-70" /></form>;
   }
   return <button className="rounded-xl border border-red-100 bg-red-50/60 px-3 py-2.5 text-sm font-black text-red-400" type="button" disabled>Replace</button>;
 }

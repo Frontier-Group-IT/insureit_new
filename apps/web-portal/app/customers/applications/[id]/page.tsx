@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/shell";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { requireMasterDataManager } from "@/lib/master-data-server";
 import { approveMobileIndividualApplication, requestMobileApplicationChanges } from "../actions";
@@ -8,6 +9,8 @@ import { approveMobileCorporateApplication, updateMobileCorporateApplicationDraf
 import { approveMobileDealershipApplication, updateMobileDealershipApplicationDraft } from "../dealership-actions";
 import { approveMobileGroupApplication } from "../group-actions";
 import { approvePospMispApplication } from "../posp-misp-actions";
+import { PospMispWorkflowPanel, type PospMispWorkflowProfile } from "../posp-misp-workflow-panel";
+import { formatIndianDate } from "@/lib/indian-date";
 
 type PageProps = { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; success?: string }> };
 type Application = { id: string; partner_type: string | null; status: string; applicant_phone: string | null; applicant_email: string | null; draft_data: Record<string, unknown> | null; created_at: string; updated_at: string; customer_id: string | null };
@@ -24,6 +27,10 @@ const labels: Record<string, string> = {
   representative_aadhaar_back: "Representative Aadhaar back",
   representative_pan_copy: "Representative PAN copy",
   education_certificate: "10th / 12th certificate",
+  education_10th_marksheet: "10th Marksheet",
+  education_12th_marksheet: "12th Marksheet",
+  education_graduation_marksheet: "Graduation Marksheet",
+  education_post_graduation_marksheet: "Post Graduation Marksheet",
   cancelled_cheque: "Cancelled cheque",
   photograph: "Photograph",
   registration_form: "Registration form",
@@ -59,12 +66,27 @@ const errors: Record<string, string> = {
   posp_misp_login_failed: "One of the customer login profiles could not be prepared. Check the mobile numbers and try again.",
   posp_misp_approval_failed: "The POSP/MISP application could not be activated. No partial customer record was retained.",
   reason_required: "Enter a clear correction reason of at least 8 characters.",
-  application_not_ready: "This application is not ready for approval."
+  application_not_ready: "This application is not ready for approval.",
+  pre_iib_incomplete: "Complete the bank and pre-IIB details before starting IIB processing.",
+  stage_locked: "This workflow stage has already been completed.",
+  iib_remarks_required: "Select the IIB result before completing this stage.",
+  iib_upload_required: "Confirm the IIB upload and enter its date.",
+  training_incomplete: "Complete all required training, exam and onboarding details.",
+  training_dates_invalid: "Training end date cannot be before the start date.",
+  credentials_required: "Confirm that the training credentials were shared.",
+  agreement_required: "Upload the agreement copy before completing training.",
+  agreement_invalid: "Agreement copy must be a PDF, JPG or PNG no larger than 5 MB.",
+  agreement_upload_failed: "The agreement copy could not be uploaded.",
+  workflow_save_failed: "The workflow update could not be saved. Refresh the page and try again."
 };
 const successes: Record<string, string> = {
   corporate_updated: "Corporate application details were saved.",
   dealership_updated: "Dealership application details were saved.",
   changes_requested: "Correction request was sent to the customer.",
+  posp_misp_submitted: "Pre-IIB application saved. Download the registration form and continue the operational workflow.",
+  iib_started: "The application moved to IIB processing.",
+  iib_completed: "IIB processing completed. Training details are now available.",
+  training_completed: "Training and post-IIB documentation completed.",
 };
 const corporateContactRoles = [
   ["corporate_creator", "Corporate Creator"],
@@ -95,6 +117,14 @@ export default async function ApplicationReviewPage({ params, searchParams }: Pa
   const isCorporate = application.partner_type === "corporate";
   const isDealership = application.partner_type === "dealership";
   const isPospMisp = application.partner_type === "posp" || application.partner_type === "misp";
+  const { data: pospMispProfile } = isPospMisp
+    ? await supabase
+      .from("posp_misp_onboarding_profiles")
+      .select("workflow_stage, iib_remarks, iib_uploaded, iib_uploaded_at, training_login_id, training_credentials_shared_flag, training_start_date, training_end_date, training_status, training_certificate_number, exam_status, onboarding_date")
+      .eq("application_id", id)
+      .maybeSingle<PospMispWorkflowProfile>()
+    : { data: null };
+  const canApprove = canReview && (!isPospMisp || pospMispProfile?.workflow_stage === "completed");
   const pageError = query.error === "application_not_ready" && !canReview ? null : query.error;
   const contactByRole = new Map((contacts ?? []).map((contact) => [contact.contact_role, contact]));
   const fields = application.partner_type === "group"
@@ -105,7 +135,7 @@ export default async function ApplicationReviewPage({ params, searchParams }: Pa
         ? [["Dealership name", draft.dealership_name], ["Owner", draft.owner_name], ["Mobile", draft.phone ?? application.applicant_phone], ["Location", [draft.city,draft.state,draft.postal_code].filter(Boolean).join(", ")], ["OEM", draft.oem_name], ["Yearly sales", salesLabel(draft.yearly_sales_band)]]
         : [["Full name", draft.contact_name], ["Mobile", application.applicant_phone], ["Email", draft.email ?? application.applicant_email], ["PAN", draft.pan_number], ["Aadhaar", draft.aadhaar_last_four ? `Ends in ${draft.aadhaar_last_four}` : null], ["Address", [draft.address_street, draft.address_locality].filter(Boolean).join(", ")], ["Location", [draft.city, draft.state, draft.postal_code].filter(Boolean).join(", ")], ["Fleet size", labelValue(draft.fleet_size_band)], ["GST registered", draft.is_gst_registered === true ? "Yes" : "No"], ["Legal trade name", draft.legal_trade_name], ["GSTIN", draft.gst_number]];
   const reviewFields = isPospMisp
-    ? [["Name", application.partner_type === "posp" ? draft.pos_name : draft.misp_name], ["Partner type", application.partner_type?.toUpperCase()], ["Associate", [draft.associate_name, draft.associate_id].filter(Boolean).join(" - ")], ["External ID", draft.external_onboarding_id], ["Primary mobile", application.applicant_phone], ["Email", draft.applicant_email ?? application.applicant_email], ["PAN", draft.pan_number], ["Aadhaar", draft.aadhaar_last_four ? `Ends in ${draft.aadhaar_last_four}` : null], ["GSTIN", draft.gst_number], ["Location", [draft.city,draft.state,draft.postal_code].filter(Boolean).join(", ")], ["Education / marksheet", draft.education_status], ["Bank", draft.bank_name], ["Account number", maskAccountNumber(draft.bank_account_number ?? draft.bank_account_last_four)], ["IFSC", draft.bank_ifsc_code], ["IIB remarks", draft.iib_remarks], ["IIB upload", [draft.iib_upload_status, draft.iib_uploaded_at].filter(Boolean).join(" - ")], ["Credentials shared", draft.training_credentials_shared_flag === true ? "Yes" : "No"], ["Training login ID", draft.training_login_id], ["Training password", draft.training_password || draft.training_password_on_file === true ? "Stored - value hidden" : "Not provided"], ["Training period", [draft.training_start_date, draft.training_end_date].filter(Boolean).join(" to ")], ["Training status", draft.training_status], ["Certificate number", draft.training_certificate_number], ["Exam status", draft.exam_status], ["Onboarding date", draft.onboarding_date], ["OEM", draft.oem_name], ["DP name", draft.dp_name], ["DP mobile", draft.dp_phone], ["DP email", draft.dp_email], ["DP PAN", draft.dp_pan_number]]
+    ? [["Name", application.partner_type === "posp" ? draft.pos_name : draft.misp_name], ["Partner type", application.partner_type?.toUpperCase()], ["Associate", [draft.associate_name, draft.associate_id].filter(Boolean).join(" - ")], ["External ID", draft.external_onboarding_id], ["Primary mobile", application.applicant_phone], ["Email", draft.applicant_email ?? application.applicant_email], ["Date of birth", formatIndianDate(textValue(draft.date_of_birth))], ["Document received", formatIndianDate(textValue(draft.document_received_at))], ["PAN", draft.pan_number], ["Aadhaar", draft.aadhaar_last_four ? `Ends in ${draft.aadhaar_last_four}` : null], ["GSTIN", draft.gst_number], ["Location", [draft.city,draft.state,draft.postal_code].filter(Boolean).join(", ")], ["Education / marksheet", draft.education_status], ["Bank", draft.bank_name], ["Account number", maskAccountNumber(draft.bank_account_number ?? draft.bank_account_last_four)], ["IFSC", draft.bank_ifsc_code], ["IIB remarks", pospMispProfile?.iib_remarks ?? draft.iib_remarks], ["IIB upload", [pospMispProfile?.iib_uploaded ? "uploaded" : draft.iib_upload_status, formatIndianDate(pospMispProfile?.iib_uploaded_at ?? textValue(draft.iib_uploaded_at))].filter(Boolean).join(" - ")], ["Credentials shared", pospMispProfile?.training_credentials_shared_flag === true ? "Yes" : "No"], ["Training login ID", pospMispProfile?.training_login_id ?? draft.training_login_id], ["Training password", pospMispProfile?.training_login_id || draft.training_password || draft.training_password_on_file === true ? "Stored - value hidden" : "Not provided"], ["Training period", [formatIndianDate(pospMispProfile?.training_start_date ?? textValue(draft.training_start_date)), formatIndianDate(pospMispProfile?.training_end_date ?? textValue(draft.training_end_date))].filter(Boolean).join(" to ")], ["Training status", pospMispProfile?.training_status ?? draft.training_status], ["Certificate number", pospMispProfile?.training_certificate_number ?? draft.training_certificate_number], ["Exam status", pospMispProfile?.exam_status ?? draft.exam_status], ["Onboarding date", formatIndianDate(pospMispProfile?.onboarding_date ?? textValue(draft.onboarding_date))], ["OEM", draft.oem_name], ["DP name", draft.dp_name], ["DP mobile", draft.dp_phone], ["DP email", draft.dp_email], ["DP PAN", draft.dp_pan_number]]
     : fields;
   const effectiveApproveAction = application.partner_type === "group"
     ? approveMobileGroupApplication
@@ -258,6 +288,7 @@ export default async function ApplicationReviewPage({ params, searchParams }: Pa
           </section>
 
           <aside className="space-y-4">
+            {isPospMisp && pospMispProfile ? <PospMispWorkflowPanel applicationId={id} profile={pospMispProfile} /> : null}
             <section className="rounded-xl border border-[#DCE5EF] bg-white p-4 shadow-sm">
               <h2 className="text-sm font-semibold text-[#0F172A]">Documents</h2>
               <div className="mt-3 space-y-2">
@@ -272,13 +303,13 @@ export default async function ApplicationReviewPage({ params, searchParams }: Pa
                   <input type="hidden" name="application_id" value={id}/>
                   <p className="text-[11px] font-semibold text-emerald-900">Approve and activate</p>
                   <p className="mt-1 text-[10px] text-emerald-800">{isPospMisp ? application.partner_type === "misp" ? "Creates the MISP customer and one login per distinct primary/DP mobile number." : "Creates the POSP customer and activates its mobile login." : "Creates the customer, account access, permanent documents and Group association."}</p>
-                  <button className="mt-3 w-full rounded-md bg-emerald-700 px-4 py-2 text-[11px] font-semibold text-white">Approve KYC</button>
+                  <FormSubmitButton label={canApprove ? "Approve KYC" : "Complete operational stages first"} pendingLabel="Approving" disabled={!canApprove} className="mt-3 inline-flex w-full items-center justify-center rounded-md bg-emerald-700 px-4 py-2 text-[11px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-emerald-300 disabled:opacity-70" />
                 </form>
                 <form action={requestMobileApplicationChanges} className="mt-3 rounded-lg border border-red-100 bg-red-50 p-3">
                   <input type="hidden" name="application_id" value={id}/>
                   <label className="text-[11px] font-semibold text-red-900" htmlFor="reason">Request corrections</label>
                   <textarea id="reason" name="reason" required minLength={8} className="mt-2 min-h-20 w-full rounded-md border border-red-100 bg-white p-2 text-[11px]"/>
-                  <button className="mt-2 w-full rounded-md border border-red-200 bg-white px-4 py-2 text-[11px] font-semibold text-red-700">Send back</button>
+                  <FormSubmitButton label="Send back" pendingLabel="Sending" className="mt-2 inline-flex w-full items-center justify-center rounded-md border border-red-200 bg-white px-4 py-2 text-[11px] font-semibold text-red-700 disabled:cursor-not-allowed disabled:opacity-70" />
                 </form>
               </section>
             ) : null}
@@ -306,7 +337,7 @@ function SaveCorrections({ canReview, status }: { canReview: boolean; status: st
   return canReview ? (
     <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#DCE5EF] bg-[#F8FAFC] px-4 py-3">
       <p className="text-[11px] text-[#64748B]">Save corrections before approving if the submitted data does not match the uploaded documents.</p>
-      <button className="rounded-md bg-[#0F2A55] px-4 py-2 text-[11px] font-semibold text-white">Save corrections</button>
+      <FormSubmitButton label="Save corrections" pendingLabel="Saving" className="inline-flex items-center justify-center rounded-md bg-[#0F2A55] px-4 py-2 text-[11px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70" />
     </div>
   ) : (
     <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[11px] font-medium text-emerald-800">

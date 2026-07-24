@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { deletePospMispImportRow, updatePospMispImportRow } from "../actions";
+import { IndianDateField } from "@/components/indian-date-field";
 
 type PartnerType = "posp" | "misp";
 type ImportRow = {
@@ -24,24 +25,30 @@ type Props = {
   rows: ImportRow[];
   salesManagers: Array<{ id: string; fullName: string; employeeCode: string | null }>;
   oems: Array<{ value: string; label: string }>;
+  banks: Array<{ value: string; label: string }>;
 };
 
 const inputClass = "h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
 const labelClass = "mb-1 block text-[10.5px] font-semibold text-[#344054]";
 const iibRemarks = ["Matching Record Found In DataBase", "No Data Found In POS System"];
-const documentFields = [
+const preIibDocumentFields = [
   ["aadhaar_front", "Aadhaar front"],
   ["aadhaar_back", "Aadhaar back"],
   ["pan_copy", "PAN copy"],
-  ["education_certificate", "10th / 12th certificate"],
+  ["education_10th_marksheet", "10th Marksheet"],
+  ["education_12th_marksheet", "12th Marksheet"],
+  ["education_graduation_marksheet", "Graduation Marksheet"],
+  ["education_post_graduation_marksheet", "Post Graduation Marksheet"],
   ["cancelled_cheque", "Cancelled cheque"],
   ["photograph", "Photograph"],
-  ["registration_form", "Registration form"],
-  ["agreement_copy", "Agreement copy"],
   ["gst_copy", "GST certificate"]
 ] as const;
+const postIibDocumentFields = [["agreement_copy", "Agreement copy"]] as const;
+const educationDocumentTypes = new Set<string>(
+  preIibDocumentFields.filter(([key]) => key.startsWith("education_")).map(([key]) => key)
+);
 
-export function ImportRowReviewTable({ batchId, batchStatus, rows, salesManagers, oems }: Props) {
+export function ImportRowReviewTable({ batchId, batchStatus, rows, salesManagers, oems, banks }: Props) {
   const [editingRow, setEditingRow] = useState<ImportRow | null>(null);
   const canEditBatch = ["parsed", "partially_submitted", "failed"].includes(batchStatus);
 
@@ -96,6 +103,7 @@ export function ImportRowReviewTable({ batchId, batchStatus, rows, salesManagers
           editable={canEditBatch && !["submitted", "processing"].includes(editingRow.status)}
           salesManagers={salesManagers}
           oems={oems}
+          banks={banks}
           onClose={() => setEditingRow(null)}
         />
       ) : null}
@@ -103,7 +111,7 @@ export function ImportRowReviewTable({ batchId, batchStatus, rows, salesManagers
   );
 }
 
-function EditRowModal({ batchId, row, editable, salesManagers, oems, onClose }: { batchId: string; row: ImportRow; editable: boolean; salesManagers: Props["salesManagers"]; oems: Props["oems"]; onClose: () => void }) {
+function EditRowModal({ batchId, row, editable, salesManagers, oems, banks, onClose }: { batchId: string; row: ImportRow; editable: boolean; salesManagers: Props["salesManagers"]; oems: Props["oems"]; banks: Props["banks"]; onClose: () => void }) {
   const data = row.normalized_data ?? {};
   const isMisp = row.partner_type === "misp";
   const selectedManagerId = stringValue(data.associate_profile_id) ?? "";
@@ -128,7 +136,7 @@ function EditRowModal({ batchId, row, editable, salesManagers, oems, onClose }: 
             <SelectField label="Associate Name" name="associate_profile_id" defaultValue={selectedManagerId} required disabled={!editable} options={salesManagers.map((manager) => ({ value: manager.id, label: `${manager.fullName}${manager.employeeCode ? ` - ${manager.employeeCode}` : ""}` }))} placeholder="Select Sales Manager" />
             <ReadOnlyValue label="Current Associate ID" value={stringValue(data.associate_id) ?? "Auto-filled when saved"} />
             <Field label={isMisp ? "MISP ID" : "Onboarding ID"} name="external_onboarding_id" defaultValue={stringValue(data.external_onboarding_id) ?? ""} disabled={!editable} />
-            <Field label="Document Received Date" name="document_received_at" type="date" defaultValue={stringValue(data.document_received_at) ?? ""} disabled={!editable} />
+            <IndianDateField label="Document Received Date" name="document_received_at" defaultValue={stringValue(data.document_received_at)} disabled={!editable} />
             {isMisp ? <Field label="MISP Name" name="misp_name" required defaultValue={stringValue(data.misp_name) ?? ""} disabled={!editable} /> : <Field label="POS Name" name="pos_name" required defaultValue={stringValue(data.pos_name) ?? ""} disabled={!editable} />}
             <Field label={isMisp ? "MISP PAN" : "PAN Number"} name="pan_number" maxLength={10} defaultValue={stringValue(data.pan_number) ?? ""} disabled={!editable} />
             {isMisp ? <SelectField label="OEM Name" name="oem_name" required defaultValue={stringValue(data.oem_name) ?? ""} disabled={!editable} options={oems} placeholder="Select OEM" /> : null}
@@ -138,7 +146,7 @@ function EditRowModal({ batchId, row, editable, salesManagers, oems, onClose }: 
           <Section title={isMisp ? "Primary MISP Contact" : "Contact Details"}>
             <Field label="Mobile Number" name="applicant_phone" required inputMode="tel" defaultValue={stringValue(data.applicant_phone) ?? ""} disabled={!editable} />
             <Field label="Email" name="applicant_email" type="email" defaultValue={stringValue(data.applicant_email) ?? ""} disabled={!editable} />
-            <Field label="Date of Birth" name="date_of_birth" type="date" defaultValue={stringValue(data.date_of_birth) ?? ""} disabled={!editable} />
+            <IndianDateField label="Date of Birth" name="date_of_birth" defaultValue={stringValue(data.date_of_birth)} disabled={!editable} />
             <Field label="Replace Aadhaar Number" name="aadhaar_number" inputMode="numeric" maxLength={12} placeholder={stringValue(data.aadhaar_last_four) ? `Stored ending ${stringValue(data.aadhaar_last_four)}` : "Optional"} disabled={!editable} />
             <Field label="Address" name="address" defaultValue={stringValue(data.address) ?? ""} disabled={!editable} />
             <Field label="City" name="city" defaultValue={stringValue(data.city) ?? ""} disabled={!editable} />
@@ -155,23 +163,26 @@ function EditRowModal({ batchId, row, editable, salesManagers, oems, onClose }: 
             </Section>
           ) : null}
 
-          <Section title="Bank and IIB Details">
-            <ReadOnlyValue label="Education / Marksheet Status" value={row.documents.some((document) => document.document_type === "education_certificate") ? "Received" : "Not received"} />
-            <Field label="Bank Name" name="bank_name" defaultValue={stringValue(data.bank_name) ?? ""} disabled={!editable} />
+          <Section title="Bank Details">
+            <ReadOnlyValue label="Education / Marksheet Status" value={row.documents.some((document) => educationDocumentTypes.has(document.document_type)) ? "Received" : "Not received"} />
+            <SelectField label="Bank Name" name="bank_id" required defaultValue={stringValue(data.bank_id) ?? ""} disabled={!editable} options={banks} placeholder="Select bank" />
             <Field label="Account Number" name="bank_account_number" defaultValue={stringValue(data.bank_account_number) ?? ""} disabled={!editable} />
             <Field label="IFSC Code" name="bank_ifsc_code" defaultValue={stringValue(data.bank_ifsc_code) ?? ""} disabled={!editable} />
+          </Section>
+
+          <Section title="IIB Portal Processing">
             <SelectField label="IIB Remarks" name="iib_remarks" defaultValue={stringValue(data.iib_remarks) ?? ""} disabled={!editable} options={iibRemarks.map((remark) => ({ value: remark, label: remark }))} placeholder="Select IIB remark" />
             <CheckboxField label="IIB uploaded" name="iib_uploaded" defaultChecked={data.iib_uploaded === true} disabled={!editable} />
-            <Field label="IIB Upload Date" name="iib_uploaded_at" type="date" defaultValue={stringValue(data.iib_uploaded_at) ?? ""} disabled={!editable} />
+            <IndianDateField label="IIB Upload Date" name="iib_uploaded_at" defaultValue={stringValue(data.iib_uploaded_at)} disabled={!editable} />
           </Section>
 
           <section className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-5 py-4">
             <div className="mb-3">
-              <h3 className="text-[13px] font-semibold text-[#0F172A]">Supporting Documents</h3>
-              <p className="mt-1 text-[10.5px] text-[#64748B]">Upload or replace files here. Document statuses are calculated from the files actually attached to this row.</p>
+              <h3 className="text-[13px] font-semibold text-[#0F172A]">Pre-IIB Documents</h3>
+              <p className="mt-1 text-[10.5px] text-[#64748B]">Documents collected before IIB submission. Education status is calculated from the marksheets attached here.</p>
             </div>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {documentFields.map(([key, label]) => {
+              {preIibDocumentFields.map(([key, label]) => {
                 const current = row.documents.find((document) => document.document_type === key);
                 return (
                   <label key={key} className="rounded-lg border border-[#DCE5EF] bg-white p-3">
@@ -184,17 +195,35 @@ function EditRowModal({ batchId, row, editable, salesManagers, oems, onClose }: 
             </div>
           </section>
 
-          <Section title="Training and Exam Credentials">
+          <section className="border-b border-[#E2E8F0] px-5 py-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div><h3 className="text-[13px] font-semibold text-[#0F172A]">Registration Form</h3><p className="mt-1 text-[10px] text-[#64748B]">The form is generated from the submitted onboarding record.</p></div>
+              {row.application_id ? <a href={`/customers/applications/${row.application_id}/registration-form`} download className="rounded-md bg-[#0F2A55] px-3 py-2 text-[10.5px] font-semibold text-white">Download PDF</a> : <span className="rounded-md border border-[#CBD5E1] bg-[#F8FAFC] px-3 py-2 text-[10px] font-semibold text-[#64748B]">Available after submission</span>}
+            </div>
+          </section>
+
+          <Section title="Training and Exam">
             <CheckboxField label="Credentials shared" name="training_credentials_shared_flag" defaultChecked={data.training_credentials_shared_flag === true} disabled={!editable} />
             <Field label="Training Login ID" name="training_login_id" defaultValue={stringValue(data.training_login_id) ?? ""} disabled={!editable} />
             <Field label="Training Password" name="training_password" type="password" defaultValue={stringValue(data.training_password) ?? ""} disabled={!editable} />
-            <Field label="Training Start Date" name="training_start_date" type="date" defaultValue={stringValue(data.training_start_date) ?? ""} disabled={!editable} />
-            <Field label="Training End Date" name="training_end_date" type="date" defaultValue={stringValue(data.training_end_date) ?? ""} disabled={!editable} />
+            <IndianDateField label="Training Start Date" name="training_start_date" defaultValue={stringValue(data.training_start_date)} disabled={!editable} />
+            <IndianDateField label="Training End Date" name="training_end_date" defaultValue={stringValue(data.training_end_date)} disabled={!editable} />
             <Field label="Training Status" name="training_status" defaultValue={stringValue(data.training_status) ?? ""} disabled={!editable} />
             <Field label="Training Certificate No." name="training_certificate_number" defaultValue={stringValue(data.training_certificate_number) ?? ""} disabled={!editable} />
             <Field label="Exam Status" name="exam_status" defaultValue={stringValue(data.exam_status) ?? ""} disabled={!editable} />
-            <Field label="Onboarding Date" name="onboarding_date" type="date" defaultValue={stringValue(data.onboarding_date) ?? ""} disabled={!editable} />
+            <IndianDateField label="Onboarding Date" name="onboarding_date" defaultValue={stringValue(data.onboarding_date)} disabled={!editable} />
           </Section>
+
+          <section className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-5 py-4">
+            <h3 className="text-[13px] font-semibold text-[#0F172A]">Post-IIB Documents</h3>
+            <p className="mt-1 text-[10px] text-[#64748B]">Agreement copy is collected after IIB processing.</p>
+            <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {postIibDocumentFields.map(([key, label]) => {
+                const current = row.documents.find((document) => document.document_type === key);
+                return <label key={key} className="rounded-lg border border-[#DCE5EF] bg-white p-3"><span className="block text-[10.5px] font-semibold text-[#344054]">{label}</span><span className={`mt-1 block truncate text-[9.5px] ${current ? "text-emerald-700" : "text-[#64748B]"}`}>{current ? current.file_name : "Not received"}</span>{editable ? <input name={key} type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" className="mt-2 block w-full text-[10px] text-[#475569] file:mr-2 file:rounded-md file:border-0 file:bg-[#EEF2FF] file:px-2.5 file:py-1.5 file:text-[9.5px] file:font-semibold file:text-[#4338CA]" /> : null}</label>;
+              })}
+            </div>
+          </section>
 
           <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t border-[#E2E8F0] bg-white/95 px-5 py-3 backdrop-blur">
             <button type="button" onClick={onClose} className="rounded-md border border-[#CBD5E1] px-4 py-2 text-[11px] font-semibold text-[#334155]">Close</button>

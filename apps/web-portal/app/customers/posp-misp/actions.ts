@@ -8,6 +8,7 @@ import { parsePospMispWorkbook, WorkbookValidationError } from "@/lib/posp-misp-
 import { canManageMasterData } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { beginPortalOnboardingApplication } from "../onboarding-applications";
+import { normalizeImportedDate } from "@/lib/indian-date";
 
 export type PospMispState = { error: string | null; field: string | null };
 
@@ -16,10 +17,12 @@ type DocumentKey =
   | "aadhaar_front"
   | "aadhaar_back"
   | "pan_copy"
-  | "education_certificate"
+  | "education_10th_marksheet"
+  | "education_12th_marksheet"
+  | "education_graduation_marksheet"
+  | "education_post_graduation_marksheet"
   | "cancelled_cheque"
   | "photograph"
-  | "registration_form"
   | "agreement_copy"
   | "gst_copy";
 
@@ -44,6 +47,7 @@ type NormalizedRow = {
   date_of_birth: string | null;
   gst_number: string | null;
   education_status: string | null;
+  bank_id: string | null;
   bank_name: string | null;
   bank_account_number: string | null;
   bank_ifsc_code: string | null;
@@ -84,6 +88,12 @@ type SalesManagerOption = {
   employee_code: string | null;
 };
 
+type BankOption = {
+  id: string;
+  name: string;
+  normalized_name: string;
+};
+
 const DOCUMENT_BUCKET = "customer-documents";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
@@ -91,17 +101,28 @@ const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const GST_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 const EXTERNAL_ID_PATTERN = /^SIB\/[0-9]{4}\/(0[1-9]|1[0-2])\/[0-9]{4}$/;
 const IIB_REMARK_OPTIONS = new Set(["Matching Record Found In DataBase", "No Data Found In POS System"]);
-const DOCUMENT_FIELDS: Array<{ key: DocumentKey; label: string }> = [
+const PRE_IIB_DOCUMENT_FIELDS: Array<{ key: DocumentKey; label: string }> = [
   { key: "aadhaar_front", label: "Aadhaar front" },
   { key: "aadhaar_back", label: "Aadhaar back" },
   { key: "pan_copy", label: "PAN copy" },
-  { key: "education_certificate", label: "10th / 12th certificate" },
+  { key: "education_10th_marksheet", label: "10th Marksheet" },
+  { key: "education_12th_marksheet", label: "12th Marksheet" },
+  { key: "education_graduation_marksheet", label: "Graduation Marksheet" },
+  { key: "education_post_graduation_marksheet", label: "Post Graduation Marksheet" },
   { key: "cancelled_cheque", label: "Cancelled cheque" },
   { key: "photograph", label: "Photograph" },
-  { key: "registration_form", label: "Registration form" },
-  { key: "agreement_copy", label: "Agreement copy" },
   { key: "gst_copy", label: "GST certificate" }
 ];
+const POST_IIB_DOCUMENT_FIELDS: Array<{ key: DocumentKey; label: string }> = [
+  { key: "agreement_copy", label: "Agreement copy" }
+];
+const DOCUMENT_FIELDS = [...PRE_IIB_DOCUMENT_FIELDS, ...POST_IIB_DOCUMENT_FIELDS];
+const EDUCATION_DOCUMENT_KEYS = new Set<DocumentKey>([
+  "education_10th_marksheet",
+  "education_12th_marksheet",
+  "education_graduation_marksheet",
+  "education_post_graduation_marksheet"
+]);
 
 function fail(error: string, field: string | null = null): PospMispState {
   return { error, field };
@@ -148,26 +169,7 @@ function normalizeAadhaar(value: string | null) {
 }
 
 function normalizeDate(value: unknown) {
-  if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString().slice(0, 10);
-  if (typeof value === "number") {
-    if (!Number.isFinite(value) || value < 1 || value > 2958465) return null;
-    return new Date(Date.UTC(1899, 11, 30) + value * 86_400_000).toISOString().slice(0, 10);
-  }
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim().replaceAll("'", " ");
-  if (!trimmed) return null;
-  const parts = trimmed.match(/^(\d{1,2})[-/\s]([A-Za-z]{3,}|\d{1,2})[-/\s](\d{2,4})$/);
-  if (parts) {
-    const day = Number(parts[1]);
-    const monthText = parts[2];
-    const year = Number(parts[3].length === 2 ? `20${parts[3]}` : parts[3]);
-    const month = /^[0-9]+$/.test(monthText)
-      ? Number(monthText) - 1
-      : ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"].indexOf(monthText.slice(0, 3).toLowerCase());
-    if (month >= 0) return new Date(Date.UTC(year, month, day)).toISOString().slice(0, 10);
-  }
-  const parsed = new Date(trimmed);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
+  return normalizeImportedDate(value);
 }
 
 function extension(value: File) {
@@ -185,6 +187,12 @@ function validateFile(value: File | null, label: string) {
 
 function documentStatusesFromForm(data: FormData) {
   return Object.fromEntries(DOCUMENT_FIELDS.map(({ key }) => [key, formFile(data, key) ? "received" : "not_received"]));
+}
+
+function educationStatusFromForm(data: FormData) {
+  return PRE_IIB_DOCUMENT_FIELDS.some(({ key }) => EDUCATION_DOCUMENT_KEYS.has(key) && Boolean(formFile(data, key)))
+    ? "received"
+    : "not_received";
 }
 
 function normalizeBoolean(value: string | null) {
@@ -216,6 +224,37 @@ function managerCode(manager: SalesManagerOption | null) {
   return manager?.employee_code?.trim() || null;
 }
 
+function normalizeBankName(value?: string | null) {
+  return value
+    ?.normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/\b(ltd|limited)\b/g, "limited")
+    .replace(/[^a-z0-9]/g, "") ?? "";
+}
+
+function compactBankName(value?: string | null) {
+  return normalizeBankName(value)
+    .replace(/limited$/g, "")
+    .replace(/nationalassociation$/g, "")
+    .replace(/bankingcorporation$/g, "");
+}
+
+function resolveBankById(banks: BankOption[], bankId: string | null) {
+  return bankId ? banks.find((bank) => bank.id === bankId) ?? null : null;
+}
+
+function resolveBankFromExcel(banks: BankOption[], value: string | null) {
+  if (!value) return null;
+  const exact = normalizeBankName(value);
+  const exactMatch = banks.find((bank) => normalizeBankName(bank.name) === exact);
+  if (exactMatch) return exactMatch;
+  const compact = compactBankName(value);
+  const candidates = banks.filter((bank) => compactBankName(bank.name) === compact);
+  return candidates.length === 1 ? candidates[0] : null;
+}
+
 async function loadSalesManagers(admin: ReturnType<typeof createSupabaseAdminClient>) {
   const { data, error } = await admin
     .from("profiles")
@@ -224,6 +263,17 @@ async function loadSalesManagers(admin: ReturnType<typeof createSupabaseAdminCli
     .eq("is_active", true)
     .order("full_name", { ascending: true })
     .returns<SalesManagerOption[]>();
+  if (error) throw error;
+  return data ?? [];
+}
+
+async function loadBanks(admin: ReturnType<typeof createSupabaseAdminClient>) {
+  const { data, error } = await admin
+    .from("banks")
+    .select("id, name, normalized_name")
+    .eq("is_active", true)
+    .order("name", { ascending: true })
+    .returns<BankOption[]>();
   if (error) throw error;
   return data ?? [];
 }
@@ -267,6 +317,7 @@ function profileDraft(row: NormalizedRow, documentStatuses: Record<string, strin
     date_of_birth: row.date_of_birth,
     gst_number: row.gst_number,
     education_status: row.education_status,
+    bank_id: row.bank_id,
     bank_name: row.bank_name,
     bank_account_last_four: row.bank_account_number?.replace(/\s/g, "").slice(-4) ?? null,
     bank_ifsc_code: row.bank_ifsc_code,
@@ -325,17 +376,45 @@ function validateRow(row: NormalizedRow) {
   if (row.pan_number && !PAN_PATTERN.test(row.pan_number)) errors.push("PAN number is invalid.");
   if (row.dp_pan_number && !PAN_PATTERN.test(row.dp_pan_number)) errors.push("DP PAN number is invalid.");
   if (row.gst_number && !GST_PATTERN.test(row.gst_number)) errors.push("GST number is invalid.");
+  if (!row.bank_id) errors.push("Select a bank from the approved bank master.");
   if (row.external_onboarding_id && !EXTERNAL_ID_PATTERN.test(row.external_onboarding_id.toUpperCase())) errors.push("External ID must use SIB/YYYY/MM/NNNN format.");
   if (row.iib_remarks && !IIB_REMARK_OPTIONS.has(row.iib_remarks)) errors.push("Choose a valid IIB remark.");
+  if (row.iib_uploaded && (!row.iib_remarks || !row.iib_uploaded_at)) {
+    errors.push("IIB remarks and upload date are required when IIB is uploaded.");
+  }
+  if (row.training_end_date && row.training_start_date && row.training_end_date < row.training_start_date) {
+    errors.push("Training end date cannot be before the start date.");
+  }
+  if (row.onboarding_date && (!row.training_login_id || !row.training_password || !row.training_start_date || !row.training_end_date || !row.training_status || !row.exam_status)) {
+    errors.push("Complete the training credentials, dates, status and exam result for an onboarded record.");
+  }
   if (row.partner_type === "misp" && !row.oem_name) errors.push("Select a valid OEM.");
   return errors;
 }
 
-function rowFromForm(data: FormData, salesManagers: SalesManagerOption[], manufacturerNames: Set<string>): NormalizedRow {
+function excelDateErrors(partnerType: PartnerType, source: Record<string, unknown>, row: NormalizedRow) {
+  const fields: Array<[string, string, string | null]> = [
+    ["Document Recv Date", "Document Received Date", row.document_received_at],
+    [partnerType === "posp" ? "D.O.B" : "Date of Birth", "Date of Birth", row.date_of_birth],
+    ["IIB Upload date", "IIB Upload Date", row.iib_uploaded_at],
+    ["Training Start Date", "Training Start Date", row.training_start_date],
+    ["Training End Date", "Training End Date", row.training_end_date],
+    ["Onboarding Date", "Onboarding Date", row.onboarding_date]
+  ];
+  return fields.flatMap(([sourceKey, label, normalized]) => {
+    const supplied = source[sourceKey];
+    return supplied !== null && supplied !== undefined && String(supplied).trim() && !normalized
+      ? [`${label} must use dd/mm/yyyy format.`]
+      : [];
+  });
+}
+
+function rowFromForm(data: FormData, salesManagers: SalesManagerOption[], manufacturerNames: Set<string>, banks: BankOption[]): NormalizedRow {
   const partnerType = text(data, "partner_type") === "misp" ? "misp" : "posp";
   const aadhaar = normalizeAadhaar(text(data, "aadhaar_number"));
   const associate = resolveSalesManagerByProfileId(salesManagers, text(data, "associate_profile_id"));
-  const educationStatus = formFile(data, "education_certificate") ? "received" : "not_received";
+  const educationStatus = educationStatusFromForm(data);
+  const bank = resolveBankById(banks, text(data, "bank_id"));
   const iibUploaded = data.get("iib_uploaded") === "true";
   const credentialsShared = data.get("training_credentials_shared_flag") === "true";
   return {
@@ -359,7 +438,8 @@ function rowFromForm(data: FormData, salesManagers: SalesManagerOption[], manufa
     date_of_birth: text(data, "date_of_birth"),
     gst_number: normalizeGst(text(data, "gst_number")),
     education_status: educationStatus,
-    bank_name: text(data, "bank_name"),
+    bank_id: bank?.id ?? null,
+    bank_name: bank?.name ?? null,
     bank_account_number: text(data, "bank_account_number"),
     bank_ifsc_code: text(data, "bank_ifsc_code")?.toUpperCase() ?? null,
     iib_remarks: normalizeIibRemark(text(data, "iib_remarks")),
@@ -384,13 +464,14 @@ function rowFromForm(data: FormData, salesManagers: SalesManagerOption[], manufa
   };
 }
 
-function rowFromImportEditForm(data: FormData, existing: NormalizedRow, salesManagers: SalesManagerOption[], manufacturerNames: Set<string>): NormalizedRow {
+function rowFromImportEditForm(data: FormData, existing: NormalizedRow, salesManagers: SalesManagerOption[], manufacturerNames: Set<string>, banks: BankOption[]): NormalizedRow {
   const partnerType = text(data, "partner_type") === "misp" ? "misp" : "posp";
   const aadhaarText = text(data, "aadhaar_number");
   const aadhaar = aadhaarText ? normalizeAadhaar(aadhaarText) : { lastFour: existing.aadhaar_last_four, hash: existing.aadhaar_hash };
   const associate = resolveSalesManagerByProfileId(salesManagers, text(data, "associate_profile_id"));
   const iibUploaded = data.get("iib_uploaded") === "true";
   const credentialsShared = data.get("training_credentials_shared_flag") === "true";
+  const bank = resolveBankById(banks, text(data, "bank_id"));
   return {
     partner_type: partnerType,
     associate_profile_id: associate?.id ?? null,
@@ -412,7 +493,8 @@ function rowFromImportEditForm(data: FormData, existing: NormalizedRow, salesMan
     date_of_birth: text(data, "date_of_birth"),
     gst_number: normalizeGst(text(data, "gst_number")),
     education_status: text(data, "education_status") === "received" ? "received" : "not_received",
-    bank_name: text(data, "bank_name"),
+    bank_id: bank?.id ?? null,
+    bank_name: bank?.name ?? null,
     bank_account_number: text(data, "bank_account_number"),
     bank_ifsc_code: text(data, "bank_ifsc_code")?.toUpperCase() ?? null,
     iib_remarks: normalizeIibRemark(text(data, "iib_remarks")),
@@ -437,11 +519,12 @@ function rowFromImportEditForm(data: FormData, existing: NormalizedRow, salesMan
   };
 }
 
-function normalizeExcelRow(partnerType: PartnerType, source: Record<string, unknown>, salesManagers: SalesManagerOption[], manufacturerNames: Set<string>): NormalizedRow {
+function normalizeExcelRow(partnerType: PartnerType, source: Record<string, unknown>, salesManagers: SalesManagerOption[], manufacturerNames: Set<string>, banks: BankOption[]): NormalizedRow {
   const aadhaar = normalizeAadhaar(cell(source, partnerType === "posp" ? "Aadhar Number" : "Aadhar Number"));
   const associate = resolveSalesManagerFromExcel(salesManagers, cell(source, "Associate Name"), cell(source, "Associate ID"));
   const iibUploaded = normalizeBoolean(cell(source, "IIB Upload"));
   const credentialsShared = normalizeBoolean(cell(source, "Training ID/Password SHARED"));
+  const bank = resolveBankFromExcel(banks, cell(source, "Bank Name"));
   return {
     partner_type: partnerType,
     associate_profile_id: associate?.id ?? null,
@@ -463,7 +546,8 @@ function normalizeExcelRow(partnerType: PartnerType, source: Record<string, unkn
     date_of_birth: normalizeDate(source[partnerType === "posp" ? "D.O.B" : "Date of Birth"]),
     gst_number: normalizeGst(cell(source, partnerType === "posp" ? "GST Number( Optional)" : "GST No")),
     education_status: "not_received",
-    bank_name: cell(source, "Bank Name"),
+    bank_id: bank?.id ?? null,
+    bank_name: bank?.name ?? cell(source, "Bank Name"),
     bank_account_number: cell(source, "Account Number"),
     bank_ifsc_code: cell(source, "IFSC Code")?.toUpperCase() ?? null,
     iib_remarks: normalizeIibRemark(cell(source, partnerType === "posp" ? "IIB Remarks POSP/ PARTNER" : "IIB Remarks MISP")),
@@ -536,6 +620,7 @@ async function createSubmittedApplication(params: {
     date_of_birth: params.row.date_of_birth,
     gst_number: params.row.gst_number,
     education_status: params.row.education_status,
+    bank_id: params.row.bank_id,
     bank_name: params.row.bank_name,
     bank_account_number: params.row.bank_account_number,
     bank_ifsc_code: params.row.bank_ifsc_code,
@@ -558,6 +643,18 @@ async function createSubmittedApplication(params: {
     dp_phone: params.row.dp_phone,
     dp_email: params.row.dp_email,
     dp_pan_number: params.row.dp_pan_number,
+    workflow_stage: params.row.onboarding_date && params.documentStatuses.agreement_copy === "received"
+      ? "completed"
+      : params.row.iib_uploaded
+        ? "training"
+        : params.row.iib_remarks
+          ? "iib_processing"
+          : "pre_iib",
+    pre_iib_submitted_at: new Date().toISOString(),
+    iib_completed_at: params.row.iib_uploaded ? new Date().toISOString() : null,
+    training_completed_at: params.row.onboarding_date && params.documentStatuses.agreement_copy === "received"
+      ? new Date().toISOString()
+      : null,
     source: params.source,
     import_batch_id: params.importBatchId ?? null,
     import_row_number: params.importRowNumber ?? null,
@@ -639,10 +736,12 @@ export async function createPospMispOnboarding(_state: PospMispState, data: Form
   const admin = createSupabaseAdminClient();
   let salesManagers: SalesManagerOption[];
   let manufacturerNames: Set<string>;
+  let banks: BankOption[];
   try {
-    [salesManagers, manufacturerNames] = await Promise.all([
+    [salesManagers, manufacturerNames, banks] = await Promise.all([
       loadSalesManagers(admin),
-      loadManufacturerNames(admin)
+      loadManufacturerNames(admin),
+      loadBanks(admin)
     ]);
   } catch (error) {
     const reference = randomUUID().slice(0, 8);
@@ -650,11 +749,11 @@ export async function createPospMispOnboarding(_state: PospMispState, data: Form
     return fail(`Required master data could not be loaded. Reference ${reference}.`);
   }
 
-  const row = rowFromForm(data, salesManagers, manufacturerNames);
+  const row = rowFromForm(data, salesManagers, manufacturerNames, banks);
   const errors = validateRow(row);
-  if (errors.length) return fail(errors[0], errors[0].includes("Associate") ? "associate_profile_id" : errors[0].includes("OEM") ? "oem_name" : errors[0].includes("DP") ? "dp_phone" : "applicant_phone");
+  if (errors.length) return fail(errors[0], errors[0].includes("Associate") ? "associate_profile_id" : errors[0].includes("bank") ? "bank_id" : errors[0].includes("OEM") ? "oem_name" : errors[0].includes("DP") ? "dp_phone" : "applicant_phone");
 
-  for (const { key, label } of DOCUMENT_FIELDS) {
+  for (const { key, label } of PRE_IIB_DOCUMENT_FIELDS) {
     const error = validateFile(formFile(data, key), label);
     if (error) return fail(error, key);
   }
@@ -668,7 +767,7 @@ export async function createPospMispOnboarding(_state: PospMispState, data: Form
   }
 
   const uploadedPaths: string[] = [];
-  for (const { key } of DOCUMENT_FIELDS) {
+  for (const { key } of PRE_IIB_DOCUMENT_FIELDS) {
     const selected = formFile(data, key);
     if (!selected) continue;
     const path = `${application.id}/posp-misp/${key}/${randomUUID()}.${extension(selected)}`;
@@ -711,10 +810,12 @@ export async function uploadPospMispWorkbook(_state: PospMispState, data: FormDa
   const admin = createSupabaseAdminClient();
   let salesManagers: SalesManagerOption[];
   let manufacturerNames: Set<string>;
+  let banks: BankOption[];
   try {
-    [salesManagers, manufacturerNames] = await Promise.all([
+    [salesManagers, manufacturerNames, banks] = await Promise.all([
       loadSalesManagers(admin),
-      loadManufacturerNames(admin)
+      loadManufacturerNames(admin),
+      loadBanks(admin)
     ]);
   } catch (error) {
     const reference = randomUUID().slice(0, 8);
@@ -738,8 +839,15 @@ export async function uploadPospMispWorkbook(_state: PospMispState, data: FormDa
     const sheet = workbookSheets.find((entry) => entry.name === sheetName);
     if (!sheet) continue;
     sheet.rows.forEach((source, index) => {
-      const normalized = normalizeExcelRow(partnerType, source, salesManagers, manufacturerNames);
-      rows.push({ partner_type: partnerType, sheet_name: sheetName, row_number: index + 2, source_data: sanitizeSourceData(source), normalized_data: normalized, validation_errors: validateRow(normalized) });
+      const normalized = normalizeExcelRow(partnerType, source, salesManagers, manufacturerNames, banks);
+      rows.push({
+        partner_type: partnerType,
+        sheet_name: sheetName,
+        row_number: index + 2,
+        source_data: sanitizeSourceData(source),
+        normalized_data: normalized,
+        validation_errors: [...validateRow(normalized), ...excelDateErrors(partnerType, source, normalized)]
+      });
     });
   }
 
@@ -917,10 +1025,12 @@ export async function updatePospMispImportRow(data: FormData) {
 
   let salesManagers: SalesManagerOption[];
   let manufacturerNames: Set<string>;
+  let banks: BankOption[];
   try {
-    [salesManagers, manufacturerNames] = await Promise.all([
+    [salesManagers, manufacturerNames, banks] = await Promise.all([
       loadSalesManagers(admin),
-      loadManufacturerNames(admin)
+      loadManufacturerNames(admin),
+      loadBanks(admin)
     ]);
   } catch {
     redirect(`/customers/posp-misp/import/${batchId}?error=master_data`);
@@ -935,8 +1045,8 @@ export async function updatePospMispImportRow(data: FormData) {
   }
 
   const normalized = {
-    ...rowFromImportEditForm(data, existingRow.normalized_data, salesManagers, manufacturerNames),
-    education_status: documentTypes.has("education_certificate") ? "received" : "not_received"
+    ...rowFromImportEditForm(data, existingRow.normalized_data, salesManagers, manufacturerNames, banks),
+    education_status: [...EDUCATION_DOCUMENT_KEYS].some((key) => documentTypes.has(key)) ? "received" : "not_received"
   };
   const validationErrors = validateRow(normalized);
   const { error: updateError } = await admin
@@ -1044,7 +1154,7 @@ export async function submitPospMispImportBatch(data: FormData) {
       const attachedDocumentTypes = new Set((rowDocuments ?? []).map((document) => document.document_type));
       const derivedRow = {
         ...row.normalized_data,
-        education_status: attachedDocumentTypes.has("education_certificate") ? "received" : "not_received"
+        education_status: [...EDUCATION_DOCUMENT_KEYS].some((key) => attachedDocumentTypes.has(key)) ? "received" : "not_received"
       };
       const application = await createSubmittedApplication({
         row: derivedRow,

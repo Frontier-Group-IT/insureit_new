@@ -22,6 +22,7 @@ type OnboardingProfile = {
   dp_name: string | null;
   dp_phone: string | null;
   dp_email: string | null;
+  workflow_stage: string;
 };
 type CustomerProfile = {
   id: string;
@@ -55,12 +56,15 @@ export async function approvePospMispApplication(formData: FormData) {
 
   const { data: onboarding, error: onboardingError } = await admin
     .from("posp_misp_onboarding_profiles")
-    .select("partner_type, pos_name, misp_name, applicant_phone, applicant_email, dp_name, dp_phone, dp_email")
+    .select("partner_type, pos_name, misp_name, applicant_phone, applicant_email, dp_name, dp_phone, dp_email, workflow_stage")
     .eq("application_id", applicationId)
     .maybeSingle<OnboardingProfile>();
 
   if (onboardingError || !onboarding) {
     redirect(`/customers/applications/${applicationId}?error=posp_misp_profile_missing`);
+  }
+  if (onboarding.workflow_stage !== "completed") {
+    redirect(`/customers/applications/${applicationId}?error=application_not_ready`);
   }
 
   const primaryPhone = normalizeIndianPhone(onboarding.applicant_phone);

@@ -31,11 +31,12 @@ export default async function PospMispImportBatchPage({ params, searchParams }: 
   const query = await searchParams;
   const supabase = await createServerSupabaseClient();
   const admin = createSupabaseAdminClient();
-  const [{ data: batch, error: batchError }, { data: rows, error: rowsError }, salesManagers, oems] = await Promise.all([
+  const [{ data: batch, error: batchError }, { data: rows, error: rowsError }, salesManagers, oems, banks] = await Promise.all([
     supabase.from("posp_misp_import_batches").select("id, file_name, total_rows, valid_rows, invalid_rows, pending_rows, submitted_rows, failed_rows, status, created_at").eq("id", batchId).maybeSingle<Batch>(),
     supabase.from("posp_misp_import_rows").select("id, row_number, sheet_name, partner_type, normalized_data, validation_errors, status, application_id, error_message").eq("import_batch_id", batchId).order("row_number", { ascending: true }).returns<ImportRow[]>(),
     loadSalesManagers(admin),
-    loadVehicleManufacturers(admin)
+    loadVehicleManufacturers(admin),
+    loadBanks(admin)
   ]);
   const rowIds = (rows ?? []).map((row) => row.id);
   const { data: rowDocuments, error: documentsError } = rowIds.length
@@ -85,7 +86,7 @@ export default async function PospMispImportBatchPage({ params, searchParams }: 
               <Metric label="Failed" value={batch.failed_rows} tone="danger" />
               <Metric label="Status" value={batch.status.replaceAll("_", " ")} />
             </section>
-            <ImportRowReviewTable batchId={batch.id} batchStatus={batch.status} rows={rowsWithDocuments} salesManagers={salesManagers} oems={oems} />
+            <ImportRowReviewTable batchId={batch.id} batchStatus={batch.status} rows={rowsWithDocuments} salesManagers={salesManagers} oems={oems} banks={banks} />
           </>
         )}
       </div>
@@ -122,6 +123,16 @@ async function loadVehicleManufacturers(admin: ReturnType<typeof createSupabaseA
     .order("name", { ascending: true })
     .returns<Array<{ name: string }>>();
   return (data ?? []).map((manufacturer) => ({ value: manufacturer.name, label: manufacturer.name }));
+}
+
+async function loadBanks(admin: ReturnType<typeof createSupabaseAdminClient>) {
+  const { data } = await admin
+    .from("banks")
+    .select("id, name")
+    .eq("is_active", true)
+    .order("name")
+    .returns<Array<{ id: string; name: string }>>();
+  return (data ?? []).map((bank) => ({ value: bank.id, label: bank.name }));
 }
 
 function errorMessage(error: string) {
