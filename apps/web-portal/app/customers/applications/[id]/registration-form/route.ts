@@ -84,8 +84,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     ["Application", [
       [application.partner_type === "posp" ? "POS Name" : "MISP Name", partnerName],
       [application.partner_type === "posp" ? "Onboarding ID" : "MISP ID", onboarding.external_onboarding_id],
-      ["Associate Name", onboarding.associate_name],
-      ["Associate ID", onboarding.associate_id],
+      ["Associate", [onboarding.associate_name, onboarding.associate_id].filter(Boolean).join(" - ")],
       ["Document Received Date", formatIndianDate(onboarding.document_received_at)]
     ]],
     ["Applicant", [

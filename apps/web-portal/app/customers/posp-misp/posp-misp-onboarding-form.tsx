@@ -34,29 +34,26 @@ const documentFields: Array<{ key: DocumentKey; label: string }> = [
   { key: "aadhaar_front", label: "Aadhaar front" },
   { key: "aadhaar_back", label: "Aadhaar back" },
   { key: "pan_copy", label: "PAN copy" },
-  { key: "education_10th_marksheet", label: "10th Marksheet" },
-  { key: "education_12th_marksheet", label: "12th Marksheet" },
-  { key: "education_graduation_marksheet", label: "Graduation Marksheet" },
-  { key: "education_post_graduation_marksheet", label: "Post Graduation Marksheet" },
   { key: "cancelled_cheque", label: "Cancelled cheque" },
   { key: "photograph", label: "Photograph" },
   { key: "gst_copy", label: "GST certificate" }
 ];
-const educationKeys: DocumentKey[] = [
-  "education_10th_marksheet",
-  "education_12th_marksheet",
-  "education_graduation_marksheet",
-  "education_post_graduation_marksheet"
+const educationOptions: Array<{ value: DocumentKey; label: string }> = [
+  { value: "education_10th_marksheet", label: "10th Marksheet" },
+  { value: "education_12th_marksheet", label: "12th Marksheet" },
+  { value: "education_graduation_marksheet", label: "Graduation Marksheet" },
+  { value: "education_post_graduation_marksheet", label: "Post Graduation Marksheet" }
 ];
 
 export function PospMispOnboardingForm({ action, partnerType, salesManagers, oems, banks }: Props) {
   const [state, formAction] = useActionState(action, { error: null, field: null });
   const [showError, setShowError] = useState(false);
   const [files, setFiles] = useState<Partial<Record<DocumentKey, File>>>({});
+  const [marksheetType, setMarksheetType] = useState<DocumentKey | "">("");
+  const [marksheetFile, setMarksheetFile] = useState<File | null>(null);
   const [associateId, setAssociateId] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
   const isMisp = partnerType === "misp";
-  const selectedAssociate = salesManagers.find((manager) => manager.id === associateId);
 
   useEffect(() => {
     setShowError(Boolean(state.error));
@@ -72,6 +69,7 @@ export function PospMispOnboardingForm({ action, partnerType, salesManagers, oem
 
   function submit(data: FormData) {
     for (const [field, selected] of Object.entries(files) as Array<[DocumentKey, File]>) data.set(field, selected, selected.name);
+    if (marksheetType && marksheetFile) data.set(marksheetType, marksheetFile, marksheetFile.name);
     formAction(data);
   }
 
@@ -115,7 +113,6 @@ export function PospMispOnboardingForm({ action, partnerType, salesManagers, oem
               }))}
               placeholder="Select Sales Manager"
             />
-            <ReadOnlyValue label="Associate ID" value={selectedAssociate?.employeeCode ?? "Auto-filled from selected Sales Manager"} />
             <Field label={isMisp ? "MISP ID" : "Onboarding ID"} name="external_onboarding_id" placeholder="External onboarding ID" />
             <IndianDateField label="Document Received Date" name="document_received_at" />
             {isMisp ? <Field label="MISP Name" name="misp_name" required placeholder="MISP name" /> : <Field label="POS Name" name="pos_name" required placeholder="POS name" />}
@@ -145,7 +142,7 @@ export function PospMispOnboardingForm({ action, partnerType, salesManagers, oem
           ) : null}
 
           <Section title="Bank Details">
-            <ReadOnlyValue label="Education / Marksheet Status" value={educationKeys.some((key) => files[key]) ? "Received" : "Not received"} />
+            <ReadOnlyValue label="Education / Marksheet Status" value={marksheetFile ? "Received" : "Not received"} />
             <SelectField label="Bank Name" name="bank_id" required options={banks} placeholder="Select bank" />
             <Field label="Account Number" name="bank_account_number" placeholder="Account number" />
             <Field label="IFSC Code" name="bank_ifsc_code" placeholder="IFSC" />
@@ -159,6 +156,21 @@ export function PospMispOnboardingForm({ action, partnerType, salesManagers, oem
               </div>
             </div>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <SelectField
+                label="Marksheet Type"
+                name="education_document_type"
+                value={marksheetType}
+                onChange={(event) => setMarksheetType(event.target.value as DocumentKey | "")}
+                required={Boolean(marksheetFile)}
+                options={educationOptions}
+                placeholder="Select marksheet type"
+              />
+              <FileField
+                label="Marksheet"
+                name="education_marksheet"
+                file={marksheetFile ?? undefined}
+                onChange={setMarksheetFile}
+              />
               {documentFields.map((document) => <FileField key={document.key} label={document.label} name={document.key} file={files[document.key]} onChange={(selected) => setFile(document.key, selected)} />)}
             </div>
           </section>
@@ -212,6 +224,6 @@ function ReadOnlyValue({ label, value }: { label: string; value: string }) {
   );
 }
 
-function FileField({ label, name, file, onChange }: { label: string; name: DocumentKey; file?: File; onChange: (file: File | null) => void }) {
+function FileField({ label, name, file, onChange }: { label: string; name: string; file?: File; onChange: (file: File | null) => void }) {
   return <div><span className={labelClass}>{label}</span><label htmlFor={name} className={`flex h-9 cursor-pointer items-center gap-2 rounded-md border px-2.5 text-[10.5px] ${file ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-dashed border-[#CBD5E1] bg-[#F8FAFC] text-[#64748B]"}`}><span>{file ? "Received" : "Not received"}</span><span className="min-w-0 flex-1 truncate">{file?.name ?? "Choose file"}</span></label><input id={name} name={name} type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" className="sr-only" onChange={(event) => onChange(event.target.files?.[0] ?? null)} /></div>;
 }

@@ -124,6 +124,19 @@ const EDUCATION_DOCUMENT_KEYS = new Set<DocumentKey>([
   "education_post_graduation_marksheet"
 ]);
 
+function isEducationDocumentKey(value: string | null): value is DocumentKey {
+  return Boolean(value && EDUCATION_DOCUMENT_KEYS.has(value as DocumentKey));
+}
+
+function prepareEducationUpload(data: FormData) {
+  const selected = formFile(data, "education_marksheet");
+  if (!selected) return null;
+  const documentType = text(data, "education_document_type");
+  if (!isEducationDocumentKey(documentType)) return "Select which marksheet you are uploading.";
+  data.set(documentType, selected, selected.name);
+  return null;
+}
+
 function fail(error: string, field: string | null = null): PospMispState {
   return { error, field };
 }
@@ -749,6 +762,9 @@ export async function createPospMispOnboarding(_state: PospMispState, data: Form
     return fail(`Required master data could not be loaded. Reference ${reference}.`);
   }
 
+  const educationUploadError = prepareEducationUpload(data);
+  if (educationUploadError) return fail(educationUploadError, "education_document_type");
+
   const row = rowFromForm(data, salesManagers, manufacturerNames, banks);
   const errors = validateRow(row);
   if (errors.length) return fail(errors[0], errors[0].includes("Associate") ? "associate_profile_id" : errors[0].includes("bank") ? "bank_id" : errors[0].includes("OEM") ? "oem_name" : errors[0].includes("DP") ? "dp_phone" : "applicant_phone");
@@ -948,6 +964,12 @@ async function saveImportRowDocuments(
   data: FormData,
   uploadedBy: string
 ) {
+  const educationUploadError = prepareEducationUpload(data);
+  if (educationUploadError) throw new Error(educationUploadError);
+  const selectedEducationType = text(data, "education_document_type");
+  const replacingEducationDocument = Boolean(
+    formFile(data, "education_marksheet") && isEducationDocumentKey(selectedEducationType)
+  );
   const selectedDocuments = DOCUMENT_FIELDS
     .map((document) => ({ ...document, file: formFile(data, document.key) }))
     .filter((document): document is typeof document & { file: File } => Boolean(document.file));
@@ -1004,6 +1026,21 @@ async function saveImportRowDocuments(
     });
   }
 
+  if (replacingEducationDocument && isEducationDocumentKey(selectedEducationType)) {
+    for (const [documentType, previous] of existingByType) {
+      if (!isEducationDocumentKey(documentType) || documentType === selectedEducationType) continue;
+      const { error: deleteError } = await admin
+        .from("posp_misp_import_row_documents")
+        .delete()
+        .eq("id", previous.id);
+      if (deleteError) throw deleteError;
+      if (previous.storage_path) {
+        await admin.storage.from(previous.storage_bucket).remove([previous.storage_path]);
+      }
+      existingByType.delete(documentType);
+    }
+  }
+
   return new Set(existingByType.keys());
 }
 
@@ -1041,7 +1078,10 @@ export async function updatePospMispImportRow(data: FormData) {
     documentTypes = await saveImportRowDocuments(admin, batchId, rowId, data, manager.id);
   } catch (error) {
     console.error("Import-row document upload failed", error);
-    redirect(`/customers/posp-misp/import/${batchId}?error=document_upload_failed`);
+    const errorCode = error instanceof Error && error.message === "Select which marksheet you are uploading."
+      ? "marksheet_type_required"
+      : "document_upload_failed";
+    redirect(`/customers/posp-misp/import/${batchId}?error=${errorCode}`);
   }
 
   const normalized = {

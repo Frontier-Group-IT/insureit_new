@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppShell } from "@/components/shell";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { DataError } from "@/components/record-list";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { requireMasterDataManager } from "@/lib/master-data-server";
@@ -61,14 +62,22 @@ export default async function PospMispImportBatchPage({ params, searchParams }: 
             {batch && batch.status !== "processing" && batch.valid_rows > 0 ? (
               <form action={submitPospMispImportBatch}>
                 <input type="hidden" name="batch_id" value={batch.id} />
-                <button className="rounded-md bg-[#4F46E5] px-4 py-2 text-[11px] font-semibold text-white">Submit Ready Rows</button>
+                <FormSubmitButton
+                  label="Submit Ready Rows"
+                  pendingLabel="Submitting"
+                  className="inline-flex items-center justify-center rounded-md bg-[#4F46E5] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-70"
+                />
               </form>
             ) : null}
             {batch && batch.status !== "processing" && batch.failed_rows > 0 ? (
               <form action={submitPospMispImportBatch}>
                 <input type="hidden" name="batch_id" value={batch.id} />
                 <input type="hidden" name="retry_failed" value="true" />
-                <button className="rounded-md border border-amber-300 bg-amber-50 px-4 py-2 text-[11px] font-semibold text-amber-800">Retry Failed Rows</button>
+                <FormSubmitButton
+                  label="Retry Failed Rows"
+                  pendingLabel="Retrying"
+                  className="inline-flex items-center justify-center rounded-md border border-amber-300 bg-amber-50 px-4 py-2 text-[11px] font-semibold text-amber-800 disabled:opacity-70"
+                />
               </form>
             ) : null}
           </div>
@@ -143,6 +152,7 @@ function errorMessage(error: string) {
     row_update_failed: "The row could not be updated.",
     row_delete_failed: "The row could not be removed.",
     document_upload_failed: "The document could not be uploaded. Use a PDF, JPG or PNG file no larger than 5 MB.",
+    marksheet_type_required: "Select the marksheet type before uploading the marksheet.",
     master_data: "Sales Manager or OEM master data could not be loaded."
   };
   return messages[error] ?? "The batch could not be updated.";

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { deletePospMispImportRow, updatePospMispImportRow } from "../actions";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { IndianDateField } from "@/components/indian-date-field";
 
 type PartnerType = "posp" | "misp";
@@ -35,18 +36,18 @@ const preIibDocumentFields = [
   ["aadhaar_front", "Aadhaar front"],
   ["aadhaar_back", "Aadhaar back"],
   ["pan_copy", "PAN copy"],
-  ["education_10th_marksheet", "10th Marksheet"],
-  ["education_12th_marksheet", "12th Marksheet"],
-  ["education_graduation_marksheet", "Graduation Marksheet"],
-  ["education_post_graduation_marksheet", "Post Graduation Marksheet"],
   ["cancelled_cheque", "Cancelled cheque"],
   ["photograph", "Photograph"],
   ["gst_copy", "GST certificate"]
 ] as const;
 const postIibDocumentFields = [["agreement_copy", "Agreement copy"]] as const;
-const educationDocumentTypes = new Set<string>(
-  preIibDocumentFields.filter(([key]) => key.startsWith("education_")).map(([key]) => key)
-);
+const educationDocumentOptions = [
+  { value: "education_10th_marksheet", label: "10th Marksheet" },
+  { value: "education_12th_marksheet", label: "12th Marksheet" },
+  { value: "education_graduation_marksheet", label: "Graduation Marksheet" },
+  { value: "education_post_graduation_marksheet", label: "Post Graduation Marksheet" }
+];
+const educationDocumentTypes = new Set(educationDocumentOptions.map((option) => option.value));
 
 export function ImportRowReviewTable({ batchId, batchStatus, rows, salesManagers, oems, banks }: Props) {
   const [editingRow, setEditingRow] = useState<ImportRow | null>(null);
@@ -81,10 +82,16 @@ export function ImportRowReviewTable({ batchId, batchStatus, rows, salesManagers
                         {row.application_id ? <Link href={`/customers/applications/${row.application_id}`} className="font-semibold text-[#4F46E5] hover:underline">Review</Link> : null}
                         <button type="button" onClick={() => setEditingRow(row)} className="rounded-md border border-[#CBD5E1] px-2.5 py-1 text-[10px] font-semibold text-[#334155]">{editable ? "View / Edit" : "View"}</button>
                         {editable ? (
-                          <form action={deletePospMispImportRow}>
+                          <form action={deletePospMispImportRow} onSubmit={(event) => {
+                            if (!window.confirm(`Remove row ${row.row_number} from this import batch?`)) event.preventDefault();
+                          }}>
                             <input type="hidden" name="batch_id" value={batchId} />
                             <input type="hidden" name="row_id" value={row.id} />
-                            <button type="submit" onClick={(event) => { if (!window.confirm(`Remove row ${row.row_number} from this import batch?`)) event.preventDefault(); }} className="rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-[10px] font-semibold text-red-700">Remove</button>
+                            <FormSubmitButton
+                              label="Remove"
+                              pendingLabel="Removing"
+                              className="inline-flex items-center justify-center rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-[10px] font-semibold text-red-700 disabled:opacity-70"
+                            />
                           </form>
                         ) : null}
                       </div>
@@ -115,6 +122,7 @@ function EditRowModal({ batchId, row, editable, salesManagers, oems, banks, onCl
   const data = row.normalized_data ?? {};
   const isMisp = row.partner_type === "misp";
   const selectedManagerId = stringValue(data.associate_profile_id) ?? "";
+  const currentEducationDocument = row.documents.find((document) => educationDocumentTypes.has(document.document_type));
 
   return (
     <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-[#0F172A]/40 px-4 py-8 backdrop-blur-[2px]" role="dialog" aria-modal="true">
@@ -134,7 +142,6 @@ function EditRowModal({ batchId, row, editable, salesManagers, oems, banks, onCl
           <input type="hidden" name="partner_type" value={row.partner_type} />
           <Section title={isMisp ? "MISP Business Details" : "POSP Details"}>
             <SelectField label="Associate Name" name="associate_profile_id" defaultValue={selectedManagerId} required disabled={!editable} options={salesManagers.map((manager) => ({ value: manager.id, label: `${manager.fullName}${manager.employeeCode ? ` - ${manager.employeeCode}` : ""}` }))} placeholder="Select Sales Manager" />
-            <ReadOnlyValue label="Current Associate ID" value={stringValue(data.associate_id) ?? "Auto-filled when saved"} />
             <Field label={isMisp ? "MISP ID" : "Onboarding ID"} name="external_onboarding_id" defaultValue={stringValue(data.external_onboarding_id) ?? ""} disabled={!editable} />
             <IndianDateField label="Document Received Date" name="document_received_at" defaultValue={stringValue(data.document_received_at)} disabled={!editable} />
             {isMisp ? <Field label="MISP Name" name="misp_name" required defaultValue={stringValue(data.misp_name) ?? ""} disabled={!editable} /> : <Field label="POS Name" name="pos_name" required defaultValue={stringValue(data.pos_name) ?? ""} disabled={!editable} />}
@@ -182,6 +189,20 @@ function EditRowModal({ batchId, row, editable, salesManagers, oems, banks, onCl
               <p className="mt-1 text-[10.5px] text-[#64748B]">Documents collected before IIB submission. Education status is calculated from the marksheets attached here.</p>
             </div>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <div className="rounded-lg border border-[#DCE5EF] bg-white p-3">
+                <SelectField
+                  label="Marksheet Type"
+                  name="education_document_type"
+                  defaultValue={currentEducationDocument?.document_type ?? ""}
+                  disabled={!editable}
+                  options={educationDocumentOptions}
+                  placeholder="Select marksheet type"
+                />
+                <span className={`mt-2 block truncate text-[9.5px] ${currentEducationDocument ? "text-emerald-700" : "text-[#64748B]"}`}>
+                  {currentEducationDocument?.file_name ?? "Not received"}
+                </span>
+                {editable ? <input name="education_marksheet" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" className="mt-2 block w-full text-[10px] text-[#475569] file:mr-2 file:rounded-md file:border-0 file:bg-[#EEF2FF] file:px-2.5 file:py-1.5 file:text-[9.5px] file:font-semibold file:text-[#4338CA]" /> : null}
+              </div>
               {preIibDocumentFields.map(([key, label]) => {
                 const current = row.documents.find((document) => document.document_type === key);
                 return (
@@ -227,7 +248,7 @@ function EditRowModal({ batchId, row, editable, salesManagers, oems, banks, onCl
 
           <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t border-[#E2E8F0] bg-white/95 px-5 py-3 backdrop-blur">
             <button type="button" onClick={onClose} className="rounded-md border border-[#CBD5E1] px-4 py-2 text-[11px] font-semibold text-[#334155]">Close</button>
-            {editable ? <button className="rounded-md bg-[#4F46E5] px-4 py-2 text-[11px] font-semibold text-white">Save Row</button> : null}
+            {editable ? <FormSubmitButton label="Save Row" pendingLabel="Saving" /> : null}
           </div>
         </form>
       </div>
