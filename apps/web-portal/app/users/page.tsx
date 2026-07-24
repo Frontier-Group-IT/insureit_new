@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createProfileRecord, setProfileActive, updateProfileRecord } from "@/app/actions";
 import { DataError, DataTable } from "@/components/record-list";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { AppShell } from "@/components/shell";
 import { StatusBadge } from "@/components/ui";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
@@ -74,7 +75,7 @@ export default async function UsersPage({ searchParams }: { searchParams?: Promi
           <Select name="reporting_manager_id" label="Reporting manager" options={managers.map((item) => [item.id, `${item.full_name} (${roleLabels[item.role as keyof typeof roleLabels] ?? item.role})`])} />
           <Input name="department" label="Department" />
           <Select name="designation" label="Designation" options={designationOptions.map((item) => [item, item])} />
-          <button className="rounded-2xl bg-navy-900 px-4 py-3 text-sm font-bold text-white md:col-span-3">Create profile</button>
+          <FormSubmitButton label="Create profile" pendingLabel="Creating" className="inline-flex items-center justify-center rounded-2xl bg-navy-900 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-70 md:col-span-3" />
         </form>
       </section>
 
@@ -133,10 +134,10 @@ function InlineEditForm({ user, managers }: { user: ProfileRow; managers: { id: 
           {designationOptions.map((item) => <option key={item} value={item}>{item}</option>)}
         </select>
         <input type="hidden" name="is_active" value={user.is_active ? "true" : "false"} />
-        <button className="rounded-xl bg-navy-900 px-3 py-2 text-xs font-bold text-white">Save</button>
+        <FormSubmitButton label="Save" pendingLabel="Saving" className="inline-flex items-center justify-center rounded-xl bg-navy-900 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-70" />
       </form>
       <form action={toggleAction}>
-        <button className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-bold text-navy-900">{user.is_active ? "Deactivate" : "Reactivate"}</button>
+        <FormSubmitButton label={user.is_active ? "Deactivate" : "Reactivate"} pendingLabel={user.is_active ? "Deactivating" : "Reactivating"} className="inline-flex w-full items-center justify-center rounded-xl border border-slate-300 px-3 py-2 text-xs font-bold text-navy-900 disabled:cursor-not-allowed disabled:opacity-70" />
       </form>
     </div>
   );

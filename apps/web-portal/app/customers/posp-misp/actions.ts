@@ -3,11 +3,13 @@
 import { createHash, randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import * as XLSX from "xlsx";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
+import { parsePospMispWorkbook, WorkbookValidationError } from "@/lib/posp-misp-workbook";
 import { canManageMasterData } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { beginPortalOnboardingApplication } from "../onboarding-applications";
+import { normalizeImportedDate } from "@/lib/indian-date";
+import { encryptSensitiveValue } from "@/lib/sensitive-data";
 
 export type PospMispState = { error: string | null; field: string | null };
 
@@ -16,10 +18,12 @@ type DocumentKey =
   | "aadhaar_front"
   | "aadhaar_back"
   | "pan_copy"
-  | "education_certificate"
+  | "education_10th_marksheet"
+  | "education_12th_marksheet"
+  | "education_graduation_marksheet"
+  | "education_post_graduation_marksheet"
   | "cancelled_cheque"
   | "photograph"
-  | "registration_form"
   | "agreement_copy"
   | "gst_copy";
 
@@ -41,9 +45,11 @@ type NormalizedRow = {
   pan_number: string | null;
   aadhaar_last_four: string | null;
   aadhaar_hash: string | null;
+  aadhaar_number_encrypted: string | null;
   date_of_birth: string | null;
   gst_number: string | null;
   education_status: string | null;
+  bank_id: string | null;
   bank_name: string | null;
   bank_account_number: string | null;
   bank_ifsc_code: string | null;
@@ -84,24 +90,56 @@ type SalesManagerOption = {
   employee_code: string | null;
 };
 
+type BankOption = {
+  id: string;
+  name: string;
+  normalized_name: string;
+};
+
+type WorkflowStage = "pre_iib" | "iib_processing" | "training" | "completed";
+
 const DOCUMENT_BUCKET = "customer-documents";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const GST_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 const IIB_REMARK_OPTIONS = new Set(["Matching Record Found In DataBase", "No Data Found In POS System"]);
-const RECEIVED_WORDS = /\b(received|downloaded|yes|done|available|submitted|ok|complete|completed)\b/i;
-const DOCUMENT_FIELDS: Array<{ key: DocumentKey; label: string }> = [
+const TRAINING_STATUS_OPTIONS = new Set(["completed", "pending"]);
+const PRE_IIB_DOCUMENT_FIELDS: Array<{ key: DocumentKey; label: string }> = [
   { key: "aadhaar_front", label: "Aadhaar front" },
   { key: "aadhaar_back", label: "Aadhaar back" },
   { key: "pan_copy", label: "PAN copy" },
-  { key: "education_certificate", label: "10th / 12th certificate" },
+  { key: "education_10th_marksheet", label: "10th Marksheet" },
+  { key: "education_12th_marksheet", label: "12th Marksheet" },
+  { key: "education_graduation_marksheet", label: "Graduation Marksheet" },
+  { key: "education_post_graduation_marksheet", label: "Post Graduation Marksheet" },
   { key: "cancelled_cheque", label: "Cancelled cheque" },
   { key: "photograph", label: "Photograph" },
-  { key: "registration_form", label: "Registration form" },
-  { key: "agreement_copy", label: "Agreement copy" },
   { key: "gst_copy", label: "GST certificate" }
 ];
+const POST_IIB_DOCUMENT_FIELDS: Array<{ key: DocumentKey; label: string }> = [
+  { key: "agreement_copy", label: "Agreement copy" }
+];
+const DOCUMENT_FIELDS = [...PRE_IIB_DOCUMENT_FIELDS, ...POST_IIB_DOCUMENT_FIELDS];
+const EDUCATION_DOCUMENT_KEYS = new Set<DocumentKey>([
+  "education_10th_marksheet",
+  "education_12th_marksheet",
+  "education_graduation_marksheet",
+  "education_post_graduation_marksheet"
+]);
+
+function isEducationDocumentKey(value: string | null): value is DocumentKey {
+  return Boolean(value && EDUCATION_DOCUMENT_KEYS.has(value as DocumentKey));
+}
+
+function prepareEducationUpload(data: FormData) {
+  const selected = formFile(data, "education_marksheet");
+  if (!selected) return null;
+  const documentType = text(data, "education_document_type");
+  if (!isEducationDocumentKey(documentType)) return "Select which marksheet you are uploading.";
+  data.set(documentType, selected, selected.name);
+  return null;
+}
 
 function fail(error: string, field: string | null = null): PospMispState {
   return { error, field };
@@ -143,32 +181,16 @@ function normalizeGst(value: string | null) {
 
 function normalizeAadhaar(value: string | null) {
   const digits = value?.replace(/\D/g, "") ?? "";
-  if (!/^[0-9]{12}$/.test(digits)) return { lastFour: null, hash: null };
-  return { lastFour: digits.slice(-4), hash: createHash("sha256").update(digits).digest("hex") };
+  if (!/^[0-9]{12}$/.test(digits)) return { lastFour: null, hash: null, encrypted: null };
+  return {
+    lastFour: digits.slice(-4),
+    hash: createHash("sha256").update(digits).digest("hex"),
+    encrypted: encryptSensitiveValue(digits)
+  };
 }
 
 function normalizeDate(value: unknown) {
-  if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString().slice(0, 10);
-  if (typeof value === "number") {
-    const parsed = XLSX.SSF.parse_date_code(value);
-    if (!parsed) return null;
-    return new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d)).toISOString().slice(0, 10);
-  }
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim().replaceAll("'", " ");
-  if (!trimmed) return null;
-  const parts = trimmed.match(/^(\d{1,2})[-/\s]([A-Za-z]{3,}|\d{1,2})[-/\s](\d{2,4})$/);
-  if (parts) {
-    const day = Number(parts[1]);
-    const monthText = parts[2];
-    const year = Number(parts[3].length === 2 ? `20${parts[3]}` : parts[3]);
-    const month = /^[0-9]+$/.test(monthText)
-      ? Number(monthText) - 1
-      : ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"].indexOf(monthText.slice(0, 3).toLowerCase());
-    if (month >= 0) return new Date(Date.UTC(year, month, day)).toISOString().slice(0, 10);
-  }
-  const parsed = new Date(trimmed);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
+  return normalizeImportedDate(value, { ambiguousExcelDatesAreDayFirst: true });
 }
 
 function extension(value: File) {
@@ -188,16 +210,41 @@ function documentStatusesFromForm(data: FormData) {
   return Object.fromEntries(DOCUMENT_FIELDS.map(({ key }) => [key, formFile(data, key) ? "received" : "not_received"]));
 }
 
+function educationStatusFromForm(data: FormData) {
+  return PRE_IIB_DOCUMENT_FIELDS.some(({ key }) => EDUCATION_DOCUMENT_KEYS.has(key) && Boolean(formFile(data, key)))
+    ? "received"
+    : "not_received";
+}
+
 function normalizeBoolean(value: string | null) {
   return /^(true|yes|y|1|uploaded|shared|done|complete|completed)$/i.test(value ?? "");
 }
 
 function normalizeEducationStatus(value: string | null) {
-  return RECEIVED_WORDS.test(value ?? "") ? "received" : "not_received";
+  if (!value) return "not_received";
+  return /^(not[\s_-]*received|pending|no|n\/?a|nil)$/i.test(value.trim())
+    ? "not_received"
+    : "received";
 }
 
 function normalizeIibRemark(value: string | null) {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized === "matching record found in database" || normalized === "matching record found") {
+    return "Matching Record Found In DataBase";
+  }
+  if (normalized === "no data found in pos system" || normalized === "no data found") {
+    return "No Data Found In POS System";
+  }
   return value?.trim() || null;
+}
+
+function normalizeTrainingStatus(value: string | null) {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized.startsWith("completed") || normalized === "complete" || normalized === "done") return "completed";
+  if (normalized.includes("pending")) return "pending";
+  return normalized;
 }
 
 function resolveSalesManagerByProfileId(managers: SalesManagerOption[], profileId: string | null) {
@@ -221,6 +268,37 @@ function managerCode(manager: SalesManagerOption | null) {
   return manager?.employee_code?.trim() || null;
 }
 
+function normalizeBankName(value?: string | null) {
+  return value
+    ?.normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/\b(ltd|limited)\b/g, "limited")
+    .replace(/[^a-z0-9]/g, "") ?? "";
+}
+
+function compactBankName(value?: string | null) {
+  return normalizeBankName(value)
+    .replace(/limited$/g, "")
+    .replace(/nationalassociation$/g, "")
+    .replace(/bankingcorporation$/g, "");
+}
+
+function resolveBankById(banks: BankOption[], bankId: string | null) {
+  return bankId ? banks.find((bank) => bank.id === bankId) ?? null : null;
+}
+
+function resolveBankFromExcel(banks: BankOption[], value: string | null) {
+  if (!value) return null;
+  const exact = normalizeBankName(value);
+  const exactMatch = banks.find((bank) => normalizeBankName(bank.name) === exact);
+  if (exactMatch) return exactMatch;
+  const compact = compactBankName(value);
+  const candidates = banks.filter((bank) => compactBankName(bank.name) === compact);
+  return candidates.length === 1 ? candidates[0] : null;
+}
+
 async function loadSalesManagers(admin: ReturnType<typeof createSupabaseAdminClient>) {
   const { data, error } = await admin
     .from("profiles")
@@ -229,6 +307,17 @@ async function loadSalesManagers(admin: ReturnType<typeof createSupabaseAdminCli
     .eq("is_active", true)
     .order("full_name", { ascending: true })
     .returns<SalesManagerOption[]>();
+  if (error) throw error;
+  return data ?? [];
+}
+
+async function loadBanks(admin: ReturnType<typeof createSupabaseAdminClient>) {
+  const { data, error } = await admin
+    .from("banks")
+    .select("id, name, normalized_name")
+    .eq("is_active", true)
+    .order("name", { ascending: true })
+    .returns<BankOption[]>();
   if (error) throw error;
   return data ?? [];
 }
@@ -272,8 +361,9 @@ function profileDraft(row: NormalizedRow, documentStatuses: Record<string, strin
     date_of_birth: row.date_of_birth,
     gst_number: row.gst_number,
     education_status: row.education_status,
+    bank_id: row.bank_id,
     bank_name: row.bank_name,
-    bank_account_number: row.bank_account_number,
+    bank_account_last_four: row.bank_account_number?.replace(/\s/g, "").slice(-4) ?? null,
     bank_ifsc_code: row.bank_ifsc_code,
     iib_remarks: row.iib_remarks,
     iib_upload_status: row.iib_upload_status,
@@ -282,7 +372,7 @@ function profileDraft(row: NormalizedRow, documentStatuses: Record<string, strin
     training_credentials_shared: row.training_credentials_shared,
     training_credentials_shared_flag: row.training_credentials_shared_flag,
     training_login_id: row.training_login_id,
-    training_password: row.training_password,
+    training_password_on_file: Boolean(row.training_password),
     training_start_date: row.training_start_date,
     training_end_date: row.training_end_date,
     training_status: row.training_status,
@@ -298,6 +388,27 @@ function profileDraft(row: NormalizedRow, documentStatuses: Record<string, strin
   };
 }
 
+function sanitizeSourceData(source: Record<string, unknown>) {
+  const sanitized = { ...source };
+  const account = cell(source, "Account Number");
+  delete sanitized["Aadhar Number"];
+  delete sanitized["Account Number"];
+  delete sanitized["Training Password"];
+  sanitized["Aadhaar"] = source["Aadhar Number"] ? "Stored separately" : null;
+  sanitized["Account Last Four"] = account?.replace(/\s/g, "").slice(-4) ?? null;
+  sanitized["Training Password"] = source["Training Password"] ? "Stored separately" : null;
+  return sanitized;
+}
+
+function sanitizeSubmittedRow(row: NormalizedRow) {
+  return {
+    ...row,
+    bank_account_number: row.bank_account_number ? `•••• ${row.bank_account_number.replace(/\s/g, "").slice(-4)}` : null,
+    training_password: row.training_password ? "Stored separately" : null,
+    aadhaar_hash: row.aadhaar_hash ? "Stored separately" : null
+  };
+}
+
 function validateRow(row: NormalizedRow) {
   const errors: string[] = [];
   if (!row.associate_profile_id) errors.push("Select a valid Sales Manager as Associate.");
@@ -309,16 +420,47 @@ function validateRow(row: NormalizedRow) {
   if (row.pan_number && !PAN_PATTERN.test(row.pan_number)) errors.push("PAN number is invalid.");
   if (row.dp_pan_number && !PAN_PATTERN.test(row.dp_pan_number)) errors.push("DP PAN number is invalid.");
   if (row.gst_number && !GST_PATTERN.test(row.gst_number)) errors.push("GST number is invalid.");
+  if (!row.bank_id) errors.push("Select a bank from the approved bank master.");
   if (row.iib_remarks && !IIB_REMARK_OPTIONS.has(row.iib_remarks)) errors.push("Choose a valid IIB remark.");
+  if (row.iib_uploaded && (!row.iib_remarks || !row.iib_uploaded_at)) {
+    errors.push("IIB remarks and upload date are required when IIB is uploaded.");
+  }
+  if (row.training_end_date && row.training_start_date && row.training_end_date < row.training_start_date) {
+    errors.push("Training end date cannot be before the start date.");
+  }
+  if (row.training_status && !TRAINING_STATUS_OPTIONS.has(row.training_status)) {
+    errors.push("Training status must be Completed or Pending.");
+  }
+  if (row.onboarding_date && (!row.training_login_id || !row.training_password || !row.training_start_date || !row.training_end_date || !row.training_status || !row.exam_status)) {
+    errors.push("Complete the training credentials, dates, status and exam result for an onboarded record.");
+  }
   if (row.partner_type === "misp" && !row.oem_name) errors.push("Select a valid OEM.");
   return errors;
 }
 
-function rowFromForm(data: FormData, salesManagers: SalesManagerOption[], manufacturerNames: Set<string>): NormalizedRow {
+function excelDateErrors(partnerType: PartnerType, source: Record<string, unknown>, row: NormalizedRow) {
+  const fields: Array<[string, string, string | null]> = [
+    ["Document Recv Date", "Document Received Date", row.document_received_at],
+    [partnerType === "posp" ? "D.O.B" : "Date of Birth", "Date of Birth", row.date_of_birth],
+    ["IIB Upload date", "IIB Upload Date", row.iib_uploaded_at],
+    ["Training Start Date", "Training Start Date", row.training_start_date],
+    ["Training End Date", "Training End Date", row.training_end_date],
+    ["Onboarding Date", "Onboarding Date", row.onboarding_date]
+  ];
+  return fields.flatMap(([sourceKey, label, normalized]) => {
+    const supplied = source[sourceKey];
+    return supplied !== null && supplied !== undefined && String(supplied).trim() && !normalized
+      ? [`${label} must use dd/mm/yyyy format.`]
+      : [];
+  });
+}
+
+function rowFromForm(data: FormData, salesManagers: SalesManagerOption[], manufacturerNames: Set<string>, banks: BankOption[]): NormalizedRow {
   const partnerType = text(data, "partner_type") === "misp" ? "misp" : "posp";
   const aadhaar = normalizeAadhaar(text(data, "aadhaar_number"));
   const associate = resolveSalesManagerByProfileId(salesManagers, text(data, "associate_profile_id"));
-  const educationStatus = formFile(data, "education_certificate") ? "received" : "not_received";
+  const educationStatus = educationStatusFromForm(data);
+  const bank = resolveBankById(banks, text(data, "bank_id"));
   const iibUploaded = data.get("iib_uploaded") === "true";
   const credentialsShared = data.get("training_credentials_shared_flag") === "true";
   return {
@@ -326,7 +468,7 @@ function rowFromForm(data: FormData, salesManagers: SalesManagerOption[], manufa
     associate_profile_id: associate?.id ?? null,
     associate_name: managerName(associate),
     associate_id: managerCode(associate),
-    external_onboarding_id: text(data, "external_onboarding_id"),
+    external_onboarding_id: text(data, "external_onboarding_id")?.toUpperCase() ?? null,
     document_received_at: text(data, "document_received_at"),
     pos_name: partnerType === "posp" ? text(data, "pos_name") : null,
     misp_name: partnerType === "misp" ? text(data, "misp_name") : null,
@@ -339,10 +481,12 @@ function rowFromForm(data: FormData, salesManagers: SalesManagerOption[], manufa
     pan_number: normalizePan(text(data, "pan_number")),
     aadhaar_last_four: aadhaar.lastFour,
     aadhaar_hash: aadhaar.hash,
+    aadhaar_number_encrypted: aadhaar.encrypted,
     date_of_birth: text(data, "date_of_birth"),
     gst_number: normalizeGst(text(data, "gst_number")),
     education_status: educationStatus,
-    bank_name: text(data, "bank_name"),
+    bank_id: bank?.id ?? null,
+    bank_name: bank?.name ?? null,
     bank_account_number: text(data, "bank_account_number"),
     bank_ifsc_code: text(data, "bank_ifsc_code")?.toUpperCase() ?? null,
     iib_remarks: normalizeIibRemark(text(data, "iib_remarks")),
@@ -355,7 +499,7 @@ function rowFromForm(data: FormData, salesManagers: SalesManagerOption[], manufa
     training_password: text(data, "training_password"),
     training_start_date: text(data, "training_start_date"),
     training_end_date: text(data, "training_end_date"),
-    training_status: text(data, "training_status"),
+    training_status: normalizeTrainingStatus(text(data, "training_status")),
     training_certificate_number: text(data, "training_certificate_number"),
     exam_status: text(data, "exam_status"),
     onboarding_date: text(data, "onboarding_date"),
@@ -367,19 +511,26 @@ function rowFromForm(data: FormData, salesManagers: SalesManagerOption[], manufa
   };
 }
 
-function rowFromImportEditForm(data: FormData, existing: NormalizedRow, salesManagers: SalesManagerOption[], manufacturerNames: Set<string>): NormalizedRow {
+function rowFromImportEditForm(data: FormData, existing: NormalizedRow, salesManagers: SalesManagerOption[], manufacturerNames: Set<string>, banks: BankOption[]): NormalizedRow {
   const partnerType = text(data, "partner_type") === "misp" ? "misp" : "posp";
   const aadhaarText = text(data, "aadhaar_number");
-  const aadhaar = aadhaarText ? normalizeAadhaar(aadhaarText) : { lastFour: existing.aadhaar_last_four, hash: existing.aadhaar_hash };
+  const aadhaar = aadhaarText
+    ? normalizeAadhaar(aadhaarText)
+    : {
+      lastFour: existing.aadhaar_last_four,
+      hash: existing.aadhaar_hash,
+      encrypted: existing.aadhaar_number_encrypted
+    };
   const associate = resolveSalesManagerByProfileId(salesManagers, text(data, "associate_profile_id"));
   const iibUploaded = data.get("iib_uploaded") === "true";
   const credentialsShared = data.get("training_credentials_shared_flag") === "true";
+  const bank = resolveBankById(banks, text(data, "bank_id"));
   return {
     partner_type: partnerType,
     associate_profile_id: associate?.id ?? null,
     associate_name: managerName(associate),
     associate_id: managerCode(associate),
-    external_onboarding_id: text(data, "external_onboarding_id"),
+    external_onboarding_id: text(data, "external_onboarding_id")?.toUpperCase() ?? null,
     document_received_at: text(data, "document_received_at"),
     pos_name: partnerType === "posp" ? text(data, "pos_name") : null,
     misp_name: partnerType === "misp" ? text(data, "misp_name") : null,
@@ -392,10 +543,12 @@ function rowFromImportEditForm(data: FormData, existing: NormalizedRow, salesMan
     pan_number: normalizePan(text(data, "pan_number")),
     aadhaar_last_four: aadhaar.lastFour,
     aadhaar_hash: aadhaar.hash,
+    aadhaar_number_encrypted: aadhaar.encrypted,
     date_of_birth: text(data, "date_of_birth"),
     gst_number: normalizeGst(text(data, "gst_number")),
-    education_status: text(data, "education_status") === "received" ? "received" : "not_received",
-    bank_name: text(data, "bank_name"),
+    education_status: existing.education_status === "received" ? "received" : "not_received",
+    bank_id: bank?.id ?? null,
+    bank_name: bank?.name ?? null,
     bank_account_number: text(data, "bank_account_number"),
     bank_ifsc_code: text(data, "bank_ifsc_code")?.toUpperCase() ?? null,
     iib_remarks: normalizeIibRemark(text(data, "iib_remarks")),
@@ -408,7 +561,7 @@ function rowFromImportEditForm(data: FormData, existing: NormalizedRow, salesMan
     training_password: text(data, "training_password"),
     training_start_date: text(data, "training_start_date"),
     training_end_date: text(data, "training_end_date"),
-    training_status: text(data, "training_status"),
+    training_status: normalizeTrainingStatus(text(data, "training_status")),
     training_certificate_number: text(data, "training_certificate_number"),
     exam_status: text(data, "exam_status"),
     onboarding_date: text(data, "onboarding_date"),
@@ -420,17 +573,18 @@ function rowFromImportEditForm(data: FormData, existing: NormalizedRow, salesMan
   };
 }
 
-function normalizeExcelRow(partnerType: PartnerType, source: Record<string, unknown>, salesManagers: SalesManagerOption[], manufacturerNames: Set<string>): NormalizedRow {
+function normalizeExcelRow(partnerType: PartnerType, source: Record<string, unknown>, salesManagers: SalesManagerOption[], manufacturerNames: Set<string>, banks: BankOption[]): NormalizedRow {
   const aadhaar = normalizeAadhaar(cell(source, partnerType === "posp" ? "Aadhar Number" : "Aadhar Number"));
   const associate = resolveSalesManagerFromExcel(salesManagers, cell(source, "Associate Name"), cell(source, "Associate ID"));
   const iibUploaded = normalizeBoolean(cell(source, "IIB Upload"));
   const credentialsShared = normalizeBoolean(cell(source, "Training ID/Password SHARED"));
+  const bank = resolveBankFromExcel(banks, cell(source, "Bank Name"));
   return {
     partner_type: partnerType,
     associate_profile_id: associate?.id ?? null,
     associate_name: managerName(associate) ?? cell(source, "Associate Name"),
     associate_id: managerCode(associate) ?? cell(source, "Associate ID"),
-    external_onboarding_id: cell(source, partnerType === "posp" ? "Onboarding ID" : "MISP ID"),
+    external_onboarding_id: cell(source, partnerType === "posp" ? "Onboarding ID" : "MISP ID")?.toUpperCase() ?? null,
     document_received_at: normalizeDate(source["Document Recv Date"]),
     pos_name: partnerType === "posp" ? cell(source, "POS Name") : null,
     misp_name: partnerType === "misp" ? cell(source, "MISP Name") : null,
@@ -443,10 +597,12 @@ function normalizeExcelRow(partnerType: PartnerType, source: Record<string, unkn
     pan_number: normalizePan(cell(source, partnerType === "posp" ? "Pan Number" : "MISP PAN")),
     aadhaar_last_four: aadhaar.lastFour,
     aadhaar_hash: aadhaar.hash,
+    aadhaar_number_encrypted: aadhaar.encrypted,
     date_of_birth: normalizeDate(source[partnerType === "posp" ? "D.O.B" : "Date of Birth"]),
     gst_number: normalizeGst(cell(source, partnerType === "posp" ? "GST Number( Optional)" : "GST No")),
-    education_status: normalizeEducationStatus(cell(source, partnerType === "posp" ? "Marsheet" : "10th/12th Certificate")),
-    bank_name: cell(source, "Bank Name"),
+    education_status: normalizeEducationStatus(cell(source, "Marsheet") ?? cell(source, "Marksheet")),
+    bank_id: bank?.id ?? null,
+    bank_name: bank?.name ?? cell(source, "Bank Name"),
     bank_account_number: cell(source, "Account Number"),
     bank_ifsc_code: cell(source, "IFSC Code")?.toUpperCase() ?? null,
     iib_remarks: normalizeIibRemark(cell(source, partnerType === "posp" ? "IIB Remarks POSP/ PARTNER" : "IIB Remarks MISP")),
@@ -459,7 +615,7 @@ function normalizeExcelRow(partnerType: PartnerType, source: Record<string, unkn
     training_password: cell(source, "Training Password"),
     training_start_date: normalizeDate(source["Training Start Date"]),
     training_end_date: normalizeDate(source["Training End Date"]),
-    training_status: cell(source, "Trainings Status"),
+    training_status: normalizeTrainingStatus(cell(source, "Trainings Status")),
     training_certificate_number: cell(source, "Training Certificate Number"),
     exam_status: cell(source, "Exam Status"),
     onboarding_date: normalizeDate(source["Onboarding Date"]),
@@ -488,6 +644,7 @@ async function createSubmittedApplication(params: {
   initiatedBy: string;
 }) {
   const admin = createSupabaseAdminClient();
+  await assertCompatibleExistingProfile(admin, params.row);
   const draftData = profileDraft(params.row, params.documentStatuses);
   const application = await beginPortalOnboardingApplication(admin, {
     initiatedBy: params.initiatedBy,
@@ -497,6 +654,13 @@ async function createSubmittedApplication(params: {
     draftData
   });
 
+  const requestedWorkflowStage: WorkflowStage = params.row.onboarding_date && params.documentStatuses.agreement_copy === "received"
+    ? "completed"
+    : params.row.iib_uploaded
+      ? "training"
+      : params.row.iib_remarks
+        ? "iib_processing"
+        : "pre_iib";
   const profilePayload = {
     application_id: application.id,
     partner_type: params.row.partner_type,
@@ -516,9 +680,11 @@ async function createSubmittedApplication(params: {
     pan_number: params.row.pan_number,
     aadhaar_last_four: params.row.aadhaar_last_four,
     aadhaar_hash: params.row.aadhaar_hash,
+    aadhaar_number_encrypted: params.row.aadhaar_number_encrypted,
     date_of_birth: params.row.date_of_birth,
     gst_number: params.row.gst_number,
     education_status: params.row.education_status,
+    bank_id: params.row.bank_id,
     bank_name: params.row.bank_name,
     bank_account_number: params.row.bank_account_number,
     bank_ifsc_code: params.row.bank_ifsc_code,
@@ -541,6 +707,12 @@ async function createSubmittedApplication(params: {
     dp_phone: params.row.dp_phone,
     dp_email: params.row.dp_email,
     dp_pan_number: params.row.dp_pan_number,
+    workflow_stage: requestedWorkflowStage,
+    pre_iib_submitted_at: new Date().toISOString(),
+    iib_completed_at: params.row.iib_uploaded ? new Date().toISOString() : null,
+    training_completed_at: params.row.onboarding_date && params.documentStatuses.agreement_copy === "received"
+      ? new Date().toISOString()
+      : null,
     source: params.source,
     import_batch_id: params.importBatchId ?? null,
     import_row_number: params.importRowNumber ?? null,
@@ -549,9 +721,50 @@ async function createSubmittedApplication(params: {
     updated_by: params.initiatedBy
   };
 
-  const { error: profileError } = await admin
+  const { data: existingProfile, error: profileLookupError } = await admin
     .from("posp_misp_onboarding_profiles")
-    .upsert(profilePayload, { onConflict: "application_id" });
+    .select("id, external_onboarding_id, source, import_batch_id, import_row_number, workflow_stage, pre_iib_submitted_at, iib_completed_at, training_completed_at, created_by")
+    .eq("application_id", application.id)
+    .maybeSingle<{
+      id: string;
+      external_onboarding_id: string | null;
+      source: "manual" | "excel_import";
+      import_batch_id: string | null;
+      import_row_number: number | null;
+      workflow_stage: WorkflowStage;
+      pre_iib_submitted_at: string | null;
+      iib_completed_at: string | null;
+      training_completed_at: string | null;
+      created_by: string | null;
+    }>();
+  if (profileLookupError) throw profileLookupError;
+  if (
+    existingProfile?.external_onboarding_id
+    && params.row.external_onboarding_id
+    && existingProfile.external_onboarding_id !== params.row.external_onboarding_id
+  ) {
+    throw new Error("The mobile number already belongs to an application with a different onboarding ID.");
+  }
+
+  const { error: profileError } = existingProfile
+    ? await admin
+      .from("posp_misp_onboarding_profiles")
+      .update({
+        ...profilePayload,
+        external_onboarding_id: params.row.external_onboarding_id ?? existingProfile.external_onboarding_id,
+        source: existingProfile.source,
+        import_batch_id: existingProfile.import_batch_id,
+        import_row_number: existingProfile.import_row_number,
+        workflow_stage: laterWorkflowStage(existingProfile.workflow_stage, requestedWorkflowStage),
+        pre_iib_submitted_at: existingProfile.pre_iib_submitted_at ?? profilePayload.pre_iib_submitted_at,
+        iib_completed_at: existingProfile.iib_completed_at ?? profilePayload.iib_completed_at,
+        training_completed_at: existingProfile.training_completed_at ?? profilePayload.training_completed_at,
+        created_by: existingProfile.created_by ?? params.initiatedBy
+      })
+      .eq("id", existingProfile.id)
+    : await admin
+      .from("posp_misp_onboarding_profiles")
+      .insert(profilePayload);
   if (profileError) throw profileError;
 
   const contacts = contactPayloads(application.id, params.row);
@@ -561,6 +774,50 @@ async function createSubmittedApplication(params: {
   }
 
   return application;
+}
+
+function laterWorkflowStage(current: WorkflowStage, requested: WorkflowStage) {
+  const stages: WorkflowStage[] = ["pre_iib", "iib_processing", "training", "completed"];
+  return stages.indexOf(current) >= stages.indexOf(requested) ? current : requested;
+}
+
+async function assertCompatibleExistingProfile(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  row: NormalizedRow
+) {
+  if (row.external_onboarding_id) {
+    const { data: idOwner, error } = await admin
+      .from("posp_misp_onboarding_profiles")
+      .select("partner_type, applicant_phone")
+      .eq("external_onboarding_id", row.external_onboarding_id)
+      .maybeSingle<{ partner_type: PartnerType; applicant_phone: string | null }>();
+    if (error) throw error;
+    if (
+      idOwner
+      && (idOwner.partner_type !== row.partner_type || idOwner.applicant_phone !== row.applicant_phone)
+    ) {
+      throw new Error("External onboarding ID already exists for another application.");
+    }
+  }
+
+  if (row.applicant_phone) {
+    const { data: phoneOwner, error } = await admin
+      .from("posp_misp_onboarding_profiles")
+      .select("external_onboarding_id")
+      .eq("partner_type", row.partner_type)
+      .eq("applicant_phone", row.applicant_phone)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ external_onboarding_id: string | null }>();
+    if (error) throw error;
+    if (
+      phoneOwner?.external_onboarding_id
+      && row.external_onboarding_id
+      && phoneOwner.external_onboarding_id !== row.external_onboarding_id
+    ) {
+      throw new Error("The mobile number already belongs to an application with a different onboarding ID.");
+    }
+  }
 }
 
 function contactPayloads(applicationId: string, row: NormalizedRow): ContactPayload[] {
@@ -622,20 +879,27 @@ export async function createPospMispOnboarding(_state: PospMispState, data: Form
   const admin = createSupabaseAdminClient();
   let salesManagers: SalesManagerOption[];
   let manufacturerNames: Set<string>;
+  let banks: BankOption[];
   try {
-    [salesManagers, manufacturerNames] = await Promise.all([
+    [salesManagers, manufacturerNames, banks] = await Promise.all([
       loadSalesManagers(admin),
-      loadManufacturerNames(admin)
+      loadManufacturerNames(admin),
+      loadBanks(admin)
     ]);
   } catch (error) {
-    return fail(`Master data could not be loaded: ${error instanceof Error ? error.message : "Unknown error"}`);
+    const reference = randomUUID().slice(0, 8);
+    console.error(`POSP/MISP onboarding master data failed [${reference}]`, error);
+    return fail(`Required master data could not be loaded. Reference ${reference}.`);
   }
 
-  const row = rowFromForm(data, salesManagers, manufacturerNames);
-  const errors = validateRow(row);
-  if (errors.length) return fail(errors[0], errors[0].includes("Associate") ? "associate_profile_id" : errors[0].includes("OEM") ? "oem_name" : errors[0].includes("DP") ? "dp_phone" : "applicant_phone");
+  const educationUploadError = prepareEducationUpload(data);
+  if (educationUploadError) return fail(educationUploadError, "education_document_type");
 
-  for (const { key, label } of DOCUMENT_FIELDS) {
+  const row = rowFromForm(data, salesManagers, manufacturerNames, banks);
+  const errors = validateRow(row);
+  if (errors.length) return fail(errors[0], errors[0].includes("Associate") ? "associate_profile_id" : errors[0].includes("bank") ? "bank_id" : errors[0].includes("OEM") ? "oem_name" : errors[0].includes("DP") ? "dp_phone" : "applicant_phone");
+
+  for (const { key, label } of PRE_IIB_DOCUMENT_FIELDS) {
     const error = validateFile(formFile(data, key), label);
     if (error) return fail(error, key);
   }
@@ -649,7 +913,7 @@ export async function createPospMispOnboarding(_state: PospMispState, data: Form
   }
 
   const uploadedPaths: string[] = [];
-  for (const { key } of DOCUMENT_FIELDS) {
+  for (const { key } of PRE_IIB_DOCUMENT_FIELDS) {
     const selected = formFile(data, key);
     if (!selected) continue;
     const path = `${application.id}/posp-misp/${key}/${randomUUID()}.${extension(selected)}`;
@@ -692,31 +956,60 @@ export async function uploadPospMispWorkbook(_state: PospMispState, data: FormDa
   const admin = createSupabaseAdminClient();
   let salesManagers: SalesManagerOption[];
   let manufacturerNames: Set<string>;
+  let banks: BankOption[];
   try {
-    [salesManagers, manufacturerNames] = await Promise.all([
+    [salesManagers, manufacturerNames, banks] = await Promise.all([
       loadSalesManagers(admin),
-      loadManufacturerNames(admin)
+      loadManufacturerNames(admin),
+      loadBanks(admin)
     ]);
   } catch (error) {
-    return fail(`Master data could not be loaded: ${error instanceof Error ? error.message : "Unknown error"}`);
+    const reference = randomUUID().slice(0, 8);
+    console.error(`POSP/MISP import master data failed [${reference}]`, error);
+    return fail(`Required master data could not be loaded. Reference ${reference}.`);
   }
-  const bytes = await selected.arrayBuffer();
-  const workbook = XLSX.read(bytes, { cellDates: true });
+  let workbookSheets;
+  try {
+    workbookSheets = await parsePospMispWorkbook(selected);
+  } catch (error) {
+    if (error instanceof WorkbookValidationError) return fail(error.message, "workbook");
+    const reference = randomUUID().slice(0, 8);
+    console.error(`POSP/MISP workbook parsing failed [${reference}]`, error);
+    return fail(`The workbook could not be processed. Reference ${reference}.`, "workbook");
+  }
+
   const rows: Array<{ partner_type: PartnerType; sheet_name: string; row_number: number; source_data: Record<string, unknown>; normalized_data: NormalizedRow; validation_errors: string[] }> = [];
 
   for (const partnerType of ["posp", "misp"] as const) {
     const sheetName = partnerType.toUpperCase();
-    const sheet = workbook.Sheets[sheetName];
+    const sheet = workbookSheets.find((entry) => entry.name === sheetName);
     if (!sheet) continue;
-    const jsonRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null, raw: false });
-    jsonRows.forEach((source, index) => {
-      if (!Object.values(source).some((value) => value !== null && String(value).trim())) return;
-      const normalized = normalizeExcelRow(partnerType, source, salesManagers, manufacturerNames);
-      rows.push({ partner_type: partnerType, sheet_name: sheetName, row_number: index + 2, source_data: source, normalized_data: normalized, validation_errors: validateRow(normalized) });
+    sheet.rows.forEach((source, index) => {
+      const normalized = normalizeExcelRow(partnerType, source, salesManagers, manufacturerNames, banks);
+      rows.push({
+        partner_type: partnerType,
+        sheet_name: sheetName,
+        row_number: index + 2,
+        source_data: sanitizeSourceData(source),
+        normalized_data: normalized,
+        validation_errors: [...validateRow(normalized), ...excelDateErrors(partnerType, source, normalized)]
+      });
     });
   }
 
   if (!rows.length) return fail("The workbook does not contain POSP or MISP rows.", "workbook");
+
+  const externalIdCounts = new Map<string, number>();
+  for (const row of rows) {
+    const externalId = row.normalized_data.external_onboarding_id;
+    if (externalId) externalIdCounts.set(externalId, (externalIdCounts.get(externalId) ?? 0) + 1);
+  }
+  for (const row of rows) {
+    const externalId = row.normalized_data.external_onboarding_id;
+    if (externalId && (externalIdCounts.get(externalId) ?? 0) > 1) {
+      row.validation_errors.push("External ID is duplicated in this workbook.");
+    }
+  }
 
   const { data: batch, error: batchError } = await admin.from("posp_misp_import_batches").insert({
     file_name: selected.name,
@@ -724,9 +1017,16 @@ export async function uploadPospMispWorkbook(_state: PospMispState, data: FormDa
     total_rows: rows.length,
     valid_rows: rows.filter((row) => !row.validation_errors.length).length,
     invalid_rows: rows.filter((row) => row.validation_errors.length).length,
+    pending_rows: rows.filter((row) => !row.validation_errors.length).length,
+    submitted_rows: 0,
+    failed_rows: 0,
     status: "parsed"
   }).select("id").single<{ id: string }>();
-  if (batchError || !batch) return fail(`Import batch could not be created: ${batchError?.message ?? "Unknown error"}`);
+  if (batchError || !batch) {
+    const reference = randomUUID().slice(0, 8);
+    console.error(`POSP/MISP import batch creation failed [${reference}]`, batchError);
+    return fail(`The import batch could not be created. Reference ${reference}.`);
+  }
 
   const { error: rowError } = await admin.from("posp_misp_import_rows").insert(rows.map((row) => ({
     import_batch_id: batch.id,
@@ -738,7 +1038,12 @@ export async function uploadPospMispWorkbook(_state: PospMispState, data: FormDa
     validation_errors: row.validation_errors,
     status: row.validation_errors.length ? "invalid" : "parsed"
   })));
-  if (rowError) return fail(`Import rows could not be saved: ${rowError.message}`);
+  if (rowError) {
+    const reference = randomUUID().slice(0, 8);
+    console.error(`POSP/MISP import row save failed [${reference}]`, rowError);
+    await admin.from("posp_misp_import_batches").delete().eq("id", batch.id);
+    return fail(`The parsed rows could not be saved. Reference ${reference}.`);
+  }
 
   redirect(`/customers/posp-misp/import/${batch.id}`);
 }
@@ -751,17 +1056,126 @@ async function refreshImportBatchCounts(admin: ReturnType<typeof createSupabaseA
     .returns<Array<{ status: string }>>();
   if (error) throw error;
   const activeRows = rows ?? [];
-  const invalidRows = activeRows.filter((row) => row.status === "invalid" || row.status === "failed").length;
+  const invalidRows = activeRows.filter((row) => row.status === "invalid").length;
   const validRows = activeRows.filter((row) => row.status === "parsed").length;
+  const pendingRows = activeRows.filter((row) => row.status === "parsed" || row.status === "processing").length;
+  const submittedRows = activeRows.filter((row) => row.status === "submitted").length;
+  const failedRows = activeRows.filter((row) => row.status === "failed").length;
+  const processingRows = activeRows.filter((row) => row.status === "processing").length;
+  const status = processingRows
+    ? "processing"
+    : activeRows.length > 0 && submittedRows === activeRows.length
+      ? "submitted"
+      : submittedRows > 0
+        ? "partially_submitted"
+        : failedRows > 0 && validRows === 0
+          ? "failed"
+          : "parsed";
   const { error: updateError } = await admin
     .from("posp_misp_import_batches")
-    .update({ total_rows: activeRows.length, valid_rows: validRows, invalid_rows: invalidRows })
+    .update({
+      total_rows: activeRows.length,
+      valid_rows: validRows,
+      invalid_rows: invalidRows,
+      pending_rows: pendingRows,
+      submitted_rows: submittedRows,
+      failed_rows: failedRows,
+      status,
+      submitted_at: status === "submitted" || status === "partially_submitted" ? new Date().toISOString() : null
+    })
     .eq("id", batchId);
   if (updateError) throw updateError;
 }
 
+async function saveImportRowDocuments(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  batchId: string,
+  rowId: string,
+  data: FormData,
+  uploadedBy: string
+) {
+  const educationUploadError = prepareEducationUpload(data);
+  if (educationUploadError) throw new Error(educationUploadError);
+  const selectedEducationType = text(data, "education_document_type");
+  const replacingEducationDocument = Boolean(
+    formFile(data, "education_marksheet") && isEducationDocumentKey(selectedEducationType)
+  );
+  const selectedDocuments = DOCUMENT_FIELDS
+    .map((document) => ({ ...document, file: formFile(data, document.key) }))
+    .filter((document): document is typeof document & { file: File } => Boolean(document.file));
+
+  for (const document of selectedDocuments) {
+    const validationError = validateFile(document.file, document.label);
+    if (validationError) throw new Error(validationError);
+  }
+
+  const { data: existingDocuments, error: existingError } = await admin
+    .from("posp_misp_import_row_documents")
+    .select("id, document_type, storage_bucket, storage_path")
+    .eq("import_row_id", rowId)
+    .returns<Array<{ id: string; document_type: string; storage_bucket: string; storage_path: string }>>();
+  if (existingError) throw existingError;
+
+  const existingByType = new Map((existingDocuments ?? []).map((document) => [document.document_type, document]));
+  for (const document of selectedDocuments) {
+    const path = `posp-misp-imports/${batchId}/${rowId}/${document.key}/${randomUUID()}.${extension(document.file)}`;
+    const { error: uploadError } = await admin.storage
+      .from(DOCUMENT_BUCKET)
+      .upload(path, new Uint8Array(await document.file.arrayBuffer()), {
+        contentType: document.file.type,
+        upsert: false
+      });
+    if (uploadError) throw uploadError;
+
+    const { error: recordError } = await admin
+      .from("posp_misp_import_row_documents")
+      .upsert({
+        import_row_id: rowId,
+        document_type: document.key,
+        file_name: document.file.name,
+        storage_bucket: DOCUMENT_BUCKET,
+        storage_path: path,
+        mime_type: document.file.type,
+        file_size: document.file.size,
+        uploaded_by: uploadedBy
+      }, { onConflict: "import_row_id,document_type" });
+    if (recordError) {
+      await admin.storage.from(DOCUMENT_BUCKET).remove([path]);
+      throw recordError;
+    }
+
+    const previous = existingByType.get(document.key);
+    if (previous?.storage_path && previous.storage_path !== path) {
+      await admin.storage.from(previous.storage_bucket).remove([previous.storage_path]);
+    }
+    existingByType.set(document.key, {
+      id: previous?.id ?? "",
+      document_type: document.key,
+      storage_bucket: DOCUMENT_BUCKET,
+      storage_path: path
+    });
+  }
+
+  if (replacingEducationDocument && isEducationDocumentKey(selectedEducationType)) {
+    for (const [documentType, previous] of existingByType) {
+      if (!isEducationDocumentKey(documentType) || documentType === selectedEducationType) continue;
+      const { error: deleteError } = await admin
+        .from("posp_misp_import_row_documents")
+        .delete()
+        .eq("id", previous.id);
+      if (deleteError) throw deleteError;
+      if (previous.storage_path) {
+        await admin.storage.from(previous.storage_bucket).remove([previous.storage_path]);
+      }
+      existingByType.delete(documentType);
+    }
+  }
+
+  return new Set(existingByType.keys());
+}
+
 export async function updatePospMispImportRow(data: FormData) {
-  await currentManager();
+  const manager = await currentManager();
   const rowId = text(data, "row_id");
   const batchId = text(data, "batch_id");
   if (!rowId || !batchId) redirect("/customers/posp-misp/import?error=row_missing");
@@ -769,25 +1183,52 @@ export async function updatePospMispImportRow(data: FormData) {
   const admin = createSupabaseAdminClient();
   const { data: existingRow, error: rowError } = await admin
     .from("posp_misp_import_rows")
-    .select("id, import_batch_id, partner_type, status, normalized_data")
+    .select("id, import_batch_id, partner_type, status, source_data, normalized_data")
     .eq("id", rowId)
     .eq("import_batch_id", batchId)
-    .maybeSingle<{ id: string; import_batch_id: string; partner_type: PartnerType; status: string; normalized_data: NormalizedRow }>();
+    .maybeSingle<{
+      id: string;
+      import_batch_id: string;
+      partner_type: PartnerType;
+      status: string;
+      source_data: Record<string, unknown>;
+      normalized_data: NormalizedRow;
+    }>();
   if (rowError || !existingRow) redirect(`/customers/posp-misp/import/${batchId}?error=row_missing`);
-  if (existingRow.status === "submitted") redirect(`/customers/posp-misp/import/${batchId}?error=row_locked`);
+  if (existingRow.status === "submitted" || existingRow.status === "processing") redirect(`/customers/posp-misp/import/${batchId}?error=row_locked`);
 
   let salesManagers: SalesManagerOption[];
   let manufacturerNames: Set<string>;
+  let banks: BankOption[];
   try {
-    [salesManagers, manufacturerNames] = await Promise.all([
+    [salesManagers, manufacturerNames, banks] = await Promise.all([
       loadSalesManagers(admin),
-      loadManufacturerNames(admin)
+      loadManufacturerNames(admin),
+      loadBanks(admin)
     ]);
   } catch {
     redirect(`/customers/posp-misp/import/${batchId}?error=master_data`);
   }
 
-  const normalized = rowFromImportEditForm(data, existingRow.normalized_data, salesManagers, manufacturerNames);
+  let documentTypes: Set<string>;
+  try {
+    documentTypes = await saveImportRowDocuments(admin, batchId, rowId, data, manager.id);
+  } catch (error) {
+    console.error("Import-row document upload failed", error);
+    const errorCode = error instanceof Error && error.message === "Select which marksheet you are uploading."
+      ? "marksheet_type_required"
+      : "document_upload_failed";
+    redirect(`/customers/posp-misp/import/${batchId}?error=${errorCode}`);
+  }
+
+  const normalized = {
+    ...rowFromImportEditForm(data, existingRow.normalized_data, salesManagers, manufacturerNames, banks),
+    education_status: [...EDUCATION_DOCUMENT_KEYS].some((key) => documentTypes.has(key))
+      || existingRow.normalized_data.education_status === "received"
+      || normalizeEducationStatus(cell(existingRow.source_data, "Marsheet") ?? cell(existingRow.source_data, "Marksheet")) === "received"
+      ? "received"
+      : "not_received"
+  };
   const validationErrors = validateRow(normalized);
   const { error: updateError } = await admin
     .from("posp_misp_import_rows")
@@ -820,7 +1261,13 @@ export async function deletePospMispImportRow(data: FormData) {
     .eq("import_batch_id", batchId)
     .maybeSingle<{ id: string; status: string }>();
   if (!existingRow) redirect(`/customers/posp-misp/import/${batchId}?error=row_missing`);
-  if (existingRow.status === "submitted") redirect(`/customers/posp-misp/import/${batchId}?error=row_locked`);
+  if (existingRow.status === "submitted" || existingRow.status === "processing") redirect(`/customers/posp-misp/import/${batchId}?error=row_locked`);
+
+  const { data: rowDocuments } = await admin
+    .from("posp_misp_import_row_documents")
+    .select("storage_bucket, storage_path")
+    .eq("import_row_id", rowId)
+    .returns<Array<{ storage_bucket: string; storage_path: string }>>();
 
   const { error: deleteError } = await admin
     .from("posp_misp_import_rows")
@@ -828,6 +1275,14 @@ export async function deletePospMispImportRow(data: FormData) {
     .eq("id", rowId)
     .eq("import_batch_id", batchId);
   if (deleteError) redirect(`/customers/posp-misp/import/${batchId}?error=row_delete_failed`);
+
+  const documentsByBucket = new Map<string, string[]>();
+  for (const document of rowDocuments ?? []) {
+    documentsByBucket.set(document.storage_bucket, [...(documentsByBucket.get(document.storage_bucket) ?? []), document.storage_path]);
+  }
+  await Promise.allSettled(
+    [...documentsByBucket].map(([bucket, paths]) => admin.storage.from(bucket).remove(paths))
+  );
 
   await refreshImportBatchCounts(admin, batchId);
   revalidatePath(`/customers/posp-misp/import/${batchId}`);
@@ -837,23 +1292,60 @@ export async function deletePospMispImportRow(data: FormData) {
 export async function submitPospMispImportBatch(data: FormData) {
   const manager = await currentManager();
   const batchId = text(data, "batch_id");
+  const retryFailed = data.get("retry_failed") === "true";
   if (!batchId) redirect("/customers/posp-misp/import?error=batch_missing");
   const admin = createSupabaseAdminClient();
-  const { data: rows, error } = await admin
+  let rowsQuery = admin
     .from("posp_misp_import_rows")
     .select("id, row_number, partner_type, source_data, normalized_data")
     .eq("import_batch_id", batchId)
-    .eq("status", "parsed")
+    .order("row_number", { ascending: true });
+  rowsQuery = retryFailed ? rowsQuery.eq("status", "failed") : rowsQuery.eq("status", "parsed");
+  const { data: rows, error } = await rowsQuery
     .returns<Array<{ id: string; row_number: number; partner_type: PartnerType; source_data: Record<string, unknown>; normalized_data: NormalizedRow }>>();
   if (error || !rows?.length) redirect(`/customers/posp-misp/import/${batchId}?error=no_valid_rows`);
 
   for (const row of rows) {
+    const expectedStatus = retryFailed ? "failed" : "parsed";
+    const { data: claimedRow } = await admin
+      .from("posp_misp_import_rows")
+      .update({ status: "processing", error_message: null })
+      .eq("id", row.id)
+      .eq("status", expectedStatus)
+      .select("id")
+      .maybeSingle<{ id: string }>();
+    if (!claimedRow) continue;
+
     try {
+      const { data: rowDocuments, error: documentsError } = await admin
+        .from("posp_misp_import_row_documents")
+        .select("document_type, file_name, storage_bucket, storage_path, mime_type, file_size, uploaded_by")
+        .eq("import_row_id", row.id)
+        .returns<Array<{
+          document_type: DocumentKey;
+          file_name: string;
+          storage_bucket: string;
+          storage_path: string;
+          mime_type: string | null;
+          file_size: number | null;
+          uploaded_by: string | null;
+        }>>();
+      if (documentsError) throw documentsError;
+
+      const attachedDocumentTypes = new Set((rowDocuments ?? []).map((document) => document.document_type));
+      const derivedRow = {
+        ...row.normalized_data,
+        education_status: [...EDUCATION_DOCUMENT_KEYS].some((key) => attachedDocumentTypes.has(key))
+          || row.normalized_data.education_status === "received"
+          || normalizeEducationStatus(cell(row.source_data, "Marsheet") ?? cell(row.source_data, "Marksheet")) === "received"
+          ? "received"
+          : "not_received"
+      };
       const application = await createSubmittedApplication({
-        row: row.normalized_data,
+        row: derivedRow,
         documentStatuses: Object.fromEntries(DOCUMENT_FIELDS.map(({ key }) => [
           key,
-          key === "education_certificate" ? row.normalized_data.education_status ?? "not_received" : "not_received"
+          attachedDocumentTypes.has(key) ? "received" : "not_received"
         ])),
         source: "excel_import",
         importBatchId: batchId,
@@ -861,12 +1353,59 @@ export async function submitPospMispImportBatch(data: FormData) {
         rawData: row.source_data,
         initiatedBy: manager.id
       });
-      await admin.from("posp_misp_import_rows").update({ status: "submitted", application_id: application.id, error_message: null }).eq("id", row.id);
+
+      if (rowDocuments?.length) {
+        const { error: documentLinkError } = await admin
+          .from("customer_onboarding_documents")
+          .upsert(rowDocuments.map((document) => ({
+            application_id: application.id,
+            document_type: document.document_type,
+            file_name: document.file_name,
+            storage_bucket: document.storage_bucket,
+            storage_path: document.storage_path,
+            mime_type: document.mime_type,
+            file_size: document.file_size,
+            verification_status: "pending",
+            uploaded_by: document.uploaded_by ?? manager.id
+          })), { onConflict: "application_id,document_type" });
+        if (documentLinkError) throw documentLinkError;
+      }
+
+      const { error: submittedRowError } = await admin.from("posp_misp_import_rows").update({
+        status: "submitted",
+        application_id: application.id,
+        error_message: null,
+        normalized_data: sanitizeSubmittedRow(derivedRow)
+      }).eq("id", row.id);
+      if (submittedRowError) throw submittedRowError;
     } catch (creationError) {
-      await admin.from("posp_misp_import_rows").update({ status: "failed", error_message: creationError instanceof Error ? creationError.message : "Unknown error" }).eq("id", row.id);
+      const reference = randomUUID().slice(0, 8);
+      console.error(`POSP/MISP import row failed [${reference}]`, creationError);
+      await admin.from("posp_misp_import_rows").update({
+        status: "failed",
+        error_message: importSubmissionError(creationError, reference)
+      }).eq("id", row.id);
     }
   }
 
-  await admin.from("posp_misp_import_batches").update({ status: "submitted", submitted_at: new Date().toISOString() }).eq("id", batchId);
-  redirect(`/customers/posp-misp/import/${batchId}?success=submitted`);
+  await refreshImportBatchCounts(admin, batchId);
+  redirect(`/customers/posp-misp/import/${batchId}?success=${retryFailed ? "retried" : "submitted"}`);
+}
+
+function importSubmissionError(error: unknown, reference: string) {
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === "object" && error && "message" in error
+      ? String(error.message)
+      : "";
+  if (/different onboarding ID/i.test(message)) {
+    return `This mobile number is already linked to a different onboarding ID. Reference ${reference}.`;
+  }
+  if (/External onboarding ID already exists/i.test(message)) {
+    return `This onboarding ID is already linked to another application. Reference ${reference}.`;
+  }
+  if (/duplicate key|unique constraint/i.test(message)) {
+    return `A matching onboarding record already exists. Review the mobile number and onboarding ID. Reference ${reference}.`;
+  }
+  return `Submission failed. Reference ${reference}.`;
 }

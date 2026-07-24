@@ -65,14 +65,21 @@ export default async function NewCustomerPage({ searchParams }: { searchParams: 
   }
 
   if (partnerType === "posp" || partnerType === "misp") {
-    const [salesManagers, oems] = await Promise.all([
+    const [salesManagers, oems, banks] = await Promise.all([
       loadSalesManagers(admin),
-      loadVehicleManufacturers(admin)
+      loadVehicleManufacturers(admin),
+      loadBanks(admin)
     ]);
 
     return (
       <AppShell title={`Add ${partnerType.toUpperCase()} Application`}>
-        <PospMispOnboardingForm action={createPospMispOnboarding} partnerType={partnerType} salesManagers={salesManagers} oems={oems} />
+        <PospMispOnboardingForm
+          action={createPospMispOnboarding}
+          partnerType={partnerType}
+          salesManagers={salesManagers}
+          oems={oems}
+          banks={banks}
+        />
       </AppShell>
     );
   }
@@ -108,6 +115,16 @@ async function loadVehicleManufacturers(admin: ReturnType<typeof createSupabaseA
     .order("name", { ascending: true })
     .returns<Array<{ name: string }>>();
   return (data ?? []).map((manufacturer) => ({ value: manufacturer.name, label: manufacturer.name }));
+}
+
+async function loadBanks(admin: ReturnType<typeof createSupabaseAdminClient>) {
+  const { data } = await admin
+    .from("banks")
+    .select("id, name")
+    .eq("is_active", true)
+    .order("name", { ascending: true })
+    .returns<Array<{ id: string; name: string }>>();
+  return (data ?? []).map((bank) => ({ value: bank.id, label: bank.name }));
 }
 
 async function loadActiveGroups(admin: ReturnType<typeof createSupabaseAdminClient>): Promise<GroupOption[]> {

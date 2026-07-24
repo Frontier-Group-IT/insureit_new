@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FormSubmitButton } from "@/components/form-submit-button";
 
 type ServerAction = (formData: FormData) => void | Promise<void>;
 
@@ -40,7 +41,7 @@ export function VerificationModalLauncher({ kind, title, action, disabled = fals
               <div className="flex items-center justify-between gap-4 border-t border-slate-100 bg-white px-8 py-5">
                 <button className="rounded-xl border border-slate-300 bg-white px-8 py-3 text-sm font-black text-navy-900" type="button" onClick={() => setOpen(false)}>Cancel</button>
                 <input type="hidden" name="notes" value={`${heading} saved.`} />
-                <button className="rounded-xl bg-blue-900 px-10 py-3 text-sm font-black text-white shadow-lg shadow-blue-900/20 hover:bg-blue-800" type="submit">Save & Close</button>
+                <FormSubmitButton label="Save & Close" pendingLabel="Saving" className="inline-flex items-center justify-center rounded-xl bg-blue-900 px-10 py-3 text-sm font-black text-white shadow-lg shadow-blue-900/20 hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-70" />
               </div>
             </form>
           </div>

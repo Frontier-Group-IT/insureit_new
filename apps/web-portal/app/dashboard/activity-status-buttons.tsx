@@ -1,4 +1,5 @@
 import { markCustomerActivityHandled, markCustomerActivityInProgress, markCustomerActivitySeen } from "./activity-actions";
+import { FormSubmitButton } from "@/components/form-submit-button";
 
 export function ActivityWorkButton({ activityId }: { activityId: string }) {
   return <ActivityStatusButton activityId={activityId} label="Work" action={markCustomerActivityInProgress} />;
@@ -20,7 +21,7 @@ function ActivityStatusButton({ activityId, label, action, primary = false }: { 
   return (
     <form action={action}>
       <input type="hidden" name="activityId" value={activityId} />
-      <button type="submit" className={className}>{label}</button>
+      <FormSubmitButton label={label} pendingLabel="Updating" className={`${className} inline-flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-70`} />
     </form>
   );
 }

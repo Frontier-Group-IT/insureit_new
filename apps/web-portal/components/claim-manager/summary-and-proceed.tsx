@@ -1,5 +1,6 @@
 import { advanceClaimWorkflow, requestFinalDocuments } from "@/app/actions";
 import { StatusBadge } from "@/components/ui";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { stageAgeLabel, type ClaimStatus } from "@/lib/claim-workflow";
 
 export type SummaryClaim = {
@@ -49,5 +50,5 @@ function SummaryCell({ icon, label, value, subValue }: { icon: string; label: st
 }
 
 function SubmitButton() {
-  return <button className="w-full rounded-2xl bg-[#071D49] px-6 py-4 text-sm font-black text-white shadow-lg shadow-blue-950/20" type="submit">Submit & Proceed →</button>;
+  return <FormSubmitButton label="Submit & Proceed" pendingLabel="Submitting" className="inline-flex w-full items-center justify-center rounded-2xl bg-[#071D49] px-6 py-4 text-sm font-black text-white shadow-lg shadow-blue-950/20 disabled:cursor-not-allowed disabled:opacity-70" />;
 }

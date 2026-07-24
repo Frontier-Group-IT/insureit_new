@@ -36,9 +36,9 @@ export function InsureItLoader({ label = "Loading", sublabel = "", compact = fal
 export function InsureItButtonLoader({ label = "Working" }: { label?: string }) {
   return (
     <span className="inline-flex items-center gap-2" data-insureit-progress="true">
-      <span className="relative grid h-4 w-4 place-items-center rounded-full bg-white/20 ring-1 ring-white/40">
-        <span className="absolute h-2.5 w-2.5 animate-[insureit-work-pulse_.85s_ease-in-out_infinite] rounded-sm border border-white/90" />
-        <span className="h-1.5 w-1.5 rounded-full bg-white" />
+      <span className="relative grid h-4 w-4 place-items-center rounded-full ring-1 ring-current/40">
+        <span className="absolute h-2.5 w-2.5 animate-[insureit-work-pulse_.85s_ease-in-out_infinite] rounded-sm border border-current" />
+        <span className="h-1.5 w-1.5 rounded-full bg-current" />
       </span>
       <span>{label}</span>
     </span>
