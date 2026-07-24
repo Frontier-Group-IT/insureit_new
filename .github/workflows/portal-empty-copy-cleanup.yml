@@ -1,0 +1,44 @@
+name: Remove empty portal copy elements
+
+on:
+  push:
+    branches:
+      - work/portal-copy-cleanup
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/portal-copy-cleanup
+          fetch-depth: 0
+
+      - name: Remove empty JSX elements
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          for path in Path('apps/web-portal').rglob('*.tsx'):
+              text = path.read_text(encoding='utf-8')
+              updated = re.sub(r'\n?\s*<(p|h1)([^>]*)>\s*</\1>', '', text)
+              updated = re.sub(r'\n?\s*<div>\s*</div>', '', updated)
+              if updated != text:
+                  path.write_text(updated, encoding='utf-8')
+          PY
+
+      - name: Remove temporary workflow and commit
+        shell: bash
+        run: |
+          git rm .github/workflows/portal-empty-copy-cleanup.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal
+          git commit -m "Remove empty portal copy elements"
+          git push origin HEAD:work/portal-copy-cleanup
