@@ -123,11 +123,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (pathname === "/") {
-    if (status === "authorized") return redirect(request, "/dashboard", refreshedSession);
-    if (status === "forbidden") return redirect(request, "/access-denied", refreshedSession);
-    return clearSessionCookies(redirect(request, "/login"));
-  }
+  if (pathname === "/") return continueRequest(request, refreshedSession);
 
   if (pathname === "/login") {
     if (status === "authorized") return redirect(request, "/dashboard", refreshedSession);
