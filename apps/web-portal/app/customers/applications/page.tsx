@@ -87,7 +87,6 @@ export default async function CustomerApplicationsPage({ searchParams }: { searc
       <div className="mx-auto max-w-[1440px] space-y-3 pb-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[11px] text-[#64748B]">Review submitted onboarding applications, document readiness and queue age.</p>
             <p className="mt-1 text-[10px] font-medium text-[#475569]">{total ? `Showing ${firstResult}-${lastResult} of ${total} applications` : "No matching applications"}</p>
           </div>
           <Link href="/customers" className="rounded-md border border-[#CBD5E1] bg-white px-3 py-2 text-[10.5px] font-semibold text-[#334155]">Customers</Link>
