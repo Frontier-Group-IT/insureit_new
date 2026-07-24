@@ -18,13 +18,15 @@ const elements = {
   message: document.getElementById("message")
 };
 
+let currentRuntime = {};
+
 chrome.runtime.onMessage.addListener((message) => {
   if (message?.type === "RUNTIME_CHANGED") renderRuntime(message.runtime);
 });
 
 document.addEventListener("DOMContentLoaded", load);
 elements.form.addEventListener("submit", saveSettings);
-elements.start.addEventListener("click", start);
+elements.start.addEventListener("click", startOrCheckNow);
 elements.pause.addEventListener("click", togglePause);
 elements.stop.addEventListener("click", stop);
 
@@ -60,16 +62,17 @@ async function saveSettings(event) {
   elements.panel.open = false;
 }
 
-async function start() {
-  setBusy(true);
-  showMessage("Starting PAN checker...");
-  const response = await chrome.runtime.sendMessage({ type: "START" });
-  setBusy(false);
+async function startOrCheckNow() {
+  const running = Boolean(currentRuntime?.running);
+  setBusy(true, running);
+  showMessage(running ? "Checking InsureIt for new PANs..." : "Starting PAN checker...");
+  const response = await chrome.runtime.sendMessage({ type: running ? "CHECK_NOW" : "START" });
+  setBusy(false, running);
   if (!response?.ok) {
     elements.panel.open = true;
-    return showMessage(response?.error || "Could not start PAN checking.", true);
+    return showMessage(response?.error || "Could not check for PAN work.", true);
   }
-  showMessage(response.jobs ? `${response.jobs} PAN job(s) claimed.` : "No pending PANs right now.", false, true);
+  showMessage(response.jobs ? `${response.jobs} PAN job(s) claimed.` : "No new PANs right now.", false, true);
 }
 
 async function togglePause() {
@@ -88,6 +91,7 @@ async function stop() {
 }
 
 function renderRuntime(runtime) {
+  currentRuntime = runtime || {};
   const running = Boolean(runtime?.running);
   const paused = Boolean(runtime?.paused);
   elements.status.textContent = runtime?.status || "Idle";
@@ -95,15 +99,16 @@ function renderRuntime(runtime) {
   elements.queued.textContent = Array.isArray(runtime?.queue) ? runtime.queue.length : 0;
   elements.currentPan.textContent = runtime?.currentPan || "—";
   elements.dot.style.background = paused ? "#f5b942" : running ? "#35d07f" : "#94a3b8";
-  elements.start.disabled = running;
+  elements.start.disabled = false;
+  elements.start.textContent = running ? "Check now" : "Start checking";
   elements.pause.disabled = !running;
   elements.pause.textContent = paused ? "Resume" : "Pause";
   elements.stop.disabled = !running;
 }
 
-function setBusy(busy) {
+function setBusy(busy, running) {
   elements.start.disabled = busy;
-  elements.start.textContent = busy ? "Starting..." : "Start checking";
+  elements.start.textContent = busy ? (running ? "Checking..." : "Starting...") : (running ? "Check now" : "Start checking");
 }
 
 function showMessage(text, error = false, success = false) {
