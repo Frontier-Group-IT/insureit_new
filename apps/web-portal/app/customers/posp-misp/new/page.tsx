@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { requirePospMispManager } from "@/lib/master-data-server";
+import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createPospMispOnboarding } from "../actions";
 import { PospMispOnboardingForm } from "../posp-misp-onboarding-form";
@@ -27,16 +28,10 @@ export default async function NewPospMispPage({ searchParams }: { searchParams: 
 }
 
 async function loadSalesManagers(admin: ReturnType<typeof createSupabaseAdminClient>) {
-  const { data } = await admin
-    .from("profiles")
-    .select("id, full_name, employee_code")
-    .eq("role", "sales_manager")
-    .eq("is_active", true)
-    .order("full_name", { ascending: true })
-    .returns<Array<{ id: string; full_name: string | null; employee_code: string | null }>>();
-  return (data ?? []).map((manager) => ({
+  const managers = await loadPospMispAssociates(admin);
+  return managers.map((manager) => ({
     id: manager.id,
-    fullName: manager.full_name?.trim() || "Unnamed Sales Manager",
+    fullName: manager.full_name?.trim() || "Unnamed Sales Employee",
     employeeCode: manager.employee_code
   }));
 }

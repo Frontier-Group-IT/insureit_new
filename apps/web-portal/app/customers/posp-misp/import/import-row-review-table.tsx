@@ -126,7 +126,7 @@ export function ImportRowReviewTable({ batchId, batchStatus, rows, salesManagers
 function EditRowModal({ batchId, row, editable, salesManagers, oems, banks, onClose }: { batchId: string; row: ImportRow; editable: boolean; salesManagers: Props["salesManagers"]; oems: Props["oems"]; banks: Props["banks"]; onClose: () => void }) {
   const data = row.normalized_data ?? {};
   const isMisp = row.partner_type === "misp";
-  const selectedManagerId = stringValue(data.associate_profile_id) ?? "";
+  const selectedManagerId = stringValue(data.associate_employee_id) ?? stringValue(data.associate_profile_id) ?? "";
   const currentEducationDocument = row.documents.find((document) => educationDocumentTypes.has(document.document_type));
   const educationReceived = data.education_status === "received"
     || Boolean(currentEducationDocument)
@@ -149,7 +149,7 @@ function EditRowModal({ batchId, row, editable, salesManagers, oems, banks, onCl
           <input type="hidden" name="row_id" value={row.id} />
           <input type="hidden" name="partner_type" value={row.partner_type} />
           <Section title={isMisp ? "MISP Business Details" : "POSP Details"}>
-            <SelectField label="Associate Name" name="associate_profile_id" defaultValue={selectedManagerId} required disabled={!editable} options={salesManagers.map((manager) => ({ value: manager.id, label: `${manager.fullName}${manager.employeeCode ? ` - ${manager.employeeCode}` : ""}` }))} placeholder="Select Sales Manager" />
+            <SelectField label="Associate Name" name="associate_employee_id" defaultValue={selectedManagerId} required disabled={!editable} options={salesManagers.map((manager) => ({ value: manager.id, label: `${manager.fullName}${manager.employeeCode ? ` - ${manager.employeeCode}` : ""}` }))} placeholder="Select Sales employee" />
             <Field label={isMisp ? "MISP ID" : "Onboarding ID"} name="external_onboarding_id" defaultValue={stringValue(data.external_onboarding_id) ?? ""} disabled={!editable} />
             <IndianDateField label="Document Received Date" name="document_received_at" defaultValue={stringValue(data.document_received_at)} disabled={!editable} />
             {isMisp ? <Field label="MISP Name" name="misp_name" required defaultValue={stringValue(data.misp_name) ?? ""} disabled={!editable} /> : <Field label="POS Name" name="pos_name" required defaultValue={stringValue(data.pos_name) ?? ""} disabled={!editable} />}

@@ -4,6 +4,7 @@ import { FormSubmitButton } from "@/components/form-submit-button";
 import { DataError } from "@/components/record-list";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { requirePospMispManager } from "@/lib/master-data-server";
+import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { ImportRowReviewTable } from "../import-row-review-table";
 import { submitPospMispImportBatch } from "../../actions";
@@ -122,16 +123,10 @@ function Metric({ label, value, tone = "default" }: { label: string; value: stri
 }
 
 async function loadSalesManagers(admin: ReturnType<typeof createSupabaseAdminClient>) {
-  const { data } = await admin
-    .from("profiles")
-    .select("id, full_name, employee_code")
-    .eq("role", "sales_manager")
-    .eq("is_active", true)
-    .order("full_name", { ascending: true })
-    .returns<Array<{ id: string; full_name: string | null; employee_code: string | null }>>();
-  return (data ?? []).map((manager) => ({
+  const managers = await loadPospMispAssociates(admin);
+  return managers.map((manager) => ({
     id: manager.id,
-    fullName: manager.full_name?.trim() || "Unnamed Sales Manager",
+    fullName: manager.full_name?.trim() || "Unnamed Sales Employee",
     employeeCode: manager.employee_code
   }));
 }
@@ -166,7 +161,7 @@ function errorMessage(error: string) {
     row_delete_failed: "The row could not be removed.",
     document_upload_failed: "The document could not be uploaded. Use a PDF, JPG or PNG file no larger than 5 MB.",
     marksheet_type_required: "Select the marksheet type before uploading the marksheet.",
-    master_data: "Sales Manager or OEM master data could not be loaded."
+    master_data: "Sales employee or OEM master data could not be loaded."
   };
   return messages[error] ?? "The batch could not be updated.";
 }

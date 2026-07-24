@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { parsePospMispWorkbook, WorkbookValidationError } from "@/lib/posp-misp-workbook";
+import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { canManagePospMispOnboarding } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { beginPortalOnboardingApplication } from "../onboarding-applications";
@@ -29,6 +30,7 @@ type DocumentKey =
 
 type NormalizedRow = {
   partner_type: PartnerType;
+  associate_employee_id: string | null;
   associate_profile_id: string | null;
   associate_name: string | null;
   associate_id: string | null;
@@ -86,6 +88,7 @@ type ContactPayload = {
 
 type SalesManagerOption = {
   id: string;
+  profile_id: string | null;
   full_name: string | null;
   employee_code: string | null;
 };
@@ -247,9 +250,9 @@ function normalizeTrainingStatus(value: string | null) {
   return normalized;
 }
 
-function resolveSalesManagerByProfileId(managers: SalesManagerOption[], profileId: string | null) {
-  if (!profileId) return null;
-  return managers.find((manager) => manager.id === profileId) ?? null;
+function resolveSalesManagerByEmployeeId(managers: SalesManagerOption[], employeeId: string | null) {
+  if (!employeeId) return null;
+  return managers.find((manager) => manager.id === employeeId) ?? null;
 }
 
 function resolveSalesManagerFromExcel(managers: SalesManagerOption[], associateName: string | null, associateId: string | null) {
@@ -300,15 +303,7 @@ function resolveBankFromExcel(banks: BankOption[], value: string | null) {
 }
 
 async function loadSalesManagers(admin: ReturnType<typeof createSupabaseAdminClient>) {
-  const { data, error } = await admin
-    .from("profiles")
-    .select("id, full_name, employee_code")
-    .eq("role", "sales_manager")
-    .eq("is_active", true)
-    .order("full_name", { ascending: true })
-    .returns<SalesManagerOption[]>();
-  if (error) throw error;
-  return data ?? [];
+  return loadPospMispAssociates(admin);
 }
 
 async function loadBanks(admin: ReturnType<typeof createSupabaseAdminClient>) {
@@ -343,6 +338,7 @@ function normalizeOem(value: string | null, manufacturerNames: Set<string>) {
 function profileDraft(row: NormalizedRow, documentStatuses: Record<string, string>) {
   return {
     partner_type: row.partner_type,
+    associate_employee_id: row.associate_employee_id,
     associate_profile_id: row.associate_profile_id,
     associate_name: row.associate_name,
     associate_id: row.associate_id,
@@ -411,7 +407,7 @@ function sanitizeSubmittedRow(row: NormalizedRow) {
 
 function validateRow(row: NormalizedRow) {
   const errors: string[] = [];
-  if (!row.associate_profile_id) errors.push("Select a valid Sales Manager as Associate.");
+  if (!row.associate_employee_id) errors.push("Select a valid Sales department employee as Associate.");
   if (row.partner_type === "posp" && !row.pos_name) errors.push("POS name is required.");
   if (row.partner_type === "misp" && !row.misp_name) errors.push("MISP name is required.");
   if (!row.applicant_phone) errors.push("Valid primary mobile is required.");
@@ -458,14 +454,15 @@ function excelDateErrors(partnerType: PartnerType, source: Record<string, unknow
 function rowFromForm(data: FormData, salesManagers: SalesManagerOption[], manufacturerNames: Set<string>, banks: BankOption[]): NormalizedRow {
   const partnerType = text(data, "partner_type") === "misp" ? "misp" : "posp";
   const aadhaar = normalizeAadhaar(text(data, "aadhaar_number"));
-  const associate = resolveSalesManagerByProfileId(salesManagers, text(data, "associate_profile_id"));
+  const associate = resolveSalesManagerByEmployeeId(salesManagers, text(data, "associate_employee_id"));
   const educationStatus = educationStatusFromForm(data);
   const bank = resolveBankById(banks, text(data, "bank_id"));
   const iibUploaded = data.get("iib_uploaded") === "true";
   const credentialsShared = data.get("training_credentials_shared_flag") === "true";
   return {
     partner_type: partnerType,
-    associate_profile_id: associate?.id ?? null,
+    associate_employee_id: associate?.id ?? null,
+    associate_profile_id: associate?.profile_id ?? null,
     associate_name: managerName(associate),
     associate_id: managerCode(associate),
     external_onboarding_id: text(data, "external_onboarding_id")?.toUpperCase() ?? null,
@@ -521,13 +518,14 @@ function rowFromImportEditForm(data: FormData, existing: NormalizedRow, salesMan
       hash: existing.aadhaar_hash,
       encrypted: existing.aadhaar_number_encrypted
     };
-  const associate = resolveSalesManagerByProfileId(salesManagers, text(data, "associate_profile_id"));
+  const associate = resolveSalesManagerByEmployeeId(salesManagers, text(data, "associate_employee_id"));
   const iibUploaded = data.get("iib_uploaded") === "true";
   const credentialsShared = data.get("training_credentials_shared_flag") === "true";
   const bank = resolveBankById(banks, text(data, "bank_id"));
   return {
     partner_type: partnerType,
-    associate_profile_id: associate?.id ?? null,
+    associate_employee_id: associate?.id ?? null,
+    associate_profile_id: associate?.profile_id ?? null,
     associate_name: managerName(associate),
     associate_id: managerCode(associate),
     external_onboarding_id: text(data, "external_onboarding_id")?.toUpperCase() ?? null,
@@ -581,7 +579,8 @@ function normalizeExcelRow(partnerType: PartnerType, source: Record<string, unkn
   const bank = resolveBankFromExcel(banks, cell(source, "Bank Name"));
   return {
     partner_type: partnerType,
-    associate_profile_id: associate?.id ?? null,
+    associate_employee_id: associate?.id ?? null,
+    associate_profile_id: associate?.profile_id ?? null,
     associate_name: managerName(associate) ?? cell(source, "Associate Name"),
     associate_id: managerCode(associate) ?? cell(source, "Associate ID"),
     external_onboarding_id: cell(source, partnerType === "posp" ? "Onboarding ID" : "MISP ID")?.toUpperCase() ?? null,
@@ -664,6 +663,7 @@ async function createSubmittedApplication(params: {
   const profilePayload = {
     application_id: application.id,
     partner_type: params.row.partner_type,
+    associate_employee_id: params.row.associate_employee_id,
     associate_profile_id: params.row.associate_profile_id,
     external_onboarding_id: params.row.external_onboarding_id,
     associate_name: params.row.associate_name,
@@ -897,7 +897,7 @@ export async function createPospMispOnboarding(_state: PospMispState, data: Form
 
   const row = rowFromForm(data, salesManagers, manufacturerNames, banks);
   const errors = validateRow(row);
-  if (errors.length) return fail(errors[0], errors[0].includes("Associate") ? "associate_profile_id" : errors[0].includes("bank") ? "bank_id" : errors[0].includes("OEM") ? "oem_name" : errors[0].includes("DP") ? "dp_phone" : "applicant_phone");
+  if (errors.length) return fail(errors[0], errors[0].includes("Associate") ? "associate_employee_id" : errors[0].includes("bank") ? "bank_id" : errors[0].includes("OEM") ? "oem_name" : errors[0].includes("DP") ? "dp_phone" : "applicant_phone");
 
   for (const { key, label } of PRE_IIB_DOCUMENT_FIELDS) {
     const error = validateFile(formFile(data, key), label);

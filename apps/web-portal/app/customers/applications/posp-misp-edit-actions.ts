@@ -4,6 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requirePospMispManager } from "@/lib/master-data-server";
+import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { encryptSensitiveValue } from "@/lib/sensitive-data";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -76,12 +77,10 @@ export async function updateSubmittedPospMispApplication(data: FormData) {
     redirect(`/customers/applications/${applicationId}?error=posp_misp_aadhaar_invalid`);
   }
 
-  const associateProfileId = value(data, "associate_profile_id");
+  const associateEmployeeId = value(data, "associate_employee_id");
   const bankId = value(data, "bank_id");
-  const [{ data: associate }, { data: bank }, { data: manufacturer }] = await Promise.all([
-    associateProfileId
-      ? admin.from("profiles").select("id, full_name, employee_code").eq("id", associateProfileId).eq("role", "sales_manager").eq("is_active", true).maybeSingle<{ id: string; full_name: string | null; employee_code: string | null }>()
-      : Promise.resolve({ data: null }),
+  const [associates, { data: bank }, { data: manufacturer }] = await Promise.all([
+    loadPospMispAssociates(admin),
     bankId
       ? admin.from("banks").select("id, name").eq("id", bankId).eq("is_active", true).maybeSingle<{ id: string; name: string }>()
       : Promise.resolve({ data: null }),
@@ -89,6 +88,7 @@ export async function updateSubmittedPospMispApplication(data: FormData) {
       ? admin.from("vehicle_manufacturers").select("name").eq("name", value(data, "oem_name")!).eq("is_active", true).maybeSingle<{ name: string }>()
       : Promise.resolve({ data: null })
   ]);
+  const associate = associates.find((option) => option.id === associateEmployeeId) ?? null;
   if (!associate || !bank || (partnerType === "misp" && !manufacturer)) {
     redirect(`/customers/applications/${applicationId}?error=posp_misp_edit_invalid`);
   }
@@ -106,7 +106,8 @@ export async function updateSubmittedPospMispApplication(data: FormData) {
     };
 
   const profileUpdate = {
-    associate_profile_id: associate.id,
+    associate_employee_id: associate.id,
+    associate_profile_id: associate.profile_id,
     associate_name: associate.full_name,
     associate_id: associate.employee_code,
     external_onboarding_id: value(data, "external_onboarding_id"),

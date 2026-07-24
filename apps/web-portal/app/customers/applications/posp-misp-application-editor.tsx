@@ -4,6 +4,7 @@ import { updateSubmittedPospMispApplication } from "./posp-misp-edit-actions";
 
 export type PospMispEditProfile = {
   partner_type: "posp" | "misp";
+  associate_employee_id: string | null;
   associate_profile_id: string | null;
   external_onboarding_id: string | null;
   document_received_at: string | null;
@@ -65,7 +66,7 @@ export function PospMispApplicationEditor({ applicationId, profile, editable, sa
     <form action={editable ? updateSubmittedPospMispApplication : undefined}>
       <input type="hidden" name="application_id" value={applicationId} />
       <Section title={isMisp ? "MISP Business Details" : "POSP Details"}>
-        <Select label="Associate Name" name="associate_profile_id" defaultValue={profile.associate_profile_id ?? ""} options={salesManagers} required disabled={!editable} />
+        <Select label="Associate Name" name="associate_employee_id" defaultValue={profile.associate_employee_id ?? profile.associate_profile_id ?? ""} options={salesManagers} required disabled={!editable} />
         <Field label={isMisp ? "MISP ID" : "Onboarding ID"} name="external_onboarding_id" defaultValue={profile.external_onboarding_id ?? ""} disabled={!editable} />
         <IndianDateField label="Document Received Date" name="document_received_at" defaultValue={profile.document_received_at} disabled={!editable} />
         <Field label={isMisp ? "MISP Name" : "POS Name"} name={isMisp ? "misp_name" : "pos_name"} defaultValue={(isMisp ? profile.misp_name : profile.pos_name) ?? ""} required disabled={!editable} />

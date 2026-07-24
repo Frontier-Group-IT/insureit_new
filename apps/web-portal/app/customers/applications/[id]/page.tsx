@@ -4,6 +4,7 @@ import { AppShell } from "@/components/shell";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { requireApplicationReviewer } from "@/lib/master-data-server";
+import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { approveMobileIndividualApplication, requestMobileApplicationChanges } from "../actions";
 import { approveMobileCorporateApplication, updateMobileCorporateApplicationDraft } from "../corporate-actions";
 import { approveMobileDealershipApplication, updateMobileDealershipApplicationDraft } from "../dealership-actions";
@@ -132,17 +133,17 @@ export default async function ApplicationReviewPage({ params, searchParams }: Pa
   const { data: pospMispProfile } = isPospMisp
     ? await supabase
       .from("posp_misp_onboarding_profiles")
-      .select("partner_type, associate_profile_id, external_onboarding_id, document_received_at, pos_name, misp_name, applicant_phone, applicant_email, date_of_birth, aadhaar_last_four, aadhaar_number_encrypted, pan_number, gst_number, address, city, state, postal_code, bank_id, bank_account_number, bank_ifsc_code, oem_name, dp_name, dp_phone, dp_email, dp_pan_number, workflow_stage, iib_remarks, iib_uploaded, iib_uploaded_at, training_login_id, training_credentials_shared_flag, training_start_date, training_end_date, training_status, training_certificate_number, exam_status, onboarding_date")
+      .select("partner_type, associate_employee_id, associate_profile_id, external_onboarding_id, document_received_at, pos_name, misp_name, applicant_phone, applicant_email, date_of_birth, aadhaar_last_four, aadhaar_number_encrypted, pan_number, gst_number, address, city, state, postal_code, bank_id, bank_account_number, bank_ifsc_code, oem_name, dp_name, dp_phone, dp_email, dp_pan_number, workflow_stage, iib_remarks, iib_uploaded, iib_uploaded_at, training_login_id, training_credentials_shared_flag, training_start_date, training_end_date, training_status, training_certificate_number, exam_status, onboarding_date")
       .eq("application_id", id)
       .maybeSingle<PospMispWorkflowProfile & Omit<PospMispEditProfile, "aadhaar_number"> & { aadhaar_number_encrypted: string | null }>()
     : { data: null };
-  const [{ data: salesManagerRows }, { data: bankRows }, { data: oemRows }] = isPospMisp
+  const [salesManagerRows, { data: bankRows }, { data: oemRows }] = isPospMisp
     ? await Promise.all([
-      admin.from("profiles").select("id, full_name, employee_code").eq("role", "sales_manager").eq("is_active", true).order("full_name"),
+      loadPospMispAssociates(admin),
       admin.from("banks").select("id, name").eq("is_active", true).order("name"),
       admin.from("vehicle_manufacturers").select("name").eq("is_active", true).order("sort_order").order("name")
     ])
-    : [{ data: [] }, { data: [] }, { data: [] }];
+    : [[], { data: [] }, { data: [] }];
   const pospMispEditProfile: PospMispEditProfile | null = pospMispProfile
     ? {
       ...pospMispProfile,
@@ -151,7 +152,7 @@ export default async function ApplicationReviewPage({ params, searchParams }: Pa
     : null;
   const salesManagerOptions = (salesManagerRows ?? []).map((manager) => ({
     value: String(manager.id),
-    label: `${manager.full_name || "Unnamed Sales Manager"}${manager.employee_code ? ` - ${manager.employee_code}` : ""}`
+    label: `${manager.full_name || "Unnamed Sales Employee"}${manager.employee_code ? ` - ${manager.employee_code}` : ""}`
   }));
   const bankOptions = (bankRows ?? []).map((bank) => ({ value: String(bank.id), label: String(bank.name) }));
   const oemOptions = (oemRows ?? []).map((manufacturer) => ({ value: String(manufacturer.name), label: String(manufacturer.name) }));

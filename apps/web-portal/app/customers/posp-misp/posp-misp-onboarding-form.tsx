@@ -103,7 +103,7 @@ export function PospMispOnboardingForm({ action, partnerType, salesManagers, oem
           <Section title={isMisp ? "MISP Business Details" : "POSP Details"}>
             <SelectField
               label="Associate Name"
-              name="associate_profile_id"
+              name="associate_employee_id"
               value={associateId}
               onChange={(event) => setAssociateId(event.target.value)}
               required
@@ -111,7 +111,7 @@ export function PospMispOnboardingForm({ action, partnerType, salesManagers, oem
                 value: manager.id,
                 label: `${manager.fullName}${manager.employeeCode ? ` - ${manager.employeeCode}` : ""}`
               }))}
-              placeholder="Select Sales Manager"
+              placeholder="Select Sales employee"
             />
             <Field label={isMisp ? "MISP ID" : "Onboarding ID"} name="external_onboarding_id" placeholder="External onboarding ID" />
             <IndianDateField label="Document Received Date" name="document_received_at" />
