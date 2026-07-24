@@ -39,7 +39,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams?: P
 
   return (
     <AppShell title="Employees">
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid gap-3">
         <section className="rounded-lg border border-[#D7E6F5] bg-white p-4 shadow-[0_3px_12px_rgba(7,29,73,0.05)]">
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#E7EEF6] pb-3">
             <div>
@@ -56,15 +56,6 @@ export default async function EmployeesPage({ searchParams }: { searchParams?: P
           <div className="pt-4"><EmployeeCreateForm managers={managers} portalRoles={portalRoles} /></div>
         </section>
 
-        <aside className="rounded-lg border border-[#D7E6F5] bg-[#071D49] p-4 text-white">
-          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#8FC5FF]">Access model</p>
-          <h2 className="mt-2 text-[16px] font-semibold">Directory first, login when needed</h2>
-          <div className="mt-4 space-y-3 text-[11px] leading-5 text-[#D8E7FA]">
-            <p>Every employee receives one permanent directory record.</p>
-            <p>Portal access is optional and sent as a secure email invitation.</p>
-            <p>Employees are deactivated rather than deleted, preserving reporting and audit history.</p>
-          </div>
-        </aside>
       </div>
 
       <section className="mt-3 rounded-lg border border-[#D7E6F5] bg-white p-4 shadow-[0_3px_12px_rgba(7,29,73,0.05)]">
