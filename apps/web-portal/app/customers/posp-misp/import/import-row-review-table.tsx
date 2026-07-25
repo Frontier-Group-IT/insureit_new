@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { deletePospMispImportRow, updatePospMispImportRow } from "../actions";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { IndianDateField } from "@/components/indian-date-field";
@@ -21,9 +21,7 @@ const sourceAliases:Record<string,string[]>={associate_name:["Associate Name","A
 export function ImportRowReviewTable({batchId,batchStatus,rows,salesManagers,oems,banks}:Props){
   const [editingRow,setEditingRow]=useState<ImportRow|null>(null);
   const canEditBatch=["parsed","partially_submitted","failed"].includes(batchStatus);
-  const summary=useMemo(()=>rows.reduce((result,row)=>{const key=row.validation_errors?.length?"attention":row.status==="submitted"?"submitted":row.status==="failed"?"failed":"ready";result[key]=(result[key]??0)+1;return result;},{} as Record<string,number>),[rows]);
   return <>
-    <div className="mb-3 grid gap-2 sm:grid-cols-4"><SummaryCard label="Total rows" value={rows.length}/><SummaryCard label="Ready" value={summary.ready??0} tone="success"/><SummaryCard label="Needs attention" value={summary.attention??0} tone="danger"/><SummaryCard label="Submitted" value={summary.submitted??0} tone="success"/></div>
     <div className="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3"><div><h2 className="text-[12px] font-semibold text-[#0F172A]">Parsed workbook rows</h2><p className="mt-0.5 text-[9.5px] text-[#64748B]">Blue correction markers show values changed after workbook parsing.</p></div><span className="rounded-full border border-[#DCE5EF] bg-white px-2.5 py-1 text-[9px] font-semibold capitalize text-[#475569]">{batchStatus.replaceAll("_"," ")}</span></div>
       <div className="overflow-x-auto"><table className="w-full min-w-[1240px] text-left text-[11px]"><thead className="border-b border-[#E2E8F0] bg-white text-[9px] uppercase tracking-[0.06em] text-[#64748B]"><tr><th className="px-4 py-3">Row</th><th className="px-3 py-3">Application</th><th className="px-3 py-3">Contact</th><th className="px-3 py-3">Documents</th><th className="px-3 py-3">Corrections</th><th className="px-3 py-3">Validation</th><th className="px-3 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-[#EEF2F6]">{rows.map(row=>{const data=row.normalized_data??{};const name=stringValue(row.partner_type==="posp"?data.pos_name:data.misp_name);const editable=canEditBatch&&!["submitted","processing"].includes(row.status);const corrections=correctedFields(row);return <tr key={row.id} className={row.validation_errors?.length?"bg-red-50/30 hover:bg-red-50/55":"hover:bg-[#FAFCFF]"}>
@@ -56,7 +54,6 @@ function EditRowModal({batchId,row,editable,salesManagers,oems,banks,onClose}:{b
   </div></div>;
 }
 
-function SummaryCard({label,value,tone}:{label:string;value:number;tone?:"success"|"danger"}){return <div className="rounded-xl border border-[#E2E8F0] bg-white px-4 py-3"><p className="text-[9px] font-semibold uppercase tracking-[0.06em] text-[#64748B]">{label}</p><p className={`mt-1 text-xl font-semibold ${tone==="danger"?"text-red-700":tone==="success"?"text-emerald-700":"text-[#071D49]"}`}>{value}</p></div>}
 function RowStatus({row}:{row:ImportRow}){const reference=row.error_message?.match(/Reference ([A-Za-z0-9-]+)/)?.[1];const label=row.status==="failed"?(reference?`Failed · ref ${reference}`:"Failed · review"):row.status.replaceAll("_"," ");const style=row.status==="submitted"?"bg-emerald-50 text-emerald-700":row.status==="failed"?"bg-red-50 text-red-700":row.status==="processing"?"bg-blue-50 text-blue-700":"bg-amber-50 text-amber-700";return <span className={`inline-flex rounded-full px-2 py-1 text-[9px] font-semibold capitalize ${style}`}>{label}</span>}
 function correctedFields(row:ImportRow){return Object.keys(sourceAliases).filter(field=>{const sourceValue=sourceAliases[field].map(alias=>row.source_data[alias]).find(value=>normalizeCompare(value)!=="");const normalizedValue=row.normalized_data[field];return normalizeCompare(normalizedValue)!==""&&normalizeCompare(sourceValue)!==normalizeCompare(normalizedValue)})}
 function normalizeCompare(value:unknown){return typeof value==="string"?value.trim().toLowerCase():value==null?"":String(value).trim().toLowerCase()}

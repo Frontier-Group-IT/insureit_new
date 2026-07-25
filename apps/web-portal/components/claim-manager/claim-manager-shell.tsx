@@ -1,6 +1,6 @@
 import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
-import { Bell, Command, Search, Sparkles } from "lucide-react";
+import { Bell, Sparkles } from "lucide-react";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { UserMenu } from "@/components/user-menu";
 import { HistoryBackButton } from "@/components/history-back-button";
@@ -36,12 +36,6 @@ export async function ClaimManagerShell({ title, backHref = "/dashboard", childr
             </div>
 
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-              <label className="group relative hidden xl:block">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8793A8] group-focus-within:text-[#6759ff]" />
-                <input aria-label="Global search" placeholder="Search records..." className="h-10 w-64 rounded-xl border border-[#dbe2ec] bg-white/82 py-1 pl-9 pr-14 text-[13px] text-[#10213D] shadow-[0_8px_24px_rgba(28,39,68,.05)]" />
-                <span className="pointer-events-none absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center gap-1 rounded-md border border-[#dfe4ec] bg-[#f7f9fc] px-1.5 py-0.5 text-[8px] font-bold text-[#7b879a]"><Command className="h-2.5 w-2.5" />K</span>
-              </label>
-
               <Link href="/customers/posp-misp" className="hidden h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-[#6759ff] to-[#17bfc5] px-3.5 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(103,89,255,.24)] hover:-translate-y-0.5 md:inline-flex"><Sparkles className="h-3.5 w-3.5" /> Quick onboard</Link>
 
               <Link href="/notifications" aria-label="Notifications" className="relative grid h-11 w-11 place-items-center rounded-2xl border border-[#dbe2ec] bg-white/92 text-[#263956] shadow-[0_8px_24px_rgba(28,39,68,.06)] hover:border-[#c9c2ff] hover:text-[#6759ff]">

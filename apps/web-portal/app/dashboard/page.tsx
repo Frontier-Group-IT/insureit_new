@@ -14,7 +14,6 @@ import {
   Landmark,
   Plus,
   ShieldCheck,
-  Sparkles,
   Store,
   UserRound,
   UsersRound,
@@ -110,20 +109,14 @@ export default async function DashboardPage() {
   return (
     <ClaimManagerShell title="Operations Dashboard" activeNav="dashboard">
       <div className="mx-auto max-w-[1540px] space-y-5 pb-8">
-        <section className="relative overflow-hidden rounded-[28px] bg-[#111a35] px-5 py-6 text-white shadow-[0_28px_80px_rgba(17,26,53,.24)] sm:px-7 sm:py-7 lg:px-8">
+        <section className="relative overflow-hidden rounded-[28px] bg-[#111a35] px-5 py-5 text-white shadow-[0_28px_80px_rgba(17,26,53,.24)] sm:px-7 sm:py-6 lg:px-8">
           <div className="portal-grid pointer-events-none absolute inset-0 opacity-30" />
           <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[#6759ff]/35 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-28 left-[38%] h-72 w-72 rounded-full bg-[#17c7c9]/20 blur-3xl" />
-          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/8 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-white/70 backdrop-blur">
-                <Sparkles className="h-3.5 w-3.5 text-[#75e5dd]" /> Live operations cockpit
-              </div>
-              <h1 className="portal-display text-[31px] font-semibold leading-[1.05] sm:text-[38px] lg:text-[44px]">
-                Good {dayPeriod()}, <span className="bg-gradient-to-r from-white via-[#dcd8ff] to-[#77e1dc] bg-clip-text text-transparent">{displayName}</span>
-              </h1>
-              <p className="mt-3 max-w-2xl text-[11.5px] leading-6 text-white/60 sm:text-[12px]">Everything important is visible at a glance—customers, fleet exposure, claims, onboarding and the work that needs action now.</p>
-            </div>
+          <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <h1 className="portal-display text-[31px] font-semibold leading-[1.05] sm:text-[38px] lg:text-[44px]">
+              Good {dayPeriod()}, <span className="bg-gradient-to-r from-white via-[#dcd8ff] to-[#77e1dc] bg-clip-text text-transparent">{displayName}</span>
+            </h1>
             <div className="flex flex-wrap gap-2">
               <div className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/12 bg-white/8 px-3.5 text-[10.5px] font-semibold text-white/78 backdrop-blur"><CalendarDays className="h-4 w-4 text-[#75e5dd]" />{dashboardDateLabel()}</div>
               {canCreateRecords ? <>

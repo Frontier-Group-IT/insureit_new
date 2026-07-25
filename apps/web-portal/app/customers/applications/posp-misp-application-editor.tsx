@@ -62,25 +62,10 @@ const documentFields = [
 export function PospMispApplicationEditor({ applicationId, profile, editable, salesManagers, banks, oems, documents }: Props) {
   const isMisp = profile.partner_type === "misp";
   const currentMarksheet = documents.find((document) => marksheetOptions.some(([value]) => value === document.document_type));
-  const receivedDocuments = documents.length;
-  const displayName = (isMisp ? profile.misp_name : profile.pos_name) || "Application pending name verification";
 
   return (
     <form action={editable ? updateSubmittedPospMispApplication : undefined} className="bg-[#F4F7FB]">
       <input type="hidden" name="application_id" value={applicationId} />
-      <div className="border-b border-[#DCE5EF] bg-white px-5 py-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-[9.5px] font-semibold uppercase tracking-[0.12em] text-[#64748B]">Official onboarding file</p>
-            <h2 className="mt-1 text-lg font-semibold text-[#071D49]">{displayName}</h2>
-            <p className="mt-1 text-[10.5px] text-[#64748B]">Application ref. {applicationId.slice(0, 8).toUpperCase()} · {profile.partner_type.toUpperCase()} verification record</p>
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-right">
-            <FileMetric label="Documents" value={String(receivedDocuments)} />
-            <FileMetric label="Mode" value={editable ? "Review" : "Read only"} />
-          </div>
-        </div>
-      </div>
 
       <div className="space-y-4 p-4 sm:p-5">
         <FileSection number="01" title={isMisp ? "MISP business particulars" : "POSP particulars"} subtitle="Core registration identity and assigned sales associate.">
@@ -132,8 +117,7 @@ export function PospMispApplicationEditor({ applicationId, profile, editable, sa
         </section>
       </div>
 
-      <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 border-t border-[#DCE5EF] bg-white/95 px-5 py-4 backdrop-blur">
-        <p className="text-[10.5px] text-[#64748B]">{editable ? "Review the official file and save verified corrections before progressing the workflow." : "This official onboarding file is locked after approval or closure."}</p>
+      <div className="sticky bottom-0 z-10 flex justify-end border-t border-[#DCE5EF] bg-white/95 px-5 py-3 backdrop-blur">
         {editable ? <FormSubmitButton label="Save verified corrections" pendingLabel="Saving verified corrections" /> : null}
       </div>
     </form>
@@ -146,7 +130,6 @@ function FileSection({ number, title, subtitle, children }: { number: string; ti
 function FileSectionHeader({ number, title, subtitle }: { number: string; title: string; subtitle: string }) {
   return <div className="flex items-start gap-3 border-b border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#071D49] text-[9px] font-bold text-white">{number}</span><div><h3 className="text-[12.5px] font-semibold text-[#0F172A]">{title}</h3><p className="mt-0.5 text-[9.8px] text-[#64748B]">{subtitle}</p></div></div>;
 }
-function FileMetric({ label, value }: { label: string; value: string }) { return <div className="min-w-24 rounded-lg border border-[#DCE5EF] bg-[#F8FAFC] px-3 py-2"><p className="text-[8.5px] font-semibold uppercase tracking-[0.06em] text-[#64748B]">{label}</p><p className="mt-0.5 text-[11px] font-semibold text-[#071D49]">{value}</p></div>; }
 function DocumentCard({ label, current, children }: { label: string; current?: string; children: React.ReactNode }) { return <div className={`rounded-xl border p-3 ${current ? "border-emerald-200 bg-emerald-50/35" : "border-amber-200 bg-amber-50/30"}`}><div className="mb-3 flex items-center justify-between gap-2"><span className="text-[10.5px] font-semibold text-[#0F172A]">{label}</span><span className={`rounded-full px-2 py-0.5 text-[8.5px] font-semibold ${current ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{current ? "Received" : "Pending"}</span></div>{children}</div>; }
 function Field({ label, name, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; name: string }) { return <div><label className={labelClass} htmlFor={`submitted-${name}`}>{label}{props.required ? " *" : ""}</label><input id={`submitted-${name}`} name={name} className={inputClass} {...props} /></div>; }
 function Select({ label, name, options, required, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { label: string; name: string; options: ReadonlyArray<{ value: string; label: string }>; required?: boolean }) { return <div><label className={labelClass} htmlFor={`submitted-${name}`}>{label}{required ? " *" : ""}</label><select id={`submitted-${name}`} name={name} required={required} className={inputClass} {...props}><option value="">Select {label.toLowerCase()}</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>; }

@@ -81,11 +81,13 @@ const sections: Array<{ key: SectionKey; label: string; icon: LucideIcon; tint: 
 export function AppNavigation({ activeNav }: Props) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [openSection, setOpenSection] = useState<SectionKey | null>(activeNav === "dashboard" || activeNav === "none" ? null : activeNav);
+  const routeSection = sectionForPath(pathname);
+  const resolvedActiveSection = routeSection ?? (activeNav !== "dashboard" && activeNav !== "none" ? activeNav : null);
+  const [openSection, setOpenSection] = useState<SectionKey | null>(resolvedActiveSection);
 
   useEffect(() => {
-    if (activeNav !== "dashboard" && activeNav !== "none") setOpenSection(activeNav);
-  }, [activeNav]);
+    if (resolvedActiveSection) setOpenSection(resolvedActiveSection);
+  }, [pathname, resolvedActiveSection]);
 
   const currentQuery = searchParams.toString();
 
@@ -98,32 +100,32 @@ export function AppNavigation({ activeNav }: Props) {
       </div>
 
       <Link href="/dashboard" className="relative flex h-[78px] items-center border-b border-white/10 px-5" aria-label="InsureIt home">
-        <BrandLockup compact />
+        <BrandLockup compact inverse />
       </Link>
 
       <nav className="relative flex-1 overflow-y-auto px-3.5 py-4">
         <Link
           href="/dashboard"
-          className={`group mb-2 flex h-12 items-center gap-3 rounded-2xl px-3.5 text-[12px] font-bold ${activeNav === "dashboard" ? "bg-white text-[#141d3b] shadow-[0_14px_35px_rgba(0,0,0,.18)]" : "text-white/72 hover:bg-white/8 hover:text-white"}`}
+          className={`group mb-2 flex h-12 items-center gap-3 rounded-2xl px-3.5 text-[12px] font-bold ${activeNav === "dashboard" && !routeSection ? "bg-white text-[#141d3b] shadow-[0_14px_35px_rgba(0,0,0,.18)]" : "text-white/72 hover:bg-white/8 hover:text-white"}`}
         >
-          <span className={`grid h-8 w-8 place-items-center rounded-xl ${activeNav === "dashboard" ? "bg-gradient-to-br from-[#6759ff] to-[#17c7c9] text-white shadow-lg" : "bg-white/8 text-white/75 group-hover:bg-white/12"}`}>
+          <span className={`grid h-8 w-8 place-items-center rounded-xl ${activeNav === "dashboard" && !routeSection ? "bg-gradient-to-br from-[#6759ff] to-[#17c7c9] text-white shadow-lg" : "bg-white/8 text-white/75 group-hover:bg-white/12"}`}>
             <Gauge className="h-4 w-4" />
           </span>
           <span className="flex-1">Dashboard</span>
-          {activeNav === "dashboard" ? <span className="h-2 w-2 rounded-full bg-[#17c7c9] shadow-[0_0_14px_#17c7c9]" /> : null}
+          {activeNav === "dashboard" && !routeSection ? <span className="h-2 w-2 rounded-full bg-[#17c7c9] shadow-[0_0_14px_#17c7c9]" /> : null}
         </Link>
 
         <p className="mb-2 mt-6 px-3 text-[9px] font-black uppercase tracking-[0.18em] text-white/35">Workspaces</p>
         <div className="space-y-1.5">
           {sections.map((section) => {
             const open = openSection === section.key;
-            const active = activeNav === section.key;
+            const active = resolvedActiveSection === section.key;
             const SectionIcon = section.icon;
             return (
               <div key={section.key} className={`overflow-hidden rounded-2xl border ${active ? "border-white/12 bg-white/8 shadow-[0_14px_30px_rgba(0,0,0,.12)]" : "border-transparent"}`}>
                 <button
                   type="button"
-                  onClick={() => setOpenSection((current) => current === section.key ? null : section.key)}
+                  onClick={() => setOpenSection((current) => current === section.key && !active ? null : section.key)}
                   className={`group flex h-11 w-full items-center gap-3 px-3.5 text-left text-[12px] font-bold ${active ? "text-white" : "text-white/68 hover:bg-white/6 hover:text-white"}`}
                   aria-expanded={open}
                 >
@@ -166,6 +168,19 @@ export function AppNavigation({ activeNav }: Props) {
       </div>
     </aside>
   );
+}
+
+function sectionForPath(pathname: string): SectionKey | null {
+  if (pathname === "/claims" || pathname.startsWith("/claims/")) return "claims";
+  if (pathname === "/tasks" || pathname.startsWith("/tasks/")) return "tasks";
+  if (pathname === "/reports" || pathname.startsWith("/reports/")) return "reports";
+  if (
+    pathname === "/employees" || pathname.startsWith("/employees/") ||
+    pathname === "/customers" || pathname.startsWith("/customers/") ||
+    pathname === "/vehicles" || pathname.startsWith("/vehicles/") ||
+    pathname === "/policies" || pathname.startsWith("/policies/")
+  ) return "master-data";
+  return null;
 }
 
 function isCurrent(href: string, pathname: string, currentQuery: string) {
