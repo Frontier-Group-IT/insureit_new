@@ -82,17 +82,17 @@ export function MobileNavigation() {
   }, [open]);
 
   const drawer = open && mounted ? createPortal(
-    <div className="fixed inset-0 z-[9999] lg:hidden" role="dialog" aria-modal="true" aria-label="Workspace navigation">
-      <button className="absolute inset-0 h-full w-full bg-[#081127]/70 backdrop-blur-sm" onClick={() => setOpen(false)} aria-label="Close navigation" />
-      <aside ref={panelRef} id="mobile-workspace-navigation" className="absolute inset-y-0 left-0 flex h-[100dvh] w-[min(88vw,360px)] flex-col overflow-hidden bg-[#111a35] text-white shadow-[24px_0_70px_rgba(0,0,0,.4)] animate-portal-enter">
+    <div className="fixed inset-0 isolate lg:hidden" style={{ zIndex: 2147483647 }} role="dialog" aria-modal="true" aria-label="Workspace navigation">
+      <button className="absolute inset-0 h-full w-full bg-[#081127]/78 backdrop-blur-sm" onClick={() => setOpen(false)} aria-label="Close navigation" />
+      <aside ref={panelRef} id="mobile-workspace-navigation" className="fixed inset-y-0 left-0 flex h-[100dvh] w-[min(88vw,360px)] flex-col overflow-hidden bg-[#111a35] text-white shadow-[24px_0_70px_rgba(0,0,0,.5)] animate-portal-enter">
         <div className="flex h-[74px] shrink-0 items-center justify-between border-b border-white/10 px-4">
-          <BrandLockup compact />
+          <BrandLockup compact inverse />
           <button ref={closeRef} type="button" onClick={() => setOpen(false)} className="grid h-11 w-11 place-items-center rounded-2xl bg-white/10 text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#8b7fff]/40" aria-label="Close navigation"><X className="h-5 w-5" /></button>
         </div>
         <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4" aria-label="Mobile workspace navigation">
-          <p className="mb-2 px-3 text-[10px] font-black uppercase tracking-[0.18em] text-white/40">My work</p>
+          <p className="mb-2 px-3 text-[10px] font-black uppercase tracking-[0.18em] text-white/45">My work</p>
           <div className="space-y-1.5">{primaryItems.map((item) => <MobileNavItem key={item.href} {...item} active={isActive(pathname, item.href)} />)}</div>
-          <p className="mb-2 mt-6 px-3 text-[10px] font-black uppercase tracking-[0.18em] text-white/40">More workspaces</p>
+          <p className="mb-2 mt-6 px-3 text-[10px] font-black uppercase tracking-[0.18em] text-white/45">More workspaces</p>
           <div className="space-y-1.5">{secondaryItems.map((item) => <MobileNavItem key={item.href} {...item} active={isActive(pathname, item.href)} />)}</div>
           <div className="h-[max(1rem,env(safe-area-inset-bottom))]" />
         </nav>
@@ -103,7 +103,7 @@ export function MobileNavigation() {
 
   return (
     <>
-      <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-[#dbe2ec] bg-white/92 text-[#1b2b49] shadow-[0_8px_24px_rgba(28,39,68,.08)] lg:hidden" aria-label="Open workspace navigation" aria-expanded={open} aria-controls="mobile-workspace-navigation">
+      <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-[#dbe2ec] bg-white text-[#1b2b49] shadow-[0_8px_24px_rgba(28,39,68,.08)] lg:hidden" aria-label="Open workspace navigation" aria-expanded={open} aria-controls="mobile-workspace-navigation">
         <Menu className="h-5 w-5" />
       </button>
       {drawer}
@@ -112,7 +112,7 @@ export function MobileNavigation() {
 }
 
 function MobileNavItem({ href, label, icon: Icon, active }: { href: string; label: string; icon: typeof Gauge; active: boolean }) {
-  return <Link href={href} aria-current={active ? "page" : undefined} className={`flex min-h-12 items-center gap-3 rounded-2xl px-3.5 text-[14px] font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#8b7fff]/35 ${active ? "bg-white text-[#17213e] shadow-[0_12px_28px_rgba(0,0,0,.2)]" : "text-white/72 hover:bg-white/8 hover:text-white"}`}><span className={`grid h-9 w-9 place-items-center rounded-xl ${active ? "bg-gradient-to-br from-[#6759ff] to-[#17c7c9] text-white" : "bg-white/8"}`}><Icon className="h-[18px] w-[18px]" /></span><span>{label}</span></Link>;
+  return <Link href={href} aria-current={active ? "page" : undefined} className={`flex min-h-12 items-center gap-3 rounded-2xl px-3.5 text-[14px] font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#8b7fff]/35 ${active ? "bg-white text-[#17213e] shadow-[0_12px_28px_rgba(0,0,0,.2)]" : "text-[#D7DDF0] hover:bg-white/8 hover:text-white"}`}><span className={`grid h-9 w-9 place-items-center rounded-xl ${active ? "bg-gradient-to-br from-[#6759ff] to-[#17c7c9] text-white" : "bg-white/10 text-white"}`}><Icon className="h-[18px] w-[18px]" /></span><span>{label}</span></Link>;
 }
 
 function isActive(pathname: string, href: string) {
