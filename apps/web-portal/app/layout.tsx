@@ -5,6 +5,7 @@ import { RouteProgressBar } from "@/components/loading/route-progress-bar";
 import { SuccessPopup } from "@/components/success-popup";
 import "./globals.css";
 import "./experience.css";
+import "./mobile.css";
 
 const manrope = Manrope({
   subsets: ["latin"],
