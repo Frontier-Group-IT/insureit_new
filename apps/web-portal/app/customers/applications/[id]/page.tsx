@@ -57,8 +57,19 @@ export default async function ApplicationReviewPage({params,searchParams}:PagePr
 
   return <AppShell title="Review KYC Application"><div className="mx-auto max-w-[1280px] space-y-4 pb-8">
     <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-4 bg-gradient-to-r from-[#071D49] via-[#0F2A55] to-[#163B70] px-5 py-5 text-white"><div><Link href="/customers/applications" className="text-[9.5px] font-semibold text-white/70">← Back to applications</Link><p className="mt-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/60">Official onboarding file</p><h1 className="mt-1 text-xl font-semibold">{title}</h1><p className="mt-1 text-[10px] text-white/70">Reference {id.slice(0,8).toUpperCase()} · Updated {new Date(application.updated_at).toLocaleDateString("en-IN")}</p></div><div className="flex gap-2"><Pill>{partnerLabel(application.partner_type)}</Pill><Pill tone="gold">{application.status.replaceAll("_"," ")}</Pill></div></div>
-      <div className="grid gap-px bg-[#E2E8F0] sm:grid-cols-4"><FileMetric label="Partner type" value={partnerLabel(application.partner_type)}/><FileMetric label="Source status" value={application.status.replaceAll("_"," ")}/><FileMetric label="Documents" value={String(previews.length)}/><FileMetric label="Review mode" value={canReview?"Editable":"Read only"}/></div>
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-gradient-to-r from-[#071D49] via-[#0F2A55] to-[#163B70] px-4 py-4 text-white">
+        <div>
+          <Link href="/customers/applications" className="text-[9.5px] font-semibold text-white/70">← Back to applications</Link>
+          <h1 className="mt-2 text-xl font-semibold">{title}</h1>
+          <p className="mt-1 text-[10px] text-white/70">Reference {id.slice(0,8).toUpperCase()} · Updated {new Date(application.updated_at).toLocaleDateString("en-IN")}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Pill>{partnerLabel(application.partner_type)}</Pill>
+          <Pill tone="gold">{application.status.replaceAll("_"," ")}</Pill>
+          <Pill>{previews.length} documents</Pill>
+          <Pill>{canReview?"Editable":"Read only"}</Pill>
+        </div>
+      </div>
     </section>
     {pageError?<div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10.5px] font-medium text-red-700">{errors[pageError]??"The action could not be completed."}</div>:null}
     {query.success?<div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10.5px] font-medium text-emerald-700">{successes[query.success]??"Saved successfully."}</div>:null}
@@ -80,4 +91,3 @@ function summaryFor(type:string|null,draft:Record<string,unknown>,application:Ap
 function primaryName(type:string|null,draft:Record<string,unknown>){const value=type==="corporate"?draft.company_name:type==="dealership"?draft.dealership_name:type==="group"?draft.group_name:type==="posp"?draft.pos_name:type==="misp"?draft.misp_name:draft.contact_name;return typeof value==="string"&&value.trim()?value.trim():null}
 function partnerLabel(value:string|null){const values:Record<string,string>={individual_proprietor:"Individual / Proprietor",group:"Group",corporate:"Corporate",dealership:"Dealership",posp:"POSP",misp:"MISP"};return value?values[value]??value:"Unknown"}
 function Pill({children,tone}:{children:React.ReactNode;tone?:"gold"}){return <span className={`rounded-full border px-3 py-1 text-[9.5px] font-semibold capitalize ${tone==="gold"?"border-[#D8A31A]/50 bg-[#D8A31A]/20 text-[#FFE89B]":"border-white/25 bg-white/10 text-white"}`}>{children}</span>}
-function FileMetric({label,value}:{label:string;value:string}){return <div className="bg-white px-4 py-3"><p className="text-[8.5px] font-semibold uppercase tracking-[0.06em] text-[#64748B]">{label}</p><p className="mt-1 text-[11px] font-semibold capitalize text-[#071D49]">{value}</p></div>}
