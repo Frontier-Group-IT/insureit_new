@@ -4,6 +4,7 @@ import { Manrope, Space_Grotesk } from "next/font/google";
 import { RouteProgressBar } from "@/components/loading/route-progress-bar";
 import { SuccessPopup } from "@/components/success-popup";
 import "./globals.css";
+import "./experience.css";
 
 const manrope = Manrope({
   subsets: ["latin"],
