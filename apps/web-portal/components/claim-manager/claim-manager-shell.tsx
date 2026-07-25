@@ -1,35 +1,79 @@
 import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
-import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
+import { Bell, Command, Search, Sparkles } from "lucide-react";
+import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { UserMenu } from "@/components/user-menu";
 import { HistoryBackButton } from "@/components/history-back-button";
 import { AppNavigation } from "@/components/claim-manager/app-navigation";
 import { BrandLockup } from "@/components/brand-lockup";
 
-type Props = { title: string; backHref?: string; children: ReactNode; activeNav?: "dashboard" | "claims" | "master-data" | "tasks" | "reports" | "none" };
-type NotificationRow = { id: string; event_type: string; title: string; priority: "low" | "medium" | "high" | "critical"; status: "new" | "seen" | "in_progress" | "handled" | "dismissed"; created_at: string };
-type NotificationGroup = { key: string; label: string; count: number; urgentCount: number; oldestAt: string; href: string };
+type Props = {
+  title: string;
+  backHref?: string;
+  children: ReactNode;
+  activeNav?: "dashboard" | "claims" | "master-data" | "tasks" | "reports" | "none";
+};
 
 export async function ClaimManagerShell({ title, backHref = "/dashboard", children, activeNav = "claims" }: Props) {
   const accessToken = await getServerAccessToken();
   const { user, profile } = await getAuthenticatedProfile(accessToken);
-  const supabase = await createServerSupabaseClient();
-  const [{ count: customerCount }, { count: kycApplicationCount }, notificationRows] = await Promise.all([
-    supabase.from("customers").select("id", { count: "exact", head: true }),
-    supabase.from("customer_onboarding_applications").select("id", { count: "exact", head: true }).in("status", ["submitted", "under_review", "changes_requested"]),
-    getNotificationRows(supabase),
-  ]);
-  const notificationGroups = buildNotificationGroups(notificationRows);
 
-  return <div className="min-h-screen bg-[#F4F9FF] text-[#101828]">
-    <Suspense fallback={<div className="fixed inset-y-0 left-0 hidden w-[244px] bg-[#F4F9FF] lg:block" />}><AppNavigation activeNav={activeNav} customerCount={customerCount ?? 0} kycApplicationCount={kycApplicationCount ?? 0} /></Suspense>
-    <div className="lg:pl-[244px]"><header className="sticky top-0 z-30 border-b border-[#D7E6F5] bg-white/95 backdrop-blur"><div className="flex h-14 items-center justify-between gap-4 px-4 lg:px-5"><div className="flex min-w-0 items-center gap-3"><HistoryBackButton fallbackHref={backHref} /><div className="hidden sm:block lg:hidden"><BrandLockup compact /></div><div className="hidden h-6 w-px bg-[#D7E6F5] sm:block" /><h1 className="truncate text-[16px] font-bold tracking-tight text-[#071D49]">{title}</h1></div><div className="flex items-center gap-2"><label className="relative hidden md:block"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[#98A2B3]">⌕</span><input aria-label="Global search" placeholder="Search" className="h-8 w-56 rounded-md border border-[#D7E6F5] bg-[#F8FBFF] py-1 pl-8 pr-3 text-[12px] text-[#071D49]" /></label><NotificationMenu groups={notificationGroups} count={notificationRows.length} /><div className="ml-1 border-l border-[#D7E6F5] pl-2"><UserMenu profile={profile} user={user ? { id: user.id, email: user.email } : null} /></div></div></div></header><main className="min-h-[calc(100vh-56px)] px-3 py-3 sm:px-4 lg:px-5">{children}</main></div>
-  </div>;
+  return (
+    <div className="min-h-screen text-[#10213D]">
+      <Suspense fallback={<div className="fixed inset-y-0 left-0 hidden w-[268px] bg-[#111A35] lg:block" />}>
+        <AppNavigation activeNav={activeNav} />
+      </Suspense>
+
+      <div className="lg:pl-[268px]">
+        <header className="sticky top-0 z-40 border-b border-white/70 bg-white/76 backdrop-blur-2xl supports-[backdrop-filter]:bg-white/68">
+          <div className="flex h-[66px] items-center justify-between gap-4 px-3 sm:px-4 lg:px-6">
+            <div className="flex min-w-0 items-center gap-3">
+              <HistoryBackButton fallbackHref={backHref} />
+              <div className="hidden sm:block lg:hidden"><BrandLockup compact /></div>
+              <div className="hidden h-7 w-px bg-gradient-to-b from-transparent via-[#ccd4e2] to-transparent sm:block" />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h1 className="truncate font-[var(--font-display)] text-[17px] font-semibold tracking-[-0.035em] text-[#12203B]">{title}</h1>
+                  <span className="hidden rounded-full border border-[#dcd8ff] bg-[#f1efff] px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-[#6759ff] xl:inline-flex">Live</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="group relative hidden xl:block">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8793A8] group-focus-within:text-[#6759ff]" />
+                <input
+                  aria-label="Global search"
+                  placeholder="Search records..."
+                  className="h-9 w-64 rounded-xl border border-[#dbe2ec] bg-white/82 py-1 pl-9 pr-14 text-[11px] text-[#10213D] shadow-[0_8px_24px_rgba(28,39,68,.05)]"
+                />
+                <span className="pointer-events-none absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center gap-1 rounded-md border border-[#dfe4ec] bg-[#f7f9fc] px-1.5 py-0.5 text-[8px] font-bold text-[#7b879a]"><Command className="h-2.5 w-2.5" />K</span>
+              </label>
+
+              <Link href="/customers/posp-misp" className="hidden h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-[#6759ff] to-[#17bfc5] px-3.5 text-[10px] font-bold text-white shadow-[0_10px_24px_rgba(103,89,255,.24)] hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(103,89,255,.3)] md:inline-flex">
+                <Sparkles className="h-3.5 w-3.5" /> Quick onboard
+              </Link>
+
+              <Link href="/notifications" aria-label="Notifications" className="relative grid h-9 w-9 place-items-center rounded-xl border border-[#dbe2ec] bg-white/90 text-[#263956] shadow-[0_8px_24px_rgba(28,39,68,.05)] hover:-translate-y-0.5 hover:border-[#c9c2ff] hover:text-[#6759ff]">
+                <Bell className="h-4 w-4" />
+                <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#ff6f61] ring-2 ring-white" />
+              </Link>
+
+              <div className="ml-1 border-l border-[#dde3ec] pl-2">
+                <UserMenu profile={profile} user={user ? { id: user.id, email: user.email } : null} />
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="relative min-h-[calc(100vh-66px)] overflow-hidden px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            <div className="absolute -right-28 top-8 h-72 w-72 rounded-full bg-[#6759ff]/7 blur-3xl" />
+            <div className="absolute left-[12%] top-[38%] h-64 w-64 rounded-full bg-[#17c7c9]/6 blur-3xl" />
+          </div>
+          <div className="relative animate-portal-enter">{children}</div>
+        </main>
+      </div>
+    </div>
+  );
 }
-
-function NotificationMenu({ groups, count }: { groups: NotificationGroup[]; count: number }) { return <details className="relative"><summary className="relative grid h-8 w-8 cursor-pointer list-none place-items-center rounded-md border border-[#D7E6F5] bg-white text-[14px] text-[#071D49] [&::-webkit-details-marker]:hidden">♧{count ? <span className="absolute -right-1.5 -top-1.5 grid min-h-4 min-w-4 place-items-center rounded-full bg-[#E5484D] px-1 text-[8px] font-bold text-white ring-2 ring-white">{count > 99 ? "99+" : count}</span> : null}</summary><div className="absolute right-0 top-10 z-50 w-[350px] overflow-hidden rounded-xl border border-[#DCE3EC] bg-white shadow-[0_18px_45px_rgba(16,24,40,0.16)]"><div className="flex items-center justify-between border-b border-[#E7ECF2] px-4 py-3"><div><p className="text-[12px] font-semibold">Action Inbox</p><p className="mt-0.5 text-[10px] text-[#667085]">Items requiring attention</p></div><span className="rounded-full bg-[#FFF3E8] px-2 py-0.5 text-[10px] font-semibold text-[#A45A08]">{count} pending</span></div>{groups.length ? <div className="divide-y divide-[#EDF0F4]">{groups.slice(0, 6).map((group) => <Link key={group.key} href={group.href} className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-[#F8FAFC]"><div><p className="text-[11px] font-semibold">{group.label}</p><p className="text-[9.5px] text-[#7A8699]">Oldest {relativeTime(group.oldestAt)}</p></div><span className="rounded-full bg-[#EEF1F5] px-2 py-1 text-[10px] font-semibold">{group.count}</span></Link>)}</div> : <div className="px-4 py-7 text-center text-[11px] text-[#7A8699]">No pending actions</div>}</div></details>; }
-async function getNotificationRows(supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>) { const { data } = await supabase.from("customer_activity_events").select("id, event_type, title, priority, status, created_at").in("status", ["new", "seen", "in_progress"]).order("created_at", { ascending: false }).limit(80).returns<NotificationRow[]>(); return data ?? []; }
-function buildNotificationGroups(rows: NotificationRow[]) { const groups = new Map<string, NotificationGroup>(); for (const row of rows) { const definition = notificationGroupDefinition(row.event_type); const existing = groups.get(definition.key); if (!existing) groups.set(definition.key, { ...definition, count: 1, urgentCount: isUrgent(row), oldestAt: row.created_at }); else { existing.count += 1; existing.urgentCount += isUrgent(row); if (Date.parse(row.created_at) < Date.parse(existing.oldestAt)) existing.oldestAt = row.created_at; } } return Array.from(groups.values()).sort((a, b) => b.urgentCount - a.urgentCount || b.count - a.count); }
-function notificationGroupDefinition(eventType: string): Pick<NotificationGroup, "key" | "label" | "href"> { if (eventType === "claim_document_reuploaded") return { key: "reupload", label: "Rejected Docs Reuploaded", href: "/dashboard?activity=replacements#manager-action" }; if (eventType === "claim_document_uploaded" || eventType === "claim_documents_completed") return { key: "documents", label: "Documents Uploaded", href: "/dashboard?activity=documents#manager-action" }; if (eventType.startsWith("support_ticket")) return { key: "support", label: "Support Replies / Tickets", href: "/dashboard?activity=support#manager-action" }; if (eventType.startsWith("customer_kyc")) return { key: "kyc", label: "KYC / Profile Updates", href: "/dashboard?activity=kyc#customer-activity" }; if (eventType === "roadside_call_started") return { key: "roadside", label: "Roadside Assistance", href: "/dashboard?activity=roadside#manager-action" }; return { key: "customer-updates", label: "Customer Updates", href: "/dashboard#manager-action" }; }
-function isUrgent(row: NotificationRow) { return row.priority === "critical" || row.priority === "high" ? 1 : 0; }
-function relativeTime(value: string) { const diffMs = Date.now() - Date.parse(value); if (!Number.isFinite(diffMs)) return "-"; const minutes = Math.max(0, Math.floor(diffMs / 60000)); if (minutes < 1) return "just now"; if (minutes < 60) return `${minutes}m ago`; const hours = Math.floor(minutes / 60); if (hours < 24) return `${hours}h ago`; const days = Math.floor(hours / 24); return days === 1 ? "1d ago" : `${days}d ago`; }

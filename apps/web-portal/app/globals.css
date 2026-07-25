@@ -4,50 +4,83 @@
 
 :root {
   color-scheme: light;
-  --surface-app: #f4f6fa;
-  --surface-panel: #ffffff;
-  --surface-muted: #f8fafc;
-  --border-subtle: #dde3ec;
-  --border-strong: #cfd7e3;
-  --text-primary: #17203a;
-  --text-secondary: #667085;
-  --brand-rail: #15183b;
-  --brand-accent: #7067e8;
-  --brand-accent-soft: #e9ebff;
+  --surface-app: #f5f7fb;
+  --surface-panel: rgba(255, 255, 255, 0.86);
+  --surface-muted: #f7f9fc;
+  --border-subtle: rgba(99, 116, 145, 0.18);
+  --border-strong: rgba(73, 91, 122, 0.28);
+  --text-primary: #10213d;
+  --text-secondary: #66748a;
+  --brand-rail: #101a36;
+  --brand-accent: #6759ff;
+  --brand-accent-strong: #5040ef;
+  --brand-accent-soft: #ece9ff;
+  --brand-cyan: #17c7c9;
+  --brand-cyan-soft: #e0fbfb;
+  --brand-coral: #ff6f61;
+  --brand-gold: #f1b94a;
   --accent: var(--brand-accent);
-  --accent-strong: #5d55d6;
+  --accent-strong: var(--brand-accent-strong);
   --border: var(--border-subtle);
   --text: var(--text-primary);
   --muted: var(--text-secondary);
-  --radius-control: 6px;
-  --radius-panel: 8px;
-  --shadow-panel: 0 2px 8px rgba(16, 24, 40, 0.035);
+  --radius-control: 12px;
+  --radius-panel: 22px;
+  --shadow-panel: 0 18px 55px rgba(39, 51, 89, 0.08);
+  --shadow-float: 0 24px 70px rgba(24, 35, 66, 0.16);
+}
+
+* {
+  box-sizing: border-box;
 }
 
 html {
-  font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   text-rendering: geometricPrecision;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--surface-app);
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 16% 8%, rgba(103, 89, 255, 0.11), transparent 28%),
+    radial-gradient(circle at 86% 12%, rgba(23, 199, 201, 0.09), transparent 25%),
+    linear-gradient(180deg, #f8faff 0%, #f4f7fb 46%, #f7f9fc 100%);
   color: var(--text-primary);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display), var(--font-manrope), sans-serif;
+  letter-spacing: -0.025em;
 }
 
 input,
 select,
 textarea {
-  @apply border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition;
+  @apply border bg-white px-3 py-2 text-sm outline-none transition;
+  border-color: rgba(116, 132, 160, 0.26);
   border-radius: var(--radius-control);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: rgba(103, 89, 255, 0.38);
 }
 
 input:focus,
 select:focus,
 textarea:focus {
-  border-color: #7067e8;
-  box-shadow: 0 0 0 3px #e9ebff;
+  border-color: #6759ff;
+  box-shadow: 0 0 0 4px rgba(103, 89, 255, 0.12), 0 8px 24px rgba(103, 89, 255, 0.08);
 }
 
 input[name="pan_number"],
@@ -68,107 +101,166 @@ summary {
   -webkit-tap-highlight-color: transparent;
 }
 
+button,
+a,
+summary {
+  transition-property: transform, color, background-color, border-color, box-shadow, opacity;
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(.2, .8, .2, 1);
+}
+
+button:active,
+a:active,
+summary:active {
+  transform: translateY(1px) scale(0.99);
+}
+
 ::selection {
-  background: #dfe2ff;
-  color: #15183b;
+  background: #ded8ff;
+  color: #17123d;
 }
 
-@keyframes insureit-orbit {
-  to {
-    transform: rotate(360deg);
-  }
+.portal-surface {
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: var(--shadow-panel);
+  backdrop-filter: blur(18px);
 }
 
-@keyframes insureit-pulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(0.88);
-    opacity: 0.72;
-  }
+.portal-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-panel);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-panel);
 }
 
-@keyframes insureit-blip {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.35);
-    opacity: 0.55;
-  }
+.portal-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.95), transparent);
+  pointer-events: none;
 }
 
-@keyframes insureit-progress {
-  0% {
-    transform: translateX(-110%);
-  }
-  55% {
-    transform: translateX(45%);
-  }
-  100% {
-    transform: translateX(220%);
-  }
+.portal-card-hover:hover {
+  transform: translateY(-4px);
+  border-color: rgba(103, 89, 255, 0.3);
+  box-shadow: 0 24px 64px rgba(34, 43, 80, 0.13);
 }
 
-@keyframes insureit-truck {
-  0% {
-    transform: translateX(-8px) translateY(0);
-  }
-  22% {
-    transform: translateX(18px) translateY(-1px);
-  }
-  48% {
-    transform: translateX(42px) translateY(0);
-  }
-  72% {
-    transform: translateX(66px) translateY(-1px);
-  }
-  100% {
-    transform: translateX(88px) translateY(0);
-  }
+.portal-display {
+  font-family: var(--font-display), var(--font-manrope), sans-serif;
+  letter-spacing: -0.04em;
+}
+
+.portal-gradient-text {
+  background: linear-gradient(110deg, #4f46e5 0%, #6759ff 38%, #0da8ae 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.portal-grid {
+  background-image:
+    linear-gradient(rgba(103, 89, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(103, 89, 255, 0.045) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.portal-noise {
+  background-image: radial-gradient(rgba(255,255,255,.13) 0.7px, transparent 0.7px);
+  background-size: 8px 8px;
+}
+
+@keyframes insureit-fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes insureit-scale-in {
+  from { opacity: 0; transform: scale(.975); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes insureit-float {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -9px, 0); }
+}
+
+@keyframes insureit-glow {
+  0%, 100% { opacity: .55; transform: scale(1); }
+  50% { opacity: .85; transform: scale(1.08); }
+}
+
+@keyframes insureit-shimmer {
+  from { transform: translateX(-130%); }
+  to { transform: translateX(220%); }
 }
 
 @keyframes insureit-route-rail {
-  0% {
-    transform: translateX(-105%);
-  }
-  58% {
-    transform: translateX(72vw);
-  }
-  100% {
-    transform: translateX(112vw);
-  }
+  0% { transform: translateX(-110%); }
+  58% { transform: translateX(72vw); }
+  100% { transform: translateX(112vw); }
+}
+
+@keyframes insureit-orbit {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes insureit-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(0.88); opacity: 0.72; }
+}
+
+@keyframes insureit-blip {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.55; }
+}
+
+@keyframes insureit-progress {
+  0% { transform: translateX(-110%); }
+  55% { transform: translateX(45%); }
+  100% { transform: translateX(220%); }
+}
+
+@keyframes insureit-truck {
+  0% { transform: translateX(-8px) translateY(0); }
+  22% { transform: translateX(18px) translateY(-1px); }
+  48% { transform: translateX(42px) translateY(0); }
+  72% { transform: translateX(66px) translateY(-1px); }
+  100% { transform: translateX(88px) translateY(0); }
 }
 
 @keyframes insureit-work-pulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(0.72);
-    opacity: 0.55;
-  }
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(0.72); opacity: 0.55; }
 }
 
 @keyframes insureit-sheen {
-  0% {
-    transform: translateX(-120%);
-  }
-  100% {
-    transform: translateX(160%);
-  }
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(160%); }
+}
+
+.animate-portal-enter {
+  animation: insureit-fade-up .48s cubic-bezier(.2,.8,.2,1) both;
+}
+
+.animate-portal-scale {
+  animation: insureit-scale-in .42s cubic-bezier(.2,.8,.2,1) both;
+}
+
+.animate-portal-float {
+  animation: insureit-float 7s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-insureit-loader="true"] * {
-    animation-duration: 3.6s !important;
-  }
-
-  [data-insureit-progress="true"] * {
-    animation-duration: 3.6s !important;
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

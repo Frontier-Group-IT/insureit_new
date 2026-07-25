@@ -3,26 +3,82 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  BarChart3,
+  CheckSquare2,
+  ChevronRight,
+  ClipboardList,
+  FileChartColumn,
+  FileCheck2,
+  Gauge,
+  LayoutGrid,
+  Settings,
+  ShieldCheck,
+  Sparkles,
+  UsersRound,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { BrandLockup } from "@/components/brand-lockup";
 
 type SectionKey = "claims" | "master-data" | "tasks" | "reports";
 type ActiveNav = "dashboard" | SectionKey | "none";
-type Item = { href: string; label: string; count?: number };
+type Item = { href: string; label: string; icon: LucideIcon };
 
 type Props = {
   activeNav: ActiveNav;
-  customerCount: number;
-  kycApplicationCount: number;
 };
 
-const sections: Array<{ key: SectionKey; label: string; icon: string; items: Item[] }> = [
-  { key: "claims", label: "Claims", icon: "▤", items: [{ href: "/claims", label: "All Claims" }, { href: "/claims?queue=documents", label: "Documents" }, { href: "/claims?journey=spot-intimation", label: "Verification" }, { href: "/claims?journey=spot-surveyor-assigned", label: "Survey" }, { href: "/claims?journey=under-repair", label: "Repair" }, { href: "/claims?journey=payment-advice-received", label: "Settlement" }] },
-  { key: "master-data", label: "Master Data", icon: "▦", items: [{ href: "/employees", label: "Employees" }, { href: "/customers", label: "Customers" }, { href: "/customers/applications", label: "KYC Applications" }, { href: "/customers/posp-misp", label: "POSP / MISP Onboarding" }, { href: "/vehicles", label: "Vehicles" }, { href: "/policies", label: "Policies" }] },
-  { key: "tasks", label: "Tasks", icon: "✓", items: [{ href: "/tasks", label: "All Tasks" }, { href: "/tasks?status=open", label: "Open" }, { href: "/tasks?status=in_progress", label: "In Progress" }, { href: "/tasks?status=completed", label: "Completed" }] },
-  { key: "reports", label: "Reports", icon: "▥", items: [{ href: "/reports", label: "Portfolio Overview" }] }
+const sections: Array<{ key: SectionKey; label: string; icon: LucideIcon; tint: string; items: Item[] }> = [
+  {
+    key: "claims",
+    label: "Claims",
+    icon: ShieldCheck,
+    tint: "from-[#ff6f61] to-[#ff9f68]",
+    items: [
+      { href: "/claims", label: "All Claims", icon: ClipboardList },
+      { href: "/claims?queue=documents", label: "Documents", icon: FileCheck2 },
+      { href: "/claims?journey=spot-intimation", label: "Verification", icon: CheckSquare2 },
+      { href: "/claims?journey=spot-surveyor-assigned", label: "Survey", icon: Gauge },
+      { href: "/claims?journey=under-repair", label: "Repair", icon: Settings },
+      { href: "/claims?journey=payment-advice-received", label: "Settlement", icon: BarChart3 },
+    ],
+  },
+  {
+    key: "master-data",
+    label: "Master Data",
+    icon: LayoutGrid,
+    tint: "from-[#6759ff] to-[#8f7cff]",
+    items: [
+      { href: "/employees", label: "Employees", icon: UsersRound },
+      { href: "/customers", label: "Customers", icon: UsersRound },
+      { href: "/customers/applications", label: "KYC Applications", icon: FileCheck2 },
+      { href: "/customers/posp-misp", label: "POSP / MISP", icon: Sparkles },
+      { href: "/vehicles", label: "Vehicles", icon: Gauge },
+      { href: "/policies", label: "Policies", icon: ShieldCheck },
+    ],
+  },
+  {
+    key: "tasks",
+    label: "Tasks",
+    icon: CheckSquare2,
+    tint: "from-[#17c7c9] to-[#62ddd3]",
+    items: [
+      { href: "/tasks", label: "All Tasks", icon: CheckSquare2 },
+      { href: "/tasks?status=open", label: "Open", icon: ClipboardList },
+      { href: "/tasks?status=in_progress", label: "In Progress", icon: Gauge },
+      { href: "/tasks?status=completed", label: "Completed", icon: FileCheck2 },
+    ],
+  },
+  {
+    key: "reports",
+    label: "Reports",
+    icon: FileChartColumn,
+    tint: "from-[#f1b94a] to-[#ffcf6b]",
+    items: [{ href: "/reports", label: "Reports Workspace", icon: FileChartColumn }],
+  },
 ];
 
-export function AppNavigation({ activeNav, customerCount, kycApplicationCount }: Props) {
+export function AppNavigation({ activeNav }: Props) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [openSection, setOpenSection] = useState<SectionKey | null>(activeNav === "dashboard" || activeNav === "none" ? null : activeNav);
@@ -34,45 +90,79 @@ export function AppNavigation({ activeNav, customerCount, kycApplicationCount }:
   const currentQuery = searchParams.toString();
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 hidden w-[244px] border-r border-[#D7E6F5] bg-[#F4F9FF] text-[#071D49] shadow-[8px_0_28px_rgba(7,29,73,0.06)] lg:flex lg:flex-col">
-      <Link href="/dashboard" className="flex h-[72px] items-center border-b border-[#D7E6F5] px-4" aria-label="InsureIT home">
+    <aside className="fixed inset-y-0 left-0 z-50 hidden w-[268px] overflow-hidden border-r border-white/10 bg-[#111a35] text-white shadow-[20px_0_60px_rgba(17,26,53,0.22)] lg:flex lg:flex-col">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -left-20 top-14 h-52 w-52 rounded-full bg-[#6759ff]/25 blur-3xl" />
+        <div className="absolute -right-20 bottom-20 h-56 w-56 rounded-full bg-[#17c7c9]/15 blur-3xl" />
+        <div className="portal-noise absolute inset-0 opacity-20" />
+      </div>
+
+      <Link href="/dashboard" className="relative flex h-[78px] items-center border-b border-white/10 px-5" aria-label="InsureIt home">
         <BrandLockup compact />
       </Link>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-3">
-        <Link href="/dashboard" className={`mb-1 flex h-10 items-center gap-3 rounded-xl px-3 text-[12px] font-bold transition ${activeNav === "dashboard" ? "bg-[#071D49] text-white shadow-[0_8px_18px_rgba(7,29,73,0.18)]" : "text-[#344B67] hover:bg-white hover:text-[#071D49]"}`}>
-          <span className="grid w-5 place-items-center text-[16px]">⌂</span><span>Dashboard</span>
+      <nav className="relative flex-1 overflow-y-auto px-3.5 py-4">
+        <Link
+          href="/dashboard"
+          className={`group mb-2 flex h-12 items-center gap-3 rounded-2xl px-3.5 text-[12px] font-bold ${activeNav === "dashboard" ? "bg-white text-[#141d3b] shadow-[0_14px_35px_rgba(0,0,0,.18)]" : "text-white/72 hover:bg-white/8 hover:text-white"}`}
+        >
+          <span className={`grid h-8 w-8 place-items-center rounded-xl ${activeNav === "dashboard" ? "bg-gradient-to-br from-[#6759ff] to-[#17c7c9] text-white shadow-lg" : "bg-white/8 text-white/75 group-hover:bg-white/12"}`}>
+            <Gauge className="h-4 w-4" />
+          </span>
+          <span className="flex-1">Dashboard</span>
+          {activeNav === "dashboard" ? <span className="h-2 w-2 rounded-full bg-[#17c7c9] shadow-[0_0_14px_#17c7c9]" /> : null}
         </Link>
 
-        <p className="mb-1 mt-4 px-3 text-[9px] font-black uppercase tracking-[0.14em] text-[#8292AA]">Workspace</p>
-        <div className="space-y-1">
+        <p className="mb-2 mt-6 px-3 text-[9px] font-black uppercase tracking-[0.18em] text-white/35">Workspaces</p>
+        <div className="space-y-1.5">
           {sections.map((section) => {
             const open = openSection === section.key;
             const active = activeNav === section.key;
+            const SectionIcon = section.icon;
             return (
-              <div key={section.key} className={`overflow-hidden rounded-xl border transition ${active ? "border-[#CFE2FF] bg-white shadow-sm" : "border-transparent"}`}>
-                <button type="button" onClick={() => setOpenSection((current) => current === section.key ? null : section.key)} className={`flex h-10 w-full items-center gap-3 px-3 text-left text-[12px] font-bold transition ${active ? "text-[#071D49]" : "text-[#344B67] hover:bg-white hover:text-[#071D49]"}`} aria-expanded={open}>
-                  <span className={`grid h-6 w-6 place-items-center rounded-lg text-[15px] ${active ? "bg-[#EAF3FF] text-[#0B63CE]" : "bg-white text-[#59687A]"}`}>{section.icon}</span>
+              <div key={section.key} className={`overflow-hidden rounded-2xl border ${active ? "border-white/12 bg-white/8 shadow-[0_14px_30px_rgba(0,0,0,.12)]" : "border-transparent"}`}>
+                <button
+                  type="button"
+                  onClick={() => setOpenSection((current) => current === section.key ? null : section.key)}
+                  className={`group flex h-11 w-full items-center gap-3 px-3.5 text-left text-[12px] font-bold ${active ? "text-white" : "text-white/68 hover:bg-white/6 hover:text-white"}`}
+                  aria-expanded={open}
+                >
+                  <span className={`grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br ${section.tint} text-white shadow-[0_8px_18px_rgba(0,0,0,.18)]`}>
+                    <SectionIcon className="h-4 w-4" />
+                  </span>
                   <span className="flex-1">{section.label}</span>
-                  <span className={`text-[11px] text-[#8292AA] transition-transform ${open ? "rotate-90" : ""}`}>›</span>
+                  <ChevronRight className={`h-4 w-4 text-white/35 ${open ? "rotate-90" : ""}`} />
                 </button>
-                {open ? <div className="space-y-0.5 px-2 pb-2 pl-11">
-                  {section.items.map((item) => {
-                    const count = item.href === "/customers" ? customerCount : item.href === "/customers/applications" ? kycApplicationCount : item.count;
-                    const itemActive = isCurrent(item.href, pathname, currentQuery);
-                    return <Link key={item.href} href={item.href} className={`flex min-h-8 items-center justify-between rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition ${itemActive ? "bg-[#071D49] text-white shadow-sm" : "text-[#59687A] hover:bg-[#EAF3FF] hover:text-[#071D49]"}`}>
-                      <span>{item.label}</span>{typeof count === "number" ? <span className={`rounded-full px-1.5 py-0.5 text-[8.5px] font-bold ${itemActive ? "bg-white/15 text-white" : "bg-white text-[#0B63CE]"}`}>{count}</span> : null}
-                    </Link>;
-                  })}
-                </div> : null}
+
+                {open ? (
+                  <div className="space-y-1 px-2.5 pb-2.5 pl-[50px] animate-portal-enter">
+                    {section.items.map((item) => {
+                      const itemActive = isCurrent(item.href, pathname, currentQuery);
+                      const ItemIcon = item.icon;
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={`group flex min-h-9 items-center gap-2 rounded-xl px-2.5 py-2 text-[10.5px] font-semibold ${itemActive ? "bg-white text-[#17213e] shadow-[0_8px_20px_rgba(0,0,0,.16)]" : "text-white/55 hover:bg-white/7 hover:text-white"}`}
+                        >
+                          <ItemIcon className={`h-3.5 w-3.5 ${itemActive ? "text-[#6759ff]" : "text-white/35 group-hover:text-white/70"}`} />
+                          <span className="truncate">{item.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </div>
             );
           })}
         </div>
       </nav>
 
-      <div className="border-t border-[#D7E6F5] p-3">
-        <Link href="/settings" className="flex h-10 items-center gap-3 rounded-xl px-3 text-[12px] font-bold text-[#59687A] transition hover:bg-white hover:text-[#071D49]"><span className="grid w-5 place-items-center text-[15px]">⚙</span><span>Settings</span></Link>
+      <div className="relative border-t border-white/10 p-3.5">
+        <Link href="/settings" className="group flex h-11 items-center gap-3 rounded-2xl px-3.5 text-[12px] font-bold text-white/65 hover:bg-white/8 hover:text-white">
+          <span className="grid h-8 w-8 place-items-center rounded-xl bg-white/8 group-hover:bg-white/12"><Settings className="h-4 w-4" /></span>
+          <span>Settings</span>
+        </Link>
       </div>
     </aside>
   );
@@ -81,13 +171,9 @@ export function AppNavigation({ activeNav, customerCount, kycApplicationCount }:
 function isCurrent(href: string, pathname: string, currentQuery: string) {
   const [targetPath, targetQuery = ""] = href.split("?");
   const nestedWorkspaces = ["/employees", "/customers/applications", "/customers/posp-misp"];
-  const nestedMatch = !targetQuery
-    && nestedWorkspaces.includes(targetPath)
-    && (pathname === targetPath || pathname.startsWith(`${targetPath}/`));
+  const nestedMatch = !targetQuery && nestedWorkspaces.includes(targetPath) && (pathname === targetPath || pathname.startsWith(`${targetPath}/`));
   if (pathname !== targetPath && !nestedMatch) return false;
-  if (!targetQuery) {
-    return nestedMatch || !currentQuery;
-  }
+  if (!targetQuery) return nestedMatch || !currentQuery;
   const expected = new URLSearchParams(targetQuery);
   const current = new URLSearchParams(currentQuery);
   return Array.from(expected.entries()).every(([key, value]) => current.get(key) === value);
