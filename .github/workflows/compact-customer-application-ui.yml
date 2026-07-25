@@ -18,98 +18,52 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Apply compact UI changes
+      - name: Apply requested UI cleanup
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
 
-          # Dashboard: remove unnecessary hero copy while preserving the greeting and actions.
           dashboard = Path('apps/web-portal/app/dashboard/page.tsx')
           text = dashboard.read_text(encoding='utf-8')
-          text = text.replace('''              <div className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/8 px-2.5 py-1 text-[8.5px] font-black uppercase tracking-[0.16em] text-white/70 backdrop-blur">
-                <Sparkles className="h-3.5 w-3.5 text-[#75e5dd]" /> Live operations cockpit
-              </div>
-''', '')
-          text = text.replace('''              <p className="mt-3 max-w-2xl text-[11.5px] leading-6 text-white/60 sm:text-[12px]">Everything important is visible at a glance—customers, fleet exposure, claims, onboarding and the work that needs action now.</p>
-''', '')
+          text = text.replace('  Sparkles,\n', '')
+          text = re.sub(r'\n\s*<div className="mb-4 inline-flex.*?Live operations cockpit\s*</div>', '', text, count=1, flags=re.S)
+          text = re.sub(r'\n\s*<p className="mt-3 max-w-2xl.*?Everything important is visible at a glance—customers, fleet exposure, claims, onboarding and the work that needs action now\.</p>', '', text, count=1, flags=re.S)
           dashboard.write_text(text, encoding='utf-8')
 
-          # Customers: keep search, filters and actions in one compact desktop row.
           customers = Path('apps/web-portal/app/customers/customer-workspace.tsx')
           text = customers.read_text(encoding='utf-8')
-          old = '''        <div className="border-b border-[#E2E8F0] p-3 sm:p-4">
-          <div className="flex gap-2">
-            <input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Search customer, trade name, mobile or city" aria-label="Search customers" className="h-11 min-w-0 flex-1 rounded-xl border border-[#CBD5E1] px-3 text-[14px] md:max-w-md" />
-            <button type="button" onClick={() => setFiltersOpen(true)} className="relative grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[#CBD5E1] bg-white text-[#334155] md:hidden" aria-label="Open customer filters"><SlidersHorizontal className="h-4.5 w-4.5" />{activeFilterCount ? <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[#6759ff] px-1 text-[9px] font-bold text-white">{activeFilterCount}</span> : null}</button>
-            <button type="button" onClick={() => setPartnerModalOpen(true)} className="inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6759ff] to-[#17bfc5] px-3 text-[12px] font-bold text-white shadow-[0_10px_24px_rgba(103,89,255,.24)]"><Plus className="h-4 w-4" /><span className="hidden sm:inline">Add Customer</span></button>
-          </div>
-
-          <div className="mt-3 hidden items-center gap-2 md:flex">
-            <select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }} className="h-10 min-w-[145px] rounded-xl border border-[#CBD5E1] bg-white px-2.5 text-[12px]"><option value="all">All statuses</option><option value="active">Active</option><option value="documents_pending">KYC incomplete</option></select>
-            <select value={partner} onChange={(event) => { setPartner(event.target.value); setPage(1); }} className="h-10 min-w-[175px] rounded-xl border border-[#CBD5E1] bg-white px-2.5 text-[12px]"><option value="all">All partner types</option>{Object.entries(partnerLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
-            <Link href="/customers/applications" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[11px] font-semibold text-[#334155]"><FileCheck2 className="h-4 w-4" />KYC Applications</Link>
-            <div className="ml-auto flex items-center gap-2"><button type="button" disabled={!selectedRows.length} onClick={exportSelected} className="h-10 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[11px] font-semibold text-[#334155] disabled:opacity-40">Export</button><details className="relative"><summary className="flex h-10 cursor-pointer list-none items-center rounded-xl border border-[#CBD5E1] bg-white px-3 text-[11px] font-semibold [&::-webkit-details-marker]:hidden">Columns</summary><div className="absolute right-0 top-11 z-30 w-52 rounded-xl border border-[#E2E8F0] bg-white p-1.5 shadow-xl">{(Object.keys(columnLabels) as ColumnKey[]).map((column) => <label key={column} className="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] hover:bg-[#F8FAFC]"><input type="checkbox" checked={visibleColumns.includes(column)} onChange={() => setVisibleColumns((current) => current.includes(column) ? current.filter((item) => item !== column) : [...current, column])} className="h-4 w-4" />{columnLabels[column]}</label>)}</div></details></div>
-          </div>
-        </div>'''
-          new = '''        <div className="border-b border-[#E2E8F0] p-2.5 sm:p-3">
+          pattern = re.compile(r'''        <div className="border-b border-\[#E2E8F0\] p-3 sm:p-4">\n          <div className="flex gap-2">.*?          </div>\n        </div>''', re.S)
+          replacement = '''        <div className="border-b border-[#E2E8F0] p-2.5 sm:p-3">
           <div className="flex flex-wrap items-center gap-2">
-            <input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Search customer, trade name, mobile or city" aria-label="Search customers" className="h-10 min-w-[240px] flex-1 rounded-xl border border-[#CBD5E1] px-3 text-[12px] md:max-w-md" />
+            <input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Search customer, trade name, mobile or city" aria-label="Search customers" className="h-10 min-w-[220px] flex-1 rounded-xl border border-[#CBD5E1] px-3 text-[12px] lg:max-w-[420px]" />
             <button type="button" onClick={() => setFiltersOpen(true)} className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#CBD5E1] bg-white text-[#334155] md:hidden" aria-label="Open customer filters"><SlidersHorizontal className="h-4 w-4" />{activeFilterCount ? <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[#6759ff] px-1 text-[9px] font-bold text-white">{activeFilterCount}</span> : null}</button>
-            <div className="hidden items-center gap-2 md:flex">
-              <select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }} className="h-10 min-w-[135px] rounded-xl border border-[#CBD5E1] bg-white px-2.5 text-[11px]"><option value="all">All statuses</option><option value="active">Active</option><option value="documents_pending">KYC incomplete</option></select>
-              <select value={partner} onChange={(event) => { setPartner(event.target.value); setPage(1); }} className="h-10 min-w-[165px] rounded-xl border border-[#CBD5E1] bg-white px-2.5 text-[11px]"><option value="all">All partner types</option>{Object.entries(partnerLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
-              <Link href="/customers/applications" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10.5px] font-semibold text-[#334155]"><FileCheck2 className="h-4 w-4" />KYC Applications</Link>
-            </div>
+            <select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }} className="hidden h-10 min-w-[135px] rounded-xl border border-[#CBD5E1] bg-white px-2.5 text-[11px] md:block"><option value="all">All statuses</option><option value="active">Active</option><option value="documents_pending">KYC incomplete</option></select>
+            <select value={partner} onChange={(event) => { setPartner(event.target.value); setPage(1); }} className="hidden h-10 min-w-[165px] rounded-xl border border-[#CBD5E1] bg-white px-2.5 text-[11px] md:block"><option value="all">All partner types</option>{Object.entries(partnerLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+            <Link href="/customers/applications" className="hidden h-10 items-center justify-center gap-2 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10.5px] font-semibold text-[#334155] md:inline-flex"><FileCheck2 className="h-4 w-4" />KYC Applications</Link>
             <button type="button" onClick={() => setPartnerModalOpen(true)} className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6759ff] to-[#17bfc5] px-3 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(103,89,255,.24)]"><Plus className="h-4 w-4" /><span className="hidden sm:inline">Add Customer</span></button>
-            <div className="ml-auto hidden items-center gap-2 md:flex"><button type="button" disabled={!selectedRows.length} onClick={exportSelected} className="h-10 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10.5px] font-semibold text-[#334155] disabled:opacity-40">Export</button><details className="relative"><summary className="flex h-10 cursor-pointer list-none items-center rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10.5px] font-semibold [&::-webkit-details-marker]:hidden">Columns</summary><div className="absolute right-0 top-11 z-30 w-52 rounded-xl border border-[#E2E8F0] bg-white p-1.5 shadow-xl">{(Object.keys(columnLabels) as ColumnKey[]).map((column) => <label key={column} className="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] hover:bg-[#F8FAFC]"><input type="checkbox" checked={visibleColumns.includes(column)} onChange={() => setVisibleColumns((current) => current.includes(column) ? current.filter((item) => item !== column) : [...current, column])} className="h-4 w-4" />{columnLabels[column]}</label>)}</div></details></div>
+            <div className="ml-auto hidden items-center gap-2 lg:flex"><button type="button" disabled={!selectedRows.length} onClick={exportSelected} className="h-10 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10.5px] font-semibold text-[#334155] disabled:opacity-40">Export</button><details className="relative"><summary className="flex h-10 cursor-pointer list-none items-center rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10.5px] font-semibold [&::-webkit-details-marker]:hidden">Columns</summary><div className="absolute right-0 top-11 z-30 w-52 rounded-xl border border-[#E2E8F0] bg-white p-1.5 shadow-xl">{(Object.keys(columnLabels) as ColumnKey[]).map((column) => <label key={column} className="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] hover:bg-[#F8FAFC]"><input type="checkbox" checked={visibleColumns.includes(column)} onChange={() => setVisibleColumns((current) => current.includes(column) ? current.filter((item) => item !== column) : [...current, column])} className="h-4 w-4" />{columnLabels[column]}</label>)}</div></details></div>
           </div>
         </div>'''
-          if old not in text:
-              raise SystemExit('Customer toolbar block not found')
-          customers.write_text(text.replace(old, new), encoding='utf-8')
+          text, count = pattern.subn(replacement, text, count=1)
+          if count != 1:
+              raise SystemExit(f'Customer toolbar replacement count was {count}')
+          customers.write_text(text, encoding='utf-8')
 
-          # Application page: keep one compact identity header with all summary information.
           application = Path('apps/web-portal/app/customers/applications/[id]/page.tsx')
           text = application.read_text(encoding='utf-8')
-          text = text.replace('''    <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-4 bg-gradient-to-r from-[#071D49] via-[#0F2A55] to-[#163B70] px-5 py-5 text-white"><div><Link href="/customers/applications" className="text-[9.5px] font-semibold text-white/70">← Back to applications</Link><p className="mt-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/60">Official onboarding file</p><h1 className="mt-1 text-xl font-semibold">{title}</h1><p className="mt-1 text-[10px] text-white/70">Reference {id.slice(0,8).toUpperCase()} · Updated {new Date(application.updated_at).toLocaleDateString("en-IN")}</p></div><div className="flex gap-2"><Pill>{partnerLabel(application.partner_type)}</Pill><Pill tone="gold">{application.status.replaceAll("_"," ")}</Pill></div></div>
-      <div className="grid gap-px bg-[#E2E8F0] sm:grid-cols-4"><FileMetric label="Partner type" value={partnerLabel(application.partner_type)}/><FileMetric label="Source status" value={application.status.replaceAll("_"," ")}/><FileMetric label="Documents" value={String(previews.length)}/><FileMetric label="Review mode" value={canReview?"Editable":"Read only"}/></div>
-    </section>''', '''    <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-gradient-to-r from-[#071D49] via-[#0F2A55] to-[#163B70] px-4 py-4 text-white"><div><Link href="/customers/applications" className="text-[9.5px] font-semibold text-white/70">← Back to applications</Link><h1 className="mt-2 text-xl font-semibold">{title}</h1><p className="mt-1 text-[10px] text-white/70">Reference {id.slice(0,8).toUpperCase()} · Updated {new Date(application.updated_at).toLocaleDateString("en-IN")}</p></div><div className="flex flex-wrap items-center gap-2"><Pill>{partnerLabel(application.partner_type)}</Pill><Pill tone="gold">{application.status.replaceAll("_"," ")}</Pill><span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[9.5px] font-semibold text-white">{previews.length} documents</span><span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[9.5px] font-semibold text-white">{canReview?"Editable":"Read only"}</span></div></div>
-    </section>''')
-          application.write_text(text, encoding='utf-8')
-
-          # POSP/MISP editor: remove the duplicated identity header and unnecessary footer copy.
-          editor = Path('apps/web-portal/app/customers/applications/posp-misp-application-editor.tsx')
-          text = editor.read_text(encoding='utf-8')
-          text = text.replace('''      <div className="border-b border-[#DCE5EF] bg-white px-5 py-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-[9.5px] font-semibold uppercase tracking-[0.12em] text-[#64748B]">Official onboarding file</p>
-            <h2 className="mt-1 text-lg font-semibold text-[#071D49]">{displayName}</h2>
-            <p className="mt-1 text-[10.5px] text-[#64748B]">Application ref. {applicationId.slice(0, 8).toUpperCase()} · {profile.partner_type.toUpperCase()} verification record</p>
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-right">
-            <FileMetric label="Documents" value={String(receivedDocuments)} />
-            <FileMetric label="Mode" value={editable ? "Review" : "Read only"} />
-          </div>
-        </div>
+          pattern = re.compile(r'''    <section className="overflow-hidden rounded-2xl border border-\[#DCE5EF\] bg-white shadow-sm">\n      <div className="flex flex-wrap items-start justify-between.*?\n      <div className="grid gap-px bg-\[#E2E8F0\] sm:grid-cols-4">.*?</div>\n    </section>''', re.S)
+          replacement = '''    <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-gradient-to-r from-[#071D49] via-[#0F2A55] to-[#163B70] px-4 py-3 text-white shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0"><Link href="/customers/applications" className="text-[9px] font-semibold text-white/65">← Back to applications</Link><div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1"><h1 className="truncate text-lg font-semibold">{title}</h1><p className="text-[9.5px] text-white/65">Ref {id.slice(0,8).toUpperCase()} · Updated {new Date(application.updated_at).toLocaleDateString("en-IN")}</p></div></div>
+        <div className="flex flex-wrap items-center gap-2"><Pill>{partnerLabel(application.partner_type)}</Pill><Pill tone="gold">{application.status.replaceAll("_"," ")}</Pill><span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[9px] font-semibold text-white/85">{previews.length} documents</span><span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[9px] font-semibold text-white/85">{canReview?"Editable":"Read only"}</span></div>
       </div>
-
-''', '')
-          text = text.replace('''      <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 border-t border-[#DCE5EF] bg-white/95 px-5 py-4 backdrop-blur">
-        <p className="text-[10.5px] text-[#64748B]">{editable ? "Review the official file and save verified corrections before progressing the workflow." : "This official onboarding file is locked after approval or closure."}</p>
-        {editable ? <FormSubmitButton label="Save verified corrections" pendingLabel="Saving verified corrections" /> : null}
-      </div>''', '''      <div className="sticky bottom-0 z-10 flex justify-end border-t border-[#DCE5EF] bg-white/95 px-5 py-3 backdrop-blur">
-        {editable ? <FormSubmitButton label="Save verified corrections" pendingLabel="Saving verified corrections" /> : null}
-      </div>''')
-          text = text.replace('''  const receivedDocuments = documents.length;
-  const displayName = (isMisp ? profile.misp_name : profile.pos_name) || "Application pending name verification";
-''', '')
-          text = text.replace('''function FileMetric({ label, value }: { label: string; value: string }) { return <div className="min-w-24 rounded-lg border border-[#DCE5EF] bg-[#F8FAFC] px-3 py-2"><p className="text-[8.5px] font-semibold uppercase tracking-[0.06em] text-[#64748B]">{label}</p><p className="mt-0.5 text-[11px] font-semibold text-[#071D49]">{value}</p></div>; }
-''', '')
-          editor.write_text(text, encoding='utf-8')
+    </section>'''
+          text, count = pattern.subn(replacement, text, count=1)
+          if count != 1:
+              raise SystemExit(f'Application header replacement count was {count}')
+          application.write_text(text, encoding='utf-8')
           PY
 
       - name: Remove temporary workflow and commit
