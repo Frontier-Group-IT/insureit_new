@@ -6,6 +6,7 @@ import { UserMenu } from "@/components/user-menu";
 import { HistoryBackButton } from "@/components/history-back-button";
 import { AppNavigation } from "@/components/claim-manager/app-navigation";
 import { MobileNavigation } from "@/components/claim-manager/mobile-navigation";
+import { MobileBottomNavigation } from "@/components/claim-manager/mobile-bottom-navigation";
 
 type Props = {
   title: string;
@@ -53,11 +54,13 @@ export async function ClaimManagerShell({ title, backHref = "/dashboard", childr
           </div>
         </header>
 
-        <main className="relative min-h-[calc(100vh-66px)] overflow-hidden px-2.5 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
+        <main className="relative min-h-[calc(100vh-66px)] overflow-hidden px-2.5 pb-24 pt-3 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
           <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true"><div className="absolute -right-28 top-8 h-72 w-72 rounded-full bg-[#6759ff]/7 blur-3xl" /><div className="absolute left-[12%] top-[38%] h-64 w-64 rounded-full bg-[#17c7c9]/6 blur-3xl" /></div>
           <div className="relative animate-portal-enter">{children}</div>
         </main>
       </div>
+
+      <MobileBottomNavigation />
     </div>
   );
 }
