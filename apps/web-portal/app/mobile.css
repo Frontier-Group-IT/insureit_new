@@ -1,0 +1,96 @@
+/* Mobile interaction and accessibility foundation */
+
+:focus-visible {
+  outline: 3px solid rgba(103, 89, 255, 0.72);
+  outline-offset: 3px;
+}
+
+[aria-disabled="true"],
+:disabled {
+  cursor: not-allowed;
+}
+
+.mobile-safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.mobile-scroll-region {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767px) {
+  html {
+    scroll-padding-bottom: 90px;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  button,
+  summary,
+  [role="button"] {
+    min-height: 40px;
+  }
+
+  textarea {
+    min-height: 112px;
+  }
+
+  .portal-card-hover:hover {
+    transform: none;
+  }
+
+  .mobile-sticky-actions {
+    position: sticky;
+    bottom: calc(74px + env(safe-area-inset-bottom));
+    z-index: 35;
+    margin-inline: -0.25rem;
+    border: 1px solid rgba(116, 132, 160, 0.2);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.94);
+    padding: 0.65rem;
+    box-shadow: 0 18px 50px rgba(24, 35, 66, 0.17);
+    backdrop-filter: blur(18px);
+  }
+
+  .mobile-card-list {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .mobile-record-card {
+    border: 1px solid rgba(116, 132, 160, 0.2);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.94);
+    padding: 0.9rem;
+    box-shadow: 0 14px 38px rgba(39, 51, 89, 0.08);
+  }
+}
+
+@media (min-width: 768px) {
+  .mobile-only {
+    display: none !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --border-subtle: rgba(28, 42, 66, 0.46);
+    --text-secondary: #46536a;
+  }
+
+  .portal-card,
+  .portal-surface,
+  .mobile-record-card {
+    border-width: 2px;
+  }
+}
