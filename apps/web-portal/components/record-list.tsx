@@ -6,9 +6,9 @@ import { EmptyState } from "./ui";
 export function DataError({ message }: { message?: string }) {
   return (
     <Card className="overflow-hidden border-red-100 bg-red-50/75 p-0">
-      <div className="flex items-start gap-3 px-5 py-4 text-red-700">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-red-100 text-red-600"><AlertTriangle className="h-4 w-4" /></span>
-        <div><p className="text-[12px] font-semibold">Unable to load records</p><p className="mt-1 text-[10.5px] leading-5 text-red-600">{message ?? "Please refresh the page or contact an administrator if the issue continues."}</p></div>
+      <div className="flex items-start gap-3 px-4 py-4 text-red-700 sm:px-5">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-red-100 text-red-600"><AlertTriangle className="h-4 w-4" /></span>
+        <div><p className="text-[13px] font-semibold">Unable to load records</p><p className="mt-1 text-[12px] leading-5 text-red-600">{message ?? "Please refresh the page or contact an administrator if the issue continues."}</p></div>
       </div>
     </Card>
   );
@@ -38,7 +38,23 @@ export function DataTable<T>({
   return (
     <Card className={compact ? "border-0 p-0 shadow-none" : "p-0"}>
       <div className={`ui-table-shell overflow-hidden border border-white/80 bg-white/72 ${compact ? "rounded-2xl" : "rounded-[22px]"}`}>
-        <div className="overflow-x-auto">
+        <div className="mobile-card-list p-3 md:hidden">
+          {rows.map((row, index) => (
+            <article className="mobile-record-card" key={index}>
+              <div className="border-b border-[#edf0f5] pb-3 text-[14px] font-extrabold text-[#12203B]">{columns[0]?.cell(row)}</div>
+              <dl className="mt-3 grid gap-2.5">
+                {columns.slice(1).map((column) => (
+                  <div className="grid grid-cols-[minmax(92px,38%)_1fr] items-start gap-3" key={column.header}>
+                    <dt className="text-[10px] font-black uppercase tracking-[0.08em] text-[#8793A8]">{column.header}</dt>
+                    <dd className="min-w-0 text-right text-[12px] font-semibold text-[#334155]">{column.cell(row)}</dd>
+                  </div>
+                ))}
+              </dl>
+            </article>
+          ))}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
           <table className={`w-full min-w-[760px] text-left ${compact ? "text-[11px]" : "text-[11.5px]"}`}>
             <thead className="sticky top-0 z-10 border-b border-[#E7E8F3] bg-[#F7F8FF]/95 uppercase tracking-[0.08em] text-[#77809A] backdrop-blur-xl">
               <tr>{columns.map((column) => <th className={compact ? "px-3 py-2.5 text-[8.5px]" : "px-4 py-3 text-[9px]"} key={column.header}>{column.header}</th>)}</tr>
