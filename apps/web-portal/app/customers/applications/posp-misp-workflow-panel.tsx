@@ -1,16 +1,17 @@
 import { FormSubmitButton } from "@/components/form-submit-button";
-import { IndianDateField } from "@/components/indian-date-field";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import {
-  completePospMispTraining,
+  completePospMispDocumentStage,
+  decidePospMispPartnerRoute,
+  markPospMispReadyForOnboarding,
   movePospMispToIib,
   queuePospMispPanVerification,
-  retryPospMispPanVerification,
-  savePospMispIibOutcome
+  retryPospMispPanVerification
 } from "./posp-misp-workflow-actions";
 
 export type PospMispWorkflowProfile = {
   workflow_stage: "pre_iib" | "iib_processing" | "training" | "completed";
+  partner_type: "posp" | "misp";
   pan_number: string | null;
   iib_remarks: string | null;
   iib_uploaded: boolean;
@@ -25,179 +26,100 @@ export type PospMispWorkflowProfile = {
   onboarding_date: string | null;
 };
 
-type PanVerificationJob = {
+type PanJob = {
   status: "pending" | "queued" | "checking" | "matched" | "not_found" | "invalid" | "failed" | "manual_review";
   result_message: string | null;
-  requested_at: string;
-  started_at: string | null;
-  completed_at: string | null;
   attempt_count: number;
   last_error: string | null;
   checked_by_device: string | null;
 };
 
-const inputClass = "h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-[11px] text-[#17203A] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
-const labelClass = "mb-1 block text-[10px] font-semibold text-[#344054]";
+type RouteState = {
+  requested_account_type: "posp" | "misp" | null;
+  final_account_type: "posp" | "misp" | "partner" | null;
+  partner_decision: "not_applicable" | "pending" | "convert_to_partner" | "do_not_proceed";
+};
 
 export async function PospMispWorkflowPanel({ applicationId, profile }: { applicationId: string; profile: PospMispWorkflowProfile }) {
-  const stage = profile.workflow_stage;
   const admin = createSupabaseAdminClient();
-  const { data: panJob } = await admin
-    .from("pan_verification_jobs")
-    .select("status, result_message, requested_at, started_at, completed_at, attempt_count, last_error, checked_by_device")
-    .eq("application_id", applicationId)
-    .maybeSingle<PanVerificationJob>();
-  const panReady = panJob?.status === "not_found";
+  const [{ data: job }, { data: route }, { count: documentCount }] = await Promise.all([
+    admin.from("pan_verification_jobs").select("status,result_message,attempt_count,last_error,checked_by_device").eq("application_id", applicationId).maybeSingle<PanJob>(),
+    admin.from("posp_misp_onboarding_profiles").select("requested_account_type,final_account_type,partner_decision").eq("application_id", applicationId).maybeSingle<RouteState>(),
+    admin.from("customer_onboarding_documents").select("id", { count: "exact", head: true }).eq("application_id", applicationId)
+  ]);
 
-  return (
-    <section className="overflow-hidden rounded-xl border border-[#DCE5EF] bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3">
-        <div>
-          <p className="text-[9px] font-semibold uppercase tracking-[.08em] text-[#64748B]">Operational workflow</p>
-          <h2 className="mt-1 text-sm font-semibold text-[#0F172A]">{stageLabel(stage)}</h2>
-        </div>
-        <span className="rounded-full border border-[#C7D2FE] bg-[#EEF2FF] px-2.5 py-1 text-[9.5px] font-semibold text-[#4338CA]">{stage.replaceAll("_", " ")}</span>
+  const stage = profile.workflow_stage;
+  const partnerDecision = route?.partner_decision ?? "not_applicable";
+  const partnerRoute = job?.status === "matched" && partnerDecision === "convert_to_partner";
+  const canContinue = job?.status === "not_found" || partnerRoute;
+  const finalType = route?.final_account_type ?? route?.requested_account_type ?? profile.partner_type;
+
+  return <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
+    <header className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <div><p className="text-[9px] font-semibold uppercase tracking-[.1em] text-[#64748B]">Onboarding progress</p><h2 className="mt-1 text-sm font-semibold text-[#0F172A]">{stageTitle(stage)}</h2></div>
+        <span className="rounded-full border border-[#C7D2FE] bg-[#EEF2FF] px-2.5 py-1 text-[9px] font-semibold text-[#4338CA]">{accountLabel(finalType)}</span>
       </div>
-
-      <PanVerificationCard applicationId={applicationId} panNumber={profile.pan_number} job={panJob} stage={stage} />
-
-      <div className="border-b border-[#E2E8F0] px-4 py-3">
-        <p className="text-[10.5px] font-medium text-[#475569]">Registration form</p>
-        <p className="mt-1 text-[9.5px] text-[#64748B]">Download the prefilled form generated from the saved onboarding record.</p>
-        <a href={`/customers/applications/${applicationId}/registration-form`} download className="mt-2 inline-flex rounded-md bg-[#0F2A55] px-3 py-2 text-[10.5px] font-semibold text-white">Download PDF</a>
+      <div className="mt-3 grid grid-cols-3 gap-1.5">
+        <Step number="1" label="Primary & IIB" active={stage === "pre_iib"} done={stage !== "pre_iib"} />
+        <Step number="2" label="Documents" active={stage === "iib_processing"} done={stage === "training" || stage === "completed"} />
+        <Step number="3" label="Review" active={stage === "training" || stage === "completed"} done={stage === "completed"} />
       </div>
+    </header>
 
-      {stage === "pre_iib" ? (
-        <form action={movePospMispToIib} className="px-4 py-3">
-          <input type="hidden" name="application_id" value={applicationId} />
-          <p className="text-[10px] leading-4 text-[#64748B]">PAN must return “No Data Found In POS System” before the case can move to IIB processing.</p>
-          <FormSubmitButton label={panReady ? "Start IIB Processing" : "Complete PAN Verification First"} pendingLabel="Starting" disabled={!panReady} className="mt-3 inline-flex w-full items-center justify-center rounded-md bg-[#4F46E5] px-4 py-2 text-[11px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-[#A5B4FC] disabled:opacity-80" />
-        </form>
-      ) : null}
+    <PanCard applicationId={applicationId} pan={profile.pan_number} job={job} stage={stage} />
 
-      {stage === "iib_processing" ? (
-        <form action={savePospMispIibOutcome} className="space-y-3 px-4 py-3">
-          <input type="hidden" name="application_id" value={applicationId} />
-          <Select label="IIB Remarks" name="iib_remarks" defaultValue={profile.iib_remarks ?? ""} options={["Matching Record Found In DataBase", "No Data Found In POS System"]} />
-          <label className="flex w-fit items-center gap-2 py-1 text-[10.5px] font-semibold text-[#344054]">
-            <input type="checkbox" name="iib_uploaded" value="true" defaultChecked={profile.iib_uploaded} className="h-4 w-4" />
-            Details uploaded to IIB
-          </label>
-          <IndianDateField label="IIB Upload Date" name="iib_uploaded_at" defaultValue={profile.iib_uploaded_at} required />
-          <FormSubmitButton label="Complete IIB Stage" pendingLabel="Saving" className="inline-flex w-full items-center justify-center rounded-md bg-[#4F46E5] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-70" />
-        </form>
-      ) : null}
+    {job?.status === "matched" && partnerDecision === "pending" ? <section className="border-b border-[#F5D7A1] bg-[#FFF9ED] px-4 py-3">
+      <p className="text-[10.5px] font-semibold text-[#8A4B08]">Existing IIB registration found</p>
+      <p className="mt-1 text-[9.5px] leading-4 text-[#9A5B13]">This applicant cannot be registered again as POSP/MISP. Continue as a separate Partner account, or close the application.</p>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <DecisionForm applicationId={applicationId} decision="convert_to_partner" label="Create as Partner" />
+        <DecisionForm applicationId={applicationId} decision="do_not_proceed" label="Do Not Proceed" danger />
+      </div>
+    </section> : null}
 
-      {stage === "training" ? (
-        <form action={completePospMispTraining} className="space-y-3 px-4 py-3">
-          <input type="hidden" name="application_id" value={applicationId} />
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Training Login ID" name="training_login_id" defaultValue={profile.training_login_id ?? ""} required />
-            <Field label="Training Password" name="training_password" type="password" required />
-            <IndianDateField label="Training Start Date" name="training_start_date" defaultValue={profile.training_start_date} required />
-            <IndianDateField label="Training End Date" name="training_end_date" defaultValue={profile.training_end_date} required />
-            <SelectValues label="Training Status" name="training_status" defaultValue={profile.training_status ?? ""} options={[["completed", "Completed"], ["pending", "Pending"]]} />
-            <Field label="Certificate Number" name="training_certificate_number" defaultValue={profile.training_certificate_number ?? ""} />
-            <Field label="Exam Status" name="exam_status" defaultValue={profile.exam_status ?? ""} required />
-            <IndianDateField label="Onboarding Date" name="onboarding_date" defaultValue={profile.onboarding_date} required />
-          </div>
-          <label className="flex items-center gap-2 rounded-md border border-[#CBD5E1] bg-[#F8FAFC] px-3 py-2 text-[10.5px] font-semibold text-[#344054]">
-            <input type="checkbox" name="training_credentials_shared_flag" value="true" defaultChecked={profile.training_credentials_shared_flag} className="h-4 w-4" />
-            Training credentials shared
-          </label>
-          <label>
-            <span className={labelClass}>Agreement Copy *</span>
-            <input name="agreement_copy" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" className="block w-full rounded-md border border-[#CBD5E1] bg-white px-3 py-2 text-[10px] file:mr-2 file:rounded-md file:border-0 file:bg-[#EEF2FF] file:px-2.5 file:py-1.5 file:text-[9.5px] file:font-semibold file:text-[#4338CA]" />
-          </label>
-          <FormSubmitButton label="Complete Training Stage" pendingLabel="Completing" className="inline-flex w-full items-center justify-center rounded-md bg-emerald-700 px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-70" />
-        </form>
-      ) : null}
+    {partnerRoute ? <div className="border-b border-[#D8C7FF] bg-[#F7F3FF] px-4 py-3"><p className="text-[10.5px] font-semibold text-[#5B21B6]">Partner route selected</p><p className="mt-1 text-[9.5px] leading-4 text-[#6D28D9]">The existing IIB result remains visible. The applicant will continue only as a Partner.</p></div> : null}
 
-      {stage === "completed" ? <p className="px-4 py-4 text-[10.5px] font-medium text-emerald-700">IIB, training and post-IIB documentation are complete. This application is ready for approval.</p> : null}
-    </section>
-  );
+    {stage === "pre_iib" ? <section className="px-4 py-3">
+      <p className="text-[9.5px] leading-4 text-[#64748B]">IIB status is filled automatically by the N.M. extension. Continue after clearance or Partner selection.</p>
+      <form action={movePospMispToIib} className="mt-3"><input type="hidden" name="application_id" value={applicationId} /><FormSubmitButton label={canContinue ? "Continue to Documents" : "Waiting for IIB Decision"} pendingLabel="Opening documents" disabled={!canContinue} className={primaryButton} /></form>
+    </section> : null}
+
+    {stage === "iib_processing" ? <section className="px-4 py-3">
+      <div className="flex items-center justify-between rounded-xl border border-[#E2E8F0] bg-[#FBFDFF] px-3 py-2.5"><div><p className="text-[10.5px] font-semibold text-[#0F172A]">Supporting documents</p><p className="mt-0.5 text-[9px] text-[#64748B]">Upload files in the document section below. {documentCount ?? 0} attached.</p></div><span className="rounded-full bg-[#EEF2FF] px-2 py-1 text-[9px] font-semibold text-[#4338CA]">Step 2</span></div>
+      <form action={completePospMispDocumentStage} className="mt-3"><input type="hidden" name="application_id" value={applicationId} /><FormSubmitButton label="Documents Complete" pendingLabel="Saving" disabled={!documentCount} className={primaryButton} /></form>
+    </section> : null}
+
+    {stage === "training" ? <section className="px-4 py-3">
+      <div className="rounded-xl border border-[#CDE8D8] bg-[#F2FBF6] px-3 py-3"><p className="text-[10.5px] font-semibold text-[#067647]">Ready for final review</p><p className="mt-1 text-[9.5px] leading-4 text-[#23815A]">Primary information, IIB verification and documents are complete.</p><div className="mt-2 flex items-center justify-between rounded-lg bg-white/80 px-3 py-2"><span className="text-[9px] text-[#667085]">Final account type</span><strong className="text-[10px] text-[#0F172A]">{accountLabel(finalType)}</strong></div></div>
+      <form action={markPospMispReadyForOnboarding} className="mt-3"><input type="hidden" name="application_id" value={applicationId} /><FormSubmitButton label="Mark Ready for Onboarding" pendingLabel="Completing" className="inline-flex w-full items-center justify-center rounded-lg bg-emerald-700 px-4 py-2.5 text-[11px] font-semibold text-white" /></form>
+    </section> : null}
+
+    {stage === "completed" ? <div className="px-4 py-4"><p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-[10.5px] font-semibold text-emerald-800">Ready to create the {accountLabel(finalType)} account.</p></div> : null}
+  </section>;
 }
 
-function PanVerificationCard({ applicationId, panNumber, job, stage }: { applicationId: string; panNumber: string | null; job: PanVerificationJob | null; stage: PospMispWorkflowProfile["workflow_stage"] }) {
+const primaryButton = "inline-flex w-full items-center justify-center rounded-lg bg-[#4F46E5] px-4 py-2.5 text-[11px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-[#A5B4FC]";
+
+function PanCard({ applicationId, pan, job, stage }: { applicationId: string; pan: string | null; job: PanJob | null; stage: PospMispWorkflowProfile["workflow_stage"] }) {
   const status = job?.status ?? "not_queued";
-  const tone = status === "not_found"
-    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-    : status === "matched" || status === "invalid" || status === "manual_review"
-      ? "border-red-200 bg-red-50 text-red-800"
-      : status === "failed"
-        ? "border-amber-200 bg-amber-50 text-amber-800"
-        : "border-blue-200 bg-blue-50 text-blue-800";
-  const canQueue = stage === "pre_iib" && (!job || ["failed", "invalid", "matched", "manual_review"].includes(job.status));
+  const tone = status === "not_found" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : status === "matched" ? "border-amber-200 bg-amber-50 text-amber-800" : status === "invalid" || status === "manual_review" ? "border-red-200 bg-red-50 text-red-800" : status === "failed" ? "border-orange-200 bg-orange-50 text-orange-800" : "border-blue-200 bg-blue-50 text-blue-800";
+  const canQueue = stage === "pre_iib" && (!job || ["failed", "invalid", "manual_review"].includes(job.status));
   const action = job ? retryPospMispPanVerification : queuePospMispPanVerification;
-
-  return (
-    <div className="border-b border-[#E2E8F0] px-4 py-3">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[9px] font-semibold uppercase tracking-[.08em] text-[#64748B]">Automated PAN verification</p>
-          <p className="mt-1 text-[11px] font-semibold text-[#0F172A]">{maskPan(panNumber)}</p>
-        </div>
-        <span className={`rounded-full border px-2.5 py-1 text-[9px] font-semibold ${tone}`}>{panStatusLabel(status)}</span>
-      </div>
-      <p className="mt-2 text-[10px] leading-4 text-[#475569]">{panStatusMessage(status, job)}</p>
-      {job?.checked_by_device ? <p className="mt-1 text-[9px] text-[#64748B]">Checked by {job.checked_by_device} · Attempt {job.attempt_count}</p> : null}
-      {canQueue ? (
-        <form action={action} className="mt-3">
-          <input type="hidden" name="application_id" value={applicationId} />
-          <FormSubmitButton label={job ? "Retry PAN Verification" : "Queue PAN Verification"} pendingLabel="Queuing" className="inline-flex w-full items-center justify-center rounded-md bg-[#0F2A55] px-3 py-2 text-[10.5px] font-semibold text-white disabled:opacity-70" />
-        </form>
-      ) : null}
-      {status === "pending" || status === "queued" || status === "checking" ? <p className="mt-2 text-[9px] font-medium text-blue-700">The N.M. desktop checker will update this card automatically after processing.</p> : null}
-    </div>
-  );
+  return <section className="border-b border-[#E2E8F0] px-4 py-3"><div className="flex items-start justify-between gap-3"><div><p className="text-[9px] font-semibold uppercase tracking-[.08em] text-[#64748B]">Automatic IIB status</p><p className="mt-1 text-[11px] font-semibold text-[#0F172A]">{maskPan(pan)}</p></div><span className={`rounded-full border px-2.5 py-1 text-[9px] font-semibold ${tone}`}>{statusLabel(status)}</span></div><p className="mt-2 text-[10px] leading-4 text-[#475569]">{statusMessage(status, job)}</p>{job?.checked_by_device ? <p className="mt-1 text-[9px] text-[#64748B]">Checked by {job.checked_by_device} · Attempt {job.attempt_count}</p> : null}{canQueue ? <form action={action} className="mt-3"><input type="hidden" name="application_id" value={applicationId} /><FormSubmitButton label={job ? "Retry IIB Check" : "Queue IIB Check"} pendingLabel="Queuing" className="inline-flex w-full items-center justify-center rounded-lg bg-[#0F2A55] px-3 py-2 text-[10.5px] font-semibold text-white" /></form> : null}{["pending", "queued", "checking"].includes(status) ? <p className="mt-2 text-[9px] font-medium text-blue-700">The N.M. browser extension will update this automatically.</p> : null}</section>;
 }
 
-function Field({ label, name, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; name: string }) {
-  return <div><label className={labelClass} htmlFor={name}>{label}{props.required ? " *" : ""}</label><input id={name} name={name} className={inputClass} {...props} /></div>;
+function DecisionForm({ applicationId, decision, label, danger = false }: { applicationId: string; decision: string; label: string; danger?: boolean }) {
+  return <form action={decidePospMispPartnerRoute}><input type="hidden" name="application_id" value={applicationId} /><input type="hidden" name="partner_decision" value={decision} /><FormSubmitButton label={label} pendingLabel="Saving" className={`inline-flex w-full items-center justify-center rounded-lg px-3 py-2 text-[10.5px] font-semibold ${danger ? "border border-[#F2B8B5] bg-white text-[#B42318]" : "bg-[#0F2A55] text-white"}`} /></form>;
 }
 
-function Select({ label, name, options, defaultValue }: { label: string; name: string; options: string[]; defaultValue: string }) {
-  return <div><label className={labelClass} htmlFor={name}>{label} *</label><select id={name} name={name} required defaultValue={defaultValue} className={inputClass}><option value="">Select IIB remark</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>;
+function Step({ number, label, active, done }: { number: string; label: string; active: boolean; done: boolean }) {
+  const tone = done ? "border-emerald-200 bg-emerald-50 text-emerald-700" : active ? "border-indigo-200 bg-indigo-50 text-indigo-700" : "border-slate-200 bg-white text-slate-400";
+  return <div className={`flex items-center gap-1.5 rounded-lg border px-2 py-1.5 ${tone}`}><span className="text-[8px] font-bold">{done ? "✓" : number}</span><span className="truncate text-[8.5px] font-semibold">{label}</span></div>;
 }
 
-function SelectValues({ label, name, options, defaultValue }: { label: string; name: string; options: Array<[string, string]>; defaultValue: string }) {
-  return <div><label className={labelClass} htmlFor={name}>{label} *</label><select id={name} name={name} required defaultValue={defaultValue} className={inputClass}><option value="">Select {label.toLowerCase()}</option>{options.map(([value, optionLabel]) => <option key={value} value={value}>{optionLabel}</option>)}</select></div>;
-}
-
-function stageLabel(stage: PospMispWorkflowProfile["workflow_stage"]) {
-  if (stage === "pre_iib") return "Pre-IIB collection";
-  if (stage === "iib_processing") return "IIB portal processing";
-  if (stage === "training") return "Training and post-IIB documents";
-  return "Operational onboarding complete";
-}
-
-function maskPan(value: string | null) {
-  const pan = value?.trim().toUpperCase() ?? "";
-  return pan.length === 10 ? `${pan.slice(0, 2)}***${pan.slice(5, 8)}${pan.slice(-1)}` : "PAN unavailable";
-}
-
-function panStatusLabel(status: string) {
-  const labels: Record<string, string> = {
-    not_queued: "Not queued",
-    pending: "Pending",
-    queued: "Queued",
-    checking: "Checking",
-    matched: "Matching record found",
-    not_found: "No record found",
-    invalid: "Invalid PAN",
-    failed: "Check failed",
-    manual_review: "Manual review"
-  };
-  return labels[status] ?? status.replaceAll("_", " ");
-}
-
-function panStatusMessage(status: string, job: PanVerificationJob | null) {
-  if (status === "not_found") return job?.result_message ?? "No Data Found In POS System. The application may continue to IIB processing.";
-  if (status === "matched") return job?.result_message ?? "Matching Record Found In DataBase. Review the existing POS record before proceeding.";
-  if (status === "checking") return "The N.M. desktop checker is querying the IIB POS portal now.";
-  if (status === "pending" || status === "queued") return "This PAN is waiting for the authorised N.M. desktop checker.";
-  if (status === "failed") return job?.last_error ?? "The previous verification attempt failed. Queue it again when the checker is available.";
-  if (status === "invalid") return "The PAN format is invalid. Correct the PAN in the application before retrying.";
-  if (status === "manual_review") return "This PAN requires an authorised manual review before onboarding can continue.";
-  return "Queue this PAN for verification before starting IIB processing.";
-}
+function stageTitle(stage: PospMispWorkflowProfile["workflow_stage"]) { return stage === "pre_iib" ? "Primary information & IIB check" : stage === "iib_processing" ? "Document upload" : stage === "training" ? "Final review" : "Ready for onboarding"; }
+function accountLabel(value: string | null) { return value === "partner" ? "Partner" : value?.toUpperCase() || "Pending route"; }
+function maskPan(value: string | null) { const pan = value?.trim().toUpperCase() ?? ""; return pan.length === 10 ? `${pan.slice(0, 2)}***${pan.slice(5, 8)}${pan.slice(-1)}` : "PAN unavailable"; }
+function statusLabel(status: string) { return ({ not_queued: "Not queued", pending: "Pending", queued: "Queued", checking: "Checking", matched: "Existing IIB record", not_found: "IIB cleared", invalid: "Invalid PAN", failed: "Check failed", manual_review: "Manual review" } as Record<string,string>)[status] ?? status.replaceAll("_", " "); }
+function statusMessage(status: string, job: PanJob | null) { if (status === "not_found") return job?.result_message ?? "No Data Found In POS System. Continue as POSP/MISP."; if (status === "matched") return job?.result_message ?? "Matching Record Found In DataBase. Continue only as a Partner if required."; if (status === "checking") return "The N.M. extension is checking this PAN in IIB POS."; if (status === "pending" || status === "queued") return "Waiting for the authorised N.M. extension."; if (status === "failed") return job?.last_error ?? "The previous IIB check failed."; if (status === "invalid") return "Correct the PAN before retrying."; return "Queue this PAN for automatic IIB verification."; }

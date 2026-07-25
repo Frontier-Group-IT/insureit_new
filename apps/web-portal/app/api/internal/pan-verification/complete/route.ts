@@ -55,13 +55,44 @@ export async function POST(request: NextRequest) {
   }
 
   if (status === "matched" || status === "not_found") {
-    await admin
+    const { data: profile } = await admin
       .from("posp_misp_onboarding_profiles")
-      .update({
-        iib_remarks: resultMessage,
-        updated_at: now
-      })
+      .select("partner_type, requested_account_type")
+      .eq("application_id", job.application_id)
+      .maybeSingle<{ partner_type: "posp" | "misp"; requested_account_type: "posp" | "misp" | null }>();
+
+    const requestedType = profile?.requested_account_type ?? profile?.partner_type ?? null;
+    const routeUpdate = status === "not_found"
+      ? {
+          iib_remarks: resultMessage,
+          requested_account_type: requestedType,
+          final_account_type: requestedType,
+          partner_decision: "not_applicable",
+          partner_decision_at: null,
+          partner_decision_by: null,
+          partner_decision_remark: null,
+          updated_at: now
+        }
+      : {
+          iib_remarks: resultMessage,
+          requested_account_type: requestedType,
+          final_account_type: null,
+          partner_decision: "pending",
+          partner_decision_at: null,
+          partner_decision_by: null,
+          partner_decision_remark: null,
+          updated_at: now
+        };
+
+    const { error: profileError } = await admin
+      .from("posp_misp_onboarding_profiles")
+      .update(routeUpdate)
       .eq("application_id", job.application_id);
+
+    if (profileError) {
+      console.error("PAN result route update failed", profileError);
+      return NextResponse.json({ error: "profile_update_failed" }, { status: 500 });
+    }
   }
 
   return NextResponse.json({ ok: true, applicationId: job.application_id });

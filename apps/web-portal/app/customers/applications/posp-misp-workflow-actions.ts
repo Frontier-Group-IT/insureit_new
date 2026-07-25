@@ -1,16 +1,11 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { canManagePospMispOnboarding } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-const IIB_REMARKS = new Set(["Matching Record Found In DataBase", "No Data Found In POS System"]);
-const TRAINING_STATUSES = new Set(["completed", "pending"]);
-const ALLOWED_FILE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 
 export async function queuePospMispPanVerification(data: FormData) {
@@ -54,142 +49,121 @@ export async function retryPospMispPanVerification(data: FormData) {
   return queuePospMispPanVerification(data);
 }
 
+export async function decidePospMispPartnerRoute(data: FormData) {
+  const { actorId, applicationId, admin } = await context(data);
+  const decision = value(data, "partner_decision");
+  const remark = value(data, "partner_decision_remark");
+  if (!decision || !["convert_to_partner", "do_not_proceed"].includes(decision)) redirectTo(applicationId, "partner_decision_required");
+
+  const { data: profile } = await admin
+    .from("posp_misp_onboarding_profiles")
+    .select("id, workflow_stage, iib_remarks, partner_decision")
+    .eq("application_id", applicationId)
+    .maybeSingle<{ id: string; workflow_stage: string; iib_remarks: string | null; partner_decision: string }>();
+
+  if (!profile?.id || profile.workflow_stage !== "pre_iib") redirectTo(applicationId, "stage_locked");
+  if (profile.iib_remarks !== "Matching Record Found In DataBase") redirectTo(applicationId, "partner_decision_not_available");
+
+  const now = new Date().toISOString();
+  const { error } = await admin
+    .from("posp_misp_onboarding_profiles")
+    .update({
+      partner_decision: decision,
+      final_account_type: decision === "convert_to_partner" ? "partner" : null,
+      partner_decision_at: now,
+      partner_decision_by: actorId,
+      partner_decision_remark: remark,
+      updated_by: actorId,
+      updated_at: now
+    })
+    .eq("id", profile.id);
+
+  if (error) redirectTo(applicationId, "partner_decision_failed");
+
+  if (decision === "do_not_proceed") {
+    await admin.from("customer_onboarding_applications").update({ status: "rejected", updated_at: now }).eq("id", applicationId);
+  }
+
+  revalidatePath(`/customers/applications/${applicationId}`);
+  redirect(`/customers/applications/${applicationId}?success=${decision === "convert_to_partner" ? "partner_route_selected" : "application_closed"}`);
+}
+
 export async function movePospMispToIib(data: FormData) {
   const { actorId, applicationId, admin } = await context(data);
   const { data: profile } = await admin
     .from("posp_misp_onboarding_profiles")
-    .select("id, bank_id, workflow_stage")
+    .select("id, bank_id, workflow_stage, iib_remarks, final_account_type, partner_decision, partner_type")
     .eq("application_id", applicationId)
-    .maybeSingle<{ id: string; bank_id: string | null; workflow_stage: string }>();
+    .maybeSingle<{ id: string; bank_id: string | null; workflow_stage: string; iib_remarks: string | null; final_account_type: string | null; partner_decision: string; partner_type: "posp" | "misp" }>();
+
   if (!profile?.id || !profile.bank_id) redirectTo(applicationId, "pre_iib_incomplete");
   if (profile.workflow_stage !== "pre_iib") redirectTo(applicationId, "stage_locked");
 
-  const { data: verification } = await admin
-    .from("pan_verification_jobs")
-    .select("status")
-    .eq("application_id", applicationId)
-    .maybeSingle<{ status: string }>();
-  if (!verification || verification.status !== "not_found") {
-    redirectTo(applicationId, verification?.status === "matched" ? "pan_match_found" : "pan_verification_required");
-  }
+  const normalRoute = profile.iib_remarks === "No Data Found In POS System";
+  const partnerRoute = profile.iib_remarks === "Matching Record Found In DataBase" && profile.partner_decision === "convert_to_partner" && profile.final_account_type === "partner";
+  if (!normalRoute && !partnerRoute) redirectTo(applicationId, profile.iib_remarks === "Matching Record Found In DataBase" ? "partner_decision_required" : "pan_verification_required");
 
+  const now = new Date().toISOString();
   const { data: updated, error } = await admin
     .from("posp_misp_onboarding_profiles")
-    .update({ workflow_stage: "iib_processing", pre_iib_submitted_at: new Date().toISOString(), updated_by: actorId })
+    .update({
+      workflow_stage: "iib_processing",
+      requested_account_type: profile.partner_type,
+      final_account_type: partnerRoute ? "partner" : profile.partner_type,
+      pre_iib_submitted_at: now,
+      updated_by: actorId,
+      updated_at: now
+    })
     .eq("id", profile.id)
     .eq("workflow_stage", "pre_iib")
     .select("id")
     .maybeSingle<{ id: string }>();
+
   if (error || !updated) redirectTo(applicationId, "workflow_save_failed");
   revalidatePath(`/customers/applications/${applicationId}`);
-  redirect(`/customers/applications/${applicationId}?success=iib_started`);
+  redirect(`/customers/applications/${applicationId}?success=documents_started`);
 }
 
-export async function savePospMispIibOutcome(data: FormData) {
+export async function completePospMispDocumentStage(data: FormData) {
   const { actorId, applicationId, admin } = await context(data);
-  const remarks = value(data, "iib_remarks");
-  const uploaded = data.get("iib_uploaded") === "true";
-  const uploadedAt = value(data, "iib_uploaded_at");
-  if (!remarks || !IIB_REMARKS.has(remarks)) redirectTo(applicationId, "iib_remarks_required");
-  if (!uploaded || !uploadedAt) redirectTo(applicationId, "iib_upload_required");
-
-  const { data: updated, error } = await admin
+  const { data: profile } = await admin
     .from("posp_misp_onboarding_profiles")
-    .update({
-      iib_remarks: remarks,
-      iib_uploaded: true,
-      iib_upload_status: "uploaded",
-      iib_uploaded_at: uploadedAt,
-      workflow_stage: "training",
-      iib_completed_at: new Date().toISOString(),
-      updated_by: actorId
-    })
+    .select("id, workflow_stage")
     .eq("application_id", applicationId)
-    .eq("workflow_stage", "iib_processing")
-    .select("id")
-    .maybeSingle<{ id: string }>();
-  if (error || !updated) redirectTo(applicationId, "workflow_save_failed");
-  revalidatePath(`/customers/applications/${applicationId}`);
-  redirect(`/customers/applications/${applicationId}?success=iib_completed`);
-}
+    .maybeSingle<{ id: string; workflow_stage: string }>();
+  if (!profile?.id || profile.workflow_stage !== "iib_processing") redirectTo(applicationId, "stage_locked");
 
-export async function completePospMispTraining(data: FormData) {
-  const { actorId, applicationId, admin } = await context(data);
-  const loginId = value(data, "training_login_id");
-  const password = value(data, "training_password");
-  const startDate = value(data, "training_start_date");
-  const endDate = value(data, "training_end_date");
-  const trainingStatus = value(data, "training_status");
-  const certificateNumber = value(data, "training_certificate_number");
-  const examStatus = value(data, "exam_status");
-  const onboardingDate = value(data, "onboarding_date");
-  const credentialsShared = data.get("training_credentials_shared_flag") === "true";
-  if (!loginId || !password || !startDate || !endDate || !trainingStatus || !examStatus || !onboardingDate) {
-    redirectTo(applicationId, "training_incomplete");
-  }
-  if (!TRAINING_STATUSES.has(trainingStatus)) redirectTo(applicationId, "training_incomplete");
-  if (endDate < startDate) redirectTo(applicationId, "training_dates_invalid");
-  if (!credentialsShared) redirectTo(applicationId, "credentials_required");
-
-  const agreement = file(data, "agreement_copy");
-  const { data: existingAgreement } = await admin
+  const { count } = await admin
     .from("customer_onboarding_documents")
-    .select("id")
-    .eq("application_id", applicationId)
-    .eq("document_type", "agreement_copy")
-    .maybeSingle<{ id: string }>();
-  if (!agreement && !existingAgreement) redirectTo(applicationId, "agreement_required");
-  if (agreement) {
-    if (!ALLOWED_FILE_TYPES.has(agreement.type) || agreement.size > MAX_FILE_SIZE) {
-      redirectTo(applicationId, "agreement_invalid");
-    }
-    const extension = agreement.type === "application/pdf" ? "pdf" : agreement.type === "image/png" ? "png" : "jpg";
-    const path = `${applicationId}/posp-misp/agreement_copy/${randomUUID()}.${extension}`;
-    const { error: uploadError } = await admin.storage
-      .from("customer-documents")
-      .upload(path, new Uint8Array(await agreement.arrayBuffer()), { contentType: agreement.type, upsert: false });
-    if (uploadError) redirectTo(applicationId, "agreement_upload_failed");
-    const { error: documentError } = await admin.from("customer_onboarding_documents").upsert({
-      application_id: applicationId,
-      document_type: "agreement_copy",
-      file_name: agreement.name,
-      storage_bucket: "customer-documents",
-      storage_path: path,
-      mime_type: agreement.type,
-      file_size: agreement.size,
-      verification_status: "pending",
-      uploaded_by: actorId
-    }, { onConflict: "application_id,document_type" });
-    if (documentError) {
-      await admin.storage.from("customer-documents").remove([path]);
-      redirectTo(applicationId, "agreement_upload_failed");
-    }
-  }
+    .select("id", { count: "exact", head: true })
+    .eq("application_id", applicationId);
+  if (!count) redirectTo(applicationId, "documents_incomplete");
 
-  const { data: updated, error } = await admin
+  const { error } = await admin
     .from("posp_misp_onboarding_profiles")
-    .update({
-      training_login_id: loginId,
-      training_password: password,
-      training_credentials_shared: credentialsShared ? "yes" : "no",
-      training_credentials_shared_flag: credentialsShared,
-      training_start_date: startDate,
-      training_end_date: endDate,
-      training_status: trainingStatus,
-      training_certificate_number: certificateNumber,
-      exam_status: examStatus,
-      onboarding_date: onboardingDate,
-      workflow_stage: "completed",
-      training_completed_at: new Date().toISOString(),
-      updated_by: actorId
-    })
-    .eq("application_id", applicationId)
-    .eq("workflow_stage", "training")
-    .select("id")
-    .maybeSingle<{ id: string }>();
-  if (error || !updated) redirectTo(applicationId, "workflow_save_failed");
+    .update({ workflow_stage: "training", updated_by: actorId, updated_at: new Date().toISOString() })
+    .eq("id", profile.id);
+  if (error) redirectTo(applicationId, "workflow_save_failed");
   revalidatePath(`/customers/applications/${applicationId}`);
-  redirect(`/customers/applications/${applicationId}?success=training_completed`);
+  redirect(`/customers/applications/${applicationId}?success=documents_completed`);
+}
+
+export async function markPospMispReadyForOnboarding(data: FormData) {
+  const { actorId, applicationId, admin } = await context(data);
+  const { data: profile } = await admin
+    .from("posp_misp_onboarding_profiles")
+    .select("id, workflow_stage")
+    .eq("application_id", applicationId)
+    .maybeSingle<{ id: string; workflow_stage: string }>();
+  if (!profile?.id || profile.workflow_stage !== "training") redirectTo(applicationId, "stage_locked");
+
+  const { error } = await admin
+    .from("posp_misp_onboarding_profiles")
+    .update({ workflow_stage: "completed", updated_by: actorId, updated_at: new Date().toISOString() })
+    .eq("id", profile.id);
+  if (error) redirectTo(applicationId, "workflow_save_failed");
+  revalidatePath(`/customers/applications/${applicationId}`);
+  redirect(`/customers/applications/${applicationId}?success=ready_for_onboarding`);
 }
 
 async function context(data: FormData) {
@@ -204,11 +178,6 @@ async function context(data: FormData) {
 function value(data: FormData, key: string) {
   const current = data.get(key);
   return typeof current === "string" && current.trim() ? current.trim() : null;
-}
-
-function file(data: FormData, key: string) {
-  const current = data.get(key);
-  return current instanceof File && current.size > 0 ? current : null;
 }
 
 function redirectTo(applicationId: string, error: string): never {
