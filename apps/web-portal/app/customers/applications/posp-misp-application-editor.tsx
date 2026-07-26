@@ -1,6 +1,7 @@
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { IndianDateField } from "@/components/indian-date-field";
 import { updateSubmittedPospMispApplication } from "./posp-misp-edit-actions";
+import { retryPospMispPanVerification } from "./posp-misp-workflow-actions";
 
 export type PospMispEditProfile={partner_type:"posp"|"misp";associate_employee_id:string|null;associate_profile_id:string|null;external_onboarding_id:string|null;document_received_at:string|null;pos_name:string|null;misp_name:string|null;applicant_phone:string|null;applicant_email:string|null;date_of_birth:string|null;aadhaar_last_four:string|null;aadhaar_number:string|null;pan_number:string|null;gst_number:string|null;address:string|null;city:string|null;state:string|null;postal_code:string|null;bank_id:string|null;bank_account_number:string|null;bank_ifsc_code:string|null;oem_name:string|null;dp_name:string|null;dp_phone:string|null;dp_email:string|null;dp_pan_number:string|null};
 type Props={applicationId:string;profile:PospMispEditProfile;editable:boolean;salesManagers:Array<{value:string;label:string}>;banks:Array<{value:string;label:string}>;oems:Array<{value:string;label:string}>;documents:Array<{document_type:string;file_name:string}>};
@@ -22,7 +23,7 @@ export function PospMispApplicationEditor({applicationId,profile,editable,salesM
           <Select label="Associate" name="associate_employee_id" defaultValue={profile.associate_employee_id??profile.associate_profile_id??""} options={salesManagers} required disabled={!editable}/>
           <Field label="Onboarding ID" name="external_onboarding_id" defaultValue={profile.external_onboarding_id??""} placeholder="Enter onboarding ID" disabled={!editable}/>
           <Field label={isMisp?"MISP Name":"POS Name"} name={isMisp?"misp_name":"pos_name"} defaultValue={(isMisp?profile.misp_name:profile.pos_name)??""} required disabled={!editable}/>
-          <Field label="PAN Number" name="pan_number" defaultValue={profile.pan_number??""} maxLength={10} disabled={!editable}/>
+          <PanField applicationId={applicationId} value={profile.pan_number??""} editable={editable}/>
           <IndianDateField label="Document Received Date" name="document_received_at" defaultValue={profile.document_received_at} disabled={!editable}/>
           {isMisp?<Select label="OEM" name="oem_name" defaultValue={profile.oem_name??""} options={oems} required disabled={!editable}/>:null}
           <Field label="GST Number" name="gst_number" defaultValue={profile.gst_number??""} maxLength={15} disabled={!editable}/>
@@ -55,6 +56,30 @@ export function PospMispApplicationEditor({applicationId,profile,editable,salesM
     </div>
     <div className="sticky bottom-0 z-10 flex justify-end border-t border-[#DCE5EF] bg-white/95 px-5 py-3 backdrop-blur">{editable?<FormSubmitButton label="Save primary details & documents" pendingLabel="Saving"/>:null}</div>
   </form>;
+}
+
+function PanField({applicationId,value,editable}:{applicationId:string;value:string;editable:boolean}){
+  return <div>
+    <label className={labelClass}>PAN Number</label>
+    <div className="flex items-center gap-2">
+      <input name="pan_number" defaultValue={value} maxLength={10} disabled={!editable} className={inputClass}/>
+      <button
+        type="submit"
+        formAction={retryPospMispPanVerification}
+        title="Recheck PAN in IIB"
+        aria-label="Recheck PAN in IIB"
+        className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#C7D2FE] bg-[#EEF2FF] text-[#4338CA] shadow-sm transition hover:border-[#818CF8] hover:bg-[#E0E7FF] focus:outline-none focus:ring-2 focus:ring-[#C7D2FE]"
+      >
+        <input type="hidden" name="application_id" value={applicationId}/>
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M20 11a8 8 0 1 0-2.34 5.66"/>
+          <path d="M20 4v7h-7"/>
+          <path d="m9.5 12 1.7 1.7 3.6-4"/>
+        </svg>
+      </button>
+    </div>
+    <p className="mt-1 text-[8.5px] text-[#64748B]">Use the icon to clear the current result and queue a fresh IIB check.</p>
+  </div>;
 }
 
 function Header({number,title,subtitle}:{number:string;title:string;subtitle:string}){return <div className="flex items-start gap-3 border-b border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#071D49] text-[9px] font-bold text-white">{number}</span><div><h3 className="text-[12.5px] font-semibold text-[#0F172A]">{title}</h3><p className="mt-0.5 text-[9.8px] text-[#64748B]">{subtitle}</p></div></div>}
