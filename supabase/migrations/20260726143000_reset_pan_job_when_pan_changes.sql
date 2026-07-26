@@ -80,4 +80,37 @@ begin
 end;
 $$;
 
+update public.posp_misp_onboarding_profiles profile
+set iib_remarks = null,
+    final_account_type = null,
+    partner_decision = 'not_applicable',
+    partner_decision_at = null,
+    partner_decision_by = null,
+    partner_decision_remark = null,
+    updated_at = now()
+from public.pan_verification_jobs job
+where job.application_id = profile.application_id
+  and upper(regexp_replace(coalesce(job.pan_number, ''), '\s', '', 'g'))
+      is distinct from upper(regexp_replace(coalesce(profile.pan_number, ''), '\s', '', 'g'));
+
+update public.pan_verification_jobs job
+set onboarding_profile_id = profile.id,
+    partner_type = profile.partner_type,
+    pan_number = profile.pan_number,
+    status = 'pending',
+    result_code = null,
+    result_message = null,
+    last_error = null,
+    checked_by_device = null,
+    requested_at = now(),
+    started_at = null,
+    completed_at = null,
+    attempt_count = 0,
+    updated_at = now()
+from public.posp_misp_onboarding_profiles profile
+where job.application_id = profile.application_id
+  and profile.pan_number ~ '^[A-Z]{5}[0-9]{4}[A-Z]$'
+  and upper(regexp_replace(coalesce(job.pan_number, ''), '\s', '', 'g'))
+      is distinct from upper(regexp_replace(coalesce(profile.pan_number, ''), '\s', '', 'g'));
+
 commit;
