@@ -1,4 +1,4 @@
-import { IntermediaryRegister } from "../page";
+import { IntermediaryRegister } from "../intermediary-register";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
