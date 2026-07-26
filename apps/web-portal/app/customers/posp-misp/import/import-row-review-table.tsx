@@ -175,7 +175,20 @@ function EditRowModal({ batchId, row, editable, salesManagers, oems, banks, onCl
   );
 }
 
-function RowStatus({ row }: { row: ImportRow }) { const label = row.status.replaceAll("_", " "); const style = row.status === "submitted" ? "bg-emerald-50 text-emerald-700" : row.status === "failed" ? "bg-red-50 text-red-700" : row.status === "processing" ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700"; return <span className={`inline-flex rounded-full px-1.5 py-1 text-[8px] font-semibold capitalize ${style}`}>{label}</span>; }
+function RowStatus({ row }: { row: ImportRow }) {
+  const label = row.status.replaceAll("_", " ");
+  const style = row.status === "submitted" ? "bg-emerald-50 text-emerald-700" : row.status === "failed" ? "bg-red-50 text-red-700" : row.status === "processing" ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700";
+  return (
+    <div className="space-y-1">
+      <span className={`inline-flex rounded-full px-1.5 py-1 text-[8px] font-semibold capitalize ${style}`}>{label}</span>
+      {row.status === "failed" ? (
+        <p className="break-words text-[8px] font-medium leading-3 text-red-700" title={row.error_message ?? "No failure reason was saved."}>
+          {row.error_message ?? "No failure reason was saved. Retry the row to capture the backend error."}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 function Section({ title, children }: { title: string; children: React.ReactNode }) { return <section className="rounded-2xl border border-[#DCE5EF] bg-white"><div className="border-b bg-[#F8FAFC] px-4 py-3"><h4 className="text-[12px] font-semibold">{title}</h4></div><div className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-4">{children}</div></section>; }
 function DocumentBox({ label, current, children }: { label: string; current?: string; children: React.ReactNode }) { return <div className={`rounded-xl border p-3 ${current ? "border-emerald-200 bg-emerald-50/35" : "border-amber-200 bg-amber-50/30"}`}><div className="flex justify-between"><span className="text-[10px] font-semibold capitalize">{label}</span><span className="text-[8px] font-semibold">{current ? "Received" : "Pending"}</span></div><p className="mt-1 truncate text-[9px] text-[#64748B]">{current ?? "No file attached"}</p><div className="mt-2">{children}</div></div>; }
 function Field({ label, name, required = false, disabled = false, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; name: string }) { return <div><label className={labelClass}>{label}{required ? " *" : ""}</label><input name={name} required={required} disabled={disabled} className={inputClass} {...props} /></div>; }
