@@ -12,7 +12,7 @@ type Props = {
   title: string;
   backHref?: string;
   children: ReactNode;
-  activeNav?: "dashboard" | "claims" | "master-data" | "tasks" | "reports" | "none";
+  activeNav?: "dashboard" | "claims" | "master-data" | "distribution" | "tasks" | "reports" | "none";
 };
 
 export async function ClaimManagerShell({ title, backHref = "/dashboard", children, activeNav = "claims" }: Props) {
