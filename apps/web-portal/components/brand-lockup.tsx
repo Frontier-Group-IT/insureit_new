@@ -12,7 +12,8 @@ type Props = {
 export function BrandLockup({ compact = false, inverse = false, className = "", size }: Props) {
   const resolvedSize = size ?? (compact ? "compact" : "default");
   const nameColor = inverse ? "text-white" : "text-[#071D49]";
-  const taglineColor = inverse ? "text-white/78" : "text-[#071D49]";
+  const taglineColor = inverse ? "text-white/90" : "text-[#071D49]";
+  const markTreatment = inverse ? "brightness-0 invert" : "";
   const isHero = resolvedSize === "hero";
   const isCompact = resolvedSize === "compact";
 
@@ -23,7 +24,7 @@ export function BrandLockup({ compact = false, inverse = false, className = "", 
         alt="InsureIT"
         width={isHero ? 76 : isCompact ? 38 : 44}
         height={isHero ? 76 : isCompact ? 38 : 44}
-        className={`${isHero ? "h-[76px] w-[76px]" : isCompact ? "h-[38px] w-[38px]" : "h-11 w-11"} shrink-0 object-contain`}
+        className={`${isHero ? "h-[76px] w-[76px]" : isCompact ? "h-[38px] w-[38px]" : "h-11 w-11"} shrink-0 object-contain ${markTreatment}`}
         unoptimized
         priority
       />
