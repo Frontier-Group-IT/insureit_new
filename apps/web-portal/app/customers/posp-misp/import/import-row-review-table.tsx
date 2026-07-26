@@ -62,11 +62,18 @@ export function ImportRowReviewTable({ batchId, batchStatus, rows, salesManagers
           <span className="rounded-full border border-[#DCE5EF] bg-white px-2.5 py-1 text-[9px] font-semibold capitalize text-[#475569]">{batchStatus.replaceAll("_", " ")}</span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1380px] text-left text-[11px]">
-            <thead className="border-b border-[#E2E8F0] bg-white text-[9px] uppercase tracking-[0.06em] text-[#64748B]">
+        <div className="w-full overflow-hidden">
+          <table className="w-full table-fixed text-left text-[10px]">
+            <thead className="border-b border-[#E2E8F0] bg-white text-[8.5px] uppercase tracking-[0.04em] text-[#64748B]">
               <tr>
-                <th className="px-4 py-3">Row</th><th className="px-3 py-3">Application</th><th className="px-3 py-3">Contact</th><th className="px-3 py-3">Documents</th><th className="px-3 py-3">IIB Status</th><th className="px-3 py-3">Final Route</th><th className="px-3 py-3">Validation</th><th className="px-3 py-3">Import</th><th className="px-4 py-3 text-right">Actions</th>
+                <th className="hidden w-[5%] px-2 py-2.5 lg:table-cell">Row</th>
+                <th className="w-[16%] px-2 py-2.5">Application</th>
+                <th className="w-[15%] px-2 py-2.5">Contact</th>
+                <th className="w-[13%] px-2 py-2.5">IIB Status</th>
+                <th className="w-[13%] px-2 py-2.5">Final Route</th>
+                <th className="w-[22%] px-2 py-2.5">Validation</th>
+                <th className="w-[8%] px-2 py-2.5">Import</th>
+                <th className="w-[13%] px-2 py-2.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EEF2F6]">
@@ -76,15 +83,14 @@ export function ImportRowReviewTable({ batchId, batchStatus, rows, salesManagers
                 const editable = canEditBatch && !["submitted", "processing"].includes(row.status);
                 return (
                   <tr key={row.id} className={row.validation_errors?.length ? "bg-red-50/30" : "hover:bg-[#FAFCFF]"}>
-                    <td className="px-4 py-3"><p className="font-semibold tabular-nums text-[#0F172A]">{row.row_number}</p><p className="text-[9px] text-[#64748B]">{row.sheet_name}</p></td>
-                    <td className="px-3 py-3"><div className="flex items-center gap-2"><span className={`rounded-full px-2 py-0.5 text-[8.5px] font-bold ${row.partner_type === "misp" ? "bg-[#FFF7D6] text-[#8A6500]" : "bg-[#E8F0FF] text-[#174EA6]"}`}>{row.partner_type.toUpperCase()}</span><div><p className="font-semibold text-[#0F172A]">{name ?? "Name missing"}</p><p className="text-[9px] text-[#64748B]">{maskPan(stringValue(data.pan_number))}</p></div></div></td>
-                    <td className="px-3 py-3"><p className="tabular-nums">{stringValue(data.applicant_phone) ?? "-"}</p><p className="max-w-[180px] truncate text-[9px] text-[#64748B]">{stringValue(data.applicant_email) ?? "Email not provided"}</p></td>
-                    <td className="px-3 py-3"><span className={`rounded-full px-2 py-1 text-[9px] font-semibold ${row.documents.length ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{row.documents.length} attached</span></td>
-                    <td className="px-3 py-3"><IibStatus row={row} /></td>
-                    <td className="px-3 py-3"><RouteStatus row={row} /></td>
-                    <td className="max-w-[260px] px-3 py-3">{row.validation_errors?.length ? <ul className="space-y-1">{row.validation_errors.slice(0, 2).map((error, index) => <li key={index} className="text-[9.5px] font-medium text-red-700">• {error}</li>)}</ul> : <span className="inline-flex rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-semibold text-emerald-700">Ready to submit</span>}</td>
-                    <td className="px-3 py-3"><RowStatus row={row} /></td>
-                    <td className="px-4 py-3"><div className="flex justify-end gap-2">{row.application_id ? <Link href={`/customers/applications/${row.application_id}`} className="rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-[9.5px] font-semibold text-indigo-700">Open file</Link> : null}<button type="button" onClick={() => setEditingRow(row)} className="rounded-lg border border-[#CBD5E1] px-2.5 py-1.5 text-[9.5px] font-semibold text-[#334155]">{editable ? "Review" : "View"}</button>{editable ? <form action={deletePospMispImportRow} onSubmit={(event) => { if (!window.confirm(`Remove row ${row.row_number}?`)) event.preventDefault(); }}><input type="hidden" name="batch_id" value={batchId} /><input type="hidden" name="row_id" value={row.id} /><FormSubmitButton label="Remove" pendingLabel="Removing" className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-[9.5px] font-semibold text-red-700" /></form> : null}</div></td>
+                    <td className="hidden px-2 py-2.5 lg:table-cell"><p className="font-semibold tabular-nums text-[#0F172A]">{row.row_number}</p><p className="truncate text-[8px] text-[#64748B]">{row.sheet_name}</p></td>
+                    <td className="px-2 py-2.5"><div className="flex min-w-0 items-start gap-1.5"><span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[7.5px] font-bold ${row.partner_type === "misp" ? "bg-[#FFF7D6] text-[#8A6500]" : "bg-[#E8F0FF] text-[#174EA6]"}`}>{row.partner_type.toUpperCase()}</span><div className="min-w-0"><p className="truncate font-semibold text-[#0F172A]">{name ?? "Name missing"}</p><p className="truncate text-[8px] text-[#64748B]">{maskPan(stringValue(data.pan_number))}</p></div></div></td>
+                    <td className="px-2 py-2.5"><p className="truncate tabular-nums">{stringValue(data.applicant_phone) ?? "-"}</p><p className="truncate text-[8px] text-[#64748B]">{stringValue(data.applicant_email) ?? "Email not provided"}</p></td>
+                    <td className="px-2 py-2.5"><IibStatus row={row} /></td>
+                    <td className="px-2 py-2.5"><RouteStatus row={row} /></td>
+                    <td className="px-2 py-2.5">{row.validation_errors?.length ? <ul className="space-y-0.5">{row.validation_errors.slice(0, 2).map((error, index) => <li key={index} className="break-words text-[8.5px] font-medium leading-4 text-red-700">• {error}</li>)}</ul> : <span className="inline-flex rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-semibold text-emerald-700">Ready</span>}</td>
+                    <td className="px-2 py-2.5"><RowStatus row={row} /></td>
+                    <td className="px-2 py-2.5"><div className="flex flex-col items-stretch gap-1">{row.application_id ? <Link href={`/customers/applications/${row.application_id}`} className="rounded-md border border-indigo-200 bg-indigo-50 px-2 py-1 text-center text-[8.5px] font-semibold text-indigo-700">Open</Link> : null}<button type="button" onClick={() => setEditingRow(row)} className="rounded-md border border-[#CBD5E1] px-2 py-1 text-[8.5px] font-semibold text-[#334155]">{editable ? "Review" : "View"}</button>{editable ? <form action={deletePospMispImportRow} onSubmit={(event) => { if (!window.confirm(`Remove row ${row.row_number}?`)) event.preventDefault(); }}><input type="hidden" name="batch_id" value={batchId} /><input type="hidden" name="row_id" value={row.id} /><FormSubmitButton label="Remove" pendingLabel="Removing" className="w-full rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[8.5px] font-semibold text-red-700" /></form> : null}</div></td>
                   </tr>
                 );
               })}
@@ -99,22 +105,22 @@ export function ImportRowReviewTable({ batchId, batchStatus, rows, salesManagers
 }
 
 function IibStatus({ row }: { row: ImportRow }) {
-  if (!row.application_id) return <span className="rounded-full bg-slate-100 px-2 py-1 text-[9px] font-semibold text-slate-600">Starts after submission</span>;
+  if (!row.application_id) return <span className="inline-flex rounded-full bg-slate-100 px-1.5 py-1 text-[8px] font-semibold leading-3 text-slate-600">Starts after submission</span>;
   const status = row.pan_job?.status ?? "pending";
   const style = status === "not_found" ? "bg-emerald-50 text-emerald-700" : status === "matched" ? "bg-amber-50 text-amber-800" : status === "failed" || status === "invalid" ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-700";
-  const label: Record<string, string> = { pending: "Waiting for extension", queued: "Waiting for extension", checking: "Checking in IIB", not_found: "No data found", matched: "Matching record found", invalid: "Invalid PAN", failed: "Check failed" };
-  return <div><span className={`rounded-full px-2 py-1 text-[9px] font-semibold ${style}`}>{label[status] ?? status.replaceAll("_", " ")}</span>{row.pan_job?.checked_by_device ? <p className="mt-1 text-[8.5px] text-[#64748B]">{row.pan_job.checked_by_device}</p> : null}</div>;
+  const label: Record<string, string> = { pending: "Waiting", queued: "Waiting", checking: "Checking", not_found: "No data found", matched: "Match found", invalid: "Invalid PAN", failed: "Check failed" };
+  return <div><span className={`inline-flex rounded-full px-1.5 py-1 text-[8px] font-semibold leading-3 ${style}`}>{label[status] ?? status.replaceAll("_", " ")}</span>{row.pan_job?.checked_by_device ? <p className="mt-1 truncate text-[7.5px] text-[#64748B]">{row.pan_job.checked_by_device}</p> : null}</div>;
 }
 
 function RouteStatus({ row }: { row: ImportRow }) {
   const profile = row.route_profile;
-  if (!row.application_id) return <span className="text-[9px] text-[#94A3B8]">Pending submission</span>;
+  if (!row.application_id) return <span className="text-[8px] text-[#94A3B8]">Pending</span>;
   if (row.pan_job?.status === "matched" && profile?.partner_decision === "pending") {
-    return <div className="space-y-1.5"><p className="text-[9px] font-semibold text-amber-800">POSP/MISP not available</p><form action={decidePospMispPartnerRoute}><input type="hidden" name="application_id" value={row.application_id} /><input type="hidden" name="partner_decision" value="convert_to_partner" /><FormSubmitButton label="Create as Partner" pendingLabel="Converting" className="w-full rounded-lg bg-[#635BFF] px-2 py-1.5 text-[9px] font-semibold text-white" /></form><form action={decidePospMispPartnerRoute}><input type="hidden" name="application_id" value={row.application_id} /><input type="hidden" name="partner_decision" value="do_not_proceed" /><FormSubmitButton label="Do Not Proceed" pendingLabel="Closing" className="w-full rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-[9px] font-semibold text-red-700" /></form></div>;
+    return <div className="space-y-1"><p className="text-[8px] font-semibold text-amber-800">Route decision</p><form action={decidePospMispPartnerRoute}><input type="hidden" name="application_id" value={row.application_id} /><input type="hidden" name="partner_decision" value="convert_to_partner" /><FormSubmitButton label="Partner" pendingLabel="Converting" className="w-full rounded-md bg-[#635BFF] px-1.5 py-1 text-[8px] font-semibold text-white" /></form><form action={decidePospMispPartnerRoute}><input type="hidden" name="application_id" value={row.application_id} /><input type="hidden" name="partner_decision" value="do_not_proceed" /><FormSubmitButton label="Close" pendingLabel="Closing" className="w-full rounded-md border border-red-200 bg-red-50 px-1.5 py-1 text-[8px] font-semibold text-red-700" /></form></div>;
   }
   const finalType = profile?.final_account_type;
-  if (finalType) return <span className={`rounded-full px-2 py-1 text-[9px] font-semibold ${finalType === "partner" ? "bg-violet-50 text-violet-700" : "bg-emerald-50 text-emerald-700"}`}>{finalType === "partner" ? "Partner" : `${finalType.toUpperCase()} cleared`}</span>;
-  return <span className="text-[9px] text-[#64748B]">Awaiting IIB</span>;
+  if (finalType) return <span className={`inline-flex rounded-full px-1.5 py-1 text-[8px] font-semibold ${finalType === "partner" ? "bg-violet-50 text-violet-700" : "bg-emerald-50 text-emerald-700"}`}>{finalType === "partner" ? "Partner" : `${finalType.toUpperCase()} cleared`}</span>;
+  return <span className="text-[8px] text-[#64748B]">Awaiting IIB</span>;
 }
 
 function EditRowModal({ batchId, row, editable, salesManagers, oems, banks, onClose }: { batchId: string; row: ImportRow; editable: boolean; salesManagers: Props["salesManagers"]; oems: Props["oems"]; banks: Props["banks"]; onClose: () => void }) {
@@ -169,7 +175,7 @@ function EditRowModal({ batchId, row, editable, salesManagers, oems, banks, onCl
   );
 }
 
-function RowStatus({ row }: { row: ImportRow }) { const label = row.status.replaceAll("_", " "); const style = row.status === "submitted" ? "bg-emerald-50 text-emerald-700" : row.status === "failed" ? "bg-red-50 text-red-700" : row.status === "processing" ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700"; return <span className={`inline-flex rounded-full px-2 py-1 text-[9px] font-semibold capitalize ${style}`}>{label}</span>; }
+function RowStatus({ row }: { row: ImportRow }) { const label = row.status.replaceAll("_", " "); const style = row.status === "submitted" ? "bg-emerald-50 text-emerald-700" : row.status === "failed" ? "bg-red-50 text-red-700" : row.status === "processing" ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700"; return <span className={`inline-flex rounded-full px-1.5 py-1 text-[8px] font-semibold capitalize ${style}`}>{label}</span>; }
 function Section({ title, children }: { title: string; children: React.ReactNode }) { return <section className="rounded-2xl border border-[#DCE5EF] bg-white"><div className="border-b bg-[#F8FAFC] px-4 py-3"><h4 className="text-[12px] font-semibold">{title}</h4></div><div className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-4">{children}</div></section>; }
 function DocumentBox({ label, current, children }: { label: string; current?: string; children: React.ReactNode }) { return <div className={`rounded-xl border p-3 ${current ? "border-emerald-200 bg-emerald-50/35" : "border-amber-200 bg-amber-50/30"}`}><div className="flex justify-between"><span className="text-[10px] font-semibold capitalize">{label}</span><span className="text-[8px] font-semibold">{current ? "Received" : "Pending"}</span></div><p className="mt-1 truncate text-[9px] text-[#64748B]">{current ?? "No file attached"}</p><div className="mt-2">{children}</div></div>; }
 function Field({ label, name, required = false, disabled = false, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; name: string }) { return <div><label className={labelClass}>{label}{required ? " *" : ""}</label><input name={name} required={required} disabled={disabled} className={inputClass} {...props} /></div>; }
