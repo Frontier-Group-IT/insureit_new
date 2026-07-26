@@ -3,7 +3,7 @@ import { AppShell } from "@/components/shell";
 import { requirePospMispManager } from "@/lib/master-data-server";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { createPospMispOnboarding } from "../actions";
+import { createManualPospMispOnboarding } from "../manual-actions";
 import { PospMispOnboardingForm } from "../posp-misp-onboarding-form";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ export default async function NewPospMispPage({ searchParams }: { searchParams: 
 
   return (
     <AppShell title={`Add ${partnerType.toUpperCase()} Application`}>
-      <PospMispOnboardingForm action={createPospMispOnboarding} partnerType={partnerType} salesManagers={salesManagers} oems={oems} banks={banks} />
+      <PospMispOnboardingForm action={createManualPospMispOnboarding} partnerType={partnerType} salesManagers={salesManagers} oems={oems} banks={banks} />
     </AppShell>
   );
 }
