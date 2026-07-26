@@ -20,6 +20,7 @@ export function PospMispApplicationEditor({applicationId,profile,editable,salesM
         <Header number="1" title="Primary information" subtitle="Save the applicant details. PAN checking is automatic and the IIB result cannot be edited manually."/>
         <div className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-4">
           <Select label="Associate" name="associate_employee_id" defaultValue={profile.associate_employee_id??profile.associate_profile_id??""} options={salesManagers} required disabled={!editable}/>
+          <Field label="Onboarding ID" name="external_onboarding_id" defaultValue={profile.external_onboarding_id??""} placeholder="Enter onboarding ID" disabled={!editable}/>
           <Field label={isMisp?"MISP Name":"POS Name"} name={isMisp?"misp_name":"pos_name"} defaultValue={(isMisp?profile.misp_name:profile.pos_name)??""} required disabled={!editable}/>
           <Field label="PAN Number" name="pan_number" defaultValue={profile.pan_number??""} maxLength={10} disabled={!editable}/>
           <IndianDateField label="Document Received Date" name="document_received_at" defaultValue={profile.document_received_at} disabled={!editable}/>
