@@ -73,7 +73,7 @@ export function ImportRowReviewTable({ batchId, batchStatus, rows, salesManagers
                 <th className="w-[13%] px-2 py-2.5">Final Route</th>
                 <th className="w-[20%] px-2 py-2.5">Validation</th>
                 <th className="w-[9%] px-2 py-2.5">Import</th>
-                <th className="w-[13%] px-2 py-2.5 text-right">Actions</th>
+                <th className="w-[8%] px-2 py-2.5 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EEF2F6]">
@@ -91,7 +91,13 @@ export function ImportRowReviewTable({ batchId, batchStatus, rows, salesManagers
                     <td className="px-2 py-2.5"><RouteStatus row={row} /></td>
                     <td className="px-2 py-2.5">{row.validation_errors?.length ? <ul className="space-y-0.5">{row.validation_errors.slice(0, 2).map((error, index) => <li key={index} className="break-words text-[8.5px] font-medium leading-4 text-red-700">• {error}</li>)}</ul> : <span className="inline-flex rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-semibold text-emerald-700">Ready</span>}</td>
                     <td className="px-2 py-2.5"><RowStatus row={row} /></td>
-                    <td className="px-2 py-2.5"><div className="flex flex-col items-stretch gap-1">{row.application_id ? <Link href={`/customers/applications/${row.application_id}`} className="rounded-md border border-indigo-200 bg-indigo-50 px-2 py-1 text-center text-[8.5px] font-semibold text-indigo-700">Open</Link> : null}<button type="button" onClick={() => setEditingRow(row)} className="rounded-md border border-[#CBD5E1] px-2 py-1 text-[8.5px] font-semibold text-[#334155]">{editable ? "Review" : "View"}</button>{editable ? <form action={deletePospMispImportRow} onSubmit={(event) => { if (!window.confirm(`Remove row ${row.row_number}?`)) event.preventDefault(); }}><input type="hidden" name="batch_id" value={batchId} /><input type="hidden" name="row_id" value={row.id} /><FormSubmitButton label="Remove" pendingLabel="Removing" className="w-full rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[8.5px] font-semibold text-red-700" /></form> : null}</div></td>
+                    <td className="px-2 py-2.5">
+                      <div className="flex items-center justify-center gap-1.5">
+                        {row.application_id ? <Link href={`/customers/applications/${row.application_id}`} title="Open application" aria-label="Open application" className="grid h-8 w-8 place-items-center rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 transition hover:bg-indigo-100"><OpenIcon /></Link> : null}
+                        <button type="button" onClick={() => setEditingRow(row)} title={editable ? "Review or correct row" : "View row"} aria-label={editable ? "Review or correct row" : "View row"} className="grid h-8 w-8 place-items-center rounded-lg border border-[#CBD5E1] bg-white text-[#334155] transition hover:border-[#94A3B8] hover:bg-[#F8FAFC]"><ReviewIcon /></button>
+                        {editable ? <form action={deletePospMispImportRow} onSubmit={(event) => { if (!window.confirm(`Remove row ${row.row_number}?`)) event.preventDefault(); }}><input type="hidden" name="batch_id" value={batchId} /><input type="hidden" name="row_id" value={row.id} /><button type="submit" title="Remove row" aria-label="Remove row" className="grid h-8 w-8 place-items-center rounded-lg border border-red-200 bg-red-50 text-red-700 transition hover:bg-red-100"><TrashIcon /></button></form> : null}
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
@@ -179,17 +185,11 @@ function EditRowModal({ batchId, row, editable, salesManagers, oems, banks, onCl
 function RowStatus({ row }: { row: ImportRow }) {
   const label = row.status.replaceAll("_", " ");
   const style = row.status === "submitted" ? "bg-emerald-50 text-emerald-700" : row.status === "failed" ? "bg-red-50 text-red-700" : row.status === "processing" ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700";
-  return (
-    <div className="space-y-1">
-      <span className={`inline-flex rounded-full px-1.5 py-1 text-[8px] font-semibold capitalize ${style}`}>{label}</span>
-      {row.status === "failed" ? (
-        <p className="break-words text-[8px] font-medium leading-3 text-red-700" title={row.error_message ?? "No failure reason was saved."}>
-          {row.error_message ?? "No failure reason was saved. Retry the row to capture the backend error."}
-        </p>
-      ) : null}
-    </div>
-  );
+  return <div className="space-y-1"><span className={`inline-flex rounded-full px-1.5 py-1 text-[8px] font-semibold capitalize ${style}`}>{label}</span>{row.status === "failed" ? <p className="break-words text-[8px] font-medium leading-3 text-red-700" title={row.error_message ?? "No failure reason was saved."}>{row.error_message ?? "No failure reason was saved. Retry the row to capture the backend error."}</p> : null}</div>;
 }
+function OpenIcon(){return <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 3h7v7"/><path d="m10 14 11-11"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>}
+function ReviewIcon(){return <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/><path d="m15 5 3 3"/></svg>}
+function TrashIcon(){return <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>}
 function Section({ title, children }: { title: string; children: React.ReactNode }) { return <section className="rounded-2xl border border-[#DCE5EF] bg-white"><div className="border-b bg-[#F8FAFC] px-4 py-3"><h4 className="text-[12px] font-semibold">{title}</h4></div><div className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-4">{children}</div></section>; }
 function DocumentBox({ label, current, children }: { label: string; current?: string; children: React.ReactNode }) { return <div className={`rounded-xl border p-3 ${current ? "border-emerald-200 bg-emerald-50/35" : "border-amber-200 bg-amber-50/30"}`}><div className="flex justify-between"><span className="text-[10px] font-semibold capitalize">{label}</span><span className="text-[8px] font-semibold">{current ? "Received" : "Pending"}</span></div><p className="mt-1 truncate text-[9px] text-[#64748B]">{current ?? "No file attached"}</p><div className="mt-2">{children}</div></div>; }
 function Field({ label, name, required = false, disabled = false, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; name: string }) { return <div><label className={labelClass}>{label}{required ? " *" : ""}</label><input name={name} required={required} disabled={disabled} className={inputClass} {...props} /></div>; }
