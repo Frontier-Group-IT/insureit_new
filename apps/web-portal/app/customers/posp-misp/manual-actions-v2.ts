@@ -7,7 +7,6 @@ import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { canManagePospMispOnboarding } from "@/lib/roles";
 import { encryptSensitiveValue } from "@/lib/sensitive-data";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { beginPortalOnboardingApplication } from "../onboarding-applications";
 import type { PospMispState } from "./actions";
 
 const DOCUMENT_BUCKET = "customer-documents";
@@ -110,35 +109,14 @@ export async function createManualPospMispOnboardingV2(_state: PospMispState, da
   if (duplicate) return fail(`${partnerType === "misp" ? "MISP" : "POSP"} ID already exists.`, "external_onboarding_id");
 
   const draftData = {
-    partner_type: partnerType,
-    associate_employee_id: associate.id,
-    associate_profile_id: associate.profile_id,
-    associate_name: associate.full_name,
-    associate_id: associate.employee_code,
-    external_onboarding_id: onboardingId,
-    document_received_at: value(data, "document_received_at"),
-    pos_name: posName,
-    misp_name: mispName,
-    applicant_phone: applicantPhone,
-    applicant_email: applicantEmail,
-    pan_number: businessPan,
-    gst_number: gst,
-    address,
-    city,
-    state,
-    postal_code: postalCode,
-    bank_id: bank.id,
-    bank_name: bank.name,
-    bank_account_last_four: accountNumber.slice(-4),
-    bank_ifsc_code: ifsc,
-    oem_name: manufacturer?.name ?? null,
-    dp_first_name: dpFirst,
-    dp_middle_name: dpMiddle,
-    dp_last_name: dpLast,
-    dp_name: dpName,
-    dp_phone: dpPhone,
-    dp_email: dpEmail,
-    dp_pan_number: dpPan,
+    partner_type: partnerType, associate_employee_id: associate.id, associate_profile_id: associate.profile_id,
+    associate_name: associate.full_name, associate_id: associate.employee_code, external_onboarding_id: onboardingId,
+    document_received_at: value(data, "document_received_at"), pos_name: posName, misp_name: mispName,
+    applicant_phone: applicantPhone, applicant_email: applicantEmail, pan_number: businessPan, gst_number: gst,
+    address, city, state, postal_code: postalCode, bank_id: bank.id, bank_name: bank.name,
+    bank_account_last_four: accountNumber.slice(-4), bank_ifsc_code: ifsc, oem_name: manufacturer?.name ?? null,
+    dp_first_name: dpFirst, dp_middle_name: dpMiddle, dp_last_name: dpLast, dp_name: dpName,
+    dp_phone: dpPhone, dp_email: dpEmail, dp_pan_number: dpPan,
     dp_date_of_birth: partnerType === "misp" ? dob : null,
     dp_aadhaar_last_four: partnerType === "misp" ? aadhaar.lastFour : null,
     date_of_birth: partnerType === "posp" ? dob : null,
@@ -148,49 +126,33 @@ export async function createManualPospMispOnboardingV2(_state: PospMispState, da
   let applicationId: string | null = null;
   const uploaded: string[] = [];
   try {
-    const application = await beginPortalOnboardingApplication(admin, {
-      initiatedBy: manager.id,
-      partnerType,
-      phone: applicantPhone,
-      email: applicantEmail,
-      draftData
-    });
+    const now = new Date().toISOString();
+    const { data: application, error: applicationError } = await admin.from("intermediary_onboarding_applications").insert({
+      initiated_by: manager.id,
+      source: "manager_portal",
+      requested_type: partnerType,
+      final_type: null,
+      status: "submitted",
+      current_step: 1,
+      applicant_phone: applicantPhone,
+      applicant_email: applicantEmail,
+      draft_data: draftData,
+      submitted_at: now,
+      updated_at: now
+    }).select("id").single<{ id: string }>();
+    if (applicationError || !application) throw applicationError ?? new Error("Unable to create intermediary onboarding application.");
     applicationId = application.id;
 
     const { error: profileError } = await admin.from("posp_misp_onboarding_profiles").insert({
-      application_id: application.id,
-      partner_type: partnerType,
-      requested_account_type: partnerType,
-      final_account_type: null,
-      partner_decision: "not_applicable",
-      associate_employee_id: associate.id,
-      associate_profile_id: associate.profile_id,
-      associate_name: associate.full_name,
-      associate_id: associate.employee_code,
-      external_onboarding_id: onboardingId,
-      document_received_at: value(data, "document_received_at"),
-      pos_name: posName,
-      misp_name: mispName,
-      applicant_phone: applicantPhone,
-      applicant_email: applicantEmail,
-      pan_number: businessPan,
-      gst_number: gst,
-      address,
-      city,
-      state,
-      postal_code: postalCode,
-      bank_id: bank.id,
-      bank_name: bank.name,
-      bank_account_number: accountNumber,
-      bank_ifsc_code: ifsc,
-      oem_name: manufacturer?.name ?? null,
-      dp_first_name: dpFirst,
-      dp_middle_name: dpMiddle,
-      dp_last_name: dpLast,
-      dp_name: dpName,
-      dp_phone: dpPhone,
-      dp_email: dpEmail,
-      dp_pan_number: dpPan,
+      application_id: application.id, partner_type: partnerType, requested_account_type: partnerType,
+      final_account_type: null, partner_decision: "not_applicable", associate_employee_id: associate.id,
+      associate_profile_id: associate.profile_id, associate_name: associate.full_name, associate_id: associate.employee_code,
+      external_onboarding_id: onboardingId, document_received_at: value(data, "document_received_at"),
+      pos_name: posName, misp_name: mispName, applicant_phone: applicantPhone, applicant_email: applicantEmail,
+      pan_number: businessPan, gst_number: gst, address, city, state, postal_code: postalCode,
+      bank_id: bank.id, bank_name: bank.name, bank_account_number: accountNumber, bank_ifsc_code: ifsc,
+      oem_name: manufacturer?.name ?? null, dp_first_name: dpFirst, dp_middle_name: dpMiddle,
+      dp_last_name: dpLast, dp_name: dpName, dp_phone: dpPhone, dp_email: dpEmail, dp_pan_number: dpPan,
       dp_date_of_birth: partnerType === "misp" ? dob : null,
       dp_aadhaar_last_four: partnerType === "misp" ? aadhaar.lastFour : null,
       dp_aadhaar_hash: partnerType === "misp" ? aadhaar.hash : null,
@@ -199,25 +161,19 @@ export async function createManualPospMispOnboardingV2(_state: PospMispState, da
       aadhaar_last_four: partnerType === "posp" ? aadhaar.lastFour : null,
       aadhaar_hash: partnerType === "posp" ? aadhaar.hash : null,
       aadhaar_number_encrypted: partnerType === "posp" ? aadhaar.encrypted : null,
-      education_status: "not_received",
-      iib_remarks: null,
-      iib_upload_status: "pending",
-      iib_uploaded: false,
-      workflow_stage: "pre_iib",
-      pre_iib_submitted_at: new Date().toISOString(),
-      source: "manual",
-      raw_data: {},
-      created_by: manager.id,
-      updated_by: manager.id
+      education_status: "not_received", iib_remarks: null, iib_upload_status: "pending", iib_uploaded: false,
+      workflow_stage: "pre_iib", pre_iib_submitted_at: now, source: "manual", raw_data: {},
+      created_by: manager.id, updated_by: manager.id
     });
     if (profileError) throw profileError;
 
-    const { error: contactError } = await admin.from("customer_onboarding_contacts").upsert({
+    const { error: contactError } = await admin.from("intermediary_onboarding_contacts").upsert({
       application_id: application.id,
       contact_role: partnerType === "misp" ? "misp_dp" : "posp",
       full_name: partnerType === "misp" ? dpName! : posName!,
       phone: applicantPhone,
       email: applicantEmail,
+      is_designated_person: partnerType === "misp",
       login_required: false,
       membership_status: "pending"
     }, { onConflict: "application_id,contact_role" });
@@ -226,35 +182,29 @@ export async function createManualPospMispOnboardingV2(_state: PospMispState, da
     for (const field of DOCUMENT_FIELDS) {
       const selected = upload(data, field);
       if (!selected) continue;
-      const path = `${application.id}/posp-misp/${field}/${randomUUID()}.${fileExtension(selected)}`;
+      const path = `${application.id}/intermediary/${field}/${randomUUID()}.${fileExtension(selected)}`;
       const { error: uploadError } = await admin.storage.from(DOCUMENT_BUCKET).upload(path, new Uint8Array(await selected.arrayBuffer()), { contentType: selected.type, upsert: false });
       if (uploadError) throw uploadError;
       uploaded.push(path);
-      const { error: documentError } = await admin.from("customer_onboarding_documents").upsert({
-        application_id: application.id,
-        document_type: field,
-        file_name: selected.name,
-        storage_bucket: DOCUMENT_BUCKET,
-        storage_path: path,
-        mime_type: selected.type,
-        file_size: selected.size,
-        verification_status: "pending",
-        uploaded_by: manager.id
+      const { error: documentError } = await admin.from("intermediary_onboarding_documents").upsert({
+        application_id: application.id, document_type: field, file_name: selected.name,
+        storage_bucket: DOCUMENT_BUCKET, storage_path: path, mime_type: selected.type,
+        file_size: selected.size, verification_status: "pending", uploaded_by: manager.id
       }, { onConflict: "application_id,document_type" });
       if (documentError) throw documentError;
     }
   } catch (error) {
     if (uploaded.length) await admin.storage.from(DOCUMENT_BUCKET).remove(uploaded);
     if (applicationId) {
-      await admin.from("customer_onboarding_documents").delete().eq("application_id", applicationId);
-      await admin.from("customer_onboarding_contacts").delete().eq("application_id", applicationId);
+      await admin.from("intermediary_onboarding_documents").delete().eq("application_id", applicationId);
+      await admin.from("intermediary_onboarding_contacts").delete().eq("application_id", applicationId);
       await admin.from("posp_misp_onboarding_profiles").delete().eq("application_id", applicationId);
-      await admin.from("customer_onboarding_applications").delete().eq("id", applicationId);
+      await admin.from("intermediary_onboarding_applications").delete().eq("id", applicationId);
     }
     return fail(`Application could not be submitted: ${message(error, "Unknown database error")}`);
   }
 
-  redirect(`/customers/applications/${applicationId}?success=posp_misp_submitted`);
+  redirect(`/intermediaries/applications/${applicationId}?success=posp_misp_submitted`);
 }
 
 async function currentManager() {
