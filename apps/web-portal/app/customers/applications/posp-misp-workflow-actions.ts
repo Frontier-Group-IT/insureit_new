@@ -53,13 +53,15 @@ export async function retryPospMispPanVerification(data: FormData) {
     .eq("application_id", applicationId)
     .maybeSingle<{ id: string; partner_type: "posp" | "misp"; pan_number: string | null }>();
 
-  const panNumber = profile?.pan_number?.trim().toUpperCase() ?? "";
+  const enteredPan = value(data, "pan_number")?.replace(/\s/g, "").toUpperCase();
+  const panNumber = enteredPan || profile?.pan_number?.trim().toUpperCase() || "";
   if (!profile?.id || !PAN_PATTERN.test(panNumber)) redirectTo(applicationId, "pan_verification_invalid");
 
   const now = new Date().toISOString();
   const { error: profileError } = await admin
     .from("posp_misp_onboarding_profiles")
     .update({
+      pan_number: panNumber,
       iib_remarks: null,
       iib_upload_status: "pending",
       iib_uploaded: false,
