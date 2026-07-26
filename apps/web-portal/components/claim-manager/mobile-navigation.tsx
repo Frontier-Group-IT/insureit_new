@@ -11,7 +11,7 @@ const primaryItems = [
   { href: "/dashboard", label: "Dashboard", icon: Gauge },
   { href: "/claims", label: "Claims", icon: ShieldCheck },
   { href: "/customers", label: "Customers", icon: UsersRound },
-  { href: "/intermediaries", label: "Distribution Network", icon: Sparkles },
+  { href: "/intermediaries", label: "Intermediatory", icon: Sparkles },
   { href: "/customers/posp-misp", label: "Intermediary Onboarding", icon: FileCheck2 },
   { href: "/tasks", label: "Tasks", icon: CheckSquare2 },
 ];
