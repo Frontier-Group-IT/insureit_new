@@ -65,14 +65,38 @@ async function saveSettings(event) {
 async function startOrCheckNow() {
   const running = Boolean(currentRuntime?.running);
   setBusy(true, running);
-  showMessage(running ? "Checking InsureIt for new PANs..." : "Starting PAN checker...");
+  showMessage(running ? "Checking InsureIt and resuming queued PANs..." : "Starting PAN checker...");
   const response = await chrome.runtime.sendMessage({ type: running ? "CHECK_NOW" : "START" });
   setBusy(false, running);
   if (!response?.ok) {
     elements.panel.open = true;
     return showMessage(response?.error || "Could not check for PAN work.", true);
   }
-  showMessage(response.jobs ? `${response.jobs} PAN job(s) claimed.` : "No new PANs right now.", false, true);
+
+  const latest = await chrome.runtime.sendMessage({ type: "GET_RUNTIME" });
+  if (latest?.ok) renderRuntime(latest);
+  const available = Array.isArray(latest?.queue) ? latest.queue.length : 0;
+
+  if (available > 0 && !latest?.currentPan) {
+    await wakeIibTabForQueuedWork();
+    return showMessage(`${available} PAN job(s) ready. The IIB POS tab was restarted to resume checking.`, false, true);
+  }
+  if (available > 0) {
+    return showMessage(`${available} PAN job(s) are ready or currently being processed.`, false, true);
+  }
+  showMessage(response.jobs ? `${response.jobs} PAN job(s) claimed.` : "No PAN work is waiting right now.", false, true);
+}
+
+async function wakeIibTabForQueuedWork() {
+  const tabs = await chrome.tabs.query({ url: "https://pos.iib.gov.in/*" });
+  if (tabs.length && tabs[0].id) {
+    try {
+      await chrome.tabs.update(tabs[0].id, { active: true });
+      await chrome.tabs.reload(tabs[0].id, { bypassCache: true });
+      return;
+    } catch (_) {}
+  }
+  await chrome.tabs.create({ url: "https://pos.iib.gov.in/", active: true });
 }
 
 async function togglePause() {
