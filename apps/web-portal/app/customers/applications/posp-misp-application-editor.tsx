@@ -23,7 +23,7 @@ export function PospMispApplicationEditor({applicationId,profile,editable,salesM
           <Select label="Associate" name="associate_employee_id" defaultValue={profile.associate_employee_id??profile.associate_profile_id??""} options={salesManagers} required disabled={!editable}/>
           <Field label="Onboarding ID" name="external_onboarding_id" defaultValue={profile.external_onboarding_id??""} placeholder="Enter onboarding ID" disabled={!editable}/>
           <Field label={isMisp?"MISP Name":"POS Name"} name={isMisp?"misp_name":"pos_name"} defaultValue={(isMisp?profile.misp_name:profile.pos_name)??""} required disabled={!editable}/>
-          <PanField applicationId={applicationId} value={profile.pan_number??""} editable={editable}/>
+          <PanField value={profile.pan_number??""} editable={editable}/>
           <IndianDateField label="Document Received Date" name="document_received_at" defaultValue={profile.document_received_at} disabled={!editable}/>
           {isMisp?<Select label="OEM" name="oem_name" defaultValue={profile.oem_name??""} options={oems} required disabled={!editable}/>:null}
           <Field label="GST Number" name="gst_number" defaultValue={profile.gst_number??""} maxLength={15} disabled={!editable}/>
@@ -58,24 +58,13 @@ export function PospMispApplicationEditor({applicationId,profile,editable,salesM
   </form>;
 }
 
-function PanField({applicationId,value,editable}:{applicationId:string;value:string;editable:boolean}){
+function PanField({value,editable}:{value:string;editable:boolean}){
   return <div>
     <label className={labelClass}>PAN Number</label>
     <div className="flex items-center gap-2">
       <input name="pan_number" defaultValue={value} maxLength={10} disabled={!editable} className={inputClass}/>
-      <button
-        type="submit"
-        formAction={retryPospMispPanVerification}
-        title="Recheck PAN in IIB"
-        aria-label="Recheck PAN in IIB"
-        className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#C7D2FE] bg-[#EEF2FF] text-[#4338CA] shadow-sm transition hover:border-[#818CF8] hover:bg-[#E0E7FF] focus:outline-none focus:ring-2 focus:ring-[#C7D2FE]"
-      >
-        <input type="hidden" name="application_id" value={applicationId}/>
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M20 11a8 8 0 1 0-2.34 5.66"/>
-          <path d="M20 4v7h-7"/>
-          <path d="m9.5 12 1.7 1.7 3.6-4"/>
-        </svg>
+      <button type="submit" formAction={retryPospMispPanVerification} title="Recheck PAN in IIB" aria-label="Recheck PAN in IIB" className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#C7D2FE] bg-[#EEF2FF] text-[#4338CA] shadow-sm transition hover:border-[#818CF8] hover:bg-[#E0E7FF] focus:outline-none focus:ring-2 focus:ring-[#C7D2FE]">
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/><path d="m9.5 12 1.7 1.7 3.6-4"/></svg>
       </button>
     </div>
     <p className="mt-1 text-[8.5px] text-[#64748B]">Use the icon to clear the current result and queue a fresh IIB check.</p>
