@@ -7,7 +7,7 @@ import { requirePospMispManager } from "@/lib/master-data-server";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { ImportRowReviewTable } from "../import-row-review-table";
-import { submitPospMispImportBatch } from "../../actions";
+import { submitPospMispImportBatch } from "../bulk-submit-actions";
 import { decryptSensitiveValue } from "@/lib/sensitive-data";
 import { PanVerificationAutoRefresh } from "../../../applications/pan-verification-auto-refresh";
 
@@ -63,4 +63,4 @@ async function loadSalesManagers(admin:ReturnType<typeof createSupabaseAdminClie
 async function loadVehicleManufacturers(admin:ReturnType<typeof createSupabaseAdminClient>){const {data}=await admin.from("vehicle_manufacturers").select("name").eq("is_active",true).order("sort_order",{ascending:true}).order("name",{ascending:true}).returns<Array<{name:string}>>();return(data??[]).map(item=>({value:item.name,label:item.name}))}
 async function loadBanks(admin:ReturnType<typeof createSupabaseAdminClient>){const {data}=await admin.from("banks").select("id,name").eq("is_active",true).order("name").returns<Array<{id:string;name:string}>>();return(data??[]).map(item=>({value:item.id,label:item.name}))}
 function errorMessage(error:string){const messages:Record<string,string>={no_valid_rows:"No valid rows are available for submission.",row_missing:"The selected import row could not be found.",row_locked:"This row has already been submitted and cannot be edited.",row_update_failed:"The row could not be updated.",row_delete_failed:"The row could not be removed.",document_upload_failed:"The document could not be uploaded. Use a PDF, JPG or PNG file no larger than 5 MB.",marksheet_type_required:"Select the marksheet type before uploading the marksheet.",master_data:"Sales employee or OEM master data could not be loaded."};return messages[error]??"The batch could not be updated."}
-function successMessage(success:string){const messages:Record<string,string>={submitted:"Ready rows were created and queued for automatic IIB checking.",retried:"Failed rows were retried.",row_updated:"Parsed row was updated and revalidated.",row_removed:"Parsed row was removed from this batch."};return messages[success]??"Saved successfully."}
+function successMessage(success:string){const messages:Record<string,string>={submitted:"Ready rows were created and queued for automatic IIB checking.",retried:"Failed rows were retried. Review the Import column for the result.",row_updated:"Parsed row was updated and revalidated.",row_removed:"Parsed row was removed from this batch."};return messages[success]??"Saved successfully."}
