@@ -33,6 +33,56 @@ export async function POST(request: NextRequest) {
   const device = clean(body?.device, 120);
   const now = new Date().toISOString();
 
+  const { data: currentJob, error: currentJobError } = await admin
+    .from("pan_verification_jobs")
+    .select("id, application_id, onboarding_profile_id, pan_number, status")
+    .eq("id", jobId)
+    .maybeSingle<{
+      id: string;
+      application_id: string;
+      onboarding_profile_id: string | null;
+      pan_number: string;
+      status: string;
+    }>();
+
+  if (currentJobError || !currentJob || currentJob.status !== "checking") {
+    return NextResponse.json({ error: "completion_failed" }, { status: 409 });
+  }
+
+  const { data: currentProfile, error: profileReadError } = await admin
+    .from("posp_misp_onboarding_profiles")
+    .select("id, partner_type, requested_account_type, pan_number")
+    .eq("application_id", currentJob.application_id)
+    .maybeSingle<{
+      id: string;
+      partner_type: "posp" | "misp";
+      requested_account_type: "posp" | "misp" | null;
+      pan_number: string | null;
+    }>();
+
+  if (profileReadError || !currentProfile) {
+    return NextResponse.json({ error: "profile_not_found" }, { status: 409 });
+  }
+
+  const queuedPan = normalizePan(currentJob.pan_number);
+  const livePan = normalizePan(currentProfile.pan_number);
+  if (!queuedPan || !livePan || queuedPan !== livePan) {
+    await admin
+      .from("pan_verification_jobs")
+      .update({
+        status: "failed",
+        result_code: "stale_pan",
+        result_message: null,
+        last_error: "The applicant PAN changed before this result was returned. A fresh check is required.",
+        completed_at: now,
+        updated_at: now
+      })
+      .eq("id", jobId)
+      .eq("status", "checking");
+
+    return NextResponse.json({ error: "stale_pan_result" }, { status: 409 });
+  }
+
   const { data: job, error } = await admin
     .from("pan_verification_jobs")
     .update({
@@ -46,6 +96,7 @@ export async function POST(request: NextRequest) {
     })
     .eq("id", jobId)
     .eq("status", "checking")
+    .eq("pan_number", currentJob.pan_number)
     .select("application_id, onboarding_profile_id")
     .maybeSingle<{ application_id: string; onboarding_profile_id: string | null }>();
 
@@ -55,13 +106,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (status === "matched" || status === "not_found") {
-    const { data: profile } = await admin
-      .from("posp_misp_onboarding_profiles")
-      .select("partner_type, requested_account_type")
-      .eq("application_id", job.application_id)
-      .maybeSingle<{ partner_type: "posp" | "misp"; requested_account_type: "posp" | "misp" | null }>();
-
-    const requestedType = profile?.requested_account_type ?? profile?.partner_type ?? null;
+    const requestedType = currentProfile.requested_account_type ?? currentProfile.partner_type;
     const routeUpdate = status === "not_found"
       ? {
           iib_remarks: resultMessage,
@@ -87,7 +132,8 @@ export async function POST(request: NextRequest) {
     const { error: profileError } = await admin
       .from("posp_misp_onboarding_profiles")
       .update(routeUpdate)
-      .eq("application_id", job.application_id);
+      .eq("id", currentProfile.id)
+      .eq("pan_number", currentJob.pan_number);
 
     if (profileError) {
       console.error("PAN result route update failed", profileError);
@@ -96,6 +142,11 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ ok: true, applicationId: job.application_id });
+}
+
+function normalizePan(value: string | null | undefined) {
+  const normalized = value?.replace(/\s/g, "").toUpperCase() ?? "";
+  return /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(normalized) ? normalized : null;
 }
 
 function clean(value: string | undefined, maxLength: number) {
