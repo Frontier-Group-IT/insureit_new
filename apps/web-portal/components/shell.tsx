@@ -5,17 +5,19 @@ export async function AppShell({ children, title }: { children: ReactNode; title
   const resolvedTitle = title ?? "InsureIt";
   const normalizedTitle = resolvedTitle.toLowerCase();
 
-  const activeNav = normalizedTitle.includes("employee") || normalizedTitle.includes("customer") || normalizedTitle.includes("kyc") || normalizedTitle.includes("vehicle") || normalizedTitle.includes("polic")
-    ? "master-data"
-    : normalizedTitle.includes("claim")
-      ? "claims"
-      : normalizedTitle.includes("task")
-        ? "tasks"
-        : normalizedTitle.includes("report")
-          ? "reports"
-          : normalizedTitle.includes("dashboard")
-            ? "dashboard"
-            : "none";
+  const activeNav = normalizedTitle.includes("intermediar") || normalizedTitle.includes("distribution") || normalizedTitle.includes("posp") || normalizedTitle.includes("misp")
+    ? "distribution"
+    : normalizedTitle.includes("employee") || normalizedTitle.includes("customer") || normalizedTitle.includes("kyc") || normalizedTitle.includes("vehicle") || normalizedTitle.includes("polic")
+      ? "master-data"
+      : normalizedTitle.includes("claim")
+        ? "claims"
+        : normalizedTitle.includes("task")
+          ? "tasks"
+          : normalizedTitle.includes("report")
+            ? "reports"
+            : normalizedTitle.includes("dashboard")
+              ? "dashboard"
+              : "none";
 
   return (
     <ClaimManagerShell title={resolvedTitle} activeNav={activeNav}>
