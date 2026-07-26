@@ -6,7 +6,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type IntermediaryType = "posp" | "misp" | "partner";
+export type IntermediaryType = "posp" | "misp" | "partner";
 type IntermediaryRow = {
   id: string;
   intermediary_code: string | null;
@@ -24,11 +24,13 @@ type IntermediaryRow = {
   updated_at: string;
 };
 
-export default async function IntermediariesPage({ searchParams }: { searchParams: Promise<{ type?: string; q?: string }> }) {
-  await requirePospMispManager();
+export default async function IntermediariesPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const query = await searchParams;
-  const selectedType = ["posp", "misp", "partner"].includes(query.type ?? "") ? query.type as IntermediaryType : null;
-  const search = query.q?.trim().slice(0, 80) ?? "";
+  return <IntermediaryRegister selectedType={null} search={query.q?.trim().slice(0, 80) ?? ""} />;
+}
+
+export async function IntermediaryRegister({ selectedType, search = "" }: { selectedType: IntermediaryType | null; search?: string }) {
+  await requirePospMispManager();
   const admin = createSupabaseAdminClient();
 
   let request = admin
@@ -44,27 +46,28 @@ export default async function IntermediariesPage({ searchParams }: { searchParam
   const { data: allCounts } = await admin.from("intermediaries").select("intermediary_type, account_status").returns<Array<{ intermediary_type: IntermediaryType; account_status: string }>>();
   const count = (type: IntermediaryType) => (allCounts ?? []).filter((row) => row.intermediary_type === type).length;
   const active = (allCounts ?? []).filter((row) => row.account_status === "active").length;
+  const pageTitle = selectedType === "posp" ? "POSP" : selectedType === "misp" ? "MISP" : selectedType === "partner" ? "Business Associates" : "Overview";
+  const searchAction = selectedType ? `/intermediaries/${selectedType}` : "/intermediaries";
 
   return (
-    <AppShell title="Distribution Network">
+    <AppShell title={`Intermediatory - ${pageTitle}`}>
       <div className="mx-auto max-w-[1480px] space-y-4 pb-6">
         <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4 bg-gradient-to-r from-[#071D49] via-[#0F2A55] to-[#163B70] px-5 py-5 text-white">
-            <div><p className="text-[9px] font-bold uppercase tracking-[.14em] text-white/55">Distribution Network</p><h1 className="mt-1 text-xl font-semibold">Intermediaries</h1><p className="mt-1 max-w-2xl text-[10.5px] text-white/70">POSP, MISP and Business Associates are managed separately from customers. They introduce business; customers remain policyholders and insured parties.</p></div>
-            <Link href="/customers/posp-misp" className="rounded-xl bg-white px-4 py-2.5 text-[10.5px] font-bold text-[#0F2A55]">Open onboarding</Link>
+            <div><p className="text-[9px] font-bold uppercase tracking-[.14em] text-white/55">Intermediatory</p><h1 className="mt-1 text-xl font-semibold">{pageTitle}</h1></div>
+            <Link href="/customers/posp-misp" className="rounded-xl bg-white px-4 py-2.5 text-[10.5px] font-bold text-[#0F2A55]">Onboarding</Link>
           </div>
-          <div className="grid gap-px bg-[#E2E8F0] sm:grid-cols-2 lg:grid-cols-4"><Metric label="POSP" value={count("posp")} /><Metric label="MISP" value={count("misp")} /><Metric label="Business Associates" value={count("partner")} /><Metric label="Active network" value={active} /></div>
+          {!selectedType ? <div className="grid gap-px bg-[#E2E8F0] sm:grid-cols-2 lg:grid-cols-4"><Metric label="POSP" value={count("posp")} /><Metric label="MISP" value={count("misp")} /><Metric label="Business Associates" value={count("partner")} /><Metric label="Active" value={active} /></div> : null}
         </section>
 
-        <form method="get" className="grid gap-2 rounded-xl border border-[#DCE5EF] bg-white p-3 shadow-sm sm:grid-cols-[1fr_180px_auto]">
+        <form method="get" action={searchAction} className="grid gap-2 rounded-xl border border-[#DCE5EF] bg-white p-3 shadow-sm sm:grid-cols-[1fr_auto]">
           <input name="q" defaultValue={search} placeholder="Search name, mobile or onboarding ID" className="h-10 rounded-lg border border-[#CBD5E1] bg-[#F8FAFC] px-3 text-[11px] outline-none focus:border-[#635BFF]" />
-          <select name="type" defaultValue={selectedType ?? ""} className="h-10 rounded-lg border border-[#CBD5E1] bg-white px-3 text-[11px]"><option value="">All intermediary types</option><option value="posp">POSP</option><option value="misp">MISP</option><option value="partner">Business Associates</option></select>
-          <button className="h-10 rounded-lg bg-[#0F2A55] px-4 text-[10.5px] font-semibold text-white">Apply</button>
+          <button className="h-10 rounded-lg bg-[#0F2A55] px-4 text-[10.5px] font-semibold text-white">Search</button>
         </form>
 
         <section className="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-sm">
-          <div className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3"><h2 className="text-[12px] font-semibold">Network register</h2><p className="mt-0.5 text-[9.5px] text-[#64748B]">Business Associates use a neutral internal label and remain separated from customer records.</p></div>
-          {error ? <div className="px-4 py-12 text-center text-[11px] text-red-700">The intermediary register could not be loaded. Apply the latest Supabase migration first.</div> : rows.length ? <div className="overflow-x-auto"><table className="w-full min-w-[980px] text-left text-[10.5px]"><thead className="border-b bg-white text-[8.5px] uppercase tracking-[.05em] text-[#64748B]"><tr><th className="px-4 py-3">Intermediary</th><th className="px-3 py-3">Type</th><th className="px-3 py-3">Contact</th><th className="px-3 py-3">IIB</th><th className="px-3 py-3">Compliance</th><th className="px-3 py-3">Account</th><th className="px-4 py-3 text-right">Action</th></tr></thead><tbody className="divide-y divide-[#EEF2F6]">{rows.map((row) => <tr key={row.id} className="hover:bg-[#FAFCFF]"><td className="px-4 py-3"><p className="font-semibold text-[#0F172A]">{row.display_name}</p><p className="mt-0.5 text-[8.5px] text-[#64748B]">{row.onboarding_id ?? row.intermediary_code ?? "ID pending"}</p></td><td className="px-3 py-3"><TypePill type={row.intermediary_type} /></td><td className="px-3 py-3"><p>{row.mobile ?? "-"}</p><p className="text-[8.5px] text-[#64748B]">{row.city ?? "Location pending"}</p></td><td className="px-3 py-3"><Status value={row.iib_status} /></td><td className="px-3 py-3"><Status value={row.compliance_status} /></td><td className="px-3 py-3"><Status value={row.account_status} /></td><td className="px-4 py-3 text-right">{row.application_id ? <Link href={`/customers/applications/${row.application_id}`} className="rounded-lg border border-[#C7D2FE] bg-[#EEF2FF] px-3 py-1.5 text-[9px] font-semibold text-[#4338CA]">Open file</Link> : <span className="text-[#94A3B8]">No file</span>}</td></tr>)}</tbody></table></div> : <div className="px-4 py-16 text-center"><p className="text-[12px] font-semibold">No intermediaries found</p><p className="mt-1 text-[10px] text-[#64748B]">Complete or import an onboarding application to create the intermediary record.</p></div>}
+          <div className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3"><h2 className="text-[12px] font-semibold">{pageTitle} Register</h2></div>
+          {error ? <div className="px-4 py-12 text-center text-[11px] text-red-700">The register could not be loaded.</div> : rows.length ? <div className="overflow-x-auto"><table className="w-full min-w-[980px] text-left text-[10.5px]"><thead className="border-b bg-white text-[8.5px] uppercase tracking-[.05em] text-[#64748B]"><tr><th className="px-4 py-3">Name</th>{!selectedType ? <th className="px-3 py-3">Type</th> : null}<th className="px-3 py-3">Contact</th><th className="px-3 py-3">IIB</th><th className="px-3 py-3">Compliance</th><th className="px-3 py-3">Account</th><th className="px-4 py-3 text-right">Action</th></tr></thead><tbody className="divide-y divide-[#EEF2F6]">{rows.map((row) => <tr key={row.id} className="hover:bg-[#FAFCFF]"><td className="px-4 py-3"><p className="font-semibold text-[#0F172A]">{row.display_name}</p><p className="mt-0.5 text-[8.5px] text-[#64748B]">{row.onboarding_id ?? row.intermediary_code ?? "ID pending"}</p></td>{!selectedType ? <td className="px-3 py-3"><TypePill type={row.intermediary_type} /></td> : null}<td className="px-3 py-3"><p>{row.mobile ?? "-"}</p><p className="text-[8.5px] text-[#64748B]">{row.city ?? "-"}</p></td><td className="px-3 py-3"><Status value={row.iib_status} /></td><td className="px-3 py-3"><Status value={row.compliance_status} /></td><td className="px-3 py-3"><Status value={row.account_status} /></td><td className="px-4 py-3 text-right">{row.application_id ? <Link href={`/customers/applications/${row.application_id}`} className="rounded-lg border border-[#C7D2FE] bg-[#EEF2FF] px-3 py-1.5 text-[9px] font-semibold text-[#4338CA]">Open</Link> : <span className="text-[#94A3B8]">-</span>}</td></tr>)}</tbody></table></div> : <div className="px-4 py-16 text-center"><p className="text-[12px] font-semibold">No records found</p></div>}
         </section>
       </div>
     </AppShell>
