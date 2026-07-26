@@ -17,7 +17,7 @@ const primaryItems = [
 ];
 
 const secondaryItems = [
-  { href: "/customers/applications", label: "Customer KYC", icon: FileCheck2 },
+  { href: "/customer-kyc", label: "Customer KYC", icon: FileCheck2 },
   { href: "/employees", label: "Employees", icon: UsersRound },
   { href: "/vehicles", label: "Vehicles", icon: Gauge },
   { href: "/policies", label: "Policies", icon: ShieldCheck },
