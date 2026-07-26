@@ -46,7 +46,68 @@ export async function queuePospMispPanVerification(data: FormData) {
 }
 
 export async function retryPospMispPanVerification(data: FormData) {
-  return queuePospMispPanVerification(data);
+  const { actorId, applicationId, admin } = await context(data);
+  const { data: profile } = await admin
+    .from("posp_misp_onboarding_profiles")
+    .select("id, partner_type, pan_number")
+    .eq("application_id", applicationId)
+    .maybeSingle<{ id: string; partner_type: "posp" | "misp"; pan_number: string | null }>();
+
+  const panNumber = profile?.pan_number?.trim().toUpperCase() ?? "";
+  if (!profile?.id || !PAN_PATTERN.test(panNumber)) redirectTo(applicationId, "pan_verification_invalid");
+
+  const now = new Date().toISOString();
+  const { error: profileError } = await admin
+    .from("posp_misp_onboarding_profiles")
+    .update({
+      iib_remarks: null,
+      iib_upload_status: "pending",
+      iib_uploaded: false,
+      iib_uploaded_at: null,
+      iib_completed_at: null,
+      requested_account_type: profile.partner_type,
+      final_account_type: null,
+      partner_decision: "pending",
+      partner_decision_at: null,
+      partner_decision_by: null,
+      partner_decision_remark: null,
+      workflow_stage: "pre_iib",
+      updated_by: actorId,
+      updated_at: now
+    })
+    .eq("id", profile.id);
+  if (profileError) redirectTo(applicationId, "pan_verification_reset_failed");
+
+  const { error: jobError } = await admin.from("pan_verification_jobs").upsert({
+    application_id: applicationId,
+    onboarding_profile_id: profile.id,
+    partner_type: profile.partner_type,
+    pan_number: panNumber,
+    status: "pending",
+    result_code: null,
+    result_message: null,
+    requested_at: now,
+    started_at: null,
+    completed_at: null,
+    attempt_count: 0,
+    last_error: null,
+    checked_by_device: null,
+    requested_by: actorId,
+    override_reason: null,
+    overridden_by: null,
+    overridden_at: null,
+    updated_at: now
+  }, { onConflict: "application_id" });
+  if (jobError) redirectTo(applicationId, "pan_verification_queue_failed");
+
+  await admin
+    .from("customer_onboarding_applications")
+    .update({ status: "submitted", updated_at: now })
+    .eq("id", applicationId)
+    .eq("status", "rejected");
+
+  revalidatePath(`/customers/applications/${applicationId}`);
+  redirect(`/customers/applications/${applicationId}?success=pan_verification_requeued`);
 }
 
 export async function decidePospMispPartnerRoute(data: FormData) {
