@@ -28,9 +28,12 @@ export async function createIntermediaryPortalLogin(formData: FormData) {
   const eligible = ["training_pending","training_assigned","training_in_progress","training_completed","exam_pending","exam_allotted","exam_in_progress","exam_failed","exam_passed","agreement_pending","agreement_sent","agreement_signed","iib_submission_pending","iib_submitted","iib_registered"].includes(application?.registration_status ?? "");
   if (!eligible) redirect(`${returnPath}?error=portal_login_stage_locked`);
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : null;
-  const options = siteUrl ? { redirectTo: `${siteUrl}/auth/callback?next=/intermediary-portal`, data: { full_name: intermediary.display_name, role: "intermediary" } } : { data: { full_name: intermediary.display_name, role: "intermediary" } };
-  const { data: invite, error: inviteError } = await admin.auth.admin.inviteUserByEmail(intermediary.email, options);
+  const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (productionHost ? `https://${productionHost}` : null);
+  const inviteOptions = siteUrl
+    ? { redirectTo: `${siteUrl}/auth/callback?next=/intermediary-portal`, data: { full_name: intermediary.display_name, role: "intermediary" } }
+    : { data: { full_name: intermediary.display_name, role: "intermediary" } };
+  const { data: invite, error: inviteError } = await admin.auth.admin.inviteUserByEmail(intermediary.email, inviteOptions);
   if (inviteError || !invite.user?.id) redirect(`${returnPath}?error=${encodeURIComponent(inviteError?.message ?? "portal_login_invite_failed")}`);
 
   const now = new Date().toISOString();
