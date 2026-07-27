@@ -54,12 +54,16 @@ export async function createManualPospMispOnboardingV2(_state: PospMispState, da
   const accountNumber = onlyDigits(data, "bank_account_number");
   const ifsc = compactUpper(data, "bank_ifsc_code");
   const gst = compactUpper(data, "gst_number");
-  const posName = partnerType === "posp" ? value(data, "pos_name") : null;
+  const posFirst = partnerType === "posp" ? value(data, "pos_first_name") : null;
+  const posMiddle = partnerType === "posp" ? value(data, "pos_middle_name") : null;
+  const posLast = partnerType === "posp" ? value(data, "pos_last_name") : null;
+  const posName = partnerType === "posp" ? [posFirst, posMiddle, posLast].filter(Boolean).join(" ") || null : null;
   const mispName = partnerType === "misp" ? value(data, "misp_name") : null;
 
   if (!onboardingId) return fail(`${partnerType === "misp" ? "MISP" : "POSP"} ID is required.`, "external_onboarding_id");
   if (!PAN.test(businessPan ?? "")) return fail(`${partnerType === "misp" ? "MISP" : "POSP"} PAN is invalid.`, "pan_number");
-  if (partnerType === "posp" && !posName) return fail("POS Name is required.", "pos_name");
+  if (partnerType === "posp" && !posFirst) return fail("POS First Name is required.", "pos_first_name");
+  if (partnerType === "posp" && !posLast) return fail("POS Last Name is required.", "pos_last_name");
   if (partnerType === "misp" && !mispName) return fail("MISP Name is required.", "misp_name");
   if (!address) return fail("Address is required.", "address");
   if (!city) return fail("City is required.", "city");
@@ -81,7 +85,6 @@ export async function createManualPospMispOnboardingV2(_state: PospMispState, da
 
   if (partnerType === "misp") {
     if (!dpFirst) return fail("DP First Name is required.", "dp_first_name");
-    if (!dpMiddle) return fail("DP Middle Name is required.", "dp_middle_name");
     if (!dpLast) return fail("DP Last Name is required.", "dp_last_name");
     if (!dpPhone) return fail("Enter a valid DP Contact.", "dp_phone");
     if (!dpEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dpEmail)) return fail("Enter a valid DP Email.", "dp_email");
@@ -111,7 +114,8 @@ export async function createManualPospMispOnboardingV2(_state: PospMispState, da
   const draftData = {
     partner_type: partnerType, associate_employee_id: associate.id, associate_profile_id: associate.profile_id,
     associate_name: associate.full_name, associate_id: associate.employee_code, external_onboarding_id: onboardingId,
-    document_received_at: value(data, "document_received_at"), pos_name: posName, misp_name: mispName,
+    document_received_at: value(data, "document_received_at"), pos_first_name: posFirst, pos_middle_name: posMiddle,
+    pos_last_name: posLast, pos_name: posName, misp_name: mispName,
     applicant_phone: applicantPhone, applicant_email: applicantEmail, pan_number: businessPan, gst_number: gst,
     address, city, state, postal_code: postalCode, bank_id: bank.id, bank_name: bank.name,
     bank_account_last_four: accountNumber.slice(-4), bank_ifsc_code: ifsc, oem_name: manufacturer?.name ?? null,
