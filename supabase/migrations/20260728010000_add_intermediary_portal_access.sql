@@ -1,3 +1,53 @@
+-- Add the intermediary role before opening the main transaction.
+-- PostgreSQL enum values added with ALTER TYPE become usable only after that
+-- statement commits, so this block must remain outside BEGIN/COMMIT below.
+do $$
+declare
+  role_type_schema text;
+  role_type_name text;
+begin
+  select enum_namespace.nspname, role_type.typname
+    into role_type_schema, role_type_name
+  from pg_attribute attribute
+  join pg_class profile_table
+    on profile_table.oid = attribute.attrelid
+  join pg_namespace table_namespace
+    on table_namespace.oid = profile_table.relnamespace
+  join pg_type role_type
+    on role_type.oid = attribute.atttypid
+  join pg_namespace enum_namespace
+    on enum_namespace.oid = role_type.typnamespace
+  where table_namespace.nspname = 'public'
+    and profile_table.relname = 'profiles'
+    and attribute.attname = 'role'
+    and attribute.attnum > 0
+    and not attribute.attisdropped
+    and role_type.typtype = 'e'
+  limit 1;
+
+  if role_type_name is null then
+    raise exception 'Could not resolve the enum type used by public.profiles.role';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_enum enum_value
+    join pg_type enum_type on enum_type.oid = enum_value.enumtypid
+    join pg_namespace enum_namespace on enum_namespace.oid = enum_type.typnamespace
+    where enum_namespace.nspname = role_type_schema
+      and enum_type.typname = role_type_name
+      and enum_value.enumlabel = 'intermediary'
+  ) then
+    execute format(
+      'alter type %I.%I add value %L',
+      role_type_schema,
+      role_type_name,
+      'intermediary'
+    );
+  end if;
+end
+$$;
+
 begin;
 
 alter table public.intermediaries
@@ -31,35 +81,6 @@ create index if not exists intermediary_portal_accounts_auth_user_idx
   on public.intermediary_portal_accounts(auth_user_id);
 create index if not exists intermediary_portal_accounts_status_idx
   on public.intermediary_portal_accounts(status);
-
--- The portal uses a text role column. Replace only the known role check when present.
-do $$
-declare
-  constraint_name text;
-begin
-  select con.conname into constraint_name
-  from pg_constraint con
-  join pg_class rel on rel.oid = con.conrelid
-  join pg_namespace nsp on nsp.oid = rel.relnamespace
-  where nsp.nspname = 'public'
-    and rel.relname = 'profiles'
-    and con.contype = 'c'
-    and pg_get_constraintdef(con.oid) ilike '%role%'
-  limit 1;
-
-  if constraint_name is not null then
-    execute format('alter table public.profiles drop constraint %I', constraint_name);
-  end if;
-end $$;
-
-alter table public.profiles
-  add constraint profiles_role_check
-  check (role in (
-    'super_admin','admin','manager','claims_head','sales_operations_head',
-    'backoffice_executive','claim_processor','field_executive','relationship_manager',
-    'director','sales_head','zonal_head','asm','sales_manager','agent','customer',
-    'it_super_user','intermediary'
-  ));
 
 alter table public.intermediary_portal_accounts enable row level security;
 
