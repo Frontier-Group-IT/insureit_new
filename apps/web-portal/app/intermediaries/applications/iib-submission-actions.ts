@@ -8,6 +8,38 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const applicationPath = (id: string) => `/intermediaries/applications/${id}`;
 
+type ApplicationRow = { id:string; final_type:"posp"|"misp"|"partner"|null; registration_status:string };
+type ProfileRow = {
+  partner_type:"posp"|"misp";
+  pos_name:string|null; misp_name:string|null; applicant_phone:string|null; applicant_email:string|null;
+  date_of_birth:string|null; pan_number:string|null; aadhaar_number_encrypted:string|null;
+  address:string|null; city:string|null; state:string|null; postal_code:string|null;
+  dp_name:string|null; dp_phone:string|null; dp_email:string|null; dp_pan_number:string|null;
+  dp_date_of_birth:string|null; dp_aadhaar_number_encrypted:string|null;
+};
+type AssignmentRow = {
+  training_status:string|null; training_completed_at:string|null;
+  exam_status:string|null; exam_score:number|null; exam_completed_at:string|null;
+  agreement_status:string|null; agreement_signed_at:string|null;
+};
+type DocumentRow = {
+  document_type:string; file_name:string; storage_bucket:string; storage_path:string; verification_status:string;
+};
+type IdentityPayload = {
+  name:string|null; mobile:string|null; email:string|null; pan:string|null; date_of_birth:string|null; aadhaar:string|null;
+};
+type IibPayload = {
+  application_id:string;
+  intermediary_type:"posp"|"misp";
+  identity:IdentityPayload;
+  address:{line:string|null;city:string|null;state:string|null;postal_code:string|null};
+  qualification:{
+    training_status:string|null; training_completed_at:string|null; exam_status:string|null; exam_score:number|null;
+    exam_completed_at:string|null; agreement_status:string|null; agreement_signed_at:string|null;
+  };
+  documents:Array<{type:string;file_name:string;bucket:string;path:string;verification_status:string}>;
+};
+
 export async function prepareIntermediaryIibPayload(formData: FormData) {
   const reviewer = await requirePospMispManager();
   const applicationId = text(formData, "application_id");
@@ -15,18 +47,18 @@ export async function prepareIntermediaryIibPayload(formData: FormData) {
 
   const admin = createSupabaseAdminClient();
   const [{ data: application }, { data: profile }, { data: assignment }, { data: intermediary }, { data: documents }] = await Promise.all([
-    admin.from("intermediary_onboarding_applications").select("id,final_type,registration_status").eq("id", applicationId).maybeSingle<{ id:string; final_type:"posp"|"misp"|"partner"|null; registration_status:string }>(),
-    admin.from("posp_misp_onboarding_profiles").select("partner_type,pos_name,misp_name,applicant_phone,applicant_email,date_of_birth,pan_number,aadhaar_number_encrypted,address,city,state,postal_code,dp_name,dp_phone,dp_email,dp_pan_number,dp_date_of_birth,dp_aadhaar_number_encrypted").eq("application_id", applicationId).maybeSingle<any>(),
-    admin.from("intermediary_training_exam_assignments").select("training_status,training_completed_at,exam_status,exam_score,exam_completed_at,agreement_status,agreement_signed_at").eq("application_id", applicationId).maybeSingle<any>(),
+    admin.from("intermediary_onboarding_applications").select("id,final_type,registration_status").eq("id", applicationId).maybeSingle<ApplicationRow>(),
+    admin.from("posp_misp_onboarding_profiles").select("partner_type,pos_name,misp_name,applicant_phone,applicant_email,date_of_birth,pan_number,aadhaar_number_encrypted,address,city,state,postal_code,dp_name,dp_phone,dp_email,dp_pan_number,dp_date_of_birth,dp_aadhaar_number_encrypted").eq("application_id", applicationId).maybeSingle<ProfileRow>(),
+    admin.from("intermediary_training_exam_assignments").select("training_status,training_completed_at,exam_status,exam_score,exam_completed_at,agreement_status,agreement_signed_at").eq("application_id", applicationId).maybeSingle<AssignmentRow>(),
     admin.from("intermediaries").select("id").eq("application_id", applicationId).maybeSingle<{id:string}>(),
-    admin.from("intermediary_onboarding_documents").select("document_type,file_name,storage_bucket,storage_path,verification_status").eq("application_id", applicationId)
+    admin.from("intermediary_onboarding_documents").select("document_type,file_name,storage_bucket,storage_path,verification_status").eq("application_id", applicationId).returns<DocumentRow[]>()
   ]);
 
   if (!application || !profile || application.final_type === "partner") redirect(`${applicationPath(applicationId)}?stage=review&error=iib_not_available`);
   if (assignment?.agreement_status !== "signed") redirect(`${applicationPath(applicationId)}?stage=review&error=iib_agreement_required`);
 
   const type = (application.final_type ?? profile.partner_type) as "posp"|"misp";
-  const identity = type === "misp" ? {
+  const identity: IdentityPayload = type === "misp" ? {
     name: profile.dp_name,
     mobile: profile.dp_phone,
     email: profile.dp_email,
@@ -42,7 +74,7 @@ export async function prepareIntermediaryIibPayload(formData: FormData) {
     aadhaar: decryptSensitiveValue(profile.aadhaar_number_encrypted)
   };
 
-  const payload = {
+  const payload: IibPayload = {
     application_id: applicationId,
     intermediary_type: type,
     identity,
@@ -61,7 +93,7 @@ export async function prepareIntermediaryIibPayload(formData: FormData) {
       agreement_status: assignment?.agreement_status ?? null,
       agreement_signed_at: assignment?.agreement_signed_at ?? null
     },
-    documents: (documents ?? []).map((document:any) => ({
+    documents: (documents ?? []).map((document) => ({
       type: document.document_type,
       file_name: document.file_name,
       bucket: document.storage_bucket,
