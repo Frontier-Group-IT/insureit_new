@@ -13,7 +13,7 @@ export type Profile = {
   is_active: boolean;
 };
 
-export function isAllowedAdminRole(role: string | null | undefined): role is AllowedAdminRole {
+export function isAllowedAdminRole(role: string | null | undefined): boolean {
   return Boolean(role && (allowedAdminRoles.includes(role as AllowedAdminRole) || isPortalRole(role) || isIntermediaryRole(role)));
 }
 
