@@ -29,7 +29,9 @@ export async function assignIntermediaryTraining(formData: FormData) {
     .eq("application_id", applicationId)
     .maybeSingle<{ workflow_stage: string }>();
 
-  if (!application || !profile || profile.workflow_stage !== "training" || application.final_type === "partner") {
+  const allowedStatus = application && ["training_pending", "training_assigned", "training_in_progress", "iib_submission_pending"].includes(application.registration_status);
+  const allowedStage = profile && ["training", "completed"].includes(profile.workflow_stage);
+  if (!application || !profile || !allowedStatus || !allowedStage || application.final_type === "partner") {
     redirect(`${path(applicationId)}?stage=review&error=training_assignment_locked`);
   }
 
@@ -48,8 +50,8 @@ export async function assignIntermediaryTraining(formData: FormData) {
   }, { onConflict: "application_id" });
   if (error) redirect(`${path(applicationId)}?stage=review&error=training_assignment_failed`);
 
-  await admin.from("intermediary_onboarding_applications").update({ registration_status: "training_assigned", updated_at: now }).eq("id", applicationId);
-  await admin.from("posp_misp_onboarding_profiles").update({ training_status: "assigned", training_start_date: now.slice(0, 10), updated_by: reviewer.id, updated_at: now }).eq("application_id", applicationId);
+  await admin.from("intermediary_onboarding_applications").update({ status: "under_review", registration_status: "training_assigned", completed_at: null, updated_at: now }).eq("id", applicationId);
+  await admin.from("posp_misp_onboarding_profiles").update({ workflow_stage: "training", training_status: "assigned", training_start_date: now.slice(0, 10), updated_by: reviewer.id, updated_at: now }).eq("application_id", applicationId);
 
   revalidatePath(path(applicationId));
   redirect(`${path(applicationId)}?stage=review&success=training_assigned`);
@@ -74,7 +76,7 @@ export async function updateIntermediaryTrainingStatus(formData: FormData) {
 
   const registrationStatus = status === "completed" ? "training_completed" : status === "in_progress" ? "training_in_progress" : "training_assigned";
   await admin.from("intermediary_onboarding_applications").update({ registration_status: registrationStatus, updated_at: now }).eq("id", applicationId);
-  await admin.from("posp_misp_onboarding_profiles").update({ training_status: status, training_end_date: status === "completed" ? now.slice(0, 10) : null, updated_by: reviewer.id, updated_at: now }).eq("application_id", applicationId);
+  await admin.from("posp_misp_onboarding_profiles").update({ workflow_stage: "training", training_status: status, training_end_date: status === "completed" ? now.slice(0, 10) : null, updated_by: reviewer.id, updated_at: now }).eq("application_id", applicationId);
 
   revalidatePath(path(applicationId));
   redirect(`${path(applicationId)}?stage=review&success=training_status_updated`);
