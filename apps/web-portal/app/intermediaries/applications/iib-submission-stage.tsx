@@ -3,7 +3,17 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { prepareIntermediaryIibPayload, startIntermediaryIibHandoff } from "./iib-submission-actions";
 
 type Props = { applicationId:string; agreementSigned:boolean; finalType:string|null };
-type Packet = { status:string; missing_fields:string[]; payload:Record<string,any>; prepared_at:string|null; handoff_started_at:string|null };
+type IdentityPayload = { name?:unknown; pan?:unknown; date_of_birth?:unknown; mobile?:unknown; email?:unknown; aadhaar?:unknown };
+type AddressPayload = { line?:unknown; city?:unknown; state?:unknown; postal_code?:unknown };
+type QualificationPayload = { training_status?:unknown; exam_status?:unknown; exam_score?:unknown; agreement_status?:unknown };
+type DocumentPayload = { type?:unknown; file_name?:unknown; bucket?:unknown; path?:unknown; verification_status?:unknown };
+type IibPayload = {
+  identity?:IdentityPayload;
+  address?:AddressPayload;
+  qualification?:QualificationPayload;
+  documents?:DocumentPayload[];
+};
+type Packet = { status:string; missing_fields:string[]; payload:IibPayload|null; prepared_at:string|null; handoff_started_at:string|null };
 
 export async function IibSubmissionStage({applicationId,agreementSigned,finalType}:Props){
  if(finalType==="partner"||!agreementSigned)return null;
