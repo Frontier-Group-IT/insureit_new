@@ -23,12 +23,24 @@
         <div><span>Queued</span><strong id="queued">0</strong></div>
         <div><span>Current</span><strong id="current-pan">—</strong></div>
       </div>
+      <div class="metrics">
+        <div><span>Controller</span><strong id="controller-state">STOPPED</strong></div>
+        <div><span>IIB page</span><strong id="page-type">Unknown</strong></div>
+        <div><span>Attempt</span><strong id="current-attempt">—</strong></div>
+      </div>
+      <p id="last-error" class="message error"></p>
     </section>
 
     <section class="actions">
       <button id="start" class="primary">Start checking</button>
       <button id="pause">Pause</button>
       <button id="stop" class="danger">Stop</button>
+    </section>
+
+    <section class="actions">
+      <button id="focus-iib">Focus IIB</button>
+      <button id="reconnect-iib">Reconnect</button>
+      <button id="restart-iib">Restart tab</button>
     </section>
 
     <details id="settings-panel">
@@ -39,11 +51,12 @@
         <label>IIB user ID<input id="iib-user-id" type="text" required /></label>
         <label>IIB password<input id="iib-password" type="password" required /></label>
         <label>Device name<input id="device-name" type="text" value="N.M. PAN Checker" /></label>
-        <label>Batch size<input id="batch-size" type="number" min="1" max="100" value="20" /></label>
+        <label>Queue batch size<input id="batch-size" type="number" min="1" max="10" value="3" /></label>
         <button type="submit" class="save">Save settings</button>
       </form>
     </details>
 
+    <button id="export-diagnostics">Export diagnostics</button>
     <p id="message" class="message"></p>
     <p class="note">Complete CAPTCHA manually in the IIB POS tab. The extension never bypasses CAPTCHA.</p>
   </main>
