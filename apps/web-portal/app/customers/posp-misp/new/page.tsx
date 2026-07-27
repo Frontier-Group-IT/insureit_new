@@ -19,9 +19,10 @@ export default async function NewPospMispPage({ searchParams }: { searchParams: 
     loadVehicleManufacturers(admin),
     loadBanks(admin)
   ]);
+  const backHref = partnerType === "misp" ? "/intermediaries/misp" : "/intermediaries/posp";
 
   return (
-    <AppShell title={`Add ${partnerType.toUpperCase()} Application`}>
+    <AppShell title={`Add ${partnerType.toUpperCase()} Application`} backHref={backHref}>
       <PospMispOnboardingForm action={createManualPospMispOnboardingV2} partnerType={partnerType} salesManagers={salesManagers} oems={oems} banks={banks} />
     </AppShell>
   );
