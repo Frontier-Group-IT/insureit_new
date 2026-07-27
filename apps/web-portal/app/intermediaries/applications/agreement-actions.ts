@@ -26,6 +26,8 @@ export async function sendIntermediaryAgreement(formData: FormData) {
     agreement_status: "sent",
     agreement_signing_url: signingUrl,
     agreement_sent_at: now,
+    agreement_opened_at: null,
+    agreement_signed_at: null,
     updated_by: reviewer.id,
     updated_at: now,
   }).eq("application_id", applicationId);
@@ -48,16 +50,20 @@ export async function updateIntermediaryAgreementStatus(formData: FormData) {
 
   const admin = createSupabaseAdminClient();
   const { data: assignment } = await admin.from("intermediary_training_exam_assignments")
-    .select("exam_status,agreement_signing_url")
+    .select("exam_status,agreement_signing_url,agreement_opened_at")
     .eq("application_id", applicationId)
-    .maybeSingle<{ exam_status: string; agreement_signing_url: string | null }>();
+    .maybeSingle<{ exam_status: string; agreement_signing_url: string | null; agreement_opened_at: string | null }>();
   if (!assignment || assignment.exam_status !== "passed" || !assignment.agreement_signing_url) {
     redirect(`${applicationPath(applicationId)}?stage=review&error=agreement_locked`);
   }
 
   const now = new Date().toISOString();
   const update: Record<string, unknown> = { agreement_status: status, updated_by: reviewer.id, updated_at: now };
-  if (status === "signed") update.agreement_signed_at = now;
+  if (status === "opened" && !assignment.agreement_opened_at) update.agreement_opened_at = now;
+  if (status === "signed") {
+    update.agreement_opened_at = assignment.agreement_opened_at ?? now;
+    update.agreement_signed_at = now;
+  }
   const { error } = await admin.from("intermediary_training_exam_assignments").update(update).eq("application_id", applicationId);
   if (error) redirect(`${applicationPath(applicationId)}?stage=review&error=agreement_status_failed`);
 
