@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Search } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { requirePospMispManager } from "@/lib/master-data-server";
@@ -7,14 +8,233 @@ import { createIntermediaryPortalLogin } from "./portal-account-actions";
 import { resendIntermediaryPortalInvite } from "./resend-portal-invite-action";
 
 export type IntermediaryType = "posp" | "misp" | "partner";
-type IntermediaryRow={id:string;intermediary_code:string|null;onboarding_id:string|null;intermediary_type:IntermediaryType;requested_type:"posp"|"misp";display_name:string;mobile:string|null;email:string|null;city:string|null;iib_status:string;compliance_status:string;account_status:string;portal_access_status:string;visibility_level:string;application_id:string|null;updated_at:string};
-type Filters={search?:string;accountStatus?:string;registrationStatus?:string;portalAccess?:string;typeFilter?:IntermediaryType|null;success?:string;error?:string};
+type IntermediaryRow = {
+  id: string;
+  intermediary_code: string | null;
+  onboarding_id: string | null;
+  intermediary_type: IntermediaryType;
+  requested_type: "posp" | "misp";
+  display_name: string;
+  mobile: string | null;
+  email: string | null;
+  city: string | null;
+  iib_status: string;
+  compliance_status: string;
+  account_status: string;
+  portal_access_status: string;
+  visibility_level: string;
+  application_id: string | null;
+  updated_at: string;
+};
+type Filters = {
+  search?: string;
+  accountStatus?: string;
+  registrationStatus?: string;
+  portalAccess?: string;
+  typeFilter?: IntermediaryType | null;
+  success?: string;
+  error?: string;
+};
 
-export async function IntermediaryRegister({selectedType,search="",accountStatus="",registrationStatus="",portalAccess="",typeFilter=null,success,error}: {selectedType:IntermediaryType|null}&Filters){
- await requirePospMispManager();const admin=createSupabaseAdminClient();const effectiveType=selectedType??typeFilter;let request=admin.from("intermediaries").select("id,intermediary_code,onboarding_id,intermediary_type,requested_type,display_name,mobile,email,city,iib_status,compliance_status,account_status,portal_access_status,visibility_level,application_id,updated_at").order("updated_at",{ascending:false}).limit(250);if(effectiveType)request=request.eq("intermediary_type",effectiveType);if(accountStatus)request=request.eq("account_status",accountStatus);if(portalAccess)request=request.eq("portal_access_status",portalAccess);if(search)request=request.or(`display_name.ilike.%${search}%,mobile.ilike.%${search}%,email.ilike.%${search}%,onboarding_id.ilike.%${search}%,intermediary_code.ilike.%${search}%`);const{data,error:loadError}=await request.returns<IntermediaryRow[]>();let rows=data??[];const appIds=rows.map(row=>row.application_id).filter((value):value is string=>Boolean(value));const{data:apps}=appIds.length?await admin.from("intermediary_onboarding_applications").select("id,registration_status").in("id",appIds).returns<Array<{id:string;registration_status:string}>>():{data:[] as Array<{id:string;registration_status:string}>};const registrationMap=new Map((apps??[]).map(item=>[item.id,item.registration_status]));if(registrationStatus)rows=rows.filter(row=>registrationMap.get(row.application_id??"")===registrationStatus);const{data:allCounts}=await admin.from("intermediaries").select("intermediary_type,account_status").returns<Array<{intermediary_type:IntermediaryType;account_status:string}>>();const count=(type:IntermediaryType)=>(allCounts??[]).filter(row=>row.intermediary_type===type).length;const active=(allCounts??[]).filter(row=>row.account_status==="active").length;const pageTitle=selectedType==="posp"?"POSP":selectedType==="misp"?"MISP":selectedType==="partner"?"Partners":"Overview";const searchAction=selectedType?`/intermediaries/${selectedType}`:"/intermediaries";const onboardingAction=selectedType==="posp"?{href:"/customers/posp-misp/new?partner_type=posp",label:"Onboard POSP"}:selectedType==="misp"?{href:"/customers/posp-misp/new?partner_type=misp",label:"Onboard MISP"}:selectedType==="partner"?{href:"/customers/posp-misp",label:"Onboard Partner"}:{href:"/customers/posp-misp",label:"Onboard Intermediary"};
- const successMessage=success==="portal_login_invited"?"Portal invitation sent.":success==="portal_invite_resent"?"A fresh portal invitation has been sent.":"Action completed.";
- return <AppShell title={`Intermediatory - ${pageTitle}`}><div className="mx-auto max-w-[1480px] space-y-4 pb-6"><section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm"><div className="flex flex-wrap items-center justify-between gap-4 bg-gradient-to-r from-[#071D49] via-[#0F2A55] to-[#163B70] px-5 py-5 text-white"><div><p className="text-[9px] font-bold uppercase tracking-[.14em] text-white/55">Intermediatory</p><h1 className="mt-1 text-xl font-semibold">{pageTitle}</h1></div><Link href={onboardingAction.href} className="rounded-xl bg-white px-4 py-2.5 text-[10.5px] font-bold text-[#0F2A55]">{onboardingAction.label}</Link></div>{!selectedType?<div className="grid gap-px bg-[#E2E8F0] sm:grid-cols-2 lg:grid-cols-4"><Metric label="POSP" value={count("posp")}/><Metric label="MISP" value={count("misp")}/><Metric label="Partners" value={count("partner")}/><Metric label="Active" value={active}/></div>:null}</section>{success?<div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10.5px] font-medium text-emerald-700">{successMessage}</div>:null}{error?<div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10.5px] font-medium text-red-700">{decodeURIComponent(error)}</div>:null}<form method="get" action={searchAction} className="grid gap-2 rounded-xl border border-[#DCE5EF] bg-white p-3 shadow-sm sm:grid-cols-2 lg:grid-cols-[1.4fr_180px_220px_170px_auto]">{!selectedType?<select name="type" defaultValue={typeFilter??""} className="h-10 rounded-lg border border-[#CBD5E1] bg-white px-3 text-[11px]"><option value="">All intermediary types</option><option value="posp">POSP</option><option value="misp">MISP</option><option value="partner">Partner</option></select>:<input name="q" defaultValue={search} placeholder="Search name, mobile, email or ID" className="h-10 rounded-lg border border-[#CBD5E1] bg-[#F8FAFC] px-3 text-[11px] outline-none"/>}{!selectedType?<input name="q" defaultValue={search} placeholder="Search name, mobile, email or ID" className="h-10 rounded-lg border border-[#CBD5E1] bg-[#F8FAFC] px-3 text-[11px] outline-none"/>:null}<select name="account_status" defaultValue={accountStatus} className="h-10 rounded-lg border border-[#CBD5E1] bg-white px-3 text-[11px]"><option value="">All account statuses</option><option value="under_onboarding">Under onboarding</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="suspended">Suspended</option><option value="terminated">Terminated</option></select><select name="registration_status" defaultValue={registrationStatus} className="h-10 rounded-lg border border-[#CBD5E1] bg-white px-3 text-[11px]"><option value="">All registration statuses</option><option value="training_pending">Training pending</option><option value="training_assigned">Training assigned</option><option value="exam_allotted">Exam allotted</option><option value="exam_passed">Exam passed</option><option value="agreement_pending">Agreement pending</option><option value="iib_submission_pending">IIB pending</option><option value="iib_registered">Registered</option></select><select name="portal_access" defaultValue={portalAccess} className="h-10 rounded-lg border border-[#CBD5E1] bg-white px-3 text-[11px]"><option value="">All portal access</option><option value="not_created">Not created</option><option value="invited">Invited</option><option value="active">Active</option><option value="disabled">Disabled</option></select><button className="h-10 rounded-lg bg-[#0F2A55] px-4 text-[10.5px] font-semibold text-white">Apply</button></form><section className="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-sm"><div className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3"><h2 className="text-[12px] font-semibold">{pageTitle} Register</h2></div>{loadError?<div className="px-4 py-12 text-center text-[11px] text-red-700">The register could not be loaded.</div>:rows.length?<div className="overflow-x-auto"><table className="w-full min-w-[1180px] text-left text-[10.5px]"><thead className="border-b bg-white text-[8.5px] uppercase tracking-[.05em] text-[#64748B]"><tr><th className="px-4 py-3">Name</th>{!selectedType?<th className="px-3 py-3">Type</th>:null}<th className="px-3 py-3">Contact</th><th className="px-3 py-3">Registration</th><th className="px-3 py-3">Account</th><th className="px-3 py-3">Portal</th><th className="px-4 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-[#EEF2F6]">{rows.map(row=>{const reg=registrationMap.get(row.application_id??"")??"-";const eligible=row.intermediary_type!=="partner"&&row.portal_access_status==="not_created"&&["training_pending","training_assigned","training_in_progress","training_completed","exam_pending","exam_allotted","exam_in_progress","exam_failed","exam_passed","agreement_pending","agreement_sent","agreement_signed","iib_submission_pending","iib_submitted","iib_registered"].includes(reg);const canResend=row.intermediary_type!=="partner"&&row.portal_access_status==="invited";return <tr key={row.id} className="hover:bg-[#FAFCFF]"><td className="px-4 py-3"><p className="font-semibold text-[#0F172A]">{row.display_name}</p><p className="mt-0.5 text-[8.5px] text-[#64748B]">{row.onboarding_id??row.intermediary_code??"ID pending"}</p></td>{!selectedType?<td className="px-3 py-3"><TypePill type={row.intermediary_type}/></td>:null}<td className="px-3 py-3"><p>{row.mobile??"-"}</p><p className="text-[8.5px] text-[#64748B]">{row.email??row.city??"-"}</p></td><td className="px-3 py-3"><Status value={reg}/></td><td className="px-3 py-3"><Status value={row.account_status}/></td><td className="px-3 py-3"><Status value={row.portal_access_status}/></td><td className="px-4 py-3"><div className="flex justify-end gap-2">{row.application_id?<Link href={`/intermediaries/applications/${row.application_id}`} className="rounded-lg border border-[#C7D2FE] bg-[#EEF2FF] px-3 py-1.5 text-[9px] font-semibold text-[#4338CA]">Open</Link>:null}{eligible?<form action={createIntermediaryPortalLogin}><input type="hidden" name="intermediary_id" value={row.id}/><input type="hidden" name="return_path" value={searchAction}/><FormSubmitButton label="Create portal login" pendingLabel="Sending invite" className="rounded-lg bg-[#0F2A55] px-3 py-1.5 text-[9px] font-semibold text-white"/></form>:null}{canResend?<form action={resendIntermediaryPortalInvite}><input type="hidden" name="intermediary_id" value={row.id}/><input type="hidden" name="return_path" value={searchAction}/><FormSubmitButton label="Resend invite" pendingLabel="Sending again" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-[9px] font-semibold text-amber-800"/></form>:null}</div></td></tr>})}</tbody></table></div>:<div className="px-4 py-16 text-center"><p className="text-[12px] font-semibold">No records found</p></div>}</section></div></AppShell>;
+export async function IntermediaryRegister({
+  selectedType,
+  search = "",
+  accountStatus = "",
+  registrationStatus = "",
+  portalAccess = "",
+  typeFilter = null,
+  success,
+  error,
+}: { selectedType: IntermediaryType | null } & Filters) {
+  await requirePospMispManager();
+  const admin = createSupabaseAdminClient();
+  const effectiveType = selectedType ?? typeFilter;
+
+  let request = admin
+    .from("intermediaries")
+    .select("id,intermediary_code,onboarding_id,intermediary_type,requested_type,display_name,mobile,email,city,iib_status,compliance_status,account_status,portal_access_status,visibility_level,application_id,updated_at")
+    .order("updated_at", { ascending: false })
+    .limit(250);
+
+  if (effectiveType) request = request.eq("intermediary_type", effectiveType);
+  if (accountStatus) request = request.eq("account_status", accountStatus);
+  if (portalAccess) request = request.eq("portal_access_status", portalAccess);
+  if (search) {
+    request = request.or(
+      `display_name.ilike.%${search}%,mobile.ilike.%${search}%,email.ilike.%${search}%,onboarding_id.ilike.%${search}%,intermediary_code.ilike.%${search}%`,
+    );
+  }
+
+  const { data, error: loadError } = await request.returns<IntermediaryRow[]>();
+  let rows = data ?? [];
+  const appIds = rows.map((row) => row.application_id).filter((value): value is string => Boolean(value));
+  const { data: apps } = appIds.length
+    ? await admin
+        .from("intermediary_onboarding_applications")
+        .select("id,registration_status")
+        .in("id", appIds)
+        .returns<Array<{ id: string; registration_status: string }>>()
+    : { data: [] as Array<{ id: string; registration_status: string }> };
+
+  const registrationMap = new Map((apps ?? []).map((item) => [item.id, item.registration_status]));
+  if (registrationStatus) rows = rows.filter((row) => registrationMap.get(row.application_id ?? "") === registrationStatus);
+
+  const { data: allCounts } = await admin
+    .from("intermediaries")
+    .select("intermediary_type,account_status")
+    .returns<Array<{ intermediary_type: IntermediaryType; account_status: string }>>();
+
+  const count = (type: IntermediaryType) => (allCounts ?? []).filter((row) => row.intermediary_type === type).length;
+  const active = (allCounts ?? []).filter((row) => row.account_status === "active").length;
+  const pageTitle = selectedType === "posp" ? "POSP" : selectedType === "misp" ? "MISP" : selectedType === "partner" ? "Partners" : "Overview";
+  const searchAction = selectedType ? `/intermediaries/${selectedType}` : "/intermediaries";
+  const onboardingAction = selectedType === "posp"
+    ? { href: "/customers/posp-misp/new?partner_type=posp", label: "Onboard POSP" }
+    : selectedType === "misp"
+      ? { href: "/customers/posp-misp/new?partner_type=misp", label: "Onboard MISP" }
+      : selectedType === "partner"
+        ? { href: "/customers/posp-misp", label: "Onboard Partner" }
+        : { href: "/customers/posp-misp", label: "Onboard Intermediary" };
+  const successMessage = success === "portal_login_invited"
+    ? "Portal invitation sent."
+    : success === "portal_invite_resent"
+      ? "A fresh portal invitation has been sent."
+      : "Action completed.";
+  const activeMetric = typeFilter ?? (accountStatus === "active" ? "active" : null);
+
+  return (
+    <AppShell title={`Intermediatory - ${pageTitle}`}>
+      <div className="mx-auto max-w-[1480px] space-y-4 pb-6">
+        <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4 bg-gradient-to-r from-[#071D49] via-[#0F2A55] to-[#163B70] px-5 py-5 text-white">
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-[.14em] text-white/55">Intermediatory</p>
+              <h1 className="mt-1 text-xl font-semibold">{pageTitle}</h1>
+            </div>
+            <Link href={onboardingAction.href} className="rounded-xl bg-white px-4 py-2.5 text-[10.5px] font-bold text-[#0F2A55]">
+              {onboardingAction.label}
+            </Link>
+          </div>
+
+          {!selectedType ? (
+            <div className="grid gap-px bg-[#E2E8F0] sm:grid-cols-2 lg:grid-cols-4">
+              <MetricFilter label="POSP" value={count("posp")} href={metricHref("posp", search, activeMetric)} active={activeMetric === "posp"} />
+              <MetricFilter label="MISP" value={count("misp")} href={metricHref("misp", search, activeMetric)} active={activeMetric === "misp"} />
+              <MetricFilter label="Partners" value={count("partner")} href={metricHref("partner", search, activeMetric)} active={activeMetric === "partner"} />
+              <MetricFilter label="Active" value={active} href={metricHref("active", search, activeMetric)} active={activeMetric === "active"} />
+            </div>
+          ) : null}
+        </section>
+
+        {success ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10.5px] font-medium text-emerald-700">{successMessage}</div> : null}
+        {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10.5px] font-medium text-red-700">{decodeURIComponent(error)}</div> : null}
+
+        <form method="get" action={searchAction} className="relative rounded-xl border border-[#DCE5EF] bg-white p-3 shadow-sm">
+          {!selectedType && typeFilter ? <input type="hidden" name="type" value={typeFilter} /> : null}
+          {!selectedType && accountStatus === "active" ? <input type="hidden" name="account_status" value="active" /> : null}
+          <Search className="pointer-events-none absolute left-6 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />
+          <input
+            name="q"
+            defaultValue={search}
+            placeholder="Search name, mobile, email or ID"
+            aria-label="Search intermediaries"
+            className="h-11 w-full rounded-xl border border-[#CBD5E1] bg-[#F8FAFC] pl-10 pr-4 text-[11.5px] outline-none transition focus:border-[#635BFF] focus:bg-white focus:ring-2 focus:ring-[#E7E5FF]"
+          />
+        </form>
+
+        <section className="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3">
+            <h2 className="text-[12px] font-semibold">{pageTitle} Register</h2>
+            {activeMetric ? <Link href={search ? `/intermediaries?q=${encodeURIComponent(search)}` : "/intermediaries"} className="text-[9.5px] font-semibold text-[#635BFF]">Show all</Link> : null}
+          </div>
+          {loadError ? (
+            <div className="px-4 py-12 text-center text-[11px] text-red-700">The register could not be loaded.</div>
+          ) : rows.length ? (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1180px] text-left text-[10.5px]">
+                <thead className="border-b bg-white text-[8.5px] uppercase tracking-[.05em] text-[#64748B]">
+                  <tr>
+                    <th className="px-4 py-3">Name</th>
+                    {!selectedType ? <th className="px-3 py-3">Type</th> : null}
+                    <th className="px-3 py-3">Contact</th>
+                    <th className="px-3 py-3">Registration</th>
+                    <th className="px-3 py-3">Account</th>
+                    <th className="px-3 py-3">Portal</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EEF2F6]">
+                  {rows.map((row) => {
+                    const reg = registrationMap.get(row.application_id ?? "") ?? "-";
+                    const eligible = row.intermediary_type !== "partner" && row.portal_access_status === "not_created" && [
+                      "training_pending", "training_assigned", "training_in_progress", "training_completed", "exam_pending", "exam_allotted", "exam_in_progress", "exam_failed", "exam_passed", "agreement_pending", "agreement_sent", "agreement_signed", "iib_submission_pending", "iib_submitted", "iib_registered",
+                    ].includes(reg);
+                    const canResend = row.intermediary_type !== "partner" && row.portal_access_status === "invited";
+                    return (
+                      <tr key={row.id} className="hover:bg-[#FAFCFF]">
+                        <td className="px-4 py-3">
+                          <p className="font-semibold text-[#0F172A]">{row.display_name}</p>
+                          <p className="mt-0.5 text-[8.5px] text-[#64748B]">{row.onboarding_id ?? row.intermediary_code ?? "ID pending"}</p>
+                        </td>
+                        {!selectedType ? <td className="px-3 py-3"><TypePill type={row.intermediary_type} /></td> : null}
+                        <td className="px-3 py-3"><p>{row.mobile ?? "-"}</p><p className="text-[8.5px] text-[#64748B]">{row.email ?? row.city ?? "-"}</p></td>
+                        <td className="px-3 py-3"><Status value={reg} /></td>
+                        <td className="px-3 py-3"><Status value={row.account_status} /></td>
+                        <td className="px-3 py-3"><Status value={row.portal_access_status} /></td>
+                        <td className="px-4 py-3">
+                          <div className="flex justify-end gap-2">
+                            {row.application_id ? <Link href={`/intermediaries/applications/${row.application_id}`} className="rounded-lg border border-[#C7D2FE] bg-[#EEF2FF] px-3 py-1.5 text-[9px] font-semibold text-[#4338CA]">Open</Link> : null}
+                            {eligible ? <form action={createIntermediaryPortalLogin}><input type="hidden" name="intermediary_id" value={row.id} /><input type="hidden" name="return_path" value={searchAction} /><FormSubmitButton label="Create portal login" pendingLabel="Sending invite" className="rounded-lg bg-[#0F2A55] px-3 py-1.5 text-[9px] font-semibold text-white" /></form> : null}
+                            {canResend ? <form action={resendIntermediaryPortalInvite}><input type="hidden" name="intermediary_id" value={row.id} /><input type="hidden" name="return_path" value={searchAction} /><FormSubmitButton label="Resend invite" pendingLabel="Sending again" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-[9px] font-semibold text-amber-800" /></form> : null}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="px-4 py-16 text-center"><p className="text-[12px] font-semibold">No records found</p></div>
+          )}
+        </section>
+      </div>
+    </AppShell>
+  );
 }
-function Metric({label,value}:{label:string;value:number}){return <div className="bg-white px-4 py-3"><p className="text-[9px] font-semibold uppercase tracking-[.06em] text-[#64748B]">{label}</p><p className="mt-1 text-xl font-semibold text-[#071D49]">{value}</p></div>}
-function TypePill({type}:{type:IntermediaryType}){const label=type==="partner"?"Partner":type.toUpperCase();return <span className="rounded-full bg-slate-100 px-2 py-1 text-[8.5px] font-bold text-slate-700">{label}</span>}
-function Status({value}:{value:string}){return <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-[8.5px] font-semibold capitalize text-slate-700">{value.replaceAll("_"," ")}</span>}
+
+function MetricFilter({ label, value, href, active }: { label: string; value: number; href: string; active: boolean }) {
+  return (
+    <Link
+      href={href}
+      aria-pressed={active}
+      className={`group relative bg-white px-4 py-3 transition hover:z-10 hover:-translate-y-0.5 hover:bg-[#F8F7FF] hover:shadow-[0_12px_28px_rgba(63,56,150,0.12)] ${active ? "z-10 bg-gradient-to-br from-[#EEF2FF] to-[#E8FBFA] shadow-[inset_0_-3px_0_#635BFF]" : ""}`}
+    >
+      <p className={`text-[9px] font-semibold uppercase tracking-[.06em] ${active ? "text-[#4F46E5]" : "text-[#64748B]"}`}>{label}</p>
+      <div className="mt-1 flex items-end justify-between gap-3">
+        <p className="text-xl font-semibold text-[#071D49]">{value}</p>
+        <span className={`text-[8.5px] font-semibold transition group-hover:translate-x-0.5 ${active ? "text-[#4F46E5]" : "text-[#94A3B8]"}`}>{active ? "Selected" : "Filter →"}</span>
+      </div>
+    </Link>
+  );
+}
+
+function metricHref(metric: IntermediaryType | "active", search: string, activeMetric: IntermediaryType | "active" | null) {
+  const params = new URLSearchParams();
+  if (search) params.set("q", search);
+  if (activeMetric !== metric) {
+    if (metric === "active") params.set("account_status", "active");
+    else params.set("type", metric);
+  }
+  const query = params.toString();
+  return `/intermediaries${query ? `?${query}` : ""}`;
+}
+
+function TypePill({ type }: { type: IntermediaryType }) {
+  const label = type === "partner" ? "Partner" : type.toUpperCase();
+  return <span className="rounded-full bg-slate-100 px-2 py-1 text-[8.5px] font-bold text-slate-700">{label}</span>;
+}
+
+function Status({ value }: { value: string }) {
+  return <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-[8.5px] font-semibold capitalize text-slate-700">{value.replaceAll("_", " ")}</span>;
+}
