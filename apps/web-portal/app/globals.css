@@ -256,6 +256,35 @@ summary:active {
   animation: insureit-float 7s ease-in-out infinite;
 }
 
+/* Full-viewport bulk POSP/MISP import row editor. */
+[role="dialog"][aria-modal="true"].z-\[130\] {
+  display: block !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  background: #f4f7fb !important;
+  backdrop-filter: none !important;
+}
+
+[role="dialog"][aria-modal="true"].z-\[130\] > div {
+  display: flex !important;
+  width: 100vw !important;
+  max-width: none !important;
+  min-height: 100vh !important;
+  height: 100dvh !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+[role="dialog"][aria-modal="true"].z-\[130\] > div > form {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     scroll-behavior: auto !important;
