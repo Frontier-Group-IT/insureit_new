@@ -10,11 +10,19 @@ const elements = {
   start: document.getElementById("start"),
   pause: document.getElementById("pause"),
   stop: document.getElementById("stop"),
+  focusIib: document.getElementById("focus-iib"),
+  reconnectIib: document.getElementById("reconnect-iib"),
+  restartIib: document.getElementById("restart-iib"),
+  exportDiagnostics: document.getElementById("export-diagnostics"),
   status: document.getElementById("runtime-status"),
   dot: document.getElementById("status-dot"),
   processed: document.getElementById("processed"),
   queued: document.getElementById("queued"),
   currentPan: document.getElementById("current-pan"),
+  controllerState: document.getElementById("controller-state"),
+  pageType: document.getElementById("page-type"),
+  currentAttempt: document.getElementById("current-attempt"),
+  lastError: document.getElementById("last-error"),
   message: document.getElementById("message")
 };
 
@@ -29,6 +37,10 @@ elements.form.addEventListener("submit", saveSettings);
 elements.start.addEventListener("click", startOrCheckNow);
 elements.pause.addEventListener("click", togglePause);
 elements.stop.addEventListener("click", stop);
+elements.focusIib.addEventListener("click", () => runCommand("FOCUS_IIB", "Focusing the managed IIB tab..."));
+elements.reconnectIib.addEventListener("click", () => runCommand("RECONNECT_IIB", "Reconnecting to the IIB portal..."));
+elements.restartIib.addEventListener("click", () => runCommand("RESTART_IIB", "Restarting the managed IIB tab..."));
+elements.exportDiagnostics.addEventListener("click", exportDiagnostics);
 
 async function load() {
   const response = await chrome.runtime.sendMessage({ type: "GET_ALL_STATE" });
@@ -39,7 +51,7 @@ async function load() {
   elements.iibUserId.value = config.iibUserId || "POS.1156BR";
   elements.iibPassword.value = config.iibPassword || "";
   elements.deviceName.value = config.deviceName || "N.M. PAN Checker";
-  elements.batchSize.value = config.batchSize || 20;
+  elements.batchSize.value = config.batchSize || 3;
   renderRuntime(response.runtime || {});
   if (!config.insureitUrl || !config.workerKey || !config.iibPassword) elements.panel.open = true;
 }
@@ -65,38 +77,16 @@ async function saveSettings(event) {
 async function startOrCheckNow() {
   const running = Boolean(currentRuntime?.running);
   setBusy(true, running);
-  showMessage(running ? "Checking InsureIt and resuming queued PANs..." : "Starting PAN checker...");
+  showMessage(running ? "Checking the managed IIB tab and queued PANs..." : "Starting the hardened PAN checker...");
   const response = await chrome.runtime.sendMessage({ type: running ? "CHECK_NOW" : "START" });
   setBusy(false, running);
   if (!response?.ok) {
-    elements.panel.open = true;
-    return showMessage(response?.error || "Could not check for PAN work.", true);
+    if (!currentRuntime?.running) elements.panel.open = true;
+    return showMessage(response?.error || "Could not start the PAN checker.", true);
   }
-
   const latest = await chrome.runtime.sendMessage({ type: "GET_RUNTIME" });
   if (latest?.ok) renderRuntime(latest);
-  const available = Array.isArray(latest?.queue) ? latest.queue.length : 0;
-
-  if (available > 0 && !latest?.currentPan) {
-    await wakeIibTabForQueuedWork();
-    return showMessage(`${available} PAN job(s) ready. The IIB POS tab was restarted to resume checking.`, false, true);
-  }
-  if (available > 0) {
-    return showMessage(`${available} PAN job(s) are ready or currently being processed.`, false, true);
-  }
-  showMessage(response.jobs ? `${response.jobs} PAN job(s) claimed.` : "No PAN work is waiting right now.", false, true);
-}
-
-async function wakeIibTabForQueuedWork() {
-  const tabs = await chrome.tabs.query({ url: "https://pos.iib.gov.in/*" });
-  if (tabs.length && tabs[0].id) {
-    try {
-      await chrome.tabs.update(tabs[0].id, { active: true });
-      await chrome.tabs.reload(tabs[0].id, { bypassCache: true });
-      return;
-    } catch (_) {}
-  }
-  await chrome.tabs.create({ url: "https://pos.iib.gov.in/", active: true });
+  showMessage(latest?.status || "PAN checker is running.", false, true);
 }
 
 async function togglePause() {
@@ -114,6 +104,22 @@ async function stop() {
   showMessage("PAN checker stopped.");
 }
 
+async function runCommand(type, pendingMessage) {
+  showMessage(pendingMessage);
+  const response = await chrome.runtime.sendMessage({ type });
+  if (!response?.ok) return showMessage(response?.error || "The requested recovery action failed.", true);
+  const latest = await chrome.runtime.sendMessage({ type: "GET_RUNTIME" });
+  if (latest?.ok) renderRuntime(latest);
+  showMessage(latest?.status || "Recovery action completed.", false, true);
+}
+
+async function exportDiagnostics() {
+  showMessage("Preparing diagnostics...");
+  const response = await chrome.runtime.sendMessage({ type: "EXPORT_DIAGNOSTICS" });
+  if (!response?.ok) return showMessage(response?.error || "Diagnostics could not be exported.", true);
+  showMessage("Diagnostics export started.", false, true);
+}
+
 function renderRuntime(runtime) {
   currentRuntime = runtime || {};
   const running = Boolean(runtime?.running);
@@ -122,12 +128,20 @@ function renderRuntime(runtime) {
   elements.processed.textContent = runtime?.processed || 0;
   elements.queued.textContent = Array.isArray(runtime?.queue) ? runtime.queue.length : 0;
   elements.currentPan.textContent = runtime?.currentPan || "—";
-  elements.dot.style.background = paused ? "#f5b942" : running ? "#35d07f" : "#94a3b8";
+  elements.controllerState.textContent = runtime?.state || "STOPPED";
+  elements.pageType.textContent = humanize(runtime?.lastPageType || "unknown");
+  elements.currentAttempt.textContent = runtime?.currentAttempt ? `${runtime.currentAttempt} / 3` : "—";
+  elements.lastError.textContent = runtime?.lastError || "";
+  elements.lastError.style.display = runtime?.lastError ? "block" : "none";
+  elements.dot.style.background = runtime?.lastError ? "#ef4444" : paused ? "#f5b942" : running ? "#35d07f" : "#94a3b8";
   elements.start.disabled = false;
   elements.start.textContent = running ? "Check now" : "Start checking";
   elements.pause.disabled = !running;
   elements.pause.textContent = paused ? "Resume" : "Pause";
   elements.stop.disabled = !running;
+  elements.focusIib.disabled = false;
+  elements.reconnectIib.disabled = false;
+  elements.restartIib.disabled = false;
 }
 
 function setBusy(busy, running) {
@@ -138,4 +152,8 @@ function setBusy(busy, running) {
 function showMessage(text, error = false, success = false) {
   elements.message.textContent = text || "";
   elements.message.className = `message${error ? " error" : success ? " success" : ""}`;
+}
+
+function humanize(value) {
+  return String(value || "unknown").replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
