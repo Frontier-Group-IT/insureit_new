@@ -12,7 +12,8 @@ export const protectedPortalRoots = [
   "/users",
   "/notifications",
   "/settings",
-  "/claim-documents"
+  "/claim-documents",
+  "/intermediary-portal"
 ] as const;
 
 export function isProtectedPortalPath(pathname: string) {
