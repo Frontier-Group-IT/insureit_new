@@ -15,6 +15,7 @@ export const appRoles = [
   "sales_manager",
   "agent",
   "customer",
+  "intermediary",
   "it_super_user"
 ] as const;
 
@@ -88,6 +89,7 @@ export const roleLabels: Record<AppRole, string> = {
   sales_manager: "Sales Manager",
   agent: "Agent",
   customer: "Customer",
+  intermediary: "Intermediary",
   it_super_user: "IT Super User"
 };
 
@@ -117,6 +119,10 @@ export function isAppRole(role: string | null | undefined): role is AppRole {
 
 export function isPortalRole(role: string | null | undefined): role is AppRole {
   return Boolean(role && isAppRole(role) && portalRoles.includes(role));
+}
+
+export function isIntermediaryRole(role: string | null | undefined) {
+  return role === "intermediary";
 }
 
 export function canManageUsers(role: string | null | undefined) {
