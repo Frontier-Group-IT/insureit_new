@@ -32,11 +32,11 @@ export async function ClaimManagerShell({ title, backHref = "/dashboard", childr
               <MobileNavigation />
               <div className="hidden sm:block"><HistoryBackButton fallbackHref={backHref} /></div>
               <div className="hidden h-7 w-px bg-gradient-to-b from-transparent via-[#ccd4e2] to-transparent sm:block" />
-              <div className="min-w-0"><h1 className="truncate font-[var(--font-display)] text-[17px] font-semibold tracking-[-0.035em] text-[#12203B] sm:text-[18px]">{title}</h1></div>
+              <div className="min-w-0"><h1 className="truncate font-[var(--font-display)] text-[15px] font-semibold tracking-[-0.035em] text-[#12203B] sm:text-[18px]">{title}</h1></div>
             </div>
 
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-              <Link href="/customers/posp-misp" className="hidden h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-[#6759ff] to-[#17bfc5] px-3.5 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(103,89,255,.24)] hover:-translate-y-0.5 md:inline-flex"><Sparkles className="h-3.5 w-3.5" /> Quick onboard</Link>
+              <Link href="/customers/posp-misp" aria-label="Quick onboard" title="Quick onboard" className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6759ff] to-[#17bfc5] px-2.5 text-[10px] font-bold text-white shadow-[0_10px_24px_rgba(103,89,255,.24)] hover:-translate-y-0.5 sm:px-3.5 sm:text-[11px]"><Sparkles className="h-3.5 w-3.5" /><span className="hidden sm:inline">Quick onboard</span><span className="sm:hidden">Onboard</span></Link>
 
               <Link href="/notifications" aria-label="Notifications" className="relative grid h-11 w-11 place-items-center rounded-2xl border border-[#dbe2ec] bg-white/92 text-[#263956] shadow-[0_8px_24px_rgba(28,39,68,.06)] hover:border-[#c9c2ff] hover:text-[#6759ff]">
                 <Bell className="h-[18px] w-[18px]" />
