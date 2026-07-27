@@ -3,41 +3,38 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requirePospMispManager } from "@/lib/master-data-server";
-import { decryptSensitiveValue } from "@/lib/sensitive-data";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const applicationPath = (id: string) => `/intermediaries/applications/${id}`;
+const NAME = /^[A-Za-z ]+$/;
+const PAN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 
 type ApplicationRow = { id:string; final_type:"posp"|"misp"|"partner"|null; registration_status:string };
 type ProfileRow = {
   partner_type:"posp"|"misp";
-  pos_name:string|null; misp_name:string|null; applicant_phone:string|null; applicant_email:string|null;
-  date_of_birth:string|null; pan_number:string|null; aadhaar_number_encrypted:string|null;
-  address:string|null; city:string|null; state:string|null; postal_code:string|null;
-  dp_name:string|null; dp_phone:string|null; dp_email:string|null; dp_pan_number:string|null;
-  dp_date_of_birth:string|null; dp_aadhaar_number_encrypted:string|null;
+  external_onboarding_id:string|null;
+  pos_name:string|null; pos_first_name:string|null; pos_middle_name:string|null; pos_last_name:string|null;
+  misp_name:string|null;
+  applicant_phone:string|null; applicant_email:string|null; date_of_birth:string|null; pan_number:string|null;
+  city:string|null; postal_code:string|null;
+  dp_first_name:string|null; dp_middle_name:string|null; dp_last_name:string|null;
+  dp_phone:string|null; dp_email:string|null; dp_pan_number:string|null; dp_date_of_birth:string|null;
 };
-type AssignmentRow = {
-  training_status:string|null; training_completed_at:string|null;
-  exam_status:string|null; exam_score:number|null; exam_completed_at:string|null;
-  agreement_status:string|null; agreement_signed_at:string|null;
-};
-type DocumentRow = {
-  document_type:string; file_name:string; storage_bucket:string; storage_path:string; verification_status:string;
-};
-type IdentityPayload = {
-  name:string|null; mobile:string|null; email:string|null; pan:string|null; date_of_birth:string|null; aadhaar:string|null;
-};
-type IibPayload = {
-  application_id:string;
-  intermediary_type:"posp"|"misp";
-  identity:IdentityPayload;
-  address:{line:string|null;city:string|null;state:string|null;postal_code:string|null};
-  qualification:{
-    training_status:string|null; training_completed_at:string|null; exam_status:string|null; exam_score:number|null;
-    exam_completed_at:string|null; agreement_status:string|null; agreement_signed_at:string|null;
-  };
-  documents:Array<{type:string;file_name:string;bucket:string;path:string;verification_status:string}>;
+type AssignmentRow = { training_status:string; exam_status:string; agreement_status:string };
+type DocumentRow = { document_type:string; file_name:string; storage_bucket:string; storage_path:string; verification_status:string };
+type PortalPayload = {
+  PAN:string;
+  PoSPFName:string;
+  PoSPMName:string;
+  PoSPLName:string;
+  DoB:string;
+  City:string;
+  Pin:string;
+  AppointmentDate:string;
+  EMail:string;
+  Mobile:string;
+  Status:"Y";
+  InternalPOSCode:string;
 };
 
 export async function prepareIntermediaryIibPayload(formData: FormData) {
@@ -48,8 +45,8 @@ export async function prepareIntermediaryIibPayload(formData: FormData) {
   const admin = createSupabaseAdminClient();
   const [{ data: application }, { data: profile }, { data: assignment }, { data: intermediary }, { data: documents }] = await Promise.all([
     admin.from("intermediary_onboarding_applications").select("id,final_type,registration_status").eq("id", applicationId).maybeSingle<ApplicationRow>(),
-    admin.from("posp_misp_onboarding_profiles").select("partner_type,pos_name,misp_name,applicant_phone,applicant_email,date_of_birth,pan_number,aadhaar_number_encrypted,address,city,state,postal_code,dp_name,dp_phone,dp_email,dp_pan_number,dp_date_of_birth,dp_aadhaar_number_encrypted").eq("application_id", applicationId).maybeSingle<ProfileRow>(),
-    admin.from("intermediary_training_exam_assignments").select("training_status,training_completed_at,exam_status,exam_score,exam_completed_at,agreement_status,agreement_signed_at").eq("application_id", applicationId).maybeSingle<AssignmentRow>(),
+    admin.from("posp_misp_onboarding_profiles").select("partner_type,external_onboarding_id,pos_name,pos_first_name,pos_middle_name,pos_last_name,misp_name,applicant_phone,applicant_email,date_of_birth,pan_number,city,postal_code,dp_first_name,dp_middle_name,dp_last_name,dp_phone,dp_email,dp_pan_number,dp_date_of_birth").eq("application_id", applicationId).maybeSingle<ProfileRow>(),
+    admin.from("intermediary_training_exam_assignments").select("training_status,exam_status,agreement_status").eq("application_id", applicationId).maybeSingle<AssignmentRow>(),
     admin.from("intermediaries").select("id").eq("application_id", applicationId).maybeSingle<{id:string}>(),
     admin.from("intermediary_onboarding_documents").select("document_type,file_name,storage_bucket,storage_path,verification_status").eq("application_id", applicationId).returns<DocumentRow[]>()
   ]);
@@ -58,42 +55,54 @@ export async function prepareIntermediaryIibPayload(formData: FormData) {
   if (assignment?.agreement_status !== "signed") redirect(`${applicationPath(applicationId)}?stage=review&error=iib_agreement_required`);
 
   const type = (application.final_type ?? profile.partner_type) as "posp"|"misp";
-  const identity: IdentityPayload = type === "misp" ? {
-    name: profile.dp_name,
-    mobile: profile.dp_phone,
-    email: profile.dp_email,
-    pan: profile.dp_pan_number,
-    date_of_birth: profile.dp_date_of_birth,
-    aadhaar: decryptSensitiveValue(profile.dp_aadhaar_number_encrypted)
-  } : {
-    name: profile.pos_name,
-    mobile: profile.applicant_phone,
-    email: profile.applicant_email,
-    pan: profile.pan_number,
-    date_of_birth: profile.date_of_birth,
-    aadhaar: decryptSensitiveValue(profile.aadhaar_number_encrypted)
+  const fallbackPosName = splitName(profile.pos_name);
+  const firstName = cleanName(type === "misp" ? profile.dp_first_name : profile.pos_first_name ?? fallbackPosName.first);
+  const middleName = cleanName(type === "misp" ? profile.dp_middle_name : profile.pos_middle_name ?? fallbackPosName.middle);
+  const lastName = cleanName(type === "misp" ? profile.dp_last_name : profile.pos_last_name ?? fallbackPosName.last);
+  const pan = compactPan(type === "misp" ? profile.dp_pan_number : profile.pan_number);
+  const dob = formatPortalDate(type === "misp" ? profile.dp_date_of_birth : profile.date_of_birth);
+  const email = (type === "misp" ? profile.dp_email : profile.applicant_email)?.trim().toLowerCase() ?? "";
+  const mobile = tenDigitMobile(type === "misp" ? profile.dp_phone : profile.applicant_phone);
+  const city = profile.city?.trim() ?? "";
+  const pin = profile.postal_code?.replace(/\D/g, "") ?? "";
+  const internalPosCode = profile.external_onboarding_id?.trim() ?? "";
+
+  const portalPayload: PortalPayload = {
+    PAN: pan,
+    PoSPFName: firstName,
+    PoSPMName: middleName,
+    PoSPLName: lastName,
+    DoB: dob,
+    City: city,
+    Pin: pin,
+    AppointmentDate: formatPortalDate(new Date().toISOString()),
+    EMail: email,
+    Mobile: mobile,
+    Status: "Y",
+    InternalPOSCode: internalPosCode
   };
 
-  const payload: IibPayload = {
-    application_id: applicationId,
+  const required: Array<[string, string, boolean]> = [
+    ["PAN", portalPayload.PAN, PAN.test(portalPayload.PAN)],
+    ["First name", portalPayload.PoSPFName, Boolean(portalPayload.PoSPFName && NAME.test(portalPayload.PoSPFName))],
+    ["Last name", portalPayload.PoSPLName, Boolean(portalPayload.PoSPLName && NAME.test(portalPayload.PoSPLName))],
+    ["Date of birth", portalPayload.DoB, Boolean(portalPayload.DoB)],
+    ["City", portalPayload.City, Boolean(portalPayload.City)],
+    ["PIN", portalPayload.Pin, /^[0-9]{6}$/.test(portalPayload.Pin)],
+    ["Email", portalPayload.EMail, /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(portalPayload.EMail)],
+    ["Mobile", portalPayload.Mobile, /^[6-9][0-9]{9}$/.test(portalPayload.Mobile)],
+    ["Internal POS code", portalPayload.InternalPOSCode, Boolean(portalPayload.InternalPOSCode)]
+  ];
+  const missingFields = required.filter(([, , valid]) => !valid).map(([label]) => label);
+  if (portalPayload.PoSPMName && !NAME.test(portalPayload.PoSPMName)) missingFields.push("Middle name");
+  if (assignment?.training_status !== "completed") missingFields.push("Training completion");
+  if (assignment?.exam_status !== "passed") missingFields.push("Passed examination");
+  if (!(documents ?? []).length) missingFields.push("Documents");
+
+  const payload = {
+    portal_fields: portalPayload,
     intermediary_type: type,
-    identity,
-    address: {
-      line: profile.address,
-      city: profile.city,
-      state: profile.state,
-      postal_code: profile.postal_code
-    },
-    qualification: {
-      training_status: assignment?.training_status ?? null,
-      training_completed_at: assignment?.training_completed_at ?? null,
-      exam_status: assignment?.exam_status ?? null,
-      exam_score: assignment?.exam_score ?? null,
-      exam_completed_at: assignment?.exam_completed_at ?? null,
-      agreement_status: assignment?.agreement_status ?? null,
-      agreement_signed_at: assignment?.agreement_signed_at ?? null
-    },
-    documents: (documents ?? []).map((document) => ({
+    documents: (documents ?? []).map(document => ({
       type: document.document_type,
       file_name: document.file_name,
       bucket: document.storage_bucket,
@@ -101,16 +110,6 @@ export async function prepareIntermediaryIibPayload(formData: FormData) {
       verification_status: document.verification_status
     }))
   };
-
-  const required: Array<[string, unknown]> = [
-    ["Name", identity.name], ["Mobile", identity.mobile], ["Email", identity.email], ["PAN", identity.pan],
-    ["Date of birth", identity.date_of_birth], ["Aadhaar", identity.aadhaar], ["Address", profile.address],
-    ["City", profile.city], ["State", profile.state], ["Postal code", profile.postal_code]
-  ];
-  const missingFields = required.filter(([, value]) => !value).map(([label]) => label);
-  if (assignment?.training_status !== "completed") missingFields.push("Training completion");
-  if (assignment?.exam_status !== "passed") missingFields.push("Passed examination");
-  if (!(documents ?? []).length) missingFields.push("Documents");
 
   const now = new Date().toISOString();
   const status = missingFields.length ? "draft" : "ready";
@@ -153,3 +152,8 @@ function text(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
+function compactPan(value:string|null){return value?.replace(/\s/g, "").toUpperCase() ?? ""}
+function tenDigitMobile(value:string|null){const digits=value?.replace(/\D/g, "") ?? "";return digits.length>10?digits.slice(-10):digits}
+function cleanName(value:string|null|undefined){return (value??"").trim().replace(/\s+/g," ")}
+function splitName(value:string|null){const parts=(value??"").trim().split(/\s+/).filter(Boolean);if(!parts.length)return{first:"",middle:"",last:""};if(parts.length===1)return{first:parts[0],middle:"",last:""};return{first:parts[0],middle:parts.slice(1,-1).join(" "),last:parts.at(-1)??""}}
+function formatPortalDate(value:string|null|undefined){if(!value)return"";const date=new Date(value);if(Number.isNaN(date.getTime()))return"";return new Intl.DateTimeFormat("en-GB",{day:"2-digit",month:"2-digit",year:"numeric",timeZone:"Asia/Kolkata"}).format(date)}
