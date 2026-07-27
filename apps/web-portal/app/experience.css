@@ -147,6 +147,17 @@ main :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea):
   transform: translateY(-1px);
 }
 
+main input[name="dp_pan_number"],
+main input[name="pan_number"] {
+  min-width: 0;
+  padding-left: .75rem;
+  padding-right: .75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 11px;
+  letter-spacing: .025em;
+  text-overflow: clip;
+}
+
 main input[type="checkbox"],
 main input[type="radio"] {
   accent-color: #6759ff;
