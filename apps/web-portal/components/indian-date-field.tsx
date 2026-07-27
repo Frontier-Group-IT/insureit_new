@@ -5,7 +5,7 @@ import { CalendarDays } from "lucide-react";
 import { normalizeImportedDate } from "@/lib/indian-date";
 
 type Props = {
-  label: string;
+  label?: string;
   name: string;
   defaultValue?: string | null;
   required?: boolean;
@@ -20,9 +20,11 @@ export function IndianDateField({ label, name, defaultValue, required = false, d
 
   return (
     <div>
-      <label className="mb-1 block text-[10.5px] font-semibold text-[#344054]" htmlFor={`${name}-date`}>
-        {label}{required ? " *" : ""}
-      </label>
+      {label ? (
+        <label className="mb-1 block text-[10.5px] font-semibold text-[#344054]" htmlFor={`${name}-date`}>
+          {label}{required ? " *" : ""}
+        </label>
+      ) : null}
       <div className="relative">
         <input
           id={`${name}-date`}
