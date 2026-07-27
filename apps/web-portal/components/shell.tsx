@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shell";
 
-export async function AppShell({ children, title }: { children: ReactNode; title?: string }) {
+export async function AppShell({ children, title, backHref }: { children: ReactNode; title?: string; backHref?: string }) {
   const resolvedTitle = title ?? "InsureIt";
   const normalizedTitle = resolvedTitle.toLowerCase();
 
@@ -20,7 +20,7 @@ export async function AppShell({ children, title }: { children: ReactNode; title
               : "none";
 
   return (
-    <ClaimManagerShell title={resolvedTitle} activeNav={activeNav}>
+    <ClaimManagerShell title={resolvedTitle} activeNav={activeNav} backHref={backHref}>
       <div className="ui-page-stage relative isolate space-y-4 pb-7">{children}</div>
     </ClaimManagerShell>
   );
