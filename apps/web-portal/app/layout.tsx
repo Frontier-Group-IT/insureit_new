@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Manrope, Space_Grotesk } from "next/font/google";
 import { RouteProgressBar } from "@/components/loading/route-progress-bar";
 import { SuccessPopup } from "@/components/success-popup";
+import { ProfessionalFormValidation } from "@/components/professional-form-validation";
 import "./globals.css";
 import "./experience.css";
 import "./mobile.css";
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" className={`${manrope.variable} ${spaceGrotesk.variable}`}>
       <body>
         {children}
+        <ProfessionalFormValidation />
         <SuccessPopup />
         <RouteProgressBar />
       </body>
