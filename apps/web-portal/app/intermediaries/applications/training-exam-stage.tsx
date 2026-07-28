@@ -1,5 +1,6 @@
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { CompactRegistrationForm } from "./compact-registration-form";
+import { IcallTrainingDashboard, type IcallTrainingAssignment } from "./icall-training-dashboard";
 import {
   allotIntermediaryExam,
   assignIntermediaryTraining,
@@ -8,15 +9,8 @@ import {
 } from "./training-exam-actions";
 import { sendIntermediaryAgreement, updateIntermediaryAgreementStatus } from "./agreement-actions";
 
-type Assignment = {
-  training_title: string | null;
-  training_url: string | null;
+type Assignment = IcallTrainingAssignment & {
   training_instructions: string | null;
-  training_assigned_at: string | null;
-  training_started_at: string | null;
-  training_completed_at: string | null;
-  training_deadline: string | null;
-  training_status: string;
   exam_title: string | null;
   exam_url: string | null;
   passing_percentage: number | null;
@@ -25,10 +19,7 @@ type Assignment = {
   exam_available_from: string | null;
   exam_available_until: string | null;
   exam_allotted_at: string | null;
-  exam_completed_at: string | null;
   exam_passed_at: string | null;
-  exam_status: string;
-  exam_score: number | null;
   exam_attempts_used: number;
   agreement_status: string;
   agreement_signing_url: string | null;
@@ -87,6 +78,7 @@ export function TrainingExamStage({ applicationId, profile, assignment, document
   const agreementSent = Boolean(assignment?.agreement_signing_url && ["sent", "opened", "signed"].includes(assignment?.agreement_status ?? ""));
   const agreementSigned = assignment?.agreement_status === "signed";
   const currentStep = !registrationCompleted ? 1 : !trainingCompleted ? 2 : !examPassed ? 3 : !agreementSigned ? 4 : 5;
+  const isIcall = Boolean(assignment?.icall_login_id || assignment?.training_title?.startsWith("iCall POSP"));
 
   return <div id="qualification-process" className="space-y-4 scroll-mt-24">
     <ProcessHeader currentStep={currentStep} />
@@ -95,8 +87,8 @@ export function TrainingExamStage({ applicationId, profile, assignment, document
       {registrationCompleted ? <OutcomeDetails title="Registration outcome" facts={[{ label: "Result", value: "Completed" }, { label: "Documents", value: String(documents.length) }, { label: "PAN check", value: iibVerified ? "Cleared" : "Review required" }, { label: "Completed on", value: formatDateTime(profile.document_received_at) }]}><div className="border-t border-[#E5EAF0] pt-4"><CompactRegistrationForm profile={profile} iibVerified={iibVerified} documents={documents} /></div></OutcomeDetails> : <CompactRegistrationForm profile={profile} iibVerified={iibVerified} documents={documents} />}
     </ProcessSection>
 
-    {registrationCompleted ? <ProcessSection id="training-requirement" number="2" title="Training" subtitle="Assign and track training." state={trainingCompleted ? "completed" : "current"} statusText={trainingCompleted ? "Training completed" : "Action required"}>
-      {trainingCompleted ? <OutcomeDetails title="Training outcome" facts={[{ label: "Result", value: "Completed" }, { label: "Training", value: assignment?.training_title ?? "-" }, { label: "Assigned on", value: formatDateTime(assignment?.training_assigned_at) }, { label: "Started on", value: formatDateTime(assignment?.training_started_at) }, { label: "Deadline", value: formatDateTime(assignment?.training_deadline) }, { label: "Completed on", value: formatDateTime(assignment?.training_completed_at) }]} /> : trainingAssigned ? <div className="space-y-4">
+    {registrationCompleted ? <ProcessSection id="training-requirement" number="2" title="Training" subtitle="Assign and track training." state={trainingCompleted ? "completed" : "current"} statusText={trainingCompleted ? "Training completed" : isIcall ? "Live status" : "Action required"}>
+      {trainingAssigned && isIcall && assignment ? <IcallTrainingDashboard applicationId={applicationId} assignment={assignment} /> : trainingCompleted ? <OutcomeDetails title="Training outcome" facts={[{ label: "Result", value: "Completed" }, { label: "Training", value: assignment?.training_title ?? "-" }, { label: "Assigned on", value: formatDateTime(assignment?.training_assigned_at) }, { label: "Started on", value: formatDateTime(assignment?.training_started_at) }, { label: "Deadline", value: formatDateTime(assignment?.training_deadline) }, { label: "Completed on", value: formatDateTime(assignment?.training_completed_at) }]} /> : trainingAssigned ? <div className="space-y-4">
         <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <SummaryFact label="Training" value={assignment?.training_title ?? "-"} />
           <SummaryFact label="Deadline" value={formatDateTime(assignment?.training_deadline)} />
@@ -114,8 +106,8 @@ export function TrainingExamStage({ applicationId, profile, assignment, document
       </div> : <form action={assignIntermediaryTraining} className="grid gap-3 lg:grid-cols-2"><input type="hidden" name="application_id" value={applicationId} /><Field label="Training title" name="training_title" defaultValue="POSP / MISP Training" required /><Field label="Training URL" name="training_url" type="url" placeholder="https://" required /><Field label="Deadline" name="training_deadline" type="date" /><div className="lg:col-span-2"><label className={labelClass}>Instructions</label><textarea name="training_instructions" className="min-h-24 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 py-2 text-[10.5px]" /></div><div className="lg:col-span-2"><FormSubmitButton label="Assign training" pendingLabel="Assigning" className="rounded-xl bg-[#071D49] px-5 py-2.5 text-[10px] font-semibold text-white" /></div></form>}
     </ProcessSection> : null}
 
-    {trainingCompleted ? <ProcessSection id="examination-requirement" number="3" title="Examination" subtitle="Allot and record the result." state={examPassed ? "completed" : "current"} statusText={examPassed ? "Examination passed" : examFailed ? "Examination failed" : "Action required"}>
-      {examPassed ? <OutcomeDetails title="Examination outcome" facts={examFacts(assignment)} /> : <div className="space-y-4">
+    {trainingCompleted ? <ProcessSection id="examination-requirement" number="3" title="Examination" subtitle="Allot and record the result." state={examPassed ? "completed" : "current"} statusText={examPassed ? "Examination passed" : examFailed ? "Examination failed" : isIcall ? "Synced from iCall" : "Action required"}>
+      {examPassed ? <OutcomeDetails title="Examination outcome" facts={examFacts(assignment)} /> : isIcall ? <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-[10px] text-blue-800">The examination result is controlled by iCall and will appear here after the next status sync.</div> : <div className="space-y-4">
         {examFailed ? <OutcomeDetails title="Latest examination result" facts={examFacts(assignment)} /> : null}
         {examAllotted ? <>
           <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
