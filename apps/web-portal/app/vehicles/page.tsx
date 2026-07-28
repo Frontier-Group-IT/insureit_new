@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
@@ -19,6 +20,8 @@ export const revalidate = 0;
 
 export default async function VehiclesPage() {
   const profile = await requireCapability("view_vehicles");
+  if (!profile) redirect("/access-denied");
+
   const scope = await getEmployeeAccessScope(profile.id, profile.role);
   const admin = createSupabaseAdminClient();
 
