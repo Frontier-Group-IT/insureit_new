@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { DataError } from "@/components/record-list";
 import { createServerSupabaseClient } from "@/lib/auth-server";
@@ -14,6 +15,7 @@ export const revalidate=0;
 
 export default async function PospMispPage({searchParams}:{searchParams:Promise<{q?:string;type?:string;status?:string;page?:string}>}){
  const profile=await requirePospMispManager();
+ if(!profile) redirect("/access-denied");
  const query=await searchParams; const q=query.q?.trim().slice(0,100)||null; const partnerType=query.type==="posp"||query.type==="misp"?query.type:null; const status=["submitted","under_review","changes_requested","approved","rejected"].includes(query.status??"")?query.status!:null; const page=Math.max(1,Number.parseInt(query.page??"1",10)||1);
  const accessibleIds=await getAccessibleIntermediaryApplicationIds(profile.id,profile.role);
  const scoped=accessibleIds!==null;
