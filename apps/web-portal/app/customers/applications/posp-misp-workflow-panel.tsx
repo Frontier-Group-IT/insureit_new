@@ -26,30 +26,47 @@ export async function PospMispWorkflowPanel({applicationId,profile}:{application
  const registrationStatus=application?.registration_status??"primary_pending";
  const qualificationTarget=qualificationActionTarget(assignment);
 
- return <div className="space-y-3">
-  <section className="rounded-2xl border border-[#CFE8DA] bg-gradient-to-r from-[#F4FBF7] via-white to-[#F8FAFC] px-5 py-4 shadow-sm">
-   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+ return <div className="-my-2 space-y-2">
+  <style>{`
+   nav[aria-label="Onboarding stages"] { gap: 0.375rem; padding: 0.375rem; }
+   nav[aria-label="Onboarding stages"] > a,
+   nav[aria-label="Onboarding stages"] > div { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+   nav[aria-label="Onboarding stages"]:has(a[aria-current="step"][href*="stage=review"]) > a:nth-child(-n+2) {
+    border-color: #A7F3D0;
+    background: #ECFDF5;
+    color: #047857;
+   }
+   nav[aria-label="Onboarding stages"]:has(a[aria-current="step"][href*="stage=review"]) > a:nth-child(-n+2)::before {
+    content: "✓";
+    display: inline-block;
+    margin-right: 0.3rem;
+    font-weight: 800;
+    color: #059669;
+   }
+  `}</style>
+  <section className="rounded-2xl border border-[#CFE8DA] bg-gradient-to-r from-[#F4FBF7] via-white to-[#F8FAFC] px-4 py-3 shadow-sm">
+   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div className="min-w-0">
-     <p className="text-[9px] font-semibold uppercase tracking-[.12em] text-[#64748B]">Automatic IIB status</p>
-     <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
-      <p className="text-base font-semibold tracking-[.02em] text-[#0F172A]">{maskPan(job?.status?iibPan:null)}</p>
+     <p className="text-[8.5px] font-semibold uppercase tracking-[.12em] text-[#64748B]">Automatic IIB status</p>
+     <div className="mt-1 flex flex-wrap items-center gap-2">
+      <p className="text-[15px] font-semibold tracking-[.02em] text-[#0F172A]">{maskPan(job?.status?iibPan:null)}</p>
       <StatusBadge status={job?.status??"pending"}/>
      </div>
-     <p className="mt-1.5 text-[10.5px] text-[#475569]">{jobMessage(job)}</p>
+     <p className="mt-1 text-[10px] text-[#475569]">{jobMessage(job)}</p>
     </div>
     <div className="flex shrink-0 flex-wrap items-center gap-2">
-     {stage==="pre_iib"&&job?.status==="not_found"?<form action={movePospMispToIib}><input type="hidden" name="application_id" value={applicationId}/><FormSubmitButton label="Continue to Documents" pendingLabel="Opening documents" className="rounded-lg bg-gradient-to-r from-[#6759FF] to-[#4F8DF6] px-4 py-2.5 text-[10px] font-semibold text-white"/></form>:null}
-     {stage==="pre_iib"&&job?.status==="matched"&&partnerDecision==="pending"?<><form action={decidePospMispPartnerRoute}><input type="hidden" name="application_id" value={applicationId}/><input type="hidden" name="partner_decision" value="convert_to_partner"/><FormSubmitButton label="Create as Partner" pendingLabel="Saving" className="rounded-lg bg-violet-600 px-4 py-2.5 text-[10px] font-semibold text-white"/></form><form action={decidePospMispPartnerRoute}><input type="hidden" name="application_id" value={applicationId}/><input type="hidden" name="partner_decision" value="do_not_proceed"/><FormSubmitButton label="Do Not Proceed" pendingLabel="Closing" className="rounded-lg border border-[#CBD5E1] bg-white px-4 py-2.5 text-[10px] font-semibold text-[#475569] shadow-sm hover:bg-[#F8FAFC]"/></form></>:null}
-     {stage==="pre_iib"&&partnerRoute?<form action={movePospMispToIib}><input type="hidden" name="application_id" value={applicationId}/><FormSubmitButton label="Continue to Documents" pendingLabel="Opening documents" className="rounded-lg bg-gradient-to-r from-[#6759FF] to-[#4F8DF6] px-4 py-2.5 text-[10px] font-semibold text-white"/></form>:null}
-     {stage==="pre_iib"&&(job?.status==="failed"||job?.status==="invalid")?<form action={retryPospMispPanVerification}><input type="hidden" name="application_id" value={applicationId}/><FormSubmitButton label="Retry PAN check" pendingLabel="Re-queuing" className="rounded-lg bg-[#071D49] px-4 py-2.5 text-[10px] font-semibold text-white"/></form>:null}
-     {stage==="iib_processing"?<form action={completePospMispDocumentStage}><input type="hidden" name="application_id" value={applicationId}/><FormSubmitButton label={documentCount?"Documents Complete":"Upload Documents"} pendingLabel="Completing" disabled={!documentCount} className="rounded-lg bg-gradient-to-r from-[#6759FF] to-[#4F8DF6] px-4 py-2.5 text-[10px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"/></form>:null}
-     {stage==="training"?<Link href={`/intermediaries/applications/${applicationId}?stage=review#${qualificationTarget.anchor}`} className="rounded-lg bg-gradient-to-r from-[#6759FF] to-[#4F8DF6] px-4 py-2.5 text-center text-[10px] font-semibold text-white">{qualificationTarget.label}</Link>:null}
+     {stage==="pre_iib"&&job?.status==="not_found"?<form action={movePospMispToIib}><input type="hidden" name="application_id" value={applicationId}/><FormSubmitButton label="Continue to Documents" pendingLabel="Opening documents" className="rounded-lg bg-gradient-to-r from-[#6759FF] to-[#4F8DF6] px-4 py-2 text-[10px] font-semibold text-white"/></form>:null}
+     {stage==="pre_iib"&&job?.status==="matched"&&partnerDecision==="pending"?<><form action={decidePospMispPartnerRoute}><input type="hidden" name="application_id" value={applicationId}/><input type="hidden" name="partner_decision" value="convert_to_partner"/><FormSubmitButton label="Create as Partner" pendingLabel="Saving" className="rounded-lg bg-violet-600 px-4 py-2 text-[10px] font-semibold text-white"/></form><form action={decidePospMispPartnerRoute}><input type="hidden" name="application_id" value={applicationId}/><input type="hidden" name="partner_decision" value="do_not_proceed"/><FormSubmitButton label="Do Not Proceed" pendingLabel="Closing" className="rounded-lg border border-[#CBD5E1] bg-white px-4 py-2 text-[10px] font-semibold text-[#475569] shadow-sm hover:bg-[#F8FAFC]"/></form></>:null}
+     {stage==="pre_iib"&&partnerRoute?<form action={movePospMispToIib}><input type="hidden" name="application_id" value={applicationId}/><FormSubmitButton label="Continue to Documents" pendingLabel="Opening documents" className="rounded-lg bg-gradient-to-r from-[#6759FF] to-[#4F8DF6] px-4 py-2 text-[10px] font-semibold text-white"/></form>:null}
+     {stage==="pre_iib"&&(job?.status==="failed"||job?.status==="invalid")?<form action={retryPospMispPanVerification}><input type="hidden" name="application_id" value={applicationId}/><FormSubmitButton label="Retry PAN check" pendingLabel="Re-queuing" className="rounded-lg bg-[#071D49] px-4 py-2 text-[10px] font-semibold text-white"/></form>:null}
+     {stage==="iib_processing"?<form action={completePospMispDocumentStage}><input type="hidden" name="application_id" value={applicationId}/><FormSubmitButton label={documentCount?"Documents Complete":"Upload Documents"} pendingLabel="Completing" disabled={!documentCount} className="rounded-lg bg-gradient-to-r from-[#6759FF] to-[#4F8DF6] px-4 py-2 text-[10px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"/></form>:null}
+     {stage==="training"?<Link href={`/intermediaries/applications/${applicationId}?stage=review#${qualificationTarget.anchor}`} className="rounded-lg bg-gradient-to-r from-[#6759FF] to-[#4F8DF6] px-4 py-2 text-center text-[10px] font-semibold text-white">{qualificationTarget.label}</Link>:null}
     </div>
    </div>
   </section>
 
-  {partnerRoute?<section className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-[10.5px] font-semibold text-violet-800">Business Associate route selected</section>:null}
-  {stage==="completed"?<section className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10.5px] font-semibold text-emerald-700">Onboarding completed.</section>:null}
+  {partnerRoute?<section className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-[10.5px] font-semibold text-violet-800">Business Associate route selected</section>:null}
+  {stage==="completed"?<section className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-[10.5px] font-semibold text-emerald-700">Onboarding completed.</section>:null}
   <span className="sr-only">{stageTitle(stage,registrationStatus)} · {finalType}</span>
  </div>;
 }
