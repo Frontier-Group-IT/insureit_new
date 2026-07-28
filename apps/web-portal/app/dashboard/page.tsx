@@ -21,6 +21,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shell";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
+import { getAccessibleIntermediaryApplicationIds } from "@/lib/employee-access-scope";
 import { getOperationsDashboardData, type OperationsDashboardData } from "@/lib/operations-dashboard";
 import { canManageMasterData } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -40,10 +41,21 @@ export default async function DashboardPage() {
   const { profile } = await getAuthenticatedProfile(accessToken);
   const dashboard = await getOperationsDashboardData(supabase);
   const admin = createSupabaseAdminClient();
+  const accessibleApplicationIds = profile?.id
+    ? await getAccessibleIntermediaryApplicationIds(profile.id, profile.role)
+    : [];
+  const scopedIntermediaries = accessibleApplicationIds !== null;
+
+  async function intermediaryCount(type: "posp" | "misp") {
+    if (scopedIntermediaries && !accessibleApplicationIds.length) return { count: 0, error: null };
+    let query = admin.from("intermediaries").select("id", { count: "exact", head: true }).eq("intermediary_type", type);
+    if (scopedIntermediaries) query = query.in("application_id", accessibleApplicationIds);
+    return query;
+  }
 
   const [pospResult, mispResult, kycResult, submittedKycResult, changedKycResult] = await Promise.all([
-    admin.from("intermediaries").select("id", { count: "exact", head: true }).eq("intermediary_type", "posp"),
-    admin.from("intermediaries").select("id", { count: "exact", head: true }).eq("intermediary_type", "misp"),
+    intermediaryCount("posp"),
+    intermediaryCount("misp"),
     admin.from("customer_onboarding_applications").select("id", { count: "exact", head: true }).in("status", activeKycStatuses),
     admin.from("customer_onboarding_applications").select("id", { count: "exact", head: true }).eq("status", "submitted"),
     admin.from("customer_onboarding_applications").select("id", { count: "exact", head: true }).eq("status", "changes_requested"),
