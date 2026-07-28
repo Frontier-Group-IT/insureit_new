@@ -73,9 +73,10 @@ export const roleCapabilities: Record<AppRole, readonly Capability[]> = {
     "view_reports", "view_notifications"
   ],
   sales_head: [
-    "view_dashboard", "view_intermediaries", "create_intermediary_application", "review_intermediary_application",
-    "view_customers", "manage_customers", "view_kyc", "review_kyc", "view_org_tree", "view_tasks",
-    "manage_tasks", "view_reports", "view_notifications"
+    "view_dashboard", "view_claims", "view_intermediaries", "create_intermediary_application",
+    "review_intermediary_application", "view_customers", "manage_customers", "view_kyc", "review_kyc",
+    "view_employees", "view_org_tree", "view_vehicles", "view_policies", "view_tasks", "manage_tasks",
+    "view_reports", "view_notifications"
   ],
   zonal_head: [
     "view_dashboard", "view_intermediaries", "create_intermediary_application", "review_intermediary_application",
