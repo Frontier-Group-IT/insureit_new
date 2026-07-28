@@ -8,6 +8,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type PartnerType="posp"|"misp";
 type RowRecord={id:string;row_number:number;partner_type:PartnerType;source_data:Record<string,unknown>;normalized_data:Record<string,unknown>};
+type PanJobRecord={id:string;status:string};
 
 export async function submitPospMispImportBatchV2(data:FormData){
   const manager=await currentManager();
@@ -51,8 +52,15 @@ export async function submitPospMispImportBatchV2(data:FormData){
       const{error:contactError}=await admin.from("intermediary_onboarding_contacts").upsert({application_id:application.id,contact_role:isMisp?"misp_dp":"posp",full_name:fullName,phone:applicantPhone,email:applicantEmail,is_designated_person:isMisp,login_required:false,membership_status:"pending"},{onConflict:"application_id,contact_role"});
       if(contactError)throw stage("Create contact",contactError);
       const verificationPan=(isMisp?string(n.dp_pan_number):string(n.pan_number))?.replace(/\s/g,"").toUpperCase();
-      const{error:jobError}=await admin.from("pan_verification_jobs").insert({application_id:application.id,onboarding_profile_id:profile.id,partner_type:row.partner_type,pan_number:verificationPan,status:"pending",result_code:null,result_message:null,requested_at:now,started_at:null,completed_at:null,attempt_count:0,last_error:null,checked_by_device:null,requested_by:manager.id,updated_at:now});
-      if(jobError)throw stage("Queue PAN verification",jobError);
+      const{data:existingJob,error:jobLookupError}=await admin.from("pan_verification_jobs").select("id,status").eq("application_id",application.id).maybeSingle<PanJobRecord>();
+      if(jobLookupError)throw stage("Check PAN verification queue",jobLookupError);
+      if(existingJob){
+        const{error:jobUpdateError}=await admin.from("pan_verification_jobs").update({onboarding_profile_id:profile.id,partner_type:row.partner_type,pan_number:verificationPan,requested_by:manager.id,updated_at:now}).eq("id",existingJob.id);
+        if(jobUpdateError)throw stage("Confirm PAN verification queue",jobUpdateError);
+      }else{
+        const{error:jobInsertError}=await admin.from("pan_verification_jobs").insert({application_id:application.id,onboarding_profile_id:profile.id,partner_type:row.partner_type,pan_number:verificationPan,status:"pending",result_code:null,result_message:null,requested_at:now,started_at:null,completed_at:null,attempt_count:0,last_error:null,checked_by_device:null,requested_by:manager.id,updated_at:now});
+        if(jobInsertError)throw stage("Queue PAN verification",jobInsertError);
+      }
       const{error:rowError}=await admin.from("posp_misp_import_rows").update({status:"submitted",application_id:application.id,error_message:null}).eq("id",row.id);
       if(rowError)throw stage("Finalize import row",rowError);
     }catch(error){
