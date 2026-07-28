@@ -25,7 +25,7 @@ type Row = {
 
 export default async function IcallUatPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const profile = await requirePospMispManager();
-  if (!profile) redirect("/access-denied");
+  if (!profile || profile.role !== "it_super_user") redirect("/access-denied");
   const { q = "" } = await searchParams;
   const search = q.trim().slice(0, 80);
   const admin = createSupabaseAdminClient();
