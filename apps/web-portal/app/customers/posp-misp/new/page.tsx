@@ -20,10 +20,12 @@ export default async function NewPospMispPage({ searchParams }: { searchParams: 
     loadVehicleManufacturers(admin),
     loadBanks(admin)
   ]);
-  const backHref = partnerType === "misp" ? "/intermediaries/misp" : "/intermediaries/posp";
+  const isMisp = partnerType === "misp";
+  const backHref = isMisp ? "/intermediaries/misp" : "/intermediaries/partner";
+  const title = isMisp ? "Add MISP Application" : "Add Partner Application";
 
   return (
-    <AppShell title={`Add ${partnerType.toUpperCase()} Application`} backHref={backHref}>
+    <AppShell title={title} backHref={backHref}>
       <PospMispOnboardingForm action={createScopedManualPospMispOnboarding} partnerType={partnerType} salesManagers={salesManagers} oems={oems} banks={banks} />
     </AppShell>
   );
