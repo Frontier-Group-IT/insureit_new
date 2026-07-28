@@ -3,7 +3,7 @@
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { isEmployeeWithinAccessScope } from "@/lib/employee-access-scope";
 import type { PospMispState } from "./actions";
-import { createManualPospMispOnboardingV2 } from "./manual-actions-v2";
+import { createPartnerFirstOnboarding } from "./partner-first-manual-action";
 
 export async function createScopedManualPospMispOnboarding(state: PospMispState, data: FormData): Promise<PospMispState> {
   const accessToken = await getServerAccessToken();
@@ -12,7 +12,7 @@ export async function createScopedManualPospMispOnboarding(state: PospMispState,
   if (!profile?.id || !employeeId) return { error: "Select a valid RM Name.", field: "associate_employee_id" };
   const allowed = await isEmployeeWithinAccessScope(profile.id, profile.role, employeeId);
   if (!allowed) return { error: "You can only create an application for yourself or an employee in your reporting hierarchy.", field: "associate_employee_id" };
-  return createManualPospMispOnboardingV2(state, data);
+  return createPartnerFirstOnboarding(state, data);
 }
 
 function text(data: FormData, key: string) {
