@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { BarChart3, CheckSquare2, ChevronRight, ClipboardList, FileChartColumn, FileCheck2, Gauge, LayoutGrid, Settings, ShieldCheck, Sparkles, UsersRound } from "lucide-react";
+import { BarChart3, CheckSquare2, ChevronRight, ClipboardList, FileChartColumn, FileCheck2, FlaskConical, Gauge, LayoutGrid, Settings, ShieldCheck, Sparkles, UsersRound } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { BrandLockup } from "@/components/brand-lockup";
 import { hasCapability, type Capability } from "@/lib/roles";
 
-type SectionKey="claims"|"distribution"|"master-data"|"tasks"|"reports";
+type SectionKey="claims"|"distribution"|"master-data"|"tasks"|"reports"|"development";
 type ActiveNav="dashboard"|SectionKey|"none";
 type Item={href:string;label:string;icon:LucideIcon;capability:Capability};
 type Section={key:SectionKey;label:string;icon:LucideIcon;tint:string;capability:Capability;items:Item[]};
@@ -22,7 +22,9 @@ export const navigationSections:Section[]=[
  {key:"reports",label:"Reports",icon:FileChartColumn,tint:"from-[#f1b94a] to-[#ffcf6b]",capability:"view_reports",items:[{href:"/reports",label:"Reports Workspace",icon:FileChartColumn,capability:"view_reports"}]}
 ];
 
-export function visibleNavigationSections(role:string|null|undefined){return navigationSections.filter(section=>hasCapability(role,section.capability)).map(section=>({...section,items:section.items.filter(item=>hasCapability(role,item.capability))}));}
+const developmentSection:Section={key:"development",label:"Development",icon:FlaskConical,tint:"from-[#7C3AED] to-[#2563EB]",capability:"manage_system",items:[{href:"/customers/posp-misp/icall-uat",label:"iCall UAT Integration",icon:FlaskConical,capability:"manage_system"}]};
+
+export function visibleNavigationSections(role:string|null|undefined){const sections=navigationSections.filter(section=>hasCapability(role,section.capability)).map(section=>({...section,items:section.items.filter(item=>hasCapability(role,item.capability))}));return role==="it_super_user"?[...sections,developmentSection]:sections;}
 
 export function AppNavigation({activeNav,role}:Props){
  const pathname=usePathname();const searchParams=useSearchParams();const sections=useMemo(()=>visibleNavigationSections(role),[role]);const routeSection=sectionForPath(pathname);const resolved=routeSection??(activeNav!=="dashboard"&&activeNav!=="none"?activeNav:null);const[openSection,setOpenSection]=useState<SectionKey|null>(resolved);useEffect(()=>{if(resolved&&sections.some(section=>section.key===resolved))setOpenSection(resolved)},[pathname,resolved,sections]);const currentQuery=searchParams.toString();
@@ -38,5 +40,5 @@ export function AppNavigation({activeNav,role}:Props){
  </aside>;
 }
 
-export function sectionForPath(pathname:string):SectionKey|null{if(pathname==="/claims"||pathname.startsWith("/claims/"))return"claims";if(pathname==="/intermediaries"||pathname.startsWith("/intermediaries/")||pathname==="/customers/posp-misp"||pathname.startsWith("/customers/posp-misp/"))return"distribution";if(pathname==="/tasks"||pathname.startsWith("/tasks/"))return"tasks";if(pathname==="/reports"||pathname.startsWith("/reports/"))return"reports";if(pathname==="/employees"||pathname.startsWith("/employees/")||pathname==="/customers"||pathname==="/customer-kyc"||pathname.startsWith("/customer-kyc/")||pathname==="/vehicles"||pathname.startsWith("/vehicles/")||pathname==="/policies"||pathname.startsWith("/policies/"))return"master-data";return null}
+export function sectionForPath(pathname:string):SectionKey|null{if(pathname==="/customers/posp-misp/icall-uat")return"development";if(pathname==="/claims"||pathname.startsWith("/claims/"))return"claims";if(pathname==="/intermediaries"||pathname.startsWith("/intermediaries/")||pathname==="/customers/posp-misp"||pathname.startsWith("/customers/posp-misp/"))return"distribution";if(pathname==="/tasks"||pathname.startsWith("/tasks/"))return"tasks";if(pathname==="/reports"||pathname.startsWith("/reports/"))return"reports";if(pathname==="/employees"||pathname.startsWith("/employees/")||pathname==="/customers"||pathname==="/customer-kyc"||pathname.startsWith("/customer-kyc/")||pathname==="/vehicles"||pathname.startsWith("/vehicles/")||pathname==="/policies"||pathname.startsWith("/policies/"))return"master-data";return null}
 export function isCurrent(href:string,pathname:string,currentQuery:string){const[targetPath,targetQuery=""]=href.split("?");if(pathname!==targetPath)return false;if(!targetQuery)return currentQuery.length===0;const expected=new URLSearchParams(targetQuery);const current=new URLSearchParams(currentQuery);return Array.from(expected.entries()).every(([key,value])=>current.get(key)===value)}
