@@ -4,7 +4,7 @@ import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
 import { requirePospMispManager } from "@/lib/master-data-server";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { createManualPospMispOnboardingV2 } from "../manual-actions-v2";
+import { createScopedManualPospMispOnboarding } from "../scoped-manual-action";
 import { PospMispOnboardingForm } from "../posp-misp-onboarding-form";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +24,7 @@ export default async function NewPospMispPage({ searchParams }: { searchParams: 
 
   return (
     <AppShell title={`Add ${partnerType.toUpperCase()} Application`} backHref={backHref}>
-      <PospMispOnboardingForm action={createManualPospMispOnboardingV2} partnerType={partnerType} salesManagers={salesManagers} oems={oems} banks={banks} />
+      <PospMispOnboardingForm action={createScopedManualPospMispOnboarding} partnerType={partnerType} salesManagers={salesManagers} oems={oems} banks={banks} />
     </AppShell>
   );
 }
@@ -34,14 +34,8 @@ async function loadSalesManagers(admin: ReturnType<typeof createSupabaseAdminCli
     loadPospMispAssociates(admin),
     getEmployeeAccessScope(profileId, role)
   ]);
-  const visibleManagers = scope.mode === "organization"
-    ? managers
-    : managers.filter((manager) => scope.employeeIds.includes(manager.id));
-  return visibleManagers.map((manager) => ({
-    id: manager.id,
-    fullName: manager.full_name?.trim() || "Unnamed Sales Employee",
-    employeeCode: manager.employee_code
-  }));
+  const visibleManagers = scope.mode === "organization" ? managers : managers.filter((manager) => scope.employeeIds.includes(manager.id));
+  return visibleManagers.map((manager) => ({ id: manager.id, fullName: manager.full_name?.trim() || "Unnamed Sales Employee", employeeCode: manager.employee_code }));
 }
 
 async function loadVehicleManufacturers(admin: ReturnType<typeof createSupabaseAdminClient>) {
