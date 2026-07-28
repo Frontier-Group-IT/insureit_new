@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 
+const INVALID_CLASSES = ["!border-red-400", "!bg-red-50", "!ring-2", "!ring-red-100"];
+
 export function OnboardingFieldPresentation({ children }: { children: ReactNode }) {
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -14,7 +16,10 @@ export function OnboardingFieldPresentation({ children }: { children: ReactNode 
         if (label.querySelector("[data-required-mark]")) return;
 
         const nodes = Array.from(label.childNodes);
-        const trailingText = [...nodes].reverse().find((node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trimEnd().endsWith("*"));
+        const trailingText = [...nodes]
+          .reverse()
+          .find((node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trimEnd().endsWith("*"));
+
         if (!trailingText?.textContent) return;
 
         const original = trailingText.textContent;
@@ -31,24 +36,23 @@ export function OnboardingFieldPresentation({ children }: { children: ReactNode 
       });
     };
 
-    decorateRequiredLabels();
-    const observer = new MutationObserver(decorateRequiredLabels);
-    observer.observe(root, { childList: true, subtree: true });
+    const removeValidationHighlighting = () => {
+      root
+        .querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("input,select,textarea")
+        .forEach((element) => element.classList.remove(...INVALID_CLASSES));
+    };
+
+    const refreshPresentation = () => {
+      decorateRequiredLabels();
+      removeValidationHighlighting();
+    };
+
+    refreshPresentation();
+    const observer = new MutationObserver(refreshPresentation);
+    observer.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
+
     return () => observer.disconnect();
   }, []);
 
-  return (
-    <div ref={rootRef} className="onboarding-neutral-validation">
-      {children}
-      <style jsx global>{`
-        .onboarding-neutral-validation input[class~="!border-red-400"],
-        .onboarding-neutral-validation select[class~="!border-red-400"],
-        .onboarding-neutral-validation textarea[class~="!border-red-400"] {
-          border-color: #cbd5e1 !important;
-          background-color: #ffffff !important;
-          box-shadow: none !important;
-        }
-      `}</style>
-    </div>
-  );
+  return <div ref={rootRef}>{children}</div>;
 }
