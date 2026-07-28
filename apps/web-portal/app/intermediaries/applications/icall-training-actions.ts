@@ -16,16 +16,17 @@ export async function registerWithIcallUat(formData: FormData) {
   const admin = createSupabaseAdminClient();
   const { data: application } = await admin
     .from("intermediary_onboarding_applications")
-    .select("id,final_type")
+    .select("id,final_type,applicant_phone,applicant_email")
     .eq("id", applicationId)
-    .maybeSingle<{ id: string; final_type: string | null }>();
+    .maybeSingle<{ id: string; final_type: string | null; applicant_phone: string | null; applicant_email: string | null }>();
   const { data: profile } = await admin
     .from("posp_misp_onboarding_profiles")
-    .select("partner_type,external_onboarding_id,pos_first_name,pos_last_name,pan_number,date_of_birth,applicant_email,applicant_phone,training_login_id")
+    .select("partner_type,external_onboarding_id,pos_name,pos_first_name,pos_last_name,pan_number,date_of_birth,applicant_email,applicant_phone,training_login_id")
     .eq("application_id", applicationId)
     .maybeSingle<{
       partner_type: "posp" | "misp";
       external_onboarding_id: string | null;
+      pos_name: string | null;
       pos_first_name: string | null;
       pos_last_name: string | null;
       pan_number: string | null;
@@ -41,19 +42,21 @@ export async function registerWithIcallUat(formData: FormData) {
   if (profile.training_login_id) redirect(`${route(applicationId)}?stage=review&error=icall_already_registered`);
 
   const pan = normalizePan(profile.pan_number);
-  const mobile = normalizeMobile(profile.applicant_phone);
+  const mobile = normalizeMobile(profile.applicant_phone || application.applicant_phone);
+  const email = (profile.applicant_email || application.applicant_email)?.trim().toLowerCase() || null;
+  const nameParts = resolveName(profile.pos_first_name, profile.pos_last_name, profile.pos_name);
   const dob = formatDob(profile.date_of_birth);
-  if (!pan || !profile.pos_first_name?.trim() || !profile.applicant_email?.trim() || !mobile) {
+  if (!pan || !nameParts.firstName || !email || !mobile) {
     redirect(`${route(applicationId)}?stage=review&error=icall_details_incomplete`);
   }
 
   try {
     const response = await registerIcallPosp({
       pan,
-      pospFirstName: profile.pos_first_name.trim(),
-      pospLastName: profile.pos_last_name?.trim() || "",
+      pospFirstName: nameParts.firstName,
+      pospLastName: nameParts.lastName,
       dob: dob || "",
-      email_id: profile.applicant_email.trim().toLowerCase(),
+      email_id: email,
       mobile,
       internalPOSCode: profile.external_onboarding_id?.trim() || applicationId,
     });
@@ -182,6 +185,16 @@ function normalizeMobile(value: string | null) {
   const digits = value?.replace(/\D/g, "") || "";
   const mobile = digits.slice(-10);
   return /^[6-9][0-9]{9}$/.test(mobile) ? mobile : null;
+}
+
+function resolveName(firstName: string | null, lastName: string | null, fullName: string | null) {
+  const first = firstName?.trim() || "";
+  const last = lastName?.trim() || "";
+  if (first) return { firstName: first, lastName: last };
+  const parts = fullName?.trim().split(/\s+/).filter(Boolean) || [];
+  if (!parts.length) return { firstName: "", lastName: "" };
+  if (parts.length === 1) return { firstName: parts[0], lastName: "" };
+  return { firstName: parts.slice(0, -1).join(" "), lastName: parts.at(-1) || "" };
 }
 
 function formatDob(value: string | null) {
