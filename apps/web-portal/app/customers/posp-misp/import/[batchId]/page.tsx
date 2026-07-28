@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { DataError } from "@/components/record-list";
-import { createServerSupabaseClient } from "@/lib/auth-server";
+import { canAccessImportBatch } from "@/lib/employee-access-scope";
 import { requirePospMispManager } from "@/lib/master-data-server";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -21,31 +22,34 @@ export const dynamic="force-dynamic";
 export const revalidate=0;
 
 export default async function PospMispImportBatchPage({params,searchParams}:{params:Promise<{batchId:string}>;searchParams:Promise<{error?:string;success?:string;count?:string}>}){
-  await requirePospMispManager();
+  const profile=await requirePospMispManager();
   const {batchId}=await params;
+  if(!profile?.id)redirect("/access-denied");
+  const allowed=await canAccessImportBatch(profile.id,profile.role,batchId);
+  if(!allowed)redirect("/access-denied");
+
   const query=await searchParams;
-  const supabase=await createServerSupabaseClient();
   const admin=createSupabaseAdminClient();
   const [{data:batch,error:batchError},{data:rows,error:rowsError},salesManagers,oems,banks]=await Promise.all([
-    supabase.from("posp_misp_import_batches").select("id,file_name,total_rows,valid_rows,invalid_rows,pending_rows,submitted_rows,failed_rows,status,created_at").eq("id",batchId).maybeSingle<Batch>(),
-    supabase.from("posp_misp_import_rows").select("id,row_number,sheet_name,partner_type,source_data,normalized_data,validation_errors,status,application_id,error_message").eq("import_batch_id",batchId).order("row_number",{ascending:true}).returns<ImportRow[]>(),
+    admin.from("posp_misp_import_batches").select("id,file_name,total_rows,valid_rows,invalid_rows,pending_rows,submitted_rows,failed_rows,status,created_at").eq("id",batchId).maybeSingle<Batch>(),
+    admin.from("posp_misp_import_rows").select("id,row_number,sheet_name,partner_type,source_data,normalized_data,validation_errors,status,application_id,error_message").eq("import_batch_id",batchId).order("row_number",{ascending:true}).returns<ImportRow[]>(),
     loadSalesManagers(admin),loadVehicleManufacturers(admin),loadBanks(admin)
   ]);
   const rowIds=(rows??[]).map(row=>row.id);
   const applicationIds=(rows??[]).flatMap(row=>row.application_id?[row.application_id]:[]);
   const [{data:rowDocuments,error:documentsError},{data:panJobs},{data:routeProfiles}]=await Promise.all([
-    rowIds.length?supabase.from("posp_misp_import_row_documents").select("import_row_id,document_type,file_name").in("import_row_id",rowIds).returns<RowDocument[]>():Promise.resolve({data:[] as RowDocument[],error:null}),
+    rowIds.length?admin.from("posp_misp_import_row_documents").select("import_row_id,document_type,file_name").in("import_row_id",rowIds).returns<RowDocument[]>():Promise.resolve({data:[] as RowDocument[],error:null}),
     applicationIds.length?admin.from("pan_verification_jobs").select("application_id,status,result_message,last_error,checked_by_device").in("application_id",applicationIds).returns<PanJob[]>():Promise.resolve({data:[] as PanJob[],error:null}),
     applicationIds.length?admin.from("posp_misp_onboarding_profiles").select("application_id,requested_account_type,final_account_type,partner_decision,iib_remarks").in("application_id",applicationIds).returns<RouteProfile[]>():Promise.resolve({data:[] as RouteProfile[],error:null})
   ]);
   const documentsByRow=new Map<string,RowDocument[]>();
   for(const document of rowDocuments??[])documentsByRow.set(document.import_row_id,[...(documentsByRow.get(document.import_row_id)??[]),document]);
   const jobsByApplication=new Map((panJobs??[]).map(job=>[job.application_id,job]));
-  const profilesByApplication=new Map((routeProfiles??[]).map(profile=>[profile.application_id,profile]));
+  const profilesByApplication=new Map((routeProfiles??[]).map(profileRow=>[profileRow.application_id,profileRow]));
   const rowsWithWorkflow=(rows??[]).map(row=>({...row,normalized_data:{...row.normalized_data,aadhaar_number:decryptSensitiveValue(typeof row.normalized_data.aadhaar_number_encrypted==="string"?row.normalized_data.aadhaar_number_encrypted:null)},documents:documentsByRow.get(row.id)??[],pan_job:row.application_id?jobsByApplication.get(row.application_id)??null:null,route_profile:row.application_id?profilesByApplication.get(row.application_id)??null:null}));
   const shouldRefresh=rowsWithWorkflow.some(row=>row.application_id&&(!row.pan_job||["pending","queued","checking"].includes(row.pan_job.status)));
   return <AppShell title="POSP / MISP Import Review"><PanVerificationAutoRefresh enabled={shouldRefresh}/><div className="mx-auto max-w-[1440px] space-y-3 pb-4">
-    <div className="flex flex-wrap items-center justify-between gap-2"><div><Link href="/customers/posp-misp" className="text-[10.5px] font-semibold text-[#4F46E5] hover:underline">Back to POSP / MISP</Link><h1 className="mt-2 text-lg font-semibold text-[#0F172A]">{batch?.file_name??"Import batch"}</h1><p className="mt-1 text-[11px] text-[#64748B]">Review primary details, submit valid rows, then watch the automatic IIB results here.</p></div><div className="flex items-center gap-2"><Link href="/api/templates/posp-misp-v2" className="inline-flex items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-[11px] font-semibold text-indigo-700">Download v2 Template</Link>{batch&&batch.status!=="processing"&&batch.valid_rows>0?<form action={submitPospMispImportBatchV2}><input type="hidden" name="batch_id" value={batch.id}/><FormSubmitButton label="Submit Ready Rows" pendingLabel="Submitting" className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-4 py-2.5 text-[11px] font-semibold text-white shadow-lg disabled:opacity-70"/></form>:null}{batch&&batch.status!=="processing"&&batch.failed_rows>0?<form action={submitPospMispImportBatchV2}><input type="hidden" name="batch_id" value={batch.id}/><input type="hidden" name="retry_failed" value="true"/><FormSubmitButton label="Retry Failed Rows" pendingLabel="Retrying" className="inline-flex items-center justify-center rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-[11px] font-semibold text-amber-800 disabled:opacity-70"/></form>:null}</div></div>
+    <div className="flex flex-wrap items-center justify-between gap-2"><div><div className="flex flex-wrap items-center gap-3"><Link href="/customers/posp-misp/import/batches" className="text-[10.5px] font-semibold text-[#4F46E5] hover:underline">← Back to Import Batches</Link><Link href="/customers/posp-misp" className="text-[10.5px] font-semibold text-[#64748B] hover:underline">Onboarding Applications</Link></div><h1 className="mt-2 text-lg font-semibold text-[#0F172A]">{batch?.file_name??"Import batch"}</h1><p className="mt-1 text-[11px] text-[#64748B]">Review primary details, submit valid rows, and return here later to complete any remaining onboarding work.</p></div><div className="flex items-center gap-2"><Link href="/api/templates/posp-misp-v2" className="inline-flex items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-[11px] font-semibold text-indigo-700">Download v2 Template</Link>{batch&&batch.status!=="processing"&&batch.valid_rows>0?<form action={submitPospMispImportBatchV2}><input type="hidden" name="batch_id" value={batch.id}/><FormSubmitButton label="Submit Ready Rows" pendingLabel="Submitting" className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-4 py-2.5 text-[11px] font-semibold text-white shadow-lg disabled:opacity-70"/></form>:null}{batch&&batch.status!=="processing"&&batch.failed_rows>0?<form action={submitPospMispImportBatchV2}><input type="hidden" name="batch_id" value={batch.id}/><input type="hidden" name="retry_failed" value="true"/><FormSubmitButton label="Retry Failed Rows" pendingLabel="Retrying" className="inline-flex items-center justify-center rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-[11px] font-semibold text-amber-800 disabled:opacity-70"/></form>:null}</div></div>
     {query.error?<DataError message={errorMessage(query.error)}/>:null}{query.success?<div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-semibold text-emerald-700">{successMessage(query.success,query.count)}</div>:null}
     {batchError||rowsError||documentsError||!batch?<DataError message={batch?"Import batch data could not be loaded.":"Import batch not found."}/>:<><section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6"><Metric label="Total Rows" value={batch.total_rows}/><Metric label="Ready" value={batch.valid_rows} tone="success"/><Metric label="Invalid Rows" value={batch.invalid_rows} tone="warning"/><Metric label="Submitted" value={batch.submitted_rows} tone="success"/><Metric label="Failed" value={batch.failed_rows} tone="danger"/><Metric label="Status" value={batch.status.replaceAll("_"," ")}/></section><ImportRowReviewTableV2 batchId={batch.id} batchStatus={batch.status} rows={rowsWithWorkflow} salesManagers={salesManagers} oems={oems} banks={banks}/></>}
   </div></AppShell>;
