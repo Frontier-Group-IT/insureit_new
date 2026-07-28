@@ -2,14 +2,13 @@
   const INSTANCE_KEY = "__NM_IIB_PAN_CHECKER_INSTANCE__";
   const previous = globalThis[INSTANCE_KEY];
   if (previous?.shutdown) {
-    try { previous.shutdown(); } catch (_) {}
+    try { previous.shutdown(true); } catch (_) {}
   }
 
   const SELECTORS = {
     userId: ["#txtUserId", "input[id$='txtUserId']", "input[name$='txtUserId']"],
     password: ["#txtPassword", "input[type='password']"],
     captcha: ["#captchaTextBox", "input[id*='captcha' i]", "input[name*='captcha' i]"],
-    submit: ["#btnSubmit", "input[type='submit']", "button[type='submit']"],
     posQuery: ["#ctl00_ContentPlaceHolder1_dgMenu_ctl02_lnkImage", "a[id$='lnkImage']"],
     panRadio: ["#ctl00_ContentPlaceHolder1_rdPAN", "input[type='radio'][id*='PAN' i]", "input[type='radio'][value*='PAN' i]"],
     panInput: ["#ctl00_ContentPlaceHolder1_txtPAN", "input[id$='_txtPAN']", "input[name$='$txtPAN']", "input[placeholder*='PAN' i]"],
@@ -28,6 +27,7 @@
   let contextAlive = true;
 
   function shutdown(removeOverlay = false) {
+    if (!contextAlive && !removeOverlay) return;
     contextAlive = false;
     loopStarted = false;
     if (observer) observer.disconnect();
@@ -41,33 +41,73 @@
   globalThis[INSTANCE_KEY] = { shutdown };
 
   function extensionContextAvailable() {
-    try { return contextAlive && Boolean(chrome?.runtime?.id); } catch (_) { return false; }
+    try { return contextAlive && typeof chrome !== "undefined" && Boolean(chrome.runtime?.id); }
+    catch (_) { return false; }
   }
 
-  function isContextInvalidated(error) {
-    return /extension context invalidated|receiving end does not exist|message port closed/i.test(String(error?.message || error || ""));
+  function invalidated(message) {
+    return /extension context invalidated|receiving end does not exist|message port closed/i.test(String(message || ""));
   }
 
-  async function sendRuntimeMessage(message) {
+  // Callback-style messaging is intentional. Chrome can surface an invalidated MV3
+  // context as an unhandled Promise rejection even when an awaited sendMessage is
+  // wrapped in try/catch. This helper never rejects.
+  function sendRuntimeMessage(message) {
+    return new Promise((resolve) => {
+      if (!extensionContextAvailable()) {
+        shutdown();
+        resolve(null);
+        return;
+      }
+      try {
+        chrome.runtime.sendMessage(message, (response) => {
+          let runtimeError = null;
+          try { runtimeError = chrome.runtime.lastError?.message || null; }
+          catch (_) { runtimeError = "Extension context invalidated"; }
+          if (runtimeError) {
+            if (invalidated(runtimeError) || !extensionContextAvailable()) shutdown();
+            resolve(null);
+            return;
+          }
+          resolve(response ?? null);
+        });
+      } catch (error) {
+        if (invalidated(error?.message) || !extensionContextAvailable()) shutdown();
+        resolve(null);
+      }
+    });
+  }
+
+  // Used by MutationObserver: no Promise is created, so a stale page can never
+  // produce an unhandled rejection after the extension is reloaded.
+  function sendRuntimeMessageNoWait(message) {
     if (!extensionContextAvailable()) {
       shutdown();
-      return null;
+      return;
     }
     try {
-      return await chrome.runtime.sendMessage(message);
-    } catch (error) {
-      if (isContextInvalidated(error) || !extensionContextAvailable()) shutdown();
-      return null;
+      chrome.runtime.sendMessage(message, () => {
+        let runtimeError = null;
+        try { runtimeError = chrome.runtime.lastError?.message || null; }
+        catch (_) { runtimeError = "Extension context invalidated"; }
+        if (runtimeError && (invalidated(runtimeError) || !extensionContextAvailable())) shutdown();
+      });
+    } catch (_) {
+      shutdown();
     }
   }
 
-  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-    if (!contextAlive) return false;
-    handleMessage(message)
-      .then((response) => sendResponse(response))
-      .catch((error) => sendResponse({ ok: false, error: error?.message || "Content-script error" }));
-    return true;
-  });
+  try {
+    chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+      if (!contextAlive) return false;
+      handleMessage(message)
+        .then((response) => sendResponse(response))
+        .catch((error) => sendResponse({ ok: false, error: error?.message || "Content-script error" }));
+      return true;
+    });
+  } catch (_) {
+    shutdown();
+  }
 
   init().catch(() => shutdown());
 
@@ -78,7 +118,7 @@
     const response = await sendRuntimeMessage({ type: "GET_ALL_STATE" });
     if (!response?.ok || !contextAlive) return;
     renderOverlay(response.runtime);
-    await reportPortalState();
+    reportPortalState();
     if (response.runtime.running && !response.runtime.paused) ensureAutomation();
   }
 
@@ -104,30 +144,34 @@
       if (observerTimer) clearTimeout(observerTimer);
       observerTimer = setTimeout(() => {
         observerTimer = null;
-        reportPortalState().catch(() => {});
-      }, 250);
+        reportPortalState();
+      }, 400);
     });
     observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["style", "class", "hidden"] });
   }
 
-  async function reportPortalState() {
+  function reportPortalState() {
     if (!contextAlive) return;
-    const pageType = classifyPage();
-    const response = await sendRuntimeMessage({ type: "PORTAL_STATE", pageType });
-    if (!response && !extensionContextAvailable()) shutdown();
+    sendRuntimeMessageNoWait({ type: "PORTAL_STATE", pageType: classifyPage() });
   }
 
   function detectPageResponse() {
     const pageType = classifyPage();
-    const controls = {
-      userId: Boolean(find(SELECTORS.userId)),
-      password: Boolean(find(SELECTORS.password)),
-      captcha: Boolean(find(SELECTORS.captcha)),
-      posQuery: Boolean(find(SELECTORS.posQuery)),
-      panInput: Boolean(find(SELECTORS.panInput)),
-      queryButton: Boolean(find(SELECTORS.queryButton))
+    return {
+      ok: true,
+      pageType,
+      controls: {
+        userId: Boolean(find(SELECTORS.userId)),
+        password: Boolean(find(SELECTORS.password)),
+        captcha: Boolean(find(SELECTORS.captcha)),
+        posQuery: Boolean(find(SELECTORS.posQuery)),
+        panInput: Boolean(find(SELECTORS.panInput)),
+        queryButton: Boolean(find(SELECTORS.queryButton))
+      },
+      url: location.href,
+      title: document.title,
+      message: pageMessage(pageType)
     };
-    return { ok: true, pageType, controls, url: location.href, title: document.title, message: pageMessage(pageType) };
   }
 
   function classifyPage() {
@@ -148,13 +192,12 @@
   }
 
   function pageMessage(pageType) {
-    const messages = {
+    return ({
       login: "IIB login page is ready.", captcha_error: "CAPTCHA was not accepted.", invalid_credentials: "IIB credentials were not accepted.",
       session_expired: "IIB session expired.", access_denied: "IIB access was denied.", maintenance: "IIB portal is under maintenance.",
       server_error: "IIB portal returned a server error.", pan_query: "PAN query page is ready.", menu: "IIB menu page is ready.",
       blank: "IIB page is blank.", unknown: "The current IIB page was not recognised."
-    };
-    return messages[pageType] || "Unknown IIB page state.";
+    })[pageType] || "Unknown IIB page state.";
   }
 
   async function prepareLogin(config) {
@@ -175,7 +218,7 @@
     link.click();
     const ready = await waitFor(() => visible(find(SELECTORS.panInput)) && visible(find(SELECTORS.queryButton)), 20000, 250);
     if (!ready) return { ok: false, error: "PAN query page did not open." };
-    await reportPortalState();
+    reportPortalState();
     return { ok: true };
   }
 
@@ -247,7 +290,6 @@
     for (let attempt = previousAttempt + 1; attempt <= MAX_JOB_ATTEMPTS && contextAlive; attempt += 1) {
       const updated = await sendRuntimeMessage({ type: "UPDATE_RUNTIME", patch: { currentPan: masked, currentJobId: job.id, currentAttempt: attempt, state: "SUBMITTING_PAN", status: `Checking ${masked} - attempt ${attempt} of ${MAX_JOB_ATTEMPTS}` } });
       if (!updated) return;
-
       const controls = getQueryControls();
       if (!controls.ok) {
         await updateStatus("PAN query controls were not found. Reconnecting...");
@@ -255,12 +297,9 @@
         await finishJob(job, "failed", null, "PAN query controls were not found on the IIB page.");
         return;
       }
-
       controls.radio?.click();
       setInputValue(controls.input, pan);
-      clearResultVisibility();
       controls.button.click();
-
       await updateStatus(`Waiting for the IIB result for ${masked}...`, masked);
       const result = await waitForResult(RESULT_TIMEOUT_MS);
       if (result === "matched") { await finishJob(job, "matched", "Matching Record Found In DataBase", ""); return; }
@@ -305,16 +344,12 @@
 
   async function finishJob(job, status, resultMessage, error) {
     const response = await sendRuntimeMessage({ type: "COMPLETE_JOB", payload: { jobId: job.id, status, resultMessage, error } });
-    if (!response?.ok) { if (contextAlive) await updateStatus(response?.error || "Could not update InsureIt with the PAN result."); return; }
+    if (!response?.ok) {
+      if (contextAlive) await updateStatus(response?.error || "Could not update InsureIt with the PAN result.");
+      return;
+    }
     const label = status === "not_found" ? "No record found" : status === "matched" ? "Matching record found" : status === "invalid" ? "Invalid PAN" : "Check failed";
     await updateStatus(`${label}. Waiting 2.5 seconds before the next PAN...`, maskPan(job.pan_number));
-  }
-
-  function clearResultVisibility() {
-    for (const selectors of [SELECTORS.positive, SELECTORS.negative]) {
-      const element = find(selectors);
-      if (element) element.dataset.nmPreviousText = (element.innerText || "").trim();
-    }
   }
 
   async function updateStatus(status, currentPan) {
@@ -325,7 +360,8 @@
 
   function find(selectors) {
     for (const selector of selectors) {
-      try { const element = document.querySelector(selector); if (element) return element; } catch (_) {}
+      try { const element = document.querySelector(selector); if (element) return element; }
+      catch (_) {}
     }
     return null;
   }
@@ -359,8 +395,8 @@
       style.textContent = `#nm-pan-overlay{position:fixed;z-index:2147483647;top:16px;right:16px;width:350px;background:#102447;color:#fff;border-radius:14px;box-shadow:0 18px 45px rgba(15,23,42,.34);font-family:Segoe UI,Arial,sans-serif;overflow:hidden;border:1px solid rgba(255,255,255,.15)}#nm-pan-overlay .nm-head{display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid rgba(255,255,255,.12);font-size:13px}.nm-dot{width:9px;height:9px;border-radius:50%;background:#35d07f;box-shadow:0 0 0 4px rgba(53,208,127,.15)}#nm-pan-overlay .nm-head button{border:0;background:transparent;color:#fff;font-size:16px;cursor:pointer;padding:0 2px}#nm-focus{margin-left:auto}.nm-body{padding:13px}.nm-pan{font-size:15px;font-weight:700}.nm-status{margin-top:5px;color:#c7d7f5;font-size:11px;line-height:1.45;min-height:31px}.nm-row{display:flex;justify-content:space-between;margin-top:9px;color:#b9c9e8;font-size:10px}.nm-bar{height:6px;margin-top:8px;background:rgba(255,255,255,.14);border-radius:999px;overflow:hidden}.nm-bar span{display:block;height:100%;width:0;background:#4d8dff;transition:width .25s ease}#nm-pan-overlay.nm-collapsed .nm-body{display:none}`;
       document.documentElement.appendChild(style);
       document.getElementById("nm-minimise")?.addEventListener("click", () => overlay.classList.toggle("nm-collapsed"));
-      document.getElementById("nm-focus")?.addEventListener("click", () => sendRuntimeMessage({ type: "FOCUS_IIB" }));
-      document.getElementById("nm-reconnect")?.addEventListener("click", () => sendRuntimeMessage({ type: "RECONNECT_IIB" }));
+      document.getElementById("nm-focus")?.addEventListener("click", () => { void sendRuntimeMessage({ type: "FOCUS_IIB" }); });
+      document.getElementById("nm-reconnect")?.addEventListener("click", () => { void sendRuntimeMessage({ type: "RECONNECT_IIB" }); });
     }
     document.getElementById("nm-pan").textContent = `Current PAN: ${runtime.currentPan || "—"}`;
     document.getElementById("nm-status").textContent = runtime.status || "Working...";
