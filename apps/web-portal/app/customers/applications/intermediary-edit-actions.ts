@@ -30,9 +30,16 @@ export async function updateIntermediaryApplication(data:FormData){
  const editSection=value(data,"edit_section")??"primary";
  if(editSection==="documents"){
   if(profile.workflow_stage!=="iib_processing")redirect(`${path(applicationId)}?error=stage_locked`);
-  for(const documentType of DOCUMENT_FIELDS){const selected=file(data,documentType);if(selected)await replaceDocument(admin,applicationId,documentType,selected,reviewer.id)}
+  const {data:existingRows}=await admin.from("intermediary_onboarding_documents").select("document_type").eq("application_id",applicationId).returns<Array<{document_type:string}>>();
+  const resultingTypes=new Set((existingRows??[]).map(row=>row.document_type));
   const marksheet=file(data,"education_marksheet");const marksheetType=value(data,"education_document_type");
   if(marksheet&&(!marksheetType||!EDUCATION_TYPES.has(marksheetType)))redirect(`${path(applicationId)}?error=posp_misp_marksheet_type_required&stage=documents`);
+  if(marksheet&&marksheetType)resultingTypes.add(marksheetType);
+  for(const documentType of DOCUMENT_FIELDS){if(file(data,documentType))resultingTypes.add(documentType)}
+  const hasEducation=[...EDUCATION_TYPES].some(type=>resultingTypes.has(type));
+  const missingStandard=DOCUMENT_FIELDS.find(type=>!resultingTypes.has(type));
+  if(!hasEducation||missingStandard)redirect(`${path(applicationId)}?error=documents_incomplete&stage=documents`);
+  for(const documentType of DOCUMENT_FIELDS){const selected=file(data,documentType);if(selected)await replaceDocument(admin,applicationId,documentType,selected,reviewer.id)}
   if(marksheet&&marksheetType){await replaceDocument(admin,applicationId,marksheetType,marksheet,reviewer.id);const{data:others}=await admin.from("intermediary_onboarding_documents").select("id,storage_bucket,storage_path").eq("application_id",applicationId).in("document_type",[...EDUCATION_TYPES]).neq("document_type",marksheetType).returns<Array<{id:string;storage_bucket:string;storage_path:string}>>();for(const document of others??[]){await admin.from("intermediary_onboarding_documents").delete().eq("id",document.id);await admin.storage.from(document.storage_bucket).remove([document.storage_path])}await admin.from("posp_misp_onboarding_profiles").update({education_status:"received",updated_by:reviewer.id,updated_at:new Date().toISOString()}).eq("id",profile.id)}
   revalidatePath(path(applicationId));redirect(`${path(applicationId)}?success=documents_saved&stage=documents`);
  }
