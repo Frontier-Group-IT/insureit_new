@@ -98,15 +98,12 @@ export default async function DashboardPage() {
           <div className="portal-grid pointer-events-none absolute inset-0 opacity-30" />
           <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[#6759ff]/35 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-28 left-[38%] h-72 w-72 rounded-full bg-[#17c7c9]/20 blur-3xl" />
-          <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <h1 className="portal-display text-[29px] font-semibold leading-[1.05] sm:text-[38px] lg:text-[44px]">Good {dayPeriod()}, <span className="bg-gradient-to-r from-white via-[#dcd8ff] to-[#77e1dc] bg-clip-text text-transparent">{displayName}</span></h1>
-            <div className="grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
-              <div className="inline-flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-xl border border-white/12 bg-white/8 px-2 text-[9px] font-semibold text-white/78 backdrop-blur sm:gap-2 sm:px-3.5 sm:text-[10.5px]"><CalendarDays className="h-3.5 w-3.5 shrink-0 text-[#75e5dd] sm:h-4 sm:w-4" /><span className="truncate">{dashboardDateLabel()}</span></div>
-              {canCreateRecords ? <>
-                <Link href="/customers?choose_partner=1" className="inline-flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-xl border border-white/15 bg-white px-2 text-[9px] font-bold text-[#17213e] shadow-lg hover:-translate-y-0.5 sm:gap-2 sm:px-3.5 sm:text-[10.5px]"><Plus className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" /><span className="truncate">New customer</span></Link>
-                <Link href="/customers/applications" className="inline-flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6759ff] to-[#17bfc5] px-2 text-[9px] font-bold text-white shadow-[0_12px_30px_rgba(103,89,255,.35)] hover:-translate-y-0.5 sm:gap-2 sm:px-3.5 sm:text-[10.5px]"><CheckCircle2 className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" /><span className="truncate">Review KYC</span></Link>
-              </> : null}
-            </div>
+          <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <h1 className="portal-display text-[18px] font-semibold leading-tight sm:text-[22px] lg:text-[26px]">Good {dayPeriod()}, <span className="bg-gradient-to-r from-white via-[#dcd8ff] to-[#77e1dc] bg-clip-text text-transparent">{displayName}</span></h1>
+            {canCreateRecords ? <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
+              <Link href="/customers?choose_partner=1" className="inline-flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-xl border border-white/15 bg-white px-2 text-[9px] font-bold text-[#17213e] shadow-lg hover:-translate-y-0.5 sm:gap-2 sm:px-3.5 sm:text-[10.5px]"><Plus className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" /><span className="truncate">New customer</span></Link>
+              <Link href="/customers/applications" className="inline-flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6759ff] to-[#17bfc5] px-2 text-[9px] font-bold text-white shadow-[0_12px_30px_rgba(103,89,255,.35)] hover:-translate-y-0.5 sm:gap-2 sm:px-3.5 sm:text-[10.5px]"><CheckCircle2 className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" /><span className="truncate">Review KYC</span></Link>
+            </div> : null}
           </div>
         </section>
 
@@ -127,7 +124,6 @@ function SectionTitle({ eyebrow, title, href }: { eyebrow: string; title: string
 function StatusPill({ status }: { status: string }) { const normalized = status.toLowerCase(); const className = normalized.includes("approved") || normalized.includes("complete") || normalized.includes("settled") ? "border-emerald-200 bg-emerald-50 text-emerald-700" : normalized.includes("reject") || normalized.includes("changes") || normalized.includes("expired") ? "border-rose-200 bg-rose-50 text-rose-700" : normalized.includes("progress") || normalized.includes("submitted") || normalized.includes("intimat") ? "border-blue-200 bg-blue-50 text-blue-700" : "border-amber-200 bg-amber-50 text-amber-700"; return <span className={`inline-flex max-w-[170px] truncate rounded-full border px-2 py-0.5 text-[8.5px] font-bold capitalize ${className}`}>{status.replaceAll("_", " ")}</span>; }
 function applicationName(row: OperationsDashboardData["recentApplications"][number]) { return row.display_name ?? row.applicant_phone ?? row.applicant_email ?? "Unnamed application"; }
 function partnerLabel(value: string | null) { const labels: Record<string, string> = { group: "Group", corporate: "Corporate", dealership: "Dealership", individual_proprietor: "Individual / Proprietor", posp: "POSP", misp: "MISP" }; return value ? labels[value] ?? value : "Partner type pending"; }
-function dashboardDateLabel() { return new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric", weekday: "short", timeZone: "Asia/Kolkata" }).format(new Date()); }
 function dayPeriod() { const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hour12: false, timeZone: "Asia/Kolkata" }).format(new Date())); if (hour < 12) return "morning"; if (hour < 17) return "afternoon"; return "evening"; }
 function firstName(name?: string | null) { return name?.trim().split(/\s+/)[0] ?? ""; }
 function relativeTime(value: string) { const diffMs = Date.now() - Date.parse(value); if (!Number.isFinite(diffMs)) return "-"; const minutes = Math.max(0, Math.floor(diffMs / 60000)); if (minutes < 1) return "Just now"; if (minutes < 60) return `${minutes}m ago`; const hours = Math.floor(minutes / 60); if (hours < 24) return `${hours}h ago`; const days = Math.floor(hours / 24); return days === 1 ? "1d ago" : `${days}d ago`; }
