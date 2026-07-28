@@ -139,6 +139,16 @@ async function syncStatusIntoPortal(
     exam_passed_at: examStatus === "passed" ? examCompletedAt || now : null,
     exam_status: examStatus,
     exam_score: Number.isFinite(score) ? score : null,
+    icall_login_id: data.login_id || loginId,
+    icall_candidate_name: data.candidate_name || null,
+    icall_mobile_number: data.mobileNumber || null,
+    icall_internal_pos_code: data.internal_pos_code || null,
+    icall_issue_date: dateOnly(issueDate),
+    icall_expiry_date: dateOnly(expiryDate),
+    icall_hours_allotted: data.hours_allotted || null,
+    icall_hours_completed: data.hours_completed || null,
+    icall_hours_remaining: data.hours_remaining || null,
+    icall_last_synced_at: now,
     updated_by: reviewerId,
     updated_at: now,
   }, { onConflict: "application_id" });
@@ -212,6 +222,10 @@ function parseIcallDate(value: string | null | undefined) {
   if (us) return `${us[3]}-${us[1]}-${us[2]}T00:00:00.000Z`;
   const parsed = new Date(raw);
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+function dateOnly(value: string | null) {
+  return value ? value.slice(0, 10) : null;
 }
 
 function normalizeTrainingStatus(value: string | null | undefined) {
