@@ -30,7 +30,7 @@ export default async function CustomersPage() {
     .order("created_at", { ascending: false })
     .returns<CustomerRow[]>();
 
-  const rows = customersResult.data ?? [];
+  const rows: CustomerRow[] = customersResult.data ?? [];
 
   return (
     <AppShell title="Customers">
