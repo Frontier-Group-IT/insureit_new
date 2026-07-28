@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { canAccessIntermediary } from "@/lib/employee-access-scope";
 import { requirePospMispManager } from "@/lib/master-data-server";
+import { hasCapability } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export async function resendIntermediaryPortalInvite(formData: FormData) {
@@ -10,6 +12,8 @@ export async function resendIntermediaryPortalInvite(formData: FormData) {
   const intermediaryId = value(formData, "intermediary_id");
   const returnPath = safeReturnPath(value(formData, "return_path"));
   if (!reviewer?.id || !intermediaryId) redirect(`${returnPath}?error=portal_login_invalid`);
+  if (!hasCapability(reviewer.role, "review_intermediary_application")) redirect(`${returnPath}?error=portal_login_not_authorized`);
+  if (!(await canAccessIntermediary(reviewer.id, reviewer.role, intermediaryId))) redirect(`${returnPath}?error=portal_login_not_authorized`);
 
   const admin = createSupabaseAdminClient();
   const { data: intermediary } = await admin.from("intermediaries")
@@ -17,9 +21,7 @@ export async function resendIntermediaryPortalInvite(formData: FormData) {
     .eq("id", intermediaryId)
     .maybeSingle<{id:string;email:string|null;portal_access_status:string;intermediary_type:string}>();
 
-  if (!intermediary || intermediary.intermediary_type === "partner" || intermediary.portal_access_status !== "invited") {
-    redirect(`${returnPath}?error=portal_resend_not_available`);
-  }
+  if (!intermediary || intermediary.intermediary_type === "partner" || intermediary.portal_access_status !== "invited") redirect(`${returnPath}?error=portal_resend_not_available`);
   if (!intermediary.email) redirect(`${returnPath}?error=portal_login_email_required`);
 
   const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
@@ -34,10 +36,5 @@ export async function resendIntermediaryPortalInvite(formData: FormData) {
   redirect(`${returnPath}?success=portal_invite_resent`);
 }
 
-function value(formData: FormData, key: string) {
-  const entry = formData.get(key);
-  return typeof entry === "string" && entry.trim() ? entry.trim() : null;
-}
-function safeReturnPath(path: string | null) {
-  return path && /^\/intermediaries(?:\/(?:posp|misp|partner))?$/.test(path) ? path : "/intermediaries";
-}
+function value(formData: FormData, key: string) { const entry = formData.get(key); return typeof entry === "string" && entry.trim() ? entry.trim() : null; }
+function safeReturnPath(path: string | null) { return path && /^\/intermediaries(?:\/(?:posp|misp|partner))?$/.test(path) ? path : "/intermediaries"; }
