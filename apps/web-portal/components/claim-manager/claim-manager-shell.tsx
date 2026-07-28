@@ -1,6 +1,6 @@
 import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
-import { Bell, Sparkles } from "lucide-react";
+import { Bell } from "lucide-react";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { hasCapability } from "@/lib/roles";
 import { UserMenu } from "@/components/user-menu";
@@ -38,8 +38,6 @@ export async function ClaimManagerShell({ title, backHref = "/dashboard", childr
             </div>
 
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-              {hasCapability(role,"create_intermediary_application") ? <Link href="/customers/posp-misp" aria-label="Quick onboard" title="Quick onboard" className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6759ff] to-[#17bfc5] px-2.5 text-[10px] font-bold text-white shadow-[0_10px_24px_rgba(103,89,255,.24)] hover:-translate-y-0.5 sm:px-3.5 sm:text-[11px]"><Sparkles className="h-3.5 w-3.5" /><span className="hidden sm:inline">Quick onboard</span><span className="sm:hidden">Onboard</span></Link> : null}
-
               {hasCapability(role,"view_notifications") ? <Link href="/notifications" aria-label="Notifications" className="relative grid h-11 w-11 place-items-center rounded-2xl border border-white/55 bg-white/52 text-[#183456] shadow-[0_8px_24px_rgba(28,39,68,.10)] backdrop-blur-xl hover:border-[#7D91B4] hover:text-[#6759ff]">
                 <Bell className="h-[18px] w-[18px]" />
                 <span className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-[#ff6f61] ring-2 ring-white" />
