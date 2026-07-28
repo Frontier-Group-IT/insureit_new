@@ -1,5 +1,7 @@
 import { AppShell } from "@/components/shell";
-import { createServerSupabaseClient } from "@/lib/auth-server";
+import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
+import { requireCapability } from "@/lib/master-data-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { PolicyWorkspace } from "./policy-workspace";
 
 type PolicyRow = {
@@ -8,18 +10,29 @@ type PolicyRow = {
   policy_type: string;
   start_date: string;
   end_date: string;
-  customers: { company_name: string | null; contact_name: string } | null;
+  customers: { company_name: string | null; contact_name: string; created_by: string | null } | null;
   vehicles: { vehicle_no: string } | null;
   insurance_companies: { name: string } | null;
 };
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function PoliciesPage() {
-  const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase
+  const profile = await requireCapability("view_policies");
+  const scope = await getEmployeeAccessScope(profile.id, profile.role);
+  const admin = createSupabaseAdminClient();
+
+  if (scope.mode !== "organization" && !scope.profileIds.length) {
+    return <AppShell title="Policies"><PolicyWorkspace rows={[]} /></AppShell>;
+  }
+
+  let query = admin
     .from("policies")
-    .select("id, policy_no, policy_type, start_date, end_date, customers(company_name, contact_name), vehicles(vehicle_no), insurance_companies(name)")
-    .order("created_at", { ascending: false })
-    .returns<PolicyRow[]>();
+    .select("id, policy_no, policy_type, start_date, end_date, customers!inner(company_name, contact_name, created_by), vehicles(vehicle_no), insurance_companies(name)")
+    .order("created_at", { ascending: false });
+  if (scope.mode !== "organization") query = query.in("customers.created_by", scope.profileIds);
+  const { data, error } = await query.returns<PolicyRow[]>();
 
   return (
     <AppShell title="Policies">
