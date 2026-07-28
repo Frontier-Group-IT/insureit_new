@@ -20,8 +20,21 @@ export function UserMenu({ profile, user }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isSendingReset, setIsSendingReset] = useState(false);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
   const displayName = profile?.full_name || user?.email || "Signed-in user";
   const initials = useMemo(() => initialsFor(profile?.full_name, user?.email), [profile?.full_name, user?.email]);
+
+  async function handleResetPassword() {
+    if (!user?.email || isSendingReset) return;
+    setIsSendingReset(true);
+    setResetMessage(null);
+    const supabase = createClient();
+    const redirectTo = `${window.location.origin}/auth/callback?next=/settings`;
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, { redirectTo });
+    setResetMessage(error ? error.message : "Password reset link sent to your email.");
+    setIsSendingReset(false);
+  }
 
   async function handleLogout() {
     setIsSigningOut(true);
@@ -59,21 +72,23 @@ export function UserMenu({ profile, user }: UserMenuProps) {
           {showDetails ? (
             <div className="border-y border-slate-100 bg-slate-50 px-4 py-3 text-xs text-slate-600">
               <dl className="space-y-2">
-                <div className="flex justify-between gap-3">
-                  <dt className="font-semibold text-slate-500">Email</dt>
-                  <dd className="truncate text-right text-slate-700">{user?.email ?? "—"}</dd>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <dt className="font-semibold text-slate-500">Role</dt>
-                  <dd className="text-right capitalize text-slate-700">{profile?.role?.replaceAll("_", " ") ?? "—"}</dd>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <dt className="font-semibold text-slate-500">Status</dt>
-                  <dd className="text-right text-slate-700">{profile?.is_active ? "Active" : "Inactive"}</dd>
-                </div>
+                <div className="flex justify-between gap-3"><dt className="font-semibold text-slate-500">Email</dt><dd className="truncate text-right text-slate-700">{user?.email ?? "—"}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="font-semibold text-slate-500">Role</dt><dd className="text-right capitalize text-slate-700">{profile?.role?.replaceAll("_", " ") ?? "—"}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="font-semibold text-slate-500">Status</dt><dd className="text-right text-slate-700">{profile?.is_active ? "Active" : "Inactive"}</dd></div>
               </dl>
             </div>
           ) : null}
+          {resetMessage ? <div className="border-t border-slate-100 bg-slate-50 px-4 py-2.5 text-xs text-slate-600">{resetMessage}</div> : null}
+          <button
+            className="flex w-full items-center justify-between border-t border-slate-100 px-4 py-3 text-left text-sm font-semibold text-navy-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            type="button"
+            onClick={handleResetPassword}
+            disabled={isSendingReset || !user?.email}
+            role="menuitem"
+          >
+            <span>{isSendingReset ? "Sending reset link..." : "Reset Password"}</span>
+            <span aria-hidden="true">→</span>
+          </button>
           <button
             className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
             type="button"
