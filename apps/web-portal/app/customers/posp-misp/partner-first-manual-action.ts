@@ -31,6 +31,7 @@ export async function createPartnerFirstOnboarding(state: PospMispState, data: F
   const fullName = [firstName, middleName, lastName].filter(Boolean).join(" ");
   const phone = normalizePhone(text(data, "applicant_phone"));
   const email = text(data, "applicant_email")?.toLowerCase() ?? null;
+  const dateOfBirth = text(data, "date_of_birth");
   const pan = compactUpper(data, "pan_number");
   const aadhaar = digits(data, "aadhaar_number");
   const address = text(data, "address");
@@ -45,6 +46,7 @@ export async function createPartnerFirstOnboarding(state: PospMispState, data: F
   if (!lastName) return fail("Last Name is required.", "pos_last_name");
   if (!phone) return fail("Enter a valid Contact Number.", "applicant_phone");
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail("Enter a valid Email.", "applicant_email");
+  if (!dateOfBirth || Number.isNaN(Date.parse(dateOfBirth))) return fail("Enter a valid Date of Birth.", "date_of_birth");
   if (!PAN.test(pan ?? "")) return fail("PAN format is invalid.", "pan_number");
   if (!/^[0-9]{12}$/.test(aadhaar ?? "")) return fail("Aadhaar Number must contain exactly 12 digits.", "aadhaar_number");
   if (!address) return fail("Address is required.", "address");
@@ -97,6 +99,7 @@ export async function createPartnerFirstOnboarding(state: PospMispState, data: F
       pos_name: fullName,
       applicant_phone: phone,
       applicant_email: email,
+      date_of_birth: dateOfBirth,
       address,
       city,
       state: stateName,
@@ -148,6 +151,7 @@ export async function createPartnerFirstOnboarding(state: PospMispState, data: F
       pos_name: fullName,
       applicant_phone: phone,
       applicant_email: email,
+      date_of_birth: dateOfBirth,
       pan_number: pan,
       address,
       city,
