@@ -23,17 +23,45 @@ import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shel
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { getOperationsDashboardData, type OperationsDashboardData } from "@/lib/operations-dashboard";
 import { canManageMasterData } from "@/lib/roles";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type Metric = { label: string; value: number; supporting: string; href: string; icon: LucideIcon; gradient: string; glow: string };
 type FocusItem = { label: string; value: number; detail: string; href: string; icon: LucideIcon; tone: string };
 
 const partnerIcons: Record<string, LucideIcon> = { group: UsersRound, corporate: Building2, dealership: Store, individual: UserRound, posp: BriefcaseBusiness, misp: Landmark };
+const activeKycStatuses = ["submitted", "under_review", "changes_requested"];
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function DashboardPage() {
   const supabase = await createServerSupabaseClient();
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
   const dashboard = await getOperationsDashboardData(supabase);
+  const admin = createSupabaseAdminClient();
+
+  const [pospResult, mispResult, kycResult, submittedKycResult, changedKycResult] = await Promise.all([
+    admin.from("intermediaries").select("id", { count: "exact", head: true }).eq("intermediary_type", "posp"),
+    admin.from("intermediaries").select("id", { count: "exact", head: true }).eq("intermediary_type", "misp"),
+    admin.from("customer_onboarding_applications").select("id", { count: "exact", head: true }).in("status", activeKycStatuses),
+    admin.from("customer_onboarding_applications").select("id", { count: "exact", head: true }).eq("status", "submitted"),
+    admin.from("customer_onboarding_applications").select("id", { count: "exact", head: true }).eq("status", "changes_requested"),
+  ]);
+
+  const pospCount = pospResult.error ? dashboard.portfolio.find((item) => item.key === "posp")?.value ?? 0 : pospResult.count ?? 0;
+  const mispCount = mispResult.error ? dashboard.portfolio.find((item) => item.key === "misp")?.value ?? 0 : mispResult.count ?? 0;
+  const kycCount = kycResult.error ? dashboard.attention.onboarding : kycResult.count ?? 0;
+  const submittedKycCount = submittedKycResult.error ? dashboard.attention.submittedOnboarding : submittedKycResult.count ?? 0;
+  const changedKycCount = changedKycResult.error ? dashboard.attention.changesRequested : changedKycResult.count ?? 0;
+  const livePortfolio = dashboard.portfolio.map((item) => item.key === "posp" ? { ...item, value: pospCount } : item.key === "misp" ? { ...item, value: mispCount } : item);
+  const liveErrors = [
+    ...dashboard.errors,
+    pospResult.error ? "POSP total could not be refreshed." : null,
+    mispResult.error ? "MISP total could not be refreshed." : null,
+    kycResult.error || submittedKycResult.error || changedKycResult.error ? "KYC application totals could not be refreshed." : null,
+  ].filter(Boolean) as string[];
+
   const displayName = firstName(profile?.full_name) || "Operations Team";
   const canCreateRecords = canManageMasterData(profile?.role);
 
@@ -45,7 +73,7 @@ export default async function DashboardPage() {
   ];
 
   const focusItems: FocusItem[] = [
-    { label: "KYC applications", value: dashboard.attention.onboarding, detail: `${dashboard.attention.submittedOnboarding} submitted · ${dashboard.attention.changesRequested} corrections`, href: "/customers/applications", icon: FileCheck2, tone: "bg-[#eeeaff] text-[#5b4ce5]" },
+    { label: "KYC applications", value: kycCount, detail: `${submittedKycCount} submitted · ${changedKycCount} corrections`, href: "/customers/applications", icon: FileCheck2, tone: "bg-[#eeeaff] text-[#5b4ce5]" },
     { label: "Expired policies", value: dashboard.totals.expiredPolicies, detail: "Immediate coverage review", href: "/policies", icon: FileWarning, tone: "bg-[#fff0ed] text-[#d94e44]" },
     { label: "Overdue tasks", value: dashboard.attention.overdueTasks, detail: `${dashboard.attention.openTasks} open follow-ups`, href: "/tasks", icon: Clock3, tone: "bg-[#fff7e5] text-[#bc7d12]" },
     { label: "Documents to review", value: dashboard.attention.documents, detail: "Pending or returned files", href: "/documents", icon: BellRing, tone: "bg-[#e7fbfa] text-[#078f93]" },
@@ -70,9 +98,9 @@ export default async function DashboardPage() {
           </div>
         </section>
 
-        {dashboard.errors.length ? <section className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-[10.5px] text-amber-900 shadow-sm"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0" /><div><p className="font-bold">Some figures are temporarily unavailable.</p><p className="mt-0.5 text-amber-800">{dashboard.errors.join(" ")}</p></div></section> : null}
+        {liveErrors.length ? <section className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-[10.5px] text-amber-900 shadow-sm"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0" /><div><p className="font-bold">Some figures are temporarily unavailable.</p><p className="mt-0.5 text-amber-800">{liveErrors.join(" ")}</p></div></section> : null}
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Business summary">{metrics.map((metric, index) => <MetricCard key={metric.label} metric={metric} delay={index * 70} />)}</section>
-        <section className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,.8fr)]"><div className="portal-card p-4 sm:p-5"><SectionTitle eyebrow="Priority radar" title="Needs your attention" href="/notifications" /><div className="mt-4 grid gap-3 sm:grid-cols-2">{focusItems.map((item) => <FocusCard key={item.label} item={item} />)}</div>{dashboard.attention.highPriorityActivity > 0 ? <Link href="/notifications" className="mt-4 flex items-center justify-between rounded-2xl border border-[#ffd6d0] bg-gradient-to-r from-[#fff6f4] to-[#fffaf8] px-4 py-3 text-[10.5px] font-bold text-[#bd4139]"><span>{dashboard.attention.highPriorityActivity} high-priority customer updates require attention</span><ArrowUpRight className="h-4 w-4" /></Link> : null}</div><div className="portal-card p-4 sm:p-5"><SectionTitle eyebrow="Portfolio Breakdown" title="Account Categories" href="/customers" /><div className="mt-4 grid grid-cols-2 gap-2.5">{dashboard.portfolio.map((item) => <PortfolioCard key={item.key} item={item} />)}</div></div></section>
+        <section className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,.8fr)]"><div className="portal-card p-4 sm:p-5"><SectionTitle eyebrow="Priority radar" title="Needs your attention" href="/notifications" /><div className="mt-4 grid gap-3 sm:grid-cols-2">{focusItems.map((item) => <FocusCard key={item.label} item={item} />)}</div>{dashboard.attention.highPriorityActivity > 0 ? <Link href="/notifications" className="mt-4 flex items-center justify-between rounded-2xl border border-[#ffd6d0] bg-gradient-to-r from-[#fff6f4] to-[#fffaf8] px-4 py-3 text-[10.5px] font-bold text-[#bd4139]"><span>{dashboard.attention.highPriorityActivity} high-priority customer updates require attention</span><ArrowUpRight className="h-4 w-4" /></Link> : null}</div><div className="portal-card p-4 sm:p-5"><SectionTitle eyebrow="Portfolio Breakdown" title="Account Categories" href="/customers" /><div className="mt-4 grid grid-cols-2 gap-2.5">{livePortfolio.map((item) => <PortfolioCard key={item.key} item={item} />)}</div></div></section>
         <section className="grid gap-5 xl:grid-cols-2"><ActivityList title="Recent applications" eyebrow="Onboarding" href="/customers/applications" rows={dashboard.recentApplications.map((row) => ({ id: row.id, href: `/customers/applications/${row.id}`, title: applicationName(row), subtitle: `${partnerLabel(row.partner_type)} · ${row.applicant_phone ?? row.applicant_email ?? "Contact not recorded"}`, status: row.status, updatedAt: row.updated_at }))} /><ActivityList title="Latest claim movement" eyebrow="Claims" href="/claims" rows={dashboard.latestClaims.map((row) => ({ id: row.id, href: `/claims/${row.id}`, title: row.vehicles?.vehicle_no ?? row.claim_no, subtitle: `${row.customers?.company_name ?? row.customers?.contact_name ?? "Customer unavailable"} · ${row.claim_no}`, status: row.current_status, updatedAt: row.updated_at }))} /></section>
       </div>
     </ClaimManagerShell>
