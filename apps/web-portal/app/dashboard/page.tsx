@@ -23,7 +23,7 @@ import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shel
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { getAccessibleIntermediaryApplicationIds } from "@/lib/employee-access-scope";
 import { getOperationsDashboardData, type OperationsDashboardData } from "@/lib/operations-dashboard";
-import { canManageMasterData } from "@/lib/roles";
+import { hasCapability } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type Metric = { label: string; value: number; supporting: string; href: string; icon: LucideIcon; gradient: string; glow: string };
@@ -75,7 +75,9 @@ export default async function DashboardPage() {
   ].filter(Boolean) as string[];
 
   const displayName = firstName(profile?.full_name) || "Operations Team";
-  const canCreateRecords = canManageMasterData(profile?.role);
+  const canCreateCustomer = hasCapability(profile?.role, "manage_customers");
+  const canReviewKyc = hasCapability(profile?.role, "review_kyc");
+  const showCustomerActions = canCreateCustomer || canReviewKyc;
 
   const metrics: Metric[] = [
     { label: "Customer portfolio", value: dashboard.totals.customers, supporting: `${dashboard.totals.activeCustomers} active · ${dashboard.totals.newCustomers} new in 30 days`, href: "/customers", icon: UsersRound, gradient: "from-[#6759ff] via-[#7568ff] to-[#988cff]", glow: "bg-[#6759ff]/20" },
@@ -100,9 +102,9 @@ export default async function DashboardPage() {
           <div className="pointer-events-none absolute -bottom-28 left-[38%] h-72 w-72 rounded-full bg-[#17c7c9]/20 blur-3xl" />
           <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <h1 className="portal-display text-[18px] font-semibold leading-tight sm:text-[22px] lg:text-[26px]">Good {dayPeriod()}, <span className="bg-gradient-to-r from-white via-[#dcd8ff] to-[#77e1dc] bg-clip-text text-transparent">{displayName}</span></h1>
-            {canCreateRecords ? <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
-              <Link href="/customers?choose_partner=1" className="inline-flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-xl border border-white/15 bg-white px-2 text-[9px] font-bold text-[#17213e] shadow-lg hover:-translate-y-0.5 sm:gap-2 sm:px-3.5 sm:text-[10.5px]"><Plus className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" /><span className="truncate">New customer</span></Link>
-              <Link href="/customers/applications" className="inline-flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6759ff] to-[#17bfc5] px-2 text-[9px] font-bold text-white shadow-[0_12px_30px_rgba(103,89,255,.35)] hover:-translate-y-0.5 sm:gap-2 sm:px-3.5 sm:text-[10.5px]"><CheckCircle2 className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" /><span className="truncate">Review KYC</span></Link>
+            {showCustomerActions ? <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
+              {canCreateCustomer ? <Link href="/customers?choose_partner=1" className="inline-flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-xl border border-white/15 bg-white px-2 text-[9px] font-bold text-[#17213e] shadow-lg hover:-translate-y-0.5 sm:gap-2 sm:px-3.5 sm:text-[10.5px]"><Plus className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" /><span className="truncate">New customer</span></Link> : null}
+              {canReviewKyc ? <Link href="/customers/applications" className="inline-flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6759ff] to-[#17bfc5] px-2 text-[9px] font-bold text-white shadow-[0_12px_30px_rgba(103,89,255,.35)] hover:-translate-y-0.5 sm:gap-2 sm:px-3.5 sm:text-[10.5px]"><CheckCircle2 className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" /><span className="truncate">Review KYC</span></Link> : null}
             </div> : null}
           </div>
         </section>
