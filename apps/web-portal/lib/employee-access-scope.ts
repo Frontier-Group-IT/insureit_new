@@ -10,6 +10,7 @@ type EmployeeLink = { id: string; reporting_manager_id: string | null };
 type ProfileLink = { id: string; employee_id: string | null };
 type ApplicationLink = { application_id: string };
 type IntermediaryLink = { id: string; application_id: string | null };
+type ImportRowLink = { import_batch_id: string; normalized_data: Record<string, unknown> | null };
 
 export type EmployeeAccessScope = {
   mode: "organization" | "hierarchy" | "self" | "none";
@@ -53,6 +54,26 @@ export async function getAccessibleIntermediaryApplicationIds(profileId: string,
   return Array.from(new Set((data ?? []).map((row) => row.application_id).filter(Boolean)));
 }
 
+export async function getAccessibleImportBatchIds(profileId: string, role: string | null | undefined) {
+  const scope = await getEmployeeAccessScope(profileId, role);
+  if (scope.mode === "organization") return null;
+  if (!scope.employeeIds.length && !scope.profileIds.length) return [];
+
+  const admin = createSupabaseAdminClient();
+  const { data } = await admin
+    .from("posp_misp_import_rows")
+    .select("import_batch_id,normalized_data")
+    .returns<ImportRowLink[]>();
+
+  const employeeIds = new Set(scope.employeeIds);
+  const profileIds = new Set(scope.profileIds);
+  return Array.from(new Set((data ?? []).filter((row) => {
+    const employeeId = stringValue(row.normalized_data?.associate_employee_id);
+    const profileIdValue = stringValue(row.normalized_data?.associate_profile_id);
+    return Boolean((employeeId && employeeIds.has(employeeId)) || (profileIdValue && profileIds.has(profileIdValue)));
+  }).map((row) => row.import_batch_id)));
+}
+
 export async function getAccessibleIntermediaryIds(profileId: string, role: string | null | undefined) {
   const applicationIds = await getAccessibleIntermediaryApplicationIds(profileId, role);
   if (applicationIds === null) return null;
@@ -65,6 +86,11 @@ export async function getAccessibleIntermediaryIds(profileId: string, role: stri
 export async function canAccessIntermediaryApplication(profileId: string, role: string | null | undefined, applicationId: string) {
   const ids = await getAccessibleIntermediaryApplicationIds(profileId, role);
   return ids === null || ids.includes(applicationId);
+}
+
+export async function canAccessImportBatch(profileId: string, role: string | null | undefined, batchId: string) {
+  const ids = await getAccessibleImportBatchIds(profileId, role);
+  return ids === null || ids.includes(batchId);
 }
 
 export async function canAccessIntermediary(profileId: string, role: string | null | undefined, intermediaryId: string) {
@@ -96,4 +122,8 @@ function descendantIds(rootId: string, employees: EmployeeLink[]) {
     queue.push(...(children.get(id) ?? []));
   }
   return result;
+}
+
+function stringValue(value: unknown) {
+  return typeof value === "string" && value ? value : null;
 }
