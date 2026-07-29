@@ -5,7 +5,6 @@ import { requirePospMispManager } from "@/lib/master-data-server";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { OnboardingFieldPresentation } from "../onboarding-field-presentation";
-import { submitScopedManualPospMispOnboarding } from "../scoped-manual-action";
 import { PospMispOnboardingForm } from "../posp-misp-onboarding-form";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +30,7 @@ export default async function NewPospMispPage({ searchParams }: { searchParams: 
   return (
     <AppShell title={title} backHref={backHref}>
       <OnboardingFieldPresentation>
-        <PospMispOnboardingForm action={submitScopedManualPospMispOnboarding} partnerType={partnerType} salesManagers={salesManagers} oems={oems} banks={banks} error={query.error ?? null} />
+        <PospMispOnboardingForm partnerType={partnerType} salesManagers={salesManagers} oems={oems} banks={banks} error={query.error ?? null} />
       </OnboardingFieldPresentation>
     </AppShell>
   );
