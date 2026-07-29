@@ -8,6 +8,7 @@ import { HistoryBackButton } from "@/components/history-back-button";
 import { AppNavigation } from "@/components/claim-manager/app-navigation";
 import { MobileNavigation } from "@/components/claim-manager/mobile-navigation";
 import { MobileBottomNavigation } from "@/components/claim-manager/mobile-bottom-navigation";
+import { HeaderPathRail } from "@/components/claim-manager/header-path-rail";
 
 type Props = {
   title: string;
@@ -34,7 +35,7 @@ export async function ClaimManagerShell({ title, backHref = "/dashboard", childr
               <MobileNavigation role={role} />
               <div className="hidden sm:block"><HistoryBackButton fallbackHref={backHref} /></div>
               <div className="hidden h-7 w-px bg-gradient-to-b from-transparent via-[#526C91]/60 to-transparent sm:block" />
-              <div className="min-w-0"><h1 className="truncate font-[var(--font-display)] text-[15px] font-semibold tracking-[-0.035em] text-[#0C2852] sm:text-[18px]">{title}</h1></div>
+              <HeaderPathRail title={title} />
             </div>
 
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
