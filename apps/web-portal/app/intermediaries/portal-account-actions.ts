@@ -17,18 +17,19 @@ export async function createIntermediaryPortalLogin(formData: FormData) {
 
   const admin = createSupabaseAdminClient();
   const { data: intermediary } = await admin.from("intermediaries")
-    .select("id,application_id,intermediary_type,display_name,email,portal_access_status")
+    .select("id,application_id,intermediary_type,display_name,email,account_status,portal_access_status")
     .eq("id", intermediaryId)
-    .maybeSingle<{ id:string; application_id:string|null; intermediary_type:"posp"|"misp"|"partner"; display_name:string; email:string|null; portal_access_status:string }>();
+    .maybeSingle<{ id:string; application_id:string|null; intermediary_type:"posp"|"misp"|"partner"; display_name:string; email:string|null; account_status:string; portal_access_status:string }>();
 
-  if (!intermediary || intermediary.intermediary_type === "partner") redirect(`${returnPath}?error=portal_login_not_available`);
+  if (!intermediary || intermediary.account_status !== "active") redirect(`${returnPath}?error=portal_login_not_available`);
   if (!intermediary.email) redirect(`${returnPath}?error=portal_login_email_required`);
   if (intermediary.portal_access_status !== "not_created") redirect(`${returnPath}?error=portal_login_exists`);
 
-  const { data: application } = intermediary.application_id ? await admin.from("intermediary_onboarding_applications")
-    .select("registration_status").eq("id", intermediary.application_id).maybeSingle<{ registration_status:string }>() : { data:null };
-  const eligible = ["training_pending","training_assigned","training_in_progress","training_completed","exam_pending","exam_allotted","exam_in_progress","exam_failed","exam_passed","agreement_pending","agreement_sent","agreement_signed","iib_submission_pending","iib_submitted","iib_registered"].includes(application?.registration_status ?? "");
-  if (!eligible) redirect(`${returnPath}?error=portal_login_stage_locked`);
+  if (intermediary.intermediary_type !== "partner") {
+    const { data: application } = intermediary.application_id ? await admin.from("intermediary_onboarding_applications")
+      .select("registration_status").eq("id", intermediary.application_id).maybeSingle<{ registration_status:string }>() : { data:null };
+    if (application?.registration_status !== "iib_registered") redirect(`${returnPath}?error=portal_login_stage_locked`);
+  }
 
   const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (productionHost ? `https://${productionHost}` : null);
