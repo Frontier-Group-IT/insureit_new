@@ -57,7 +57,7 @@ export async function movePospMispToIib(data:FormData){
 
 export async function completePospMispDocumentStage(data:FormData){
  const {actorId,applicationId,admin}=await context(data);
- const {data:profile}=await admin.from("posp_misp_onboarding_profiles").select("id, workflow_stage, existing_registration_confirmed, partner_type, partner_id").eq("application_id",applicationId).maybeSingle<{id:string;workflow_stage:string;existing_registration_confirmed:boolean;partner_type:"posp"|"misp";partner_id:string|null}>();
+ const {data:profile}=await admin.from("posp_misp_onboarding_profiles").select("id, workflow_stage, existing_registration_confirmed, partner_type, partner_id, external_onboarding_id, pos_name, misp_name, applicant_phone, applicant_email, dp_phone, dp_email, city").eq("application_id",applicationId).maybeSingle<{id:string;workflow_stage:string;existing_registration_confirmed:boolean;partner_type:"posp"|"misp";partner_id:string|null;external_onboarding_id:string|null;pos_name:string|null;misp_name:string|null;applicant_phone:string|null;applicant_email:string|null;dp_phone:string|null;dp_email:string|null;city:string|null}>();
  if(!profile?.id||profile.workflow_stage!=="iib_processing")redirectTo(applicationId,"stage_locked");
  const {data:documents}=await admin.from("intermediary_onboarding_documents").select("document_type").eq("application_id",applicationId).returns<Array<{document_type:string}>>();
  const types=new Set((documents??[]).map(item=>item.document_type));
@@ -65,6 +65,8 @@ export async function completePospMispDocumentStage(data:FormData){
  let partnerId=profile.partner_id;
  if(!partnerId){const {data,error}=await admin.rpc("issue_partner_identity",{p_application_id:applicationId,p_actor_id:actorId});if(error||!data)redirectTo(applicationId,"partner_activation_failed");partnerId=String(data)}
  const now=new Date().toISOString();
+ const registerError=await syncPartnerRegister(admin,applicationId,partnerId,profile,now);
+ if(registerError)redirectTo(applicationId,"partner_activation_failed");
  if(profile.existing_registration_confirmed){const {error}=await admin.from("posp_misp_onboarding_profiles").update({workflow_stage:"completed",partner_status:"active_partner",updated_by:actorId,updated_at:now}).eq("id",profile.id);if(error)redirectTo(applicationId,"workflow_save_failed");await admin.from("intermediary_onboarding_applications").update({partner_status:"active_partner",status:"approved",registration_status:"existing_posp_ready_for_activation",updated_at:now}).eq("id",applicationId);revalidatePartnerViews(applicationId);redirect(`${partnersPath}?success=partner_activated&partner_id=${encodeURIComponent(partnerId)}`)}
  const {error}=await admin.from("posp_misp_onboarding_profiles").update({workflow_stage:"training",partner_status:"active_partner",training_status:"not_assigned",exam_status:"not_allotted",updated_by:actorId,updated_at:now}).eq("id",profile.id);if(error)redirectTo(applicationId,"workflow_save_failed");
  await admin.from("intermediary_training_exam_assignments").upsert({application_id:applicationId,training_status:"not_assigned",exam_status:"not_allotted",updated_by:actorId,updated_at:now},{onConflict:"application_id"});
@@ -81,6 +83,16 @@ export async function requestPartnerPospConversion(data:FormData){
  await admin.from("intermediary_training_exam_assignments").upsert({application_id:applicationId,training_status:"not_assigned",exam_status:"not_allotted",updated_by:actorId,updated_at:now},{onConflict:"application_id"});await admin.from("intermediary_onboarding_applications").update({posp_conversion_requested_at:now,registration_status:"training_pending",updated_at:now}).eq("id",applicationId);revalidatePath(applicationPath(applicationId));redirect(`${applicationPath(applicationId)}?stage=review&success=posp_conversion_started`);
 }
 
+async function syncPartnerRegister(admin:ReturnType<typeof createSupabaseAdminClient>,applicationId:string,partnerId:string,profile:{partner_type:"posp"|"misp";external_onboarding_id:string|null;pos_name:string|null;misp_name:string|null;applicant_phone:string|null;applicant_email:string|null;dp_phone:string|null;dp_email:string|null;city:string|null},now:string){
+ const displayName=(profile.partner_type==="misp"?profile.misp_name:profile.pos_name)?.trim()||"Unnamed Partner";
+ const mobile=profile.partner_type==="misp"?(profile.dp_phone??profile.applicant_phone):profile.applicant_phone;
+ const email=profile.partner_type==="misp"?(profile.dp_email??profile.applicant_email):profile.applicant_email;
+ const payload={intermediary_code:partnerId,onboarding_id:profile.external_onboarding_id,intermediary_type:"partner",requested_type:profile.partner_type,display_name:displayName,mobile,email,city:profile.city,iib_status:"pending",compliance_status:"pending",account_status:"active",portal_access_status:"not_created",visibility_level:"internal",updated_at:now};
+ const {data:existing,error:readError}=await admin.from("intermediaries").select("id").eq("application_id",applicationId).maybeSingle<{id:string}>();
+ if(readError)return readError;
+ if(existing?.id){const {error}=await admin.from("intermediaries").update(payload).eq("id",existing.id);return error}
+ const {error}=await admin.from("intermediaries").insert({application_id:applicationId,...payload,created_at:now});return error;
+}
 function revalidatePartnerViews(applicationId:string){revalidatePath(applicationPath(applicationId));revalidatePath("/customers/posp-misp");revalidatePath("/intermediaries");revalidatePath(partnersPath)}
 function verificationPan(profile:{partner_type:"posp"|"misp";pan_number:string|null;dp_pan_number:string|null}|null|undefined){return (profile?.partner_type==="misp"?profile.dp_pan_number:profile?.pan_number)?.replace(/\s/g,"").toUpperCase()??""}
 async function context(data:FormData){const applicationId=value(data,"application_id");if(!applicationId)redirect("/customers/posp-misp");const accessToken=await getServerAccessToken();const {profile}=await getAuthenticatedProfile(accessToken);if(!profile?.id||!canManagePospMispOnboarding(profile.role))redirect("/access-denied");return{actorId:profile.id,applicationId,admin:createSupabaseAdminClient()}}
