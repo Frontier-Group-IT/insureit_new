@@ -22,8 +22,8 @@ export default async function NewPospMispPage({ searchParams }: { searchParams: 
     loadBanks(admin)
   ]);
   const isMisp = partnerType === "misp";
-  const backHref = isMisp ? "/intermediaries/misp" : "/intermediaries/partner";
-  const title = isMisp ? "Add MISP Application" : "Add Partner Application";
+  const backHref = isMisp ? "/intermediaries/misp" : "/intermediaries/posp";
+  const title = isMisp ? "Add MISP Application" : "Add POSP Application";
 
   return (
     <AppShell title={title} backHref={backHref}>
