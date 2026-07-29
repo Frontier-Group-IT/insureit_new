@@ -94,7 +94,7 @@ function buildRoute(pathname: string, title: string): RouteItem[] {
 
   const visibleSegments = segments.filter((segment) => !/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(segment));
   let accumulated = "";
-  const items = visibleSegments.map((segment, index) => {
+  const items: RouteItem[] = visibleSegments.map((segment, index) => {
     accumulated += `/${segment}`;
     const isLast = index === visibleSegments.length - 1;
     return {
@@ -112,7 +112,7 @@ function buildRoute(pathname: string, title: string): RouteItem[] {
 export function HeaderRouteRail({ title }: { title: string }) {
   const pathname = usePathname();
   const items = buildRoute(pathname, title);
-  const compactItems = items.length > 4 ? [items[0], { label: "…" }, ...items.slice(-2)] : items;
+  const compactItems: RouteItem[] = items.length > 4 ? [items[0], { label: "…" }, ...items.slice(-2)] : items;
 
   return (
     <nav aria-label="Breadcrumb" className="min-w-0">
