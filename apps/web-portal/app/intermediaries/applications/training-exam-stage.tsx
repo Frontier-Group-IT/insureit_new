@@ -1,6 +1,7 @@
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { CompactRegistrationForm } from "./compact-registration-form";
 import { IcallTrainingDashboard, type IcallTrainingAssignment } from "./icall-training-dashboard";
+import { IcallUatPanel } from "./icall-uat-panel";
 import {
   allotIntermediaryExam,
   assignIntermediaryTraining,
@@ -50,6 +51,9 @@ type Profile = {
   dp_email: string | null;
   dp_pan_number: string | null;
   aadhaar_number: string | null;
+  training_login_id: string | null;
+  training_status: string | null;
+  exam_status: string | null;
 };
 
 type Props = {
@@ -77,7 +81,7 @@ export function TrainingExamStage({ applicationId, profile, assignment, document
   const examFailed = assignment?.exam_status === "failed";
   const agreementSent = Boolean(assignment?.agreement_signing_url && ["sent", "opened", "signed"].includes(assignment?.agreement_status ?? ""));
   const agreementSigned = assignment?.agreement_status === "signed";
-  const isIcall = Boolean(assignment?.icall_login_id || assignment?.training_title?.startsWith("iCall POSP"));
+  const isIcall = profile.partner_type === "posp" || Boolean(assignment?.icall_login_id || assignment?.training_title?.startsWith("iCall POSP"));
   const currentStep = isIcall
     ? !registrationCompleted ? 1 : !examPassed ? 2 : !agreementSigned ? 3 : 4
     : !registrationCompleted ? 1 : !trainingCompleted ? 2 : !examPassed ? 3 : !agreementSigned ? 4 : 5;
@@ -89,8 +93,8 @@ export function TrainingExamStage({ applicationId, profile, assignment, document
       {registrationCompleted ? <OutcomeDetails title="Registration outcome" facts={[{ label: "Result", value: "Completed" }, { label: "Documents", value: String(documents.length) }, { label: "PAN check", value: iibVerified ? "Cleared" : "Review required" }, { label: "Completed on", value: formatDateTime(profile.document_received_at) }]}><div className="border-t border-[#E5EAF0] pt-4"><CompactRegistrationForm profile={profile} iibVerified={iibVerified} documents={documents} /></div></OutcomeDetails> : <CompactRegistrationForm profile={profile} iibVerified={iibVerified} documents={documents} />}
     </ProcessSection>
 
-    {registrationCompleted ? <ProcessSection id="training-requirement" number="2" title={isIcall ? "Training & Examination" : "Training"} subtitle={isIcall ? "Live training progress and final exam result from iCall." : "Assign and track training."} state={isIcall ? (examPassed ? "completed" : "current") : (trainingCompleted ? "completed" : "current")} statusText={isIcall ? (examPassed ? "Training and exam completed" : examFailed ? "Exam failed" : "Live status") : (trainingCompleted ? "Training completed" : "Action required")}>
-      {trainingAssigned && isIcall && assignment ? <IcallTrainingDashboard applicationId={applicationId} assignment={assignment} /> : trainingCompleted ? <OutcomeDetails title="Training outcome" facts={[{ label: "Result", value: "Completed" }, { label: "Training", value: assignment?.training_title ?? "-" }, { label: "Assigned on", value: formatDateTime(assignment?.training_assigned_at) }, { label: "Started on", value: formatDateTime(assignment?.training_started_at) }, { label: "Deadline", value: formatDateTime(assignment?.training_deadline) }, { label: "Completed on", value: formatDateTime(assignment?.training_completed_at) }]} /> : trainingAssigned ? <div className="space-y-4">
+    {registrationCompleted ? <ProcessSection id="training-requirement" number="2" title={isIcall ? "Training & Examination" : "Training"} subtitle={isIcall ? "Register, track training progress and fetch the final exam result from iCall." : "Assign and track training."} state={isIcall ? (examPassed ? "completed" : "current") : (trainingCompleted ? "completed" : "current")} statusText={isIcall ? (examPassed ? "Training and exam completed" : examFailed ? "Exam failed" : profile.training_login_id ? "Live status" : "Registration required") : (trainingCompleted ? "Training completed" : "Action required")}>
+      {isIcall && !trainingAssigned ? <IcallUatPanel applicationId={applicationId} partnerType={profile.partner_type} loginId={profile.training_login_id} trainingStatus={profile.training_status} examStatus={profile.exam_status} /> : trainingAssigned && isIcall && assignment ? <IcallTrainingDashboard applicationId={applicationId} assignment={assignment} /> : trainingCompleted ? <OutcomeDetails title="Training outcome" facts={[{ label: "Result", value: "Completed" }, { label: "Training", value: assignment?.training_title ?? "-" }, { label: "Assigned on", value: formatDateTime(assignment?.training_assigned_at) }, { label: "Started on", value: formatDateTime(assignment?.training_started_at) }, { label: "Deadline", value: formatDateTime(assignment?.training_deadline) }, { label: "Completed on", value: formatDateTime(assignment?.training_completed_at) }]} /> : trainingAssigned ? <div className="space-y-4">
         <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <SummaryFact label="Training" value={assignment?.training_title ?? "-"} />
           <SummaryFact label="Deadline" value={formatDateTime(assignment?.training_deadline)} />
