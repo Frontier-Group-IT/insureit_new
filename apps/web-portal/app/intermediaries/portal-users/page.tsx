@@ -50,7 +50,7 @@ export default async function IntermediaryPortalUsersPage() {
   const suspended = rows.filter((row) => row.status === "suspended").length;
 
   return (
-    <AppShell title="Intermediary Portal Users" activeNav="distribution">
+    <AppShell title="Intermediary Portal Users">
       <div className="mx-auto max-w-[1480px] space-y-4 pb-8">
         <section className="rounded-2xl border border-[#DCE5EF] bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
