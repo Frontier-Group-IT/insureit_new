@@ -1,7 +1,6 @@
 "use server";
 
 import { createHash, randomUUID } from "node:crypto";
-import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { canManagePospMispOnboarding } from "@/lib/roles";
@@ -17,8 +16,9 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 const DOCUMENT_FIELDS = ["aadhaar_front","aadhaar_back","pan_copy","education_10th_marksheet","education_12th_marksheet","education_graduation_marksheet","education_post_graduation_marksheet","cancelled_cheque","photograph","gst_copy"] as const;
 type PartnerType = "posp" | "misp";
+type CreateResult = PospMispState & { applicationId?: string | null };
 
-export async function createManualPospMispOnboardingV2(_state: PospMispState, data: FormData): Promise<PospMispState> {
+export async function createManualPospMispOnboardingV2(_state: PospMispState, data: FormData): Promise<CreateResult> {
   const manager = await currentManager().catch((error) => ({ error } as const));
   if ("error" in manager) return fail(message(manager.error, "You are not authorized."));
   const admin = createSupabaseAdminClient();
@@ -40,8 +40,8 @@ export async function createManualPospMispOnboardingV2(_state: PospMispState, da
   const businessPan = compactUpper(data, "pan_number");
   const address = value(data, "address"); const city = value(data, "city"); const state = value(data, "state");
   const postalCode = onlyDigits(data, "postal_code"); const accountNumber = onlyDigits(data, "bank_account_number"); const ifsc = compactUpper(data, "bank_ifsc_code");
-  const gstRegistered = partnerType === "misp" || value(data, "gst_registered") === "yes";
-  const gst = gstRegistered ? compactUpper(data, "gst_number") : null;
+  const gstRegistered = partnerType === "misp";
+  const gst = compactUpper(data, "gst_number");
   const posFirst = partnerType === "posp" ? value(data, "pos_first_name") : null; const posMiddle = partnerType === "posp" ? value(data, "pos_middle_name") : null; const posLast = partnerType === "posp" ? value(data, "pos_last_name") : null;
   const posName = partnerType === "posp" ? [posFirst, posMiddle, posLast].filter(Boolean).join(" ") || null : null;
   const mispName = partnerType === "misp" ? value(data, "misp_name") : null;
@@ -53,7 +53,8 @@ export async function createManualPospMispOnboardingV2(_state: PospMispState, da
   if (!/^[0-9]{6}$/.test(postalCode ?? "")) return fail("PIN Code must contain exactly 6 digits.", "postal_code");
   if (!accountNumber || !/^[0-9]{6,20}$/.test(accountNumber)) return fail("Enter a valid Account Number.", "bank_account_number");
   if (!IFSC.test(ifsc ?? "")) return fail("Enter a valid IFSC Code.", "bank_ifsc_code");
-  if (gstRegistered && !GST.test(gst ?? "")) return fail("GST Number is invalid.", "gst_number");
+  if (gst && !GST.test(gst)) return fail("GST Number is invalid.", "gst_number");
+  if (gstRegistered && !gst) return fail("GST Number is required.", "gst_number");
   const dpFirst = partnerType === "misp" ? value(data, "dp_first_name") : null; const dpMiddle = partnerType === "misp" ? value(data, "dp_middle_name") : null; const dpLast = partnerType === "misp" ? value(data, "dp_last_name") : null;
   const dpName = [dpFirst, dpMiddle, dpLast].filter(Boolean).join(" ") || null; const dpPhone = partnerType === "misp" ? normalizePhone(value(data, "dp_phone")) : null; const dpEmail = partnerType === "misp" ? value(data, "dp_email")?.toLowerCase() ?? null : null; const dpPan = partnerType === "misp" ? compactUpper(data, "dp_pan_number") : null;
   const dob = value(data, "date_of_birth"); const aadhaarDigits = onlyDigits(data, "aadhaar_number");
@@ -62,13 +63,13 @@ export async function createManualPospMispOnboardingV2(_state: PospMispState, da
   if (!applicantPhone) return fail("Enter a valid Mobile Number.", partnerType === "misp" ? "dp_phone" : "applicant_phone");
   const aadhaar = aadhaarDigits && /^[0-9]{12}$/.test(aadhaarDigits) ? { lastFour: aadhaarDigits.slice(-4), hash: createHash("sha256").update(aadhaarDigits).digest("hex"), encrypted: encryptSensitiveValue(aadhaarDigits) } : { lastFour: null, hash: null, encrypted: null };
   for (const field of DOCUMENT_FIELDS) { const selected = upload(data, field); if (!selected) continue; if (!ALLOWED_FILE_TYPES.has(selected.type)) return fail(`${label(field)} must be PDF, JPG or PNG.`, field); if (selected.size > MAX_FILE_SIZE) return fail(`${label(field)} must be 5 MB or smaller.`, field); }
-  const draftData = { partner_type: partnerType, associate_employee_id: associate.id, associate_profile_id: associate.profile_id, associate_name: associate.full_name, associate_id: associate.employee_code, external_onboarding_id: onboardingId, document_received_at: value(data, "document_received_at"), pos_first_name: posFirst, pos_middle_name: posMiddle, pos_last_name: posLast, pos_name: posName, misp_name: mispName, applicant_phone: applicantPhone, applicant_email: applicantEmail, pan_number: businessPan, gst_number: gst, gst_registered: gstRegistered, address, city, state, postal_code: postalCode, bank_id: bank.id, bank_name: bank.name, bank_account_last_four: accountNumber.slice(-4), bank_ifsc_code: ifsc, oem_name: manufacturer?.name ?? null, dp_first_name: dpFirst, dp_middle_name: dpMiddle, dp_last_name: dpLast, dp_name: dpName, dp_phone: dpPhone, dp_email: dpEmail, dp_pan_number: dpPan, dp_date_of_birth: partnerType === "misp" ? dob : null, dp_aadhaar_last_four: partnerType === "misp" ? aadhaar.lastFour : null, date_of_birth: partnerType === "posp" ? dob : null, aadhaar_last_four: partnerType === "posp" ? aadhaar.lastFour : null };
+  const draftData = { partner_type: partnerType, associate_employee_id: associate.id, associate_profile_id: associate.profile_id, associate_name: associate.full_name, associate_id: associate.employee_code, external_onboarding_id: onboardingId, document_received_at: value(data, "document_received_at"), pos_first_name: posFirst, pos_middle_name: posMiddle, pos_last_name: posLast, pos_name: posName, misp_name: mispName, applicant_phone: applicantPhone, applicant_email: applicantEmail, pan_number: businessPan, gst_number: gst, gst_registered: Boolean(gst), address, city, state, postal_code: postalCode, bank_id: bank.id, bank_name: bank.name, bank_account_last_four: accountNumber.slice(-4), bank_ifsc_code: ifsc, oem_name: manufacturer?.name ?? null, dp_first_name: dpFirst, dp_middle_name: dpMiddle, dp_last_name: dpLast, dp_name: dpName, dp_phone: dpPhone, dp_email: dpEmail, dp_pan_number: dpPan, dp_date_of_birth: partnerType === "misp" ? dob : null, dp_aadhaar_last_four: partnerType === "misp" ? aadhaar.lastFour : null, date_of_birth: partnerType === "posp" ? dob : null, aadhaar_last_four: partnerType === "posp" ? aadhaar.lastFour : null };
   let applicationId: string | null = null; const uploaded: string[] = [];
   try {
     const now = new Date().toISOString();
     const { data: application, error: applicationError } = await admin.from("intermediary_onboarding_applications").insert({ initiated_by: manager.id, source: "manager_portal", requested_type: partnerType, final_type: null, status: "submitted", current_step: 1, applicant_phone: applicantPhone, applicant_email: applicantEmail, draft_data: draftData, submitted_at: now, updated_at: now }).select("id").single<{ id: string }>();
     if (applicationError || !application) throw applicationError ?? new Error("Unable to create intermediary onboarding application."); applicationId = application.id;
-    const { error: profileError } = await admin.from("posp_misp_onboarding_profiles").insert({ application_id: application.id, partner_type: partnerType, requested_account_type: partnerType, final_account_type: null, partner_decision: "not_applicable", associate_employee_id: associate.id, associate_profile_id: associate.profile_id, associate_name: associate.full_name, associate_id: associate.employee_code, external_onboarding_id: null, document_received_at: value(data, "document_received_at"), pos_name: posName, misp_name: mispName, applicant_phone: applicantPhone, applicant_email: applicantEmail, pan_number: businessPan, gst_number: gst, address, city, state, postal_code: postalCode, bank_id: bank.id, bank_name: bank.name, bank_account_number: accountNumber, bank_ifsc_code: ifsc, oem_name: manufacturer?.name ?? null, dp_first_name: dpFirst, dp_middle_name: dpMiddle, dp_last_name: dpLast, dp_name: dpName, dp_phone: dpPhone, dp_email: dpEmail, dp_pan_number: dpPan, dp_date_of_birth: partnerType === "misp" ? dob : null, dp_aadhaar_last_four: partnerType === "misp" ? aadhaar.lastFour : null, dp_aadhaar_hash: partnerType === "misp" ? aadhaar.hash : null, dp_aadhaar_number_encrypted: partnerType === "misp" ? aadhaar.encrypted : null, date_of_birth: partnerType === "posp" ? dob : null, aadhaar_last_four: partnerType === "posp" ? aadhaar.lastFour : null, aadhaar_hash: partnerType === "posp" ? aadhaar.hash : null, aadhaar_number_encrypted: partnerType === "posp" ? aadhaar.encrypted : null, education_status: "not_received", iib_remarks: null, iib_upload_status: "pending", iib_uploaded: false, workflow_stage: "pre_iib", pre_iib_submitted_at: now, source: "manual", raw_data: { gst_registered: gstRegistered }, created_by: manager.id, updated_by: manager.id });
+    const { error: profileError } = await admin.from("posp_misp_onboarding_profiles").insert({ application_id: application.id, partner_type: partnerType, requested_account_type: partnerType, final_account_type: null, partner_decision: "not_applicable", associate_employee_id: associate.id, associate_profile_id: associate.profile_id, associate_name: associate.full_name, associate_id: associate.employee_code, external_onboarding_id: null, document_received_at: value(data, "document_received_at"), pos_name: posName, misp_name: mispName, applicant_phone: applicantPhone, applicant_email: applicantEmail, pan_number: businessPan, gst_number: gst, address, city, state, postal_code: postalCode, bank_id: bank.id, bank_name: bank.name, bank_account_number: accountNumber, bank_ifsc_code: ifsc, oem_name: manufacturer?.name ?? null, dp_first_name: dpFirst, dp_middle_name: dpMiddle, dp_last_name: dpLast, dp_name: dpName, dp_phone: dpPhone, dp_email: dpEmail, dp_pan_number: dpPan, dp_date_of_birth: partnerType === "misp" ? dob : null, dp_aadhaar_last_four: partnerType === "misp" ? aadhaar.lastFour : null, dp_aadhaar_hash: partnerType === "misp" ? aadhaar.hash : null, dp_aadhaar_number_encrypted: partnerType === "misp" ? aadhaar.encrypted : null, date_of_birth: partnerType === "posp" ? dob : null, aadhaar_last_four: partnerType === "posp" ? aadhaar.lastFour : null, aadhaar_hash: partnerType === "posp" ? aadhaar.hash : null, aadhaar_number_encrypted: partnerType === "posp" ? aadhaar.encrypted : null, education_status: "not_received", iib_remarks: null, iib_upload_status: "pending", iib_uploaded: false, workflow_stage: "pre_iib", pre_iib_submitted_at: now, source: "manual", raw_data: { gst_registered: Boolean(gst) }, created_by: manager.id, updated_by: manager.id });
     if (profileError) throw profileError;
     const { error: contactError } = await admin.from("intermediary_onboarding_contacts").upsert({ application_id: application.id, contact_role: partnerType === "misp" ? "misp_dp" : "posp", full_name: partnerType === "misp" ? dpName! : posName!, phone: applicantPhone, email: applicantEmail, is_designated_person: partnerType === "misp", login_required: false, membership_status: "pending" }, { onConflict: "application_id,contact_role" });
     if (contactError) throw contactError;
@@ -78,10 +79,10 @@ export async function createManualPospMispOnboardingV2(_state: PospMispState, da
     if (applicationId) { await admin.from("intermediary_onboarding_documents").delete().eq("application_id", applicationId); await admin.from("intermediary_onboarding_contacts").delete().eq("application_id", applicationId); await admin.from("posp_misp_onboarding_profiles").delete().eq("application_id", applicationId); await admin.from("intermediary_onboarding_applications").delete().eq("id", applicationId); }
     return fail(`Application could not be submitted: ${message(error, "Unknown database error")}`);
   }
-  redirect(`/intermediaries/applications/${applicationId}?success=posp_misp_submitted`);
+  return { error: null, field: null, applicationId };
 }
 async function currentManager(){const accessToken=await getServerAccessToken();const{profile}=await getAuthenticatedProfile(accessToken);if(!profile?.id||!canManagePospMispOnboarding(profile.role))throw new Error("You are not authorized to manage intermediary onboarding.");return{id:profile.id}}
-function fail(error:string,field:string|null=null):PospMispState{return{error,field}}
+function fail(error:string,field:string|null=null):CreateResult{return{error,field}}
 function value(data:FormData,key:string){const current=data.get(key);return typeof current==="string"&&current.trim()?current.trim():null}
 function compactUpper(data:FormData,key:string){return value(data,key)?.replace(/\s/g,"").toUpperCase()??null}
 function onlyDigits(data:FormData,key:string){return value(data,key)?.replace(/\D/g,"")??null}
