@@ -17,11 +17,11 @@ export async function resendIntermediaryPortalInvite(formData: FormData) {
 
   const admin = createSupabaseAdminClient();
   const { data: intermediary } = await admin.from("intermediaries")
-    .select("id,email,portal_access_status,intermediary_type")
+    .select("id,email,account_status,portal_access_status")
     .eq("id", intermediaryId)
-    .maybeSingle<{id:string;email:string|null;portal_access_status:string;intermediary_type:string}>();
+    .maybeSingle<{id:string;email:string|null;account_status:string;portal_access_status:string}>();
 
-  if (!intermediary || intermediary.intermediary_type === "partner" || intermediary.portal_access_status !== "invited") redirect(`${returnPath}?error=portal_resend_not_available`);
+  if (!intermediary || intermediary.account_status !== "active" || intermediary.portal_access_status !== "invited") redirect(`${returnPath}?error=portal_resend_not_available`);
   if (!intermediary.email) redirect(`${returnPath}?error=portal_login_email_required`);
 
   const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
