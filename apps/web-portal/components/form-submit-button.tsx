@@ -20,7 +20,7 @@ export function FormSubmitButton({
   const { pending } = useFormStatus();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [formChanged, setFormChanged] = useState(false);
-  const requireChange = /^(Save primary details|Save & return to Documents|Save documents)$/i.test(label);
+  const requireChange = /^(Save primary details|Save documents)$/i.test(label);
 
   useEffect(() => {
     if (!requireChange) return;
