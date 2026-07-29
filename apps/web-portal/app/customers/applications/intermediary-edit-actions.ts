@@ -16,7 +16,6 @@ const DOCUMENT_FIELDS=["aadhaar_front","aadhaar_back","pan_copy","cancelled_cheq
 const PAN=/^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const IFSC=/^[A-Z]{4}0[A-Z0-9]{6}$/;
 const NAME=/^[A-Za-z ]+$/;
-const MATCHING_RECORD="Matching Record Found In DataBase";
 const path=(id:string)=>`/intermediaries/applications/${id}`;
 
 type EditableProfile={id:string;partner_type:"posp"|"misp";workflow_stage:"pre_iib"|"iib_processing"|"training"|"completed";associate_employee_id:string|null;associate_profile_id:string|null;external_onboarding_id:string|null;bank_id:string|null;bank_name:string|null;aadhaar_last_four:string|null;aadhaar_hash:string|null;aadhaar_number_encrypted:string|null;dp_aadhaar_last_four:string|null;dp_aadhaar_hash:string|null;dp_aadhaar_number_encrypted:string|null};
@@ -65,16 +64,11 @@ export async function updateIntermediaryApplication(data:FormData){
  await admin.from("intermediary_onboarding_contacts").delete().eq("application_id",applicationId);const{error:contactError}=await admin.from("intermediary_onboarding_contacts").insert({application_id:applicationId,contact_role:type==="misp"?"misp_dp":"posp",full_name:type==="misp"?dpName:posName,phone:applicantPhone,email:applicantEmail,is_designated_person:type==="misp",login_required:false,membership_status:"pending"});if(contactError)redirect(`${path(applicationId)}?error=posp_misp_edit_failed&stage=primary`);
  const now=new Date().toISOString();
  if(profile.workflow_stage==="pre_iib"){
-  const{data:verification}=await admin.from("posp_misp_onboarding_profiles").select("iib_remarks").eq("id",profile.id).maybeSingle<{iib_remarks:string|null}>();
-  const verificationReady=verification?.iib_remarks==="No Data Found In POS System"||verification?.iib_remarks===MATCHING_RECORD;
-  if(verificationReady){
-   const{data:advanced,error:advanceError}=await admin.from("posp_misp_onboarding_profiles").update({workflow_stage:"iib_processing",requested_account_type:type,final_account_type:type,pre_iib_submitted_at:now,updated_by:reviewer.id,updated_at:now}).eq("id",profile.id).eq("workflow_stage","pre_iib").select("id").maybeSingle<{id:string}>();
-   if(advanceError||!advanced)redirect(`${path(applicationId)}?error=workflow_save_failed&stage=primary`);
-   await admin.from("intermediary_onboarding_applications").update({final_type:type,registration_status:"documents_pending",updated_at:now}).eq("id",applicationId);
-   revalidatePath(path(applicationId));redirect(`${path(applicationId)}?success=primary_details_saved&stage=documents`);
-  }
+  const{data:advanced,error:advanceError}=await admin.from("posp_misp_onboarding_profiles").update({workflow_stage:"iib_processing",requested_account_type:type,final_account_type:type,pre_iib_submitted_at:now,updated_by:reviewer.id,updated_at:now}).eq("id",profile.id).eq("workflow_stage","pre_iib").select("id").maybeSingle<{id:string}>();
+  if(advanceError||!advanced)redirect(`${path(applicationId)}?error=workflow_save_failed&stage=primary`);
+  await admin.from("intermediary_onboarding_applications").update({final_type:type,registration_status:"documents_pending",updated_at:now}).eq("id",applicationId);
  }
- revalidatePath(path(applicationId));const returnStage=profile.workflow_stage==="iib_processing"?"documents":profile.workflow_stage==="pre_iib"?"primary":"review";redirect(`${path(applicationId)}?success=primary_details_saved&stage=${returnStage}`);
+ revalidatePath(path(applicationId));redirect(`${path(applicationId)}?success=primary_details_saved&stage=documents`);
 }
 
 async function replaceDocument(admin:ReturnType<typeof createSupabaseAdminClient>,applicationId:string,documentType:string,selected:File,uploadedBy:string){if(!ALLOWED_FILE_TYPES.has(selected.type)||selected.size>MAX_FILE_SIZE)redirect(`${path(applicationId)}?error=posp_misp_document_invalid&stage=documents`);const{data:previous}=await admin.from("intermediary_onboarding_documents").select("storage_bucket,storage_path").eq("application_id",applicationId).eq("document_type",documentType).maybeSingle<{storage_bucket:string;storage_path:string}>();const extension=selected.type==="application/pdf"?"pdf":selected.type==="image/png"?"png":"jpg";const storagePath=`${applicationId}/intermediary/${documentType}/${randomUUID()}.${extension}`;const{error:uploadError}=await admin.storage.from(DOCUMENT_BUCKET).upload(storagePath,new Uint8Array(await selected.arrayBuffer()),{contentType:selected.type,upsert:false});if(uploadError)redirect(`${path(applicationId)}?error=posp_misp_document_failed&stage=documents`);const{error:recordError}=await admin.from("intermediary_onboarding_documents").upsert({application_id:applicationId,document_type:documentType,file_name:selected.name,storage_bucket:DOCUMENT_BUCKET,storage_path:storagePath,mime_type:selected.type,file_size:selected.size,verification_status:"pending",uploaded_by:uploadedBy},{onConflict:"application_id,document_type"});if(recordError){await admin.storage.from(DOCUMENT_BUCKET).remove([storagePath]);redirect(`${path(applicationId)}?error=posp_misp_document_failed&stage=documents`)}if(previous?.storage_path&&previous.storage_path!==storagePath)await admin.storage.from(previous.storage_bucket).remove([previous.storage_path])}
