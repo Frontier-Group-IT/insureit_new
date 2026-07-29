@@ -8,6 +8,7 @@ import { HistoryBackButton } from "@/components/history-back-button";
 import { AppNavigation } from "@/components/claim-manager/app-navigation";
 import { MobileNavigation } from "@/components/claim-manager/mobile-navigation";
 import { MobileBottomNavigation } from "@/components/claim-manager/mobile-bottom-navigation";
+import { HeaderRouteRail } from "@/components/claim-manager/header-route-rail";
 
 type Props = {
   title: string;
@@ -30,11 +31,11 @@ export async function ClaimManagerShell({ title, backHref = "/dashboard", childr
       <div className="lg:pl-[268px]">
         <header className="sticky top-0 z-40 border-b border-[#476184]/35 bg-[linear-gradient(110deg,rgba(188,203,224,0.88),rgba(203,215,232,0.82),rgba(230,236,245,0.72))] shadow-[0_12px_36px_rgba(18,40,75,0.14)] backdrop-blur-2xl supports-[backdrop-filter]:bg-[linear-gradient(110deg,rgba(167,187,215,0.74),rgba(198,212,231,0.68),rgba(226,234,245,0.60))]">
           <div className="flex min-h-[66px] items-center justify-between gap-2 px-2.5 py-2 sm:px-4 lg:px-6">
-            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
               <MobileNavigation role={role} />
               <div className="hidden sm:block"><HistoryBackButton fallbackHref={backHref} /></div>
               <div className="hidden h-7 w-px bg-gradient-to-b from-transparent via-[#526C91]/60 to-transparent sm:block" />
-              <div className="min-w-0"><h1 className="truncate font-[var(--font-display)] text-[15px] font-semibold tracking-[-0.035em] text-[#0C2852] sm:text-[18px]">{title}</h1></div>
+              <div className="min-w-0 flex-1"><HeaderRouteRail title={title} /></div>
             </div>
 
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
