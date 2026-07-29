@@ -2,18 +2,18 @@ import Link from "next/link";
 import { IndianDateField } from "@/components/indian-date-field";
 
 type PartnerType="posp"|"misp";
-type Props={action:(data:FormData)=>Promise<void>;partnerType:PartnerType;salesManagers:Array<{id:string;fullName:string;employeeCode:string|null}>;oems:Array<{value:string;label:string}>;banks:Array<{value:string;label:string}>;error?:string|null};
+type Props={partnerType:PartnerType;salesManagers:Array<{id:string;fullName:string;employeeCode:string|null}>;oems:Array<{value:string;label:string}>;banks:Array<{value:string;label:string}>;error?:string|null};
 const inputClass="h-9 w-full min-w-0 rounded-lg border border-[#CBD5E1] bg-white px-3 text-[11px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
 const dateInputClass="h-9 w-full rounded-lg border border-[#CBD5E1] bg-white px-3 pr-9 text-[11px] font-medium text-[#17203A] outline-none transition focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF] disabled:bg-[#F8FAFC] disabled:text-[#64748B]";
 const labelClass="mb-1 block text-[9.5px] font-semibold text-[#344054]";
 
-export function PospMispOnboardingForm({action,partnerType,salesManagers,oems,banks,error}:Props){
+export function PospMispOnboardingForm({partnerType,salesManagers,oems,banks,error}:Props){
  const isMisp=partnerType==="misp";const backHref=isMisp?"/intermediaries/misp":"/intermediaries/posp";
  return <div className="w-full space-y-2 pb-12">
   {error?<div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[10px] font-medium text-red-700">{error}</div>:null}
   <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between"><span className="w-fit rounded-full border border-[#D8DEE8] bg-white px-2.5 py-1 text-[10px] font-semibold text-[#475569]">New {partnerType.toUpperCase()} Application</span><div className="flex gap-3"><Link href="/customers/posp-misp/import" className="text-[10px] font-semibold text-[#4F46E5]">Import Excel</Link><Link href={backHref} className="text-[10px] font-semibold text-[#4F46E5]">Back</Link></div></div>
   <StageBar/>
-  <form action={action} className="w-full overflow-hidden rounded-xl border border-[#DCE5EF] bg-white shadow-sm"><input type="hidden" name="partner_type" value={partnerType}/>
+  <form method="post" action="/customers/posp-misp/new/submit" className="w-full overflow-hidden rounded-xl border border-[#DCE5EF] bg-white shadow-sm"><input type="hidden" name="partner_type" value={partnerType}/>
    <header className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 sm:px-4"><div className="flex items-start gap-2.5"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#071D49] text-[9px] font-bold text-white">1</span><div><h2 className="text-[13px] font-semibold text-[#0F172A]">Primary information & PAN check</h2><p className="mt-0.5 text-[9px] leading-3.5 text-[#64748B]">The POSP/MISP ID is issued only after successful onboarding. A Partner ID is issued after Stage 2 documents are submitted.</p></div></div></header>
    <Section title={isMisp?"MISP details":"POSP details"}>
     <div className={`grid min-w-0 gap-3 md:grid-cols-2 xl:col-span-4 ${isMisp?"xl:grid-cols-4":"xl:grid-cols-3"}`}><SelectField label="RM Name" name="associate_employee_id" required options={salesManagers.map(manager=>({value:manager.id,label:`${manager.fullName}${manager.employeeCode?` - ${manager.employeeCode}`:""}`}))} placeholder="Select RM"/>{isMisp?<Field label="MISP Name" name="misp_name" required/>:null}<PanInput label={isMisp?"MISP PAN":"PAN Number"} name="pan_number" compact/><IndianDateField label="Document Received Date" name="document_received_at" inputClassName={dateInputClass}/></div>
