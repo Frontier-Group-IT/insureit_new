@@ -17,12 +17,16 @@ export async function resendIntermediaryPortalInvite(formData: FormData) {
 
   const admin = createSupabaseAdminClient();
   const { data: intermediary } = await admin.from("intermediaries")
-    .select("id,email,account_status,portal_access_status")
+    .select("id,application_id,intermediary_type,email,account_status,portal_access_status")
     .eq("id", intermediaryId)
-    .maybeSingle<{id:string;email:string|null;account_status:string;portal_access_status:string}>();
+    .maybeSingle<{id:string;application_id:string|null;intermediary_type:"posp"|"misp"|"partner";email:string|null;account_status:string;portal_access_status:string}>();
 
-  if (!intermediary || intermediary.account_status !== "active" || intermediary.portal_access_status !== "invited") redirect(`${returnPath}?error=portal_resend_not_available`);
+  if (!intermediary || intermediary.portal_access_status !== "invited") redirect(`${returnPath}?error=portal_resend_not_available`);
   if (!intermediary.email) redirect(`${returnPath}?error=portal_login_email_required`);
+  const { data: application } = intermediary.application_id ? await admin.from("intermediary_onboarding_applications")
+    .select("partner_status").eq("id", intermediary.application_id).maybeSingle<{ partner_status:string|null }>() : { data:null };
+  const activePartner = intermediary.intermediary_type === "partner" || application?.partner_status === "active_partner";
+  if (!activePartner && intermediary.account_status !== "active") redirect(`${returnPath}?error=portal_resend_not_available`);
 
   const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (productionHost ? `https://${productionHost}` : undefined);
