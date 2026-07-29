@@ -66,7 +66,10 @@ export const navigationSections:NavigationSection[]=[
    {href:"/policies",label:"Policy Register",icon:ShieldCheck,capability:"view_policies"},
    {href:"/policies/new",label:"Add Policy",icon:Plus,capability:"manage_customers"}
   ]},
-  {href:"/employees",label:"Employees",icon:UsersRound,capability:"view_employees"}
+  {kind:"group",key:"employees",label:"Employees",icon:UsersRound,capability:"view_employees",items:[
+   {href:"/employees",label:"Employee Directory",icon:UsersRound,capability:"view_employees"},
+   {href:"/employees/new",label:"Add Employee",icon:UserPlus,capability:"manage_users"}
+  ]}
  ]},
  {key:"tasks",label:"Tasks",icon:CheckSquare2,tint:"from-[#17c7c9] to-[#62ddd3]",capability:"view_tasks",items:[
   {href:"/tasks",label:"All Tasks",icon:CheckSquare2,capability:"view_tasks"},
