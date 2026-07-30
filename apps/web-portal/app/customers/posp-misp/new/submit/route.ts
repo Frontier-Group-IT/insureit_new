@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       .update({
         workflow_stage: "iib_processing",
         requested_account_type: partnerType,
-        final_account_type: partnerType,
+        final_account_type: null,
         pre_iib_submitted_at: now,
         updated_at: now,
       })
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     admin
       .from("intermediary_onboarding_applications")
       .update({
-        final_type: partnerType,
+        final_type: null,
         current_step: 2,
         registration_status: "documents_pending",
         updated_at: now,

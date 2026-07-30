@@ -27,11 +27,11 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
  const now=new Date().toISOString();
  const inheritedRegistration=sourceApp.registration_record_id??sourceProfile.registration_record_id??null;
  const childDraft={...sourceDraft,account_context:requestedType,parent_partner_application_id:sourceApplicationId,linked_partner_code:sourceProfile.partner_id??null};
- const registrationStatus="onboarding_started";
+ const registrationStatus=requestedType==="posp"?"training_pending":"agreement_pending";
  const {data:child,error:childError}=await admin.from("intermediary_onboarding_applications").insert({
   initiated_by:reviewer.id,source:"partner_account",requested_type:requestedType,final_type:requestedType,status:"submitted",current_step:3,
   applicant_phone:sourceApp.applicant_phone,applicant_email:sourceApp.applicant_email,draft_data:childDraft,submitted_at:now,updated_at:now,
-  partner_record_id:sourceApp.partner_record_id,partner_status:"active_partner"
+  partner_record_id:sourceApp.partner_record_id,partner_status:"active_partner",registration_status:registrationStatus
  }).select("id").single<{id:string}>();
  if(childError||!child)redirect(`${reviewPath(sourceApplicationId)}?error=${encodeURIComponent(linkedAccountError(childError))}`);
 
@@ -41,7 +41,7 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
   for(const key of ["id","application_id","created_at","updated_at"]){delete original[key]}
   const childProfile={...original,
    application_id:child.id,
-   partner_id:null,
+   partner_id:sourceProfile.partner_id,
    partner_type:requestedType,
    requested_account_type:requestedType,
    final_account_type:requestedType,
@@ -76,6 +76,10 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
    const{error:childProfileLinkError}=await admin.from("posp_misp_onboarding_profiles").update({registration_record_id:inheritedRegistration}).eq("application_id",child.id);if(childProfileLinkError)throw childProfileLinkError;
    registrationTransferred=true;
   }else{
+   const {data:registration,error:registrationError}=await admin.from("intermediary_registrations").insert({partner_id:sourceApp.partner_record_id,application_id:child.id,registration_type:requestedType,registration_status:registrationStatus,training_status:requestedType==="posp"?"not_assigned":"not_required",exam_status:requestedType==="posp"?"not_allotted":"not_required",agreement_status:"not_started",iib_status:"pending",created_by:reviewer.id,updated_at:now}).select("id").single<{id:string}>();
+   if(registrationError||!registration)throw registrationError??new Error("The linked registration record could not be created.");
+   const{error:childAppRegistrationError}=await admin.from("intermediary_onboarding_applications").update({registration_record_id:registration.id,updated_at:now}).eq("id",child.id);if(childAppRegistrationError)throw childAppRegistrationError;
+   const{error:childProfileRegistrationError}=await admin.from("posp_misp_onboarding_profiles").update({registration_record_id:registration.id,updated_at:now}).eq("application_id",child.id);if(childProfileRegistrationError)throw childProfileRegistrationError;
    await admin.from("posp_misp_onboarding_profiles").update({workflow_stage:"completed",updated_by:reviewer.id,updated_at:now}).eq("application_id",sourceApplicationId);
   }
  }catch(error){

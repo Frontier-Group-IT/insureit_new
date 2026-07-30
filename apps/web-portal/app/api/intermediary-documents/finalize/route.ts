@@ -23,18 +23,14 @@ export async function POST(request: Request) {
   const missing=required.filter(type=>!types.has(type));
   if(!hasEducation||missing.length)return NextResponse.json({ok:false,message:!hasEducation?"Upload the education marksheet before saving.":`Upload the remaining document${missing.length===1?"":"s"}: ${missing.join(", ").replaceAll("_"," ")}.`},{status:400});
 
-  let partnerId=profile.partner_id;
-  if(!partnerId){
-    const {data,error}=await admin.rpc("issue_partner_identity",{p_application_id:applicationId,p_actor_id:manager!.id});
-    if(error||!data)return NextResponse.json({ok:false,message:error?.message||"Partner ID could not be issued."},{status:500});
-    partnerId=String(data);
-  }
+  const {data:issuedPartnerId,error:partnerError}=await admin.rpc("issue_partner_identity",{p_application_id:applicationId,p_actor_id:manager!.id});
+  if(partnerError||!issuedPartnerId)return NextResponse.json({ok:false,message:partnerError?.message||"Partner ID could not be issued."},{status:500});
+  const partnerId=String(issuedPartnerId);
   const {error:syncError}=await admin.rpc("sync_partner_intermediary",{p_application_id:applicationId});
   if(syncError)return NextResponse.json({ok:false,message:syncError.message||"Partner register could not be updated."},{status:500});
   const now=new Date().toISOString();
-  await admin.from("posp_misp_onboarding_profiles").update({workflow_stage:"training",partner_status:"active_partner",training_status:"not_assigned",exam_status:"not_allotted",updated_by:manager!.id,updated_at:now}).eq("id",profile.id);
-  await admin.from("intermediary_onboarding_applications").update({partner_status:"active_partner",registration_status:"training_pending",updated_at:now}).eq("id",applicationId);
-  await admin.from("intermediary_training_exam_assignments").upsert({application_id:applicationId,training_status:"not_assigned",exam_status:"not_allotted",updated_by:manager!.id,updated_at:now},{onConflict:"application_id"});
+  await admin.from("posp_misp_onboarding_profiles").update({workflow_stage:"completed",partner_status:"active_partner",final_account_type:"partner",updated_by:manager!.id,updated_at:now}).eq("id",profile.id);
+  await admin.from("intermediary_onboarding_applications").update({final_type:"partner",partner_status:"active_partner",status:"approved",registration_status:"partner_active",updated_at:now}).eq("id",applicationId);
   revalidatePath(`/intermediaries/applications/${applicationId}`);revalidatePath("/intermediaries/partner");
   return NextResponse.json({ok:true,partner_id:partnerId});
 }
