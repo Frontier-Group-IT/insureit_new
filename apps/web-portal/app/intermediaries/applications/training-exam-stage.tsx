@@ -81,7 +81,7 @@ export function TrainingExamStage({ applicationId, profile, assignment, document
   const examFailed = assignment?.exam_status === "failed";
   const agreementSent = Boolean(assignment?.agreement_signing_url && ["sent", "opened", "signed"].includes(assignment?.agreement_status ?? ""));
   const agreementSigned = assignment?.agreement_status === "signed";
-  const isIcall = profile.partner_type === "posp" || Boolean(assignment?.icall_login_id || assignment?.training_title?.startsWith("iCall POSP"));
+  const isIcall = profile.partner_type === "posp" || profile.partner_type === "misp" || Boolean(assignment?.icall_login_id || assignment?.training_title?.startsWith("iCall"));
   return <div id="qualification-process" className="space-y-4 scroll-mt-24">
 
     <ProcessSection id="registration-requirement" number="3" title="Registration" subtitle="Verified details and documents." state={registrationCompleted ? "completed" : "current"} statusText={registrationCompleted ? "Registration completed" : "Action required"}>

@@ -21,7 +21,7 @@ export async function registerWithIcallUat(formData: FormData) {
     .maybeSingle<{ id: string; final_type: string | null; applicant_phone: string | null; applicant_email: string | null }>();
   const { data: profile } = await admin
     .from("posp_misp_onboarding_profiles")
-    .select("partner_type,external_onboarding_id,pos_name,pos_first_name,pos_last_name,pan_number,date_of_birth,applicant_email,applicant_phone,training_login_id")
+    .select("partner_type,external_onboarding_id,pos_name,pos_first_name,pos_last_name,pan_number,date_of_birth,applicant_email,applicant_phone,misp_name,dp_name,dp_first_name,dp_last_name,dp_pan_number,dp_date_of_birth,dp_email,dp_phone,training_login_id")
     .eq("application_id", applicationId)
     .maybeSingle<{
       partner_type: "posp" | "misp";
@@ -33,19 +33,28 @@ export async function registerWithIcallUat(formData: FormData) {
       date_of_birth: string | null;
       applicant_email: string | null;
       applicant_phone: string | null;
+      misp_name: string | null;
+      dp_name: string | null;
+      dp_first_name: string | null;
+      dp_last_name: string | null;
+      dp_pan_number: string | null;
+      dp_date_of_birth: string | null;
+      dp_email: string | null;
+      dp_phone: string | null;
       training_login_id: string | null;
     }>();
 
-  if (!application || !profile || application.final_type === "partner" || profile.partner_type !== "posp") {
-    redirect(`${route(applicationId)}?stage=review&error=icall_posp_only`);
+  if (!application || !profile || application.final_type === "partner") {
+    redirect(`${route(applicationId)}?stage=review&error=icall_account_required`);
   }
   if (profile.training_login_id) redirect(`${route(applicationId)}?stage=review&error=icall_already_registered`);
 
-  const pan = normalizePan(profile.pan_number);
-  const mobile = normalizeMobile(profile.applicant_phone || application.applicant_phone);
-  const email = (profile.applicant_email || application.applicant_email)?.trim().toLowerCase() || null;
-  const nameParts = resolveName(profile.pos_first_name, profile.pos_last_name, profile.pos_name);
-  const dob = formatDob(profile.date_of_birth);
+  const isMisp = profile.partner_type === "misp";
+  const pan = normalizePan(isMisp ? profile.dp_pan_number : profile.pan_number);
+  const mobile = normalizeMobile((isMisp ? profile.dp_phone : profile.applicant_phone) || application.applicant_phone);
+  const email = ((isMisp ? profile.dp_email : profile.applicant_email) || application.applicant_email)?.trim().toLowerCase() || null;
+  const nameParts = isMisp ? resolveName(profile.dp_first_name, profile.dp_last_name, profile.dp_name) : resolveName(profile.pos_first_name, profile.pos_last_name, profile.pos_name);
+  const dob = formatDob(isMisp ? profile.dp_date_of_birth : profile.date_of_birth);
   if (!pan || !nameParts.firstName || !email || !mobile) {
     redirect(`${route(applicationId)}?stage=review&error=icall_details_incomplete`);
   }
@@ -66,12 +75,12 @@ export async function registerWithIcallUat(formData: FormData) {
     const loginId = created?.loginid || existing?.loginid || (existing?.message?.toLowerCase().includes("training ongoing") ? pan : null);
     if (!loginId) throw new Error(response.message || existing?.message || "Registration failed");
 
-    await syncStatusIntoPortal(admin, reviewer.id, applicationId, loginId);
+    await syncStatusIntoPortal(admin, reviewer.id, applicationId, loginId, profile.partner_type);
     revalidatePath(route(applicationId));
     redirect(`${route(applicationId)}?stage=review&success=icall_registered`);
   } catch (error) {
     if (isRedirectError(error)) throw error;
-    console.error("iCall UAT registration failed", { applicationId, error });
+    console.error("iCall UAT registration failed", { applicationId, partnerType: profile.partner_type, error });
     redirect(`${route(applicationId)}?stage=review&error=icall_registration_failed`);
   }
 }
@@ -84,16 +93,16 @@ export async function syncIcallUatStatus(formData: FormData) {
   const admin = createSupabaseAdminClient();
   const { data: profile } = await admin
     .from("posp_misp_onboarding_profiles")
-    .select("training_login_id,pan_number,partner_type")
+    .select("training_login_id,pan_number,dp_pan_number,partner_type")
     .eq("application_id", applicationId)
-    .maybeSingle<{ training_login_id: string | null; pan_number: string | null; partner_type: "posp" | "misp" }>();
-  if (!profile || profile.partner_type !== "posp") redirect(`${route(applicationId)}?stage=review&error=icall_posp_only`);
+    .maybeSingle<{ training_login_id: string | null; pan_number: string | null; dp_pan_number: string | null; partner_type: "posp" | "misp" }>();
+  if (!profile) redirect(`${route(applicationId)}?stage=review&error=icall_account_required`);
 
-  const loginId = profile.training_login_id || normalizePan(profile.pan_number);
+  const loginId = profile.training_login_id || normalizePan(profile.partner_type === "misp" ? profile.dp_pan_number : profile.pan_number);
   if (!loginId) redirect(`${route(applicationId)}?stage=review&error=icall_not_registered`);
 
   try {
-    await syncStatusIntoPortal(admin, reviewer.id, applicationId, loginId);
+    await syncStatusIntoPortal(admin, reviewer.id, applicationId, loginId, profile.partner_type);
     revalidatePath(route(applicationId));
     redirect(`${route(applicationId)}?stage=review&success=icall_status_synced`);
   } catch (error) {
@@ -108,6 +117,7 @@ async function syncStatusIntoPortal(
   reviewerId: string,
   applicationId: string,
   loginId: string,
+  partnerType: "posp" | "misp",
 ) {
   const response = await getIcallPospTrainingStatus(loginId);
   if (response.statusCode !== 200 || !response.data) throw new Error(response.message || "Status not found");
@@ -123,9 +133,10 @@ async function syncStatusIntoPortal(
   const examCompletedAt = parseIcallDate(data.final_exam?.completion_date);
   const score = data.final_exam?.score == null || data.final_exam.score === "" ? null : Number(data.final_exam.score);
 
+  const accountLabel = partnerType.toUpperCase();
   await admin.from("intermediary_training_exam_assignments").upsert({
     application_id: applicationId,
-    training_title: "iCall POSP 15 Hours Training (UAT)",
+    training_title: `iCall ${accountLabel} 15 Hours Training (UAT)`,
     training_url: "https://www.icallinsurance.com/",
     training_instructions: `iCall UAT login ID: ${loginId}. Status is synced from the iCall API.`,
     training_assigned_at: issueDate || now,
@@ -133,7 +144,7 @@ async function syncStatusIntoPortal(
     training_completed_at: completedAt,
     training_deadline: expiryDate,
     training_status: trainingStatus,
-    exam_title: examStatus === "not_allotted" ? null : "iCall POSP Final Examination (UAT)",
+    exam_title: examStatus === "not_allotted" ? null : `iCall ${accountLabel} Final Examination (UAT)`,
     exam_url: examStatus === "not_allotted" ? null : "https://www.icallinsurance.com/",
     exam_completed_at: examCompletedAt,
     exam_passed_at: examStatus === "passed" ? examCompletedAt || now : null,

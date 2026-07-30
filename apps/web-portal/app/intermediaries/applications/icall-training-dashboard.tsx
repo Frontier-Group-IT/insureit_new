@@ -48,7 +48,7 @@ export async function IcallTrainingDashboard({ applicationId, assignment }: { ap
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div>
         <p className="text-[9px] font-semibold uppercase tracking-[.08em] text-blue-700">Live iCall API status</p>
-        <h4 className="mt-1 text-[13px] font-semibold text-[#0F172A]">{details.icall_candidate_name || "POSP training account"}</h4>
+        <h4 className="mt-1 text-[13px] font-semibold text-[#0F172A]">{details.icall_candidate_name || "Training account"}</h4>
         <p className="mt-1 text-[9.5px] text-[#64748B]">Login ID {details.icall_login_id || "-"}{details.icall_internal_pos_code ? ` · Internal code ${details.icall_internal_pos_code}` : ""}</p>
       </div>
       <span className={`rounded-full px-3 py-1.5 text-[9px] font-semibold ${details.training_status === "completed" ? "bg-emerald-100 text-emerald-700" : details.training_status === "expired" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"}`}>{friendly(details.training_status)}</span>
