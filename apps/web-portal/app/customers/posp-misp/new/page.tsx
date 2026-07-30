@@ -1,8 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
-import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
 import { requirePospMispManager } from "@/lib/master-data-server";
-import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createManualPospMispOnboardingV2 } from "../manual-actions-v2";
 import { OnboardingFieldPresentation } from "../onboarding-field-presentation";
@@ -14,13 +12,12 @@ export const revalidate = 0;
 type Query = { partner_type?: string };
 
 export default async function NewPospMispPage({ searchParams }: { searchParams: Promise<Query> }) {
-  const profile = await requirePospMispManager();
+  await requirePospMispManager();
   const query = await searchParams;
   const partnerType = query.partner_type;
   if (partnerType !== "posp" && partnerType !== "misp") redirect("/customers/posp-misp");
   const admin = createSupabaseAdminClient();
-  const [salesManagers, oems, banks] = await Promise.all([
-    loadSalesManagers(admin, profile!.id, profile!.role),
+  const [oems, banks] = await Promise.all([
     loadVehicleManufacturers(admin),
     loadBanks(admin)
   ]);
@@ -34,22 +31,12 @@ export default async function NewPospMispPage({ searchParams }: { searchParams: 
         <PospMispOnboardingForm
           action={createManualPospMispOnboardingV2}
           partnerType={partnerType}
-          salesManagers={salesManagers}
           oems={oems}
           banks={banks}
         />
       </OnboardingFieldPresentation>
     </AppShell>
   );
-}
-
-async function loadSalesManagers(admin: ReturnType<typeof createSupabaseAdminClient>, profileId: string, role: string) {
-  const [managers, scope] = await Promise.all([
-    loadPospMispAssociates(admin),
-    getEmployeeAccessScope(profileId, role)
-  ]);
-  const visibleManagers = scope.mode === "organization" ? managers : managers.filter((manager) => scope.employeeIds.includes(manager.id));
-  return visibleManagers.map((manager) => ({ id: manager.id, fullName: manager.full_name?.trim() || "Unnamed Sales Employee", employeeCode: manager.employee_code }));
 }
 
 async function loadVehicleManufacturers(admin: ReturnType<typeof createSupabaseAdminClient>) {
