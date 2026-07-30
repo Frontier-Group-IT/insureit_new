@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Search } from "lucide-react";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { FeedbackToast } from "@/components/ui-feedback";
@@ -14,6 +15,9 @@ type SelectOption = { value: string; label: string };
 type Props = {
   action: (state: CreateState, data: FormData) => Promise<CreateState>;
   partnerType: PartnerType;
+  searchAction: string;
+  rmSearch: string;
+  salesManagers: SelectOption[];
   oems: SelectOption[];
   banks: SelectOption[];
 };
@@ -22,7 +26,7 @@ const inputClass = "h-11 w-full min-w-0 rounded-xl border border-[#CBD5E1] bg-wh
 const dateInputClass = inputClass;
 const labelClass = "mb-1.5 block text-[10.5px] font-semibold text-[#344054]";
 
-export function PospMispOnboardingForm({ action, partnerType, oems, banks }: Props) {
+export function PospMispOnboardingForm({ action, partnerType, searchAction, rmSearch, salesManagers, oems, banks }: Props) {
   const router = useRouter();
   const [state, formAction] = useActionState(action, { error: null, field: null, applicationId: null });
   const [showError, setShowError] = useState(false);
@@ -83,11 +87,12 @@ export function PospMispOnboardingForm({ action, partnerType, oems, banks }: Pro
         <div className="flex gap-3"><Link href="/customers/posp-misp/import" className="text-[10.5px] font-semibold text-[#4F46E5]">Import Excel</Link><Link href={backHref} className="text-[10.5px] font-semibold text-[#4F46E5]">Back</Link></div>
       </div>
       <StageBar />
+      <form id="rm-search-form" method="get" action={searchAction}></form>
       <form ref={formRef} action={formAction} onSubmitCapture={handleSubmit} onInvalidCapture={handleInvalid} className="w-full overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
         <input type="hidden" name="partner_type" value={partnerType} />
         <header className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-3 py-3 sm:px-5 sm:py-4"><div className="flex items-start gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#071D49] text-[10px] font-bold text-white">1</span><div><h2 className="text-[14px] font-semibold text-[#0F172A]">Primary information & PAN check</h2><p className="mt-0.5 text-[10px] leading-4 text-[#64748B]">The POSP/MISP ID is issued only after successful onboarding. A Partner ID is issued after Stage 2 documents are submitted.</p></div></div></header>
         <Section title={isMisp ? "MISP details" : "POSP details"}>
-          <div className={`grid min-w-0 gap-3 md:grid-cols-2 xl:col-span-4 ${isMisp ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}><SearchableSelectField label="RM Name" name="associate_employee_id" required placeholder="Select RM" value={rmValue} onChange={value => { setRmValue(value); setClientError(null); }} />{isMisp ? <Field label="MISP Name" name="misp_name" required /> : null}<PanInput label={isMisp ? "MISP PAN" : "PAN Number"} name="pan_number" compact /><IndianDateField label="Document Received Date" name="document_received_at" inputClassName={dateInputClass} /></div>
+          <div className={`grid min-w-0 gap-3 md:grid-cols-2 xl:col-span-4 ${isMisp ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}><RmSearchSelect partnerType={partnerType} label="RM Name" name="associate_employee_id" required options={salesManagers} searchValue={rmSearch} value={rmValue} onChange={value => { setRmValue(value); setClientError(null); }} />{isMisp ? <Field label="MISP Name" name="misp_name" required /> : null}<PanInput label={isMisp ? "MISP PAN" : "PAN Number"} name="pan_number" compact /><IndianDateField label="Document Received Date" name="document_received_at" inputClassName={dateInputClass} /></div>
           {!isMisp ? <div className="grid min-w-0 gap-3 md:grid-cols-3 xl:col-span-4"><Field label="POS First Name" name="pos_first_name" required /><Field label="POS Middle Name" name="pos_middle_name" /><Field label="POS Last Name" name="pos_last_name" required /></div> : null}
           {isMisp ? <SelectField label="OEM Name" name="oem_name" required options={oems} placeholder="Select OEM" /> : null}
           <Field label="Address" name="address" required /><Field label="City" name="city" required /><Field label="State" name="state" required /><Field label="PIN Code" name="postal_code" required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} minLength={6} />
@@ -101,77 +106,23 @@ export function PospMispOnboardingForm({ action, partnerType, oems, banks }: Pro
   </>;
 }
 
-function SearchableSelectField({ label, name, required = false, placeholder, value, onChange }: { label: string; name: string; required?: boolean; placeholder: string; value: string; onChange: (value: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [options, setOptions] = useState<SelectOption[]>([]);
-  const [selectedLabel, setSelectedLabel] = useState("");
-  const [loading, setLoading] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const normalizedQuery = query.trim().toLowerCase();
-
-  useEffect(() => {
-    if (normalizedQuery.length < 2) {
-      setOptions([]);
-      setLoading(false);
-      return;
-    }
-    const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      setLoading(true);
-      try {
-        const response = await fetch(`/api/posp-misp/rm-search?q=${encodeURIComponent(query.trim())}`, { signal: controller.signal });
-        const payload = await response.json() as { options?: SelectOption[] };
-        setOptions(Array.isArray(payload.options) ? payload.options : []);
-      } catch (error) {
-        if (!(error instanceof DOMException && error.name === "AbortError")) setOptions([]);
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    }, 200);
-    return () => {
-      controller.abort();
-      window.clearTimeout(timer);
-    };
-  }, [normalizedQuery, query]);
-
-  function choose(option: SelectOption) {
-    onChange(option.value);
-    setSelectedLabel(option.label);
-    setQuery(option.label);
-    setOpen(false);
-  }
-
-  return <div className="relative min-w-0">
-    <label className={labelClass} htmlFor={`${name}-trigger`}>{label}{required ? " *" : ""}</label>
-    <input type="hidden" name={name} value={value} />
-    <div className="relative">
-      <input
-        ref={inputRef}
-        id={`${name}-trigger`}
-        type="text"
-        value={open ? query : selectedLabel || query}
-        placeholder={placeholder}
-        autoComplete="off"
-        role="combobox"
-        aria-expanded={open}
-        aria-controls={`${name}-listbox`}
-        onFocus={() => { setQuery(selectedLabel); setOpen(false); }}
-        onChange={event => { setQuery(event.target.value); setSelectedLabel(""); onChange(""); setOpen(true); }}
-        onKeyDown={event => {
-          if (event.key === "Escape") { event.preventDefault(); setOpen(false); inputRef.current?.blur(); }
-          if (event.key === "Enter" && open && options[0]) { event.preventDefault(); choose(options[0]); }
-        }}
-        onBlur={() => window.setTimeout(() => setOpen(false), 120)}
-        className={`${inputClass} pr-10`}
-      />
-      <button type="button" tabIndex={-1} aria-label={`Toggle ${label}`} onMouseDown={event => event.preventDefault()} onClick={() => { setQuery(selectedLabel); setOpen(true); inputRef.current?.focus(); }} className="absolute inset-y-0 right-0 grid w-10 place-items-center text-[#64748B]">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className={`h-4 w-4 transition ${open ? "rotate-180" : ""}`} aria-hidden="true"><path d="m5 7.5 5 5 5-5" /></svg>
-      </button>
+function RmSearchSelect({ partnerType, label, name, required = false, options, searchValue, value, onChange }: { partnerType: PartnerType; label: string; name: string; required?: boolean; options: SelectOption[]; searchValue: string; value: string; onChange: (value: string) => void }) {
+  return <div className="min-w-0">
+    <label className={labelClass} htmlFor={`${name}_search`}>{label}{required ? " *" : ""}</label>
+    <input type="hidden" name="partner_type" value={partnerType} form="rm-search-form" />
+    <div className="mb-2 flex min-w-0 gap-2">
+      <div className="relative min-w-0 flex-1">
+        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#94A3B8]" />
+        <input id={`${name}_search`} name="rm_q" defaultValue={searchValue} placeholder="Search RM name or code" form="rm-search-form" className={`${inputClass} pl-9`} />
+      </div>
+      <button type="submit" form="rm-search-form" className="h-11 rounded-xl border border-[#C9D5E5] bg-white px-3 text-[10.5px] font-bold text-[#0F2A55]">Search</button>
     </div>
-    {open ? <div id={`${name}-listbox`} role="listbox" className="absolute z-50 mt-1 max-h-64 w-full min-w-[280px] overflow-y-auto rounded-xl border border-[#CBD5E1] bg-white p-1.5 shadow-[0_16px_40px_rgba(15,23,42,.18)]">
-      {normalizedQuery.length < 2 ? <div className="px-3 py-6 text-center text-[11px] text-[#64748B]">Type at least 2 characters to search RM</div> : loading ? <div className="px-3 py-6 text-center text-[11px] text-[#64748B]">Searching...</div> : options.length ? options.map(option => <button key={option.value} type="button" role="option" aria-selected={option.value === value} onMouseDown={event => event.preventDefault()} onClick={() => choose(option)} className={`flex w-full rounded-lg px-3 py-2.5 text-left text-[11px] transition ${option.value === value ? "bg-[#EEF2FF] font-semibold text-[#4338CA]" : "text-[#17203A] hover:bg-[#F1F5F9]"}`}>{option.label}</button>) : <div className="px-3 py-6 text-center text-[11px] text-[#64748B]">No results found</div>}
-    </div> : null}
+    <select id={name} name={name} required={required} value={value} onInvalid={event => event.currentTarget.setCustomValidity(`Please search and select a valid ${label.toLowerCase()}.`)} onChange={event => { event.currentTarget.setCustomValidity(""); onChange(event.target.value); }} className={inputClass}>
+      <option value="">{searchValue.length >= 2 ? "Select RM" : "Search RM first"}</option>
+      {options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+    </select>
+    {searchValue.length >= 2 && !options.length ? <p className="mt-1 text-[9px] font-medium text-red-600">No RM found for this search.</p> : null}
+    {searchValue.length > 0 && searchValue.length < 2 ? <p className="mt-1 text-[9px] text-[#64748B]">Enter at least 2 characters, then search.</p> : null}
   </div>;
 }
 

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
+import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { requireMasterDataManager } from "@/lib/master-data-server";
 import { createCustomerOnboarding } from "../actions";
@@ -20,8 +21,8 @@ type GroupOption = { value: string; label: string };
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function NewCustomerPage({ searchParams }: { searchParams: Promise<{ partner_type?: string; dealership_type?: string }> }) {
-  const { partner_type: partnerType, dealership_type: dealershipType } = await searchParams;
+export default async function NewCustomerPage({ searchParams }: { searchParams: Promise<{ partner_type?: string; dealership_type?: string; rm_q?: string }> }) {
+  const { partner_type: partnerType, dealership_type: dealershipType, rm_q: rmQuery } = await searchParams;
   if (!partnerType || !supportedPartnerTypes.has(partnerType)) redirect("/customers?choose_partner=1");
 
   await requireMasterDataManager();
@@ -65,7 +66,9 @@ export default async function NewCustomerPage({ searchParams }: { searchParams: 
   }
 
   if (partnerType === "posp" || partnerType === "misp") {
-    const [oems, banks] = await Promise.all([
+    const rmSearch = rmQuery?.trim().slice(0, 80) ?? "";
+    const [salesManagers, oems, banks] = await Promise.all([
+      loadSalesManagers(admin, rmSearch),
       loadVehicleManufacturers(admin),
       loadBanks(admin)
     ]);
@@ -75,6 +78,9 @@ export default async function NewCustomerPage({ searchParams }: { searchParams: 
         <PospMispOnboardingForm
           action={createManualPospMispOnboardingV2}
           partnerType={partnerType}
+          searchAction="/customers/new"
+          rmSearch={rmSearch}
+          salesManagers={salesManagers}
           oems={oems}
           banks={banks}
         />
@@ -87,6 +93,23 @@ export default async function NewCustomerPage({ searchParams }: { searchParams: 
       <CustomerOnboardingForm action={createCustomerOnboarding} partnerType={partnerType} />
     </AppShell>
   );
+}
+
+async function loadSalesManagers(admin: ReturnType<typeof createSupabaseAdminClient>, search: string) {
+  if (search.length < 2) return [];
+  const needle = search.toLowerCase();
+  const managers = await loadPospMispAssociates(admin);
+  return managers
+    .filter((manager) => {
+      const name = manager.full_name?.toLowerCase() ?? "";
+      const code = manager.employee_code?.toLowerCase() ?? "";
+      return name.includes(needle) || code.includes(needle);
+    })
+    .slice(0, 20)
+    .map((manager) => ({
+      value: manager.id,
+      label: `${manager.full_name?.trim() || "Unnamed Sales Employee"}${manager.employee_code ? ` - ${manager.employee_code}` : ""}`
+    }));
 }
 
 async function loadVehicleManufacturers(admin: ReturnType<typeof createSupabaseAdminClient>) {
