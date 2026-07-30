@@ -32,6 +32,7 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
   const [showError, setShowError] = useState(Boolean(initialError));
   const [clientError, setClientError] = useState<string | null>(null);
   const [rmValue, setRmValue] = useState("");
+  const [posting, setPosting] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const isMisp = partnerType === "misp";
   const backHref = isMisp ? "/intermediaries/misp" : "/intermediaries/posp";
@@ -54,18 +55,32 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
   }, [initialError, initialField, router, state.applicationId, state.error, state.field]);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    const invalidField = firstInvalidControl(event.currentTarget);
+    if (submitPath) return;
+    validateForSubmit(event.currentTarget, event);
+  }
+
+  function handleRouteSubmit() {
+    const form = formRef.current;
+    if (!form || posting) return;
+    if (!validateForSubmit(form)) return;
+    setPosting(true);
+    form.submit();
+  }
+
+  function validateForSubmit(form: HTMLFormElement, event?: React.FormEvent<HTMLFormElement>) {
+    const invalidField = firstInvalidControl(form);
     if (!invalidField) {
       setClientError(null);
-      return;
+      return true;
     }
-    event.preventDefault();
+    event?.preventDefault();
     setClientError(validationMessage(invalidField));
     setShowError(true);
     requestAnimationFrame(() => {
       invalidField.focus({ preventScroll: true });
       invalidField.scrollIntoView({ behavior: "smooth", block: "center" });
     });
+    return false;
   }
 
   const visibleError = clientError ?? state.error ?? initialError;
@@ -90,7 +105,7 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
         {!isMisp ? <Section title="POSP contact"><Field label="Mobile Number" name="applicant_phone" required inputMode="tel" pattern="(?:\+91)?[6-9][0-9]{9}" /><Field label="Email" name="applicant_email" type="email" required /><IndianDateField label="Date of Birth" name="date_of_birth" required inputClassName={dateInputClass} /><Field label="Aadhaar Number" name="aadhaar_number" required inputMode="numeric" pattern="[0-9]{12}" maxLength={12} minLength={12} /></Section> : null}
         {isMisp ? <Section title="Designated Person (DP)"><Field label="DP First Name" name="dp_first_name" required /><Field label="DP Middle Name" name="dp_middle_name" /><Field label="DP Last Name" name="dp_last_name" required /><Field label="DP Contact" name="dp_phone" required inputMode="tel" pattern="(?:\+91)?[6-9][0-9]{9}" /><Field label="DP Email" name="dp_email" required type="email" /><PanInput label="DP PAN No" name="dp_pan_number" /><IndianDateField label="DP Date of Birth" name="date_of_birth" required inputClassName={dateInputClass} /><Field label="DP Aadhaar Number" name="aadhaar_number" required inputMode="numeric" pattern="[0-9]{12}" maxLength={12} minLength={12} /></Section> : null}
         <Section title="Bank details"><SelectField label="Bank Name" name="bank_id" required options={banks} placeholder="Select bank" /><Field label="Account Number" name="bank_account_number" required inputMode="numeric" pattern="[0-9]{6,20}" /><Field label="IFSC Code" name="bank_ifsc_code" required maxLength={11} minLength={11} pattern="[A-Za-z]{4}0[A-Za-z0-9]{6}" transform="uppercase" /></Section>
-        <div className="sticky bottom-0 z-20 flex flex-col gap-2 border-t border-[#E2E8F0] bg-white/96 px-3 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5"><p className="text-[9.5px] text-[#64748B]">Stage 1 saves the application, queues the PAN check and opens Documents.</p><FormSubmitButton label="Save & check PAN" pendingLabel="Saving & opening Documents" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto" /></div>
+        <div className="sticky bottom-0 z-20 flex flex-col gap-2 border-t border-[#E2E8F0] bg-white/96 px-3 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5"><p className="text-[9.5px] text-[#64748B]">Stage 1 saves the application, queues the PAN check and opens Documents.</p>{submitPath ? <button type="button" disabled={posting} onClick={handleRouteSubmit} className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-80 sm:w-auto">{posting ? "Saving & opening Documents" : "Save & check PAN"}</button> : <FormSubmitButton label="Save & check PAN" pendingLabel="Saving & opening Documents" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto" />}</div>
       </form>
     </div>
   </>;
