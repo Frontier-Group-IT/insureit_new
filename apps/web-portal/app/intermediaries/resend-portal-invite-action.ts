@@ -39,6 +39,5 @@ export async function resendIntermediaryPortalInvite(formData: FormData) {
   revalidatePath(returnPath);
   redirect(`${returnPath}?success=portal_invite_resent`);
 }
-
 function value(formData: FormData, key: string) { const entry = formData.get(key); return typeof entry === "string" && entry.trim() ? entry.trim() : null; }
-function safeReturnPath(path: string | null) { return path && /^\/intermediaries(?:\/(?:posp|misp|partner))?$/.test(path) ? path : "/intermediaries"; }
+function safeReturnPath(path: string | null) { return path && /^\/intermediaries(?:\/(?:posp|misp|partner)|\/applications\/[0-9a-f-]+)?$/i.test(path) ? path : "/intermediaries"; }
