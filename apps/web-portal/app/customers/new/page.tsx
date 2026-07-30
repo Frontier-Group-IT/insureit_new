@@ -11,6 +11,7 @@ import { createDealershipOnboarding } from "../dealership-actions";
 import { DealershipOnboardingForm } from "../dealership-onboarding-form";
 import { createGroupOnboarding } from "../group-actions";
 import { GroupOnboardingForm } from "../group-onboarding-form";
+import { createManualPospMispOnboardingV2 } from "../posp-misp/manual-actions-v2";
 import { PospMispOnboardingForm } from "../posp-misp/posp-misp-onboarding-form";
 
 const supportedPartnerTypes = new Set(["individual_proprietor", "dealership", "corporate", "group", "posp", "misp"]);
@@ -74,6 +75,7 @@ export default async function NewCustomerPage({ searchParams }: { searchParams: 
     return (
       <AppShell title={`Add ${partnerType.toUpperCase()} Application`}>
         <PospMispOnboardingForm
+          action={createManualPospMispOnboardingV2}
           partnerType={partnerType}
           salesManagers={salesManagers}
           oems={oems}
