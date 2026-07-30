@@ -85,7 +85,7 @@ export function PospMispOnboardingForm({ action, partnerType, salesManagers, oem
         <div className="flex gap-3"><Link href="/customers/posp-misp/import" className="text-[10.5px] font-semibold text-[#4F46E5]">Import Excel</Link><Link href={backHref} className="text-[10.5px] font-semibold text-[#4F46E5]">Back</Link></div>
       </div>
       <StageBar />
-      <form ref={formRef} action={formAction} onSubmitCapture={handleSubmit} onInvalidCapture={handleInvalid} onInputCapture={() => { if (clientError) setClientError(null); }} className="w-full overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
+      <form ref={formRef} action={formAction} onSubmitCapture={handleSubmit} onInvalidCapture={handleInvalid} className="w-full overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
         <input type="hidden" name="partner_type" value={partnerType} />
         <header className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-3 py-3 sm:px-5 sm:py-4"><div className="flex items-start gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#071D49] text-[10px] font-bold text-white">1</span><div><h2 className="text-[14px] font-semibold text-[#0F172A]">Primary information & PAN check</h2><p className="mt-0.5 text-[10px] leading-4 text-[#64748B]">The POSP/MISP ID is issued only after successful onboarding. A Partner ID is issued after Stage 2 documents are submitted.</p></div></div></header>
         <Section title={isMisp ? "MISP details" : "POSP details"}>
@@ -106,74 +106,46 @@ export function PospMispOnboardingForm({ action, partnerType, salesManagers, oem
 function SearchableSelectField({ label, name, required = false, options, placeholder, value, onChange }: { label: string; name: string; required?: boolean; options: SelectOption[]; placeholder: string; value: string; onChange: (value: string) => void }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [activeIndex, setActiveIndex] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const searchRef = useRef<HTMLInputElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const selected = options.find(option => option.value === value) ?? null;
-  const filtered = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) return options;
-    return options.filter(option => option.label.toLowerCase().includes(normalized));
-  }, [options, query]);
-
-  useEffect(() => {
-    function handleOutside(event: MouseEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handleOutside);
-    return () => document.removeEventListener("mousedown", handleOutside);
-  }, []);
-
-  useEffect(() => {
-    setActiveIndex(0);
-    if (open) requestAnimationFrame(() => searchRef.current?.focus());
-    else setQuery("");
-  }, [open]);
-
-  useEffect(() => setActiveIndex(0), [query]);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filtered = normalizedQuery ? options.filter(option => option.label.toLowerCase().includes(normalizedQuery)) : options;
 
   function choose(option: SelectOption) {
     onChange(option.value);
+    setQuery(option.label);
     setOpen(false);
-    triggerRef.current?.focus();
   }
 
-  function handleKeyDown(event: React.KeyboardEvent) {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      setOpen(false);
-      triggerRef.current?.focus();
-      return;
-    }
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setActiveIndex(index => Math.min(index + 1, Math.max(filtered.length - 1, 0)));
-      return;
-    }
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setActiveIndex(index => Math.max(index - 1, 0));
-      return;
-    }
-    if (event.key === "Enter" && filtered[activeIndex]) {
-      event.preventDefault();
-      choose(filtered[activeIndex]);
-    }
-  }
-
-  return <div ref={containerRef} className="relative min-w-0">
+  return <div className="relative min-w-0">
     <label className={labelClass} htmlFor={`${name}-trigger`}>{label}{required ? " *" : ""}</label>
     <input type="hidden" name={name} value={value} />
-    <button ref={triggerRef} id={`${name}-trigger`} type="button" aria-haspopup="listbox" aria-expanded={open} aria-controls={`${name}-listbox`} onClick={() => setOpen(current => !current)} onKeyDown={event => { if (!open && ["ArrowDown", "Enter", " "].includes(event.key)) { event.preventDefault(); setOpen(true); } }} className={`${inputClass} flex items-center justify-between text-left ${required && !value ? "" : ""}`}>
-      <span className={selected ? "truncate" : "truncate text-[#98A2B3]"}>{selected?.label ?? placeholder}</span>
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className={`h-4 w-4 shrink-0 transition ${open ? "rotate-180" : ""}`} aria-hidden="true"><path d="m5 7.5 5 5 5-5" /></svg>
-    </button>
-    {open ? <div className="absolute z-50 mt-1 w-full min-w-[280px] overflow-hidden rounded-xl border border-[#CBD5E1] bg-white shadow-[0_16px_40px_rgba(15,23,42,.18)]" onKeyDown={handleKeyDown}>
-      <div className="border-b border-[#E2E8F0] p-2"><input ref={searchRef} type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search by RM name or ID" aria-label={`Search ${label}`} className="h-9 w-full rounded-lg border border-[#CBD5E1] bg-[#F8FAFC] px-3 text-[11px] text-[#17203A] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]" /></div>
-      <div id={`${name}-listbox`} role="listbox" className="max-h-60 overflow-y-auto p-1.5">
-        {filtered.length ? filtered.map((option, index) => <button key={option.value} type="button" role="option" aria-selected={option.value === value} onMouseEnter={() => setActiveIndex(index)} onClick={() => choose(option)} className={`flex w-full rounded-lg px-3 py-2.5 text-left text-[11px] transition ${option.value === value || index === activeIndex ? "bg-[#EEF2FF] font-semibold text-[#4338CA]" : "text-[#17203A] hover:bg-[#F1F5F9]"}`}>{option.label}</button>) : <div className="px-3 py-6 text-center text-[11px] text-[#64748B]">No results found</div>}
-      </div>
+    <div className="relative">
+      <input
+        ref={inputRef}
+        id={`${name}-trigger`}
+        type="text"
+        value={open ? query : selected?.label ?? query}
+        placeholder={placeholder}
+        autoComplete="off"
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={`${name}-listbox`}
+        onFocus={() => { setQuery(selected?.label ?? ""); setOpen(true); }}
+        onChange={event => { setQuery(event.target.value); setOpen(true); }}
+        onKeyDown={event => {
+          if (event.key === "Escape") { event.preventDefault(); setOpen(false); inputRef.current?.blur(); }
+          if (event.key === "Enter" && open && filtered[0]) { event.preventDefault(); choose(filtered[0]); }
+        }}
+        onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+        className={`${inputClass} pr-10`}
+      />
+      <button type="button" tabIndex={-1} aria-label={`Toggle ${label}`} onMouseDown={event => event.preventDefault()} onClick={() => { setQuery(selected?.label ?? ""); setOpen(current => !current); inputRef.current?.focus(); }} className="absolute inset-y-0 right-0 grid w-10 place-items-center text-[#64748B]">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className={`h-4 w-4 transition ${open ? "rotate-180" : ""}`} aria-hidden="true"><path d="m5 7.5 5 5 5-5" /></svg>
+      </button>
+    </div>
+    {open ? <div id={`${name}-listbox`} role="listbox" className="absolute z-50 mt-1 max-h-64 w-full min-w-[280px] overflow-y-auto rounded-xl border border-[#CBD5E1] bg-white p-1.5 shadow-[0_16px_40px_rgba(15,23,42,.18)]">
+      {filtered.length ? filtered.map(option => <button key={option.value} type="button" role="option" aria-selected={option.value === value} onMouseDown={event => event.preventDefault()} onClick={() => choose(option)} className={`flex w-full rounded-lg px-3 py-2.5 text-left text-[11px] transition ${option.value === value ? "bg-[#EEF2FF] font-semibold text-[#4338CA]" : "text-[#17203A] hover:bg-[#F1F5F9]"}`}>{option.label}</button>) : <div className="px-3 py-6 text-center text-[11px] text-[#64748B]">No results found</div>}
     </div> : null}
   </div>;
 }
