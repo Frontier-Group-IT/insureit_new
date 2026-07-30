@@ -30,16 +30,16 @@ export const navigationSections:NavigationSection[]=[
  {key:"distribution",label:"Intermediatory",icon:Sparkles,tint:"from-[#17c7c9] to-[#6759ff]",capability:"view_intermediaries",items:[
   {href:"/intermediaries",label:"Overview",icon:UsersRound,capability:"view_intermediaries"},
   {kind:"group",key:"partners",label:"Partners",icon:UsersRound,capability:"view_intermediaries",items:[
-   {href:"/intermediaries/partner",label:"Partner Register",icon:UsersRound,capability:"view_intermediaries"},
+   {href:"/intermediaries/partner",label:"All Partner",icon:UsersRound,capability:"view_intermediaries"},
    {href:"/intermediaries/portal-users",label:"Portal Users",icon:UserCog,capability:"review_intermediary_application"}
   ]},
   {kind:"group",key:"posp",label:"POSP",icon:UsersRound,capability:"view_intermediaries",items:[
-   {href:"/intermediaries/posp",label:"POSP Register",icon:UsersRound,capability:"view_intermediaries"},
-   {href:"/customers/posp-misp/new?partner_type=posp",label:"Add POSP Application",icon:UserPlus,capability:"create_intermediary_application"}
+   {href:"/intermediaries/posp",label:"All POSP",icon:UsersRound,capability:"view_intermediaries"},
+   {href:"/customers/posp-misp/new?partner_type=posp",label:"Add POSP",icon:UserPlus,capability:"create_intermediary_application"}
   ]},
   {kind:"group",key:"misp",label:"MISP",icon:UsersRound,capability:"view_intermediaries",items:[
-   {href:"/intermediaries/misp",label:"MISP Register",icon:UsersRound,capability:"view_intermediaries"},
-   {href:"/customers/posp-misp/new?partner_type=misp",label:"Add MISP Application",icon:UserPlus,capability:"create_intermediary_application"}
+   {href:"/intermediaries/misp",label:"All MISP",icon:UsersRound,capability:"view_intermediaries"},
+   {href:"/customers/posp-misp/new?partner_type=misp",label:"Add MISP",icon:UserPlus,capability:"create_intermediary_application"}
   ]},
   {kind:"group",key:"intermediary-onboarding",label:"Onboarding",icon:FileCheck2,capability:"view_intermediaries",items:[
    {href:"/customers/posp-misp",label:"Applications",icon:FileCheck2,capability:"view_intermediaries"},
