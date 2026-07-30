@@ -107,11 +107,16 @@ function SearchableSelectField({ label, name, required = false, options, placeho
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-  const selected = options.find(option => option.value === value) ?? null;
+  const selected = useMemo(() => options.find(option => option.value === value) ?? null, [options, value]);
   const normalizedQuery = query.trim().toLowerCase();
   const filtered = useMemo(() => {
-    const matches = normalizedQuery ? options.filter(option => option.label.toLowerCase().includes(normalizedQuery)) : options;
-    return matches.slice(0, 50);
+    if (normalizedQuery.length < 2) return [];
+    const matches: SelectOption[] = [];
+    for (const option of options) {
+      if (option.label.toLowerCase().includes(normalizedQuery)) matches.push(option);
+      if (matches.length >= 50) break;
+    }
+    return matches;
   }, [normalizedQuery, options]);
 
   function choose(option: SelectOption) {
@@ -134,7 +139,7 @@ function SearchableSelectField({ label, name, required = false, options, placeho
         role="combobox"
         aria-expanded={open}
         aria-controls={`${name}-listbox`}
-        onFocus={() => { setQuery(selected?.label ?? ""); setOpen(true); }}
+        onFocus={() => { setQuery(selected?.label ?? ""); setOpen(false); }}
         onChange={event => { setQuery(event.target.value); setOpen(true); }}
         onKeyDown={event => {
           if (event.key === "Escape") { event.preventDefault(); setOpen(false); inputRef.current?.blur(); }
@@ -143,12 +148,12 @@ function SearchableSelectField({ label, name, required = false, options, placeho
         onBlur={() => window.setTimeout(() => setOpen(false), 120)}
         className={`${inputClass} pr-10`}
       />
-      <button type="button" tabIndex={-1} aria-label={`Toggle ${label}`} onMouseDown={event => event.preventDefault()} onClick={() => { setQuery(selected?.label ?? ""); setOpen(current => !current); inputRef.current?.focus(); }} className="absolute inset-y-0 right-0 grid w-10 place-items-center text-[#64748B]">
+      <button type="button" tabIndex={-1} aria-label={`Toggle ${label}`} onMouseDown={event => event.preventDefault()} onClick={() => { setQuery(selected?.label ?? ""); setOpen(true); inputRef.current?.focus(); }} className="absolute inset-y-0 right-0 grid w-10 place-items-center text-[#64748B]">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className={`h-4 w-4 transition ${open ? "rotate-180" : ""}`} aria-hidden="true"><path d="m5 7.5 5 5 5-5" /></svg>
       </button>
     </div>
     {open ? <div id={`${name}-listbox`} role="listbox" className="absolute z-50 mt-1 max-h-64 w-full min-w-[280px] overflow-y-auto rounded-xl border border-[#CBD5E1] bg-white p-1.5 shadow-[0_16px_40px_rgba(15,23,42,.18)]">
-      {filtered.length ? filtered.map(option => <button key={option.value} type="button" role="option" aria-selected={option.value === value} onMouseDown={event => event.preventDefault()} onClick={() => choose(option)} className={`flex w-full rounded-lg px-3 py-2.5 text-left text-[11px] transition ${option.value === value ? "bg-[#EEF2FF] font-semibold text-[#4338CA]" : "text-[#17203A] hover:bg-[#F1F5F9]"}`}>{option.label}</button>) : <div className="px-3 py-6 text-center text-[11px] text-[#64748B]">No results found</div>}
+      {normalizedQuery.length < 2 ? <div className="px-3 py-6 text-center text-[11px] text-[#64748B]">Type at least 2 characters to search RM</div> : filtered.length ? filtered.map(option => <button key={option.value} type="button" role="option" aria-selected={option.value === value} onMouseDown={event => event.preventDefault()} onClick={() => choose(option)} className={`flex w-full rounded-lg px-3 py-2.5 text-left text-[11px] transition ${option.value === value ? "bg-[#EEF2FF] font-semibold text-[#4338CA]" : "text-[#17203A] hover:bg-[#F1F5F9]"}`}>{option.label}</button>) : <div className="px-3 py-6 text-center text-[11px] text-[#64748B]">No results found</div>}
     </div> : null}
   </div>;
 }
