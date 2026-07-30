@@ -21,15 +21,15 @@ export async function createIntermediaryPortalLogin(formData: FormData) {
     .eq("id", intermediaryId)
     .maybeSingle<{ id:string; application_id:string|null; intermediary_type:"posp"|"misp"|"partner"; display_name:string; email:string|null; account_status:string; portal_access_status:string }>();
 
-  if (!intermediary || intermediary.account_status !== "active") redirect(`${returnPath}?error=portal_login_not_available`);
+  if (!intermediary) redirect(`${returnPath}?error=portal_login_not_available`);
   if (!intermediary.email) redirect(`${returnPath}?error=portal_login_email_required`);
   if (intermediary.portal_access_status !== "not_created") redirect(`${returnPath}?error=portal_login_exists`);
 
-  if (intermediary.intermediary_type !== "partner") {
-    const { data: application } = intermediary.application_id ? await admin.from("intermediary_onboarding_applications")
-      .select("registration_status").eq("id", intermediary.application_id).maybeSingle<{ registration_status:string }>() : { data:null };
-    if (application?.registration_status !== "iib_registered") redirect(`${returnPath}?error=portal_login_stage_locked`);
-  }
+  const { data: application } = intermediary.application_id ? await admin.from("intermediary_onboarding_applications")
+    .select("registration_status,partner_status").eq("id", intermediary.application_id).maybeSingle<{ registration_status:string; partner_status:string|null }>() : { data:null };
+  const activePartner = intermediary.intermediary_type === "partner" || application?.partner_status === "active_partner";
+  if (!activePartner && intermediary.account_status !== "active") redirect(`${returnPath}?error=portal_login_not_available`);
+  if (!activePartner && application?.registration_status !== "iib_registered") redirect(`${returnPath}?error=portal_login_stage_locked`);
 
   const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (productionHost ? `https://${productionHost}` : null);

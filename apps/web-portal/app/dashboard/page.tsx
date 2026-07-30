@@ -28,6 +28,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type Metric = { label: string; value: number; supporting: string; href: string; icon: LucideIcon; gradient: string; glow: string };
 type FocusItem = { label: string; value: number; detail: string; href: string; icon: LucideIcon; tone: string };
+type IntermediaryApplicationState = { id: string; requested_type: "posp" | "misp"; registration_status: string; partner_status: string | null };
 
 const partnerIcons: Record<string, LucideIcon> = { group: UsersRound, corporate: Building2, dealership: Store, individual: UserRound, posp: BriefcaseBusiness, misp: Landmark };
 const activeKycStatuses = ["submitted", "under_review", "changes_requested"];
@@ -46,31 +47,33 @@ export default async function DashboardPage() {
     : [];
   const scopedIntermediaries = accessibleApplicationIds !== null;
 
-  async function intermediaryCount(type: "posp" | "misp") {
-    if (scopedIntermediaries && !accessibleApplicationIds.length) return { count: 0, error: null };
-    let query = admin.from("intermediaries").select("id", { count: "exact", head: true }).eq("intermediary_type", type);
-    if (scopedIntermediaries) query = query.in("application_id", accessibleApplicationIds);
-    return query;
+  let intermediaryApplicationsQuery = admin
+    .from("intermediary_onboarding_applications")
+    .select("id,requested_type,registration_status,partner_status");
+  if (scopedIntermediaries) {
+    intermediaryApplicationsQuery = accessibleApplicationIds.length
+      ? intermediaryApplicationsQuery.in("id", accessibleApplicationIds)
+      : intermediaryApplicationsQuery.in("id", ["00000000-0000-0000-0000-000000000000"]);
   }
 
-  const [pospResult, mispResult, kycResult, submittedKycResult, changedKycResult] = await Promise.all([
-    intermediaryCount("posp"),
-    intermediaryCount("misp"),
+  const [intermediaryApplicationsResult, kycResult, submittedKycResult, changedKycResult] = await Promise.all([
+    intermediaryApplicationsQuery.returns<IntermediaryApplicationState[]>(),
     admin.from("customer_onboarding_applications").select("id", { count: "exact", head: true }).in("status", activeKycStatuses),
     admin.from("customer_onboarding_applications").select("id", { count: "exact", head: true }).eq("status", "submitted"),
     admin.from("customer_onboarding_applications").select("id", { count: "exact", head: true }).eq("status", "changes_requested"),
   ]);
 
-  const pospCount = pospResult.error ? dashboard.portfolio.find((item) => item.key === "posp")?.value ?? 0 : pospResult.count ?? 0;
-  const mispCount = mispResult.error ? dashboard.portfolio.find((item) => item.key === "misp")?.value ?? 0 : mispResult.count ?? 0;
+  const intermediaryApplications = intermediaryApplicationsResult.data ?? [];
+  const partnerCount = intermediaryApplications.filter((item) => item.partner_status === "active_partner").length;
+  const pospCount = intermediaryApplications.filter((item) => item.requested_type === "posp" && item.registration_status === "iib_registered").length;
+  const mispCount = intermediaryApplications.filter((item) => item.requested_type === "misp" && item.registration_status === "iib_registered").length;
   const kycCount = kycResult.error ? dashboard.attention.onboarding : kycResult.count ?? 0;
   const submittedKycCount = submittedKycResult.error ? dashboard.attention.submittedOnboarding : submittedKycResult.count ?? 0;
   const changedKycCount = changedKycResult.error ? dashboard.attention.changesRequested : changedKycResult.count ?? 0;
   const livePortfolio = dashboard.portfolio.map((item) => item.key === "posp" ? { ...item, value: pospCount } : item.key === "misp" ? { ...item, value: mispCount } : item);
   const liveErrors = [
     ...dashboard.errors,
-    pospResult.error ? "POSP total could not be refreshed." : null,
-    mispResult.error ? "MISP total could not be refreshed." : null,
+    intermediaryApplicationsResult.error ? "POSP, MISP and Partner totals could not be refreshed." : null,
     kycResult.error || submittedKycResult.error || changedKycResult.error ? "KYC application totals could not be refreshed." : null,
   ].filter(Boolean) as string[];
 
@@ -81,6 +84,7 @@ export default async function DashboardPage() {
 
   const metrics: Metric[] = [
     { label: "Customer portfolio", value: dashboard.totals.customers, supporting: `${dashboard.totals.activeCustomers} active · ${dashboard.totals.newCustomers} new in 30 days`, href: "/customers", icon: UsersRound, gradient: "from-[#6759ff] via-[#7568ff] to-[#988cff]", glow: "bg-[#6759ff]/20" },
+    { label: "Partner accounts", value: partnerCount, supporting: `${partnerCount} active Partner account${partnerCount === 1 ? "" : "s"}`, href: "/intermediaries/partner", icon: BriefcaseBusiness, gradient: "from-[#3156b8] via-[#4775df] to-[#75a3ff]", glow: "bg-[#4775df]/20" },
     { label: "Fleet under management", value: dashboard.totals.vehicles, supporting: `${dashboard.totals.policies} policies · ${dashboard.totals.activePolicies} currently valid`, href: "/vehicles", icon: CarFront, gradient: "from-[#0e9fa8] via-[#17bfc5] to-[#5edbd2]", glow: "bg-[#17c7c9]/20" },
     { label: "Renewal exposure", value: dashboard.totals.expiringPolicies + dashboard.totals.expiredPolicies, supporting: `${dashboard.totals.expiringPolicies} due soon · ${dashboard.totals.expiredPolicies} expired`, href: "/policies", icon: CalendarDays, gradient: "from-[#df8d28] via-[#f1b94a] to-[#ffd477]", glow: "bg-[#f1b94a]/20" },
     { label: "Open claims", value: dashboard.totals.openClaims, supporting: `${dashboard.totals.recentClaims} reported in 30 days · ${dashboard.totals.claims} total`, href: "/claims", icon: ShieldCheck, gradient: "from-[#ec5c51] via-[#ff6f61] to-[#ff9b74]", glow: "bg-[#ff6f61]/20" },
@@ -110,7 +114,7 @@ export default async function DashboardPage() {
         </section>
 
         {liveErrors.length ? <section className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-[10.5px] text-amber-900 shadow-sm"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0" /><div><p className="font-bold">Some figures are temporarily unavailable.</p><p className="mt-0.5 text-amber-800">{liveErrors.join(" ")}</p></div></section> : null}
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Business summary">{metrics.map((metric, index) => <MetricCard key={metric.label} metric={metric} delay={index * 70} />)}</section>
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5" aria-label="Business summary">{metrics.map((metric, index) => <MetricCard key={metric.label} metric={metric} delay={index * 70} />)}</section>
         <section className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,.8fr)]"><div className="portal-card p-4 sm:p-5"><SectionTitle eyebrow="Priority radar" title="Needs your attention" href="/notifications" /><div className="mt-4 grid gap-3 sm:grid-cols-2">{focusItems.map((item) => <FocusCard key={item.label} item={item} />)}</div>{dashboard.attention.highPriorityActivity > 0 ? <Link href="/notifications" className="mt-4 flex items-center justify-between rounded-2xl border border-[#ffd6d0] bg-gradient-to-r from-[#fff6f4] to-[#fffaf8] px-4 py-3 text-[10.5px] font-bold text-[#bd4139]"><span>{dashboard.attention.highPriorityActivity} high-priority customer updates require attention</span><ArrowUpRight className="h-4 w-4" /></Link> : null}</div><div className="portal-card p-4 sm:p-5"><SectionTitle eyebrow="Portfolio Breakdown" title="Account Categories" href="/customers" /><div className="mt-4 grid grid-cols-2 gap-2.5">{livePortfolio.map((item) => <PortfolioCard key={item.key} item={item} />)}</div></div></section>
         <section className="grid gap-5 xl:grid-cols-2"><ActivityList title="Recent applications" eyebrow="Onboarding" href="/customers/applications" rows={dashboard.recentApplications.map((row) => ({ id: row.id, href: `/customers/applications/${row.id}`, title: applicationName(row), subtitle: `${partnerLabel(row.partner_type)} · ${row.applicant_phone ?? row.applicant_email ?? "Contact not recorded"}`, status: row.status, updatedAt: row.updated_at }))} /><ActivityList title="Latest claim movement" eyebrow="Claims" href="/claims" rows={dashboard.latestClaims.map((row) => ({ id: row.id, href: `/claims/${row.id}`, title: row.vehicles?.vehicle_no ?? row.claim_no, subtitle: `${row.customers?.company_name ?? row.customers?.contact_name ?? "Customer unavailable"} · ${row.claim_no}`, status: row.current_status, updatedAt: row.updated_at }))} /></section>
       </div>

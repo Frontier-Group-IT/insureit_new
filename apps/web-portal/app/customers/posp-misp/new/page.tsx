@@ -5,15 +5,17 @@ import { requirePospMispManager } from "@/lib/master-data-server";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { OnboardingFieldPresentation } from "../onboarding-field-presentation";
-import { createScopedManualPospMispOnboarding } from "../scoped-manual-action";
 import { PospMispOnboardingForm } from "../posp-misp-onboarding-form";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function NewPospMispPage({ searchParams }: { searchParams: Promise<{ partner_type?: string }> }) {
+type Query = { partner_type?: string; error?: string };
+
+export default async function NewPospMispPage({ searchParams }: { searchParams: Promise<Query> }) {
   const profile = await requirePospMispManager();
-  const { partner_type: partnerType } = await searchParams;
+  const query = await searchParams;
+  const partnerType = query.partner_type;
   if (partnerType !== "posp" && partnerType !== "misp") redirect("/customers/posp-misp");
   const admin = createSupabaseAdminClient();
   const [salesManagers, oems, banks] = await Promise.all([
@@ -28,7 +30,7 @@ export default async function NewPospMispPage({ searchParams }: { searchParams: 
   return (
     <AppShell title={title} backHref={backHref}>
       <OnboardingFieldPresentation>
-        <PospMispOnboardingForm action={createScopedManualPospMispOnboarding} partnerType={partnerType} salesManagers={salesManagers} oems={oems} banks={banks} />
+        <PospMispOnboardingForm partnerType={partnerType} salesManagers={salesManagers} oems={oems} banks={banks} error={query.error ?? null} />
       </OnboardingFieldPresentation>
     </AppShell>
   );

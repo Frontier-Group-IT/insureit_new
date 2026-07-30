@@ -22,8 +22,12 @@ export default async function PospMispPage({searchParams}:{searchParams:Promise<
  const supabase=await createServerSupabaseClient();
  const {data,error}=await supabase.rpc("get_intermediary_application_queue",{p_query:q,p_requested_type:partnerType,p_status:status,p_page:scoped?1:page,p_page_size:scoped?SCOPED_FETCH_LIMIT:PAGE_SIZE});
  const fetchedRows=(Array.isArray(data)?data:[]) as QueueRow[];
- const allowedRows=scoped?fetchedRows.filter(row=>accessibleIds.includes(row.id)):fetchedRows;
- const total=scoped?allowedRows.length:Number(allowedRows[0]?.total_count??0);
+ const fetchedIds=fetchedRows.map(row=>row.id);
+ const {data:activePartnerProfiles}=fetchedIds.length?await supabase.from("posp_misp_onboarding_profiles").select("application_id").in("application_id",fetchedIds).eq("partner_status","active_partner").not("partner_id","is",null).returns<Array<{application_id:string}>>():{data:[] as Array<{application_id:string}>};
+ const activePartnerIds=new Set((activePartnerProfiles??[]).map(row=>row.application_id));
+ const onboardingRows=fetchedRows.filter(row=>!activePartnerIds.has(row.id));
+ const allowedRows=scoped?onboardingRows.filter(row=>accessibleIds.includes(row.id)):onboardingRows;
+ const total=scoped?allowedRows.length:Math.max(0,Number(fetchedRows[0]?.total_count??0)-activePartnerIds.size);
  const totalPages=Math.max(1,Math.ceil(total/PAGE_SIZE));
  const rows=scoped?allowedRows.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE):allowedRows;
  const counts=(scoped?allowedRows:rows).reduce((summary,row)=>{summary[row.status]=(summary[row.status]??0)+1;return summary},{} as Record<string,number>);
