@@ -30,6 +30,7 @@ export function PospMispOnboardingForm({ action, partnerType, salesManagers, oem
   const [clientError, setClientError] = useState<string | null>(null);
   const [rmValue, setRmValue] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
+  const invalidHandledRef = useRef(false);
   const isMisp = partnerType === "misp";
   const backHref = isMisp ? "/intermediaries/misp" : "/intermediaries/posp";
 
@@ -51,6 +52,11 @@ export function PospMispOnboardingForm({ action, partnerType, salesManagers, oem
 
   function handleInvalid(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (invalidHandledRef.current) return;
+    invalidHandledRef.current = true;
+    window.setTimeout(() => {
+      invalidHandledRef.current = false;
+    }, 0);
     const field = event.target;
     if (!(field instanceof HTMLInputElement) && !(field instanceof HTMLSelectElement)) return;
     const label = field.labels?.[0]?.textContent?.replace(" *", "").trim() || field.name.replaceAll("_", " ");
@@ -63,7 +69,9 @@ export function PospMispOnboardingForm({ action, partnerType, salesManagers, oem
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    if (rmValue) return;
+    invalidHandledRef.current = false;
+    const selectedRm = new FormData(event.currentTarget).get("associate_employee_id");
+    if (typeof selectedRm === "string" && selectedRm.trim()) return;
     event.preventDefault();
     setClientError("Please select a valid RM name from the list.");
     setShowError(true);
@@ -109,4 +117,4 @@ function Stage({ number, label, active = false }: { number: string; label: strin
 function PanInput({ label, name, compact = false }: { label: string; name: string; compact?: boolean }) { return <div className={`min-w-0 ${compact ? "" : "xl:col-span-2"}`}><label className={labelClass} htmlFor={name}>{label} *</label><input id={name} name={name} required maxLength={10} minLength={10} pattern="[A-Za-z]{5}[0-9]{4}[A-Za-z]" onInvalid={event => { const input = event.currentTarget; input.setCustomValidity(input.validity.valueMissing ? `${label} is required.` : `Enter a valid ${label.toLowerCase()} in the format ABCDE1234F.`); }} onInput={event => { event.currentTarget.value = event.currentTarget.value.toUpperCase().replace(/\s/g, ""); event.currentTarget.setCustomValidity(""); }} className={`${inputClass} font-mono tracking-[0.03em]`} /></div>; }
 function Section({ title, children }: { title: string; children: React.ReactNode }) { return <section className="border-b border-[#E2E8F0] px-3 py-4 sm:px-5 sm:py-5"><h3 className="mb-4 text-[12px] font-semibold text-[#0F172A]">{title}</h3><div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">{children}</div></section>; }
 function Field({ label, name, required = false, transform, onInvalid, onInput, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; name: string; transform?: "uppercase" }) { return <div className="min-w-0"><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} required={required} className={inputClass} onInvalid={event => { const input = event.currentTarget; if (input.validity.valueMissing) input.setCustomValidity(`${label} is required.`); else if (input.validity.typeMismatch || input.validity.patternMismatch || input.validity.tooShort) input.setCustomValidity(`Enter a valid ${label.toLowerCase()}.`); onInvalid?.(event); }} onInput={event => { if (transform === "uppercase") event.currentTarget.value = event.currentTarget.value.toUpperCase().replace(/\s/g, ""); event.currentTarget.setCustomValidity(""); onInput?.(event); }} {...props} /></div>; }
-function SelectField({ label, name, required = false, options, placeholder, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { label: string; name: string; options: SelectOption[]; placeholder: string }) { return <div className="min-w-0"><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><select id={name} name={name} required={required} className={inputClass} onInvalid={event => event.currentTarget.setCustomValidity(`Please select a valid ${label.toLowerCase()} from the list.`)} onChange={event => { event.currentTarget.setCustomValidity(""); props.onChange?.(event); }} {...props}><option value="">{placeholder}</option>{options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>; }
+function SelectField({ label, name, required = false, options, placeholder, onInvalid, onChange, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { label: string; name: string; options: SelectOption[]; placeholder: string }) { return <div className="min-w-0"><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><select id={name} name={name} required={required} className={inputClass} onInvalid={event => { event.currentTarget.setCustomValidity(`Please select a valid ${label.toLowerCase()} from the list.`); onInvalid?.(event); }} onChange={event => { event.currentTarget.setCustomValidity(""); onChange?.(event); }} {...props}><option value="">{placeholder}</option>{options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>; }
