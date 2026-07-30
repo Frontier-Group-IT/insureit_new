@@ -109,7 +109,10 @@ function SearchableSelectField({ label, name, required = false, options, placeho
   const inputRef = useRef<HTMLInputElement>(null);
   const selected = options.find(option => option.value === value) ?? null;
   const normalizedQuery = query.trim().toLowerCase();
-  const filtered = normalizedQuery ? options.filter(option => option.label.toLowerCase().includes(normalizedQuery)) : options;
+  const filtered = useMemo(() => {
+    const matches = normalizedQuery ? options.filter(option => option.label.toLowerCase().includes(normalizedQuery)) : options;
+    return matches.slice(0, 50);
+  }, [normalizedQuery, options]);
 
   function choose(option: SelectOption) {
     onChange(option.value);
