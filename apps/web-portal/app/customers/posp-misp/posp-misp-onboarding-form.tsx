@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { FeedbackToast } from "@/components/ui-feedback";
@@ -15,6 +14,7 @@ type SelectOption = { value: string; label: string };
 type Props = {
   action: (state: CreateState, data: FormData) => Promise<CreateState>;
   partnerType: PartnerType;
+  salesManagers: SelectOption[];
   oems: SelectOption[];
   banks: SelectOption[];
 };
@@ -23,7 +23,7 @@ const inputClass = "h-11 w-full min-w-0 rounded-xl border border-[#CBD5E1] bg-wh
 const dateInputClass = inputClass;
 const labelClass = "mb-1.5 block text-[10.5px] font-semibold text-[#344054]";
 
-export function PospMispOnboardingForm({ action, partnerType, oems, banks }: Props) {
+export function PospMispOnboardingForm({ action, partnerType, salesManagers, oems, banks }: Props) {
   const router = useRouter();
   const [state, formAction] = useActionState(action, { error: null, field: null, applicationId: null });
   const [showError, setShowError] = useState(false);
@@ -88,7 +88,7 @@ export function PospMispOnboardingForm({ action, partnerType, oems, banks }: Pro
         <input type="hidden" name="partner_type" value={partnerType} />
         <header className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-3 py-3 sm:px-5 sm:py-4"><div className="flex items-start gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#071D49] text-[10px] font-bold text-white">1</span><div><h2 className="text-[14px] font-semibold text-[#0F172A]">Primary information & PAN check</h2><p className="mt-0.5 text-[10px] leading-4 text-[#64748B]">The POSP/MISP ID is issued only after successful onboarding. A Partner ID is issued after Stage 2 documents are submitted.</p></div></div></header>
         <Section title={isMisp ? "MISP details" : "POSP details"}>
-          <div className={`grid min-w-0 gap-3 md:grid-cols-2 xl:col-span-4 ${isMisp ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}><RmPicker label="RM Name" name="associate_employee_id" required value={rmValue} onChange={value => { setRmValue(value); setClientError(null); }} />{isMisp ? <Field label="MISP Name" name="misp_name" required /> : null}<PanInput label={isMisp ? "MISP PAN" : "PAN Number"} name="pan_number" compact /><IndianDateField label="Document Received Date" name="document_received_at" inputClassName={dateInputClass} /></div>
+          <div className={`grid min-w-0 gap-3 md:grid-cols-2 xl:col-span-4 ${isMisp ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}><SelectField label="RM Name" name="associate_employee_id" required options={salesManagers} placeholder="Select RM" value={rmValue} onChange={event => { setRmValue(event.target.value); setClientError(null); }} />{isMisp ? <Field label="MISP Name" name="misp_name" required /> : null}<PanInput label={isMisp ? "MISP PAN" : "PAN Number"} name="pan_number" compact /><IndianDateField label="Document Received Date" name="document_received_at" inputClassName={dateInputClass} /></div>
           {!isMisp ? <div className="grid min-w-0 gap-3 md:grid-cols-3 xl:col-span-4"><Field label="POS First Name" name="pos_first_name" required /><Field label="POS Middle Name" name="pos_middle_name" /><Field label="POS Last Name" name="pos_last_name" required /></div> : null}
           {isMisp ? <SelectField label="OEM Name" name="oem_name" required options={oems} placeholder="Select OEM" /> : null}
           <Field label="Address" name="address" required /><Field label="City" name="city" required /><Field label="State" name="state" required /><Field label="PIN Code" name="postal_code" required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} minLength={6} />
@@ -100,97 +100,6 @@ export function PospMispOnboardingForm({ action, partnerType, oems, banks }: Pro
       </form>
     </div>
   </>;
-}
-
-function RmPicker({ label, name, required = false, value, onChange }: { label: string; name: string; required?: boolean; value: string; onChange: (value: string) => void }) {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<SelectOption[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [selected, setSelected] = useState<SelectOption | null>(null);
-  const hasSearchTerm = query.trim().length >= 2;
-
-  useEffect(() => {
-    function handlePointerDown(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!hasSearchTerm) {
-      setOpen(false);
-      setSuggestions([]);
-      setLoading(false);
-      return;
-    }
-
-    const controller = new AbortController();
-    setLoading(true);
-    fetch(`/api/posp-misp/rm-search?q=${encodeURIComponent(query.trim())}`, { signal: controller.signal })
-      .then(response => response.ok ? response.json() : { options: [] })
-      .then((payload: { options?: SelectOption[] }) => setSuggestions(Array.isArray(payload.options) ? payload.options : []))
-      .catch(error => {
-        if (!(error instanceof DOMException && error.name === "AbortError")) setSuggestions([]);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-
-    return () => controller.abort();
-  }, [hasSearchTerm, query]);
-
-  function choose(option: SelectOption) {
-    setSelected(option);
-    setQuery(option.label);
-    onChange(option.value);
-    setOpen(false);
-  }
-
-  return <div ref={rootRef} className="relative min-w-0">
-    <label className={labelClass} htmlFor={`${name}-trigger`}>{label}{required ? " *" : ""}</label>
-    <input type="hidden" name={name} value={value} />
-    <div className="relative">
-      <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#94A3B8]" />
-      <input
-        id={`${name}-trigger`}
-        type="text"
-        value={query}
-        placeholder="Type RM name or code"
-        autoComplete="off"
-        role="combobox"
-        aria-expanded={open}
-        aria-controls={`${name}-listbox`}
-        aria-autocomplete="list"
-        onFocus={() => { if (hasSearchTerm) setOpen(true); }}
-        onBlur={() => window.setTimeout(() => setOpen(false), 120)}
-        onChange={event => {
-          const next = event.target.value;
-          setQuery(next);
-          setSelected(null);
-          onChange("");
-          setOpen(next.trim().length >= 2);
-        }}
-        className={`${inputClass} pl-9`}
-      />
-    </div>
-    {open && hasSearchTerm && (loading || suggestions.length > 0) ? <div id={`${name}-listbox`} role="listbox" className="absolute z-50 mt-2 max-h-64 w-full min-w-[280px] overflow-auto rounded-xl border border-[#CBD5E1] bg-white p-1.5 shadow-[0_16px_40px_rgba(15,23,42,.18)]">
-      {loading ? <p className="px-3 py-2 text-[11px] font-medium text-[#64748B]">Searching...</p> : suggestions.map(option => <button key={option.value} type="button" role="option" aria-selected={option.value === value} onMouseDown={event => event.preventDefault()} onClick={() => choose(option)} className="block w-full rounded-lg px-3 py-2.5 text-left text-[11px] font-semibold text-[#17203A] transition hover:bg-[#EEF2FF]">{option.label}</button>)}
-    </div> : null}
-    {open && hasSearchTerm && !loading && suggestions.length === 0 ? <p className="mt-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-[10px] font-medium text-blue-700">No matching RM found.</p> : null}
-    {selected ? <p className="mt-1 text-[9px] font-medium text-[#475569]">Selected: {selected.label}</p> : null}
-  </div>;
 }
 
 function StageBar() { return <div className="grid grid-cols-1 gap-1.5 rounded-2xl border border-[#DCE5EF] bg-white p-2 shadow-sm sm:grid-cols-3 sm:gap-2"><Stage active number="1" label="Primary & IIB" /><Stage number="2" label="Documents" /><Stage number="3" label="Review" /></div>; }
