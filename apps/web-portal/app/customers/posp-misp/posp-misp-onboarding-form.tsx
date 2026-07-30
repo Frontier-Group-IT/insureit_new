@@ -43,16 +43,7 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
       router.replace(`/intermediaries/applications/${state.applicationId}/workflow?stage=documents&success=primary_details_saved`);
       return;
     }
-    const fieldName = state.field ?? initialField;
     setShowError(Boolean(state.error ?? initialError));
-    if (!fieldName) return;
-    requestAnimationFrame(() => {
-      const field = formRef.current?.elements.namedItem(fieldName);
-      if (field instanceof HTMLElement) {
-        field.focus({ preventScroll: true });
-        field.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    });
   }, [initialError, initialField, router, state.applicationId, state.error, state.field]);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -63,7 +54,6 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
   function handleRouteSubmit() {
     const form = formRef.current;
     if (!form || posting) return;
-    if (!validateForSubmit(form)) return;
     setPosting(true);
     form.submit();
   }
