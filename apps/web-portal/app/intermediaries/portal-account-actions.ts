@@ -46,4 +46,4 @@ export async function createIntermediaryPortalLogin(formData: FormData) {
   revalidatePath(returnPath);redirect(`${returnPath}?success=portal_login_invited`);
 }
 function text(formData: FormData, key: string) { const value = formData.get(key); return typeof value === "string" && value.trim() ? value.trim() : null; }
-function safeReturnPath(value: string | null) { return value && /^\/intermediaries(?:\/(?:posp|misp|partner))?$/.test(value) ? value : "/intermediaries"; }
+function safeReturnPath(value: string | null) { return value && /^\/intermediaries(?:\/(?:posp|misp|partner)|\/applications\/[0-9a-f-]+)?$/i.test(value) ? value : "/intermediaries"; }
