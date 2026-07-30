@@ -28,10 +28,11 @@ export function PospMispOnboardingForm({ action, partnerType, salesManagers, oem
   const [state, formAction] = useActionState(action, { error: null, field: null, applicationId: null });
   const [showError, setShowError] = useState(false);
   const [clientError, setClientError] = useState<string | null>(null);
+  const [rmValue, setRmValue] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
   const isMisp = partnerType === "misp";
   const backHref = isMisp ? "/intermediaries/misp" : "/intermediaries/posp";
-  const rmOptions = salesManagers.map(manager => ({ value: manager.id, label: `${manager.fullName}${manager.employeeCode ? ` - ${manager.employeeCode}` : ""}` }));
+  const rmOptions = useMemo(() => salesManagers.map(manager => ({ value: manager.id, label: `${manager.fullName}${manager.employeeCode ? ` - ${manager.employeeCode}` : ""}` })), [salesManagers]);
 
   useEffect(() => {
     if (state.applicationId && !state.error) {
@@ -62,6 +63,18 @@ export function PospMispOnboardingForm({ action, partnerType, salesManagers, oem
     });
   }
 
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    if (rmValue) return;
+    event.preventDefault();
+    setClientError("Please select a valid RM name from the list.");
+    setShowError(true);
+    requestAnimationFrame(() => {
+      const trigger = document.getElementById("associate_employee_id-trigger");
+      trigger?.focus();
+      trigger?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }
+
   const visibleError = clientError ?? state.error;
 
   return <>
@@ -72,11 +85,11 @@ export function PospMispOnboardingForm({ action, partnerType, salesManagers, oem
         <div className="flex gap-3"><Link href="/customers/posp-misp/import" className="text-[10.5px] font-semibold text-[#4F46E5]">Import Excel</Link><Link href={backHref} className="text-[10.5px] font-semibold text-[#4F46E5]">Back</Link></div>
       </div>
       <StageBar />
-      <form ref={formRef} action={formAction} onInvalidCapture={handleInvalid} onInputCapture={() => { if (clientError) setClientError(null); }} className="w-full overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
+      <form ref={formRef} action={formAction} onSubmitCapture={handleSubmit} onInvalidCapture={handleInvalid} onInputCapture={() => { if (clientError) setClientError(null); }} className="w-full overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
         <input type="hidden" name="partner_type" value={partnerType} />
         <header className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-3 py-3 sm:px-5 sm:py-4"><div className="flex items-start gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#071D49] text-[10px] font-bold text-white">1</span><div><h2 className="text-[14px] font-semibold text-[#0F172A]">Primary information & PAN check</h2><p className="mt-0.5 text-[10px] leading-4 text-[#64748B]">The POSP/MISP ID is issued only after successful onboarding. A Partner ID is issued after Stage 2 documents are submitted.</p></div></div></header>
         <Section title={isMisp ? "MISP details" : "POSP details"}>
-          <div className={`grid min-w-0 gap-3 md:grid-cols-2 xl:col-span-4 ${isMisp ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}><SearchableSelectField label="RM Name" name="associate_employee_id" required options={rmOptions} placeholder="Select RM" />{isMisp ? <Field label="MISP Name" name="misp_name" required /> : null}<PanInput label={isMisp ? "MISP PAN" : "PAN Number"} name="pan_number" compact /><IndianDateField label="Document Received Date" name="document_received_at" inputClassName={dateInputClass} /></div>
+          <div className={`grid min-w-0 gap-3 md:grid-cols-2 xl:col-span-4 ${isMisp ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}><SearchableSelectField label="RM Name" name="associate_employee_id" required options={rmOptions} placeholder="Select RM" value={rmValue} onChange={value => { setRmValue(value); setClientError(null); }} />{isMisp ? <Field label="MISP Name" name="misp_name" required /> : null}<PanInput label={isMisp ? "MISP PAN" : "PAN Number"} name="pan_number" compact /><IndianDateField label="Document Received Date" name="document_received_at" inputClassName={dateInputClass} /></div>
           {!isMisp ? <div className="grid min-w-0 gap-3 md:grid-cols-3 xl:col-span-4"><Field label="POS First Name" name="pos_first_name" required /><Field label="POS Middle Name" name="pos_middle_name" /><Field label="POS Last Name" name="pos_last_name" required /></div> : null}
           {isMisp ? <SelectField label="OEM Name" name="oem_name" required options={oems} placeholder="Select OEM" /> : null}
           <Field label="Address" name="address" required /><Field label="City" name="city" required /><Field label="State" name="state" required /><Field label="PIN Code" name="postal_code" required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} minLength={6} />
@@ -90,10 +103,10 @@ export function PospMispOnboardingForm({ action, partnerType, salesManagers, oem
   </>;
 }
 
-function SearchableSelectField({ label, name, required = false, options, placeholder }: { label: string; name: string; required?: boolean; options: SelectOption[]; placeholder: string }) {
+function SearchableSelectField({ label, name, required = false, options, placeholder, value, onChange }: { label: string; name: string; required?: boolean; options: SelectOption[]; placeholder: string; value: string; onChange: (value: string) => void }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [value, setValue] = useState("");
+  const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -108,84 +121,58 @@ function SearchableSelectField({ label, name, required = false, options, placeho
     function handleOutside(event: MouseEvent) {
       if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
     }
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setOpen(false);
-        triggerRef.current?.focus();
-      }
-    }
     document.addEventListener("mousedown", handleOutside);
-    document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("mousedown", handleOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
+    return () => document.removeEventListener("mousedown", handleOutside);
   }, []);
 
   useEffect(() => {
+    setActiveIndex(0);
     if (open) requestAnimationFrame(() => searchRef.current?.focus());
     else setQuery("");
   }, [open]);
 
+  useEffect(() => setActiveIndex(0), [query]);
+
+  function choose(option: SelectOption) {
+    onChange(option.value);
+    setOpen(false);
+    triggerRef.current?.focus();
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setOpen(false);
+      triggerRef.current?.focus();
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveIndex(index => Math.min(index + 1, Math.max(filtered.length - 1, 0)));
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveIndex(index => Math.max(index - 1, 0));
+      return;
+    }
+    if (event.key === "Enter" && filtered[activeIndex]) {
+      event.preventDefault();
+      choose(filtered[activeIndex]);
+    }
+  }
+
   return <div ref={containerRef} className="relative min-w-0">
     <label className={labelClass} htmlFor={`${name}-trigger`}>{label}{required ? " *" : ""}</label>
-    <select
-      id={name}
-      name={name}
-      value={value}
-      required={required}
-      tabIndex={-1}
-      aria-hidden="true"
-      onChange={() => undefined}
-      onInvalid={event => {
-        event.currentTarget.setCustomValidity(`Please select a valid ${label.toLowerCase()} from the list.`);
-        triggerRef.current?.focus();
-      }}
-      className="pointer-events-none absolute h-px w-px opacity-0"
-    >
-      <option value="">{placeholder}</option>
-      {options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-    </select>
-    <button
-      ref={triggerRef}
-      id={`${name}-trigger`}
-      type="button"
-      aria-haspopup="listbox"
-      aria-expanded={open}
-      aria-controls={`${name}-listbox`}
-      onClick={() => setOpen(current => !current)}
-      className={`${inputClass} flex items-center justify-between text-left`}
-    >
+    <input type="hidden" name={name} value={value} />
+    <button ref={triggerRef} id={`${name}-trigger`} type="button" aria-haspopup="listbox" aria-expanded={open} aria-controls={`${name}-listbox`} onClick={() => setOpen(current => !current)} onKeyDown={event => { if (!open && ["ArrowDown", "Enter", " "].includes(event.key)) { event.preventDefault(); setOpen(true); } }} className={`${inputClass} flex items-center justify-between text-left ${required && !value ? "" : ""}`}>
       <span className={selected ? "truncate" : "truncate text-[#98A2B3]"}>{selected?.label ?? placeholder}</span>
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className={`h-4 w-4 shrink-0 transition ${open ? "rotate-180" : ""}`} aria-hidden="true"><path d="m5 7.5 5 5 5-5" /></svg>
     </button>
-    {open ? <div className="absolute z-50 mt-1 w-full min-w-[280px] overflow-hidden rounded-xl border border-[#CBD5E1] bg-white shadow-[0_16px_40px_rgba(15,23,42,.18)]">
-      <div className="border-b border-[#E2E8F0] p-2">
-        <input
-          ref={searchRef}
-          type="search"
-          value={query}
-          onChange={event => setQuery(event.target.value)}
-          placeholder="Search by RM name or ID"
-          aria-label={`Search ${label}`}
-          className="h-9 w-full rounded-lg border border-[#CBD5E1] bg-[#F8FAFC] px-3 text-[11px] text-[#17203A] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]"
-        />
-      </div>
+    {open ? <div className="absolute z-50 mt-1 w-full min-w-[280px] overflow-hidden rounded-xl border border-[#CBD5E1] bg-white shadow-[0_16px_40px_rgba(15,23,42,.18)]" onKeyDown={handleKeyDown}>
+      <div className="border-b border-[#E2E8F0] p-2"><input ref={searchRef} type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search by RM name or ID" aria-label={`Search ${label}`} className="h-9 w-full rounded-lg border border-[#CBD5E1] bg-[#F8FAFC] px-3 text-[11px] text-[#17203A] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]" /></div>
       <div id={`${name}-listbox`} role="listbox" className="max-h-60 overflow-y-auto p-1.5">
-        {filtered.length ? filtered.map(option => <button
-          key={option.value}
-          type="button"
-          role="option"
-          aria-selected={option.value === value}
-          onClick={() => {
-            setValue(option.value);
-            const select = containerRef.current?.querySelector("select");
-            select?.setCustomValidity("");
-            setOpen(false);
-            triggerRef.current?.focus();
-          }}
-          className={`flex w-full rounded-lg px-3 py-2.5 text-left text-[11px] transition ${option.value === value ? "bg-[#EEF2FF] font-semibold text-[#4338CA]" : "text-[#17203A] hover:bg-[#F1F5F9]"}`}
-        >{option.label}</button>) : <div className="px-3 py-6 text-center text-[11px] text-[#64748B]">No results found</div>}
+        {filtered.length ? filtered.map((option, index) => <button key={option.value} type="button" role="option" aria-selected={option.value === value} onMouseEnter={() => setActiveIndex(index)} onClick={() => choose(option)} className={`flex w-full rounded-lg px-3 py-2.5 text-left text-[11px] transition ${option.value === value || index === activeIndex ? "bg-[#EEF2FF] font-semibold text-[#4338CA]" : "text-[#17203A] hover:bg-[#F1F5F9]"}`}>{option.label}</button>) : <div className="px-3 py-6 text-center text-[11px] text-[#64748B]">No results found</div>}
       </div>
     </div> : null}
   </div>;
