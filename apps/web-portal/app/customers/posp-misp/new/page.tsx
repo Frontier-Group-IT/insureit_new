@@ -11,7 +11,7 @@ import { PospMispOnboardingForm } from "../posp-misp-onboarding-form";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type Query = { partner_type?: string; form_error?: string; form_field?: string };
+type Query = Record<string, string | undefined> & { partner_type?: string; form_error?: string; form_field?: string };
 
 export default async function NewPospMispPage({ searchParams }: { searchParams: Promise<Query> }) {
   const profile = await requirePospMispManager();
@@ -37,12 +37,21 @@ export default async function NewPospMispPage({ searchParams }: { searchParams: 
           partnerType={partnerType}
           initialError={query.form_error ?? null}
           initialField={query.form_field ?? null}
+          initialValues={extractInitialValues(query)}
           salesManagers={salesManagers}
           oems={oems}
           banks={banks}
         />
       </OnboardingFieldPresentation>
     </AppShell>
+  );
+}
+
+function extractInitialValues(query: Query) {
+  return Object.fromEntries(
+    Object.entries(query)
+      .filter(([key, value]) => key.startsWith("v_") && typeof value === "string")
+      .map(([key, value]) => [key.slice(2), value ?? ""])
   );
 }
 
