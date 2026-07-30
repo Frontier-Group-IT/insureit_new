@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.redirect(
-    new URL(`/intermediaries/applications/${result.applicationId}?success=posp_misp_submitted`, request.url),
+    new URL(`/intermediaries/applications/${result.applicationId}/workflow?stage=documents&success=posp_misp_submitted`, request.url),
     303,
   );
 }
