@@ -13,7 +13,10 @@ type CreateState = PospMispState & { applicationId?: string | null };
 type SelectOption = { value: string; label: string };
 type Props = {
   action: (state: CreateState, data: FormData) => Promise<CreateState>;
+  submitPath?: string;
   partnerType: PartnerType;
+  initialError?: string | null;
+  initialField?: string | null;
   salesManagers: SelectOption[];
   oems: SelectOption[];
   banks: SelectOption[];
@@ -23,14 +26,13 @@ const inputClass = "h-11 w-full min-w-0 rounded-xl border border-[#CBD5E1] bg-wh
 const dateInputClass = inputClass;
 const labelClass = "mb-1.5 block text-[10.5px] font-semibold text-[#344054]";
 
-export function PospMispOnboardingForm({ action, partnerType, salesManagers, oems, banks }: Props) {
+export function PospMispOnboardingForm({ action, submitPath, partnerType, initialError = null, initialField = null, salesManagers, oems, banks }: Props) {
   const router = useRouter();
   const [state, formAction] = useActionState(action, { error: null, field: null, applicationId: null });
-  const [showError, setShowError] = useState(false);
+  const [showError, setShowError] = useState(Boolean(initialError));
   const [clientError, setClientError] = useState<string | null>(null);
   const [rmValue, setRmValue] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
-  const invalidHandledRef = useRef(false);
   const isMisp = partnerType === "misp";
   const backHref = isMisp ? "/intermediaries/misp" : "/intermediaries/posp";
 
@@ -39,52 +41,34 @@ export function PospMispOnboardingForm({ action, partnerType, salesManagers, oem
       router.replace(`/intermediaries/applications/${state.applicationId}/workflow?stage=documents&success=primary_details_saved`);
       return;
     }
-    setShowError(Boolean(state.error));
-    if (!state.field) return;
+    const fieldName = state.field ?? initialField;
+    setShowError(Boolean(state.error ?? initialError));
+    if (!fieldName) return;
     requestAnimationFrame(() => {
-      const field = formRef.current?.elements.namedItem(state.field ?? "");
+      const field = formRef.current?.elements.namedItem(fieldName);
       if (field instanceof HTMLElement) {
         field.focus({ preventScroll: true });
         field.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     });
-  }, [router, state.applicationId, state.error, state.field]);
-
-  function handleInvalid(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (invalidHandledRef.current) return;
-    invalidHandledRef.current = true;
-    window.setTimeout(() => {
-      invalidHandledRef.current = false;
-    }, 0);
-    const field = event.target;
-    if (!(field instanceof HTMLInputElement) && !(field instanceof HTMLSelectElement)) return;
-    const label = field.labels?.[0]?.textContent?.replace(" *", "").trim() || field.name.replaceAll("_", " ");
-    setClientError(field.validationMessage || `Please enter a valid value for ${label}.`);
-    setShowError(true);
-    requestAnimationFrame(() => {
-      field.focus({ preventScroll: true });
-      field.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
-  }
+  }, [initialError, initialField, router, state.applicationId, state.error, state.field]);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    invalidHandledRef.current = false;
-    const selectedRm = new FormData(event.currentTarget).get("associate_employee_id");
-    if (typeof selectedRm === "string" && selectedRm.trim()) return;
+    const invalidField = firstInvalidControl(event.currentTarget);
+    if (!invalidField) {
+      setClientError(null);
+      return;
+    }
     event.preventDefault();
-    setClientError("Please select a valid RM name from the list.");
+    setClientError(validationMessage(invalidField));
     setShowError(true);
     requestAnimationFrame(() => {
-      const field = formRef.current?.elements.namedItem("associate_employee_id");
-      if (field instanceof HTMLElement) {
-        field.focus({ preventScroll: true });
-        field.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
+      invalidField.focus({ preventScroll: true });
+      invalidField.scrollIntoView({ behavior: "smooth", block: "center" });
     });
   }
 
-  const visibleError = clientError ?? state.error;
+  const visibleError = clientError ?? state.error ?? initialError;
 
   return <>
     {visibleError && showError ? <FeedbackToast tone="error" message={visibleError} onClose={() => { setShowError(false); setClientError(null); }} /> : null}
@@ -94,7 +78,7 @@ export function PospMispOnboardingForm({ action, partnerType, salesManagers, oem
         <div className="flex gap-3"><Link href="/customers/posp-misp/import" className="text-[10.5px] font-semibold text-[#4F46E5]">Import Excel</Link><Link href={backHref} className="text-[10.5px] font-semibold text-[#4F46E5]">Back</Link></div>
       </div>
       <StageBar />
-      <form ref={formRef} action={formAction} onSubmitCapture={handleSubmit} onInvalidCapture={handleInvalid} className="w-full overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
+      <form ref={formRef} action={submitPath ?? formAction} method={submitPath ? "post" : undefined} onSubmitCapture={handleSubmit} noValidate className="w-full overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
         <input type="hidden" name="partner_type" value={partnerType} />
         <header className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-3 py-3 sm:px-5 sm:py-4"><div className="flex items-start gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#071D49] text-[10px] font-bold text-white">1</span><div><h2 className="text-[14px] font-semibold text-[#0F172A]">Primary information & PAN check</h2><p className="mt-0.5 text-[10px] leading-4 text-[#64748B]">The POSP/MISP ID is issued only after successful onboarding. A Partner ID is issued after Stage 2 documents are submitted.</p></div></div></header>
         <Section title={isMisp ? "MISP details" : "POSP details"}>
@@ -118,3 +102,5 @@ function PanInput({ label, name, compact = false }: { label: string; name: strin
 function Section({ title, children }: { title: string; children: React.ReactNode }) { return <section className="border-b border-[#E2E8F0] px-3 py-4 sm:px-5 sm:py-5"><h3 className="mb-4 text-[12px] font-semibold text-[#0F172A]">{title}</h3><div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">{children}</div></section>; }
 function Field({ label, name, required = false, transform, onInvalid, onInput, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; name: string; transform?: "uppercase" }) { return <div className="min-w-0"><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} required={required} className={inputClass} onInvalid={event => { const input = event.currentTarget; if (input.validity.valueMissing) input.setCustomValidity(`${label} is required.`); else if (input.validity.typeMismatch || input.validity.patternMismatch || input.validity.tooShort) input.setCustomValidity(`Enter a valid ${label.toLowerCase()}.`); onInvalid?.(event); }} onInput={event => { if (transform === "uppercase") event.currentTarget.value = event.currentTarget.value.toUpperCase().replace(/\s/g, ""); event.currentTarget.setCustomValidity(""); onInput?.(event); }} {...props} /></div>; }
 function SelectField({ label, name, required = false, options, placeholder, onInvalid, onChange, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { label: string; name: string; options: SelectOption[]; placeholder: string }) { return <div className="min-w-0"><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><select id={name} name={name} required={required} className={inputClass} onInvalid={event => { event.currentTarget.setCustomValidity(`Please select a valid ${label.toLowerCase()} from the list.`); onInvalid?.(event); }} onChange={event => { event.currentTarget.setCustomValidity(""); onChange?.(event); }} {...props}><option value="">{placeholder}</option>{options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>; }
+function firstInvalidControl(form: HTMLFormElement) { for (const control of Array.from(form.elements)) { if (!(control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement)) continue; if (control.disabled || control.type === "hidden") continue; control.setCustomValidity(""); if (!control.validity.valid) return control; } return null; }
+function validationMessage(control: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement) { const label = control.labels?.[0]?.textContent?.replace(/\s\*$/, "").trim() || control.name.replaceAll("_", " "); if (control instanceof HTMLSelectElement && control.validity.valueMissing) return `Please select a valid ${label.toLowerCase()} from the list.`; if (control.validity.valueMissing) return `${label} is required.`; return `Enter a valid ${label.toLowerCase()}.`; }
