@@ -33,7 +33,7 @@ export function PospMispOnboardingForm({ action, partnerType, salesManagers, oem
 
   useEffect(() => {
     if (state.applicationId && !state.error) {
-      router.replace(`/intermediaries/applications/${state.applicationId}?stage=documents&success=primary_details_saved`);
+      router.replace(`/intermediaries/applications/${state.applicationId}/workflow?stage=documents&success=primary_details_saved`);
       return;
     }
     setShowError(Boolean(state.error));
