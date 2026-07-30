@@ -22,9 +22,9 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
  const sourceDraft=object(sourceApp.draft_data);
  const {data:existingApps}=await admin.from("intermediary_onboarding_applications").select("id,draft_data").eq("partner_record_id",String(sourceApp.partner_record_id)).neq("id",sourceApplicationId).returns<Array<{id:string;draft_data:Record<string,unknown>|null}>>();
  const existing=(existingApps??[]).find(row=>object(row.draft_data).account_context===requestedType);
- if(existing)redirect(reviewPath(existing.id));
 
  const now=new Date().toISOString();
+ if(existing){await syncInheritedDocuments(admin,sourceApplicationId,existing.id,reviewer.id,now);revalidatePath(reviewPath(existing.id));redirect(reviewPath(existing.id))}
  const inheritedRegistration=sourceApp.registration_record_id??sourceProfile.registration_record_id??null;
  const childDraft={...sourceDraft,account_context:requestedType,parent_partner_application_id:sourceApplicationId,linked_partner_code:sourceProfile.partner_id??null};
  const registrationStatus=requestedType==="posp"?"training_pending":"agreement_pending";
@@ -65,8 +65,7 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
   const{data:contacts}=await admin.from("intermediary_onboarding_contacts").select("contact_role,full_name,phone,email,is_designated_person,login_required,membership_status").eq("application_id",sourceApplicationId).returns<Array<Record<string,unknown>>>();
   if(contacts?.length){const{error}=await admin.from("intermediary_onboarding_contacts").insert(contacts.map(row=>({...row,application_id:child.id})));if(error)throw error}
 
-  const{data:documents}=await admin.from("intermediary_onboarding_documents").select("document_type,file_name,storage_bucket,storage_path,mime_type,file_size,verification_status,verified_by,verified_at,review_notes").eq("application_id",sourceApplicationId).returns<Array<Record<string,unknown>>>();
-  if(documents?.length){const{error}=await admin.from("intermediary_onboarding_documents").insert(documents.map(row=>({...row,id:randomUUID(),application_id:child.id,uploaded_by:reviewer.id,created_at:now})));if(error)throw error}
+  await syncInheritedDocuments(admin,sourceApplicationId,child.id,reviewer.id,now);
 
   if(inheritedRegistration){
    const {error:clearSourceAppError}=await admin.from("intermediary_onboarding_applications").update({registration_record_id:null,updated_at:now}).eq("id",sourceApplicationId);if(clearSourceAppError)throw clearSourceAppError;
@@ -100,5 +99,13 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
 
 function text(data:FormData,key:string){const value=data.get(key);return typeof value==="string"&&value.trim()?value.trim():null}
 function object(value:unknown):Record<string,unknown>{return value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>: {}}
+async function syncInheritedDocuments(admin:ReturnType<typeof createSupabaseAdminClient>,sourceApplicationId:string,targetApplicationId:string,uploadedBy:string,now:string){
+ const{data:documents,error:readError}=await admin.from("intermediary_onboarding_documents").select("document_type,file_name,storage_bucket,storage_path,mime_type,file_size,verification_status,verified_by,verified_at").eq("application_id",sourceApplicationId).returns<Array<Record<string,unknown>>>();
+ if(readError)throw readError;
+ if(!documents?.length)return;
+ const rows=documents.map(row=>({...row,id:randomUUID(),application_id:targetApplicationId,uploaded_by:uploadedBy,created_at:now,updated_at:now}));
+ const{error}=await admin.from("intermediary_onboarding_documents").upsert(rows,{onConflict:"application_id,document_type",ignoreDuplicates:true});
+ if(error)throw error;
+}
 function errorMessage(error:unknown,fallback:string){if(error instanceof Error&&error.message)return error.message;if(error&&typeof error==="object"&&"message" in error&&typeof (error as {message?:unknown}).message==="string")return (error as {message:string}).message;return fallback}
 function linkedAccountError(error:unknown){const message=errorMessage(error,"");if(message.includes("intermediary_onboarding_applications_registration_status_check"))return "The linked account could not be started because its onboarding status is not supported. Please refresh and try again.";if(message.includes("duplicate key")||message.includes("unique constraint"))return "A linked POSP or MISP account already exists for this Partner.";return "Unable to create the linked account. No changes were made. Please try again."}

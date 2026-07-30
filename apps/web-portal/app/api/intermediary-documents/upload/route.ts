@@ -90,7 +90,7 @@ export async function POST(request: Request) {
   }
 
   if (previous?.storage_path && previous.storage_path !== storagePath) {
-    await admin.storage.from(previous.storage_bucket).remove([previous.storage_path]);
+    await removeStorageObjectIfUnreferenced(admin, previous.storage_bucket, previous.storage_path);
   }
 
   if (EDUCATION_TYPES.has(documentType)) {
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
       .returns<Array<{ id: string; storage_bucket: string; storage_path: string }>>();
     for (const document of otherEducation ?? []) {
       await admin.from("intermediary_onboarding_documents").delete().eq("id", document.id);
-      await admin.storage.from(document.storage_bucket).remove([document.storage_path]);
+      await removeStorageObjectIfUnreferenced(admin, document.storage_bucket, document.storage_path);
     }
     await admin.from("posp_misp_onboarding_profiles").update({ education_status: "received", updated_by: reviewer.id, updated_at: new Date().toISOString() }).eq("id", profile.id);
   }
@@ -114,4 +114,13 @@ export async function POST(request: Request) {
 function text(data: FormData, key: string) {
   const value = data.get(key);
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+async function removeStorageObjectIfUnreferenced(admin: ReturnType<typeof createSupabaseAdminClient>, bucket: string, path: string) {
+  const { count } = await admin
+    .from("intermediary_onboarding_documents")
+    .select("id", { count: "exact", head: true })
+    .eq("storage_bucket", bucket)
+    .eq("storage_path", path);
+  if (!count) await admin.storage.from(bucket).remove([path]);
 }
