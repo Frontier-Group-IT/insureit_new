@@ -10,15 +10,15 @@ export async function POST(request: Request) {
   if (result.error) {
     const url = new URL("/customers/posp-misp/new", request.url);
     url.searchParams.set("partner_type", partnerType);
-    url.searchParams.set("error", result.error);
-    if (result.field) url.searchParams.set("field", result.field);
+    url.searchParams.set("form_error", result.error);
+    if (result.field) url.searchParams.set("form_field", result.field);
     return NextResponse.redirect(url, 303);
   }
 
   if (!result.applicationId) {
     const url = new URL("/customers/posp-misp/new", request.url);
     url.searchParams.set("partner_type", partnerType);
-    url.searchParams.set("error", "The application was saved but its reference could not be returned. Open Onboarding Applications to continue.");
+    url.searchParams.set("form_error", "The application was saved but its reference could not be returned. Open Onboarding Applications to continue.");
     return NextResponse.redirect(url, 303);
   }
 

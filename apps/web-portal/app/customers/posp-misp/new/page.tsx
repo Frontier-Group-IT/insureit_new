@@ -11,7 +11,7 @@ import { PospMispOnboardingForm } from "../posp-misp-onboarding-form";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type Query = { partner_type?: string; error?: string; field?: string };
+type Query = { partner_type?: string; form_error?: string; form_field?: string };
 
 export default async function NewPospMispPage({ searchParams }: { searchParams: Promise<Query> }) {
   const profile = await requirePospMispManager();
@@ -35,8 +35,8 @@ export default async function NewPospMispPage({ searchParams }: { searchParams: 
           action={createManualPospMispOnboardingV2}
           submitPath="/customers/posp-misp/new/submit"
           partnerType={partnerType}
-          initialError={query.error ?? null}
-          initialField={query.field ?? null}
+          initialError={query.form_error ?? null}
+          initialField={query.form_field ?? null}
           salesManagers={salesManagers}
           oems={oems}
           banks={banks}

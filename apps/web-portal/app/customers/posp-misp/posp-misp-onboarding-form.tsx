@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { FormSubmitButton } from "@/components/form-submit-button";
-import { FeedbackToast } from "@/components/ui-feedback";
 import { IndianDateField } from "@/components/indian-date-field";
 import type { PospMispState } from "./actions";
 
@@ -29,7 +28,6 @@ const labelClass = "mb-1.5 block text-[10.5px] font-semibold text-[#344054]";
 export function PospMispOnboardingForm({ action, submitPath, partnerType, initialError = null, initialField = null, salesManagers, oems, banks }: Props) {
   const router = useRouter();
   const [state, formAction] = useActionState(action, { error: null, field: null, applicationId: null });
-  const [showError, setShowError] = useState(Boolean(initialError));
   const [clientError, setClientError] = useState<string | null>(null);
   const [rmValue, setRmValue] = useState("");
   const [posting, setPosting] = useState(false);
@@ -43,7 +41,6 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
       router.replace(`/intermediaries/applications/${state.applicationId}/workflow?stage=documents&success=primary_details_saved`);
       return;
     }
-    setShowError(Boolean(state.error ?? initialError));
   }, [initialError, initialField, router, state.applicationId, state.error, state.field]);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -66,7 +63,6 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
     }
     event?.preventDefault();
     setClientError(validationMessage(invalidField));
-    setShowError(true);
     requestAnimationFrame(() => {
       invalidField.focus({ preventScroll: true });
       invalidField.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -77,13 +73,13 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
   const visibleError = clientError ?? state.error ?? initialError;
 
   return <>
-    {visibleError && showError ? <FeedbackToast tone="error" message={visibleError} onClose={() => { setShowError(false); setClientError(null); }} /> : null}
     <div className="w-full space-y-3 pb-20">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <span className="w-fit rounded-full border border-[#D8DEE8] bg-white px-2.5 py-1 text-[10.5px] font-semibold text-[#475569]">New {partnerType.toUpperCase()} Application</span>
         <div className="flex gap-3"><Link href="/customers/posp-misp/import" className="text-[10.5px] font-semibold text-[#4F46E5]">Import Excel</Link><Link href={backHref} className="text-[10.5px] font-semibold text-[#4F46E5]">Back</Link></div>
       </div>
       <StageBar />
+      {visibleError ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[11px] font-semibold text-red-700">{visibleError}</div> : null}
       <form ref={formRef} action={submitPath ?? formAction} method={submitPath ? "post" : undefined} onSubmitCapture={handleSubmit} noValidate className="w-full overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
         <input type="hidden" name="partner_type" value={partnerType} />
         <header className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-3 py-3 sm:px-5 sm:py-4"><div className="flex items-start gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#071D49] text-[10px] font-bold text-white">1</span><div><h2 className="text-[14px] font-semibold text-[#0F172A]">Primary information & PAN check</h2><p className="mt-0.5 text-[10px] leading-4 text-[#64748B]">The POSP/MISP ID is issued only after successful onboarding. A Partner ID is issued after Stage 2 documents are submitted.</p></div></div></header>
