@@ -2,7 +2,6 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
-import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { canManagePospMispOnboarding } from "@/lib/roles";
 import { encryptSensitiveValue } from "@/lib/sensitive-data";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -24,8 +23,7 @@ export async function createManualPospMispOnboardingV2(_state: PospMispState, da
   if ("error" in manager) return fail(message(manager.error, "You are not authorized."));
   const admin = createSupabaseAdminClient();
   const partnerType: PartnerType = value(data, "partner_type") === "misp" ? "misp" : "posp";
-  const associates = await loadPospMispAssociates(admin).catch(() => []);
-  const associate = associates.find((row) => row.id === value(data, "associate_employee_id")) ?? null;
+  const associate = await loadSelectedAssociate(admin, value(data, "associate_employee_id")).catch(() => null);
   if (!associate) return fail("Select a valid RM Name.", "associate_employee_id");
   const bankId = value(data, "bank_id");
   const { data: bank } = bankId ? await admin.from("banks").select("id,name").eq("id", bankId).eq("is_active", true).maybeSingle<{ id: string; name: string }>() : { data: null };
@@ -85,6 +83,7 @@ export async function createManualPospMispOnboardingV2(_state: PospMispState, da
   return { error: null, field: null, applicationId };
 }
 async function currentManager(){const accessToken=await getServerAccessToken();const{profile}=await getAuthenticatedProfile(accessToken);if(!profile?.id||!canManagePospMispOnboarding(profile.role))throw new Error("You are not authorized to manage intermediary onboarding.");return{id:profile.id}}
+async function loadSelectedAssociate(admin:ReturnType<typeof createSupabaseAdminClient>,employeeId:string|null){if(!employeeId)return null;const{data:employee,error}=await admin.from("employees").select("id,full_name,employee_code").eq("id",employeeId).ilike("department","sales").eq("employment_status","active").maybeSingle<{id:string;full_name:string|null;employee_code:string|null}>();if(error||!employee)return null;const{data:profile,error:profileError}=await admin.from("profiles").select("id").eq("employee_id",employee.id).eq("is_active",true).maybeSingle<{id:string}>();if(profileError)return null;return{...employee,profile_id:profile?.id??null}}
 function fail(error:string,field:string|null=null):CreateResult{return{error,field}}
 function value(data:FormData,key:string){const current=data.get(key);return typeof current==="string"&&current.trim()?current.trim():null}
 function compactUpper(data:FormData,key:string){return value(data,key)?.replace(/\s/g,"").toUpperCase()??null}

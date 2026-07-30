@@ -68,9 +68,11 @@ export function PospMispOnboardingForm({ action, partnerType, salesManagers, oem
     setClientError("Please select a valid RM name from the list.");
     setShowError(true);
     requestAnimationFrame(() => {
-      const trigger = document.getElementById("associate_employee_id-trigger");
-      trigger?.focus();
-      trigger?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const field = formRef.current?.elements.namedItem("associate_employee_id");
+      if (field instanceof HTMLElement) {
+        field.focus({ preventScroll: true });
+        field.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
     });
   }
 
