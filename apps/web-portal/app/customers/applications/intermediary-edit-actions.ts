@@ -16,7 +16,7 @@ const DOCUMENT_FIELDS=["aadhaar_front","aadhaar_back","pan_copy","cancelled_cheq
 const PAN=/^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const IFSC=/^[A-Z]{4}0[A-Z0-9]{6}$/;
 const NAME=/^[A-Za-z ]+$/;
-const path=(id:string)=>`/intermediaries/applications/${id}`;
+const path=(id:string)=>`/intermediaries/applications/${id}/workflow`;
 
 type EditableProfile={id:string;partner_type:"posp"|"misp";workflow_stage:"pre_iib"|"iib_processing"|"training"|"completed";associate_employee_id:string|null;associate_profile_id:string|null;external_onboarding_id:string|null;bank_id:string|null;bank_name:string|null;aadhaar_last_four:string|null;aadhaar_hash:string|null;aadhaar_number_encrypted:string|null;dp_aadhaar_last_four:string|null;dp_aadhaar_hash:string|null;dp_aadhaar_number_encrypted:string|null};
 
