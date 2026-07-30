@@ -37,7 +37,7 @@ export async function IntermediaryRegister({ selectedType, search = "", accountS
   const applicationMap = new Map((apps ?? []).map((item) => [item.id, item]));
 
   if (effectiveType === "partner") rows = rows.filter((row) => accountContext(applicationMap.get(row.application_id ?? "")) === "partner");
-  if (selectedType === "posp" || selectedType === "misp") rows = rows.filter((row) => applicationMap.get(row.application_id ?? "")?.registration_status === REGISTERED_STATUS);
+  if (selectedType === "posp" || selectedType === "misp") rows = rows.filter((row) => accountContext(applicationMap.get(row.application_id ?? "")) === selectedType);
   if (registrationStatus) rows = rows.filter((row) => applicationMap.get(row.application_id ?? "")?.registration_status === registrationStatus);
 
   let countRequest = admin.from("intermediaries").select("id,intermediary_type,application_id");
@@ -46,7 +46,7 @@ export async function IntermediaryRegister({ selectedType, search = "", accountS
   const countAppIds = (allCounts ?? []).map((row) => row.application_id).filter((value): value is string => Boolean(value));
   const { data: countApps } = countAppIds.length ? await admin.from("intermediary_onboarding_applications").select("id,registration_status,partner_status,requested_type,final_type,draft_data").in("id", countAppIds).returns<ApplicationState[]>() : { data: [] as ApplicationState[] };
   const countStatusMap = new Map((countApps ?? []).map((item) => [item.id, item]));
-  const count = (type: IntermediaryType) => (allCounts ?? []).filter((row) => type === "partner" ? accountContext(countStatusMap.get(row.application_id ?? "")) === "partner" : row.intermediary_type === type && countStatusMap.get(row.application_id ?? "")?.registration_status === REGISTERED_STATUS).length;
+  const count = (type: IntermediaryType) => (allCounts ?? []).filter((row) => type === "partner" ? accountContext(countStatusMap.get(row.application_id ?? "")) === "partner" : row.intermediary_type === type && accountContext(countStatusMap.get(row.application_id ?? "")) === type).length;
 
   const pageTitle = selectedType === "posp" ? "POSP" : selectedType === "misp" ? "MISP" : selectedType === "partner" ? "Partners" : "Overview";
   const searchAction = selectedType ? `/intermediaries/${selectedType}` : "/intermediaries";
@@ -94,8 +94,7 @@ function displayIdentity(row: IntermediaryRow, app: ApplicationState | undefined
   const partnerId = codes.find((code) => code.startsWith("PART-"));
   const intermediaryId = codes.find((code) => !code.startsWith("PART-"));
   if (context === "partner") return partnerId ?? "Partner ID pending";
-  if (app?.registration_status === REGISTERED_STATUS) return intermediaryId ?? `${context.toUpperCase()} ID pending`;
-  return `${context.toUpperCase()} ID pending`;
+  return intermediaryId ?? `${context.toUpperCase()} ID pending`;
 }
 
 function parentPartnerId(row: IntermediaryRow, app: ApplicationState | undefined) {

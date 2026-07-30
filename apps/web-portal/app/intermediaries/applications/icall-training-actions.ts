@@ -6,7 +6,7 @@ import { requirePospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getIcallPospTrainingStatus, registerIcallPosp } from "@/lib/icall-training-api";
 
-const route = (applicationId: string) => `/intermediaries/applications/${applicationId}`;
+const route = (applicationId: string) => `/intermediaries/applications/${applicationId}/workflow`;
 
 export async function registerWithIcallUat(formData: FormData) {
   const reviewer = await requirePospMispManager();
