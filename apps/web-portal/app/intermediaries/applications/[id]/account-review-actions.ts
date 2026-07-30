@@ -27,13 +27,13 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
  const now=new Date().toISOString();
  const inheritedRegistration=sourceApp.registration_record_id??sourceProfile.registration_record_id??null;
  const childDraft={...sourceDraft,account_context:requestedType,parent_partner_application_id:sourceApplicationId,linked_partner_code:sourceProfile.partner_id??null};
- const childStatus=requestedType==="posp"?"training_pending":"agreement_pending";
+ const registrationStatus="onboarding_started";
  const {data:child,error:childError}=await admin.from("intermediary_onboarding_applications").insert({
   initiated_by:reviewer.id,source:"partner_account",requested_type:requestedType,final_type:requestedType,status:"submitted",current_step:3,
   applicant_phone:sourceApp.applicant_phone,applicant_email:sourceApp.applicant_email,draft_data:childDraft,submitted_at:now,updated_at:now,
-  partner_record_id:sourceApp.partner_record_id,partner_status:"active_partner",registration_status:childStatus
+  partner_record_id:sourceApp.partner_record_id,partner_status:"active_partner"
  }).select("id").single<{id:string}>();
- if(childError||!child)redirect(`${reviewPath(sourceApplicationId)}?error=${encodeURIComponent(errorMessage(childError,"linked_account_create_failed") )}`);
+ if(childError||!child)redirect(`${reviewPath(sourceApplicationId)}?error=${encodeURIComponent(linkedAccountError(childError))}`);
 
  let registrationTransferred=false;
  try{
@@ -46,7 +46,7 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
    requested_account_type:requestedType,
    final_account_type:requestedType,
    external_onboarding_id:`PENDING-${requestedType.toUpperCase()}-${child.id}`,
-   workflow_stage:"training",
+   workflow_stage:requestedType==="posp"?"training":"agreement",
    partner_status:"active_partner",
    registration_record_id:null,
    training_status:requestedType==="posp"?"pending":"not_required",
@@ -69,14 +69,13 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
   if(documents?.length){const{error}=await admin.from("intermediary_onboarding_documents").insert(documents.map(row=>({...row,id:randomUUID(),application_id:child.id,uploaded_by:reviewer.id,created_at:now})));if(error)throw error}
 
   if(inheritedRegistration){
-   const {error:clearSourceAppError}=await admin.from("intermediary_onboarding_applications").update({registration_record_id:null,registration_status:"partner_created",updated_at:now}).eq("id",sourceApplicationId);if(clearSourceAppError)throw clearSourceAppError;
+   const {error:clearSourceAppError}=await admin.from("intermediary_onboarding_applications").update({registration_record_id:null,updated_at:now}).eq("id",sourceApplicationId);if(clearSourceAppError)throw clearSourceAppError;
    const {error:clearSourceProfileError}=await admin.from("posp_misp_onboarding_profiles").update({registration_record_id:null,workflow_stage:"completed",updated_by:reviewer.id,updated_at:now}).eq("application_id",sourceApplicationId);if(clearSourceProfileError)throw clearSourceProfileError;
-   const{error:registrationError}=await admin.from("intermediary_registrations").update({application_id:child.id,registration_type:requestedType,registration_status:childStatus,updated_at:now}).eq("id",String(inheritedRegistration));if(registrationError)throw registrationError;
+   const{error:registrationError}=await admin.from("intermediary_registrations").update({application_id:child.id,registration_type:requestedType,registration_status:registrationStatus,updated_at:now}).eq("id",String(inheritedRegistration));if(registrationError)throw registrationError;
    const{error:childAppLinkError}=await admin.from("intermediary_onboarding_applications").update({registration_record_id:inheritedRegistration}).eq("id",child.id);if(childAppLinkError)throw childAppLinkError;
    const{error:childProfileLinkError}=await admin.from("posp_misp_onboarding_profiles").update({registration_record_id:inheritedRegistration}).eq("application_id",child.id);if(childProfileLinkError)throw childProfileLinkError;
    registrationTransferred=true;
   }else{
-   await admin.from("intermediary_onboarding_applications").update({registration_status:"partner_created",updated_at:now}).eq("id",sourceApplicationId);
    await admin.from("posp_misp_onboarding_profiles").update({workflow_stage:"completed",updated_by:reviewer.id,updated_at:now}).eq("application_id",sourceApplicationId);
   }
  }catch(error){
@@ -89,7 +88,7 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
   await admin.from("intermediary_onboarding_contacts").delete().eq("application_id",child.id);
   await admin.from("posp_misp_onboarding_profiles").delete().eq("application_id",child.id);
   await admin.from("intermediary_onboarding_applications").delete().eq("id",child.id);
-  redirect(`${reviewPath(sourceApplicationId)}?error=${encodeURIComponent(errorMessage(error,"linked_account_create_failed"))}`);
+  redirect(`${reviewPath(sourceApplicationId)}?error=${encodeURIComponent(linkedAccountError(error))}`);
  }
  revalidatePath(reviewPath(sourceApplicationId));
  redirect(`${reviewPath(child.id)}?success=linked_${requestedType}_account_created`);
@@ -98,3 +97,4 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
 function text(data:FormData,key:string){const value=data.get(key);return typeof value==="string"&&value.trim()?value.trim():null}
 function object(value:unknown):Record<string,unknown>{return value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>: {}}
 function errorMessage(error:unknown,fallback:string){if(error instanceof Error&&error.message)return error.message;if(error&&typeof error==="object"&&"message" in error&&typeof (error as {message?:unknown}).message==="string")return (error as {message:string}).message;return fallback}
+function linkedAccountError(error:unknown){const message=errorMessage(error,"");if(message.includes("intermediary_onboarding_applications_registration_status_check"))return "The linked account could not be started because its onboarding status is not supported. Please refresh and try again.";if(message.includes("duplicate key")||message.includes("unique constraint"))return "A linked POSP or MISP account already exists for this Partner.";return "Unable to create the linked account. No changes were made. Please try again."}
