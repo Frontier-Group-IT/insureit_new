@@ -1,4 +1,6 @@
-import Image from "next/image";
+import { FileText } from "lucide-react";
+import { documentVisuals, fallbackDocumentVisual } from "@/lib/visual-assets";
+import { VisualAsset } from "@/components/ui/visual-asset";
 
 type Tone = "missing" | "uploaded" | "required" | "optional" | "error";
 
@@ -16,29 +18,6 @@ type DocumentVisualCardProps = {
   clickTargetId?: string;
   compact?: boolean;
 };
-
-const assets: Record<string, { src: string; alt: string; position?: string }> = {
-  aadhaar_front: { src: "/document-assets/aadhaar-card.png", alt: "Aadhaar card front visual" },
-  aadhaar_back: { src: "/document-assets/pan-card.png", alt: "Aadhaar card back visual" },
-  representative_aadhaar_front: { src: "/document-assets/aadhaar-card.png", alt: "Aadhaar card front visual" },
-  representative_aadhaar_back: { src: "/document-assets/pan-card.png", alt: "Aadhaar card back visual" },
-  pan_copy: { src: "/document-assets/identity-card.png", alt: "PAN card visual" },
-  company_pan_copy: { src: "/document-assets/identity-card.png", alt: "PAN card visual" },
-  representative_pan_copy: { src: "/document-assets/identity-card.png", alt: "PAN card visual" },
-  photograph: { src: "/document-assets/photograph.png", alt: "Photograph visual" },
-  cancelled_cheque: { src: "/document-assets/cancelled-cheque.png", alt: "Cancelled cheque visual" },
-  education: { src: "/document-assets/education-certificate.png", alt: "Education certificate visual" },
-  education_marksheet: { src: "/document-assets/education-certificate.png", alt: "Education certificate visual" },
-  education_10th_marksheet: { src: "/document-assets/education-certificate.png", alt: "Education certificate visual" },
-  education_12th_marksheet: { src: "/document-assets/education-certificate.png", alt: "Education certificate visual" },
-  education_graduation_marksheet: { src: "/document-assets/education-certificate.png", alt: "Education certificate visual" },
-  education_post_graduation_marksheet: { src: "/document-assets/education-certificate.png", alt: "Education certificate visual" },
-  agreement_copy: { src: "/document-assets/agreement-copy.png", alt: "Agreement document visual" },
-  gst_copy: { src: "/document-assets/gst-certificate.png", alt: "GST certificate visual" },
-  registration_form: { src: "/document-assets/registration-form.png", alt: "Registration form visual" },
-};
-
-const fallbackAsset = { src: "/document-assets/identity-card.png", alt: "Document visual" };
 
 const toneClasses: Record<Tone, string> = {
   missing: "border-slate-200 bg-white",
@@ -62,6 +41,7 @@ export function DocumentVisualCard({
   fileName,
   required = false,
   status,
+  meta,
   tone,
   action,
   children,
@@ -69,30 +49,54 @@ export function DocumentVisualCard({
   clickTargetId,
   compact = false,
 }: DocumentVisualCardProps) {
-  const asset = assets[type] ?? fallbackAsset;
+  const asset = documentVisuals[type] ?? fallbackDocumentVisual;
   const resolvedTone = tone ?? (fileName ? "uploaded" : required ? "required" : "optional");
   const label = status ?? (fileName ? "Uploaded" : required ? "Required" : "Optional");
 
   return (
-    <article id={id} className={`group relative overflow-hidden rounded-[22px] border shadow-[0_24px_60px_rgba(15,23,42,0.07)] transition hover:-translate-y-1 hover:shadow-[0_34px_76px_rgba(15,23,42,0.1)] ${toneClasses[resolvedTone]}`}>
-      {clickTargetId ? <label htmlFor={clickTargetId} className="absolute inset-0 z-10 cursor-pointer" aria-label={`Upload ${title}`} /> : null}
-      <div className={`relative overflow-hidden bg-white ${compact ? "h-52" : "h-72"}`}>
-        <Image
-          src={asset.src}
-          alt={asset.alt}
-          fill
-          sizes={compact ? "(max-width: 768px) 100vw, 360px" : "(max-width: 768px) 100vw, 460px"}
-          className="object-cover transition duration-300 group-hover:scale-[1.015]"
-          style={{ objectPosition: asset.position ?? "center" }}
+    <article
+      id={id}
+      className={`group relative overflow-hidden rounded-[22px] border shadow-[0_20px_48px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_28px_64px_rgba(15,23,42,0.09)] ${toneClasses[resolvedTone]}`}
+    >
+      {clickTargetId ? (
+        <label
+          htmlFor={clickTargetId}
+          className="absolute inset-0 z-10 cursor-pointer"
+          aria-label={`Upload ${title}`}
         />
+      ) : null}
+
+      <div className={`relative overflow-hidden bg-white ${compact ? "h-48" : "h-64"}`}>
+        <VisualAsset
+          type="image"
+          src={asset.src}
+          label={asset.alt}
+          className="h-full w-full"
+          sizes={compact ? "(max-width: 768px) 100vw, 360px" : "(max-width: 768px) 100vw, 460px"}
+          imageClassName="object-cover transition duration-300 group-hover:scale-[1.015]"
+          position={asset.position}
+        />
+
         <div className="absolute left-3 top-3 flex items-center gap-1.5">
-          <span className={`rounded-full border px-2 py-1 text-[8.5px] font-bold uppercase tracking-[0.04em] ${badgeClasses[resolvedTone]}`}>{label}</span>
+          <span className={`rounded-full border px-2 py-1 text-[8.5px] font-bold uppercase tracking-[0.04em] ${badgeClasses[resolvedTone]}`}>
+            {label}
+          </span>
         </div>
       </div>
-      <div className="absolute inset-x-3 bottom-3 z-20 rounded-2xl border border-white/75 bg-white/82 p-3 shadow-[0_16px_38px_rgba(15,23,42,0.12)] backdrop-blur-sm">
+
+      <div className="absolute inset-x-3 bottom-3 z-20 rounded-2xl border border-white/75 bg-white/88 p-3 shadow-[0_14px_34px_rgba(15,23,42,0.11)] backdrop-blur-sm">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="truncate text-[12px] font-semibold text-[#0F172A]">{title}{required ? <span className="ml-1 text-red-500">*</span> : null}</h3>
+            <h3 className="truncate text-[12px] font-semibold text-[#0F172A]">
+              {title}
+              {required ? <span className="ml-1 text-red-500">*</span> : null}
+            </h3>
+            {fileName || meta ? (
+              <p className="mt-1 flex min-w-0 items-center gap-1.5 truncate text-[9px] text-slate-500">
+                <FileText aria-hidden="true" size={12} strokeWidth={1.8} className="shrink-0" />
+                <span className="truncate">{fileName ?? meta}</span>
+              </p>
+            ) : null}
           </div>
           {action ? <div className="relative z-30 shrink-0">{action}</div> : null}
         </div>
