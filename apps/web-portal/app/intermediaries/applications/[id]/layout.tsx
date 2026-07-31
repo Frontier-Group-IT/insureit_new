@@ -18,6 +18,17 @@ export default function ApplicationReviewLayout({ children }: { children: React.
       const label = action.textContent?.trim().toLowerCase();
       if (label === "edit details") action.dataset.reviewAction = "edit";
       if (label === "create user") action.dataset.reviewAction = "create-user";
+
+      if (label === "open linked account" && !action.closest("#linked-account")) {
+        action.textContent = "Open POSP Account";
+        action.dataset.headerPospAction = "true";
+      }
+
+      if (label === "open posp account" && action.closest("#linked-account")) {
+        const wrapper = action.parentElement;
+        action.remove();
+        if (wrapper && wrapper.childElementCount === 0) wrapper.remove();
+      }
     });
 
     root.querySelectorAll<HTMLElement>("h1, h2, h3, p, span, dt").forEach((element) => {
@@ -32,23 +43,6 @@ export default function ApplicationReviewLayout({ children }: { children: React.
         const steps = section?.querySelector<HTMLElement>("div[class*='grid']");
         if (section) section.dataset.pospJourney = "true";
         if (steps) steps.dataset.pospJourneySteps = "true";
-      }
-
-      const linkedSection = element.closest<HTMLElement>("section#linked-account");
-      if (element.tagName === "H2" && linkedSection && label?.startsWith("linked ") && label.endsWith(" account")) {
-        const headingRow = element.parentElement;
-        const action = linkedSection.querySelector<HTMLAnchorElement>("a");
-        const actionWrapper = action?.parentElement;
-
-        if (headingRow && action) {
-          linkedSection.dataset.linkedAccountCard = "true";
-          headingRow.dataset.linkedAccountHeader = "true";
-          action.dataset.linkedAccountAction = "true";
-          headingRow.appendChild(action);
-          if (actionWrapper && actionWrapper !== headingRow && actionWrapper.childElementCount === 0) {
-            actionWrapper.remove();
-          }
-        }
       }
 
       if (label === "portal user status") {
@@ -152,26 +146,6 @@ export default function ApplicationReviewLayout({ children }: { children: React.
           color: #24345a !important;
         }
 
-        .application-review-refined [data-linked-account-header="true"] {
-          display: flex !important;
-          align-items: center !important;
-          justify-content: space-between !important;
-          gap: 1rem !important;
-          width: 100% !important;
-        }
-
-        .application-review-refined [data-linked-account-action="true"] {
-          display: inline-flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          flex-shrink: 0 !important;
-          margin-left: auto !important;
-          min-height: 2.25rem !important;
-          padding: 0 1rem !important;
-          border-radius: 0.75rem !important;
-          white-space: nowrap !important;
-        }
-
         .application-review-refined [data-review-header-stats="true"] {
           width: 100% !important;
           grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
@@ -182,6 +156,7 @@ export default function ApplicationReviewLayout({ children }: { children: React.
           min-width: 0 !important;
         }
 
+        .application-review-refined [data-header-posp-action="true"],
         .application-review-refined [data-review-action="edit"],
         .application-review-refined [data-review-action="create-user"] {
           display: inline-flex !important;
@@ -191,12 +166,16 @@ export default function ApplicationReviewLayout({ children }: { children: React.
           min-width: 8rem !important;
           height: 2.5rem !important;
           padding: 0 1rem !important;
-          border: 1px solid #ded8ce !important;
           border-radius: 0.85rem !important;
+          font-weight: 600 !important;
+        }
+
+        .application-review-refined [data-review-action="edit"],
+        .application-review-refined [data-review-action="create-user"] {
+          border: 1px solid #ded8ce !important;
           background: #f3f0e9 !important;
           color: #071d49 !important;
           box-shadow: 0 1px 2px rgba(7, 29, 73, 0.08) !important;
-          font-weight: 600 !important;
         }
 
         .application-review-refined [data-review-action="edit"]::before {
@@ -263,16 +242,7 @@ export default function ApplicationReviewLayout({ children }: { children: React.
         }
 
         @media (max-width: 639px) {
-          .application-review-refined [data-linked-account-header="true"] {
-            align-items: flex-start !important;
-            flex-direction: column !important;
-          }
-
-          .application-review-refined [data-linked-account-action="true"] {
-            width: 100% !important;
-            margin-left: 0 !important;
-          }
-
+          .application-review-refined [data-header-posp-action="true"],
           .application-review-refined [data-review-action="edit"],
           .application-review-refined [data-review-action="create-user"] {
             min-width: auto !important;
