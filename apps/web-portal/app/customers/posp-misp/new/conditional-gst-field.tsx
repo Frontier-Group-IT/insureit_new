@@ -9,11 +9,12 @@ export function ConditionalGstField(){
  useEffect(()=>{
   let observer:MutationObserver|null=null;
   const attach=()=>{
-   const form=document.querySelector<HTMLFormElement>('form input[name="partner_type"][value="posp"]')?.form;
-   const ifsc=form?.querySelector<HTMLInputElement>('input[name="bank_ifsc_code"]');
-   const grid=ifsc?.parentElement?.parentElement;
+   const partnerInput=document.querySelector('form input[name="partner_type"][value="posp"]') as HTMLInputElement|null;
+   const form=partnerInput?.form??null;
+   const ifsc=form?.querySelector('input[name="bank_ifsc_code"]') as HTMLInputElement|null;
+   const grid=ifsc?.parentElement?.parentElement??null;
    if(!form||!ifsc||!grid)return false;
-   let mount=form.querySelector<HTMLElement>('[data-conditional-gst-mount]');
+   let mount=form.querySelector('[data-conditional-gst-mount]') as HTMLElement|null;
    if(!mount){mount=document.createElement("div");mount.dataset.conditionalGstMount="true";mount.className="contents";grid.insertBefore(mount,ifsc.parentElement?.nextSibling??null)}
    setTarget(mount);return true;
   };
