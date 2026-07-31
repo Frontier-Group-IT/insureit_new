@@ -57,8 +57,13 @@ export type IcallSsoResponse = {
   statusCode: number;
   status: string;
   message?: string;
+  redirectUrl?: string;
+  redirectURL?: string;
+  redirect_url?: string;
   data?: {
     redirectUrl?: string;
+    redirectURL?: string;
+    redirect_url?: string;
   };
 };
 
@@ -102,15 +107,35 @@ async function postGateway<T>(path: string, body: unknown): Promise<T> {
     throw new Error(`iCall gateway returned a non-JSON response (HTTP ${response.status}).`);
   }
 
+  const normalized = unwrapPayload(parsed);
+
   if (!response.ok) {
     const message =
-      typeof parsed === "object" && parsed && "message" in parsed
-        ? String((parsed as { message?: unknown }).message || "")
+      typeof normalized === "object" && normalized && "message" in normalized
+        ? String((normalized as { message?: unknown }).message || "")
         : "";
     throw new Error(message || `iCall gateway HTTP ${response.status}.`);
   }
 
-  return parsed as T;
+  return normalized as T;
+}
+
+function unwrapPayload(value: unknown): unknown {
+  if (!value || typeof value !== "object") return value;
+
+  const record = value as Record<string, unknown>;
+  const payload = record.payload;
+  if (typeof payload !== "string" || !payload.trim()) return value;
+
+  try {
+    const decoded = Buffer.from(payload.trim(), "base64").toString("utf8");
+    const parsed = JSON.parse(decoded) as unknown;
+    return parsed && typeof parsed === "object"
+      ? { ...record, ...(parsed as Record<string, unknown>), payload: undefined }
+      : parsed;
+  } catch {
+    return value;
+  }
 }
 
 export async function registerIcallPosp(input: IcallRegistrationRequest) {
