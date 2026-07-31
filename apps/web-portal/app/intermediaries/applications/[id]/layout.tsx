@@ -100,6 +100,10 @@ export default function ApplicationReviewLayout({ children }: { children: React.
           display: none !important;
         }
 
+        .application-review-refined #activity {
+          display: none !important;
+        }
+
         .application-review-refined [data-five-step-workflow="true"] {
           display: grid !important;
           grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
