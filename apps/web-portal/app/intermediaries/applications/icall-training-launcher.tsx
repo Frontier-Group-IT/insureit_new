@@ -51,6 +51,25 @@ export function IcallTrainingLauncher({ applicationId, loginId }: Props) {
     });
   }
 
+  function openFreshTab() {
+    setError(null);
+    const popup = window.open("about:blank", "_blank");
+    startTransition(async () => {
+      const result = await launchIcallTrainingSso(applicationId, loginId);
+      if (!result.ok || !result.redirectUrl) {
+        popup?.close();
+        setError(result.message || "Unable to open iCall training in a new tab.");
+        return;
+      }
+      if (popup) {
+        popup.opener = null;
+        popup.location.replace(result.redirectUrl);
+      } else {
+        window.location.href = result.redirectUrl;
+      }
+    });
+  }
+
   const modal = open && redirectUrl ? (
     <div className="fixed inset-0 z-[1000] flex flex-col bg-[#07152F]" role="dialog" aria-modal="true" aria-label="iCall training portal">
       <header className="flex min-h-14 items-center justify-between gap-3 border-b border-white/15 bg-[#071D49] px-4 py-2 text-white sm:px-5">
@@ -59,7 +78,7 @@ export function IcallTrainingLauncher({ applicationId, loginId }: Props) {
           <p className="mt-0.5 truncate text-[12px] font-semibold">Training &amp; Examination · {loginId}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <a href={redirectUrl} target="_blank" rel="noreferrer" className="hidden h-9 items-center rounded-xl border border-white/25 px-3 text-[9.5px] font-semibold text-white hover:bg-white/10 sm:inline-flex">Open in new tab</a>
+          <button type="button" onClick={openFreshTab} disabled={isPending} className="hidden h-9 items-center rounded-xl border border-white/25 px-3 text-[9.5px] font-semibold text-white hover:bg-white/10 disabled:opacity-60 sm:inline-flex">{isPending ? "Preparing…" : "Open in new tab"}</button>
           <button type="button" onClick={close} className="grid h-9 w-9 place-items-center rounded-xl border border-white/25 text-lg leading-none text-white hover:bg-white/10" aria-label="Close iCall training">×</button>
         </div>
       </header>
