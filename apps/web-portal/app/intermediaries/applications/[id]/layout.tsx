@@ -27,19 +27,22 @@ export default function ApplicationReviewLayout({ children }: { children: React.
         element.closest("section")?.setAttribute("data-open-requirements", "true");
       }
 
-      if (!partnerReview) return;
-
-      if (label === "partner onboarding journey") {
-        element.closest("section")?.setAttribute("data-partner-journey", "true");
-      }
-
       if (label === "portal user status") {
         const stat = element.closest<HTMLElement>("div[class*='items-center']");
         if (stat) {
           stat.dataset.partnerPortalStatus = "true";
           const grid = stat.parentElement;
-          if (grid) grid.dataset.partnerHeaderStats = "true";
+          if (grid) {
+            grid.dataset.reviewHeaderStats = "true";
+            if (partnerReview) grid.dataset.partnerHeaderStats = "true";
+          }
         }
+      }
+
+      if (!partnerReview) return;
+
+      if (label === "partner onboarding journey") {
+        element.closest("section")?.setAttribute("data-partner-journey", "true");
       }
 
       if (label === "onboarding date") {
@@ -63,6 +66,16 @@ export default function ApplicationReviewLayout({ children }: { children: React.
       <style>{`
         .application-review-refined [data-open-requirements="true"] {
           display: none !important;
+        }
+
+        .application-review-refined [data-review-header-stats="true"] {
+          width: 100% !important;
+          grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+        }
+
+        .application-review-refined [data-review-header-stats="true"] > div {
+          width: 100% !important;
+          min-width: 0 !important;
         }
 
         .application-review-refined [data-review-action="edit"],
@@ -126,6 +139,7 @@ export default function ApplicationReviewLayout({ children }: { children: React.
         }
 
         @media (max-width: 1199px) {
+          .application-review-refined [data-review-header-stats="true"],
           .partner-review-refined [data-partner-header-stats="true"] {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
           }
@@ -137,6 +151,7 @@ export default function ApplicationReviewLayout({ children }: { children: React.
             min-width: auto !important;
           }
 
+          .application-review-refined [data-review-header-stats="true"],
           .partner-review-refined [data-partner-header-stats="true"] {
             grid-template-columns: minmax(0, 1fr) !important;
           }
