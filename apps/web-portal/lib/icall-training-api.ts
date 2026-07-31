@@ -107,7 +107,7 @@ async function postGateway<T>(path: string, body: unknown): Promise<T> {
     throw new Error(`iCall gateway returned a non-JSON response (HTTP ${response.status}).`);
   }
 
-  const normalized = unwrapPayload(parsed);
+  const normalized = normalizeIcallResponse(unwrapPayload(parsed));
 
   if (!response.ok) {
     const message =
@@ -136,6 +136,16 @@ function unwrapPayload(value: unknown): unknown {
   } catch {
     return value;
   }
+}
+
+function normalizeIcallResponse(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+
+  const record = { ...(value as Record<string, unknown>) };
+  if (typeof record.statusCode === "string" && /^\d+$/.test(record.statusCode.trim())) {
+    record.statusCode = Number(record.statusCode);
+  }
+  return record;
 }
 
 export async function registerIcallPosp(input: IcallRegistrationRequest) {
