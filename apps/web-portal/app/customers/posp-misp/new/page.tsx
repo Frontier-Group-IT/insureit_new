@@ -4,6 +4,7 @@ import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
 import { requirePospMispManager } from "@/lib/master-data-server";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { createManualPospMispOnboardingV2 } from "../manual-actions-v2";
 import { OnboardingFieldPresentation } from "../onboarding-field-presentation";
 import { PospMispOnboardingForm } from "../posp-misp-onboarding-form";
 
@@ -30,7 +31,13 @@ export default async function NewPospMispPage({ searchParams }: { searchParams: 
   return (
     <AppShell title={title} backHref={backHref}>
       <OnboardingFieldPresentation>
-        <PospMispOnboardingForm partnerType={partnerType} salesManagers={salesManagers} oems={oems} banks={banks} error={query.error ?? null} />
+        <PospMispOnboardingForm
+          action={createManualPospMispOnboardingV2}
+          partnerType={partnerType}
+          salesManagers={salesManagers}
+          oems={oems}
+          banks={banks}
+        />
       </OnboardingFieldPresentation>
     </AppShell>
   );
