@@ -27,6 +27,23 @@ export default function ApplicationReviewLayout({ children }: { children: React.
         element.closest("section")?.setAttribute("data-open-requirements", "true");
       }
 
+      if (label?.startsWith("linked ") && label.endsWith(" account")) {
+        const section = element.closest<HTMLElement>("section");
+        const headingRow = element.parentElement;
+        const action = section?.querySelector<HTMLAnchorElement>("a");
+        const actionWrapper = action?.parentElement;
+
+        if (section && headingRow && action) {
+          section.dataset.linkedAccountCard = "true";
+          headingRow.dataset.linkedAccountHeader = "true";
+          action.dataset.linkedAccountAction = "true";
+          headingRow.appendChild(action);
+          if (actionWrapper && actionWrapper !== headingRow && actionWrapper.childElementCount === 0) {
+            actionWrapper.remove();
+          }
+        }
+      }
+
       if (label === "portal user status") {
         const stat = element.closest<HTMLElement>("div[class*='items-center']");
         if (stat) {
@@ -66,6 +83,26 @@ export default function ApplicationReviewLayout({ children }: { children: React.
       <style>{`
         .application-review-refined [data-open-requirements="true"] {
           display: none !important;
+        }
+
+        .application-review-refined [data-linked-account-header="true"] {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: space-between !important;
+          gap: 1rem !important;
+          width: 100% !important;
+        }
+
+        .application-review-refined [data-linked-account-action="true"] {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          flex-shrink: 0 !important;
+          margin-left: auto !important;
+          min-height: 2.25rem !important;
+          padding: 0 1rem !important;
+          border-radius: 0.75rem !important;
+          white-space: nowrap !important;
         }
 
         .application-review-refined [data-review-header-stats="true"] {
@@ -146,6 +183,16 @@ export default function ApplicationReviewLayout({ children }: { children: React.
         }
 
         @media (max-width: 639px) {
+          .application-review-refined [data-linked-account-header="true"] {
+            align-items: flex-start !important;
+            flex-direction: column !important;
+          }
+
+          .application-review-refined [data-linked-account-action="true"] {
+            width: 100% !important;
+            margin-left: 0 !important;
+          }
+
           .application-review-refined [data-review-action="edit"],
           .application-review-refined [data-review-action="create-user"] {
             min-width: auto !important;
