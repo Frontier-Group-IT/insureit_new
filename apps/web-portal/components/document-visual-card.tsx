@@ -41,8 +41,8 @@ const fallbackAsset = { src: "/document-assets/identity-card.png", alt: "Documen
 
 const toneClasses: Record<Tone, string> = {
   missing: "border-slate-200 bg-white",
-  uploaded: "border-emerald-200 bg-emerald-50/30",
-  required: "border-amber-200 bg-amber-50/25",
+  uploaded: "border-emerald-200 bg-white",
+  required: "border-amber-200 bg-white",
   optional: "border-[#DCE5EF] bg-white",
   error: "border-red-300 bg-red-50",
 };
@@ -61,7 +61,6 @@ export function DocumentVisualCard({
   fileName,
   required = false,
   status,
-  meta,
   tone,
   action,
   children,
@@ -73,26 +72,23 @@ export function DocumentVisualCard({
   const label = status ?? (fileName ? "Uploaded" : required ? "Required" : "Optional");
 
   return (
-    <article id={id} className={`overflow-hidden rounded-2xl border shadow-sm transition ${toneClasses[resolvedTone]}`}>
-      <div className={`relative overflow-hidden bg-gradient-to-br from-[#F8FBFF] via-white to-[#EEF4FF] ${compact ? "h-28" : "h-40"}`}>
+    <article id={id} className={`overflow-hidden rounded-2xl border shadow-[0_18px_42px_rgba(15,23,42,0.055)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_55px_rgba(15,23,42,0.075)] ${toneClasses[resolvedTone]}`}>
+      <div className={`relative overflow-hidden bg-[#F7FAFF] ${compact ? "h-32" : "h-48"}`}>
         <Image
           src={asset.src}
           alt={asset.alt}
           fill
           sizes={compact ? "(max-width: 768px) 50vw, 260px" : "(max-width: 768px) 100vw, 360px"}
-          className={`p-3 drop-shadow-[0_18px_26px_rgba(15,23,42,0.16)] ${asset.fit === "cover" ? "object-cover" : "object-contain"}`}
+          className={`scale-[1.12] drop-shadow-[0_26px_30px_rgba(15,23,42,0.18)] ${asset.fit === "cover" ? "object-cover" : "object-contain"}`}
         />
         <div className="absolute left-3 top-3 flex items-center gap-1.5">
           <span className={`rounded-full border px-2 py-1 text-[8.5px] font-bold uppercase tracking-[0.04em] ${badgeClasses[resolvedTone]}`}>{label}</span>
-          {required ? <span className="rounded-full border border-red-100 bg-white/90 px-2 py-1 text-[8.5px] font-bold uppercase text-red-600">Mandatory</span> : null}
         </div>
       </div>
       <div className={compact ? "p-3" : "p-4"}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="truncate text-[12px] font-semibold text-[#0F172A]">{title}</h3>
-            <p className="mt-1 truncate text-[9.5px] font-medium text-[#64748B]">{fileName || "No file attached yet"}</p>
-            {meta ? <p className="mt-1 text-[8.5px] font-medium text-[#94A3B8]">{meta}</p> : null}
+            <h3 className="truncate text-[12px] font-semibold text-[#0F172A]">{title}{required ? <span className="ml-1 text-red-500">*</span> : null}</h3>
           </div>
           {action ? <div className="shrink-0">{action}</div> : null}
         </div>
