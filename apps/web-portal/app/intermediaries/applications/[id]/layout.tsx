@@ -21,23 +21,41 @@ export default function ApplicationReviewLayout({ children }: { children: React.
       if (label === "edit details") action.dataset.partnerAction = "edit";
       if (label === "create user") action.dataset.partnerAction = "create-user";
     });
+
+    root.querySelectorAll<HTMLElement>("h1, h2, h3, p, span").forEach((element) => {
+      const label = element.textContent?.trim().toLowerCase();
+
+      if (label === "partner onboarding journey") {
+        element.closest("section")?.setAttribute("data-partner-journey", "true");
+      }
+
+      if (label === "portal user status") {
+        const stat = element.closest<HTMLElement>("div[class*='items-center']");
+        if (stat) {
+          stat.dataset.partnerPortalStatus = "true";
+          const grid = stat.parentElement;
+          if (grid) grid.dataset.partnerHeaderStats = "true";
+        }
+      }
+    });
   }, []);
 
   return (
     <div ref={rootRef} className={isPartnerReview ? "partner-review-refined" : undefined}>
       {children}
       <style>{`
-        .partner-review-refined #overview > section:nth-of-type(2),
+        .partner-review-refined [data-partner-journey="true"],
         .partner-review-refined #activity {
           display: none !important;
         }
 
-        .partner-review-refined section[class*="bg-gradient-to-br"] > div:last-child > div:last-child {
-          display: none !important;
+        .partner-review-refined [data-partner-header-stats="true"] {
+          grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
         }
 
-        .partner-review-refined section[class*="bg-gradient-to-br"] > div:last-child {
-          grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        .partner-review-refined [data-partner-portal-status="true"] {
+          display: flex !important;
+          order: 5 !important;
         }
 
         .partner-review-refined [data-partner-action="edit"],
@@ -46,9 +64,9 @@ export default function ApplicationReviewLayout({ children }: { children: React.
           align-items: center !important;
           justify-content: center !important;
           gap: 0.45rem !important;
-          border: 1px solid rgba(255, 255, 255, 0.78) !important;
+          border: 1px solid #ded8ce !important;
           border-radius: 0.75rem !important;
-          background: #ffffff !important;
+          background: #f3f0e9 !important;
           color: #071d49 !important;
           box-shadow: 0 1px 2px rgba(7, 29, 73, 0.08) !important;
         }
@@ -73,22 +91,22 @@ export default function ApplicationReviewLayout({ children }: { children: React.
 
         .partner-review-refined [data-partner-action="edit"]:hover,
         .partner-review-refined [data-partner-action="create-user"]:hover {
-          border-color: #cbd5e1 !important;
-          background: #f8fafc !important;
+          border-color: #cfc7bb !important;
+          background: #ebe6dd !important;
         }
 
         .partner-review-refined > div > div[class*="max-w-[1480px]"] {
           gap: 0.85rem !important;
         }
 
-        @media (max-width: 1279px) {
-          .partner-review-refined section[class*="bg-gradient-to-br"] > div:last-child {
+        @media (max-width: 1199px) {
+          .partner-review-refined [data-partner-header-stats="true"] {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
           }
         }
 
         @media (max-width: 639px) {
-          .partner-review-refined section[class*="bg-gradient-to-br"] > div:last-child {
+          .partner-review-refined [data-partner-header-stats="true"] {
             grid-template-columns: minmax(0, 1fr) !important;
           }
         }
