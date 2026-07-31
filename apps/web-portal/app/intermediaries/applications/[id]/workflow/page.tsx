@@ -13,6 +13,7 @@ import { IibSubmissionStage } from "@/app/intermediaries/applications/iib-submis
 import { WorkflowResultDialog } from "@/app/intermediaries/applications/workflow-result-dialog";
 import { WorkflowErrorDialog } from "@/app/intermediaries/applications/workflow-error-dialog";
 import { IntermediaryDocumentUploadController } from "@/app/intermediaries/applications/intermediary-document-upload-controller";
+import { AccountReviewBackLink } from "@/app/intermediaries/applications/account-review-back-link";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -73,7 +74,7 @@ export default async function IntermediaryWorkflowPage({params,searchParams}:{pa
       <section className="rounded-2xl border border-[#DCE5EF] bg-white/80 px-5 py-4 shadow-sm backdrop-blur">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <Link href={`/intermediaries/applications/${id}`} className="text-[10px] font-semibold text-[#4F46E5] hover:underline">← Back to account review</Link>
+            <AccountReviewBackLink href={`/intermediaries/applications/${id}`} />
             <div className="mt-2 flex flex-wrap items-center gap-2.5"><h1 className="text-xl font-semibold text-[#0F172A]">{title}</h1>{permanentReference?<span className="rounded-lg border border-[#D7E0EB] bg-white px-2.5 py-1 text-[9.5px] font-medium text-[#475569]">{permanentReference}</span>:null}</div>
           </div>
           <div className="flex items-center gap-3"><span className="font-mono text-[15px] font-semibold tracking-wide text-[#334155]">{maskPan(profile.pan_number)}</span><span className={`rounded-lg px-3 py-1.5 text-[9.5px] font-semibold ${iibCleared?"bg-emerald-100 text-emerald-700":"bg-amber-100 text-amber-800"}`}>{iibCleared?"✓ IIB Cleared":"IIB Review"}</span></div>
