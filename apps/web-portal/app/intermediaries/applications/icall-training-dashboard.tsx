@@ -1,6 +1,7 @@
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { syncIcallUatStatus } from "./icall-training-actions";
+import { IcallTrainingLauncher } from "./icall-training-launcher";
 
 export type IcallTrainingAssignment = {
   training_title: string | null;
@@ -76,7 +77,7 @@ export async function IcallTrainingDashboard({ applicationId, assignment }: { ap
     </div>
 
     <div className="flex flex-wrap gap-2">
-      <a href={details.training_url || "https://www.icallinsurance.com/"} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center rounded-xl bg-[#071D49] px-4 text-[10px] font-semibold text-white">Open training</a>
+      {details.icall_login_id ? <IcallTrainingLauncher applicationId={applicationId} loginId={details.icall_login_id} /> : <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[9.5px] text-amber-800">Sync the iCall status before opening training.</div>}
       <form action={syncIcallUatStatus}>
         <input type="hidden" name="application_id" value={applicationId} />
         <FormSubmitButton label="Sync latest status" pendingLabel="Syncing" className="h-10 rounded-xl border border-blue-200 bg-white px-4 text-[10px] font-semibold text-blue-800" />
