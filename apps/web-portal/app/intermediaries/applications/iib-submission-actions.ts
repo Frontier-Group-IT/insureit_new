@@ -51,8 +51,8 @@ export async function prepareIntermediaryIibPayload(formData: FormData) {
     admin.from("intermediary_onboarding_documents").select("document_type,file_name,storage_bucket,storage_path,verification_status").eq("application_id", applicationId).returns<DocumentRow[]>()
   ]);
 
-  if (!application || !profile || application.final_type === "partner") redirect(`${applicationPath(applicationId)}?stage=review&error=iib_not_available`);
-  if (assignment?.agreement_status !== "signed") redirect(`${applicationPath(applicationId)}?stage=review&error=iib_agreement_required`);
+  if (!application || !profile || application.final_type === "partner") redirectFresh(`${applicationPath(applicationId)}?stage=review&error=iib_not_available`);
+  if (assignment?.agreement_status !== "signed") redirectFresh(`${applicationPath(applicationId)}?stage=review&error=iib_agreement_required`);
 
   const type = (application.final_type ?? profile.partner_type) as "posp"|"misp";
   const fallbackPosName = splitName(profile.pos_name);
@@ -124,7 +124,7 @@ export async function prepareIntermediaryIibPayload(formData: FormData) {
     prepared_by: reviewer.id,
     updated_at: now
   }, { onConflict: "application_id" });
-  if (error) redirect(`${applicationPath(applicationId)}?stage=review&error=iib_prepare_failed`);
+  if (error) redirectFresh(`${applicationPath(applicationId)}?stage=review&error=iib_prepare_failed`);
 
   await admin.from("intermediary_onboarding_applications").update({
     registration_status: status === "ready" ? "iib_submission_pending" : application.registration_status,
@@ -132,7 +132,7 @@ export async function prepareIntermediaryIibPayload(formData: FormData) {
   }).eq("id", applicationId);
 
   revalidatePath(applicationPath(applicationId));
-  redirect(`${applicationPath(applicationId)}?stage=review&success=${status === "ready" ? "iib_payload_ready" : "iib_payload_incomplete"}#iib-submission`);
+  redirectFresh(`${applicationPath(applicationId)}?stage=review&success=${status === "ready" ? "iib_payload_ready" : "iib_payload_incomplete"}#iib-submission`);
 }
 
 export async function startIntermediaryIibHandoff(formData: FormData) {
@@ -141,11 +141,16 @@ export async function startIntermediaryIibHandoff(formData: FormData) {
   if (!reviewer?.id || !applicationId) redirect("/customers/posp-misp");
   const admin = createSupabaseAdminClient();
   const { data: packet } = await admin.from("intermediary_iib_submission_packets").select("status,missing_fields").eq("application_id", applicationId).maybeSingle<{status:string;missing_fields:string[]}>();
-  if (!packet || packet.status !== "ready" || packet.missing_fields.length) redirect(`${applicationPath(applicationId)}?stage=review&error=iib_payload_not_ready#iib-submission`);
+  if (!packet || packet.status !== "ready" || packet.missing_fields.length) redirectFresh(`${applicationPath(applicationId)}?stage=review&error=iib_payload_not_ready#iib-submission`);
   const now = new Date().toISOString();
   await admin.from("intermediary_iib_submission_packets").update({ status:"handoff_started", handoff_started_at:now, handoff_started_by:reviewer.id, updated_at:now }).eq("application_id", applicationId);
   revalidatePath(applicationPath(applicationId));
-  redirect(`${applicationPath(applicationId)}?stage=review&success=iib_handoff_started#iib-submission`);
+  redirectFresh(`${applicationPath(applicationId)}?stage=review&success=iib_handoff_started#iib-submission`);
+}
+
+function redirectFresh(href: string): never {
+  const [base, hash = ""] = href.split("#", 2);
+  return redirect(`${base}${base.includes("?") ? "&" : "?"}fresh=${Date.now()}${hash ? `#${hash}` : ""}`);
 }
 
 function text(formData: FormData, key: string) {

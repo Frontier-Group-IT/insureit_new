@@ -16,7 +16,7 @@ export async function queuePospMispPanVerification(data:FormData){
  const {data:profile}=await admin.from("posp_misp_onboarding_profiles").select("id, partner_type, pan_number, dp_pan_number, workflow_stage").eq("application_id",applicationId).maybeSingle<{id:string;partner_type:"posp"|"misp";pan_number:string|null;dp_pan_number:string|null;workflow_stage:string}>();
  const panNumber=verificationPan(profile);if(!profile?.id||!PAN_PATTERN.test(panNumber))redirectTo(applicationId,"pan_verification_invalid");if(profile.workflow_stage!=="pre_iib")redirectTo(applicationId,"stage_locked");
  const now=new Date().toISOString();const {error}=await admin.from("pan_verification_jobs").upsert({application_id:applicationId,onboarding_profile_id:profile.id,partner_type:profile.partner_type,pan_number:panNumber,status:"pending",result_code:null,result_message:null,requested_at:now,started_at:null,completed_at:null,last_error:null,checked_by_device:null,requested_by:actorId,override_reason:null,overridden_by:null,overridden_at:null,updated_at:now},{onConflict:"application_id"});
- if(error)redirectTo(applicationId,"pan_verification_queue_failed");await admin.from("intermediary_onboarding_applications").update({registration_status:"pan_checking",updated_at:now}).eq("id",applicationId);revalidatePath(applicationPath(applicationId));redirect(`${applicationPath(applicationId)}?success=pan_verification_queued`);
+ if(error)redirectTo(applicationId,"pan_verification_queue_failed");await admin.from("intermediary_onboarding_applications").update({registration_status:"pan_checking",updated_at:now}).eq("id",applicationId);revalidatePath(applicationPath(applicationId));redirectFresh(`${applicationPath(applicationId)}?success=pan_verification_queued`);
 }
 
 export async function retryPospMispPanVerification(data:FormData){
@@ -31,7 +31,7 @@ export async function retryPospMispPanVerification(data:FormData){
  const {error:profileError}=await admin.from("posp_misp_onboarding_profiles").update({...profilePanUpdate,iib_remarks:null,iib_upload_status:"pending",iib_uploaded:false,iib_uploaded_at:null,iib_completed_at:null,requested_account_type:profile.partner_type,final_account_type:resetFinalType,partner_decision:"not_applicable",workflow_stage:resetStage,record_source:"new_onboarding",updated_by:actorId,updated_at:now}).eq("id",profile.id);
  if(profileError)redirectTo(applicationId,"pan_verification_reset_failed");await admin.from("pan_verification_jobs").delete().eq("application_id",applicationId);
  const {error:jobError}=await admin.from("pan_verification_jobs").insert({application_id:applicationId,onboarding_profile_id:profile.id,partner_type:profile.partner_type,pan_number:panNumber,status:"pending",result_code:null,result_message:null,requested_at:now,started_at:null,completed_at:null,attempt_count:0,last_error:null,checked_by_device:null,requested_by:actorId,updated_at:now});
- if(jobError)redirectTo(applicationId,"pan_verification_queue_failed");await admin.from("intermediary_onboarding_applications").update({registration_status:"pan_checking",updated_at:now}).eq("id",applicationId);revalidatePath(applicationPath(applicationId));redirect(`${applicationPath(applicationId)}?success=pan_verification_requeued`);
+ if(jobError)redirectTo(applicationId,"pan_verification_queue_failed");await admin.from("intermediary_onboarding_applications").update({registration_status:"pan_checking",updated_at:now}).eq("id",applicationId);revalidatePath(applicationPath(applicationId));redirectFresh(`${applicationPath(applicationId)}?success=pan_verification_requeued`);
 }
 
 export async function decidePospMispPartnerRoute(data:FormData){
@@ -43,10 +43,10 @@ export async function decidePospMispPartnerRoute(data:FormData){
  if(decision==="import_existing_posp"){
   const confirmed=value(data,"existing_registration_confirmed")==="yes";const existingCode=value(data,"existing_registration_code")??profile.external_onboarding_id;if(profile.partner_type!=="posp"||!confirmed||!existingCode)redirectTo(applicationId,"existing_posp_confirmation_required");
   const {error}=await admin.from("posp_misp_onboarding_profiles").update({partner_decision:"not_applicable",requested_account_type:"posp",final_account_type:"posp",workflow_stage:"iib_processing",record_source:"legacy_import",existing_registration_confirmed:true,existing_registration_confirmed_by:actorId,existing_registration_confirmed_at:now,existing_registration_code:existingCode,existing_registration_remarks:remark,pre_iib_submitted_at:now,updated_by:actorId,updated_at:now}).eq("id",profile.id);if(error)redirectTo(applicationId,"partner_decision_failed");
-  await admin.from("intermediary_onboarding_applications").update({final_type:"posp",status:"submitted",registration_status:"existing_posp_documents_pending",updated_at:now}).eq("id",applicationId);revalidatePath(applicationPath(applicationId));redirect(`${applicationPath(applicationId)}?stage=documents&success=existing_posp_imported`);
+  await admin.from("intermediary_onboarding_applications").update({final_type:"posp",status:"submitted",registration_status:"existing_posp_documents_pending",updated_at:now}).eq("id",applicationId);revalidatePath(applicationPath(applicationId));redirectFresh(`${applicationPath(applicationId)}?stage=documents&success=existing_posp_imported`);
  }
  const {error}=await admin.from("posp_misp_onboarding_profiles").update({partner_decision:decision,partner_decision_at:now,partner_decision_by:actorId,partner_decision_remark:remark,updated_by:actorId,updated_at:now}).eq("id",profile.id);if(error)redirectTo(applicationId,"partner_decision_failed");
- await admin.from("intermediary_onboarding_applications").update({status:"rejected",registration_status:"rejected",updated_at:now}).eq("id",applicationId);revalidatePath(applicationPath(applicationId));redirect(`${applicationPath(applicationId)}?success=application_closed`);
+ await admin.from("intermediary_onboarding_applications").update({status:"rejected",registration_status:"rejected",updated_at:now}).eq("id",applicationId);revalidatePath(applicationPath(applicationId));redirectFresh(`${applicationPath(applicationId)}?success=application_closed`);
 }
 
 export async function movePospMispToIib(data:FormData){
@@ -56,7 +56,7 @@ export async function movePospMispToIib(data:FormData){
  const normalRoute=profile.iib_remarks==="No Data Found In POS System";if(!normalRoute&&profile.iib_remarks!==MATCHING_RECORD)redirectTo(applicationId,"pan_verification_required");
  const now=new Date().toISOString();const finalType=profile.partner_type;
  const {data:updated,error}=await admin.from("posp_misp_onboarding_profiles").update({workflow_stage:"iib_processing",requested_account_type:profile.partner_type,final_account_type:finalType,pre_iib_submitted_at:now,iib_match_warning_text:profile.iib_remarks===MATCHING_RECORD?MATCHING_RECORD:null,updated_by:actorId,updated_at:now}).eq("id",profile.id).eq("workflow_stage","pre_iib").select("id").maybeSingle<{id:string}>();
- if(error||!updated)redirectTo(applicationId,"workflow_save_failed");await admin.from("intermediary_onboarding_applications").update({final_type:finalType,registration_status:"documents_pending",updated_at:now}).eq("id",applicationId);revalidatePath(applicationPath(applicationId));redirect(`${applicationPath(applicationId)}?stage=documents&success=documents_started`);
+ if(error||!updated)redirectTo(applicationId,"workflow_save_failed");await admin.from("intermediary_onboarding_applications").update({final_type:finalType,registration_status:"documents_pending",updated_at:now}).eq("id",applicationId);revalidatePath(applicationPath(applicationId));redirectFresh(`${applicationPath(applicationId)}?stage=documents&success=documents_started`);
 }
 
 export async function completePospMispDocumentStage(data:FormData){
@@ -77,7 +77,7 @@ export async function completePospMispDocumentStage(data:FormData){
 }
 
 export async function requestPartnerPospConversion(data:FormData){
- const applicationId=value(data,"application_id");if(!applicationId)redirect("/customers/posp-misp");redirect(`${applicationPath(applicationId)}?error=registration_type_locked`);
+ const applicationId=value(data,"application_id");if(!applicationId)redirect("/customers/posp-misp");redirectFresh(`${applicationPath(applicationId)}?error=registration_type_locked`);
 }
 
 async function syncPartnerRegister(admin:ReturnType<typeof createSupabaseAdminClient>,applicationId:string,partnerId:string,profile:{partner_type:"posp"|"misp";external_onboarding_id:string|null;pos_name:string|null;misp_name:string|null;applicant_phone:string|null;applicant_email:string|null;dp_phone:string|null;dp_email:string|null;city:string|null},now:string){
@@ -94,4 +94,5 @@ function revalidatePartnerViews(applicationId:string){revalidatePath(application
 function verificationPan(profile:{partner_type:"posp"|"misp";pan_number:string|null;dp_pan_number:string|null}|null|undefined){return (profile?.partner_type==="misp"?profile.dp_pan_number:profile?.pan_number)?.replace(/\s/g,"").toUpperCase()??""}
 async function context(data:FormData){const applicationId=value(data,"application_id");if(!applicationId)redirect("/customers/posp-misp");const accessToken=await getServerAccessToken();const {profile}=await getAuthenticatedProfile(accessToken);if(!profile?.id||!canManagePospMispOnboarding(profile.role))redirect("/access-denied");return{actorId:profile.id,applicationId,admin:createSupabaseAdminClient()}}
 function value(data:FormData,key:string){const current=data.get(key);return typeof current==="string"&&current.trim()?current.trim():null}
-function redirectTo(applicationId:string,error:string):never{redirect(`${applicationPath(applicationId)}?error=${error}`)}
+function redirectTo(applicationId:string,error:string):never{redirectFresh(`${applicationPath(applicationId)}?error=${error}`)}
+function redirectFresh(href:string):never{redirect(`${href}${href.includes("?")?"&":"?"}fresh=${Date.now()}`)}

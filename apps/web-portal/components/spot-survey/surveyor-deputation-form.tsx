@@ -1,15 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { deputeSpotSurveyor } from "@/app/claims/[id]/surveyor-actions";
+import { freshDynamicRouteUrl } from "@/components/fresh-dynamic-route-navigation";
 import { InsureItButtonLoader } from "@/components/loading/insureit-loader";
 
 type Result = { ok: boolean; message?: string };
 
 export function SurveyorDeputationForm({ claimId, variant = "launcher", backHref }: { claimId: string; variant?: "launcher" | "form"; backHref?: string }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<Result | null>(null);
   const [surveyorName, setSurveyorName] = useState("");
@@ -46,8 +45,7 @@ export function SurveyorDeputationForm({ claimId, variant = "launcher", backHref
           const response = await deputeSpotSurveyor(formData);
           setResult(response);
           if (response.ok) {
-            router.push(`/claims/${claimId}`);
-            router.refresh();
+            window.location.assign(freshDynamicRouteUrl(`/claims/${claimId}`));
           }
         });
       }}

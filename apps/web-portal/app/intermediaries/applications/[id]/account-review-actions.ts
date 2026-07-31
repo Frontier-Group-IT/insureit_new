@@ -18,24 +18,24 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
   admin.from("intermediary_onboarding_applications").select("id,initiated_by,source,requested_type,status,registration_status,partner_status,applicant_phone,applicant_email,draft_data,partner_record_id,registration_record_id").eq("id",sourceApplicationId).maybeSingle<Record<string,unknown>>(),
   admin.from("posp_misp_onboarding_profiles").select("*").eq("application_id",sourceApplicationId).maybeSingle<Record<string,unknown>>()
  ]);
- if(!sourceApp||!sourceProfile||sourceApp.partner_status!=="active_partner"||!sourceApp.partner_record_id)redirect(`${reviewPath(sourceApplicationId)}?error=partner_account_required`);
+ if(!sourceApp||!sourceProfile||sourceApp.partner_status!=="active_partner"||!sourceApp.partner_record_id)redirectFresh(`${reviewPath(sourceApplicationId)}?error=partner_account_required`);
  const sourceDraft=object(sourceApp.draft_data);
  const {data:existingApps}=await admin.from("intermediary_onboarding_applications").select("id,draft_data").eq("partner_record_id",String(sourceApp.partner_record_id)).neq("id",sourceApplicationId).returns<Array<{id:string;draft_data:Record<string,unknown>|null}>>();
  const existing=(existingApps??[]).find(row=>object(row.draft_data).account_context===requestedType);
 
  const now=new Date().toISOString();
- if(existing){await syncInheritedDocuments(admin,sourceApplicationId,existing.id,reviewer.id,now);revalidatePath(reviewPath(existing.id));redirect(reviewPath(existing.id))}
+ if(existing){await syncInheritedDocuments(admin,sourceApplicationId,existing.id,reviewer.id,now);revalidatePath(reviewPath(existing.id));redirectFresh(reviewPath(existing.id))}
  const inheritedRegistration=sourceApp.registration_record_id??sourceProfile.registration_record_id??null;
  const childDraft={...sourceDraft,account_context:requestedType,parent_partner_application_id:sourceApplicationId,linked_partner_code:sourceProfile.partner_id??null};
  const registrationStatus="training_pending";
  const {data:issuedCode,error:codeError}=await admin.rpc("next_registration_code",{p_type:requestedType});
- if(codeError||typeof issuedCode!=="string"||!issuedCode)redirect(`${reviewPath(sourceApplicationId)}?error=${encodeURIComponent("The POSP/MISP ID could not be allotted. Please try again.")}`);
+ if(codeError||typeof issuedCode!=="string"||!issuedCode)redirectFresh(`${reviewPath(sourceApplicationId)}?error=${encodeURIComponent("The POSP/MISP ID could not be allotted. Please try again.")}`);
  const {data:child,error:childError}=await admin.from("intermediary_onboarding_applications").insert({
   initiated_by:reviewer.id,source:"partner_account",requested_type:requestedType,final_type:requestedType,status:"submitted",current_step:3,
   applicant_phone:sourceApp.applicant_phone,applicant_email:sourceApp.applicant_email,draft_data:childDraft,submitted_at:now,updated_at:now,
   partner_record_id:sourceApp.partner_record_id,partner_status:"active_partner",registration_status:registrationStatus
  }).select("id").single<{id:string}>();
- if(childError||!child)redirect(`${reviewPath(sourceApplicationId)}?error=${encodeURIComponent(linkedAccountError(stepError("child_application",childError??new Error("The child application could not be created."))))}`);
+ if(childError||!child)redirectFresh(`${reviewPath(sourceApplicationId)}?error=${encodeURIComponent(linkedAccountError(stepError("child_application",childError??new Error("The child application could not be created."))))}`);
 
  let registrationTransferred=false;
  try{
@@ -98,10 +98,10 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
   await admin.from("intermediary_onboarding_contacts").delete().eq("application_id",child.id);
   await admin.from("posp_misp_onboarding_profiles").delete().eq("application_id",child.id);
   await admin.from("intermediary_onboarding_applications").delete().eq("id",child.id);
-  redirect(`${reviewPath(sourceApplicationId)}?error=${encodeURIComponent(linkedAccountError(error))}`);
+  redirectFresh(`${reviewPath(sourceApplicationId)}?error=${encodeURIComponent(linkedAccountError(error))}`);
  }
  revalidatePath(reviewPath(sourceApplicationId));
- redirect(`${reviewPath(child.id)}?success=linked_${requestedType}_account_created`);
+ redirectFresh(`${reviewPath(child.id)}?success=linked_${requestedType}_account_created`);
 }
 
 function text(data:FormData,key:string){const value=data.get(key);return typeof value==="string"&&value.trim()?value.trim():null}
@@ -117,3 +117,4 @@ async function syncInheritedDocuments(admin:ReturnType<typeof createSupabaseAdmi
 }
 function errorMessage(error:unknown,fallback:string){if(error instanceof Error&&error.message)return error.message;if(error&&typeof error==="object"&&"message" in error&&typeof (error as {message?:unknown}).message==="string")return (error as {message:string}).message;return fallback}
 function linkedAccountError(error:unknown){const message=errorMessage(error,"");if(message.includes("intermediary_onboarding_applications_registration_status_check"))return "The linked account could not be started because its onboarding status is not supported. Please refresh and try again.";if(message.includes("duplicate key")||message.includes("unique constraint"))return "A linked POSP or MISP account already exists for this Partner.";if(message.startsWith("[profile]"))return "The linked profile could not be created. Parent-only identifiers were detected on the new account profile.";if(message.startsWith("[registration"))return "The linked registration record could not be prepared for this Partner.";if(message.startsWith("["))return `Unable to create the linked account at ${message.slice(1,message.indexOf("]"))}. No changes were made.`;return "Unable to create the linked account. No changes were made. Please try again."}
+function redirectFresh(href:string):never{redirect(`${href}${href.includes("?")?"&":"?"}fresh=${Date.now()}`)}

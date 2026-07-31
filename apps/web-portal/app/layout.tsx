@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Manrope, Space_Grotesk } from "next/font/google";
 import { AadhaarMaskNormalizer } from "@/components/aadhaar-mask-normalizer";
+import { FreshDynamicRouteNavigation } from "@/components/fresh-dynamic-route-navigation";
 import { RouteProgressBar } from "@/components/loading/route-progress-bar";
 import { SuccessPopup } from "@/components/success-popup";
 import { ProfessionalFormValidation } from "@/components/professional-form-validation";
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <AadhaarMaskNormalizer />
         <ProfessionalFormValidation />
         <SuccessPopup />
+        <FreshDynamicRouteNavigation />
         <RouteProgressBar />
       </body>
     </html>

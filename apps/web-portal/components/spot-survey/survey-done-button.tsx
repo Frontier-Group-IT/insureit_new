@@ -1,12 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { freshDynamicRouteUrl } from "@/components/fresh-dynamic-route-navigation";
 import { InsureItButtonLoader } from "@/components/loading/insureit-loader";
 import { markSpotSurveyDone } from "./survey-done-actions";
 
 export function SurveyDoneButton({ claimId }: { claimId: string }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
 
@@ -20,8 +19,7 @@ export function SurveyDoneButton({ claimId }: { claimId: string }) {
           startTransition(async () => {
             const response = await markSpotSurveyDone(claimId);
             if (response.ok) {
-              router.push(`/claims/${claimId}/final-documents`);
-              router.refresh();
+              window.location.assign(freshDynamicRouteUrl(`/claims/${claimId}/final-documents`));
               return;
             }
             setMessage(response.message ?? "Unable to mark survey done.");

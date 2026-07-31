@@ -15,7 +15,7 @@ export async function assignIntermediaryTraining(formData: FormData) {
   const instructions = value(formData, "training_instructions");
   const deadline = value(formData, "training_deadline");
   if (!reviewer?.id || !applicationId) redirect("/customers/posp-misp");
-  if (!title || !validHttpUrl(url)) redirect(`${path(applicationId)}?stage=review&error=training_assignment_invalid`);
+  if (!title || !validHttpUrl(url)) redirectFresh(`${path(applicationId)}?stage=review&error=training_assignment_invalid`);
 
   const admin = createSupabaseAdminClient();
   const { data: application } = await admin
@@ -32,7 +32,7 @@ export async function assignIntermediaryTraining(formData: FormData) {
   const allowedStatus = application && ["training_pending", "training_assigned", "training_in_progress", "iib_submission_pending"].includes(application.registration_status);
   const allowedStage = profile && ["training", "completed"].includes(profile.workflow_stage);
   if (!application || !profile || !allowedStatus || !allowedStage || application.final_type === "partner") {
-    redirect(`${path(applicationId)}?stage=review&error=training_assignment_locked`);
+    redirectFresh(`${path(applicationId)}?stage=review&error=training_assignment_locked`);
   }
 
   const now = new Date().toISOString();
@@ -48,13 +48,13 @@ export async function assignIntermediaryTraining(formData: FormData) {
     updated_by: reviewer.id,
     updated_at: now,
   }, { onConflict: "application_id" });
-  if (error) redirect(`${path(applicationId)}?stage=review&error=training_assignment_failed`);
+  if (error) redirectFresh(`${path(applicationId)}?stage=review&error=training_assignment_failed`);
 
   await admin.from("intermediary_onboarding_applications").update({ status: "under_review", registration_status: "training_assigned", completed_at: null, updated_at: now }).eq("id", applicationId);
   await admin.from("posp_misp_onboarding_profiles").update({ workflow_stage: "training", training_status: "assigned", training_start_date: now.slice(0, 10), updated_by: reviewer.id, updated_at: now }).eq("application_id", applicationId);
 
   revalidatePath(path(applicationId));
-  redirect(`${path(applicationId)}?stage=review&success=training_assigned`);
+  redirectFresh(`${path(applicationId)}?stage=review&success=training_assigned`);
 }
 
 export async function updateIntermediaryTrainingStatus(formData: FormData) {
@@ -63,7 +63,7 @@ export async function updateIntermediaryTrainingStatus(formData: FormData) {
   const status = value(formData, "training_status");
   if (!reviewer?.id || !applicationId) redirect("/customers/posp-misp");
   if (!status || !["assigned", "opened", "in_progress", "completed", "expired"].includes(status)) {
-    redirect(`${path(applicationId)}?stage=review&error=training_status_invalid`);
+    redirectFresh(`${path(applicationId)}?stage=review&error=training_status_invalid`);
   }
 
   const admin = createSupabaseAdminClient();
@@ -72,14 +72,14 @@ export async function updateIntermediaryTrainingStatus(formData: FormData) {
   if (status === "in_progress") update.training_started_at = now;
   if (status === "completed") update.training_completed_at = now;
   const { error } = await admin.from("intermediary_training_exam_assignments").update(update).eq("application_id", applicationId);
-  if (error) redirect(`${path(applicationId)}?stage=review&error=training_status_failed`);
+  if (error) redirectFresh(`${path(applicationId)}?stage=review&error=training_status_failed`);
 
   const registrationStatus = status === "completed" ? "training_completed" : status === "in_progress" ? "training_in_progress" : "training_assigned";
   await admin.from("intermediary_onboarding_applications").update({ registration_status: registrationStatus, updated_at: now }).eq("id", applicationId);
   await admin.from("posp_misp_onboarding_profiles").update({ workflow_stage: "training", training_status: status, training_end_date: status === "completed" ? now.slice(0, 10) : null, updated_by: reviewer.id, updated_at: now }).eq("application_id", applicationId);
 
   revalidatePath(path(applicationId));
-  redirect(`${path(applicationId)}?stage=review&success=training_status_updated`);
+  redirectFresh(`${path(applicationId)}?stage=review&success=training_status_updated`);
 }
 
 export async function allotIntermediaryExam(formData: FormData) {
@@ -94,7 +94,7 @@ export async function allotIntermediaryExam(formData: FormData) {
   const availableUntil = value(formData, "exam_available_until");
   if (!reviewer?.id || !applicationId) redirect("/customers/posp-misp");
   if (!title || !validHttpUrl(url) || passingPercentage === null || passingPercentage <= 0 || passingPercentage > 100 || maximumAttempts === null || maximumAttempts < 1) {
-    redirect(`${path(applicationId)}?stage=review&error=exam_allotment_invalid`);
+    redirectFresh(`${path(applicationId)}?stage=review&error=exam_allotment_invalid`);
   }
 
   const admin = createSupabaseAdminClient();
@@ -102,7 +102,7 @@ export async function allotIntermediaryExam(formData: FormData) {
     .select("training_status")
     .eq("application_id", applicationId)
     .maybeSingle<{ training_status: string }>();
-  if (!assignment || assignment.training_status === "not_assigned") redirect(`${path(applicationId)}?stage=review&error=exam_allotment_locked`);
+  if (!assignment || assignment.training_status === "not_assigned") redirectFresh(`${path(applicationId)}?stage=review&error=exam_allotment_locked`);
 
   const now = new Date().toISOString();
   const examStatus = assignment.training_status === "completed" ? "available" : "locked";
@@ -119,13 +119,13 @@ export async function allotIntermediaryExam(formData: FormData) {
     updated_by: reviewer.id,
     updated_at: now,
   }).eq("application_id", applicationId);
-  if (error) redirect(`${path(applicationId)}?stage=review&error=exam_allotment_failed`);
+  if (error) redirectFresh(`${path(applicationId)}?stage=review&error=exam_allotment_failed`);
 
   await admin.from("intermediary_onboarding_applications").update({ registration_status: "exam_allotted", updated_at: now }).eq("id", applicationId);
   await admin.from("posp_misp_onboarding_profiles").update({ exam_status: examStatus, updated_by: reviewer.id, updated_at: now }).eq("application_id", applicationId);
 
   revalidatePath(path(applicationId));
-  redirect(`${path(applicationId)}?stage=review&success=exam_allotted`);
+  redirectFresh(`${path(applicationId)}?stage=review&success=exam_allotted`);
 }
 
 export async function updateIntermediaryExamResult(formData: FormData) {
@@ -134,7 +134,7 @@ export async function updateIntermediaryExamResult(formData: FormData) {
   const result = value(formData, "exam_result");
   const score = numberValue(formData, "exam_score");
   if (!reviewer?.id || !applicationId) redirect("/customers/posp-misp");
-  if (!result || !["passed", "failed"].includes(result)) redirect(`${path(applicationId)}?stage=review&error=exam_result_invalid`);
+  if (!result || !["passed", "failed"].includes(result)) redirectFresh(`${path(applicationId)}?stage=review&error=exam_result_invalid`);
 
   const admin = createSupabaseAdminClient();
   const now = new Date().toISOString();
@@ -142,7 +142,7 @@ export async function updateIntermediaryExamResult(formData: FormData) {
     .select("exam_attempts_used")
     .eq("application_id", applicationId)
     .maybeSingle<{ exam_attempts_used: number }>();
-  if (!assignment) redirect(`${path(applicationId)}?stage=review&error=exam_result_failed`);
+  if (!assignment) redirectFresh(`${path(applicationId)}?stage=review&error=exam_result_failed`);
 
   const { error } = await admin.from("intermediary_training_exam_assignments").update({
     exam_status: result,
@@ -154,13 +154,17 @@ export async function updateIntermediaryExamResult(formData: FormData) {
     updated_by: reviewer.id,
     updated_at: now,
   }).eq("application_id", applicationId);
-  if (error) redirect(`${path(applicationId)}?stage=review&error=exam_result_failed`);
+  if (error) redirectFresh(`${path(applicationId)}?stage=review&error=exam_result_failed`);
 
   await admin.from("intermediary_onboarding_applications").update({ registration_status: result === "passed" ? "agreement_pending" : "exam_failed", updated_at: now }).eq("id", applicationId);
   await admin.from("posp_misp_onboarding_profiles").update({ exam_status: result, updated_by: reviewer.id, updated_at: now }).eq("application_id", applicationId);
 
   revalidatePath(path(applicationId));
-  redirect(`${path(applicationId)}?stage=review&success=${result === "passed" ? "exam_passed" : "exam_failed"}`);
+  redirectFresh(`${path(applicationId)}?stage=review&success=${result === "passed" ? "exam_passed" : "exam_failed"}`);
+}
+
+function redirectFresh(href: string): never {
+  redirect(`${href}${href.includes("?") ? "&" : "?"}fresh=${Date.now()}`);
 }
 
 function value(formData: FormData, name: string) {

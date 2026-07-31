@@ -1,10 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { freshDynamicRouteUrl } from "@/components/fresh-dynamic-route-navigation";
 
 export function QualificationSectionLink({ applicationId, label }: { applicationId: string; label: string }) {
-  const router = useRouter();
-
   function focusQualificationSection() {
     const heading = Array.from(document.querySelectorAll("h2")).find(
       (element) => element.textContent?.trim() === "Qualification and agreement process"
@@ -17,7 +15,7 @@ export function QualificationSectionLink({ applicationId, label }: { application
       return;
     }
 
-    router.push(`/intermediaries/applications/${applicationId}?stage=review#qualification-process`);
+    window.location.assign(freshDynamicRouteUrl(`/intermediaries/applications/${applicationId}?stage=review#qualification-process`));
   }
 
   return (

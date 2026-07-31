@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { FormSubmitButton } from "@/components/form-submit-button";
+import { freshDynamicRouteUrl } from "@/components/fresh-dynamic-route-navigation";
 import { IndianDateField } from "@/components/indian-date-field";
 import type { PospMispState } from "./actions";
 
@@ -27,7 +27,6 @@ const dateInputClass = inputClass;
 const labelClass = "mb-1.5 block text-[10.5px] font-semibold text-[#344054]";
 
 export function PospMispOnboardingForm({ action, submitPath, partnerType, initialError = null, initialField = null, initialValues = {}, salesManagers, oems, banks }: Props) {
-  const router = useRouter();
   const [state, formAction] = useActionState(action, { error: null, field: null, applicationId: null });
   const [clientError, setClientError] = useState<string | null>(null);
   const [rmValue, setRmValue] = useState(initialValues.associate_employee_id ?? "");
@@ -39,10 +38,10 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
 
   useEffect(() => {
     if (state.applicationId && !state.error) {
-      router.replace(`/intermediaries/applications/${state.applicationId}/workflow?stage=documents&success=primary_details_saved`);
+      window.location.replace(freshDynamicRouteUrl(`/intermediaries/applications/${state.applicationId}/workflow?stage=documents&success=primary_details_saved`));
       return;
     }
-  }, [initialError, initialField, router, state.applicationId, state.error, state.field]);
+  }, [initialError, initialField, state.applicationId, state.error, state.field]);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     if (submitPath) return;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { freshDynamicRouteUrl } from "@/components/fresh-dynamic-route-navigation";
 
 type Props = { applicationId: string; event: string | null };
 type DialogConfig = {
@@ -68,7 +69,7 @@ function detectIntermediaryType(): "POSP" | "MISP" {
 }
 
 function navigateFresh(href: string) {
-  window.location.assign(href);
+  window.location.assign(freshDynamicRouteUrl(href));
 }
 
 function configFor(event: string, applicationId: string, intermediaryType: "POSP" | "MISP"): DialogConfig | null {

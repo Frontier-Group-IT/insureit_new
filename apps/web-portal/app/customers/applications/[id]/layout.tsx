@@ -6,6 +6,6 @@ export default async function CustomerApplicationLayout({children,params}:{child
  const {id}=await params;
  const admin=createSupabaseAdminClient();
  const {data}=await admin.from("intermediary_onboarding_applications").select("id").eq("id",id).maybeSingle<{id:string}>();
- if(data?.id)redirect(`/intermediaries/applications/${id}`);
+ if(data?.id)redirect(`/intermediaries/applications/${id}?fresh=${Date.now()}`);
  return children;
 }
