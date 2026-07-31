@@ -28,7 +28,6 @@ const PRESERVED_FIELDS = [
   "bank_id",
   "bank_account_number",
   "bank_ifsc_code",
-  "has_gst",
   "gst_number",
 ] as const;
 
