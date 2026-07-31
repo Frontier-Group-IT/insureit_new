@@ -59,6 +59,14 @@ export default function ApplicationReviewLayout({ children }: { children: React.
         }
       }
 
+      if (label === "aadhaar") {
+        const field = element.parentElement;
+        const value = field?.querySelector<HTMLElement>("dd");
+        const current = value?.textContent?.trim() ?? "";
+        const lastFour = current.match(/(\d{4})$/)?.[1];
+        if (value && lastFour) value.textContent = `****${lastFour}`;
+      }
+
       if (!partnerReview) return;
 
       if (label === "partner onboarding journey") {
@@ -68,14 +76,6 @@ export default function ApplicationReviewLayout({ children }: { children: React.
       if (label === "onboarding date") {
         const stat = element.closest<HTMLElement>("div[class*='items-center']");
         if (stat) stat.dataset.partnerOnboardingDate = "true";
-      }
-
-      if (label === "aadhaar") {
-        const field = element.parentElement;
-        const value = field?.querySelector<HTMLElement>("dd");
-        const current = value?.textContent?.trim() ?? "";
-        const lastFour = current.match(/(\d{4})$/)?.[1];
-        if (value && lastFour) value.textContent = `****${lastFour}`;
       }
     });
   }, []);
