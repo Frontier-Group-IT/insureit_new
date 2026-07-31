@@ -53,49 +53,81 @@ export type IcallTrainingStatusResponse = {
   };
 };
 
-const DEFAULT_BASE_URL = "https://www.icallinsurance.com/API/SANKALP/UAT";
+export type IcallSsoResponse = {
+  statusCode: number;
+  status: string;
+  message?: string;
+  data?: {
+    redirectUrl?: string;
+  };
+};
+
+export type IcallTccResponse = {
+  statusCode: number;
+  status: string;
+  message?: string;
+  data?: unknown;
+};
 
 function configuration() {
-  const authToken = process.env.ICALL_UAT_AUTH_TOKEN?.trim();
-  if (!authToken) throw new Error("ICALL_UAT_AUTH_TOKEN is not configured.");
-  return {
-    authToken,
-    baseUrl: (process.env.ICALL_UAT_BASE_URL?.trim() || DEFAULT_BASE_URL).replace(/\/$/, ""),
-  };
+  const gatewayUrl = process.env.ICALL_GATEWAY_URL?.trim().replace(/\/$/, "");
+  const gatewaySecret = process.env.ICALL_GATEWAY_SECRET?.trim();
+
+  if (!gatewayUrl) throw new Error("ICALL_GATEWAY_URL is not configured.");
+  if (!gatewaySecret) throw new Error("ICALL_GATEWAY_SECRET is not configured.");
+
+  return { gatewayUrl, gatewaySecret };
 }
 
-async function postJson<T>(url: string, body: unknown): Promise<T> {
-  const response = await fetch(url, {
+async function postGateway<T>(path: string, body: unknown): Promise<T> {
+  const { gatewayUrl, gatewaySecret } = configuration();
+  const response = await fetch(`${gatewayUrl}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Authorization: `Bearer ${gatewaySecret}`,
+    },
     body: JSON.stringify(body),
     cache: "no-store",
-    signal: AbortSignal.timeout(20_000),
+    signal: AbortSignal.timeout(35_000),
   });
+
   const text = await response.text();
   let parsed: unknown;
+
   try {
     parsed = JSON.parse(text);
   } catch {
-    throw new Error(`iCall returned a non-JSON response (HTTP ${response.status}).`);
+    throw new Error(`iCall gateway returned a non-JSON response (HTTP ${response.status}).`);
   }
-  if (!response.ok) throw new Error(`iCall HTTP ${response.status}.`);
+
+  if (!response.ok) {
+    const message =
+      typeof parsed === "object" && parsed && "message" in parsed
+        ? String((parsed as { message?: unknown }).message || "")
+        : "";
+    throw new Error(message || `iCall gateway HTTP ${response.status}.`);
+  }
+
   return parsed as T;
 }
 
-function decodeBase64Json<T>(payload: string): T {
-  return JSON.parse(Buffer.from(payload.trim(), "base64").toString("utf8")) as T;
-}
-
 export async function registerIcallPosp(input: IcallRegistrationRequest) {
-  const { authToken, baseUrl } = configuration();
-  const encoded = Buffer.from(JSON.stringify({ authToken, ...input }), "utf8").toString("base64");
-  const wrapper = await postJson<{ payload?: string }>(`${baseUrl}/RegisterPOSPTraining`, { payload: encoded });
-  if (!wrapper.payload) throw new Error("iCall registration response did not contain payload.");
-  return decodeBase64Json<IcallRegistrationResponse>(wrapper.payload);
+  return postGateway<IcallRegistrationResponse>("/uat/icall/register", input);
 }
 
 export async function getIcallPospTrainingStatus(loginId: string) {
-  const { authToken, baseUrl } = configuration();
-  return postJson<IcallTrainingStatusResponse>(`${baseUrl}/POSPTrainingStatus`, { authToken, loginId });
+  return postGateway<IcallTrainingStatusResponse>("/uat/icall/status", { loginId });
+}
+
+export async function getIcallSso(loginId: string) {
+  return postGateway<IcallSsoResponse>("/uat/icall/sso", { loginId });
+}
+
+export async function getIcallTcc(tccFromDate: string, tccToDate: string) {
+  return postGateway<IcallTccResponse>("/uat/icall/tcc", {
+    tcc_from_date: tccFromDate,
+    tcc_to_date: tccToDate,
+  });
 }
