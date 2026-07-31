@@ -15,7 +15,7 @@ export default function ApplicationReviewLayout({ children }: { children: React.
   return (
     <div ref={rootRef} className={isPartnerReview ? "partner-review-compact" : undefined}>
       {children}
-      <style jsx global>{`
+      <style>{`
         .partner-review-compact [class*="max-w-[1480px]"] > nav {
           display: none !important;
         }
