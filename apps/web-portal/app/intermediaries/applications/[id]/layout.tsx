@@ -34,14 +34,14 @@ export default function ApplicationReviewLayout({ children }: { children: React.
         if (steps) steps.dataset.pospJourneySteps = "true";
       }
 
-      if (label?.startsWith("linked ") && label.endsWith(" account")) {
-        const section = element.closest<HTMLElement>("section");
+      const linkedSection = element.closest<HTMLElement>("section#linked-account");
+      if (element.tagName === "H2" && linkedSection && label?.startsWith("linked ") && label.endsWith(" account")) {
         const headingRow = element.parentElement;
-        const action = section?.querySelector<HTMLAnchorElement>("a");
+        const action = linkedSection.querySelector<HTMLAnchorElement>("a");
         const actionWrapper = action?.parentElement;
 
-        if (section && headingRow && action) {
-          section.dataset.linkedAccountCard = "true";
+        if (headingRow && action) {
+          linkedSection.dataset.linkedAccountCard = "true";
           headingRow.dataset.linkedAccountHeader = "true";
           action.dataset.linkedAccountAction = "true";
           headingRow.appendChild(action);
