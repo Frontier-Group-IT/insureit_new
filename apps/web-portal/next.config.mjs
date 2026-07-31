@@ -16,6 +16,7 @@ const contentSecurityPolicy = [
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
+  "frame-src 'self' https://www.icallinsurance.com",
   "object-src 'none'",
   `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'"}`,
   "style-src 'self' 'unsafe-inline'",
