@@ -14,16 +14,20 @@ export default function ApplicationReviewLayout({ children }: { children: React.
     const partnerReview = text.includes("Individual Partner") || text.includes("Business Partner");
     setIsPartnerReview(partnerReview);
 
-    if (!partnerReview) return;
-
     root.querySelectorAll<HTMLAnchorElement | HTMLButtonElement>("a, button").forEach((action) => {
       const label = action.textContent?.trim().toLowerCase();
-      if (label === "edit details") action.dataset.partnerAction = "edit";
-      if (label === "create user") action.dataset.partnerAction = "create-user";
+      if (label === "edit details") action.dataset.reviewAction = "edit";
+      if (label === "create user") action.dataset.reviewAction = "create-user";
     });
 
     root.querySelectorAll<HTMLElement>("h1, h2, h3, p, span, dt").forEach((element) => {
       const label = element.textContent?.trim().toLowerCase();
+
+      if (label === "open requirements") {
+        element.closest("section")?.setAttribute("data-open-requirements", "true");
+      }
+
+      if (!partnerReview) return;
 
       if (label === "partner onboarding journey") {
         element.closest("section")?.setAttribute("data-partner-journey", "true");
@@ -54,9 +58,54 @@ export default function ApplicationReviewLayout({ children }: { children: React.
   }, []);
 
   return (
-    <div ref={rootRef} className={isPartnerReview ? "partner-review-refined" : undefined}>
+    <div ref={rootRef} className={isPartnerReview ? "application-review-refined partner-review-refined" : "application-review-refined"}>
       {children}
       <style>{`
+        .application-review-refined [data-open-requirements="true"] {
+          display: none !important;
+        }
+
+        .application-review-refined [data-review-action="edit"],
+        .application-review-refined [data-review-action="create-user"] {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 0.55rem !important;
+          min-width: 8rem !important;
+          height: 2.5rem !important;
+          padding: 0 1rem !important;
+          border: 1px solid #ded8ce !important;
+          border-radius: 0.85rem !important;
+          background: #f3f0e9 !important;
+          color: #071d49 !important;
+          box-shadow: 0 1px 2px rgba(7, 29, 73, 0.08) !important;
+          font-weight: 600 !important;
+        }
+
+        .application-review-refined [data-review-action="edit"]::before {
+          content: "✎";
+          font-size: 0.82rem;
+          line-height: 1;
+        }
+
+        .application-review-refined [data-review-action="create-user"]::before {
+          content: "+";
+          display: grid;
+          width: 1.05rem;
+          height: 1.05rem;
+          place-items: center;
+          border: 1px solid currentColor;
+          border-radius: 999px;
+          font-size: 0.72rem;
+          line-height: 1;
+        }
+
+        .application-review-refined [data-review-action="edit"]:hover,
+        .application-review-refined [data-review-action="create-user"]:hover {
+          border-color: #cfc7bb !important;
+          background: #ebe6dd !important;
+        }
+
         .partner-review-refined [data-partner-journey="true"],
         .partner-review-refined [data-partner-onboarding-date="true"],
         .partner-review-refined #activity {
@@ -72,43 +121,6 @@ export default function ApplicationReviewLayout({ children }: { children: React.
           order: 5 !important;
         }
 
-        .partner-review-refined [data-partner-action="edit"],
-        .partner-review-refined [data-partner-action="create-user"] {
-          display: inline-flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          gap: 0.45rem !important;
-          border: 1px solid #ded8ce !important;
-          border-radius: 0.75rem !important;
-          background: #f3f0e9 !important;
-          color: #071d49 !important;
-          box-shadow: 0 1px 2px rgba(7, 29, 73, 0.08) !important;
-        }
-
-        .partner-review-refined [data-partner-action="edit"]::before {
-          content: "✎";
-          font-size: 0.8rem;
-          line-height: 1;
-        }
-
-        .partner-review-refined [data-partner-action="create-user"]::before {
-          content: "+";
-          display: grid;
-          width: 1rem;
-          height: 1rem;
-          place-items: center;
-          border: 1px solid currentColor;
-          border-radius: 999px;
-          font-size: 0.7rem;
-          line-height: 1;
-        }
-
-        .partner-review-refined [data-partner-action="edit"]:hover,
-        .partner-review-refined [data-partner-action="create-user"]:hover {
-          border-color: #cfc7bb !important;
-          background: #ebe6dd !important;
-        }
-
         .partner-review-refined > div > div[class*="max-w-[1480px]"] {
           gap: 0.85rem !important;
         }
@@ -120,6 +132,11 @@ export default function ApplicationReviewLayout({ children }: { children: React.
         }
 
         @media (max-width: 639px) {
+          .application-review-refined [data-review-action="edit"],
+          .application-review-refined [data-review-action="create-user"] {
+            min-width: auto !important;
+          }
+
           .partner-review-refined [data-partner-header-stats="true"] {
             grid-template-columns: minmax(0, 1fr) !important;
           }
