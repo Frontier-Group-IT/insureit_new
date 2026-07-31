@@ -7,6 +7,7 @@ import { ProfessionalFormValidation } from "@/components/professional-form-valid
 import "./globals.css";
 import "./experience.css";
 import "./mobile.css";
+import "./unified-stepper.css";
 
 const manrope = Manrope({
   subsets: ["latin"],
