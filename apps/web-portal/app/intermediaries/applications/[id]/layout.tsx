@@ -1,96 +1,112 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 
 type StepState = "completed" | "active" | "upcoming";
 
 export default function ApplicationReviewLayout({ children }: { children: React.ReactNode }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [isPartnerReview, setIsPartnerReview] = useState(false);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const searchKey = searchParams.toString();
 
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
+    const currentRoot = root;
 
-    const text = root.textContent ?? "";
-    const partnerReview = text.includes("Individual Partner") || text.includes("Business Partner");
-    setIsPartnerReview(partnerReview);
+    function refine() {
+      const text = currentRoot.textContent ?? "";
+      const partnerReview = text.includes("Individual Partner") || text.includes("Business Partner");
+      setIsPartnerReview(partnerReview);
 
-    root.querySelectorAll<HTMLAnchorElement | HTMLButtonElement>("a, button").forEach((action) => {
-      const label = action.textContent?.trim().toLowerCase();
-      if (label === "edit details") action.dataset.reviewAction = "edit";
-      if (label === "create user") action.dataset.reviewAction = "create-user";
+      currentRoot.querySelectorAll<HTMLAnchorElement | HTMLButtonElement>("a, button").forEach((action) => {
+        const label = action.textContent?.trim().toLowerCase();
+        if (label === "edit details") action.dataset.reviewAction = "edit";
+        if (label === "create user") action.dataset.reviewAction = "create-user";
 
-      if (action instanceof HTMLAnchorElement && label?.includes("back to account review")) {
-        action.dataset.freshAccountReviewNavigation = "true";
-        action.onclick = (event) => {
-          if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-          event.preventDefault();
-          window.location.assign(action.href);
-        };
-      }
+        if (action instanceof HTMLAnchorElement && label?.includes("back to account review")) {
+          action.dataset.freshAccountReviewNavigation = "true";
+          action.onclick = (event) => {
+            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            window.location.assign(action.href);
+          };
+        }
 
-      if (label === "open linked account" && !action.closest("#linked-account")) {
-        action.textContent = "Open POSP Account";
-        action.dataset.headerPospAction = "true";
-      }
+        if (label === "open linked account" && !action.closest("#linked-account")) {
+          action.textContent = "Open POSP Account";
+          action.dataset.headerPospAction = "true";
+        }
 
-      if (label === "open posp account" && action.closest("#linked-account")) {
-        const wrapper = action.parentElement;
-        action.remove();
-        if (wrapper && wrapper.childElementCount === 0) wrapper.remove();
-      }
-    });
+        if (label === "open posp account" && action.closest("#linked-account")) {
+          const wrapper = action.parentElement;
+          action.remove();
+          if (wrapper && wrapper.childElementCount === 0) wrapper.remove();
+        }
+      });
 
-    root.querySelector("#linked-account")?.remove();
-    normalizeWorkflowStepper(root);
+      currentRoot.querySelector("#linked-account")?.remove();
+      normalizeWorkflowStepper(currentRoot);
 
-    root.querySelectorAll<HTMLElement>("h1, h2, h3, p, span, dt").forEach((element) => {
-      const label = element.textContent?.trim().toLowerCase();
+      currentRoot.querySelectorAll<HTMLElement>("h1, h2, h3, p, span, dt").forEach((element) => {
+        const label = element.textContent?.trim().toLowerCase();
 
-      if (label === "open requirements") {
-        element.closest("section")?.setAttribute("data-open-requirements", "true");
-      }
+        if (label === "open requirements") {
+          element.closest("section")?.setAttribute("data-open-requirements", "true");
+        }
 
-      if (label === "posp account journey") {
-        const section = element.closest<HTMLElement>("section");
-        const steps = section?.querySelector<HTMLElement>("div[class*='grid']");
-        if (section) section.dataset.pospJourney = "true";
-        if (steps) steps.dataset.pospJourneySteps = "true";
-      }
+        if (label === "posp account journey") {
+          const section = element.closest<HTMLElement>("section");
+          const steps = section?.querySelector<HTMLElement>("div[class*='grid']");
+          if (section) section.dataset.pospJourney = "true";
+          if (steps) steps.dataset.pospJourneySteps = "true";
+        }
 
-      if (label === "portal user status") {
-        const stat = element.closest<HTMLElement>("div[class*='items-center']");
-        if (stat) {
-          stat.dataset.partnerPortalStatus = "true";
-          const grid = stat.parentElement;
-          if (grid) {
-            grid.dataset.reviewHeaderStats = "true";
-            if (partnerReview) grid.dataset.partnerHeaderStats = "true";
+        if (label === "portal user status") {
+          const stat = element.closest<HTMLElement>("div[class*='items-center']");
+          if (stat) {
+            stat.dataset.partnerPortalStatus = "true";
+            const grid = stat.parentElement;
+            if (grid) {
+              grid.dataset.reviewHeaderStats = "true";
+              if (partnerReview) grid.dataset.partnerHeaderStats = "true";
+            }
           }
         }
-      }
 
-      if (label === "aadhaar") {
-        const field = element.parentElement;
-        const value = field?.querySelector<HTMLElement>("dd");
-        const current = value?.textContent?.trim() ?? "";
-        const lastFour = current.match(/(\d{4})$/)?.[1];
-        if (value && lastFour) value.textContent = `****${lastFour}`;
-      }
+        if (label === "aadhaar") {
+          const field = element.parentElement;
+          const value = field?.querySelector<HTMLElement>("dd");
+          const current = value?.textContent?.trim() ?? "";
+          const lastFour = current.match(/(\d{4})$/)?.[1];
+          if (value && lastFour) value.textContent = `****${lastFour}`;
+        }
 
-      if (!partnerReview) return;
+        if (!partnerReview) return;
 
-      if (label === "partner onboarding journey") {
-        element.closest("section")?.setAttribute("data-partner-journey", "true");
-      }
+        if (label === "partner onboarding journey") {
+          element.closest("section")?.setAttribute("data-partner-journey", "true");
+        }
 
-      if (label === "onboarding date") {
-        const stat = element.closest<HTMLElement>("div[class*='items-center']");
-        if (stat) stat.dataset.partnerOnboardingDate = "true";
-      }
-    });
-  }, []);
+        if (label === "onboarding date") {
+          const stat = element.closest<HTMLElement>("div[class*='items-center']");
+          if (stat) stat.dataset.partnerOnboardingDate = "true";
+        }
+      });
+    }
+
+    refine();
+    const frame = window.requestAnimationFrame(refine);
+    const timer = window.setTimeout(refine, 80);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [pathname, searchKey]);
 
   return (
     <div ref={rootRef} className={isPartnerReview ? "application-review-refined partner-review-refined" : "application-review-refined"}>
