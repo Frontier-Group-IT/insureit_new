@@ -31,6 +31,8 @@ export default function ApplicationReviewLayout({ children }: { children: React.
       }
     });
 
+    root.querySelector("#linked-account")?.remove();
+
     root.querySelectorAll<HTMLElement>("h1, h2, h3, p, span, dt").forEach((element) => {
       const label = element.textContent?.trim().toLowerCase();
 
