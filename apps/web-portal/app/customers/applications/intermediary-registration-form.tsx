@@ -42,7 +42,6 @@ const documentRequirements = [
   ["cancelled_cheque", "Cancelled cheque", ["cancelled_cheque"]],
   ["photograph", "Photograph", ["photograph"]],
   ["gst_copy", "GST certificate", ["gst_copy"]],
-  ["agreement_copy", "Agreement copy", ["agreement_copy"]],
 ] as const;
 
 export function IntermediaryRegistrationForm({ profile, iibVerified, documents, onBackToPrimary, onBackToDocuments }: Props) {
@@ -55,7 +54,7 @@ export function IntermediaryRegistrationForm({ profile, iibVerified, documents, 
   const aadhaarDisplay = profile.aadhaar_last_four ? `XXXX XXXX ${profile.aadhaar_last_four}` : "-";
   const registrationDate = formatDate(profile.document_received_at);
   const attachedTypes = new Set(documents.map((document) => document.document_type));
-  const rows = documentRequirements.map(([key, label, acceptedTypes]) => ({
+  const rows = documentRequirements.filter(([, label]) => label !== "GST certificate" || Boolean(profile.gst_number)).map(([key, label, acceptedTypes]) => ({
     key,
     label,
     attached: acceptedTypes.some((type) => attachedTypes.has(type)),

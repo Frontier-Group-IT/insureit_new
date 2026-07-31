@@ -8,8 +8,6 @@ const STANDARD_DOCUMENTS = [
   "pan_copy",
   "cancelled_cheque",
   "photograph",
-  "gst_copy",
-  "agreement_copy",
 ] as const;
 const LABELS: Record<string, string> = {
   education_marksheet: "Marksheet",
@@ -19,13 +17,12 @@ const LABELS: Record<string, string> = {
   cancelled_cheque: "Cancelled cheque",
   photograph: "Photograph",
   gst_copy: "GST certificate",
-  agreement_copy: "Agreement copy",
 };
 const MAX_FILE_SIZE = 4 * 1024 * 1024;
 
 type UploadItem = { documentType: string; fieldName: string; file: File; label: string };
 
-export function IntermediaryDocumentUploadController({ applicationId, enabled }: { applicationId: string; enabled: boolean }) {
+export function IntermediaryDocumentUploadController({ applicationId, enabled, showGst = false }: { applicationId: string; enabled: boolean; showGst?: boolean }) {
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,7 +51,8 @@ export function IntermediaryDocumentUploadController({ applicationId, enabled }:
         }
         items.push({ documentType: marksheetType, fieldName: "education_marksheet", file: marksheet, label: LABELS.education_marksheet });
       }
-      for (const fieldName of STANDARD_DOCUMENTS) {
+      const standardDocuments = showGst ? [...STANDARD_DOCUMENTS, "gst_copy" as const] : STANDARD_DOCUMENTS;
+      for (const fieldName of standardDocuments) {
         const selected = formData.get(fieldName);
         if (selected instanceof File && selected.size > 0) {
           items.push({ documentType: fieldName, fieldName, file: selected, label: LABELS[fieldName] });
@@ -98,7 +96,7 @@ export function IntermediaryDocumentUploadController({ applicationId, enabled }:
 
     form.addEventListener("submit", handleSubmit, true);
     return () => form.removeEventListener("submit", handleSubmit, true);
-  }, [applicationId, enabled, progress]);
+  }, [applicationId, enabled, progress, showGst]);
 
   return (
     <>

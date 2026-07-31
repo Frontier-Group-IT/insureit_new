@@ -42,12 +42,11 @@ const requirements = [
   ["Cancelled cheque", ["cancelled_cheque"]],
   ["Photograph", ["photograph"]],
   ["GST certificate", ["gst_copy"]],
-  ["Agreement copy", ["agreement_copy"]],
 ] as const;
 
 export function CompactRegistrationForm({ profile, iibVerified, documents }: Props) {
   const rows = registrationRows(profile, iibVerified);
-  const documentRows = requirements.map(([label, types]) => {
+  const documentRows = requirements.filter(([label]) => label !== "GST certificate" || Boolean(profile.gst_number)).map(([label, types]) => {
     const file = documents.find((document) => types.includes(document.document_type as never));
     return { label, attached: Boolean(file), fileName: file?.file_name ?? null };
   });
