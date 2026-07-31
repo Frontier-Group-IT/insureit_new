@@ -27,6 +27,30 @@ export default function ApplicationReviewLayout({ children }: { children: React.
         element.closest("section")?.setAttribute("data-open-requirements", "true");
       }
 
+      if (label === "posp account journey") {
+        const section = element.closest<HTMLElement>("section");
+        const steps = section?.querySelector<HTMLElement>("div[class*='grid']");
+        if (section) section.dataset.pospJourney = "true";
+        if (steps) steps.dataset.pospJourneySteps = "true";
+      }
+
+      if (label?.startsWith("linked ") && label.endsWith(" account")) {
+        const section = element.closest<HTMLElement>("section");
+        const headingRow = element.parentElement;
+        const action = section?.querySelector<HTMLAnchorElement>("a");
+        const actionWrapper = action?.parentElement;
+
+        if (section && headingRow && action) {
+          section.dataset.linkedAccountCard = "true";
+          headingRow.dataset.linkedAccountHeader = "true";
+          action.dataset.linkedAccountAction = "true";
+          headingRow.appendChild(action);
+          if (actionWrapper && actionWrapper !== headingRow && actionWrapper.childElementCount === 0) {
+            actionWrapper.remove();
+          }
+        }
+      }
+
       if (label === "portal user status") {
         const stat = element.closest<HTMLElement>("div[class*='items-center']");
         if (stat) {
@@ -66,6 +90,86 @@ export default function ApplicationReviewLayout({ children }: { children: React.
       <style>{`
         .application-review-refined [data-open-requirements="true"] {
           display: none !important;
+        }
+
+        .application-review-refined [data-posp-journey="true"] {
+          border: 0 !important;
+          border-radius: 0 !important;
+          background: transparent !important;
+          box-shadow: none !important;
+          padding: 0.15rem 0 0.35rem !important;
+        }
+
+        .application-review-refined [data-posp-journey="true"] > h2 {
+          margin: 0 0 0.9rem !important;
+          font-size: 0.82rem !important;
+          font-weight: 650 !important;
+          color: #17203a !important;
+        }
+
+        .application-review-refined [data-posp-journey-steps="true"] {
+          position: relative !important;
+          display: grid !important;
+          grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+          gap: 0 !important;
+          align-items: start !important;
+          overflow: visible !important;
+        }
+
+        .application-review-refined [data-posp-journey-steps="true"]::before {
+          content: "";
+          position: absolute;
+          top: 0.63rem;
+          left: 10%;
+          right: 10%;
+          height: 1px;
+          background: #cbd5e1;
+          z-index: 0;
+        }
+
+        .application-review-refined [data-posp-journey-steps="true"] > div {
+          position: relative !important;
+          z-index: 1 !important;
+          min-width: 0 !important;
+          border: 0 !important;
+          border-radius: 0 !important;
+          background: transparent !important;
+          padding: 0 !important;
+          text-align: center !important;
+        }
+
+        .application-review-refined [data-posp-journey-steps="true"] > div > div {
+          width: 1.35rem !important;
+          height: 1.35rem !important;
+          border: 1px solid #cbd5e1 !important;
+          box-shadow: 0 0 0 5px #f8fafc !important;
+        }
+
+        .application-review-refined [data-posp-journey-steps="true"] > div > p {
+          margin-top: 0.45rem !important;
+          font-size: 0.58rem !important;
+          font-weight: 600 !important;
+          color: #24345a !important;
+        }
+
+        .application-review-refined [data-linked-account-header="true"] {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: space-between !important;
+          gap: 1rem !important;
+          width: 100% !important;
+        }
+
+        .application-review-refined [data-linked-account-action="true"] {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          flex-shrink: 0 !important;
+          margin-left: auto !important;
+          min-height: 2.25rem !important;
+          padding: 0 1rem !important;
+          border-radius: 0.75rem !important;
+          white-space: nowrap !important;
         }
 
         .application-review-refined [data-review-header-stats="true"] {
@@ -145,7 +249,30 @@ export default function ApplicationReviewLayout({ children }: { children: React.
           }
         }
 
+        @media (max-width: 720px) {
+          .application-review-refined [data-posp-journey-steps="true"] {
+            overflow-x: auto !important;
+            grid-template-columns: repeat(5, minmax(7rem, 1fr)) !important;
+            padding-bottom: 0.35rem !important;
+          }
+
+          .application-review-refined [data-posp-journey-steps="true"]::before {
+            left: 3.5rem;
+            right: 3.5rem;
+          }
+        }
+
         @media (max-width: 639px) {
+          .application-review-refined [data-linked-account-header="true"] {
+            align-items: flex-start !important;
+            flex-direction: column !important;
+          }
+
+          .application-review-refined [data-linked-account-action="true"] {
+            width: 100% !important;
+            margin-left: 0 !important;
+          }
+
           .application-review-refined [data-review-action="edit"],
           .application-review-refined [data-review-action="create-user"] {
             min-width: auto !important;
