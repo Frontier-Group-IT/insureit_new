@@ -13,6 +13,7 @@ type DocumentVisualCardProps = {
   action?: React.ReactNode;
   children?: React.ReactNode;
   id?: string;
+  clickTargetId?: string;
   compact?: boolean;
 };
 
@@ -65,6 +66,7 @@ export function DocumentVisualCard({
   action,
   children,
   id,
+  clickTargetId,
   compact = false,
 }: DocumentVisualCardProps) {
   const asset = assets[type] ?? fallbackAsset;
@@ -72,27 +74,28 @@ export function DocumentVisualCard({
   const label = status ?? (fileName ? "Uploaded" : required ? "Required" : "Optional");
 
   return (
-    <article id={id} className={`overflow-hidden rounded-2xl border shadow-[0_18px_42px_rgba(15,23,42,0.055)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_55px_rgba(15,23,42,0.075)] ${toneClasses[resolvedTone]}`}>
-      <div className={`relative overflow-hidden bg-[#F7FAFF] ${compact ? "h-32" : "h-48"}`}>
+    <article id={id} className={`group relative overflow-hidden rounded-[22px] border shadow-[0_24px_60px_rgba(15,23,42,0.07)] transition hover:-translate-y-1 hover:shadow-[0_34px_76px_rgba(15,23,42,0.1)] ${toneClasses[resolvedTone]}`}>
+      {clickTargetId ? <label htmlFor={clickTargetId} className="absolute inset-0 z-10 cursor-pointer" aria-label={`Upload ${title}`} /> : null}
+      <div className={`relative overflow-hidden bg-[radial-gradient(circle_at_50%_34%,#FFFFFF_0%,#F9FBFF_38%,#EDF4FF_100%)] ${compact ? "h-44" : "h-64"}`}>
         <Image
           src={asset.src}
           alt={asset.alt}
           fill
-          sizes={compact ? "(max-width: 768px) 50vw, 260px" : "(max-width: 768px) 100vw, 360px"}
-          className={`scale-[1.12] drop-shadow-[0_26px_30px_rgba(15,23,42,0.18)] ${asset.fit === "cover" ? "object-cover" : "object-contain"}`}
+          sizes={compact ? "(max-width: 768px) 100vw, 360px" : "(max-width: 768px) 100vw, 460px"}
+          className={`scale-[1.34] drop-shadow-[0_30px_34px_rgba(15,23,42,0.2)] transition duration-300 group-hover:scale-[1.4] ${asset.fit === "cover" ? "object-cover" : "object-contain"}`}
         />
         <div className="absolute left-3 top-3 flex items-center gap-1.5">
           <span className={`rounded-full border px-2 py-1 text-[8.5px] font-bold uppercase tracking-[0.04em] ${badgeClasses[resolvedTone]}`}>{label}</span>
         </div>
       </div>
-      <div className={compact ? "p-3" : "p-4"}>
-        <div className="flex items-start justify-between gap-3">
+      <div className="absolute inset-x-3 bottom-3 z-20 rounded-2xl border border-white/80 bg-white/88 p-3 shadow-[0_16px_38px_rgba(15,23,42,0.12)] backdrop-blur-md">
+        <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h3 className="truncate text-[12px] font-semibold text-[#0F172A]">{title}{required ? <span className="ml-1 text-red-500">*</span> : null}</h3>
           </div>
-          {action ? <div className="shrink-0">{action}</div> : null}
+          {action ? <div className="relative z-30 shrink-0">{action}</div> : null}
         </div>
-        {children ? <div className="mt-3 space-y-2">{children}</div> : null}
+        {children ? <div className="relative z-30 mt-2">{children}</div> : null}
       </div>
     </article>
   );
