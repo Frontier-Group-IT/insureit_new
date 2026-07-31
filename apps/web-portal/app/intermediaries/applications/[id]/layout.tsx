@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+type StepState = "completed" | "active" | "upcoming";
+
 export default function ApplicationReviewLayout({ children }: { children: React.ReactNode }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [isPartnerReview, setIsPartnerReview] = useState(false);
@@ -32,6 +34,7 @@ export default function ApplicationReviewLayout({ children }: { children: React.
     });
 
     root.querySelector("#linked-account")?.remove();
+    normalizeWorkflowStepper(root);
 
     root.querySelectorAll<HTMLElement>("h1, h2, h3, p, span, dt").forEach((element) => {
       const label = element.textContent?.trim().toLowerCase();
@@ -86,6 +89,17 @@ export default function ApplicationReviewLayout({ children }: { children: React.
       <style>{`
         .application-review-refined [data-open-requirements="true"] {
           display: none !important;
+        }
+
+        .application-review-refined [data-five-step-workflow="true"] {
+          display: grid !important;
+          grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+          gap: 1px !important;
+          width: 100% !important;
+        }
+
+        .application-review-refined [data-five-step-workflow="true"] > a {
+          min-width: 0 !important;
         }
 
         .application-review-refined [data-posp-journey="true"] {
@@ -224,6 +238,11 @@ export default function ApplicationReviewLayout({ children }: { children: React.
         }
 
         @media (max-width: 1199px) {
+          .application-review-refined [data-five-step-workflow="true"] {
+            grid-template-columns: repeat(5, minmax(8.5rem, 1fr)) !important;
+            overflow-x: auto !important;
+          }
+
           .application-review-refined [data-review-header-stats="true"],
           .partner-review-refined [data-partner-header-stats="true"] {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
@@ -258,4 +277,78 @@ export default function ApplicationReviewLayout({ children }: { children: React.
       `}</style>
     </div>
   );
+}
+
+function normalizeWorkflowStepper(root: HTMLElement) {
+  const navigation = Array.from(root.querySelectorAll<HTMLElement>("nav")).find((nav) => {
+    const labels = Array.from(nav.children).map((child) => child.textContent?.toLowerCase() ?? "");
+    return labels.length === 6 && labels.some((label) => label.includes("primary details")) && labels.some((label) => label.includes("iib upload"));
+  });
+
+  if (!navigation) return;
+
+  const original = Array.from(navigation.children) as HTMLAnchorElement[];
+  const registration = original[2];
+  const trainingExam = original[3];
+  const agreement = original[4];
+  const iib = original[5];
+  if (!registration || !trainingExam || !agreement || !iib) return;
+
+  const partnerLinked = registration.cloneNode(true) as HTMLAnchorElement;
+  const training = trainingExam.cloneNode(true) as HTMLAnchorElement;
+  const exam = trainingExam.cloneNode(true) as HTMLAnchorElement;
+  const agreementStep = agreement.cloneNode(true) as HTMLAnchorElement;
+  const activeStep = iib.cloneNode(true) as HTMLAnchorElement;
+
+  const trainingState = readStepState(trainingExam);
+  const pageText = root.textContent?.toLowerCase() ?? "";
+  const examPassed = /exam\s*(status)?\s*:?\s*passed/.test(pageText);
+  const examStarted = !examPassed && /exam\s*(status)?\s*:?\s*(allotted|in progress|started)/.test(pageText);
+
+  configureStep(partnerLinked, 1, "Partner linked", readStepState(registration), "#registration-requirement");
+  configureStep(training, 2, "Training", trainingState, "#training-requirement");
+  configureStep(
+    exam,
+    3,
+    "Exam",
+    examPassed ? "completed" : examStarted ? "active" : trainingState === "completed" ? "active" : "upcoming",
+    "#training-requirement",
+  );
+  configureStep(agreementStep, 4, "Agreement", readStepState(agreement), "#agreement-requirement");
+  configureStep(activeStep, 5, "POSP active", readStepState(iib), "#iib-submission");
+
+  navigation.replaceChildren(partnerLinked, training, exam, agreementStep, activeStep);
+  navigation.dataset.fiveStepWorkflow = "true";
+}
+
+function readStepState(step: HTMLElement): StepState {
+  const status = step.textContent?.toLowerCase() ?? "";
+  if (status.includes("completed")) return "completed";
+  if (status.includes("current")) return "active";
+  return "upcoming";
+}
+
+function configureStep(step: HTMLAnchorElement, number: number, label: string, state: StepState, hash: string) {
+  const url = new URL(step.href, window.location.origin);
+  url.hash = hash;
+  step.href = `${url.pathname}${url.search}${url.hash}`;
+
+  const circle = step.querySelector<HTMLElement>("span");
+  const paragraphs = step.querySelectorAll<HTMLElement>("p");
+  const title = paragraphs[0];
+  const status = paragraphs[1];
+
+  if (title) title.textContent = label;
+  if (status) status.textContent = state === "completed" ? "Completed" : state === "active" ? "Current" : "Upcoming";
+  if (circle) circle.textContent = state === "completed" ? "✓" : String(number);
+
+  step.classList.toggle("bg-[#EEF4FF]", state === "active");
+
+  if (circle) {
+    circle.className = `grid h-7 w-7 shrink-0 place-items-center rounded-full text-[10px] font-bold ${state === "completed" ? "bg-emerald-600 text-white" : state === "active" ? "bg-[#071D49] text-white" : "bg-slate-100 text-slate-400"}`;
+  }
+
+  if (title) {
+    title.className = `text-[10px] font-semibold ${state === "active" ? "text-[#071D49]" : state === "completed" ? "text-emerald-800" : "text-slate-500"}`;
+  }
 }
