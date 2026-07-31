@@ -17,7 +17,7 @@ type DocumentVisualCardProps = {
   compact?: boolean;
 };
 
-const assets: Record<string, { src: string; alt: string; fit?: "contain" | "cover" }> = {
+const assets: Record<string, { src: string; alt: string; position?: string }> = {
   aadhaar_front: { src: "/document-assets/aadhaar-card.png", alt: "Aadhaar card front visual" },
   aadhaar_back: { src: "/document-assets/pan-card.png", alt: "Aadhaar card back visual" },
   representative_aadhaar_front: { src: "/document-assets/aadhaar-card.png", alt: "Aadhaar card front visual" },
@@ -76,19 +76,20 @@ export function DocumentVisualCard({
   return (
     <article id={id} className={`group relative overflow-hidden rounded-[22px] border shadow-[0_24px_60px_rgba(15,23,42,0.07)] transition hover:-translate-y-1 hover:shadow-[0_34px_76px_rgba(15,23,42,0.1)] ${toneClasses[resolvedTone]}`}>
       {clickTargetId ? <label htmlFor={clickTargetId} className="absolute inset-0 z-10 cursor-pointer" aria-label={`Upload ${title}`} /> : null}
-      <div className={`relative overflow-hidden bg-[radial-gradient(circle_at_50%_34%,#FFFFFF_0%,#F9FBFF_38%,#EDF4FF_100%)] ${compact ? "h-44" : "h-64"}`}>
+      <div className={`relative overflow-hidden bg-white ${compact ? "h-52" : "h-72"}`}>
         <Image
           src={asset.src}
           alt={asset.alt}
           fill
           sizes={compact ? "(max-width: 768px) 100vw, 360px" : "(max-width: 768px) 100vw, 460px"}
-          className={`scale-[1.34] drop-shadow-[0_30px_34px_rgba(15,23,42,0.2)] transition duration-300 group-hover:scale-[1.4] ${asset.fit === "cover" ? "object-cover" : "object-contain"}`}
+          className="object-cover transition duration-300 group-hover:scale-[1.015]"
+          style={{ objectPosition: asset.position ?? "center" }}
         />
         <div className="absolute left-3 top-3 flex items-center gap-1.5">
           <span className={`rounded-full border px-2 py-1 text-[8.5px] font-bold uppercase tracking-[0.04em] ${badgeClasses[resolvedTone]}`}>{label}</span>
         </div>
       </div>
-      <div className="absolute inset-x-3 bottom-3 z-20 rounded-2xl border border-white/80 bg-white/88 p-3 shadow-[0_16px_38px_rgba(15,23,42,0.12)] backdrop-blur-md">
+      <div className="absolute inset-x-3 bottom-3 z-20 rounded-2xl border border-white/75 bg-white/82 p-3 shadow-[0_16px_38px_rgba(15,23,42,0.12)] backdrop-blur-sm">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h3 className="truncate text-[12px] font-semibold text-[#0F172A]">{title}{required ? <span className="ml-1 text-red-500">*</span> : null}</h3>
