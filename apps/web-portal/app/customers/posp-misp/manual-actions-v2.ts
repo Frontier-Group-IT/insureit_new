@@ -39,8 +39,8 @@ export async function createManualPospMispOnboardingV2(_state: PospMispState, da
   const businessPan = compactUpper(data, "pan_number");
   const address = value(data, "address"); const city = value(data, "city"); const state = value(data, "state");
   const postalCode = onlyDigits(data, "postal_code"); const accountNumber = onlyDigits(data, "bank_account_number"); const ifsc = compactUpper(data, "bank_ifsc_code");
-  const gstRegistered = partnerType === "misp";
-  const gst = compactUpper(data, "gst_number");
+  const gstRegistered = data.get("has_gst") === "true";
+  const gst = gstRegistered ? compactUpper(data, "gst_number") : null;
   const posFirst = partnerType === "posp" ? value(data, "pos_first_name") : null; const posMiddle = partnerType === "posp" ? value(data, "pos_middle_name") : null; const posLast = partnerType === "posp" ? value(data, "pos_last_name") : null;
   const posName = partnerType === "posp" ? [posFirst, posMiddle, posLast].filter(Boolean).join(" ") || null : null;
   const mispName = partnerType === "misp" ? value(data, "misp_name") : null;
@@ -52,8 +52,8 @@ export async function createManualPospMispOnboardingV2(_state: PospMispState, da
   if (!/^[0-9]{6}$/.test(postalCode ?? "")) return fail("PIN Code must contain exactly 6 digits.", "postal_code");
   if (!accountNumber || !/^[0-9]{6,20}$/.test(accountNumber)) return fail("Enter a valid Account Number.", "bank_account_number");
   if (!IFSC.test(ifsc ?? "")) return fail("Enter a valid IFSC Code.", "bank_ifsc_code");
-  if (gst && !GST.test(gst)) return fail("GST Number is invalid.", "gst_number");
   if (gstRegistered && !gst) return fail("GST Number is required.", "gst_number");
+  if (gst && !GST.test(gst)) return fail("GST Number is invalid.", "gst_number");
   const dpFirst = partnerType === "misp" ? value(data, "dp_first_name") : null; const dpMiddle = partnerType === "misp" ? value(data, "dp_middle_name") : null; const dpLast = partnerType === "misp" ? value(data, "dp_last_name") : null;
   const dpName = [dpFirst, dpMiddle, dpLast].filter(Boolean).join(" ") || null; const dpPhone = partnerType === "misp" ? normalizePhone(value(data, "dp_phone")) : null; const dpEmail = partnerType === "misp" ? value(data, "dp_email")?.toLowerCase() ?? null : null; const dpPan = partnerType === "misp" ? compactUpper(data, "dp_pan_number") : null;
   const dob = value(data, "date_of_birth"); const aadhaarDigits = onlyDigits(data, "aadhaar_number");

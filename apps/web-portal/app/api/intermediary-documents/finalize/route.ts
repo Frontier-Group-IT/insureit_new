@@ -3,8 +3,7 @@ import { NextResponse } from "next/server";
 import { requirePospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-const EDUCATION_TYPES = new Set(["education_10th_marksheet","education_12th_marksheet","education_graduation_marksheet","education_post_graduation_marksheet"]);
-const BASE_REQUIRED_TYPES = ["aadhaar_front","aadhaar_back","pan_copy","cancelled_cheque","photograph","agreement_copy"] as const;
+const BASE_REQUIRED_TYPES = ["aadhaar_front","aadhaar_back","pan_copy","cancelled_cheque"] as const;
 
 export async function POST(request: Request) {
   const manager = await requirePospMispManager();
@@ -18,10 +17,9 @@ export async function POST(request: Request) {
 
   const { data: documents } = await admin.from("intermediary_onboarding_documents").select("document_type").eq("application_id",applicationId).returns<Array<{document_type:string}>>();
   const types = new Set((documents??[]).map(document=>document.document_type));
-  const hasEducation=[...EDUCATION_TYPES].some(type=>types.has(type));
-  const required=[...BASE_REQUIRED_TYPES,...((profile.partner_type==="misp"||Boolean(profile.gst_number))?["gst_copy"]:[])];
+  const required=[...BASE_REQUIRED_TYPES,...(profile.gst_number?["gst_copy"]:[])];
   const missing=required.filter(type=>!types.has(type));
-  if(!hasEducation||missing.length)return NextResponse.json({ok:false,message:!hasEducation?"Upload the education marksheet before saving.":`Upload the remaining document${missing.length===1?"":"s"}: ${missing.join(", ").replaceAll("_"," ")}.`},{status:400});
+  if(missing.length)return NextResponse.json({ok:false,message:`Upload the remaining document${missing.length===1?"":"s"}: ${missing.join(", ").replaceAll("_"," ")}.`},{status:400});
 
   const {data:issuedPartnerId,error:partnerError}=await admin.rpc("issue_partner_identity",{p_application_id:applicationId,p_actor_id:manager!.id});
   if(partnerError||!issuedPartnerId)return NextResponse.json({ok:false,message:partnerError?.message||"Partner ID could not be issued."},{status:500});

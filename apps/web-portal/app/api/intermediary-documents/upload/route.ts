@@ -19,7 +19,6 @@ const STANDARD_TYPES = new Set([
   "cancelled_cheque",
   "photograph",
   "gst_copy",
-  "agreement_copy",
 ]);
 
 export async function POST(request: Request) {
@@ -45,13 +44,16 @@ export async function POST(request: Request) {
   const admin = createSupabaseAdminClient();
   const [{ data: application }, { data: profile }] = await Promise.all([
     admin.from("intermediary_onboarding_applications").select("id,status").eq("id", applicationId).maybeSingle<{ id: string; status: string }>(),
-    admin.from("posp_misp_onboarding_profiles").select("id,workflow_stage").eq("application_id", applicationId).maybeSingle<{ id: string; workflow_stage: string }>(),
+    admin.from("posp_misp_onboarding_profiles").select("id,workflow_stage,gst_number").eq("application_id", applicationId).maybeSingle<{ id: string; workflow_stage: string; gst_number: string | null }>(),
   ]);
   if (!application || !profile || !["submitted", "under_review", "changes_requested"].includes(application.status)) {
     return NextResponse.json({ ok: false, message: "This application is not editable." }, { status: 403 });
   }
   if (profile.workflow_stage !== "iib_processing") {
     return NextResponse.json({ ok: false, message: "Document upload is not available at the current stage." }, { status: 409 });
+  }
+  if (documentType === "gst_copy" && !profile.gst_number) {
+    return NextResponse.json({ ok: false, message: "GST certificate is only required when GST details are saved." }, { status: 400 });
   }
 
   const extension = selected.type === "application/pdf" ? "pdf" : selected.type === "image/png" ? "png" : "jpg";
