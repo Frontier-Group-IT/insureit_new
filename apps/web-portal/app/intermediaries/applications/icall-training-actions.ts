@@ -4,9 +4,47 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requirePospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { getIcallPospTrainingStatus, registerIcallPosp } from "@/lib/icall-training-api";
+import { getIcallPospTrainingStatus, getIcallSso, registerIcallPosp } from "@/lib/icall-training-api";
 
 const route = (applicationId: string) => `/intermediaries/applications/${applicationId}/workflow`;
+
+export async function launchIcallTrainingSso(applicationId: string, submittedLoginId: string) {
+  const reviewer = await requirePospMispManager();
+  if (!reviewer?.id || !applicationId) return { ok: false as const, message: "You are not authorized to open this training session." };
+
+  const admin = createSupabaseAdminClient();
+  const { data: profile } = await admin
+    .from("posp_misp_onboarding_profiles")
+    .select("training_login_id,pan_number,dp_pan_number,partner_type")
+    .eq("application_id", applicationId)
+    .maybeSingle<{ training_login_id: string | null; pan_number: string | null; dp_pan_number: string | null; partner_type: "posp" | "misp" }>();
+
+  if (!profile) return { ok: false as const, message: "The POSP training account was not found." };
+
+  const storedLoginId = profile.training_login_id || normalizePan(profile.partner_type === "misp" ? profile.dp_pan_number : profile.pan_number);
+  const requestedLoginId = normalizePan(submittedLoginId);
+  if (!storedLoginId || !requestedLoginId || storedLoginId !== requestedLoginId) {
+    return { ok: false as const, message: "The iCall login ID does not match this application." };
+  }
+
+  try {
+    const response = await getIcallSso(storedLoginId);
+    const redirectUrl = response.data?.redirectUrl?.trim();
+    if (response.statusCode !== 200 || !redirectUrl) {
+      return { ok: false as const, message: response.message || "iCall did not return a training URL." };
+    }
+
+    const parsed = new URL(redirectUrl);
+    if (parsed.protocol !== "https:" || parsed.hostname !== "www.icallinsurance.com") {
+      return { ok: false as const, message: "iCall returned an unexpected training URL." };
+    }
+
+    return { ok: true as const, redirectUrl };
+  } catch (error) {
+    console.error("iCall SSO launch failed", { applicationId, loginId: storedLoginId, error });
+    return { ok: false as const, message: error instanceof Error ? error.message : "Unable to open iCall training." };
+  }
+}
 
 export async function registerWithIcallUat(formData: FormData) {
   const reviewer = await requirePospMispManager();
