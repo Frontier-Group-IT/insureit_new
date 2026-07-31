@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 type Props = { applicationId: string; event: string | null };
@@ -17,7 +16,6 @@ type DialogConfig = {
 };
 
 export function WorkflowResultDialog({ applicationId, event }: Props) {
-  const router = useRouter();
   const config = event ? configFor(event, applicationId, detectIntermediaryType()) : null;
 
   useEffect(() => {
@@ -27,7 +25,7 @@ export function WorkflowResultDialog({ applicationId, event }: Props) {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [applicationId, config, router]);
+  }, [applicationId, config]);
 
   if (!config) return null;
   const closeHref = `/intermediaries/applications/${applicationId}`;
