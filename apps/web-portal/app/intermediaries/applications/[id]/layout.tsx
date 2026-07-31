@@ -22,7 +22,7 @@ export default function ApplicationReviewLayout({ children }: { children: React.
       if (label === "create user") action.dataset.partnerAction = "create-user";
     });
 
-    root.querySelectorAll<HTMLElement>("h1, h2, h3, p, span").forEach((element) => {
+    root.querySelectorAll<HTMLElement>("h1, h2, h3, p, span, dt").forEach((element) => {
       const label = element.textContent?.trim().toLowerCase();
 
       if (label === "partner onboarding journey") {
@@ -37,6 +37,19 @@ export default function ApplicationReviewLayout({ children }: { children: React.
           if (grid) grid.dataset.partnerHeaderStats = "true";
         }
       }
+
+      if (label === "onboarding date") {
+        const stat = element.closest<HTMLElement>("div[class*='items-center']");
+        if (stat) stat.dataset.partnerOnboardingDate = "true";
+      }
+
+      if (label === "aadhaar") {
+        const field = element.parentElement;
+        const value = field?.querySelector<HTMLElement>("dd");
+        const current = value?.textContent?.trim() ?? "";
+        const lastFour = current.match(/(\d{4})$/)?.[1];
+        if (value && lastFour) value.textContent = `****${lastFour}`;
+      }
     });
   }, []);
 
@@ -45,6 +58,7 @@ export default function ApplicationReviewLayout({ children }: { children: React.
       {children}
       <style>{`
         .partner-review-refined [data-partner-journey="true"],
+        .partner-review-refined [data-partner-onboarding-date="true"],
         .partner-review-refined #activity {
           display: none !important;
         }
