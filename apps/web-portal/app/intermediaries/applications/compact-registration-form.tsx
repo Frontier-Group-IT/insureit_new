@@ -176,7 +176,7 @@ function registrationRows(profile: Profile, iibVerified: boolean): Array<[string
     ["Country", "India"],
     [profile.partner_type === "misp" ? "MISP ID" : "POSP ID", profile.external_onboarding_id || "-"],
     ["PAN No.", (isMisp ? profile.dp_pan_number : profile.pan_number) || "-"],
-    ["Aadhaar No.", profile.aadhaar_number || "-"],
+    ["Aadhaar No.", maskAadhaar(profile.aadhaar_number)],
     ["GST Registration No.", profile.gst_number || "-"],
     ["MSMED Registration No.", "-"],
     ["Name of Bank", profile.bank_name || "-"],
@@ -192,5 +192,6 @@ function Section({ title, rows }: { title: string; rows: Array<[string, string]>
 function Declaration({ number, text }: { number: string; text: string }) { return <div className="mb-2 flex items-start gap-2 rounded-lg border border-[#DCE5EF] bg-[#F8FAFC] px-3 py-2 last:mb-0"><span className="grid h-4 w-4 shrink-0 place-items-center rounded bg-emerald-600 text-[8px] font-bold text-white">✓</span><p className="text-[7.8px] leading-4 text-[#334155]"><strong>{number}.</strong> {text}</p></div>; }
 function Signature({ label }: { label: string }) { return <div className="pt-10"><div className="border-t border-[#64748B] pt-2 text-center text-[8px] font-semibold text-[#475569]">{label}</div></div>; }
 function formatDate(value: string | null) { if (!value) return new Intl.DateTimeFormat("en-IN").format(new Date()); const date = new Date(value); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("en-IN").format(date); }
+function maskAadhaar(value: string | null) { return value ? `**** ${value.slice(-4)}` : "-"; }
 function wrap(text: string, font: { widthOfTextAtSize: (value: string, size: number) => number }, size: number, maxWidth: number, maxLines: number) { const words = text.replace(/[^\x20-\x7E]/g, " ").split(/\s+/); const lines: string[] = []; let current = ""; for (const word of words) { const candidate = current ? `${current} ${word}` : word; if (font.widthOfTextAtSize(candidate, size) <= maxWidth) current = candidate; else { if (current) lines.push(current); current = word; if (lines.length >= maxLines - 1) break; } } if (current && lines.length < maxLines) lines.push(current); return lines; }
 const printCss = `@page{size:A4;margin:9mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#0f172a;margin:0}button,summary{display:none!important}details>div{display:block!important;border:0!important;padding:0!important}.bg-\[\#071D49\]{background:#071D49!important;color:white!important}.grid{display:grid}.sm\:grid-cols-2{grid-template-columns:1fr 1fr}.sm\:grid-cols-3{grid-template-columns:1fr 1fr 1fr}.lg\:grid-cols-4{grid-template-columns:repeat(4,1fr)}.border,.border-t,.border-b,.border-r{border-color:#cbd5e1!important}.border{border:1px solid #cbd5e1}.border-t{border-top:1px solid #cbd5e1}.border-b{border-bottom:1px solid #cbd5e1}.border-r{border-right:1px solid #cbd5e1}.p-3{padding:8px}.p-5{padding:12px}.px-3{padding-left:8px;padding-right:8px}.py-2{padding-top:5px;padding-bottom:5px}h3,h4,p{margin:0}section{break-inside:avoid;font-size:8px}`;

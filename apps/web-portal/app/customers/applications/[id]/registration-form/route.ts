@@ -94,7 +94,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       ["Email", onboarding.applicant_email ?? application.applicant_email],
       ["Date of Birth", formatIndianDate(onboarding.date_of_birth)],
       ["PAN Number", onboarding.pan_number],
-      ["Aadhaar", decryptSensitiveValue(onboarding.aadhaar_number_encrypted) ?? (onboarding.aadhaar_last_four ? `Ending ${onboarding.aadhaar_last_four}` : null)],
+      ["Aadhaar", maskAadhaar(decryptSensitiveValue(onboarding.aadhaar_number_encrypted) ?? onboarding.aadhaar_last_four)],
       ["GST Number", onboarding.gst_number],
       ["Address", [onboarding.address, onboarding.city, onboarding.state, onboarding.postal_code].filter(Boolean).join(", ")]
     ]],
@@ -149,4 +149,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
 function ascii(value: string) {
   return value.normalize("NFKD").replace(/[^\x20-\x7E]/g, "");
+}
+
+function maskAadhaar(value: string | null | undefined) {
+  return value ? `**** ${value.slice(-4)}` : null;
 }

@@ -51,7 +51,7 @@ export function IntermediaryRegistrationForm({ profile, iibVerified, documents, 
   const phone = isMisp ? profile.dp_phone : profile.applicant_phone;
   const email = isMisp ? profile.dp_email : profile.applicant_email;
   const accountName = contactName;
-  const aadhaarDisplay = profile.aadhaar_last_four ? `XXXX XXXX ${profile.aadhaar_last_four}` : "-";
+  const aadhaarDisplay = profile.aadhaar_last_four ? `**** ${profile.aadhaar_last_four}` : "-";
   const registrationDate = formatDate(profile.document_received_at);
   const attachedTypes = new Set(documents.map((document) => document.document_type));
   const rows = documentRequirements.filter(([, label]) => label !== "GST certificate" || Boolean(profile.gst_number)).map(([key, label, acceptedTypes]) => ({
