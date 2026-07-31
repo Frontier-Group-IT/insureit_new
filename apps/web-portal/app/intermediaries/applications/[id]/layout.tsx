@@ -21,6 +21,15 @@ export default function ApplicationReviewLayout({ children }: { children: React.
       if (label === "edit details") action.dataset.reviewAction = "edit";
       if (label === "create user") action.dataset.reviewAction = "create-user";
 
+      if (action instanceof HTMLAnchorElement && label?.includes("back to account review")) {
+        action.dataset.freshAccountReviewNavigation = "true";
+        action.onclick = (event) => {
+          if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          event.preventDefault();
+          window.location.assign(action.href);
+        };
+      }
+
       if (label === "open linked account" && !action.closest("#linked-account")) {
         action.textContent = "Open POSP Account";
         action.dataset.headerPospAction = "true";
