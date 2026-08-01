@@ -1,12 +1,45 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+
 type Props = { partnerType:"posp"|"misp"; initialValues?:Record<string,string> };
 
 export function LegacyOnboardingFields({ partnerType, initialValues = {} }: Props) {
+  const sectionRef = useRef<HTMLElement>(null);
+  const remarksRef = useRef<HTMLTextAreaElement>(null);
+  const [remarksError, setRemarksError] = useState<string | null>(null);
   const registrationLabel = partnerType === "misp" ? "Existing MISP ID" : "Existing POSP ID";
 
+  useEffect(() => {
+    const section = sectionRef.current;
+    const form = section?.closest("form");
+    if (!form) return;
+
+    const interceptInvalidLegacySubmit = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const button = target.closest("button");
+      if (!button || !/save\s*&\s*check\s*pan/i.test(button.textContent ?? "")) return;
+
+      const remarks = remarksRef.current;
+      if (!remarks || remarks.value.trim().length >= 10) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      if ("stopImmediatePropagation" in event) event.stopImmediatePropagation();
+      setRemarksError("Enter at least 10 characters explaining how the previous record was verified.");
+      requestAnimationFrame(() => {
+        remarks.focus({ preventScroll: true });
+        remarks.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    };
+
+    form.addEventListener("click", interceptInvalidLegacySubmit, true);
+    return () => form.removeEventListener("click", interceptInvalidLegacySubmit, true);
+  }, []);
+
   return (
-    <section className="border-t border-amber-200 bg-amber-50/70 px-3 py-4 sm:px-5 sm:py-5" data-legacy-onboarding-fields="true">
+    <section ref={sectionRef} className="border-t border-amber-200 bg-amber-50/70 px-3 py-4 sm:px-5 sm:py-5" data-legacy-onboarding-fields="true">
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-[9px] font-bold uppercase tracking-[.08em] text-amber-700">Existing intermediary migration</p>
@@ -25,7 +58,23 @@ export function LegacyOnboardingFields({ partnerType, initialValues = {} }: Prop
 
       <label className="mt-4 block">
         <span className="mb-1.5 block text-[10.5px] font-semibold text-[#344054]">Migration verification remarks *</span>
-        <textarea name="legacy_migration_remarks" required minLength={10} defaultValue={initialValues.legacy_migration_remarks} className="min-h-24 w-full rounded-xl border border-[#CBD5E1] bg-white px-3.5 py-2.5 text-[12px] text-[#17203A] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]" placeholder="Mention where the existing IDs and historical records were verified." />
+        <textarea
+          ref={remarksRef}
+          name="legacy_migration_remarks"
+          required
+          minLength={10}
+          data-label="Migration verification remarks"
+          defaultValue={initialValues.legacy_migration_remarks}
+          onChange={(event) => {
+            if (event.currentTarget.value.trim().length >= 10) setRemarksError(null);
+          }}
+          className={`min-h-24 w-full rounded-xl border bg-white px-3.5 py-2.5 text-[12px] text-[#17203A] outline-none focus:ring-2 ${remarksError ? "border-red-400 focus:border-red-500 focus:ring-red-100" : "border-[#CBD5E1] focus:border-[#4F46E5] focus:ring-[#E0E7FF]"}`}
+          placeholder="Example: Verified from the previous POSP register and agreement file."
+        />
+        <div className="mt-1.5 flex items-center justify-between gap-3">
+          <span className={`text-[9.5px] ${remarksError ? "font-semibold text-red-600" : "text-[#64748B]"}`}>{remarksError ?? "Minimum 10 characters required."}</span>
+          <span className="text-[9px] text-[#94A3B8]">Do not enter only “OK”.</span>
+        </div>
       </label>
 
       <label className="mt-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-white p-3 text-[10px] leading-5 text-amber-950">
@@ -40,7 +89,7 @@ function Field({ label, name, ...props }: React.InputHTMLAttributes<HTMLInputEle
   return (
     <label className="min-w-0">
       <span className="mb-1.5 block text-[10.5px] font-semibold text-[#344054]">{label}{props.required ? " *" : ""}</span>
-      <input name={name} className="h-11 w-full min-w-0 rounded-xl border border-[#CBD5E1] bg-white px-3.5 text-[12px] text-[#17203A] outline-none placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]" {...props} />
+      <input name={name} data-label={label} className="h-11 w-full min-w-0 rounded-xl border border-[#CBD5E1] bg-white px-3.5 text-[12px] text-[#17203A] outline-none placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]" {...props} />
     </label>
   );
 }
