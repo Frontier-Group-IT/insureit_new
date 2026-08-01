@@ -27,7 +27,7 @@ export default async function NewPospMispPage({ searchParams }: { searchParams: 
     loadBanks(admin)
   ]);
   const isMisp = partnerType === "misp";
-  const legacyMode = query.legacy_mode === "existing" && process.env.NEXT_PUBLIC_ENABLE_LEGACY_INTERMEDIARY_IMPORT === "true";
+  const legacyMode = query.legacy_mode === "existing";
   const backHref = isMisp ? "/intermediaries/misp" : "/intermediaries/posp";
   const title = legacyMode ? `Add Existing ${isMisp ? "MISP" : "POSP"} & Partner` : isMisp ? "Add MISP Application" : "Add POSP Application";
   const initialValues = extractInitialValues(query);
