@@ -5,13 +5,15 @@ import { requirePospMispManager } from "@/lib/master-data-server";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createManualPospMispOnboardingV2 } from "../manual-actions-v2";
+import { createLegacyPartnerOnboarding } from "../legacy-manual-actions";
+import { LegacyOnboardingFields } from "../legacy-onboarding-fields";
 import { OnboardingFieldPresentation } from "../onboarding-field-presentation";
 import { PospMispOnboardingForm } from "../posp-misp-onboarding-form";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type Query = Record<string, string | undefined> & { partner_type?: string; form_error?: string; form_field?: string };
+type Query = Record<string, string | undefined> & { partner_type?: string; form_error?: string; form_field?: string; legacy_mode?: string };
 
 export default async function NewPospMispPage({ searchParams }: { searchParams: Promise<Query> }) {
   const profile = await requirePospMispManager();
@@ -25,23 +27,26 @@ export default async function NewPospMispPage({ searchParams }: { searchParams: 
     loadBanks(admin)
   ]);
   const isMisp = partnerType === "misp";
+  const legacyMode = query.legacy_mode === "existing" && process.env.NEXT_PUBLIC_ENABLE_LEGACY_INTERMEDIARY_IMPORT === "true";
   const backHref = isMisp ? "/intermediaries/misp" : "/intermediaries/posp";
-  const title = isMisp ? "Add MISP Application" : "Add POSP Application";
+  const title = legacyMode ? `Add Existing ${isMisp ? "MISP" : "POSP"} & Partner` : isMisp ? "Add MISP Application" : "Add POSP Application";
+  const initialValues = extractInitialValues(query);
 
   return (
     <AppShell title={title} backHref={backHref}>
       <OnboardingFieldPresentation>
         <PospMispOnboardingForm
-          action={createManualPospMispOnboardingV2}
-          submitPath="/customers/posp-misp/new/submit"
+          action={legacyMode ? createLegacyPartnerOnboarding : createManualPospMispOnboardingV2}
+          submitPath={legacyMode ? undefined : "/customers/posp-misp/new/submit"}
           partnerType={partnerType}
           initialError={query.form_error ?? null}
           initialField={query.form_field ?? null}
-          initialValues={extractInitialValues(query)}
+          initialValues={initialValues}
           salesManagers={salesManagers}
           oems={oems}
           banks={banks}
         />
+        {legacyMode ? <LegacyOnboardingFields partnerType={partnerType} initialValues={initialValues} /> : null}
       </OnboardingFieldPresentation>
     </AppShell>
   );
