@@ -94,6 +94,41 @@
   color: #17203a !important;
 }
 
+/* Shared POSP/MISP workflow identity header. */
+section[class*="bg-white/80"]:has(a[href^="/intermediaries/applications/"]) {
+  border-color: #173e7b !important;
+  background: linear-gradient(135deg, #071d49 0%, #0a2b65 54%, #0c4a9a 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 18px 45px rgba(7, 29, 73, 0.18) !important;
+}
+
+section[class*="bg-white/80"]:has(a[href^="/intermediaries/applications/"]) h1 {
+  color: #ffffff !important;
+}
+
+section[class*="bg-white/80"]:has(a[href^="/intermediaries/applications/"]) a {
+  color: #dbeafe !important;
+}
+
+section[class*="bg-white/80"]:has(a[href^="/intermediaries/applications/"]) a:hover {
+  color: #ffffff !important;
+}
+
+section[class*="bg-white/80"]:has(a[href^="/intermediaries/applications/"]) h1 + span {
+  border-color: rgba(255, 255, 255, 0.24) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #f8fafc !important;
+}
+
+section[class*="bg-white/80"]:has(a[href^="/intermediaries/applications/"]) > div > div:last-child > span:first-child {
+  color: #f8fafc !important;
+}
+
+section[class*="bg-white/80"]:has(a[href^="/intermediaries/applications/"]) > div > div:last-child > span:last-child {
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12) !important;
+}
+
 @media (max-width: 720px) {
   .application-review-refined [data-five-step-workflow="true"],
   .application-review-refined [data-posp-journey-steps="true"] {
