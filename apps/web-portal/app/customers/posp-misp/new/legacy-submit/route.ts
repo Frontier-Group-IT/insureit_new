@@ -33,6 +33,11 @@ const PRESERVED_FIELDS = [
   "legacy_registration_code",
   "legacy_original_onboarding_date",
   "legacy_original_activation_date",
+  "legacy_training_status",
+  "legacy_exam_status",
+  "legacy_agreement_status",
+  "legacy_iib_upload_status",
+  "legacy_iib_registration_status",
   "legacy_migration_remarks",
 ] as const;
 
