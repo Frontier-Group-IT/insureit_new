@@ -237,19 +237,19 @@ function permanentCodes(row: IntermediaryRow) {
 function displayIdentity(row: IntermediaryRow, app: ApplicationState | undefined, selectedType: IntermediaryType | null) {
   const context = selectedType ?? accountContext(app);
   const codes = permanentCodes(row);
-  const partnerId = codes.find((code) => code.startsWith("PART-"));
-  const intermediaryId = codes.find((code) => !code.startsWith("PART-"));
-  if (context === "partner") return partnerId ?? "Partner ID pending";
-  return intermediaryId ?? `${context.toUpperCase()} ID pending`;
+  if (context === "partner") {
+    return codes[0] ?? textValue(app?.draft_data?.legacy_partner_code) ?? "Partner ID pending";
+  }
+  return codes[0] ?? textValue(app?.draft_data?.legacy_registration_code) ?? textValue(app?.draft_data?.existing_registration_code) ?? `${context.toUpperCase()} ID pending`;
 }
 
 function parentPartnerId(row: IntermediaryRow, app: ApplicationState | undefined) {
   const context = accountContext(app);
   const codes = permanentCodes(row);
-  const partnerId = codes.find((code) => code.startsWith("PART-"));
-  const linkedCode = typeof app?.draft_data?.linked_partner_code === "string" ? app.draft_data.linked_partner_code : null;
+  const prefixedPartnerId = codes.find((code) => code.startsWith("PART-"));
+  const linkedCode = textValue(app?.draft_data?.linked_partner_code) ?? textValue(app?.draft_data?.legacy_partner_code);
   if (context === "partner") return "Self";
-  return linkedCode ?? partnerId ?? "Partner ID pending";
+  return linkedCode ?? prefixedPartnerId ?? "Partner ID pending";
 }
 
 function partnerLocation(row: IntermediaryRow, app: ApplicationState | undefined) {
