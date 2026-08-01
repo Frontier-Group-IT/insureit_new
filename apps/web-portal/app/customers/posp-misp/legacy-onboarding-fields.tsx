@@ -6,13 +6,21 @@ import { createPortal } from "react-dom";
 type Props = { partnerType:"posp"|"misp"; initialValues?:Record<string,string> };
 
 export function LegacyOnboardingFields({ partnerType, initialValues = {} }: Props) {
-  const [target, setTarget] = useState<Element | null>(null);
+  const [target, setTarget] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
-    const form = document.querySelector("form");
+    const form = document.querySelector<HTMLFormElement>("form[data-posp-misp-onboarding-form='true']") ?? document.querySelector<HTMLFormElement>("form");
     if (!form) return;
-    const footer = form.querySelector("div.sticky.bottom-0");
-    setTarget(footer ?? form);
+    const footer = form.querySelector<HTMLElement>("div.sticky.bottom-0");
+    const host = document.createElement("div");
+    host.dataset.legacyOnboardingHost = "true";
+    if (footer) form.insertBefore(host, footer);
+    else form.appendChild(host);
+    setTarget(host);
+    return () => {
+      setTarget(null);
+      host.remove();
+    };
   }, []);
 
   if (!target) return null;
