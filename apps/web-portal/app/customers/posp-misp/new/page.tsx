@@ -45,8 +45,8 @@ export default async function NewPospMispPage({ searchParams }: { searchParams: 
           salesManagers={salesManagers}
           oems={oems}
           banks={banks}
+          legacyFields={legacyMode ? <LegacyOnboardingFields partnerType={partnerType} initialValues={initialValues} /> : null}
         />
-        {legacyMode ? <LegacyOnboardingFields partnerType={partnerType} initialValues={initialValues} /> : null}
       </OnboardingFieldPresentation>
     </AppShell>
   );
