@@ -11,12 +11,15 @@ export function LegacyIntermediaryImportLink() {
 
   useEffect(() => {
     if (!LEGACY_IMPORT_ENABLED) return;
-    const match = pathname.match(REVIEW_ROUTE);
-    if (!match) return;
-    const applicationId = match[1];
 
     const apply = () => {
-      if (document.querySelector("[data-legacy-intermediary-import-link='true']")) return;
+      if (pathname === "/customers/posp-misp" || pathname === "/customers/posp-misp/") {
+        addLegacyCreateShortcuts();
+      }
+
+      const match = pathname.match(REVIEW_ROUTE);
+      if (!match || document.querySelector("[data-legacy-intermediary-import-link='true']")) return;
+      const applicationId = match[1];
       const actions = Array.from(document.querySelectorAll<HTMLAnchorElement | HTMLButtonElement>("a, button"));
       const createAction = actions.find((action) => {
         const label = action.textContent?.trim().toLowerCase() ?? "";
@@ -46,4 +49,30 @@ export function LegacyIntermediaryImportLink() {
   }, [pathname]);
 
   return null;
+}
+
+function addLegacyCreateShortcuts() {
+  if (document.querySelector("[data-legacy-create-shortcuts='true']")) return;
+  const links = Array.from(document.querySelectorAll<HTMLAnchorElement>("a"));
+  const addPosp = links.find((link) => link.textContent?.trim().toLowerCase() === "add posp");
+  const addMisp = links.find((link) => link.textContent?.trim().toLowerCase() === "add misp");
+  const actionRow = addPosp?.parentElement ?? addMisp?.parentElement;
+  if (!actionRow) return;
+
+  const wrapper = document.createElement("span");
+  wrapper.dataset.legacyCreateShortcuts = "true";
+  wrapper.className = "contents";
+
+  const posp = document.createElement("a");
+  posp.href = "/customers/posp-misp/new?partner_type=posp&legacy_mode=existing";
+  posp.textContent = "Add Existing POSP";
+  posp.className = addPosp?.className ?? "";
+
+  const misp = document.createElement("a");
+  misp.href = "/customers/posp-misp/new?partner_type=misp&legacy_mode=existing";
+  misp.textContent = "Add Existing MISP";
+  misp.className = addMisp?.className ?? "";
+
+  wrapper.append(posp, misp);
+  actionRow.appendChild(wrapper);
 }
