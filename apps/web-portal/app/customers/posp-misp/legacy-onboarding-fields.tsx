@@ -1,27 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
-
-const LEGACY_FORM_ID = "legacy-existing-intermediary-form";
-
 type Props = { partnerType:"posp"|"misp"; initialValues?:Record<string,string> };
 
 export function LegacyOnboardingFields({ partnerType, initialValues = {} }: Props) {
-  useEffect(() => {
-    const form = document.querySelector<HTMLFormElement>("form[data-posp-misp-onboarding-form='true']") ?? document.querySelector<HTMLFormElement>("form");
-    if (!form) return;
-    const previousId = form.id;
-    form.id = LEGACY_FORM_ID;
-    return () => {
-      if (previousId) form.id = previousId;
-      else form.removeAttribute("id");
-    };
-  }, []);
-
   const registrationLabel = partnerType === "misp" ? "Existing MISP ID" : "Existing POSP ID";
 
   return (
-    <section className="rounded-2xl border border-amber-200 bg-amber-50/70 px-3 py-4 shadow-sm sm:px-5 sm:py-5" data-legacy-onboarding-fields="true">
+    <section className="border-t border-amber-200 bg-amber-50/70 px-3 py-4 sm:px-5 sm:py-5" data-legacy-onboarding-fields="true">
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-[9px] font-bold uppercase tracking-[.08em] text-amber-700">Existing intermediary migration</p>
@@ -40,11 +25,11 @@ export function LegacyOnboardingFields({ partnerType, initialValues = {} }: Prop
 
       <label className="mt-4 block">
         <span className="mb-1.5 block text-[10.5px] font-semibold text-[#344054]">Migration verification remarks *</span>
-        <textarea form={LEGACY_FORM_ID} name="legacy_migration_remarks" required minLength={10} defaultValue={initialValues.legacy_migration_remarks} className="min-h-24 w-full rounded-xl border border-[#CBD5E1] bg-white px-3.5 py-2.5 text-[12px] text-[#17203A] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]" placeholder="Mention where the existing IDs and historical records were verified." />
+        <textarea name="legacy_migration_remarks" required minLength={10} defaultValue={initialValues.legacy_migration_remarks} className="min-h-24 w-full rounded-xl border border-[#CBD5E1] bg-white px-3.5 py-2.5 text-[12px] text-[#17203A] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]" placeholder="Mention where the existing IDs and historical records were verified." />
       </label>
 
       <label className="mt-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-white p-3 text-[10px] leading-5 text-amber-950">
-        <input form={LEGACY_FORM_ID} type="checkbox" name="legacy_confirmation" value="yes" required className="mt-1 h-4 w-4 shrink-0" />
+        <input type="checkbox" name="legacy_confirmation" value="yes" required className="mt-1 h-4 w-4 shrink-0" />
         <span>I confirm that the Partner ID and {partnerType.toUpperCase()} ID were already issued and must be stored as permanent historical identifiers.</span>
       </label>
     </section>
@@ -55,7 +40,7 @@ function Field({ label, name, ...props }: React.InputHTMLAttributes<HTMLInputEle
   return (
     <label className="min-w-0">
       <span className="mb-1.5 block text-[10.5px] font-semibold text-[#344054]">{label}{props.required ? " *" : ""}</span>
-      <input form={LEGACY_FORM_ID} name={name} className="h-11 w-full min-w-0 rounded-xl border border-[#CBD5E1] bg-white px-3.5 text-[12px] text-[#17203A] outline-none placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]" {...props} />
+      <input name={name} className="h-11 w-full min-w-0 rounded-xl border border-[#CBD5E1] bg-white px-3.5 text-[12px] text-[#17203A] outline-none placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]" {...props} />
     </label>
   );
 }
