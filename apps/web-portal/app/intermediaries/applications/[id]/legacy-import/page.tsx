@@ -71,7 +71,7 @@ export default async function LegacyImportPage({ params, searchParams }: { param
             <Field label="Agreement signed date" name="agreement_date" type="date" required />
             {type === "posp" ? <><Field label="Training completed date" name="training_completed_date" type="date" required /><Field label="Exam passed date" name="exam_passed_date" type="date" required /><Field label="Exam score (optional)" name="exam_score" type="number" min="0" max="100" step="0.01" /></> : null}
           </div>
-          {type === "misp" ? <p className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2.5 text-[9.5px] text-blue-800">Training and examination will be recorded as not applicable for MISP. Agreement and IIB registration will be recorded as completed.</p> : null}
+          {type === "misp" ? <p className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2.5 text-[9.5px] text-blue-800">The existing MISP migration bypasses live training and examination. Both stages will be recorded as completed and passed using the historical activation date, while Agreement and IIB registration will also be recorded as completed.</p> : null}
         </Section>
 
         <Section title="Verification and audit" note="This remark will remain with the imported account as an audit reference.">
