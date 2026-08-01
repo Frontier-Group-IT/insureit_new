@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Suspense, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Manrope, Space_Grotesk } from "next/font/google";
 import { AadhaarMaskNormalizer } from "@/components/aadhaar-mask-normalizer";
 import { FreshDynamicRouteNavigation } from "@/components/fresh-dynamic-route-navigation";
@@ -35,15 +35,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" className={`${manrope.variable} ${spaceGrotesk.variable}`}>
       <body>
         {children}
-        <Suspense fallback={null}>
-          <AadhaarMaskNormalizer />
-          <PospMispReviewCleanup />
-          <PartnerLinkedAccountHeaderNormalizer />
-          <ProfessionalFormValidation />
-          <SuccessPopup />
-          <FreshDynamicRouteNavigation />
-          <RouteProgressBar />
-        </Suspense>
+        <AadhaarMaskNormalizer />
+        <PospMispReviewCleanup />
+        <PartnerLinkedAccountHeaderNormalizer />
+        <ProfessionalFormValidation />
+        <SuccessPopup />
+        <FreshDynamicRouteNavigation />
+        <RouteProgressBar />
       </body>
     </html>
   );
