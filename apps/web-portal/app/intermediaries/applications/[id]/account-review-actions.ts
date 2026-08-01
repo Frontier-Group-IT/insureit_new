@@ -5,6 +5,12 @@ import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { requirePospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import {
+ currentStepForRegistrationStatus,
+ isLegacyWorkflowActive,
+ readLegacyWorkflow,
+ registrationStatusForLegacyWorkflow,
+} from "@/app/customers/posp-misp/legacy-workflow-statuses";
 
 const reviewPath=(id:string)=>`/intermediaries/applications/${id}`;
 type AdminClient=ReturnType<typeof createSupabaseAdminClient>;
@@ -29,6 +35,9 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
   sourceProfile.record_source==="legacy_manual_pending_activation"||
   sourceProfile.record_source==="legacy_manual"||
   sourceProfile.existing_registration_confirmed===true;
+ const legacyWorkflow=readLegacyWorkflow(sourceDraft,sourceRaw);
+ const registrationStatus=isLegacy?registrationStatusForLegacyWorkflow(legacyWorkflow):"training_pending";
+ const legacyActive=isLegacy&&isLegacyWorkflowActive(legacyWorkflow);
 
  let partnerRecordId=plainText(sourceApp.partner_record_id)??plainText(sourceProfile.partner_record_id);
  if(!partnerRecordId&&isLegacy){
@@ -52,8 +61,19 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
  if(existing){await syncInheritedDocuments(admin,sourceApplicationId,existing.id,reviewer.id,now);revalidatePath(reviewPath(existing.id));redirectFresh(reviewPath(existing.id))}
 
  const inheritedRegistration=sourceApp.registration_record_id??sourceProfile.registration_record_id??null;
- const childDraft={...sourceDraft,account_context:requestedType,parent_partner_application_id:sourceApplicationId,linked_partner_code:partnerCode??sourceProfile.partner_id??null,record_source:isLegacy?"legacy_manual":sourceDraft.record_source,issued_registration_code:isLegacy?reservedCode:undefined};
- const registrationStatus=isLegacy?"iib_registered":"training_pending";
+ const childDraft={
+  ...sourceDraft,
+  account_context:requestedType,
+  parent_partner_application_id:sourceApplicationId,
+  linked_partner_code:partnerCode??sourceProfile.partner_id??null,
+  record_source:isLegacy?"legacy_manual":sourceDraft.record_source,
+  issued_registration_code:isLegacy?reservedCode:undefined,
+  legacy_training_status:isLegacy?legacyWorkflow.trainingStatus:undefined,
+  legacy_exam_status:isLegacy?legacyWorkflow.examStatus:undefined,
+  legacy_agreement_status:isLegacy?legacyWorkflow.agreementStatus:undefined,
+  legacy_iib_upload_status:isLegacy?legacyWorkflow.iibUploadStatus:undefined,
+  legacy_iib_registration_status:isLegacy?legacyWorkflow.iibRegistrationStatus:undefined,
+ };
  let issuedCode:string;
  if(isLegacy){
   issuedCode=reservedCode!;
@@ -70,9 +90,20 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
  }
 
  const {data:child,error:childError}=await admin.from("intermediary_onboarding_applications").insert({
-  initiated_by:reviewer.id,source:isLegacy?"legacy_manual":"partner_account",requested_type:requestedType,final_type:requestedType,status:isLegacy?"approved":"submitted",current_step:isLegacy?6:3,
-  applicant_phone:sourceApp.applicant_phone,applicant_email:sourceApp.applicant_email,draft_data:childDraft,submitted_at:isLegacy?legacyDate(sourceDraft.legacy_original_onboarding_date,now):now,updated_at:now,
-  partner_record_id:partnerRecordId,partner_status:"active_partner",registration_status:registrationStatus
+  initiated_by:reviewer.id,
+  source:isLegacy?"legacy_manual":"partner_account",
+  requested_type:requestedType,
+  final_type:requestedType,
+  status:isLegacy?"approved":"submitted",
+  current_step:isLegacy?currentStepForRegistrationStatus(registrationStatus):3,
+  applicant_phone:sourceApp.applicant_phone,
+  applicant_email:sourceApp.applicant_email,
+  draft_data:childDraft,
+  submitted_at:isLegacy?legacyDate(sourceDraft.legacy_original_onboarding_date,now):now,
+  updated_at:now,
+  partner_record_id:partnerRecordId,
+  partner_status:"active_partner",
+  registration_status:registrationStatus
  }).select("id").single<{id:string}>();
  if(childError||!child)redirectFresh(`${reviewPath(sourceApplicationId)}?error=${encodeURIComponent(linkedAccountError(stepError("child_application",childError??new Error("The child application could not be created."))))}`);
 
@@ -87,6 +118,7 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
 
  try{
   const historicalDate=legacyDate(sourceDraft.legacy_original_activation_date,now);
+  const historicalDay=historicalDate.slice(0,10);
 
   if(isLegacy){
    const {error:releaseError}=await admin.from("posp_misp_onboarding_profiles").update({
@@ -148,18 +180,18 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
    aadhaar_hash:requestedType==="posp"?(sourceProfile.aadhaar_hash??null):null,
    aadhaar_number_encrypted:requestedType==="posp"?(sourceProfile.aadhaar_number_encrypted??null):null,
    education_status:sourceProfile.education_status??"not_received",
-   workflow_stage:isLegacy?"completed":"training",
-   training_status:isLegacy?"completed":"pending",
-   training_certificate_number:isLegacy?`LEGACY-${issuedCode}`:null,
-   training_start_date:isLegacy?historicalDate:null,
-   training_end_date:isLegacy?historicalDate:null,
-   exam_status:isLegacy?"passed":"not_allotted",
-   iib_uploaded:isLegacy,
-   iib_uploaded_at:isLegacy?historicalDate:null,
-   iib_upload_status:isLegacy?"uploaded":"pending",
+   workflow_stage:isLegacy?(legacyActive?"completed":"training"):"training",
+   training_status:isLegacy?legacyWorkflow.trainingStatus:"pending",
+   training_certificate_number:null,
+   training_start_date:isLegacy&&legacyWorkflow.trainingStatus!=="not_assigned"?historicalDay:null,
+   training_end_date:isLegacy&&legacyWorkflow.trainingStatus==="completed"?historicalDay:null,
+   exam_status:isLegacy?legacyWorkflow.examStatus:"not_allotted",
+   iib_uploaded:isLegacy?legacyWorkflow.iibUploadStatus==="uploaded":false,
+   iib_uploaded_at:isLegacy&&legacyWorkflow.iibUploadStatus==="uploaded"?historicalDay:null,
+   iib_upload_status:isLegacy?legacyWorkflow.iibUploadStatus:"pending",
    iib_remarks:null,
    pre_iib_submitted_at:sourceProfile.pre_iib_submitted_at??now,
-   onboarding_date:isLegacy?legacyDate(sourceDraft.legacy_original_onboarding_date,historicalDate):null,
+   onboarding_date:isLegacy?legacyDate(sourceDraft.legacy_original_onboarding_date,historicalDate).slice(0,10):null,
    source:sourceProfile.source??"manual",
    record_source:isLegacy?"legacy_manual":sourceProfile.record_source??null,
    existing_registration_confirmed:isLegacy,
@@ -172,6 +204,11 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
     linked_partner_code:partnerCode??sourceProfile.partner_id??null,
     issued_registration_code:issuedCode,
     record_source:isLegacy?"legacy_manual":sourceRaw.record_source,
+    legacy_training_status:isLegacy?legacyWorkflow.trainingStatus:undefined,
+    legacy_exam_status:isLegacy?legacyWorkflow.examStatus:undefined,
+    legacy_agreement_status:isLegacy?legacyWorkflow.agreementStatus:undefined,
+    legacy_iib_upload_status:isLegacy?legacyWorkflow.iibUploadStatus:undefined,
+    legacy_iib_registration_status:isLegacy?legacyWorkflow.iibRegistrationStatus:undefined,
    },
    created_by:reviewer.id,
    updated_by:reviewer.id,
@@ -183,17 +220,29 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
   if(contacts?.length){const{error}=await admin.from("intermediary_onboarding_contacts").insert(contacts.map(row=>({...row,application_id:child.id})));if(error)throw stepError("contacts",error)}
   await syncInheritedDocuments(admin,sourceApplicationId,child.id,reviewer.id,now).catch(error=>{throw stepError("documents",error)});
 
+  const registrationPayload={
+   application_id:child.id,
+   registration_type:requestedType,
+   registration_code:issuedCode,
+   registration_status:registrationStatus,
+   training_status:isLegacy?legacyWorkflow.trainingStatus:"not_assigned",
+   exam_status:isLegacy?legacyWorkflow.examStatus:"not_allotted",
+   agreement_status:isLegacy?legacyWorkflow.agreementStatus:"not_started",
+   iib_status:isLegacy?legacyWorkflow.iibRegistrationStatus:"pending",
+   activated_at:legacyActive?historicalDate:null,
+   updated_at:now,
+  };
+
   if(inheritedRegistration){
    const {error:clearSourceAppError}=await admin.from("intermediary_onboarding_applications").update({registration_record_id:null,updated_at:now}).eq("id",sourceApplicationId);if(clearSourceAppError)throw stepError("clear_source_app",clearSourceAppError);
    const {error:clearSourceProfileError}=await admin.from("posp_misp_onboarding_profiles").update({registration_record_id:null,workflow_stage:"completed",updated_by:reviewer.id,updated_at:now}).eq("application_id",sourceApplicationId);if(clearSourceProfileError)throw stepError("clear_source_profile",clearSourceProfileError);
-   const{error:registrationError}=await admin.from("intermediary_registrations").update({application_id:child.id,registration_type:requestedType,registration_code:issuedCode,registration_status:registrationStatus,training_status:isLegacy?"completed":"not_assigned",exam_status:isLegacy?"passed":"not_allotted",agreement_status:isLegacy?"signed":"not_started",iib_status:isLegacy?"registered":"pending",updated_at:now}).eq("id",String(inheritedRegistration));if(registrationError)throw stepError("registration_transfer",registrationError);
+   const{error:registrationError}=await admin.from("intermediary_registrations").update(registrationPayload).eq("id",String(inheritedRegistration));if(registrationError)throw stepError("registration_transfer",registrationError);
    const{error:childAppLinkError}=await admin.from("intermediary_onboarding_applications").update({registration_record_id:inheritedRegistration}).eq("id",child.id);if(childAppLinkError)throw stepError("child_app_link",childAppLinkError);
    const{error:childProfileLinkError}=await admin.from("posp_misp_onboarding_profiles").update({registration_record_id:inheritedRegistration}).eq("application_id",child.id);if(childProfileLinkError)throw stepError("child_profile_link",childProfileLinkError);
    registrationTransferred=true;
   }else{
    const {data:existingRegistration,error:existingRegistrationError}=await admin.from("intermediary_registrations").select("id").eq("partner_id",partnerRecordId).maybeSingle<{id:string}>();
    if(existingRegistrationError)throw stepError("registration_lookup",existingRegistrationError);
-   const registrationPayload={application_id:child.id,registration_type:requestedType,registration_code:issuedCode,registration_status:registrationStatus,training_status:isLegacy?"completed":"not_assigned",exam_status:isLegacy?"passed":"not_allotted",agreement_status:isLegacy?"signed":"not_started",iib_status:isLegacy?"registered":"pending",updated_at:now};
    const {data:registration,error:registrationError}=existingRegistration
     ?await admin.from("intermediary_registrations").update(registrationPayload).eq("id",existingRegistration.id).select("id").single<{id:string}>()
     :await admin.from("intermediary_registrations").insert({partner_id:partnerRecordId,...registrationPayload,created_by:reviewer.id}).select("id").single<{id:string}>();
@@ -204,10 +253,22 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
   }
 
   if(isLegacy){
-   const {error:assignmentError}=await admin.from("intermediary_training_exam_assignments").insert({application_id:child.id,training_title:`Historical ${requestedType.toUpperCase()} training`,training_status:"completed",training_assigned_at:historicalDate,training_started_at:historicalDate,training_completed_at:historicalDate,exam_title:`Historical ${requestedType.toUpperCase()} examination`,exam_status:"passed",exam_completed_at:historicalDate,exam_passed_at:historicalDate,agreement_status:"signed",agreement_sent_at:historicalDate,agreement_opened_at:historicalDate,agreement_signed_at:historicalDate,created_at:now,updated_at:now});
+   const assignment=legacyAssignmentPayload(child.id,requestedType,legacyWorkflow,historicalDate,reviewer.id,now);
+   const {error:assignmentError}=await admin.from("intermediary_training_exam_assignments").insert(assignment);
    if(assignmentError)throw stepError("historical_stages",assignmentError);
    const {data:linkedRegister}=await admin.from("intermediaries").select("id").eq("application_id",child.id).maybeSingle<{id:string}>();
-   if(linkedRegister){const {error:registerError}=await admin.from("intermediaries").update({intermediary_code:issuedCode,onboarding_id:issuedCode,intermediary_type:requestedType,requested_type:requestedType,account_status:"active",updated_at:now}).eq("id",linkedRegister.id);if(registerError)throw stepError("intermediary_register",registerError)}
+   if(linkedRegister){
+    const {error:registerError}=await admin.from("intermediaries").update({
+     intermediary_code:issuedCode,
+     onboarding_id:issuedCode,
+     intermediary_type:requestedType,
+     requested_type:requestedType,
+     account_status:legacyActive?"active":"under_onboarding",
+     activated_at:legacyActive?historicalDate:null,
+     updated_at:now,
+    }).eq("id",linkedRegister.id);
+    if(registerError)throw stepError("intermediary_register",registerError)
+   }
   }
  }catch(error){
   if(inheritedRegistration&&registrationTransferred){
@@ -229,7 +290,47 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
  }
  revalidatePath(reviewPath(sourceApplicationId));
  revalidatePath("/intermediaries");
+ revalidatePath(`/intermediaries/${requestedType}`);
  redirectFresh(`${reviewPath(child.id)}?success=${isLegacy?"legacy_intermediary_imported":`linked_${requestedType}_account_created`}`);
+}
+
+function legacyAssignmentPayload(applicationId:string,requestedType:"posp"|"misp",workflow:ReturnType<typeof readLegacyWorkflow>,historicalDate:string,actorId:string,now:string){
+ const trainingAssigned=workflow.trainingStatus!=="not_assigned";
+ const trainingStarted=["opened","in_progress","completed"].includes(workflow.trainingStatus);
+ const trainingCompleted=workflow.trainingStatus==="completed";
+ const examAllotted=workflow.examStatus!=="not_allotted";
+ const examStarted=["in_progress","passed","failed","attempts_exhausted"].includes(workflow.examStatus);
+ const examCompleted=["passed","failed","attempts_exhausted"].includes(workflow.examStatus);
+ const agreementSent=["sent","opened","signed","declined","expired","failed"].includes(workflow.agreementStatus);
+ const agreementOpened=["opened","signed"].includes(workflow.agreementStatus);
+ const iibStarted=["submission_in_progress","submitted","registered","failed","manual_review"].includes(workflow.iibRegistrationStatus);
+ const iibSubmitted=["submitted","registered"].includes(workflow.iibRegistrationStatus);
+ return {
+  application_id:applicationId,
+  training_title:trainingAssigned?`Historical ${requestedType.toUpperCase()} training`:null,
+  training_status:workflow.trainingStatus,
+  training_assigned_at:trainingAssigned?historicalDate:null,
+  training_started_at:trainingStarted?historicalDate:null,
+  training_completed_at:trainingCompleted?historicalDate:null,
+  exam_title:examAllotted?`Historical ${requestedType.toUpperCase()} examination`:null,
+  exam_status:workflow.examStatus,
+  exam_allotted_at:examAllotted?historicalDate:null,
+  exam_started_at:examStarted?historicalDate:null,
+  exam_completed_at:examCompleted?historicalDate:null,
+  exam_passed_at:workflow.examStatus==="passed"?historicalDate:null,
+  agreement_status:workflow.agreementStatus,
+  agreement_sent_at:agreementSent?historicalDate:null,
+  agreement_opened_at:agreementOpened?historicalDate:null,
+  agreement_signed_at:workflow.agreementStatus==="signed"?historicalDate:null,
+  iib_registration_status:workflow.iibRegistrationStatus,
+  iib_submission_started_at:iibStarted?historicalDate:null,
+  iib_submitted_at:iibSubmitted?historicalDate:null,
+  iib_registered_at:workflow.iibRegistrationStatus==="registered"?historicalDate:null,
+  assigned_by:actorId,
+  updated_by:actorId,
+  created_at:now,
+  updated_at:now,
+ };
 }
 
 async function resolveLegacyPartnerRecordId(admin:AdminClient,sourceApplicationId:string,actorId:string,sourceApp:Record<string,unknown>,sourceProfile:Record<string,unknown>){
@@ -250,5 +351,5 @@ function legacyDate(value:unknown,fallback:string){if(typeof value!=="string"||!
 function stepError(step:string,error:unknown){const detail=errorMessage(error,"Unknown database error");return new Error(`[${step}] ${detail}`)}
 async function syncInheritedDocuments(admin:AdminClient,sourceApplicationId:string,targetApplicationId:string,uploadedBy:string,now:string){const{data:documents,error:readError}=await admin.from("intermediary_onboarding_documents").select("document_type,file_name,storage_bucket,storage_path,mime_type,file_size,verification_status,verified_by,verified_at").eq("application_id",sourceApplicationId).returns<Array<Record<string,unknown>>>();if(readError)throw readError;if(!documents?.length)return;const rows=documents.map(row=>({...row,id:randomUUID(),application_id:targetApplicationId,uploaded_by:uploadedBy,created_at:now,updated_at:now}));const{error}=await admin.from("intermediary_onboarding_documents").upsert(rows,{onConflict:"application_id,document_type",ignoreDuplicates:true});if(error)throw error}
 function errorMessage(error:unknown,fallback:string){if(error instanceof Error&&error.message)return error.message;if(error&&typeof error==="object"&&"message" in error&&typeof (error as {message?:unknown}).message==="string")return (error as {message:string}).message;return fallback}
-function linkedAccountError(error:unknown){const message=errorMessage(error,"");if(message.includes("intermediary_onboarding_applications_registration_status_check"))return "The linked account could not be completed because its legacy status is not supported by the live database. Apply the latest migrations and try again.";if(message.includes("duplicate key")||message.includes("unique constraint"))return "The existing POSP or MISP ID is already used by another account.";if(message.startsWith("[release_legacy_registration_reservation]"))return "The reserved existing POSP/MISP ID could not be transferred from the Partner to the linked account.";if(message.startsWith("[profile]"))return `The linked profile could not be created: ${message.slice(message.indexOf("]")+1).trim()}`;if(message.startsWith("[registration"))return "The linked registration record could not be prepared for this Partner.";if(message.startsWith("[historical_stages]"))return "The historical training, exam and agreement completion could not be recorded. No linked account was retained.";if(message.startsWith("["))return `Unable to create the linked account at ${message.slice(1,message.indexOf("]"))}. No changes were made.`;return "Unable to create the linked account. No changes were made. Please try again."}
+function linkedAccountError(error:unknown){const message=errorMessage(error,"");if(message.includes("intermediary_onboarding_applications_registration_status_check"))return "The linked account could not be saved because its selected workflow status is not supported by the live database. Apply the latest migrations and try again.";if(message.includes("duplicate key")||message.includes("unique constraint"))return "The existing POSP or MISP ID is already used by another account.";if(message.startsWith("[release_legacy_registration_reservation]"))return "The reserved existing POSP/MISP ID could not be transferred from the Partner to the linked account.";if(message.startsWith("[profile]"))return `The linked profile could not be created: ${message.slice(message.indexOf("]")+1).trim()}`;if(message.startsWith("[registration"))return "The linked registration record could not be prepared for this Partner.";if(message.startsWith("[historical_stages]"))return "The selected historical Training, Exam, Agreement and IIB statuses could not be recorded. No linked account was retained.";if(message.startsWith("["))return `Unable to create the linked account at ${message.slice(1,message.indexOf("]"))}. No changes were made.`;return "Unable to create the linked account. No changes were made. Please try again."}
 function redirectFresh(href:string):never{redirect(`${href}${href.includes("?")?"&":"?"}fresh=${Date.now()}`)}
