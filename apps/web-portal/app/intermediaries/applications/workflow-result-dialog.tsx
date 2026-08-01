@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { freshDynamicRouteUrl } from "@/components/fresh-dynamic-route-navigation";
 
 type Props = { applicationId: string; event: string | null };
@@ -18,18 +18,62 @@ type DialogConfig = {
 
 export function WorkflowResultDialog({ applicationId, event }: Props) {
   const config = event ? configFor(event, applicationId, detectIntermediaryType()) : null;
+  const [visible, setVisible] = useState(false);
+  const seenKey = event && config ? `workflow-result-dialog:${applicationId}:${event}` : null;
 
   useEffect(() => {
-    if (!config) return;
+    if (!config || !event || !seenKey) return;
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete("success");
+    window.history.replaceState(window.history.state, "", `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
+
+    if (sessionStorage.getItem(seenKey) === "seen") {
+      setVisible(false);
+      return;
+    }
+
+    sessionStorage.setItem(seenKey, "seen");
+    setVisible(true);
+
     const onKeyDown = (keyboardEvent: KeyboardEvent) => {
       if (keyboardEvent.key === "Escape") navigateFresh(`/intermediaries/applications/${applicationId}`);
     };
+    const onPageShow = (pageEvent: PageTransitionEvent) => {
+      if (pageEvent.persisted && sessionStorage.getItem(seenKey) === "seen") setVisible(false);
+    };
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [applicationId, config]);
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("pageshow", onPageShow);
+    };
+  }, [applicationId, config, event, seenKey]);
 
-  if (!config) return null;
+  if (!config || !visible) return null;
   const closeHref = `/intermediaries/applications/${applicationId}`;
+
+  if (config.celebratory) {
+    return (
+      <div className="fixed inset-0 z-[2147483000] grid place-items-center bg-[#081127]/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="process-result-title">
+        <div className="w-full max-w-[380px] overflow-hidden rounded-2xl border border-white/70 bg-white shadow-[0_26px_80px_rgba(8,17,39,.28)]">
+          <div className="flex items-start gap-3 px-5 pb-4 pt-5">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-50 text-[18px] font-bold text-emerald-700">✓</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#635BFF]">Success</p>
+              <h2 id="process-result-title" className="mt-1 text-[17px] font-semibold leading-tight text-[#0F172A]">{config.title}</h2>
+            </div>
+            <button type="button" onClick={() => navigateFresh(closeHref)} aria-label="Close" className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[#E2E8F0] bg-white text-[16px] text-[#64748B] transition hover:bg-[#F8FAFC]">×</button>
+          </div>
+          <div className={`grid gap-2 border-t border-[#E2E8F0] bg-[#F8FAFC] px-5 py-4 ${config.secondaryHref ? "sm:grid-cols-2" : ""}`}>
+            {config.secondaryHref && config.secondaryLabel ? (
+              <button type="button" onClick={() => navigateFresh(config.secondaryHref!)} className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-2.5 text-center text-[10px] font-semibold text-[#334155]">{config.secondaryLabel}</button>
+            ) : null}
+            <button type="button" onClick={() => navigateFresh(config.primaryHref)} className="rounded-xl bg-[#071D49] px-4 py-2.5 text-center text-[10px] font-semibold text-white">{config.primaryLabel}</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[2147483000] grid place-items-center bg-[#081127]/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="process-result-title">
@@ -77,7 +121,7 @@ function configFor(event: string, applicationId: string, intermediaryType: "POSP
   const configs: Record<string, DialogConfig> = {
     documents_completed: {
       eyebrow: "Partner registration complete",
-      title: "Congratulations! Partner ID successfully created",
+      title: "Partner ID created",
       message: "The Partner ID has been generated successfully and the updated Partner account is now available.",
       nextStep: "Continue to the refreshed account review and verify the generated Partner ID.",
       primaryLabel: "Continue",
@@ -93,7 +137,7 @@ function configFor(event: string, applicationId: string, intermediaryType: "POSP
     agreement_signed: { eyebrow: "Agreement process", title: "Agreement signed", message: "The agreement requirement has been completed successfully.", nextStep: "Proceed with IIB registration when the IIB submission stage is enabled.", primaryLabel: "Open application", primaryHref: `${application}?stage=review`, secondaryLabel: "Open intermediary list", secondaryHref: "/intermediaries" },
     onboarding_completed: {
       eyebrow: `${intermediaryType} registration complete`,
-      title: `Congratulations! ${intermediaryType} ID successfully created`,
+      title: `${intermediaryType} ID created`,
       message: `The ${intermediaryType} ID has been generated successfully and the updated account is ready for review.`,
       nextStep: `Continue to the refreshed account review and verify the generated ${intermediaryType} ID.`,
       primaryLabel: "Continue",

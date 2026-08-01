@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, BadgeCheck, GraduationCap, PartyPopper, Sparkles, X } from "lucide-react";
 import { DocumentVisualCard } from "@/components/document-visual-card";
 import { AppShell } from "@/components/shell";
 import { requirePospMispManager } from "@/lib/master-data-server";
@@ -8,6 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createIntermediaryPortalLogin } from "@/app/intermediaries/portal-account-actions";
 import { resendIntermediaryPortalInvite } from "@/app/intermediaries/resend-portal-invite-action";
 import { createLinkedIntermediaryAccount } from "./account-review-actions";
+import { IdSuccessModal } from "./id-success-modal";
 
 export const dynamic="force-dynamic";
 export const revalidate=0;
@@ -92,55 +92,6 @@ function CompactSubmit({label,secondary=false}:{label:string;secondary?:boolean}
 function JourneyCard({title,journey}:{title:string;journey:JourneyItem[]}){return <section className="bg-transparent px-0 py-1"><h2 className="mb-4 text-[13px] font-semibold text-[#17203A]">{title}</h2><div className={`relative grid gap-0 ${journey.length===2?"sm:grid-cols-2":"sm:grid-cols-5"} before:absolute before:left-[10%] before:right-[10%] before:top-[13px] before:h-px before:bg-[#CBD5E1] before:content-['']`}>{journey.map(x=><Journey key={x.label} {...x}/>)}</div></section>}
 function Journey({label,done,active}:JourneyItem){return <div className="relative z-[1] min-w-0 text-center"><div className={`mx-auto grid h-7 w-7 place-items-center rounded-full border text-[10px] font-bold shadow-[0_0_0_6px_#F8FAFC] ${done?"border-emerald-600 bg-emerald-600 text-white":active?"border-[#4F46E5] bg-[#4F46E5] text-white":"border-[#D7E0EB] bg-[#F1F5F9] text-[#94A3B8]"}`}>{done?"✓":active?"•":"-"}</div><p className="mt-2 text-[10px] font-semibold text-[#24345A]">{label}</p></div>}
 function Notice({tone,text}:{tone:"error"|"success";text:string}){return <div className={`rounded-xl border px-4 py-3 text-[10.5px] ${tone==="error"?"border-red-200 bg-red-50 text-red-700":"border-emerald-200 bg-emerald-50 text-emerald-700"}`}>{text}</div>}
-function IdSuccessModal({event,applicationId,isPartner,preferredType,partnerId,registrationId,linkedId}:{event:string|undefined;applicationId:string;isPartner:boolean;preferredType:"posp"|"misp";partnerId:string|null;registrationId:string|null;linkedId:string|undefined}){
- if(!event||!modalSuccessEvents.has(event))return null;
- const createdLinkedType=event==="linked_misp_account_created"?"misp":event==="linked_posp_account_created"?"posp":null;
- const accountType=createdLinkedType??preferredType;
- const accountLabel=accountType.toUpperCase();
- const closeHref=freshHref(`/intermediaries/applications/${applicationId}`);
- const isPartnerEvent=event==="partner_id_generated"||event==="documents_saved";
- const generatedId=isPartnerEvent?partnerId:registrationId;
- const title=isPartnerEvent?"Congratulations! Partner ID successfully created":`Congratulations! ${accountLabel} ID successfully created`;
- const message=isPartnerEvent
-  ? `Partner ID${generatedId?` ${generatedId}`:""} has been issued after successful document completion.`
-  : `${accountLabel} ID${generatedId?` ${generatedId}`:""} has been generated and the intermediary onboarding journey is ready.`;
- const nextStep=isPartnerEvent
-  ? `Create the ${accountLabel} ID from this active Partner profile.`
-  : "Start the training and examination stage for this account.";
- return <div className="fixed inset-0 z-[2147483000] grid place-items-center bg-[#07152D]/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="id-success-title">
-  <div className="relative w-full max-w-[500px] overflow-hidden rounded-[26px] border border-white/70 bg-white shadow-[0_34px_100px_rgba(8,17,39,.35)]">
-   <div className="relative overflow-hidden bg-gradient-to-br from-[#071D49] via-[#123E86] to-[#4F46E5] px-6 pb-6 pt-7 text-white">
-    <div className="absolute -right-10 -top-12 h-36 w-36 rounded-full bg-white/10 blur-2xl"/>
-    <div className="absolute -bottom-12 left-8 h-28 w-28 rounded-full bg-cyan-300/20 blur-2xl"/>
-    <Link href={closeHref} aria-label="Close success popup" className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-xl border border-white/20 bg-white/10 text-white transition hover:bg-white/20"><X className="h-4 w-4"/></Link>
-    <div className="relative mx-auto grid h-16 w-16 place-items-center rounded-2xl border border-white/25 bg-white/15 shadow-[0_18px_40px_rgba(0,0,0,.22)]">
-     <PartyPopper className="h-8 w-8 text-[#FDE68A]"/>
-     <Sparkles className="absolute -right-2 -top-2 h-5 w-5 text-white"/>
-    </div>
-    <p className="relative mt-4 text-center text-[9px] font-bold uppercase tracking-[0.16em] text-blue-100">ID generated</p>
-    <h2 id="id-success-title" className="relative mt-1 text-center text-[20px] font-semibold leading-tight">{title}</h2>
-   </div>
-   <div className="space-y-4 px-6 py-5 text-center">
-    <p className="text-[11px] leading-5 text-[#475569]">{message}</p>
-    {generatedId?<div className="mx-auto inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-[12px] font-semibold text-emerald-800"><BadgeCheck className="h-4 w-4"/>{generatedId}</div>:null}
-    <div className="rounded-2xl border border-[#DCE5EF] bg-[#F8FAFC] p-4 text-left">
-     <p className="text-[8.5px] font-bold uppercase tracking-[0.1em] text-[#635BFF]">Immediate next action</p>
-     <p className="mt-1 text-[11px] font-semibold text-[#0F172A]">{nextStep}</p>
-    </div>
-   </div>
-   <div className="grid gap-2 border-t border-[#E2E8F0] bg-[#F8FAFC] px-6 py-4 sm:grid-cols-2">
-    <Link href={closeHref} className="inline-flex h-11 items-center justify-center rounded-xl border border-[#CBD5E1] bg-white px-4 text-[10.5px] font-semibold text-[#334155] transition hover:border-[#94A3B8] hover:bg-[#F1F5F9]">OK</Link>
-    {isPartnerEvent&&isPartner&&!linkedId?
-     <form action={createLinkedIntermediaryAccount}>
-      <input type="hidden" name="application_id" value={applicationId}/>
-      <input type="hidden" name="registration_type" value={accountType}/>
-      <button type="submit" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4B8DF8] px-4 text-[10.5px] font-semibold text-white shadow-[0_14px_30px_rgba(79,70,229,.24)] transition hover:brightness-105">Create {accountLabel} ID <ArrowRight className="h-4 w-4"/></button>
-     </form>
-     :<Link href={freshHref(isPartnerEvent&&linkedId?`/intermediaries/applications/${linkedId}`:`/intermediaries/applications/${applicationId}/workflow?stage=review#training-requirement`)} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4B8DF8] px-4 text-[10.5px] font-semibold text-white shadow-[0_14px_30px_rgba(79,70,229,.24)] transition hover:brightness-105">{isPartnerEvent?"Open linked account":"Start Training & Exam"} <GraduationCap className="h-4 w-4"/></Link>}
-   </div>
-  </div>
- </div>
-}
 function Icon({name,className="h-4 w-4"}:{name:IconName;className?:string}){const paths:Record<IconName,React.ReactNode>={user:<><circle cx="12" cy="8" r="3"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></>,account:<><circle cx="12" cy="12" r="9"/><path d="M8 15c1-2.5 7-2.5 8 0M12 7.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Z"/></>,id:<><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8" cy="11" r="2"/><path d="M6 16c.8-1.8 3.2-1.8 4 0M13 10h5M13 14h5"/></>,rm:<><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M17 8v6M14 11h6"/></>,portal:<><circle cx="12" cy="12" r="9"/><path d="M8 12h8M13 9l3 3-3 3"/></>,calendar:<><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01"/></>,overview:<><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>,details:<><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></>,documents:<><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v5h5M9 13h6M9 17h6"/></>,link:<><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1"/></>,phone:<><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.8a2 2 0 0 1-.5 2.1L8.1 9.8a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.8 2.1Z"/></>,email:<><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></>,location:<><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></>};return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">{paths[name]}</svg>}
 function portalLabel(value:string|undefined){if(value==="invited")return"Portal User Invited";if(value==="active")return"Portal User Active";if(value==="suspended")return"Portal User Suspended";return"Portal User Not Created"}
 function pretty(v:string){return v.replaceAll("_"," ").replace(/\b\w/g,x=>x.toUpperCase())}
@@ -151,4 +102,3 @@ function asObject(v:unknown):Record<string,unknown>{return v&&typeof v==="object
 function decode(v:string){try{return decodeURIComponent(v)}catch{return v}}
 function successMessage(v:string){if(v==="portal_login_invited")return"Portal user created and invitation sent.";if(v==="portal_invite_resent")return"Portal login link resent.";if(v.startsWith("linked_"))return"Linked account application created.";return"Action completed successfully."}
 function date(v:string|null|undefined){if(!v)return"-";const d=new Date(v);return Number.isNaN(d.getTime())?v:new Intl.DateTimeFormat("en-IN",{dateStyle:"medium",timeZone:"Asia/Kolkata"}).format(d)}
-function freshHref(href:string){const [path,hash]=href.split("#");return `${path}${path.includes("?")?"&":"?"}fresh=${Date.now()}${hash?`#${hash}`:""}`}
