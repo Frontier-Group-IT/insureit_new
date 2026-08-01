@@ -4,11 +4,13 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
 const REVIEW_ROUTE = /^\/intermediaries\/applications\/([^/]+)\/?$/;
+const LEGACY_IMPORT_ENABLED = process.env.NEXT_PUBLIC_ENABLE_LEGACY_INTERMEDIARY_IMPORT === "true";
 
 export function LegacyIntermediaryImportLink() {
   const pathname = usePathname();
 
   useEffect(() => {
+    if (!LEGACY_IMPORT_ENABLED) return;
     const match = pathname.match(REVIEW_ROUTE);
     if (!match) return;
     const applicationId = match[1];
