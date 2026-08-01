@@ -21,19 +21,22 @@ const NAME=/^[A-Za-z ]+$/;
 const path=(id:string)=>`/intermediaries/applications/${id}/workflow`;
 
 type EditableProfile={id:string;partner_type:"posp"|"misp";workflow_stage:"pre_iib"|"iib_processing"|"training"|"completed";associate_employee_id:string|null;associate_profile_id:string|null;external_onboarding_id:string|null;bank_id:string|null;bank_name:string|null;aadhaar_last_four:string|null;aadhaar_hash:string|null;aadhaar_number_encrypted:string|null;dp_aadhaar_last_four:string|null;dp_aadhaar_hash:string|null;dp_aadhaar_number_encrypted:string|null};
+type EditableApplication={id:string;requested_type:"posp"|"misp";status:string;partner_status:string|null;draft_data:Record<string,unknown>|null};
 
 export async function updateIntermediaryApplication(data:FormData){
  const reviewer=await requirePospMispManager();const applicationId=value(data,"application_id");if(!applicationId||!reviewer?.id)redirect("/customers/posp-misp");
  const admin=createSupabaseAdminClient();
  const [{data:application},{data:profile}]=await Promise.all([
-  admin.from("intermediary_onboarding_applications").select("id,requested_type,status,draft_data").eq("id",applicationId).maybeSingle<{id:string;requested_type:"posp"|"misp";status:string;draft_data:Record<string,unknown>|null}>(),
+  admin.from("intermediary_onboarding_applications").select("id,requested_type,status,partner_status,draft_data").eq("id",applicationId).maybeSingle<EditableApplication>(),
   admin.from("posp_misp_onboarding_profiles").select("id,partner_type,workflow_stage,associate_employee_id,associate_profile_id,external_onboarding_id,bank_id,bank_name,aadhaar_last_four,aadhaar_hash,aadhaar_number_encrypted,dp_aadhaar_last_four,dp_aadhaar_hash,dp_aadhaar_number_encrypted").eq("application_id",applicationId).maybeSingle<EditableProfile>()
  ]);
- if(!application||!profile||!["submitted","under_review","changes_requested"].includes(application.status))redirectFresh(`${path(applicationId)}?error=posp_misp_edit_locked`);
+ const activePartnerAccount=application?.partner_status==="active_partner";
+ const editableStatus=Boolean(application&&(["submitted","under_review","changes_requested"].includes(application.status)||activePartnerAccount));
+ if(!application||!profile||!editableStatus)redirectFresh(`${path(applicationId)}?error=posp_misp_edit_locked`);
 
  const editSection=value(data,"edit_section")??"primary";
  if(editSection==="documents"){
-  if(profile.workflow_stage!=="iib_processing")redirectFresh(`${path(applicationId)}?error=stage_locked`);
+  if(profile.workflow_stage!=="iib_processing"&&!activePartnerAccount)redirectFresh(`${path(applicationId)}?error=stage_locked`);
   const {data:existingRows}=await admin.from("intermediary_onboarding_documents").select("document_type").eq("application_id",applicationId).returns<Array<{document_type:string}>>();
   const resultingTypes=new Set((existingRows??[]).map(row=>row.document_type));
   const marksheet=file(data,"education_marksheet");const marksheetType=value(data,"education_document_type");
