@@ -29,6 +29,7 @@ export async function createLegacyPartnerOnboarding(state: CreateState, data: Fo
     admin.from("intermediary_registrations").select("id").eq("registration_code", registrationCode).limit(1),
     admin.from("intermediaries").select("id").eq("intermediary_code", registrationCode).limit(1),
     admin.from("posp_misp_onboarding_profiles").select("application_id").eq("external_onboarding_id", registrationCode).limit(1),
+    admin.from("posp_misp_onboarding_profiles").select("application_id").eq("partner_id", partnerCode).limit(1),
   ]);
   if (duplicateResults.some((result) => (result.data?.length ?? 0) > 0)) {
     return { error: "The entered Partner or POSP/MISP ID is already used by another record.", field: "legacy_partner_code", applicationId: null };
@@ -55,6 +56,8 @@ export async function createLegacyPartnerOnboarding(state: CreateState, data: Fo
   const [{ error: appError }, { error: profileError }] = await Promise.all([
     admin.from("intermediary_onboarding_applications").update({ draft_data: { ...draft, ...legacy }, updated_at: now }).eq("id", result.applicationId),
     admin.from("posp_misp_onboarding_profiles").update({
+      partner_id: partnerCode,
+      external_onboarding_id: registrationCode,
       record_source: "legacy_manual_pending_activation",
       existing_registration_confirmed: true,
       existing_registration_code: registrationCode,
