@@ -24,10 +24,13 @@ type ApplicationRow = {
   registration_status: string;
   draft_data: Record<string, unknown> | null;
   partner_record_id: string | null;
+  registration_record_id: string | null;
 };
 type PartnerRow = { id: string; partner_code: string };
+type ProfileRow = { application_id: string; external_onboarding_id: string | null; existing_registration_code: string | null };
+type RegistrationRow = { id: string; registration_code: string | null };
 
-const APP_SELECT = "id,registration_status,draft_data,partner_record_id";
+const APP_SELECT = "id,registration_status,draft_data,partner_record_id,registration_record_id";
 
 export async function StructuredAccountRegister({ type, search = "" }: { type: AccountType; search?: string }) {
   const profile = await requirePospMispManager();
@@ -41,23 +44,34 @@ export async function StructuredAccountRegister({ type, search = "" }: { type: A
     .order("updated_at", { ascending: false })
     .limit(250);
   if (accessibleIds !== null) request = accessibleIds.length ? request.in("id", accessibleIds) : request.in("id", ["00000000-0000-0000-0000-000000000000"]);
-  if (search) request = request.or(`display_name.ilike.%${search}%,mobile.ilike.%${search}%,email.ilike.%${search}%,intermediary_code.ilike.%${search}%`);
+  if (search) request = request.or(`display_name.ilike.%${search}%,mobile.ilike.%${search}%,email.ilike.%${search}%,intermediary_code.ilike.%${search}%,onboarding_id.ilike.%${search}%`);
 
   const { data, error } = await request.returns<IntermediaryRow[]>();
   const rows = data ?? [];
   const appIds = rows.map((row) => row.application_id).filter((value): value is string => Boolean(value));
-  const { data: applications } = appIds.length
-    ? await admin.from("intermediary_onboarding_applications").select(APP_SELECT).in("id", appIds).returns<ApplicationRow[]>()
-    : { data: [] as ApplicationRow[] };
+  const [{ data: applications }, { data: accountProfiles }] = appIds.length
+    ? await Promise.all([
+        admin.from("intermediary_onboarding_applications").select(APP_SELECT).in("id", appIds).returns<ApplicationRow[]>(),
+        admin.from("posp_misp_onboarding_profiles").select("application_id,external_onboarding_id,existing_registration_code").in("application_id", appIds).returns<ProfileRow[]>(),
+      ])
+    : [{ data: [] as ApplicationRow[] }, { data: [] as ProfileRow[] }];
   const appMap = new Map((applications ?? []).map((app) => [app.id, app]));
+  const profileMap = new Map((accountProfiles ?? []).map((item) => [item.application_id, item]));
   const partnerIds = [...new Set((applications ?? []).map((app) => app.partner_record_id).filter((value): value is string => Boolean(value)))];
-  const { data: partners } = partnerIds.length
-    ? await admin.from("partners").select("id,partner_code").in("id", partnerIds).returns<PartnerRow[]>()
-    : { data: [] as PartnerRow[] };
+  const registrationIds = [...new Set((applications ?? []).map((app) => app.registration_record_id).filter((value): value is string => Boolean(value)))];
+  const [{ data: partners }, { data: registrations }] = await Promise.all([
+    partnerIds.length
+      ? admin.from("partners").select("id,partner_code").in("id", partnerIds).returns<PartnerRow[]>()
+      : Promise.resolve({ data: [] as PartnerRow[] }),
+    registrationIds.length
+      ? admin.from("intermediary_registrations").select("id,registration_code").in("id", registrationIds).returns<RegistrationRow[]>()
+      : Promise.resolve({ data: [] as RegistrationRow[] }),
+  ]);
   const partnerMap = new Map((partners ?? []).map((partner) => [partner.id, partner.partner_code]));
+  const registrationMap = new Map((registrations ?? []).map((registration) => [registration.id, registration.registration_code]));
 
   const counts = rows.reduce((acc, row) => {
-    const stage = stageFor(appMap.get(row.application_id ?? ""), type);
+    const stage = stageFor(appMap.get(row.application_id ?? ""));
     if (stage === "Active") acc.active += 1;
     else acc.onboarding += 1;
     return acc;
@@ -102,13 +116,14 @@ export async function StructuredAccountRegister({ type, search = "" }: { type: A
                 </tr></thead>
                 <tbody className="divide-y divide-[#E7ECF3]">{rows.map((row) => {
                   const app = appMap.get(row.application_id ?? "");
-                  const stage = stageFor(app, type);
-                  const accountId = permanentAccountId(row, type);
+                  const stage = stageFor(app);
                   const partnerId = app?.partner_record_id ? partnerMap.get(app.partner_record_id) : null;
+                  const registrationCode = app?.registration_record_id ? registrationMap.get(app.registration_record_id) : null;
+                  const accountId = permanentAccountId(row, app, profileMap.get(row.application_id ?? ""), registrationCode, partnerId);
                   const rm = textValue(app?.draft_data?.associate_name) ?? "Not assigned";
                   return <tr key={row.id} className="transition hover:bg-[#F8FAFF]">
                     <td className="px-5 py-4"><p className="font-semibold text-[#0F2A55]">{row.display_name}</p><p className="mt-1 text-[8.5px] text-[#64748B]">{[row.city, row.mobile].filter(Boolean).join(" · ") || row.email || "Contact not available"}</p></td>
-                    <td className="px-3 py-4"><p className="font-semibold text-[#0F2A55]">{accountId ?? `${title} ID pending`}</p></td>
+                    <td className="px-3 py-4"><p className="font-semibold text-[#0F2A55]">{accountId ?? `${title} ID pending`}</p>{accountId && !accountId.startsWith(`${title}-`) ? <p className="mt-1 text-[8px] text-[#64748B]">Existing issued ID</p> : null}</td>
                     <td className="px-3 py-4"><p className="font-medium text-[#17203A]">{partnerId ?? "Partner ID pending"}</p></td>
                     <td className="px-3 py-4"><p className={rm === "Not assigned" ? "font-medium text-amber-700" : "font-medium text-[#17203A]"}>{rm}</p></td>
                     <td className="px-3 py-4"><StageBadge value={stage} /></td>
@@ -126,24 +141,46 @@ export async function StructuredAccountRegister({ type, search = "" }: { type: A
   );
 }
 
-function stageFor(app: ApplicationRow | undefined, type: AccountType) {
+function stageFor(app: ApplicationRow | undefined) {
   const status = app?.registration_status?.toLowerCase() ?? "";
   if (status === "iib_registered") return "Active";
+  if (status === "iib_submitted") return "IIB submitted";
   if (status.includes("iib")) return "IIB pending";
-  if (status.includes("agreement") && status.includes("sign")) return "Agreement signed";
+  if (status === "agreement_signed") return "Agreement signed";
+  if (status === "agreement_sent") return "Agreement sent";
   if (status.includes("agreement")) return "Agreement pending";
-  if (type === "misp") return "Agreement pending";
-  if (status.includes("exam") && status.includes("pass")) return "Exam passed";
+  if (status === "exam_passed") return "Exam passed";
+  if (status === "exam_in_progress") return "Exam in progress";
+  if (status === "exam_allotted") return "Exam allotted";
+  if (status === "exam_failed") return "Exam failed";
   if (status.includes("exam")) return "Exam pending";
-  if (status.includes("training") && status.includes("complete")) return "Training completed";
-  if (status.includes("training")) return "Training started";
+  if (status === "training_completed") return "Training completed";
+  if (status === "training_in_progress") return "Training in progress";
+  if (status === "training_assigned") return "Training assigned";
+  if (status.includes("training")) return "Training pending";
   return "Onboarding started";
 }
-function permanentAccountId(row: IntermediaryRow, type: AccountType) {
-  return [row.intermediary_code, row.onboarding_id].map((value) => value?.trim()).find((value): value is string => Boolean(value) && !value!.startsWith("PENDING-") && value!.startsWith(`${type.toUpperCase()}-`)) ?? null;
+function permanentAccountId(row: IntermediaryRow, app: ApplicationRow | undefined, profile: ProfileRow | undefined, registrationCode: string | null | undefined, partnerId: string | null | undefined) {
+  const draft = app?.draft_data ?? {};
+  const candidates = [
+    row.intermediary_code,
+    row.onboarding_id,
+    registrationCode,
+    profile?.existing_registration_code,
+    profile?.external_onboarding_id,
+    textValue(draft.issued_registration_code),
+    textValue(draft.legacy_registration_code),
+  ];
+  return candidates.map((value) => value?.trim()).find((value): value is string => isPermanentRegistrationCode(value, partnerId)) ?? null;
+}
+function isPermanentRegistrationCode(value: string | null | undefined, partnerId: string | null | undefined) {
+  if (!value) return false;
+  const normalized = value.trim().toUpperCase();
+  if (!normalized || normalized.startsWith("PENDING-") || normalized.startsWith("PART-")) return false;
+  return !partnerId || normalized !== partnerId.trim().toUpperCase();
 }
 function accountStatusLabel(status: string, stage: string) {
-  if (stage === "Active" || status === "active") return "Active";
+  if (stage === "Active") return "Active";
   if (status === "suspended") return "Suspended";
   if (status === "inactive") return "Inactive";
   return "Under onboarding";
@@ -151,5 +188,5 @@ function accountStatusLabel(status: string, stage: string) {
 function textValue(value: unknown) { return typeof value === "string" && value.trim() ? value.trim() : null; }
 function formatDate(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? "—" : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(date); }
 function Metric({ label, value }: { label: string; value: number }) { return <div className="border-r border-[#E2E8F0] px-5 py-4 last:border-r-0"><p className="text-[8.5px] uppercase tracking-[0.04em] text-[#64748B]">{label}</p><p className="mt-1 text-[22px] font-semibold text-[#0F2A55]">{value}</p></div>; }
-function StageBadge({ value }: { value: string }) { const active = value === "Active"; return <span className={`inline-flex rounded-full px-2.5 py-1 text-[8.5px] font-semibold ${active ? "bg-emerald-50 text-emerald-700" : "bg-indigo-50 text-indigo-700"}`}>{value}</span>; }
+function StageBadge({ value }: { value: string }) { const active = value === "Active"; const failed = value.includes("failed"); return <span className={`inline-flex rounded-full px-2.5 py-1 text-[8.5px] font-semibold ${active ? "bg-emerald-50 text-emerald-700" : failed ? "bg-red-50 text-red-700" : "bg-indigo-50 text-indigo-700"}`}>{value}</span>; }
 function StatusBadge({ value }: { value: string }) { const cls = value === "Active" ? "bg-emerald-50 text-emerald-700" : value === "Suspended" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"; return <span className={`inline-flex rounded-full px-2.5 py-1 text-[8.5px] font-semibold ${cls}`}>{value}</span>; }
