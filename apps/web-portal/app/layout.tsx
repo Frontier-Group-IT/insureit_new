@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Manrope, Space_Grotesk } from "next/font/google";
 import { AadhaarMaskNormalizer } from "@/components/aadhaar-mask-normalizer";
 import { FreshDynamicRouteNavigation } from "@/components/fresh-dynamic-route-navigation";
+import { PospMispReviewCleanup } from "@/components/posp-misp-review-cleanup";
 import { RouteProgressBar } from "@/components/loading/route-progress-bar";
 import { SuccessPopup } from "@/components/success-popup";
 import { ProfessionalFormValidation } from "@/components/professional-form-validation";
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         {children}
         <AadhaarMaskNormalizer />
+        <PospMispReviewCleanup />
         <ProfessionalFormValidation />
         <SuccessPopup />
         <FreshDynamicRouteNavigation />
