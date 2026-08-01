@@ -12,14 +12,17 @@ export function LegacyIntermediaryImportLink() {
   useEffect(() => {
     if (!LEGACY_IMPORT_ENABLED) return;
 
-    const apply = () => {
-      if (pathname === "/customers/posp-misp" || pathname === "/customers/posp-misp/") {
-        addLegacyCreateShortcuts();
-      }
+    const addSidebarLinks = () => {
+      addSidebarLink("Add POSP", "Add Existing POSP", "/customers/posp-misp/existing/new?partner_type=posp");
+      addSidebarLink("Add MISP", "Add Existing MISP", "/customers/posp-misp/existing/new?partner_type=misp");
+    };
 
+    const addReviewLink = () => {
       const match = pathname.match(REVIEW_ROUTE);
-      if (!match || document.querySelector("[data-legacy-intermediary-import-link='true']")) return;
+      if (!match) return;
       const applicationId = match[1];
+      if (document.querySelector("[data-legacy-intermediary-import-link='true']")) return;
+
       const actions = Array.from(document.querySelectorAll<HTMLAnchorElement | HTMLButtonElement>("a, button"));
       const createAction = actions.find((action) => {
         const label = action.textContent?.trim().toLowerCase() ?? "";
@@ -33,6 +36,11 @@ export function LegacyIntermediaryImportLink() {
       link.dataset.legacyIntermediaryImportLink = "true";
       link.className = "inline-flex h-10 items-center justify-center rounded-xl border border-white/35 bg-white/10 px-4 text-[10px] font-semibold text-white transition hover:bg-white/20";
       createAction.parentElement?.parentElement?.appendChild(link);
+    };
+
+    const apply = () => {
+      addSidebarLinks();
+      addReviewLink();
     };
 
     apply();
@@ -51,28 +59,24 @@ export function LegacyIntermediaryImportLink() {
   return null;
 }
 
-function addLegacyCreateShortcuts() {
-  if (document.querySelector("[data-legacy-create-shortcuts='true']")) return;
-  const links = Array.from(document.querySelectorAll<HTMLAnchorElement>("a"));
-  const addPosp = links.find((link) => link.textContent?.trim().toLowerCase() === "add posp");
-  const addMisp = links.find((link) => link.textContent?.trim().toLowerCase() === "add misp");
-  const actionRow = addPosp?.parentElement ?? addMisp?.parentElement;
-  if (!actionRow) return;
+function addSidebarLink(anchorLabel: string, newLabel: string, href: string) {
+  const marker = `legacy-${newLabel.toLowerCase().replaceAll(" ", "-")}`;
+  if (document.querySelector(`[data-${marker}='true']`)) return;
 
-  const wrapper = document.createElement("span");
-  wrapper.dataset.legacyCreateShortcuts = "true";
-  wrapper.className = "contents";
+  const anchors = Array.from(document.querySelectorAll<HTMLAnchorElement>("aside a"));
+  const anchor = anchors.find((item) => item.textContent?.trim().toLowerCase() === anchorLabel.toLowerCase());
+  if (!anchor || !anchor.parentElement) return;
 
-  const posp = document.createElement("a");
-  posp.href = "/customers/posp-misp/new?partner_type=posp&legacy_mode=existing";
-  posp.textContent = "Add Existing POSP";
-  posp.className = addPosp?.className ?? "";
+  const link = anchor.cloneNode(true) as HTMLAnchorElement;
+  link.href = href;
+  link.title = newLabel;
+  link.setAttribute(`data-${marker}`, "true");
 
-  const misp = document.createElement("a");
-  misp.href = "/customers/posp-misp/new?partner_type=misp&legacy_mode=existing";
-  misp.textContent = "Add Existing MISP";
-  misp.className = addMisp?.className ?? "";
+  const text = link.querySelector("span:last-child");
+  if (text) text.textContent = newLabel;
+  else link.textContent = newLabel;
 
-  wrapper.append(posp, misp);
-  actionRow.appendChild(wrapper);
+  link.classList.remove("bg-white", "text-[#17213e]");
+  if (!link.className.includes("text-white/82")) link.className += " text-white/82 hover:bg-white/10 hover:text-white";
+  anchor.insertAdjacentElement("afterend", link);
 }
