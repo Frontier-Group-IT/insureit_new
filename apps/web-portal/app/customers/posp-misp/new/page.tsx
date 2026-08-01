@@ -5,7 +5,6 @@ import { requirePospMispManager } from "@/lib/master-data-server";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createManualPospMispOnboardingV2 } from "../manual-actions-v2";
-import { createLegacyPartnerOnboarding } from "../legacy-manual-actions";
 import { LegacyOnboardingFields } from "../legacy-onboarding-fields";
 import { OnboardingFieldPresentation } from "../onboarding-field-presentation";
 import { PospMispOnboardingForm } from "../posp-misp-onboarding-form";
@@ -36,8 +35,8 @@ export default async function NewPospMispPage({ searchParams }: { searchParams: 
     <AppShell title={title} backHref={backHref}>
       <OnboardingFieldPresentation>
         <PospMispOnboardingForm
-          action={legacyMode ? createLegacyPartnerOnboarding : createManualPospMispOnboardingV2}
-          submitPath={legacyMode ? undefined : "/customers/posp-misp/new/submit"}
+          action={createManualPospMispOnboardingV2}
+          submitPath={legacyMode ? "/customers/posp-misp/new/legacy-submit" : "/customers/posp-misp/new/submit"}
           partnerType={partnerType}
           initialError={query.form_error ?? null}
           initialField={query.form_field ?? null}
