@@ -163,13 +163,13 @@ function stageFor(app: ApplicationRow | undefined) {
 function permanentAccountId(row: IntermediaryRow, app: ApplicationRow | undefined, profile: ProfileRow | undefined, registrationCode: string | null | undefined, partnerId: string | null | undefined) {
   const draft = app?.draft_data ?? {};
   const candidates = [
-    row.intermediary_code,
-    row.onboarding_id,
-    registrationCode,
     profile?.existing_registration_code,
     profile?.external_onboarding_id,
     textValue(draft.issued_registration_code),
     textValue(draft.legacy_registration_code),
+    registrationCode,
+    row.intermediary_code,
+    row.onboarding_id,
   ];
   return candidates.map((value) => value?.trim()).find((value): value is string => isPermanentRegistrationCode(value, partnerId)) ?? null;
 }
