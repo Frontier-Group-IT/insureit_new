@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { freshDynamicRouteUrl } from "@/components/fresh-dynamic-route-navigation";
 import { IndianDateField } from "@/components/indian-date-field";
@@ -20,13 +20,14 @@ type Props = {
   salesManagers: SelectOption[];
   oems: SelectOption[];
   banks: SelectOption[];
+  legacyFields?: ReactNode;
 };
 
 const inputClass = "h-11 w-full min-w-0 rounded-xl border border-[#CBD5E1] bg-white px-3.5 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
 const dateInputClass = inputClass;
 const labelClass = "mb-1.5 block text-[10.5px] font-semibold text-[#344054]";
 
-export function PospMispOnboardingForm({ action, submitPath, partnerType, initialError = null, initialField = null, initialValues = {}, salesManagers, oems, banks }: Props) {
+export function PospMispOnboardingForm({ action, submitPath, partnerType, initialError = null, initialField = null, initialValues = {}, salesManagers, oems, banks, legacyFields = null }: Props) {
   const [state, formAction] = useActionState(action, { error: null, field: null, applicationId: null });
   const [clientError, setClientError] = useState<string | null>(null);
   const [rmValue, setRmValue] = useState(initialValues.associate_employee_id ?? "");
@@ -91,6 +92,7 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
         {!isMisp ? <Section title="POSP contact"><Field label="Mobile Number" name="applicant_phone" required manualValidation={manualValidation} inputMode="tel" pattern="(?:\+91)?[6-9][0-9]{9}" defaultValue={initialValues.applicant_phone} /><Field label="Email" name="applicant_email" type="email" required manualValidation={manualValidation} defaultValue={initialValues.applicant_email} /><IndianDateField label="Date of Birth" name="date_of_birth" required={!manualValidation} defaultValue={initialValues.date_of_birth} inputClassName={dateInputClass} /><Field label="Aadhaar Number" name="aadhaar_number" required manualValidation={manualValidation} inputMode="numeric" pattern="[0-9]{12}" maxLength={12} minLength={12} defaultValue={initialValues.aadhaar_number} /></Section> : null}
         {isMisp ? <Section title="Designated Person (DP)"><Field label="DP First Name" name="dp_first_name" required manualValidation={manualValidation} defaultValue={initialValues.dp_first_name} /><Field label="DP Middle Name" name="dp_middle_name" manualValidation={manualValidation} defaultValue={initialValues.dp_middle_name} /><Field label="DP Last Name" name="dp_last_name" required manualValidation={manualValidation} defaultValue={initialValues.dp_last_name} /><Field label="DP Contact" name="dp_phone" required manualValidation={manualValidation} inputMode="tel" pattern="(?:\+91)?[6-9][0-9]{9}" defaultValue={initialValues.dp_phone} /><Field label="DP Email" name="dp_email" required type="email" manualValidation={manualValidation} defaultValue={initialValues.dp_email} /><PanInput label="DP PAN No" name="dp_pan_number" manualValidation={manualValidation} defaultValue={initialValues.dp_pan_number} /><IndianDateField label="DP Date of Birth" name="date_of_birth" required={!manualValidation} defaultValue={initialValues.date_of_birth} inputClassName={dateInputClass} /><Field label="DP Aadhaar Number" name="aadhaar_number" required manualValidation={manualValidation} inputMode="numeric" pattern="[0-9]{12}" maxLength={12} minLength={12} defaultValue={initialValues.aadhaar_number} /></Section> : null}
         <Section title="Bank details"><SelectField label="Bank Name" name="bank_id" required manualValidation={manualValidation} options={banks} placeholder="Select bank" defaultValue={initialValues.bank_id} /><Field label="Account Number" name="bank_account_number" required manualValidation={manualValidation} inputMode="numeric" pattern="[0-9]{6,20}" defaultValue={initialValues.bank_account_number} /><Field label="IFSC Code" name="bank_ifsc_code" required manualValidation={manualValidation} maxLength={11} minLength={11} pattern="[A-Za-z]{4}0[A-Za-z0-9]{6}" transform="uppercase" defaultValue={initialValues.bank_ifsc_code} /><Field label="GST Number" name="gst_number" required={isMisp} manualValidation={manualValidation} maxLength={15} minLength={isMisp ? 15 : undefined} pattern="[0-9]{2}[A-Za-z]{5}[0-9]{4}[A-Za-z][1-9A-Za-z]Z[0-9A-Za-z]" transform="uppercase" defaultValue={initialValues.gst_number} /></Section>
+        {legacyFields}
         <div className="sticky bottom-0 z-20 flex flex-col gap-2 border-t border-[#E2E8F0] bg-white/96 px-3 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5"><p className="text-[9.5px] text-[#64748B]">Stage 1 saves the application, queues the PAN check and opens Documents.</p>{submitPath ? <button type="button" disabled={posting} onClick={handleRouteSubmit} className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-80 sm:w-auto">{posting ? "Saving & opening Documents" : "Save & check PAN"}</button> : <FormSubmitButton label="Save & check PAN" pendingLabel="Saving & opening Documents" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto" />}</div>
       </form>
     </div>
