@@ -7,6 +7,7 @@ import { requirePospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const reviewPath=(id:string)=>`/intermediaries/applications/${id}`;
+type AdminClient=ReturnType<typeof createSupabaseAdminClient>;
 
 export async function createLinkedIntermediaryAccount(formData:FormData){
  const reviewer=await requirePospMispManager();
@@ -18,7 +19,8 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
   admin.from("intermediary_onboarding_applications").select("id,initiated_by,source,requested_type,status,registration_status,partner_status,applicant_phone,applicant_email,draft_data,partner_record_id,registration_record_id").eq("id",sourceApplicationId).maybeSingle<Record<string,unknown>>(),
   admin.from("posp_misp_onboarding_profiles").select("*").eq("application_id",sourceApplicationId).maybeSingle<Record<string,unknown>>()
  ]);
- if(!sourceApp||!sourceProfile||sourceApp.partner_status!=="active_partner"||!sourceApp.partner_record_id)redirectFresh(`${reviewPath(sourceApplicationId)}?error=partner_account_required`);
+ if(!sourceApp||!sourceProfile||sourceApp.partner_status!=="active_partner")redirectFresh(`${reviewPath(sourceApplicationId)}?error=partner_account_required`);
+
  const sourceDraft=object(sourceApp.draft_data);
  const sourceRaw=object(sourceProfile.raw_data);
  const isLegacy=
@@ -27,6 +29,17 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
   sourceProfile.record_source==="legacy_manual_pending_activation"||
   sourceProfile.record_source==="legacy_manual"||
   sourceProfile.existing_registration_confirmed===true;
+
+ let partnerRecordId=plainText(sourceApp.partner_record_id)??plainText(sourceProfile.partner_record_id);
+ if(!partnerRecordId&&isLegacy){
+  try{
+   partnerRecordId=await resolveLegacyPartnerRecordId(admin,sourceApplicationId,reviewer.id,sourceApp,sourceProfile);
+  }catch(error){
+   redirectFresh(`${reviewPath(sourceApplicationId)}?error=${encodeURIComponent(errorMessage(error,"The legacy Partner record could not be linked. Please try again."))}`);
+  }
+ }
+ if(!partnerRecordId)redirectFresh(`${reviewPath(sourceApplicationId)}?error=partner_account_required`);
+
  const reservedCode=firstText(
   sourceProfile.existing_registration_code,
   sourceProfile.external_onboarding_id,
@@ -36,7 +49,7 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
  if(isLegacy&&(!reservedCode||reservedCode.startsWith("PENDING-"))){
   redirectFresh(`${reviewPath(sourceApplicationId)}?error=${encodeURIComponent("The existing POSP/MISP ID reserved during Partner onboarding is missing. Review the legacy application before creating the linked account.")}`);
  }
- const {data:existingApps}=await admin.from("intermediary_onboarding_applications").select("id,draft_data").eq("partner_record_id",String(sourceApp.partner_record_id)).neq("id",sourceApplicationId).returns<Array<{id:string;draft_data:Record<string,unknown>|null}>>();
+ const {data:existingApps}=await admin.from("intermediary_onboarding_applications").select("id,draft_data").eq("partner_record_id",partnerRecordId).neq("id",sourceApplicationId).returns<Array<{id:string;draft_data:Record<string,unknown>|null}>>();
  const existing=(existingApps??[]).find(row=>object(row.draft_data).account_context===requestedType);
 
  const now=new Date().toISOString();
@@ -61,7 +74,7 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
  const {data:child,error:childError}=await admin.from("intermediary_onboarding_applications").insert({
   initiated_by:reviewer.id,source:isLegacy?"legacy_manual":"partner_account",requested_type:requestedType,final_type:requestedType,status:isLegacy?"approved":"submitted",current_step:isLegacy?6:3,
   applicant_phone:sourceApp.applicant_phone,applicant_email:sourceApp.applicant_email,draft_data:childDraft,submitted_at:isLegacy?legacyDate(sourceDraft.legacy_original_onboarding_date,now):now,updated_at:now,
-  partner_record_id:sourceApp.partner_record_id,partner_status:"active_partner",registration_status:registrationStatus
+  partner_record_id:partnerRecordId,partner_status:"active_partner",registration_status:registrationStatus
  }).select("id").single<{id:string}>();
  if(childError||!child)redirectFresh(`${reviewPath(sourceApplicationId)}?error=${encodeURIComponent(linkedAccountError(stepError("child_application",childError??new Error("The child application could not be created."))))}`);
 
@@ -73,7 +86,7 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
   const childProfile={...original,
    application_id:child.id,
    partner_id:sourceProfile.partner_id,
-   partner_record_id:sourceApp.partner_record_id,
+   partner_record_id:partnerRecordId,
    partner_type:requestedType,
    requested_account_type:requestedType,
    final_account_type:requestedType,
@@ -115,12 +128,12 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
    const{error:childProfileLinkError}=await admin.from("posp_misp_onboarding_profiles").update({registration_record_id:inheritedRegistration}).eq("application_id",child.id);if(childProfileLinkError)throw stepError("child_profile_link",childProfileLinkError);
    registrationTransferred=true;
   }else{
-   const {data:existingRegistration,error:existingRegistrationError}=await admin.from("intermediary_registrations").select("id").eq("partner_id",String(sourceApp.partner_record_id)).maybeSingle<{id:string}>();
+   const {data:existingRegistration,error:existingRegistrationError}=await admin.from("intermediary_registrations").select("id").eq("partner_id",partnerRecordId).maybeSingle<{id:string}>();
    if(existingRegistrationError)throw stepError("registration_lookup",existingRegistrationError);
    const registrationPayload={application_id:child.id,registration_type:requestedType,registration_code:issuedCode,registration_status:registrationStatus,training_status:isLegacy?"completed":"not_assigned",exam_status:isLegacy?"passed":"not_allotted",agreement_status:isLegacy?"signed":"not_started",iib_status:isLegacy?"registered":"pending",updated_at:now};
    const {data:registration,error:registrationError}=existingRegistration
     ? await admin.from("intermediary_registrations").update(registrationPayload).eq("id",existingRegistration.id).select("id").single<{id:string}>()
-    : await admin.from("intermediary_registrations").insert({partner_id:sourceApp.partner_record_id,...registrationPayload,created_by:reviewer.id}).select("id").single<{id:string}>();
+    : await admin.from("intermediary_registrations").insert({partner_id:partnerRecordId,...registrationPayload,created_by:reviewer.id}).select("id").single<{id:string}>();
    if(registrationError||!registration)throw stepError("registration_create",registrationError??new Error("The linked registration record could not be created."));
    const{error:childAppRegistrationError}=await admin.from("intermediary_onboarding_applications").update({registration_record_id:registration.id,updated_at:now}).eq("id",child.id);if(childAppRegistrationError)throw stepError("child_app_registration",childAppRegistrationError);
    const{error:childProfileRegistrationError}=await admin.from("posp_misp_onboarding_profiles").update({registration_record_id:registration.id,updated_at:now}).eq("application_id",child.id);if(childProfileRegistrationError)throw stepError("child_profile_registration",childProfileRegistrationError);
@@ -175,12 +188,45 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
  redirectFresh(`${reviewPath(child.id)}?success=${isLegacy?"legacy_intermediary_imported":`linked_${requestedType}_account_created`}`);
 }
 
+async function resolveLegacyPartnerRecordId(admin:AdminClient,sourceApplicationId:string,actorId:string,sourceApp:Record<string,unknown>,sourceProfile:Record<string,unknown>){
+ const draft=object(sourceApp.draft_data);
+ const raw=object(sourceProfile.raw_data);
+ const partnerCode=firstText(sourceProfile.partner_id,draft.legacy_partner_code,raw.legacy_partner_code);
+ let partnerId:string|null=null;
+
+ const {data:bySource,error:sourceLookupError}=await admin.from("partners").select("id").eq("source_application_id",sourceApplicationId).maybeSingle<{id:string}>();
+ if(sourceLookupError)throw stepError("partner_source_lookup",sourceLookupError);
+ partnerId=bySource?.id??null;
+
+ if(!partnerId&&partnerCode){
+  const {data:byCode,error:codeLookupError}=await admin.from("partners").select("id").eq("partner_code",partnerCode).maybeSingle<{id:string}>();
+  if(codeLookupError)throw stepError("partner_code_lookup",codeLookupError);
+  partnerId=byCode?.id??null;
+ }
+
+ if(!partnerId){
+  const {data:ensured,error:ensureError}=await admin.rpc("ensure_legacy_partner_record",{p_application_id:sourceApplicationId,p_actor_id:actorId});
+  if(ensureError)throw stepError("partner_record_create",ensureError);
+  partnerId=plainText(ensured);
+ }
+ if(!partnerId)throw new Error("The active legacy Partner could not be connected to its Partner record.");
+
+ const [{error:applicationLinkError},{error:profileLinkError}]=await Promise.all([
+  admin.from("intermediary_onboarding_applications").update({partner_record_id:partnerId,updated_at:new Date().toISOString()}).eq("id",sourceApplicationId),
+  admin.from("posp_misp_onboarding_profiles").update({partner_record_id:partnerId,updated_by:actorId,updated_at:new Date().toISOString()}).eq("application_id",sourceApplicationId)
+ ]);
+ if(applicationLinkError)throw stepError("application_partner_link",applicationLinkError);
+ if(profileLinkError)throw stepError("profile_partner_link",profileLinkError);
+ return partnerId;
+}
+
 function text(data:FormData,key:string){const value=data.get(key);return typeof value==="string"&&value.trim()?value.trim():null}
+function plainText(value:unknown){return typeof value==="string"&&value.trim()?value.trim():null}
 function object(value:unknown):Record<string,unknown>{return value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>: {}}
 function firstText(...values:unknown[]){for(const value of values){if(typeof value==="string"&&value.trim())return value.trim().toUpperCase()}return null}
 function legacyDate(value:unknown,fallback:string){if(typeof value!=="string"||!value.trim())return fallback;const date=new Date(value);return Number.isNaN(date.getTime())?fallback:date.toISOString()}
 function stepError(step:string,error:unknown){const detail=errorMessage(error,"Unknown database error");return new Error(`[${step}] ${detail}`)}
-async function syncInheritedDocuments(admin:ReturnType<typeof createSupabaseAdminClient>,sourceApplicationId:string,targetApplicationId:string,uploadedBy:string,now:string){
+async function syncInheritedDocuments(admin:AdminClient,sourceApplicationId:string,targetApplicationId:string,uploadedBy:string,now:string){
  const{data:documents,error:readError}=await admin.from("intermediary_onboarding_documents").select("document_type,file_name,storage_bucket,storage_path,mime_type,file_size,verification_status,verified_by,verified_at").eq("application_id",sourceApplicationId).returns<Array<Record<string,unknown>>>();
  if(readError)throw readError;
  if(!documents?.length)return;
