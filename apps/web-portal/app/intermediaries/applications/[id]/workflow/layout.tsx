@@ -34,5 +34,29 @@ export default function IntermediaryWorkflowLayout({ children }: { children: Rea
     return () => document.removeEventListener("click", handleBackNavigation, true);
   }, []);
 
+  useEffect(() => {
+    const alignWorkflowStepNumbers = () => {
+      const numbers: Array<[string, string]> = [
+        ["training-requirement", "2"],
+        ["examination-requirement", "3"],
+        ["agreement-requirement", "4"],
+      ];
+
+      for (const [sectionId, expectedNumber] of numbers) {
+        const badge = document.querySelector<HTMLElement>(`#${sectionId} > div:first-child span:first-child`);
+        if (!badge || badge.textContent?.trim() === "✓") continue;
+        if (badge.textContent?.trim() !== expectedNumber) badge.textContent = expectedNumber;
+      }
+
+      const iibStep = document.querySelector<HTMLElement>("#iib-submission header p:first-child");
+      if (iibStep && iibStep.textContent?.trim() !== "Step 5") iibStep.textContent = "Step 5";
+    };
+
+    alignWorkflowStepNumbers();
+    const observer = new MutationObserver(alignWorkflowStepNumbers);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [pathname, search]);
+
   return children;
 }
