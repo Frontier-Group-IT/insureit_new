@@ -156,7 +156,7 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
    exam_status:isLegacy?"passed":"not_allotted",
    iib_uploaded:isLegacy,
    iib_uploaded_at:isLegacy?historicalDate:null,
-   iib_upload_status:isLegacy?"completed":"pending",
+   iib_upload_status:isLegacy?"uploaded":"pending",
    iib_remarks:null,
    pre_iib_submitted_at:sourceProfile.pre_iib_submitted_at??now,
    onboarding_date:isLegacy?legacyDate(sourceDraft.legacy_original_onboarding_date,historicalDate):null,
