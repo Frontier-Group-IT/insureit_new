@@ -88,7 +88,7 @@ export function IntermediaryDocumentUploadController({ applicationId, enabled, s
         const finalResult = (await finalResponse.json().catch(() => null)) as { ok?: boolean; message?: string } | null;
         if (!finalResponse.ok || !finalResult?.ok) throw new Error(finalResult?.message || "The document stage could not be saved.");
 
-        window.location.replace(freshDynamicRouteUrl(`/intermediaries/applications/${applicationId}?success=documents_saved&stage=documents`));
+        window.location.replace(freshDynamicRouteUrl(`/intermediaries/applications/${applicationId}?success=partner_id_generated`));
       } catch (uploadError) {
         setProgress(null);
         setError(uploadError instanceof Error ? uploadError.message : "The documents could not be uploaded.");
