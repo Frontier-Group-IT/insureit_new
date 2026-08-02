@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
-import { canManageMasterData } from "@/lib/roles";
+import { canAccessCustomer } from "@/lib/employee-access-scope";
+import { getCustomerManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const ROLES = ["corporate_creator", "ceo_head", "admin_head", "dedicated_spoc"] as const;
@@ -13,9 +13,8 @@ function text(data: FormData, name: string) { const value = data.get(name); retu
 function phone(value: string | null) { if (!value) return null; const digits = value.replace(/\D/g, ""); return digits.length === 10 ? `+91${digits}` : null; }
 
 export async function updateCorporateProfile(customerId: string, formData: FormData) {
-  const token = await getServerAccessToken();
-  const { profile } = await getAuthenticatedProfile(token);
-  if (!profile?.id || !canManageMasterData(profile.role)) redirect(`/customers/${customerId}/edit?error=unauthorized`);
+  const profile = await getCustomerManager(customerId);
+  if (!profile?.id) redirect(`/customers/${customerId}/edit?error=unauthorized`);
 
   const companyName = text(formData, "company_name");
   const pan = text(formData, "company_pan")?.replace(/\s/g, "").toUpperCase() ?? null;
@@ -32,6 +31,8 @@ export async function updateCorporateProfile(customerId: string, formData: FormD
   const admin = createSupabaseAdminClient();
 
   if (parentGroupId) {
+    const groupAllowed = await canAccessCustomer(profile.id, profile.role, parentGroupId);
+    if (!groupAllowed) redirect(`/customers/${customerId}/edit?error=invalid_group`);
     const { data: group } = await admin.from("customers").select("id").eq("id", parentGroupId).eq("partner_type", "group").eq("onboarding_status", "active").maybeSingle<{ id:string }>();
     if (!group) redirect(`/customers/${customerId}/edit?error=invalid_group`);
   }
