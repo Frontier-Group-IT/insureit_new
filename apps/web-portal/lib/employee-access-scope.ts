@@ -11,6 +11,7 @@ type ProfileLink = { id: string; employee_id: string | null };
 type ApplicationLink = { application_id: string };
 type IntermediaryLink = { id: string; application_id: string | null };
 type ImportRowLink = { import_batch_id: string; normalized_data: Record<string, unknown> | null };
+type CustomerLink = { id: string };
 
 export type EmployeeAccessScope = {
   mode: "organization" | "hierarchy" | "self" | "none";
@@ -38,6 +39,20 @@ export async function getEmployeeAccessScope(profileId: string, role: string | n
     : { data: [] as ProfileLink[] };
   const profileIds = Array.from(new Set([profileId, ...(profiles ?? []).map((profile) => profile.id)]));
   return { mode, employeeIds, profileIds };
+}
+
+export async function getAccessibleCustomerIds(profileId: string, role: string | null | undefined) {
+  const scope = await getEmployeeAccessScope(profileId, role);
+  if (scope.mode === "organization") return null;
+  if (!scope.profileIds.length) return [];
+
+  const filters = [
+    `created_by.in.(${scope.profileIds.join(",")})`,
+    `assigned_agent_id.in.(${scope.profileIds.join(",")})`,
+  ];
+  const admin = createSupabaseAdminClient();
+  const { data } = await admin.from("customers").select("id").or(filters.join(",")).returns<CustomerLink[]>();
+  return Array.from(new Set((data ?? []).map((row) => row.id).filter(Boolean)));
 }
 
 export async function getAccessibleIntermediaryApplicationIds(profileId: string, role: string | null | undefined) {
@@ -83,6 +98,11 @@ export async function getAccessibleIntermediaryIds(profileId: string, role: stri
   return Array.from(new Set((data ?? []).map((row) => row.id)));
 }
 
+export async function canAccessCustomer(profileId: string, role: string | null | undefined, customerId: string) {
+  const ids = await getAccessibleCustomerIds(profileId, role);
+  return ids === null || ids.includes(customerId);
+}
+
 export async function canAccessIntermediaryApplication(profileId: string, role: string | null | undefined, applicationId: string) {
   const ids = await getAccessibleIntermediaryApplicationIds(profileId, role);
   return ids === null || ids.includes(applicationId);
@@ -101,6 +121,11 @@ export async function canAccessIntermediary(profileId: string, role: string | nu
 export async function isEmployeeWithinAccessScope(profileId: string, role: string | null | undefined, employeeId: string) {
   const scope = await getEmployeeAccessScope(profileId, role);
   return scope.mode === "organization" || scope.employeeIds.includes(employeeId);
+}
+
+export async function isProfileWithinAccessScope(profileId: string, role: string | null | undefined, targetProfileId: string) {
+  const scope = await getEmployeeAccessScope(profileId, role);
+  return scope.mode === "organization" || scope.profileIds.includes(targetProfileId);
 }
 
 function descendantIds(rootId: string, employees: EmployeeLink[]) {
