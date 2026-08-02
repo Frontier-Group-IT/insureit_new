@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import { requirePospMispManager } from "@/lib/master-data-server";
+import { getScopedPospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const DOCUMENT_BUCKET = "customer-documents";
@@ -22,14 +22,18 @@ const STANDARD_TYPES = new Set([
 ]);
 
 export async function POST(request: Request) {
-  const reviewer = await requirePospMispManager();
   const data = await request.formData();
   const applicationId = text(data, "application_id");
   const documentType = text(data, "document_type");
   const selected = data.get("file");
 
-  if (!reviewer?.id || !applicationId || !documentType || !(selected instanceof File) || selected.size === 0) {
+  if (!applicationId || !documentType || !(selected instanceof File) || selected.size === 0) {
     return NextResponse.json({ ok: false, message: "The document upload request is incomplete." }, { status: 400 });
+  }
+
+  const reviewer = await getScopedPospMispManager(applicationId);
+  if (!reviewer?.id) {
+    return NextResponse.json({ ok: false, message: "You are not authorized to update this application." }, { status: 403 });
   }
   if (!STANDARD_TYPES.has(documentType) && !EDUCATION_TYPES.has(documentType)) {
     return NextResponse.json({ ok: false, message: "The selected document type is not supported." }, { status: 400 });
