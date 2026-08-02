@@ -19,21 +19,44 @@ type PortalFields = {
 };
 type PacketPayload = { portal_fields?: PortalFields; documents?: Array<{ type: string; file_name: string }> };
 type Packet = { status: string; missing_fields: string[]; payload: PacketPayload; prepared_at: string | null; handoff_started_at: string | null };
-type ApplicationRow = { draft_data: Record<string, unknown> | null };
+type ApplicationRow = { registration_status: string; draft_data: Record<string, unknown> | null };
+type AssignmentRow = { iib_registration_status: string; iib_registered_at: string | null };
 
 export async function IibSubmissionStage({ applicationId, agreementSigned, finalType }: Props) {
   if (finalType === "partner" || !agreementSigned) return null;
 
   const admin = createSupabaseAdminClient();
-  const [{ data: databasePacket }, { data: application }] = await Promise.all([
+  const [{ data: databasePacket }, { data: application }, { data: assignment }] = await Promise.all([
     admin.from("intermediary_iib_submission_packets").select("status,missing_fields,payload,prepared_at,handoff_started_at").eq("application_id", applicationId).maybeSingle<Packet>(),
-    admin.from("intermediary_onboarding_applications").select("draft_data").eq("id", applicationId).maybeSingle<ApplicationRow>(),
+    admin.from("intermediary_onboarding_applications").select("registration_status,draft_data").eq("id", applicationId).maybeSingle<ApplicationRow>(),
+    admin.from("intermediary_training_exam_assignments").select("iib_registration_status,iib_registered_at").eq("application_id", applicationId).maybeSingle<AssignmentRow>(),
   ]);
   const packet = databasePacket ?? packetFromDraft(application?.draft_data);
+  const registered = application?.registration_status === "iib_registered" || assignment?.iib_registration_status === "registered" || packet?.status === "registered";
   const fields = packet?.payload?.portal_fields ?? {};
   const documents = packet?.payload?.documents ?? [];
   const ready = packet?.status === "ready" || packet?.status === "handoff_started";
   const portalUrl = process.env.NEXT_PUBLIC_IIB_POS_PORTAL_URL;
+
+  if (registered) {
+    return <section id="iib-submission" className="scroll-mt-24 overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-100 bg-emerald-50/70 px-5 py-4">
+        <div>
+          <p className="text-[9px] font-semibold uppercase tracking-[.1em] text-emerald-700">Step 6</p>
+          <h2 className="mt-1 text-[14px] font-semibold text-[#0F172A]">IIB Registration</h2>
+          <p className="mt-1 text-[9px] text-[#64748B]">The IIB process for this account is already complete.</p>
+        </div>
+        <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-[8.5px] font-semibold text-emerald-800">Registered</span>
+      </header>
+      <div className="flex flex-wrap items-center justify-between gap-4 p-5">
+        <div>
+          <p className="text-[10px] font-semibold text-emerald-900">No new IIB preparation is required.</p>
+          <p className="mt-1 text-[9.5px] text-[#64748B]">Preparing another payload could incorrectly move this account back to submission pending, so the preparation and handoff controls are disabled.</p>
+        </div>
+        <p className="text-[9px] font-medium text-emerald-800">Registered {formatDateTime(assignment?.iib_registered_at)}</p>
+      </div>
+    </section>;
+  }
 
   return <section id="iib-submission" className="scroll-mt-24 overflow-hidden rounded-2xl border border-[#BFD0E2] bg-white shadow-sm">
     <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#DCE5EF] bg-[#F8FAFC] px-5 py-4">
