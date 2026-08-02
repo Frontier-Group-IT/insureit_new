@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import { getScopedPospMispManager } from "@/lib/master-data-server";
+import { getPospMispManager, getScopedPospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const DOCUMENT_BUCKET = "customer-documents";
@@ -22,6 +22,11 @@ const STANDARD_TYPES = new Set([
 ]);
 
 export async function POST(request: Request) {
+  const authenticatedManager = await getPospMispManager();
+  if (!authenticatedManager?.id) {
+    return NextResponse.json({ ok: false, message: "You are not authorized to upload intermediary documents." }, { status: 403 });
+  }
+
   const data = await request.formData();
   const applicationId = text(data, "application_id");
   const documentType = text(data, "document_type");
