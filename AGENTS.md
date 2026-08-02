@@ -1,12 +1,19 @@
 # Repository Agent Instructions
 
-## Mandatory project context
+## Mandatory startup context
 
-Before changing intermediary, Partner, POSP, MISP, onboarding, document, registration, portal-user, or IIB code, read:
+Before doing any work in this repository, read both:
 
 - `docs/INSUREIT_PROJECT_CONTEXT.md`
+- `docs/CURRENT_CHAT_HANDOFF.md`
 
-Treat that document as the current technical handover and business-rule context. Update it after material workflow, schema, constraint, migration, or architecture changes.
+Do this at the beginning of every new ChatGPT/Codex session connected to the repository. Do not ask the user to repeat information already recorded in those files.
+
+Treat `docs/INSUREIT_PROJECT_CONTEXT.md` as the durable technical and business-rule source of truth. Treat `docs/CURRENT_CHAT_HANDOFF.md` as the current conversation continuation state, including active audit findings, selected work, implementation boundaries, and unresolved risks.
+
+Update the durable project context after material workflow, schema, constraint, migration, or architecture changes. Update or consolidate the current chat handoff after the active work is materially implemented and verified.
+
+Never store secrets, API keys, passwords, tokens, cookies, private keys, or MCP credentials in repository context files.
 
 ### Current working agreement
 
