@@ -105,25 +105,25 @@ export async function deleteIntermediaryAccount(
     new Set((portalAccounts ?? []).map((row) => row.auth_user_id).filter((value): value is string => Boolean(value))),
   );
 
-  let deletedAuthUsers = 0;
+  let removedPortalUsers = 0;
   for (const authUserId of authUserIds) {
     const { error } = await admin.auth.admin.deleteUser(authUserId);
-    if (error) {
+    if (error && !isMissingAuthUser(error.message)) {
       console.error("Intermediary deletion auth cleanup failed", {
         applicationId,
         deletionMode,
         authUserId,
-        deletedAuthUsers,
+        removedPortalUsers,
         message: error.message,
       });
       return {
         ok: false,
-        message: deletedAuthUsers
+        message: removedPortalUsers
           ? "Some portal access was removed, but the account records were not deleted. Please try again before recreating portal access."
           : "Portal access could not be removed, so account deletion was stopped safely.",
       };
     }
-    deletedAuthUsers += 1;
+    removedPortalUsers += 1;
   }
 
   const { error: deletionError } = await admin.rpc("delete_intermediary_account_v1", {
@@ -138,12 +138,12 @@ export async function deleteIntermediaryAccount(
       applicationId,
       deletionMode,
       code: deletionError.code,
-      deletedAuthUsers,
+      removedPortalUsers,
       message: deletionError.message,
     });
     return {
       ok: false,
-      message: deletedAuthUsers
+      message: removedPortalUsers
         ? "Portal access was removed, but the account records could not be deleted. Please try the deletion again."
         : "The account could not be deleted. No database records were removed.",
     };
@@ -228,4 +228,8 @@ async function removeStoredDocuments(
 function readAccountContext(draftData: Record<string, unknown> | null) {
   const value = draftData?.account_context;
   return value === "posp" || value === "misp" ? value : "partner";
+}
+
+function isMissingAuthUser(message: string) {
+  return /user.*not found|not found.*user/i.test(message);
 }
