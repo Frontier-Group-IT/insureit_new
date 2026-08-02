@@ -1,5 +1,8 @@
+import { internalLaunchHome } from "@/lib/launch-scope";
+
 export const protectedPortalRoots = [
   "/dashboard",
+  "/intermediaries",
   "/customers",
   "/vehicles",
   "/policies",
@@ -21,15 +24,15 @@ export function isProtectedPortalPath(pathname: string) {
 }
 
 export function safePortalReturnPath(value: string | null | undefined) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/dashboard";
-  if (value.includes("\\") || /[\u0000-\u001f\u007f]/.test(value) || /%2f|%5c/i.test(value)) return "/dashboard";
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return internalLaunchHome;
+  if (value.includes("\\") || /[\u0000-\u001f\u007f]/.test(value) || /%2f|%5c/i.test(value)) return internalLaunchHome;
 
   try {
     const url = new URL(value, "https://portal.insureit.local");
-    if (url.origin !== "https://portal.insureit.local" || !isProtectedPortalPath(url.pathname)) return "/dashboard";
+    if (url.origin !== "https://portal.insureit.local" || !isProtectedPortalPath(url.pathname)) return internalLaunchHome;
     return `${url.pathname}${url.search}${url.hash}`;
   } catch {
-    return "/dashboard";
+    return internalLaunchHome;
   }
 }
 
