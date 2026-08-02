@@ -17,17 +17,21 @@ export async function requireMasterDataManager() {
   return profile;
 }
 
-export async function requirePospMispManager() {
+export async function getPospMispManager() {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!canManagePospMispOnboarding(profile?.role)) redirect("/access-denied");
+  return profile?.id && canManagePospMispOnboarding(profile.role) ? profile : null;
+}
+
+export async function requirePospMispManager() {
+  const profile = await getPospMispManager();
+  if (!profile) redirect("/access-denied");
   return profile;
 }
 
 export async function getScopedPospMispManager(applicationId: string) {
-  const accessToken = await getServerAccessToken();
-  const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!profile?.id || !canManagePospMispOnboarding(profile.role)) return null;
+  const profile = await getPospMispManager();
+  if (!profile) return null;
 
   const allowed = await canAccessIntermediaryApplication(profile.id, profile.role, applicationId);
   return allowed ? profile : null;
