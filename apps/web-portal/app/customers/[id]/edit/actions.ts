@@ -3,8 +3,8 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
-import { canManageMasterData } from "@/lib/roles";
+import { isProfileWithinAccessScope } from "@/lib/employee-access-scope";
+import { getCustomerManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const DOCUMENT_BUCKET = "customer-documents";
@@ -19,9 +19,8 @@ function safeExtension(file: File) { if (file.type === "application/pdf") return
 function editErrorUrl(id: string, message: string, field?: string) { const params = new URLSearchParams({ error: message }); if (field) params.set("field", field); return `/customers/${id}/edit?${params.toString()}`; }
 
 export async function updateCustomerProfile(id: string, formData: FormData) {
-  const accessToken = await getServerAccessToken();
-  const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!profile?.id || !canManageMasterData(profile.role)) redirect(editErrorUrl(id, "You are not authorized to update customers."));
+  const profile = await getCustomerManager(id);
+  if (!profile?.id) redirect(editErrorUrl(id, "You are not authorized to update this customer."));
 
   const contactName = textValue(formData, "contact_name");
   if (!contactName) redirect(editErrorUrl(id, "Customer name is required.", "contact_name"));
@@ -30,8 +29,12 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
   const legalTradeName = textValue(formData, "legal_trade_name");
   const panNumber = textValue(formData, "pan_number")?.replace(/\s/g, "").toUpperCase() ?? null;
   const gstNumber = textValue(formData, "gst_number")?.replace(/\s/g, "").toUpperCase() ?? null;
+  const assignedAgentId = textValue(formData, "assigned_agent_id");
   const uploadedDocumentCount = documentTypes.reduce((count, type) => count + (fileValue(formData, type) ? 1 : 0), 0);
 
+  if (assignedAgentId && !await isProfileWithinAccessScope(profile.id, profile.role, assignedAgentId)) {
+    redirect(editErrorUrl(id, "The selected agent is outside your permitted hierarchy.", "assigned_agent_id"));
+  }
   if (isGstRegistered && !legalTradeName) redirect(editErrorUrl(id, "Enter the Legal Trade Name before marking the customer as GST Registered.", "legal_trade_name"));
   if (isGstRegistered && !gstNumber) redirect(editErrorUrl(id, "Enter the GST Number before marking the customer as GST Registered.", "gst_number"));
   if (isGstRegistered && gstNumber && !GSTIN_PATTERN.test(gstNumber)) redirect(editErrorUrl(id, "Enter a valid 15-character GSTIN, for example 22AAAAA0000A1Z5.", "gst_number"));
@@ -54,13 +57,13 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
     is_gst_registered: isGstRegistered,
     gst_number: isGstRegistered ? gstNumber : null,
     onboarding_status: textValue(formData, "onboarding_status") ?? "active",
-    assigned_agent_id: textValue(formData, "assigned_agent_id"),
+    assigned_agent_id: assignedAgentId,
     updated_by: profile.id
   }).eq("id", id);
 
   if (error) {
     if (error.message.includes("customers_gst_number_format_check")) redirect(editErrorUrl(id, "Enter a valid 15-character GSTIN, for example 22AAAAA0000A1Z5.", "gst_number"));
-    redirect(editErrorUrl(id, `Customer could not be saved: ${error.message}`));
+    redirect(editErrorUrl(id, "Customer could not be saved."));
   }
 
   for (const documentType of documentTypes) {
@@ -76,7 +79,7 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
 
     const storagePath = `${id}/${documentType}/${randomUUID()}.${safeExtension(file)}`;
     const { error: uploadError } = await admin.storage.from(DOCUMENT_BUCKET).upload(storagePath, new Uint8Array(await file.arrayBuffer()), { contentType: file.type, upsert: false });
-    if (uploadError) redirect(editErrorUrl(id, `Document upload failed: ${uploadError.message}`, documentType));
+    if (uploadError) redirect(editErrorUrl(id, "Document upload failed.", documentType));
 
     const { error: metadataError } = await admin.from("customer_documents").insert({
       customer_id: id,
@@ -94,7 +97,7 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
     });
     if (metadataError) {
       await admin.storage.from(DOCUMENT_BUCKET).remove([storagePath]);
-      redirect(editErrorUrl(id, `Document record could not be saved: ${metadataError.message}`, documentType));
+      redirect(editErrorUrl(id, "Document record could not be saved.", documentType));
     }
   }
 
