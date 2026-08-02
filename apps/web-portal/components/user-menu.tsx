@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/lib/auth-config";
+import { internalLaunchHome } from "@/lib/launch-scope";
 import { createClient } from "@/lib/supabase";
 
 type UserMenuProps = {
@@ -30,7 +31,7 @@ export function UserMenu({ profile, user }: UserMenuProps) {
     setIsSendingReset(true);
     setResetMessage(null);
     const supabase = createClient();
-    const redirectTo = `${window.location.origin}/auth/callback?next=/settings`;
+    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(internalLaunchHome)}`;
     const { error } = await supabase.auth.resetPasswordForEmail(user.email, { redirectTo });
     setResetMessage(error ? error.message : "Password reset link sent to your email.");
     setIsSendingReset(false);
