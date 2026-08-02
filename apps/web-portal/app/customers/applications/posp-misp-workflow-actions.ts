@@ -67,9 +67,9 @@ export async function completePospMispDocumentStage(data:FormData){
  const {data:documents}=await admin.from("intermediary_onboarding_documents").select("document_type").eq("application_id",applicationId).returns<Array<{document_type:string}>>();
  const types=new Set((documents??[]).map(item=>item.document_type));
  for(const required of ["aadhaar_front","pan_copy","cancelled_cheque"]){if(!types.has(required))redirectTo(applicationId,"partner_documents_incomplete")}
- const {data,error}=await admin.rpc("finalize_partner_activation_v2",{p_application_id:applicationId,p_actor_id:actorId});
- if(error||!data)redirectTo(applicationId,"partner_activation_failed");
- const result=data as PartnerActivationResult;const partnerId=typeof result.partner_id==="string"?result.partner_id:null;
+ const {data:activationData,error}=await admin.rpc("finalize_partner_activation_v2",{p_application_id:applicationId,p_actor_id:actorId});
+ if(error||!activationData)redirectTo(applicationId,"partner_activation_failed");
+ const result=activationData as PartnerActivationResult;const partnerId=typeof result.partner_id==="string"?result.partner_id:null;
  if(!partnerId)redirectTo(applicationId,"partner_activation_failed");
  revalidatePartnerViews(applicationId);
  if(profile.existing_registration_confirmed)redirect(`${partnersPath}?success=partner_activated&partner_id=${encodeURIComponent(partnerId)}`);
