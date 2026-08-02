@@ -11,6 +11,13 @@ type ActivationResult = {
   already_active?: unknown;
 };
 
+type ActivationProfile = {
+  workflow_stage: string;
+  gst_number: string | null;
+  partner_status: string | null;
+  partner_id: string | null;
+};
+
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as { application_id?: string } | null;
   const applicationId = body?.application_id?.trim();
@@ -24,27 +31,38 @@ export async function POST(request: Request) {
   const admin = createSupabaseAdminClient();
   const { data: profile } = await admin
     .from("posp_misp_onboarding_profiles")
-    .select("workflow_stage,gst_number")
+    .select("workflow_stage,gst_number,partner_status,partner_id")
     .eq("application_id", applicationId)
-    .maybeSingle<{ workflow_stage: string; gst_number: string | null }>();
+    .maybeSingle<ActivationProfile>();
 
-  if (!profile || profile.workflow_stage !== "iib_processing") {
-    return NextResponse.json({ ok: false, message: "Document upload is not available at the current stage." }, { status: 409 });
+  const permanentPartnerId = profile?.partner_id?.trim();
+  const activeRetry = Boolean(
+    profile
+      && profile.workflow_stage === "completed"
+      && profile.partner_status === "active_partner"
+      && permanentPartnerId
+      && !permanentPartnerId.startsWith("PENDING-"),
+  );
+
+  if (!profile || (profile.workflow_stage !== "iib_processing" && !activeRetry)) {
+    return NextResponse.json({ ok: false, message: "Partner activation is not available at the current stage." }, { status: 409 });
   }
 
-  const { data: documents } = await admin
-    .from("intermediary_onboarding_documents")
-    .select("document_type")
-    .eq("application_id", applicationId)
-    .returns<Array<{ document_type: string }>>();
-  const types = new Set((documents ?? []).map((document) => document.document_type));
-  const required = [...BASE_REQUIRED_TYPES, ...(profile.gst_number ? ["gst_copy"] : [])];
-  const missing = required.filter((type) => !types.has(type));
-  if (missing.length) {
-    return NextResponse.json(
-      { ok: false, message: `Upload the remaining document${missing.length === 1 ? "" : "s"}: ${missing.join(", ").replaceAll("_", " ")}.` },
-      { status: 400 },
-    );
+  if (!activeRetry) {
+    const { data: documents } = await admin
+      .from("intermediary_onboarding_documents")
+      .select("document_type")
+      .eq("application_id", applicationId)
+      .returns<Array<{ document_type: string }>>();
+    const types = new Set((documents ?? []).map((document) => document.document_type));
+    const required = [...BASE_REQUIRED_TYPES, ...(profile.gst_number ? ["gst_copy"] : [])];
+    const missing = required.filter((type) => !types.has(type));
+    if (missing.length) {
+      return NextResponse.json(
+        { ok: false, message: `Upload the remaining document${missing.length === 1 ? "" : "s"}: ${missing.join(", ").replaceAll("_", " ")}.` },
+        { status: 400 },
+      );
+    }
   }
 
   const { data, error } = await admin.rpc("finalize_partner_activation_v2", {
