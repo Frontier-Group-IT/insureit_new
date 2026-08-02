@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requirePospMispManager } from "@/lib/master-data-server";
+import { requireScopedPospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type Application={id:string;requested_type:"posp"|"misp";status:string};
@@ -11,7 +11,7 @@ const path=(id:string)=>`/intermediaries/applications/${id}`;
 
 export async function approvePospMispApplication(formData:FormData){
  const applicationId=value(formData,"application_id");if(!applicationId)redirect("/customers/posp-misp?error=missing_application");
- const reviewer=await requirePospMispManager();if(!reviewer?.id)redirectFresh(`${path(applicationId)}?error=unauthorized`);
+ const reviewer=await requireScopedPospMispManager(applicationId);if(!reviewer?.id)redirectFresh(`${path(applicationId)}?error=unauthorized`);
  const admin=createSupabaseAdminClient();
  const {data:application,error:applicationError}=await admin.from("intermediary_onboarding_applications").select("id,requested_type,status").eq("id",applicationId).maybeSingle<Application>();
  if(applicationError||!application)redirectFresh(`${path(applicationId)}?error=application_not_found`);
