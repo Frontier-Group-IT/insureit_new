@@ -114,10 +114,15 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
     admin.from("vehicle_manufacturers").select("name").eq("is_active", true).order("sort_order").order("name").returns<Array<{ name: string }>>(),
   ]);
 
-  const aadhaarEncrypted = profile.partner_type === "misp" ? profile.dp_aadhaar_number_encrypted : profile.aadhaar_number_encrypted;
+  const {
+    aadhaar_number_encrypted,
+    dp_aadhaar_number_encrypted,
+    ...safeProfile
+  } = profile;
+  const aadhaarEncrypted = profile.partner_type === "misp" ? dp_aadhaar_number_encrypted : aadhaar_number_encrypted;
   const aadhaarLastFour = profile.partner_type === "misp" ? profile.dp_aadhaar_last_four : profile.aadhaar_last_four;
   const editProfile: PospMispEditProfile = {
-    ...profile,
+    ...safeProfile,
     date_of_birth: profile.partner_type === "misp" ? profile.dp_date_of_birth : profile.date_of_birth,
     aadhaar_last_four: aadhaarLastFour,
     aadhaar_exists: Boolean(aadhaarEncrypted),
