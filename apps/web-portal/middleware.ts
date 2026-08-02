@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { accessTokenCookie, isAuthorizedProfile, refreshTokenCookie, type Profile } from "@/lib/auth-config";
+import { internalLaunchHome, isIntermediaryLaunchPath, isIntermediaryOnlyLaunch } from "@/lib/launch-scope";
 import { isProtectedPortalPath, safePortalReturnPath } from "@/lib/portal-routes";
+import { hasCapability } from "@/lib/roles";
 
 type SessionStatus = "authorized" | "forbidden" | "invalid";
 type SessionCheck = { status: SessionStatus; role: string | null };
@@ -27,8 +29,6 @@ async function checkSession(accessToken: string): Promise<SessionCheck> {
   const user = (await authResponse.json()) as { id?: string };
   if (!user.id) return { status: "invalid", role: null };
 
-  // Profile authorization must not depend on changing table RLS policies. The service
-  // role key is used only inside server-side middleware and is never exposed to the client.
   const profileApiKey = env.supabaseServiceRoleKey ?? env.supabaseAnonKey;
   const profileBearer = env.supabaseServiceRoleKey ?? accessToken;
   const profileResponse = await fetch(
@@ -108,7 +108,7 @@ export async function middleware(request: NextRequest) {
   if (pathname === "/") return continueRequest(request, refreshedSession);
 
   if (pathname === "/login") {
-    if (check.status === "authorized") return redirect(request, check.role === "intermediary" ? "/intermediary-portal" : "/dashboard", refreshedSession);
+    if (check.status === "authorized") return redirect(request, check.role === "intermediary" ? "/intermediary-portal" : internalLaunchHome, refreshedSession);
     if (check.status === "forbidden") return redirect(request, "/access-denied", refreshedSession);
     return clearSessionCookies(continueRequest(request));
   }
@@ -121,7 +121,13 @@ export async function middleware(request: NextRequest) {
     }
     if (check.status === "forbidden") return redirect(request, "/access-denied", refreshedSession);
     if (check.role === "intermediary" && !pathname.startsWith("/intermediary-portal")) return redirect(request, "/intermediary-portal", refreshedSession);
-    if (check.role !== "intermediary" && pathname.startsWith("/intermediary-portal")) return redirect(request, "/dashboard", refreshedSession);
+    if (check.role !== "intermediary" && pathname.startsWith("/intermediary-portal")) return redirect(request, internalLaunchHome, refreshedSession);
+
+    if (isIntermediaryOnlyLaunch && check.role !== "intermediary") {
+      if (!hasCapability(check.role, "view_intermediaries")) return redirect(request, "/access-denied", refreshedSession);
+      if (!isIntermediaryLaunchPath(pathname)) return redirect(request, internalLaunchHome, refreshedSession);
+    }
+
     return continueRequest(request, refreshedSession);
   }
 
