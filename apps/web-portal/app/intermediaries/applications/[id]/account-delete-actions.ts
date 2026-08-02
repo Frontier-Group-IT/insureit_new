@@ -54,11 +54,17 @@ export async function deleteIntermediaryAccount(
     return { ok: false, message: "Only a Partner account can use Partner-and-linked-account deletion." };
   }
 
-  const targetApplicationIds = await resolveTargetApplicationIds(
-    admin,
-    application,
-    deletionMode,
-  );
+  let targetApplicationIds: string[];
+  try {
+    targetApplicationIds = await resolveTargetApplicationIds(admin, application, deletionMode);
+  } catch (error) {
+    console.error("Intermediary deletion target resolution failed", {
+      applicationId,
+      deletionMode,
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+    return { ok: false, message: "Linked accounts could not be verified, so deletion was stopped safely." };
+  }
 
   if (!targetApplicationIds.length) {
     return { ok: false, message: "No accounts were selected for deletion." };
