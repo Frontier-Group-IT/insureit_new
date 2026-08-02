@@ -14,7 +14,6 @@ import { approvePospMispApplication } from "../posp-misp-actions";
 import { PospMispWorkflowPanel, type PospMispWorkflowProfile } from "../posp-misp-workflow-panel";
 import { PospMispApplicationEditor, type PospMispEditProfile } from "../posp-misp-application-editor";
 import { CorporateReviewWorkspace, DealershipReviewWorkspace, SummaryReviewWorkspace, type ReviewContact } from "../review-workspaces";
-import { decryptSensitiveValue } from "@/lib/sensitive-data";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type PageProps={params:Promise<{id:string}>;searchParams:Promise<{error?:string;success?:string}>};
@@ -44,9 +43,9 @@ export default async function ApplicationReviewPage({params,searchParams}:PagePr
   const isPospMisp=application.partner_type==="posp"||application.partner_type==="misp";
   const supported=["individual_proprietor","group","corporate","dealership","posp","misp"].includes(application.partner_type??"");
   const canReview=supported&&["submitted","under_review","changes_requested"].includes(application.status)&&!application.customer_id;
-  const {data:pospMispProfile}=isPospMisp?await supabase.from("posp_misp_onboarding_profiles").select("partner_type,associate_employee_id,associate_profile_id,external_onboarding_id,document_received_at,pos_name,misp_name,applicant_phone,applicant_email,date_of_birth,aadhaar_last_four,aadhaar_number_encrypted,pan_number,gst_number,address,city,state,postal_code,bank_id,bank_account_number,bank_ifsc_code,oem_name,dp_name,dp_phone,dp_email,dp_pan_number,workflow_stage,iib_remarks,iib_uploaded,iib_uploaded_at,training_login_id,training_credentials_shared_flag,training_start_date,training_end_date,training_status,training_certificate_number,exam_status,onboarding_date,requested_account_type,final_account_type,partner_decision").eq("application_id",id).maybeSingle<PospMispWorkflowProfile&Omit<PospMispEditProfile,"aadhaar_number">&{aadhaar_number_encrypted:string|null}>():{data:null};
+  const {data:pospMispProfile}=isPospMisp?await supabase.from("posp_misp_onboarding_profiles").select("partner_type,associate_employee_id,associate_profile_id,external_onboarding_id,document_received_at,pos_name,misp_name,applicant_phone,applicant_email,date_of_birth,aadhaar_last_four,aadhaar_number_encrypted,pan_number,gst_number,address,city,state,postal_code,bank_id,bank_account_number,bank_ifsc_code,oem_name,dp_name,dp_phone,dp_email,dp_pan_number,workflow_stage,iib_remarks,iib_uploaded,iib_uploaded_at,training_login_id,training_credentials_shared_flag,training_start_date,training_end_date,training_status,training_certificate_number,exam_status,onboarding_date,requested_account_type,final_account_type,partner_decision").eq("application_id",id).maybeSingle<PospMispWorkflowProfile&Omit<PospMispEditProfile,"aadhaar_exists">&{aadhaar_number_encrypted:string|null}>():{data:null};
   const [associates,{data:bankRows},{data:oemRows}]=isPospMisp?await Promise.all([loadPospMispAssociates(admin),admin.from("banks").select("id,name").eq("is_active",true).order("name"),admin.from("vehicle_manufacturers").select("name").eq("is_active",true).order("sort_order").order("name")]):[[],{data:[]},{data:[]}];
-  const pospMispEditProfile:PospMispEditProfile|null=pospMispProfile?{...pospMispProfile,aadhaar_number:decryptSensitiveValue(pospMispProfile.aadhaar_number_encrypted)}:null;
+  const pospMispEditProfile:PospMispEditProfile|null=toSafePospMispEditProfile(pospMispProfile);
   const salesManagerOptions=(associates??[]).map(manager=>({value:String(manager.id),label:`${manager.full_name||"Unnamed Sales Employee"}${manager.employee_code?` - ${manager.employee_code}`:""}`}));
   const bankOptions=(bankRows??[]).map(bank=>({value:String(bank.id),label:String(bank.name)}));
   const oemOptions=(oemRows??[]).map(manufacturer=>({value:String(manufacturer.name),label:String(manufacturer.name)}));
@@ -69,6 +68,11 @@ export default async function ApplicationReviewPage({params,searchParams}:PagePr
   </div></AppShell>;
 }
 
+function toSafePospMispEditProfile(profile:(PospMispWorkflowProfile&Omit<PospMispEditProfile,"aadhaar_exists">&{aadhaar_number_encrypted:string|null})|null):PospMispEditProfile|null{
+  if(!profile)return null;
+  const{aadhaar_number_encrypted,...safeProfile}=profile;
+  return{...safeProfile,aadhaar_exists:Boolean(aadhaar_number_encrypted)};
+}
 function summaryFor(type:string|null,draft:Record<string,unknown>,application:Application):Array<[string,unknown]>{if(type==="group")return[["Group name",draft.group_name],["Owner / promoter",draft.owner_name],["Login mobile",application.applicant_phone],["Owner contact mobile",draft.owner_phone??application.applicant_phone],["Email",draft.email??application.applicant_email]];if(type==="individual_proprietor")return[["Full name",draft.contact_name],["Mobile",application.applicant_phone],["Email",draft.email??application.applicant_email],["PAN",draft.pan_number],["Aadhaar",maskAadhaar(draft.aadhaar_last_four)],["Address",[draft.address_street,draft.address_locality].filter(Boolean).join(", ")],["Location",[draft.city,draft.state,draft.postal_code].filter(Boolean).join(", ")],["Fleet size",draft.fleet_size_band],["GST registered",draft.is_gst_registered===true?"Yes":"No"],["Legal trade name",draft.legal_trade_name],["GSTIN",draft.gst_number]];return[["Application",primaryName(type,draft)],["Mobile",application.applicant_phone],["Email",application.applicant_email]]}
 function primaryName(type:string|null,draft:Record<string,unknown>){const value=type==="corporate"?draft.company_name:type==="dealership"?draft.dealership_name:type==="group"?draft.group_name:type==="posp"?draft.pos_name:type==="misp"?draft.misp_name:draft.contact_name;return typeof value==="string"&&value.trim()?value.trim():null}
 function maskAadhaar(value:unknown){return typeof value==="string"&&value?`**** ${value.slice(-4)}`:null}
