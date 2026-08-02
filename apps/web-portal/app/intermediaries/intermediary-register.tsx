@@ -64,9 +64,9 @@ export async function IntermediaryRegister({
   const profile = await requirePospMispManager();
   const admin = createSupabaseAdminClient();
   const effectiveType = selectedType ?? typeFilter;
-  const accessibleIds = await getAccessibleIntermediaryIds(profile!.id, profile!.role);
-  const canReview = hasCapability(profile!.role, "review_intermediary_application");
-  const canCreate = hasCapability(profile!.role, "create_intermediary_application");
+  const accessibleIds = await getAccessibleIntermediaryIds(profile.id, profile.role);
+  const canReview = hasCapability(profile.role, "review_intermediary_application");
+  const canCreate = hasCapability(profile.role, "create_intermediary_application");
 
   let request = admin
     .from("intermediaries")
@@ -87,12 +87,16 @@ export async function IntermediaryRegister({
     : { data: [] as ApplicationState[] };
   const applicationMap = new Map((apps ?? []).map((item) => [item.id, item]));
 
-  if (effectiveType === "partner") rows = rows.filter((row) => accountContext(applicationMap.get(row.application_id ?? "")) === "partner");
-  if (selectedType === "posp" || selectedType === "misp") rows = rows.filter((row) => accountContext(applicationMap.get(row.application_id ?? "")) === selectedType);
-  if (registrationStatus) rows = rows.filter((row) => applicationMap.get(row.application_id ?? "")?.registration_status === registrationStatus);
+  rows = rows.filter((row) => {
+    if (!row.application_id) return false;
+    const application = applicationMap.get(row.application_id);
+    return Boolean(application && row.intermediary_type === accountContext(application));
+  });
+  if (effectiveType) rows = rows.filter((row) => row.intermediary_type === effectiveType);
+  if (registrationStatus) rows = rows.filter((row) => applicationMap.get(row.application_id as string)?.registration_status === registrationStatus);
 
   const partnerRecordIds = rows
-    .map((row) => applicationMap.get(row.application_id ?? "")?.partner_record_id)
+    .map((row) => applicationMap.get(row.application_id as string)?.partner_record_id)
     .filter((value): value is string => Boolean(value));
   const { data: relatedApplications } = partnerRecordIds.length
     ? await admin
@@ -117,11 +121,11 @@ export async function IntermediaryRegister({
     : { data: [] as ApplicationState[] };
   const countStatusMap = new Map((countApps ?? []).map((item) => [item.id, item]));
   const count = (type: IntermediaryType) =>
-    (allCounts ?? []).filter((row) =>
-      type === "partner"
-        ? accountContext(countStatusMap.get(row.application_id ?? "")) === "partner"
-        : row.intermediary_type === type && accountContext(countStatusMap.get(row.application_id ?? "")) === type,
-    ).length;
+    (allCounts ?? []).filter((row) => {
+      if (!row.application_id || row.intermediary_type !== type) return false;
+      const application = countStatusMap.get(row.application_id);
+      return Boolean(application && accountContext(application) === type);
+    }).length;
 
   const pageTitle = selectedType === "posp" ? "POSP" : selectedType === "misp" ? "MISP" : selectedType === "partner" ? "Partners" : "Overview";
   const searchAction = selectedType ? `/intermediaries/${selectedType}` : "/intermediaries";
@@ -181,25 +185,25 @@ function PartnerTable({
   canReview: boolean;
 }) {
   return <div className="overflow-x-auto"><table className="w-full min-w-[1180px] text-left text-[10.5px]"><thead className="border-b text-[8.5px] uppercase text-[#64748B]"><tr><th className="px-4 py-3">Partner</th><th className="px-3 py-3">Partner ID</th><th className="px-3 py-3">Type</th><th className="px-3 py-3">Assigned RM</th><th className="px-3 py-3">Linked account</th><th className="px-3 py-3">Portal access</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Action</th></tr></thead><tbody className="divide-y">{rows.map((row) => {
-    const app = applicationMap.get(row.application_id ?? "");
+    const app = applicationMap.get(row.application_id as string);
     const linked = app?.partner_record_id ? linkedApplicationMap.get(app.partner_record_id) : undefined;
     const allowedType = app?.requested_type ?? row.requested_type;
     const linkedType = linked ? accountContext(linked) : allowedType;
     const location = partnerLocation(row, app);
     const assignedRm = textValue(app?.draft_data?.associate_name) ?? "Not assigned";
-    return <tr key={row.id} className="hover:bg-[#FAFCFF]"><td className="px-4 py-3">{row.application_id ? <FreshAccountReviewLink href={`/intermediaries/applications/${row.application_id}`} className="font-semibold text-[#0F2A55] hover:text-[#635BFF] hover:underline">{row.display_name}</FreshAccountReviewLink> : <p className="font-semibold text-[#0F2A55]">{row.display_name}</p>}<p className="mt-0.5 text-[8.5px] text-[#64748B]">{location}</p></td><td className="px-3 py-3 font-semibold text-[#0F2A55]">{displayIdentity(row, app, "partner")}</td><td className="px-3 py-3">{allowedType === "misp" ? "Business" : "Individual"}</td><td className="px-3 py-3">{assignedRm}</td><td className="px-3 py-3"><Status value={linked ? linkedAccountLabel(linkedType, linked.registration_status) : "Not created"} /></td><td className="px-3 py-3"><Status value={portalAccessLabel(row.portal_access_status)} /></td><td className="px-3 py-3"><Status value={partnerStatusLabel(app?.partner_status ?? row.account_status)} /></td><td className="px-3 py-3">{linked ? <FreshAccountReviewLink href={`/intermediaries/applications/${linked.id}`} className="inline-flex rounded-lg bg-[#0F2A55] px-3 py-2 text-[9px] font-semibold text-white transition hover:bg-[#173A70]">View linked {linkedType.toUpperCase()}</FreshAccountReviewLink> : canReview && row.application_id && app?.partner_status === "active_partner" ? <form action={createLinkedIntermediaryAccount}><input type="hidden" name="application_id" value={row.application_id} /><input type="hidden" name="registration_type" value={allowedType} /><FormSubmitButton label={`Create ${allowedType.toUpperCase()}`} pendingLabel="Creating" className="rounded-lg bg-[#635BFF] px-3 py-2 text-[9px] font-semibold text-white disabled:opacity-60" /></form> : <span className="text-[#94A3B8]">—</span>}</td></tr>;
+    return <tr key={row.id} className="hover:bg-[#FAFCFF]"><td className="px-4 py-3"><FreshAccountReviewLink href={`/intermediaries/applications/${row.application_id}`} className="font-semibold text-[#0F2A55] hover:text-[#635BFF] hover:underline">{row.display_name}</FreshAccountReviewLink><p className="mt-0.5 text-[8.5px] text-[#64748B]">{location}</p></td><td className="px-3 py-3 font-semibold text-[#0F2A55]">{displayIdentity(row, app, "partner")}</td><td className="px-3 py-3">{allowedType === "misp" ? "Business" : "Individual"}</td><td className="px-3 py-3">{assignedRm}</td><td className="px-3 py-3"><Status value={linked ? linkedAccountLabel(linkedType, linked.registration_status) : "Not created"} /></td><td className="px-3 py-3"><Status value={portalAccessLabel(row.portal_access_status)} /></td><td className="px-3 py-3"><Status value={partnerStatusLabel(app?.partner_status ?? row.account_status)} /></td><td className="px-3 py-3">{linked ? <FreshAccountReviewLink href={`/intermediaries/applications/${linked.id}`} className="inline-flex rounded-lg bg-[#0F2A55] px-3 py-2 text-[9px] font-semibold text-white transition hover:bg-[#173A70]">View linked {linkedType.toUpperCase()}</FreshAccountReviewLink> : canReview && app?.partner_status === "active_partner" ? <form action={createLinkedIntermediaryAccount}><input type="hidden" name="application_id" value={row.application_id as string} /><input type="hidden" name="registration_type" value={allowedType} /><FormSubmitButton label={`Create ${allowedType.toUpperCase()}`} pendingLabel="Creating" className="rounded-lg bg-[#635BFF] px-3 py-2 text-[9px] font-semibold text-white disabled:opacity-60" /></form> : <span className="text-[#94A3B8]">—</span>}</td></tr>;
   })}</tbody></table></div>;
 }
 
 function DefaultIntermediaryTable({ rows, applicationMap, selectedType, canReview, searchAction }: { rows: IntermediaryRow[]; applicationMap: Map<string, ApplicationState>; selectedType: IntermediaryType | null; canReview: boolean; searchAction: string }) {
   return <div className="overflow-x-auto"><table className="w-full min-w-[1120px] text-left text-[10.5px]"><thead className="border-b text-[8.5px] uppercase text-[#64748B]"><tr><th className="px-4 py-3">Account</th><th className="px-3 py-3">Name</th><th className="px-3 py-3">Account ID</th><th className="px-3 py-3">Parent Partner</th><th className="px-3 py-3">Contact</th><th className="px-3 py-3">Workflow</th><th className="px-3 py-3">Portal / Access</th></tr></thead><tbody className="divide-y">{rows.map((row) => {
-    const app = applicationMap.get(row.application_id ?? "");
+    const app = applicationMap.get(row.application_id as string);
     const context = accountContext(app);
     const lifecycle = deriveLifecycle(app, context);
     const isPartnerAccount = context === "partner";
     const canCreateLogin = canReview && isPartnerAccount && app?.partner_status === "active_partner" && row.portal_access_status === "not_created";
     const canResend = canReview && isPartnerAccount && app?.partner_status === "active_partner" && row.portal_access_status === "invited";
-    return <tr key={row.id} className="hover:bg-[#FAFCFF]"><td className="px-4 py-3"><p className="font-semibold text-[#0F2A55]">{accountLabel(context, app)}</p><p className="mt-0.5 text-[8.5px] font-medium text-[#64748B]">{isPartnerAccount ? "Parent account" : "Linked account"}</p></td><td className="px-3 py-3">{row.application_id ? <FreshAccountReviewLink href={`/intermediaries/applications/${row.application_id}`} className="font-semibold text-[#0F2A55] hover:text-[#635BFF] hover:underline">{row.display_name}</FreshAccountReviewLink> : <p className="font-semibold">{row.display_name}</p>}<p className="mt-0.5 text-[8.5px] text-[#64748B]">{row.city ?? "-"}</p></td><td className="px-3 py-3 font-semibold text-[#0F2A55]">{displayIdentity(row, app, selectedType)}</td><td className="px-3 py-3 text-[#17203A]">{parentPartnerId(row, app)}</td><td className="px-3 py-3"><p>{row.mobile ?? "-"}</p><p className="text-[8.5px] text-[#64748B]">{row.email ?? "-"}</p></td><td className="px-3 py-3"><Status value={lifecycle.stage} /><p className="mt-1 text-[8.5px] text-[#64748B]">{lifecycle.account}</p></td><td className="px-3 py-3">{canCreateLogin ? <form action={createIntermediaryPortalLogin}><input type="hidden" name="intermediary_id" value={row.id} /><input type="hidden" name="return_path" value={searchAction} /><FormSubmitButton label="Create user" pendingLabel="Sending link" className="rounded-lg bg-[#0F2A55] px-3 py-1.5 text-[9px] font-semibold text-white disabled:opacity-60" /></form> : canResend ? <form action={resendIntermediaryPortalInvite}><input type="hidden" name="intermediary_id" value={row.id} /><input type="hidden" name="return_path" value={searchAction} /><FormSubmitButton label="Resend link" pendingLabel="Sending again" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-[9px] font-semibold text-amber-800 disabled:opacity-60" /></form> : <><Status value={isPartnerAccount ? row.portal_access_status : "Managed from partner"} /><p className="mt-1 text-[8.5px] text-[#94A3B8]">{isPartnerAccount ? "Partner login" : "No separate user"}</p></>}</td></tr>;
+    return <tr key={row.id} className="hover:bg-[#FAFCFF]"><td className="px-4 py-3"><p className="font-semibold text-[#0F2A55]">{accountLabel(context, app)}</p><p className="mt-0.5 text-[8.5px] font-medium text-[#64748B]">{isPartnerAccount ? "Parent account" : "Linked account"}</p></td><td className="px-3 py-3"><FreshAccountReviewLink href={`/intermediaries/applications/${row.application_id}`} className="font-semibold text-[#0F2A55] hover:text-[#635BFF] hover:underline">{row.display_name}</FreshAccountReviewLink><p className="mt-0.5 text-[8.5px] text-[#64748B]">{row.city ?? "-"}</p></td><td className="px-3 py-3 font-semibold text-[#0F2A55]">{displayIdentity(row, app, selectedType)}</td><td className="px-3 py-3 text-[#17203A]">{parentPartnerId(row, app)}</td><td className="px-3 py-3"><p>{row.mobile ?? "-"}</p><p className="text-[8.5px] text-[#64748B]">{row.email ?? "-"}</p></td><td className="px-3 py-3"><Status value={lifecycle.stage} /><p className="mt-1 text-[8.5px] text-[#64748B]">{lifecycle.account}</p></td><td className="px-3 py-3">{canCreateLogin ? <form action={createIntermediaryPortalLogin}><input type="hidden" name="intermediary_id" value={row.id} /><input type="hidden" name="return_path" value={searchAction} /><FormSubmitButton label="Create user" pendingLabel="Sending link" className="rounded-lg bg-[#0F2A55] px-3 py-1.5 text-[9px] font-semibold text-white disabled:opacity-60" /></form> : canResend ? <form action={resendIntermediaryPortalInvite}><input type="hidden" name="intermediary_id" value={row.id} /><input type="hidden" name="return_path" value={searchAction} /><FormSubmitButton label="Resend link" pendingLabel="Sending again" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-[9px] font-semibold text-amber-800 disabled:opacity-60" /></form> : <><Status value={isPartnerAccount ? row.portal_access_status : "Managed from partner"} /><p className="mt-1 text-[8.5px] text-[#94A3B8]">{isPartnerAccount ? "Partner login" : "No separate user"}</p></>}</td></tr>;
   })}</tbody></table></div>;
 }
 
