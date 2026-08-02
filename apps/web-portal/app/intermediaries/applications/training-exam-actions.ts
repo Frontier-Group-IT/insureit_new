@@ -2,19 +2,20 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requirePospMispManager } from "@/lib/master-data-server";
+import { requireScopedPospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const path = (applicationId: string) => `/intermediaries/applications/${applicationId}`;
 
 export async function assignIntermediaryTraining(formData: FormData) {
-  const reviewer = await requirePospMispManager();
   const applicationId = value(formData, "application_id");
+  if (!applicationId) redirect("/customers/posp-misp");
+  const reviewer = await requireScopedPospMispManager(applicationId);
   const title = value(formData, "training_title");
   const url = value(formData, "training_url");
   const instructions = value(formData, "training_instructions");
   const deadline = value(formData, "training_deadline");
-  if (!reviewer?.id || !applicationId) redirect("/customers/posp-misp");
+  if (!reviewer?.id) redirect("/customers/posp-misp");
   if (!title || !validHttpUrl(url)) redirectFresh(`${path(applicationId)}?stage=review&error=training_assignment_invalid`);
 
   const admin = createSupabaseAdminClient();
@@ -58,10 +59,11 @@ export async function assignIntermediaryTraining(formData: FormData) {
 }
 
 export async function updateIntermediaryTrainingStatus(formData: FormData) {
-  const reviewer = await requirePospMispManager();
   const applicationId = value(formData, "application_id");
+  if (!applicationId) redirect("/customers/posp-misp");
+  const reviewer = await requireScopedPospMispManager(applicationId);
   const status = value(formData, "training_status");
-  if (!reviewer?.id || !applicationId) redirect("/customers/posp-misp");
+  if (!reviewer?.id) redirect("/customers/posp-misp");
   if (!status || !["assigned", "opened", "in_progress", "completed", "expired"].includes(status)) {
     redirectFresh(`${path(applicationId)}?stage=review&error=training_status_invalid`);
   }
@@ -83,8 +85,9 @@ export async function updateIntermediaryTrainingStatus(formData: FormData) {
 }
 
 export async function allotIntermediaryExam(formData: FormData) {
-  const reviewer = await requirePospMispManager();
   const applicationId = value(formData, "application_id");
+  if (!applicationId) redirect("/customers/posp-misp");
+  const reviewer = await requireScopedPospMispManager(applicationId);
   const title = value(formData, "exam_title");
   const url = value(formData, "exam_url");
   const passingPercentage = numberValue(formData, "passing_percentage");
@@ -92,7 +95,7 @@ export async function allotIntermediaryExam(formData: FormData) {
   const durationMinutes = integerValue(formData, "exam_duration_minutes");
   const availableFrom = value(formData, "exam_available_from");
   const availableUntil = value(formData, "exam_available_until");
-  if (!reviewer?.id || !applicationId) redirect("/customers/posp-misp");
+  if (!reviewer?.id) redirect("/customers/posp-misp");
   if (!title || !validHttpUrl(url) || passingPercentage === null || passingPercentage <= 0 || passingPercentage > 100 || maximumAttempts === null || maximumAttempts < 1) {
     redirectFresh(`${path(applicationId)}?stage=review&error=exam_allotment_invalid`);
   }
@@ -129,11 +132,12 @@ export async function allotIntermediaryExam(formData: FormData) {
 }
 
 export async function updateIntermediaryExamResult(formData: FormData) {
-  const reviewer = await requirePospMispManager();
   const applicationId = value(formData, "application_id");
+  if (!applicationId) redirect("/customers/posp-misp");
+  const reviewer = await requireScopedPospMispManager(applicationId);
   const result = value(formData, "exam_result");
   const score = numberValue(formData, "exam_score");
-  if (!reviewer?.id || !applicationId) redirect("/customers/posp-misp");
+  if (!reviewer?.id) redirect("/customers/posp-misp");
   if (!result || !["passed", "failed"].includes(result)) redirectFresh(`${path(applicationId)}?stage=review&error=exam_result_invalid`);
 
   const admin = createSupabaseAdminClient();
