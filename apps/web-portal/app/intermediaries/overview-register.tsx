@@ -177,8 +177,9 @@ export async function OverviewIntermediaryRegister({ search = "", success, error
                 </thead>
                 <tbody className="divide-y">
                   {visible.map((row) => {
-                    const partnerApp = appMap.get(row.application_id as string);
-                    const parentProfile = profileMap.get(row.application_id as string);
+                    const applicationId = row.application_id as string;
+                    const partnerApp = appMap.get(applicationId);
+                    const parentProfile = profileMap.get(applicationId);
                     const canonicalPartner = partnerApp?.partner_record_id
                       ? canonicalPartnerMap.get(partnerApp.partner_record_id)
                       : undefined;
@@ -197,7 +198,7 @@ export async function OverviewIntermediaryRegister({ search = "", success, error
                       <tr key={row.id} className="hover:bg-[#F8FAFF]">
                         <td className="px-5 py-4">
                           <FreshAccountReviewLink
-                            href={`/intermediaries/applications/${row.application_id}`}
+                            href={`/intermediaries/applications/${applicationId}`}
                             className="font-semibold text-[#0F2A55] hover:text-[#635BFF] hover:underline"
                           >
                             {row.display_name}
@@ -225,7 +226,7 @@ export async function OverviewIntermediaryRegister({ search = "", success, error
                         <td className="px-3 py-4">
                           <div className="flex flex-wrap items-center gap-2">
                             <FreshAccountReviewLink
-                              href={`/intermediaries/applications/${row.application_id}`}
+                              href={`/intermediaries/applications/${applicationId}`}
                               className="inline-flex rounded-lg border border-[#CBD5E1] bg-white px-3 py-2 text-[9px] font-semibold text-[#0F2A55]"
                             >
                               View Partner
@@ -239,7 +240,7 @@ export async function OverviewIntermediaryRegister({ search = "", success, error
                               </FreshAccountReviewLink>
                             ) : canReview && activePartner ? (
                               <form action={createLinkedIntermediaryAccount}>
-                                <input type="hidden" name="application_id" value={row.application_id} />
+                                <input type="hidden" name="application_id" value={applicationId} />
                                 <input type="hidden" name="registration_type" value={allowedType} />
                                 <FormSubmitButton
                                   label={`Create ${allowedType.toUpperCase()}`}
