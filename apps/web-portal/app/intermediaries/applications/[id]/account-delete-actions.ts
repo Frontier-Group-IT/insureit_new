@@ -55,7 +55,11 @@ export async function deleteIntermediaryAccount(
   }
 
   let targetApplicationIds: string[];
+  let parentApplicationId: string | null = null;
   try {
+    if (deletionMode === "child") {
+      parentApplicationId = await resolveParentApplicationId(admin, application);
+    }
     targetApplicationIds = await resolveTargetApplicationIds(admin, application, deletionMode);
   } catch (error) {
     console.error("Intermediary deletion target resolution failed", {
@@ -149,21 +153,59 @@ export async function deleteIntermediaryAccount(
     };
   }
 
-  const cleanupWarning = await removeStoredDocuments(admin, documents ?? [], applicationId, deletionMode);
+  const storageCleanupWarning = await removeStoredDocuments(admin, documents ?? [], applicationId, deletionMode);
+  const parentPreservationWarning = parentApplicationId
+    ? await verifyParentPreserved(admin, parentApplicationId, applicationId)
+    : false;
+  const cleanupWarning = storageCleanupWarning || parentPreservationWarning;
 
   revalidatePath("/intermediaries");
   revalidatePath("/intermediaries/partner");
   revalidatePath("/intermediaries/posp");
   revalidatePath("/intermediaries/misp");
   revalidatePath("/customers/posp-misp");
+  if (parentApplicationId) revalidatePath(`/intermediaries/applications/${parentApplicationId}`);
 
   return {
     ok: true,
     redirectTo: deletionMode === "partner"
       ? "/intermediaries/partner?success=partner_deleted"
-      : `/intermediaries/${accountContext}?success=linked_account_deleted`,
+      : parentApplicationId
+        ? `/intermediaries/applications/${parentApplicationId}?success=linked_account_deleted`
+        : "/intermediaries?success=linked_account_deleted",
     cleanupWarning,
   };
+}
+
+async function resolveParentApplicationId(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  application: ApplicationRow,
+) {
+  const explicitParentId = textValue(application.draft_data?.parent_partner_application_id);
+  if (explicitParentId) {
+    const { data, error } = await admin
+      .from("intermediary_onboarding_applications")
+      .select("id,draft_data")
+      .eq("id", explicitParentId)
+      .maybeSingle<{ id: string; draft_data: Record<string, unknown> | null }>();
+    if (error) throw new Error("The parent Partner application could not be loaded.");
+    if (data && readAccountContext(data.draft_data) === "partner") return data.id;
+  }
+
+  if (application.partner_record_id) {
+    const { data, error } = await admin
+      .from("intermediary_onboarding_applications")
+      .select("id,draft_data")
+      .eq("partner_record_id", application.partner_record_id)
+      .neq("id", application.id)
+      .order("created_at", { ascending: true })
+      .returns<Array<{ id: string; draft_data: Record<string, unknown> | null }>>();
+    if (error) throw new Error("The parent Partner application could not be loaded.");
+    const parent = (data ?? []).find((row) => readAccountContext(row.draft_data) === "partner");
+    if (parent) return parent.id;
+  }
+
+  throw new Error("The linked Partner record could not be resolved.");
 }
 
 async function resolveTargetApplicationIds(
@@ -201,23 +243,42 @@ async function removeStoredDocuments(
   applicationId: string,
   deletionMode: IntermediaryDeletionMode,
 ) {
-  const byBucket = new Map<string, string[]>();
+  const uniqueDocuments = new Map<string, StoredDocument>();
   for (const document of documents) {
     if (!document.storage_bucket || !document.storage_path) continue;
-    const paths = byBucket.get(document.storage_bucket) ?? [];
-    paths.push(document.storage_path);
-    byBucket.set(document.storage_bucket, paths);
+    uniqueDocuments.set(`${document.storage_bucket}\u0000${document.storage_path}`, document);
   }
 
   let cleanupWarning = false;
-  for (const [bucket, paths] of byBucket) {
-    const { error } = await admin.storage.from(bucket).remove(Array.from(new Set(paths)));
+  for (const document of uniqueDocuments.values()) {
+    const { count, error: referenceError } = await admin
+      .from("intermediary_onboarding_documents")
+      .select("id", { count: "exact", head: true })
+      .eq("storage_bucket", document.storage_bucket)
+      .eq("storage_path", document.storage_path);
+
+    if (referenceError) {
+      cleanupWarning = true;
+      console.error("Deleted intermediary storage reference check failed", {
+        applicationId,
+        deletionMode,
+        bucket: document.storage_bucket,
+        path: document.storage_path,
+        code: referenceError.code,
+      });
+      continue;
+    }
+
+    if ((count ?? 0) > 0) continue;
+
+    const { error } = await admin.storage.from(document.storage_bucket).remove([document.storage_path]);
     if (error) {
       cleanupWarning = true;
       console.error("Deleted intermediary storage cleanup failed", {
         applicationId,
         deletionMode,
-        bucket,
+        bucket: document.storage_bucket,
+        path: document.storage_path,
         message: error.message,
       });
     }
@@ -225,9 +286,44 @@ async function removeStoredDocuments(
   return cleanupWarning;
 }
 
+async function verifyParentPreserved(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  parentApplicationId: string,
+  deletedChildApplicationId: string,
+) {
+  const [{ data: parentApplication, error: applicationError }, { data: parentProfile, error: profileError }] = await Promise.all([
+    admin
+      .from("intermediary_onboarding_applications")
+      .select("id,partner_record_id,partner_status")
+      .eq("id", parentApplicationId)
+      .maybeSingle<{ id: string; partner_record_id: string | null; partner_status: string | null }>(),
+    admin
+      .from("posp_misp_onboarding_profiles")
+      .select("application_id,partner_id,associate_name")
+      .eq("application_id", parentApplicationId)
+      .maybeSingle<{ application_id: string; partner_id: string | null; associate_name: string | null }>(),
+  ]);
+
+  if (!applicationError && !profileError && parentApplication && parentProfile) return false;
+
+  console.error("Parent Partner preservation verification failed after child deletion", {
+    parentApplicationId,
+    deletedChildApplicationId,
+    applicationCode: applicationError?.code,
+    profileCode: profileError?.code,
+    applicationFound: Boolean(parentApplication),
+    profileFound: Boolean(parentProfile),
+  });
+  return true;
+}
+
 function readAccountContext(draftData: Record<string, unknown> | null) {
   const value = draftData?.account_context;
   return value === "posp" || value === "misp" ? value : "partner";
+}
+
+function textValue(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 function isMissingAuthUser(message: string) {
