@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
-import { requirePospMispManager } from "@/lib/master-data-server";
+import { requireScopedPospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import {
  currentStepForRegistrationStatus,
@@ -16,10 +16,11 @@ const reviewPath=(id:string)=>`/intermediaries/applications/${id}`;
 type AdminClient=ReturnType<typeof createSupabaseAdminClient>;
 
 export async function createLinkedIntermediaryAccount(formData:FormData){
- const reviewer=await requirePospMispManager();
  const sourceApplicationId=text(formData,"application_id");
+ if(!sourceApplicationId)redirect("/intermediaries?error=linked_account_invalid");
+ const reviewer=await requireScopedPospMispManager(sourceApplicationId);
  const requestedType=text(formData,"registration_type")==="misp"?"misp":"posp";
- if(!reviewer?.id||!sourceApplicationId)redirect("/intermediaries?error=linked_account_invalid");
+ if(!reviewer?.id)redirect("/intermediaries?error=linked_account_invalid");
  const admin=createSupabaseAdminClient();
  const [{data:sourceApp},{data:sourceProfile}]=await Promise.all([
   admin.from("intermediary_onboarding_applications").select("id,initiated_by,source,requested_type,status,registration_status,partner_status,applicant_phone,applicant_email,draft_data,partner_record_id,registration_record_id").eq("id",sourceApplicationId).maybeSingle<Record<string,unknown>>(),
