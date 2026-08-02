@@ -1,0 +1,37 @@
+name: Temporary Intermediary scope validation
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web-validation:
+    runs-on: ubuntu-latest
+    env:
+      CI: "true"
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: diagnostic-placeholder
+      SUPABASE_SERVICE_ROLE_KEY: diagnostic-placeholder
+      POSP_MISP_DATA_ENCRYPTION_KEY: diagnostic-placeholder-key-with-sufficient-length
+      NEXT_PUBLIC_SITE_URL: https://example.invalid
+      NEXT_PUBLIC_PORTAL_URL: https://example.invalid
+      NEXT_PUBLIC_INSUREIT_LAUNCH_SCOPE: intermediary
+      ICALL_GATEWAY_URL: https://example.invalid
+      ICALL_GATEWAY_SECRET: diagnostic-placeholder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Lint web portal
+        run: npm run lint:web
+      - name: Typecheck web portal
+        run: npm run typecheck:web
+      - name: Build web portal
+        run: npm run build:web
