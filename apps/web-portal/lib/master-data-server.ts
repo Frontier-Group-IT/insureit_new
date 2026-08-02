@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
-import { canAccessIntermediaryApplication } from "@/lib/employee-access-scope";
+import { canAccessCustomer, canAccessIntermediaryApplication } from "@/lib/employee-access-scope";
 import { canManageMasterData, canManagePospMispOnboarding, hasCapability, type Capability } from "@/lib/roles";
 
 export async function requireCapability(capability: Capability) {
@@ -14,6 +14,32 @@ export async function requireMasterDataManager() {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
   if (!canManageMasterData(profile?.role)) redirect("/access-denied");
+  return profile;
+}
+
+export async function getCustomerViewer(customerId: string) {
+  const accessToken = await getServerAccessToken();
+  const { profile } = await getAuthenticatedProfile(accessToken);
+  if (!profile?.id || !hasCapability(profile.role, "view_customers")) return null;
+  return await canAccessCustomer(profile.id, profile.role, customerId) ? profile : null;
+}
+
+export async function requireCustomerViewer(customerId: string) {
+  const profile = await getCustomerViewer(customerId);
+  if (!profile) redirect("/access-denied");
+  return profile;
+}
+
+export async function getCustomerManager(customerId: string) {
+  const accessToken = await getServerAccessToken();
+  const { profile } = await getAuthenticatedProfile(accessToken);
+  if (!profile?.id || !hasCapability(profile.role, "manage_customers")) return null;
+  return await canAccessCustomer(profile.id, profile.role, customerId) ? profile : null;
+}
+
+export async function requireCustomerManager(customerId: string) {
+  const profile = await getCustomerManager(customerId);
+  if (!profile) redirect("/access-denied");
   return profile;
 }
 
