@@ -70,8 +70,8 @@ begin
     or v_draft_data->>'record_source' = 'legacy_manual_pending_activation'
     or v_raw_data->>'record_source' = 'legacy_manual_pending_activation';
 
-  -- Safe retry: return the existing Partner identity only when both primary
-  -- records already agree that the Partner is active.
+  -- Safe retry: return the existing Partner identity only when every canonical
+  -- record already agrees that the Partner is active.
   if v_profile_partner_status = 'active_partner'
      and v_application_partner_status = 'active_partner'
      and v_profile_partner_id is not null
@@ -86,6 +86,19 @@ begin
         and upper(trim(i.intermediary_code)) = v_profile_partner_id
     ) then
       raise exception 'Active Partner register state is inconsistent';
+    end if;
+
+    if not exists (
+      select 1
+      from public.intermediary_onboarding_applications a
+      join public.posp_misp_onboarding_profiles pr on pr.application_id = a.id
+      join public.partners p
+        on p.id = coalesce(a.partner_record_id, pr.partner_record_id)
+        or p.source_application_id = a.id
+      where a.id = p_application_id
+        and upper(trim(p.partner_code)) = v_profile_partner_id
+    ) then
+      raise exception 'Active canonical Partner state is inconsistent';
     end if;
 
     return jsonb_build_object(
@@ -169,8 +182,12 @@ begin
 
   if not exists (
     select 1
-    from public.partners p
-    where p.source_application_id = p_application_id
+    from public.intermediary_onboarding_applications a
+    join public.posp_misp_onboarding_profiles pr on pr.application_id = a.id
+    join public.partners p
+      on p.id = coalesce(a.partner_record_id, pr.partner_record_id)
+      or p.source_application_id = a.id
+    where a.id = p_application_id
       and upper(trim(p.partner_code)) = v_partner_id
   ) then
     raise exception 'Canonical Partner record synchronization failed';
