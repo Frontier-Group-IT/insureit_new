@@ -14,6 +14,9 @@ as $$
 declare
   v_draft_data jsonb;
   v_raw_data jsonb;
+  v_application_source text;
+  v_profile_record_source text;
+  v_existing_registration_confirmed boolean;
   v_workflow_stage text;
   v_profile_partner_id text;
   v_profile_partner_status text;
@@ -33,6 +36,9 @@ begin
   select
     coalesce(a.draft_data, '{}'::jsonb),
     coalesce(p.raw_data, '{}'::jsonb),
+    a.source,
+    p.record_source,
+    coalesce(p.existing_registration_confirmed, false),
     p.workflow_stage,
     nullif(upper(trim(p.partner_id)), ''),
     p.partner_status,
@@ -40,6 +46,9 @@ begin
   into
     v_draft_data,
     v_raw_data,
+    v_application_source,
+    v_profile_record_source,
+    v_existing_registration_confirmed,
     v_workflow_stage,
     v_profile_partner_id,
     v_profile_partner_status,
@@ -67,8 +76,11 @@ begin
   v_legacy_mode :=
     v_draft_data->>'onboarding_mode' = 'legacy_existing_partner'
     or v_raw_data->>'onboarding_mode' = 'legacy_existing_partner'
-    or v_draft_data->>'record_source' = 'legacy_manual_pending_activation'
-    or v_raw_data->>'record_source' = 'legacy_manual_pending_activation';
+    or v_draft_data->>'record_source' in ('legacy_manual', 'legacy_manual_pending_activation')
+    or v_raw_data->>'record_source' in ('legacy_manual', 'legacy_manual_pending_activation')
+    or v_application_source = 'legacy_manual'
+    or v_profile_record_source in ('legacy_manual', 'legacy_manual_pending_activation')
+    or v_existing_registration_confirmed;
 
   -- Safe retry: return the existing Partner identity only when every canonical
   -- record already agrees that the Partner is active.
