@@ -33,8 +33,7 @@ export function AccountDeleteControl({
 
   const normalizedPath = pathname.replace(/\/$/, "");
   const expectedPath = `/intermediaries/applications/${applicationId}`;
-  if (normalizedPath !== expectedPath) return null;
-
+  const visible = normalizedPath === expectedPath;
   const deletionMode: IntermediaryDeletionMode = accountContext === "partner" ? "partner" : "child";
   const accountLabel = accountContext === "partner" ? "Partner" : accountContext.toUpperCase();
   const confirmationPhrase = accountIdentifier || "DELETE";
@@ -66,7 +65,7 @@ export function AccountDeleteControl({
   }
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !visible) return;
     previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const frame = window.requestAnimationFrame(() => inputRef.current?.focus());
     const previousOverflow = document.body.style.overflow;
@@ -75,7 +74,11 @@ export function AccountDeleteControl({
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
-        closeDialog();
+        if (!isPending) {
+          setOpen(false);
+          setConfirmation("");
+          setError(null);
+        }
         return;
       }
       if (event.key !== "Tab" || !dialogRef.current) return;
@@ -103,7 +106,9 @@ export function AccountDeleteControl({
       document.body.style.overflow = previousOverflow;
       previousFocusRef.current?.focus();
     };
-  }, [open, isPending]);
+  }, [open, isPending, visible]);
+
+  if (!visible) return null;
 
   return (
     <>
@@ -118,7 +123,7 @@ export function AccountDeleteControl({
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/65 p-4 backdrop-blur-sm" aria-hidden={false}>
+        <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/65 p-4 backdrop-blur-sm">
           <div
             ref={dialogRef}
             role="dialog"
