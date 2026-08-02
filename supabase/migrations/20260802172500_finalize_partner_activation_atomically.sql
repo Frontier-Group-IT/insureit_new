@@ -136,8 +136,15 @@ begin
       p_actor_id,
       v_legacy_partner_id
     );
+
+    -- The historical identity function preserves the manual Partner code. This
+    -- helper creates or links the canonical parent Partner row using that code.
+    -- Both calls participate in this same transaction and roll back together.
+    perform public.ensure_legacy_partner_record(p_application_id, p_actor_id);
     v_identity_source := 'legacy_manual';
   else
+    -- The normal identity function creates the generated Partner code, canonical
+    -- parent Partner row and the transferable registration placeholder together.
     v_partner_id := public.issue_partner_identity(p_application_id, p_actor_id);
     v_identity_source := 'generated';
   end if;
