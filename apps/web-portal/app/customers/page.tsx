@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { DataError } from "@/components/record-list";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
@@ -24,6 +25,8 @@ export const revalidate = 0;
 
 export default async function CustomersPage() {
   const profile = await requireCapability("view_customers");
+  if (!profile?.id) redirect("/access-denied");
+
   const accessibleIds = await getAccessibleCustomerIds(profile.id, profile.role);
   const admin = createSupabaseAdminClient();
 
