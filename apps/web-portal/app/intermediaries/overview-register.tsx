@@ -70,10 +70,15 @@ export async function OverviewIntermediaryRegister({ search = "", success, error
     ? await admin.from("intermediary_onboarding_applications").select(APPLICATION_SELECT).in("id", appIds).returns<ApplicationState[]>()
     : { data: [] as ApplicationState[] };
   const appMap = new Map((apps ?? []).map((app) => [app.id, app]));
-  const intermediaryByApplication = new Map(allRows.filter((row) => row.application_id).map((row) => [row.application_id as string, row]));
-  const partnerRows = allRows.filter((row) => accountContext(appMap.get(row.application_id ?? "")) === "partner");
+  const validRows = allRows.filter((row) => {
+    if (!row.application_id) return false;
+    const application = appMap.get(row.application_id);
+    return Boolean(application && row.intermediary_type === accountContext(application));
+  });
+  const intermediaryByApplication = new Map(validRows.map((row) => [row.application_id as string, row]));
+  const partnerRows = validRows.filter((row) => row.intermediary_type === "partner");
   const partnerRecordIds = [...new Set(partnerRows
-    .map((row) => appMap.get(row.application_id ?? "")?.partner_record_id)
+    .map((row) => appMap.get(row.application_id as string)?.partner_record_id)
     .filter((value): value is string => Boolean(value)))];
 
   const [{ data: relatedApps }, { data: canonicalPartners }] = await Promise.all([
@@ -105,8 +110,8 @@ export async function OverviewIntermediaryRegister({ search = "", success, error
   const normalized = search.trim().toLowerCase();
   const visible = partnerRows.filter((row) => {
     if (!normalized) return true;
-    const app = appMap.get(row.application_id ?? "");
-    const parentProfile = profileMap.get(row.application_id ?? "");
+    const app = appMap.get(row.application_id as string);
+    const parentProfile = profileMap.get(row.application_id as string);
     const canonicalPartner = app?.partner_record_id ? canonicalPartnerMap.get(app.partner_record_id) : undefined;
     return [
       row.display_name,
@@ -172,8 +177,8 @@ export async function OverviewIntermediaryRegister({ search = "", success, error
                 </thead>
                 <tbody className="divide-y">
                   {visible.map((row) => {
-                    const partnerApp = appMap.get(row.application_id ?? "");
-                    const parentProfile = profileMap.get(row.application_id ?? "");
+                    const partnerApp = appMap.get(row.application_id as string);
+                    const parentProfile = profileMap.get(row.application_id as string);
                     const canonicalPartner = partnerApp?.partner_record_id
                       ? canonicalPartnerMap.get(partnerApp.partner_record_id)
                       : undefined;
@@ -191,16 +196,12 @@ export async function OverviewIntermediaryRegister({ search = "", success, error
                     return (
                       <tr key={row.id} className="hover:bg-[#F8FAFF]">
                         <td className="px-5 py-4">
-                          {row.application_id ? (
-                            <FreshAccountReviewLink
-                              href={`/intermediaries/applications/${row.application_id}`}
-                              className="font-semibold text-[#0F2A55] hover:text-[#635BFF] hover:underline"
-                            >
-                              {row.display_name}
-                            </FreshAccountReviewLink>
-                          ) : (
-                            <p className="font-semibold text-[#0F2A55]">{row.display_name}</p>
-                          )}
+                          <FreshAccountReviewLink
+                            href={`/intermediaries/applications/${row.application_id}`}
+                            className="font-semibold text-[#0F2A55] hover:text-[#635BFF] hover:underline"
+                          >
+                            {row.display_name}
+                          </FreshAccountReviewLink>
                           <p className="mt-1 text-[8.5px] text-[#64748B]">{partnerLocation(row, partnerApp, parentProfile)}</p>
                         </td>
                         <td className="px-3 py-4 font-semibold text-[#0F2A55]">{partnerId}</td>
@@ -223,14 +224,12 @@ export async function OverviewIntermediaryRegister({ search = "", success, error
                         <td className="px-3 py-4"><Badge value={portalLabel(row.portal_access_status)} /></td>
                         <td className="px-3 py-4">
                           <div className="flex flex-wrap items-center gap-2">
-                            {row.application_id ? (
-                              <FreshAccountReviewLink
-                                href={`/intermediaries/applications/${row.application_id}`}
-                                className="inline-flex rounded-lg border border-[#CBD5E1] bg-white px-3 py-2 text-[9px] font-semibold text-[#0F2A55]"
-                              >
-                                View Partner
-                              </FreshAccountReviewLink>
-                            ) : null}
+                            <FreshAccountReviewLink
+                              href={`/intermediaries/applications/${row.application_id}`}
+                              className="inline-flex rounded-lg border border-[#CBD5E1] bg-white px-3 py-2 text-[9px] font-semibold text-[#0F2A55]"
+                            >
+                              View Partner
+                            </FreshAccountReviewLink>
                             {linkedApp ? (
                               <FreshAccountReviewLink
                                 href={`/intermediaries/applications/${linkedApp.id}`}
@@ -238,7 +237,7 @@ export async function OverviewIntermediaryRegister({ search = "", success, error
                               >
                                 View linked {linkedType.toUpperCase()}
                               </FreshAccountReviewLink>
-                            ) : canReview && row.application_id && activePartner ? (
+                            ) : canReview && activePartner ? (
                               <form action={createLinkedIntermediaryAccount}>
                                 <input type="hidden" name="application_id" value={row.application_id} />
                                 <input type="hidden" name="registration_type" value={allowedType} />
@@ -266,8 +265,8 @@ export async function OverviewIntermediaryRegister({ search = "", success, error
   );
 }
 
-function accountContext(app: ApplicationState | undefined): "partner" | AccountType {
-  const value = app?.draft_data?.account_context;
+function accountContext(app: ApplicationState): "partner" | AccountType {
+  const value = app.draft_data?.account_context;
   return value === "posp" || value === "misp" ? value : "partner";
 }
 function linkedAccountType(app: ApplicationState): AccountType {
