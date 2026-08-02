@@ -12,11 +12,19 @@ jobs:
   web-build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: diagnostic-placeholder
+      SUPABASE_SERVICE_ROLE_KEY: diagnostic-placeholder
+      POSP_MISP_DATA_ENCRYPTION_KEY: diagnostic-placeholder-key-with-sufficient-length
+      NEXT_PUBLIC_SITE_URL: https://example.invalid
+      ICALL_GATEWAY_URL: https://example.invalid
+      ICALL_GATEWAY_SECRET: diagnostic-placeholder
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - name: Typecheck web portal
