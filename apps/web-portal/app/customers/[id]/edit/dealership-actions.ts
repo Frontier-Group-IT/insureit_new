@@ -3,8 +3,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
-import { canManageMasterData } from "@/lib/roles";
+import { getCustomerManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export type DealershipEditState = { error: string | null; field: string | null };
@@ -23,9 +22,8 @@ function ext(value: File) { return value.type === "application/pdf" ? "pdf" : va
 function validateUpload(value: File | null, label: string) { if (!value) return null; if (!ALLOWED.has(value.type)) return `${label} must be PDF, JPG or PNG.`; if (value.size > MAX_FILE_SIZE) return `${label} must be 5 MB or smaller.`; return null; }
 
 export async function updateDealershipProfile(customerId: string, _state: DealershipEditState, formData: FormData): Promise<DealershipEditState> {
-  const accessToken = await getServerAccessToken();
-  const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!profile?.id || !canManageMasterData(profile.role)) return fail("You are not authorized to update dealerships.");
+  const profile = await getCustomerManager(customerId);
+  if (!profile?.id) return fail("You are not authorized to update this dealership.");
 
   const dealershipType = text(formData, "dealership_type");
   const dealershipName = text(formData, "dealership_name");
@@ -76,14 +74,14 @@ export async function updateDealershipProfile(customerId: string, _state: Dealer
     postal_code: postalCode, is_gst_registered: isGstRegistered, gst_number: isGstRegistered ? gstNumber : null,
     updated_by: profile.id, updated_at: new Date().toISOString()
   }).eq("id", customerId);
-  if (customerError) return fail(`Dealership details could not be updated: ${customerError.message}`);
+  if (customerError) return fail("Dealership details could not be updated.");
 
   const { error: profileError } = await admin.from("dealership_profiles").upsert({
     customer_id: customerId, dealership_type: dealershipType, dealership_name: dealershipName,
     owner_name: ownerName, oem_name: oemName, yearly_sales_band: yearlySalesBand,
     updated_at: new Date().toISOString()
   }, { onConflict: "customer_id" });
-  if (profileError) return fail(`Business profile could not be updated: ${profileError.message}`);
+  if (profileError) return fail("Business profile could not be updated.");
 
   const representativePayload: Record<string, unknown> = {
     customer_id: customerId, representative_type: dealershipType, representative_name: representativeName,
@@ -92,27 +90,27 @@ export async function updateDealershipProfile(customerId: string, _state: Dealer
   };
   if (aadhaar) { representativePayload.aadhaar_last_four = aadhaar.slice(-4); representativePayload.aadhaar_hash = createHash("sha256").update(aadhaar).digest("hex"); }
   const { error: representativeError } = await admin.from("dealership_representatives").upsert(representativePayload, { onConflict: "customer_id" });
-  if (representativeError) return fail(`Representative details could not be updated: ${representativeError.message}`);
+  if (representativeError) return fail("Representative details could not be updated.");
 
   for (const role of ["sales_head", "bodyshop_head", "insurance_head", "insurance_spoc"] as const) {
     const { error } = await admin.from("dealership_contacts").upsert({
       customer_id: customerId, contact_role: role, contact_name: text(formData, `${role}_name`),
       mobile: phone(text(formData, `${role}_mobile`)), email: text(formData, `${role}_email`), updated_at: new Date().toISOString()
     }, { onConflict: "customer_id,contact_role" });
-    if (error) return fail(`Additional contacts could not be updated: ${error.message}`);
+    if (error) return fail("Additional contacts could not be updated.");
   }
 
   for (const [field, documentType] of uploadFields) {
     const upload = selectedFile(formData, field); if (!upload) continue;
     const storagePath = `${customerId}/dealership/${field}/${randomUUID()}.${ext(upload)}`;
     const { error: uploadError } = await admin.storage.from(BUCKET).upload(storagePath, new Uint8Array(await upload.arrayBuffer()), { contentType: upload.type, upsert: false });
-    if (uploadError) return fail(`Document upload failed: ${uploadError.message}`, field);
+    if (uploadError) return fail("Document upload failed.", field);
     const { error: metadataError } = await admin.from("customer_documents").insert({
       customer_id: customerId, document_type: documentType, file_name: upload.name, storage_bucket: BUCKET,
       storage_path: storagePath, mime_type: upload.type, file_size: upload.size, verification_status: "verified",
       upload_source: "manager_portal", uploaded_by: profile.id, verified_by: profile.id, verified_at: new Date().toISOString()
     });
-    if (metadataError) { await admin.storage.from(BUCKET).remove([storagePath]); return fail(`Document record could not be saved: ${metadataError.message}`, field); }
+    if (metadataError) { await admin.storage.from(BUCKET).remove([storagePath]); return fail("Document record could not be saved.", field); }
   }
 
   revalidatePath("/customers");
