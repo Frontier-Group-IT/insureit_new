@@ -1,0 +1,71 @@
+name: Deploy production to Vercel
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .deploy/production-trigger.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: insureit-production-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Trigger Vercel production deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Verify deploy hook secret
+        shell: bash
+        env:
+          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$VERCEL_DEPLOY_HOOK_URL" ]; then
+            echo "::error::Repository secret VERCEL_DEPLOY_HOOK_URL is not configured."
+            exit 1
+          fi
+
+      - name: Trigger Vercel deploy hook
+        id: deploy
+        shell: bash
+        env:
+          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          set -euo pipefail
+
+          http_status=$(curl \
+            --silent \
+            --show-error \
+            --output vercel-response.json \
+            --write-out "%{http_code}" \
+            --request POST \
+            "$VERCEL_DEPLOY_HOOK_URL")
+
+          echo "Vercel response status: $http_status"
+          cat vercel-response.json
+          echo
+
+          if [[ "$http_status" -lt 200 || "$http_status" -ge 300 ]]; then
+            echo "::error::Vercel deploy hook returned HTTP $http_status."
+            exit 1
+          fi
+
+      - name: Write deployment summary
+        shell: bash
+        run: |
+          {
+            echo "## Vercel production deployment requested"
+            echo
+            echo "- Branch: \`main\`"
+            echo "- Trigger commit: \`${GITHUB_SHA}\`"
+            echo "- Requested by: \`${GITHUB_ACTOR}\`"
+            echo
+            echo "This confirms that Vercel accepted the deploy-hook request. Check Vercel for the final build and deployment result."
+          } >> "$GITHUB_STEP_SUMMARY"
