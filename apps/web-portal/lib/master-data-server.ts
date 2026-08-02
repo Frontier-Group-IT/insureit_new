@@ -24,6 +24,21 @@ export async function requirePospMispManager() {
   return profile;
 }
 
+export async function getScopedPospMispManager(applicationId: string) {
+  const accessToken = await getServerAccessToken();
+  const { profile } = await getAuthenticatedProfile(accessToken);
+  if (!profile?.id || !canManagePospMispOnboarding(profile.role)) return null;
+
+  const allowed = await canAccessIntermediaryApplication(profile.id, profile.role, applicationId);
+  return allowed ? profile : null;
+}
+
+export async function requireScopedPospMispManager(applicationId: string) {
+  const profile = await getScopedPospMispManager(applicationId);
+  if (!profile) redirect("/access-denied");
+  return profile;
+}
+
 export async function requireApplicationReviewer(applicationId: string) {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
