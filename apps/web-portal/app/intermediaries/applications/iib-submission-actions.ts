@@ -37,7 +37,12 @@ type ProfileRow = {
   dp_pan_number: string | null;
   dp_date_of_birth: string | null;
 };
-type AssignmentRow = { training_status: string; exam_status: string; agreement_status: string };
+type AssignmentRow = {
+  training_status: string;
+  exam_status: string;
+  agreement_status: string;
+  iib_registration_status: string;
+};
 type DocumentRow = { document_type: string; file_name: string; storage_bucket: string; storage_path: string; verification_status: string };
 type PortalPayload = {
   PAN: string;
@@ -70,7 +75,7 @@ export async function prepareIntermediaryIibPayload(formData: FormData) {
   const [{ data: application }, { data: profile }, { data: assignment }, { data: intermediary }, { data: documents }] = await Promise.all([
     admin.from("intermediary_onboarding_applications").select("id,final_type,registration_status,draft_data").eq("id", applicationId).maybeSingle<ApplicationRow>(),
     admin.from("posp_misp_onboarding_profiles").select("partner_type,external_onboarding_id,pos_name,pos_first_name,pos_middle_name,pos_last_name,misp_name,applicant_phone,applicant_email,date_of_birth,pan_number,city,postal_code,dp_first_name,dp_middle_name,dp_last_name,dp_phone,dp_email,dp_pan_number,dp_date_of_birth").eq("application_id", applicationId).maybeSingle<ProfileRow>(),
-    admin.from("intermediary_training_exam_assignments").select("training_status,exam_status,agreement_status").eq("application_id", applicationId).maybeSingle<AssignmentRow>(),
+    admin.from("intermediary_training_exam_assignments").select("training_status,exam_status,agreement_status,iib_registration_status").eq("application_id", applicationId).maybeSingle<AssignmentRow>(),
     admin.from("intermediaries").select("id").eq("application_id", applicationId).maybeSingle<{ id: string }>(),
     admin.from("intermediary_onboarding_documents").select("document_type,file_name,storage_bucket,storage_path,verification_status").eq("application_id", applicationId).returns<DocumentRow[]>(),
   ]);
@@ -78,6 +83,12 @@ export async function prepareIntermediaryIibPayload(formData: FormData) {
   if (!application || !profile || application.final_type === "partner") {
     redirectFresh(`${applicationPath(applicationId)}?stage=review&error=iib_not_available`);
   }
+
+  const alreadyRegistered = application.registration_status === "iib_registered" || assignment?.iib_registration_status === "registered";
+  if (alreadyRegistered) {
+    redirectFresh(`${applicationPath(applicationId)}?stage=review&success=iib_already_registered#iib-submission`);
+  }
+
   if (assignment?.agreement_status !== "signed") {
     redirectFresh(`${applicationPath(applicationId)}?stage=review&error=iib_agreement_required`);
   }
@@ -149,9 +160,6 @@ export async function prepareIntermediaryIibPayload(formData: FormData) {
     handoff_started_at: null,
   };
 
-  // Keep the dedicated packet table as the primary audit store, but also mirror the
-  // packet into draft_data. The mirror prevents the button from becoming a silent
-  // no-op when the packet table is missing or temporarily unavailable in an older DB.
   const [{ error: packetError }, { error: applicationError }] = await Promise.all([
     admin.from("intermediary_iib_submission_packets").upsert({
       application_id: applicationId,
@@ -185,10 +193,17 @@ export async function startIntermediaryIibHandoff(formData: FormData) {
   if (!reviewer?.id || !applicationId) redirect("/customers/posp-misp");
 
   const admin = createSupabaseAdminClient();
-  const [{ data: packet }, { data: application }] = await Promise.all([
+  const [{ data: packet }, { data: application }, { data: assignment }] = await Promise.all([
     admin.from("intermediary_iib_submission_packets").select("status,missing_fields,payload,prepared_at,handoff_started_at").eq("application_id", applicationId).maybeSingle<StoredPacket>(),
-    admin.from("intermediary_onboarding_applications").select("draft_data").eq("id", applicationId).maybeSingle<{ draft_data: Record<string, unknown> | null }>(),
+    admin.from("intermediary_onboarding_applications").select("registration_status,draft_data").eq("id", applicationId).maybeSingle<{ registration_status: string; draft_data: Record<string, unknown> | null }>(),
+    admin.from("intermediary_training_exam_assignments").select("iib_registration_status").eq("application_id", applicationId).maybeSingle<{ iib_registration_status: string }>(),
   ]);
+
+  const alreadyRegistered = application?.registration_status === "iib_registered" || assignment?.iib_registration_status === "registered";
+  if (alreadyRegistered) {
+    redirectFresh(`${applicationPath(applicationId)}?stage=review&success=iib_already_registered#iib-submission`);
+  }
+
   const effectivePacket = packet ?? packetFromDraft(application?.draft_data);
   if (!effectivePacket || effectivePacket.status !== "ready" || effectivePacket.missing_fields.length) {
     redirectFresh(`${applicationPath(applicationId)}?stage=review&error=iib_payload_not_ready#iib-submission`);
