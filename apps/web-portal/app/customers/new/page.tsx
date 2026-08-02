@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
+import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { requireMasterDataManager } from "@/lib/master-data-server";
+import { requireCapability, requirePospMispManager } from "@/lib/master-data-server";
 import { createCustomerOnboarding } from "../actions";
 import { CustomerOnboardingForm } from "../customer-onboarding-form";
 import { createCorporateOnboarding } from "../corporate-actions";
@@ -25,9 +26,33 @@ export default async function NewCustomerPage({ searchParams }: { searchParams: 
   const { partner_type: partnerType, dealership_type: dealershipType } = await searchParams;
   if (!partnerType || !supportedPartnerTypes.has(partnerType)) redirect("/customers?choose_partner=1");
 
-  await requireMasterDataManager();
   const admin = createSupabaseAdminClient();
-  const groupOptions = partnerType === "group" ? [] : await loadActiveGroups(admin);
+
+  if (partnerType === "posp" || partnerType === "misp") {
+    await requirePospMispManager();
+    const [salesManagers, oems, banks] = await Promise.all([
+      loadSalesManagers(admin),
+      loadVehicleManufacturers(admin),
+      loadBanks(admin)
+    ]);
+
+    return (
+      <AppShell title={`Add ${partnerType.toUpperCase()} Application`}>
+        <PospMispOnboardingForm
+          action={createManualPospMispOnboardingV2}
+          partnerType={partnerType}
+          salesManagers={salesManagers}
+          oems={oems}
+          banks={banks}
+        />
+      </AppShell>
+    );
+  }
+
+  const profile = await requireCapability("manage_customers");
+  if (!profile?.id) redirect("/access-denied");
+  const accessibleCustomerIds = await getAccessibleCustomerIds(profile.id, profile.role);
+  const groupOptions = partnerType === "group" ? [] : await loadActiveGroups(admin, accessibleCustomerIds);
 
   if (partnerType === "dealership") {
     if (dealershipType !== "posp" && dealershipType !== "misp") redirect("/customers/dealership-type");
@@ -61,26 +86,6 @@ export default async function NewCustomerPage({ searchParams }: { searchParams: 
     return (
       <AppShell title="Add Group">
         <GroupOnboardingForm action={createGroupOnboarding} />
-      </AppShell>
-    );
-  }
-
-  if (partnerType === "posp" || partnerType === "misp") {
-    const [salesManagers, oems, banks] = await Promise.all([
-      loadSalesManagers(admin),
-      loadVehicleManufacturers(admin),
-      loadBanks(admin)
-    ]);
-
-    return (
-      <AppShell title={`Add ${partnerType.toUpperCase()} Application`}>
-        <PospMispOnboardingForm
-          action={createManualPospMispOnboardingV2}
-          partnerType={partnerType}
-          salesManagers={salesManagers}
-          oems={oems}
-          banks={banks}
-        />
       </AppShell>
     );
   }
@@ -121,14 +126,17 @@ async function loadBanks(admin: ReturnType<typeof createSupabaseAdminClient>) {
   return (data ?? []).map((bank) => ({ value: bank.id, label: bank.name }));
 }
 
-async function loadActiveGroups(admin: ReturnType<typeof createSupabaseAdminClient>): Promise<GroupOption[]> {
-  const { data } = await admin
+async function loadActiveGroups(admin: ReturnType<typeof createSupabaseAdminClient>, accessibleCustomerIds: string[] | null): Promise<GroupOption[]> {
+  if (accessibleCustomerIds !== null && !accessibleCustomerIds.length) return [];
+
+  let request = admin
     .from("customers")
     .select("id,customer_code,company_name,contact_name")
     .eq("partner_type", "group")
     .eq("onboarding_status", "active")
-    .order("company_name", { ascending: true })
-    .returns<Array<{ id: string; customer_code: string; company_name: string | null; contact_name: string }>>();
+    .order("company_name", { ascending: true });
+  if (accessibleCustomerIds !== null) request = request.in("id", accessibleCustomerIds);
+  const { data } = await request.returns<Array<{ id: string; customer_code: string; company_name: string | null; contact_name: string }>>();
 
   return (data ?? []).map((group) => ({
     value: group.id,
