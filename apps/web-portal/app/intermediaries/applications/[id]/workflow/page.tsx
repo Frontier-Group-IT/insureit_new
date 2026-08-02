@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { requirePospMispManager } from "@/lib/master-data-server";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
-import { decryptSensitiveValue } from "@/lib/sensitive-data";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { PospMispApplicationEditor, type PospMispEditProfile } from "@/app/customers/applications/posp-misp-application-editor";
 import { type PospMispWorkflowProfile } from "@/app/customers/applications/posp-misp-workflow-panel";
@@ -31,7 +30,7 @@ type Application = {
   draft_data: Record<string, unknown> | null;
 };
 type Document = { id: string; document_type: string; file_name: string; storage_bucket: string; storage_path: string; verification_status: string };
-type ProfileRow = PospMispWorkflowProfile & Omit<PospMispEditProfile, "aadhaar_number"> & {
+type ProfileRow = PospMispWorkflowProfile & Omit<PospMispEditProfile, "aadhaar_exists"> & {
   aadhaar_number_encrypted: string | null;
   dp_aadhaar_number_encrypted: string | null;
   dp_aadhaar_last_four: string | null;
@@ -117,8 +116,12 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
 
   const aadhaarEncrypted = profile.partner_type === "misp" ? profile.dp_aadhaar_number_encrypted : profile.aadhaar_number_encrypted;
   const aadhaarLastFour = profile.partner_type === "misp" ? profile.dp_aadhaar_last_four : profile.aadhaar_last_four;
-  const aadhaarNumber = decryptSensitiveValue(aadhaarEncrypted);
-  const editProfile: PospMispEditProfile = { ...profile, date_of_birth: profile.partner_type === "misp" ? profile.dp_date_of_birth : profile.date_of_birth, aadhaar_last_four: aadhaarLastFour, aadhaar_number: aadhaarNumber };
+  const editProfile: PospMispEditProfile = {
+    ...profile,
+    date_of_birth: profile.partner_type === "misp" ? profile.dp_date_of_birth : profile.date_of_birth,
+    aadhaar_last_four: aadhaarLastFour,
+    aadhaar_exists: Boolean(aadhaarEncrypted),
+  };
   const editable = ["submitted", "under_review", "changes_requested"].includes(application.status) || application.partner_status === "active_partner";
   const title = profile.partner_type === "misp" ? (profile.misp_name ?? "MISP application") : (profile.pos_name ?? "POSP application");
   const context = accountContext(application.draft_data);
@@ -168,7 +171,7 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
         <main className="overflow-hidden rounded-2xl border bg-white">
           {viewStage === "review" ? (
             <div className="space-y-5 bg-[#F4F7FB] p-4 [&_#qualification-process>section:first-child>div:first-child]:!bg-none [&_#qualification-process>section:first-child>div:first-child]:!bg-[#F8FAFC] [&_#qualification-process>section:first-child>div:first-child]:!text-[#0F172A] [&_#qualification-process>section:first-child>div:first-child_*]:!text-[#0F172A] [&_#qualification-process>section:first-child>div:first-child_p]:!text-[#64748B]">
-              <TrainingExamStage applicationId={id} profile={{ ...editProfile, bank_name: profile.bank_name, aadhaar_number: aadhaarNumber, training_login_id: profile.training_login_id, training_status: profile.training_status, exam_status: profile.exam_status }} assignment={assignment ?? null} documents={docList} iibVerified={iibCleared} finalType={application.final_type} />
+              <TrainingExamStage applicationId={id} profile={{ ...editProfile, bank_name: profile.bank_name, aadhaar_number: aadhaarLastFour, training_login_id: profile.training_login_id, training_status: profile.training_status, exam_status: profile.exam_status }} assignment={assignment ?? null} documents={docList} iibVerified={iibCleared} finalType={application.final_type} />
               <IibSubmissionStage applicationId={id} agreementSigned={assignment?.agreement_status === "signed"} finalType={application.final_type} />
             </div>
           ) : (
