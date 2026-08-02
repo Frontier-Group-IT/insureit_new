@@ -59,7 +59,7 @@ export async function createLinkedIntermediaryAccount(formData:FormData){
  const {data:existingApps}=await admin.from("intermediary_onboarding_applications").select("id,draft_data").eq("partner_record_id",partnerRecordId).neq("id",sourceApplicationId).returns<Array<{id:string;draft_data:Record<string,unknown>|null}>>();
  const existing=(existingApps??[]).find(row=>object(row.draft_data).account_context===requestedType);
  const now=new Date().toISOString();
- if(existing){await syncInheritedDocuments(admin,sourceApplicationId,existing.id,reviewer.id,now);revalidatePath(reviewPath(existing.id));redirectFresh(reviewPath(existing.id))}
+ if(existing){await requireScopedPospMispManager(existing.id);await syncInheritedDocuments(admin,sourceApplicationId,existing.id,reviewer.id,now);revalidatePath(reviewPath(existing.id));redirectFresh(reviewPath(existing.id))}
 
  const inheritedRegistration=sourceApp.registration_record_id??sourceProfile.registration_record_id??null;
  const childDraft={
