@@ -1,7 +1,9 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-02T15:12:00+05:30",
+  "deploy_requested_at": "2026-08-02T20:59:00+05:30",
   "requested_by": "Nishant Mishra",
   "source": "ChatGPT explicit deploy command",
+  "source_commit": "adaf84b863d9e5e54088cb99473419dd3c4b6b1c",
+  "release_scope": "Legacy iCall workflow synchronization guard, scoped authorization, and previously committed intermediary deletion controls.",
   "instructions": "Update this file only after the user explicitly says deploy now or finish and deploy. Ordinary code commits must not modify it."
 }
