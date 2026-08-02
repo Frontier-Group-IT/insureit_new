@@ -185,10 +185,15 @@ after insert on public.intermediary_account_deletion_audit
 for each row
 execute function public.cleanup_deleted_intermediary_register_rows();
 
+-- PostgreSQL cannot change a function return type through CREATE OR REPLACE.
+-- Drop and recreate this exact signature inside the same transaction so any
+-- later failure restores the previous definition automatically.
+drop function if exists public.sync_partner_intermediary(uuid);
+
 -- Synchronize a Partner register row only for the permanent parent Partner
 -- application. POSP/MISP child profiles also carry partner_id for linkage and
 -- must not create a second Partner row.
-create or replace function public.sync_partner_intermediary(p_application_id uuid)
+create function public.sync_partner_intermediary(p_application_id uuid)
 returns void
 language plpgsql
 security definer
@@ -306,6 +311,11 @@ begin
   end if;
 end;
 $$;
+
+revoke all on function public.sync_partner_intermediary(uuid) from public;
+revoke all on function public.sync_partner_intermediary(uuid) from anon;
+revoke all on function public.sync_partner_intermediary(uuid) from authenticated;
+grant execute on function public.sync_partner_intermediary(uuid) to service_role;
 
 -- Reconcile all profiles once with the corrected parent/child rule.
 do $$
