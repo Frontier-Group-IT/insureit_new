@@ -13,6 +13,10 @@ Treat that document as the current technical handover and business-rule context.
 - Approved changes for this established project may be committed directly to `main` unless the user explicitly requests a branch or pull request.
 - Before modifying an existing file, fetch the current `main` version and use its current blob SHA.
 - Vercel deploys from `main`.
+- Automatic Vercel deployment from ordinary Git commits is intentionally disabled.
+- Ordinary development commits must not modify `.deploy/production-trigger.json`.
+- Trigger one batched production deployment only after the user explicitly says **deploy now** or **finish and deploy**. Do this by updating `.deploy/production-trigger.json`; `.github/workflows/deploy-production.yml` then calls the protected Vercel deploy hook.
+- A successful GitHub Actions hook request proves only that Vercel accepted the request. Check the Vercel build/deployment result before claiming production success.
 - A committed migration is not proof that it has been applied in Supabase.
 - Do not claim build, deployment, migration, or live workflow success without direct evidence.
 
