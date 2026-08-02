@@ -96,7 +96,7 @@ where c.contype = 'c'
     or c.conname ilike '%type%'
     or c.conname ilike '%source%'
   )
-order by table_name::text, constraint_name;
+order by c.conrelid::regclass::text, c.conname;
 
 -- 6. Existing Partner identities/links for the target. Duplicate or mismatched
 -- codes will cause the atomic operation to roll back.
