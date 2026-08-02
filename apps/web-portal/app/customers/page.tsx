@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/shell";
 import { DataError } from "@/components/record-list";
+import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { CustomerWorkspace } from "./customer-workspace";
@@ -22,14 +23,25 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function CustomersPage() {
-  await requireCapability("view_customers");
+  const profile = await requireCapability("view_customers");
+  const accessibleIds = await getAccessibleCustomerIds(profile.id, profile.role);
   const admin = createSupabaseAdminClient();
-  const customersResult = await admin
+
+  if (accessibleIds !== null && !accessibleIds.length) {
+    return (
+      <AppShell title="Customers">
+        <DealershipEntryActivator />
+        <div className="mx-auto max-w-[1480px]"><CustomerWorkspace rows={[]} /></div>
+      </AppShell>
+    );
+  }
+
+  let request = admin
     .from("customers")
     .select("id, customer_code, partner_type, company_name, contact_name, phone, city, fleet_size_band, onboarding_status, vehicles(count)")
-    .order("created_at", { ascending: false })
-    .returns<CustomerRow[]>();
-
+    .order("created_at", { ascending: false });
+  if (accessibleIds !== null) request = request.in("id", accessibleIds);
+  const customersResult = await request.returns<CustomerRow[]>();
   const rows: CustomerRow[] = customersResult.data ?? [];
 
   return (
