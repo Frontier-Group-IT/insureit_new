@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { BrandLockup } from "@/components/brand-lockup";
 import { InsureItLoader } from "@/components/loading/insureit-loader";
+import { internalLaunchHome } from "@/lib/launch-scope";
 
 export default function Home() {
   useEffect(() => {
@@ -24,7 +25,7 @@ export default function Home() {
       return;
     }
 
-    window.location.replace("/dashboard");
+    window.location.replace(internalLaunchHome);
   }, []);
 
   return (
