@@ -1,7 +1,7 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": null,
-  "requested_by": null,
-  "source": "manual setup",
+  "deploy_requested_at": "2026-08-02T15:12:00+05:30",
+  "requested_by": "Nishant Mishra",
+  "source": "ChatGPT explicit deploy command",
   "instructions": "Update this file only after the user explicitly says deploy now or finish and deploy. Ordinary code commits must not modify it."
 }
