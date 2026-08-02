@@ -73,7 +73,7 @@ const explicitRoutes: Array<{ match: RegExp; items: RouteItem[] }> = [
     match: /^\/intermediaries\/applications\/[^/]+/,
     items: [
       { label: "Intermediatory", href: "/intermediaries" },
-      { label: "Applications", href: "/intermediaries/applications" },
+      { label: "Applications", href: "/customers/posp-misp" },
       { label: "Application review" },
     ],
   },
