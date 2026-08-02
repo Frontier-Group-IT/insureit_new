@@ -1,0 +1,7 @@
+{
+  "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
+  "deploy_requested_at": null,
+  "requested_by": null,
+  "source": "manual setup",
+  "instructions": "Update this file only after the user explicitly says deploy now or finish and deploy. Ordinary code commits must not modify it."
+}
