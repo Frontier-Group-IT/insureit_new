@@ -2,14 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
-import { canManagePospMispOnboarding } from "@/lib/roles";
+import { requireScopedPospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const PAN_PATTERN=/^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const MATCHING_RECORD="Matching Record Found In DataBase";
 const applicationPath=(id:string)=>`/intermediaries/applications/${id}`;
 const partnersPath="/intermediaries/partner";
+
+type PartnerActivationResult={partner_id?:unknown;identity_source?:unknown;already_active?:unknown};
 
 export async function queuePospMispPanVerification(data:FormData){
  const {actorId,applicationId,admin}=await context(data);
@@ -61,38 +62,27 @@ export async function movePospMispToIib(data:FormData){
 
 export async function completePospMispDocumentStage(data:FormData){
  const {actorId,applicationId,admin}=await context(data);
- const {data:profile}=await admin.from("posp_misp_onboarding_profiles").select("id, workflow_stage, existing_registration_confirmed, partner_type, partner_id, external_onboarding_id, pos_name, misp_name, applicant_phone, applicant_email, dp_phone, dp_email, city").eq("application_id",applicationId).maybeSingle<{id:string;workflow_stage:string;existing_registration_confirmed:boolean;partner_type:"posp"|"misp";partner_id:string|null;external_onboarding_id:string|null;pos_name:string|null;misp_name:string|null;applicant_phone:string|null;applicant_email:string|null;dp_phone:string|null;dp_email:string|null;city:string|null}>();
+ const {data:profile}=await admin.from("posp_misp_onboarding_profiles").select("id, workflow_stage, existing_registration_confirmed").eq("application_id",applicationId).maybeSingle<{id:string;workflow_stage:string;existing_registration_confirmed:boolean}>();
  if(!profile?.id||profile.workflow_stage!=="iib_processing")redirectTo(applicationId,"stage_locked");
  const {data:documents}=await admin.from("intermediary_onboarding_documents").select("document_type").eq("application_id",applicationId).returns<Array<{document_type:string}>>();
  const types=new Set((documents??[]).map(item=>item.document_type));
  for(const required of ["aadhaar_front","pan_copy","cancelled_cheque"]){if(!types.has(required))redirectTo(applicationId,"partner_documents_incomplete")}
- const {data:issuedPartnerId,error:partnerError}=await admin.rpc("issue_partner_identity",{p_application_id:applicationId,p_actor_id:actorId});if(partnerError||!issuedPartnerId)redirectTo(applicationId,"partner_activation_failed");const partnerId=String(issuedPartnerId);
- const now=new Date().toISOString();
- const registerError=await syncPartnerRegister(admin,applicationId,partnerId,profile,now);
- if(registerError)redirectTo(applicationId,"partner_activation_failed");
- if(profile.existing_registration_confirmed){const {error}=await admin.from("posp_misp_onboarding_profiles").update({workflow_stage:"completed",partner_status:"active_partner",final_account_type:"partner",updated_by:actorId,updated_at:now}).eq("id",profile.id);if(error)redirectTo(applicationId,"workflow_save_failed");await admin.from("intermediary_onboarding_applications").update({final_type:"partner",partner_status:"active_partner",status:"approved",registration_status:"partner_active",updated_at:now}).eq("id",applicationId);revalidatePartnerViews(applicationId);redirect(`${partnersPath}?success=partner_activated&partner_id=${encodeURIComponent(partnerId)}`)}
- const {error}=await admin.from("posp_misp_onboarding_profiles").update({workflow_stage:"completed",partner_status:"active_partner",requested_account_type:profile.partner_type,final_account_type:"partner",updated_by:actorId,updated_at:now}).eq("id",profile.id);if(error)redirectTo(applicationId,"workflow_save_failed");
- await admin.from("intermediary_onboarding_applications").update({final_type:"partner",partner_status:"active_partner",status:"approved",registration_status:"partner_active",updated_at:now}).eq("id",applicationId);
- revalidatePartnerViews(applicationId);redirect(`${partnersPath}?success=documents_completed&partner_id=${encodeURIComponent(partnerId)}`);
+ const {data,error}=await admin.rpc("finalize_partner_activation_v2",{p_application_id:applicationId,p_actor_id:actorId});
+ if(error||!data)redirectTo(applicationId,"partner_activation_failed");
+ const result=data as PartnerActivationResult;const partnerId=typeof result.partner_id==="string"?result.partner_id:null;
+ if(!partnerId)redirectTo(applicationId,"partner_activation_failed");
+ revalidatePartnerViews(applicationId);
+ if(profile.existing_registration_confirmed)redirect(`${partnersPath}?success=partner_activated&partner_id=${encodeURIComponent(partnerId)}`);
+ redirect(`${partnersPath}?success=documents_completed&partner_id=${encodeURIComponent(partnerId)}`);
 }
 
 export async function requestPartnerPospConversion(data:FormData){
- const applicationId=value(data,"application_id");if(!applicationId)redirect("/customers/posp-misp");redirectFresh(`${applicationPath(applicationId)}?error=registration_type_locked`);
+ const applicationId=value(data,"application_id");if(!applicationId)redirect("/customers/posp-misp");await requireScopedPospMispManager(applicationId);redirectFresh(`${applicationPath(applicationId)}?error=registration_type_locked`);
 }
 
-async function syncPartnerRegister(admin:ReturnType<typeof createSupabaseAdminClient>,applicationId:string,partnerId:string,profile:{partner_type:"posp"|"misp";external_onboarding_id:string|null;pos_name:string|null;misp_name:string|null;applicant_phone:string|null;applicant_email:string|null;dp_phone:string|null;dp_email:string|null;city:string|null},now:string){
- const displayName=(profile.partner_type==="misp"?profile.misp_name:profile.pos_name)?.trim()||"Unnamed Partner";
- const mobile=profile.partner_type==="misp"?(profile.dp_phone??profile.applicant_phone):profile.applicant_phone;
- const email=profile.partner_type==="misp"?(profile.dp_email??profile.applicant_email):profile.applicant_email;
- const payload={intermediary_code:partnerId,onboarding_id:profile.external_onboarding_id,intermediary_type:"partner",requested_type:profile.partner_type,display_name:displayName,mobile,email,city:profile.city,iib_status:"pending",compliance_status:"pending",account_status:"active",portal_access_status:"not_created",visibility_level:"internal",updated_at:now};
- const {data:existing,error:readError}=await admin.from("intermediaries").select("id").eq("application_id",applicationId).maybeSingle<{id:string}>();
- if(readError)return readError;
- if(existing?.id){const {error}=await admin.from("intermediaries").update(payload).eq("id",existing.id);return error}
- const {error}=await admin.from("intermediaries").insert({application_id:applicationId,...payload,created_at:now});return error;
-}
 function revalidatePartnerViews(applicationId:string){revalidatePath(applicationPath(applicationId));revalidatePath("/customers/posp-misp");revalidatePath("/intermediaries");revalidatePath(partnersPath);revalidatePath("/intermediaries/posp");revalidatePath("/intermediaries/misp")}
 function verificationPan(profile:{partner_type:"posp"|"misp";pan_number:string|null;dp_pan_number:string|null}|null|undefined){return (profile?.partner_type==="misp"?profile.dp_pan_number:profile?.pan_number)?.replace(/\s/g,"").toUpperCase()??""}
-async function context(data:FormData){const applicationId=value(data,"application_id");if(!applicationId)redirect("/customers/posp-misp");const accessToken=await getServerAccessToken();const {profile}=await getAuthenticatedProfile(accessToken);if(!profile?.id||!canManagePospMispOnboarding(profile.role))redirect("/access-denied");return{actorId:profile.id,applicationId,admin:createSupabaseAdminClient()}}
+async function context(data:FormData){const applicationId=value(data,"application_id");if(!applicationId)redirect("/customers/posp-misp");const profile=await requireScopedPospMispManager(applicationId);return{actorId:profile.id,applicationId,admin:createSupabaseAdminClient()}}
 function value(data:FormData,key:string){const current=data.get(key);return typeof current==="string"&&current.trim()?current.trim():null}
 function redirectTo(applicationId:string,error:string):never{redirectFresh(`${applicationPath(applicationId)}?error=${error}`)}
 function redirectFresh(href:string):never{redirect(`${href}${href.includes("?")?"&":"?"}fresh=${Date.now()}`)}
