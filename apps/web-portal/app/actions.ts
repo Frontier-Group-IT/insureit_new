@@ -396,54 +396,15 @@ export async function setProfileActive(id: string, isActive: boolean) {
 }
 
 export async function updateClaimStatus(id: string, formData: FormData) {
-  const supabase = await createServerSupabaseClient();
-  const changedBy = await currentProfileId();
   const nextStatus = textValue(formData, "current_status");
-  const notes = textValue(formData, "notes");
+  const canonicalForm = new FormData();
 
-  if (!nextStatus || !claimStatuses.includes(nextStatus as (typeof claimStatuses)[number])) {
-    throw new Error("Choose a valid claim status.");
+  for (const [key, value] of formData.entries()) {
+    if (key !== "current_status") canonicalForm.append(key, value);
   }
+  if (nextStatus) canonicalForm.set("next_status", nextStatus);
 
-  const { data: claim, error: claimError } = await supabase
-    .from("claims")
-    .select("id, current_status")
-    .eq("id", id)
-    .maybeSingle<{ id: string; current_status: (typeof claimStatuses)[number] }>();
-
-  if (claimError || !claim) {
-    throw new Error(claimError?.message ?? "Claim not found.");
-  }
-
-  if (claim.current_status === nextStatus) {
-    revalidatePath(`/claims/${id}`);
-    return;
-  }
-
-  const { error: updateError } = await supabase
-    .from("claims")
-    .update({ current_status: nextStatus })
-    .eq("id", id);
-
-  if (updateError) {
-    throw new Error(updateError.message);
-  }
-
-  const { error: historyError } = await supabase.from("claim_status_history").insert({
-    claim_id: id,
-    from_status: claim.current_status,
-    to_status: nextStatus,
-    notes,
-    changed_by: changedBy
-  });
-
-  if (historyError) {
-    throw new Error(historyError.message);
-  }
-
-  revalidatePath(`/claims/${id}`);
-  revalidatePath("/claims");
-  revalidatePath("/timeline");
+  await advanceClaimWorkflow(id, canonicalForm);
 }
 type ClaimForWorkflow = {
   id: string;
