@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requirePospMispManager } from "@/lib/master-data-server";
+import { requireScopedPospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const applicationPath = (id: string) => `/intermediaries/applications/${id}`;
@@ -67,9 +67,10 @@ type StoredPacket = {
 };
 
 export async function prepareIntermediaryIibPayload(formData: FormData) {
-  const reviewer = await requirePospMispManager();
   const applicationId = text(formData, "application_id");
-  if (!reviewer?.id || !applicationId) redirect("/customers/posp-misp");
+  if (!applicationId) redirect("/customers/posp-misp");
+  const reviewer = await requireScopedPospMispManager(applicationId);
+  if (!reviewer?.id) redirect("/customers/posp-misp");
 
   const admin = createSupabaseAdminClient();
   const [{ data: application }, { data: profile }, { data: assignment }, { data: intermediary }, { data: documents }] = await Promise.all([
@@ -188,9 +189,10 @@ export async function prepareIntermediaryIibPayload(formData: FormData) {
 }
 
 export async function startIntermediaryIibHandoff(formData: FormData) {
-  const reviewer = await requirePospMispManager();
   const applicationId = text(formData, "application_id");
-  if (!reviewer?.id || !applicationId) redirect("/customers/posp-misp");
+  if (!applicationId) redirect("/customers/posp-misp");
+  const reviewer = await requireScopedPospMispManager(applicationId);
+  if (!reviewer?.id) redirect("/customers/posp-misp");
 
   const admin = createSupabaseAdminClient();
   const [{ data: packet }, { data: application }, { data: assignment }] = await Promise.all([
