@@ -3,7 +3,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requirePospMispManager } from "@/lib/master-data-server";
+import { requireScopedPospMispManager } from "@/lib/master-data-server";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { encryptSensitiveValue } from "@/lib/sensitive-data";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -24,7 +24,7 @@ type EditableProfile={id:string;partner_type:"posp"|"misp";workflow_stage:"pre_i
 type EditableApplication={id:string;requested_type:"posp"|"misp";status:string;partner_status:string|null;draft_data:Record<string,unknown>|null};
 
 export async function updateIntermediaryApplication(data:FormData){
- const reviewer=await requirePospMispManager();const applicationId=value(data,"application_id");if(!applicationId||!reviewer?.id)redirect("/customers/posp-misp");
+ const applicationId=value(data,"application_id");if(!applicationId)redirect("/customers/posp-misp");const reviewer=await requireScopedPospMispManager(applicationId);if(!reviewer?.id)redirect("/customers/posp-misp");
  const admin=createSupabaseAdminClient();
  const [{data:application},{data:profile}]=await Promise.all([
   admin.from("intermediary_onboarding_applications").select("id,requested_type,status,partner_status,draft_data").eq("id",applicationId).maybeSingle<EditableApplication>(),
