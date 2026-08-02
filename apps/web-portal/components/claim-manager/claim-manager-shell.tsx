@@ -2,6 +2,7 @@ import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
+import { internalLaunchHome, isIntermediaryOnlyLaunch } from "@/lib/launch-scope";
 import { hasCapability } from "@/lib/roles";
 import { UserMenu } from "@/components/user-menu";
 import { HistoryBackButton } from "@/components/history-back-button";
@@ -17,7 +18,7 @@ type Props = {
   activeNav?: "dashboard" | "claims" | "master-data" | "distribution" | "tasks" | "reports" | "none";
 };
 
-export async function ClaimManagerShell({ title, backHref = "/dashboard", children, activeNav = "claims" }: Props) {
+export async function ClaimManagerShell({ title, backHref = internalLaunchHome, children, activeNav = "claims" }: Props) {
   const accessToken = await getServerAccessToken();
   const { user, profile } = await getAuthenticatedProfile(accessToken);
   const role = profile?.role;
@@ -39,7 +40,7 @@ export async function ClaimManagerShell({ title, backHref = "/dashboard", childr
             </div>
 
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-              {hasCapability(role,"view_notifications") ? <Link href="/notifications" aria-label="Notifications" className="relative grid h-11 w-11 place-items-center rounded-2xl border border-white/55 bg-white/52 text-[#183456] shadow-[0_8px_24px_rgba(28,39,68,.10)] backdrop-blur-xl hover:border-[#7D91B4] hover:text-[#6759ff]">
+              {!isIntermediaryOnlyLaunch && hasCapability(role,"view_notifications") ? <Link href="/notifications" aria-label="Notifications" className="relative grid h-11 w-11 place-items-center rounded-2xl border border-white/55 bg-white/52 text-[#183456] shadow-[0_8px_24px_rgba(28,39,68,.10)] backdrop-blur-xl hover:border-[#7D91B4] hover:text-[#6759ff]">
                 <Bell className="h-[18px] w-[18px]" />
                 <span className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-[#ff6f61] ring-2 ring-white" />
               </Link> : null}
