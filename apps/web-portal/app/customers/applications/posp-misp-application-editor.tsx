@@ -124,8 +124,6 @@ export function PospMispApplicationEditor({ applicationId, profile, workflowStag
       {isMisp ? <><input type="hidden" name="dp_name" value={[dpFirstName, dpMiddleName, dpLastName].filter(Boolean).join(" ")} /><input type="hidden" name="applicant_phone" value={dpPhone} /><input type="hidden" name="applicant_email" value={dpEmail} /></> : <input type="hidden" name="pos_name" value={[posFirstName, posMiddleName, posLastName].filter(Boolean).join(" ")} />}
 
       <div className="space-y-4 p-4 sm:p-5">
-        {profile.partner_id ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3"><p className="text-[9px] font-semibold uppercase tracking-[.08em] text-emerald-700">Partner ID issued</p><p className="mt-1 text-[16px] font-bold text-emerald-900">{profile.partner_id}</p></div> : null}
-
         {showPrimary ? (
           <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
             <Header number="1" title="Primary information & PAN check" subtitle="POSP/MISP IDs are issued only after successful onboarding." />
