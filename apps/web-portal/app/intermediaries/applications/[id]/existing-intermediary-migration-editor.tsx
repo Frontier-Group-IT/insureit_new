@@ -1,6 +1,7 @@
-import { FormSubmitButton } from "@/components/form-submit-button";
-import { IndianDateField } from "@/components/indian-date-field";
-import { updateExistingIntermediaryMigrationDetails } from "./existing-intermediary-migration-actions";
+"use client";
+
+import { useActionState, useEffect, useRef } from "react";
+import { updateExistingIntermediaryMigrationDetails, type MigrationSaveState } from "./existing-intermediary-migration-actions";
 
 type Props = {
   applicationId: string;
@@ -11,22 +12,47 @@ type Props = {
 
 const inputClass = "h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[11px] font-medium text-[#17203A] outline-none transition focus:border-[#635BFF] focus:ring-2 focus:ring-[#E7E5FF] disabled:bg-[#F8FAFC] disabled:text-[#475569]";
 const labelClass = "mb-1.5 block text-[9.5px] font-semibold uppercase tracking-[0.04em] text-[#526178]";
+const initialState: MigrationSaveState = { ok: true, message: "Migration fields save automatically." };
 
 export function ExistingIntermediaryMigrationEditor({ applicationId, accountType, values, editable }: Props) {
   const registrationLabel = accountType === "misp" ? "Existing MISP ID" : "Existing POSP ID";
+  const [state, formAction, pending] = useActionState(updateExistingIntermediaryMigrationDetails, initialState);
+  const formRef = useRef<HTMLFormElement>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dirtyRef = useRef(false);
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  function scheduleSave() {
+    if (!editable) return;
+    dirtyRef.current = true;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      if (dirtyRef.current && formRef.current) {
+        dirtyRef.current = false;
+        formRef.current.requestSubmit();
+      }
+    }, 700);
+  }
+
   return (
     <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
-      <div className="border-b border-[#E7ECF3] bg-[#FAFBFD] px-5 py-4">
-        <h2 className="text-[12.5px] font-semibold text-[#17203A]">Existing Intermediary Migration</h2>
-        <p className="mt-1 text-[9.5px] font-medium text-[#64748B]">Maintain historical IDs, original dates, workflow completion and verification notes imported from previous records.</p>
+      <div className="flex flex-col gap-2 border-b border-[#E7ECF3] bg-[#FAFBFD] px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-[12.5px] font-semibold text-[#17203A]">Existing Intermediary Migration</h2>
+          <p className="mt-1 text-[9.5px] font-medium text-[#64748B]">Maintain historical IDs, original dates, workflow completion and verification notes imported from previous records.</p>
+        </div>
+        <p className={`text-[9px] font-semibold ${pending ? "text-indigo-600" : state.ok ? "text-emerald-700" : "text-red-700"}`} aria-live="polite">
+          {pending ? "Saving migration changes…" : state.message}
+        </p>
       </div>
-      <form action={updateExistingIntermediaryMigrationDetails} className="space-y-5 p-5">
+      <form ref={formRef} action={formAction} onChange={scheduleSave} className="space-y-5 p-5">
         <input type="hidden" name="application_id" value={applicationId} />
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <Field label="Existing Partner ID" name="legacy_partner_code" defaultValue={value(values, "legacy_partner_code")} disabled={!editable} />
           <Field label={registrationLabel} name="legacy_registration_code" defaultValue={value(values, "legacy_registration_code")} disabled={!editable} />
-          <IndianDateField label="Original Onboarding Date" name="legacy_original_onboarding_date" defaultValue={value(values, "legacy_original_onboarding_date")} disabled={!editable} />
-          <IndianDateField label="Original Activation Date" name="legacy_original_activation_date" defaultValue={value(values, "legacy_original_activation_date")} disabled={!editable} />
+          <DateField label="Original Onboarding Date" name="legacy_original_onboarding_date" defaultValue={value(values, "legacy_original_onboarding_date")} disabled={!editable} />
+          <DateField label="Original Activation Date" name="legacy_original_activation_date" defaultValue={value(values, "legacy_original_activation_date")} disabled={!editable} />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
@@ -41,8 +67,6 @@ export function ExistingIntermediaryMigrationEditor({ applicationId, accountType
           <label className={labelClass} htmlFor="legacy_verification_remarks">Verification Remarks</label>
           <textarea id="legacy_verification_remarks" name="legacy_verification_remarks" defaultValue={value(values, "legacy_verification_remarks")} disabled={!editable} rows={4} className="w-full rounded-xl border border-[#CBD5E1] bg-white px-3 py-2.5 text-[11px] font-medium text-[#17203A] outline-none transition focus:border-[#635BFF] focus:ring-2 focus:ring-[#E7E5FF] disabled:bg-[#F8FAFC] disabled:text-[#475569]" placeholder="Record source, verification outcome, missing historical evidence or correction reason" />
         </div>
-
-        {editable ? <div className="flex justify-end border-t border-[#E7ECF3] pt-4"><FormSubmitButton label="Save migration details" pendingLabel="Saving migration details" /></div> : null}
       </form>
     </section>
   );
@@ -50,6 +74,9 @@ export function ExistingIntermediaryMigrationEditor({ applicationId, accountType
 
 function Field({ label, name, defaultValue, disabled }: { label: string; name: string; defaultValue: string; disabled: boolean }) {
   return <div><label className={labelClass} htmlFor={name}>{label}</label><input id={name} name={name} defaultValue={defaultValue} disabled={disabled} className={inputClass} /></div>;
+}
+function DateField({ label, name, defaultValue, disabled }: { label: string; name: string; defaultValue: string; disabled: boolean }) {
+  return <div><label className={labelClass} htmlFor={name}>{label}</label><input id={name} name={name} type="date" defaultValue={defaultValue} disabled={disabled} className={inputClass} /></div>;
 }
 function Select({ label, name, defaultValue, options, disabled }: { label: string; name: string; defaultValue: string; options: Array<{ value: string; label: string }>; disabled: boolean }) {
   return <div><label className={labelClass} htmlFor={name}>{label}</label><select id={name} name={name} defaultValue={defaultValue} disabled={disabled} className={inputClass}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>;
