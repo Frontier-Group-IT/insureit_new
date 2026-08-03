@@ -1,0 +1,23 @@
+name: Temporary validate review and migration UI
+
+on:
+  push:
+    branches:
+      - debug/validate-review-migration-ui-20260803
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck:web
+      - run: npm run build:web
