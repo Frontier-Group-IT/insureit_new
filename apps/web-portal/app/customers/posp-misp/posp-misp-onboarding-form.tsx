@@ -75,16 +75,26 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    const form = event.currentTarget;
+    if (validateForm(event.currentTarget)) return;
+    event.preventDefault();
+  }
+
+  function handleSaveClick() {
+    const form = formRef.current;
+    if (!form || !validateForm(form)) return;
+    form.requestSubmit();
+  }
+
+  function validateForm(form: HTMLFormElement) {
     const result = firstValidationError(new FormData(form), partnerType, orderedControlNames(form));
     if (!result) {
       setFieldErrors({});
-      return;
+      return true;
     }
-    event.preventDefault();
     touchedRef.current.add(result.field);
     setFieldErrors({ [result.field]: result.message });
     focusField(form, result.field);
+    return false;
   }
 
   function handleFieldBlur(event: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
@@ -124,7 +134,7 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
         {isMisp ? <Section title="Designated Person (DP)"><Field label="DP First Name" name="dp_first_name" required defaultValue={initialValues.dp_first_name} error={fieldErrors.dp_first_name} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="DP Middle Name" name="dp_middle_name" defaultValue={initialValues.dp_middle_name} error={fieldErrors.dp_middle_name} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="DP Last Name" name="dp_last_name" required defaultValue={initialValues.dp_last_name} error={fieldErrors.dp_last_name} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="DP Contact" name="dp_phone" required inputMode="tel" pattern="(?:\+91)?[6-9][0-9]{9}" defaultValue={initialValues.dp_phone} error={fieldErrors.dp_phone} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="DP Email" name="dp_email" required type="email" defaultValue={initialValues.dp_email} error={fieldErrors.dp_email} onBlur={handleFieldBlur} onInput={handleFieldInput} /><PanInput label="DP PAN No" name="dp_pan_number" defaultValue={initialValues.dp_pan_number} error={fieldErrors.dp_pan_number} onBlur={handleFieldBlur} onInput={handleFieldInput} /><IndianDateField label="DP Date of Birth" name="date_of_birth" required defaultValue={initialValues.date_of_birth} inputClassName={dateInputClass} error={fieldErrors.date_of_birth} onBlur={handleFieldBlur} /><Field label="DP Aadhaar Number" name="aadhaar_number" required inputMode="numeric" pattern="[0-9]{12}" maxLength={12} minLength={12} defaultValue={initialValues.aadhaar_number} error={fieldErrors.aadhaar_number} onBlur={handleFieldBlur} onInput={handleFieldInput} /></Section> : null}
         <Section title="Bank details"><SelectField label="Bank Name" name="bank_id" required options={banks} placeholder="Select bank" defaultValue={initialValues.bank_id} error={fieldErrors.bank_id} onBlur={handleFieldBlur} onChange={handleFieldInput} /><Field label="Account Number" name="bank_account_number" required inputMode="numeric" pattern="[0-9]{6,20}" defaultValue={initialValues.bank_account_number} error={fieldErrors.bank_account_number} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="IFSC Code" name="bank_ifsc_code" required maxLength={11} minLength={11} pattern="[A-Za-z]{4}0[A-Za-z0-9]{6}" transform="uppercase" defaultValue={initialValues.bank_ifsc_code} error={fieldErrors.bank_ifsc_code} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="GST Number" name="gst_number" required={isMisp} maxLength={15} minLength={isMisp ? 15 : undefined} pattern="[0-9]{2}[A-Za-z]{5}[0-9]{4}[A-Za-z][1-9A-Za-z]Z[0-9A-Za-z]" transform="uppercase" defaultValue={initialValues.gst_number} error={fieldErrors.gst_number} onBlur={handleFieldBlur} onInput={handleFieldInput} /></Section>
         {legacyFields}
-        <div className="sticky bottom-0 z-20 flex flex-col gap-2 border-t border-[#E2E8F0] bg-white/96 px-3 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5"><p className="text-[9.5px] text-[#64748B]">Stage 1 saves the application, queues the PAN check and opens Documents.</p>{submitPath ? <button type="submit" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto">Save & check PAN</button> : <FormSubmitButton label="Save & check PAN" pendingLabel="Saving & opening Documents" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto" />}</div>
+        <div className="sticky bottom-0 z-20 flex flex-col gap-2 border-t border-[#E2E8F0] bg-white/96 px-3 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5"><p className="text-[9.5px] text-[#64748B]">Stage 1 saves the application, queues the PAN check and opens Documents.</p>{submitPath ? <button type="button" onClick={handleSaveClick} className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto">Save & check PAN</button> : <FormSubmitButton label="Save & check PAN" pendingLabel="Saving & opening Documents" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto" />}</div>
       </form>
     </div>
   </>;
