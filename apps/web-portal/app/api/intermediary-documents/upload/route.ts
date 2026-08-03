@@ -5,6 +5,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const DOCUMENT_BUCKET = "customer-documents";
 const MAX_FILE_SIZE = 4 * 1024 * 1024;
+const MAX_CUSTOM_LABEL_LENGTH = 60;
 const ALLOWED_FILE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 const EDUCATION_TYPES = new Set([
   "education_10th_marksheet",
@@ -19,7 +20,15 @@ const STANDARD_TYPES = new Set([
   "cancelled_cheque",
   "photograph",
   "gst_copy",
+  "training_certificate",
+  "registration_certificate",
+  "agreement_copy",
+  "custom_1",
+  "custom_2",
+  "custom_3",
+  "custom_4",
 ]);
+const CUSTOM_TYPES = new Set(["custom_1", "custom_2", "custom_3", "custom_4"]);
 const EDITABLE_APPLICATION_STATUSES = new Set(["submitted", "under_review", "changes_requested"]);
 
 export async function POST(request: Request) {
@@ -34,6 +43,7 @@ export async function POST(request: Request) {
   const data = await request.formData();
   const applicationId = text(data, "application_id");
   const documentType = text(data, "document_type");
+  const documentLabel = text(data, "document_label");
   const selected = data.get("file");
 
   if (!applicationId || !documentType || !(selected instanceof File) || selected.size === 0) {
@@ -50,6 +60,11 @@ export async function POST(request: Request) {
   if (!STANDARD_TYPES.has(documentType) && !EDUCATION_TYPES.has(documentType)) {
     return NextResponse.json({ ok: false, message: "The selected document type is not supported." }, { status: 400 });
   }
+  if (CUSTOM_TYPES.has(documentType)) {
+    if (!documentLabel || documentLabel.length > MAX_CUSTOM_LABEL_LENGTH || !/[A-Za-z0-9]/.test(documentLabel)) {
+      return NextResponse.json({ ok: false, message: "Enter a valid document name of up to 60 characters." }, { status: 400 });
+    }
+  }
   if (!ALLOWED_FILE_TYPES.has(selected.type)) {
     return NextResponse.json({ ok: false, message: "Use a PDF, JPG or PNG file." }, { status: 400 });
   }
@@ -61,7 +76,7 @@ export async function POST(request: Request) {
   const [{ data: application }, { data: profile }] = await Promise.all([
     admin
       .from("intermediary_onboarding_applications")
-      .select("id,status,registration_status,partner_status,final_type")
+      .select("id,status,registration_status,partner_status,final_type,draft_data")
       .eq("id", applicationId)
       .maybeSingle<{
         id: string;
@@ -69,12 +84,13 @@ export async function POST(request: Request) {
         registration_status: string;
         partner_status: string | null;
         final_type: string | null;
+        draft_data: Record<string, unknown> | null;
       }>(),
     admin
       .from("posp_misp_onboarding_profiles")
-      .select("id,workflow_stage,gst_number")
+      .select("id,workflow_stage,gst_number,record_source,existing_registration_confirmed")
       .eq("application_id", applicationId)
-      .maybeSingle<{ id: string; workflow_stage: string; gst_number: string | null }>(),
+      .maybeSingle<{ id: string; workflow_stage: string; gst_number: string | null; record_source: string | null; existing_registration_confirmed: boolean | null }>(),
   ]);
 
   if (!application || !profile) {
@@ -87,6 +103,11 @@ export async function POST(request: Request) {
     || profile.workflow_stage === "completed";
   const onboardingMode = profile.workflow_stage === "iib_processing" && !maintenanceMode;
   const editable = EDITABLE_APPLICATION_STATUSES.has(application.status) || maintenanceMode;
+  const legacyMode =
+    profile.existing_registration_confirmed === true
+    || profile.record_source === "excel_import"
+    || profile.record_source === "legacy_import"
+    || application.draft_data?.legacy_mode === "existing";
 
   if (!editable) {
     return NextResponse.json(
@@ -101,7 +122,10 @@ export async function POST(request: Request) {
     );
   }
   if (documentType === "gst_copy" && !profile.gst_number) {
-    return NextResponse.json({ ok: false, message: "GST certificate is only required when GST details are saved." }, { status: 400 });
+    return NextResponse.json({ ok: false, message: "GST certificate is only available when GST details are saved." }, { status: 400 });
+  }
+  if (["training_certificate", "registration_certificate", "agreement_copy"].includes(documentType) && !legacyMode) {
+    return NextResponse.json({ ok: false, message: "This historical document slot is available only for existing POSP/MISP records." }, { status: 400 });
   }
 
   const extension = selected.type === "application/pdf" ? "pdf" : selected.type === "image/png" ? "png" : "jpg";
@@ -124,6 +148,7 @@ export async function POST(request: Request) {
     {
       application_id: applicationId,
       document_type: documentType,
+      document_label: CUSTOM_TYPES.has(documentType) ? documentLabel : null,
       file_name: selected.name,
       storage_bucket: DOCUMENT_BUCKET,
       storage_path: storagePath,
@@ -165,6 +190,7 @@ export async function POST(request: Request) {
     {
       ok: true,
       document_type: documentType,
+      document_label: CUSTOM_TYPES.has(documentType) ? documentLabel : null,
       file_name: selected.name,
       finalize_required: onboardingMode,
       maintenance_mode: maintenanceMode,
