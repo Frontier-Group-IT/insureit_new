@@ -1,0 +1,94 @@
+name: Temporary document slot codemod
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  codemod:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Patch intermediary document readers
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          workflow = Path('apps/web-portal/app/intermediaries/applications/[id]/workflow/page.tsx')
+          text = workflow.read_text()
+          replacements = [
+            ('type Document = { id: string; document_type: string; file_name: string; storage_bucket: string; storage_path: string; verification_status: string };',
+             'type Document = { id: string; document_type: string; document_label: string | null; file_name: string; storage_bucket: string; storage_path: string; verification_status: string };'),
+            ('select("id,document_type,file_name,storage_bucket,storage_path,verification_status")',
+             'select("id,document_type,document_label,file_name,storage_bucket,storage_path,verification_status")'),
+            ('const docList = (documents ?? []).map((item) => ({ document_type: item.document_type, file_name: item.file_name }));',
+             'const docList = (documents ?? []).map((item) => ({ document_type: item.document_type, document_label: item.document_label, file_name: item.file_name }));'),
+            ('const context = accountContext(application.draft_data);',
+             'const context = accountContext(application.draft_data);\n  const legacyDocuments = profile.existing_registration_confirmed === true || ["excel_import", "legacy_import"].includes(profile.record_source) || asObject(application.draft_data).legacy_mode === "existing";'),
+            ('<IntermediaryDocumentUploadController applicationId={id} enabled={viewStage === "documents" && editable} showGst={Boolean(profile.gst_number)} />',
+             '<IntermediaryDocumentUploadController applicationId={id} enabled={viewStage === "documents" && editable} showGst={Boolean(profile.gst_number)} legacyDocuments={legacyDocuments} />'),
+            ('documents={docList} />', 'documents={docList} legacyDocuments={legacyDocuments} />'),
+          ]
+          for old, new in replacements:
+            if old not in text:
+              raise SystemExit(f'workflow pattern missing: {old[:100]}')
+            text = text.replace(old, new, 1)
+          workflow.write_text(text)
+
+          review = Path('apps/web-portal/app/intermediaries/applications/[id]/page.tsx')
+          text = review.read_text()
+          replacements = [
+            ('import { DocumentVisualCard } from "@/components/document-visual-card";\n',
+             'import { IntermediaryDocumentGrid } from "@/components/intermediary-document-grid";\n'),
+            ('  document_received_at: string | null;\n};',
+             '  document_received_at: string | null;\n  record_source: string | null;\n  existing_registration_confirmed: boolean | null;\n};'),
+            ('  file_name: string;\n  storage_bucket:',
+             '  file_name: string;\n  document_label: string | null;\n  storage_bucket:'),
+            ('document_received_at").eq("application_id", id)',
+             'document_received_at,record_source,existing_registration_confirmed").eq("application_id", id)'),
+            ('select("id,document_type,file_name,storage_bucket,storage_path,verification_status,created_at")',
+             'select("id,document_type,document_label,file_name,storage_bucket,storage_path,verification_status,created_at")'),
+            ('  const isMisp = accountContext === "misp";\n',
+             '  const isMisp = accountContext === "misp";\n  const legacyDocuments = profile.existing_registration_confirmed === true || ["excel_import", "legacy_import"].includes(profile.record_source ?? "") || draft.legacy_mode === "existing";\n'),
+            ('        <section id="documents"><DocumentsCard><DocumentChecklist documents={documents ?? []} /></DocumentsCard></section>',
+             '        <section id="documents"><DocumentsCard><IntermediaryDocumentGrid documents={documentLinks} legacy={legacyDocuments} hasGst={Boolean(profile.gst_number)} editable={false} /></DocumentsCard></section>'),
+            ('const complete = activePartner || ["aadhaar_front", "pan_copy", "cancelled_cheque"].every((type) => types.has(type));',
+             'const complete = activePartner || ["aadhaar_front", "aadhaar_back", "pan_copy", "cancelled_cheque", "photograph"].every((type) => types.has(type));'),
+          ]
+          for old, new in replacements:
+            if old not in text:
+              raise SystemExit(f'review pattern missing: {old[:100]}')
+            text = text.replace(old, new, 1)
+
+          anchor = '  const stats = isPartner\n'
+          if anchor not in text:
+            raise SystemExit('stats anchor missing')
+          document_links = '''  const documentLinks = await Promise.all((documents ?? []).map(async (document) => {
+    const { data } = await admin.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 900);
+    return { document_type: document.document_type, document_label: document.document_label, file_name: document.file_name, href: data?.signedUrl ?? null };
+  }));
+
+'''
+          text = text.replace(anchor, document_links + anchor, 1)
+          text, count = re.subn(r'function DocumentChecklist\([\s\S]*?(?=function DocumentsCard)', '', text, count=1)
+          if count != 1:
+            raise SystemExit('DocumentChecklist block not removed')
+          review.write_text(text)
+          PY
+      - name: Remove temporary workflow
+        run: rm .github/workflows/temporary-document-slot-codemod.yml
+      - name: Commit codemod
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add apps/web-portal .github/workflows/temporary-document-slot-codemod.yml
+          git commit -m "Wire shared intermediary document slots across review pages"
+          git push origin HEAD:${{ github.head_ref }}
