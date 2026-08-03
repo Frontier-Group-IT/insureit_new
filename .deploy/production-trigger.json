@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-03T23:14:14+05:30",
+  "deploy_requested_at": "2026-08-03T23:34:21+05:30",
   "requested_by": "Nishant Mishra",
   "source": "ChatGPT explicit deploy command",
-  "source_commit": "fe641e375864bbac6b61df7d8d5ac0d9c294a7e0",
-  "release_scope": "Deploy zero-render POSP/MISP onboarding validation: validation failure now mutates only the first invalid field's DOM error node instead of using React state that re-renders the full large form and real RM/OEM/bank option lists.",
-  "verification": "Commit fe641e375864bbac6b61df7d8d5ac0d9c294a7e0 passed local production build, typecheck, lint, and Playwright browser validation against a temporary debug route. Blank Save produced no POST, kept the URL unchanged, focused associate_employee_id, and showed 'Please select RM Name.' Existing lint warnings are unrelated unused imports.",
+  "source_commit": "207361388f3f3ea53be2aa798f0cf0d69bf7cfa5",
+  "release_scope": "Deploy server-rendered POSP/MISP onboarding form: the large field tree and RM/OEM/bank option lists no longer hydrate as one client component. A tiny delegated validation guard handles first-field validation without re-rendering the form.",
+  "verification": "Commit 207361388f3f3ea53be2aa798f0cf0d69bf7cfa5 passed local production build, typecheck, lint, and Playwright browser validation against a temporary debug route. Blank Save showed 'Please select RM Name.' RM-selected Save showed 'PAN Number is required.' Both cases produced zero POST requests and kept the URL unchanged. Existing lint warnings are unrelated unused imports.",
   "instructions": "Update this file only after the user explicitly says deploy now or finish and deploy. Ordinary code commits must not modify it."
 }
