@@ -20,6 +20,7 @@ const STANDARD_TYPES = new Set([
   "photograph",
   "gst_copy",
 ]);
+const EDITABLE_APPLICATION_STATUSES = new Set(["submitted", "under_review", "changes_requested"]);
 
 export async function POST(request: Request) {
   const authenticatedManager = await getPospMispManager();
@@ -58,14 +59,46 @@ export async function POST(request: Request) {
 
   const admin = createSupabaseAdminClient();
   const [{ data: application }, { data: profile }] = await Promise.all([
-    admin.from("intermediary_onboarding_applications").select("id,status").eq("id", applicationId).maybeSingle<{ id: string; status: string }>(),
-    admin.from("posp_misp_onboarding_profiles").select("id,workflow_stage,gst_number").eq("application_id", applicationId).maybeSingle<{ id: string; workflow_stage: string; gst_number: string | null }>(),
+    admin
+      .from("intermediary_onboarding_applications")
+      .select("id,status,registration_status,partner_status,final_type")
+      .eq("id", applicationId)
+      .maybeSingle<{
+        id: string;
+        status: string;
+        registration_status: string;
+        partner_status: string | null;
+        final_type: string | null;
+      }>(),
+    admin
+      .from("posp_misp_onboarding_profiles")
+      .select("id,workflow_stage,gst_number")
+      .eq("application_id", applicationId)
+      .maybeSingle<{ id: string; workflow_stage: string; gst_number: string | null }>(),
   ]);
-  if (!application || !profile || !["submitted", "under_review", "changes_requested"].includes(application.status)) {
-    return NextResponse.json({ ok: false, message: "This application is not editable." }, { status: 403 });
+
+  if (!application || !profile) {
+    return NextResponse.json({ ok: false, message: "This application could not be found." }, { status: 404 });
   }
-  if (profile.workflow_stage !== "iib_processing") {
-    return NextResponse.json({ ok: false, message: "Document upload is not available at the current stage." }, { status: 409 });
+
+  const maintenanceMode =
+    application.partner_status === "active_partner"
+    || application.registration_status === "iib_registered"
+    || profile.workflow_stage === "completed";
+  const onboardingMode = profile.workflow_stage === "iib_processing" && !maintenanceMode;
+  const editable = EDITABLE_APPLICATION_STATUSES.has(application.status) || maintenanceMode;
+
+  if (!editable) {
+    return NextResponse.json(
+      { ok: false, code: "application_not_editable", message: "This application is not editable in its current account state." },
+      { status: 403, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+  if (!onboardingMode && !maintenanceMode) {
+    return NextResponse.json(
+      { ok: false, code: "document_stage_locked", message: "Document upload is not available at the current stage." },
+      { status: 409, headers: { "Cache-Control": "no-store" } },
+    );
   }
   if (documentType === "gst_copy" && !profile.gst_number) {
     return NextResponse.json({ ok: false, message: "GST certificate is only required when GST details are saved." }, { status: 400 });
@@ -122,11 +155,20 @@ export async function POST(request: Request) {
       await admin.from("intermediary_onboarding_documents").delete().eq("id", document.id);
       await removeStorageObjectIfUnreferenced(admin, document.storage_bucket, document.storage_path);
     }
-    await admin.from("posp_misp_onboarding_profiles").update({ education_status: "received", updated_by: reviewer.id, updated_at: new Date().toISOString() }).eq("id", profile.id);
+    await admin
+      .from("posp_misp_onboarding_profiles")
+      .update({ education_status: "received", updated_by: reviewer.id, updated_at: new Date().toISOString() })
+      .eq("id", profile.id);
   }
 
   return NextResponse.json(
-    { ok: true, document_type: documentType, file_name: selected.name },
+    {
+      ok: true,
+      document_type: documentType,
+      file_name: selected.name,
+      finalize_required: onboardingMode,
+      maintenance_mode: maintenanceMode,
+    },
     { headers: { "Cache-Control": "no-store" } },
   );
 }
