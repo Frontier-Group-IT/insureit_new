@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DocumentVisualCard } from "@/components/document-visual-card";
 import { AppShell } from "@/components/shell";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { requirePospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createIntermediaryPortalLogin } from "@/app/intermediaries/portal-account-actions";
@@ -196,7 +197,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
                     <form action={createLinkedIntermediaryAccount}>
                       <input type="hidden" name="application_id" value={id} />
                       <input type="hidden" name="registration_type" value={profile.partner_type} />
-                      <CompactSubmit label={profile.partner_type === "misp" ? "Create MISP account" : "Create POSP account"} />
+                      <CompactSubmit label={profile.partner_type === "misp" ? "Create MISP ID" : "Create POSP ID"} pendingLabel={profile.partner_type === "misp" ? "Creating MISP ID…" : "Creating POSP ID…"} />
                     </form>
                   )
                 ) : <CompactLink href={`/intermediaries/applications/${id}/workflow?stage=documents`} label="Continue documents" />
@@ -206,13 +207,13 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
                 <form action={createIntermediaryPortalLogin}>
                   <input type="hidden" name="intermediary_id" value={intermediary.id} />
                   <input type="hidden" name="return_path" value={returnPath} />
-                  <CompactSubmit label="Create user" secondary />
+                  <CompactSubmit label="Create user" pendingLabel="Creating user…" secondary />
                 </form>
               ) : activePartner && intermediary?.portal_access_status === "invited" ? (
                 <form action={resendIntermediaryPortalInvite}>
                   <input type="hidden" name="intermediary_id" value={intermediary.id} />
                   <input type="hidden" name="return_path" value={returnPath} />
-                  <CompactSubmit label="Resend link" secondary />
+                  <CompactSubmit label="Resend link" pendingLabel="Sending link…" secondary />
                 </form>
               ) : null}
             </div>
@@ -250,7 +251,13 @@ function HeaderStat({ icon, label, value }: { icon: IconName; label: string; val
 function Info({ label, value }: { label: string; value: string }) { return <div className="flex min-w-0 items-baseline gap-1.5 text-[10.5px] leading-5"><dt className="shrink-0 font-semibold text-[#64748B]">{label}:</dt><dd className="min-w-0 break-words font-semibold text-[#0F172A]">{value}</dd></div>; }
 function Id({ value, active = false }: { value: string; active?: boolean }) { return <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold">{value}{active ? <span className="grid h-4 w-4 place-items-center rounded-full bg-emerald-500 text-white"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-2.5 w-2.5" aria-hidden="true"><path d="M3.5 8.5 6.5 11 12.5 5" /></svg></span> : null}</span>; }
 function CompactLink({ href, label, secondary = false }: { href: string; label: string; secondary?: boolean }) { return <Link href={href} className={`inline-flex h-9 items-center rounded-xl px-4 text-[10px] font-semibold ${secondary ? "border border-white/30 bg-white/10 text-white" : "bg-gradient-to-r from-[#635BFF] to-[#4B8DF8] text-white"}`}>{label}</Link>; }
-function CompactSubmit({ label, secondary = false }: { label: string; secondary?: boolean }) { return <button type="submit" className={`inline-flex h-9 items-center rounded-xl px-4 text-[10px] font-semibold ${secondary ? "border border-white/30 bg-white/10 text-white" : "bg-gradient-to-r from-[#635BFF] to-[#4B8DF8] text-white"}`}>{label}</button>; }
+function CompactSubmit({ label, pendingLabel, secondary = false }: { label: string; pendingLabel: string; secondary?: boolean }) {
+  return <FormSubmitButton
+    label={label}
+    pendingLabel={pendingLabel}
+    className={`inline-flex h-9 items-center justify-center rounded-xl px-4 text-[10px] font-semibold ${secondary ? "border border-white/30 bg-white/10 text-white hover:border-white/50 hover:bg-white/20" : "bg-gradient-to-r from-[#635BFF] to-[#4B8DF8] text-white hover:brightness-110"}`}
+  />;
+}
 function JourneyCard({ title, journey }: { title: string; journey: JourneyItem[] }) { return <section className="bg-transparent px-0 py-1"><h2 className="mb-4 text-[13px] font-semibold text-[#17203A]">{title}</h2><div className={`relative grid gap-0 ${journey.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-5"} before:absolute before:left-[10%] before:right-[10%] before:top-[13px] before:h-px before:bg-[#CBD5E1] before:content-['']`}>{journey.map((item) => <Journey key={item.label} {...item} />)}</div></section>; }
 function Journey({ label, done, active }: JourneyItem) { return <div className="relative z-[1] min-w-0 text-center"><div className={`mx-auto grid h-7 w-7 place-items-center rounded-full border text-[10px] font-bold shadow-[0_0_0_6px_#F8FAFC] ${done ? "border-emerald-600 bg-emerald-600 text-white" : active ? "border-[#4F46E5] bg-[#4F46E5] text-white" : "border-[#D7E0EB] bg-[#F1F5F9] text-[#94A3B8]"}`}>{done ? "✓" : active ? "•" : "-"}</div><p className="mt-2 text-[10px] font-semibold text-[#24345A]">{label}</p></div>; }
 function Notice({ tone, text }: { tone: "error" | "success"; text: string }) { return <div className={`rounded-xl border px-4 py-3 text-[10.5px] ${tone === "error" ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>{text}</div>; }
