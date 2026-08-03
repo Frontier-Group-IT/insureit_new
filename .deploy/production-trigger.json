@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-04T01:29:45+05:30",
+  "deploy_requested_at": "2026-08-04T01:49:00+05:30",
   "requested_by": "Nishant Mishra",
   "source": "ChatGPT explicit deploy command",
-  "source_commit": "1a258b581886ca0fb18e2a8ba18ef5b85c245285",
-  "release_scope": "Deploy existing POSP/MISP onboarding freeze fix: remove class-mutation observer loop from onboarding field presentation, replace validation class cleanup with CSS-only neutral styling, remove legacy Save-button click interception, and keep route-post/native form validation workflow intact.",
-  "verification": "Commit 1a258b581886ca0fb18e2a8ba18ef5b85c245285 passed local typecheck, lint and production build. Lint/build reported only existing unrelated unused-import warnings in app/actions.ts and app/customers/posp-misp/import/bulk-upload-v2-actions.ts. Browser-level reproduction confirmed validation class changes no longer trigger an observer loop."
+  "source_commit": "11b3c053b55a3282dc19855d0c1e8d1c484ef8d1",
+  "release_scope": "Deploy the V1 full policy onboarding UI prototype for client UI/UX review. The release replaces the compact legacy policy form with a structured six-section prototype covering source, customer and vehicle, policy and premium, insurer pay-in, partner payout, and review. No database migration is included.",
+  "verification": "Source commit is present on main. No local production build evidence is available in this session; Vercel build result must be checked before claiming deployment success.",
   "instructions": "Update this file only after the user explicitly says deploy now or finish and deploy. Ordinary code commits must not modify it."
 }
