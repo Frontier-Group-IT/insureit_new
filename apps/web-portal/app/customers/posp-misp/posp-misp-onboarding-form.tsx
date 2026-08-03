@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
+import { useActionState, useEffect, useRef, type ReactNode } from "react";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { freshDynamicRouteUrl } from "@/components/fresh-dynamic-route-navigation";
 import { IndianDateField } from "@/components/indian-date-field";
@@ -11,7 +11,6 @@ import type { PospMispState } from "./actions";
 type PartnerType = "posp" | "misp";
 type CreateState = PospMispState & { applicationId?: string | null };
 type SelectOption = { value: string; label: string };
-type FieldErrors = Record<string, string>;
 type Props = {
   action: (state: CreateState, data: FormData) => Promise<CreateState>;
   submitPath?: string;
@@ -39,8 +38,6 @@ const GST = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 
 export function PospMispOnboardingForm({ action, submitPath, partnerType, initialError = null, initialField = null, initialValues = {}, salesManagers, oems, banks, legacyFields = null }: Props) {
   const [state, formAction] = useActionState(action, { error: null, field: null, applicationId: null });
-  const [rmValue, setRmValue] = useState(initialValues.associate_employee_id ?? "");
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const formRef = useRef<HTMLFormElement>(null);
   const touchedRef = useRef(new Set<string>());
   const invalidHandledRef = useRef(false);
@@ -57,8 +54,10 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
     const fieldName = state.field ?? initialField;
     if (!fieldName) return;
     const message = state.error ?? initialError;
-    if (message) setFieldErrors((current) => ({ ...current, [fieldName]: message }));
-    const field = formRef.current?.elements.namedItem(fieldName);
+    const form = formRef.current;
+    if (!form || !message) return;
+    showFieldError(form, fieldName, message, false);
+    const field = form.elements.namedItem(fieldName);
     if (!(field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement)) return;
     requestAnimationFrame(() => {
       field.focus({ preventScroll: true });
@@ -67,12 +66,10 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
   }, [initialError, initialField, state.error, state.field]);
 
   function setFieldError(name: string, message: string | null) {
-    setFieldErrors((current) => {
-      const next = { ...current };
-      if (message) next[name] = message;
-      else delete next[name];
-      return next;
-    });
+    const form = formRef.current;
+    if (!form) return;
+    if (message) showFieldError(form, name, message, false);
+    else clearFieldError(form, name);
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -96,19 +93,17 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
     invalidHandledRef.current = true;
     const form = event.currentTarget;
     touchedRef.current.add(field.name);
-    setFieldErrors({ [field.name]: validationErrorForField(field.name, new FormData(form), partnerType) ?? field.validationMessage });
-    focusField(form, field.name);
+    showFieldError(form, field.name, validationErrorForField(field.name, new FormData(form), partnerType) ?? field.validationMessage, true);
   }
 
   function validateForm(form: HTMLFormElement) {
     const result = firstValidationError(new FormData(form), partnerType, orderedControlNames(form));
     if (!result) {
-      setFieldErrors({});
+      clearFormErrors(form);
       return true;
     }
     touchedRef.current.add(result.field);
-    setFieldErrors({ [result.field]: result.message });
-    focusField(form, result.field);
+    showFieldError(form, result.field, result.message, true);
     return false;
   }
 
@@ -123,7 +118,7 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
   function handleFieldInput(event: React.FormEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     const form = formRef.current;
     const name = event.currentTarget.name;
-    if (!form || !name || (!touchedRef.current.has(name) && !fieldErrors[name])) return;
+    if (!form || !name || (!touchedRef.current.has(name) && !hasFieldError(form, name))) return;
     setFieldError(name, validationErrorForField(name, new FormData(form), partnerType));
   }
 
@@ -136,20 +131,20 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
         <div className="flex gap-3"><Link href="/customers/posp-misp/import" className="text-[10.5px] font-semibold text-[#4F46E5]">Import Excel</Link><Link href={backHref} className="text-[10.5px] font-semibold text-[#4F46E5]">Back</Link></div>
       </div>
       {visibleError ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[11px] font-semibold text-red-700">{visibleError}</div> : null}
-      <form ref={formRef} action={submitPath ?? formAction} method={submitPath ? "post" : undefined} onSubmitCapture={handleSubmit} onInvalidCapture={handleInvalid} data-validation-mode="native-fallback-v3" className="w-full overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
+      <form ref={formRef} action={submitPath ?? formAction} method={submitPath ? "post" : undefined} onSubmitCapture={handleSubmit} onInvalidCapture={handleInvalid} data-validation-mode="zero-render-v4" className="w-full overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
         <input type="hidden" name="partner_type" value={partnerType} />
         <header className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-3 py-3 sm:px-5 sm:py-4"><div className="flex items-start gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#071D49] text-[10px] font-bold text-white">1</span><div><h2 className="text-[14px] font-semibold text-[#0F172A]">Primary information & PAN check</h2><p className="mt-0.5 text-[10px] leading-4 text-[#64748B]">The POSP/MISP ID is issued only after successful onboarding. A Partner ID is issued after Stage 2 documents are submitted.</p></div></div></header>
         <Section title={isMisp ? "MISP details" : "POSP details"}>
-          <div className={`grid min-w-0 gap-3 md:grid-cols-2 xl:col-span-4 ${isMisp ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}><SelectField label="RM Name" name="associate_employee_id" required options={salesManagers} placeholder="Select RM" value={rmValue} error={fieldErrors.associate_employee_id} onBlur={handleFieldBlur} onChange={event => { setRmValue(event.target.value); handleFieldInput(event); }} />{isMisp ? <Field label="MISP Name" name="misp_name" required defaultValue={initialValues.misp_name} error={fieldErrors.misp_name} onBlur={handleFieldBlur} onInput={handleFieldInput} /> : null}<PanInput label={isMisp ? "MISP PAN" : "PAN Number"} name="pan_number" compact defaultValue={initialValues.pan_number} error={fieldErrors.pan_number} onBlur={handleFieldBlur} onInput={handleFieldInput} /><IndianDateField label="Document Received Date" name="document_received_at" defaultValue={initialValues.document_received_at} inputClassName={dateInputClass} error={fieldErrors.document_received_at} onBlur={handleFieldBlur} /></div>
-          {!isMisp ? <div className="grid min-w-0 gap-3 md:grid-cols-3 xl:col-span-4"><Field label="POS First Name" name="pos_first_name" required defaultValue={initialValues.pos_first_name} error={fieldErrors.pos_first_name} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="POS Middle Name" name="pos_middle_name" defaultValue={initialValues.pos_middle_name} error={fieldErrors.pos_middle_name} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="POS Last Name" name="pos_last_name" required defaultValue={initialValues.pos_last_name} error={fieldErrors.pos_last_name} onBlur={handleFieldBlur} onInput={handleFieldInput} /></div> : null}
-          {isMisp ? <SelectField label="OEM Name" name="oem_name" required options={oems} placeholder="Select OEM" defaultValue={initialValues.oem_name} error={fieldErrors.oem_name} onBlur={handleFieldBlur} onChange={handleFieldInput} /> : null}
-          <Field label="Address" name="address" required defaultValue={initialValues.address} error={fieldErrors.address} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="City" name="city" required defaultValue={initialValues.city} error={fieldErrors.city} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="State" name="state" required defaultValue={initialValues.state} error={fieldErrors.state} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="PIN Code" name="postal_code" required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} minLength={6} defaultValue={initialValues.postal_code} error={fieldErrors.postal_code} onBlur={handleFieldBlur} onInput={handleFieldInput} />
+          <div className={`grid min-w-0 gap-3 md:grid-cols-2 xl:col-span-4 ${isMisp ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}><SelectField label="RM Name" name="associate_employee_id" required options={salesManagers} placeholder="Select RM" defaultValue={initialValues.associate_employee_id} onBlur={handleFieldBlur} onChange={handleFieldInput} />{isMisp ? <Field label="MISP Name" name="misp_name" required defaultValue={initialValues.misp_name} onBlur={handleFieldBlur} onInput={handleFieldInput} /> : null}<PanInput label={isMisp ? "MISP PAN" : "PAN Number"} name="pan_number" compact defaultValue={initialValues.pan_number} onBlur={handleFieldBlur} onInput={handleFieldInput} /><IndianDateField label="Document Received Date" name="document_received_at" defaultValue={initialValues.document_received_at} inputClassName={dateInputClass} onBlur={handleFieldBlur} /></div>
+          {!isMisp ? <div className="grid min-w-0 gap-3 md:grid-cols-3 xl:col-span-4"><Field label="POS First Name" name="pos_first_name" required defaultValue={initialValues.pos_first_name} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="POS Middle Name" name="pos_middle_name" defaultValue={initialValues.pos_middle_name} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="POS Last Name" name="pos_last_name" required defaultValue={initialValues.pos_last_name} onBlur={handleFieldBlur} onInput={handleFieldInput} /></div> : null}
+          {isMisp ? <SelectField label="OEM Name" name="oem_name" required options={oems} placeholder="Select OEM" defaultValue={initialValues.oem_name} onBlur={handleFieldBlur} onChange={handleFieldInput} /> : null}
+          <Field label="Address" name="address" required defaultValue={initialValues.address} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="City" name="city" required defaultValue={initialValues.city} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="State" name="state" required defaultValue={initialValues.state} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="PIN Code" name="postal_code" required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} minLength={6} defaultValue={initialValues.postal_code} onBlur={handleFieldBlur} onInput={handleFieldInput} />
         </Section>
-        {!isMisp ? <Section title="POSP contact"><Field label="Mobile Number" name="applicant_phone" required inputMode="tel" pattern="(?:\+91)?[6-9][0-9]{9}" defaultValue={initialValues.applicant_phone} error={fieldErrors.applicant_phone} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="Email" name="applicant_email" type="email" required defaultValue={initialValues.applicant_email} error={fieldErrors.applicant_email} onBlur={handleFieldBlur} onInput={handleFieldInput} /><IndianDateField label="Date of Birth" name="date_of_birth" required defaultValue={initialValues.date_of_birth} inputClassName={dateInputClass} error={fieldErrors.date_of_birth} onBlur={handleFieldBlur} /><Field label="Aadhaar Number" name="aadhaar_number" required inputMode="numeric" pattern="[0-9]{12}" maxLength={12} minLength={12} defaultValue={initialValues.aadhaar_number} error={fieldErrors.aadhaar_number} onBlur={handleFieldBlur} onInput={handleFieldInput} /></Section> : null}
-        {isMisp ? <Section title="Designated Person (DP)"><Field label="DP First Name" name="dp_first_name" required defaultValue={initialValues.dp_first_name} error={fieldErrors.dp_first_name} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="DP Middle Name" name="dp_middle_name" defaultValue={initialValues.dp_middle_name} error={fieldErrors.dp_middle_name} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="DP Last Name" name="dp_last_name" required defaultValue={initialValues.dp_last_name} error={fieldErrors.dp_last_name} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="DP Contact" name="dp_phone" required inputMode="tel" pattern="(?:\+91)?[6-9][0-9]{9}" defaultValue={initialValues.dp_phone} error={fieldErrors.dp_phone} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="DP Email" name="dp_email" required type="email" defaultValue={initialValues.dp_email} error={fieldErrors.dp_email} onBlur={handleFieldBlur} onInput={handleFieldInput} /><PanInput label="DP PAN No" name="dp_pan_number" defaultValue={initialValues.dp_pan_number} error={fieldErrors.dp_pan_number} onBlur={handleFieldBlur} onInput={handleFieldInput} /><IndianDateField label="DP Date of Birth" name="date_of_birth" required defaultValue={initialValues.date_of_birth} inputClassName={dateInputClass} error={fieldErrors.date_of_birth} onBlur={handleFieldBlur} /><Field label="DP Aadhaar Number" name="aadhaar_number" required inputMode="numeric" pattern="[0-9]{12}" maxLength={12} minLength={12} defaultValue={initialValues.aadhaar_number} error={fieldErrors.aadhaar_number} onBlur={handleFieldBlur} onInput={handleFieldInput} /></Section> : null}
-        <Section title="Bank details"><SelectField label="Bank Name" name="bank_id" required options={banks} placeholder="Select bank" defaultValue={initialValues.bank_id} error={fieldErrors.bank_id} onBlur={handleFieldBlur} onChange={handleFieldInput} /><Field label="Account Number" name="bank_account_number" required inputMode="numeric" pattern="[0-9]{6,20}" defaultValue={initialValues.bank_account_number} error={fieldErrors.bank_account_number} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="IFSC Code" name="bank_ifsc_code" required maxLength={11} minLength={11} pattern="[A-Za-z]{4}0[A-Za-z0-9]{6}" transform="uppercase" defaultValue={initialValues.bank_ifsc_code} error={fieldErrors.bank_ifsc_code} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="GST Number" name="gst_number" required={isMisp} maxLength={15} minLength={isMisp ? 15 : undefined} pattern="[0-9]{2}[A-Za-z]{5}[0-9]{4}[A-Za-z][1-9A-Za-z]Z[0-9A-Za-z]" transform="uppercase" defaultValue={initialValues.gst_number} error={fieldErrors.gst_number} onBlur={handleFieldBlur} onInput={handleFieldInput} /></Section>
+        {!isMisp ? <Section title="POSP contact"><Field label="Mobile Number" name="applicant_phone" required inputMode="tel" pattern="(?:\+91)?[6-9][0-9]{9}" defaultValue={initialValues.applicant_phone} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="Email" name="applicant_email" type="email" required defaultValue={initialValues.applicant_email} onBlur={handleFieldBlur} onInput={handleFieldInput} /><IndianDateField label="Date of Birth" name="date_of_birth" required defaultValue={initialValues.date_of_birth} inputClassName={dateInputClass} onBlur={handleFieldBlur} /><Field label="Aadhaar Number" name="aadhaar_number" required inputMode="numeric" pattern="[0-9]{12}" maxLength={12} minLength={12} defaultValue={initialValues.aadhaar_number} onBlur={handleFieldBlur} onInput={handleFieldInput} /></Section> : null}
+        {isMisp ? <Section title="Designated Person (DP)"><Field label="DP First Name" name="dp_first_name" required defaultValue={initialValues.dp_first_name} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="DP Middle Name" name="dp_middle_name" defaultValue={initialValues.dp_middle_name} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="DP Last Name" name="dp_last_name" required defaultValue={initialValues.dp_last_name} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="DP Contact" name="dp_phone" required inputMode="tel" pattern="(?:\+91)?[6-9][0-9]{9}" defaultValue={initialValues.dp_phone} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="DP Email" name="dp_email" required type="email" defaultValue={initialValues.dp_email} onBlur={handleFieldBlur} onInput={handleFieldInput} /><PanInput label="DP PAN No" name="dp_pan_number" defaultValue={initialValues.dp_pan_number} onBlur={handleFieldBlur} onInput={handleFieldInput} /><IndianDateField label="DP Date of Birth" name="date_of_birth" required defaultValue={initialValues.date_of_birth} inputClassName={dateInputClass} onBlur={handleFieldBlur} /><Field label="DP Aadhaar Number" name="aadhaar_number" required inputMode="numeric" pattern="[0-9]{12}" maxLength={12} minLength={12} defaultValue={initialValues.aadhaar_number} onBlur={handleFieldBlur} onInput={handleFieldInput} /></Section> : null}
+        <Section title="Bank details"><SelectField label="Bank Name" name="bank_id" required options={banks} placeholder="Select bank" defaultValue={initialValues.bank_id} onBlur={handleFieldBlur} onChange={handleFieldInput} /><Field label="Account Number" name="bank_account_number" required inputMode="numeric" pattern="[0-9]{6,20}" defaultValue={initialValues.bank_account_number} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="IFSC Code" name="bank_ifsc_code" required maxLength={11} minLength={11} pattern="[A-Za-z]{4}0[A-Za-z0-9]{6}" transform="uppercase" defaultValue={initialValues.bank_ifsc_code} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="GST Number" name="gst_number" required={isMisp} maxLength={15} minLength={isMisp ? 15 : undefined} pattern="[0-9]{2}[A-Za-z]{5}[0-9]{4}[A-Za-z][1-9A-Za-z]Z[0-9A-Za-z]" transform="uppercase" defaultValue={initialValues.gst_number} onBlur={handleFieldBlur} onInput={handleFieldInput} /></Section>
         {legacyFields}
-        <div className="sticky bottom-0 z-20 flex flex-col gap-2 border-t border-[#E2E8F0] bg-white/96 px-3 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5"><p className="text-[9.5px] text-[#64748B]">Stage 1 saves the application, queues the PAN check and opens Documents.</p>{submitPath ? <button type="submit" onClick={handleSaveClick} data-validation-mode="native-fallback-v3" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto">Save & check PAN</button> : <FormSubmitButton label="Save & check PAN" pendingLabel="Saving & opening Documents" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto" />}</div>
+        <div className="sticky bottom-0 z-20 flex flex-col gap-2 border-t border-[#E2E8F0] bg-white/96 px-3 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5"><p className="text-[9.5px] text-[#64748B]">Stage 1 saves the application, queues the PAN check and opens Documents.</p>{submitPath ? <button type="submit" onClick={handleSaveClick} data-validation-mode="zero-render-v4" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto">Save & check PAN</button> : <FormSubmitButton label="Save & check PAN" pendingLabel="Saving & opening Documents" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto" />}</div>
       </form>
     </div>
   </>;
@@ -218,6 +213,44 @@ function focusField(form: HTMLFormElement, name: string) {
     field.focus({ preventScroll: true });
     field.scrollIntoView({ behavior: "smooth", block: "center" });
   });
+}
+
+function showFieldError(form: HTMLFormElement, name: string, message: string, clearPrevious: boolean) {
+  if (clearPrevious) clearFormErrors(form);
+  const field = form.elements.namedItem(name);
+  if (!(field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement)) return;
+  const error = field.closest<HTMLElement>("[data-field-container]")?.querySelector<HTMLElement>("[data-field-error]");
+  field.setAttribute("aria-invalid", "true");
+  if (error) {
+    error.textContent = message;
+    error.hidden = false;
+    field.setAttribute("aria-describedby", error.id);
+  }
+  focusField(form, name);
+}
+
+function clearFieldError(form: HTMLFormElement, name: string) {
+  const field = form.elements.namedItem(name);
+  if (!(field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement)) return;
+  const error = field.closest<HTMLElement>("[data-field-container]")?.querySelector<HTMLElement>("[data-field-error]");
+  field.removeAttribute("aria-invalid");
+  field.removeAttribute("aria-describedby");
+  if (error) {
+    error.textContent = "";
+    error.hidden = true;
+  }
+}
+
+function clearFormErrors(form: HTMLFormElement) {
+  form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("[aria-invalid='true']").forEach((field) => {
+    if (field.name) clearFieldError(form, field.name);
+  });
+}
+
+function hasFieldError(form: HTMLFormElement, name: string) {
+  const field = form.elements.namedItem(name);
+  if (!(field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement)) return false;
+  return field.getAttribute("aria-invalid") === "true";
 }
 
 function text(data: FormData, name: string) {
