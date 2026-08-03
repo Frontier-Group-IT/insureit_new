@@ -43,6 +43,7 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const formRef = useRef<HTMLFormElement>(null);
   const touchedRef = useRef(new Set<string>());
+  const invalidHandledRef = useRef(false);
   const isMisp = partnerType === "misp";
   const backHref = isMisp ? "/intermediaries/misp" : "/intermediaries/posp";
 
@@ -75,14 +76,28 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    invalidHandledRef.current = false;
     if (validateForm(event.currentTarget)) return;
     event.preventDefault();
   }
 
-  function handleSaveClick() {
+  function handleSaveClick(event: React.MouseEvent<HTMLButtonElement>) {
+    invalidHandledRef.current = false;
     const form = formRef.current;
-    if (!form || !validateForm(form)) return;
-    form.requestSubmit();
+    if (!form || validateForm(form)) return;
+    event.preventDefault();
+  }
+
+  function handleInvalid(event: React.InvalidEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (invalidHandledRef.current) return;
+    const field = event.target;
+    if (!(field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement) || !field.name) return;
+    invalidHandledRef.current = true;
+    const form = event.currentTarget;
+    touchedRef.current.add(field.name);
+    setFieldErrors({ [field.name]: validationErrorForField(field.name, new FormData(form), partnerType) ?? field.validationMessage });
+    focusField(form, field.name);
   }
 
   function validateForm(form: HTMLFormElement) {
@@ -121,7 +136,7 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
         <div className="flex gap-3"><Link href="/customers/posp-misp/import" className="text-[10.5px] font-semibold text-[#4F46E5]">Import Excel</Link><Link href={backHref} className="text-[10.5px] font-semibold text-[#4F46E5]">Back</Link></div>
       </div>
       {visibleError ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[11px] font-semibold text-red-700">{visibleError}</div> : null}
-      <form ref={formRef} action={submitPath ?? formAction} method={submitPath ? "post" : undefined} onSubmitCapture={handleSubmit} noValidate className="w-full overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
+      <form ref={formRef} action={submitPath ?? formAction} method={submitPath ? "post" : undefined} onSubmitCapture={handleSubmit} onInvalidCapture={handleInvalid} data-validation-mode="native-fallback-v3" className="w-full overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
         <input type="hidden" name="partner_type" value={partnerType} />
         <header className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-3 py-3 sm:px-5 sm:py-4"><div className="flex items-start gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#071D49] text-[10px] font-bold text-white">1</span><div><h2 className="text-[14px] font-semibold text-[#0F172A]">Primary information & PAN check</h2><p className="mt-0.5 text-[10px] leading-4 text-[#64748B]">The POSP/MISP ID is issued only after successful onboarding. A Partner ID is issued after Stage 2 documents are submitted.</p></div></div></header>
         <Section title={isMisp ? "MISP details" : "POSP details"}>
@@ -134,7 +149,7 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
         {isMisp ? <Section title="Designated Person (DP)"><Field label="DP First Name" name="dp_first_name" required defaultValue={initialValues.dp_first_name} error={fieldErrors.dp_first_name} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="DP Middle Name" name="dp_middle_name" defaultValue={initialValues.dp_middle_name} error={fieldErrors.dp_middle_name} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="DP Last Name" name="dp_last_name" required defaultValue={initialValues.dp_last_name} error={fieldErrors.dp_last_name} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="DP Contact" name="dp_phone" required inputMode="tel" pattern="(?:\+91)?[6-9][0-9]{9}" defaultValue={initialValues.dp_phone} error={fieldErrors.dp_phone} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="DP Email" name="dp_email" required type="email" defaultValue={initialValues.dp_email} error={fieldErrors.dp_email} onBlur={handleFieldBlur} onInput={handleFieldInput} /><PanInput label="DP PAN No" name="dp_pan_number" defaultValue={initialValues.dp_pan_number} error={fieldErrors.dp_pan_number} onBlur={handleFieldBlur} onInput={handleFieldInput} /><IndianDateField label="DP Date of Birth" name="date_of_birth" required defaultValue={initialValues.date_of_birth} inputClassName={dateInputClass} error={fieldErrors.date_of_birth} onBlur={handleFieldBlur} /><Field label="DP Aadhaar Number" name="aadhaar_number" required inputMode="numeric" pattern="[0-9]{12}" maxLength={12} minLength={12} defaultValue={initialValues.aadhaar_number} error={fieldErrors.aadhaar_number} onBlur={handleFieldBlur} onInput={handleFieldInput} /></Section> : null}
         <Section title="Bank details"><SelectField label="Bank Name" name="bank_id" required options={banks} placeholder="Select bank" defaultValue={initialValues.bank_id} error={fieldErrors.bank_id} onBlur={handleFieldBlur} onChange={handleFieldInput} /><Field label="Account Number" name="bank_account_number" required inputMode="numeric" pattern="[0-9]{6,20}" defaultValue={initialValues.bank_account_number} error={fieldErrors.bank_account_number} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="IFSC Code" name="bank_ifsc_code" required maxLength={11} minLength={11} pattern="[A-Za-z]{4}0[A-Za-z0-9]{6}" transform="uppercase" defaultValue={initialValues.bank_ifsc_code} error={fieldErrors.bank_ifsc_code} onBlur={handleFieldBlur} onInput={handleFieldInput} /><Field label="GST Number" name="gst_number" required={isMisp} maxLength={15} minLength={isMisp ? 15 : undefined} pattern="[0-9]{2}[A-Za-z]{5}[0-9]{4}[A-Za-z][1-9A-Za-z]Z[0-9A-Za-z]" transform="uppercase" defaultValue={initialValues.gst_number} error={fieldErrors.gst_number} onBlur={handleFieldBlur} onInput={handleFieldInput} /></Section>
         {legacyFields}
-        <div className="sticky bottom-0 z-20 flex flex-col gap-2 border-t border-[#E2E8F0] bg-white/96 px-3 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5"><p className="text-[9.5px] text-[#64748B]">Stage 1 saves the application, queues the PAN check and opens Documents.</p>{submitPath ? <button type="button" onClick={handleSaveClick} className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto">Save & check PAN</button> : <FormSubmitButton label="Save & check PAN" pendingLabel="Saving & opening Documents" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto" />}</div>
+        <div className="sticky bottom-0 z-20 flex flex-col gap-2 border-t border-[#E2E8F0] bg-white/96 px-3 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5"><p className="text-[9.5px] text-[#64748B]">Stage 1 saves the application, queues the PAN check and opens Documents.</p>{submitPath ? <button type="submit" onClick={handleSaveClick} data-validation-mode="native-fallback-v3" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto">Save & check PAN</button> : <FormSubmitButton label="Save & check PAN" pendingLabel="Saving & opening Documents" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto" />}</div>
       </form>
     </div>
   </>;
