@@ -148,7 +148,13 @@ Use the protocol for existing interfaces, screenshots, live pages, or source cod
 
 ### Form submission and validation freeze prevention
 
-**LEARNING:** A repeated POSP/MISP onboarding freeze was caused by route-post forms calling `form.submit()` after setting a local pending state. Direct `HTMLFormElement.submit()` bypasses React submit handlers, native constraint validation, inline validation utilities and `preventDefault()`, so invalid PAN/mobile/etc. can still post while the UI remains locked in a saving state.
+**LEARNING: POSP/MISP ONBOARDING FREEZE ROOT CAUSE.**
+
+**DO NOT PUT CUSTOM REACT VALIDATION HANDLERS ON ROUTE-POST ONBOARDING FORMS THAT USE `submitPath`.**
+
+**VERIFIED FIX:** the production freeze on `/intermediaries/posp/new` was resolved by keeping `submitPath` forms on a plain browser POST path: no React `onClick`, no `onSubmitCapture`, no `onInvalidCapture`, no blur/input validation handlers that mutate validation state. Use native `required`, `pattern`, `minLength` and `maxLength` attributes for immediate browser validation, then let the route handler/server action remain the authority. Commit `6d2a40f5edce52a611efc120c7aff6f8843c19f2` implemented the working fix.
+
+**FAILED APPROACH TO AVOID:** adding more client validation, pending state guards, `form.submit()`, tiny hydrated validation guards, or server-render wrapper workarounds can still leave the route-post page in a locked/unresponsive state. The safe rule for this workflow is to remove React from the submit/invalid validation path, not to add another validation layer.
 
 For all validated forms, especially onboarding, document, account, payment, KYC and workflow-transition forms:
 
