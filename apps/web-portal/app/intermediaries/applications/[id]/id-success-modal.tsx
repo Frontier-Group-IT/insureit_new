@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, BadgeCheck, GraduationCap, X } from "lucide-react";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { createLinkedIntermediaryAccount } from "./account-review-actions";
 
 type Props = {
@@ -77,9 +78,12 @@ export function IdSuccessModal({ event, applicationId, isPartner, preferredType,
             <form action={createLinkedIntermediaryAccount}>
               <input type="hidden" name="application_id" value={applicationId} />
               <input type="hidden" name="registration_type" value={accountType} />
-              <button type="submit" className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4B8DF8] px-4 text-[10.5px] font-semibold text-white shadow-[0_12px_24px_rgba(79,70,229,.22)] transition hover:brightness-105">
-                Create {accountLabel} ID <ArrowRight className="h-4 w-4" />
-              </button>
+              <FormSubmitButton
+                label={`Create ${accountLabel} ID`}
+                pendingLabel={`Creating ${accountLabel} ID…`}
+                icon={<ArrowRight className="h-4 w-4" />}
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4B8DF8] px-4 text-[10.5px] font-semibold text-white shadow-[0_12px_24px_rgba(79,70,229,.22)] hover:brightness-110"
+              />
             </form>
           ) : (
             <Link href={primaryHref} onClick={() => setVisible(false)} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4B8DF8] px-4 text-[10.5px] font-semibold text-white shadow-[0_12px_24px_rgba(79,70,229,.22)] transition hover:brightness-105">
