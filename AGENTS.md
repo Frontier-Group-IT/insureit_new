@@ -145,3 +145,17 @@ Use the protocol for existing interfaces, screenshots, live pages, or source cod
 - Verify desktop and mobile behavior, loading/error/empty states, keyboard interaction and permission-gated actions.
 - Run available lint, typecheck, build and tests before claiming success.
 - Do not merge a pull request unless the user explicitly asks.
+
+### Form submission and validation freeze prevention
+
+**LEARNING:** A repeated POSP/MISP onboarding freeze was caused by route-post forms calling `form.submit()` after setting a local pending state. Direct `HTMLFormElement.submit()` bypasses React submit handlers, native constraint validation, inline validation utilities and `preventDefault()`, so invalid PAN/mobile/etc. can still post while the UI remains locked in a saving state.
+
+For all validated forms, especially onboarding, document, account, payment, KYC and workflow-transition forms:
+
+- Do not use `form.submit()` from click handlers.
+- Use a real `type="submit"` button or `form.requestSubmit()` only when a programmatic submit is truly required.
+- Run the same validation path for button clicks, Enter-key submission and programmatic submission.
+- Set `pending`, `posting`, disabled or loading state only after validation passes.
+- If validation fails, prevent submission, keep entered data intact, show the field-level or banner error, and focus/scroll to the first invalid field.
+- Preserve server-side validation as the authority; client validation is only an early recovery path.
+- When resolving conflicts in validated forms, preserve existing shared validators such as `validateInlineForm` and apply freeze prevention on top instead of replacing the current form workflow.
