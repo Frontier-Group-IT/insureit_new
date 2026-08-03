@@ -5,7 +5,7 @@ import { useActionState, useEffect, useRef, useState, type ReactNode } from "rea
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { freshDynamicRouteUrl } from "@/components/fresh-dynamic-route-navigation";
 import { IndianDateField } from "@/components/indian-date-field";
-import { handleInlineBlur, handleInlineInput, inlineFieldErrorId, validateInlineForm } from "@/components/inline-field-validation";
+import { inlineFieldErrorId } from "@/components/inline-field-validation";
 import type { PospMispState } from "./actions";
 
 type PartnerType = "posp" | "misp";
@@ -31,9 +31,7 @@ const labelClass = "mb-1.5 block text-[10.5px] font-semibold text-[#344054]";
 export function PospMispOnboardingForm({ action, submitPath, partnerType, initialError = null, initialField = null, initialValues = {}, salesManagers, oems, banks, legacyFields = null }: Props) {
   const [state, formAction] = useActionState(action, { error: null, field: null, applicationId: null });
   const [rmValue, setRmValue] = useState(initialValues.associate_employee_id ?? "");
-  const [posting, setPosting] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
-  const postingRef = useRef(false);
   const isMisp = partnerType === "misp";
   const backHref = isMisp ? "/intermediaries/misp" : "/intermediaries/posp";
 
@@ -54,24 +52,6 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
     });
   }, [initialField, state.field]);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    if (postingRef.current) {
-      event.preventDefault();
-      return;
-    }
-    const valid = validateInlineForm(event.currentTarget);
-    if (!valid) {
-      event.preventDefault();
-      postingRef.current = false;
-      setPosting(false);
-      return;
-    }
-    if (submitPath) {
-      postingRef.current = true;
-      setPosting(true);
-    }
-  }
-
   const visibleError = state.error ?? initialError;
 
   return <>
@@ -81,7 +61,7 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
         <div className="flex gap-3"><Link href="/customers/posp-misp/import" className="text-[10.5px] font-semibold text-[#4F46E5]">Import Excel</Link><Link href={backHref} className="text-[10.5px] font-semibold text-[#4F46E5]">Back</Link></div>
       </div>
       {visibleError ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[11px] font-semibold text-red-700">{visibleError}</div> : null}
-      <form ref={formRef} action={submitPath ?? formAction} method={submitPath ? "post" : undefined} onSubmitCapture={handleSubmit} onBlur={handleInlineBlur} onInput={handleInlineInput} noValidate className="w-full overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
+      <form ref={formRef} action={submitPath ?? formAction} method={submitPath ? "post" : undefined} noValidate className="w-full overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
         <input type="hidden" name="partner_type" value={partnerType} />
         <header className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-3 py-3 sm:px-5 sm:py-4"><div className="flex items-start gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#071D49] text-[10px] font-bold text-white">1</span><div><h2 className="text-[14px] font-semibold text-[#0F172A]">Primary information & PAN check</h2><p className="mt-0.5 text-[10px] leading-4 text-[#64748B]">The POSP/MISP ID is issued only after successful onboarding. A Partner ID is issued after Stage 2 documents are submitted.</p></div></div></header>
         <Section title={isMisp ? "MISP details" : "POSP details"}>
@@ -94,7 +74,7 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
         {isMisp ? <Section title="Designated Person (DP)"><Field label="DP First Name" name="dp_first_name" required defaultValue={initialValues.dp_first_name} /><Field label="DP Middle Name" name="dp_middle_name" defaultValue={initialValues.dp_middle_name} /><Field label="DP Last Name" name="dp_last_name" required defaultValue={initialValues.dp_last_name} /><Field label="DP Contact" name="dp_phone" required inputMode="tel" pattern="(?:\+91)?[6-9][0-9]{9}" defaultValue={initialValues.dp_phone} /><Field label="DP Email" name="dp_email" required type="email" defaultValue={initialValues.dp_email} /><PanInput label="DP PAN No" name="dp_pan_number" defaultValue={initialValues.dp_pan_number} /><IndianDateField label="DP Date of Birth" name="date_of_birth" required defaultValue={initialValues.date_of_birth} inputClassName={dateInputClass} /><Field label="DP Aadhaar Number" name="aadhaar_number" required inputMode="numeric" pattern="[0-9]{12}" maxLength={12} minLength={12} defaultValue={initialValues.aadhaar_number} /></Section> : null}
         <Section title="Bank details"><SelectField label="Bank Name" name="bank_id" required options={banks} placeholder="Select bank" defaultValue={initialValues.bank_id} /><Field label="Account Number" name="bank_account_number" required inputMode="numeric" pattern="[0-9]{6,20}" defaultValue={initialValues.bank_account_number} /><Field label="IFSC Code" name="bank_ifsc_code" required maxLength={11} minLength={11} pattern="[A-Za-z]{4}0[A-Za-z0-9]{6}" transform="uppercase" defaultValue={initialValues.bank_ifsc_code} /><Field label="GST Number" name="gst_number" required={isMisp} maxLength={15} minLength={isMisp ? 15 : undefined} pattern="[0-9]{2}[A-Za-z]{5}[0-9]{4}[A-Za-z][1-9A-Za-z]Z[0-9A-Za-z]" transform="uppercase" defaultValue={initialValues.gst_number} /></Section>
         {legacyFields}
-        <div className="sticky bottom-0 z-20 flex flex-col gap-2 border-t border-[#E2E8F0] bg-white/96 px-3 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5"><p className="text-[9.5px] text-[#64748B]">Stage 1 saves the application, queues the PAN check and opens Documents.</p>{submitPath ? <button type="submit" disabled={posting} className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-80 sm:w-auto">{posting ? "Saving & opening Documents" : "Save & check PAN"}</button> : <FormSubmitButton label="Save & check PAN" pendingLabel="Saving & opening Documents" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto" />}</div>
+        <div className="sticky bottom-0 z-20 flex flex-col gap-2 border-t border-[#E2E8F0] bg-white/96 px-3 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5"><p className="text-[9.5px] text-[#64748B]">Stage 1 saves the application, queues the PAN check and opens Documents.</p>{submitPath ? <button type="submit" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto">Save & check PAN</button> : <FormSubmitButton label="Save & check PAN" pendingLabel="Saving & opening Documents" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto" />}</div>
       </form>
     </div>
   </>;
