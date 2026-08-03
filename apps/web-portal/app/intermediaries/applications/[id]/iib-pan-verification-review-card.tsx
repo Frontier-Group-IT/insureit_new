@@ -35,65 +35,50 @@ export async function IibPanVerificationReviewCard({ applicationId }: { applicat
   const activelyRefreshing = status === "pending" || status === "queued" || status === "checking";
   const canQueue = profile.workflow_stage === "pre_iib" && !job;
   const canRetry = profile.workflow_stage === "pre_iib" && (status === "failed" || status === "invalid");
-  const meta = job?.completed_at ?? job?.started_at ?? job?.requested_at;
   const presentation = statusPresentation(status, Boolean(job));
+  const message = job?.result_message ?? job?.last_error ?? presentation.message;
 
   return (
-    <aside className="fixed bottom-5 right-5 z-40 w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-[#D8E2F0] bg-white/95 p-3 shadow-[0_18px_55px_rgba(15,23,42,.18)] backdrop-blur">
+    <div className="mr-1 flex min-w-[148px] max-w-[220px] items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-white shadow-sm backdrop-blur-sm">
       <PanVerificationAutoRefresh enabled={activelyRefreshing && Boolean(job)} />
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[8.5px] font-semibold uppercase tracking-[.12em] text-[#64748B]">IIB PAN verification</p>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <p className="text-[13px] font-semibold tracking-[.04em] text-[#0F172A]">{maskPan(pan)}</p>
-            <span className={`rounded-full px-2.5 py-1 text-[8.5px] font-semibold ${presentation.badge}`}>{presentation.label}</span>
-          </div>
-        </div>
-        <span className={`mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full ${presentation.dot}`} aria-hidden="true" />
+      <span className={`h-2 w-2 shrink-0 rounded-full ${presentation.dot}`} aria-hidden="true" />
+      <div className="min-w-0 flex-1 leading-tight">
+        <p className="text-[7.5px] font-semibold uppercase tracking-[.08em] text-white/60">IIB PAN verification</p>
+        <p className="mt-0.5 text-[10px] font-semibold tracking-[.04em] text-white">{maskPan(pan)}</p>
+        <p className={`mt-0.5 text-[8.5px] font-semibold ${presentation.text}`}>{presentation.label}</p>
+        <p className="mt-0.5 truncate text-[7.5px] font-medium text-white/65" title={message}>{message}</p>
       </div>
-
-      <p className="mt-2 text-[9.5px] leading-4 text-[#475569]">{job?.result_message ?? job?.last_error ?? presentation.message}</p>
-
-      {(job?.checked_by_device || meta) ? (
-        <p className="mt-1.5 text-[8.5px] text-[#94A3B8]">
-          {job?.checked_by_device ? `Checker: ${job.checked_by_device}` : ""}
-          {job?.checked_by_device && meta ? " · " : ""}
-          {meta ? formatDateTime(meta) : ""}
-        </p>
+      {canQueue ? (
+        <form action={queuePospMispPanVerification} className="shrink-0">
+          <input type="hidden" name="application_id" value={applicationId} />
+          <FormSubmitButton label="Check" pendingLabel="…" className="inline-flex h-7 items-center rounded-lg bg-white px-2.5 text-[8px] font-semibold text-[#071D49] hover:bg-blue-50" />
+        </form>
       ) : null}
-
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        {canQueue ? (
-          <form action={queuePospMispPanVerification}>
-            <input type="hidden" name="application_id" value={applicationId} />
-            <FormSubmitButton label="Check PAN" pendingLabel="Queuing…" className="inline-flex h-8 items-center rounded-lg bg-[#071D49] px-3 text-[9px] font-semibold text-white hover:bg-[#0B2A63]" />
-          </form>
-        ) : null}
-        {canRetry ? (
-          <form action={retryPospMispPanVerification}>
-            <input type="hidden" name="application_id" value={applicationId} />
-            <FormSubmitButton label="Retry check" pendingLabel="Re-queuing…" className="inline-flex h-8 items-center rounded-lg bg-[#071D49] px-3 text-[9px] font-semibold text-white hover:bg-[#0B2A63]" />
-          </form>
-        ) : null}
-        <Link href={`/intermediaries/applications/${applicationId}/workflow?stage=primary`} className="inline-flex h-8 items-center rounded-lg border border-[#D8E2F0] bg-white px-3 text-[9px] font-semibold text-[#334155] hover:bg-[#F8FAFC]">
-          Review PAN
+      {canRetry ? (
+        <form action={retryPospMispPanVerification} className="shrink-0">
+          <input type="hidden" name="application_id" value={applicationId} />
+          <FormSubmitButton label="Retry" pendingLabel="…" className="inline-flex h-7 items-center rounded-lg bg-white px-2.5 text-[8px] font-semibold text-[#071D49] hover:bg-blue-50" />
+        </form>
+      ) : status === "invalid" || status === "failed" ? (
+        <Link href={`/intermediaries/applications/${applicationId}/workflow?stage=primary`} className="inline-flex h-7 shrink-0 items-center rounded-lg border border-white/25 bg-white/10 px-2.5 text-[8px] font-semibold text-white hover:bg-white/20">
+          Review
         </Link>
-      </div>
-    </aside>
+      ) : null}
+    </div>
   );
 }
 
 function statusPresentation(status: PanJobStatus, hasJob: boolean) {
-  if (!hasJob) return { label: "Not queued", badge: "bg-slate-100 text-slate-700", dot: "bg-slate-400", message: "Queue this PAN for the authorised IIB checker extension." };
-  const map: Record<PanJobStatus, { label: string; badge: string; dot: string; message: string }> = {
-    pending: { label: "Waiting", badge: "bg-slate-100 text-slate-700", dot: "bg-slate-400", message: "Waiting for the authorised extension to collect this PAN." },
-    queued: { label: "Queued", badge: "bg-blue-50 text-blue-700", dot: "bg-blue-500", message: "Queued for checking in the IIB POS portal." },
-    checking: { label: "Checking", badge: "bg-blue-50 text-blue-700", dot: "animate-pulse bg-blue-500", message: "The extension is currently checking this PAN." },
-    matched: { label: "Existing record", badge: "bg-amber-50 text-amber-700", dot: "bg-amber-500", message: "A matching IIB record was found. Review the account route before proceeding." },
-    not_found: { label: "IIB cleared", badge: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500", message: "No existing IIB POS record was found for this PAN." },
-    invalid: { label: "Invalid PAN", badge: "bg-red-50 text-red-700", dot: "bg-red-500", message: "Correct the PAN and retry the verification." },
-    failed: { label: "Check failed", badge: "bg-red-50 text-red-700", dot: "bg-red-500", message: "The last extension check failed and can be retried." },
-    manual_review: { label: "Manual review", badge: "bg-violet-50 text-violet-700", dot: "bg-violet-500", message: "This PAN requires manual review." },
+  if (!hasJob) return { label: "Not queued", text: "text-slate-200", dot: "bg-slate-300", message: "Waiting to be checked" };
+  const map: Record<PanJobStatus, { label: string; text: string; dot: string; message: string }> = {
+    pending: { label: "Waiting", text: "text-slate-200", dot: "bg-slate-300", message: "Waiting for the checker extension" },
+    queued: { label: "Queued", text: "text-blue-200", dot: "bg-blue-300", message: "Queued for IIB POS checking" },
+    checking: { label: "Checking", text: "text-blue-200", dot: "animate-pulse bg-blue-300", message: "Checking in the IIB POS portal" },
+    matched: { label: "Existing record", text: "text-amber-200", dot: "bg-amber-300", message: "Matching Record Found In DataBase" },
+    not_found: { label: "IIB cleared", text: "text-emerald-200", dot: "bg-emerald-300", message: "No Data Found In POS System" },
+    invalid: { label: "Invalid PAN", text: "text-red-200", dot: "bg-red-300", message: "Correct the PAN and retry" },
+    failed: { label: "Check failed", text: "text-red-200", dot: "bg-red-300", message: "The last check failed" },
+    manual_review: { label: "Manual review", text: "text-violet-200", dot: "bg-violet-300", message: "Manual review is required" },
   };
   return map[status];
 }
@@ -101,10 +86,4 @@ function statusPresentation(status: PanJobStatus, hasJob: boolean) {
 function maskPan(value: string | null) {
   const normalized = value?.replace(/\s/g, "").toUpperCase() ?? "";
   return normalized.length === 10 ? `${normalized.slice(0, 2)}****${normalized.slice(-3)}` : "PAN unavailable";
-}
-
-function formatDateTime(value: string) {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" }).format(parsed);
 }
