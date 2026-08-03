@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-03T22:27:00+05:30",
+  "deploy_requested_at": "2026-08-03T22:42:24+05:30",
   "requested_by": "Nishant Mishra",
   "source": "ChatGPT explicit deploy command",
-  "source_commit": "d4f399a86ff8434f577087c1c278950c3c5a2413",
-  "release_scope": "Approved Intermediatory release through current main: harden POSP/MISP empty-submit validation and add immediate loading, disabled, hover, active, and focus feedback for POSP/MISP ID creation, portal-user creation, and resend-link actions without duplicating existing workflow loaders.",
-  "verification": "PR #154 GitHub Actions run 30828545552 passed npm ci, lint:web, typecheck:web, and build:web. The production Vercel build is the final deployment gate for source commit d4f399a86ff8434f577087c1c278950c3c5a2413.",
+  "source_commit": "1934b5627116a369cf1c025f7d12a859391736e4",
+  "release_scope": "Deploy current main for Intermediatory fixes: POSP/MISP onboarding validation blocks empty or invalid route-post saves before server POST, AGENTS documents the route-form guardrail, and approved Intermediatory loading feedback changes remain included.",
+  "verification": "POSP/MISP validation fix was typechecked, linted and production-built locally before deployment. PR #154 GitHub Actions run 30828545552 passed npm ci, lint:web, typecheck:web, and build:web for the loading feedback changes. Production Vercel build is the final deployment gate for current main.",
   "instructions": "Update this file only after the user explicitly says deploy now or finish and deploy. Ordinary code commits must not modify it."
 }
