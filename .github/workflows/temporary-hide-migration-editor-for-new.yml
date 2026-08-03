@@ -1,0 +1,146 @@
+name: Temporary hide migration editor for new onboarding
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch-and-validate:
+    if: github.head_ref == 'fix/hide-migration-editor-for-new'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply focused visibility rule
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('apps/web-portal/app/intermediaries/applications/[id]/workflow/page.tsx')
+          text = path.read_text()
+
+          anchor = '''  if (context !== "partner" && application.partner_record_id) {
+    const { data: familyApplications } = await admin
+      .from("intermediary_onboarding_applications")
+      .select("id,draft_data")
+      .eq("partner_record_id", application.partner_record_id)
+      .neq("id", id)
+      .returns<Array<{ id: string; draft_data: Record<string, unknown> | null }>>();
+    const parentApplication = (familyApplications ?? []).find((item) => accountContext(item.draft_data) === "partner");
+    if (parentApplication) {
+      const { data: parentProfile } = await admin
+        .from("posp_misp_onboarding_profiles")
+        .select("raw_data")
+        .eq("application_id", parentApplication.id)
+        .maybeSingle<{ raw_data: Record<string, unknown> | null }>();
+      migrationValues = {
+        ...migrationValues,
+        ...asObject(parentProfile?.raw_data),
+        ...asObject(parentApplication.draft_data),
+      };
+    }
+  }
+'''
+          replacement = anchor + '''  const showMigrationEditor = isExistingIntermediaryMigration({
+    recordSource: profile.record_source,
+    existingRegistrationConfirmed: profile.existing_registration_confirmed,
+    existingRegistrationCode: profile.existing_registration_code,
+    applicationDraft: application.draft_data,
+    migrationValues,
+  });
+'''
+          if anchor not in text:
+            raise SystemExit('migration values anchor missing')
+          text = text.replace(anchor, replacement, 1)
+
+          old_render = '''              {viewStage === "primary" ? <div className="px-4 pb-4 sm:px-5 sm:pb-5"><ExistingIntermediaryMigrationEditor applicationId={id} accountType={profile.partner_type} values={migrationValues} editable={editable} /></div> : null}'''
+          new_render = '''              {viewStage === "primary" && showMigrationEditor ? <div className="px-4 pb-4 sm:px-5 sm:pb-5"><ExistingIntermediaryMigrationEditor applicationId={id} accountType={profile.partner_type} values={migrationValues} editable={editable} /></div> : null}'''
+          if old_render not in text:
+            raise SystemExit('migration editor render pattern missing')
+          text = text.replace(old_render, new_render, 1)
+
+          helper_anchor = '''function asObject(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+'''
+          helper = helper_anchor + '''
+function isExistingIntermediaryMigration({
+  recordSource,
+  existingRegistrationConfirmed,
+  existingRegistrationCode,
+  applicationDraft,
+  migrationValues,
+}: {
+  recordSource: string | null | undefined;
+  existingRegistrationConfirmed: boolean;
+  existingRegistrationCode: string | null;
+  applicationDraft: Record<string, unknown> | null;
+  migrationValues: Record<string, unknown>;
+}) {
+  const normalizedSource = recordSource?.trim().toLowerCase() ?? "";
+  const explicitLegacySources = new Set([
+    "excel_import",
+    "legacy_import",
+    "historical_manual",
+    "existing_onboarding",
+    "existing_intermediary",
+    "legacy",
+  ]);
+  if (explicitLegacySources.has(normalizedSource)) return true;
+  if (existingRegistrationConfirmed || hasMeaningfulValue(existingRegistrationCode)) return true;
+
+  const evidence = { ...asObject(applicationDraft), ...migrationValues };
+  const modeValues = [
+    evidence.draft_onboarding_mode,
+    evidence.onboarding_mode,
+    evidence.record_source,
+    evidence.source,
+  ];
+  if (modeValues.some((value) => typeof value === "string" && /(legacy|existing|excel|historical)/i.test(value))) return true;
+
+  return [
+    "legacy_partner_code",
+    "legacy_registration_code",
+    "existing_partner_id",
+    "existing_posp_id",
+    "existing_misp_id",
+    "original_onboarding_date",
+    "original_activation_date",
+    "migration_verification_remarks",
+    "verification_remarks",
+  ].some((key) => hasMeaningfulValue(evidence[key]));
+}
+
+function hasMeaningfulValue(value: unknown) {
+  return typeof value === "string" ? value.trim().length > 0 : value !== null && value !== undefined && value !== false;
+}
+'''
+          if helper_anchor not in text:
+            raise SystemExit('helper anchor missing')
+          text = text.replace(helper_anchor, helper, 1)
+          path.write_text(text)
+          PY
+      - name: Install dependencies
+        run: npm ci || (sleep 10 && npm ci)
+      - run: npm run typecheck:web
+      - run: npm run build:web
+      - name: Commit validated changes to PR branch
+        run: |
+          rm .github/workflows/temporary-hide-migration-editor-for-new.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add apps/web-portal/app/intermediaries/applications/[id]/workflow/page.tsx .github/workflows/temporary-hide-migration-editor-for-new.yml
+          git commit -m "Hide migration editor for new onboarding records"
+          git push origin HEAD:${{ github.head_ref }}
