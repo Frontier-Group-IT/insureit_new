@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getScopedPospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-const BASE_REQUIRED_TYPES = ["aadhaar_front", "aadhaar_back", "pan_copy", "cancelled_cheque"] as const;
+const BASE_REQUIRED_TYPES = ["aadhaar_front", "aadhaar_back", "pan_copy", "cancelled_cheque", "photograph"] as const;
 
 type ActivationResult = {
   partner_id?: unknown;
