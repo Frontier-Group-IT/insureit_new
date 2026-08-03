@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   DEFAULT_LEGACY_WORKFLOW,
   LEGACY_AGREEMENT_OPTIONS,
@@ -14,9 +14,6 @@ type Props = { partnerType:"posp"|"misp"; initialValues?:Record<string,string> }
 type StatusOption = { readonly value:string; readonly label:string };
 
 export function LegacyOnboardingFields({ partnerType, initialValues = {} }: Props) {
-  const sectionRef = useRef<HTMLElement>(null);
-  const remarksRef = useRef<HTMLTextAreaElement>(null);
-  const [remarksError, setRemarksError] = useState<string | null>(null);
   const [trainingStatus, setTrainingStatus] = useState(() => initialStatus(LEGACY_TRAINING_OPTIONS, initialValues.legacy_training_status, DEFAULT_LEGACY_WORKFLOW.trainingStatus));
   const [examStatus, setExamStatus] = useState(() => initialStatus(LEGACY_EXAM_OPTIONS, initialValues.legacy_exam_status, DEFAULT_LEGACY_WORKFLOW.examStatus));
   const [agreementStatus, setAgreementStatus] = useState(() => initialStatus(LEGACY_AGREEMENT_OPTIONS, initialValues.legacy_agreement_status, DEFAULT_LEGACY_WORKFLOW.agreementStatus));
@@ -25,36 +22,8 @@ export function LegacyOnboardingFields({ partnerType, initialValues = {} }: Prop
   const registrationLabel = partnerType === "misp" ? "Existing MISP ID" : "Existing POSP ID";
   const finalOutcomes = [trainingStatus === "completed", examStatus === "passed", agreementStatus === "signed", iibUploadStatus === "uploaded", iibRegistrationStatus === "registered"].filter(Boolean).length;
 
-  useEffect(() => {
-    const section = sectionRef.current;
-    const form = section?.closest("form");
-    if (!form) return;
-
-    const interceptInvalidLegacySubmit = (event: Event) => {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      const button = target.closest("button");
-      if (!button || !/save\s*&\s*check\s*pan/i.test(button.textContent ?? "")) return;
-
-      const remarks = remarksRef.current;
-      if (!remarks || remarks.value.trim().length >= 10) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-      if ("stopImmediatePropagation" in event) event.stopImmediatePropagation();
-      setRemarksError("Enter at least 10 characters explaining how the previous record was verified.");
-      requestAnimationFrame(() => {
-        remarks.focus({ preventScroll: true });
-        remarks.scrollIntoView({ behavior: "smooth", block: "center" });
-      });
-    };
-
-    form.addEventListener("click", interceptInvalidLegacySubmit, true);
-    return () => form.removeEventListener("click", interceptInvalidLegacySubmit, true);
-  }, []);
-
   return (
-    <section ref={sectionRef} className="border-t border-amber-200 bg-amber-50/70 px-3 py-4 sm:px-5 sm:py-5" data-legacy-onboarding-fields="true">
+    <section className="border-t border-amber-200 bg-amber-50/70 px-3 py-4 sm:px-5 sm:py-5" data-legacy-onboarding-fields="true">
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-[9px] font-bold uppercase tracking-[.08em] text-amber-700">Existing intermediary migration</p>
@@ -94,20 +63,16 @@ export function LegacyOnboardingFields({ partnerType, initialValues = {} }: Prop
       <label className="mt-4 block">
         <span className="mb-1.5 block text-[10.5px] font-semibold text-[#344054]">Migration verification remarks *</span>
         <textarea
-          ref={remarksRef}
           name="legacy_migration_remarks"
           required
           minLength={10}
           data-label="Migration verification remarks"
           defaultValue={initialValues.legacy_migration_remarks}
-          onChange={(event) => {
-            if (event.currentTarget.value.trim().length >= 10) setRemarksError(null);
-          }}
-          className={`min-h-24 w-full rounded-xl border bg-white px-3.5 py-2.5 text-[12px] text-[#17203A] outline-none focus:ring-2 ${remarksError ? "border-red-400 focus:border-red-500 focus:ring-red-100" : "border-[#CBD5E1] focus:border-[#4F46E5] focus:ring-[#E0E7FF]"}`}
+          className="min-h-24 w-full rounded-xl border border-[#CBD5E1] bg-white px-3.5 py-2.5 text-[12px] text-[#17203A] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]"
           placeholder="Example: Verified from the previous POSP register and agreement file."
         />
         <div className="mt-1.5 flex items-center justify-between gap-3">
-          <span className={`text-[9.5px] ${remarksError ? "font-semibold text-red-600" : "text-[#64748B]"}`}>{remarksError ?? "Minimum 10 characters required."}</span>
+          <span className="text-[9.5px] text-[#64748B]">Minimum 10 characters required.</span>
           <span className="text-[9px] text-[#94A3B8]">Do not enter only “OK”.</span>
         </div>
       </label>
