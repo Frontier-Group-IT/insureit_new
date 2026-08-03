@@ -1,0 +1,66 @@
+name: Temporary application review UI fix
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch-and-validate:
+    if: github.head_ref == 'fix/application-review-success-ui'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply focused UI changes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          workflow = Path('apps/web-portal/app/intermediaries/applications/[id]/workflow/page.tsx')
+          text = workflow.read_text()
+          import_anchor = 'import { WorkflowErrorDialog } from "@/app/intermediaries/applications/workflow-error-dialog";'
+          import_line = 'import { WorkflowSuccessToast } from "@/app/intermediaries/applications/workflow-success-toast";'
+          if import_line not in text:
+            if import_anchor not in text:
+              raise SystemExit('workflow import anchor missing')
+            text = text.replace(import_anchor, import_anchor + '\n' + import_line, 1)
+
+          old_notice = '{query.success && !popupEvent ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10.5px] text-emerald-700">{successes[query.success] ?? "Saved successfully."}</div> : null}'
+          new_notice = '{query.success && !popupEvent ? <WorkflowSuccessToast message={successes[query.success] ?? "Saved successfully."} /> : null}'
+          if old_notice not in text:
+            raise SystemExit('persistent success notice pattern missing')
+          text = text.replace(old_notice, new_notice, 1)
+          workflow.write_text(text)
+
+          editor = Path('apps/web-portal/app/customers/applications/posp-misp-application-editor.tsx')
+          text = editor.read_text()
+          banner = '        {profile.partner_id ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3"><p className="text-[9px] font-semibold uppercase tracking-[.08em] text-emerald-700">Partner ID issued</p><p className="mt-1 text-[16px] font-bold text-emerald-900">{profile.partner_id}</p></div> : null}\n\n'
+          if banner not in text:
+            raise SystemExit('Partner ID banner pattern missing')
+          text = text.replace(banner, '', 1)
+          editor.write_text(text)
+          PY
+      - name: Install dependencies
+        run: npm ci || (sleep 10 && npm ci)
+      - run: npm run typecheck:web
+      - run: npm run build:web
+      - name: Commit validated changes to PR branch
+        run: |
+          rm .github/workflows/temporary-application-review-ui-fix.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add apps/web-portal/app/intermediaries/applications/[id]/workflow/page.tsx apps/web-portal/app/customers/applications/posp-misp-application-editor.tsx apps/web-portal/app/intermediaries/applications/workflow-success-toast.tsx .github/workflows/temporary-application-review-ui-fix.yml
+          git commit -m "Fix application review success feedback"
+          git push origin HEAD:${{ github.head_ref }}
