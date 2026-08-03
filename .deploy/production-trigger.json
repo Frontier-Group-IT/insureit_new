@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-03T15:47:00+05:30",
+  "deploy_requested_at": "2026-08-03T20:32:00+05:30",
   "requested_by": "Nishant Mishra",
   "source": "ChatGPT explicit deploy command",
-  "source_commit": "8175ffe4f17cd2a811b55cab46154997baf57dc2",
-  "release_scope": "Approved Intermediary-section release through current main, including Partner/POSP/MISP workflow and register corrections, document maintenance, migration-detail synchronization, dashboard account-type counting, review-page UI updates, and inline field-level validation with targeted server fallbacks.",
-  "verification": "Temporary GitHub Actions diagnostic passed npm ci, web TypeScript typecheck, and full web build with non-secret placeholder Supabase build variables for source commit 8175ffe4f17cd2a811b55cab46154997baf57dc2.",
+  "source_commit": "bf175acd0bdc4a313c3d39bd7bcfcc31e3135042",
+  "release_scope": "Approved Application Review UI fix: remove the Partner ID issued banner and replace the persistent Stage 1 success banner with an auto-dismissing toast that clears the success query parameter.",
+  "verification": "PR #153 validation passed npm ci, web TypeScript typecheck, and full web build before merge. Merge commit: bf175acd0bdc4a313c3d39bd7bcfcc31e3135042.",
   "instructions": "Update this file only after the user explicitly says deploy now or finish and deploy. Ordinary code commits must not modify it."
 }
