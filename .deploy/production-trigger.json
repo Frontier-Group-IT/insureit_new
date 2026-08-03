@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-04T01:08:32+05:30",
+  "deploy_requested_at": "2026-08-04T01:29:45+05:30",
   "requested_by": "Nishant Mishra",
   "source": "ChatGPT explicit deploy command",
-  "source_commit": "2bd0059b1f7a90fbf6f93fd485b6f8fa109c1ff4",
-  "release_scope": "Deploy Intermediaries action-control style standardization from Hermes audit: shared action style classes, normalized FormSubmitButton defaults, consistent register/account-review/workflow/IIB/training/delete-modal action heights, font sizes, focus rings, hover states and disabled states.",
-  "verification": "Commit 2bd0059b1f7a90fbf6f93fd485b6f8fa109c1ff4 passed local typecheck, lint and production build. Lint/build reported only existing unrelated unused-import warnings in app/actions.ts and app/customers/posp-misp/import/bulk-upload-v2-actions.ts.",
+  "source_commit": "1a258b581886ca0fb18e2a8ba18ef5b85c245285",
+  "release_scope": "Deploy existing POSP/MISP onboarding freeze fix: remove class-mutation observer loop from onboarding field presentation, replace validation class cleanup with CSS-only neutral styling, remove legacy Save-button click interception, and keep route-post/native form validation workflow intact.",
+  "verification": "Commit 1a258b581886ca0fb18e2a8ba18ef5b85c245285 passed local typecheck, lint and production build. Lint/build reported only existing unrelated unused-import warnings in app/actions.ts and app/customers/posp-misp/import/bulk-upload-v2-actions.ts. Browser-level reproduction confirmed validation class changes no longer trigger an observer loop."
   "instructions": "Update this file only after the user explicitly says deploy now or finish and deploy. Ordinary code commits must not modify it."
 }
