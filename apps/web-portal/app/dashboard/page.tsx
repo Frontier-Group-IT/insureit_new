@@ -28,7 +28,13 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type Metric = { label: string; value: number; supporting: string; href: string; icon: LucideIcon; gradient: string; glow: string };
 type FocusItem = { label: string; value: number; detail: string; href: string; icon: LucideIcon; tone: string };
-type IntermediaryApplicationState = { id: string; requested_type: "posp" | "misp"; registration_status: string; partner_status: string | null };
+type IntermediaryApplicationState = {
+  id: string;
+  requested_type: "posp" | "misp";
+  registration_status: string;
+  partner_status: string | null;
+  draft_data: Record<string, unknown> | null;
+};
 
 const partnerIcons: Record<string, LucideIcon> = { group: UsersRound, corporate: Building2, dealership: Store, individual: UserRound, posp: BriefcaseBusiness, misp: Landmark };
 const activeKycStatuses = ["submitted", "under_review", "changes_requested"];
@@ -49,7 +55,7 @@ export default async function DashboardPage() {
 
   let intermediaryApplicationsQuery = admin
     .from("intermediary_onboarding_applications")
-    .select("id,requested_type,registration_status,partner_status");
+    .select("id,requested_type,registration_status,partner_status,draft_data");
   if (scopedIntermediaries) {
     intermediaryApplicationsQuery = accessibleApplicationIds.length
       ? intermediaryApplicationsQuery.in("id", accessibleApplicationIds)
@@ -64,9 +70,9 @@ export default async function DashboardPage() {
   ]);
 
   const intermediaryApplications = intermediaryApplicationsResult.data ?? [];
-  const partnerCount = intermediaryApplications.filter((item) => item.partner_status === "active_partner").length;
-  const pospCount = intermediaryApplications.filter((item) => item.requested_type === "posp" && item.registration_status === "iib_registered").length;
-  const mispCount = intermediaryApplications.filter((item) => item.requested_type === "misp" && item.registration_status === "iib_registered").length;
+  const partnerCount = intermediaryApplications.filter((item) => accountContext(item) === "partner" && item.partner_status === "active_partner").length;
+  const pospCount = intermediaryApplications.filter((item) => accountContext(item) === "posp" && item.partner_status === "active_partner").length;
+  const mispCount = intermediaryApplications.filter((item) => accountContext(item) === "misp" && item.partner_status === "active_partner").length;
   const kycCount = kycResult.error ? dashboard.attention.onboarding : kycResult.count ?? 0;
   const submittedKycCount = submittedKycResult.error ? dashboard.attention.submittedOnboarding : submittedKycResult.count ?? 0;
   const changedKycCount = changedKycResult.error ? dashboard.attention.changesRequested : changedKycResult.count ?? 0;
@@ -130,6 +136,10 @@ function SectionTitle({ eyebrow, title, href }: { eyebrow: string; title: string
 function StatusPill({ status }: { status: string }) { const normalized = status.toLowerCase(); const className = normalized.includes("approved") || normalized.includes("complete") || normalized.includes("settled") ? "border-emerald-200 bg-emerald-50 text-emerald-700" : normalized.includes("reject") || normalized.includes("changes") || normalized.includes("expired") ? "border-rose-200 bg-rose-50 text-rose-700" : normalized.includes("progress") || normalized.includes("submitted") || normalized.includes("intimat") ? "border-blue-200 bg-blue-50 text-blue-700" : "border-amber-200 bg-amber-50 text-amber-700"; return <span className={`inline-flex max-w-[170px] truncate rounded-full border px-2 py-0.5 text-[8.5px] font-bold capitalize ${className}`}>{status.replaceAll("_", " ")}</span>; }
 function applicationName(row: OperationsDashboardData["recentApplications"][number]) { return row.display_name ?? row.applicant_phone ?? row.applicant_email ?? "Unnamed application"; }
 function partnerLabel(value: string | null) { const labels: Record<string, string> = { group: "Group", corporate: "Corporate", dealership: "Dealership", individual_proprietor: "Individual / Proprietor", posp: "POSP", misp: "MISP" }; return value ? labels[value] ?? value : "Partner type pending"; }
+function accountContext(application: IntermediaryApplicationState): "partner" | "posp" | "misp" {
+  const value = application.draft_data?.account_context;
+  return value === "posp" || value === "misp" ? value : "partner";
+}
 function dayPeriod() { const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hour12: false, timeZone: "Asia/Kolkata" }).format(new Date())); if (hour < 12) return "morning"; if (hour < 17) return "afternoon"; return "evening"; }
 function firstName(name?: string | null) { return name?.trim().split(/\s+/)[0] ?? ""; }
 function relativeTime(value: string) { const diffMs = Date.now() - Date.parse(value); if (!Number.isFinite(diffMs)) return "-"; const minutes = Math.max(0, Math.floor(diffMs / 60000)); if (minutes < 1) return "Just now"; if (minutes < 60) return `${minutes}m ago`; const hours = Math.floor(minutes / 60); if (hours < 24) return `${hours}h ago`; const days = Math.floor(hours / 24); return days === 1 ? "1d ago" : `${days}d ago`; }
