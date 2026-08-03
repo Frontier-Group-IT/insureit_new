@@ -74,7 +74,12 @@ export function IntermediaryDocumentUploadController({ applicationId, enabled, s
           uploadData.set("application_id", applicationId);
           uploadData.set("document_type", item.documentType);
           uploadData.set("file", item.file, item.file.name);
-          const response = await fetch("/api/intermediary-documents/upload", { method: "POST", body: uploadData });
+          const response = await fetch("/api/intermediary-documents/upload", {
+            method: "POST",
+            body: uploadData,
+            credentials: "same-origin",
+            cache: "no-store",
+          });
           const result = (await response.json().catch(() => null)) as { ok?: boolean; message?: string } | null;
           if (!response.ok || !result?.ok) throw new Error(result?.message || `${item.label} could not be uploaded.`);
         }
@@ -84,6 +89,8 @@ export function IntermediaryDocumentUploadController({ applicationId, enabled, s
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ application_id: applicationId }),
+          credentials: "same-origin",
+          cache: "no-store",
         });
         const finalResult = (await finalResponse.json().catch(() => null)) as { ok?: boolean; message?: string } | null;
         if (!finalResponse.ok || !finalResult?.ok) throw new Error(finalResult?.message || "The document stage could not be saved.");
