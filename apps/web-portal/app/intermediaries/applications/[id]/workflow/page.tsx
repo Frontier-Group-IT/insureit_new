@@ -29,6 +29,7 @@ type Application = {
   applicant_email: string | null;
   updated_at: string;
   draft_data: Record<string, unknown> | null;
+  partner_record_id: string | null;
 };
 type Document = { id: string; document_type: string; file_name: string; storage_bucket: string; storage_path: string; verification_status: string };
 type ProfileRow = PospMispWorkflowProfile & Omit<PospMispEditProfile, "aadhaar_exists"> & {
@@ -87,17 +88,12 @@ const errors: Record<string, string> = {
   duplicate_pan: "This PAN number is already registered with another intermediary account.",
   duplicate_email: "This email address is already registered with another intermediary account.",
   duplicate_mobile: "This mobile number is already registered with another intermediary account.",
-  migration_details_not_found: "The migration record could not be found.",
-  migration_details_partner_only: "Migration details can only be maintained from the Partner account.",
-  migration_activation_before_onboarding: "The original activation date cannot be earlier than the original onboarding date.",
-  migration_details_save_failed: "The existing intermediary migration details could not be saved.",
 };
 const successes: Record<string, string> = {
   posp_misp_submitted: "Primary information saved.",
   primary_details_saved: "Stage 1 details saved.",
   documents_saved: "Stage 2 documents saved and Partner ID issued.",
   documents_started: "Document stage opened.",
-  migration_details_saved: "Existing intermediary migration details updated.",
 };
 const popupEvents = new Set(["documents_completed", "training_assigned", "training_status_updated", "exam_allotted", "exam_passed", "exam_failed", "agreement_sent", "agreement_signed", "onboarding_completed"]);
 
@@ -107,7 +103,7 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
   const query = await searchParams;
   const admin = createSupabaseAdminClient();
   const [{ data: application }, { data: profile }, { data: documents }, { data: panJob }, { data: assignment }] = await Promise.all([
-    admin.from("intermediary_onboarding_applications").select("id,requested_type,final_type,status,registration_status,partner_status,applicant_phone,applicant_email,updated_at,draft_data").eq("id", id).maybeSingle<Application>(),
+    admin.from("intermediary_onboarding_applications").select("id,requested_type,final_type,status,registration_status,partner_status,applicant_phone,applicant_email,updated_at,draft_data,partner_record_id").eq("id", id).maybeSingle<Application>(),
     admin.from("posp_misp_onboarding_profiles").select("partner_id,partner_type,associate_employee_id,associate_profile_id,external_onboarding_id,document_received_at,pos_name,pos_first_name,pos_middle_name,pos_last_name,misp_name,applicant_phone,applicant_email,date_of_birth,aadhaar_last_four,aadhaar_number_encrypted,pan_number,gst_number,address,city,state,postal_code,bank_id,bank_name,bank_account_number,bank_ifsc_code,oem_name,dp_name,dp_first_name,dp_middle_name,dp_last_name,dp_phone,dp_email,dp_pan_number,dp_date_of_birth,dp_aadhaar_last_four,dp_aadhaar_number_encrypted,workflow_stage,iib_remarks,iib_uploaded,iib_uploaded_at,training_login_id,training_credentials_shared_flag,training_start_date,training_end_date,training_status,training_certificate_number,exam_status,onboarding_date,record_source,existing_registration_confirmed,existing_registration_code,existing_registration_confirmed_at,raw_data").eq("application_id", id).maybeSingle<ProfileRow>(),
     admin.from("intermediary_onboarding_documents").select("id,document_type,file_name,storage_bucket,storage_path,verification_status").eq("application_id", id).order("created_at").returns<Document[]>(),
     admin.from("pan_verification_jobs").select("status").eq("application_id", id).maybeSingle<PanJob>(),
@@ -144,7 +140,29 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
   const docList = (documents ?? []).map((item) => ({ document_type: item.document_type, file_name: item.file_name }));
   const popupEvent = query.success && popupEvents.has(query.success) ? query.success : null;
   const iibCleared = profile.iib_remarks === "No Data Found In POS System";
-  const migrationValues = { ...asObject(profile.raw_data), ...asObject(application.draft_data) };
+
+  let migrationValues = { ...asObject(profile.raw_data), ...asObject(application.draft_data) };
+  if (context !== "partner" && application.partner_record_id) {
+    const { data: familyApplications } = await admin
+      .from("intermediary_onboarding_applications")
+      .select("id,draft_data")
+      .eq("partner_record_id", application.partner_record_id)
+      .neq("id", id)
+      .returns<Array<{ id: string; draft_data: Record<string, unknown> | null }>>();
+    const parentApplication = (familyApplications ?? []).find((item) => accountContext(item.draft_data) === "partner");
+    if (parentApplication) {
+      const { data: parentProfile } = await admin
+        .from("posp_misp_onboarding_profiles")
+        .select("raw_data")
+        .eq("application_id", parentApplication.id)
+        .maybeSingle<{ raw_data: Record<string, unknown> | null }>();
+      migrationValues = {
+        ...migrationValues,
+        ...asObject(parentProfile?.raw_data),
+        ...asObject(parentApplication.draft_data),
+      };
+    }
+  }
 
   return (
     <AppShell title="Intermediary Workflow">
@@ -186,7 +204,7 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
           ) : (
             <div className="space-y-4 bg-[#F4F7FB]">
               <PospMispApplicationEditor applicationId={id} profile={editProfile} workflowStage={profile.workflow_stage} viewStage={viewStage} editable={editable} salesManagers={associates.map((item) => ({ value: item.id, label: item.full_name ?? "Unnamed" }))} banks={(banks ?? []).map((item) => ({ value: item.id, label: item.name }))} oems={(oems ?? []).map((item) => ({ value: item.name, label: item.name }))} documents={docList} />
-              {context === "partner" && viewStage === "primary" ? <div className="px-4 pb-4 sm:px-5 sm:pb-5"><ExistingIntermediaryMigrationEditor applicationId={id} accountType={profile.partner_type} values={migrationValues} editable={editable} /></div> : null}
+              {viewStage === "primary" ? <div className="px-4 pb-4 sm:px-5 sm:pb-5"><ExistingIntermediaryMigrationEditor applicationId={id} accountType={profile.partner_type} values={migrationValues} editable={editable} /></div> : null}
             </div>
           )}
         </main>
@@ -274,6 +292,7 @@ function SixStepNavigation({ applicationId, viewStage, registrationStatus, docum
     </nav>
   );
 }
+
 function currentStep(viewStage: ViewStage, status: string) {
   if (viewStage === "primary") return 1;
   if (viewStage === "documents") return 2;
