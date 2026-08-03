@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { FormSubmitButton } from "@/components/form-submit-button";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { PanVerificationAutoRefresh } from "@/app/customers/applications/pan-verification-auto-refresh";
 import { queuePospMispPanVerification, retryPospMispPanVerification } from "@/app/customers/applications/posp-misp-workflow-actions";
@@ -33,35 +32,52 @@ export async function IibPanVerificationReviewCard({ applicationId }: { applicat
   const pan = profile.partner_type === "misp" ? profile.dp_pan_number : profile.pan_number;
   const status = job?.status ?? "pending";
   const activelyRefreshing = status === "pending" || status === "queued" || status === "checking";
-  const canQueue = profile.workflow_stage === "pre_iib" && !job;
-  const canRetry = profile.workflow_stage === "pre_iib" && (status === "failed" || status === "invalid");
+  const canCheck = profile.workflow_stage === "pre_iib";
+  const shouldRetry = status === "failed" || status === "invalid";
   const presentation = statusPresentation(status, Boolean(job));
   const message = job?.result_message ?? job?.last_error ?? presentation.message;
 
   return (
-    <div className="mr-1 flex min-w-[148px] max-w-[220px] items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-white shadow-sm backdrop-blur-sm">
+    <div className="group mr-1 flex h-9 min-w-[178px] max-w-[238px] items-center rounded-xl border border-white/30 bg-white/10 text-white shadow-sm transition hover:border-white/45 hover:bg-white/15">
       <PanVerificationAutoRefresh enabled={activelyRefreshing && Boolean(job)} />
-      <span className={`h-2 w-2 shrink-0 rounded-full ${presentation.dot}`} aria-hidden="true" />
-      <div className="min-w-0 flex-1 leading-tight">
-        <p className="text-[7.5px] font-semibold uppercase tracking-[.08em] text-white/60">IIB PAN verification</p>
-        <p className="mt-0.5 text-[10px] font-semibold tracking-[.04em] text-white">{maskPan(pan)}</p>
-        <p className={`mt-0.5 text-[8.5px] font-semibold ${presentation.text}`}>{presentation.label}</p>
-        <p className="mt-0.5 truncate text-[7.5px] font-medium text-white/65" title={message}>{message}</p>
+
+      <div className="flex min-w-0 flex-1 items-center gap-2 px-3">
+        <span className={`h-2 w-2 shrink-0 rounded-full ${presentation.dot}`} aria-hidden="true" />
+        <div className="min-w-0 leading-none">
+          <div className="flex items-center gap-1.5">
+            <p className="text-[7px] font-semibold uppercase tracking-[.08em] text-white/55">IIB PAN</p>
+            <p className="text-[8.5px] font-semibold tracking-[.04em] text-white">{maskPan(pan)}</p>
+          </div>
+          <p className={`mt-1 truncate text-[8px] font-semibold ${presentation.text}`} title={message}>{presentation.label}</p>
+        </div>
       </div>
-      {canQueue ? (
-        <form action={queuePospMispPanVerification} className="shrink-0">
+
+      {canCheck ? (
+        <form action={shouldRetry ? retryPospMispPanVerification : queuePospMispPanVerification} className="flex h-full shrink-0 items-center border-l border-white/20 px-1.5">
           <input type="hidden" name="application_id" value={applicationId} />
-          <FormSubmitButton label="Check" pendingLabel="…" className="inline-flex h-7 items-center rounded-lg bg-white px-2.5 text-[8px] font-semibold text-[#071D49] hover:bg-blue-50" />
-        </form>
-      ) : null}
-      {canRetry ? (
-        <form action={retryPospMispPanVerification} className="shrink-0">
-          <input type="hidden" name="application_id" value={applicationId} />
-          <FormSubmitButton label="Retry" pendingLabel="…" className="inline-flex h-7 items-center rounded-lg bg-white px-2.5 text-[8px] font-semibold text-[#071D49] hover:bg-blue-50" />
+          <button
+            type="submit"
+            title={job ? "Run IIB PAN check again" : "Run IIB PAN check"}
+            aria-label={job ? "Run IIB PAN check again" : "Run IIB PAN check"}
+            className="grid h-6 w-6 place-items-center rounded-lg text-white/75 transition hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+          >
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={`h-3.5 w-3.5 ${status === "checking" ? "animate-spin" : ""}`} aria-hidden="true">
+              <path d="M16.5 6.5V3.8l-1.9 1.9A6.5 6.5 0 1 0 16 12" />
+              <path d="M12.8 3.8h3.7v3.7" />
+            </svg>
+          </button>
         </form>
       ) : status === "invalid" || status === "failed" ? (
-        <Link href={`/intermediaries/applications/${applicationId}/workflow?stage=primary`} className="inline-flex h-7 shrink-0 items-center rounded-lg border border-white/25 bg-white/10 px-2.5 text-[8px] font-semibold text-white hover:bg-white/20">
-          Review
+        <Link
+          href={`/intermediaries/applications/${applicationId}/workflow?stage=primary`}
+          title="Review PAN details"
+          aria-label="Review PAN details"
+          className="grid h-full w-9 shrink-0 place-items-center border-l border-white/20 text-white/75 transition hover:bg-white/15 hover:text-white"
+        >
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden="true">
+            <circle cx="9" cy="9" r="5.5" />
+            <path d="m13 13 3.2 3.2" />
+          </svg>
         </Link>
       ) : null}
     </div>
@@ -69,11 +85,11 @@ export async function IibPanVerificationReviewCard({ applicationId }: { applicat
 }
 
 function statusPresentation(status: PanJobStatus, hasJob: boolean) {
-  if (!hasJob) return { label: "Not queued", text: "text-slate-200", dot: "bg-slate-300", message: "Waiting to be checked" };
+  if (!hasJob) return { label: "Not checked", text: "text-white/70", dot: "bg-white/45", message: "Waiting to be checked" };
   const map: Record<PanJobStatus, { label: string; text: string; dot: string; message: string }> = {
-    pending: { label: "Waiting", text: "text-slate-200", dot: "bg-slate-300", message: "Waiting for the checker extension" },
+    pending: { label: "Waiting for checker", text: "text-white/75", dot: "bg-white/55", message: "Waiting for the checker extension" },
     queued: { label: "Queued", text: "text-blue-200", dot: "bg-blue-300", message: "Queued for IIB POS checking" },
-    checking: { label: "Checking", text: "text-blue-200", dot: "animate-pulse bg-blue-300", message: "Checking in the IIB POS portal" },
+    checking: { label: "Checking…", text: "text-blue-200", dot: "animate-pulse bg-blue-300", message: "Checking in the IIB POS portal" },
     matched: { label: "Existing record", text: "text-amber-200", dot: "bg-amber-300", message: "Matching Record Found In DataBase" },
     not_found: { label: "IIB cleared", text: "text-emerald-200", dot: "bg-emerald-300", message: "No Data Found In POS System" },
     invalid: { label: "Invalid PAN", text: "text-red-200", dot: "bg-red-300", message: "Correct the PAN and retry" },
