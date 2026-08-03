@@ -15,11 +15,11 @@ type Props = {
   linkedId: string | undefined;
 };
 
-const modalSuccessEvents = new Set(["partner_id_generated", "documents_saved", "linked_posp_account_created", "linked_misp_account_created"]);
+const modalSuccessEvents = new Set(["partner_id_generated", "linked_posp_account_created", "linked_misp_account_created"]);
 
 export function IdSuccessModal({ event, applicationId, isPartner, preferredType, partnerId, registrationId, linkedId }: Props) {
   const [visible, setVisible] = useState(false);
-  const isPartnerEvent = event === "partner_id_generated" || event === "documents_saved";
+  const isPartnerEvent = event === "partner_id_generated";
   const createdLinkedType = event === "linked_misp_account_created" ? "misp" : event === "linked_posp_account_created" ? "posp" : null;
   const accountType = createdLinkedType ?? preferredType;
   const accountLabel = accountType.toUpperCase();
