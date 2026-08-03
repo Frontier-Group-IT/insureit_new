@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { DocumentVisualCard } from "@/components/document-visual-card";
 import {
   buildIntermediaryDocumentSlots,
@@ -20,11 +21,20 @@ type GridDocument = IntermediaryDocumentRecord & {
   href?: string | null;
 };
 
+type ContextPayload = {
+  ok?: boolean;
+  legacy?: boolean;
+  has_gst?: boolean;
+  documents?: GridDocument[];
+  message?: string;
+};
+
 type Props = {
   documents: GridDocument[];
   legacy: boolean;
   hasGst: boolean;
   editable: boolean;
+  applicationId?: string;
   missingDocument?: string | null;
   onFileSelection?: (name: string, selected: boolean) => void;
 };
@@ -33,6 +43,7 @@ type CustomDialogState = {
   slotKey: string;
   title: string;
   existingLabel: string;
+  hasExistingDocument: boolean;
 } | null;
 
 export function IntermediaryDocumentGrid({
@@ -40,33 +51,136 @@ export function IntermediaryDocumentGrid({
   legacy,
   hasGst,
   editable,
+  applicationId,
   missingDocument = null,
   onFileSelection,
 }: Props) {
-  const slots = useMemo(() => buildIntermediaryDocumentSlots({ legacy, hasGst }), [hasGst, legacy]);
+  const pathname = usePathname();
+  const routeApplicationId = pathname.match(/^\/intermediaries\/applications\/([^/]+)/)?.[1] ?? null;
+  const resolvedApplicationId = applicationId ?? routeApplicationId;
+  const [resolvedDocuments, setResolvedDocuments] = useState<GridDocument[]>(documents);
+  const [resolvedLegacy, setResolvedLegacy] = useState(legacy);
+  const [resolvedHasGst, setResolvedHasGst] = useState(hasGst);
   const [customDialog, setCustomDialog] = useState<CustomDialogState>(null);
-  const [customLabels, setCustomLabels] = useState<Record<string, string>>(() =>
-    Object.fromEntries(documents.filter((item) => item.document_type.startsWith("custom_")).map((item) => [item.document_type, item.document_label ?? ""])),
-  );
+  const [customLabels, setCustomLabels] = useState<Record<string, string>>(() => customLabelMap(documents));
   const [selectedNames, setSelectedNames] = useState<Record<string, string>>({});
-  const [selectedMarksheetType, setSelectedMarksheetType] = useState(() => {
-    const education = documents.find((item) => item.document_type.startsWith("education_"));
-    return education?.document_type ?? "";
-  });
+  const [selectedMarksheetType, setSelectedMarksheetType] = useState(() => currentEducationType(documents));
+  const [maintenanceMessage, setMaintenanceMessage] = useState<string | null>(null);
+  const [maintenanceBusy, setMaintenanceBusy] = useState(false);
+
+  useEffect(() => {
+    setResolvedDocuments(documents);
+    setResolvedLegacy(legacy);
+    setResolvedHasGst(hasGst);
+    setCustomLabels((current) => ({ ...customLabelMap(documents), ...current }));
+    setSelectedMarksheetType((current) => current || currentEducationType(documents));
+  }, [documents, hasGst, legacy]);
+
+  useEffect(() => {
+    if (!resolvedApplicationId) return;
+    let cancelled = false;
+
+    void fetch(`/api/intermediary-documents/context?application_id=${encodeURIComponent(resolvedApplicationId)}`, {
+      credentials: "same-origin",
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => null)) as ContextPayload | null;
+        if (!response.ok || !payload?.ok) throw new Error(payload?.message || "The document context could not be loaded.");
+        return payload;
+      })
+      .then((payload) => {
+        if (cancelled) return;
+        const nextDocuments = payload.documents ?? [];
+        setResolvedDocuments(nextDocuments);
+        setResolvedLegacy(payload.legacy === true);
+        setResolvedHasGst(payload.has_gst === true);
+        setCustomLabels((current) => ({ ...customLabelMap(nextDocuments), ...current }));
+        setSelectedMarksheetType((current) => current || currentEducationType(nextDocuments));
+      })
+      .catch(() => {
+        // Keep the server-rendered fallback. A failed enhancement must not block uploads or reviews.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [resolvedApplicationId]);
+
+  const slots = useMemo(
+    () => buildIntermediaryDocumentSlots({ legacy: resolvedLegacy, hasGst: resolvedHasGst }),
+    [resolvedHasGst, resolvedLegacy],
+  );
+
+  async function renameCustomDocument(slotKey: string, label: string) {
+    if (!resolvedApplicationId) return false;
+    setMaintenanceBusy(true);
+    setMaintenanceMessage(null);
+    try {
+      const response = await fetch("/api/intermediary-documents/custom", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        cache: "no-store",
+        body: JSON.stringify({
+          application_id: resolvedApplicationId,
+          document_type: slotKey,
+          document_label: label,
+        }),
+      });
+      const payload = (await response.json().catch(() => null)) as { ok?: boolean; message?: string } | null;
+      if (!response.ok || !payload?.ok) throw new Error(payload?.message || "The document could not be renamed.");
+      setResolvedDocuments((current) => current.map((item) => item.document_type === slotKey ? { ...item, document_label: label } : item));
+      setCustomLabels((current) => ({ ...current, [slotKey]: label }));
+      setMaintenanceMessage("Document name updated.");
+      return true;
+    } catch (error) {
+      setMaintenanceMessage(error instanceof Error ? error.message : "The document could not be renamed.");
+      return false;
+    } finally {
+      setMaintenanceBusy(false);
+    }
+  }
+
+  async function deleteCustomDocument(slotKey: string) {
+    if (!resolvedApplicationId || !window.confirm("Delete this custom document?")) return;
+    setMaintenanceBusy(true);
+    setMaintenanceMessage(null);
+    try {
+      const response = await fetch("/api/intermediary-documents/custom", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        cache: "no-store",
+        body: JSON.stringify({ application_id: resolvedApplicationId, document_type: slotKey }),
+      });
+      const payload = (await response.json().catch(() => null)) as { ok?: boolean; message?: string } | null;
+      if (!response.ok || !payload?.ok) throw new Error(payload?.message || "The document could not be deleted.");
+      setResolvedDocuments((current) => current.filter((item) => item.document_type !== slotKey));
+      setCustomLabels((current) => ({ ...current, [slotKey]: "" }));
+      setSelectedNames((current) => ({ ...current, [slotKey]: "" }));
+      onFileSelection?.(slotKey, false);
+      setMaintenanceMessage("Custom document deleted.");
+    } catch (error) {
+      setMaintenanceMessage(error instanceof Error ? error.message : "The document could not be deleted.");
+    } finally {
+      setMaintenanceBusy(false);
+    }
+  }
 
   return (
     <>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
         {slots.map((slot) => {
-          const document = findDocumentForSlot(slot, documents);
-          const title = slotTitle(slot, document);
+          const existingDocument = findDocumentForSlot(slot, resolvedDocuments);
+          const title = slotTitle(slot, existingDocument);
           const missing = missingDocument === slot.key || (slot.education && missingDocument === "education_document_type");
           const selectedName = selectedNames[slot.key];
           const inputName = slot.education ? "education_marksheet" : slot.key;
           const inputId = `upload-${slot.key}`;
-          const emptyOptional = !document && !slot.required;
-          const status = missing ? "Action required" : document ? "Uploaded" : selectedName ? "Ready" : slot.required ? "Required" : "Optional";
-          const tone = missing ? "error" : document || selectedName ? "uploaded" : slot.required ? "required" : "optional";
+          const emptyOptional = !existingDocument && !slot.required;
+          const status = missing ? "Action required" : existingDocument ? "Uploaded" : selectedName ? "Ready" : slot.required ? "Required" : "Optional";
+          const tone = missing ? "error" : existingDocument || selectedName ? "uploaded" : slot.required ? "required" : "optional";
 
           return (
             <DocumentVisualCard
@@ -74,14 +188,14 @@ export function IntermediaryDocumentGrid({
               key={slot.key}
               type={slot.key}
               title={title}
-              fileName={document?.file_name || selectedName}
+              fileName={existingDocument?.file_name || selectedName}
               required={slot.required}
               status={status}
               tone={tone}
               compact
               muted={emptyOptional && !editable}
-              action={document?.href ? (
-                <a href={document.href} target="_blank" rel="noreferrer" className="inline-flex h-7 items-center rounded-lg border border-[#D7DDF0] bg-white px-2.5 text-[8.5px] font-semibold text-[#24345A] shadow-sm">Open</a>
+              action={existingDocument?.href ? (
+                <a href={existingDocument.href} target="_blank" rel="noreferrer" className="inline-flex h-7 items-center rounded-lg border border-[#D7DDF0] bg-white px-2.5 text-[8.5px] font-semibold text-[#24345A] shadow-sm">Open</a>
               ) : null}
             >
               {editable ? (
@@ -101,14 +215,25 @@ export function IntermediaryDocumentGrid({
 
                   {slot.custom ? (
                     <>
-                      <input type="hidden" name={`${slot.key}_label`} value={customLabels[slot.key] ?? document?.document_label ?? ""} />
-                      <button
-                        type="button"
-                        onClick={() => setCustomDialog({ slotKey: slot.key, title, existingLabel: customLabels[slot.key] ?? document?.document_label ?? "" })}
-                        className="inline-flex h-8 w-full items-center justify-center rounded-lg bg-gradient-to-r from-[#635BFF] to-[#4B8DF8] px-3 text-[8.5px] font-semibold text-white"
-                      >
-                        {document || selectedName ? "Replace / rename" : "Add document"}
-                      </button>
+                      <input type="hidden" name={`${slot.key}_label`} value={customLabels[slot.key] ?? existingDocument?.document_label ?? ""} />
+                      <div className="grid gap-1.5">
+                        <button
+                          type="button"
+                          disabled={maintenanceBusy}
+                          onClick={() => setCustomDialog({
+                            slotKey: slot.key,
+                            title,
+                            existingLabel: customLabels[slot.key] ?? existingDocument?.document_label ?? "",
+                            hasExistingDocument: Boolean(existingDocument),
+                          })}
+                          className="inline-flex h-8 w-full items-center justify-center rounded-lg bg-gradient-to-r from-[#635BFF] to-[#4B8DF8] px-3 text-[8.5px] font-semibold text-white disabled:opacity-50"
+                        >
+                          {existingDocument || selectedName ? "Replace / rename" : "Add document"}
+                        </button>
+                        {existingDocument ? (
+                          <button type="button" disabled={maintenanceBusy} onClick={() => void deleteCustomDocument(slot.key)} className="h-7 rounded-lg border border-red-200 bg-red-50 px-2 text-[8px] font-semibold text-red-700 disabled:opacity-50">Delete</button>
+                        ) : null}
+                      </div>
                     </>
                   ) : (
                     <>
@@ -116,7 +241,7 @@ export function IntermediaryDocumentGrid({
                         id={inputId}
                         name={inputName}
                         type="file"
-                        required={slot.required && !document}
+                        required={slot.required && !existingDocument}
                         accept=".pdf,.jpg,.jpeg,.png"
                         onChange={(event) => {
                           const file = event.currentTarget.files?.[0];
@@ -126,7 +251,7 @@ export function IntermediaryDocumentGrid({
                         className="sr-only"
                       />
                       <label htmlFor={inputId} className="inline-flex h-8 w-full cursor-pointer items-center justify-center rounded-lg bg-gradient-to-r from-[#635BFF] to-[#4B8DF8] px-3 text-[8.5px] font-semibold text-white">
-                        {document ? "Replace" : "Upload"}
+                        {existingDocument ? "Replace" : "Upload"}
                       </label>
                     </>
                   )}
@@ -137,12 +262,21 @@ export function IntermediaryDocumentGrid({
         })}
       </div>
 
+      {maintenanceMessage ? <p className="mt-3 rounded-xl border border-[#DCE5EF] bg-[#F8FAFC] px-3 py-2 text-[9px] font-semibold text-[#475569]">{maintenanceMessage}</p> : null}
+
       {customDialog ? (
         <CustomDocumentDialog
           state={customDialog}
+          busy={maintenanceBusy}
           onClose={() => setCustomDialog(null)}
-          onConfirm={(label, file) => {
-            const input = document.getElementById(`custom-file-${customDialog.slotKey}`) as HTMLInputElement | null;
+          onConfirm={async (label, file) => {
+            if (!file && customDialog.hasExistingDocument) {
+              const renamed = await renameCustomDocument(customDialog.slotKey, label);
+              if (renamed) setCustomDialog(null);
+              return;
+            }
+            if (!file) return;
+            const input = globalThis.document.getElementById(`custom-file-${customDialog.slotKey}`) as HTMLInputElement | null;
             if (input) {
               const transfer = new DataTransfer();
               transfer.items.add(file);
@@ -165,19 +299,22 @@ export function IntermediaryDocumentGrid({
 
 function CustomDocumentDialog({
   state,
+  busy,
   onClose,
   onConfirm,
 }: {
   state: NonNullable<CustomDialogState>;
+  busy: boolean;
   onClose: () => void;
-  onConfirm: (label: string, file: File) => void;
+  onConfirm: (label: string, file: File | null) => void | Promise<void>;
 }) {
   const [label, setLabel] = useState(state.existingLabel);
   const [file, setFile] = useState<File | null>(null);
   const validLabel = label.trim().length > 0 && label.trim().length <= 60 && /[A-Za-z0-9]/.test(label);
+  const canConfirm = validLabel && (Boolean(file) || state.hasExistingDocument);
 
   return (
-    <div className="fixed inset-0 z-[230] grid place-items-center bg-[#07152D]/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Add other document">
+    <div className="fixed inset-0 z-[230] grid place-items-center bg-[#07152D]/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Manage other document">
       <div className="w-full max-w-md overflow-hidden rounded-2xl border border-white/70 bg-white shadow-[0_30px_90px_rgba(15,23,42,.3)]">
         <div className="border-b border-[#E2E8F0] px-5 py-4">
           <p className="text-[9px] font-semibold uppercase tracking-[.08em] text-[#635BFF]">Other document</p>
@@ -190,15 +327,28 @@ function CustomDocumentDialog({
             <p className="mt-1 text-[8.5px] text-[#64748B]">Maximum 60 characters.</p>
           </div>
           <div>
-            <label className="mb-1.5 block text-[10px] font-semibold text-[#344054]">File *</label>
+            <label className="mb-1.5 block text-[10px] font-semibold text-[#344054]">{state.hasExistingDocument ? "Replacement file (optional)" : "File *"}</label>
             <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => setFile(event.currentTarget.files?.[0] ?? null)} className="block w-full rounded-xl border border-[#CBD5E1] bg-white px-3 py-2 text-[10px]" />
+            {state.hasExistingDocument ? <p className="mt-1 text-[8.5px] text-[#64748B]">Leave the file empty to rename the existing document only.</p> : null}
           </div>
         </div>
         <div className="flex justify-end gap-2 border-t border-[#E2E8F0] bg-[#F8FAFC] px-5 py-4">
-          <button type="button" onClick={onClose} className="h-10 rounded-xl border border-[#CBD5E1] bg-white px-4 text-[10px] font-semibold text-[#475569]">Cancel</button>
-          <button type="button" disabled={!validLabel || !file} onClick={() => file && onConfirm(label.trim(), file)} className="h-10 rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4B8DF8] px-4 text-[10px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Use document</button>
+          <button type="button" disabled={busy} onClick={onClose} className="h-10 rounded-xl border border-[#CBD5E1] bg-white px-4 text-[10px] font-semibold text-[#475569] disabled:opacity-50">Cancel</button>
+          <button type="button" disabled={!canConfirm || busy} onClick={() => void onConfirm(label.trim(), file)} className="h-10 rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4B8DF8] px-4 text-[10px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{file ? "Use document" : "Rename document"}</button>
         </div>
       </div>
     </div>
   );
+}
+
+function customLabelMap(documents: GridDocument[]) {
+  return Object.fromEntries(
+    documents
+      .filter((item) => item.document_type.startsWith("custom_"))
+      .map((item) => [item.document_type, item.document_label ?? ""]),
+  );
+}
+
+function currentEducationType(documents: GridDocument[]) {
+  return documents.find((item) => item.document_type.startsWith("education_"))?.document_type ?? "";
 }
