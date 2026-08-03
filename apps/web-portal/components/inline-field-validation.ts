@@ -33,16 +33,13 @@ export function validateInlineControl(control: ValidatedControl, force = false) 
 
 export function validateInlineForm(form: HTMLFormElement) {
   const controls = formControls(form);
-  let firstInvalid: ValidatedControl | null = null;
+  clearPreviousInlineErrors(form);
 
   for (const control of controls) {
-    if (!validateInlineControl(control, true) && !firstInvalid) firstInvalid = control;
-  }
-
-  if (firstInvalid) {
+    if (validateInlineControl(control, true)) continue;
     requestAnimationFrame(() => {
-      firstInvalid?.focus({ preventScroll: true });
-      firstInvalid?.scrollIntoView({ behavior: "smooth", block: "center" });
+      control.focus({ preventScroll: true });
+      control.scrollIntoView({ behavior: "smooth", block: "center" });
     });
     return false;
   }
@@ -52,11 +49,11 @@ export function validateInlineForm(form: HTMLFormElement) {
 // Live validation during typing/focus movement was disabled after it caused
 // browser freezes on the large intermediary onboarding form. Validation now
 // runs only on submit, while server-side field errors remain targeted inline.
-export function handleInlineBlur(_event: React.FocusEvent<HTMLFormElement>) {
+export function handleInlineBlur() {
   return;
 }
 
-export function handleInlineInput(_event: React.FormEvent<HTMLFormElement>) {
+export function handleInlineInput() {
   return;
 }
 
@@ -106,6 +103,11 @@ function clearInlineError(control: ValidatedControl) {
     error.hidden = true;
     control.removeAttribute("aria-describedby");
   }
+}
+
+function clearPreviousInlineErrors(form: HTMLFormElement) {
+  const controls = form.querySelectorAll<ValidatedControl>('input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"]');
+  controls.forEach(clearInlineError);
 }
 
 function formControls(form: HTMLFormElement) {

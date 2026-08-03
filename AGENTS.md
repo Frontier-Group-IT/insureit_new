@@ -157,5 +157,6 @@ For all validated forms, especially onboarding, document, account, payment, KYC 
 - Run the same validation path for button clicks, Enter-key submission and programmatic submission.
 - Set `pending`, `posting`, disabled or loading state only after validation passes.
 - If validation fails, prevent submission, keep entered data intact, show the field-level or banner error, and focus/scroll to the first invalid field.
+- On large forms, validate and render only the first blocking invalid field per submit. Do not rewrite every required field/error node at once on an empty submit, because this has repeatedly caused perceived hangs in the intermediary onboarding workflow.
 - Preserve server-side validation as the authority; client validation is only an early recovery path.
 - When resolving conflicts in validated forms, preserve existing shared validators such as `validateInlineForm` and apply freeze prevention on top instead of replacing the current form workflow.

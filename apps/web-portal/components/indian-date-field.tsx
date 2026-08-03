@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CalendarDays } from "lucide-react";
+import { inlineFieldErrorId } from "@/components/inline-field-validation";
 import { normalizeImportedDate } from "@/lib/indian-date";
 
 type Props = {
@@ -17,9 +18,10 @@ const defaultInputClassName = "h-10 w-full rounded-xl border border-[#CBD5E1] bg
 
 export function IndianDateField({ label, name, defaultValue, required = false, disabled = false, inputClassName }: Props) {
   const [value, setValue] = useState(() => normalizeImportedDate(defaultValue) ?? "");
+  const errorId = inlineFieldErrorId(name);
 
   return (
-    <div>
+    <div data-field-container>
       {label ? (
         <label className="mb-1 block text-[10.5px] font-semibold text-[#344054]" htmlFor={`${name}-date`}>
           {label}{required ? " *" : ""}
@@ -42,6 +44,7 @@ export function IndianDateField({ label, name, defaultValue, required = false, d
         />
         <CalendarDays className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
       </div>
+      <p id={errorId} data-field-error hidden className="mt-1.5 text-[9.5px] font-semibold text-red-600" />
     </div>
   );
 }
