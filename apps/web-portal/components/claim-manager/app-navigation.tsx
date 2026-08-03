@@ -36,11 +36,11 @@ export const navigationSections:NavigationSection[]=[
   ]},
   {kind:"group",key:"posp",label:"POSP",icon:UsersRound,capability:"view_intermediaries",items:[
    {href:"/intermediaries/posp",label:"All POSP",icon:UsersRound,capability:"view_intermediaries"},
-   {href:"/customers/posp-misp/new?partner_type=posp",label:"Add POSP",icon:UserPlus,capability:"create_intermediary_application"}
+   {href:"/intermediaries/posp/new",label:"Add POSP",icon:UserPlus,capability:"create_intermediary_application"}
   ]},
   {kind:"group",key:"misp",label:"MISP",icon:UsersRound,capability:"view_intermediaries",items:[
    {href:"/intermediaries/misp",label:"All MISP",icon:UsersRound,capability:"view_intermediaries"},
-   {href:"/customers/posp-misp/new?partner_type=misp",label:"Add MISP",icon:UserPlus,capability:"create_intermediary_application"}
+   {href:"/intermediaries/misp/new",label:"Add MISP",icon:UserPlus,capability:"create_intermediary_application"}
   ]},
   {kind:"group",key:"intermediary-onboarding",label:"Onboarding",icon:FileCheck2,capability:"view_intermediaries",items:[
    {href:"/customers/posp-misp",label:"Applications",icon:FileCheck2,capability:"view_intermediaries"},
