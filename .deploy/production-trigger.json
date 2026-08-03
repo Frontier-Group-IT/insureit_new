@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-03T22:42:24+05:30",
+  "deploy_requested_at": "2026-08-03T22:55:03+05:30",
   "requested_by": "Nishant Mishra",
   "source": "ChatGPT explicit deploy command",
-  "source_commit": "1934b5627116a369cf1c025f7d12a859391736e4",
-  "release_scope": "Deploy current main for Intermediatory fixes: POSP/MISP onboarding validation blocks empty or invalid route-post saves before server POST, AGENTS documents the route-form guardrail, and approved Intermediatory loading feedback changes remain included.",
-  "verification": "POSP/MISP validation fix was typechecked, linted and production-built locally before deployment. PR #154 GitHub Actions run 30828545552 passed npm ci, lint:web, typecheck:web, and build:web for the loading feedback changes. Production Vercel build is the final deployment gate for current main.",
+  "source_commit": "88c2bde851178a3b6afa40017b161025335de9bd",
+  "release_scope": "Deploy POSP/MISP onboarding validation native fallback: blank and format-invalid saves are blocked by browser-native constraints even if React hydration is unavailable, while hydrated sessions still use targeted first-field inline validation.",
+  "verification": "Commit 88c2bde851178a3b6afa40017b161025335de9bd passed npm --workspace apps/web-portal run build, typecheck and lint locally. Existing lint warnings are unrelated unused imports in app/actions.ts and bulk-upload-v2-actions.ts. Production Vercel build is the final deployment gate.",
   "instructions": "Update this file only after the user explicitly says deploy now or finish and deploy. Ordinary code commits must not modify it."
 }
