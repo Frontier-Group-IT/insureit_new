@@ -154,6 +154,7 @@ For all validated forms, especially onboarding, document, account, payment, KYC 
 
 - Do not use `form.submit()` from click handlers.
 - Use a real `type="submit"` button or `form.requestSubmit()` only when a programmatic submit is truly required.
+- For route-post onboarding forms with custom client validation, make the visible Save button `type="button"`, run the lightweight `FormData` validator in its click handler, and call `form.requestSubmit()` only after validation passes. Keep the form `onSubmit`/`onSubmitCapture` guard for Enter-key submission.
 - Run the same validation path for button clicks, Enter-key submission and programmatic submission.
 - Set `pending`, `posting`, disabled or loading state only after validation passes.
 - If validation fails, prevent submission, keep entered data intact, show the field-level or banner error, and focus/scroll to the first invalid field.
