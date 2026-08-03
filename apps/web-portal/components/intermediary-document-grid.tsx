@@ -172,7 +172,7 @@ export function IntermediaryDocumentGrid({
     <>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
         {slots.map((slot) => {
-          const existingDocument = findDocumentForSlot(slot, resolvedDocuments);
+          const existingDocument = findDocumentForSlot(slot, resolvedDocuments) as GridDocument | undefined;
           const title = slotTitle(slot, existingDocument);
           const missing = missingDocument === slot.key || (slot.education && missingDocument === "education_document_type");
           const selectedName = selectedNames[slot.key];
