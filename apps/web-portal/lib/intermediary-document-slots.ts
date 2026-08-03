@@ -62,6 +62,6 @@ export function findDocumentForSlot(slot: IntermediaryDocumentSlot, documents: I
 }
 
 export function slotTitle(slot: IntermediaryDocumentSlot, document?: IntermediaryDocumentRecord | null) {
-  if (slot.custom) return document?.document_label?.trim() || slot.title;
+  if (slot.custom) return document?.document_label?.trim() || document?.file_name?.trim() || slot.title;
   return slot.title;
 }
