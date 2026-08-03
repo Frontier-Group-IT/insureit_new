@@ -79,7 +79,6 @@ export function IntermediaryDocumentUploadController({ applicationId, enabled, s
 
       try {
         let finalizeRequired = false;
-        let maintenanceMode = false;
 
         for (let index = 0; index < items.length; index += 1) {
           const item = items[index];
@@ -97,7 +96,6 @@ export function IntermediaryDocumentUploadController({ applicationId, enabled, s
           const result = (await response.json().catch(() => null)) as UploadResult | null;
           if (!response.ok || !result?.ok) throw new Error(result?.message || `${item.label} could not be uploaded.`);
           finalizeRequired ||= result.finalize_required === true;
-          maintenanceMode ||= result.maintenance_mode === true;
         }
 
         if (finalizeRequired) {
@@ -115,8 +113,7 @@ export function IntermediaryDocumentUploadController({ applicationId, enabled, s
           return;
         }
 
-        const success = maintenanceMode ? "documents_saved" : "documents_saved";
-        window.location.replace(freshDynamicRouteUrl(`/intermediaries/applications/${applicationId}?success=${success}`));
+        window.location.replace(freshDynamicRouteUrl(`/intermediaries/applications/${applicationId}?success=documents_updated`));
       } catch (uploadError) {
         setProgress(null);
         setError(uploadError instanceof Error ? uploadError.message : "The documents could not be uploaded.");
