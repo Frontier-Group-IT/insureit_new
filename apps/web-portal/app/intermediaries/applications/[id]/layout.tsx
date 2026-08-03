@@ -3,6 +3,8 @@ import { requireScopedPospMispManager } from "@/lib/master-data-server";
 import { hasCapability } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { AccountDeleteControl } from "./account-delete-control";
+import { IibPanVerificationReviewCard } from "./iib-pan-verification-review-card";
+import { ReviewCardVisibility } from "./review-card-visibility";
 
 type ApplicationRow = {
   id: string;
@@ -28,10 +30,9 @@ export default async function ApplicationReviewLayout({
 }) {
   const { id } = await params;
   const reviewer = await requireScopedPospMispManager(id);
-
-  if (!hasCapability(reviewer.role, "manage_system")) return children;
-
+  const canDelete = hasCapability(reviewer.role, "manage_system");
   const admin = createSupabaseAdminClient();
+
   const [{ data: application }, { data: profile }, { data: intermediary }] = await Promise.all([
     admin
       .from("intermediary_onboarding_applications")
@@ -59,7 +60,7 @@ export default async function ApplicationReviewLayout({
     : permanentValue(intermediary?.intermediary_code) ?? permanentValue(profile.external_onboarding_id);
 
   let linkedAccountCount = 0;
-  if (accountContext === "partner") {
+  if (canDelete && accountContext === "partner") {
     if (application.partner_record_id) {
       const { count } = await admin
         .from("intermediary_onboarding_applications")
@@ -79,12 +80,17 @@ export default async function ApplicationReviewLayout({
   return (
     <>
       {children}
-      <AccountDeleteControl
-        applicationId={id}
-        accountContext={accountContext}
-        accountIdentifier={accountIdentifier}
-        linkedAccountCount={linkedAccountCount}
-      />
+      <ReviewCardVisibility applicationId={id}>
+        <IibPanVerificationReviewCard applicationId={id} />
+      </ReviewCardVisibility>
+      {canDelete ? (
+        <AccountDeleteControl
+          applicationId={id}
+          accountContext={accountContext}
+          accountIdentifier={accountIdentifier}
+          linkedAccountCount={linkedAccountCount}
+        />
+      ) : null}
     </>
   );
 }
