@@ -49,17 +49,15 @@ export function validateInlineForm(form: HTMLFormElement) {
   return true;
 }
 
-export function handleInlineBlur(event: React.FocusEvent<HTMLFormElement>) {
-  const control = asControl(event.target);
-  if (!control) return;
-  control.dataset.validationTouched = "true";
-  validateInlineControl(control, true);
+// Live validation during typing/focus movement was disabled after it caused
+// browser freezes on the large intermediary onboarding form. Validation now
+// runs only on submit, while server-side field errors remain targeted inline.
+export function handleInlineBlur(_event: React.FocusEvent<HTMLFormElement>) {
+  return;
 }
 
-export function handleInlineInput(event: React.FormEvent<HTMLFormElement>) {
-  const control = asControl(event.target);
-  if (!control || control.dataset.validationTouched !== "true") return;
-  validateInlineControl(control, true);
+export function handleInlineInput(_event: React.FormEvent<HTMLFormElement>) {
+  return;
 }
 
 export function inlineFieldErrorId(name: string) {
@@ -114,10 +112,4 @@ function formControls(form: HTMLFormElement) {
   return Array.from(form.elements).filter((item): item is ValidatedControl =>
     item instanceof HTMLInputElement || item instanceof HTMLSelectElement || item instanceof HTMLTextAreaElement,
   );
-}
-
-function asControl(target: EventTarget | null): ValidatedControl | null {
-  return target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement
-    ? target
-    : null;
 }
