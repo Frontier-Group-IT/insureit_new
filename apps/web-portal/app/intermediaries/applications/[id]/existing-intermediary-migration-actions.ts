@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { requireScopedPospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -11,25 +10,39 @@ const allowedAgreement = new Set(["not_started", "sent", "opened", "signed", "un
 const allowedIibUpload = new Set(["pending", "uploaded", "unknown"]);
 const allowedIibRegistration = new Set(["pending", "submitted", "registered", "unknown"]);
 
-export async function updateExistingIntermediaryMigrationDetails(formData: FormData) {
+export type MigrationSaveState = { ok: boolean; message: string; savedAt?: string };
+
+type ApplicationRow = {
+  id: string;
+  partner_record_id: string | null;
+  draft_data: Record<string, unknown> | null;
+};
+type ProfileRow = {
+  id: string;
+  application_id: string;
+  raw_data: Record<string, unknown> | null;
+};
+
+export async function updateExistingIntermediaryMigrationDetails(
+  _previous: MigrationSaveState,
+  formData: FormData,
+): Promise<MigrationSaveState> {
   const applicationId = text(formData, "application_id");
-  if (!applicationId) redirect("/intermediaries");
+  if (!applicationId) return { ok: false, message: "Application reference is missing." };
 
   const actor = await requireScopedPospMispManager(applicationId);
   const admin = createSupabaseAdminClient();
-  const [{ data: application }, { data: profile }] = await Promise.all([
-    admin.from("intermediary_onboarding_applications").select("id,draft_data").eq("id", applicationId).maybeSingle<{ id: string; draft_data: Record<string, unknown> | null }>(),
-    admin.from("posp_misp_onboarding_profiles").select("id,partner_type,raw_data").eq("application_id", applicationId).maybeSingle<{ id: string; partner_type: "posp" | "misp"; raw_data: Record<string, unknown> | null }>(),
-  ]);
-
-  if (!application || !profile) redirectFresh(applicationId, "migration_details_not_found");
-  const context = object(application.draft_data).account_context;
-  if (context === "posp" || context === "misp") redirectFresh(applicationId, "migration_details_partner_only");
+  const { data: current, error: currentError } = await admin
+    .from("intermediary_onboarding_applications")
+    .select("id,partner_record_id,draft_data")
+    .eq("id", applicationId)
+    .maybeSingle<ApplicationRow>();
+  if (currentError || !current) return { ok: false, message: "The migration record could not be found." };
 
   const originalOnboardingDate = dateValue(formData, "legacy_original_onboarding_date");
   const originalActivationDate = dateValue(formData, "legacy_original_activation_date");
   if (originalOnboardingDate && originalActivationDate && originalActivationDate < originalOnboardingDate) {
-    redirectFresh(applicationId, "migration_activation_before_onboarding");
+    return { ok: false, message: "Activation date cannot be earlier than onboarding date." };
   }
 
   const now = new Date().toISOString();
@@ -50,35 +63,116 @@ export async function updateExistingIntermediaryMigrationDetails(formData: FormD
     legacy_migration_updated_by: actor.id,
   };
 
-  const { error: appError } = await admin
-    .from("intermediary_onboarding_applications")
-    .update({ draft_data: { ...object(application.draft_data), ...migration }, updated_at: now })
-    .eq("id", applicationId);
-  if (appError) redirectFresh(applicationId, "migration_details_save_failed");
+  let applications: ApplicationRow[] = [current];
+  if (current.partner_record_id) {
+    const { data, error } = await admin
+      .from("intermediary_onboarding_applications")
+      .select("id,partner_record_id,draft_data")
+      .eq("partner_record_id", current.partner_record_id)
+      .returns<ApplicationRow[]>();
+    if (error) return { ok: false, message: "Linked account records could not be loaded." };
+    applications = data?.length ? data : [current];
+  }
 
-  const { error: profileError } = await admin
+  const applicationIds = applications.map((item) => item.id);
+  const { data: profiles, error: profilesError } = await admin
     .from("posp_misp_onboarding_profiles")
-    .update({
+    .select("id,application_id,raw_data")
+    .in("application_id", applicationIds)
+    .returns<ProfileRow[]>();
+  if (profilesError) return { ok: false, message: "Linked profile records could not be loaded." };
+
+  for (const app of applications) {
+    const context = accountContext(app.draft_data);
+    const registrationStatus = context === "partner"
+      ? undefined
+      : mapRegistrationStatus(migration.legacy_iib_registration_status);
+    const appUpdate: Record<string, unknown> = {
+      draft_data: { ...object(app.draft_data), ...migration },
+      updated_at: now,
+    };
+    if (registrationStatus) appUpdate.registration_status = registrationStatus;
+    const { error } = await admin.from("intermediary_onboarding_applications").update(appUpdate).eq("id", app.id);
+    if (error) return { ok: false, message: "Migration details could not be synchronized to every application." };
+  }
+
+  for (const profile of profiles ?? []) {
+    const app = applications.find((item) => item.id === profile.application_id);
+    const context = accountContext(app?.draft_data);
+    const profileUpdate: Record<string, unknown> = {
       raw_data: { ...object(profile.raw_data), ...migration },
       onboarding_date: originalOnboardingDate,
       updated_by: actor.id,
       updated_at: now,
-    })
-    .eq("id", profile.id);
-  if (profileError) {
-    await admin.from("intermediary_onboarding_applications").update({ draft_data: application.draft_data, updated_at: now }).eq("id", applicationId);
-    redirectFresh(applicationId, "migration_details_save_failed");
+    };
+    if (context !== "partner") {
+      if (migration.legacy_training_status !== "unknown") profileUpdate.training_status = migration.legacy_training_status;
+      if (migration.legacy_exam_status !== "unknown") profileUpdate.exam_status = migration.legacy_exam_status;
+      if (migration.legacy_iib_upload_status !== "unknown") {
+        profileUpdate.iib_uploaded = migration.legacy_iib_upload_status === "uploaded";
+        profileUpdate.iib_uploaded_at = migration.legacy_iib_upload_status === "uploaded"
+          ? toTimestamp(originalActivationDate) ?? now
+          : null;
+      }
+      if (migration.legacy_registration_code) profileUpdate.external_onboarding_id = migration.legacy_registration_code;
+    }
+    const { error } = await admin.from("posp_misp_onboarding_profiles").update(profileUpdate).eq("id", profile.id);
+    if (error) return { ok: false, message: "Migration details could not be synchronized to every profile." };
   }
 
-  revalidatePath(`/intermediaries/applications/${applicationId}`);
-  revalidatePath(`/intermediaries/applications/${applicationId}/workflow`);
+  for (const app of applications) {
+    if (accountContext(app.draft_data) === "partner") continue;
+
+    const assignmentUpdate: Record<string, unknown> = { updated_at: now };
+    if (migration.legacy_training_status !== "unknown") {
+      assignmentUpdate.training_status = migration.legacy_training_status;
+      assignmentUpdate.training_completed_at = migration.legacy_training_status === "completed" ? toTimestamp(originalActivationDate) ?? now : null;
+    }
+    if (migration.legacy_exam_status !== "unknown") {
+      assignmentUpdate.exam_status = migration.legacy_exam_status;
+      assignmentUpdate.exam_completed_at = ["passed", "failed"].includes(migration.legacy_exam_status) ? toTimestamp(originalActivationDate) ?? now : null;
+      assignmentUpdate.exam_passed_at = migration.legacy_exam_status === "passed" ? toTimestamp(originalActivationDate) ?? now : null;
+    }
+    if (migration.legacy_agreement_status !== "unknown") {
+      assignmentUpdate.agreement_status = migration.legacy_agreement_status;
+      assignmentUpdate.agreement_signed_at = migration.legacy_agreement_status === "signed" ? toTimestamp(originalActivationDate) ?? now : null;
+    }
+    if (Object.keys(assignmentUpdate).length > 1) {
+      await admin.from("intermediary_training_exam_assignments").update(assignmentUpdate).eq("application_id", app.id);
+    }
+
+    const intermediaryUpdate: Record<string, unknown> = { updated_at: now };
+    if (originalActivationDate) intermediaryUpdate.activated_at = toTimestamp(originalActivationDate);
+    if (migration.legacy_registration_code) intermediaryUpdate.intermediary_code = migration.legacy_registration_code;
+    const { error: intermediaryError } = await admin.from("intermediaries").update(intermediaryUpdate).eq("application_id", app.id);
+    if (intermediaryError) return { ok: false, message: "The linked POSP/MISP register could not be updated. Check whether the entered ID is already in use." };
+  }
+
+  for (const id of applicationIds) {
+    revalidatePath(`/intermediaries/applications/${id}`);
+    revalidatePath(`/intermediaries/applications/${id}/workflow`);
+  }
   revalidatePath("/intermediaries");
-  redirect(`/intermediaries/applications/${applicationId}/workflow?stage=primary&success=migration_details_saved&fresh=${Date.now()}`);
+  revalidatePath("/intermediaries/partners");
+  revalidatePath("/intermediaries/posp");
+  revalidatePath("/intermediaries/misp");
+
+  return { ok: true, message: "Migration details saved and synchronized.", savedAt: now };
 }
 
+function mapRegistrationStatus(value: string) {
+  if (value === "registered") return "iib_registered";
+  if (value === "submitted") return "iib_submitted";
+  if (value === "pending") return "iib_submission_pending";
+  return null;
+}
+function accountContext(draft: Record<string, unknown> | null | undefined) {
+  const context = draft?.account_context;
+  return context === "posp" || context === "misp" ? context : "partner";
+}
+function toTimestamp(value: string | null) { return value ? `${value}T00:00:00.000Z` : null; }
 function text(data: FormData, key: string) { const value = data.get(key); return typeof value === "string" && value.trim() ? value.trim() : null; }
 function optionalText(data: FormData, key: string) { return text(data, key); }
 function dateValue(data: FormData, key: string) { const value = text(data, key); return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null; }
 function choice(data: FormData, key: string, allowed: Set<string>, fallback: string) { const value = text(data, key); return value && allowed.has(value) ? value : fallback; }
 function object(value: unknown): Record<string, unknown> { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
-function redirectFresh(applicationId: string, error: string): never { redirect(`/intermediaries/applications/${applicationId}/workflow?stage=primary&error=${error}&fresh=${Date.now()}`); }
