@@ -1,3 +1,4 @@
+# one-time codemod; this file removes itself after a successful run
 name: Temporary document slot codemod
 on:
   pull_request:
