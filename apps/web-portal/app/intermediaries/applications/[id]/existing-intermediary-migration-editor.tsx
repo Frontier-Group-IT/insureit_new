@@ -23,6 +23,8 @@ export function ExistingIntermediaryMigrationEditor({ applicationId, accountType
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
+  if (!isExistingMigrationRecord(values)) return null;
+
   function submitDirtyForm() {
     if (!dirtyRef.current || !formRef.current || pending) return;
     dirtyRef.current = false;
@@ -78,6 +80,39 @@ export function ExistingIntermediaryMigrationEditor({ applicationId, accountType
       </form>
     </section>
   );
+}
+
+function isExistingMigrationRecord(values: Record<string, unknown>) {
+  const sourceKeys = ["draft_onboarding_mode", "onboarding_mode", "record_source", "source"];
+  if (sourceKeys.some((key) => typeof values[key] === "string" && /(legacy|existing|excel|historical)/i.test(String(values[key])))) return true;
+
+  if (values.existing_registration_confirmed === true || values.existing_registration_confirmed === "true") return true;
+
+  const identityAndDateKeys = [
+    "legacy_partner_code",
+    "legacy_registration_code",
+    "existing_registration_code",
+    "legacy_original_onboarding_date",
+    "legacy_original_activation_date",
+    "legacy_verification_remarks",
+  ];
+  if (identityAndDateKeys.some((key) => hasMeaningfulValue(values[key]))) return true;
+
+  const statusKeys = [
+    "legacy_training_status",
+    "legacy_exam_status",
+    "legacy_agreement_status",
+    "legacy_iib_upload_status",
+    "legacy_iib_registration_status",
+  ];
+  return statusKeys.some((key) => {
+    const status = value(values, key).trim().toLowerCase();
+    return Boolean(status && status !== "unknown");
+  });
+}
+
+function hasMeaningfulValue(item: unknown) {
+  return typeof item === "string" ? item.trim().length > 0 : item !== null && item !== undefined && item !== false;
 }
 
 function Field({ label, name, defaultValue, disabled }: { label: string; name: string; defaultValue: string; disabled: boolean }) {
