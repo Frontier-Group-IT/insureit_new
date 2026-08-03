@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-03T22:14:00+05:30",
+  "deploy_requested_at": "2026-08-03T22:27:00+05:30",
   "requested_by": "Nishant Mishra",
   "source": "ChatGPT explicit deploy command",
-  "source_commit": "6d239ca6422f0b9e0e1cbbdb7724b91bce53df3e",
-  "release_scope": "Approved Intermediary edit-page fix: hide Existing Intermediary Migration for normal new Partner/POSP/MISP onboarding while retaining it for records with explicit legacy, existing, import, historical ID, date, remarks, or workflow-status evidence.",
-  "verification": "PR #155 final diff was reviewed and limited to one shared migration-editor component. Automated pre-merge typecheck/build did not complete; the production Vercel build is the release validation gate for merge commit 6d239ca6422f0b9e0e1cbbdb7724b91bce53df3e.",
+  "source_commit": "d4f399a86ff8434f577087c1c278950c3c5a2413",
+  "release_scope": "Approved Intermediatory release through current main: harden POSP/MISP empty-submit validation and add immediate loading, disabled, hover, active, and focus feedback for POSP/MISP ID creation, portal-user creation, and resend-link actions without duplicating existing workflow loaders.",
+  "verification": "PR #154 GitHub Actions run 30828545552 passed npm ci, lint:web, typecheck:web, and build:web. The production Vercel build is the final deployment gate for source commit d4f399a86ff8434f577087c1c278950c3c5a2413.",
   "instructions": "Update this file only after the user explicitly says deploy now or finish and deploy. Ordinary code commits must not modify it."
 }
