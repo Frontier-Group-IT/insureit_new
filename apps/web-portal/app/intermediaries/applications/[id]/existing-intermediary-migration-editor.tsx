@@ -23,16 +23,24 @@ export function ExistingIntermediaryMigrationEditor({ applicationId, accountType
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
+  function submitDirtyForm() {
+    if (!dirtyRef.current || !formRef.current || pending) return;
+    dirtyRef.current = false;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
+    formRef.current.requestSubmit();
+  }
+
   function scheduleSave() {
     if (!editable) return;
     dirtyRef.current = true;
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      if (dirtyRef.current && formRef.current) {
-        dirtyRef.current = false;
-        formRef.current.requestSubmit();
-      }
-    }, 700);
+    timerRef.current = setTimeout(submitDirtyForm, 700);
+  }
+
+  function flushOnFocusLeave(event: React.FocusEvent<HTMLFormElement>) {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+    submitDirtyForm();
   }
 
   return (
@@ -46,7 +54,7 @@ export function ExistingIntermediaryMigrationEditor({ applicationId, accountType
           {pending ? "Saving migration changes…" : state.message}
         </p>
       </div>
-      <form ref={formRef} action={formAction} onChange={scheduleSave} className="space-y-5 p-5">
+      <form ref={formRef} action={formAction} onChange={scheduleSave} onBlur={flushOnFocusLeave} className="space-y-5 p-5">
         <input type="hidden" name="application_id" value={applicationId} />
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <Field label="Existing Partner ID" name="legacy_partner_code" defaultValue={value(values, "legacy_partner_code")} disabled={!editable} />
