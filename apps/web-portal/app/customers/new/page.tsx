@@ -40,7 +40,6 @@ export default async function NewCustomerPage({ searchParams }: { searchParams: 
       <AppShell title={`Add ${partnerType.toUpperCase()} Application`}>
         <PospMispOnboardingForm
           action={createManualPospMispOnboardingV2}
-          submitPath="/customers/posp-misp/new/submit"
           partnerType={partnerType}
           salesManagers={salesManagers}
           oems={oems}

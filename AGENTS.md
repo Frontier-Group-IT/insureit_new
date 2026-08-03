@@ -154,12 +154,11 @@ For all validated forms, especially onboarding, document, account, payment, KYC 
 
 - Do not use `form.submit()` from click handlers.
 - Use a real `type="submit"` button or `form.requestSubmit()` only when a programmatic submit is truly required.
-- For route-post onboarding forms with custom client validation, keep a browser-native validation fallback. Prefer a real `type="submit"` button with required/pattern/minLength/maxLength attributes, run the lightweight `FormData` validator in the click/submit handlers, and prevent submission on failure. Avoid a JS-only `type="button"` submit path unless there is a separate no-JS/native fallback.
+- For route-post onboarding forms with a `submitPath`, do not attach React `onClick`, `onSubmitCapture`, or `onInvalidCapture` validation handlers. Use a real `type="submit"` button with required/pattern/minLength/maxLength attributes and let the route handler/server action remain the authority.
 - Run the same validation path for button clicks, Enter-key submission and programmatic submission.
 - Set `pending`, `posting`, disabled or loading state only after validation passes.
 - If validation fails, prevent submission, keep entered data intact, show the field-level or banner error, and focus/scroll to the first invalid field.
 - On large forms, validate and render only the first blocking invalid field per submit. Do not rewrite every required field/error node at once on an empty submit, because this has repeatedly caused perceived hangs in the intermediary onboarding workflow.
-- Do not make high-option onboarding forms into one large hydrated client component. Server-render the field tree and option lists; hydrate only a tiny delegated validation guard when client-side behavior is needed.
-- For fragile large route-post onboarding forms, use lightweight value-based client validation that checks `FormData` and renders only targeted errors. Avoid native validity sweeps, live whole-form validation and pending-state locks before validation passes.
+- For fragile large onboarding forms that stay on React server actions, use lightweight value-based client validation that checks `FormData` and renders only targeted errors. For route-post forms with `submitPath`, avoid custom React validation handlers entirely.
 - Preserve server-side validation as the authority; client validation is only an early recovery path.
 - When resolving conflicts in validated forms, preserve existing shared validators such as `validateInlineForm` and apply freeze prevention on top instead of replacing the current form workflow.
