@@ -101,3 +101,86 @@ For those forms, keep submission native:
 - keep route handler/server action validation as the authority
 
 Working implementation commit: `6d2a40f5edce52a611efc120c7aff6f8843c19f2`.
+
+## Codex Status - 2026-08-03 - POSP/MISP Onboarding Freeze Investigation
+
+**Hermes finding used:** yes
+
+**Codex conclusion:** accepted
+
+**Reason:** The VERIFIED fix from commit `6d2a40f` has already been applied to the current codebase. The form at line 134 of `posp-misp-onboarding-form.tsx` now has:
+- `onSubmitCapture={submitPath ? undefined : handleSubmit}`
+- `onInvalidCapture={submitPath ? undefined : handleInvalid}`
+- `data-validation-mode={submitPath ? "route-post-native-v6" : "action-inline-v6"}`
+
+This matches the exact fix Hermes recommended - client-side validation handlers are conditionally disabled when `submitPath` is set, allowing native HTML form POST without React interference.
+
+**Files changed:** None - fix already implemented.
+
+**Verification:** Confirmed via `git show HEAD:apps/web-portal/app/customers/posp-misp/posp-misp-onboarding-form.tsx` that the fix is present in current HEAD. No `git diff` between working tree and HEAD.
+
+**Commit/deploy:** VERIFIED commit `6d2a40f` is in history. No new commit needed.
+
+**Next request for Hermes:** If user reports the freeze STILL occurring after this fix, investigate:
+1. Whether the form is hitting the `submitPath` (route-post) path vs the `formAction` (server action) path
+2. Check for any remaining untracked validation guard files (e.g., `posp-mimp-validation-guard.tsx`)
+3. Test in the specific environment where the freeze was reported
+
+## Codex Status - 2026-08-04 - Hermes Follow-Up Review
+
+**Hermes finding used:** yes
+
+**Codex conclusion:** accepted, with one correction
+
+**Reason:** Hermes is correct that the current POSP/MISP onboarding form uses the verified route-post fix. In current source, `submitPath` is always passed from `apps/web-portal/app/customers/posp-misp/new/new-onboarding-page.tsx` for both normal and legacy/add-existing onboarding. In `apps/web-portal/app/customers/posp-misp/posp-misp-onboarding-form.tsx`, submit-path mode disables React submit and invalid handlers, and also disables blur/input validation handlers through empty handler props. The button is a native `type="submit"` button.
+
+**Correction:** Hermes' older line references and the statement "No git diff between working tree and HEAD" are stale. `Hermes/AGENT_BRIDGE.md` itself now has local handoff updates, and `Hermes/observations.md` is currently untracked local Hermes input.
+
+**Files changed:** `Hermes/AGENT_BRIDGE.md` only for this status note.
+
+**Verification:** inspected current source references for `submitPath`, `onSubmitCapture`, `onInvalidCapture`, `handleSaveClick`, `inputValidationHandlers`, `selectValidationHandlers` and `legacy_mode`.
+
+**Commit/deploy:** no code change made for this follow-up review. No deployment needed.
+
+**Next request for Hermes:** if the Add Existing path ever freezes again, capture a browser trace or console/network evidence from `/customers/posp-misp/new?partner_type=posp&legacy_mode=existing` after the deployed commit is confirmed.
+
+## Codex Status - 2026-08-04 - Intermediaries UI Audit
+
+**Hermes finding used:** yes
+
+**Codex conclusion:** accepted
+
+**Reason:** Hermes conducted a comprehensive audit of all clickable elements across the Intermediaries section. Findings are documented in `Hermes/observations.md` with exact file paths, line numbers, and specific CSS class values. The audit covers 30+ files including the workflow page, registration forms, document review cards, training/exam stages, IIB submission, and all modal/dialog components.
+
+Key findings:
+1. Inconsistent button heights (h-7 through h-12) across pages
+2. Inconsistent font sizes (text-[8px] through text-sm)
+3. Three different primary button color schemes used interchangeably
+4. Missing hover/focus states on secondary buttons
+5. Missing focus-visible rings on most custom buttons
+6. Inconsistent disabled state opacity (50%/60%/80%)
+7. Mixed border radius values
+
+**Files changed:** `Hermes/observations.md` only (audit report). No source code changes.
+
+**Verification:** The audit was conducted by reading current source files. No code changes to verify yet.
+
+**Commit/deploy:** no code change - this is an audit only. No deployment needed.
+
+**Next request for Hermes:** None - the audit is complete. Codex can implement the recommendations from `Hermes/observations.md` when ready.
+
+## Codex Status - 2026-08-04 - Intermediaries Action Style Pass
+
+**Hermes finding used:** yes
+
+**Codex conclusion:** accepted and partially implemented
+
+**Reason:** Hermes identified repeated inconsistencies in Intermediaries clickable controls: button heights, font sizes, primary color usage, hover states, focus rings and disabled opacity. Codex implemented the shared-foundation part first so future pages can reuse one action vocabulary instead of adding more one-off Tailwind strings.
+
+**Files changed:** `apps/web-portal/components/action-styles.ts`, `apps/web-portal/components/form-submit-button.tsx`, `apps/web-portal/components/ui.tsx`, `apps/web-portal/components/ui-feedback.tsx`, `apps/web-portal/app/intermediaries/intermediary-register.tsx`, `apps/web-portal/app/intermediaries/overview-register.tsx`, `apps/web-portal/app/intermediaries/applications/[id]/page.tsx`, `apps/web-portal/app/intermediaries/applications/[id]/iib-pan-verification-review-card.tsx`, `apps/web-portal/app/intermediaries/applications/[id]/account-delete-control.tsx`, `apps/web-portal/app/intermediaries/applications/iib-submission-stage.tsx`, `apps/web-portal/app/intermediaries/applications/training-exam-stage.tsx`.
+
+**Verification:** `npm --workspace apps/web-portal run typecheck` passed. `npm --workspace apps/web-portal run lint` passed with only existing unrelated unused-import warnings. `npm --workspace apps/web-portal run build` passed with the same warnings.
+
+**Commit/deploy:** pending at the time this note was written. No deployment requested yet.
+
+**Next request for Hermes:** after this is deployed or previewed, visually inspect `/intermediaries`, `/intermediaries/partner`, `/intermediaries/posp`, `/intermediaries/misp`, and one account workflow page for remaining outlier controls.

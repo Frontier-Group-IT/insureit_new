@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { actionBaseClassName, primaryActionClassName } from "@/components/action-styles";
 import { InsureItButtonLoader } from "@/components/loading/insureit-loader";
 
-const defaultClassName = "inline-flex items-center justify-center gap-2 rounded-md bg-[var(--brand-accent)] px-4 py-2 text-[11px] font-semibold text-white shadow-sm hover:bg-[#5D55D8] disabled:cursor-not-allowed disabled:opacity-80";
-const interactionClassName = "cursor-pointer transition duration-150 ease-out hover:-translate-y-px hover:shadow-md active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#818CF8] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none disabled:opacity-70";
+const defaultClassName = primaryActionClassName;
+const interactionClassName = `${actionBaseClassName} cursor-pointer disabled:translate-y-0 disabled:shadow-none`;
 
 export function FormSubmitButton({
   label = "Save changes",

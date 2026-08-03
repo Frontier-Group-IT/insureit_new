@@ -1,4 +1,5 @@
 import { FormSubmitButton } from "@/components/form-submit-button";
+import { darkActionClassName, primaryActionClassName, secondaryActionClassName } from "@/components/action-styles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { prepareIntermediaryIibPayload, startIntermediaryIibHandoff } from "./iib-submission-actions";
 
@@ -74,7 +75,7 @@ export async function IibSubmissionStage({ applicationId, agreementSigned, final
         <p className="text-[10px] text-[#475569]">Prepare the values required by the IIB POS portal.</p>
         <form action={prepareIntermediaryIibPayload}>
           <input type="hidden" name="application_id" value={applicationId} />
-          <FormSubmitButton label="Prepare IIB data" pendingLabel="Preparing" className="rounded-xl bg-gradient-to-r from-[#6759FF] to-[#4F8DF6] px-5 py-2.5 text-[10px] font-semibold text-white shadow-[0_10px_24px_rgba(79,70,229,.18)]" />
+          <FormSubmitButton label="Prepare IIB data" pendingLabel="Preparing" className={primaryActionClassName} />
         </form>
       </div> : <div className="space-y-5">
         {packet.missing_fields.length ? <div className="border-l-2 border-amber-400 pl-3">
@@ -101,13 +102,13 @@ export async function IibSubmissionStage({ applicationId, agreementSigned, final
           <div className="flex flex-wrap gap-2">
             <form action={prepareIntermediaryIibPayload}>
               <input type="hidden" name="application_id" value={applicationId} />
-              <FormSubmitButton label="Refresh data" pendingLabel="Refreshing" className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-2.5 text-[10px] font-semibold text-[#334155]" />
+              <FormSubmitButton label="Refresh data" pendingLabel="Refreshing" className={secondaryActionClassName} />
             </form>
             {ready ? <form action={startIntermediaryIibHandoff}>
               <input type="hidden" name="application_id" value={applicationId} />
-              <FormSubmitButton label="Prepare portal handoff" pendingLabel="Preparing" className="rounded-xl bg-[#071D49] px-4 py-2.5 text-[10px] font-semibold text-white" />
+              <FormSubmitButton label="Prepare portal handoff" pendingLabel="Preparing" className={darkActionClassName} />
             </form> : null}
-            {ready && portalUrl ? <a href={portalUrl} target="_blank" rel="noreferrer" className="rounded-xl bg-gradient-to-r from-[#6759FF] to-[#4F8DF6] px-4 py-2.5 text-[10px] font-semibold text-white">Open IIB portal</a> : null}
+            {ready && portalUrl ? <a href={portalUrl} target="_blank" rel="noreferrer" className={primaryActionClassName}>Open IIB portal</a> : null}
           </div>
         </div>
         {!portalUrl && ready ? <p className="text-[8.5px] text-[#64748B]">Set NEXT_PUBLIC_IIB_POS_PORTAL_URL to enable the portal button.</p> : null}

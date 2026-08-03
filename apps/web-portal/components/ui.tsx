@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AlertCircle, ArrowRight, LoaderCircle, Search, SlidersHorizontal, Sparkles } from "lucide-react";
+import { primaryActionClassName, secondaryActionClassName } from "@/components/action-styles";
 import type { ClaimStatus } from "./data";
 
 const statusStyles: Record<string, string> = {
@@ -109,8 +110,8 @@ export function SearchFilterBar({
         </label>
         <div className={`flex flex-col sm:flex-row sm:items-center ${compact ? "gap-2" : "gap-3"}`}>
           <label className="relative"><SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#8B93AA]" /><select name={filterName} className={`${compact ? "h-9 min-w-36 rounded-xl pl-9 text-[11px]" : "h-10 min-w-44 rounded-xl pl-9 text-[11.5px]"}`} aria-label={filterLabel} defaultValue={defaultFilter}><option value="all">All {filterLabel.toLowerCase()}</option>{filterOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-          <button type="submit" className={`${compact ? "h-9 rounded-xl px-3 text-[10.5px]" : "h-10 rounded-xl px-4 text-[11px]"} ui-primary-action font-bold text-white`}>Apply</button>
-          {hasFilters ? <Link href="?" className={`${compact ? "h-9 rounded-xl px-3 text-[10.5px]" : "h-10 rounded-xl px-4 text-[11px]"} inline-flex items-center justify-center border border-white/80 bg-white/80 font-bold text-[#596178] shadow-sm transition hover:-translate-y-0.5 hover:bg-white`}>Clear</Link> : null}
+          <button type="submit" className={`${primaryActionClassName} ${compact ? "h-9 px-3 text-[9px]" : ""}`}>Apply</button>
+          {hasFilters ? <Link href="?" className={`${secondaryActionClassName} ${compact ? "h-9 px-3 text-[9px]" : ""}`}>Clear</Link> : null}
           {action}
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { Search } from "lucide-react";
+import { compactDarkActionClassName, compactPrimaryActionClassName, compactSecondaryActionClassName } from "@/components/action-styles";
 import { AppShell } from "@/components/shell";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { getAccessibleIntermediaryIds } from "@/lib/employee-access-scope";
@@ -227,14 +228,14 @@ export async function OverviewIntermediaryRegister({ search = "", success, error
                           <div className="flex flex-wrap items-center gap-2">
                             <FreshAccountReviewLink
                               href={`/intermediaries/applications/${applicationId}`}
-                              className="inline-flex rounded-lg border border-[#CBD5E1] bg-white px-3 py-2 text-[9px] font-semibold text-[#0F2A55]"
+                              className={compactSecondaryActionClassName}
                             >
                               View Partner
                             </FreshAccountReviewLink>
                             {linkedApp ? (
                               <FreshAccountReviewLink
                                 href={`/intermediaries/applications/${linkedApp.id}`}
-                                className="inline-flex rounded-lg bg-[#0F2A55] px-3 py-2 text-[9px] font-semibold text-white"
+                                className={compactDarkActionClassName}
                               >
                                 View linked {linkedType.toUpperCase()}
                               </FreshAccountReviewLink>
@@ -245,7 +246,7 @@ export async function OverviewIntermediaryRegister({ search = "", success, error
                                 <FormSubmitButton
                                   label={`Create ${allowedType.toUpperCase()}`}
                                   pendingLabel="Creating"
-                                  className="rounded-lg bg-[#635BFF] px-3 py-2 text-[9px] font-semibold text-white disabled:opacity-60"
+                                  className={compactPrimaryActionClassName}
                                 />
                               </form>
                             ) : null}

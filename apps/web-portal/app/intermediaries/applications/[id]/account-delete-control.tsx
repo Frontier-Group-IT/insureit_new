@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AlertTriangle, Trash2, X } from "lucide-react";
+import { destructiveActionClassName, destructiveSecondaryActionClassName, secondaryActionClassName } from "@/components/action-styles";
 import {
   deleteIntermediaryAccount,
   type IntermediaryDeletionMode,
@@ -115,7 +116,7 @@ export function AccountDeleteControl({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-5 right-5 z-40 inline-flex min-h-11 items-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 shadow-[0_12px_32px_rgba(15,23,42,.18)] transition hover:border-red-300 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+        className={`fixed bottom-5 right-5 z-40 ${destructiveSecondaryActionClassName} shadow-[0_12px_32px_rgba(15,23,42,.18)]`}
         aria-label={`Delete ${accountLabel} account`}
       >
         <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -150,7 +151,7 @@ export function AccountDeleteControl({
                 type="button"
                 onClick={closeDialog}
                 disabled={isPending}
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-500 transition hover:bg-white hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-500 transition hover:bg-white hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Close delete warning"
               >
                 <X className="h-5 w-5" aria-hidden="true" />
@@ -196,7 +197,7 @@ export function AccountDeleteControl({
                 type="button"
                 onClick={closeDialog}
                 disabled={isPending}
-                className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:opacity-50"
+                className={secondaryActionClassName}
               >
                 Cancel
               </button>
@@ -205,7 +206,7 @@ export function AccountDeleteControl({
                 onClick={submitDeletion}
                 disabled={!canConfirm}
                 aria-busy={isPending}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45"
+                className={destructiveActionClassName}
               >
                 <Trash2 className="h-4 w-4" aria-hidden="true" />
                 {isPending ? "Deleting…" : deletionMode === "partner" ? "Delete Partner and linked accounts" : `Delete ${accountLabel}`}
