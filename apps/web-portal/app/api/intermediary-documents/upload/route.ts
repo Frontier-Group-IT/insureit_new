@@ -24,7 +24,10 @@ const STANDARD_TYPES = new Set([
 export async function POST(request: Request) {
   const authenticatedManager = await getPospMispManager();
   if (!authenticatedManager?.id) {
-    return NextResponse.json({ ok: false, message: "You are not authorized to upload intermediary documents." }, { status: 403 });
+    return NextResponse.json(
+      { ok: false, code: "intermediary_upload_session_missing", message: "Your login session was not available for this upload. Refresh the page, sign in again if required, and retry." },
+      { status: 401, headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   const data = await request.formData();
@@ -38,7 +41,10 @@ export async function POST(request: Request) {
 
   const reviewer = await getScopedPospMispManager(applicationId);
   if (!reviewer?.id) {
-    return NextResponse.json({ ok: false, message: "You are not authorized to update this application." }, { status: 403 });
+    return NextResponse.json(
+      { ok: false, code: "intermediary_upload_scope_denied", message: "This application is outside your permitted Intermediary hierarchy or is no longer assigned to you." },
+      { status: 403, headers: { "Cache-Control": "no-store" } },
+    );
   }
   if (!STANDARD_TYPES.has(documentType) && !EDUCATION_TYPES.has(documentType)) {
     return NextResponse.json({ ok: false, message: "The selected document type is not supported." }, { status: 400 });
@@ -119,7 +125,10 @@ export async function POST(request: Request) {
     await admin.from("posp_misp_onboarding_profiles").update({ education_status: "received", updated_by: reviewer.id, updated_at: new Date().toISOString() }).eq("id", profile.id);
   }
 
-  return NextResponse.json({ ok: true, document_type: documentType, file_name: selected.name });
+  return NextResponse.json(
+    { ok: true, document_type: documentType, file_name: selected.name },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }
 
 function text(data: FormData, key: string) {
