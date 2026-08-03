@@ -15,6 +15,7 @@ type DocumentVisualCardProps = {
   id?: string;
   clickTargetId?: string;
   compact?: boolean;
+  muted?: boolean;
 };
 
 const assets: Record<string, { src: string; alt: string; position?: string }> = {
@@ -33,9 +34,15 @@ const assets: Record<string, { src: string; alt: string; position?: string }> = 
   education_12th_marksheet: { src: "/document-assets/education-certificate.png", alt: "Education certificate visual" },
   education_graduation_marksheet: { src: "/document-assets/education-certificate.png", alt: "Education certificate visual" },
   education_post_graduation_marksheet: { src: "/document-assets/education-certificate.png", alt: "Education certificate visual" },
+  training_certificate: { src: "/document-assets/education-certificate.png", alt: "Training certificate visual" },
+  registration_certificate: { src: "/document-assets/registration-form.png", alt: "Registration certificate visual" },
   agreement_copy: { src: "/document-assets/agreement-copy.png", alt: "Agreement document visual" },
   gst_copy: { src: "/document-assets/gst-certificate.png", alt: "GST certificate visual" },
   registration_form: { src: "/document-assets/registration-form.png", alt: "Registration form visual" },
+  custom_1: { src: "/document-assets/identity-card.png", alt: "Other document visual" },
+  custom_2: { src: "/document-assets/identity-card.png", alt: "Other document visual" },
+  custom_3: { src: "/document-assets/identity-card.png", alt: "Other document visual" },
+  custom_4: { src: "/document-assets/identity-card.png", alt: "Other document visual" },
 };
 
 const fallbackAsset = { src: "/document-assets/identity-card.png", alt: "Document visual" };
@@ -68,31 +75,32 @@ export function DocumentVisualCard({
   id,
   clickTargetId,
   compact = false,
+  muted = false,
 }: DocumentVisualCardProps) {
   const asset = assets[type] ?? fallbackAsset;
   const resolvedTone = tone ?? (fileName ? "uploaded" : required ? "required" : "optional");
   const label = status ?? (fileName ? "Uploaded" : required ? "Required" : "Optional");
 
   return (
-    <article id={id} className={`group relative overflow-hidden rounded-[22px] border shadow-[0_24px_60px_rgba(15,23,42,0.07)] transition hover:-translate-y-1 hover:shadow-[0_34px_76px_rgba(15,23,42,0.1)] ${toneClasses[resolvedTone]}`}>
+    <article id={id} className={`group relative overflow-hidden rounded-[18px] border shadow-[0_16px_38px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_52px_rgba(15,23,42,0.09)] ${toneClasses[resolvedTone]} ${muted ? "opacity-50 hover:opacity-80" : "opacity-100"}`}>
       {clickTargetId ? <label htmlFor={clickTargetId} className="absolute inset-0 z-10 cursor-pointer" aria-label={`Upload ${title}`} /> : null}
-      <div className={`relative overflow-hidden bg-white ${compact ? "h-52" : "h-72"}`}>
+      <div className={`relative overflow-hidden bg-white ${compact ? "h-40" : "h-72"}`}>
         <Image
           src={asset.src}
           alt={asset.alt}
           fill
-          sizes={compact ? "(max-width: 768px) 100vw, 360px" : "(max-width: 768px) 100vw, 460px"}
+          sizes={compact ? "(max-width: 768px) 50vw, 240px" : "(max-width: 768px) 100vw, 460px"}
           className="object-cover transition duration-300 group-hover:scale-[1.015]"
           style={{ objectPosition: asset.position ?? "center" }}
         />
-        <div className="absolute left-3 top-3 flex items-center gap-1.5">
-          <span className={`rounded-full border px-2 py-1 text-[8.5px] font-bold uppercase tracking-[0.04em] ${badgeClasses[resolvedTone]}`}>{label}</span>
+        <div className="absolute left-2.5 top-2.5 flex items-center gap-1.5">
+          <span className={`rounded-full border px-2 py-1 text-[8px] font-bold uppercase tracking-[0.04em] ${badgeClasses[resolvedTone]}`}>{label}</span>
         </div>
       </div>
-      <div className="absolute inset-x-3 bottom-3 z-20 rounded-2xl border border-white/75 bg-white/82 p-3 shadow-[0_16px_38px_rgba(15,23,42,0.12)] backdrop-blur-sm">
-        <div className="flex items-center justify-between gap-3">
+      <div className="absolute inset-x-2.5 bottom-2.5 z-20 rounded-xl border border-white/75 bg-white/84 p-2.5 shadow-[0_12px_28px_rgba(15,23,42,0.11)] backdrop-blur-sm">
+        <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <h3 className="truncate text-[12px] font-semibold text-[#0F172A]">{title}{required ? <span className="ml-1 text-red-500">*</span> : null}</h3>
+            <h3 className="line-clamp-2 text-[10.5px] font-semibold leading-4 text-[#0F172A]">{title}{required ? <span className="ml-1 text-red-500">*</span> : null}</h3>
           </div>
           {action ? <div className="relative z-30 shrink-0">{action}</div> : null}
         </div>
