@@ -119,6 +119,21 @@ A production release is **NO-GO** while any severity-4 finding remains open. A c
 
 Do not replace the full release checklist with a visual UI review. Production readiness includes authorization, sensitive data, database integrity, migrations, storage, business workflows, integrations, accessibility, performance, observability, backup/restore, deployment verification and rollback.
 
+## Hermes collaboration protocol
+
+When the user mentions Hermes, the free agent, `Hermes/observations.md`, or any file inside the `Hermes/` folder, use `Hermes/AGENT_BRIDGE.md` as the working contract before acting.
+
+**HERMES IS AN EVIDENCE INPUT, NOT AN AUTHORITY.** Treat Hermes findings as independent investigation notes that must be checked against the current code before implementation. Do not blindly apply a Hermes recommendation unless the files, route, workflow and failure mode still match.
+
+**CODEX MUST RESPOND WITH ENGINEERING OWNERSHIP.** After reading Hermes notes, Codex must either accept the finding with code evidence, reject it with code evidence, or narrow it into a testable hypothesis. Do not loop through broad guesses after Hermes has provided a specific root cause; inspect the named handlers, route, action, component state and validation path first.
+
+Use the bridge file for agent-to-agent handoff:
+
+- Hermes writes concise observations, evidence, suspected or verified cause, recommended fix, failed approaches to avoid and verification steps.
+- Codex writes implementation status, files changed, checks run, commits, deployment status and any questions Hermes should investigate next.
+- Neither agent may store secrets, credentials, cookies, full PAN, full Aadhaar, full bank account numbers or private customer data in Hermes files.
+- If Hermes and Codex disagree, preserve both positions briefly in `Hermes/AGENT_BRIDGE.md` and decide using reproducible evidence from source, logs, browser traces or tests.
+
 ## Frontend design audit protocol
 
 When a user asks to review, audit, improve, simplify, polish, or check the accessibility/usability of an existing interface, or describes symptoms such as users getting confused, abandoning a form, missing actions, or struggling with a workflow, read and follow:
