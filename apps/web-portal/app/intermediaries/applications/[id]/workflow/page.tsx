@@ -11,6 +11,7 @@ import { TrainingExamStage } from "@/app/intermediaries/applications/training-ex
 import { IibSubmissionStage } from "@/app/intermediaries/applications/iib-submission-stage";
 import { WorkflowResultDialog } from "@/app/intermediaries/applications/workflow-result-dialog";
 import { WorkflowErrorDialog } from "@/app/intermediaries/applications/workflow-error-dialog";
+import { WorkflowSuccessToast } from "@/app/intermediaries/applications/workflow-success-toast";
 import { IntermediaryDocumentUploadController } from "@/app/intermediaries/applications/intermediary-document-upload-controller";
 import { AccountReviewBackLink } from "@/app/intermediaries/applications/account-review-back-link";
 import { ExistingIntermediaryMigrationEditor } from "../existing-intermediary-migration-editor";
@@ -186,7 +187,7 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
           </div>
         </section>
 
-        {query.success && !popupEvent ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10.5px] text-emerald-700">{successes[query.success] ?? "Saved successfully."}</div> : null}
+        {query.success && !popupEvent ? <WorkflowSuccessToast message={successes[query.success] ?? "Saved successfully."} /> : null}
 
         {context === "partner" ? (
           <PartnerTwoStepNavigation applicationId={id} viewStage={viewStage} documentsComplete={showDocuments} partnerActive={application.partner_status === "active_partner"} />
