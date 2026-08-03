@@ -13,6 +13,7 @@ import { WorkflowResultDialog } from "@/app/intermediaries/applications/workflow
 import { WorkflowErrorDialog } from "@/app/intermediaries/applications/workflow-error-dialog";
 import { IntermediaryDocumentUploadController } from "@/app/intermediaries/applications/intermediary-document-upload-controller";
 import { AccountReviewBackLink } from "@/app/intermediaries/applications/account-review-back-link";
+import { ExistingIntermediaryMigrationEditor } from "../existing-intermediary-migration-editor";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -40,6 +41,7 @@ type ProfileRow = PospMispWorkflowProfile & Omit<PospMispEditProfile, "aadhaar_e
   existing_registration_confirmed: boolean;
   existing_registration_code: string | null;
   existing_registration_confirmed_at: string | null;
+  raw_data: Record<string, unknown> | null;
 };
 type PanJob = { status: string };
 type ViewStage = "primary" | "documents" | "review";
@@ -85,12 +87,17 @@ const errors: Record<string, string> = {
   duplicate_pan: "This PAN number is already registered with another intermediary account.",
   duplicate_email: "This email address is already registered with another intermediary account.",
   duplicate_mobile: "This mobile number is already registered with another intermediary account.",
+  migration_details_not_found: "The migration record could not be found.",
+  migration_details_partner_only: "Migration details can only be maintained from the Partner account.",
+  migration_activation_before_onboarding: "The original activation date cannot be earlier than the original onboarding date.",
+  migration_details_save_failed: "The existing intermediary migration details could not be saved.",
 };
 const successes: Record<string, string> = {
   posp_misp_submitted: "Primary information saved.",
   primary_details_saved: "Stage 1 details saved.",
   documents_saved: "Stage 2 documents saved and Partner ID issued.",
   documents_started: "Document stage opened.",
+  migration_details_saved: "Existing intermediary migration details updated.",
 };
 const popupEvents = new Set(["documents_completed", "training_assigned", "training_status_updated", "exam_allotted", "exam_passed", "exam_failed", "agreement_sent", "agreement_signed", "onboarding_completed"]);
 
@@ -101,7 +108,7 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
   const admin = createSupabaseAdminClient();
   const [{ data: application }, { data: profile }, { data: documents }, { data: panJob }, { data: assignment }] = await Promise.all([
     admin.from("intermediary_onboarding_applications").select("id,requested_type,final_type,status,registration_status,partner_status,applicant_phone,applicant_email,updated_at,draft_data").eq("id", id).maybeSingle<Application>(),
-    admin.from("posp_misp_onboarding_profiles").select("partner_id,partner_type,associate_employee_id,associate_profile_id,external_onboarding_id,document_received_at,pos_name,pos_first_name,pos_middle_name,pos_last_name,misp_name,applicant_phone,applicant_email,date_of_birth,aadhaar_last_four,aadhaar_number_encrypted,pan_number,gst_number,address,city,state,postal_code,bank_id,bank_name,bank_account_number,bank_ifsc_code,oem_name,dp_name,dp_first_name,dp_middle_name,dp_last_name,dp_phone,dp_email,dp_pan_number,dp_date_of_birth,dp_aadhaar_last_four,dp_aadhaar_number_encrypted,workflow_stage,iib_remarks,iib_uploaded,iib_uploaded_at,training_login_id,training_credentials_shared_flag,training_start_date,training_end_date,training_status,training_certificate_number,exam_status,onboarding_date,record_source,existing_registration_confirmed,existing_registration_code,existing_registration_confirmed_at").eq("application_id", id).maybeSingle<ProfileRow>(),
+    admin.from("posp_misp_onboarding_profiles").select("partner_id,partner_type,associate_employee_id,associate_profile_id,external_onboarding_id,document_received_at,pos_name,pos_first_name,pos_middle_name,pos_last_name,misp_name,applicant_phone,applicant_email,date_of_birth,aadhaar_last_four,aadhaar_number_encrypted,pan_number,gst_number,address,city,state,postal_code,bank_id,bank_name,bank_account_number,bank_ifsc_code,oem_name,dp_name,dp_first_name,dp_middle_name,dp_last_name,dp_phone,dp_email,dp_pan_number,dp_date_of_birth,dp_aadhaar_last_four,dp_aadhaar_number_encrypted,workflow_stage,iib_remarks,iib_uploaded,iib_uploaded_at,training_login_id,training_credentials_shared_flag,training_start_date,training_end_date,training_status,training_certificate_number,exam_status,onboarding_date,record_source,existing_registration_confirmed,existing_registration_code,existing_registration_confirmed_at,raw_data").eq("application_id", id).maybeSingle<ProfileRow>(),
     admin.from("intermediary_onboarding_documents").select("id,document_type,file_name,storage_bucket,storage_path,verification_status").eq("application_id", id).order("created_at").returns<Document[]>(),
     admin.from("pan_verification_jobs").select("status").eq("application_id", id).maybeSingle<PanJob>(),
     admin.from("intermediary_training_exam_assignments").select("training_title,training_url,training_instructions,training_assigned_at,training_started_at,training_completed_at,training_deadline,training_status,exam_title,exam_url,passing_percentage,maximum_attempts,exam_duration_minutes,exam_available_from,exam_available_until,exam_allotted_at,exam_completed_at,exam_passed_at,exam_status,exam_score,exam_attempts_used,agreement_status,agreement_signing_url,agreement_sent_at,agreement_opened_at,agreement_signed_at").eq("application_id", id).maybeSingle<Assignment>(),
@@ -114,11 +121,7 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
     admin.from("vehicle_manufacturers").select("name").eq("is_active", true).order("sort_order").order("name").returns<Array<{ name: string }>>(),
   ]);
 
-  const {
-    aadhaar_number_encrypted,
-    dp_aadhaar_number_encrypted,
-    ...safeProfile
-  } = profile;
+  const { aadhaar_number_encrypted, dp_aadhaar_number_encrypted, ...safeProfile } = profile;
   const aadhaarEncrypted = profile.partner_type === "misp" ? dp_aadhaar_number_encrypted : aadhaar_number_encrypted;
   const aadhaarLastFour = profile.partner_type === "misp" ? profile.dp_aadhaar_last_four : profile.aadhaar_last_four;
   const editProfile: PospMispEditProfile = {
@@ -141,6 +144,7 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
   const docList = (documents ?? []).map((item) => ({ document_type: item.document_type, file_name: item.file_name }));
   const popupEvent = query.success && popupEvents.has(query.success) ? query.success : null;
   const iibCleared = profile.iib_remarks === "No Data Found In POS System";
+  const migrationValues = { ...asObject(profile.raw_data), ...asObject(application.draft_data) };
 
   return (
     <AppShell title="Intermediary Workflow">
@@ -180,7 +184,10 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
               <IibSubmissionStage applicationId={id} agreementSigned={assignment?.agreement_status === "signed"} finalType={application.final_type} />
             </div>
           ) : (
-            <PospMispApplicationEditor applicationId={id} profile={editProfile} workflowStage={profile.workflow_stage} viewStage={viewStage} editable={editable} salesManagers={associates.map((item) => ({ value: item.id, label: item.full_name ?? "Unnamed" }))} banks={(banks ?? []).map((item) => ({ value: item.id, label: item.name }))} oems={(oems ?? []).map((item) => ({ value: item.name, label: item.name }))} documents={docList} />
+            <div className="space-y-4 bg-[#F4F7FB]">
+              <PospMispApplicationEditor applicationId={id} profile={editProfile} workflowStage={profile.workflow_stage} viewStage={viewStage} editable={editable} salesManagers={associates.map((item) => ({ value: item.id, label: item.full_name ?? "Unnamed" }))} banks={(banks ?? []).map((item) => ({ value: item.id, label: item.name }))} oems={(oems ?? []).map((item) => ({ value: item.name, label: item.name }))} documents={docList} />
+              {context === "partner" && viewStage === "primary" ? <div className="px-4 pb-4 sm:px-5 sm:pb-5"><ExistingIntermediaryMigrationEditor applicationId={id} accountType={profile.partner_type} values={migrationValues} editable={editable} /></div> : null}
+            </div>
           )}
         </main>
       </div>
@@ -204,10 +211,12 @@ function maskPan(value: string | null) {
   const pan = value.toUpperCase();
   return pan.length >= 7 ? `${pan.slice(0, 2)}****${pan.slice(-3)}` : "PAN pending";
 }
-
 function accountContext(draft: Record<string, unknown> | null | undefined) {
   const context = draft?.account_context;
   return context === "posp" || context === "misp" ? context : "partner";
+}
+function asObject(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
 function PartnerTwoStepNavigation({ applicationId, viewStage, documentsComplete, partnerActive }: { applicationId: string; viewStage: ViewStage; documentsComplete: boolean; partnerActive: boolean }) {
@@ -265,7 +274,6 @@ function SixStepNavigation({ applicationId, viewStage, registrationStatus, docum
     </nav>
   );
 }
-
 function currentStep(viewStage: ViewStage, status: string) {
   if (viewStage === "primary") return 1;
   if (viewStage === "documents") return 2;
