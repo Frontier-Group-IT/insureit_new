@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-03T23:34:21+05:30",
+  "deploy_requested_at": "2026-08-03T23:52:39+05:30",
   "requested_by": "Nishant Mishra",
   "source": "ChatGPT explicit deploy command",
-  "source_commit": "207361388f3f3ea53be2aa798f0cf0d69bf7cfa5",
-  "release_scope": "Deploy server-rendered POSP/MISP onboarding form: the large field tree and RM/OEM/bank option lists no longer hydrate as one client component. A tiny delegated validation guard handles first-field validation without re-rendering the form.",
-  "verification": "Commit 207361388f3f3ea53be2aa798f0cf0d69bf7cfa5 passed local production build, typecheck, lint, and Playwright browser validation against a temporary debug route. Blank Save showed 'Please select RM Name.' RM-selected Save showed 'PAN Number is required.' Both cases produced zero POST requests and kept the URL unchanged. Existing lint warnings are unrelated unused imports.",
+  "source_commit": "6d2a40f5edce52a611efc120c7aff6f8843c19f2",
+  "release_scope": "Deploy route-post POSP/MISP onboarding validation fix: submitPath forms no longer attach React onClick, onSubmitCapture, onInvalidCapture, blur, or input validation handlers. The save button is a native type submit and server route validation remains the authority.",
+  "verification": "Commit 6d2a40f5edce52a611efc120c7aff6f8843c19f2 passed local production build and typecheck. Lint passed with only existing unrelated unused-import warnings in app/actions.ts and app/customers/posp-misp/import/bulk-upload-v2-actions.ts.",
   "instructions": "Update this file only after the user explicitly says deploy now or finish and deploy. Ordinary code commits must not modify it."
 }
