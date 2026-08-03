@@ -22,6 +22,12 @@ const LABELS: Record<string, string> = {
 const MAX_FILE_SIZE = 4 * 1024 * 1024;
 
 type UploadItem = { documentType: string; fieldName: string; file: File; label: string };
+type UploadResult = {
+  ok?: boolean;
+  message?: string;
+  finalize_required?: boolean;
+  maintenance_mode?: boolean;
+};
 
 export function IntermediaryDocumentUploadController({ applicationId, enabled, showGst = false }: { applicationId: string; enabled: boolean; showGst?: boolean }) {
   const [progress, setProgress] = useState<string | null>(null);
@@ -60,6 +66,11 @@ export function IntermediaryDocumentUploadController({ applicationId, enabled, s
         }
       }
 
+      if (!items.length) {
+        setError("Choose at least one document to upload or replace.");
+        return;
+      }
+
       const oversized = items.find((item) => item.file.size > MAX_FILE_SIZE);
       if (oversized) {
         setError(`${oversized.label} must be 4 MB or smaller.`);
@@ -67,6 +78,9 @@ export function IntermediaryDocumentUploadController({ applicationId, enabled, s
       }
 
       try {
+        let finalizeRequired = false;
+        let maintenanceMode = false;
+
         for (let index = 0; index < items.length; index += 1) {
           const item = items[index];
           setProgress(`Uploading ${item.label} (${index + 1} of ${items.length})`);
@@ -80,22 +94,29 @@ export function IntermediaryDocumentUploadController({ applicationId, enabled, s
             credentials: "same-origin",
             cache: "no-store",
           });
-          const result = (await response.json().catch(() => null)) as { ok?: boolean; message?: string } | null;
+          const result = (await response.json().catch(() => null)) as UploadResult | null;
           if (!response.ok || !result?.ok) throw new Error(result?.message || `${item.label} could not be uploaded.`);
+          finalizeRequired ||= result.finalize_required === true;
+          maintenanceMode ||= result.maintenance_mode === true;
         }
 
-        setProgress("Checking required documents");
-        const finalResponse = await fetch("/api/intermediary-documents/finalize", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ application_id: applicationId }),
-          credentials: "same-origin",
-          cache: "no-store",
-        });
-        const finalResult = (await finalResponse.json().catch(() => null)) as { ok?: boolean; message?: string } | null;
-        if (!finalResponse.ok || !finalResult?.ok) throw new Error(finalResult?.message || "The document stage could not be saved.");
+        if (finalizeRequired) {
+          setProgress("Checking required documents");
+          const finalResponse = await fetch("/api/intermediary-documents/finalize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ application_id: applicationId }),
+            credentials: "same-origin",
+            cache: "no-store",
+          });
+          const finalResult = (await finalResponse.json().catch(() => null)) as { ok?: boolean; message?: string } | null;
+          if (!finalResponse.ok || !finalResult?.ok) throw new Error(finalResult?.message || "The document stage could not be saved.");
+          window.location.replace(freshDynamicRouteUrl(`/intermediaries/applications/${applicationId}?success=partner_id_generated`));
+          return;
+        }
 
-        window.location.replace(freshDynamicRouteUrl(`/intermediaries/applications/${applicationId}?success=partner_id_generated`));
+        const success = maintenanceMode ? "documents_saved" : "documents_saved";
+        window.location.replace(freshDynamicRouteUrl(`/intermediaries/applications/${applicationId}?success=${success}`));
       } catch (uploadError) {
         setProgress(null);
         setError(uploadError instanceof Error ? uploadError.message : "The documents could not be uploaded.");
