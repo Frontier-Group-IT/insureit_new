@@ -2,26 +2,23 @@
 
 import { useEffect, useState } from "react";
 import { freshDynamicRouteUrl } from "@/components/fresh-dynamic-route-navigation";
+import { buildIntermediaryDocumentSlots } from "@/lib/intermediary-document-slots";
 
-const STANDARD_DOCUMENTS = [
-  "aadhaar_front",
-  "aadhaar_back",
-  "pan_copy",
-  "cancelled_cheque",
-  "photograph",
-] as const;
 const LABELS: Record<string, string> = {
-  education_marksheet: "Marksheet",
+  education: "Education Marksheet",
   aadhaar_front: "Aadhaar front",
   aadhaar_back: "Aadhaar back",
   pan_copy: "PAN copy",
   cancelled_cheque: "Cancelled cheque",
   photograph: "Photograph",
   gst_copy: "GST certificate",
+  training_certificate: "Training certificate",
+  registration_certificate: "Registration certificate",
+  agreement_copy: "Agreement copy",
 };
 const MAX_FILE_SIZE = 4 * 1024 * 1024;
 
-type UploadItem = { documentType: string; fieldName: string; file: File; label: string };
+type UploadItem = { documentType: string; fieldName: string; file: File; label: string; documentLabel?: string | null };
 type UploadResult = {
   ok?: boolean;
   message?: string;
@@ -29,7 +26,17 @@ type UploadResult = {
   maintenance_mode?: boolean;
 };
 
-export function IntermediaryDocumentUploadController({ applicationId, enabled, showGst = false }: { applicationId: string; enabled: boolean; showGst?: boolean }) {
+export function IntermediaryDocumentUploadController({
+  applicationId,
+  enabled,
+  showGst = false,
+  legacyDocuments = false,
+}: {
+  applicationId: string;
+  enabled: boolean;
+  showGst?: boolean;
+  legacyDocuments?: boolean;
+}) {
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,21 +56,36 @@ export function IntermediaryDocumentUploadController({ applicationId, enabled, s
       if (!form.reportValidity()) return;
       const formData = new FormData(form);
       const items: UploadItem[] = [];
-      const marksheet = formData.get("education_marksheet");
-      const marksheetType = stringValue(formData.get("education_document_type"));
-      if (marksheet instanceof File && marksheet.size > 0) {
-        if (!marksheetType) {
-          setError("Select the marksheet type before uploading the marksheet.");
+      const slots = buildIntermediaryDocumentSlots({ legacy: legacyDocuments, hasGst: showGst });
+
+      for (const slot of slots) {
+        if (slot.education) {
+          const selected = formData.get("education_marksheet");
+          const documentType = stringValue(formData.get("education_document_type"));
+          if (selected instanceof File && selected.size > 0) {
+            if (!documentType) {
+              setError("Select the marksheet type before uploading the marksheet.");
+              return;
+            }
+            items.push({ documentType, fieldName: "education_marksheet", file: selected, label: slot.title });
+          }
+          continue;
+        }
+
+        const selected = formData.get(slot.key);
+        if (!(selected instanceof File) || selected.size === 0) continue;
+        const documentLabel = slot.custom ? stringValue(formData.get(`${slot.key}_label`)) : null;
+        if (slot.custom && !documentLabel) {
+          setError("Enter a name for every selected Other Document.");
           return;
         }
-        items.push({ documentType: marksheetType, fieldName: "education_marksheet", file: marksheet, label: LABELS.education_marksheet });
-      }
-      const standardDocuments = showGst ? [...STANDARD_DOCUMENTS, "gst_copy" as const] : STANDARD_DOCUMENTS;
-      for (const fieldName of standardDocuments) {
-        const selected = formData.get(fieldName);
-        if (selected instanceof File && selected.size > 0) {
-          items.push({ documentType: fieldName, fieldName, file: selected, label: LABELS[fieldName] });
-        }
+        items.push({
+          documentType: slot.key,
+          fieldName: slot.key,
+          file: selected,
+          label: documentLabel || LABELS[slot.key] || slot.title,
+          documentLabel,
+        });
       }
 
       if (!items.length) {
@@ -86,6 +108,7 @@ export function IntermediaryDocumentUploadController({ applicationId, enabled, s
           const uploadData = new FormData();
           uploadData.set("application_id", applicationId);
           uploadData.set("document_type", item.documentType);
+          if (item.documentLabel) uploadData.set("document_label", item.documentLabel);
           uploadData.set("file", item.file, item.file.name);
           const response = await fetch("/api/intermediary-documents/upload", {
             method: "POST",
@@ -122,7 +145,7 @@ export function IntermediaryDocumentUploadController({ applicationId, enabled, s
 
     form.addEventListener("submit", handleSubmit, true);
     return () => form.removeEventListener("submit", handleSubmit, true);
-  }, [applicationId, enabled, progress, showGst]);
+  }, [applicationId, enabled, legacyDocuments, progress, showGst]);
 
   return (
     <>
