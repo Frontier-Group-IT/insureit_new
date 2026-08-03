@@ -33,6 +33,7 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
   const [rmValue, setRmValue] = useState(initialValues.associate_employee_id ?? "");
   const [posting, setPosting] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const postingRef = useRef(false);
   const isMisp = partnerType === "misp";
   const manualValidation = Boolean(submitPath);
   const backHref = isMisp ? "/intermediaries/misp" : "/intermediaries/posp";
@@ -42,18 +43,34 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
       window.location.replace(freshDynamicRouteUrl(`/intermediaries/applications/${state.applicationId}/workflow?stage=documents&success=primary_details_saved`));
       return;
     }
-  }, [initialError, initialField, state.applicationId, state.error, state.field]);
+  }, [state.applicationId, state.error]);
+
+  useEffect(() => {
+    const fieldName = state.field ?? initialField;
+    if (!fieldName) return;
+    const field = formRef.current?.elements.namedItem(fieldName);
+    if (!(field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement)) return;
+    requestAnimationFrame(() => {
+      field.focus({ preventScroll: true });
+      field.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [initialField, state.field]);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    if (submitPath) return;
-    validateForSubmit(event.currentTarget, event);
-  }
-
-  function handleRouteSubmit() {
-    const form = formRef.current;
-    if (!form || posting) return;
-    setPosting(true);
-    form.submit();
+    if (postingRef.current) {
+      event.preventDefault();
+      return;
+    }
+    const valid = validateForSubmit(event.currentTarget, event);
+    if (!valid) {
+      postingRef.current = false;
+      setPosting(false);
+      return;
+    }
+    if (submitPath) {
+      postingRef.current = true;
+      setPosting(true);
+    }
   }
 
   function validateForSubmit(form: HTMLFormElement, event?: React.FormEvent<HTMLFormElement>) {
@@ -93,7 +110,7 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
         {isMisp ? <Section title="Designated Person (DP)"><Field label="DP First Name" name="dp_first_name" required manualValidation={manualValidation} defaultValue={initialValues.dp_first_name} /><Field label="DP Middle Name" name="dp_middle_name" manualValidation={manualValidation} defaultValue={initialValues.dp_middle_name} /><Field label="DP Last Name" name="dp_last_name" required manualValidation={manualValidation} defaultValue={initialValues.dp_last_name} /><Field label="DP Contact" name="dp_phone" required manualValidation={manualValidation} inputMode="tel" pattern="(?:\+91)?[6-9][0-9]{9}" defaultValue={initialValues.dp_phone} /><Field label="DP Email" name="dp_email" required type="email" manualValidation={manualValidation} defaultValue={initialValues.dp_email} /><PanInput label="DP PAN No" name="dp_pan_number" manualValidation={manualValidation} defaultValue={initialValues.dp_pan_number} /><IndianDateField label="DP Date of Birth" name="date_of_birth" required={!manualValidation} defaultValue={initialValues.date_of_birth} inputClassName={dateInputClass} /><Field label="DP Aadhaar Number" name="aadhaar_number" required manualValidation={manualValidation} inputMode="numeric" pattern="[0-9]{12}" maxLength={12} minLength={12} defaultValue={initialValues.aadhaar_number} /></Section> : null}
         <Section title="Bank details"><SelectField label="Bank Name" name="bank_id" required manualValidation={manualValidation} options={banks} placeholder="Select bank" defaultValue={initialValues.bank_id} /><Field label="Account Number" name="bank_account_number" required manualValidation={manualValidation} inputMode="numeric" pattern="[0-9]{6,20}" defaultValue={initialValues.bank_account_number} /><Field label="IFSC Code" name="bank_ifsc_code" required manualValidation={manualValidation} maxLength={11} minLength={11} pattern="[A-Za-z]{4}0[A-Za-z0-9]{6}" transform="uppercase" defaultValue={initialValues.bank_ifsc_code} /><Field label="GST Number" name="gst_number" required={isMisp} manualValidation={manualValidation} maxLength={15} minLength={isMisp ? 15 : undefined} pattern="[0-9]{2}[A-Za-z]{5}[0-9]{4}[A-Za-z][1-9A-Za-z]Z[0-9A-Za-z]" transform="uppercase" defaultValue={initialValues.gst_number} /></Section>
         {legacyFields}
-        <div className="sticky bottom-0 z-20 flex flex-col gap-2 border-t border-[#E2E8F0] bg-white/96 px-3 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5"><p className="text-[9.5px] text-[#64748B]">Stage 1 saves the application, queues the PAN check and opens Documents.</p>{submitPath ? <button type="button" disabled={posting} onClick={handleRouteSubmit} className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-80 sm:w-auto">{posting ? "Saving & opening Documents" : "Save & check PAN"}</button> : <FormSubmitButton label="Save & check PAN" pendingLabel="Saving & opening Documents" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto" />}</div>
+        <div className="sticky bottom-0 z-20 flex flex-col gap-2 border-t border-[#E2E8F0] bg-white/96 px-3 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5"><p className="text-[9.5px] text-[#64748B]">Stage 1 saves the application, queues the PAN check and opens Documents.</p>{submitPath ? <button type="submit" disabled={posting} className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-80 sm:w-auto">{posting ? "Saving & opening Documents" : "Save & check PAN"}</button> : <FormSubmitButton label="Save & check PAN" pendingLabel="Saving & opening Documents" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto" />}</div>
       </form>
     </div>
   </>;
