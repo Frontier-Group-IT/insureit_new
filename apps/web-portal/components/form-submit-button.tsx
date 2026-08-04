@@ -48,6 +48,23 @@ export function FormSubmitButton({
   const isCurrentSubmission = pending && (!name || !value || data?.get(name) === value);
   const isDisabled = disabled || pending || (requireChange && !formChanged);
 
+  function preserveSubmitIntent() {
+    if (!name || value === undefined) return;
+    const form = buttonRef.current?.form;
+    if (!form) return;
+
+    const selector = `input[type="hidden"][data-submit-intent="${CSS.escape(name)}"]`;
+    let mirror = form.querySelector<HTMLInputElement>(selector);
+    if (!mirror) {
+      mirror = document.createElement("input");
+      mirror.type = "hidden";
+      mirror.dataset.submitIntent = name;
+      mirror.name = name;
+      form.appendChild(mirror);
+    }
+    mirror.value = value;
+  }
+
   return (
     <button
       ref={buttonRef}
@@ -59,6 +76,7 @@ export function FormSubmitButton({
       aria-busy={isCurrentSubmission}
       aria-live="polite"
       title={requireChange && !formChanged ? "Make a change before saving." : undefined}
+      onClick={preserveSubmitIntent}
     >
       {isCurrentSubmission ? <InsureItButtonLoader label={pendingLabel} /> : <>{icon}{label}</>}
     </button>
