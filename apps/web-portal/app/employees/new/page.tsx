@@ -1,3 +1,4 @@
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
@@ -11,7 +12,7 @@ export const revalidate = 0;
 export default async function NewEmployeePage() {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!profile?.id || !canManageUsers(profile.role)) redirect("/access-denied");
+  if (!profile?.id || !(await hasEffectiveCapability(profile, "manage_employees", "edit"))) redirect("/access-denied");
 
   const supabase = await createServerSupabaseClient();
   const { data: managers, error } = await supabase

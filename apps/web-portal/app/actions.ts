@@ -1,5 +1,7 @@
 "use server";
 
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { claimStatuses, finalDocumentTypes, isClaimStatus, managerTransitions, replacementStatusFor, requiredDocumentTypesForStatus, verifiedStatusFor, type ClaimStatus } from "@/lib/claim-workflow";
@@ -271,7 +273,7 @@ export async function updatePolicy(id: string, formData: FormData) {
 async function requireUserManager() {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!canManageUsers(profile?.role)) {
+  if (!(await hasEffectiveCapability(profile, "manage_users", "approve"))) {
     throw new Error("You do not have permission to manage users.");
   }
   return profile?.id ?? null;
@@ -428,7 +430,7 @@ async function currentProfile() {
 
 async function requireClaimStagePermission() {
   const profile = await currentProfile();
-  if (!canUpdateClaimStage(profile?.role)) {
+  if (!(await hasEffectiveCapability(profile, "manage_claims", "edit"))) {
     throw new Error("You do not have permission to update claim workflow stages.");
   }
   return profile;
@@ -436,7 +438,7 @@ async function requireClaimStagePermission() {
 
 async function requireDocumentReviewPermission() {
   const profile = await currentProfile();
-  if (!canVerifyClaimDocuments(profile?.role)) {
+  if (!(await hasEffectiveCapability(profile, "manage_claims", "edit"))) {
     throw new Error("You do not have permission to verify claim documents.");
   }
   return profile;

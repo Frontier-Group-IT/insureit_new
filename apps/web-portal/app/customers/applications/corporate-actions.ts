@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireMasterDataManager } from "@/lib/master-data-server";
+import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { approvePortalOnboardingApplication } from "../onboarding-applications";
 
@@ -19,7 +19,7 @@ const CONTACT_ROLES = ["corporate_creator","ceo_head","admin_head","dedicated_sp
 export async function updateMobileCorporateApplicationDraft(formData: FormData) {
   const applicationId = value(formData,"application_id");
   if (!applicationId) redirect("/customers/applications?error=missing_application");
-  const reviewer = await requireMasterDataManager();
+  const reviewer = await requireCapability("review_kyc", "edit");
   if (!reviewer?.id) redirect(`/customers/applications/${applicationId}?error=unauthorized`);
   const admin = createSupabaseAdminClient();
   const { data: application, error: applicationError } = await admin.from("customer_onboarding_applications").select("id,profile_id,partner_type,status,applicant_phone,applicant_email,customer_id,draft_data").eq("id",applicationId).single<Application>();
@@ -75,7 +75,7 @@ export async function updateMobileCorporateApplicationDraft(formData: FormData) 
 export async function approveMobileCorporateApplication(formData: FormData) {
   const applicationId = value(formData,"application_id");
   if (!applicationId) redirect("/customers/applications?error=missing_application");
-  const reviewer = await requireMasterDataManager();
+  const reviewer = await requireCapability("review_kyc", "edit");
   if (!reviewer?.id) redirect(`/customers/applications/${applicationId}?error=unauthorized`);
   const admin = createSupabaseAdminClient();
   const { data: application } = await admin.from("customer_onboarding_applications").select("id,profile_id,partner_type,status,applicant_phone,applicant_email,group_customer_id,draft_data").eq("id",applicationId).single<Application>();

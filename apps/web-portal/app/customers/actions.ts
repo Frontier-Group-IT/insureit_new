@@ -1,5 +1,7 @@
 "use server";
 
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+
 import { createHash, randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
@@ -64,7 +66,7 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
 
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!profile?.id || !canManageMasterData(profile.role)) return failure("You are not authorized to onboard customers.");
+  if (!profile?.id || !(await hasEffectiveCapability(profile, "manage_customers", "edit"))) return failure("You are not authorized to onboard customers.");
 
   let admin;
   try { admin = createSupabaseAdminClient(); } catch (error) { return failure(error instanceof Error ? error.message : "Supabase Admin configuration is missing."); }

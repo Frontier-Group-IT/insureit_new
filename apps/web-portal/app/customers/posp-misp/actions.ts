@@ -1,5 +1,7 @@
 "use server";
 
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+
 import { createHash, randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -629,7 +631,7 @@ function normalizeExcelRow(partnerType: PartnerType, source: Record<string, unkn
 async function currentManager() {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!profile?.id || !canManagePospMispOnboarding(profile.role)) throw new Error("You are not authorized to manage POSP/MISP onboarding.");
+  if (!profile?.id || !(await hasAnyEffectiveCapability(profile, ["create_intermediary_application", "review_intermediary_application"]))) throw new Error("You are not authorized to manage POSP/MISP onboarding.");
   return profile;
 }
 

@@ -1,3 +1,4 @@
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
 import { redirect } from "next/navigation";
 import { createProfileRecord, setProfileActive, updateProfileRecord } from "@/app/actions";
 import { DataError, DataTable } from "@/components/record-list";
@@ -24,7 +25,7 @@ type ProfileRow = {
 export default async function UsersPage({ searchParams }: { searchParams?: Promise<{ q?: string; role?: string; status?: string }> }) {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!canManageUsers(profile?.role)) redirect("/access-denied");
+  if (!(await hasEffectiveCapability(profile, "manage_users", "approve"))) redirect("/access-denied");
 
   const params = (await searchParams) ?? {};
   const q = params.q?.trim() ?? "";

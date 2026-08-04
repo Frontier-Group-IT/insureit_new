@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/auth-server";
-import { requireMasterDataManager } from "@/lib/master-data-server";
+import { requireCapability } from "@/lib/master-data-server";
 import { approvePortalOnboardingApplication } from "../onboarding-applications";
 
 type Draft = Record<string, unknown>;
@@ -14,7 +14,7 @@ type ApplicationDocument = { id: string; document_type: string; file_name: strin
 export async function approveMobileIndividualApplication(formData: FormData) {
   const applicationId = value(formData, "application_id");
   if (!applicationId) redirect("/customers/applications?error=missing_application");
-  const reviewer = await requireMasterDataManager();
+  const reviewer = await requireCapability("review_kyc", "edit");
   if (!reviewer?.id) redirect(`/customers/applications/${applicationId}?error=unauthorized`);
   const admin = await createServerSupabaseClient();
   const { data: application, error: applicationError } = await admin.from("customer_onboarding_applications").select("id, profile_id, partner_type, status, applicant_phone, applicant_email, draft_data").eq("id", applicationId).single<Application>();
@@ -97,7 +97,7 @@ export async function approveMobileIndividualApplication(formData: FormData) {
 export async function approveMobileGroupApplication(formData: FormData) {
   const applicationId = value(formData, "application_id");
   if (!applicationId) redirect("/customers/applications?error=missing_application");
-  const reviewer = await requireMasterDataManager();
+  const reviewer = await requireCapability("review_kyc", "edit");
   if (!reviewer?.id) redirect(`/customers/applications/${applicationId}?error=unauthorized`);
   const admin = await createServerSupabaseClient();
   const { data: application, error } = await admin.from("customer_onboarding_applications").select("id, profile_id, partner_type, status, applicant_phone, applicant_email, draft_data").eq("id", applicationId).single<Application>();
@@ -155,7 +155,7 @@ export async function requestMobileApplicationChanges(formData: FormData) {
   const applicationId = value(formData, "application_id");
   const reason = value(formData, "reason");
   if (!applicationId) redirect("/customers/applications?error=missing_application");
-  const reviewer = await requireMasterDataManager();
+  const reviewer = await requireCapability("review_kyc", "edit");
   if (!reviewer?.id) redirect(`/customers/applications/${applicationId}?error=unauthorized`);
   if (!reason || reason.length < 8) redirect(`/customers/applications/${applicationId}?error=reason_required`);
   const admin = await createServerSupabaseClient();

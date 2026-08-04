@@ -1,5 +1,7 @@
 "use server";
 
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+
 import { createHash, randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
@@ -25,7 +27,7 @@ function validateFile(value: File | null, label: string, required = false) { if 
 export async function createDealershipOnboarding(_state: DealershipOnboardingState, formData: FormData): Promise<DealershipOnboardingState> {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!profile?.id || !canManageMasterData(profile.role)) return fail("You are not authorized to onboard dealerships.");
+  if (!profile?.id || !(await hasEffectiveCapability(profile, "manage_customers", "edit"))) return fail("You are not authorized to onboard dealerships.");
 
   const dealershipType = text(formData, "dealership_type");
   const dealershipName = text(formData, "dealership_name");

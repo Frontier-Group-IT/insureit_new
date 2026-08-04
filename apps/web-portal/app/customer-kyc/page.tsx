@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AppShell } from "@/components/shell";
-import { requireMasterDataManager } from "@/lib/master-data-server";
+import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ type Application = {
 };
 
 export default async function CustomerKycPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string }> }) {
-  await requireMasterDataManager();
+  await requireCapability("review_kyc", "edit");
   const query = await searchParams;
   const search = query.q?.trim().slice(0, 80) ?? "";
   const status = ["submitted", "under_review", "changes_requested", "approved", "rejected"].includes(query.status ?? "") ? query.status : null;

@@ -1,5 +1,7 @@
 "use server";
 
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
@@ -111,7 +113,7 @@ function validate(n:Record<string,unknown>,type:PartnerType){
   if(type==="posp"&&(!string(n.pos_first_name)||!string(n.pos_last_name)||!string(n.pan_number)||!string(n.date_of_birth)||!string(n.aadhaar_hash)))throw new Error("POSP identity fields are incomplete.");
   if(type==="misp"&&(!string(n.misp_name)||!string(n.dp_first_name)||!string(n.dp_last_name)||!string(n.dp_pan_number)||!string(n.dp_date_of_birth)||!string(n.dp_aadhaar_hash)||!string(n.oem_name)))throw new Error("MISP designated-person fields are incomplete.");
 }
-async function currentManager(){const token=await getServerAccessToken();const{profile}=await getAuthenticatedProfile(token);if(!profile?.id||!canManagePospMispOnboarding(profile.role))throw new Error("Not authorized.");return{id:profile.id}}
+async function currentManager(){const token=await getServerAccessToken();const{profile}=await getAuthenticatedProfile(token);if(!profile?.id||!(await hasAnyEffectiveCapability(profile, ["create_intermediary_application", "review_intermediary_application"])))throw new Error("Not authorized.");return{id:profile.id}}
 async function refreshBatch(batchId:string){const admin=createSupabaseAdminClient();const{data}=await admin.from("posp_misp_import_rows").select("status").eq("import_batch_id",batchId).returns<Array<{status:string}>>();const rows=data??[];const count=(s:string)=>rows.filter(r=>r.status===s).length;const submitted=count("submitted"),failed=count("failed"),parsed=count("parsed"),processing=count("processing"),invalid=count("invalid");const status=processing?"processing":rows.length&&submitted===rows.length?"submitted":submitted?"partially_submitted":failed&&!parsed?"failed":"parsed";await admin.from("posp_misp_import_batches").update({total_rows:rows.length,valid_rows:parsed,invalid_rows:invalid,pending_rows:parsed+processing,submitted_rows:submitted,failed_rows:failed,status,submitted_at:submitted?new Date().toISOString():null}).eq("id",batchId)}
 function string(value:unknown){return typeof value==="string"&&value.trim()?value.trim():null}
 function value(data:FormData,key:string){const current=data.get(key);return typeof current==="string"&&current.trim()?current.trim():null}

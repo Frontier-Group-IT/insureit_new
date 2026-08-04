@@ -1,5 +1,7 @@
 "use server";
 
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+
 import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import type { ClaimStatus } from "@/lib/claim-workflow";
@@ -11,7 +13,7 @@ type ClaimRow = { id: string; customer_id: string | null; current_status: ClaimS
 async function currentProfile() {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!canUpdateClaimStage(profile?.role)) throw new Error("You do not have permission to complete this stage.");
+  if (!(await hasEffectiveCapability(profile, "manage_claims", "edit"))) throw new Error("You do not have permission to complete this stage.");
   return profile;
 }
 

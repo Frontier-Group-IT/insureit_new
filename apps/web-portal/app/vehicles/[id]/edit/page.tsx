@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { saveVehicle } from "@/app/master-data-form-actions";
 import { VehicleForm } from "@/components/forms";
 import { AppShell } from "@/components/shell";
-import { requireMasterDataManager } from "@/lib/master-data-server";
+import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type CustomerOption = { id: string; company_name: string | null; contact_name: string };
@@ -30,7 +30,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function EditVehiclePage({ params }: { params: Promise<{ id: string }> }) {
-  await requireMasterDataManager();
+  await requireCapability("view_vehicles", "edit");
   const { id } = await params;
   const admin = createSupabaseAdminClient();
 

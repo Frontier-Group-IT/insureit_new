@@ -1,5 +1,7 @@
 "use server";
 
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+
 import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { canManageMasterData } from "@/lib/roles";
@@ -15,7 +17,7 @@ function phone(value: string | null) { if (!value) return null; const digits = v
 export async function createGroupOnboarding(_state: GroupOnboardingState, data: FormData): Promise<GroupOnboardingState> {
   const token = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(token);
-  if (!profile?.id || !canManageMasterData(profile.role)) return fail("You are not authorized to onboard groups.");
+  if (!profile?.id || !(await hasEffectiveCapability(profile, "manage_customers", "edit"))) return fail("You are not authorized to onboard groups.");
 
   const groupName = text(data, "group_name");
   const ownerName = text(data, "owner_name");

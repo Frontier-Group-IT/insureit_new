@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireMasterDataManager } from "@/lib/master-data-server";
+import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { approvePortalOnboardingApplication } from "../onboarding-applications";
 
@@ -22,7 +22,7 @@ export async function approveMobileGroupApplication(formData: FormData) {
   const applicationId = value(formData, "application_id");
   if (!applicationId) redirect("/customers/applications?error=missing_application");
 
-  const reviewer = await requireMasterDataManager();
+  const reviewer = await requireCapability("review_kyc", "edit");
   if (!reviewer?.id) redirect(`/customers/applications/${applicationId}?error=unauthorized`);
 
   // Approval is an explicitly authorized server-side operation. Use the service

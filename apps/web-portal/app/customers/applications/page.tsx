@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/shell";
 import { DataError } from "@/components/record-list";
 import { createServerSupabaseClient } from "@/lib/auth-server";
-import { requireMasterDataManager } from "@/lib/master-data-server";
+import { requireCapability } from "@/lib/master-data-server";
 
 type SearchParams = {
   q?: string;
@@ -57,7 +57,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function CustomerApplicationsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  await requireMasterDataManager();
+  await requireCapability("review_kyc", "edit");
   const query = await searchParams;
   const q = clean(query.q);
   const partner = allowed(query.partner, new Set(partnerOptions.map(([value]) => value)));

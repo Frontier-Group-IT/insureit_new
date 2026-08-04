@@ -1,3 +1,4 @@
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell, Card, PageHeader } from "@/components/shell";
@@ -16,7 +17,7 @@ export const revalidate = 0;
 
 export default async function AccessControlPage({ searchParams }: { searchParams: Promise<{ q?: string; role?: string; success?: string; error?: string }> }) {
   const viewer = (await getAuthenticatedProfile(await getServerAccessToken())).profile;
-  if (!viewer?.id || !["it_super_user", "super_admin"].includes(viewer.role ?? "")) redirect("/access-denied");
+  if (!viewer?.id || !(await hasEffectiveCapability(viewer, "manage_system", "approve"))) redirect("/access-denied");
   const params = await searchParams;
   const q = params.q?.trim().toLowerCase() ?? "";
   const roleFilter = isAppRole(params.role) ? params.role : "";

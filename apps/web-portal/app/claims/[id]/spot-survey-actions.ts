@@ -1,5 +1,7 @@
 "use server";
 
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+
 import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import type { ClaimStatus } from "@/lib/claim-workflow";
@@ -19,7 +21,7 @@ type VerificationType = "rc" | "insurance" | "document" | "detail";
 async function currentProfile() {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!canVerifyClaimDocuments(profile?.role)) throw new Error("You do not have permission to verify claim documents.");
+  if (!(await hasEffectiveCapability(profile, "manage_claims", "edit"))) throw new Error("You do not have permission to verify claim documents.");
   return profile;
 }
 

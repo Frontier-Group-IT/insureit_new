@@ -1,5 +1,7 @@
 "use server";
 
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+
 import { createHash } from "node:crypto";
 import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
@@ -117,7 +119,7 @@ export async function updatePospMispImportRowV2(data:FormData){
   redirect(`/customers/posp-misp/import/${batchId}?success=row_updated`);
 }
 
-async function currentManager(){const token=await getServerAccessToken();const{profile}=await getAuthenticatedProfile(token);if(!profile?.id||!canManagePospMispOnboarding(profile.role))throw new Error("Not authorized.");return profile}
+async function currentManager(){const token=await getServerAccessToken();const{profile}=await getAuthenticatedProfile(token);if(!profile?.id||!(await hasAnyEffectiveCapability(profile, ["create_intermediary_application", "review_intermediary_application"])))throw new Error("Not authorized.");return profile}
 async function refreshBatch(admin:ReturnType<typeof createSupabaseAdminClient>,batchId:string){const{data}=await admin.from("posp_misp_import_rows").select("status").eq("import_batch_id",batchId).returns<Array<{status:string}>>();const rows=data??[];const count=(s:string)=>rows.filter(row=>row.status===s).length;const parsed=count("parsed"),invalid=count("invalid"),submitted=count("submitted"),failed=count("failed"),processing=count("processing");const status=processing?"processing":rows.length&&submitted===rows.length?"submitted":submitted?"partially_submitted":failed&&!parsed?"failed":"parsed";await admin.from("posp_misp_import_batches").update({total_rows:rows.length,valid_rows:parsed,invalid_rows:invalid,pending_rows:parsed+processing,submitted_rows:submitted,failed_rows:failed,status}).eq("id",batchId)}
 function value(data:FormData,key:string){const current=data.get(key);return typeof current==="string"&&current.trim()?current.trim():null}
 function compactUpper(data:FormData,key:string){return value(data,key)?.replace(/\s/g,"").toUpperCase()??null}

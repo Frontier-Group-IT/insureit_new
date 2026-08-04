@@ -1,3 +1,4 @@
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppShell, Card, PageHeader } from "@/components/shell";
@@ -18,7 +19,7 @@ export const revalidate = 0;
 
 export default async function EmployeePermissionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ module?: string; success?: string; error?: string }> }) {
   const viewer = (await getAuthenticatedProfile(await getServerAccessToken())).profile;
-  if (!viewer?.id || !["it_super_user", "super_admin"].includes(viewer.role ?? "")) redirect("/access-denied");
+  if (!viewer?.id || !(await hasEffectiveCapability(viewer, "manage_system", "approve"))) redirect("/access-denied");
   const { id } = await params;
   const query = await searchParams;
   const admin = createSupabaseAdminClient();

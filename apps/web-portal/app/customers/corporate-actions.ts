@@ -1,5 +1,7 @@
 "use server";
 
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
@@ -25,7 +27,7 @@ function checkFile(value: File | null, label: string, required = false) { if (!v
 export async function createCorporateOnboarding(_state: CorporateOnboardingState, data: FormData): Promise<CorporateOnboardingState> {
   const token = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(token);
-  if (!profile?.id || !canManageMasterData(profile.role)) return fail("You are not authorized to onboard corporate customers.");
+  if (!profile?.id || !(await hasEffectiveCapability(profile, "manage_customers", "edit"))) return fail("You are not authorized to onboard corporate customers.");
 
   const companyName = text(data, "company_name");
   const companyPan = text(data, "company_pan")?.replace(/\s/g, "").toUpperCase() ?? null;

@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { canManageMasterData, canManagePospMispOnboarding } from "@/lib/roles";
+import { hasAnyEffectiveCapability } from "@/lib/effective-permissions";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { formatIndianDate } from "@/lib/indian-date";
@@ -63,7 +63,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   ]);
 
   if (!application || !onboarding) return new Response("POSP/MISP application not found.", { status: 404 });
-  if (!actor?.id || (!canManageMasterData(actor.role) && !canManagePospMispOnboarding(actor.role))) {
+  if (!actor?.id || !(await hasAnyEffectiveCapability(actor, ["manage_customers", "create_intermediary_application", "review_intermediary_application"]))) {
     return new Response("You are not authorized to download this form.", { status: 403 });
   }
 

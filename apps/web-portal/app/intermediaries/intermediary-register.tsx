@@ -5,7 +5,7 @@ import { AppShell } from "@/components/shell";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { getAccessibleIntermediaryIds } from "@/lib/employee-access-scope";
 import { requirePospMispManager } from "@/lib/master-data-server";
-import { hasCapability } from "@/lib/roles";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { FreshAccountReviewLink } from "./applications/account-review-back-link";
 import { createLinkedIntermediaryAccount } from "./applications/[id]/account-review-actions";
@@ -66,8 +66,8 @@ export async function IntermediaryRegister({
   const admin = createSupabaseAdminClient();
   const effectiveType = selectedType ?? typeFilter;
   const accessibleIds = await getAccessibleIntermediaryIds(profile.id, profile.role);
-  const canReview = hasCapability(profile.role, "review_intermediary_application");
-  const canCreate = hasCapability(profile.role, "create_intermediary_application");
+  const canReview = await hasEffectiveCapability(profile, "review_intermediary_application", "edit");
+  const canCreate = await hasEffectiveCapability(profile, "create_intermediary_application", "edit");
 
   let request = admin
     .from("intermediaries")

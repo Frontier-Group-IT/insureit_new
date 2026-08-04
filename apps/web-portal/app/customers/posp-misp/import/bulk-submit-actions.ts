@@ -1,5 +1,7 @@
 "use server";
 
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
@@ -219,7 +221,7 @@ export async function submitPospMispImportBatch(data: FormData) {
 async function currentManager() {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!profile?.id || !canManagePospMispOnboarding(profile.role)) {
+  if (!profile?.id || !(await hasAnyEffectiveCapability(profile, ["create_intermediary_application", "review_intermediary_application"]))) {
     throw new Error("You are not authorized to manage intermediary onboarding.");
   }
   return { id: profile.id };

@@ -1,5 +1,7 @@
 "use server";
 
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
@@ -13,7 +15,7 @@ const allowedScope = new Set<PermissionScope>(["inherit", "self", "hierarchy", "
 
 async function requirePermissionAdministrator() {
   const { profile } = await getAuthenticatedProfile(await getServerAccessToken());
-  if (!profile?.id || !editableRoles.has(profile.role ?? "")) redirect("/access-denied");
+  if (!profile?.id || !(await hasEffectiveCapability(profile, "manage_system", "approve"))) redirect("/access-denied");
   return profile;
 }
 

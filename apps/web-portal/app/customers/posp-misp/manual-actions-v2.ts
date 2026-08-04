@@ -1,5 +1,7 @@
 "use server";
 
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+
 import { createHash, randomUUID } from "node:crypto";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { canManagePospMispOnboarding } from "@/lib/roles";
@@ -81,7 +83,7 @@ export async function createManualPospMispOnboardingV2(_state: PospMispState, da
   }
   return { error: null, field: null, applicationId };
 }
-async function currentManager(){const accessToken=await getServerAccessToken();const{profile}=await getAuthenticatedProfile(accessToken);if(!profile?.id||!canManagePospMispOnboarding(profile.role))throw new Error("You are not authorized to manage intermediary onboarding.");return{id:profile.id}}
+async function currentManager(){const accessToken=await getServerAccessToken();const{profile}=await getAuthenticatedProfile(accessToken);if(!profile?.id||!(await hasAnyEffectiveCapability(profile, ["create_intermediary_application", "review_intermediary_application"])))throw new Error("You are not authorized to manage intermediary onboarding.");return{id:profile.id}}
 async function loadSelectedAssociate(admin:ReturnType<typeof createSupabaseAdminClient>,employeeId:string|null){if(!employeeId)return null;const{data:employee,error}=await admin.from("employees").select("id,full_name,employee_code").eq("id",employeeId).ilike("department","sales").eq("employment_status","active").maybeSingle<{id:string;full_name:string|null;employee_code:string|null}>();if(error||!employee)return null;const{data:profile,error:profileError}=await admin.from("profiles").select("id").eq("employee_id",employee.id).eq("is_active",true).maybeSingle<{id:string}>();if(profileError)return null;return{...employee,profile_id:profile?.id??null}}
 function fail(error:string,field:string|null=null):CreateResult{return{error,field}}
 function value(data:FormData,key:string){const current=data.get(key);return typeof current==="string"&&current.trim()?current.trim():null}

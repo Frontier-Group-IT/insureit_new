@@ -1,5 +1,7 @@
 "use server";
 
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
@@ -9,7 +11,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 export async function deleteSelectedPospMispImportRows(data: FormData) {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!profile?.is_active || !canManagePospMispOnboarding(profile.role)) {
+  if (!profile?.is_active || !(await hasAnyEffectiveCapability(profile, ["create_intermediary_application", "review_intermediary_application"]))) {
     redirect("/access-denied");
   }
 

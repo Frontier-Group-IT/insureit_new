@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
-import { requirePospMispManager } from "@/lib/master-data-server";
+import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { IcallUatPanel } from "@/app/intermediaries/applications/icall-uat-panel";
 
@@ -24,8 +23,7 @@ type Row = {
 };
 
 export default async function IcallUatPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const profile = await requirePospMispManager();
-  if (!profile || profile.role !== "it_super_user") redirect("/access-denied");
+  await requireCapability("manage_system", "approve");
   const { q = "" } = await searchParams;
   const search = q.trim().slice(0, 80);
   const admin = createSupabaseAdminClient();

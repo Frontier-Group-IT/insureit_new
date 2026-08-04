@@ -1,5 +1,7 @@
 "use server";
 
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+
 import { revalidatePath } from "next/cache";
 import { requireScopedPospMispManager } from "@/lib/master-data-server";
 import { hasCapability } from "@/lib/roles";
@@ -31,7 +33,7 @@ export async function deleteIntermediaryAccount(
   }
 
   const reviewer = await requireScopedPospMispManager(applicationId);
-  if (!reviewer?.id || !hasCapability(reviewer.role, "manage_system")) {
+  if (!reviewer?.id || !await hasEffectiveCapability(reviewer, "manage_system", "approve")) {
     return { ok: false, message: "Only a system administrator can permanently delete intermediary accounts." };
   }
 
