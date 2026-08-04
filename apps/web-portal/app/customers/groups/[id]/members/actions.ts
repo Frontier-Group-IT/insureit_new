@@ -2,11 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireMasterDataManager } from "@/lib/master-data-server";
+import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export async function addGroupMember(formData: FormData) {
-  const reviewer = await requireMasterDataManager();
+  const reviewer = await requireCapability("manage_customers", "edit");
   const groupId = value(formData,"group_id"); const childId = value(formData,"child_customer_id");
   if (!reviewer?.id || !groupId || !childId) redirect("/customers?error=invalid_group_link");
   const admin = createSupabaseAdminClient();
@@ -19,7 +19,7 @@ export async function addGroupMember(formData: FormData) {
 }
 
 export async function removeGroupMember(formData: FormData) {
-  const reviewer = await requireMasterDataManager(); const groupId=value(formData,"group_id"); const relationshipId=value(formData,"relationship_id");
+  const reviewer = await requireCapability("manage_customers", "edit"); const groupId=value(formData,"group_id"); const relationshipId=value(formData,"relationship_id");
   if (!reviewer?.id || !groupId || !relationshipId) redirect("/customers");
   const admin=createSupabaseAdminClient();
   const { data: relationship, error: relationshipError } = await admin.from("customer_relationships").select("child_customer_id").eq("id",relationshipId).eq("parent_customer_id",groupId).eq("relationship_type","group_member").eq("is_active",true).maybeSingle<{child_customer_id:string}>();

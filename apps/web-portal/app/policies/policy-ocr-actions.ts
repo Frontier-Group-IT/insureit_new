@@ -1,6 +1,6 @@
 "use server";
 
-import { requireMasterDataManager } from "@/lib/master-data-server";
+import { requirePolicyEditor } from "@/lib/policy-access-server";
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
@@ -18,7 +18,7 @@ export type PolicyOcrResult =
   | { ok: false; error: string };
 
 export async function extractPolicyDocument(formData: FormData): Promise<PolicyOcrResult> {
-  await requireMasterDataManager();
+  await requirePolicyEditor();
 
   const file = formData.get("policy_document");
   if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Select a policy PDF or image." };

@@ -4,10 +4,10 @@ import { canAccessCustomer, canAccessIntermediaryApplication } from "@/lib/emplo
 import { hasAnyEffectiveCapability, hasEffectiveCapability } from "@/lib/effective-permissions";
 import type { Capability } from "@/lib/roles";
 
-export async function requireCapability(capability: Capability) {
+export async function requireCapability(capability: Capability, minimumAccess?: "view" | "edit" | "approve") {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!(await hasEffectiveCapability(profile, capability))) redirect("/access-denied");
+  if (!(await hasEffectiveCapability(profile, capability, minimumAccess))) redirect("/access-denied");
   return profile;
 }
 

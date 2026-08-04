@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/shell";
-import { requireMasterDataManager } from "@/lib/master-data-server";
+import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { addGroupMember, removeGroupMember } from "./actions";
 
@@ -9,7 +9,7 @@ type Customer = { id:string; customer_code:string; partner_type:string|null; com
 type Relationship = { id:string; child_customer_id:string; customers:Customer|null };
 
 export default async function GroupMembersPage({params,searchParams}:{params:Promise<{id:string}>;searchParams:Promise<{error?:string}>}){
-  await requireMasterDataManager(); const {id}=await params; const query=await searchParams; const admin=createSupabaseAdminClient();
+  await requireCapability("manage_customers", "edit"); const {id}=await params; const query=await searchParams; const admin=createSupabaseAdminClient();
   const {data:group}=await admin.from("customers").select("id,customer_code,partner_type,company_name,contact_name,phone,onboarding_status").eq("id",id).maybeSingle<Customer>();
   if(!group||group.partner_type!=="group")notFound();
   const {data:links}=await admin.from("customer_relationships").select("id,child_customer_id,customers:child_customer_id(id,customer_code,partner_type,company_name,contact_name,phone,onboarding_status)").eq("parent_customer_id",id).eq("relationship_type","group_member").eq("is_active",true).returns<Relationship[]>();

@@ -1,3 +1,4 @@
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
 import type { ReactNode } from "react";
 import { requireScopedPospMispManager } from "@/lib/master-data-server";
 import { hasCapability } from "@/lib/roles";
@@ -30,7 +31,7 @@ export default async function ApplicationReviewLayout({
 }) {
   const { id } = await params;
   const reviewer = await requireScopedPospMispManager(id);
-  const canDelete = hasCapability(reviewer.role, "manage_system");
+  const canDelete = await hasEffectiveCapability(reviewer, "manage_system", "approve");
   const admin = createSupabaseAdminClient();
 
   const [{ data: application }, { data: profile }, { data: intermediary }] = await Promise.all([

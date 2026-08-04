@@ -1,3 +1,4 @@
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { StatusBadge } from "@/components/ui";
@@ -20,7 +21,7 @@ type OrgNode = OrgProfile & { children: OrgNode[] };
 export default async function OrganizationPage() {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!canViewOrganizationTree(profile?.role)) redirect("/access-denied");
+  if (!(await hasEffectiveCapability(profile, "view_org_tree", "view"))) redirect("/access-denied");
 
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase

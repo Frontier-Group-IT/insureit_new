@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { createInsuranceCompany, savePolicy } from "@/app/master-data-form-actions";
 import { PolicyForm } from "@/components/policy-form";
 import { AppShell } from "@/components/shell";
-import { requireMasterDataManager } from "@/lib/master-data-server";
+import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type CustomerOption = { id: string; contact_name: string };
@@ -23,7 +23,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function EditPolicyPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireMasterDataManager();
+  await requirePolicyEditor();
   const { id } = await params;
   const admin = createSupabaseAdminClient();
 

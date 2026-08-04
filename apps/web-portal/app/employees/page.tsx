@@ -1,3 +1,4 @@
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { redirect } from "next/navigation";
@@ -14,8 +15,8 @@ const NO_EMPLOYEE_ID = "00000000-0000-0000-0000-000000000000";
 export default async function EmployeesPage({ searchParams }: { searchParams?: Promise<{ q?: string; status?: string }> }) {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!profile?.id || !hasCapability(profile.role, "view_employees")) redirect("/access-denied");
-  const canManage = canManageUsers(profile.role);
+  if (!profile?.id || !(await hasEffectiveCapability(profile, "view_employees", "view"))) redirect("/access-denied");
+  const canManage = await hasEffectiveCapability(profile, "manage_employees", "edit");
   const scope = await getEmployeeAccessScope(profile.id, profile.role);
   const params = (await searchParams) ?? {};
   const q = params.q?.trim() ?? "";

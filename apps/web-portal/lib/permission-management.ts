@@ -45,7 +45,7 @@ const labels: Record<Capability, Omit<PermissionDefinition, "capability" | "role
 export const permissionDefinitions: PermissionDefinition[] = Object.entries(labels).map(([capability, definition]) => ({
   capability: capability as Capability,
   ...definition,
-  roleAccess: capability.startsWith("view_") ? "view" : capability.startsWith("approve_") || capability.startsWith("activate_") ? "approve" : "edit",
+  roleAccess: capability.startsWith("view_") ? "view" : definition.risk === "critical" || capability.startsWith("approve_") || capability.startsWith("activate_") ? "approve" : "edit",
 }));
 
 export function rolePermissionAccess(role: string | null | undefined, capability: Capability): PermissionAccess {

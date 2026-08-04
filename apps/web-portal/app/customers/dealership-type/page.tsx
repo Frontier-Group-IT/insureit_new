@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { AppShell } from "@/components/shell";
-import { requireMasterDataManager } from "@/lib/master-data-server";
+import { requireCapability } from "@/lib/master-data-server";
 
 export default async function DealershipTypePage() {
-  await requireMasterDataManager();
+  await requireCapability("manage_customers", "edit");
 
   return (
     <AppShell title="Select Dealership Type">

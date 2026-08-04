@@ -1,3 +1,4 @@
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
 import Link from "next/link";
 import { AppShell } from "@/components/shell";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
@@ -7,9 +8,9 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function SettingsPage() {
-  await requireMasterDataManager();
+  await requireCapability("manage_system", "approve");
   const { profile } = await getAuthenticatedProfile(await getServerAccessToken());
-  const canManagePermissions = Boolean(profile?.role && ["it_super_user", "super_admin"].includes(profile.role));
+  const canManagePermissions = await hasEffectiveCapability(profile, "manage_system", "approve");
 
   return (
     <AppShell title="Settings">

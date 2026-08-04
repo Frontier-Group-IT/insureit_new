@@ -1,5 +1,7 @@
 "use server";
 
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
@@ -40,7 +42,7 @@ async function getInviteRedirectUrl() {
 async function requireEmployeeManager() {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!profile?.id || !["it_super_user", "admin", "super_admin"].includes(String(profile.role))) {
+  if (!profile?.id || !(await hasEffectiveCapability(profile, "manage_employees", "edit"))) {
     throw new Error("You do not have permission to manage employees.");
   }
   return profile.id;

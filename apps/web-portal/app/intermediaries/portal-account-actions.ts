@@ -1,5 +1,7 @@
 "use server";
 
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { canAccessIntermediary } from "@/lib/employee-access-scope";
@@ -12,7 +14,7 @@ export async function createIntermediaryPortalLogin(formData: FormData) {
   const intermediaryId = text(formData, "intermediary_id");
   const returnPath = safeReturnPath(text(formData, "return_path"));
   if (!reviewer?.id || !intermediaryId) redirect(`${returnPath}?error=portal_login_invalid`);
-  if (!hasCapability(reviewer.role, "review_intermediary_application")) redirect(`${returnPath}?error=portal_login_not_authorized`);
+  if (!(await hasEffectiveCapability(reviewer, "review_intermediary_application", "edit"))) redirect(`${returnPath}?error=portal_login_not_authorized`);
   if (!(await canAccessIntermediary(reviewer.id, reviewer.role, intermediaryId))) redirect(`${returnPath}?error=portal_login_not_authorized`);
 
   const admin = createSupabaseAdminClient();
