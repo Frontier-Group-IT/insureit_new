@@ -9,6 +9,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createIntermediaryPortalLogin } from "@/app/intermediaries/portal-account-actions";
 import { resendIntermediaryPortalInvite } from "@/app/intermediaries/resend-portal-invite-action";
 import { createLinkedIntermediaryAccount } from "./account-review-actions";
+import { HeaderPanRecheck } from "./header-pan-recheck";
 import { IdSuccessModal } from "./id-success-modal";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +40,7 @@ type Profile = {
   date_of_birth: string | null;
   aadhaar_last_four: string | null;
   pan_number: string | null;
+  dp_pan_number: string | null;
   gst_number: string | null;
   address: string | null;
   city: string | null;
@@ -96,6 +98,12 @@ type LinkedApplication = {
   draft_data: Record<string, unknown> | null;
   updated_at: string;
 };
+type PanJob = {
+  status: string;
+  result_code: string | null;
+  result_message: string | null;
+  last_error: string | null;
+};
 type JourneyItem = { label: string; done: boolean; active: boolean };
 type IconName = "user" | "account" | "id" | "rm" | "portal" | "calendar" | "documents" | "link";
 
@@ -118,12 +126,13 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
   await requirePospMispManager();
   const admin = createSupabaseAdminClient();
 
-  const [{ data: application }, { data: profile }, { data: assignment }, { data: documents }, { data: intermediary }] = await Promise.all([
+  const [{ data: application }, { data: profile }, { data: assignment }, { data: documents }, { data: intermediary }, { data: panJob }] = await Promise.all([
     admin.from("intermediary_onboarding_applications").select("id,requested_type,final_type,status,registration_status,partner_status,created_at,updated_at,draft_data,partner_record_id,registration_record_id").eq("id", id).maybeSingle<Application>(),
-    admin.from("posp_misp_onboarding_profiles").select("partner_id,partner_type,external_onboarding_id,pos_name,misp_name,applicant_phone,applicant_email,date_of_birth,aadhaar_last_four,pan_number,gst_number,address,city,state,postal_code,bank_name,bank_account_number,bank_ifsc_code,oem_name,dp_name,dp_phone,dp_email,dp_date_of_birth,dp_aadhaar_last_four,workflow_stage,iib_remarks,iib_uploaded,iib_uploaded_at,training_status,training_certificate_number,exam_status,onboarding_date,associate_name,document_received_at").eq("application_id", id).maybeSingle<Profile>(),
+    admin.from("posp_misp_onboarding_profiles").select("partner_id,partner_type,external_onboarding_id,pos_name,misp_name,applicant_phone,applicant_email,date_of_birth,aadhaar_last_four,pan_number,dp_pan_number,gst_number,address,city,state,postal_code,bank_name,bank_account_number,bank_ifsc_code,oem_name,dp_name,dp_phone,dp_email,dp_date_of_birth,dp_aadhaar_last_four,workflow_stage,iib_remarks,iib_uploaded,iib_uploaded_at,training_status,training_certificate_number,exam_status,onboarding_date,associate_name,document_received_at").eq("application_id", id).maybeSingle<Profile>(),
     admin.from("intermediary_training_exam_assignments").select("training_status,training_completed_at,exam_status,exam_score,exam_completed_at,agreement_status,agreement_signed_at").eq("application_id", id).maybeSingle<Assignment>(),
     admin.from("intermediary_onboarding_documents").select("id,document_type,file_name,storage_bucket,storage_path,verification_status,created_at").eq("application_id", id).order("created_at").returns<Document[]>(),
     admin.from("intermediaries").select("id,intermediary_code,portal_access_status,account_status,activated_at").eq("application_id", id).maybeSingle<Intermediary>(),
+    admin.from("pan_verification_jobs").select("status,result_code,result_message,last_error").eq("application_id", id).maybeSingle<PanJob>(),
   ]);
   if (!application || !profile) notFound();
 
@@ -141,6 +150,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
   const phone = profile.partner_type === "misp" ? profile.dp_phone ?? profile.applicant_phone : profile.applicant_phone;
   const email = profile.partner_type === "misp" ? profile.dp_email ?? profile.applicant_email : profile.applicant_email;
   const aadhaar = profile.partner_type === "misp" ? profile.dp_aadhaar_last_four : profile.aadhaar_last_four;
+  const verificationPan = (profile.partner_type === "misp" ? profile.dp_pan_number : profile.pan_number)?.replace(/\s/g, "").toUpperCase() ?? null;
 
   const { data: related } = application.partner_record_id
     ? await admin.from("intermediary_onboarding_applications").select("id,requested_type,registration_status,draft_data,updated_at").eq("partner_record_id", application.partner_record_id).neq("id", id).order("created_at", { ascending: false }).returns<LinkedApplication[]>()
@@ -192,6 +202,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
               <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h1 className="truncate text-2xl font-semibold">{name}</h1>{isPartner && partnerId ? <Id value={partnerId} active={activePartner} /> : null}{registrationId ? <Id value={registrationId} /> : null}</div></div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <HeaderPanRecheck applicationId={id} pan={verificationPan} job={panJob ?? null} />
               {isPartner ? (
                 activePartner ? (
                   linked ? <CompactLink href={`/intermediaries/applications/${linked.id}`} label="Open linked account" /> : (
@@ -286,5 +297,5 @@ function maskAadhaar(value: string | null | undefined) { return value ? `**** ${
 function maskAccount(value: string | null) { return value ? `•••• ${value.slice(-4)}` : "Not available"; }
 function asObject(value: unknown): Record<string, unknown> { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
 function decode(value: string) { try { return decodeURIComponent(value); } catch { return value; } }
-function successMessage(value: string) { if (value === "portal_login_invited") return "Portal user created and invitation sent."; if (value === "portal_invite_resent") return "Portal login link resent."; if (value.startsWith("linked_")) return "Linked account application created."; return "Action completed successfully."; }
+function successMessage(value: string) { if (value === "portal_login_invited") return "Portal user created and invitation sent."; if (value === "portal_invite_resent") return "Portal login link resent."; if (value === "pan_verification_requeued") return "PAN recheck added to the IIB queue."; if (value.startsWith("linked_")) return "Linked account application created."; return "Action completed successfully."; }
 function date(value: string | null | undefined) { if (!value) return "-"; const parsed = new Date(value); return Number.isNaN(parsed.getTime()) ? value : new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" }).format(parsed); }
