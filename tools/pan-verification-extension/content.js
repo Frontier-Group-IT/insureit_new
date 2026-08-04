@@ -174,6 +174,9 @@
     if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) return finishJob(job, "invalid", "Invalid PAN format", "");
 
     const runtime = await send({ type: "GET_RUNTIME" });
+    const resumedResult = recoverPostbackResult(job, pan, runtime);
+    if (resumedResult === "matched") return finishJob(job, "matched", "Matching Record Found In DataBase", "");
+    if (resumedResult === "not_found") return finishJob(job, "not_found", "No Data Found In POS System", "");
     const startAttempt = runtime?.currentJobId === job.id ? Number(runtime.currentAttempt || 0) + 1 : 1;
     for (let attempt = startAttempt; attempt <= MAX_JOB_ATTEMPTS && alive; attempt += 1) {
       await send({ type: "UPDATE_RUNTIME", patch: { currentPan: masked, currentJobId: job.id, currentAttempt: attempt, state: "SUBMITTING_PAN", status: `Checking ${masked} - attempt ${attempt} of ${MAX_JOB_ATTEMPTS}` } });
@@ -197,6 +200,16 @@
       if (attempt < MAX_JOB_ATTEMPTS) { await updateStatus(`No fresh result received. Retrying ${masked}...`, masked); await sleep(1200); continue; }
       return finishJob(job, "failed", null, "No fresh result was returned by the IIB POS portal after three attempts.");
     }
+  }
+
+  function recoverPostbackResult(job, pan, runtime) {
+    if (runtime?.currentJobId !== job.id || Number(runtime.currentAttempt || 0) < 1) return null;
+    const currentPan = String(find(SELECTORS.panInput)?.value || "").replace(/\s/g, "").toUpperCase();
+    if (currentPan !== pan) return null;
+    const current = resultSignature();
+    if (current.matched) return "matched";
+    if (current.notFound) return "not_found";
+    return null;
   }
 
   async function waitForFreshResult({ baseline, pan, submittedAt, timeoutMs }) {
