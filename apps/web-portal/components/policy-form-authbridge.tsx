@@ -10,16 +10,7 @@ type SelectOption = { label: string; value: string };
 type VehicleOption = SelectOption & { customerId: string };
 type PolicyValues = { customer_id?: string | null; vehicle_id?: string | null; insurance_company_id?: string | null; policy_no?: string | null; policy_type?: string | null; insured_declared_value?: number | null; start_date?: string | null; end_date?: string | null };
 type CreateInsurerResult = { ok: boolean; insurer?: SelectOption; error?: string };
-
-type Props = {
-  action: FormAction;
-  createInsurerAction: (formData: FormData) => Promise<CreateInsurerResult>;
-  customers: SelectOption[];
-  vehicles: VehicleOption[];
-  insurers: SelectOption[];
-  values?: PolicyValues;
-  submitLabel?: string;
-};
+type Props = { action: FormAction; createInsurerAction: (formData: FormData) => Promise<CreateInsurerResult>; customers: SelectOption[]; vehicles: VehicleOption[]; insurers: SelectOption[]; values?: PolicyValues; submitLabel?: string };
 
 type FormState = {
   issuanceDate: string; rmName: string; intermediaryType: string; leadSource: string; intermediaryCode: string; businessLine: string;
@@ -35,13 +26,11 @@ const inputClass = "h-9 w-full rounded-lg border border-[#D8DEE9] bg-white px-3 
 const labelClass = "mb-1 flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-[0.045em] text-[#475467]";
 const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
 const sections = ["Source", "Customer & Vehicle", "Policy & Premium", "Insurer Pay-in", "Partner Payout", "Review"];
-
 const vehicleClassMap: Record<string, { description: string; capacityLabel: string }> = {
   PCP: { description: "Private Car", capacityLabel: "CC" }, TWP: { description: "Two Wheeler", capacityLabel: "CC" },
   GCV: { description: "Goods Carrying Vehicle", capacityLabel: "GVW" }, PCV: { description: "Passenger Carrying Vehicle", capacityLabel: "Seating Capacity" },
   MISD: { description: "Miscellaneous Vehicle", capacityLabel: "Category / CC" }, CPM: { description: "Contractor Plant & Machinery", capacityLabel: "Equipment Capacity" }
 };
-
 const emptyState: FormState = {
   issuanceDate: new Date().toISOString().slice(0, 10), rmName: "", intermediaryType: "", leadSource: "", intermediaryCode: "", businessLine: "Motor",
   registrationNo: "", insuredName: "", phoneNo: "", vehicleClass: "", make: "", model: "", fuelType: "", capacity: "", manufacturingYear: "", chassisNo: "", engineNo: "", rtoState: "", rtoName: "",
@@ -55,8 +44,20 @@ function classifyVehicle(value: string | null) {
   if (/goods|truck|cargo/.test(text)) return "GCV";
   if (/passenger|bus|taxi|cab/.test(text)) return "PCV";
   if (/plant|machinery|excavator|construction/.test(text)) return "CPM";
-  if (/private|car|motor car/.test(text)) return "PCP";
-  return "";
+  if (/motor car|private|car|lmv/.test(text)) return "PCP";
+  return "MISD";
+}
+function titleCase(value: string | null) { return value ? value.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : ""; }
+function normalizeFuel(value: string | null) {
+  const v = (value ?? "").toUpperCase();
+  if (v.includes("PETROL")) return "Petrol"; if (v.includes("DIESEL")) return "Diesel"; if (v.includes("CNG")) return "CNG";
+  if (v.includes("ELECTRIC")) return "Electric"; if (v.includes("HYBRID")) return "Hybrid"; if (v.includes("BI")) return "Bi-Fuel"; return value ? "Other" : "";
+}
+function capacityFor(review: PolicyRcReview, vehicleClass: string) {
+  if (vehicleClass === "PCP" || vehicleClass === "TWP") return review.engineCapacity ?? "";
+  if (vehicleClass === "PCV") return review.seatingCapacity ?? "";
+  if (vehicleClass === "GCV" || vehicleClass === "CPM") return review.grossWeight ?? "";
+  return review.vehicleCategory ?? review.engineCapacity ?? review.grossWeight ?? "";
 }
 
 export function PolicyFormAuthbridge({ action, createInsurerAction, customers, vehicles, insurers, values, submitLabel = "Create Policy" }: Props) {
@@ -65,55 +66,44 @@ export function PolicyFormAuthbridge({ action, createInsurerAction, customers, v
   const [activeSection, setActiveSection] = useState(0);
   const [rcReview, setRcReview] = useState<PolicyRcReview | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
+  const [showFullRc, setShowFullRc] = useState(true);
   const [isLookingUp, startLookup] = useTransition();
-
   const numeric = (value: string) => Number(value || 0);
   const calculations = useMemo(() => {
     const od = numeric(form.od), tp = numeric(form.tp), cpa = form.cpaOpted === "Yes" ? numeric(form.cpa) : 0;
-    const net = od + tp + cpa;
-    const gst = form.vehicleClass === "GCV" ? ((od + cpa) * .18) + (tp * .05) : net * .18;
-    const gross = net + gst;
-    const projectedOd = od * numeric(form.projectedOdPercent) / 100;
-    const projectedTp = tp * numeric(form.projectedTpPercent) / 100;
-    const totalPayin = projectedOd + projectedTp + numeric(form.insurerScheme);
-    const tds = totalPayin * .10;
-    const payinAfterTds = totalPayin - tds;
-    const payoutOd = od * numeric(form.payoutOdPercent) / 100;
-    const payoutTp = form.payoutBasis === "OD" ? 0 : tp * numeric(form.payoutTpPercent) / 100;
-    const grossPayout = Math.max(0, payoutOd + payoutTp - numeric(form.retention));
-    const shortPayout = Math.max(0, totalPayin - numeric(form.payinBilledAmount));
-    return { net, gst, gross, projectedOd, projectedTp, totalPayin, tds, payinAfterTds, grossPayout, shortPayout };
+    const net = od + tp + cpa, gst = form.vehicleClass === "GCV" ? ((od + cpa) * .18) + (tp * .05) : net * .18, gross = net + gst;
+    const projectedOd = od * numeric(form.projectedOdPercent) / 100, projectedTp = tp * numeric(form.projectedTpPercent) / 100;
+    const totalPayin = projectedOd + projectedTp + numeric(form.insurerScheme), tds = totalPayin * .10, payinAfterTds = totalPayin - tds;
+    const payoutOd = od * numeric(form.payoutOdPercent) / 100, payoutTp = form.payoutBasis === "OD" ? 0 : tp * numeric(form.payoutTpPercent) / 100;
+    return { net, gst, gross, projectedOd, projectedTp, totalPayin, tds, payinAfterTds, grossPayout: Math.max(0, payoutOd + payoutTp - numeric(form.retention)), shortPayout: Math.max(0, totalPayin - numeric(form.payinBilledAmount)) };
   }, [form]);
-
   function update<K extends keyof FormState>(key: K, value: FormState[K]) { setForm((current) => ({ ...current, [key]: value })); }
   function changeVehicleClass(value: string) { setForm((current) => ({ ...current, vehicleClass: value, capacity: "", policyProduct: "" })); }
-
   function fetchRcDetails() {
     setLookupError(null); setRcReview(null);
-    startLookup(async () => {
-      const result = await lookupPolicyRegistrationRc(form.registrationNo);
-      if (!result.ok) { setLookupError(result.error); return; }
-      setRcReview(result.review);
-    });
+    startLookup(async () => { const result = await lookupPolicyRegistrationRc(form.registrationNo); if (!result.ok) { setLookupError(result.error); return; } setRcReview(result.review); setShowFullRc(true); });
   }
-
   function useRcDetails() {
     if (!rcReview) return;
     const mappedClass = classifyVehicle(rcReview.vehicleClass);
     setForm((current) => ({
       ...current,
       registrationNo: rcReview.registrationNumber || current.registrationNo,
+      insuredName: current.insuredName || rcReview.ownerName || "",
+      phoneNo: current.phoneNo || (rcReview.mobileNumber ?? "").replace(/\D/g, "").slice(-10),
       vehicleClass: current.vehicleClass || mappedClass,
       make: current.make || rcReview.make || "",
       model: current.model || rcReview.model || "",
-      fuelType: current.fuelType || rcReview.fuelType || "",
+      fuelType: current.fuelType || normalizeFuel(rcReview.fuelType),
+      capacity: current.capacity || capacityFor(rcReview, current.vehicleClass || mappedClass),
       manufacturingYear: current.manufacturingYear || rcReview.manufacturingYear || "",
-      rtoState: current.rtoState || rcReview.rtoState || "",
+      chassisNo: current.chassisNo || rcReview.chassisNumber || "",
+      engineNo: current.engineNo || rcReview.engineNumber || "",
+      rtoState: current.rtoState || titleCase(rcReview.rtoState),
       rtoName: current.rtoName || rcReview.rtoName || "",
     }));
     setRcReview(null);
   }
-
   const vehicleMeta = vehicleClassMap[form.vehicleClass];
   const policyProducts = form.vehicleClass === "PCP" || form.vehicleClass === "TWP" ? ["Package", "Third Party", "SAOD", "Bundled", "Long Term Package", "Long Term Third Party"] : ["Package", "Third Party", "SAOD"];
 
@@ -137,9 +127,20 @@ export function PolicyFormAuthbridge({ action, createInsurerAction, customers, v
         <Select label="Business line" value={form.businessLine} onChange={e=>update("businessLine",e.target.value)} options={["Motor"]} placeholder="Select" />
       </Section>
 
-      <Section number="02" title="Insured & vehicle identification" subtitle="Fetch real RC details, review them, then choose whether to use them." badge="AuthBridge API">
-        <div className="md:col-span-2 xl:col-span-2"><label className={labelClass}>Registration number <Required/><Tag text="AuthBridge" tone="amber"/></label><div className="flex gap-2"><input className={`${inputClass} uppercase`} value={form.registrationNo} onChange={e=>{update("registrationNo",e.target.value.toUpperCase());setRcReview(null);setLookupError(null);}} placeholder="MP20AB1234"/><button type="button" onClick={fetchRcDetails} disabled={isLookingUp||form.registrationNo.replace(/[^A-Z0-9]/gi,"").length<6} className="min-w-[130px] rounded-lg bg-[#17365D] px-3 text-[9.5px] font-bold text-white disabled:opacity-40">{isLookingUp?"Fetching RC…":"Fetch RC details"}</button></div><p className="mt-1 text-[8.5px] text-[#98A2B3]">One explicit lookup per click. Provider response may take 5–20 seconds.</p>{lookupError?<p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[9px] font-semibold text-red-700">{lookupError}</p>:null}</div>
-        {rcReview?<div className="md:col-span-2 xl:col-span-4 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-[10px] font-bold text-emerald-900">RC details found</p><p className="mt-0.5 text-[8px] text-emerald-700">Review before applying. Existing manually entered fields will not be overwritten.</p></div><div className="flex gap-2"><button type="button" onClick={()=>setRcReview(null)} className="rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-[9px] font-semibold text-emerald-800">Cancel</button><button type="button" onClick={useRcDetails} className="rounded-lg bg-emerald-700 px-3 py-1.5 text-[9px] font-bold text-white">Use these details</button></div></div><div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4"><ReviewItem label="Registration" value={rcReview.registrationNumber}/><ReviewItem label="Vehicle class" value={rcReview.vehicleClass}/><ReviewItem label="Manufacturer" value={rcReview.make}/><ReviewItem label="Model" value={rcReview.model}/><ReviewItem label="Fuel" value={rcReview.fuelType}/><ReviewItem label="Manufacturing year" value={rcReview.manufacturingYear}/><ReviewItem label="RTO" value={rcReview.rtoName}/><ReviewItem label="Chassis / Engine" value={[rcReview.chassisMasked,rcReview.engineMasked].filter(Boolean).join(" / ")||null}/></div>{rcReview.transactionId?<p className="mt-2 text-[7.5px] text-emerald-700">Transaction: {rcReview.transactionId}</p>:null}</div>:null}
+      <Section number="02" title="Insured & vehicle identification" subtitle="Fetch real RC details, review the complete response, then choose whether to apply it." badge="AuthBridge API">
+        <div className="md:col-span-2 xl:col-span-2"><label className={labelClass}>Registration number <Required/><Tag text="AuthBridge" tone="amber"/></label><div className="flex gap-2"><input className={`${inputClass} uppercase`} value={form.registrationNo} onChange={e=>{update("registrationNo",e.target.value.toUpperCase());setRcReview(null);setLookupError(null);}} placeholder="MP20AB1234"/><button type="button" onClick={fetchRcDetails} disabled={isLookingUp||form.registrationNo.replace(/[^A-Z0-9]/gi,"").length<6} className="min-w-[140px] rounded-lg bg-[#17365D] px-3 text-[9.5px] font-bold text-white disabled:opacity-40">{isLookingUp?"Fetching RC…":"Fetch RC details"}</button></div><p className="mt-1 text-[8.5px] text-[#98A2B3]">One explicit lookup per click. Provider response may take 5–20 seconds.</p>{lookupError?<p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[9px] font-semibold text-red-700">{lookupError}</p>:null}</div>
+        {rcReview?<div className="md:col-span-2 xl:col-span-4 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-[11px] font-bold text-emerald-900">RC details found</p><p className="mt-0.5 text-[8px] text-emerald-700">All available AuthBridge fields are shown below. Existing manual values will not be overwritten.</p></div><div className="flex flex-wrap gap-2"><button type="button" onClick={()=>setShowFullRc(v=>!v)} className="rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-[9px] font-semibold text-emerald-800">{showFullRc?"Show summary":"Show full RC"}</button><button type="button" onClick={()=>setRcReview(null)} className="rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-[9px] font-semibold text-emerald-800">Cancel</button><button type="button" onClick={useRcDetails} className="rounded-lg bg-emerald-700 px-3 py-1.5 text-[9px] font-bold text-white">Use these details</button></div></div>
+          <RcGroup title="Vehicle summary" items={[["Registration",rcReview.registrationNumber],["Owner / insured",rcReview.ownerName],["Vehicle class",rcReview.vehicleClass],["Category",rcReview.vehicleCategory],["Manufacturer",rcReview.make],["Model",rcReview.model],["Fuel",rcReview.fuelType],["Manufacture date",rcReview.manufactureDate]]}/>
+          {showFullRc?<>
+            <RcGroup title="Technical details" items={[["Engine capacity / CC",rcReview.engineCapacity],["Seating capacity",rcReview.seatingCapacity],["Standing capacity",rcReview.standingCapacity],["Sleeper capacity",rcReview.sleeperCapacity],["Gross weight / GVW",rcReview.grossWeight],["Unladen weight",rcReview.unladenWeight],["Wheel base",rcReview.wheelBase],["Cylinders",rcReview.cylinders],["Body type",rcReview.bodyType],["Colour",rcReview.color],["Emission norm",rcReview.normsType],["Commercial",rcReview.isCommercial],["Chassis number",rcReview.chassisNumber],["Engine number",rcReview.engineNumber]]}/>
+            <RcGroup title="Registration & compliance" items={[["Registration date",rcReview.registrationDate],["RC status",rcReview.registrationStatus],["Status as on",rcReview.statusAsOn],["RTO",rcReview.rtoName],["RTO state",rcReview.rtoState],["Fitness / RC expiry",rcReview.fitnessExpiryDate],["Tax upto",rcReview.taxUpto],["PUC number",rcReview.pucNumber],["PUC upto",rcReview.pucUpto],["Blacklist status",rcReview.blacklistStatus],["Non-use status",rcReview.nonUseStatus]]}/>
+            <RcGroup title="Insurance & hypothecation" items={[["Existing insurer",rcReview.insuranceCompany],["Existing policy number",rcReview.insurancePolicyNumber],["Insurance upto",rcReview.insuranceUpto],["Financed",rcReview.financed],["Financer",rcReview.financerName]]}/>
+            <RcGroup title="Permit details" items={[["Permit number",rcReview.permitNumber],["Permit type",rcReview.permitType],["Permit issue date",rcReview.permitIssueDate],["Permit valid from",rcReview.permitValidFrom],["Permit valid upto",rcReview.permitValidUpto],["National permit issued by",rcReview.nationalPermitIssuedBy],["National permit number",rcReview.nationalPermitNumber],["National permit upto",rcReview.nationalPermitUpto]]}/>
+            <RcGroup title="Owner summary" items={[["Owner serial",rcReview.ownerSerialNumber],["City",rcReview.ownerCity],["District",rcReview.ownerDistrict],["State",rcReview.ownerState],["Pincode",rcReview.ownerPincode],["Mobile",rcReview.mobileNumber],["Present address",rcReview.presentAddress],["Permanent address",rcReview.permanentAddress]]}/>
+          </>:null}
+          <p className="mt-3 text-[7.5px] text-emerald-700">INSUREIT transaction: {rcReview.transactionId ?? "—"} · Provider transaction: {rcReview.providerTransactionId ?? "—"}</p>
+        </div>:null}
         <Field label="Insured name" value={form.insuredName} onChange={e=>update("insuredName",e.target.value.toUpperCase())} placeholder="Customer / insured name" required />
         <Field label="Phone number" value={form.phoneNo} onChange={e=>update("phoneNo",e.target.value.replace(/\D/g,"").slice(0,10))} placeholder="10 digit mobile" inputMode="numeric" />
         <Select label="Class of vehicle" value={form.vehicleClass} onChange={e=>changeVehicleClass(e.target.value)} options={Object.keys(vehicleClassMap)} placeholder="Select class" required />
@@ -149,8 +150,8 @@ export function PolicyFormAuthbridge({ action, createInsurerAction, customers, v
         <Select label="Fuel type" value={form.fuelType} onChange={e=>update("fuelType",e.target.value)} options={["Petrol","Diesel","CNG","Electric","Hybrid","Bi-Fuel","Other"]} placeholder="Select fuel" />
         <Field label={vehicleMeta?.capacityLabel||"CC / Seating / GVW / Category"} value={form.capacity} onChange={e=>update("capacity",e.target.value)} placeholder="Enter value" disabled={!form.vehicleClass}/>
         <Select label="Year of manufacturing" value={form.manufacturingYear} onChange={e=>update("manufacturingYear",e.target.value)} options={Array.from({length:31},(_,i)=>String(new Date().getFullYear()-i))} placeholder="Select year" />
-        <Field label="Chassis number" value={form.chassisNo} onChange={e=>update("chassisNo",e.target.value.toUpperCase())} placeholder="Enter from policy document" />
-        <Field label="Engine number" value={form.engineNo} onChange={e=>update("engineNo",e.target.value.toUpperCase())} placeholder="Enter from policy document" />
+        <Field label="Chassis number" value={form.chassisNo} onChange={e=>update("chassisNo",e.target.value.toUpperCase())} placeholder="Fetched from RC or enter manually" />
+        <Field label="Engine number" value={form.engineNo} onChange={e=>update("engineNo",e.target.value.toUpperCase())} placeholder="Fetched from RC or enter manually" />
         <Select label="RTO state" value={form.rtoState} onChange={e=>update("rtoState",e.target.value)} options={["Delhi / NCR","Haryana","Uttar Pradesh","Madhya Pradesh","Rajasthan","Punjab","Other"]} placeholder="Select state" />
         <Field label="RTO name / code" value={form.rtoName} onChange={e=>update("rtoName",e.target.value.toUpperCase())} placeholder="MP20 – Jabalpur" />
       </Section>
@@ -189,22 +190,22 @@ export function PolicyFormAuthbridge({ action, createInsurerAction, customers, v
       </Section>
     </div>
 
-    <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start"><div className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-sm"><div className="border-b bg-[#F8FAFC] px-4 py-3"><p className="text-[9px] font-bold uppercase tracking-[.12em] text-[#4F46E5]">Live summary</p><h3 className="mt-1 text-[13px] font-semibold">Policy Financials</h3></div><div className="space-y-2.5 p-4"><SummaryRow label="OD Premium" value={money.format(numeric(form.od))}/><SummaryRow label="Third Party" value={money.format(numeric(form.tp))}/><SummaryRow label="CPA" value={money.format(form.cpaOpted==="Yes"?numeric(form.cpa):0)}/><Divider/><SummaryRow label="Net Premium" value={money.format(calculations.net)} bold/><SummaryRow label="GST" value={money.format(calculations.gst)}/><SummaryRow label="Gross Premium" value={money.format(calculations.gross)} bold accent/><Divider/><SummaryRow label="Pay-in after TDS" value={money.format(calculations.payinAfterTds)}/><SummaryRow label="Partner payout" value={money.format(calculations.grossPayout)}/><SummaryRow label="Indicative margin" value={money.format(calculations.payinAfterTds-calculations.grossPayout)} bold/></div></div>
-      <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4"><p className="text-[10px] font-bold text-blue-900">AuthBridge UAT</p><p className="mt-1 text-[9px] leading-4 text-blue-800">Lookup runs server-side through the protected AWS gateway. No provider credential or relay secret is sent to the browser.</p></div>
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4"><p className="text-[10px] font-bold text-amber-900">Prototype safeguard</p><p className="mt-1 text-[9px] leading-4 text-amber-800">Policy submission remains disabled for UI/API testing. RC details are not saved to the database.</p></div>
-    </aside></div>
+    <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start"><div className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-sm"><div className="border-b bg-[#F8FAFC] px-4 py-3"><p className="text-[9px] font-bold uppercase tracking-[.12em] text-[#4F46E5]">Live summary</p><h3 className="mt-1 text-[13px] font-semibold">Policy Financials</h3></div><div className="space-y-2.5 p-4"><SummaryRow label="Net Premium" value={money.format(calculations.net)} bold/><SummaryRow label="GST" value={money.format(calculations.gst)}/><SummaryRow label="Gross Premium" value={money.format(calculations.gross)} bold accent/><Divider/><SummaryRow label="Pay-in after TDS" value={money.format(calculations.payinAfterTds)}/><SummaryRow label="Partner payout" value={money.format(calculations.grossPayout)}/><SummaryRow label="Indicative margin" value={money.format(calculations.payinAfterTds-calculations.grossPayout)} bold/></div></div><div className="rounded-2xl border border-amber-200 bg-amber-50 p-4"><p className="text-[10px] font-bold text-amber-900">Prototype safeguard</p><p className="mt-1 text-[9px] leading-4 text-amber-800">RC data is fetched live but policy submission remains UI-only in this V1 build.</p></div></aside></div>
 
-    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#D9E2F0] bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(15,23,42,.08)] backdrop-blur"><div className="mx-auto flex max-w-[1480px] items-center justify-end gap-2"><Link href="/policies" className="rounded-lg border border-[#CBD5E1] px-4 py-2 text-[10px] font-semibold">Cancel</Link><button type="button" className="rounded-lg border border-[#C7D2FE] bg-[#EEF2FF] px-4 py-2 text-[10px] font-semibold text-[#4338CA]">Save Draft</button><button type="button" className="rounded-lg bg-[#17365D] px-5 py-2 text-[10px] font-bold text-white">Submit for UI Review</button></div></div>
+    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#D9E2F0] bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(15,23,42,.08)] backdrop-blur"><div className="mx-auto flex max-w-[1480px] justify-end gap-2"><Link href="/policies" className="rounded-lg border border-[#CBD5E1] px-4 py-2 text-[10px] font-semibold">Cancel</Link><button type="button" className="rounded-lg border border-[#C7D2FE] bg-[#EEF2FF] px-4 py-2 text-[10px] font-semibold text-[#4338CA]">Save Draft</button><button type="button" className="rounded-lg bg-[#17365D] px-5 py-2 text-[10px] font-bold text-white">Submit for UI Review</button></div></div>
   </div>;
 }
 
-function Section({number,title,subtitle,badge,children}:{number:string;title:string;subtitle:string;badge:string;children:ReactNode}){return <section className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-sm"><div className="flex flex-col gap-2 border-b bg-[#FBFCFE] px-4 py-3 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-start gap-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-[#17365D] text-[9px] font-bold text-white">{number}</span><div><h2 className="text-[13px] font-semibold">{title}</h2><p className="mt-.5 text-[9px] text-[#667085]">{subtitle}</p></div></div><span className="w-fit rounded-full border bg-white px-2.5 py-1 text-[8px] font-semibold text-[#667085]">{badge}</span></div><div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">{children}</div></section>}
-function Field({label,required,...props}:InputHTMLAttributes<HTMLInputElement>&{label:string}){return <div><label className={labelClass}>{label}{required?<Required/>:null}</label><input {...props} required={required} className={`${inputClass} ${props.type==="number"?"tabular-nums":""}`}/></div>}
-function Select({label,options,placeholder,required,...props}:SelectHTMLAttributes<HTMLSelectElement>&{label:string;options:string[];placeholder:string}){return <div><label className={labelClass}>{label}{required?<Required/>:null}</label><select {...props} required={required} className={inputClass}><option value="">{placeholder}</option>{options.map(o=><option key={o} value={o}>{o}</option>)}</select></div>}
-function PercentField({label,value,onChange,disabled}:{label:string;value:string;onChange:(v:string)=>void;disabled?:boolean}){return <div><label className={labelClass}>{label}<Tag text="%" tone="indigo"/></label><input type="number" min="0" max="100" step=".01" value={value} onChange={e=>onChange(e.target.value)} disabled={disabled} className={inputClass} placeholder="0.00"/></div>}
-function ReadOnly({label,value,strong,accent}:{label:string;value:string;strong?:boolean;accent?:boolean}){return <div><label className={labelClass}>{label}<Tag text="Auto" tone="green"/></label><div className={`flex h-9 items-center rounded-lg border px-3 text-[11px] ${accent?"border-[#B7C5F8] bg-[#EEF2FF] text-[#3730A3]":"border-[#DDE5DD] bg-[#F6FBF6] text-[#365A3C]"} ${strong?"font-bold":"font-semibold"}`}>{value}</div></div>}
-function ReviewItem({label,value}:{label:string;value:string|null}){return <div className="rounded-lg border border-emerald-100 bg-white px-3 py-2"><p className="text-[7.5px] font-bold uppercase tracking-[.05em] text-emerald-600">{label}</p><p className="mt-1 truncate text-[9.5px] font-semibold text-[#17203A]" title={value??"Not returned"}>{value||"Not returned"}</p></div>}
-function Required(){return <span className="text-red-500">*</span>}
-function Tag({text,tone}:{text:string;tone:"amber"|"indigo"|"green"}){const s=tone==="amber"?"bg-amber-50 text-amber-700":tone==="indigo"?"bg-indigo-50 text-indigo-700":"bg-emerald-50 text-emerald-700";return <span className={`rounded px-1.5 py-.5 text-[7px] font-bold normal-case tracking-normal ${s}`}>{text}</span>}
-function SummaryRow({label,value,bold,accent}:{label:string;value:string;bold?:boolean;accent?:boolean}){return <div className="flex justify-between gap-3"><span className={`text-[9.5px] ${bold?"font-semibold":"text-[#667085]"}`}>{label}</span><span className={`text-[10px] ${bold?"font-bold":"font-semibold"} ${accent?"text-[#4F46E5]":""}`}>{value}</span></div>}
-function Divider(){return <div className="border-t border-dashed border-[#D0D5DD]"/>}
+function RcGroup({ title, items }: { title: string; items: Array<[string, string | null]> }) {
+  const visible = items.filter(([, value]) => value && value !== "NA");
+  if (!visible.length) return null;
+  return <div className="mt-3"><p className="mb-2 text-[8px] font-bold uppercase tracking-[.12em] text-emerald-800">{title}</p><div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{visible.map(([label,value])=><ReviewItem key={label} label={label} value={value}/>)}</div></div>;
+}
+function Section({ number,title,subtitle,badge,children }: { number:string;title:string;subtitle:string;badge:string;children:ReactNode }) { return <section className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-sm"><div className="flex items-start justify-between border-b bg-[#FBFCFE] px-4 py-3"><div className="flex gap-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-[#17365D] text-[9px] font-bold text-white">{number}</span><div><h2 className="text-[13px] font-semibold">{title}</h2><p className="mt-0.5 text-[9px] text-[#667085]">{subtitle}</p></div></div><span className="rounded-full border bg-white px-2.5 py-1 text-[8px] text-[#667085]">{badge}</span></div><div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">{children}</div></section>; }
+function Field({ label, required, ...props }: InputHTMLAttributes<HTMLInputElement> & { label:string }) { return <div><label className={labelClass}>{label}{required?<Required/>:null}</label><input {...props} required={required} className={inputClass}/></div>; }
+function Select({ label, options, placeholder, required, ...props }: SelectHTMLAttributes<HTMLSelectElement> & { label:string;options:string[];placeholder:string }) { return <div><label className={labelClass}>{label}{required?<Required/>:null}</label><select {...props} required={required} className={inputClass}><option value="">{placeholder}</option>{options.map(o=><option key={o} value={o}>{o}</option>)}</select></div>; }
+function PercentField({ label,value,onChange,disabled }: { label:string;value:string;onChange:(v:string)=>void;disabled?:boolean }) { return <Field label={label} type="number" min="0" max="100" step="0.01" value={value} onChange={e=>onChange(e.target.value)} disabled={disabled} placeholder="0.00"/>; }
+function ReadOnly({ label,value,strong,accent }: { label:string;value:string;strong?:boolean;accent?:boolean }) { return <div><label className={labelClass}>{label}<Tag text="Auto" tone="green"/></label><div className={`flex h-9 items-center rounded-lg border px-3 text-[11px] ${accent?"border-indigo-200 bg-indigo-50 text-indigo-800":"border-emerald-100 bg-emerald-50/50 text-emerald-900"} ${strong?"font-bold":"font-semibold"}`}>{value}</div></div>; }
+function ReviewItem({ label,value }: { label:string;value:string|null }) { return <div className="min-w-0 rounded-lg border border-emerald-100 bg-white/80 px-3 py-2"><p className="text-[7px] font-bold uppercase tracking-[.08em] text-emerald-700">{label}</p><p className="mt-1 break-words text-[9.5px] font-medium text-[#17203A]">{value||"Not returned"}</p></div>; }
+function Required(){return <span className="text-red-500">*</span>;} function Tag({text,tone}:{text:string;tone:"amber"|"green"}){return <span className={`rounded px-1.5 py-0.5 text-[7px] font-bold normal-case ${tone==="amber"?"bg-amber-50 text-amber-700":"bg-emerald-50 text-emerald-700"}`}>{text}</span>;}
+function SummaryRow({label,value,bold,accent}:{label:string;value:string;bold?:boolean;accent?:boolean}){return <div className="flex justify-between gap-3"><span className={`text-[9.5px] ${bold?"font-semibold":"text-[#667085]"}`}>{label}</span><span className={`text-[10px] ${bold?"font-bold":"font-semibold"} ${accent?"text-[#4F46E5]":""}`}>{value}</span></div>;} function Divider(){return <div className="border-t border-dashed"/>;}
