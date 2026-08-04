@@ -3,6 +3,7 @@ import { hasCapability, roleCapabilities } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export type PermissionAccess = "none" | "view" | "edit" | "approve";
+export type EmployeePermissionAccess = PermissionAccess | "inherit";
 export type PermissionScope = "role_default" | "inherit" | "self" | "hierarchy" | "organization";
 
 export type PermissionDefinition = {
