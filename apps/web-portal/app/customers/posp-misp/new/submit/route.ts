@@ -30,10 +30,29 @@ const PRESERVED_FIELDS = [
   "bank_ifsc_code",
   "gst_number",
 ] as const;
+const OPEN_APPLICATION_STATUSES = new Set(["submitted", "under_review", "changes_requested"]);
+
+type ExistingProfile = { application_id: string };
+type ExistingApplication = {
+  id: string;
+  status: string;
+  partner_status: string | null;
+  draft_data: Record<string, unknown> | null;
+};
 
 export async function POST(request: Request) {
   const data = await request.formData();
   const partnerType = data.get("partner_type") === "misp" ? "misp" : "posp";
+  const admin = createSupabaseAdminClient();
+  const existingApplicationId = await findExistingOpenApplication(admin, partnerType, text(data, "pan_number"));
+
+  if (existingApplicationId) {
+    return NextResponse.redirect(
+      new URL(`/intermediaries/applications/${existingApplicationId}/workflow?stage=documents&success=documents_started`, request.url),
+      303,
+    );
+  }
+
   const result = await createScopedManualPospMispOnboarding({ error: null, field: null }, data);
 
   if (result.error) {
@@ -53,7 +72,6 @@ export async function POST(request: Request) {
     return NextResponse.redirect(url, 303);
   }
 
-  const admin = createSupabaseAdminClient();
   const now = new Date().toISOString();
   const [{ error: profileError }, { error: applicationError }] = await Promise.all([
     admin
@@ -88,6 +106,49 @@ export async function POST(request: Request) {
     new URL(`/intermediaries/applications/${result.applicationId}/workflow?stage=documents&success=primary_details_saved`, request.url),
     303,
   );
+}
+
+async function findExistingOpenApplication(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  partnerType: "posp" | "misp",
+  panNumber: string | null,
+) {
+  const pan = panNumber?.replace(/\s/g, "").toUpperCase() ?? "";
+  if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) return null;
+
+  const { data: profiles, error: profileError } = await admin
+    .from("posp_misp_onboarding_profiles")
+    .select("application_id")
+    .eq("partner_type", partnerType)
+    .eq("pan_number", pan)
+    .limit(20)
+    .returns<ExistingProfile[]>();
+  if (profileError || !profiles?.length) return null;
+
+  const applicationIds = profiles.map((profile) => profile.application_id);
+  const { data: applications, error: applicationError } = await admin
+    .from("intermediary_onboarding_applications")
+    .select("id,status,partner_status,draft_data")
+    .in("id", applicationIds)
+    .order("updated_at", { ascending: false })
+    .returns<ExistingApplication[]>();
+  if (applicationError) return null;
+
+  return (applications ?? []).find((application) =>
+    OPEN_APPLICATION_STATUSES.has(application.status)
+    && application.partner_status !== "active_partner"
+    && accountContext(application.draft_data) === "partner"
+  )?.id ?? null;
+}
+
+function accountContext(draft: Record<string, unknown> | null | undefined) {
+  const context = draft?.account_context;
+  return context === "posp" || context === "misp" ? context : "partner";
+}
+
+function text(data: FormData, key: string) {
+  const value = data.get(key);
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 function preserveValues(url: URL, data: FormData) {
