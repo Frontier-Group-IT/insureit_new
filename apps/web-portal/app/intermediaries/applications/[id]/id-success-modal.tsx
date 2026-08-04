@@ -16,7 +16,7 @@ type Props = {
   linkedId: string | undefined;
 };
 
-const modalSuccessEvents = new Set(["partner_id_generated", "linked_posp_account_created", "linked_misp_account_created"]);
+const modalSuccessEvents = new Set(["partner_id_generated", "linked_posp_account_created", "linked_misp_account_created", "legacy_intermediary_imported"]);
 
 export function IdSuccessModal({ event, applicationId, isPartner, preferredType, partnerId, registrationId, linkedId }: Props) {
   const [visible, setVisible] = useState(false);

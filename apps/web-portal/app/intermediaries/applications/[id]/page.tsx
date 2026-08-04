@@ -118,7 +118,7 @@ const partnerDocuments = [
   ["education_graduation_marksheet", "Education Marksheet"],
   ["education_post_graduation_marksheet", "Education Marksheet"],
 ] as const;
-const modalSuccessEvents = new Set(["partner_id_generated", "documents_saved", "linked_posp_account_created", "linked_misp_account_created"]);
+const modalSuccessEvents = new Set(["partner_id_generated", "documents_saved", "linked_posp_account_created", "linked_misp_account_created", "legacy_intermediary_imported"]);
 
 export default async function IntermediaryAccountReviewPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; success?: string }> }) {
   const { id } = await params;
