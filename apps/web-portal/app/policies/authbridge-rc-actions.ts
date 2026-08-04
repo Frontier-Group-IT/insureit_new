@@ -15,6 +15,13 @@ export type PolicyRcReview = {
   rtoState: string | null;
   ownerName: string | null;
   ownerSerialNumber: string | null;
+  ownerCity: string | null;
+  ownerDistrict: string | null;
+  ownerState: string | null;
+  ownerPincode: string | null;
+  permanentAddress: string | null;
+  presentAddress: string | null;
+  mobileNumber: string | null;
   vehicleClass: string | null;
   vehicleCategory: string | null;
   bodyType: string | null;
@@ -35,22 +42,25 @@ export type PolicyRcReview = {
   normsType: string | null;
   isCommercial: string | null;
   chassisNumber: string | null;
-  chassisMasked: string | null;
   engineNumber: string | null;
-  engineMasked: string | null;
   financed: string | null;
   financerName: string | null;
   insuranceCompany: string | null;
   insurancePolicyNumber: string | null;
   insuranceUpto: string | null;
+  permitIssueDate: string | null;
   permitNumber: string | null;
   permitType: string | null;
   permitValidFrom: string | null;
   permitValidUpto: string | null;
+  nationalPermitIssuedBy: string | null;
   nationalPermitNumber: string | null;
   nationalPermitUpto: string | null;
   pucNumber: string | null;
   pucUpto: string | null;
+  nonUseStatus: string | null;
+  nonUseFrom: string | null;
+  nonUseTo: string | null;
   blacklistStatus: string | null;
   transactionId: string | null;
   providerTransactionId: string | null;
@@ -61,37 +71,19 @@ export type PolicyRcLookupResult =
   | { ok: true; review: PolicyRcReview }
   | { ok: false; error: string };
 
-function normalizeKey(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
+function record(value: unknown): UnknownRecord {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as UnknownRecord : {};
 }
 
-function flatten(value: unknown, output = new Map<string, unknown>()) {
-  if (!value || typeof value !== "object") return output;
-  if (Array.isArray(value)) {
-    for (const item of value) flatten(item, output);
-    return output;
-  }
-  for (const [key, nested] of Object.entries(value as UnknownRecord)) {
-    const normalized = normalizeKey(key);
-    if (!output.has(normalized) && (typeof nested === "string" || typeof nested === "number" || typeof nested === "boolean")) output.set(normalized, nested);
-    if (nested && typeof nested === "object") flatten(nested, output);
-  }
-  return output;
-}
-
-function pick(map: Map<string, unknown>, ...candidates: string[]) {
-  for (const candidate of candidates) {
-    const value = map.get(normalizeKey(candidate));
-    if (typeof value === "string" && value.trim()) return value.trim();
-    if (typeof value === "number" || typeof value === "boolean") return String(value);
-  }
+function text(source: UnknownRecord, key: string) {
+  const value = source[key];
+  if (typeof value === "string") return value.trim() || null;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
   return null;
 }
 
 function yearOnly(value: string | null) {
-  if (!value) return null;
-  const match = value.match(/(?:19|20)\d{2}/);
-  return match?.[0] ?? null;
+  return value?.match(/(?:19|20)\d{2}/)?.[0] ?? null;
 }
 
 function stateFromRto(value: string | null) {
@@ -100,77 +92,86 @@ function stateFromRto(value: string | null) {
   return parts.length > 1 ? parts.at(-1) ?? null : null;
 }
 
-function maskIdentifier(value: string | null) {
-  if (!value) return null;
-  const normalized = value.trim();
-  if (normalized.length <= 4) return normalized;
-  return `${"*".repeat(Math.max(4, normalized.length - 4))}${normalized.slice(-4)}`;
-}
-
 export async function lookupPolicyRegistrationRc(registrationNumber: string): Promise<PolicyRcLookupResult> {
   try {
     const response = await lookupAuthbridgeRc(registrationNumber);
-    const fields = flatten(response.data);
-    const rtoName = pick(fields, "RTO", "rto_name", "registering_authority");
-    const manufactureDate = pick(fields, "Manufacture Date", "manufacturing_date", "manufacturing_month_year");
-    const chassisNumber = pick(fields, "Chassis Number", "chassis_no", "chassis_number");
-    const engineNumber = pick(fields, "Engine Number", "engine_no", "engine_number");
+    const root = record(response.data);
+    const msg = record(root.msg);
+    const registration = record(msg["Registration Details"]);
+    const vehicle = record(msg["Vehicle Details"]);
+    const owner = record(msg["Owners Details"]);
+    const insurance = record(msg["Insurance Details"]);
+    const finance = record(msg["Hypothecation Details"]);
+    const rcStatus = record(msg["RC Status"]);
+
+    const rtoName = text(registration, "RTO");
+    const manufactureDate = text(vehicle, "Manufacture Date");
     const normalizedRegistration = normalizeVehicleRegistrationNumber(
-      pick(fields, "Registration Number", "Vehicle Number", "registration_no", "vehicle_number") ?? response.registrationNumber ?? registrationNumber,
+      text(registration, "Registration Number") ?? text(vehicle, "Vehicle Number") ?? response.registrationNumber ?? registrationNumber,
     );
 
     return {
       ok: true,
       review: {
         registrationNumber: normalizedRegistration,
-        registrationDate: pick(fields, "Registration Date", "reg_date"),
-        registrationStatus: pick(fields, "Status", "rc_status"),
-        statusAsOn: pick(fields, "Status As On", "status_date"),
-        fitnessExpiryDate: pick(fields, "Fitness Date/RC Expiry Date", "fitness_upto", "rc_expiry_date"),
-        taxUpto: pick(fields, "Vehicle Tax Up to", "Tax Upto", "tax_upto"),
+        registrationDate: text(registration, "Registration Date"),
+        registrationStatus: text(registration, "Status"),
+        statusAsOn: text(registration, "Status As On"),
+        fitnessExpiryDate: text(registration, "Fitness Date/RC Expiry Date"),
+        taxUpto: text(registration, "Vehicle Tax Up to") ?? text(registration, "Tax Upto"),
         rtoName,
-        rtoState: stateFromRto(rtoName) ?? pick(fields, "Present Address State", "Permanant Address State", "rto_state"),
-        ownerName: pick(fields, "Owners Name", "Owner Name"),
-        ownerSerialNumber: pick(fields, "Owners Number", "Owner Serial Number"),
-        vehicleClass: pick(fields, "Vehicle Class", "vehicle_class"),
-        vehicleCategory: pick(fields, "Vehicle Category", "vehicle_category"),
-        bodyType: pick(fields, "Body Type", "body_type"),
-        make: pick(fields, "Maker/Manufacturer", "manufacturer", "maker"),
-        model: pick(fields, "Model / Makers Class", "maker_model", "model"),
-        fuelType: pick(fields, "Fuel Type", "fuel_type"),
+        rtoState: stateFromRto(rtoName) ?? text(owner, "Present Address State") ?? text(owner, "Permanant Address State"),
+        ownerName: text(owner, "Owners Name"),
+        ownerSerialNumber: text(owner, "Owners Number") ?? text(vehicle, "Owner Serial Number"),
+        ownerCity: text(owner, "Present Address City") ?? text(owner, "Permanant Address City"),
+        ownerDistrict: text(owner, "Present Address District") ?? text(owner, "Permanant Address District"),
+        ownerState: text(owner, "Present Address State") ?? text(owner, "Permanant Address State"),
+        ownerPincode: text(owner, "Present Address Pincode") ?? text(owner, "Permanant Address Pincode"),
+        permanentAddress: text(owner, "Permanent Address") ?? text(owner, "Split Permanant Address"),
+        presentAddress: text(owner, "Present Address") ?? text(owner, "Split Present Address"),
+        mobileNumber: text(vehicle, "Mobile Number"),
+        vehicleClass: text(vehicle, "Vehicle Class"),
+        vehicleCategory: text(vehicle, "Vehicle Category"),
+        bodyType: text(vehicle, "Body Type"),
+        make: text(vehicle, "Maker/Manufacturer"),
+        model: text(vehicle, "Model / Makers Class"),
+        fuelType: text(vehicle, "Fuel Type"),
         manufactureDate,
         manufacturingYear: yearOnly(manufactureDate),
-        engineCapacity: pick(fields, "Engine Capacity", "cubic_capacity", "cc"),
-        seatingCapacity: pick(fields, "Seating Capacity", "seating_capacity"),
-        standingCapacity: pick(fields, "Vehicle Standing Capacity", "standing_capacity"),
-        sleeperCapacity: pick(fields, "sleeper Capacity", "sleeper_capacity"),
-        grossWeight: pick(fields, "Gross Weight", "gross_vehicle_weight", "gvw"),
-        unladenWeight: pick(fields, "Unloading Weight", "Unladen Weight", "unladen_weight"),
-        wheelBase: pick(fields, "Wheel Base", "wheel_base"),
-        cylinders: pick(fields, "No of cylinder", "number_of_cylinders"),
-        color: pick(fields, "Color", "vehicle_color"),
-        normsType: pick(fields, "Norms Type", "emission_norms"),
-        isCommercial: pick(fields, "Is Commercial", "is_commercial"),
-        chassisNumber,
-        chassisMasked: maskIdentifier(chassisNumber),
-        engineNumber,
-        engineMasked: maskIdentifier(engineNumber),
-        financed: pick(fields, "Financed", "is_financed"),
-        financerName: pick(fields, "Financer Name", "financier_name"),
-        insuranceCompany: pick(fields, "Insurance Company", "insurance_company"),
-        insurancePolicyNumber: pick(fields, "Policy Number", "insurance_policy_number"),
-        insuranceUpto: pick(fields, "Insurance To Date/Insurance Upto", "insurance_upto"),
-        permitNumber: pick(fields, "Permit Number", "permit_number"),
-        permitType: pick(fields, "Permit Type", "permit_type"),
-        permitValidFrom: pick(fields, "Permit Vald From", "Permit Valid From", "permit_valid_from"),
-        permitValidUpto: pick(fields, "Permit Valid Upto", "permit_valid_upto"),
-        nationalPermitNumber: pick(fields, "National Permit Number", "national_permit_number"),
-        nationalPermitUpto: pick(fields, "National Permit Upto", "national_permit_upto"),
-        pucNumber: pick(fields, "PUCC NO", "puc_number"),
-        pucUpto: pick(fields, "PUCC Upto", "puc_upto"),
-        blacklistStatus: pick(fields, "Blacklist Status", "blacklist_status"),
+        engineCapacity: text(vehicle, "Engine Capacity"),
+        seatingCapacity: text(vehicle, "Seating Capacity"),
+        standingCapacity: text(vehicle, "Vehicle Standing Capacity"),
+        sleeperCapacity: text(vehicle, "sleeper Capacity"),
+        grossWeight: text(vehicle, "Gross Weight"),
+        unladenWeight: text(vehicle, "Unloading Weight"),
+        wheelBase: text(vehicle, "Wheel Base"),
+        cylinders: text(vehicle, "No of cylinder"),
+        color: text(vehicle, "Color"),
+        normsType: text(vehicle, "Norms Type"),
+        isCommercial: text(vehicle, "Is Commercial"),
+        chassisNumber: text(vehicle, "Chassis Number"),
+        engineNumber: text(vehicle, "Engine Number"),
+        financed: text(finance, "Financed"),
+        financerName: text(finance, "Financer Name"),
+        insuranceCompany: text(insurance, "Insurance Company"),
+        insurancePolicyNumber: text(insurance, "Policy Number"),
+        insuranceUpto: text(insurance, "Insurance To Date/Insurance Upto"),
+        permitIssueDate: text(rcStatus, "Permit Issue Date"),
+        permitNumber: text(rcStatus, "Permit Number"),
+        permitType: text(rcStatus, "Permit Type"),
+        permitValidFrom: text(rcStatus, "Permit Vald From"),
+        permitValidUpto: text(rcStatus, "Permit Valid Upto"),
+        nationalPermitIssuedBy: text(rcStatus, "National Permit Issued By"),
+        nationalPermitNumber: text(rcStatus, "National Permit Number"),
+        nationalPermitUpto: text(rcStatus, "National Permit Upto"),
+        pucNumber: text(rcStatus, "PUCC NO"),
+        pucUpto: text(rcStatus, "PUCC Upto"),
+        nonUseStatus: text(rcStatus, "Non Use Status"),
+        nonUseFrom: text(rcStatus, "Non Use From"),
+        nonUseTo: text(rcStatus, "Non Use To"),
+        blacklistStatus: text(vehicle, "Blacklist Status"),
         transactionId: response.transactionId ?? null,
-        providerTransactionId: pick(fields, "ts_transaction_id"),
+        providerTransactionId: text(root, "ts_transaction_id"),
         lookedUpAt: response.lookedUpAt ?? null,
       },
     };
