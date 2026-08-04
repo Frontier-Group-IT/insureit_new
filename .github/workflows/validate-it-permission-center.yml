@@ -1,16 +1,20 @@
 name: Validate IT permission center
 
 on:
-  push:
-    branches: [feature/it-permission-center]
+  pull_request:
+    branches: [main]
     paths:
+      - "apps/web-portal/app/system/access-control/**"
+      - "apps/web-portal/lib/permission-management.ts"
+      - "apps/web-portal/app/settings/page.tsx"
+      - "supabase/migrations/20260804194500_add_permission_management_foundation.sql"
       - ".github/workflows/validate-it-permission-center.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  patch-and-validate:
+  validate:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
@@ -21,44 +25,10 @@ jobs:
       NEXT_PUBLIC_INSUREIT_LAUNCH_SCOPE: full
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: feature/it-permission-center
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-      - name: Apply safe integration patches
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          p = Path('apps/web-portal/lib/permission-management.ts')
-          text = p.read_text()
-          text = text.replace('export type PermissionAccess = "none" | "view" | "edit" | "approve";\n', 'export type PermissionAccess = "none" | "view" | "edit" | "approve";\nexport type EmployeePermissionAccess = PermissionAccess | "inherit";\n')
-          p.write_text(text)
-
-          p = Path('apps/web-portal/app/system/access-control/actions.ts')
-          text = p.read_text()
-          text = text.replace('import { permissionDefinitions, type PermissionAccess, type PermissionScope } from "@/lib/permission-management";', 'import { permissionDefinitions, type EmployeePermissionAccess, type PermissionScope } from "@/lib/permission-management";')
-          text = text.replace('const allowedAccess = new Set<PermissionAccess>(["inherit", "none", "view", "edit", "approve"] as PermissionAccess[]);', 'const allowedAccess = new Set<EmployeePermissionAccess>(["inherit", "none", "view", "edit", "approve"]);')
-          text = text.replace('as PermissionAccess;', 'as EmployeePermissionAccess;')
-          p.write_text(text)
-
-          p = Path('apps/web-portal/components/claim-manager/app-navigation.tsx')
-          text = p.read_text()
-          old = 'const developmentSection:NavigationSection={key:"development",label:"Development",icon:FlaskConical,tint:"from-[#7C3AED] to-[#2563EB]",capability:"manage_system",items:[{href:"/customers/posp-misp/icall-uat",label:"iCall UAT Integration",icon:FlaskConical,capability:"manage_system"}]};'
-          new = 'const developmentSection:NavigationSection={key:"development",label:"System Administration",icon:FlaskConical,tint:"from-[#7C3AED] to-[#2563EB]",capability:"manage_system",items:[{href:"/system/access-control",label:"Employees & Access",icon:UserCog,capability:"manage_users"},{href:"/customers/posp-misp/icall-uat",label:"iCall UAT Integration",icon:FlaskConical,capability:"manage_system"}]};'
-          if old not in text:
-              raise SystemExit('Development section anchor not found')
-          p.write_text(text.replace(old, new, 1))
-          PY
       - run: npm ci
       - run: npm run typecheck:web
       - run: npm run build:web
-      - name: Commit validated integration
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add apps/web-portal/lib/permission-management.ts apps/web-portal/app/system/access-control/actions.ts apps/web-portal/components/claim-manager/app-navigation.tsx
-          git diff --cached --quiet || git commit -m "Integrate IT permission center safely"
-          git push
