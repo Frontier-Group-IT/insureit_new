@@ -1,8 +1,9 @@
-import { addPolicy, createInsuranceCompany } from "@/app/master-data-form-actions";
+import { createInsuranceCompany } from "@/app/master-data-form-actions";
+import { addPolicy } from "@/app/policies/policy-actions";
 import { PolicyFormAuthbridge } from "@/components/policy-form-authbridge";
 import { PolicyOcrImportPanel } from "@/components/policy-ocr-import-panel";
 import { AppShell } from "@/components/shell";
-import { requireMasterDataManager } from "@/lib/master-data-server";
+import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type CustomerOption = { id: string; contact_name: string };
@@ -13,7 +14,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function NewPolicyPage() {
-  await requireMasterDataManager();
+  await requirePolicyEditor();
   const admin = createSupabaseAdminClient();
 
   const [customersResult, vehiclesResult, insurersResult] = await Promise.all([
