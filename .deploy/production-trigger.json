@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-04T14:13:00+05:30",
+  "deploy_requested_at": "2026-08-04T14:38:00+05:30",
   "requested_by": "Nishant Mishra",
   "source": "ChatGPT explicit deploy command",
-  "source_commit": "2bbffaa595be6ed4a85e7e0db635993dc7da005a",
-  "release_scope": "Deploy the shared left-sidebar interaction update from PR #165: consistent hover feedback across Dashboard, top-level workspace sections, grouped submenu headers, nested submenu links, and Settings, while preserving active states, permissions, routes, and expansion behavior.",
-  "verification": "PR #165 branch validation completed npm ci, npm run lint:web, npm run typecheck:web, and npm run build:web. The final PR contained only apps/web-portal/components/claim-manager/app-navigation.tsx. Vercel deployment status must reach Ready before claiming production success.",
+  "source_commit": "b3bf3f85fb897c00e9d47b2f6ee17c43e5ba4d53",
+  "release_scope": "Deploy the sidebar section-collapse correction from PR #166 together with the PAN-verification worker reliability release from PR #163 that was already merged into main after the previous production source. Expanded top-level sidebar sections can now contract when clicked again while active styling and route behavior remain unchanged.",
+  "verification": "PR #166 passed the focused toggle assertion, npm ci, npm run lint:web, npm run typecheck:web, and npm run build:web. PR #163 was already merged into main and its Vercel preview reached Ready. Vercel production status must reach Ready before claiming deployment success.",
   "instructions": "Update this file only after the user explicitly says deploy now or finish and deploy. Ordinary code commits must not modify it."
 }
