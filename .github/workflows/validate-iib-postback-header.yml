@@ -1,0 +1,31 @@
+name: Validate IIB postback and header
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "tools/pan-verification-extension/**"
+      - "apps/web-portal/app/intermediaries/applications/[id]/**"
+      - ".github/workflows/validate-iib-postback-header.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
+      PAN_VERIFICATION_WORKER_KEY: placeholder-worker-key
+      NEXT_PUBLIC_INSUREIT_LAUNCH_SCOPE: intermediary
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: node --check tools/pan-verification-extension/content.js
+      - run: node -e "JSON.parse(require('fs').readFileSync('tools/pan-verification-extension/manifest.json','utf8'))"
+      - run: npm ci
+      - run: npm run typecheck:web
+      - run: npm run build:web
