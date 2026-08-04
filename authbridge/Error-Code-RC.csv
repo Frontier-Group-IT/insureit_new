@@ -1,0 +1,15 @@
+HttpCode, StatusCode,Message,REMARK
+401,1046,Unauthorized Access.,ERROR CODE (Non Billable)
+400,1011,Invalid request. Please check Token and/or Data.,
+400,1024,transID is not set.,
+400,1011,Invalid username.,
+400,1014,docNumber is required.,
+400,1022,"Invalid docType, please provide valid docType.",
+400,1014,RC Number length must be greater than 2 digit.,
+400,1014,RC Number must be alphanumeric.,
+500,0,Encounter Technical Problem. Please try again later.,
+500,0,something went wrong in the serverside,
+500,1138,Some error ,
+200,0,"Something went wrong,Check RC No",
+200,9,No Data Found.Check RC Number,Discrepant (Billable)
+200,1,Success,SUCCESS CODE (Billable)
