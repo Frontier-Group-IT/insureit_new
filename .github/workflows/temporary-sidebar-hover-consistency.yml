@@ -1,0 +1,56 @@
+name: Temporary sidebar hover consistency validation
+
+on:
+  push:
+    branches:
+      - feature/sidebar-hover-consistency
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      NEXT_PUBLIC_INSUREIT_LAUNCH_SCOPE: intermediary
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/sidebar-hover-consistency
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply sidebar hover changes
+        run: python .github/scripts/apply-sidebar-hover-consistency.py
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint web portal
+        run: npm run lint:web
+
+      - name: Typecheck web portal
+        run: npm run typecheck:web
+
+      - name: Build web portal
+        run: npm run build:web
+
+      - name: Commit validated source change
+        run: |
+          rm .github/scripts/apply-sidebar-hover-consistency.py
+          rm .github/workflows/temporary-sidebar-hover-consistency.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal/components/claim-manager/app-navigation.tsx .github/scripts/apply-sidebar-hover-consistency.py .github/workflows/temporary-sidebar-hover-consistency.yml
+          git commit -m "fix: standardize sidebar hover interactions"
+          git push origin HEAD:feature/sidebar-hover-consistency
