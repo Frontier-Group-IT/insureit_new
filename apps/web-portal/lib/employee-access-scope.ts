@@ -1,4 +1,4 @@
-import type { AppRole } from "@/lib/roles";
+import type { AppRole, Capability } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const organizationWideRoles: AppRole[] = [
@@ -12,6 +12,7 @@ type ApplicationLink = { application_id: string };
 type IntermediaryLink = { id: string; application_id: string | null };
 type ImportRowLink = { import_batch_id: string; normalized_data: Record<string, unknown> | null };
 type CustomerLink = { id: string };
+type ScopeOverride = { scope_type: string; expires_at: string | null };
 
 export type EmployeeAccessScope = {
   mode: "organization" | "hierarchy" | "self" | "none";
@@ -19,30 +20,47 @@ export type EmployeeAccessScope = {
   profileIds: string[];
 };
 
-export async function getEmployeeAccessScope(profileId: string, role: string | null | undefined): Promise<EmployeeAccessScope> {
-  if (organizationWideRoles.includes(role as AppRole)) return { mode: "organization", employeeIds: [], profileIds: [] };
-
+export async function getEmployeeAccessScope(profileId: string, role: string | null | undefined, capability?: Capability): Promise<EmployeeAccessScope> {
   const admin = createSupabaseAdminClient();
+  let requestedMode: EmployeeAccessScope["mode"] = organizationWideRoles.includes(role as AppRole)
+    ? "organization"
+    : hierarchyRoles.includes(role as AppRole)
+      ? "hierarchy"
+      : "self";
+
+  if (capability) {
+    const { data: override } = await admin
+      .from("employee_permission_overrides")
+      .select("scope_type,expires_at")
+      .eq("profile_id", profileId)
+      .eq("capability", capability)
+      .maybeSingle<ScopeOverride>();
+    const valid = override && (!override.expires_at || new Date(override.expires_at).getTime() > Date.now());
+    if (valid && override.scope_type !== "inherit") {
+      requestedMode = override.scope_type === "organization" ? "organization" : override.scope_type === "hierarchy" ? "hierarchy" : "self";
+    }
+  }
+
+  if (requestedMode === "organization") return { mode: "organization", employeeIds: [], profileIds: [] };
+
   const { data: currentProfile } = await admin.from("profiles").select("id,employee_id").eq("id", profileId).maybeSingle<ProfileLink>();
   if (!currentProfile?.employee_id) return { mode: "none", employeeIds: [], profileIds: [profileId] };
 
   let employeeIds = [currentProfile.employee_id];
-  let mode: EmployeeAccessScope["mode"] = "self";
-  if (hierarchyRoles.includes(role as AppRole)) {
+  if (requestedMode === "hierarchy") {
     const { data: employees } = await admin.from("employees").select("id,reporting_manager_id").eq("employment_status", "active").returns<EmployeeLink[]>();
     employeeIds = descendantIds(currentProfile.employee_id, employees ?? []);
-    mode = "hierarchy";
   }
 
   const { data: profiles } = employeeIds.length
     ? await admin.from("profiles").select("id,employee_id").in("employee_id", employeeIds).eq("is_active", true).returns<ProfileLink[]>()
     : { data: [] as ProfileLink[] };
   const profileIds = Array.from(new Set([profileId, ...(profiles ?? []).map((profile) => profile.id)]));
-  return { mode, employeeIds, profileIds };
+  return { mode: requestedMode, employeeIds, profileIds };
 }
 
-export async function getAccessibleCustomerIds(profileId: string, role: string | null | undefined) {
-  const scope = await getEmployeeAccessScope(profileId, role);
+export async function getAccessibleCustomerIds(profileId: string, role: string | null | undefined, capability: Capability = "view_customers") {
+  const scope = await getEmployeeAccessScope(profileId, role, capability);
   if (scope.mode === "organization") return null;
   if (!scope.profileIds.length) return [];
 
@@ -55,8 +73,8 @@ export async function getAccessibleCustomerIds(profileId: string, role: string |
   return Array.from(new Set((data ?? []).map((row) => row.id).filter(Boolean)));
 }
 
-export async function getAccessibleIntermediaryApplicationIds(profileId: string, role: string | null | undefined) {
-  const scope = await getEmployeeAccessScope(profileId, role);
+export async function getAccessibleIntermediaryApplicationIds(profileId: string, role: string | null | undefined, capability: Capability = "view_intermediaries") {
+  const scope = await getEmployeeAccessScope(profileId, role, capability);
   if (scope.mode === "organization") return null;
   if (!scope.employeeIds.length && !scope.profileIds.length) return [];
 
@@ -69,8 +87,8 @@ export async function getAccessibleIntermediaryApplicationIds(profileId: string,
   return Array.from(new Set((data ?? []).map((row) => row.application_id).filter(Boolean)));
 }
 
-export async function getAccessibleImportBatchIds(profileId: string, role: string | null | undefined) {
-  const scope = await getEmployeeAccessScope(profileId, role);
+export async function getAccessibleImportBatchIds(profileId: string, role: string | null | undefined, capability: Capability = "view_intermediaries") {
+  const scope = await getEmployeeAccessScope(profileId, role, capability);
   if (scope.mode === "organization") return null;
   if (!scope.employeeIds.length && !scope.profileIds.length) return [];
 
@@ -89,8 +107,8 @@ export async function getAccessibleImportBatchIds(profileId: string, role: strin
   }).map((row) => row.import_batch_id)));
 }
 
-export async function getAccessibleIntermediaryIds(profileId: string, role: string | null | undefined) {
-  const applicationIds = await getAccessibleIntermediaryApplicationIds(profileId, role);
+export async function getAccessibleIntermediaryIds(profileId: string, role: string | null | undefined, capability: Capability = "view_intermediaries") {
+  const applicationIds = await getAccessibleIntermediaryApplicationIds(profileId, role, capability);
   if (applicationIds === null) return null;
   if (!applicationIds.length) return [];
   const admin = createSupabaseAdminClient();
@@ -98,23 +116,23 @@ export async function getAccessibleIntermediaryIds(profileId: string, role: stri
   return Array.from(new Set((data ?? []).map((row) => row.id)));
 }
 
-export async function canAccessCustomer(profileId: string, role: string | null | undefined, customerId: string) {
-  const ids = await getAccessibleCustomerIds(profileId, role);
+export async function canAccessCustomer(profileId: string, role: string | null | undefined, customerId: string, capability: Capability = "view_customers") {
+  const ids = await getAccessibleCustomerIds(profileId, role, capability);
   return ids === null || ids.includes(customerId);
 }
 
-export async function canAccessIntermediaryApplication(profileId: string, role: string | null | undefined, applicationId: string) {
-  const ids = await getAccessibleIntermediaryApplicationIds(profileId, role);
+export async function canAccessIntermediaryApplication(profileId: string, role: string | null | undefined, applicationId: string, capability: Capability = "view_intermediaries") {
+  const ids = await getAccessibleIntermediaryApplicationIds(profileId, role, capability);
   return ids === null || ids.includes(applicationId);
 }
 
-export async function canAccessImportBatch(profileId: string, role: string | null | undefined, batchId: string) {
-  const ids = await getAccessibleImportBatchIds(profileId, role);
+export async function canAccessImportBatch(profileId: string, role: string | null | undefined, batchId: string, capability: Capability = "view_intermediaries") {
+  const ids = await getAccessibleImportBatchIds(profileId, role, capability);
   return ids === null || ids.includes(batchId);
 }
 
-export async function canAccessIntermediary(profileId: string, role: string | null | undefined, intermediaryId: string) {
-  const ids = await getAccessibleIntermediaryIds(profileId, role);
+export async function canAccessIntermediary(profileId: string, role: string | null | undefined, intermediaryId: string, capability: Capability = "view_intermediaries") {
+  const ids = await getAccessibleIntermediaryIds(profileId, role, capability);
   return ids === null || ids.includes(intermediaryId);
 }
 
