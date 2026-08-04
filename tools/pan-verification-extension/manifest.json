@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "IIB POS PAN Checker - N.M.",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Reliably checks queued InsureIt POSP/MISP PAN numbers in the authorised IIB POS portal session.",
   "permissions": ["storage", "tabs", "alarms", "scripting", "webNavigation", "downloads"],
   "host_permissions": [
