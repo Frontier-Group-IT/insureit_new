@@ -1,0 +1,326 @@
+name: Temporary intermediary Save and Exit validation
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    if: github.head_ref == 'feature/intermediary-save-exit'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      NEXT_PUBLIC_INSUREIT_LAUNCH_SCOPE: intermediary
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply focused Save and Exit changes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              file = Path(path)
+              text = file.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected one match in {path}, found {count}: {old[:140]!r}")
+              file.write_text(text.replace(old, new, 1))
+
+          # Shared form submit button: disable every submit while pending, but show
+          # the loader only on the button that initiated the submission.
+          submit_button = "apps/web-portal/components/form-submit-button.tsx"
+          replace_once(submit_button, "  icon,\n}: {", "  icon,\n  name,\n  value,\n}: {")
+          replace_once(submit_button, "  icon?: React.ReactNode;\n}) {", "  icon?: React.ReactNode;\n  name?: string;\n  value?: string;\n}) {")
+          replace_once(submit_button, "  const { pending } = useFormStatus();", "  const { pending, data } = useFormStatus();")
+          replace_once(
+              submit_button,
+              "  const isDisabled = disabled || pending || (requireChange && !formChanged);",
+              "  const isCurrentSubmission = pending && (!name || !value || data?.get(name) === value);\n  const isDisabled = disabled || pending || (requireChange && !formChanged);",
+          )
+          replace_once(
+              submit_button,
+              "      type=\"submit\"\n      disabled={isDisabled}\n      aria-busy={pending}",
+              "      type=\"submit\"\n      name={name}\n      value={value}\n      disabled={isDisabled}\n      aria-busy={isCurrentSubmission}",
+          )
+          replace_once(
+              submit_button,
+              "      {pending ? <InsureItButtonLoader label={pendingLabel} /> : <>{icon}{label}</>}",
+              "      {isCurrentSubmission ? <InsureItButtonLoader label={pendingLabel} /> : <>{icon}{label}</>}",
+          )
+
+          # Shared Add POSP/MISP form, including both normal and existing modes.
+          onboarding_form = "apps/web-portal/app/customers/posp-misp/posp-misp-onboarding-form.tsx"
+          replace_once(
+              onboarding_form,
+              'import { useActionState, useEffect, useRef, type ReactNode } from "react";',
+              'import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";',
+          )
+          replace_once(
+              onboarding_form,
+              'import { FormSubmitButton } from "@/components/form-submit-button";\n',
+              'import { FormSubmitButton } from "@/components/form-submit-button";\nimport { InsureItButtonLoader } from "@/components/loading/insureit-loader";\n',
+          )
+          replace_once(
+              onboarding_form,
+              "  const invalidHandledRef = useRef(false);\n  const isMisp = partnerType === \"misp\";",
+              "  const invalidHandledRef = useRef(false);\n  const actionSubmitIntentRef = useRef<\"exit\" | \"documents\">(\"documents\");\n  const [routeSubmitIntent, setRouteSubmitIntent] = useState<\"exit\" | \"documents\" | null>(null);\n  const isMisp = partnerType === \"misp\";",
+          )
+          replace_once(
+              onboarding_form,
+              '''  useEffect(() => {
+    if (state.applicationId && !state.error) {
+      window.location.replace(freshDynamicRouteUrl(`/intermediaries/applications/${state.applicationId}/workflow?stage=documents&success=primary_details_saved`));
+    }
+  }, [state.applicationId, state.error]);''',
+              '''  useEffect(() => {
+    if (state.applicationId && !state.error) {
+      const destination = actionSubmitIntentRef.current === "exit"
+        ? "/customers/posp-misp"
+        : `/intermediaries/applications/${state.applicationId}/workflow?stage=documents&success=primary_details_saved`;
+      window.location.replace(freshDynamicRouteUrl(destination));
+    }
+  }, [state.applicationId, state.error]);''',
+          )
+          replace_once(
+              onboarding_form,
+              '''  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    invalidHandledRef.current = false;
+    if (validateForm(event.currentTarget)) return;
+    event.preventDefault();
+  }''',
+              '''  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    invalidHandledRef.current = false;
+    if (!validateForm(event.currentTarget)) {
+      event.preventDefault();
+      return;
+    }
+    const submitter = (event.nativeEvent as SubmitEvent).submitter;
+    actionSubmitIntentRef.current = submitter instanceof HTMLButtonElement && submitter.value === "exit" ? "exit" : "documents";
+  }
+
+  function handleRouteSubmit(event: React.FormEvent<HTMLFormElement>) {
+    const submitter = (event.nativeEvent as SubmitEvent).submitter;
+    setRouteSubmitIntent(submitter instanceof HTMLButtonElement && submitter.value === "exit" ? "exit" : "documents");
+  }''',
+          )
+          replace_once(
+              onboarding_form,
+              'onSubmitCapture={submitPath ? undefined : handleSubmit}',
+              'onSubmitCapture={submitPath ? handleRouteSubmit : handleSubmit}',
+          )
+          old_footer = '''        <div className="sticky bottom-0 z-20 flex flex-col gap-2 border-t border-[#E2E8F0] bg-white/96 px-3 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5"><p className="text-[9.5px] text-[#64748B]">Stage 1 saves the application, queues the PAN check and opens Documents.</p>{submitPath ? <button type="submit" data-validation-mode="route-post-native-v7" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto">Save & check PAN</button> : <FormSubmitButton label="Save & check PAN" pendingLabel="Saving & opening Documents" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto" />}</div>'''
+          new_footer = '''        <div className="sticky bottom-0 z-20 flex flex-col gap-2 border-t border-[#E2E8F0] bg-white/96 px-3 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <p className="text-[9.5px] text-[#64748B]">Stage 1 saves the application, queues the PAN check and opens Documents.</p>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            {submitPath ? <>
+              <RouteSubmitButton intent="exit" activeIntent={routeSubmitIntent} label="Save & Exit" pendingLabel="Saving & exiting…" secondary />
+              <RouteSubmitButton intent="documents" activeIntent={routeSubmitIntent} label="Save & return to documents" pendingLabel="Saving & opening documents…" />
+            </> : <>
+              <FormSubmitButton name="submit_intent" value="exit" label="Save & Exit" pendingLabel="Saving & exiting…" className="w-full rounded-xl border border-[#CBD5E1] bg-white px-5 py-2.5 text-[11px] font-semibold text-[#334155] hover:border-[#94A3B8] hover:bg-[#F8FAFC] sm:w-auto" />
+              <FormSubmitButton name="submit_intent" value="documents" label="Save & return to documents" pendingLabel="Saving & opening documents…" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto" />
+            </>}
+          </div>
+        </div>'''
+          replace_once(onboarding_form, old_footer, new_footer)
+          replace_once(
+              onboarding_form,
+              "function PanInput({ label, name, compact = false, defaultValue, error, onBlur, onInput }:",
+              '''function RouteSubmitButton({ intent, activeIntent, label, pendingLabel, secondary = false }: { intent: "exit" | "documents"; activeIntent: "exit" | "documents" | null; label: string; pendingLabel: string; secondary?: boolean }) {
+  const isPending = activeIntent === intent;
+  return <button type="submit" name="submit_intent" value={intent} disabled={Boolean(activeIntent)} aria-busy={isPending} data-validation-mode="route-post-native-v7" className={`inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-[11px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#818CF8] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto ${secondary ? "border border-[#CBD5E1] bg-white text-[#334155] hover:border-[#94A3B8] hover:bg-[#F8FAFC]" : "bg-gradient-to-r from-[#635BFF] to-[#4285F4] text-white hover:brightness-110"}`}>
+    {isPending ? <InsureItButtonLoader label={pendingLabel} /> : label}
+  </button>;
+}
+
+function PanInput({ label, name, compact = false, defaultValue, error, onBlur, onInput }:''',
+          )
+
+          # Normal Add POSP/MISP route.
+          normal_route = "apps/web-portal/app/customers/posp-misp/new/submit/route.ts"
+          replace_once(
+              normal_route,
+              '  const partnerType = data.get("partner_type") === "misp" ? "misp" : "posp";\n',
+              '  const partnerType = data.get("partner_type") === "misp" ? "misp" : "posp";\n  const submitIntent = readSubmitIntent(data);\n',
+          )
+          replace_once(
+              normal_route,
+              '''    return NextResponse.redirect(
+      new URL(`/intermediaries/applications/${existingApplicationId}/workflow?stage=documents&success=documents_started`, request.url),
+      303,
+    );''',
+              '''    return NextResponse.redirect(
+      successDestination(request.url, existingApplicationId, submitIntent, "documents_started"),
+      303,
+    );''',
+          )
+          replace_once(
+              normal_route,
+              '''  return NextResponse.redirect(
+    new URL(`/intermediaries/applications/${result.applicationId}/workflow?stage=documents&success=primary_details_saved`, request.url),
+    303,
+  );
+}
+
+async function validateSubmissionScope''',
+              '''  return NextResponse.redirect(
+    successDestination(request.url, result.applicationId, submitIntent, "primary_details_saved"),
+    303,
+  );
+}
+
+function readSubmitIntent(data: FormData) {
+  return data.get("submit_intent") === "exit" ? "exit" as const : "documents" as const;
+}
+
+function successDestination(requestUrl: string, applicationId: string, intent: "exit" | "documents", success: string) {
+  return intent === "exit"
+    ? new URL("/customers/posp-misp", requestUrl)
+    : new URL(`/intermediaries/applications/${applicationId}/workflow?stage=documents&success=${success}`, requestUrl);
+}
+
+async function validateSubmissionScope''',
+          )
+
+          # Existing POSP/MISP route.
+          legacy_route = "apps/web-portal/app/customers/posp-misp/new/legacy-submit/route.ts"
+          replace_once(
+              legacy_route,
+              '  const partnerType = data.get("partner_type") === "misp" ? "misp" : "posp";\n',
+              '  const partnerType = data.get("partner_type") === "misp" ? "misp" : "posp";\n  const submitIntent = data.get("submit_intent") === "exit" ? "exit" : "documents";\n',
+          )
+          replace_once(
+              legacy_route,
+              '''  return NextResponse.redirect(new URL(`/intermediaries/applications/${result.applicationId}/workflow?stage=documents&success=primary_details_saved`, request.url), 303);
+}
+
+function preserveValues''',
+              '''  const destination = submitIntent === "exit"
+    ? new URL("/customers/posp-misp", request.url)
+    : new URL(`/intermediaries/applications/${result.applicationId}/workflow?stage=documents&success=primary_details_saved`, request.url);
+  return NextResponse.redirect(destination, 303);
+}
+
+function preserveValues''',
+          )
+
+          # Edit Details footer: same form and same validation for both actions.
+          editor = "apps/web-portal/app/customers/applications/posp-misp-application-editor.tsx"
+          old_editor_footer = '''      {editable && (showPrimary || showDocuments) ? <div className="sticky bottom-0 z-10 flex items-center justify-between gap-3 border-t border-[#DCE5EF] bg-white/95 px-5 py-3 backdrop-blur">{showDocuments ? <Link href={`/intermediaries/applications/${applicationId}/workflow?stage=primary`} className="rounded-xl border px-4 py-2.5 text-[10.5px] font-semibold">Back to Primary</Link> : <span />}<div className="text-right">{showDocuments && !documentsReady ? <p className="mb-1 text-[8.5px] font-semibold text-amber-700">Attach every mandatory document before saving.</p> : null}<FormSubmitButton label={showPrimary ? (workflowStage === "pre_iib" ? "Save primary details" : "Save & return to Documents") : "Save documents"} pendingLabel="Saving" /></div></div> : null}'''
+          new_editor_footer = '''      {editable && (showPrimary || showDocuments) ? <div className="sticky bottom-0 z-10 flex items-center justify-between gap-3 border-t border-[#DCE5EF] bg-white/95 px-5 py-3 backdrop-blur">{showDocuments ? <Link href={`/intermediaries/applications/${applicationId}/workflow?stage=primary`} className="rounded-xl border px-4 py-2.5 text-[10.5px] font-semibold">Back to Primary</Link> : <span />}<div className="text-right">{showDocuments && !documentsReady ? <p className="mb-1 text-[8.5px] font-semibold text-amber-700">Attach every mandatory document before saving.</p> : null}{showPrimary ? <div className="flex flex-col gap-2 sm:flex-row"><FormSubmitButton name="submit_intent" value="exit" label="Save & Exit" pendingLabel="Saving & exiting…" className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-2.5 text-[10.5px] font-semibold text-[#334155] hover:border-[#94A3B8] hover:bg-[#F8FAFC]" /><FormSubmitButton name="submit_intent" value="documents" label="Save & return to documents" pendingLabel="Saving & opening documents…" /></div> : <FormSubmitButton label="Save documents" pendingLabel="Saving" />}</div></div> : null}'''
+          replace_once(editor, old_editor_footer, new_editor_footer)
+
+          # Edit action: preserve all validation/persistence, branch only at final redirect.
+          edit_action = "apps/web-portal/app/customers/applications/intermediary-edit-actions.ts"
+          replace_once(
+              edit_action,
+              'type EditableApplication={id:string;requested_type:"posp"|"misp";status:string;partner_status:string|null;draft_data:Record<string,unknown>|null};',
+              'type EditableApplication={id:string;requested_type:"posp"|"misp";status:string;partner_status:string|null;draft_data:Record<string,unknown>|null;partner_record_id:string|null};\ntype PartnerReviewApplication={id:string;partner_record_id:string|null;draft_data:Record<string,unknown>|null};',
+          )
+          replace_once(
+              edit_action,
+              ' const applicationId=value(data,"application_id");if(!applicationId)redirect("/customers/posp-misp");const reviewer=await requireScopedPospMispManager(applicationId);',
+              ' const applicationId=value(data,"application_id");if(!applicationId)redirect("/customers/posp-misp");const submitIntent=value(data,"submit_intent")==="exit"?"exit":"documents";const reviewer=await requireScopedPospMispManager(applicationId);',
+          )
+          replace_once(
+              edit_action,
+              '.select("id,requested_type,status,partner_status,draft_data")',
+              '.select("id,requested_type,status,partner_status,draft_data,partner_record_id")',
+          )
+          replace_once(
+              edit_action,
+              ' revalidatePath(path(applicationId));revalidatePath(`/intermediaries/applications/${applicationId}`);redirectFresh(`${path(applicationId)}?success=primary_details_saved&stage=documents`);\n}\n\nasync function replaceDocument',
+              ''' revalidatePath(path(applicationId));revalidatePath(`/intermediaries/applications/${applicationId}`);
+ if(submitIntent==="exit"){
+  const partnerApplicationId=await resolvePartnerReviewApplicationId(admin,application);
+  revalidatePath(`/intermediaries/applications/${partnerApplicationId}`);
+  redirectFresh(`/intermediaries/applications/${partnerApplicationId}?success=primary_details_saved`);
+ }
+ redirectFresh(`${path(applicationId)}?success=primary_details_saved&stage=documents`);
+}
+
+async function resolvePartnerReviewApplicationId(admin:ReturnType<typeof createSupabaseAdminClient>,application:EditableApplication){
+ if(accountContext(application.draft_data)==="partner")return application.id;
+ const parentApplicationId=plainText(application.draft_data?.parent_partner_application_id);
+ if(parentApplicationId){
+  const{data:parent}=await admin.from("intermediary_onboarding_applications").select("id,partner_record_id,draft_data").eq("id",parentApplicationId).maybeSingle<PartnerReviewApplication>();
+  if(parent&&accountContext(parent.draft_data)==="partner"&&(!application.partner_record_id||parent.partner_record_id===application.partner_record_id))return parent.id;
+ }
+ if(application.partner_record_id){
+  const{data:related}=await admin.from("intermediary_onboarding_applications").select("id,partner_record_id,draft_data").eq("partner_record_id",application.partner_record_id).returns<PartnerReviewApplication[]>();
+  const partner=(related??[]).find(item=>accountContext(item.draft_data)==="partner");
+  if(partner)return partner.id;
+ }
+ return application.id;
+}
+function accountContext(draft:Record<string,unknown>|null|undefined){const context=draft?.account_context;return context==="posp"||context==="misp"?context:"partner"}
+function plainText(input:unknown){return typeof input==="string"&&input.trim()?input.trim():null}
+
+async function replaceDocument''',
+          )
+
+          # Assertions for routing, validation and duplicate-loader behavior.
+          checks = {
+              onboarding_form: [
+                  'name="submit_intent" value="exit"',
+                  'label="Save & return to documents"',
+                  'onSubmitCapture={submitPath ? handleRouteSubmit : handleSubmit}',
+              ],
+              normal_route: ['successDestination(request.url, result.applicationId, submitIntent'],
+              legacy_route: ['submitIntent === "exit"'],
+              editor: ['name="submit_intent" value="exit"', 'label="Save & return to documents"'],
+              edit_action: ['resolvePartnerReviewApplicationId', 'parent_partner_application_id', 'partner_record_id'],
+              submit_button: ['isCurrentSubmission', 'data?.get(name) === value'],
+          }
+          for path, needles in checks.items():
+              text = Path(path).read_text()
+              for needle in needles:
+                  if needle not in text:
+                      raise SystemExit(f"Missing required Save and Exit assertion in {path}: {needle}")
+
+          print("Intermediary Save and Exit patch applied successfully.")
+          PY
+
+      - name: Install dependencies
+        run: npm ci || (sleep 10 && npm ci)
+
+      - name: Lint web portal
+        run: npm run lint:web
+
+      - name: Typecheck web portal
+        run: npm run typecheck:web
+
+      - name: Build web portal
+        run: npm run build:web
+
+      - name: Commit validated application changes
+        run: |
+          rm .github/workflows/temporary-intermediary-save-exit-validation.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add \
+            apps/web-portal/components/form-submit-button.tsx \
+            apps/web-portal/app/customers/posp-misp/posp-misp-onboarding-form.tsx \
+            apps/web-portal/app/customers/posp-misp/new/submit/route.ts \
+            apps/web-portal/app/customers/posp-misp/new/legacy-submit/route.ts \
+            apps/web-portal/app/customers/applications/posp-misp-application-editor.tsx \
+            apps/web-portal/app/customers/applications/intermediary-edit-actions.ts \
+            .github/workflows/temporary-intermediary-save-exit-validation.yml
+          git commit -m "Add validated Save and Exit actions"
+          git push origin HEAD:${{ github.head_ref }}
