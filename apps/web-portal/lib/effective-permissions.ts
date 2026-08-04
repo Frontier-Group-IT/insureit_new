@@ -25,3 +25,14 @@ export async function hasAnyEffectiveCapability(
   }
   return false;
 }
+
+export async function getEffectivePermissionAccessMap(
+  profile: { id?: string | null; role?: string | null } | null | undefined,
+): Promise<Partial<Record<Capability, PermissionAccess>>> {
+  if (!profile?.id || !isAppRole(profile.role)) return {};
+  const entries = await Promise.all(permissionDefinitions.map(async ({ capability }) => {
+    const permission = await getEffectivePermission(profile.id!, profile.role as import("@/lib/roles").AppRole, capability);
+    return [capability, permission.access] as const;
+  }));
+  return Object.fromEntries(entries) as Partial<Record<Capability, PermissionAccess>>;
+}

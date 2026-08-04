@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Bell } from "lucide-react";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { internalLaunchHome, isIntermediaryOnlyLaunch } from "@/lib/launch-scope";
-import { hasCapability } from "@/lib/roles";
+import { getEffectivePermissionAccessMap } from "@/lib/effective-permissions";
 import { UserMenu } from "@/components/user-menu";
 import { HistoryBackButton } from "@/components/history-back-button";
 import { AppNavigation } from "@/components/claim-manager/app-navigation";
@@ -22,25 +22,27 @@ export async function ClaimManagerShell({ title, backHref = internalLaunchHome, 
   const accessToken = await getServerAccessToken();
   const { user, profile } = await getAuthenticatedProfile(accessToken);
   const role = profile?.role;
+  const permissionAccess = await getEffectivePermissionAccessMap(profile);
+  const canViewNotifications = (permissionAccess.view_notifications ?? "none") !== "none";
 
   return (
     <div className="min-h-screen text-[#10213D]">
       <Suspense fallback={<div className="fixed inset-y-0 left-0 hidden w-[268px] bg-[#111A35] lg:block" />}>
-        <AppNavigation activeNav={activeNav} role={role} />
+        <AppNavigation activeNav={activeNav} role={role} permissionAccess={permissionAccess} />
       </Suspense>
 
       <div className="lg:pl-[268px]">
         <header className="sticky top-0 z-40 border-b border-[#476184]/35 bg-[linear-gradient(110deg,rgba(188,203,224,0.88),rgba(203,215,232,0.82),rgba(230,236,245,0.72))] shadow-[0_12px_36px_rgba(18,40,75,0.14)] backdrop-blur-2xl supports-[backdrop-filter]:bg-[linear-gradient(110deg,rgba(167,187,215,0.74),rgba(198,212,231,0.68),rgba(226,234,245,0.60))]">
           <div className="flex min-h-[66px] items-center justify-between gap-2 px-2.5 py-2 sm:px-4 lg:px-6">
             <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-              <MobileNavigation role={role} />
+              <MobileNavigation role={role} permissionAccess={permissionAccess} />
               <div className="hidden sm:block"><HistoryBackButton fallbackHref={backHref} /></div>
               <div className="hidden h-7 w-px bg-gradient-to-b from-transparent via-[#526C91]/60 to-transparent sm:block" />
               <div className="min-w-0 flex-1"><HeaderRouteRail title={title} /></div>
             </div>
 
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-              {!isIntermediaryOnlyLaunch && hasCapability(role,"view_notifications") ? <Link href="/notifications" aria-label="Notifications" className="relative grid h-11 w-11 place-items-center rounded-2xl border border-white/55 bg-white/52 text-[#183456] shadow-[0_8px_24px_rgba(28,39,68,.10)] backdrop-blur-xl hover:border-[#7D91B4] hover:text-[#6759ff]">
+              {!isIntermediaryOnlyLaunch && canViewNotifications ? <Link href="/notifications" aria-label="Notifications" className="relative grid h-11 w-11 place-items-center rounded-2xl border border-white/55 bg-white/52 text-[#183456] shadow-[0_8px_24px_rgba(28,39,68,.10)] backdrop-blur-xl hover:border-[#7D91B4] hover:text-[#6759ff]">
                 <Bell className="h-[18px] w-[18px]" />
                 <span className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-[#ff6f61] ring-2 ring-white" />
               </Link> : null}
@@ -56,7 +58,7 @@ export async function ClaimManagerShell({ title, backHref = internalLaunchHome, 
         </main>
       </div>
 
-      <MobileBottomNavigation role={role} />
+      <MobileBottomNavigation role={role} permissionAccess={permissionAccess} />
     </div>
   );
 }

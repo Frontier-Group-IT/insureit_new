@@ -5,7 +5,7 @@ import { DataError } from "@/components/record-list";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { getAccessibleIntermediaryApplicationIds } from "@/lib/employee-access-scope";
 import { requirePospMispManager } from "@/lib/master-data-server";
-import { hasCapability } from "@/lib/roles";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
 
 type QueueRow = { id:string; partner_type:"posp"|"misp"; source:string; status:string; applicant_phone:string|null; applicant_name:string|null; city:string|null; external_onboarding_id:string|null; document_count:number; age_days:number; updated_at:string; total_count:number };
 type QueueApplication = { id:string; draft_data:Record<string,unknown>|null; partner_status:string|null; registration_status:string|null; final_type:string|null };
@@ -36,8 +36,8 @@ export default async function PospMispPage({searchParams}:{searchParams:Promise<
  const safePage=Math.min(page,totalPages);
  const rows=allowedRows.slice((safePage-1)*PAGE_SIZE,safePage*PAGE_SIZE);
  const counts=allowedRows.reduce((summary,row)=>{summary[row.status]=(summary[row.status]??0)+1;return summary},{} as Record<string,number>);
- const canCreate=hasCapability(profile.role,"create_intermediary_application");
- const canReview=hasCapability(profile.role,"review_intermediary_application");
+ const canCreate=await hasEffectiveCapability(profile,"create_intermediary_application","edit");
+ const canReview=await hasEffectiveCapability(profile,"review_intermediary_application","edit");
  const actionButtonClass="inline-flex min-h-10 items-center justify-center rounded-xl border border-white bg-white px-3.5 py-2 text-[10.5px] font-semibold text-[#0F2A55] shadow-[0_8px_20px_rgba(7,29,73,0.12)] transition hover:-translate-y-0.5 hover:border-[#B8C7DE] hover:bg-[#F3F7FC] hover:shadow-[0_12px_26px_rgba(7,29,73,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80";
  const loadError=error||applicationsError;
  return <AppShell title="Intermediary Onboarding"><div className="mx-auto max-w-[1480px] space-y-4 pb-5">

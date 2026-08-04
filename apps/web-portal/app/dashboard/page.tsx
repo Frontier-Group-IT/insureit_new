@@ -23,7 +23,7 @@ import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shel
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { getAccessibleIntermediaryApplicationIds } from "@/lib/employee-access-scope";
 import { getOperationsDashboardData, type OperationsDashboardData } from "@/lib/operations-dashboard";
-import { hasCapability } from "@/lib/roles";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type Metric = { label: string; value: number; supporting: string; href: string; icon: LucideIcon; gradient: string; glow: string };
@@ -84,8 +84,8 @@ export default async function DashboardPage() {
   ].filter(Boolean) as string[];
 
   const displayName = firstName(profile?.full_name) || "Operations Team";
-  const canCreateCustomer = hasCapability(profile?.role, "manage_customers");
-  const canReviewKyc = hasCapability(profile?.role, "review_kyc");
+  const canCreateCustomer = await hasEffectiveCapability(profile, "manage_customers", "edit");
+  const canReviewKyc = await hasEffectiveCapability(profile, "review_kyc", "edit");
   const showCustomerActions = canCreateCustomer || canReviewKyc;
 
   const metrics: Metric[] = [
