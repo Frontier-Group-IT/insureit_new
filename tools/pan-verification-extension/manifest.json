@@ -1,13 +1,12 @@
 {
   "manifest_version": 3,
   "name": "IIB POS PAN Checker - N.M.",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Reliably checks queued InsureIt POSP/MISP PAN numbers in the authorised IIB POS portal session.",
   "permissions": ["storage", "tabs", "alarms", "scripting", "webNavigation", "downloads"],
   "host_permissions": [
     "https://pos.iib.gov.in/*",
-    "https://*.vercel.app/*",
-    "http://localhost:3000/*"
+    "https://*.vercel.app/*"
   ],
   "background": {
     "service_worker": "service-worker.js"

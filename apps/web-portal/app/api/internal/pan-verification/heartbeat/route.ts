@@ -9,29 +9,33 @@ export async function POST(request: NextRequest) {
   if (unauthorized) return unauthorized;
 
   const body = await request.json().catch(() => ({})) as {
-    limit?: number;
-    device?: string;
+    jobIds?: string[];
     workerSessionId?: string;
+    device?: string;
   };
-  const limit = Math.max(1, Math.min(Number(body.limit) || 3, 10));
-  const device = clean(body.device, 120);
   const workerSessionId = clean(body.workerSessionId, 160);
+  const device = clean(body.device, 120);
+  const jobIds = Array.isArray(body.jobIds)
+    ? body.jobIds.filter((value): value is string => typeof value === "string").slice(0, 10)
+    : [];
+
   if (!workerSessionId) return NextResponse.json({ error: "worker_session_required" }, { status: 400 });
+  if (!jobIds.length) return NextResponse.json({ ok: true, jobs: [] });
 
   const admin = createSupabaseAdminClient();
-  const { data, error } = await admin.rpc("claim_pan_verification_jobs", {
-    p_limit: limit,
-    p_worker_device: device,
+  const { data, error } = await admin.rpc("heartbeat_pan_verification_jobs", {
+    p_job_ids: jobIds,
     p_worker_session_id: workerSessionId,
+    p_worker_device: device,
     p_lease_minutes: 5,
   });
 
   if (error) {
-    console.error("PAN verification claim failed", error);
-    return NextResponse.json({ error: "claim_failed" }, { status: 500 });
+    console.error("PAN verification heartbeat failed", error);
+    return NextResponse.json({ error: "heartbeat_failed" }, { status: 500 });
   }
 
-  return NextResponse.json({ jobs: Array.isArray(data) ? data : [] });
+  return NextResponse.json({ ok: true, jobs: Array.isArray(data) ? data : [] });
 }
 
 function clean(value: unknown, maxLength: number) {
