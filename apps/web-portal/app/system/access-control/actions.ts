@@ -17,6 +17,20 @@ async function requirePermissionAdministrator() {
   return profile;
 }
 
+function safeReturnPath(value: string) {
+  return value.startsWith("/system/access-control") ? value : "/system/access-control";
+}
+
+function redirectWithMessage(returnTo: string, key: "success" | "error", message: string): never {
+  const safePath = safeReturnPath(returnTo);
+  const [pathname, query = ""] = safePath.split("?", 2);
+  const params = new URLSearchParams(query);
+  params.delete("success");
+  params.delete("error");
+  params.set(key, message);
+  redirect(`${pathname}?${params.toString()}`);
+}
+
 export async function saveEmployeePermissionOverride(formData: FormData) {
   const actor = await requirePermissionAdministrator();
   const profileId = String(formData.get("profile_id") ?? "");
@@ -25,37 +39,56 @@ export async function saveEmployeePermissionOverride(formData: FormData) {
   const scope = String(formData.get("scope_type") ?? "inherit") as PermissionScope;
   const reason = String(formData.get("reason") ?? "").trim();
   const expiresAt = String(formData.get("expires_at") ?? "").trim() || null;
-  const returnTo = String(formData.get("return_to") ?? "/system/access-control");
+  const returnTo = safeReturnPath(String(formData.get("return_to") ?? "/system/access-control"));
 
-  if (!profileId || !permissionDefinitions.some((item) => item.capability === capability)) redirect(`${returnTo}?error=${encodeURIComponent("Invalid permission selection")}`);
-  if (!allowedAccess.has(access) || !allowedScope.has(scope)) redirect(`${returnTo}?error=${encodeURIComponent("Invalid access configuration")}`);
-  if (!reason || reason.length < 5) redirect(`${returnTo}?error=${encodeURIComponent("Please enter a clear reason for the change")}`);
-  if (profileId === actor.id && (capability === "manage_users" || capability === "manage_system") && access === "none") redirect(`${returnTo}?error=${encodeURIComponent("You cannot remove your own critical administration access")}`);
+  if (!profileId || !permissionDefinitions.some((item) => item.capability === capability)) redirectWithMessage(returnTo, "error", "Invalid permission selection");
+  if (!allowedAccess.has(access) || !allowedScope.has(scope)) redirectWithMessage(returnTo, "error", "Invalid access configuration");
+  if (!reason || reason.length < 5) redirectWithMessage(returnTo, "error", "Please enter a clear reason for the change");
+  if (profileId === actor.id && (capability === "manage_users" || capability === "manage_system") && access === "none") redirectWithMessage(returnTo, "error", "You cannot remove your own critical administration access");
 
   const admin = createSupabaseAdminClient();
-  const { data: target } = await admin.from("profiles").select("id,role,is_active").eq("id", profileId).maybeSingle();
-  if (!target?.id || !target.is_active || !isAppRole(target.role)) redirect(`${returnTo}?error=${encodeURIComponent("The selected active portal user could not be found")}`);
+  const { data: target, error: targetError } = await admin.from("profiles").select("id,role,is_active").eq("id", profileId).maybeSingle();
+  if (targetError || !target?.id || !target.is_active || !isAppRole(target.role)) redirectWithMessage(returnTo, "error", "The selected active portal user could not be found");
 
-  const { data: existing } = await admin.from("employee_permission_overrides").select("access_level,scope_type").eq("profile_id", profileId).eq("capability", capability).maybeSingle();
+  const { data: existing, error: existingError } = await admin
+    .from("employee_permission_overrides")
+    .select("access_level,scope_type")
+    .eq("profile_id", profileId)
+    .eq("capability", capability)
+    .maybeSingle();
+  if (existingError) redirectWithMessage(returnTo, "error", existingError.message);
 
   if (access === "inherit" && scope === "inherit") {
-    await admin.from("employee_permission_overrides").delete().eq("profile_id", profileId).eq("capability", capability);
+    const { error: deleteError } = await admin
+      .from("employee_permission_overrides")
+      .delete()
+      .eq("profile_id", profileId)
+      .eq("capability", capability);
+    if (deleteError) redirectWithMessage(returnTo, "error", deleteError.message);
   } else {
-    const { error } = await admin.from("employee_permission_overrides").upsert({
-      profile_id: profileId,
-      capability,
-      access_level: access,
-      scope_type: scope,
-      reason,
-      expires_at: expiresAt,
-      created_by: actor.id,
-      updated_by: actor.id,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "profile_id,capability" });
-    if (error) redirect(`${returnTo}?error=${encodeURIComponent(error.message)}`);
+    const { data: saved, error: saveError } = await admin
+      .from("employee_permission_overrides")
+      .upsert({
+        profile_id: profileId,
+        capability,
+        access_level: access,
+        scope_type: scope,
+        reason,
+        expires_at: expiresAt,
+        created_by: actor.id,
+        updated_by: actor.id,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "profile_id,capability" })
+      .select("profile_id,capability,access_level,scope_type")
+      .single();
+
+    if (saveError) redirectWithMessage(returnTo, "error", saveError.message);
+    if (!saved || saved.access_level !== access || saved.scope_type !== scope) {
+      redirectWithMessage(returnTo, "error", "The permission could not be verified after saving. Please try again.");
+    }
   }
 
-  await admin.from("permission_change_logs").insert({
+  const { error: auditError } = await admin.from("permission_change_logs").insert({
     changed_by_profile_id: actor.id,
     target_profile_id: profileId,
     target_role: target.role,
@@ -67,22 +100,29 @@ export async function saveEmployeePermissionOverride(formData: FormData) {
     change_type: access === "inherit" && scope === "inherit" ? "employee_reset" : "employee_override",
     reason,
   });
+  if (auditError) redirectWithMessage(returnTo, "error", `Permission saved, but audit logging failed: ${auditError.message}`);
 
   revalidatePath("/system/access-control");
   revalidatePath(`/system/access-control/employees/${profileId}`);
-  redirect(`${returnTo}?success=${encodeURIComponent("Permission updated")}`);
+  redirectWithMessage(returnTo, "success", "Permission updated");
 }
 
 export async function resetEmployeePermissionOverrides(formData: FormData) {
   const actor = await requirePermissionAdministrator();
   const profileId = String(formData.get("profile_id") ?? "");
   const reason = String(formData.get("reason") ?? "").trim();
-  if (!profileId || reason.length < 5) redirect(`/system/access-control/employees/${profileId}?error=${encodeURIComponent("Please enter a clear reset reason")}`);
+  const returnTo = `/system/access-control/employees/${profileId}`;
+  if (!profileId || reason.length < 5) redirectWithMessage(returnTo, "error", "Please enter a clear reset reason");
 
   const admin = createSupabaseAdminClient();
-  const { data: rows } = await admin.from("employee_permission_overrides").select("capability,access_level,scope_type").eq("profile_id", profileId);
+  const { data: rows, error: rowsError } = await admin
+    .from("employee_permission_overrides")
+    .select("capability,access_level,scope_type")
+    .eq("profile_id", profileId);
+  if (rowsError) redirectWithMessage(returnTo, "error", rowsError.message);
+
   if (rows?.length) {
-    await admin.from("permission_change_logs").insert(rows.map((row) => ({
+    const { error: auditError } = await admin.from("permission_change_logs").insert(rows.map((row) => ({
       changed_by_profile_id: actor.id,
       target_profile_id: profileId,
       capability: row.capability,
@@ -93,9 +133,13 @@ export async function resetEmployeePermissionOverrides(formData: FormData) {
       change_type: "employee_reset",
       reason,
     })));
+    if (auditError) redirectWithMessage(returnTo, "error", auditError.message);
   }
-  await admin.from("employee_permission_overrides").delete().eq("profile_id", profileId);
+
+  const { error: deleteError } = await admin.from("employee_permission_overrides").delete().eq("profile_id", profileId);
+  if (deleteError) redirectWithMessage(returnTo, "error", deleteError.message);
+
   revalidatePath("/system/access-control");
-  revalidatePath(`/system/access-control/employees/${profileId}`);
-  redirect(`/system/access-control/employees/${profileId}?success=${encodeURIComponent("Custom permissions reset")}`);
+  revalidatePath(returnTo);
+  redirectWithMessage(returnTo, "success", "Custom permissions reset");
 }
