@@ -35,7 +35,9 @@ export type PolicyRcReview = {
   normsType: string | null;
   isCommercial: string | null;
   chassisNumber: string | null;
+  chassisMasked: string | null;
   engineNumber: string | null;
+  engineMasked: string | null;
   financed: string | null;
   financerName: string | null;
   insuranceCompany: string | null;
@@ -98,12 +100,21 @@ function stateFromRto(value: string | null) {
   return parts.length > 1 ? parts.at(-1) ?? null : null;
 }
 
+function maskIdentifier(value: string | null) {
+  if (!value) return null;
+  const normalized = value.trim();
+  if (normalized.length <= 4) return normalized;
+  return `${"*".repeat(Math.max(4, normalized.length - 4))}${normalized.slice(-4)}`;
+}
+
 export async function lookupPolicyRegistrationRc(registrationNumber: string): Promise<PolicyRcLookupResult> {
   try {
     const response = await lookupAuthbridgeRc(registrationNumber);
     const fields = flatten(response.data);
     const rtoName = pick(fields, "RTO", "rto_name", "registering_authority");
     const manufactureDate = pick(fields, "Manufacture Date", "manufacturing_date", "manufacturing_month_year");
+    const chassisNumber = pick(fields, "Chassis Number", "chassis_no", "chassis_number");
+    const engineNumber = pick(fields, "Engine Number", "engine_no", "engine_number");
     const normalizedRegistration = normalizeVehicleRegistrationNumber(
       pick(fields, "Registration Number", "Vehicle Number", "registration_no", "vehicle_number") ?? response.registrationNumber ?? registrationNumber,
     );
@@ -140,8 +151,10 @@ export async function lookupPolicyRegistrationRc(registrationNumber: string): Pr
         color: pick(fields, "Color", "vehicle_color"),
         normsType: pick(fields, "Norms Type", "emission_norms"),
         isCommercial: pick(fields, "Is Commercial", "is_commercial"),
-        chassisNumber: pick(fields, "Chassis Number", "chassis_no", "chassis_number"),
-        engineNumber: pick(fields, "Engine Number", "engine_no", "engine_number"),
+        chassisNumber,
+        chassisMasked: maskIdentifier(chassisNumber),
+        engineNumber,
+        engineMasked: maskIdentifier(engineNumber),
         financed: pick(fields, "Financed", "is_financed"),
         financerName: pick(fields, "Financer Name", "financier_name"),
         insuranceCompany: pick(fields, "Insurance Company", "insurance_company"),
