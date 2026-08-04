@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-04T14:38:00+05:30",
+  "deploy_requested_at": "2026-08-04T22:48:51+05:30",
   "requested_by": "Nishant Mishra",
   "source": "ChatGPT explicit deploy command",
-  "source_commit": "b3bf3f85fb897c00e9d47b2f6ee17c43e5ba4d53",
-  "release_scope": "Deploy the sidebar section-collapse correction from PR #166 together with the PAN-verification worker reliability release from PR #163 that was already merged into main after the previous production source. Expanded top-level sidebar sections can now contract when clicked again while active styling and route behavior remain unchanged.",
-  "verification": "PR #166 passed the focused toggle assertion, npm ci, npm run lint:web, npm run typecheck:web, and npm run build:web. PR #163 was already merged into main and its Vercel preview reached Ready. Vercel production status must reach Ready before claiming deployment success.",
+  "source_commit": "a243ab74cdd5b827b45903f2a6e2bf8a64c74c32",
+  "release_scope": "Deploy the intermediary Partner ID and POSP/MISP ID success popup redesign. The shared popup now uses a compact production-grade ID panel with issued/context chips, structured ID display, copy action, workflow metadata and preserved existing action routing.",
+  "verification": "Commit a243ab74cdd5b827b45903f2a6e2bf8a64c74c32 passed local typecheck, lint and production build. Lint/build reported only existing unrelated unused-import warnings in app/actions.ts and app/customers/posp-misp/import/bulk-upload-v2-actions.ts.",
   "instructions": "Update this file only after the user explicitly says deploy now or finish and deploy. Ordinary code commits must not modify it."
 }
