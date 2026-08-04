@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-04T12:54:00+05:30",
+  "deploy_requested_at": "2026-08-04T13:42:00+05:30",
   "requested_by": "Nishant Mishra",
   "source": "ChatGPT explicit deploy command",
-  "source_commit": "b56361d0fd3934ca756a34c1d953bb1053b293cd",
-  "release_scope": "Deploy the compact Partner Application Review next-step redesign: remove the duplicate Continue documents action from the review header, replace the oversized Next step card with a compact primary action bar, and show accurate activation guidance covering Aadhaar, PAN, bank proof, photograph, and the conditional GST certificate.",
-  "verification": "PR #160 validation run 30887380829 and follow-up PR #162 validation run 30888179522 passed npm ci, npm run lint:web, npm run typecheck:web, and npm run build:web. Vercel deployment status must reach Ready before claiming production success.",
+  "source_commit": "146d22959e898186bacd46a5f247c4f78237a765",
+  "release_scope": "Deploy the Intermediatory navigation update that removes the Overview submenu entry from the shared desktop and mobile menu configuration while keeping the /intermediaries route available.",
+  "verification": "PR #164 validation run 30889911818 passed the focused menu assertion, npm ci, npm run lint:web, npm run typecheck:web, and npm run build:web. Vercel deployment status must reach Ready before claiming production success.",
   "instructions": "Update this file only after the user explicitly says deploy now or finish and deploy. Ordinary code commits must not modify it."
 }
