@@ -7,12 +7,13 @@ Before doing any work in this repository, read all of the following:
 - `docs/INSUREIT_PROJECT_CONTEXT.md`
 - `docs/CURRENT_CHAT_HANDOFF.md`
 - `docs/ICALL_AWS_GATEWAY_HANDOFF.md`
+- `docs/AUTHBRIDGE_RC_HANDOFF.md`
 
 Do this at the beginning of every new ChatGPT/Codex session connected to the repository. Do not ask the user to repeat information already recorded in those files.
 
-Treat `docs/INSUREIT_PROJECT_CONTEXT.md` as the durable technical and business-rule source of truth. Treat `docs/CURRENT_CHAT_HANDOFF.md` as the current conversation continuation state, including active audit findings, selected work, implementation boundaries, and unresolved risks. Treat `docs/ICALL_AWS_GATEWAY_HANDOFF.md` as the source of truth for the iCall APIs, AWS Lightsail fixed-IP gateway, Vercel environment, SSO/iframe integration, CSP history, cookie issue, verified state, and immediate continuation steps.
+Treat `docs/INSUREIT_PROJECT_CONTEXT.md` as the durable technical and business-rule source of truth. Treat `docs/CURRENT_CHAT_HANDOFF.md` as the current conversation continuation state, including active audit findings, selected work, implementation boundaries, and unresolved risks. Treat `docs/ICALL_AWS_GATEWAY_HANDOFF.md` as the source of truth for the iCall APIs, AWS Lightsail fixed-IP gateway, Vercel environment, SSO/iframe integration, CSP history, cookie issue, verified state, and immediate continuation steps. Treat `docs/AUTHBRIDGE_RC_HANDOFF.md` as the source of truth for AuthBridge Detailed RC service 372, its three-step encryption/lookup/decryption contract, AWS gateway route, verified UAT state, security incident, and Policy Onboarding vehicle-registration continuation work.
 
-Update the durable project context after material workflow, schema, constraint, migration or architecture changes. Update or consolidate the current chat handoff after active work is materially implemented, blocked or verified. Update the iCall gateway handoff after material iCall API, gateway, domain, IP allowlist, CSP, cookie, SSO, iframe, UAT or production changes.
+Update the durable project context after material workflow, schema, constraint, migration or architecture changes. Update or consolidate the current chat handoff after active work is materially implemented, blocked or verified. Update the iCall gateway handoff after material iCall API, gateway, domain, IP allowlist, CSP, cookie, SSO, iframe, UAT or production changes. Update the AuthBridge handoff after material provider-contract, gateway, field-mapping, Policy Onboarding, UAT, credential, security, or production changes.
 
 Never store secrets, API keys, passwords, tokens, cookies, private keys, full sensitive identity values or MCP credentials in repository context files.
 
@@ -80,6 +81,7 @@ Do not preserve a long failure chronology. Do not state “no changes were made�
 - `docs/INSUREIT_PROJECT_CONTEXT.md` — durable current business rules, architecture, schema constraints and verified system lessons.
 - `docs/CURRENT_CHAT_HANDOFF.md` — only the active continuation state needed by the next session. Rewrite/consolidate stale sections instead of continuously appending.
 - `docs/ICALL_AWS_GATEWAY_HANDOFF.md` — iCall/gateway-specific verified state, blockers and continuation actions.
+- `docs/AUTHBRIDGE_RC_HANDOFF.md` — AuthBridge Detailed RC provider contract, gateway state, Policy Onboarding integration boundaries, security requirements and verification evidence.
 - `docs/PRODUCTION_READINESS_AUDIT.md` — current source-backed production risks and remediation order.
 - `docs/PRODUCTION_RELEASE_CHECKLIST.md` — reusable evidence-based release gates.
 
@@ -107,6 +109,28 @@ If the answer to either of the first two questions is no, do not save it.
 - A successful GitHub Actions hook request proves only that Vercel accepted the request. Check the Vercel build/deployment result before claiming production success.
 - A committed migration is not proof that it has been applied in Supabase.
 - Do not claim build, deployment, migration or live workflow success without direct evidence.
+
+## AuthBridge Detailed RC integration protocol
+
+When modifying Policy Onboarding, vehicle registration inputs, vehicle master data, motor-policy forms, RC lookup, or AuthBridge integration code, read and follow:
+
+- `docs/AUTHBRIDGE_RC_HANDOFF.md`
+- `apps/web-portal/lib/authbridge-rc-api.ts`
+- `infrastructure/icall-gateway/server.js`
+
+Mandatory safeguards:
+
+- Keep AuthBridge calls server-side. Browser/client components must never call TruthScreen directly or receive the gateway relay secret.
+- Use the protected gateway route `POST /uat/authbridge/rc-verification` through the server-only client.
+- Never invent provider field names. Map only from a real sanitized decrypted response and the current canonical policy/vehicle schema.
+- Do not perform a lookup on every keystroke. Use an explicit fetch action or another controlled trigger to protect provider credits and avoid duplicate calls.
+- Show a loading state suitable for 5–8 second responses and a controlled timeout path up to 20 seconds.
+- Present returned details for review before applying them. Never silently overwrite manually entered or already-saved vehicle data.
+- Import only fields needed by the Policy Onboarding workflow. Avoid unnecessary owner personal data.
+- Do not log or commit decrypted responses, full addresses, phone numbers, chassis numbers, engine numbers, credentials, tokens or encrypted provider payloads.
+- Prefer normalized field-level storage. Do not store raw provider responses without an approved retention, access-control and masking design.
+- Treat successful gateway UAT as proof of the provider path only, not proof that the Policy Onboarding user journey is implemented, deployed or live.
+- The relay secret and iCall token exposed in a setup screenshot must be rotated before production use; never repeat or store the replacement values.
 
 ## Production readiness protocol
 
