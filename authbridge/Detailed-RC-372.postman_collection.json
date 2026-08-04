@@ -1,0 +1,113 @@
+{
+  "info": {
+    "_postman_id": "bf3d4a1d-c41a-4880-9c67-d78a4a624c62",
+    "name": "Detailed RC(372)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "21189711"
+  },
+  "item": [
+    {
+      "name": "Deatiled RC_encryption",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "username",
+            "value": "{{USERNAME}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n\"transID\": \"123456\",\r\n\"docType\": 372  ,\r\n\"docNumber\": \"HR46D1668\"\r\n}\t\t\t\t\t\t\t\t\t"
+        },
+        "url": {
+          "raw": "https://www.truthscreen.com/InstantSearch/encrypted_string",
+          "protocol": "https",
+          "host": [
+            "www",
+            "truthscreen",
+            "com"
+          ],
+          "path": [
+            "InstantSearch",
+            "encrypted_string"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Detailed RC_request",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "username",
+            "value": "{{USERNAME}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n\t\"requestData\":\"+u1o3P00ZMp6ROcXTn5pfzvYcNRxbXbKHritAzHQ/G+abrpZBk7w60/V5cDBVU9nnt6imaPq6oSA9aBrQk0uSKNLxNqh8mQ/AzjQEXiEIeHRvPbJ81PUz1llDd8OwoeHme3x8l8X7xNLH1mXbJJO2xhysNO2fW4mx98FZ/sfM1o=:dy97jdA3otwyDBiJ6rm0xA==\"\n\t\n}"
+        },
+        "url": {
+          "raw": "https://www.truthscreen.com/api/v2.2/utilitysearch",
+          "protocol": "https",
+          "host": [
+            "www",
+            "truthscreen",
+            "com"
+          ],
+          "path": [
+            "api",
+            "v2.2",
+            "utilitysearch"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Detailed RC_decryption",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "username",
+            "value": "{{USERNAME}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"responseData\":\"Y9bslRtsOh/RC+rlpNJJ4nURaQcS4EbOtDuKuzEDppSMIHIAfoAxJlJECS+rCIPkssE0ltw1Mf+2BthrUCQA9C4ihcvT8i0niwAeS2zCuY36hZ2WJdDFUBmcrR59CXXaNjZ6dMUkhFStGtEnTXjHZLfzzP/ZLyYrT5VTcaAwVMQ=:7/GITsWOQqsarEWi3H7alg==\"}"
+        },
+        "url": {
+          "raw": "https://www.truthscreen.com/InstantSearch/decrypt_encrypted_string",
+          "protocol": "https",
+          "host": [
+            "www",
+            "truthscreen",
+            "com"
+          ],
+          "path": [
+            "InstantSearch",
+            "decrypt_encrypted_string"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
