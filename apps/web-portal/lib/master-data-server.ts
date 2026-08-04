@@ -22,7 +22,7 @@ export async function getCustomerViewer(customerId: string) {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
   if (!profile?.id || !(await hasEffectiveCapability(profile, "view_customers"))) return null;
-  return await canAccessCustomer(profile.id, profile.role, customerId) ? profile : null;
+  return await canAccessCustomer(profile.id, profile.role, customerId, "view_customers") ? profile : null;
 }
 
 export async function requireCustomerViewer(customerId: string) {
@@ -35,7 +35,7 @@ export async function getCustomerManager(customerId: string) {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
   if (!profile?.id || !(await hasEffectiveCapability(profile, "manage_customers"))) return null;
-  return await canAccessCustomer(profile.id, profile.role, customerId) ? profile : null;
+  return await canAccessCustomer(profile.id, profile.role, customerId, "manage_customers") ? profile : null;
 }
 
 export async function requireCustomerManager(customerId: string) {
@@ -60,7 +60,7 @@ export async function getScopedPospMispManager(applicationId: string) {
   const profile = await getPospMispManager();
   if (!profile) return null;
 
-  const allowed = await canAccessIntermediaryApplication(profile.id, profile.role, applicationId);
+  const allowed = await canAccessIntermediaryApplication(profile.id, profile.role, applicationId, "review_intermediary_application");
   return allowed ? profile : null;
 }
 
@@ -82,7 +82,7 @@ export async function requireApplicationReviewer(applicationId: string) {
   ]);
   if (!canOpen) redirect("/access-denied");
 
-  const allowed = await canAccessIntermediaryApplication(profile.id, profile.role, applicationId);
+  const allowed = await canAccessIntermediaryApplication(profile.id, profile.role, applicationId, "view_intermediaries");
   if (!allowed) redirect("/access-denied");
   return profile;
 }
