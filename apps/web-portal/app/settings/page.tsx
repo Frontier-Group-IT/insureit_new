@@ -1,3 +1,4 @@
+import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import Link from "next/link";
 import { AppShell } from "@/components/shell";
