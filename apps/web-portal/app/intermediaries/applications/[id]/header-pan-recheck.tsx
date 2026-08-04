@@ -1,27 +1,21 @@
 import { FormSubmitButton } from "@/components/form-submit-button";
+import { resolveIibPanVerificationStatus, type IibPanVerificationJob } from "@/lib/iib-pan-verification-status";
 import { manuallyRecheckIibPan } from "./manual-pan-recheck-action";
 
-type Job = {
-  status: string;
-  result_code: string | null;
-  result_message: string | null;
-  last_error: string | null;
-};
-
-export function HeaderPanRecheck({ applicationId, pan, job }: { applicationId: string; pan: string | null; job: Job | null }) {
+export function HeaderPanRecheck({ applicationId, pan, job }: { applicationId: string; pan: string | null; job: IibPanVerificationJob | null }) {
   const validPan = Boolean(pan && /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan));
   const active = job?.status === "pending" || job?.status === "queued" || job?.status === "checking";
-  const status = statusText(job, validPan);
+  const status = validPan ? resolveIibPanVerificationStatus(job) : null;
 
   return (
     <div className="flex items-center gap-2">
-      <div className="min-w-[180px] rounded-xl border border-white/40 bg-white/10 px-3 py-2 text-white shadow-sm backdrop-blur-sm">
+      <div className="min-w-[180px] rounded-xl border border-white/40 bg-white/10 px-3 py-2 text-white shadow-sm backdrop-blur-sm" title={status?.detail ?? status?.label ?? "PAN not available"}>
         <div className="flex items-center gap-2">
-          <span className={`h-2 w-2 shrink-0 rounded-full ${status.dot}`} aria-hidden="true" />
+          <span className={`h-2 w-2 shrink-0 rounded-full ${status ? dotClass(status.code) : "bg-slate-400"}`} aria-hidden="true" />
           <div className="min-w-0">
-            <p className="text-[8px] font-semibold uppercase tracking-[.06em] text-white/60">IIB PAN</p>
+            <p className="text-[8px] font-semibold uppercase tracking-[.06em] text-white/60">IIB PAN status</p>
             <p className="truncate text-[10px] font-semibold">{maskPan(pan)}</p>
-            <p className="mt-0.5 truncate text-[8.5px] font-medium text-white/70">{status.label}</p>
+            <p className="mt-0.5 truncate text-[8.5px] font-medium text-white/70">{status?.label ?? "PAN not available"}</p>
           </div>
         </div>
       </div>
@@ -41,16 +35,13 @@ export function HeaderPanRecheck({ applicationId, pan, job }: { applicationId: s
   );
 }
 
-function statusText(job: Job | null, validPan: boolean) {
-  if (!validPan) return { label: "PAN not available", dot: "bg-slate-400" };
-  if (!job) return { label: "Not checked", dot: "bg-slate-400" };
-  if (job.status === "pending" || job.status === "queued") return { label: "Waiting in queue", dot: "bg-amber-300" };
-  if (job.status === "checking") return { label: "Checking now", dot: "bg-sky-300 animate-pulse" };
-  if (job.status === "not_found") return { label: "No IIB record found", dot: "bg-emerald-300" };
-  if (job.status === "matched") return { label: "Matching IIB record", dot: "bg-rose-300" };
-  if (job.status === "invalid") return { label: "Invalid PAN", dot: "bg-orange-300" };
-  if (job.status === "failed") return { label: job.last_error || "Check failed", dot: "bg-red-300" };
-  return { label: job.result_message || job.result_code || job.status.replaceAll("_", " "), dot: "bg-slate-300" };
+function dotClass(code: ReturnType<typeof resolveIibPanVerificationStatus>["code"]) {
+  if (code === "cleared") return "bg-emerald-300";
+  if (code === "matched" || code === "failed") return "bg-rose-300";
+  if (code === "queued") return "bg-amber-300";
+  if (code === "checking") return "bg-sky-300 animate-pulse";
+  if (code === "invalid") return "bg-orange-300";
+  return "bg-slate-300";
 }
 
 function RefreshIcon({ active }: { active: boolean }) {
