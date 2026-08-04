@@ -1,5 +1,5 @@
 import { addPolicy, createInsuranceCompany } from "@/app/master-data-form-actions";
-import { PolicyForm } from "@/components/policy-form";
+import { PolicyFormAuthbridge } from "@/components/policy-form-authbridge";
 import { AppShell } from "@/components/shell";
 import { requireMasterDataManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -31,7 +31,7 @@ export default async function NewPolicyPage() {
 
   return (
     <AppShell title="Add Policy">
-      <PolicyForm action={addPolicy} createInsurerAction={createInsuranceCompany} customers={customerOptions} vehicles={vehicleOptions} insurers={insurerOptions} submitLabel="Create Policy" />
+      <PolicyFormAuthbridge action={addPolicy} createInsurerAction={createInsuranceCompany} customers={customerOptions} vehicles={vehicleOptions} insurers={insurerOptions} submitLabel="Create Policy" />
     </AppShell>
   );
 }
