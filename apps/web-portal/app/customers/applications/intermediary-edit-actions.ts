@@ -22,13 +22,14 @@ const NAME=/^[A-Za-z ]+$/;
 const path=(id:string)=>`/intermediaries/applications/${id}/workflow`;
 
 type EditableProfile={id:string;partner_type:"posp"|"misp";workflow_stage:"pre_iib"|"iib_processing"|"training"|"completed";associate_employee_id:string|null;associate_profile_id:string|null;external_onboarding_id:string|null;bank_id:string|null;bank_name:string|null;aadhaar_last_four:string|null;aadhaar_hash:string|null;aadhaar_number_encrypted:string|null;dp_aadhaar_last_four:string|null;dp_aadhaar_hash:string|null;dp_aadhaar_number_encrypted:string|null};
-type EditableApplication={id:string;requested_type:"posp"|"misp";status:string;partner_status:string|null;draft_data:Record<string,unknown>|null};
+type EditableApplication={id:string;requested_type:"posp"|"misp";status:string;partner_status:string|null;draft_data:Record<string,unknown>|null;partner_record_id:string|null};
+type PartnerReviewApplication={id:string;partner_record_id:string|null;draft_data:Record<string,unknown>|null};
 
 export async function updateIntermediaryApplication(data:FormData){
- const applicationId=value(data,"application_id");if(!applicationId)redirect("/customers/posp-misp");const reviewer=await requireScopedPospMispManager(applicationId);if(!reviewer?.id)redirect("/customers/posp-misp");
+ const applicationId=value(data,"application_id");if(!applicationId)redirect("/customers/posp-misp");const submitIntent=value(data,"submit_intent")==="exit"?"exit":"documents";const reviewer=await requireScopedPospMispManager(applicationId);if(!reviewer?.id)redirect("/customers/posp-misp");
  const admin=createSupabaseAdminClient();
  const [{data:application},{data:profile}]=await Promise.all([
-  admin.from("intermediary_onboarding_applications").select("id,requested_type,status,partner_status,draft_data").eq("id",applicationId).maybeSingle<EditableApplication>(),
+  admin.from("intermediary_onboarding_applications").select("id,requested_type,status,partner_status,draft_data,partner_record_id").eq("id",applicationId).maybeSingle<EditableApplication>(),
   admin.from("posp_misp_onboarding_profiles").select("id,partner_type,workflow_stage,associate_employee_id,associate_profile_id,external_onboarding_id,bank_id,bank_name,aadhaar_last_four,aadhaar_hash,aadhaar_number_encrypted,dp_aadhaar_last_four,dp_aadhaar_hash,dp_aadhaar_number_encrypted").eq("application_id",applicationId).maybeSingle<EditableProfile>()
  ]);
  const activePartnerAccount=application?.partner_status==="active_partner";
@@ -87,8 +88,31 @@ export async function updateIntermediaryApplication(data:FormData){
   if(advanceError||!advanced)redirectFresh(`${path(applicationId)}?error=workflow_save_failed&stage=primary`);
   await admin.from("intermediary_onboarding_applications").update({final_type:type,registration_status:"documents_pending",updated_at:now}).eq("id",applicationId);
  }
- revalidatePath(path(applicationId));revalidatePath(`/intermediaries/applications/${applicationId}`);redirectFresh(`${path(applicationId)}?success=primary_details_saved&stage=documents`);
+ revalidatePath(path(applicationId));revalidatePath(`/intermediaries/applications/${applicationId}`);
+ if(submitIntent==="exit"){
+  const partnerApplicationId=await resolvePartnerReviewApplicationId(admin,application);
+  revalidatePath(`/intermediaries/applications/${partnerApplicationId}`);
+  redirectFresh(`/intermediaries/applications/${partnerApplicationId}?success=primary_details_saved`);
+ }
+ redirectFresh(`${path(applicationId)}?success=primary_details_saved&stage=documents`);
 }
+
+async function resolvePartnerReviewApplicationId(admin:ReturnType<typeof createSupabaseAdminClient>,application:EditableApplication){
+ if(accountContext(application.draft_data)==="partner")return application.id;
+ const parentApplicationId=plainText(application.draft_data?.parent_partner_application_id);
+ if(parentApplicationId){
+  const{data:parent}=await admin.from("intermediary_onboarding_applications").select("id,partner_record_id,draft_data").eq("id",parentApplicationId).maybeSingle<PartnerReviewApplication>();
+  if(parent&&accountContext(parent.draft_data)==="partner"&&(!application.partner_record_id||parent.partner_record_id===application.partner_record_id))return parent.id;
+ }
+ if(application.partner_record_id){
+  const{data:related}=await admin.from("intermediary_onboarding_applications").select("id,partner_record_id,draft_data").eq("partner_record_id",application.partner_record_id).returns<PartnerReviewApplication[]>();
+  const partner=(related??[]).find(item=>accountContext(item.draft_data)==="partner");
+  if(partner)return partner.id;
+ }
+ return application.id;
+}
+function accountContext(draft:Record<string,unknown>|null|undefined){const context=draft?.account_context;return context==="posp"||context==="misp"?context:"partner"}
+function plainText(input:unknown){return typeof input==="string"&&input.trim()?input.trim():null}
 
 async function replaceDocument(admin:ReturnType<typeof createSupabaseAdminClient>,applicationId:string,documentType:string,selected:File,uploadedBy:string){if(!ALLOWED_FILE_TYPES.has(selected.type)||selected.size>MAX_FILE_SIZE)redirectFresh(`${path(applicationId)}?error=posp_misp_document_invalid&stage=documents`);const{data:previous}=await admin.from("intermediary_onboarding_documents").select("storage_bucket,storage_path").eq("application_id",applicationId).eq("document_type",documentType).maybeSingle<{storage_bucket:string;storage_path:string}>();const extension=selected.type==="application/pdf"?"pdf":selected.type==="image/png"?"png":"jpg";const storagePath=`${applicationId}/intermediary/${documentType}/${randomUUID()}.${extension}`;const{error:uploadError}=await admin.storage.from(DOCUMENT_BUCKET).upload(storagePath,new Uint8Array(await selected.arrayBuffer()),{contentType:selected.type,upsert:false});if(uploadError)redirectFresh(`${path(applicationId)}?error=posp_misp_document_failed&stage=documents`);const{error:recordError}=await admin.from("intermediary_onboarding_documents").upsert({application_id:applicationId,document_type:documentType,file_name:selected.name,storage_bucket:DOCUMENT_BUCKET,storage_path:storagePath,mime_type:selected.type,file_size:selected.size,verification_status:"pending",uploaded_by:uploadedBy},{onConflict:"application_id,document_type"});if(recordError){await admin.storage.from(DOCUMENT_BUCKET).remove([storagePath]);redirectFresh(`${path(applicationId)}?error=posp_misp_document_failed&stage=documents`)}if(previous?.storage_path&&previous.storage_path!==storagePath)await removeStorageObjectIfUnreferenced(admin,previous.storage_bucket,previous.storage_path)}
 async function removeStorageObjectIfUnreferenced(admin:ReturnType<typeof createSupabaseAdminClient>,bucket:string,storagePath:string){const{count}=await admin.from("intermediary_onboarding_documents").select("id",{count:"exact",head:true}).eq("storage_bucket",bucket).eq("storage_path",storagePath);if(!count)await admin.storage.from(bucket).remove([storagePath])}

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useRef, type ReactNode } from "react";
+import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 import { FormSubmitButton } from "@/components/form-submit-button";
+import { InsureItButtonLoader } from "@/components/loading/insureit-loader";
 import { freshDynamicRouteUrl } from "@/components/fresh-dynamic-route-navigation";
 import { IndianDateField } from "@/components/indian-date-field";
 import { inlineFieldErrorId } from "@/components/inline-field-validation";
@@ -41,12 +42,17 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
   const formRef = useRef<HTMLFormElement>(null);
   const touchedRef = useRef(new Set<string>());
   const invalidHandledRef = useRef(false);
+  const actionSubmitIntentRef = useRef<"exit" | "documents">("documents");
+  const [routeSubmitIntent, setRouteSubmitIntent] = useState<"exit" | "documents" | null>(null);
   const isMisp = partnerType === "misp";
   const backHref = isMisp ? "/intermediaries/misp" : "/intermediaries/posp";
 
   useEffect(() => {
     if (state.applicationId && !state.error) {
-      window.location.replace(freshDynamicRouteUrl(`/intermediaries/applications/${state.applicationId}/workflow?stage=documents&success=primary_details_saved`));
+      const destination = actionSubmitIntentRef.current === "exit"
+        ? "/customers/posp-misp"
+        : `/intermediaries/applications/${state.applicationId}/workflow?stage=documents&success=primary_details_saved`;
+      window.location.replace(freshDynamicRouteUrl(destination));
     }
   }, [state.applicationId, state.error]);
 
@@ -74,8 +80,17 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     invalidHandledRef.current = false;
-    if (validateForm(event.currentTarget)) return;
-    event.preventDefault();
+    if (!validateForm(event.currentTarget)) {
+      event.preventDefault();
+      return;
+    }
+    const submitter = (event.nativeEvent as SubmitEvent).submitter;
+    actionSubmitIntentRef.current = submitter instanceof HTMLButtonElement && submitter.value === "exit" ? "exit" : "documents";
+  }
+
+  function handleRouteSubmit(event: React.FormEvent<HTMLFormElement>) {
+    const submitter = (event.nativeEvent as SubmitEvent).submitter;
+    setRouteSubmitIntent(submitter instanceof HTMLButtonElement && submitter.value === "exit" ? "exit" : "documents");
   }
 
   function handleInvalid(event: React.InvalidEvent<HTMLFormElement>) {
@@ -127,7 +142,7 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
         <div className="flex gap-3"><Link href="/customers/posp-misp/import" className="text-[10.5px] font-semibold text-[#4F46E5]">Import Excel</Link><Link href={backHref} className="text-[10.5px] font-semibold text-[#4F46E5]">Back</Link></div>
       </div>
       {visibleError ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[11px] font-semibold text-red-700">{visibleError}</div> : null}
-      <form ref={formRef} action={submitPath ?? formAction} method={submitPath ? "post" : undefined} onSubmitCapture={submitPath ? undefined : handleSubmit} onInvalidCapture={submitPath ? undefined : handleInvalid} data-posp-misp-onboarding-form="true" data-validation-mode={submitPath ? "route-post-native-v7" : "action-inline-v6"} className="w-full overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
+      <form ref={formRef} action={submitPath ?? formAction} method={submitPath ? "post" : undefined} onSubmitCapture={submitPath ? handleRouteSubmit : handleSubmit} onInvalidCapture={submitPath ? undefined : handleInvalid} data-posp-misp-onboarding-form="true" data-validation-mode={submitPath ? "route-post-native-v7" : "action-inline-v6"} className="w-full overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
         <input type="hidden" name="partner_type" value={partnerType} />
         <header className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-3 py-3 sm:px-5 sm:py-4"><div className="flex items-start gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#071D49] text-[10px] font-bold text-white">1</span><div><h2 className="text-[14px] font-semibold text-[#0F172A]">Primary information & PAN check</h2><p className="mt-0.5 text-[10px] leading-4 text-[#64748B]">The POSP/MISP ID is issued only after successful onboarding. A Partner ID is issued after Stage 2 documents are submitted.</p></div></div></header>
         <Section title={isMisp ? "MISP details" : "POSP details"}>
@@ -140,10 +155,28 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
         {isMisp ? <Section title="Designated Person (DP)"><Field label="DP First Name" name="dp_first_name" required defaultValue={initialValues.dp_first_name} {...inputValidationHandlers} /><Field label="DP Middle Name" name="dp_middle_name" defaultValue={initialValues.dp_middle_name} {...inputValidationHandlers} /><Field label="DP Last Name" name="dp_last_name" required defaultValue={initialValues.dp_last_name} {...inputValidationHandlers} /><Field label="DP Contact" name="dp_phone" required inputMode="tel" pattern="(?:\+91)?[6-9][0-9]{9}" defaultValue={initialValues.dp_phone} {...inputValidationHandlers} /><div className="grid min-w-0 gap-4 md:col-span-2 md:grid-cols-2 lg:grid-cols-[minmax(0,1.35fr)_minmax(140px,0.75fr)_minmax(170px,0.9fr)_minmax(0,1.1fr)] xl:col-span-4"><Field label="DP Email" name="dp_email" required type="email" defaultValue={initialValues.dp_email} {...inputValidationHandlers} /><PanInput label="DP PAN No" name="dp_pan_number" compact defaultValue={initialValues.dp_pan_number} {...inputValidationHandlers} /><IndianDateField label="DP Date of Birth" name="date_of_birth" required defaultValue={initialValues.date_of_birth} inputClassName={dateInputClass} {...dateValidationHandlers} /><Field label="DP Aadhaar Number" name="aadhaar_number" required inputMode="numeric" pattern="[0-9]{12}" maxLength={12} minLength={12} defaultValue={initialValues.aadhaar_number} {...inputValidationHandlers} /></div></Section> : null}
         <Section title="Bank details"><SelectField label="Bank Name" name="bank_id" required options={banks} placeholder="Select bank" defaultValue={initialValues.bank_id} {...selectValidationHandlers} /><Field label="Account Number" name="bank_account_number" required inputMode="numeric" pattern="[0-9]{6,20}" defaultValue={initialValues.bank_account_number} {...inputValidationHandlers} /><Field label="IFSC Code" name="bank_ifsc_code" required maxLength={11} minLength={11} pattern="[A-Za-z]{4}0[A-Za-z0-9]{6}" transform="uppercase" defaultValue={initialValues.bank_ifsc_code} {...inputValidationHandlers} /><Field label="GST Number" name="gst_number" required={isMisp} maxLength={15} minLength={isMisp ? 15 : undefined} pattern="[0-9]{2}[A-Za-z]{5}[0-9]{4}[A-Za-z][1-9A-Za-z]Z[0-9A-Za-z]" transform="uppercase" defaultValue={initialValues.gst_number} {...inputValidationHandlers} /></Section>
         {legacyFields}
-        <div className="sticky bottom-0 z-20 flex flex-col gap-2 border-t border-[#E2E8F0] bg-white/96 px-3 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5"><p className="text-[9.5px] text-[#64748B]">Stage 1 saves the application, queues the PAN check and opens Documents.</p>{submitPath ? <button type="submit" data-validation-mode="route-post-native-v7" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto">Save & check PAN</button> : <FormSubmitButton label="Save & check PAN" pendingLabel="Saving & opening Documents" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto" />}</div>
+        <div className="sticky bottom-0 z-20 flex flex-col gap-2 border-t border-[#E2E8F0] bg-white/96 px-3 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <p className="text-[9.5px] text-[#64748B]">Stage 1 saves the application, queues the PAN check and opens Documents.</p>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            {submitPath ? <>
+              <RouteSubmitButton intent="exit" activeIntent={routeSubmitIntent} label="Save & Exit" pendingLabel="Saving & exiting…" secondary />
+              <RouteSubmitButton intent="documents" activeIntent={routeSubmitIntent} label="Save & return to documents" pendingLabel="Saving & opening documents…" />
+            </> : <>
+              <FormSubmitButton name="submit_intent" value="exit" label="Save & Exit" pendingLabel="Saving & exiting…" className="w-full rounded-xl border border-[#CBD5E1] bg-white px-5 py-2.5 text-[11px] font-semibold text-[#334155] hover:border-[#94A3B8] hover:bg-[#F8FAFC] sm:w-auto" />
+              <FormSubmitButton name="submit_intent" value="documents" label="Save & return to documents" pendingLabel="Saving & opening documents…" className="w-full rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4285F4] px-5 py-2.5 text-[11px] font-semibold text-white sm:w-auto" />
+            </>}
+          </div>
+        </div>
       </form>
     </div>
   </>;
+}
+
+function RouteSubmitButton({ intent, activeIntent, label, pendingLabel, secondary = false }: { intent: "exit" | "documents"; activeIntent: "exit" | "documents" | null; label: string; pendingLabel: string; secondary?: boolean }) {
+  const isPending = activeIntent === intent;
+  return <button type="submit" name="submit_intent" value={intent} disabled={Boolean(activeIntent)} aria-busy={isPending} data-validation-mode="route-post-native-v7" className={`inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-[11px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#818CF8] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto ${secondary ? "border border-[#CBD5E1] bg-white text-[#334155] hover:border-[#94A3B8] hover:bg-[#F8FAFC]" : "bg-gradient-to-r from-[#635BFF] to-[#4285F4] text-white hover:brightness-110"}`}>
+    {isPending ? <InsureItButtonLoader label={pendingLabel} /> : label}
+  </button>;
 }
 
 function PanInput({ label, name, compact = false, defaultValue, error, onBlur, onInput }: { label: string; name: string; compact?: boolean; defaultValue?: string; error?: string; onBlur?: React.FocusEventHandler<HTMLInputElement>; onInput?: React.FormEventHandler<HTMLInputElement> }) {

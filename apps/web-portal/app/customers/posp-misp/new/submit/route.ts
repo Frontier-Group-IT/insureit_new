@@ -45,6 +45,7 @@ type ExistingApplication = {
 export async function POST(request: Request) {
   const data = await request.formData();
   const partnerType = data.get("partner_type") === "misp" ? "misp" : "posp";
+  const submitIntent = readSubmitIntent(data);
   const authorizationError = await validateSubmissionScope(data);
   if (authorizationError) return redirectToForm(request.url, data, partnerType, authorizationError.message, authorizationError.field);
 
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
 
   if (existingApplicationId) {
     return NextResponse.redirect(
-      new URL(`/intermediaries/applications/${existingApplicationId}/workflow?stage=documents&success=documents_started`, request.url),
+      successDestination(request.url, existingApplicationId, submitIntent, "documents_started"),
       303,
     );
   }
@@ -103,9 +104,19 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.redirect(
-    new URL(`/intermediaries/applications/${result.applicationId}/workflow?stage=documents&success=primary_details_saved`, request.url),
+    successDestination(request.url, result.applicationId, submitIntent, "primary_details_saved"),
     303,
   );
+}
+
+function readSubmitIntent(data: FormData) {
+  return data.get("submit_intent") === "exit" ? "exit" as const : "documents" as const;
+}
+
+function successDestination(requestUrl: string, applicationId: string, intent: "exit" | "documents", success: string) {
+  return intent === "exit"
+    ? new URL("/customers/posp-misp", requestUrl)
+    : new URL(`/intermediaries/applications/${applicationId}/workflow?stage=documents&success=${success}`, requestUrl);
 }
 
 async function validateSubmissionScope(data: FormData) {
