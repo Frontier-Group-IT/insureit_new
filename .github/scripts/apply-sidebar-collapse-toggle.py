@@ -18,3 +18,4 @@ if text.count(new) != 1:
     raise SystemExit("Expected exactly one collapsible top-level section toggle")
 
 path.write_text(text)
+# Synchronization commit to trigger validation after workflow registration.
