@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createCustomer, updateCustomer } from "@/app/actions";
-import { requireMasterDataManager } from "@/lib/master-data-server";
+import { requireCapability, requireMasterDataManager } from "@/lib/master-data-server";
+import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 function requiredText(formData: FormData, name: string) {
@@ -26,17 +27,17 @@ function errorUrl(path: string, message: string) {
 }
 
 export async function addCustomer(formData: FormData) {
-  await requireMasterDataManager();
+  await requireCapability("manage_customers", "edit");
   return createCustomer(formData);
 }
 
 export async function saveCustomer(id: string, formData: FormData) {
-  await requireMasterDataManager();
+  await requireCapability("manage_customers", "edit");
   return updateCustomer(id, formData);
 }
 
 export async function addVehicle(formData: FormData) {
-  await requireMasterDataManager();
+  await requireCapability("view_vehicles", "edit");
   const admin = createSupabaseAdminClient();
   const customerId = requiredText(formData, "customer_id");
   const vehicleNo = requiredText(formData, "vehicle_no")?.replace(/\s/g, "").toUpperCase() ?? null;
@@ -71,7 +72,7 @@ export async function addVehicle(formData: FormData) {
 }
 
 export async function saveVehicle(id: string, formData: FormData) {
-  await requireMasterDataManager();
+  await requireCapability("view_vehicles", "edit");
   const admin = createSupabaseAdminClient();
   const customerId = requiredText(formData, "customer_id");
   const vehicleNo = requiredText(formData, "vehicle_no")?.replace(/\s/g, "").toUpperCase() ?? null;
@@ -160,7 +161,7 @@ async function resolveInsurerId(formData: FormData) {
 }
 
 async function savePolicyRecord(id: string | null, formData: FormData) {
-  await requireMasterDataManager();
+  await requirePolicyEditor();
   const admin = createSupabaseAdminClient();
   const basePath = id ? `/policies/${id}/edit` : "/policies/new";
   const customerId = requiredText(formData, "customer_id");
