@@ -4,6 +4,7 @@ import { AppShell } from "@/components/shell";
 import { requirePospMispManager } from "@/lib/master-data-server";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { resolveIibPanVerificationStatus, type IibPanVerificationJob } from "@/lib/iib-pan-verification-status";
 import { PospMispApplicationEditor, type PospMispEditProfile } from "@/app/customers/applications/posp-misp-application-editor";
 import { type PospMispWorkflowProfile } from "@/app/customers/applications/posp-misp-workflow-panel";
 import { PanVerificationAutoRefresh } from "@/app/customers/applications/pan-verification-auto-refresh";
@@ -45,7 +46,6 @@ type ProfileRow = PospMispWorkflowProfile & Omit<PospMispEditProfile, "aadhaar_e
   existing_registration_confirmed_at: string | null;
   raw_data: Record<string, unknown> | null;
 };
-type PanJob = { status: string };
 type ViewStage = "primary" | "documents" | "review";
 type Assignment = {
   training_title: string | null;
@@ -107,7 +107,7 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
     admin.from("intermediary_onboarding_applications").select("id,requested_type,final_type,status,registration_status,partner_status,applicant_phone,applicant_email,updated_at,draft_data,partner_record_id").eq("id", id).maybeSingle<Application>(),
     admin.from("posp_misp_onboarding_profiles").select("partner_id,partner_type,associate_employee_id,associate_profile_id,external_onboarding_id,document_received_at,pos_name,pos_first_name,pos_middle_name,pos_last_name,misp_name,applicant_phone,applicant_email,date_of_birth,aadhaar_last_four,aadhaar_number_encrypted,pan_number,gst_number,address,city,state,postal_code,bank_id,bank_name,bank_account_number,bank_ifsc_code,oem_name,dp_name,dp_first_name,dp_middle_name,dp_last_name,dp_phone,dp_email,dp_pan_number,dp_date_of_birth,dp_aadhaar_last_four,dp_aadhaar_number_encrypted,workflow_stage,iib_remarks,iib_uploaded,iib_uploaded_at,training_login_id,training_credentials_shared_flag,training_start_date,training_end_date,training_status,training_certificate_number,exam_status,onboarding_date,record_source,existing_registration_confirmed,existing_registration_code,existing_registration_confirmed_at,raw_data").eq("application_id", id).maybeSingle<ProfileRow>(),
     admin.from("intermediary_onboarding_documents").select("id,document_type,file_name,storage_bucket,storage_path,verification_status").eq("application_id", id).order("created_at").returns<Document[]>(),
-    admin.from("pan_verification_jobs").select("status").eq("application_id", id).maybeSingle<PanJob>(),
+    admin.from("pan_verification_jobs").select("status,result_code,result_message,last_error").eq("application_id", id).maybeSingle<IibPanVerificationJob>(),
     admin.from("intermediary_training_exam_assignments").select("training_title,training_url,training_instructions,training_assigned_at,training_started_at,training_completed_at,training_deadline,training_status,exam_title,exam_url,passing_percentage,maximum_attempts,exam_duration_minutes,exam_available_from,exam_available_until,exam_allotted_at,exam_completed_at,exam_passed_at,exam_status,exam_score,exam_attempts_used,agreement_status,agreement_signing_url,agreement_sent_at,agreement_opened_at,agreement_signed_at").eq("application_id", id).maybeSingle<Assignment>(),
   ]);
   if (!application || !profile) notFound();
@@ -132,7 +132,7 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
   const context = accountContext(application.draft_data);
   const permanentReference = context === "partner" ? profile.partner_id : (profile.external_onboarding_id && !profile.external_onboarding_id.startsWith("PENDING-") ? profile.external_onboarding_id : null);
   const showDocuments = profile.workflow_stage !== "pre_iib" || Boolean(documents?.length);
-  const shouldRefresh = profile.workflow_stage === "pre_iib" && (!panJob || ["pending", "queued", "checking"].includes(panJob.status));
+  const shouldRefresh = profile.workflow_stage === "pre_iib" && (!panJob || ["pending", "queued", "checking"].includes(panJob.status ?? ""));
   const unlocked = profile.workflow_stage === "pre_iib" ? ["primary"] : profile.workflow_stage === "iib_processing" ? ["primary", "documents"] : ["primary", "documents", "review"];
   const normalizedError = normalizeWorkflowError(query.error, query.field);
   const requested = (normalizedError.field ? "primary" : query.stage === "primary" || query.stage === "documents" || query.stage === "review" ? query.stage : null) as ViewStage | null;
@@ -140,7 +140,9 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
   const viewStage: ViewStage = requested && unlocked.includes(requested) ? requested : defaultView;
   const docList = (documents ?? []).map((item) => ({ document_type: item.document_type, file_name: item.file_name }));
   const popupEvent = query.success && popupEvents.has(query.success) ? query.success : null;
-  const iibCleared = profile.iib_remarks === "No Data Found In POS System";
+  const verificationPan = (profile.partner_type === "misp" ? profile.dp_pan_number : profile.pan_number)?.replace(/\s/g, "").toUpperCase() ?? null;
+  const iibStatus = resolveIibPanVerificationStatus(panJob, profile.iib_remarks);
+  const iibCleared = iibStatus.code === "cleared";
 
   let migrationValues = { ...asObject(profile.raw_data), ...asObject(application.draft_data) };
   if (context !== "partner" && application.partner_record_id) {
@@ -180,9 +182,9 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
                 {permanentReference ? <span className="rounded-lg border border-[#D7E0EB] bg-white px-2.5 py-1 text-[9.5px] font-medium text-[#475569]">{permanentReference}</span> : null}
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="font-mono text-[15px] font-semibold tracking-wide text-[#334155]">{maskPan(profile.pan_number)}</span>
-              {context !== "partner" ? <span className={`rounded-lg px-3 py-1.5 text-[9.5px] font-semibold ${iibCleared ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}>{iibCleared ? "✓ IIB Cleared" : "IIB Review"}</span> : null}
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="font-mono text-[15px] font-semibold tracking-wide text-[#334155]">{maskPan(verificationPan)}</span>
+              <span title={iibStatus.detail ?? iibStatus.label} className={`rounded-lg px-3 py-1.5 text-[9.5px] font-semibold ${iibStatus.badgeClassName}`}>{iibStatus.code === "cleared" ? "✓ " : ""}{iibStatus.label}</span>
             </div>
           </div>
         </section>
