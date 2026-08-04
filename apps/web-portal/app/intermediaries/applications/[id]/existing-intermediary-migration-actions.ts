@@ -1,14 +1,28 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import {
+  DEFAULT_LEGACY_WORKFLOW,
+  LEGACY_AGREEMENT_OPTIONS,
+  LEGACY_EXAM_OPTIONS,
+  LEGACY_IIB_REGISTRATION_OPTIONS,
+  LEGACY_IIB_UPLOAD_OPTIONS,
+  LEGACY_TRAINING_OPTIONS,
+  registrationStatusForLegacyWorkflow,
+  type LegacyAgreementStatus,
+  type LegacyExamStatus,
+  type LegacyIibRegistrationStatus,
+  type LegacyIibUploadStatus,
+  type LegacyTrainingStatus,
+} from "@/app/customers/posp-misp/legacy-workflow-statuses";
 import { requireScopedPospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-const allowedTraining = new Set(["not_assigned", "assigned", "in_progress", "completed", "unknown"]);
-const allowedExam = new Set(["not_allotted", "allotted", "in_progress", "passed", "failed", "unknown"]);
-const allowedAgreement = new Set(["not_started", "sent", "opened", "signed", "unknown"]);
-const allowedIibUpload = new Set(["pending", "uploaded", "unknown"]);
-const allowedIibRegistration = new Set(["pending", "submitted", "registered", "unknown"]);
+const allowedTraining = new Set<string>(LEGACY_TRAINING_OPTIONS.map((option) => option.value));
+const allowedExam = new Set<string>(LEGACY_EXAM_OPTIONS.map((option) => option.value));
+const allowedAgreement = new Set<string>(LEGACY_AGREEMENT_OPTIONS.map((option) => option.value));
+const allowedIibUpload = new Set<string>(LEGACY_IIB_UPLOAD_OPTIONS.map((option) => option.value));
+const allowedIibRegistration = new Set<string>(LEGACY_IIB_REGISTRATION_OPTIONS.map((option) => option.value));
 
 export type MigrationSaveState = { ok: boolean; message: string; savedAt?: string };
 
@@ -46,6 +60,11 @@ export async function updateExistingIntermediaryMigrationDetails(
   }
 
   const now = new Date().toISOString();
+  const trainingStatus = choice(formData, "legacy_training_status", allowedTraining, DEFAULT_LEGACY_WORKFLOW.trainingStatus) as LegacyTrainingStatus;
+  const examStatus = choice(formData, "legacy_exam_status", allowedExam, DEFAULT_LEGACY_WORKFLOW.examStatus) as LegacyExamStatus;
+  const agreementStatus = choice(formData, "legacy_agreement_status", allowedAgreement, DEFAULT_LEGACY_WORKFLOW.agreementStatus) as LegacyAgreementStatus;
+  const iibUploadStatus = choice(formData, "legacy_iib_upload_status", allowedIibUpload, DEFAULT_LEGACY_WORKFLOW.iibUploadStatus) as LegacyIibUploadStatus;
+  const iibRegistrationStatus = choice(formData, "legacy_iib_registration_status", allowedIibRegistration, DEFAULT_LEGACY_WORKFLOW.iibRegistrationStatus) as LegacyIibRegistrationStatus;
   const migration = {
     onboarding_mode: "legacy_existing_partner",
     record_source: "legacy_manual",
@@ -53,15 +72,23 @@ export async function updateExistingIntermediaryMigrationDetails(
     legacy_registration_code: optionalText(formData, "legacy_registration_code"),
     legacy_original_onboarding_date: originalOnboardingDate,
     legacy_original_activation_date: originalActivationDate,
-    legacy_training_status: choice(formData, "legacy_training_status", allowedTraining, "unknown"),
-    legacy_exam_status: choice(formData, "legacy_exam_status", allowedExam, "unknown"),
-    legacy_agreement_status: choice(formData, "legacy_agreement_status", allowedAgreement, "unknown"),
-    legacy_iib_upload_status: choice(formData, "legacy_iib_upload_status", allowedIibUpload, "unknown"),
-    legacy_iib_registration_status: choice(formData, "legacy_iib_registration_status", allowedIibRegistration, "unknown"),
+    legacy_training_status: trainingStatus,
+    legacy_exam_status: examStatus,
+    legacy_agreement_status: agreementStatus,
+    legacy_iib_upload_status: iibUploadStatus,
+    legacy_iib_registration_status: iibRegistrationStatus,
     legacy_verification_remarks: optionalText(formData, "legacy_verification_remarks"),
+    legacy_migration_remarks: optionalText(formData, "legacy_verification_remarks"),
     legacy_migration_updated_at: now,
     legacy_migration_updated_by: actor.id,
   };
+  const workflowRegistrationStatus = registrationStatusForLegacyWorkflow({
+    trainingStatus,
+    examStatus,
+    agreementStatus,
+    iibUploadStatus,
+    iibRegistrationStatus,
+  });
 
   let applications: ApplicationRow[] = [current];
   if (current.partner_record_id) {
@@ -84,14 +111,11 @@ export async function updateExistingIntermediaryMigrationDetails(
 
   for (const app of applications) {
     const context = accountContext(app.draft_data);
-    const registrationStatus = context === "partner"
-      ? undefined
-      : mapRegistrationStatus(migration.legacy_iib_registration_status);
     const appUpdate: Record<string, unknown> = {
       draft_data: { ...object(app.draft_data), ...migration },
       updated_at: now,
     };
-    if (registrationStatus) appUpdate.registration_status = registrationStatus;
+    if (context !== "partner") appUpdate.registration_status = workflowRegistrationStatus;
     const { error } = await admin.from("intermediary_onboarding_applications").update(appUpdate).eq("id", app.id);
     if (error) return { ok: false, message: "Migration details could not be synchronized to every application." };
   }
@@ -106,14 +130,10 @@ export async function updateExistingIntermediaryMigrationDetails(
       updated_at: now,
     };
     if (context !== "partner") {
-      if (migration.legacy_training_status !== "unknown") profileUpdate.training_status = migration.legacy_training_status;
-      if (migration.legacy_exam_status !== "unknown") profileUpdate.exam_status = migration.legacy_exam_status;
-      if (migration.legacy_iib_upload_status !== "unknown") {
-        profileUpdate.iib_uploaded = migration.legacy_iib_upload_status === "uploaded";
-        profileUpdate.iib_uploaded_at = migration.legacy_iib_upload_status === "uploaded"
-          ? toTimestamp(originalActivationDate) ?? now
-          : null;
-      }
+      profileUpdate.training_status = trainingStatus;
+      profileUpdate.exam_status = examStatus;
+      profileUpdate.iib_uploaded = iibUploadStatus === "uploaded";
+      profileUpdate.iib_uploaded_at = iibUploadStatus === "uploaded" ? toTimestamp(originalActivationDate) ?? now : null;
       if (migration.legacy_registration_code) profileUpdate.external_onboarding_id = migration.legacy_registration_code;
     }
     const { error } = await admin.from("posp_misp_onboarding_profiles").update(profileUpdate).eq("id", profile.id);
@@ -123,23 +143,21 @@ export async function updateExistingIntermediaryMigrationDetails(
   for (const app of applications) {
     if (accountContext(app.draft_data) === "partner") continue;
 
-    const assignmentUpdate: Record<string, unknown> = { updated_at: now };
-    if (migration.legacy_training_status !== "unknown") {
-      assignmentUpdate.training_status = migration.legacy_training_status;
-      assignmentUpdate.training_completed_at = migration.legacy_training_status === "completed" ? toTimestamp(originalActivationDate) ?? now : null;
-    }
-    if (migration.legacy_exam_status !== "unknown") {
-      assignmentUpdate.exam_status = migration.legacy_exam_status;
-      assignmentUpdate.exam_completed_at = ["passed", "failed"].includes(migration.legacy_exam_status) ? toTimestamp(originalActivationDate) ?? now : null;
-      assignmentUpdate.exam_passed_at = migration.legacy_exam_status === "passed" ? toTimestamp(originalActivationDate) ?? now : null;
-    }
-    if (migration.legacy_agreement_status !== "unknown") {
-      assignmentUpdate.agreement_status = migration.legacy_agreement_status;
-      assignmentUpdate.agreement_signed_at = migration.legacy_agreement_status === "signed" ? toTimestamp(originalActivationDate) ?? now : null;
-    }
-    if (Object.keys(assignmentUpdate).length > 1) {
-      await admin.from("intermediary_training_exam_assignments").update(assignmentUpdate).eq("application_id", app.id);
-    }
+    const assignmentUpdate: Record<string, unknown> = {
+      updated_at: now,
+      training_status: trainingStatus,
+      training_completed_at: trainingStatus === "completed" ? toTimestamp(originalActivationDate) ?? now : null,
+      exam_status: examStatus,
+      exam_completed_at: ["passed", "failed", "attempts_exhausted"].includes(examStatus) ? toTimestamp(originalActivationDate) ?? now : null,
+      exam_passed_at: examStatus === "passed" ? toTimestamp(originalActivationDate) ?? now : null,
+      agreement_status: agreementStatus,
+      agreement_signed_at: agreementStatus === "signed" ? toTimestamp(originalActivationDate) ?? now : null,
+    };
+    const { error: assignmentError } = await admin
+      .from("intermediary_training_exam_assignments")
+      .update(assignmentUpdate)
+      .eq("application_id", app.id);
+    if (assignmentError) return { ok: false, message: "The linked workflow assignment could not be updated." };
 
     const intermediaryUpdate: Record<string, unknown> = { updated_at: now };
     if (originalActivationDate) intermediaryUpdate.activated_at = toTimestamp(originalActivationDate);
@@ -160,12 +178,6 @@ export async function updateExistingIntermediaryMigrationDetails(
   return { ok: true, message: "Migration details saved and synchronized.", savedAt: now };
 }
 
-function mapRegistrationStatus(value: string) {
-  if (value === "registered") return "iib_registered";
-  if (value === "submitted") return "iib_submitted";
-  if (value === "pending") return "iib_submission_pending";
-  return null;
-}
 function accountContext(draft: Record<string, unknown> | null | undefined) {
   const context = draft?.account_context;
   return context === "posp" || context === "misp" ? context : "partner";
