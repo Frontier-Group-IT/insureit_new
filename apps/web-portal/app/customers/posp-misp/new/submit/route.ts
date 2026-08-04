@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
+import { isEmployeeWithinAccessScope } from "@/lib/employee-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createScopedManualPospMispOnboarding } from "../../scoped-manual-action";
 
@@ -43,6 +45,9 @@ type ExistingApplication = {
 export async function POST(request: Request) {
   const data = await request.formData();
   const partnerType = data.get("partner_type") === "misp" ? "misp" : "posp";
+  const authorizationError = await validateSubmissionScope(data);
+  if (authorizationError) return redirectToForm(request.url, data, partnerType, authorizationError.message, authorizationError.field);
+
   const admin = createSupabaseAdminClient();
   const existingApplicationId = await findExistingOpenApplication(admin, partnerType, text(data, "pan_number"));
 
@@ -55,21 +60,16 @@ export async function POST(request: Request) {
 
   const result = await createScopedManualPospMispOnboarding({ error: null, field: null }, data);
 
-  if (result.error) {
-    const url = new URL("/customers/posp-misp/new", request.url);
-    url.searchParams.set("partner_type", partnerType);
-    url.searchParams.set("form_error", result.error);
-    if (result.field) url.searchParams.set("form_field", result.field);
-    preserveValues(url, data);
-    return NextResponse.redirect(url, 303);
-  }
+  if (result.error) return redirectToForm(request.url, data, partnerType, result.error, result.field);
 
   if (!result.applicationId) {
-    const url = new URL("/customers/posp-misp/new", request.url);
-    url.searchParams.set("partner_type", partnerType);
-    url.searchParams.set("form_error", "The application was saved but its reference could not be returned. Open Onboarding Applications to continue.");
-    preserveValues(url, data);
-    return NextResponse.redirect(url, 303);
+    return redirectToForm(
+      request.url,
+      data,
+      partnerType,
+      "The application was saved but its reference could not be returned. Open Onboarding Applications to continue.",
+      null,
+    );
   }
 
   const now = new Date().toISOString();
@@ -108,6 +108,16 @@ export async function POST(request: Request) {
   );
 }
 
+async function validateSubmissionScope(data: FormData) {
+  const employeeId = text(data, "associate_employee_id");
+  if (!employeeId) return { message: "Select a valid RM Name.", field: "associate_employee_id" };
+  const accessToken = await getServerAccessToken();
+  const { profile } = await getAuthenticatedProfile(accessToken);
+  if (!profile?.id) return { message: "You are not authorized to create an intermediary application.", field: null };
+  const allowed = await isEmployeeWithinAccessScope(profile.id, profile.role, employeeId);
+  return allowed ? null : { message: "You can only create an application for yourself or an employee in your reporting hierarchy.", field: "associate_employee_id" };
+}
+
 async function findExistingOpenApplication(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   partnerType: "posp" | "misp",
@@ -139,6 +149,21 @@ async function findExistingOpenApplication(
     && application.partner_status !== "active_partner"
     && accountContext(application.draft_data) === "partner"
   )?.id ?? null;
+}
+
+function redirectToForm(
+  requestUrl: string,
+  data: FormData,
+  partnerType: "posp" | "misp",
+  message: string,
+  field: string | null | undefined,
+) {
+  const url = new URL("/customers/posp-misp/new", requestUrl);
+  url.searchParams.set("partner_type", partnerType);
+  url.searchParams.set("form_error", message);
+  if (field) url.searchParams.set("form_field", field);
+  preserveValues(url, data);
+  return NextResponse.redirect(url, 303);
 }
 
 function accountContext(draft: Record<string, unknown> | null | undefined) {
