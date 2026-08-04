@@ -201,7 +201,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
                       <CompactSubmit label={profile.partner_type === "misp" ? "Create MISP ID" : "Create POSP ID"} pendingLabel={profile.partner_type === "misp" ? "Creating MISP ID…" : "Creating POSP ID…"} />
                     </form>
                   )
-                ) : <CompactLink href={`/intermediaries/applications/${id}/workflow?stage=documents`} label="Continue documents" />
+                ) : null
               ) : <CompactLink href={`/intermediaries/applications/${id}/workflow?stage=${stageFor(profile)}`} label={`Manage ${kind} account`} />}
               <CompactLink href={`/intermediaries/applications/${id}/workflow?stage=primary`} label="Edit details" secondary />
               {activePartner && intermediary?.portal_access_status === "not_created" ? (
@@ -224,7 +224,23 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
 
         <section id="overview" className="space-y-4">
           <JourneyCard title={isPartner ? "Partner onboarding journey" : `${kind} account journey`} journey={journey} />
-          {!activePartner && isPartner ? <Card title="Next step"><p className="text-[10.5px] font-medium text-[#475569]">Complete PAN verification and mandatory documents to activate this Partner.</p><div className="mt-3"><CompactLink href={`/intermediaries/applications/${id}/workflow?stage=documents`} label="Continue documents" /></div></Card> : null}
+          {!activePartner && isPartner ? (
+            <section className="overflow-hidden rounded-2xl border border-[#C7D2FE] bg-gradient-to-r from-[#EEF2FF] via-white to-[#EFF6FF] shadow-[0_12px_28px_rgba(79,70,229,.10)]">
+              <div className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#4F46E5] text-white shadow-[0_8px_18px_rgba(79,70,229,.22)]"><Icon name="documents" className="h-4.5 w-4.5" /></span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-[12.5px] font-semibold text-[#17203A]">Partner documents pending</h2>
+                      <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[8.5px] font-bold uppercase tracking-[.05em] text-amber-700">Action required</span>
+                    </div>
+                    <p className="mt-0.5 text-[10px] font-medium text-[#64748B]">Upload Aadhaar, PAN and bank proof to move this Partner to activation.</p>
+                  </div>
+                </div>
+                <Link href={`/intermediaries/applications/${id}/workflow?stage=documents`} className={`${primaryActionClassName} h-9 shrink-0 rounded-xl px-4 text-[10px]`}>Complete documents</Link>
+              </div>
+            </section>
+          ) : null}
         </section>
 
         <section id="details" className="grid gap-4 lg:grid-cols-2">
