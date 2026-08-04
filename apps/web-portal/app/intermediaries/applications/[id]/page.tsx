@@ -234,7 +234,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
                       <h2 className="text-[12.5px] font-semibold text-[#17203A]">Partner documents pending</h2>
                       <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[8.5px] font-bold uppercase tracking-[.05em] text-amber-700">Action required</span>
                     </div>
-                    <p className="mt-0.5 text-[10px] font-medium text-[#64748B]">Upload Aadhaar, PAN and bank proof to move this Partner to activation.</p>
+                    <p className="mt-0.5 text-[10px] font-medium text-[#64748B]">Upload Aadhaar, PAN, bank proof and photograph. Add the GST certificate when the Partner is GST-registered.</p>
                   </div>
                 </div>
                 <Link href={`/intermediaries/applications/${id}/workflow?stage=documents`} className={`${primaryActionClassName} h-9 shrink-0 rounded-xl px-4 text-[10px]`}>Complete documents</Link>
