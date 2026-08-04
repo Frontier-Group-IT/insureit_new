@@ -1,11 +1,14 @@
 import type { Capability } from "@/lib/roles";
 import { isAppRole } from "@/lib/roles";
-import { getEffectivePermission } from "@/lib/permission-management";
+import { getEffectivePermission, permissionDefinitions, type PermissionAccess } from "@/lib/permission-management";
+
+const accessRank: Record<PermissionAccess, number> = { none: 0, view: 1, edit: 2, approve: 3 };
 
 export async function hasEffectiveCapability(profile: { id?: string | null; role?: string | null } | null | undefined, capability: Capability) {
   if (!profile?.id || !isAppRole(profile.role)) return false;
   const permission = await getEffectivePermission(profile.id, profile.role, capability);
-  return permission.access !== "none";
+  const required = permissionDefinitions.find((item) => item.capability === capability)?.roleAccess ?? "view";
+  return accessRank[permission.access] >= accessRank[required];
 }
 
 export async function hasAnyEffectiveCapability(profile: { id?: string | null; role?: string | null } | null | undefined, capabilities: Capability[]) {
