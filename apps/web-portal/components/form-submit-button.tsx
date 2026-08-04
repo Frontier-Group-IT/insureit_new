@@ -14,14 +14,18 @@ export function FormSubmitButton({
   className = defaultClassName,
   disabled = false,
   icon,
+  name,
+  value,
 }: {
   label?: string;
   pendingLabel?: string;
   className?: string;
   disabled?: boolean;
   icon?: React.ReactNode;
+  name?: string;
+  value?: string;
 }) {
-  const { pending } = useFormStatus();
+  const { pending, data } = useFormStatus();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [formChanged, setFormChanged] = useState(false);
   const requireChange = /^(Save primary details|Save documents)$/i.test(label);
@@ -41,6 +45,7 @@ export function FormSubmitButton({
     };
   }, [requireChange, label]);
 
+  const isCurrentSubmission = pending && (!name || !value || data?.get(name) === value);
   const isDisabled = disabled || pending || (requireChange && !formChanged);
 
   return (
@@ -48,12 +53,14 @@ export function FormSubmitButton({
       ref={buttonRef}
       className={`${interactionClassName} ${className}`}
       type="submit"
+      name={name}
+      value={value}
       disabled={isDisabled}
-      aria-busy={pending}
+      aria-busy={isCurrentSubmission}
       aria-live="polite"
       title={requireChange && !formChanged ? "Make a change before saving." : undefined}
     >
-      {pending ? <InsureItButtonLoader label={pendingLabel} /> : <>{icon}{label}</>}
+      {isCurrentSubmission ? <InsureItButtonLoader label={pendingLabel} /> : <>{icon}{label}</>}
     </button>
   );
 }

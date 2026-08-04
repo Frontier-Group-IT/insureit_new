@@ -44,6 +44,7 @@ const PRESERVED_FIELDS = [
 export async function POST(request: Request) {
   const data = await request.formData();
   const partnerType = data.get("partner_type") === "misp" ? "misp" : "posp";
+  const submitIntent = data.get("submit_intent") === "exit" ? "exit" : "documents";
   const result = await createLegacyPartnerOnboarding({ error: null, field: null, applicationId: null }, data);
 
   if (result.error) {
@@ -90,7 +91,10 @@ export async function POST(request: Request) {
     return NextResponse.redirect(url, 303);
   }
 
-  return NextResponse.redirect(new URL(`/intermediaries/applications/${result.applicationId}/workflow?stage=documents&success=primary_details_saved`, request.url), 303);
+  const destination = submitIntent === "exit"
+    ? new URL("/customers/posp-misp", request.url)
+    : new URL(`/intermediaries/applications/${result.applicationId}/workflow?stage=documents&success=primary_details_saved`, request.url);
+  return NextResponse.redirect(destination, 303);
 }
 
 function preserveValues(url: URL, data: FormData) {
