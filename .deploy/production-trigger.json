@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-04T11:10:00+05:30",
+  "deploy_requested_at": "2026-08-04T11:14:00+05:30",
   "requested_by": "Nishant Mishra",
   "source": "ChatGPT explicit deploy command",
-  "source_commit": "8af6b61410b4d0661ad1ff0541e0cc14c5edd18e",
-  "release_scope": "Deploy the Intermediatory onboarding queue lifecycle correction and duplicate-open-application guard. The Onboarding Applications register now shows only unfinished Partner-side onboarding files, excludes active Partner and linked POSP/MISP qualification applications, and reuses an existing open application for repeated submissions with the same PAN and account type.",
-  "verification": "npm ci, npm run typecheck:web, and npm run build:web passed in temporary validation PR #157. Vercel deployment status must reach Ready before claiming production success.",
+  "source_commit": "4cb855d34f334b61df75dd23ddd1cb7696cfe929",
+  "release_scope": "Deploy the Add MISP Application Designated Person layout correction. DP Email, DP PAN No., DP Date of Birth, and DP Aadhaar Number now remain in one balanced desktop row, with responsive two-column tablet and single-column mobile fallbacks.",
+  "verification": "PR #158 validation run 30881071265 passed npm ci, npm run lint:web, npm run typecheck:web, and npm run build:web. Vercel deployment status must reach Ready before claiming production success.",
   "instructions": "Update this file only after the user explicitly says deploy now or finish and deploy. Ordinary code commits must not modify it."
 }
