@@ -1,0 +1,57 @@
+name: Temporary Partner document guidance validation
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    if: github.head_ref == 'fix/partner-document-guidance'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      NEXT_PUBLIC_INSUREIT_LAUNCH_SCOPE: intermediary
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply guidance correction
+        run: python .github/scripts/apply-partner-document-guidance-fix.py
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint web portal
+        run: npm run lint:web
+
+      - name: Typecheck web portal
+        run: npm run typecheck:web
+
+      - name: Build web portal
+        run: npm run build:web
+
+      - name: Commit validated source change
+        run: |
+          rm -f .github/scripts/apply-partner-document-guidance-fix.py
+          rm -f .github/workflows/temporary-partner-document-guidance-validation.yml
+          rm -f .github/temporary-partner-document-guidance-trigger
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal/app/intermediaries/applications/[id]/page.tsx .github
+          git commit -m "Correct Partner document guidance"
+          git push
