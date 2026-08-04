@@ -10,9 +10,11 @@ const PORT = Number(process.env.PORT || 3001);
 const RELAY_SECRET = process.env.RELAY_SECRET;
 const ICALL_BASE_URL = process.env.ICALL_UAT_BASE_URL;
 const ICALL_TOKEN = process.env.ICALL_UAT_AUTH_TOKEN;
+const AUTHBRIDGE_BASE_URL = String(process.env.AUTHBRIDGE_BASE_URL || "https://www.truthscreen.com").replace(/\/$/, "");
+const AUTHBRIDGE_USERNAME = String(process.env.AUTHBRIDGE_USERNAME || "").trim();
 
 if (!RELAY_SECRET || !ICALL_BASE_URL || !ICALL_TOKEN) {
-  console.error("Required environment variables are missing.");
+  console.error("Required iCall environment variables are missing.");
   process.exit(1);
 }
 
@@ -40,6 +42,14 @@ function validPan(value) {
   return /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(String(value || "").trim().toUpperCase());
 }
 
+function normalizeRegistrationNumber(value) {
+  return String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function validRegistrationNumber(value) {
+  return /^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{1,4}$/.test(value);
+}
+
 function decodeIcallResponse(response) {
   if (!response || typeof response !== "object") return response;
   if (typeof response.payload !== "string" || !response.payload.trim()) return response;
@@ -50,31 +60,88 @@ function decodeIcallResponse(response) {
   }
 }
 
-async function callIcall(endpoint, body) {
+async function postJson(url, { headers = {}, body, timeoutMs = 30000 } = {}) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(`${ICALL_BASE_URL}${endpoint}`, {
+    const response = await fetch(url, {
       method: "POST",
-      headers: { "content-type": "application/json", accept: "application/json" },
+      headers: { "content-type": "application/json", accept: "application/json", ...headers },
       body: JSON.stringify(body),
       signal: controller.signal,
     });
     const rawText = await response.text();
-    let json;
-    try {
-      json = JSON.parse(rawText);
-    } catch {
-      throw new Error(`iCall returned invalid JSON with HTTP ${response.status}`);
+    let data = rawText;
+    if (rawText.trim()) {
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        data = rawText.trim();
+      }
     }
-    return { httpStatus: response.status, data: decodeIcallResponse(json) };
+    return { httpStatus: response.status, ok: response.ok, data };
   } finally {
     clearTimeout(timeout);
   }
 }
 
+async function callIcall(endpoint, body) {
+  const result = await postJson(`${ICALL_BASE_URL}${endpoint}`, { body, timeoutMs: 30000 });
+  if (typeof result.data === "string") {
+    throw new Error(`iCall returned invalid JSON with HTTP ${result.httpStatus}`);
+  }
+  return { httpStatus: result.httpStatus, data: decodeIcallResponse(result.data) };
+}
+
+function extractOpaqueValue(value, candidateKeys) {
+  if (typeof value === "string" && value.trim()) return value.trim().replace(/^"|"$/g, "");
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+
+  for (const key of candidateKeys) {
+    const candidate = value[key];
+    if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+  }
+
+  for (const nestedKey of ["data", "result", "response"]) {
+    const nested = value[nestedKey];
+    if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+      const found = extractOpaqueValue(nested, candidateKeys);
+      if (found) return found;
+    }
+  }
+
+  return null;
+}
+
+function parsePossiblyJson(value) {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
+}
+
+async function callAuthbridge(path, body) {
+  return postJson(`${AUTHBRIDGE_BASE_URL}${path}`, {
+    headers: { username: AUTHBRIDGE_USERNAME },
+    body,
+    timeoutMs: 25000,
+  });
+}
+
 app.get("/health", (_req, res) => {
-  res.json({ status: "ok", service: "insureit-icall-gateway", environment: "uat" });
+  res.json({
+    status: "ok",
+    service: "insureit-integration-gateway",
+    environment: "uat",
+    integrations: {
+      icall: "configured",
+      authbridge: AUTHBRIDGE_USERNAME ? "configured" : "not_configured",
+    },
+  });
 });
 
 app.post("/uat/icall/register", requireRelayAuth, async (req, res) => {
@@ -150,6 +217,71 @@ app.post("/uat/icall/tcc", requireRelayAuth, async (req, res) => {
   } catch (error) {
     console.error("TCC request failed:", error.message);
     return res.status(502).json({ statusCode: 502, status: "failed", message: "iCall certificate service unavailable" });
+  }
+});
+
+app.post("/uat/authbridge/rc-verification", requireRelayAuth, async (req, res) => {
+  if (!AUTHBRIDGE_USERNAME) {
+    return res.status(503).json({ statusCode: 503, status: "failed", message: "AuthBridge is not configured" });
+  }
+
+  const registrationNumber = normalizeRegistrationNumber(req.body?.registrationNumber);
+  if (!validRegistrationNumber(registrationNumber)) {
+    return res.status(400).json({ statusCode: 400, status: "failed", message: "Invalid vehicle registration number" });
+  }
+
+  const transactionId = `INSUREIT-RC-${Date.now()}-${crypto.randomInt(1000, 10000)}`;
+  const providerRequest = { transID: transactionId, docType: 372, docNumber: registrationNumber };
+
+  try {
+    const encrypted = await callAuthbridge("/InstantSearch/encrypted_string", providerRequest);
+    if (!encrypted.ok) {
+      return res.status(502).json({ statusCode: 502, status: "failed", message: "AuthBridge request encryption failed", transactionId });
+    }
+
+    const requestData = extractOpaqueValue(encrypted.data, ["requestData", "encryptedData", "responseData", "data", "result"]);
+    if (!requestData) {
+      return res.status(502).json({ statusCode: 502, status: "failed", message: "AuthBridge returned an invalid encryption response", transactionId });
+    }
+
+    const lookup = await callAuthbridge("/api/v2.2/utilitysearch", { requestData });
+    if (!lookup.ok) {
+      return res.status(502).json({ statusCode: 502, status: "failed", message: "AuthBridge RC service unavailable", transactionId });
+    }
+
+    const responseData = extractOpaqueValue(lookup.data, ["responseData", "encryptedData", "requestData", "data", "result"]);
+    if (!responseData) {
+      const direct = parsePossiblyJson(lookup.data);
+      if (direct && typeof direct === "object") {
+        return res.json({ statusCode: 200, status: "success", transactionId, registrationNumber, provider: "authbridge", data: direct });
+      }
+      return res.status(502).json({ statusCode: 502, status: "failed", message: "AuthBridge returned an invalid RC response", transactionId });
+    }
+
+    const decrypted = await callAuthbridge("/InstantSearch/decrypt_encrypted_string", { responseData });
+    if (!decrypted.ok) {
+      return res.status(502).json({ statusCode: 502, status: "failed", message: "AuthBridge response decryption failed", transactionId });
+    }
+
+    const data = parsePossiblyJson(decrypted.data);
+    return res.json({
+      statusCode: 200,
+      status: "success",
+      provider: "authbridge",
+      transactionId,
+      registrationNumber,
+      lookedUpAt: new Date().toISOString(),
+      data,
+    });
+  } catch (error) {
+    const timedOut = error?.name === "AbortError" || error?.name === "TimeoutError";
+    console.error("AuthBridge RC request failed:", timedOut ? "provider timeout" : error.message);
+    return res.status(502).json({
+      statusCode: 502,
+      status: "failed",
+      message: timedOut ? "AuthBridge RC request timed out" : "AuthBridge RC service unavailable",
+      transactionId,
+    });
   }
 });
 
