@@ -1,1 +1,1 @@
-importScripts("background.js", "queue-reconciler.js");
+importScripts("background.js");
