@@ -29,7 +29,6 @@ export const navigationSections:NavigationSection[]=[
   ]}
  ]},
  {key:"distribution",label:"Intermediatory",icon:Sparkles,tint:"from-[#17c7c9] to-[#6759ff]",capability:"view_intermediaries",items:[
-  {href:"/intermediaries",label:"Overview",icon:UsersRound,capability:"view_intermediaries"},
   {kind:"group",key:"partners",label:"Partners",icon:UsersRound,capability:"view_intermediaries",items:[
    {href:"/intermediaries/partner",label:"All Partner",icon:UsersRound,capability:"view_intermediaries"},
    {href:"/intermediaries/portal-users",label:"Portal Users",icon:UserCog,capability:"review_intermediary_application"}
