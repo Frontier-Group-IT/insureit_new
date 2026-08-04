@@ -1,1 +1,1 @@
-trigger compact Partner next-step validation
+trigger compact Partner next-step validation after PR open
