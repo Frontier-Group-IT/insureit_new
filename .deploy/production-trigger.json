@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-05T16:38:00+05:30",
+  "deploy_requested_at": "2026-08-05T17:54:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit deploy command",
-  "source_commit": "5e60335172207d35ee79ab3fb9aebf2f4c4f5183",
-  "release_scope": "Deploy the Policy Onboarding V1 UI with the Retention field moved from Intermediary payout & settlement into Projected insurer pay-in. No database schema, API contract, premium calculation, payout calculation, permission, or submission behavior changed.",
-  "verification": "Vercel production status must reach Ready/Success before deployment is reported as complete.",
-  "instructions": "Update this file only after the user explicitly says deploy now or finish and deploy. Ordinary code commits must not modify it."
+  "source": "ChatGPT explicit merge and deploy command",
+  "source_commit": "653dd1cdd833c3633c2877376aa861ee19c87935",
+  "release_scope": "Deploy the latest main branch, including the refined Policy Onboarding UI: sticky Live Summary card, Business Line renamed to Policy Type, Direct removed from Intermediary Type, billing and reconciliation fields removed from the main onboarding page, OD/NET basis removed from section 4, Retention moved into Projected insurer pay-in, and the latest customer-linking safeguards already merged on main.",
+  "verification": "The requested changes are already merged into main. Vercel production status must reach Ready/Success before deployment is reported as complete.",
+  "instructions": "Update this file only after the user explicitly says deploy now, merge and deploy, or finish and deploy. Ordinary code commits must not modify it."
 }
