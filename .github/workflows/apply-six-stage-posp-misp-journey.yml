@@ -19,8 +19,9 @@ jobs:
           fetch-depth: 0
 
       - name: Update journey tracker
-        shell: python
+        shell: bash
         run: |
+          python <<'PY'
           from pathlib import Path
 
           path = Path("apps/web-portal/app/intermediaries/applications/[id]/page.tsx")
@@ -47,7 +48,7 @@ function Journey({ label, done, active }: JourneyItem) { return <div className="
           new_components = '''function JourneyCard({ title, journey }: { title: string; journey: JourneyItem[] }) {
   const detailedStatus = journey.length === 6;
   return (
-    <section className="bg-transparent px-0 py-1">
+    <section className="overflow-x-auto bg-transparent px-0 py-1">
       <h2 className="mb-4 text-[13px] font-semibold text-[#17203A]">{title}</h2>
       <div className={`relative grid min-w-[720px] gap-0 ${journey.length === 2 ? "sm:min-w-0 sm:grid-cols-2" : "sm:grid-cols-6"} before:absolute before:left-[8.333%] before:right-[8.333%] before:top-[21px] before:h-px before:bg-[#D6DEE9] before:content-['']`}>
         {journey.map((item, index) => <Journey key={item.label} {...item} index={index} detailedStatus={detailedStatus} />)}
@@ -74,6 +75,7 @@ function Journey({ label, done, active, index, detailedStatus }: JourneyItem & {
           source = source.replace(old_journey, new_journey)
           source = source.replace(old_components, new_components)
           path.write_text(source)
+          PY
 
       - name: Remove temporary workflow
         run: git rm .github/workflows/apply-six-stage-posp-misp-journey.yml
