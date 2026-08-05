@@ -5,6 +5,7 @@ import { requirePospMispManager } from "@/lib/master-data-server";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resolveIibPanVerificationStatus, type IibPanVerificationJob } from "@/lib/iib-pan-verification-status";
+import { buildIntermediaryDocumentSlots, findDocumentForSlot } from "@/lib/intermediary-document-slots";
 import { PospMispApplicationEditor, type PospMispEditProfile } from "@/app/customers/applications/posp-misp-application-editor";
 import { type PospMispWorkflowProfile } from "@/app/customers/applications/posp-misp-workflow-panel";
 import { PanVerificationAutoRefresh } from "@/app/customers/applications/pan-verification-auto-refresh";
@@ -138,6 +139,10 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
   const defaultView: ViewStage = profile.workflow_stage === "pre_iib" ? "primary" : profile.workflow_stage === "iib_processing" ? "documents" : "review";
   const viewStage: ViewStage = requested && unlocked.includes(requested) ? requested : defaultView;
   const docList = (documents ?? []).map((item) => ({ document_type: item.document_type, file_name: item.file_name }));
+  const primaryDetailsComplete = profile.workflow_stage !== "pre_iib";
+  const partnerDocumentsComplete = buildIntermediaryDocumentSlots({ legacy: false, hasGst: Boolean(profile.gst_number) })
+    .filter((slot) => slot.required)
+    .every((slot) => Boolean(findDocumentForSlot(slot, docList)));
   const popupEvent = query.success && popupEvents.has(query.success) ? query.success : null;
   const verificationPan = (profile.partner_type === "misp" ? profile.dp_pan_number : profile.pan_number)?.replace(/\s/g, "").toUpperCase() ?? null;
   const iibStatus = resolveIibPanVerificationStatus(panJob, profile.iib_remarks);
@@ -192,7 +197,7 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
         {query.success && !popupEvent ? <WorkflowSuccessToast message={successes[query.success] ?? "Saved successfully."} /> : null}
 
         {!onboardingComplete ? (context === "partner" ? (
-          <PartnerTwoStepNavigation applicationId={id} viewStage={viewStage} documentsComplete={showDocuments} partnerActive={application.partner_status === "active_partner"} />
+          <PartnerTwoStepNavigation applicationId={id} viewStage={viewStage} primaryDetailsComplete={primaryDetailsComplete} documentsComplete={partnerDocumentsComplete} partnerActive={application.partner_status === "active_partner"} />
         ) : (
           <SixStepNavigation applicationId={id} viewStage={viewStage} registrationStatus={application.registration_status} documentsComplete={showDocuments} agreementSigned={assignment?.agreement_status === "signed"} />
         )) : null}
@@ -240,7 +245,7 @@ function asObject(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
-function PartnerTwoStepNavigation({ applicationId, viewStage, documentsComplete, partnerActive }: { applicationId: string; viewStage: ViewStage; documentsComplete: boolean; partnerActive: boolean }) {
+function PartnerTwoStepNavigation({ applicationId, viewStage, primaryDetailsComplete, documentsComplete, partnerActive }: { applicationId: string; viewStage: ViewStage; primaryDetailsComplete: boolean; documentsComplete: boolean; partnerActive: boolean }) {
   const current = viewStage === "primary" ? 1 : 2;
   const steps = [
     ["primary", "Primary details", `/intermediaries/applications/${applicationId}/workflow?stage=primary`],
@@ -251,13 +256,13 @@ function PartnerTwoStepNavigation({ applicationId, viewStage, documentsComplete,
       <div className="relative mx-auto grid max-w-[760px] grid-cols-2 gap-0 before:absolute before:left-[25%] before:right-[25%] before:top-[18px] before:h-px before:bg-[#CBD5E1] before:content-['']">
         {steps.map((step, index) => {
           const number = index + 1;
-          const completed = partnerActive || number < current || (number === 1 && current > 1) || (number === 2 && documentsComplete);
+          const completed = partnerActive || (number === 1 ? primaryDetailsComplete : documentsComplete);
           const active = number === current && !completed;
           return (
             <Link key={step[0]} href={step[2]} className="relative z-[1] min-w-0 text-center">
               <span className={`mx-auto grid h-9 w-9 place-items-center rounded-full border text-[11px] font-bold shadow-[0_0_0_7px_#F8FAFC] transition ${completed ? "border-emerald-600 bg-emerald-600 text-white" : active ? "border-[#071D49] bg-[#071D49] text-white" : "border-[#D7E0EB] bg-[#F1F5F9] text-[#94A3B8]"}`}>{completed ? "✓" : number}</span>
               <span className={`mt-2 block truncate text-[10.5px] font-semibold ${active ? "text-[#071D49]" : completed ? "text-emerald-800" : "text-[#64748B]"}`}>{step[1]}</span>
-              <span className="mt-0.5 block text-[8.5px] font-medium text-[#64748B]">{completed ? "Completed" : active ? "Current" : "Upcoming"}</span>
+              <span className="mt-0.5 block text-[8.5px] font-medium text-[#64748B]">{completed ? "Completed" : "Pending"}</span>
             </Link>
           );
         })}

@@ -6,6 +6,7 @@ import { AppShell } from "@/components/shell";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { requirePospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { buildIntermediaryDocumentSlots, findDocumentForSlot } from "@/lib/intermediary-document-slots";
 import { createIntermediaryPortalLogin } from "@/app/intermediaries/portal-account-actions";
 import { resendIntermediaryPortalInvite } from "@/app/intermediaries/resend-portal-invite-action";
 import { createLinkedIntermediaryAccount } from "./account-review-actions";
@@ -267,7 +268,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
 function linkedAccountType(app: LinkedApplication) { const context = asObject(app.draft_data).account_context; return context === "misp" ? "misp" : context === "posp" ? "posp" : app.requested_type; }
 function permanentCode(value: string | null | undefined) { const code = value?.trim(); return code && !code.startsWith("PENDING-") && !code.startsWith("PART-") ? code : null; }
 function completeAddress(profile: Profile) { const parts = [profile.address, profile.city, profile.state].map((value) => value?.trim()).filter((value): value is string => Boolean(value)); return parts.length ? parts.join(", ") : "-"; }
-function partnerJourney(profile: Profile, docs: Document[], activePartner: boolean): JourneyItem[] { const primary = profile.workflow_stage !== "pre_iib" || Boolean(profile.partner_id); const types = new Set(docs.map((item) => item.document_type)); const complete = activePartner || ["aadhaar_front", "pan_copy", "cancelled_cheque"].every((type) => types.has(type)); return [{ label: "Primary details", done: primary, active: !primary }, { label: "Partner documents", done: complete, active: primary && !complete }]; }
+function partnerJourney(profile: Profile, docs: Document[], activePartner: boolean): JourneyItem[] { const primary = profile.workflow_stage !== "pre_iib"; const complete = activePartner || buildIntermediaryDocumentSlots({ legacy: false, hasGst: Boolean(profile.gst_number) }).filter((slot) => slot.required).every((slot) => Boolean(findDocumentForSlot(slot, docs))); return [{ label: "Primary details", done: primary, active: !primary }, { label: "Partner documents", done: complete, active: primary && !complete }]; }
 function registrationJourney(_context: AccountContext, profile: Profile, assignment: Assignment | null, app: Application): JourneyItem[] {
   const trainingAndExam = assignment?.training_status === "completed" && assignment?.exam_status === "passed";
   const agreement = assignment?.agreement_status === "signed";
@@ -299,7 +300,7 @@ function CompactSubmit({ label, pendingLabel, secondary = false }: { label: stri
   />;
 }
 function JourneyCard({ title, journey }: { title: string; journey: JourneyItem[] }) {
-  const detailedStatus = journey.length === 6;
+  const detailedStatus = true;
   return (
     <section className="overflow-x-auto bg-transparent px-0 py-1">
       <h2 className="mb-4 text-[13px] font-semibold text-[#17203A]">{title}</h2>
