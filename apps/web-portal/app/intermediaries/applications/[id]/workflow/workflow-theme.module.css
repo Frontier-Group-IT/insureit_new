@@ -1,0 +1,143 @@
+.workflowTheme {
+  --workflow-navy: #071d49;
+  --workflow-navy-mid: #0a2b65;
+  --workflow-navy-end: #0c4a9a;
+  --workflow-surface: #f4f7fb;
+  --workflow-border: #dce5ef;
+}
+
+/* Match the account review hero across Edit Details and workflow pages. */
+.workflowTheme :global([class*="max-w-[1480px]"] > section:first-of-type) {
+  overflow: hidden;
+  border-color: #173e7b !important;
+  background: linear-gradient(135deg, var(--workflow-navy), var(--workflow-navy-mid) 58%, var(--workflow-navy-end)) !important;
+  color: #fff !important;
+  box-shadow: 0 18px 45px rgba(7, 29, 73, 0.18) !important;
+}
+
+.workflowTheme :global([class*="max-w-[1480px]"] > section:first-of-type h1),
+.workflowTheme :global([class*="max-w-[1480px]"] > section:first-of-type a),
+.workflowTheme :global([class*="max-w-[1480px]"] > section:first-of-type p),
+.workflowTheme :global([class*="max-w-[1480px]"] > section:first-of-type span) {
+  color: #fff !important;
+}
+
+.workflowTheme :global([class*="max-w-[1480px]"] > section:first-of-type a) {
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.workflowTheme :global([class*="max-w-[1480px]"] > section:first-of-type a:hover) {
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+
+.workflowTheme :global([class*="max-w-[1480px]"] > section:first-of-type span[class*="rounded-lg"]) {
+  border: 1px solid rgba(255, 255, 255, 0.24) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Stage rail: no card/background, only the step indicators and connector. */
+.workflowTheme :global([class*="max-w-[1480px]"] > nav) {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  padding: 0.65rem 0.25rem !important;
+}
+
+.workflowTheme :global([class*="max-w-[1480px]"] > nav a > span:first-child) {
+  box-shadow: none !important;
+}
+
+.workflowTheme :global([class*="max-w-[1480px]"] > nav span[class*="bg-emerald-600"]) {
+  border-color: var(--workflow-navy) !important;
+  background: transparent !important;
+  color: var(--workflow-navy) !important;
+}
+
+.workflowTheme :global([class*="max-w-[1480px]"] > nav span[class*="bg-[#F1F5F9]"]) {
+  background: transparent !important;
+}
+
+.workflowTheme :global([class*="max-w-[1480px]"] > nav span[class*="text-emerald-800"]) {
+  color: var(--workflow-navy) !important;
+}
+
+/* Remove the outer card treatment and use the same compact vertical rhythm as Account Review. */
+.workflowTheme :global([class*="max-w-[1480px]"] > main) {
+  overflow: visible !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.workflowTheme :global([class*="max-w-[1480px]"] > main > div) {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+.workflowTheme :global([class*="max-w-[1480px]"] > main > div > * + *) {
+  margin-top: 1rem !important;
+}
+
+.workflowTheme :global(form[class*="bg-[#F4F7FB]"] > div[class*="space-y-4"]) {
+  padding: 0 !important;
+}
+
+/* Primary information, Documents and Final Review section headers. */
+.workflowTheme :global(form[class*="bg-[#F4F7FB]"] > div[class*="space-y-4"] > section > div:first-child),
+.workflowTheme :global(#qualification-process > section > div:first-child),
+.workflowTheme :global(#iib-submission > header) {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  background: linear-gradient(110deg, var(--workflow-navy), var(--workflow-navy-mid), var(--workflow-navy-end)) !important;
+  color: #fff !important;
+}
+
+.workflowTheme :global(form[class*="bg-[#F4F7FB]"] > div[class*="space-y-4"] > section > div:first-child *),
+.workflowTheme :global(#qualification-process > section > div:first-child *),
+.workflowTheme :global(#iib-submission > header *) {
+  color: #fff !important;
+}
+
+.workflowTheme :global(#qualification-process > section > div:first-child > div:first-child > span) {
+  border: 1px solid rgba(255, 255, 255, 0.42) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #fff !important;
+}
+
+.workflowTheme :global(#qualification-process > section > div:first-child > span),
+.workflowTheme :global(#iib-submission > header > span) {
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #fff !important;
+}
+
+/* Keep bodies white while matching the review page's padding and section spacing. */
+.workflowTheme :global(form[class*="bg-[#F4F7FB]"] > div[class*="space-y-4"] > section),
+.workflowTheme :global(#qualification-process > section),
+.workflowTheme :global(#iib-submission) {
+  border-color: var(--workflow-border) !important;
+  background: #fff !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+.workflowTheme :global(#qualification-process),
+.workflowTheme :global([class*="max-w-[1480px]"] > main > div) {
+  --tw-space-y-reverse: 0;
+}
+
+.workflowTheme :global(#qualification-process > * + *),
+.workflowTheme :global([class*="max-w-[1480px]"] > main > div > * + *) {
+  margin-top: 1rem !important;
+}
+
+.workflowTheme :global(#qualification-process > section > div:not(:first-child)),
+.workflowTheme :global(#iib-submission > div) {
+  padding: 1rem !important;
+}
+
+@media (min-width: 640px) {
+  .workflowTheme :global(#qualification-process > section > div:not(:first-child)),
+  .workflowTheme :global(#iib-submission > div) {
+    padding: 1.25rem !important;
+  }
+}
