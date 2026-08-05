@@ -17,6 +17,8 @@ export function FormSubmitButton({
   name,
   value,
   form,
+  forcePending = false,
+  onSubmitStart,
 }: {
   label?: string;
   pendingLabel?: string;
@@ -26,6 +28,8 @@ export function FormSubmitButton({
   name?: string;
   value?: string;
   form?: string;
+  forcePending?: boolean;
+  onSubmitStart?: () => void;
 }) {
   const { pending, data } = useFormStatus();
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -47,8 +51,8 @@ export function FormSubmitButton({
     };
   }, [requireChange, label]);
 
-  const isCurrentSubmission = pending && (!name || !value || data?.get(name) === value);
-  const isDisabled = disabled || pending || (requireChange && !formChanged);
+  const isCurrentSubmission = forcePending || (pending && (!name || !value || data?.get(name) === value));
+  const isDisabled = disabled || pending || forcePending || (requireChange && !formChanged);
 
   function preserveSubmitIntent() {
     if (!name || value === undefined) return;
@@ -79,7 +83,7 @@ export function FormSubmitButton({
       aria-busy={isCurrentSubmission}
       aria-live="polite"
       title={requireChange && !formChanged ? "Make a change before saving." : undefined}
-      onClick={preserveSubmitIntent}
+      onClick={() => { preserveSubmitIntent(); onSubmitStart?.(); }}
     >
       {isCurrentSubmission ? <InsureItButtonLoader label={pendingLabel} /> : <>{icon}{label}</>}
     </button>

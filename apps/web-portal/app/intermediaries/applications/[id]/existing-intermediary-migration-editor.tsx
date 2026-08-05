@@ -59,7 +59,7 @@ export function ExistingIntermediaryMigrationEditor({ applicationId, accountType
       <div className="flex flex-col gap-2 border-b border-[#E7ECF3] bg-[#FAFBFD] px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-[12.5px] font-semibold text-[#17203A]">Existing Intermediary Migration</h2>
-          <p className="mt-1 text-[9.5px] font-medium text-[#64748B]">Maintain historical IDs, original dates, workflow completion and verification notes imported from previous records.</p>
+          <p className="mt-1 text-[9.5px] font-medium text-[#64748B]">Maintain historical IDs, original dates and workflow completion imported from previous records.</p>
         </div>
         <p className={`text-[9px] font-semibold ${pending ? "text-indigo-600" : state.ok ? "text-emerald-700" : "text-red-700"}`} aria-live="polite">
           {pending ? "Saving migration changes…" : state.message}
@@ -82,10 +82,6 @@ export function ExistingIntermediaryMigrationEditor({ applicationId, accountType
           <Select label="IIB Registration Status" name="legacy_iib_registration_status" defaultValue={selectedValue(LEGACY_IIB_REGISTRATION_OPTIONS, value(values, "legacy_iib_registration_status"), DEFAULT_LEGACY_WORKFLOW.iibRegistrationStatus)} options={LEGACY_IIB_REGISTRATION_OPTIONS} disabled={!editable} />
         </div>
 
-        <div>
-          <label className={labelClass} htmlFor="legacy_verification_remarks">Verification Remarks</label>
-          <textarea id="legacy_verification_remarks" name="legacy_verification_remarks" defaultValue={value(values, "legacy_verification_remarks") || value(values, "legacy_migration_remarks")} disabled={!editable} rows={4} className="w-full rounded-xl border border-[#CBD5E1] bg-white px-3 py-2.5 text-[11px] font-medium text-[#17203A] outline-none transition focus:border-[#635BFF] focus:ring-2 focus:ring-[#E7E5FF] disabled:bg-[#F8FAFC] disabled:text-[#475569]" placeholder="Record source, verification outcome, missing historical evidence or correction reason" />
-        </div>
       </form>
     </section>
   );

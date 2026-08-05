@@ -77,8 +77,6 @@ export async function updateExistingIntermediaryMigrationDetails(
     legacy_agreement_status: agreementStatus,
     legacy_iib_upload_status: iibUploadStatus,
     legacy_iib_registration_status: iibRegistrationStatus,
-    legacy_verification_remarks: optionalText(formData, "legacy_verification_remarks"),
-    legacy_migration_remarks: optionalText(formData, "legacy_verification_remarks"),
     legacy_migration_updated_at: now,
     legacy_migration_updated_by: actor.id,
   };

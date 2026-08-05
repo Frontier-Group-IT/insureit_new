@@ -82,6 +82,7 @@ export function PospMispApplicationEditor({ applicationId, profile, workflowStag
   const [dpEmail, setDpEmail] = useState(profile.dp_email ?? profile.applicant_email ?? "");
   const [selectedFiles, setSelectedFiles] = useState<Record<string, boolean>>({});
   const [missingDocument, setMissingDocument] = useState<string | null>(null);
+  const [submittingIntent, setSubmittingIntent] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const formId = `posp-misp-editor-${applicationId}`;
   const [actionTarget, setActionTarget] = useState<HTMLElement | null>(null);
@@ -104,8 +105,8 @@ export function PospMispApplicationEditor({ applicationId, profile, workflowStag
         {showDocuments && !documentsReady ? <p className="mb-1 text-[8.5px] font-semibold text-amber-700">Attach every mandatory document before saving.</p> : null}
         {showPrimary ? (
           <div className="flex flex-col gap-2 sm:flex-row">
-            <FormSubmitButton form={formId} name="submit_intent" value="exit" label="Save & Exit" pendingLabel="Saving & exiting…" className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-2.5 text-[10.5px] font-semibold text-[#334155] hover:border-[#94A3B8] hover:bg-[#F8FAFC]" />
-            <FormSubmitButton form={formId} name="submit_intent" value="documents" label="Save & return to documents" pendingLabel="Saving & opening documents…" />
+            <FormSubmitButton form={formId} name="submit_intent" value="exit" label="Save & Exit" pendingLabel="Saving & exiting…" forcePending={submittingIntent === "exit"} onSubmitStart={() => setSubmittingIntent("exit")} className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-2.5 text-[10.5px] font-semibold text-[#334155] hover:border-[#94A3B8] hover:bg-[#F8FAFC]" />
+            <FormSubmitButton form={formId} name="submit_intent" value="documents" label="Save & return to documents" pendingLabel="Saving & opening documents…" forcePending={submittingIntent === "documents"} onSubmitStart={() => setSubmittingIntent("documents")} />
           </div>
         ) : <FormSubmitButton form={formId} label="Save documents" pendingLabel="Saving" />}
       </div>
@@ -126,14 +127,18 @@ export function PospMispApplicationEditor({ applicationId, profile, workflowStag
     const native = event.nativeEvent as SubmitEvent;
     const submitter = native.submitter as HTMLElement | null;
     if (submitter?.dataset.skipValidation === "true") return;
+    const intent = submitter instanceof HTMLButtonElement ? submitter.value || "save" : "save";
+    setSubmittingIntent(intent);
     if (showPrimary && !validateInlineForm(event.currentTarget)) {
       event.preventDefault();
+      setSubmittingIntent(null);
       return;
     }
     if (!showDocuments) return;
     const missing = requiredSlots.find((slot) => !findDocumentForSlot(slot, documents) && !selectedFiles[slot.key]);
     if (missing) {
       event.preventDefault();
+      setSubmittingIntent(null);
       focusDocument(missing.key);
     }
   }
