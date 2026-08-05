@@ -174,6 +174,7 @@ export function PolicyFormAuthbridge({ action, createInsurerAction, customers, v
         <PercentField label="Projected OD pay-in %" value={form.projectedOdPercent} onChange={v=>update("projectedOdPercent",v)}/><ReadOnly label="Projected OD pay-in" value={money.format(calculations.projectedOd)} strong/>
         <PercentField label="Projected TP pay-in %" value={form.projectedTpPercent} onChange={v=>update("projectedTpPercent",v)}/><ReadOnly label="Projected TP pay-in" value={money.format(calculations.projectedTp)} strong/>
         <Field label="Any insurer scheme" type="number" min="0" value={form.insurerScheme} onChange={e=>update("insurerScheme",e.target.value)} placeholder="₹ 0.00"/>
+        <Field label="Retention" type="number" min="0" value={form.retention} onChange={e=>update("retention",e.target.value)} placeholder="₹ 0.00"/>
         <ReadOnly label="Total projected pay-in" value={money.format(calculations.totalPayin)} strong accent/><ReadOnly label="TDS on pay-in" value={money.format(calculations.tds)}/><ReadOnly label="Pay-in after TDS" value={money.format(calculations.payinAfterTds)} strong/>
         <Field label="Pay-in bill number" value={form.payinBillNo} onChange={e=>{update("payinBillNo",e.target.value.toUpperCase());update("payinStatus",e.target.value?"Billed":"Unbilled");}} placeholder="INV/2627/001"/>
         <Field label="Pay-in billed amount" type="number" min="0" value={form.payinBilledAmount} onChange={e=>update("payinBilledAmount",e.target.value)} placeholder="₹ 0.00"/><Field label="Pay-in bill date" type="date" value={form.payinBillDate} onChange={e=>update("payinBillDate",e.target.value)}/>
@@ -181,7 +182,6 @@ export function PolicyFormAuthbridge({ action, createInsurerAction, customers, v
       </Section>
 
       <Section number="05" title="Intermediary payout & settlement" subtitle="Record the proposed payout payable to POSP, MISP or Partner." badge="Finance workflow">
-        <Field label="Retention" type="number" min="0" value={form.retention} onChange={e=>update("retention",e.target.value)} placeholder="₹ 0.00"/>
         <PercentField label="Payout OD %" value={form.payoutOdPercent} onChange={v=>update("payoutOdPercent",v)}/><PercentField label="Payout TP %" value={form.payoutTpPercent} onChange={v=>update("payoutTpPercent",v)} disabled={form.payoutBasis==="OD"}/>
         <ReadOnly label="Gross payout" value={money.format(calculations.grossPayout)} strong accent/>
         <Select label="Payout status" value={form.payoutStatus} onChange={e=>update("payoutStatus",e.target.value)} options={["Pending","Approved","On Hold","Processed","Paid","Cancelled"]} placeholder="Select status"/>
