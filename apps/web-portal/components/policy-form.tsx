@@ -161,7 +161,6 @@ export function PolicyForm({ action, createInsurerAction, customers, vehicles, i
           </Section>
 
           <Section number="04" title="Projected insurer pay-in" subtitle="Capture the projected commission receivable from the insurance company." badge="Rate assisted">
-            <Select label="OD / NET basis" value={form.payoutBasis} onChange={(e) => update("payoutBasis", e.target.value)} options={["OD", "NET"]} placeholder="Select basis" required />
             <PercentField label="Projected OD pay-in %" value={form.projectedOdPercent} onChange={(value) => update("projectedOdPercent", value)} />
             <ReadOnly label="Projected OD pay-in" value={money.format(calculations.projectedOd)} strong />
             <PercentField label="Projected TP pay-in %" value={form.projectedTpPercent} onChange={(value) => update("projectedTpPercent", value)} />
