@@ -9,7 +9,6 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createIntermediaryPortalLogin } from "@/app/intermediaries/portal-account-actions";
 import { resendIntermediaryPortalInvite } from "@/app/intermediaries/resend-portal-invite-action";
 import { createLinkedIntermediaryAccount } from "./account-review-actions";
-import { HeaderPanRecheck } from "./header-pan-recheck";
 import { IdSuccessModal } from "./id-success-modal";
 
 export const dynamic = "force-dynamic";
@@ -203,7 +202,6 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
               <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h1 className="truncate text-2xl font-semibold">{name}</h1>{isPartner && partnerId ? <Id value={partnerId} active={activePartner} /> : null}{registrationId ? <Id value={registrationId} active={onboardingComplete} /> : null}</div></div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <HeaderPanRecheck applicationId={id} pan={verificationPan} job={panJob ?? null} />
               {isPartner ? (
                 activePartner ? (
                   linked ? <CompactLink href={`/intermediaries/applications/${linked.id}`} label="Open linked account" /> : (
