@@ -214,7 +214,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
                   )
                 ) : null
               ) : <CompactLink href={`/intermediaries/applications/${id}/workflow?stage=${stageFor(profile)}`} label={`Manage ${kind} account`} />}
-              <CompactLink href={`/intermediaries/applications/${id}/workflow?stage=primary`} label="Edit details" secondary />
+              {isPartner ? <CompactLink href={`/intermediaries/applications/${id}/workflow?stage=primary`} label="Edit details" secondary /> : null}
               {activePartner && intermediary?.portal_access_status === "not_created" ? (
                 <form action={createIntermediaryPortalLogin}>
                   <input type="hidden" name="intermediary_id" value={intermediary.id} />
