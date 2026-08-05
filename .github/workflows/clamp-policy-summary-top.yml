@@ -1,0 +1,25 @@
+name: Clamp policy summary below header
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/clamp-policy-summary-top.yml
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - run: node .github/scripts/clamp-policy-summary-top.mjs
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal/components/policy-form-authbridge.tsx
+          git commit -m "Clamp policy live summary below portal header"
+          git push origin main
