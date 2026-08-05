@@ -1,163 +1,12 @@
 # iCall AWS Gateway and SSO Integration Handoff
 
-> **Captured:** 2026-08-02 15:13 IST
+> **Updated:** 2026-08-05 17:05 IST
 >
-> This document is the complete continuation state for the iCall training integration, AWS Lightsail gateway, Vercel configuration, SSO iframe work, verified behavior, unresolved vendor dependency, and immediate next actions.
->
-> Read this file before changing any iCall, training, SSO, gateway, CSP, or iframe code. Do not ask the user to repeat information already recorded here.
->
-> **Never commit secrets.** The real iCall token and relay secret exist only in protected runtime environment files/settings and are intentionally omitted here.
+> Read this file before changing any iCall, training, SSO, gateway, CSP, or iframe code. Never commit secrets, tokens, cookies, passwords, private keys, full PAN values, or temporary SSO URLs.
 
-## 1. Repository and deployment context
+## Current architecture
 
-- Repository: `Frontier-Group-IT/insureit_new`
-- Default branch: `main`
-- Main app: `apps/web-portal`
-- Vercel application URL currently used for UAT: `https://insureit-drab.vercel.app`
-- Vercel environment variables already configured server-side:
-  - `ICALL_GATEWAY_URL=https://insureit.duckdns.org`
-  - `ICALL_GATEWAY_SECRET=<stored privately in Vercel and Lightsail>`
-- Never use `NEXT_PUBLIC_` for gateway secrets.
-- Do not claim a Vercel deployment succeeded without seeing **Ready** or logs.
-- Current repository deployment rules are in root `AGENTS.md`.
-
-## 2. iCall API contract currently implemented
-
-Base UAT endpoint used only by the gateway:
-
-```text
-https://www.icallinsurance.com/API/SANKALP/UAT
-```
-
-Implemented APIs:
-
-1. Candidate registration
-   - iCall endpoint: `/RegisterPOSPTraining`
-   - Request is Base64-wrapped inside JSON `{ payload }`.
-2. Training status
-   - iCall endpoint: `/POSPTrainingStatus`
-   - Plain JSON.
-3. SSO authentication
-   - iCall endpoint: `/AuthenticateUser`
-   - Plain JSON request `{ authToken, loginId }`.
-   - Response may be direct JSON or Base64-wrapped.
-   - Successful response includes `data.redirectUrl`.
-   - iCall sometimes returns `statusCode` as string `"200"`, not numeric `200`.
-4. TCC
-   - iCall endpoint: `/POSPTCC`
-   - Plain JSON.
-
-The iCall UAT auth token exists in `/opt/insureit-gateway/.env` on Lightsail and must never be committed or copied into chat/repository context.
-
-## 3. AWS Lightsail gateway infrastructure
-
-A fixed-IP integration gateway was created because Vercel static egress IPs were too expensive and iCall requires IP allowlisting.
-
-### Instance
-
-- Provider: AWS Lightsail
-- Region: Mumbai, Zone A (`ap-south-1a`)
-- Instance name: `insureit-integration-gateway`
-- OS: Ubuntu 24.04 LTS
-- Plan: 1 GB RAM, 2 vCPU, 40 GB SSD
-- Static IPv4: `3.111.28.10`
-- Private IPv4: `172.26.12.102`
-- Networking: dual-stack
-- iCall must whitelist outbound IPv4 `3.111.28.10`.
-
-### Public hostname
-
-- DuckDNS hostname: `insureit.duckdns.org`
-- DNS points to `3.111.28.10`.
-- HTTPS certificate installed with Certbot.
-- Public verified health endpoint:
-
-```text
-https://insureit.duckdns.org/health
-```
-
-Expected response:
-
-```json
-{"status":"ok","service":"insureit-icall-gateway","environment":"uat"}
-```
-
-### Firewall
-
-Ubuntu UFW allows:
-
-- OpenSSH
-- Nginx Full
-
-Lightsail network firewall allows:
-
-- TCP 22
-- TCP 80
-- TCP 443 from Anywhere IPv4
-
-### Installed software
-
-- Node.js `22.23.2`
-- npm `10.9.8`
-- nginx `1.24.0`
-- Certbot and nginx plugin
-
-### Gateway runtime
-
-Directory:
-
-```text
-/opt/insureit-gateway
-```
-
-Files:
-
-- `server.js`
-- `package.json`
-- `package-lock.json`
-- `.env` (mode 600; contains secrets; never expose)
-
-Systemd service:
-
-```text
-insureit-gateway.service
-```
-
-Useful checks:
-
-```bash
-sudo systemctl status insureit-gateway --no-pager
-sudo journalctl -u insureit-gateway -n 50 --no-pager
-curl http://127.0.0.1:3001/health
-curl https://insureit.duckdns.org/health
-```
-
-Nginx proxies:
-
-- `/health` → `127.0.0.1:3001/health`
-- `/uat/icall/` → `127.0.0.1:3001`
-
-Protected-route behavior was verified:
-
-```bash
-curl -X POST "https://insureit.duckdns.org/uat/icall/status" \
-  -H "Content-Type: application/json" \
-  -d '{"loginId":"ABCDE1234F"}'
-```
-
-Expected and verified response without relay secret:
-
-```json
-{"statusCode":401,"status":"failed","message":"Unauthorized"}
-```
-
-## 4. Gateway code
-
-Repository file:
-
-```text
-infrastructure/icall-gateway/server.js
-```
+The Next.js portal calls the private AWS Lightsail gateway. The browser never receives the relay secret or iCall auth token.
 
 Gateway routes:
 
@@ -169,228 +18,133 @@ POST /uat/icall/tcc
 GET  /health
 ```
 
-Security behavior:
+Gateway hostname:
 
-- Relay authentication via `Authorization: Bearer <RELAY_SECRET>`.
-- Timing-safe secret comparison.
-- Helmet.
-- JSON body size limit.
-- Rate limiting.
-- PAN/login ID validation.
-- SSO redirect URL validation against HTTPS and `www.icallinsurance.com`.
-- Base64 iCall payload decoding.
-
-When gateway code changes, update the Lightsail copy and restart the service. A GitHub commit alone does not update the running Lightsail service.
-
-Typical one-line update command in Lightsail browser SSH:
-
-```bash
-cd /opt/insureit-gateway && curl -fL "https://raw.githubusercontent.com/Frontier-Group-IT/insureit_new/main/infrastructure/icall-gateway/server.js" -o server.js && node --check server.js && sudo systemctl restart insureit-gateway && sudo systemctl status insureit-gateway --no-pager
+```text
+https://insureit.duckdns.org
 ```
 
-Avoid multiline commands with trailing `\` in the Lightsail browser terminal; pastes repeatedly broke into separate commands during setup.
+Portal UAT origin:
 
-## 5. Portal-side integration files
+```text
+https://insureit-drab.vercel.app
+```
 
-Primary files:
+Primary integration files:
 
 ```text
 apps/web-portal/lib/icall-training-api.ts
 apps/web-portal/app/intermediaries/applications/icall-training-actions.ts
 apps/web-portal/app/intermediaries/applications/icall-training-dashboard.tsx
 apps/web-portal/app/intermediaries/applications/icall-training-launcher.tsx
-apps/web-portal/next.config.mjs
+apps/web-portal/app/intermediary-portal/icall-actions.ts
+apps/web-portal/app/intermediary-portal/icall-portal-launcher.tsx
+apps/web-portal/app/intermediary-portal/page.tsx
+infrastructure/icall-gateway/server.js
 ```
 
-### Portal API client
+## Verified provider behavior
 
-`apps/web-portal/lib/icall-training-api.ts`:
+- Candidate registration works.
+- Training-status sync works for the internal workflow.
+- SSO returns `data.redirectUrl`.
+- A fresh redirect URL works in a top-level browser tab.
+- Redirect URLs are short-lived or single-use and must never be reused.
+- The iframe is permitted by both applications' CSP/frame policy.
+- The iCall iframe currently may fall back to the normal login page because the iCall session cookie was observed with `SameSite=Lax`.
+- Vendor-side requirement remains `SameSite=None; Secure` for cross-site iframe authentication.
 
-- Calls only the AWS gateway.
-- Sends relay secret as server-side Bearer token.
-- Uses `cache: "no-store"` and request timeout.
-- Decodes Base64 `payload` if present.
-- Accepts iCall SSO redirect field variants.
+## Internal manager workflow
 
-### Server action
-
-`launchIcallTrainingSso(applicationId, submittedLoginId)`:
-
-- Requires an authorized POSP/MISP manager.
-- Loads the application training login ID from Supabase.
-- Verifies the submitted login ID matches the current application.
-- Calls gateway SSO.
-- Normalizes string/numeric status codes.
-- Validates returned redirect URL protocol and hostname.
-- Returns a temporary SSO redirect URL to the client launcher.
-
-### Launcher
-
-`IcallTrainingLauncher`:
-
-- Opens a full-screen iframe modal.
-- Supports Escape and close.
-- Has an **Open in new tab** fallback.
-- The new-tab action now requests a fresh SSO URL instead of reusing the iframe URL because iCall URLs are single-use/short-lived.
-
-## 6. Important commits from this work
-
-Relevant commits in order:
-
-- `8c662886b87c3ba43dc0a5b7bc0f4ca36a8111b8` — added full gateway code.
-- `707b97bfc0555b324d4e13cabca11fe926c1824f` — routed portal iCall API calls through gateway.
-- `0639b22c600ca800447feea4cd69bc36c5d56b00` — opened iCall training in secure iframe.
-- `f6841e34f409898f1324c407d9d4c37b058a12c1` — decoded wrapped gateway responses.
-- `54ddbcb6e9d64d2343f700582c761d6c8e4fc15e` — normalized string `"200"` SSO status codes.
-- `8d240db60df06000fdc73b2be61747e2127e2690` — allowed `https://www.icallinsurance.com` in portal CSP `frame-src`.
-- `f914ed71a8ff21d6b45a85c27d5360eb43b9bb80` — fresh SSO URL for new-tab fallback.
-
-Do not assume any commit is live without checking the current Vercel production deployment.
-
-## 7. Verified candidate and current functional state
-
-Test application route:
+The existing internal action remains manager-scoped and must not be weakened:
 
 ```text
-/intermediaries/applications/c657d030-6d94-44ea-b038-2d4de6748390/workflow?stage=review
+launchIcallTrainingSso(applicationId, submittedLoginId)
 ```
 
-Test candidate shown in UI:
+It validates manager scope, stored login ID and the returned HTTPS host before returning a temporary SSO URL.
 
-- Name: Aman Sharma
-- iCall login ID: `VHRFE9867E`
-- Internal POS code: `POSP-2026-00004`
-- Training allotted: `15:00`
-- Completed: `00:00:00`
-- Remaining: `15:00:00`
-- Exam: not attempted
+## External intermediary portal implementation
 
-Verified behavior:
+**IMPLEMENTED IN REPOSITORY — NOT DEPLOYED OR UAT-VERIFIED**
 
-- Registration API works.
-- Status sync works and populates the live iCall training dashboard.
-- AWS gateway health works publicly over HTTPS.
-- Relay protection works.
-- SSO API returns `statusCode: "200"`, `status: "success"`, and `data.redirectUrl`.
-- SSO redirect URL works when opened fresh in a new top-level tab.
-- iCall iframe itself now renders after both parties fixed CSP restrictions.
-- iCall currently falls back to the normal login page inside the iframe; automatic authentication is not retained.
-
-## 8. CSP debugging history and current policy
-
-### iCall-side frame policy
-
-Initially iCall returned:
+Commits:
 
 ```text
-Content-Security-Policy: frame-ancestors 'self'
+a96aaa0fd03fc09f0e69043d0bd8fff07e62e932  Add secure portal iCall SSO action
+189a7562d72a314d8190f51380ff8f14c8481296  Add portal iCall iframe launcher
+da67feac6a4cb93f6cbccf039c455afd38bd1b9b  Connect portal dashboard to secure iCall training iframe
 ```
 
-and also had `X-Frame-Options`. Their IT team:
+### External authorization action
 
-- removed `X-Frame-Options`;
-- added the current UAT origin to their `frame-ancestors` policy:
+File:
 
 ```text
-frame-ancestors 'self' https://insureit-drab.vercel.app;
+apps/web-portal/app/intermediary-portal/icall-actions.ts
 ```
 
-The production domain is not finalized. iCall was told this UAT origin is temporary and that the allowlisted production origin must be updateable later.
+`launchPortalIcallTrainingSso()`:
 
-### InsureIt-side frame policy
+- accepts no application ID or PAN from the browser;
+- resolves the authenticated active intermediary profile server-side;
+- resolves the portal account by authenticated user ID;
+- denies disabled accounts;
+- uses the portal account's own POSP/MISP application;
+- for a Partner portal, resolves the latest linked POSP/MISP child through the canonical `partner_record_id`;
+- uses POSP PAN for POSP and designated-person PAN for MISP when a stored training login ID is unavailable;
+- validates the returned SSO URL as HTTPS on `www.icallinsurance.com`;
+- logs only non-sensitive application/intermediary IDs and a controlled error message.
 
-Chrome Issues then proved our own CSP blocked the iframe with directive `frame-src` for resource `https://www.icallinsurance.com`.
+### External launcher
 
-This was fixed in `apps/web-portal/next.config.mjs` by adding:
+File:
 
 ```text
-frame-src 'self' https://www.icallinsurance.com
+apps/web-portal/app/intermediary-portal/icall-portal-launcher.tsx
 ```
 
-After deployment, the iCall page rendered inside the iframe.
+Behavior:
 
-## 9. Current unresolved issue: iframe SSO session cookie
+- requests a fresh SSO URL for every iframe launch;
+- opens a full-screen Training & Examination iframe;
+- supports Escape and close;
+- requests another fresh URL for the new-tab fallback;
+- refreshes the portal page after closing so saved status can be re-read;
+- never displays the SSO URL or provider secrets.
 
-The iframe now loads iCall, but it displays the normal Login ID/Password form instead of auto-authenticating.
+### Dashboard behavior
 
-A fresh SSO URL still auto-authenticates in a top-level new tab. This isolates the remaining problem to cross-site iframe session handling.
-
-Chrome DevTools → Application → Cookies → `https://www.icallinsurance.com` showed the iCall session/auth cookie with:
-
-- Domain: `www.icallinsurance.com`
-- Secure: yes
-- HttpOnly: yes
-- SameSite: `Lax`
-
-Because iCall is loaded in a cross-site iframe under `insureit-drab.vercel.app`, `SameSite=Lax` prevents the authentication cookie from being sent/retained for iframe navigation.
-
-The required vendor-side cookie setting is typically:
+File:
 
 ```text
-SameSite=None; Secure
+apps/web-portal/app/intermediary-portal/page.tsx
 ```
 
-The iCall IT team has been informed. This cannot be fixed by InsureIt JavaScript, Nginx, Vercel, or iframe attributes because the cookie is owned and issued by iCall.
+- POSP portal launches its own iCall qualification account.
+- MISP portal launches the designated person's qualification account.
+- Partner portal does not own training/exam state; it displays and launches the linked POSP/MISP child's qualification workflow.
+- Button labels adapt to status: Start training, Continue training, Go to examination, Reattempt examination, View completion status.
+- Partner UI clearly labels the information as linked qualification.
 
-### Exact human-style message already sent/requested
+## Remaining work before release
 
-```text
-Hi, we checked the iCall session cookie inside the iframe. The cookie is getting created, but its SameSite setting is showing as Lax. Because of this, the SSO session is not being maintained inside the iframe and it redirects to the normal login page.
+1. Run lint, TypeScript and production build for the exact commits above.
+2. Review whether a Partner can have multiple linked POSP/MISP children; current implementation selects the most recently updated child. If multiple qualification children are valid, add an explicit child selector rather than relying on latest updated.
+3. Add self-service status synchronization with a provider-call cooldown. Current close behavior reloads saved state but does not itself call iCall status.
+4. Confirm external portal account ownership queries match the production authentication/profile mapping.
+5. Deploy only after explicit user instruction.
+6. Verify POSP, MISP designated person and Partner-linked-child launches in UAT.
+7. Confirm iCall cookie is actually `SameSite=None; Secure; HttpOnly` and iframe opens authenticated.
+8. Test fresh new-tab fallback separately.
+9. Test disabled accounts, missing training registration, no linked child, provider timeout and malformed SSO response.
+10. Confirm no temporary URL, token, full PAN or provider cookie appears in logs or client-visible errors.
 
-Please change the session/auth cookie setting to:
+## Safety rules
 
-SameSite=None; Secure
-
-The cookie is already Secure and HttpOnly, so only the SameSite setting needs to be updated.
-```
-
-## 10. Single-use SSO URL behavior
-
-After the iframe consumes an SSO URL, opening the same URL in a new tab can display:
-
-```text
-Training In-Complete. ID Expired
-```
-
-This indicates iCall SSO URLs are single-use or short-lived. Do not reuse an iframe URL for the new-tab fallback.
-
-The launcher was changed so **Open in new tab** calls the server action again and receives a fresh redirect URL.
-
-When testing:
-
-1. Reload the workflow page.
-2. Click **Open training**.
-3. For new-tab testing, use the button that requests a fresh URL after commit `f914ed71...` is deployed.
-4. Do not manually reuse an older redirect URL.
-
-## 11. Immediate next steps for the next chat
-
-1. Confirm the latest Vercel production deployment includes commit `f914ed71a8ff21d6b45a85c27d5360eb43b9bb80` or a later commit containing it.
-2. Wait for iCall to confirm the authentication/session cookie is now `SameSite=None; Secure`.
-3. Test in Incognito or delete all cookies for `icallinsurance.com` before retesting.
-4. Click **Open training** and verify the iframe opens directly to the authenticated training dashboard without showing the login form.
-5. In DevTools Application → Cookies, verify the relevant iCall session cookie shows `SameSite=None`, `Secure`, and `HttpOnly`.
-6. Test the fresh **Open in new tab** fallback separately.
-7. Once iframe SSO works, test:
-   - training page navigation;
-   - session persistence through subsequent training/exam pages;
-   - mobile layout;
-   - close/reopen behavior;
-   - status sync after activity;
-   - expired/completed candidate responses.
-8. Production preparation:
-   - decide final production application domain;
-   - provide final origin to iCall for `frame-ancestors`;
-   - confirm whether the same static IP `3.111.28.10` can be whitelisted for both UAT and production with separate endpoints/tokens;
-   - rotate the UAT token because it was exposed during setup;
-   - keep production secrets out of GitHub and client-side variables.
-
-## 12. What must not be changed casually
-
-- Do not bypass iCall cookie or CSP controls using insecure proxies or response-header rewriting of the iCall application.
-- Do not expose redirect URLs, relay secrets, auth tokens, cookies, or full sensitive identifiers in logs/UI/chat.
-- Do not relax the entire InsureIt CSP to `frame-src https:`; keep the allowlist limited to the exact iCall origin(s).
-- Do not treat a successful SSO API response as proof that iframe authentication works.
-- Do not treat a successful GitHub commit as proof that Vercel or Lightsail is updated.
-- Do not reuse SSO URLs.
-- Do not create a second Lightsail instance unless iCall requires separate UAT/production IPs or strict environment isolation is deliberately chosen.
+- Never call iCall directly from browser code.
+- Never trust a browser-supplied application ID, PAN or login ID for self-service launch.
+- Never reuse a redirect URL.
+- Never assign Partner-owned training/exam state; qualification belongs to POSP/MISP.
+- Do not claim implementation is live until the exact commit is deployed and the user journey is directly verified.
+- Do not bypass vendor cookie/CSP controls using an insecure proxy.
