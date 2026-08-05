@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import {
   Building2,
-  ChevronRight,
   ClipboardCheck,
   FilePenLine,
   Files,
@@ -16,6 +15,7 @@ import {
 import { BrandLockup } from "@/components/brand-lockup";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { IcallPortalLauncher } from "./icall-portal-launcher";
 import { IntermediaryLogoutButton } from "./logout-button";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +31,13 @@ type Intermediary = {
   account_status: string;
   portal_access_status: string;
 };
-type Application = { registration_status: string; status: string };
+type Application = {
+  id: string;
+  registration_status: string;
+  status: string;
+  final_type: string | null;
+  partner_record_id: string | null;
+};
 type Assignment = {
   training_title: string | null;
   training_url: string | null;
@@ -57,13 +63,10 @@ export default async function IntermediaryPortalPage() {
     .maybeSingle<PortalAccount>();
   if (!account || account.status === "disabled") redirect("/access-denied");
 
-  const [{ data: intermediary }, { data: application }, { data: assignment }, { count: documentCount }] = await Promise.all([
+  const [{ data: intermediary }, { data: application }, { count: documentCount }] = await Promise.all([
     admin.from("intermediaries").select("id,display_name,intermediary_type,mobile,email,account_status,portal_access_status").eq("id", account.intermediary_id).maybeSingle<Intermediary>(),
     account.application_id
-      ? admin.from("intermediary_onboarding_applications").select("registration_status,status").eq("id", account.application_id).maybeSingle<Application>()
-      : Promise.resolve({ data: null }),
-    account.application_id
-      ? admin.from("intermediary_training_exam_assignments").select("training_title,training_url,training_instructions,training_deadline,training_status,exam_status,agreement_status").eq("application_id", account.application_id).maybeSingle<Assignment>()
+      ? admin.from("intermediary_onboarding_applications").select("id,registration_status,status,final_type,partner_record_id").eq("id", account.application_id).maybeSingle<Application>()
       : Promise.resolve({ data: null }),
     account.application_id
       ? admin.from("intermediary_onboarding_documents").select("id", { count: "exact", head: true }).eq("application_id", account.application_id)
@@ -80,7 +83,16 @@ export default async function IntermediaryPortalPage() {
     ]);
   }
 
-  const registrationStatus = application?.registration_status ?? "primary_pending";
+  const qualificationApplication = await resolveQualificationApplication(admin, application);
+  const { data: assignment } = qualificationApplication
+    ? await admin
+        .from("intermediary_training_exam_assignments")
+        .select("training_title,training_url,training_instructions,training_deadline,training_status,exam_status,agreement_status")
+        .eq("application_id", qualificationApplication.id)
+        .maybeSingle<Assignment>()
+    : { data: null };
+
+  const registrationStatus = qualificationApplication?.registration_status ?? application?.registration_status ?? "primary_pending";
   const trainingStatus = assignment?.training_status ?? "not_assigned";
   const examStatus = assignment?.exam_status ?? "not_allotted";
   const agreementStatus = assignment?.agreement_status ?? "not_generated";
@@ -90,6 +102,9 @@ export default async function IntermediaryPortalPage() {
   const examComplete = examStatus === "passed";
   const agreementComplete = agreementStatus === "signed";
   const iibComplete = registrationStatus === "iib_registered";
+  const hasQualificationAccount = Boolean(qualificationApplication && ["posp", "misp"].includes(qualificationApplication.final_type || ""));
+  const accountLabel = qualificationApplication?.final_type === "misp" ? "MISP designated person" : qualificationApplication?.final_type === "posp" ? "POSP" : "Qualification account";
+  const trainingButtonLabel = getTrainingButtonLabel(trainingStatus, examStatus);
 
   const steps = [
     { label: "Primary information", icon: IdCard, tone: "complete" as StepTone, status: "Completed" },
@@ -133,7 +148,12 @@ export default async function IntermediaryPortalPage() {
         </section>
 
         <section className="rounded-3xl border border-[#DCE5EF] bg-white px-5 py-6 shadow-sm sm:px-7">
-          <h2 className="text-[18px] font-semibold text-[#0F172A]">Your onboarding</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-[18px] font-semibold text-[#0F172A]">Your onboarding</h2>
+            {intermediary.intermediary_type === "partner" && hasQualificationAccount ? (
+              <span className="rounded-full bg-blue-50 px-3 py-1.5 text-[9.5px] font-semibold text-blue-700">Linked {accountLabel} qualification</span>
+            ) : null}
+          </div>
           <div className="relative mt-6">
             <div aria-hidden="true" className="absolute left-[8.5%] right-[8.5%] top-4 hidden border-t-2 border-dotted border-[#CBD5E1] lg:block" />
             <div className="relative grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
@@ -147,16 +167,16 @@ export default async function IntermediaryPortalPage() {
         <section className="rounded-3xl border border-[#DCE5EF] bg-white px-5 py-6 shadow-sm sm:px-7">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <p className="text-[9px] font-semibold uppercase tracking-[.09em] text-[#64748B]">Training material</p>
-              <h2 className="mt-1 text-[16px] font-semibold text-[#0F172A]">{assignment?.training_title ?? "Training has not been assigned"}</h2>
-              <p className="mt-2 text-[11px] text-[#64748B]">{trainingComplete ? "Training completed successfully." : "Continue learning to complete your training."}</p>
+              <p className="text-[9px] font-semibold uppercase tracking-[.09em] text-[#64748B]">{intermediary.intermediary_type === "partner" ? `Linked ${accountLabel} training` : "Training material"}</p>
+              <h2 className="mt-1 text-[16px] font-semibold text-[#0F172A]">{assignment?.training_title ?? (hasQualificationAccount ? "Training has not been assigned" : "No linked POSP or MISP training account")}</h2>
+              <p className="mt-2 text-[11px] text-[#64748B]">
+                {trainingComplete ? "Training completed successfully. Open the secure session to continue to examination when allotted." : hasQualificationAccount ? "Continue learning through the secure iCall training and examination portal." : "Training becomes available after a POSP or MISP qualification account is linked."}
+              </p>
             </div>
             <div className="flex shrink-0 flex-col items-stretch gap-3 sm:items-end">
               <span className="text-[10px] font-semibold capitalize text-[#334155]">{trainingStatus.replaceAll("_", " ")}</span>
-              {assignment?.training_url ? (
-                <a href={assignment.training_url} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#4F7DF3] bg-white px-5 py-2.5 text-[11px] font-semibold text-[#2456C8] shadow-sm transition hover:bg-[#F4F7FF]">
-                  Go to Training <ChevronRight className="h-4 w-4" />
-                </a>
+              {hasQualificationAccount && assignment ? (
+                <IcallPortalLauncher buttonLabel={trainingButtonLabel} accountLabel={accountLabel} />
               ) : null}
             </div>
           </div>
@@ -164,6 +184,34 @@ export default async function IntermediaryPortalPage() {
       </div>
     </main>
   );
+}
+
+async function resolveQualificationApplication(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  application: Application | null,
+) {
+  if (!application) return null;
+  if (application.final_type === "posp" || application.final_type === "misp") return application;
+  if (application.final_type !== "partner" || !application.partner_record_id) return null;
+
+  const { data: child } = await admin
+    .from("intermediary_onboarding_applications")
+    .select("id,registration_status,status,final_type,partner_record_id")
+    .eq("partner_record_id", application.partner_record_id)
+    .in("final_type", ["posp", "misp"])
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<Application>();
+
+  return child ?? null;
+}
+
+function getTrainingButtonLabel(trainingStatus: string, examStatus: string) {
+  if (examStatus === "passed") return "View completion status";
+  if (examStatus === "failed") return "Reattempt examination";
+  if (trainingStatus === "completed" && examStatus !== "not_allotted") return "Go to examination";
+  if (["in_progress", "started", "ongoing"].includes(trainingStatus)) return "Continue training";
+  return "Start training";
 }
 
 function StatusPill({ value }: { value: string }) {
