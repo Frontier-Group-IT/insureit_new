@@ -1,0 +1,45 @@
+name: Embed IIB refresh in status card
+
+on:
+  push:
+    branches:
+      - fix/embed-iib-refresh-in-status
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/embed-iib-refresh-in-status
+          fetch-depth: 0
+      - name: Remove duplicate standalone PAN recheck control
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          page = Path('apps/web-portal/app/intermediaries/applications/[id]/page.tsx')
+          text = page.read_text()
+          text = text.replace('import { HeaderPanRecheck } from "./header-pan-recheck";\n', '')
+          old = '              <HeaderPanRecheck applicationId={id} pan={verificationPan} job={panJob ?? null} />\n'
+          if old not in text:
+              raise SystemExit('Standalone HeaderPanRecheck usage not found')
+          text = text.replace(old, '', 1)
+          page.write_text(text)
+          PY
+      - name: Verify focused change
+        run: |
+          grep -q 'IibPanVerificationReviewCard' 'apps/web-portal/app/intermediaries/applications/[id]/layout.tsx'
+          grep -q 'border-l border-white/20' 'apps/web-portal/app/intermediaries/applications/[id]/iib-pan-verification-review-card.tsx'
+          ! grep -q 'HeaderPanRecheck' 'apps/web-portal/app/intermediaries/applications/[id]/page.tsx'
+      - name: Commit compact status control
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add 'apps/web-portal/app/intermediaries/applications/[id]/page.tsx'
+          git commit -m "Keep IIB refresh inside status card"
+          git push origin HEAD:fix/embed-iib-refresh-in-status
