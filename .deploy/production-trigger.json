@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-05T12:41:00+05:30",
+  "deploy_requested_at": "2026-08-05T16:32:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit deploy now command",
-  "source_commit": "e301e5629c444458635141477d12de4002bc5207",
-  "release_scope": "Deploy PR #185. Save & Exit from new and legacy POSP/MISP onboarding now redirects directly to the corresponding Partner application review page. Save & return to documents remains unchanged. No validation, permission, database schema, or workflow transition behavior changed.",
-  "verification": "The focused redirect assertion workflow completed successfully before merge. PR #185 changed two route files and was merged to main as commit e301e5629c444458635141477d12de4002bc5207. Full repository lint, TypeScript, and production build were not run for this change. Vercel production status must reach Ready/Success before claiming deployment completion.",
+  "source": "ChatGPT explicit deploy command",
+  "source_commit": "5a82c8f31d0c824a652fec5f49d4a057d54fd6dd",
+  "release_scope": "Deploy the AuthBridge policy onboarding V1 UI with the Retention field moved from Intermediary payout & settlement into Projected insurer pay-in. No database schema, API contract, AuthBridge mapping, premium calculation, payout calculation, permission, or submission behavior changed.",
+  "verification": "Source commit is based on the verified AuthBridge policy onboarding UI commit e6f7230e5dd36aaaa1edda197f884aef79dc33ca. The only UI change is moving the existing Retention field between sections. Vercel production status must reach Ready/Success before claiming deployment completion.",
   "instructions": "Update this file only after the user explicitly says deploy now or finish and deploy. Ordinary code commits must not modify it."
 }
