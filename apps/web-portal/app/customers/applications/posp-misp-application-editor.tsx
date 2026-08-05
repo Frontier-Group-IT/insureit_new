@@ -91,6 +91,12 @@ export function PospMispApplicationEditor({ applicationId, profile, workflowStag
     setActionTarget(actionTargetId ? document.getElementById(actionTargetId) : null);
   }, [actionTargetId]);
 
+  useEffect(() => {
+    if (!submittingIntent) return;
+    const timeout = window.setTimeout(() => setSubmittingIntent(null), 30000);
+    return () => window.clearTimeout(timeout);
+  }, [submittingIntent]);
+
   const activeView = viewStage ?? (workflowStage === "pre_iib" ? "primary" : workflowStage === "iib_processing" ? "documents" : "review");
   const showPrimary = activeView === "primary";
   const showDocuments = activeView === "documents";
@@ -105,8 +111,8 @@ export function PospMispApplicationEditor({ applicationId, profile, workflowStag
         {showDocuments && !documentsReady ? <p className="mb-1 text-[8.5px] font-semibold text-amber-700">Attach every mandatory document before saving.</p> : null}
         {showPrimary ? (
           <div className="flex flex-col gap-2 sm:flex-row">
-            <FormSubmitButton form={formId} name="submit_intent" value="exit" label="Save & Exit" pendingLabel="Saving & exiting…" forcePending={submittingIntent === "exit"} onSubmitStart={() => setSubmittingIntent("exit")} className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-2.5 text-[10.5px] font-semibold text-[#334155] hover:border-[#94A3B8] hover:bg-[#F8FAFC]" />
-            <FormSubmitButton form={formId} name="submit_intent" value="documents" label="Save & return to documents" pendingLabel="Saving & opening documents…" forcePending={submittingIntent === "documents"} onSubmitStart={() => setSubmittingIntent("documents")} />
+            <FormSubmitButton form={formId} name="submit_intent" value="exit" label="Save & Exit" pendingLabel="Saving & exiting…" forcePending={submittingIntent === "exit"} className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-2.5 text-[10.5px] font-semibold text-[#334155] hover:border-[#94A3B8] hover:bg-[#F8FAFC]" />
+            <FormSubmitButton form={formId} name="submit_intent" value="documents" label="Save & return to documents" pendingLabel="Saving & opening documents…" forcePending={submittingIntent === "documents"} />
           </div>
         ) : <FormSubmitButton form={formId} label="Save documents" pendingLabel="Saving" />}
       </div>
