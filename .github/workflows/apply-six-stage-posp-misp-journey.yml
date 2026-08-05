@@ -1,0 +1,26 @@
+name: Apply six-stage POSP MISP journey
+
+on:
+  push:
+    branches:
+      - feature/six-stage-posp-misp-journey-v2
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/six-stage-posp-misp-journey-v2
+          fetch-depth: 0
+      - run: python .github/scripts/apply-six-stage-posp-misp-journey.py
+      - run: git rm .github/workflows/apply-six-stage-posp-misp-journey.yml .github/scripts/apply-six-stage-posp-misp-journey.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal/app/intermediaries/applications/'[id]'/page.tsx
+          git commit -m "Update POSP MISP journey to six stages"
+          git push origin HEAD:feature/six-stage-posp-misp-journey-v2
