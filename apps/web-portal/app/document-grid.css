@@ -1,0 +1,10 @@
+/*
+ * Stable document-card layout shared by every upload and review surface.
+ * This stylesheet is loaded by the root layout, so the five-column desktop
+ * grid is present during the first browser paint rather than after hydration.
+ */
+@media (min-width: 1280px) {
+  .grid:has(> .document-visual-card) {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  }
+}
