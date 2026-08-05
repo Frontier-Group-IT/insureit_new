@@ -130,7 +130,9 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
   const title = profile.partner_type === "misp" ? (profile.misp_name ?? "MISP application") : (profile.pos_name ?? "POSP application");
   const context = accountContext(application.draft_data);
   const permanentReference = context === "partner" ? profile.partner_id : (profile.external_onboarding_id && !profile.external_onboarding_id.startsWith("PENDING-") ? profile.external_onboarding_id : null);
-  const showDocuments = profile.workflow_stage !== "pre_iib" || Boolean(documents?.length);
+  const requiredDocumentTypes = ["aadhaar_front", "aadhaar_back", "pan_copy", "cancelled_cheque", "photograph", ...(profile.gst_number ? ["gst_copy"] : [])];
+  const uploadedDocumentTypes = new Set((documents ?? []).filter((document) => Boolean(document.file_name?.trim())).map((document) => document.document_type));
+  const documentsComplete = requiredDocumentTypes.every((documentType) => uploadedDocumentTypes.has(documentType));
   const shouldRefresh = profile.workflow_stage === "pre_iib" && (!panJob || ["pending", "queued", "checking"].includes(panJob.status ?? ""));
   const unlocked = profile.workflow_stage === "pre_iib" ? ["primary"] : profile.workflow_stage === "iib_processing" ? ["primary", "documents"] : ["primary", "documents", "review"];
   const normalizedError = normalizeWorkflowError(query.error, query.field);
@@ -192,9 +194,9 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
         {query.success && !popupEvent ? <WorkflowSuccessToast message={successes[query.success] ?? "Saved successfully."} /> : null}
 
         {!onboardingComplete ? (context === "partner" ? (
-          <PartnerTwoStepNavigation applicationId={id} viewStage={viewStage} documentsComplete={showDocuments} partnerActive={application.partner_status === "active_partner"} />
+          <PartnerTwoStepNavigation applicationId={id} viewStage={viewStage} documentsComplete={documentsComplete} partnerActive={application.partner_status === "active_partner"} />
         ) : (
-          <SixStepNavigation applicationId={id} viewStage={viewStage} registrationStatus={application.registration_status} documentsComplete={showDocuments} agreementSigned={assignment?.agreement_status === "signed"} />
+          <SixStepNavigation applicationId={id} viewStage={viewStage} registrationStatus={application.registration_status} documentsComplete={documentsComplete} agreementSigned={assignment?.agreement_status === "signed"} />
         )) : null}
 
         <IntermediaryDocumentUploadController applicationId={id} enabled={viewStage === "documents" && editable} showGst={Boolean(profile.gst_number)} />
