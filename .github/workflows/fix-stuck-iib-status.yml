@@ -1,4 +1,4 @@
-name: Fix stuck IIB status
+name: Validate stuck IIB status fix
 
 on:
   push:
@@ -6,87 +6,16 @@ on:
       - fix/iib-status-consistency
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  patch-and-check:
-    if: ${{ github.actor != 'github-actions[bot]' }}
+  typecheck:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: fix/iib-status-consistency
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-      - name: Resolve completed PAN result before active duplicates
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          path = Path('apps/web-portal/app/intermediaries/applications/[id]/iib-pan-verification-review-card.tsx')
-          text = path.read_text()
-          text = text.replace('type PanJob = {\n  status: PanJobStatus;', 'type PanJob = {\n  application_id: string;\n  pan_number: string;\n  updated_at: string | null;\n  status: PanJobStatus;', 1)
-          text = text.replace('const JOB_COLUMNS = "status,result_message,last_error,checked_by_device,requested_at,started_at,completed_at";', 'const JOB_COLUMNS = "application_id,pan_number,updated_at,status,result_message,last_error,checked_by_device,requested_at,started_at,completed_at";', 1)
-          old = '''  let job = directJob;
-
-  // A Partner and its linked POSP/MISP accounts can have separate application IDs.
-  // PAN is unique in onboarding, so use the latest job for the same normalized PAN
-  // when the current application does not yet have its own job row.
-  if (!job && validPan) {
-    const { data: matchingJob } = await admin
-      .from("pan_verification_jobs")
-      .select(JOB_COLUMNS)
-      .eq("pan_number", pan)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle<PanJob>();
-    job = matchingJob;
-  }
-'''
-          new = '''  let job = directJob;
-
-  // Partner and linked POSP/MISP records can have different application IDs for
-  // the same unique PAN. A completed IIB outcome is authoritative for that PAN.
-  // This also prevents a duplicate/stale child job from masking an already
-  // returned result with an endless pending/checking state.
-  if (validPan) {
-    const { data: matchingJobs } = await admin
-      .from("pan_verification_jobs")
-      .select(JOB_COLUMNS)
-      .eq("pan_number", pan)
-      .order("updated_at", { ascending: false })
-      .limit(20)
-      .returns<PanJob[]>();
-    job = resolveAuthoritativeJob(directJob, matchingJobs ?? []);
-  }
-'''
-          if old not in text:
-              raise SystemExit('Old job fallback block not found')
-          text = text.replace(old, new, 1)
-          marker = '\nfunction statusPresentation(status: PanJobStatus, hasJob: boolean) {'
-          helper = '''
-const TERMINAL_STATUSES = new Set<PanJobStatus>(["matched", "not_found", "invalid", "failed", "manual_review"]);
-
-function resolveAuthoritativeJob(directJob: PanJob | null, matchingJobs: PanJob[]) {
-  const candidates = directJob
-    ? [directJob, ...matchingJobs.filter((item) => item.application_id !== directJob.application_id)]
-    : matchingJobs;
-  return candidates.find((item) => TERMINAL_STATUSES.has(item.status)) ?? candidates[0] ?? null;
-}
-'''
-          if marker not in text:
-              raise SystemExit('statusPresentation marker not found')
-          text = text.replace(marker, helper + marker, 1)
-          path.write_text(text)
-          PY
       - run: npm ci
       - run: npm run typecheck:web
-      - name: Commit fix
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add 'apps/web-portal/app/intermediaries/applications/[id]/iib-pan-verification-review-card.tsx'
-          git commit -m "Prefer completed IIB result for linked PAN"
-          git push origin HEAD:fix/iib-status-consistency
