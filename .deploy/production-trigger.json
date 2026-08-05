@@ -3,8 +3,8 @@
   "deploy_requested_at": "2026-08-05T12:11:00+05:30",
   "requested_by": "Nishant Mishra",
   "source": "ChatGPT explicit deploy now command",
-  "source_commit": "14889721463d0d74b4ec02ff18cec5347eda723f",
-  "release_scope": "Deploy PR #181. Removes the Edit details button from POSP and MISP Application Review pages while retaining the existing Manage POSP/MISP account action. Partner review pages retain Edit details. No workflow, permission, database, or extension changes.",
-  "verification": "PR #181 changed one UI file with a one-line conditional rendering update and was merged to main as commit 14889721463d0d74b4ec02ff18cec5347eda723f. The focused patch was reviewed before merge; no full repository lint, TypeScript, or production build result was available for this change.",
+  "source_commit": "1b5924d44005f2064e344b7e51cf2dd013148fd9",
+  "release_scope": "Deploy PR #182. Completed Partner, POSP, and MISP onboarding journeys now collapse from the review/workflow progress tracker into a green completion indicator beside the permanent ID. The workflow back link is removed, completed Partner steps render green, and inner Primary information & PAN check headers use a light treatment while the main identity header remains navy.",
+  "verification": "The focused repository patch workflow completed successfully before merge. PR #182 changed three UI files and was merged to main as commit 1b5924d44005f2064e344b7e51cf2dd013148fd9. Full repository lint, TypeScript, and production build were not run for this change. Vercel production status must reach Ready/Success before claiming deployment completion.",
   "instructions": "Update this file only after the user explicitly says deploy now or finish and deploy. Ordinary code commits must not modify it."
 }
