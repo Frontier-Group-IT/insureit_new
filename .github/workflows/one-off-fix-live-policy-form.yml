@@ -1,0 +1,62 @@
+name: One-off fix live policy form
+
+on:
+  push:
+    paths:
+      - '.github/workflows/one-off-fix-live-policy-form.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update-live-policy-form:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Apply requested changes to actual Add Policy component
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('apps/web-portal/components/policy-form-authbridge.tsx')
+          source = path.read_text()
+
+          replacements = [
+              ('options={["POSP","MISP","SIBL / Partner","Direct"]}', 'options={["POSP","MISP","SIBL / Partner"]}'),
+              ('<Select label="Business line" value={form.businessLine} onChange={e=>update("businessLine",e.target.value)} options={["Motor"]} placeholder="Select" />', '<Select label="Policy type" value={form.businessLine} onChange={e=>update("businessLine",e.target.value)} options={["Motor"]} placeholder="Select policy type" />'),
+              ('    <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start"><div className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-sm">', '    <aside className="space-y-4 xl:self-start"><div className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-sm xl:sticky xl:top-4 xl:z-10">'),
+              ('        <Field label="Retention" type="number" min="0" value={form.retention} onChange={e=>update("retention",e.target.value)} placeholder="₹ 0.00"/>\n', ''),
+              ('        <ReadOnly label="Total projected pay-in" value={money.format(calculations.totalPayin)} strong accent/><ReadOnly label="TDS on pay-in" value={money.format(calculations.tds)}/><ReadOnly label="Pay-in after TDS" value={money.format(calculations.payinAfterTds)} strong/>\n', '        <ReadOnly label="Total projected pay-in" value={money.format(calculations.totalPayin)} strong accent/><ReadOnly label="TDS on pay-in" value={money.format(calculations.tds)}/><ReadOnly label="Pay-in after TDS" value={money.format(calculations.payinAfterTds)} strong/>\n        <Field label="Retention" type="number" min="0" value={form.retention} onChange={e=>update("retention",e.target.value)} placeholder="₹ 0.00"/>\n'),
+          ]
+
+          for old, new in replacements:
+              if old not in source:
+                  raise SystemExit(f'Required target not found: {old[:120]}')
+              source = source.replace(old, new, 1)
+
+          removals = [
+              '        <Select label="OD / NET basis" value={form.payoutBasis} onChange={e=>update("payoutBasis",e.target.value)} options={["OD","NET"]} placeholder="Select basis" required/>\n',
+              '        <Field label="Pay-in bill number" value={form.payinBillNo} onChange={e=>{update("payinBillNo",e.target.value.toUpperCase());update("payinStatus",e.target.value?"Billed":"Unbilled");}} placeholder="INV/2627/001"/>\n',
+              '        <Field label="Pay-in billed amount" type="number" min="0" value={form.payinBilledAmount} onChange={e=>update("payinBilledAmount",e.target.value)} placeholder="₹ 0.00"/><Field label="Pay-in bill date" type="date" value={form.payinBillDate} onChange={e=>update("payinBillDate",e.target.value)}/>\n',
+              '        <Select label="Pay-in status" value={form.payinStatus} onChange={e=>update("payinStatus",e.target.value)} options={["Unbilled","Billed","Part Received","Received","Short Received","Reconciled"]} placeholder="Select status"/><ReadOnly label="Short payout" value={money.format(calculations.shortPayout)}/>\n',
+          ]
+
+          for target in removals:
+              if target not in source:
+                  raise SystemExit(f'Removal target not found: {target[:120]}')
+              source = source.replace(target, '', 1)
+
+          path.write_text(source)
+          PY
+
+      - name: Commit actual Add Policy UI changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal/components/policy-form-authbridge.tsx
+          git commit -m "Apply policy onboarding UI changes to live AuthBridge form"
+          git push origin main
