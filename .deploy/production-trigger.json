@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-05T11:16:00+05:30",
+  "deploy_requested_at": "2026-08-05T12:11:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit merge and deploy command",
-  "source_commit": "61085b49b6236a63f49943a751eec7d8e3c57388",
-  "release_scope": "Deploy PR #179. POSP and MISP application-review journey trackers now use six stages: Primary details, Documents, Registration, Training & Exam, Agreement, and IIB Upload. Completed, current, and pending states are shown on the connected timeline; the Partner two-stage journey and all existing workflow, validation, permission, database, and redirect behavior remain unchanged.",
-  "verification": "The focused repository patch workflow completed successfully and PR #179 was merged using the exact validated head SHA 37c3979127b569b3ab9542885a0ea30892e1b566. No repository PR workflow ran full lint, TypeScript, or production build checks for this change, so those checks remain unverified.",
+  "source": "ChatGPT explicit deploy now command",
+  "source_commit": "14889721463d0d74b4ec02ff18cec5347eda723f",
+  "release_scope": "Deploy PR #181. Removes the Edit details button from POSP and MISP Application Review pages while retaining the existing Manage POSP/MISP account action. Partner review pages retain Edit details. No workflow, permission, database, or extension changes.",
+  "verification": "PR #181 changed one UI file with a one-line conditional rendering update and was merged to main as commit 14889721463d0d74b4ec02ff18cec5347eda723f. The focused patch was reviewed before merge; no full repository lint, TypeScript, or production build result was available for this change.",
   "instructions": "Update this file only after the user explicitly says deploy now or finish and deploy. Ordinary code commits must not modify it."
 }
