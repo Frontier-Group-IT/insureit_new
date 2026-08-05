@@ -170,6 +170,7 @@ export function PolicyForm({ action, createInsurerAction, customers, vehicles, i
             <ReadOnly label="Total projected pay-in" value={money.format(calculations.totalPayin)} strong accent />
             <ReadOnly label="TDS on pay-in" value={money.format(calculations.tds)} hint="Prototype assumes 10%" />
             <ReadOnly label="Pay-in after TDS" value={money.format(calculations.payinAfterTds)} strong />
+            <Field label="Retention" type="number" min="0" value={form.retention} onChange={(e) => update("retention", e.target.value)} placeholder="₹ 0.00" />
             <Field label="Pay-in bill number" value={form.payinBillNo} onChange={(e) => { update("payinBillNo", e.target.value.toUpperCase()); update("payinStatus", e.target.value ? "Billed" : "Unbilled"); }} placeholder="INV/2627/001" />
             <Field label="Pay-in billed amount" type="number" min="0" value={form.payinBilledAmount} onChange={(e) => update("payinBilledAmount", e.target.value)} placeholder="₹ 0.00" />
             <Field label="Pay-in bill date" type="date" value={form.payinBillDate} onChange={(e) => update("payinBillDate", e.target.value)} />
@@ -178,7 +179,6 @@ export function PolicyForm({ action, createInsurerAction, customers, vehicles, i
           </Section>
 
           <Section number="05" title="Intermediary payout & settlement" subtitle="Record the proposed payout payable to POSP, MISP or Partner." badge="Finance workflow">
-            <Field label="Retention" type="number" min="0" value={form.retention} onChange={(e) => update("retention", e.target.value)} placeholder="₹ 0.00" />
             <PercentField label="Payout OD %" value={form.payoutOdPercent} onChange={(value) => update("payoutOdPercent", value)} />
             <PercentField label="Payout TP %" value={form.payoutTpPercent} onChange={(value) => update("payoutTpPercent", value)} disabled={form.payoutBasis === "OD"} hint={form.payoutBasis === "OD" ? "Zero as per current Excel note" : undefined} />
             <ReadOnly label="Gross payout" value={money.format(calculations.grossPayout)} strong accent />
