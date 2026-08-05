@@ -6,6 +6,7 @@ import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { lookupPolicyRegistrationRc, type PolicyRcReview } from "@/app/policies/authbridge-rc-actions";
+import { PolicyOcrImportPanel } from "@/components/policy-ocr-import-panel";
 import {
   onboardPolicy,
   type PolicyCustomerCandidate,
@@ -209,7 +210,7 @@ export function PolicyFormAuthbridge({ action, createInsurerAction, customers, v
     <div className="mb-4 overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-[0_10px_30px_rgba(15,23,42,.06)]">
       <div className="flex flex-col gap-3 border-b border-[#E7ECF3] bg-[linear-gradient(135deg,#071D49_0%,#123B75_60%,#315B9A_100%)] px-5 py-4 text-white lg:flex-row lg:items-center lg:justify-between">
         <div><div className="flex items-center gap-2"><span className="rounded-full bg-white/15 px-2.5 py-1 text-[8px] font-bold uppercase tracking-[.14em]">Database enabled</span><span className="text-[9px] text-white/70">AuthBridge UAT · prototype_v1 calculations</span></div><h1 className="mt-2 text-[18px] font-semibold">Policy Onboarding</h1><p className="mt-0.5 text-[10px] text-white/70">Creates or links the customer and vehicle, then books the policy and financial details in one transaction.</p></div>
-        <button type="button" onClick={submitPolicy} disabled={isSubmitting} className="rounded-xl bg-white px-5 py-2.5 text-[10px] font-bold text-[#071D49] shadow-sm disabled:opacity-60">{isSubmitting ? "Booking policy…" : "Book Active Policy"}</button>
+        <div className="flex flex-wrap items-center gap-2"><PolicyOcrImportPanel/><button type="button" onClick={submitPolicy} disabled={isSubmitting} className="rounded-xl bg-white px-5 py-2.5 text-[10px] font-bold text-[#071D49] shadow-sm disabled:opacity-60">{isSubmitting ? "Booking policy…" : "Book Active Policy"}</button></div>
       </div>
       <div className="flex gap-1 overflow-x-auto px-3 py-2">{sections.map((section,index)=><button key={section} type="button" onClick={()=>setActiveSection(index)} className={`flex min-w-fit items-center gap-2 rounded-lg px-3 py-2 text-[9.5px] font-semibold ${activeSection===index?"bg-[#EEF2FF] text-[#4338CA]":"text-[#667085] hover:bg-[#F8FAFC]"}`}><span className={`grid h-5 w-5 place-items-center rounded-full text-[8px] ${activeSection===index?"bg-[#4F46E5] text-white":"bg-[#EEF2F6]"}`}>{index+1}</span>{section}</button>)}</div>
     </div>
