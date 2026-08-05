@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { lookupPolicyRegistrationRc, type PolicyRcReview } from "@/app/policies/authbridge-rc-actions";
 import {
@@ -273,7 +273,7 @@ export function PolicyFormAuthbridge({ action, createInsurerAction, customers, v
       </Section>
     </div>
 
-    <aside className="xl:self-stretch"><div className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-sm xl:fixed xl:right-4 xl:top-24 xl:z-30 xl:w-[300px] 2xl:right-[calc((100vw-1480px)/2)]"><div className="border-b bg-[#F8FAFC] px-4 py-3"><p className="text-[9px] font-bold uppercase tracking-[.12em] text-[#4F46E5]">Live summary</p><h3 className="mt-1 text-[13px] font-semibold">Policy Financials</h3></div><div className="space-y-2.5 p-4"><SummaryRow label="Net Premium" value={money.format(calculations.net)} bold/><SummaryRow label="GST" value={money.format(calculations.gst)}/><SummaryRow label="Gross Premium" value={money.format(calculations.gross)} bold accent/><Divider/><SummaryRow label="Pay-in after TDS" value={money.format(calculations.payinAfterTds)}/><SummaryRow label="Partner payout" value={money.format(calculations.grossPayout)}/><SummaryRow label="Indicative margin" value={money.format(calculations.payinAfterTds-calculations.grossPayout)} bold/></div></div></aside></div>
+    <LiveSummary net={calculations.net} gst={calculations.gst} gross={calculations.gross} payinAfterTds={calculations.payinAfterTds} grossPayout={calculations.grossPayout}/></div>
 
     <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#D9E2F0] bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(15,23,42,.08)] backdrop-blur"><div className="mx-auto flex max-w-[1480px] justify-end gap-2"><Link href="/policies" className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Cancel</Link><button type="button" onClick={submitPolicy} disabled={isSubmitting} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-60">{isSubmitting ? "Booking policy…" : "Book Active Policy"}</button></div></div>
 
@@ -281,6 +281,44 @@ export function PolicyFormAuthbridge({ action, createInsurerAction, customers, v
     {customerCandidates ? <CustomerMatchModal candidates={customerCandidates} onChoose={chooseCustomer} onCancel={()=>setCustomerCandidates(null)}/> : null}
     {ownershipConflict ? <OwnershipModal conflict={ownershipConflict} onResolve={resolveOwnership} onCancel={()=>setOwnershipConflict(null)}/> : null}
   </div>;
+}
+
+
+function LiveSummary({ net, gst, gross, payinAfterTds, grossPayout }: { net:number;gst:number;gross:number;payinAfterTds:number;grossPayout:number }) {
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ left:number; width:number } | null>(null);
+
+  useEffect(() => {
+    const updatePosition = () => {
+      if (window.innerWidth < 1280 || !anchorRef.current) {
+        setPosition(null);
+        return;
+      }
+      const rect = anchorRef.current.getBoundingClientRect();
+      setPosition({ left: rect.left, width: rect.width });
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    const observer = new ResizeObserver(updatePosition);
+    if (anchorRef.current) observer.observe(anchorRef.current);
+    observer.observe(document.documentElement);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      observer.disconnect();
+    };
+  }, []);
+
+  const card = <div className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-[0_10px_30px_rgba(15,23,42,.10)]"><div className="border-b bg-[#F8FAFC] px-4 py-3"><p className="text-[9px] font-bold uppercase tracking-[.12em] text-[#4F46E5]">Live summary</p><h3 className="mt-1 text-[13px] font-semibold">Policy Financials</h3></div><div className="space-y-2.5 p-4"><SummaryRow label="Net Premium" value={money.format(net)} bold/><SummaryRow label="GST" value={money.format(gst)}/><SummaryRow label="Gross Premium" value={money.format(gross)} bold accent/><Divider/><SummaryRow label="Pay-in after TDS" value={money.format(payinAfterTds)}/><SummaryRow label="Partner payout" value={money.format(grossPayout)}/><SummaryRow label="Indicative margin" value={money.format(payinAfterTds-grossPayout)} bold/></div></div>;
+
+  return <aside className="xl:self-stretch">
+    <div className="xl:hidden">{card}</div>
+    <div ref={anchorRef} className="hidden h-px w-full xl:block" aria-hidden="true" />
+    {position && typeof document !== "undefined" ? createPortal(
+      <div className="fixed top-24 z-30" style={{ left: position.left, width: position.width }}>{card}</div>,
+      document.body,
+    ) : null}
+  </aside>;
 }
 
 function ModalShell({ title, subtitle, onClose, children, footer }: { title:string;subtitle:string;onClose:()=>void;children:ReactNode;footer:ReactNode }) {
