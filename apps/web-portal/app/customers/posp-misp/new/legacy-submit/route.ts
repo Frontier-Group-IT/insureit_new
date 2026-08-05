@@ -92,7 +92,7 @@ export async function POST(request: Request) {
   }
 
   const destination = submitIntent === "exit"
-    ? new URL("/customers/posp-misp", request.url)
+    ? new URL(`/intermediaries/applications/${result.applicationId}?success=primary_details_saved`, request.url)
     : new URL(`/intermediaries/applications/${result.applicationId}/workflow?stage=documents&success=primary_details_saved`, request.url);
   return NextResponse.redirect(destination, 303);
 }

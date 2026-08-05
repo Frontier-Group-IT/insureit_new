@@ -115,7 +115,7 @@ function readSubmitIntent(data: FormData) {
 
 function successDestination(requestUrl: string, applicationId: string, intent: "exit" | "documents", success: string) {
   return intent === "exit"
-    ? new URL("/customers/posp-misp", requestUrl)
+    ? new URL(`/intermediaries/applications/${applicationId}?success=${success}`, requestUrl)
     : new URL(`/intermediaries/applications/${applicationId}/workflow?stage=documents&success=${success}`, requestUrl);
 }
 
