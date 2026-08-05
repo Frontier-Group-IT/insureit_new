@@ -49,6 +49,7 @@ export const permissionDefinitions: PermissionDefinition[] = Object.entries(labe
 }));
 
 export function rolePermissionAccess(role: string | null | undefined, capability: Capability): PermissionAccess {
+  if (role === "it_super_user") return "approve";
   if (!hasCapability(role, capability)) return "none";
   return permissionDefinitions.find((item) => item.capability === capability)?.roleAccess ?? "view";
 }
@@ -58,6 +59,13 @@ export function permissionModules() {
 }
 
 export async function getEffectivePermission(profileId: string, role: AppRole, capability: Capability) {
+  // IT Super User is the protected developer role. It must always retain full
+  // organisation-wide access and must never be downgraded by role or employee
+  // override rows created through the permission-management interface.
+  if (role === "it_super_user") {
+    return { access: "approve" as const, scope: "organization" as const, source: "protected_role" as const };
+  }
+
   const admin = createSupabaseAdminClient();
   const now = new Date().toISOString();
   const [{ data: employeeOverride }, { data: roleOverride }] = await Promise.all([
