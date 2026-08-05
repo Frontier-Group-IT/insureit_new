@@ -82,7 +82,7 @@ export function DocumentVisualCard({
   const label = status ?? (fileName ? "Uploaded" : required ? "Required" : "Optional");
 
   return (
-    <article id={id} className={`group relative overflow-hidden rounded-[18px] border shadow-[0_16px_38px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_52px_rgba(15,23,42,0.09)] ${toneClasses[resolvedTone]} ${muted ? "opacity-50 hover:opacity-80" : "opacity-100"}`}>
+    <article id={id} className={`document-visual-card group relative overflow-hidden rounded-[18px] border shadow-[0_16px_38px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_52px_rgba(15,23,42,0.09)] ${toneClasses[resolvedTone]} ${muted ? "opacity-50 hover:opacity-80" : "opacity-100"}`}>
       {clickTargetId ? <label htmlFor={clickTargetId} className="absolute inset-0 z-10 cursor-pointer" aria-label={`Upload ${title}`} /> : null}
       <div className={`relative overflow-hidden bg-white ${compact ? "h-40" : "h-72"}`}>
         <Image
