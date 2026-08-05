@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-04T23:54:14+05:30",
+  "deploy_requested_at": "2026-08-05T11:16:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit deploy command",
-  "source_commit": "5b6d4bfd9d2852c2878b1f148927351529d2fb4b",
-  "release_scope": "Deploy the existing POSP/MISP linked-account ID popup fix. The Partner review page now treats legacy_intermediary_imported as an ID modal event, so creating the linked POSP/MISP ID after an existing Partner import shows the same compact ID popup instead of no popup/plain success handling.",
-  "verification": "Commit 5b6d4bfd9d2852c2878b1f148927351529d2fb4b passed local typecheck, lint and production build after rebasing onto latest main. Lint/build reported only existing unrelated unused-import warnings in app/actions.ts and app/customers/posp-misp/import/bulk-upload-v2-actions.ts.",
+  "source": "ChatGPT explicit merge and deploy command",
+  "source_commit": "61085b49b6236a63f49943a751eec7d8e3c57388",
+  "release_scope": "Deploy PR #179. POSP and MISP application-review journey trackers now use six stages: Primary details, Documents, Registration, Training & Exam, Agreement, and IIB Upload. Completed, current, and pending states are shown on the connected timeline; the Partner two-stage journey and all existing workflow, validation, permission, database, and redirect behavior remain unchanged.",
+  "verification": "The focused repository patch workflow completed successfully and PR #179 was merged using the exact validated head SHA 37c3979127b569b3ab9542885a0ea30892e1b566. No repository PR workflow ran full lint, TypeScript, or production build checks for this change, so those checks remain unverified.",
   "instructions": "Update this file only after the user explicitly says deploy now or finish and deploy. Ordinary code commits must not modify it."
 }
