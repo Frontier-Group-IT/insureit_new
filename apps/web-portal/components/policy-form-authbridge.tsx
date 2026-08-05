@@ -286,7 +286,7 @@ export function PolicyFormAuthbridge({ action, createInsurerAction, customers, v
 
 function LiveSummary({ net, gst, gross, payinAfterTds, grossPayout }: { net:number;gst:number;gross:number;payinAfterTds:number;grossPayout:number }) {
   const anchorRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<{ left:number; width:number } | null>(null);
+  const [position, setPosition] = useState<{ left:number; width:number; top:number } | null>(null);
 
   useEffect(() => {
     const updatePosition = () => {
@@ -295,16 +295,19 @@ function LiveSummary({ net, gst, gross, payinAfterTds, grossPayout }: { net:numb
         return;
       }
       const rect = anchorRef.current.getBoundingClientRect();
-      setPosition({ left: rect.left, width: rect.width });
+      const safeTop = 172;
+      setPosition({ left: rect.left, width: rect.width, top: Math.max(rect.top, safeTop) });
     };
 
     updatePosition();
     window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
     const observer = new ResizeObserver(updatePosition);
     if (anchorRef.current) observer.observe(anchorRef.current);
     observer.observe(document.documentElement);
     return () => {
       window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
       observer.disconnect();
     };
   }, []);
@@ -315,7 +318,7 @@ function LiveSummary({ net, gst, gross, payinAfterTds, grossPayout }: { net:numb
     <div className="xl:hidden">{card}</div>
     <div ref={anchorRef} className="hidden h-px w-full xl:block" aria-hidden="true" />
     {position && typeof document !== "undefined" ? createPortal(
-      <div className="fixed top-24 z-30" style={{ left: position.left, width: position.width }}>{card}</div>,
+      <div className="fixed z-30" style={{ left: position.left, width: position.width, top: position.top }}>{card}</div>,
       document.body,
     ) : null}
   </aside>;
