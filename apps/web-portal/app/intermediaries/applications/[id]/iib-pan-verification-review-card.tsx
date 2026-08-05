@@ -4,6 +4,9 @@ import { manuallyRecheckIibPan } from "./manual-pan-recheck-action";
 
 type PanJobStatus = "pending" | "queued" | "checking" | "matched" | "not_found" | "invalid" | "failed" | "manual_review";
 type PanJob = {
+  application_id: string;
+  pan_number: string;
+  updated_at: string | null;
   status: PanJobStatus;
   result_message: string | null;
   last_error: string | null;
@@ -19,7 +22,8 @@ type Profile = {
 };
 
 const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
-const JOB_COLUMNS = "status,result_message,last_error,checked_by_device,requested_at,started_at,completed_at";
+const JOB_COLUMNS = "application_id,pan_number,updated_at,status,result_message,last_error,checked_by_device,requested_at,started_at,completed_at";
+const TERMINAL_STATUSES = new Set<PanJobStatus>(["matched", "not_found", "invalid", "failed", "manual_review"]);
 
 export async function IibPanVerificationReviewCard({ applicationId }: { applicationId: string }) {
   const admin = createSupabaseAdminClient();
@@ -42,18 +46,19 @@ export async function IibPanVerificationReviewCard({ applicationId }: { applicat
   const validPan = PAN_PATTERN.test(pan);
   let job = directJob;
 
-  // A Partner and its linked POSP/MISP accounts can have separate application IDs.
-  // PAN is unique in onboarding, so use the latest job for the same normalized PAN
-  // when the current application does not yet have its own job row.
-  if (!job && validPan) {
-    const { data: matchingJob } = await admin
+  // Partner and linked POSP/MISP records can have different application IDs for
+  // the same unique PAN. A completed IIB outcome is authoritative for that PAN.
+  // This prevents a duplicate or stale child job from masking an already
+  // returned result with an endless pending/checking state.
+  if (validPan) {
+    const { data: matchingJobs } = await admin
       .from("pan_verification_jobs")
       .select(JOB_COLUMNS)
       .eq("pan_number", pan)
       .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle<PanJob>();
-    job = matchingJob;
+      .limit(20)
+      .returns<PanJob[]>();
+    job = resolveAuthoritativeJob(directJob, matchingJobs ?? []);
   }
 
   const status = job?.status ?? "pending";
@@ -93,6 +98,13 @@ export async function IibPanVerificationReviewCard({ applicationId }: { applicat
       </form>
     </div>
   );
+}
+
+function resolveAuthoritativeJob(directJob: PanJob | null, matchingJobs: PanJob[]) {
+  const candidates = directJob
+    ? [directJob, ...matchingJobs.filter((item) => item.application_id !== directJob.application_id)]
+    : matchingJobs;
+  return candidates.find((item) => TERMINAL_STATUSES.has(item.status)) ?? candidates[0] ?? null;
 }
 
 function statusPresentation(status: PanJobStatus, hasJob: boolean) {
