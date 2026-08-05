@@ -121,10 +121,10 @@ export function PolicyForm({ action, createInsurerAction, customers, vehicles, i
             <Field label="Policy issuance date" type="date" value={form.issuanceDate} onChange={(e) => update("issuanceDate", e.target.value)} required />
             <ReadOnly label="Month" value={form.issuanceDate ? new Date(`${form.issuanceDate}T00:00:00`).toLocaleDateString("en-US", { month: "short", year: "2-digit" }) : "Auto from issuance date"} />
             <Select label="RM name" value={form.rmName} onChange={(e) => update("rmName", e.target.value)} options={["Pramod", "Parsottam", "Krishan Kumar", "Megha", "Jayesh", "Jatin"]} placeholder="Select RM" required />
-            <Select label="Intermediary type" value={form.intermediaryType} onChange={(e) => update("intermediaryType", e.target.value)} options={["POSP", "MISP", "SIBL / Partner", "Direct"]} placeholder="Select type" required />
+            <Select label="Intermediary type" value={form.intermediaryType} onChange={(e) => update("intermediaryType", e.target.value)} options={["POSP", "MISP", "SIBL / Partner"]} placeholder="Select type" required />
             <Field label="Lead source" value={form.leadSource} onChange={(e) => update("leadSource", e.target.value)} placeholder="Search person / channel" />
             <Field label="Intermediary code" value={form.intermediaryCode} onChange={(e) => update("intermediaryCode", e.target.value.toUpperCase())} placeholder="POSP/0001" hint="Will be auto-linked from intermediary master" />
-            <Select label="Business line" value={form.businessLine} onChange={(e) => update("businessLine", e.target.value)} options={["Motor"]} placeholder="Select business line" />
+            <Select label="Policy type" value={form.businessLine} onChange={(e) => update("businessLine", e.target.value)} options={["Motor"]} placeholder="Select policy type" />
           </Section>
 
           <Section number="02" title="Insured & vehicle identification" subtitle="Search by registration first. Existing records will be linked; missing records will be created during final submission." badge="API assisted">
@@ -170,11 +170,6 @@ export function PolicyForm({ action, createInsurerAction, customers, vehicles, i
             <ReadOnly label="TDS on pay-in" value={money.format(calculations.tds)} hint="Prototype assumes 10%" />
             <ReadOnly label="Pay-in after TDS" value={money.format(calculations.payinAfterTds)} strong />
             <Field label="Retention" type="number" min="0" value={form.retention} onChange={(e) => update("retention", e.target.value)} placeholder="₹ 0.00" />
-            <Field label="Pay-in bill number" value={form.payinBillNo} onChange={(e) => { update("payinBillNo", e.target.value.toUpperCase()); update("payinStatus", e.target.value ? "Billed" : "Unbilled"); }} placeholder="INV/2627/001" />
-            <Field label="Pay-in billed amount" type="number" min="0" value={form.payinBilledAmount} onChange={(e) => update("payinBilledAmount", e.target.value)} placeholder="₹ 0.00" />
-            <Field label="Pay-in bill date" type="date" value={form.payinBillDate} onChange={(e) => update("payinBillDate", e.target.value)} />
-            <Select label="Pay-in status" value={form.payinStatus} onChange={(e) => update("payinStatus", e.target.value)} options={["Unbilled", "Billed", "Part Received", "Received", "Short Received", "Reconciled"]} placeholder="Select status" />
-            <ReadOnly label="Short payout" value={money.format(calculations.shortPayout)} />
           </Section>
 
           <Section number="05" title="Intermediary payout & settlement" subtitle="Record the proposed payout payable to POSP, MISP or Partner." badge="Finance workflow">
@@ -188,8 +183,8 @@ export function PolicyForm({ action, createInsurerAction, customers, vehicles, i
           </Section>
         </div>
 
-        <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
-          <div className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
+        <aside className="space-y-4 xl:self-start">
+          <div className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-[0_8px_24px_rgba(15,23,42,0.05)] xl:sticky xl:top-4 xl:z-10">
             <div className="border-b border-[#E7ECF3] bg-[#F8FAFC] px-4 py-3"><p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#4F46E5]">Live summary</p><h3 className="mt-1 text-[13px] font-semibold text-[#101828]">Policy Financials</h3></div>
             <div className="space-y-2.5 p-4"><SummaryRow label="OD Premium" value={calculations.net ? money.format(numeric(form.od)) : "—"} /><SummaryRow label="Third Party" value={calculations.net ? money.format(numeric(form.tp)) : "—"} /><SummaryRow label="CPA" value={calculations.net ? money.format(form.cpaOpted === "Yes" ? numeric(form.cpa) : 0) : "—"} /><Divider /><SummaryRow label="Net Premium" value={money.format(calculations.net)} bold /><SummaryRow label="GST" value={money.format(calculations.gst)} /><SummaryRow label="Gross Premium" value={money.format(calculations.gross)} bold accent /><Divider /><SummaryRow label="Pay-in after TDS" value={money.format(calculations.payinAfterTds)} /><SummaryRow label="Partner payout" value={money.format(calculations.grossPayout)} /><SummaryRow label="Indicative margin" value={money.format(calculations.payinAfterTds - calculations.grossPayout)} bold /></div>
           </div>
