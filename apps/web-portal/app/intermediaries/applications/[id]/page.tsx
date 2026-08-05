@@ -168,6 +168,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
   const linkedAccountStatus = linked ? pretty(linked.registration_status) : "Not Created";
   const activationDate = isPartner ? linkedIntermediary?.activated_at : intermediary?.activated_at;
   const journey = isPartner ? partnerJourney(profile, documents ?? [], activePartner) : registrationJourney(accountContext, profile, assignment, application);
+  const onboardingComplete = isPartner ? activePartner : application.registration_status === "iib_registered" || Boolean(profile.iib_uploaded || profile.iib_uploaded_at);
   const returnPath = `/intermediaries/applications/${id}`;
   const accountType = isPartner ? (profile.partner_type === "misp" ? "Business Partner" : "Individual Partner") : `${kind} account`;
 
@@ -199,7 +200,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
           <div className="flex flex-col gap-5 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-center gap-3">
               <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white text-[#315FEA] shadow-md"><Icon name="user" className="h-6 w-6" /></span>
-              <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h1 className="truncate text-2xl font-semibold">{name}</h1>{isPartner && partnerId ? <Id value={partnerId} active={activePartner} /> : null}{registrationId ? <Id value={registrationId} /> : null}</div></div>
+              <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h1 className="truncate text-2xl font-semibold">{name}</h1>{isPartner && partnerId ? <Id value={partnerId} active={activePartner} /> : null}{registrationId ? <Id value={registrationId} active={onboardingComplete} /> : null}</div></div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <HeaderPanRecheck applicationId={id} pan={verificationPan} job={panJob ?? null} />
@@ -234,7 +235,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
         </section>
 
         <section id="overview" className="space-y-4">
-          <JourneyCard title={isPartner ? "Partner onboarding journey" : `${kind} account journey`} journey={journey} />
+          {!onboardingComplete ? <JourneyCard title={isPartner ? "Partner onboarding journey" : `${kind} account journey`} journey={journey} /> : null}
           {!activePartner && isPartner ? (
             <section className="overflow-hidden rounded-2xl border border-[#C7D2FE] bg-gradient-to-r from-[#EEF2FF] via-white to-[#EFF6FF] shadow-[0_12px_28px_rgba(79,70,229,.10)]">
               <div className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
