@@ -1,0 +1,24 @@
+name: Validate POSP MISP workflow theme
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/web-portal/app/intermediaries/applications/[id]/workflow/**"
+      - ".github/workflows/validate-posp-misp-theme.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck:web
+      - run: npm run build:web
