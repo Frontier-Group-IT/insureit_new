@@ -1,14 +1,15 @@
-import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import type { ReactNode } from "react";
 import { requireScopedPospMispManager } from "@/lib/master-data-server";
-import { hasCapability } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { AccountDeleteControl } from "./account-delete-control";
+import { AccountStatusHeaderStat } from "./account-status-header-stat";
 import { IibPanVerificationReviewCard } from "./iib-pan-verification-review-card";
 import { ReviewCardVisibility } from "./review-card-visibility";
 
 type ApplicationRow = {
   id: string;
+  registration_status: string;
   draft_data: Record<string, unknown> | null;
   partner_record_id: string | null;
 };
@@ -20,6 +21,7 @@ type ProfileRow = {
 
 type IntermediaryRow = {
   intermediary_code: string | null;
+  account_status: string | null;
 };
 
 export default async function ApplicationReviewLayout({
@@ -37,7 +39,7 @@ export default async function ApplicationReviewLayout({
   const [{ data: application }, { data: profile }, { data: intermediary }] = await Promise.all([
     admin
       .from("intermediary_onboarding_applications")
-      .select("id,draft_data,partner_record_id")
+      .select("id,registration_status,draft_data,partner_record_id")
       .eq("id", id)
       .maybeSingle<ApplicationRow>(),
     admin
@@ -47,7 +49,7 @@ export default async function ApplicationReviewLayout({
       .maybeSingle<ProfileRow>(),
     admin
       .from("intermediaries")
-      .select("intermediary_code")
+      .select("intermediary_code,account_status")
       .eq("application_id", id)
       .maybeSingle<IntermediaryRow>(),
   ]);
@@ -59,6 +61,7 @@ export default async function ApplicationReviewLayout({
   const accountIdentifier = accountContext === "partner"
     ? permanentValue(profile.partner_id)
     : permanentValue(intermediary?.intermediary_code) ?? permanentValue(profile.external_onboarding_id);
+  const accountStatus = pretty(intermediary?.account_status ?? application.registration_status ?? "pending");
 
   let linkedAccountCount = 0;
   if (canDelete && accountContext === "partner") {
@@ -81,6 +84,7 @@ export default async function ApplicationReviewLayout({
   return (
     <>
       {children}
+      {accountContext !== "partner" ? <AccountStatusHeaderStat applicationId={id} value={accountStatus} /> : null}
       <ReviewCardVisibility applicationId={id}>
         <IibPanVerificationReviewCard applicationId={id} />
       </ReviewCardVisibility>
@@ -99,4 +103,8 @@ export default async function ApplicationReviewLayout({
 function permanentValue(value: string | null | undefined) {
   if (!value || value.startsWith("PENDING-")) return null;
   return value;
+}
+
+function pretty(value: string) {
+  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
