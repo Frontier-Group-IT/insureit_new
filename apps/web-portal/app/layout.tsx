@@ -10,6 +10,7 @@ import { ProfessionalFormValidation } from "@/components/professional-form-valid
 import "./globals.css";
 import "./experience.css";
 import "./mobile.css";
+import "./document-grid.css";
 
 const manrope = Manrope({
   subsets: ["latin"],
