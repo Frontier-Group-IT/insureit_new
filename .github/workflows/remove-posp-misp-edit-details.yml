@@ -1,0 +1,39 @@
+name: Remove POSP MISP edit details button
+
+on:
+  push:
+    branches:
+      - fix/remove-posp-misp-edit-details-button
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/remove-posp-misp-edit-details-button
+          fetch-depth: 0
+      - name: Remove review-page button for POSP and MISP
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('apps/web-portal/app/intermediaries/applications/[id]/page.tsx')
+          text = path.read_text()
+          old = '              <CompactLink href={`/intermediaries/applications/${id}/workflow?stage=primary`} label="Edit details" secondary />\n'
+          new = '              {isPartner ? <CompactLink href={`/intermediaries/applications/${id}/workflow?stage=primary`} label="Edit details" secondary /> : null}\n'
+          if old not in text:
+              raise SystemExit('Expected Edit details button was not found')
+          path.write_text(text.replace(old, new, 1))
+          PY
+      - name: Commit focused UI change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add 'apps/web-portal/app/intermediaries/applications/[id]/page.tsx'
+          git commit -m "Remove Edit details from POSP MISP review"
+          git push origin HEAD:fix/remove-posp-misp-edit-details-button
