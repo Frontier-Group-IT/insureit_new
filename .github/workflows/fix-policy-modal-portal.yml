@@ -1,0 +1,69 @@
+name: Fix policy modal viewport rendering
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/fix-policy-modal-portal.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Render policy modals through document body portal
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('apps/web-portal/components/policy-form-authbridge.tsx')
+          text = path.read_text()
+
+          old_import = 'import { useEffect, useMemo, useState, useTransition } from "react";\n'
+          new_import = old_import + 'import { createPortal } from "react-dom";\n'
+          if 'import { createPortal } from "react-dom";' not in text:
+              if old_import not in text:
+                  raise SystemExit('React import anchor not found')
+              text = text.replace(old_import, new_import, 1)
+
+          old = '''function ModalShell({ title, subtitle, onClose, children, footer }: { title:string;subtitle:string;onClose:()=>void;children:ReactNode;footer:ReactNode }) {
+  return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#071D49]/55 p-3 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={title}><div className="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-white/50 bg-white shadow-[0_30px_100px_rgba(7,29,73,.35)]"><div className="flex items-start justify-between border-b border-[#E6EBF2] bg-[linear-gradient(135deg,#F8FAFD,#EEF4FB)] px-5 py-4"><div><p className="text-[15px] font-bold text-[#102A4C]">{title}</p><p className="mt-1 text-[9.5px] text-[#667085]">{subtitle}</p></div><button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full border border-[#D8DEE9] bg-white text-lg text-[#475467] hover:bg-[#F2F5F9]" aria-label="Close">×</button></div><div className="min-h-0 flex-1 overflow-y-auto p-5">{children}</div><div className="border-t border-[#E6EBF2] bg-white px-5 py-4">{footer}</div></div></div>;
+}'''
+
+          new = '''function ModalShell({ title, subtitle, onClose, children, footer }: { title:string;subtitle:string;onClose:()=>void;children:ReactNode;footer:ReactNode }) {
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] grid h-[100dvh] w-screen place-items-center overflow-hidden bg-[#071D49]/60 p-3 backdrop-blur-sm sm:p-5" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-white/60 bg-white shadow-[0_30px_100px_rgba(7,29,73,.45)] sm:max-h-[calc(100dvh-2.5rem)] sm:rounded-3xl">
+        <div className="flex shrink-0 items-start justify-between border-b border-[#E6EBF2] bg-[linear-gradient(135deg,#F8FAFD,#EEF4FB)] px-4 py-3 sm:px-5 sm:py-4">
+          <div className="min-w-0 pr-3"><p className="truncate text-[15px] font-bold text-[#102A4C]">{title}</p><p className="mt-1 truncate text-[9.5px] text-[#667085]">{subtitle}</p></div>
+          <button type="button" onClick={onClose} className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#D8DEE9] bg-white text-lg text-[#475467] hover:bg-[#F2F5F9]" aria-label="Close">×</button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5">{children}</div>
+        <div className="shrink-0 border-t border-[#E6EBF2] bg-white px-4 py-3 sm:px-5 sm:py-4">{footer}</div>
+      </div>
+    </div>,
+    document.body,
+  );
+}'''
+
+          if old not in text:
+              raise SystemExit('ModalShell anchor not found')
+          text = text.replace(old, new, 1)
+          path.write_text(text)
+          PY
+      - name: Commit modal fix
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal/components/policy-form-authbridge.tsx
+          git commit -m "Render policy popups in viewport portal"
+          git push origin main
