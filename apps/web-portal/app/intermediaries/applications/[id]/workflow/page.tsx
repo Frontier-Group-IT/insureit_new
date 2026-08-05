@@ -206,8 +206,8 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
             </div>
           ) : (
             <div className="space-y-4 bg-[#F4F7FB]">
-              <PospMispApplicationEditor applicationId={id} profile={editProfile} workflowStage={profile.workflow_stage} viewStage={viewStage} editable={editable} salesManagers={associates.map((item) => ({ value: item.id, label: item.full_name ?? "Unnamed" }))} banks={(banks ?? []).map((item) => ({ value: item.id, label: item.name }))} oems={(oems ?? []).map((item) => ({ value: item.name, label: item.name }))} documents={docList} />
-              {viewStage === "primary" ? <div className="px-4 pb-4 sm:px-5 sm:pb-5"><ExistingIntermediaryMigrationEditor applicationId={id} accountType={profile.partner_type} values={migrationValues} editable={editable} /></div> : null}
+              <PospMispApplicationEditor applicationId={id} profile={editProfile} workflowStage={profile.workflow_stage} viewStage={viewStage} editable={editable} salesManagers={associates.map((item) => ({ value: item.id, label: item.full_name ?? "Unnamed" }))} banks={(banks ?? []).map((item) => ({ value: item.id, label: item.name }))} oems={(oems ?? []).map((item) => ({ value: item.name, label: item.name }))} documents={docList} actionTargetId={context === "partner" && viewStage === "primary" ? `partner-primary-actions-${id}` : undefined} />
+              {viewStage === "primary" ? <div className="px-4 pb-4 sm:px-5 sm:pb-5"><ExistingIntermediaryMigrationEditor applicationId={id} accountType={profile.partner_type} values={migrationValues} editable={editable} />{context === "partner" ? <div id={`partner-primary-actions-${id}`} className="mt-4" /> : null}</div> : null}
             </div>
           )}
         </main>

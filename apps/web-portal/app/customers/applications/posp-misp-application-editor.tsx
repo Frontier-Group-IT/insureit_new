@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { IndianDateField } from "@/components/indian-date-field";
 import { IntermediaryDocumentGrid } from "@/components/intermediary-document-grid";
@@ -60,13 +61,14 @@ type Props = {
   oems: Array<{ value: string; label: string }>;
   documents: DocumentRecord[];
   legacyDocuments?: boolean;
+  actionTargetId?: string;
 };
 
 const inputClass = "h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[11px] font-medium text-[#17203A] outline-none transition focus:border-[#635BFF] focus:ring-2 focus:ring-[#E7E5FF] disabled:bg-[#F8FAFC] disabled:text-[#475569] aria-[invalid=true]:border-red-400 aria-[invalid=true]:bg-red-50/40 aria-[invalid=true]:focus:border-red-500 aria-[invalid=true]:focus:ring-red-100";
 const labelClass = "mb-1.5 block text-[9.5px] font-semibold uppercase tracking-[0.04em] text-[#526178]";
 const namePattern = "[A-Za-z ]+";
 
-export function PospMispApplicationEditor({ applicationId, profile, workflowStage = "pre_iib", viewStage, editable, salesManagers, banks, oems, documents, legacyDocuments = false }: Props) {
+export function PospMispApplicationEditor({ applicationId, profile, workflowStage = "pre_iib", viewStage, editable, salesManagers, banks, oems, documents, legacyDocuments = false, actionTargetId }: Props) {
   const isMisp = profile.partner_type === "misp";
   const fallbackPos = useMemo(() => splitName(profile.pos_name), [profile.pos_name]);
   const fallbackDp = useMemo(() => splitName(profile.dp_name), [profile.dp_name]);
@@ -81,6 +83,12 @@ export function PospMispApplicationEditor({ applicationId, profile, workflowStag
   const [selectedFiles, setSelectedFiles] = useState<Record<string, boolean>>({});
   const [missingDocument, setMissingDocument] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const formId = `posp-misp-editor-${applicationId}`;
+  const [actionTarget, setActionTarget] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setActionTarget(actionTargetId ? document.getElementById(actionTargetId) : null);
+  }, [actionTargetId]);
 
   const activeView = viewStage ?? (workflowStage === "pre_iib" ? "primary" : workflowStage === "iib_processing" ? "documents" : "review");
   const showPrimary = activeView === "primary";
@@ -89,6 +97,20 @@ export function PospMispApplicationEditor({ applicationId, profile, workflowStag
   const slots = useMemo(() => buildIntermediaryDocumentSlots({ legacy: legacyDocuments, hasGst: Boolean(profile.gst_number) }), [legacyDocuments, profile.gst_number]);
   const requiredSlots = slots.filter((slot) => slot.required);
   const documentsReady = requiredSlots.every((slot) => Boolean(findDocumentForSlot(slot, documents)) || selectedFiles[slot.key]);
+  const actionBar = editable && (showPrimary || showDocuments) ? (
+    <div className={`${actionTargetId ? "flex flex-col gap-3 rounded-2xl border border-[#DCE5EF] bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between" : "sticky bottom-0 z-10 flex items-center justify-between gap-3 border-t border-[#DCE5EF] bg-white/95 px-5 py-3 backdrop-blur"}`}>
+      {showDocuments ? <Link href={`/intermediaries/applications/${applicationId}/workflow?stage=primary`} className="rounded-xl border px-4 py-2.5 text-[10.5px] font-semibold">Back to Primary</Link> : <span />}
+      <div className="text-right">
+        {showDocuments && !documentsReady ? <p className="mb-1 text-[8.5px] font-semibold text-amber-700">Attach every mandatory document before saving.</p> : null}
+        {showPrimary ? (
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <FormSubmitButton form={formId} name="submit_intent" value="exit" label="Save & Exit" pendingLabel="Saving & exiting…" className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-2.5 text-[10.5px] font-semibold text-[#334155] hover:border-[#94A3B8] hover:bg-[#F8FAFC]" />
+            <FormSubmitButton form={formId} name="submit_intent" value="documents" label="Save & return to documents" pendingLabel="Saving & opening documents…" />
+          </div>
+        ) : <FormSubmitButton form={formId} label="Save documents" pendingLabel="Saving" />}
+      </div>
+    </div>
+  ) : null;
 
   function handleFileChange(name: string, selected: boolean) {
     setSelectedFiles((current) => ({ ...current, [name]: selected }));
@@ -117,7 +139,8 @@ export function PospMispApplicationEditor({ applicationId, profile, workflowStag
   }
 
   return (
-    <form ref={formRef} action={editable ? updateIntermediaryApplication : undefined} onSubmitCapture={handleSubmit} noValidate className="bg-[#F4F7FB]">
+    <>
+    <form id={formId} ref={formRef} action={editable ? updateIntermediaryApplication : undefined} onSubmitCapture={handleSubmit} noValidate className="bg-[#F4F7FB]">
       <input type="hidden" name="application_id" value={applicationId} />
       <input type="hidden" name="edit_section" value={showDocuments ? "documents" : "primary"} />
       <input type="hidden" name="external_onboarding_id" value={profile.external_onboarding_id ?? `PENDING-${profile.partner_type.toUpperCase()}-${applicationId}`} />
@@ -154,8 +177,10 @@ export function PospMispApplicationEditor({ applicationId, profile, workflowStag
         {showReview ? <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm"><Header number="3" title="Final review" subtitle="Review the saved details and attached documents." /><div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3"><Summary label="Application type" value={profile.partner_type.toUpperCase()} /><Summary label="Partner ID" value={profile.partner_id ?? "Pending until Stage 2"} /><Summary label="Applicant" value={(isMisp ? profile.misp_name : profile.pos_name) ?? "-"} /><Summary label="Email" value={(isMisp ? profile.dp_email : profile.applicant_email) ?? "-"} /><Summary label="Documents" value={`${documents.length} attached`} /><Summary label="PAN used for IIB" value={(isMisp ? profile.dp_pan_number : profile.pan_number) ?? "-"} /></div></section> : null}
       </div>
 
-      {editable && (showPrimary || showDocuments) ? <div className="sticky bottom-0 z-10 flex items-center justify-between gap-3 border-t border-[#DCE5EF] bg-white/95 px-5 py-3 backdrop-blur">{showDocuments ? <Link href={`/intermediaries/applications/${applicationId}/workflow?stage=primary`} className="rounded-xl border px-4 py-2.5 text-[10.5px] font-semibold">Back to Primary</Link> : <span />}<div className="text-right">{showDocuments && !documentsReady ? <p className="mb-1 text-[8.5px] font-semibold text-amber-700">Attach every mandatory document before saving.</p> : null}{showPrimary ? <div className="flex flex-col gap-2 sm:flex-row"><FormSubmitButton name="submit_intent" value="exit" label="Save & Exit" pendingLabel="Saving & exiting…" className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-2.5 text-[10.5px] font-semibold text-[#334155] hover:border-[#94A3B8] hover:bg-[#F8FAFC]" /><FormSubmitButton name="submit_intent" value="documents" label="Save & return to documents" pendingLabel="Saving & opening documents…" /></div> : <FormSubmitButton label="Save documents" pendingLabel="Saving" />}</div></div> : null}
+      {!actionTargetId ? actionBar : null}
     </form>
+    {actionTargetId && actionTarget && actionBar ? createPortal(actionBar, actionTarget) : null}
+    </>
   );
 }
 

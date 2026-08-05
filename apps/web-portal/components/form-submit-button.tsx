@@ -16,6 +16,7 @@ export function FormSubmitButton({
   icon,
   name,
   value,
+  form,
 }: {
   label?: string;
   pendingLabel?: string;
@@ -24,6 +25,7 @@ export function FormSubmitButton({
   icon?: React.ReactNode;
   name?: string;
   value?: string;
+  form?: string;
 }) {
   const { pending, data } = useFormStatus();
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -32,7 +34,7 @@ export function FormSubmitButton({
 
   useEffect(() => {
     if (!requireChange) return;
-    const form = buttonRef.current?.closest("form");
+    const form = buttonRef.current?.form;
     if (!form) return;
 
     setFormChanged(false);
@@ -70,6 +72,7 @@ export function FormSubmitButton({
       ref={buttonRef}
       className={`${interactionClassName} ${className}`}
       type="submit"
+      form={form}
       name={name}
       value={value}
       disabled={isDisabled}
