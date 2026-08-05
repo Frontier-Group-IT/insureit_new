@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { PanVerificationAutoRefresh } from "@/app/customers/applications/pan-verification-auto-refresh";
-import { queuePospMispPanVerification, retryPospMispPanVerification } from "@/app/customers/applications/posp-misp-workflow-actions";
+import { manuallyRecheckIibPan } from "./manual-pan-recheck-action";
 
 type PanJobStatus = "pending" | "queued" | "checking" | "matched" | "not_found" | "invalid" | "failed" | "manual_review";
 type PanJob = {
@@ -17,23 +16,48 @@ type Profile = {
   partner_type: "posp" | "misp";
   pan_number: string | null;
   dp_pan_number: string | null;
-  workflow_stage: string;
 };
+
+const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+const JOB_COLUMNS = "status,result_message,last_error,checked_by_device,requested_at,started_at,completed_at";
 
 export async function IibPanVerificationReviewCard({ applicationId }: { applicationId: string }) {
   const admin = createSupabaseAdminClient();
-  const [{ data: profile }, { data: job }] = await Promise.all([
-    admin.from("posp_misp_onboarding_profiles").select("partner_type,pan_number,dp_pan_number,workflow_stage").eq("application_id", applicationId).maybeSingle<Profile>(),
-    admin.from("pan_verification_jobs").select("status,result_message,last_error,checked_by_device,requested_at,started_at,completed_at").eq("application_id", applicationId).maybeSingle<PanJob>(),
+  const [{ data: profile }, { data: directJob }] = await Promise.all([
+    admin
+      .from("posp_misp_onboarding_profiles")
+      .select("partner_type,pan_number,dp_pan_number")
+      .eq("application_id", applicationId)
+      .maybeSingle<Profile>(),
+    admin
+      .from("pan_verification_jobs")
+      .select(JOB_COLUMNS)
+      .eq("application_id", applicationId)
+      .maybeSingle<PanJob>(),
   ]);
 
   if (!profile) return null;
 
-  const pan = profile.partner_type === "misp" ? profile.dp_pan_number : profile.pan_number;
+  const pan = normalizePan(profile.partner_type === "misp" ? profile.dp_pan_number : profile.pan_number);
+  const validPan = PAN_PATTERN.test(pan);
+  let job = directJob;
+
+  // A Partner and its linked POSP/MISP accounts can have separate application IDs.
+  // PAN is unique in onboarding, so use the latest job for the same normalized PAN
+  // when the current application does not yet have its own job row.
+  if (!job && validPan) {
+    const { data: matchingJob } = await admin
+      .from("pan_verification_jobs")
+      .select(JOB_COLUMNS)
+      .eq("pan_number", pan)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<PanJob>();
+    job = matchingJob;
+  }
+
   const status = job?.status ?? "pending";
   const activelyRefreshing = status === "pending" || status === "queued" || status === "checking";
-  const canCheck = profile.workflow_stage === "pre_iib";
-  const shouldRetry = status === "failed" || status === "invalid";
   const presentation = statusPresentation(status, Boolean(job));
   const message = job?.result_message ?? job?.last_error ?? presentation.message;
 
@@ -52,34 +76,21 @@ export async function IibPanVerificationReviewCard({ applicationId }: { applicat
         </div>
       </div>
 
-      {canCheck ? (
-        <form action={shouldRetry ? retryPospMispPanVerification : queuePospMispPanVerification} className="flex h-full shrink-0 items-center border-l border-white/20 px-1.5">
-          <input type="hidden" name="application_id" value={applicationId} />
-          <button
-            type="submit"
-            title={job ? "Run IIB PAN check again" : "Run IIB PAN check"}
-            aria-label={job ? "Run IIB PAN check again" : "Run IIB PAN check"}
-            className="grid h-6 w-6 place-items-center rounded-lg text-white/75 transition hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-          >
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={`h-3.5 w-3.5 ${status === "checking" ? "animate-spin" : ""}`} aria-hidden="true">
-              <path d="M16.5 6.5V3.8l-1.9 1.9A6.5 6.5 0 1 0 16 12" />
-              <path d="M12.8 3.8h3.7v3.7" />
-            </svg>
-          </button>
-        </form>
-      ) : status === "invalid" || status === "failed" ? (
-        <Link
-          href={`/intermediaries/applications/${applicationId}/workflow?stage=primary`}
-          title="Review PAN details"
-          aria-label="Review PAN details"
-          className="grid h-full w-9 shrink-0 place-items-center border-l border-white/20 text-white/75 transition hover:bg-white/15 hover:text-white"
+      <form action={manuallyRecheckIibPan} className="flex h-full shrink-0 items-center border-l border-white/20 px-1.5">
+        <input type="hidden" name="application_id" value={applicationId} />
+        <button
+          type="submit"
+          disabled={!validPan || activelyRefreshing}
+          title={!validPan ? "Enter a valid PAN before checking" : activelyRefreshing ? "IIB PAN check is already running" : job ? "Run IIB PAN check again" : "Run IIB PAN check"}
+          aria-label={!validPan ? "Valid PAN required" : activelyRefreshing ? "IIB PAN check is running" : job ? "Run IIB PAN check again" : "Run IIB PAN check"}
+          className="grid h-6 w-6 place-items-center rounded-lg text-white/75 transition hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 disabled:cursor-not-allowed disabled:opacity-45"
         >
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden="true">
-            <circle cx="9" cy="9" r="5.5" />
-            <path d="m13 13 3.2 3.2" />
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={`h-3.5 w-3.5 ${activelyRefreshing ? "animate-spin" : ""}`} aria-hidden="true">
+            <path d="M16.5 6.5V3.8l-1.9 1.9A6.5 6.5 0 1 0 16 12" />
+            <path d="M12.8 3.8h3.7v3.7" />
           </svg>
-        </Link>
-      ) : null}
+        </button>
+      </form>
     </div>
   );
 }
@@ -99,7 +110,10 @@ function statusPresentation(status: PanJobStatus, hasJob: boolean) {
   return map[status];
 }
 
-function maskPan(value: string | null) {
-  const normalized = value?.replace(/\s/g, "").toUpperCase() ?? "";
-  return normalized.length === 10 ? `${normalized.slice(0, 2)}****${normalized.slice(-3)}` : "PAN unavailable";
+function normalizePan(value: string | null) {
+  return value?.replace(/\s/g, "").toUpperCase() ?? "";
+}
+
+function maskPan(value: string) {
+  return value.length === 10 ? `${value.slice(0, 2)}****${value.slice(-3)}` : "PAN unavailable";
 }
