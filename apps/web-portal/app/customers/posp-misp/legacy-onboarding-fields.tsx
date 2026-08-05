@@ -60,23 +60,6 @@ export function LegacyOnboardingFields({ partnerType, initialValues = {} }: Prop
         <p className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-[9px] leading-4 text-blue-800">Partial historical records are supported. For example, IIB file upload can be marked Uploaded while Training, Exam or Agreement remains pending. The account journey will continue from the earliest unfinished stage.</p>
       </div>
 
-      <label className="mt-4 block">
-        <span className="mb-1.5 block text-[10.5px] font-semibold text-[#344054]">Migration verification remarks *</span>
-        <textarea
-          name="legacy_migration_remarks"
-          required
-          minLength={10}
-          data-label="Migration verification remarks"
-          defaultValue={initialValues.legacy_migration_remarks}
-          className="min-h-24 w-full rounded-xl border border-[#CBD5E1] bg-white px-3.5 py-2.5 text-[12px] text-[#17203A] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]"
-          placeholder="Example: Verified from the previous POSP register and agreement file."
-        />
-        <div className="mt-1.5 flex items-center justify-between gap-3">
-          <span className="text-[9.5px] text-[#64748B]">Minimum 10 characters required.</span>
-          <span className="text-[9px] text-[#94A3B8]">Do not enter only “OK”.</span>
-        </div>
-      </label>
-
       <label className="mt-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-white p-3 text-[10px] leading-5 text-amber-950">
         <input type="checkbox" name="legacy_confirmation" value="yes" required className="mt-1 h-4 w-4 shrink-0" />
         <span>I confirm that the permanent IDs and the selected Training, Exam, Agreement and IIB statuses were verified against the previous records.</span>

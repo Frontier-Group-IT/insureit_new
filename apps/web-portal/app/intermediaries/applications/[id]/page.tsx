@@ -10,6 +10,7 @@ import { createIntermediaryPortalLogin } from "@/app/intermediaries/portal-accou
 import { resendIntermediaryPortalInvite } from "@/app/intermediaries/resend-portal-invite-action";
 import { createLinkedIntermediaryAccount } from "./account-review-actions";
 import { IdSuccessModal } from "./id-success-modal";
+import { WorkflowSuccessToast } from "../workflow-success-toast";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -193,7 +194,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
       <div className="mx-auto max-w-[1480px] space-y-4 pb-8">
         <IdSuccessModal event={query.success} applicationId={id} isPartner={isPartner} preferredType={profile.partner_type} partnerId={partnerId} registrationId={registrationId} linkedId={linked?.id} />
         {query.error ? <Notice tone="error" text={decode(query.error)} /> : null}
-        {query.success && !modalSuccessEvents.has(query.success) ? <Notice tone="success" text={successMessage(query.success)} /> : null}
+        {query.success && !modalSuccessEvents.has(query.success) ? <WorkflowSuccessToast message={successMessage(query.success)} durationMs={4000} /> : null}
 
         <section className="overflow-hidden rounded-2xl border border-[#173E7B] bg-gradient-to-br from-[#071D49] via-[#0A2B65] to-[#0C4A9A] text-white shadow-[0_18px_45px_rgba(7,29,73,.18)]">
           <div className="flex flex-col gap-5 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">

@@ -16,7 +16,6 @@ type CreateState = PospMispState & { applicationId?: string | null };
 export async function createLegacyPartnerOnboarding(state: CreateState, data: FormData): Promise<CreateState> {
   const partnerCode = code(data, "legacy_partner_code");
   const registrationCode = code(data, "legacy_registration_code");
-  const remarks = text(data, "legacy_migration_remarks");
   const originalOnboardingDate = text(data, "legacy_original_onboarding_date");
   const originalActivationDate = text(data, "legacy_original_activation_date");
   const trainingStatus = text(data, "legacy_training_status");
@@ -36,7 +35,6 @@ export async function createLegacyPartnerOnboarding(state: CreateState, data: Fo
   if (!isLegacyAgreementStatus(agreementStatus)) return { error: "Select a valid Agreement status.", field: "legacy_agreement_status", applicationId: null };
   if (!isLegacyIibUploadStatus(iibUploadStatus)) return { error: "Select a valid IIB upload status.", field: "legacy_iib_upload_status", applicationId: null };
   if (!isLegacyIibRegistrationStatus(iibRegistrationStatus)) return { error: "Select a valid IIB registration status.", field: "legacy_iib_registration_status", applicationId: null };
-  if (!remarks || remarks.length < 10) return { error: "Enter a clear migration verification remark.", field: "legacy_migration_remarks", applicationId: null };
   if (!confirmed) return { error: "Confirm that the historical identifiers and workflow statuses were verified.", field: "legacy_confirmation", applicationId: null };
 
   const admin = createSupabaseAdminClient();
@@ -75,7 +73,6 @@ export async function createLegacyPartnerOnboarding(state: CreateState, data: Fo
     legacy_agreement_status: agreementStatus,
     legacy_iib_upload_status: iibUploadStatus,
     legacy_iib_registration_status: iibRegistrationStatus,
-    legacy_migration_remarks: remarks,
     legacy_ids_verified_at: now,
     legacy_workflow_verified_at: now,
   };
