@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-05T17:54:00+05:30",
+  "deploy_requested_at": "2026-08-05T18:03:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit merge and deploy command",
-  "source_commit": "653dd1cdd833c3633c2877376aa861ee19c87935",
-  "release_scope": "Deploy the latest main branch, including the refined Policy Onboarding UI: sticky Live Summary card, Business Line renamed to Policy Type, Direct removed from Intermediary Type, billing and reconciliation fields removed from the main onboarding page, OD/NET basis removed from section 4, Retention moved into Projected insurer pay-in, and the latest customer-linking safeguards already merged on main.",
-  "verification": "The requested changes are already merged into main. Vercel production status must reach Ready/Success before deployment is reported as complete.",
-  "instructions": "Update this file only after the user explicitly says deploy now, merge and deploy, or finish and deploy. Ordinary code commits must not modify it."
+  "source": "ChatGPT verification and corrective redeploy",
+  "source_commit": "de33134bbaffc391b34f81d1fea4c9cf805e41f2",
+  "release_scope": "Deploy the actual Add Policy component used by /policies/new. Changes include Policy Type label, Direct removed from Intermediary Type, OD/NET basis removed, Retention moved into Projected insurer pay-in, billing fields removed from the main onboarding page, and only the Live Summary card made sticky.",
+  "verification": "The route apps/web-portal/app/policies/new/page.tsx renders PolicyFormAuthbridge from components/policy-form-authbridge.tsx. The requested UI changes were applied to that component in commit 6e42df35d4784e6ada57eda324d5dac86188803c. Vercel production status must reach success before reporting completion.",
+  "instructions": "Update this file only after the user explicitly requests deployment."
 }
