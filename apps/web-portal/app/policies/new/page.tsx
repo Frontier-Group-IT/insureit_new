@@ -1,7 +1,6 @@
 import { createInsuranceCompany } from "@/app/master-data-form-actions";
 import { addPolicy } from "@/app/policies/policy-actions";
 import { PolicyFormAuthbridge } from "@/components/policy-form-authbridge";
-import { PolicyOcrImportPanel } from "@/components/policy-ocr-import-panel";
 import { AppShell } from "@/components/shell";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -33,7 +32,6 @@ export default async function NewPolicyPage() {
 
   return (
     <AppShell title="Add Policy">
-      <PolicyOcrImportPanel />
       <PolicyFormAuthbridge action={addPolicy} createInsurerAction={createInsuranceCompany} customers={customerOptions} vehicles={vehicleOptions} insurers={insurerOptions} submitLabel="Create Policy" />
     </AppShell>
   );
