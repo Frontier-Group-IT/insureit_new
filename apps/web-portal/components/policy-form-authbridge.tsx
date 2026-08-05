@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { lookupPolicyRegistrationRc, type PolicyRcReview } from "@/app/policies/authbridge-rc-actions";
 import {
   onboardPolicy,
@@ -283,7 +284,20 @@ export function PolicyFormAuthbridge({ action, createInsurerAction, customers, v
 }
 
 function ModalShell({ title, subtitle, onClose, children, footer }: { title:string;subtitle:string;onClose:()=>void;children:ReactNode;footer:ReactNode }) {
-  return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#071D49]/55 p-3 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={title}><div className="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-white/50 bg-white shadow-[0_30px_100px_rgba(7,29,73,.35)]"><div className="flex items-start justify-between border-b border-[#E6EBF2] bg-[linear-gradient(135deg,#F8FAFD,#EEF4FB)] px-5 py-4"><div><p className="text-[15px] font-bold text-[#102A4C]">{title}</p><p className="mt-1 text-[9.5px] text-[#667085]">{subtitle}</p></div><button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full border border-[#D8DEE9] bg-white text-lg text-[#475467] hover:bg-[#F2F5F9]" aria-label="Close">×</button></div><div className="min-h-0 flex-1 overflow-y-auto p-5">{children}</div><div className="border-t border-[#E6EBF2] bg-white px-5 py-4">{footer}</div></div></div>;
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] grid h-[100dvh] w-screen place-items-center overflow-hidden bg-[#071D49]/60 p-3 backdrop-blur-sm sm:p-5" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-white/60 bg-white shadow-[0_30px_100px_rgba(7,29,73,.45)] sm:max-h-[calc(100dvh-2.5rem)] sm:rounded-3xl">
+        <div className="flex shrink-0 items-start justify-between border-b border-[#E6EBF2] bg-[linear-gradient(135deg,#F8FAFD,#EEF4FB)] px-4 py-3 sm:px-5 sm:py-4">
+          <div className="min-w-0 pr-3"><p className="truncate text-[15px] font-bold text-[#102A4C]">{title}</p><p className="mt-1 truncate text-[9.5px] text-[#667085]">{subtitle}</p></div>
+          <button type="button" onClick={onClose} className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#D8DEE9] bg-white text-lg text-[#475467] hover:bg-[#F2F5F9]" aria-label="Close">×</button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5">{children}</div>
+        <div className="shrink-0 border-t border-[#E6EBF2] bg-white px-4 py-3 sm:px-5 sm:py-4">{footer}</div>
+      </div>
+    </div>,
+    document.body,
+  );
 }
 function RcModal({ review, groups, setGroups, onCancel, onUse }: { review:PolicyRcReview;groups:ApplyGroups;setGroups:(value:ApplyGroups)=>void;onCancel:()=>void;onUse:()=>void }) {
   const toggles: Array<[keyof ApplyGroups,string,string]> = [["ownerIdentity","Owner identity","Name and available mobile"],["ownerAddress","Owner address","Address, city, district, state and pincode"],["vehicleIdentity","Vehicle identity","Class, make, model, fuel and year"],["technical","Technical details","Capacity, chassis and engine"],["compliance","Registration & compliance","RTO, registration, fitness, tax, permit and PUC"],["finance","Hypothecation","Financed status and financer"]];
