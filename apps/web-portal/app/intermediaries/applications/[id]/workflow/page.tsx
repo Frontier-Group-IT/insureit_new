@@ -14,7 +14,6 @@ import { WorkflowResultDialog } from "@/app/intermediaries/applications/workflow
 import { WorkflowErrorDialog } from "@/app/intermediaries/applications/workflow-error-dialog";
 import { WorkflowSuccessToast } from "@/app/intermediaries/applications/workflow-success-toast";
 import { IntermediaryDocumentUploadController } from "@/app/intermediaries/applications/intermediary-document-upload-controller";
-import { AccountReviewBackLink } from "@/app/intermediaries/applications/account-review-back-link";
 import { ExistingIntermediaryMigrationEditor } from "../existing-intermediary-migration-editor";
 
 export const dynamic = "force-dynamic";
@@ -143,6 +142,9 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
   const verificationPan = (profile.partner_type === "misp" ? profile.dp_pan_number : profile.pan_number)?.replace(/\s/g, "").toUpperCase() ?? null;
   const iibStatus = resolveIibPanVerificationStatus(panJob, profile.iib_remarks);
   const iibCleared = iibStatus.code === "cleared";
+  const onboardingComplete = context === "partner"
+    ? application.partner_status === "active_partner"
+    : application.registration_status === "iib_registered" || Boolean(profile.iib_uploaded || profile.iib_uploaded_at);
 
   let migrationValues = { ...asObject(profile.raw_data), ...asObject(application.draft_data) };
   if (context !== "partner" && application.partner_record_id) {
@@ -175,12 +177,10 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
       <div className="mx-auto max-w-[1480px] space-y-4 pb-8">
         <section className="rounded-2xl border border-[#DCE5EF] bg-white/80 px-5 py-4 shadow-sm backdrop-blur">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <AccountReviewBackLink href={`/intermediaries/applications/${id}`} />
-              <div className="mt-2 flex flex-wrap items-center gap-2.5">
-                <h1 className="text-xl font-semibold text-[#0F172A]">{title}</h1>
-                {permanentReference ? <span className="rounded-lg border border-[#D7E0EB] bg-white px-2.5 py-1 text-[9.5px] font-medium text-[#475569]">{permanentReference}</span> : null}
-              </div>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-xl font-semibold text-white">{title}</h1>
+              {permanentReference ? <span className="rounded-lg border border-white/25 bg-white/10 px-2.5 py-1 text-[9.5px] font-semibold text-white">{permanentReference}</span> : null}
+              {onboardingComplete ? <span className="rounded-full border border-emerald-300/60 bg-emerald-400/20 px-2.5 py-1 text-[9px] font-bold text-emerald-50">✓ Onboarding complete</span> : null}
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <span className="font-mono text-[15px] font-semibold tracking-wide text-[#334155]">{maskPan(verificationPan)}</span>
@@ -191,11 +191,11 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
 
         {query.success && !popupEvent ? <WorkflowSuccessToast message={successes[query.success] ?? "Saved successfully."} /> : null}
 
-        {context === "partner" ? (
+        {!onboardingComplete ? (context === "partner" ? (
           <PartnerTwoStepNavigation applicationId={id} viewStage={viewStage} documentsComplete={showDocuments} partnerActive={application.partner_status === "active_partner"} />
         ) : (
           <SixStepNavigation applicationId={id} viewStage={viewStage} registrationStatus={application.registration_status} documentsComplete={showDocuments} agreementSigned={assignment?.agreement_status === "signed"} />
-        )}
+        )) : null}
 
         <IntermediaryDocumentUploadController applicationId={id} enabled={viewStage === "documents" && editable} showGst={Boolean(profile.gst_number)} />
         <main className="overflow-hidden rounded-2xl border bg-white">
@@ -251,7 +251,7 @@ function PartnerTwoStepNavigation({ applicationId, viewStage, documentsComplete,
       <div className="relative mx-auto grid max-w-[760px] grid-cols-2 gap-0 before:absolute before:left-[25%] before:right-[25%] before:top-[18px] before:h-px before:bg-[#CBD5E1] before:content-['']">
         {steps.map((step, index) => {
           const number = index + 1;
-          const completed = number < current || (number === 1 && current > 1) || (number === 2 && documentsComplete && partnerActive);
+          const completed = partnerActive || number < current || (number === 1 && current > 1) || (number === 2 && documentsComplete);
           const active = number === current && !completed;
           return (
             <Link key={step[0]} href={step[2]} className="relative z-[1] min-w-0 text-center">
