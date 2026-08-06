@@ -74,6 +74,7 @@ export function RegistrationStepActions({ applicationId, signedUploaded }: Props
       const response = await fetch("/api/intermediary-registration/signed", { method: "POST", body: data, credentials: "same-origin", cache: "no-store" });
       const result = await response.json().catch(() => null) as { ok?: boolean; message?: string } | null;
       if (!response.ok || !result?.ok) throw new Error(result?.message || "Signed registration form could not be uploaded.");
+      router.replace(`/intermediaries/applications/${applicationId}/workflow?stage=training&success=registration_completed`);
       router.refresh();
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Signed registration form could not be uploaded.");
