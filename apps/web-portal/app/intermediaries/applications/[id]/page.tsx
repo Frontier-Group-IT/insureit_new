@@ -166,7 +166,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
   const linkedType = linked ? linkedAccountType(linked) : profile.partner_type;
   const linkedAccountId = permanentCode(linkedIntermediary?.intermediary_code) ?? "Not Created";
   const linkedAccountStatus = linked ? pretty(linked.registration_status) : "Not Created";
-  const activationDate = isPartner ? linkedIntermediary?.activated_at : intermediary?.activated_at;
+  const activationDate = intermediary?.activated_at;
   const journey = isPartner ? partnerJourney(profile, documents ?? [], activePartner) : registrationJourney(accountContext, profile, assignment, application);
   const onboardingComplete = isPartner ? activePartner : application.registration_status === "iib_registered" || Boolean(profile.iib_uploaded || profile.iib_uploaded_at);
   const returnPath = `/intermediaries/applications/${id}`;
