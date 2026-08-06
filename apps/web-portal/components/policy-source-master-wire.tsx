@@ -10,6 +10,10 @@ type Props = {
   sources: SourceOption[];
 };
 
+type ReactTrackedControl = (HTMLInputElement | HTMLSelectElement) & {
+  _valueTracker?: { setValue: (value: string) => void };
+};
+
 function controlForLabel(root: ParentNode, labelText: string) {
   const labels = Array.from(root.querySelectorAll("label"));
   const label = labels.find((item) => item.textContent?.trim().toLowerCase().startsWith(labelText.toLowerCase()));
@@ -17,9 +21,14 @@ function controlForLabel(root: ParentNode, labelText: string) {
 }
 
 function dispatchValue(control: HTMLInputElement | HTMLSelectElement, value: string) {
+  const previousValue = control.value;
   const prototype = control instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
   const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
   setter?.call(control, value);
+
+  // React tracks controlled input values internally. Resetting the tracker to the
+  // previous value ensures the following event is treated as a genuine change.
+  (control as ReactTrackedControl)._valueTracker?.setValue(previousValue);
   control.dispatchEvent(new Event("input", { bubbles: true }));
   control.dispatchEvent(new Event("change", { bubbles: true }));
 }
@@ -72,9 +81,16 @@ export function PolicySourceMasterWire({ rms, sources }: Props) {
         }
       };
 
+      let syncTimer = 0;
       const syncCode = () => {
-        const selected = optionsForType().find((item) => item.label.trim().toLowerCase() === lead.value.trim().toLowerCase());
-        dispatchValue(code, selected?.code ?? "");
+        // Allow React's delegated onChange handler to commit the controlled Lead
+        // Source value before updating the dependent intermediary-code field.
+        window.clearTimeout(syncTimer);
+        const selectedLabel = lead.value;
+        syncTimer = window.setTimeout(() => {
+          const selected = optionsForType().find((item) => item.label.trim().toLowerCase() === selectedLabel.trim().toLowerCase());
+          dispatchValue(code, selected?.code ?? "");
+        }, 0);
       };
       const onTypeChange = () => refresh(true);
       type.addEventListener("change", onTypeChange);
@@ -84,6 +100,7 @@ export function PolicySourceMasterWire({ rms, sources }: Props) {
       syncCode();
 
       cleanup = () => {
+        window.clearTimeout(syncTimer);
         type.removeEventListener("change", onTypeChange);
         lead.removeEventListener("input", syncCode);
         lead.removeEventListener("change", syncCode);
