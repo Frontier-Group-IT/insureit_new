@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { parsePolicyDocument, type ParsedPolicyField } from "@/lib/policy-ocr-parsers";
 
@@ -47,7 +48,10 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
   const config = getGoogleConfig();
   if (!config) return { ok: false, error: "Google policy OCR is not configured on this environment." };
 
-  const subjectToken = process.env.VERCEL_OIDC_TOKEN || process.env.GOOGLE_WORKLOAD_IDENTITY_SUBJECT_TOKEN;
+  const requestHeaders = await headers();
+  const subjectToken = process.env.VERCEL_OIDC_TOKEN
+    || requestHeaders.get("x-vercel-oidc-token")
+    || process.env.GOOGLE_WORKLOAD_IDENTITY_SUBJECT_TOKEN;
   if (!subjectToken) {
     return { ok: false, error: "Secure Google authentication is unavailable. Redeploy the production application with Vercel OIDC enabled." };
   }
