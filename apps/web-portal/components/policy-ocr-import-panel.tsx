@@ -4,28 +4,42 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { extractPolicyDocument, type PolicyOcrField } from "@/app/policies/policy-ocr-actions";
 
+const APPLY_FIELDS = new Set([
+  "policy_product",
+  "idv",
+  "od_premium",
+  "tp_premium",
+  "cpa_opted",
+  "cpa_premium",
+  "policy_number",
+  "insurer_name",
+  "policy_start_date",
+  "policy_end_date",
+]);
+
+const VERIFICATION_FIELDS = new Set(["total_premium", "tax_amount", "gross_premium"]);
+
 const FIELD_TARGETS: Record<string, string[]> = {
-  policy_number: ["policy number"],
-  insurer_name: ["insurance company"],
   policy_product: ["policy product"],
   idv: ["idv / sum insured", "idv"],
   od_premium: ["od premium"],
   tp_premium: ["third party premium", "tp premium"],
   cpa_opted: ["cpa opted"],
   cpa_premium: ["cpa amount", "cpa premium"],
+  policy_number: ["policy number"],
+  insurer_name: ["insurance company", "insurer"],
   policy_start_date: ["valid from"],
   policy_end_date: ["valid upto", "valid up to"],
-  insured_name: ["insured name"],
-  registration_number: ["registration number"],
-  chassis_number: ["chassis number"],
-  engine_number: ["engine number"],
-  make: ["make"],
-  model: ["model"],
-  manufacturing_year: ["year of manufacturing", "manufacturing year"],
-  gvw: ["gvw", "cc / seating / gvw / category"],
 };
 
-const VERIFICATION_FIELDS = new Set(["total_premium", "tax_amount", "gross_premium"]);
+const PRODUCT_ALIASES: Record<string, string[]> = {
+  Package: ["package", "package policy", "comprehensive", "comprehensive policy"],
+  "Third Party": ["third party", "third party policy", "liability only", "act only"],
+  SAOD: ["saod", "standalone od", "stand alone od", "standalone own damage", "stand alone own damage"],
+  Bundled: ["bundled", "bundled policy"],
+  "Long Term Package": ["long term package", "multi year package"],
+  "Long Term Third Party": ["long term third party", "long term liability", "multi year third party"],
+};
 
 export function PolicyOcrImportPanel() {
   const [open, setOpen] = useState(false);
@@ -37,12 +51,17 @@ export function PolicyOcrImportPanel() {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  const visibleFields = useMemo(
+    () => fields.filter((field) => APPLY_FIELDS.has(field.key) || VERIFICATION_FIELDS.has(field.key)),
+    [fields],
+  );
+
   const selectedCount = selected.size;
   const confidenceSummary = useMemo(() => {
-    const scored = fields.filter((field) => field.confidence !== null);
+    const scored = visibleFields.filter((field) => field.confidence !== null);
     if (!scored.length) return null;
     return Math.round(scored.reduce((sum, field) => sum + (field.confidence ?? 0), 0) / scored.length * 100);
-  }, [fields]);
+  }, [visibleFields]);
 
   useEffect(() => {
     if (!open) return;
@@ -63,6 +82,7 @@ export function PolicyOcrImportPanel() {
     setWarnings([]);
     setModel(null);
     setParserInfo(null);
+
     startTransition(async () => {
       const result = await extractPolicyDocument(formData);
       if (!result.ok) { setError(result.error); return; }
@@ -71,13 +91,13 @@ export function PolicyOcrImportPanel() {
       setParserInfo(`${result.parserId} · ${result.parserVersion} · ${result.extractionMethod}`);
       setWarnings(result.warnings);
       setSelected(new Set(result.fields
-        .filter((field) => !VERIFICATION_FIELDS.has(field.key) && (field.confidence ?? 0) >= .8 && FIELD_TARGETS[field.key])
+        .filter((field) => APPLY_FIELDS.has(field.key) && (field.confidence ?? 0) >= .8)
         .map((field) => field.key)));
     });
   }
 
   function toggle(key: string) {
-    if (VERIFICATION_FIELDS.has(key)) return;
+    if (!APPLY_FIELDS.has(key)) return;
     setSelected((current) => {
       const next = new Set(current);
       if (next.has(key)) next.delete(key); else next.add(key);
@@ -86,7 +106,7 @@ export function PolicyOcrImportPanel() {
   }
 
   function applySelected() {
-    const chosen = fields.filter((field) => selected.has(field.key));
+    const chosen = fields.filter((field) => selected.has(field.key) && APPLY_FIELDS.has(field.key));
     let applied = 0;
     const skipped: string[] = [];
 
@@ -99,7 +119,7 @@ export function PolicyOcrImportPanel() {
     }
 
     if (!applied) {
-      setError("No selected OCR fields could be matched to the onboarding form.");
+      setError("No selected policy, premium or validity fields could be applied.");
       return;
     }
     if (skipped.length) {
@@ -117,8 +137,11 @@ export function PolicyOcrImportPanel() {
       <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/60 bg-white shadow-[0_30px_100px_rgba(7,29,73,.45)] sm:max-h-[calc(100dvh-2.5rem)] sm:rounded-3xl">
         <div className="flex shrink-0 items-start justify-between border-b border-[#E6EBF2] bg-[linear-gradient(135deg,#F8FAFD,#EEF4FB)] px-4 py-4 sm:px-5">
           <div>
-            <div className="flex items-center gap-2"><h2 className="text-[15px] font-bold text-[#102A4C]">Read policy copy</h2><span className="rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-bold text-emerald-700">Production mapping</span></div>
-            <p className="mt-1 text-[9.5px] text-[#667085]">Upload, review and apply only verified details. Printed totals are shown for reconciliation and are not copied automatically.</p>
+            <div className="flex items-center gap-2">
+              <h2 className="text-[15px] font-bold text-[#102A4C]">Read policy copy</h2>
+              <span className="rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-bold text-emerald-700">Section 03 only</span>
+            </div>
+            <p className="mt-1 text-[9.5px] text-[#667085]">Only Policy product, premium and validity fields can be copied. Customer and vehicle details are never applied from the policy document.</p>
           </div>
           <button type="button" onClick={() => !pending && setOpen(false)} disabled={pending} className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#D8DEE9] bg-white text-lg text-[#475467] hover:bg-[#F2F5F9] disabled:opacity-50" aria-label="Close">×</button>
         </div>
@@ -130,46 +153,67 @@ export function PolicyOcrImportPanel() {
               <input name="policy_document" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required className="min-w-0 flex-1 rounded-xl border border-[#D8DEE9] bg-white text-[9.5px] text-[#475569] file:mr-3 file:border-0 file:bg-[#E8EEFF] file:px-4 file:py-3 file:text-[9px] file:font-semibold file:text-[#315FEA]" />
               <button disabled={pending} className="rounded-xl bg-[#17365D] px-5 py-3 text-[9.5px] font-bold text-white disabled:opacity-50">{pending ? "Reading policy…" : "Read policy copy"}</button>
             </div>
-            <p className="mt-2 text-[8.5px] text-[#94A3B8]">Currently optimized for New India Assurance motor policies. Other formats require full manual verification.</p>
+            <p className="mt-2 text-[8.5px] text-[#94A3B8]">Currently optimized for New India Assurance motor policies. Review every extracted value before applying.</p>
           </form>
 
           {error ? <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">{error}</p> : null}
           {warnings.map((warning) => <p key={warning} className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-[9px] text-amber-800">{warning}</p>)}
 
-          {fields.length ? <div className="mt-5">
+          {visibleFields.length ? <div className="mt-5">
             <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div><p className="text-[10px] font-semibold text-[#17203A]">{fields.length} fields extracted{model ? ` using ${model}` : ""}{confidenceSummary !== null ? ` · average confidence ${confidenceSummary}%` : ""}</p>{parserInfo ? <p className="mt-1 text-[8px] text-[#94A3B8]">{parserInfo}</p> : null}</div>
+              <div>
+                <p className="text-[10px] font-semibold text-[#17203A]">{visibleFields.length} relevant fields extracted{model ? ` using ${model}` : ""}{confidenceSummary !== null ? ` · average confidence ${confidenceSummary}%` : ""}</p>
+                {parserInfo ? <p className="mt-1 text-[8px] text-[#94A3B8]">{parserInfo}</p> : null}
+              </div>
               <button type="button" onClick={() => setSelected(new Set())} className="self-start rounded-lg border border-[#CBD5E1] px-3 py-2 text-[9px] font-semibold">Clear selection</button>
             </div>
-            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{fields.map((field) => {
+
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{visibleFields.map((field) => {
               const confidence = field.confidence === null ? null : Math.round(field.confidence * 100);
               const verificationOnly = VERIFICATION_FIELDS.has(field.key);
               return <label key={field.key} className={`flex gap-3 rounded-xl border p-3 ${verificationOnly ? "cursor-default border-amber-200 bg-amber-50" : selected.has(field.key) ? "cursor-pointer border-[#818CF8] bg-[#F5F3FF]" : "cursor-pointer border-[#E2E8F0] bg-white"}`}>
-                {verificationOnly ? <span className="mt-0.5 rounded bg-amber-100 px-1.5 py-1 text-[7px] font-bold text-amber-800">CHECK</span> : <input type="checkbox" checked={selected.has(field.key)} onChange={() => toggle(field.key)} className="mt-1"/>}
-                <span className="min-w-0"><span className="block text-[8px] font-bold uppercase tracking-wide text-[#64748B]">{field.label}</span><span className="mt-1 block break-words text-[10.5px] font-semibold text-[#17203A]">{field.value}</span><span className="mt-1 block text-[8px] text-[#94A3B8]">{confidence === null ? "Confidence unavailable" : `${confidence}% confidence`}{field.page ? ` · page ${field.page}` : ""}</span>{field.evidence ? <span className="mt-1 block line-clamp-2 text-[7.5px] text-[#A0AEC0]">Source: {field.evidence}</span> : null}</span>
+                {verificationOnly
+                  ? <span className="mt-0.5 rounded bg-amber-100 px-1.5 py-1 text-[7px] font-bold text-amber-800">CHECK</span>
+                  : <input type="checkbox" checked={selected.has(field.key)} onChange={() => toggle(field.key)} className="mt-1"/>}
+                <span className="min-w-0">
+                  <span className="block text-[8px] font-bold uppercase tracking-wide text-[#64748B]">{field.label}</span>
+                  <span className="mt-1 block break-words text-[10.5px] font-semibold text-[#17203A]">{field.value}</span>
+                  <span className="mt-1 block text-[8px] text-[#94A3B8]">{confidence === null ? "Confidence unavailable" : `${confidence}% confidence`}{field.page ? ` · page ${field.page}` : ""}</span>
+                  {field.evidence ? <span className="mt-1 block line-clamp-2 text-[7.5px] text-[#A0AEC0]">Source: {field.evidence}</span> : null}
+                </span>
               </label>;
             })}</div>
           </div> : null}
         </div>
 
         <div className="flex shrink-0 flex-col gap-3 border-t border-[#E6EBF2] bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4">
-          <p className="text-[8.5px] text-[#667085]">Selected editable values are copied; printed totals remain reconciliation-only.</p>
-          <div className="flex justify-end gap-2"><button type="button" onClick={() => setOpen(false)} disabled={pending} className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[9.5px] font-semibold disabled:opacity-50">Cancel</button><button type="button" onClick={applySelected} disabled={!selectedCount || pending} className="rounded-xl bg-[#315FEA] px-5 py-2.5 text-[9.5px] font-bold text-white disabled:opacity-40">Apply selected details ({selectedCount})</button></div>
+          <p className="text-[8.5px] text-[#667085]">Printed Net, GST and Gross are verification-only and never overwrite portal calculations.</p>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setOpen(false)} disabled={pending} className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[9.5px] font-semibold disabled:opacity-50">Cancel</button>
+            <button type="button" onClick={applySelected} disabled={!selectedCount || pending} className="rounded-xl bg-[#315FEA] px-5 py-2.5 text-[9.5px] font-bold text-white disabled:opacity-40">Apply Section 03 details ({selectedCount})</button>
+          </div>
         </div>
       </div>
     </div>,
     document.body,
   ) : null;
 
-  return <><button type="button" onClick={() => setOpen(true)} className="rounded-xl border border-white/35 bg-white/10 px-4 py-2.5 text-[10px] font-bold text-white shadow-sm transition hover:bg-white/20">Read Policy Copy</button>{modal}</>;
+  return <>
+    <button type="button" onClick={() => setOpen(true)} className="rounded-xl border border-white/35 bg-white/10 px-4 py-2.5 text-[10px] font-bold text-white shadow-sm transition hover:bg-white/20">Read Policy Copy</button>
+    {modal}
+  </>;
 }
 
 function normalizeText(value: string) {
-  return value.toLowerCase().replace(/\b(?:the|co|company|limited|ltd)\b/g, " ").replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
+  return value
+    .toLowerCase()
+    .replace(/\b(?:the|co|company|limited|ltd|general|insurance)\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function findControl(aliases: string[]) {
-  if (!aliases.length) return null;
   const labels = Array.from(document.querySelectorAll("label"));
   for (const label of labels) {
     const text = (label.textContent ?? "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -181,18 +225,50 @@ function findControl(aliases: string[]) {
 }
 
 function valueForControl(field: PolicyOcrField, control: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement) {
-  if (control instanceof HTMLSelectElement) {
-    const wanted = normalizeText(field.value);
-    const exact = Array.from(control.options).find((option) => normalizeText(option.textContent ?? option.label) === wanted || normalizeText(option.value) === wanted);
-    if (exact) return exact.value;
-    const contains = Array.from(control.options).find((option) => {
-      const optionText = normalizeText(option.textContent ?? option.label);
-      return optionText && wanted && (optionText.includes(wanted) || wanted.includes(optionText));
-    });
-    return contains?.value ?? "";
-  }
   if (control instanceof HTMLInputElement && control.type === "date") return toIsoDate(field.value);
-  return field.value;
+  if (!(control instanceof HTMLSelectElement)) return field.value;
+
+  if (field.key === "policy_product") return matchPolicyProduct(control, field.value);
+  if (field.key === "insurer_name") return matchInsurer(control, field.value);
+  if (field.key === "cpa_opted") return matchSimpleOption(control, field.value);
+  return matchSimpleOption(control, field.value);
+}
+
+function matchPolicyProduct(control: HTMLSelectElement, rawValue: string) {
+  const wanted = normalizeText(rawValue);
+  const canonical = Object.entries(PRODUCT_ALIASES).find(([, aliases]) => aliases.some((alias) => normalizeText(alias) === wanted || wanted.includes(normalizeText(alias))))?.[0] ?? rawValue;
+  return findOptionValue(control, canonical);
+}
+
+function matchInsurer(control: HTMLSelectElement, rawValue: string) {
+  const wantedTokens = new Set(normalizeText(rawValue).split(" ").filter(Boolean));
+  let best: { value: string; score: number } | null = null;
+
+  for (const option of Array.from(control.options)) {
+    if (!option.value) continue;
+    const optionTokens = new Set(normalizeText(option.textContent ?? option.label).split(" ").filter(Boolean));
+    if (!optionTokens.size) continue;
+    const overlap = Array.from(wantedTokens).filter((token) => optionTokens.has(token)).length;
+    const score = overlap / Math.max(wantedTokens.size, 1);
+    if (!best || score > best.score) best = { value: option.value, score };
+  }
+
+  return best && best.score >= .6 ? best.value : "";
+}
+
+function matchSimpleOption(control: HTMLSelectElement, rawValue: string) {
+  return findOptionValue(control, rawValue);
+}
+
+function findOptionValue(control: HTMLSelectElement, rawValue: string) {
+  const wanted = normalizeText(rawValue);
+  const exact = Array.from(control.options).find((option) => normalizeText(option.textContent ?? option.label) === wanted || normalizeText(option.value) === wanted);
+  if (exact) return exact.value;
+  const contains = Array.from(control.options).find((option) => {
+    const optionText = normalizeText(option.textContent ?? option.label);
+    return optionText && wanted && (optionText.includes(wanted) || wanted.includes(optionText));
+  });
+  return contains?.value ?? "";
 }
 
 function toIsoDate(value: string) {
@@ -206,11 +282,23 @@ function toIsoDate(value: string) {
 
 function setNativeValue(control: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement, value: string) {
   if (!value) return false;
-  const prototype = control instanceof HTMLInputElement ? HTMLInputElement.prototype : control instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLTextAreaElement.prototype;
+  const wasDisabled = control.disabled;
+  if (wasDisabled) control.disabled = false;
+
+  const prototype = control instanceof HTMLInputElement
+    ? HTMLInputElement.prototype
+    : control instanceof HTMLSelectElement
+      ? HTMLSelectElement.prototype
+      : HTMLTextAreaElement.prototype;
   const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
-  if (!setter) return false;
+  if (!setter) {
+    if (wasDisabled) control.disabled = true;
+    return false;
+  }
+
   setter.call(control, value);
   control.dispatchEvent(new Event("input", { bubbles: true }));
   control.dispatchEvent(new Event("change", { bubbles: true }));
+  if (wasDisabled) control.disabled = true;
   return control.value === value;
 }
