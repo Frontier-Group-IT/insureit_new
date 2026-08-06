@@ -1,0 +1,44 @@
+name: Apply Partner activation date fix
+
+on:
+  push:
+    branches:
+      - fix/partner-activation-date-source-20260806
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/partner-activation-date-source-20260806
+          fetch-depth: 0
+      - name: Update activation date source
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('apps/web-portal/app/intermediaries/applications/[id]/page.tsx')
+          text = path.read_text()
+          old = 'const activationDate = isPartner ? linkedIntermediary?.activated_at : intermediary?.activated_at;'
+          new = 'const activationDate = intermediary?.activated_at;'
+          if old not in text:
+              raise SystemExit('Expected activation-date logic was not found')
+          path.write_text(text.replace(old, new, 1))
+          PY
+          rm .github/workflows/apply-partner-activation-date-fix.yml
+          grep -F 'const activationDate = intermediary?.activated_at;' 'apps/web-portal/app/intermediaries/applications/[id]/page.tsx'
+          if grep -Fq 'const activationDate = isPartner ? linkedIntermediary?.activated_at : intermediary?.activated_at;' 'apps/web-portal/app/intermediaries/applications/[id]/page.tsx'; then
+            echo 'Old activation-date logic is still present'
+            exit 1
+          fi
+      - name: Commit focused fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add 'apps/web-portal/app/intermediaries/applications/[id]/page.tsx' .github/workflows/apply-partner-activation-date-fix.yml
+          git commit -m 'Fix Partner activation date source'
+          git push origin HEAD:fix/partner-activation-date-source-20260806
