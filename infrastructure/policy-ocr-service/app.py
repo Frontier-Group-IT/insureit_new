@@ -8,7 +8,7 @@ from typing import Any
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from paddleocr import PPStructureV3
 
-app = FastAPI(title="INSUREIT Policy OCR", version="0.2.0")
+app = FastAPI(title="INSUREIT Policy OCR", version="0.3.0")
 SECRET = os.environ.get("POLICY_OCR_SERVICE_SECRET", "")
 MAX_BYTES = 15 * 1024 * 1024
 
@@ -177,11 +177,11 @@ def lookup_table_value(raw_pages: list[str], labels: list[str]) -> tuple[str, in
         rows = extract_html_rows(raw)
         for row_index, row in enumerate(rows):
             normalized_row = [normalize_label(cell) for cell in row]
-
-            # Header row followed by a values row, such as Make / Model / Variant.
             for column_index, normalized_cell in enumerate(normalized_row):
                 if normalized_cell not in wanted:
                     continue
+
+                # Header row followed by a values row, such as Make / Model / Variant.
                 if row_index + 1 < len(rows) and column_index < len(rows[row_index + 1]):
                     candidate = clean_generic(rows[row_index + 1][column_index])
                     if is_valid_candidate(candidate):
@@ -191,6 +191,26 @@ def lookup_table_value(raw_pages: list[str], labels: list[str]) -> tuple[str, in
                 for candidate_index in range(column_index + 1, len(row)):
                     candidate = clean_generic(row[candidate_index])
                     if is_valid_candidate(candidate) and normalize_label(candidate) not in wanted:
+                        return candidate, page_index, f"{row[column_index]}: {candidate}"
+    return None
+
+
+def lookup_same_row_value(raw_pages: list[str], labels: list[str]) -> tuple[str, int, str] | None:
+    """Find a value to the right of an exact label without crossing into the next row."""
+    wanted = {normalize_label(label) for label in labels}
+    for page_index, raw in enumerate(raw_pages, start=1):
+        for row in extract_html_rows(raw):
+            normalized_row = [normalize_label(cell) for cell in row]
+            for column_index, normalized_cell in enumerate(normalized_row):
+                if normalized_cell not in wanted:
+                    continue
+                for candidate_index in range(column_index + 1, len(row)):
+                    candidate = clean_generic(row[candidate_index])
+                    if not candidate:
+                        continue
+                    if normalize_label(candidate) in wanted:
+                        continue
+                    if is_valid_candidate(candidate):
                         return candidate, page_index, f"{row[column_index]}: {candidate}"
     return None
 
@@ -302,25 +322,40 @@ def extract_fields(raw_pages: list[str]) -> list[dict[str, Any]]:
 
     table_specs: list[tuple[str, list[str], float, Any | None]] = [
         ("make", ["Make", "Manufacturer"], 0.96, clean_generic),
-        ("model", ["Model"], 0.96, clean_generic),
-        ("variant", ["Variant"], 0.95, clean_generic),
+        ("model", ["Model"], 0.96, normalize_vehicle_description),
+        ("variant", ["Variant"], 0.95, normalize_vehicle_description),
         ("manufacturing_year", ["Manufacturing Year", "Year of Manufacture", "Mfg Year"], 0.96, clean_generic),
         ("seating_capacity", ["Seating capacity", "Seating Capacity"], 0.94, clean_integer),
         ("gvw", ["GVW"], 0.96, clean_integer),
         ("chassis_number", ["Chassis No.", "Chassis No", "Chassis Number"], 0.98, compact_identifier),
-        ("engine_number", ["Engine/Motor No.", "Engine Motor No", "Engine No.", "Engine Number"], 0.98, compact_identifier),
+        ("engine_number", ["Engine/Motor No.", "Engine Motor No", "Engine No.", "Engine Number"], 0.98, clean_engine_number),
         ("vehicle_type", ["Vehicle Type"], 0.94, clean_generic),
         ("vehicle_sub_class", ["Vehicle Sub Class", "Vehicle Subclass"], 0.94, clean_generic),
         ("built_type", ["Built Type"], 0.94, clean_generic),
         ("idv", ["Total IDV", "Total Insured Declared Value"], 0.98, clean_money),
-        ("od_premium", ["Net Own Damage Premium (A)", "Net Own Damage Premium"], 0.98, clean_money),
-        ("tp_premium", ["Net Liability Premium (B)", "Net Liability Premium"], 0.98, clean_money),
-        ("total_premium", ["Total Premium (A+B)", "Total Premium"], 0.98, clean_money),
-        ("tax_amount", ["IGST (5% of Basic TP + 18% of rest of Premium)", "IGST", "GST"], 0.96, clean_money),
-        ("gross_premium", ["Gross Premium Paid", "Premium Paid"], 0.98, clean_money),
     ]
     for key, labels, confidence, cleaner in table_specs:
         add(key, lookup_table_value(raw_pages, labels), confidence=confidence, cleaner=cleaner)
+
+    premium_specs: list[tuple[str, list[str], float]] = [
+        ("od_premium", ["Net Own Damage Premium (A)", "Net Own Damage Premium"], 0.98),
+        ("tp_premium", ["Net Liability Premium (B)", "Net Liability Premium"], 0.98),
+        ("total_premium", ["Total Premium (A+B)", "Total Premium"], 0.98),
+        ("tax_amount", ["IGST (5% of Basic TP + 18% of rest of Premium)", "IGST", "GST"], 0.96),
+        ("gross_premium", ["Gross Premium Paid", "Premium Paid"], 0.98),
+    ]
+    for key, labels, confidence in premium_specs:
+        add(key, lookup_same_row_value(raw_pages, labels), confidence=confidence, cleaner=clean_money)
+
+    premium_fallbacks: list[tuple[str, list[str], float]] = [
+        ("od_premium", [rf"Net\s+Own\s+Damage\s+Premium\s*\(A\)\s*[:\-]?\s*({MONEY})"], 0.95),
+        ("tp_premium", [rf"Net\s+Liability\s+Premium\s*\(B\)\s*[:\-]?\s*({MONEY})"], 0.95),
+        ("total_premium", [rf"Total\s+Premium\s*\(A\+B\)\s*[:\-]?\s*({MONEY})"], 0.95),
+        ("tax_amount", [rf"IGST[^\n]{{0,140}}?({MONEY})\s*$"], 0.93),
+        ("gross_premium", [rf"Gross\s+Premium\s+Paid\s*[:\-]?\s*({MONEY})"], 0.96),
+    ]
+    for key, patterns, confidence in premium_fallbacks:
+        add(key, find_pattern(clean_pages, patterns, flags=re.IGNORECASE | re.MULTILINE), confidence=confidence, cleaner=clean_money)
 
     if "registration_number" not in seen:
         registration = lookup_table_value(raw_pages, ["Registration No.", "Registration No", "Regn No."])
@@ -363,6 +398,7 @@ def extract_fields(raw_pages: list[str]) -> list[dict[str, Any]]:
         "hypothecation",
         find_pattern(clean_pages, [r"Hypothecation\s*Details\s*[:\-]?\s*([^\n]{3,120})"]),
         confidence=0.96,
+        cleaner=normalize_hypothecation,
     )
 
     addons: list[str] = []
@@ -386,6 +422,10 @@ def compact_identifier(value: str) -> str:
     return re.sub(r"[^A-Z0-9\-/]", "", value.upper())
 
 
+def clean_engine_number(value: str) -> str:
+    return re.sub(r"[^A-Z0-9.\-/]", "", value.upper())
+
+
 def clean_integer(value: str) -> str:
     match = re.search(r"\d+", value.replace(",", ""))
     return match.group(0) if match else ""
@@ -399,6 +439,20 @@ def clean_money(value: str) -> str:
 def clean_name(value: str) -> str:
     value = re.split(r"\b(?:Own Damage Period|Motor Liability Period|Policy Issued|Policy No\.?|Proposal No\.?)\b", value, maxsplit=1, flags=re.IGNORECASE)[0]
     return clean_generic(value).upper()
+
+
+def normalize_vehicle_description(value: str) -> str:
+    value = clean_generic(value).upper()
+    value = re.sub(r"([A-Z]{2,})(\d{2,})", r"\1 \2", value)
+    value = re.sub(r"(\.TK)(?=\d)", r"\1 ", value)
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def normalize_hypothecation(value: str) -> str:
+    value = clean_generic(value).upper()
+    value = re.sub(r"\bBANKOFINDIA\b", "BANK OF INDIA", value)
+    value = re.sub(r"\s*-\s*", " - ", value)
+    return re.sub(r"\s+", " ", value).strip(" -")
 
 
 def normalize_registration(value: str) -> str:
