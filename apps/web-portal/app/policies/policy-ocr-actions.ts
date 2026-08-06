@@ -37,6 +37,21 @@ type TextAnchor = {
   textSegments?: Array<{ startIndex?: string | number; endIndex?: string | number }>;
 };
 
+type StsPayload = {
+  access_token?: string;
+  error?: string;
+  error_description?: string;
+};
+
+type SafeOidcClaims = {
+  issuer?: string;
+  audience?: string | string[];
+  subject?: string;
+  issuedAt?: number;
+  notBefore?: number;
+  expiresAt?: number;
+};
+
 export async function extractPolicyDocument(formData: FormData): Promise<PolicyOcrResult> {
   await requirePolicyEditor();
 
@@ -145,9 +160,15 @@ async function getGoogleAccessToken(config: NonNullable<ReturnType<typeof getGoo
     signal,
   });
 
-  const stsPayload = await stsResponse.json().catch(() => null) as { access_token?: string; error?: string } | null;
+  const stsPayload = await stsResponse.json().catch(() => null) as StsPayload | null;
   if (!stsResponse.ok || !stsPayload?.access_token) {
-    console.error("Google STS exchange failed", stsResponse.status, stsPayload?.error);
+    console.error(
+      "Google STS exchange failed",
+      stsResponse.status,
+      stsPayload?.error,
+      stsPayload?.error_description,
+      decodeSafeOidcClaims(subjectToken),
+    );
     throw new Error("google_sts_exchange_failed");
   }
 
@@ -169,6 +190,26 @@ async function getGoogleAccessToken(config: NonNullable<ReturnType<typeof getGoo
     throw new Error("google_service_account_impersonation_failed");
   }
   return impersonationPayload.accessToken;
+}
+
+function decodeSafeOidcClaims(token: string): SafeOidcClaims {
+  try {
+    const payloadSegment = token.split(".")[1];
+    if (!payloadSegment) return {};
+    const payload = JSON.parse(Buffer.from(payloadSegment, "base64url").toString("utf8")) as Record<string, unknown>;
+    return {
+      issuer: typeof payload.iss === "string" ? payload.iss : undefined,
+      audience: typeof payload.aud === "string" || Array.isArray(payload.aud)
+        ? payload.aud as string | string[]
+        : undefined,
+      subject: typeof payload.sub === "string" ? payload.sub : undefined,
+      issuedAt: typeof payload.iat === "number" ? payload.iat : undefined,
+      notBefore: typeof payload.nbf === "number" ? payload.nbf : undefined,
+      expiresAt: typeof payload.exp === "number" ? payload.exp : undefined,
+    };
+  } catch {
+    return {};
+  }
 }
 
 function extractPageTexts(document: DocumentAiResponse["document"]): string[] {
