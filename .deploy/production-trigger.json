@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-07T03:00:00+05:30",
+  "deploy_requested_at": "2026-08-07T03:22:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT controlled production deployment",
-  "source_commit": "8b08adb79f818d81bab2fccbdfd59baa2c46bd85",
-  "release_scope": "Deploy Google Document AI policy OCR with Vercel OIDC Workload Identity Federation and INSUREIT server-side parsers for Digit, IFFCO-Tokio, and New India policy formats. Preserve review-before-apply behavior for Policy Onboarding Section 03 only.",
-  "verification": "Typecheck passed, lint completed with warnings only, and the Next.js production build completed successfully on the verified branch before merge. Vercel production status must reach success and the live OCR workflow must be tested before reporting completion.",
+  "source": "ChatGPT controlled OCR authentication redeploy",
+  "source_commit": "6e3668c48e147d7c0274221bad911603280ae692",
+  "release_scope": "Redeploy Google Document AI policy OCR with corrected Vercel runtime OIDC token retrieval from the x-vercel-oidc-token request header, preserving the server-only STS exchange, service-account impersonation, insurer parsers, and Section 03 review-before-apply workflow.",
+  "verification": "The user pulled main at commit 6e3668c48e147d7c0274221bad911603280ae692. npm run typecheck passed and npm run build completed successfully with warnings only. Vercel must report Ready for the resulting production deployment and the live Digit policy OCR flow must be tested before completion is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
