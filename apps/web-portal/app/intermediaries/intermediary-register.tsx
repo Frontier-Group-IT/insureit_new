@@ -150,7 +150,7 @@ export async function IntermediaryRegister({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <form method="get" action={searchAction} className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />
-            <input name="q" defaultValue={search} placeholder="Search name, mobile, email or ID" className="h-11 w-full rounded-xl border border-[#D8E1EC] bg-white/70 pl-10 pr-4 text-[11px] text-[#17203A] shadow-sm outline-none backdrop-blur placeholder:text-[#94A3B8] focus:border-[#9AA9FF] focus:ring-2 focus:ring-[#E4E8FF]" />
+            <input name="q" defaultValue={search} placeholder="Search name, mobile, email or ID" className="h-10 w-full rounded-xl border border-[#D8E1EC] bg-white pl-10 pr-4 text-[11px] text-[#17203A] outline-none placeholder:text-[#94A3B8] focus:border-[#315FEA] focus:ring-2 focus:ring-[#E6ECFF]" />
           </form>
           {canCreate && onboardingAction ? <Link href={onboardingAction.href} className={`${secondaryActionClassName} shrink-0 bg-white/75 backdrop-blur`}>{onboardingAction.label}</Link> : null}
         </div>
@@ -159,8 +159,8 @@ export async function IntermediaryRegister({
         {success ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10.5px] font-medium text-emerald-700">{successMessage}</div> : null}
         {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10.5px] font-medium text-red-700">{decodeURIComponent(error)}</div> : null}
 
-        <section className="overflow-hidden rounded-2xl border bg-white/80 shadow-sm backdrop-blur">
-          <div className="border-b bg-white/60 px-4 py-3"><h2 className="text-[12px] font-semibold">{selectedType === "partner" ? "Partner register" : "Intermediary register"}</h2></div>
+        <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-[#E7ECF3] bg-[#FAFBFD] px-4 py-3"><h2 className="text-[12px] font-semibold text-[#17203A]">{selectedType === "partner" ? "Partner Register" : "Intermediary Register"}</h2><span className="text-[9.5px] font-medium text-[#64748B]">{rows.length} records</span></div>
           {loadError ? <div className="px-4 py-12 text-center text-[11px] text-red-700">The register could not be loaded.</div> : rows.length ? (
             selectedType === "partner" ? (
               <PartnerTable rows={rows} applicationMap={applicationMap} linkedApplicationMap={linkedApplicationMap} canReview={canReview} />
@@ -185,18 +185,17 @@ function PartnerTable({
   linkedApplicationMap: Map<string, ApplicationState>;
   canReview: boolean;
 }) {
-  return <div className="overflow-x-auto"><table className="w-full min-w-[1180px] text-left text-[10.5px]"><thead className="border-b text-[8.5px] uppercase text-[#64748B]"><tr><th className="px-4 py-3">Partner</th><th className="px-3 py-3">Partner ID</th><th className="px-3 py-3">Type</th><th className="px-3 py-3">Assigned RM</th><th className="px-3 py-3">Linked account</th><th className="px-3 py-3">Portal access</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Action</th></tr></thead><tbody className="divide-y">{rows.map((row) => {
+  return <div className="overflow-x-auto"><table className="w-full min-w-[1040px] table-fixed text-left text-[10.5px]"><thead className="border-b text-[8.5px] uppercase text-[#64748B]"><tr><th className="px-4 py-3">Partner</th><th className="px-3 py-3">Partner ID</th><th className="px-3 py-3">Type</th><th className="px-3 py-3">Assigned RM</th><th className="px-3 py-3">Linked account</th><th className="px-3 py-3">Portal access</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Action</th></tr></thead><tbody className="divide-y">{rows.map((row) => {
     const app = applicationMap.get(row.application_id as string);
     const linked = app?.partner_record_id ? linkedApplicationMap.get(app.partner_record_id) : undefined;
     const allowedType = app?.requested_type ?? row.requested_type;
     const linkedType = linked ? accountContext(linked) : allowedType;
-    const location = partnerLocation(row, app);
-    const assignedRm = textValue(app?.draft_data?.associate_name) ?? "Not assigned";
+        const assignedRm = textValue(app?.draft_data?.associate_name) ?? "Not assigned";
     const partnerComplete = app?.partner_status === "active_partner";
     const action = !partnerComplete ? (
-      <FreshAccountReviewLink href={`/intermediaries/applications/${row.application_id}`} className={compactDarkActionClassName}>Continue onboarding</FreshAccountReviewLink>
+      <FreshAccountReviewLink href={`/intermediaries/applications/${row.application_id}`} className={compactDarkActionClassName}>Open</FreshAccountReviewLink>
     ) : linked ? (
-      <FreshAccountReviewLink href={`/intermediaries/applications/${linked.id}`} className={compactDarkActionClassName}>View {linkedType.toUpperCase()}</FreshAccountReviewLink>
+      <FreshAccountReviewLink href={`/intermediaries/applications/${linked.id}`} className={compactDarkActionClassName}>Open {linkedType.toUpperCase()}</FreshAccountReviewLink>
     ) : canReview ? (
       <form action={createLinkedIntermediaryAccount}>
         <input type="hidden" name="application_id" value={row.application_id as string} />
@@ -204,7 +203,7 @@ function PartnerTable({
         <FormSubmitButton label={`Create ${allowedType.toUpperCase()}`} pendingLabel={`Creating ${allowedType.toUpperCase()}...`} className={compactPrimaryActionClassName} />
       </form>
     ) : <span className="text-[#94A3B8]">—</span>;
-    return <tr key={row.id} className="hover:bg-[#FAFCFF]"><td className="px-4 py-3"><FreshAccountReviewLink href={`/intermediaries/applications/${row.application_id}`} className="font-semibold text-[#0F2A55] hover:text-[#635BFF] hover:underline">{row.display_name}</FreshAccountReviewLink><p className="mt-0.5 text-[8.5px] text-[#64748B]">{location}</p></td><td className="px-3 py-3 font-semibold text-[#0F2A55]">{displayIdentity(row, app, "partner")}</td><td className="px-3 py-3">{allowedType === "misp" ? "Business" : "Individual"}</td><td className="px-3 py-3">{assignedRm}</td><td className="px-3 py-3"><Status value={linked ? linkedAccountLabel(linkedType, linked.registration_status) : "Not created"} /></td><td className="px-3 py-3"><Status value={portalAccessLabel(row.portal_access_status)} /></td><td className="px-3 py-3"><Status value={partnerStatusLabel(app?.partner_status ?? row.account_status)} /></td><td className="px-3 py-3">{action}</td></tr>;
+    return <tr key={row.id} className="h-[52px] transition hover:bg-[#F8FAFF]"><td className="truncate px-4 py-3"><FreshAccountReviewLink href={`/intermediaries/applications/${row.application_id}`} className="font-semibold text-[#0F2A55] hover:text-[#315FEA] hover:underline">{row.display_name}</FreshAccountReviewLink></td><td className="truncate px-3 py-3 font-semibold text-[#0F2A55]" title={displayIdentity(row, app, "partner")}>{displayIdentity(row, app, "partner")}</td><td className="px-3 py-3">{allowedType === "misp" ? "Business" : "Individual"}</td><td className={`truncate px-3 py-3 ${assignedRm === "Not assigned" ? "font-medium text-amber-700" : "text-[#17203A]"}`} title={assignedRm}>{assignedRm}</td><td className="px-3 py-3"><Status value={linked ? linkedAccountLabel(linkedType, linked.registration_status) : "Not created"} /></td><td className="px-3 py-3"><Status value={portalAccessLabel(row.portal_access_status)} /></td><td className="px-3 py-3"><Status value={partnerStatusLabel(app?.partner_status ?? row.account_status)} /></td><td className="px-3 py-3 text-right">{action}</td></tr>;
   })}</tbody></table></div>;
 }
 

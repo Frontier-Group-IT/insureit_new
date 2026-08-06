@@ -82,28 +82,28 @@ export async function StructuredAccountRegister({ type, search = "" }: { type: A
   return (
     <AppShell title={`${title} Register`}>
       <div className="mx-auto max-w-[1480px] space-y-4 pb-6">
-        <div className="flex gap-3">
+        <div className="flex flex-col gap-2 rounded-2xl border border-[#DCE5EF] bg-white p-3 shadow-sm sm:flex-row sm:items-center">
           <form method="get" className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />
-            <input name="q" defaultValue={search} placeholder={`Search ${title} name, ID, Partner ID, mobile or email`} className="h-12 w-full rounded-2xl border border-[#D8E1EC] bg-white/80 pl-11 pr-4 text-[11px] shadow-sm outline-none focus:border-[#9AA9FF] focus:ring-2 focus:ring-[#E4E8FF]" />
+            <input name="q" defaultValue={search} placeholder={`Search ${title} name, ID, Partner ID, mobile or email`} className="h-10 w-full rounded-xl border border-[#D8E1EC] bg-white pl-10 pr-4 text-[11px] text-[#17203A] outline-none placeholder:text-[#94A3B8] focus:border-[#315FEA] focus:ring-2 focus:ring-[#E6ECFF]" />
           </form>
-          <Link href={onboardHref} className="inline-flex h-12 items-center justify-center rounded-2xl border border-[#C9D5E5] bg-white px-5 text-[10.5px] font-bold text-[#0F2A55] shadow-sm hover:border-[#9AA9FF]">Onboard {title}</Link>
+          <Link href={onboardHref} className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl bg-[#0F2A55] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#173A70]">Onboard {title}</Link>
         </div>
 
-        <section className="grid overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm sm:grid-cols-3">
-          <Metric label={`Total ${title} accounts`} value={rows.length} />
-          <Metric label="Under onboarding" value={counts.onboarding} />
-          <Metric label="Active accounts" value={counts.active} />
+        <section className="flex flex-wrap items-center gap-1.5 rounded-xl border border-[#DCE5EF] bg-white p-1.5 shadow-sm">
+          <Metric label="All" value={rows.length} active />
+          <Metric label="Active" value={counts.active} />
+          <Metric label="Onboarding" value={counts.onboarding} />
         </section>
 
         <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
-          <div className="border-b bg-[#FAFBFD] px-5 py-4">
-            <h2 className="text-[12.5px] font-semibold text-[#17203A]">{title} account register</h2>
-            <p className="mt-1 text-[9px] text-[#64748B]">Current onboarding position, ownership and next action for every {title} account.</p>
+          <div className="flex items-center justify-between border-b border-[#E7ECF3] bg-[#FAFBFD] px-4 py-3">
+            <h2 className="text-[12px] font-semibold text-[#17203A]">{title} Register</h2>
+            <span className="text-[9.5px] font-medium text-[#64748B]">{rows.length} records</span>
           </div>
           {error ? <div className="px-5 py-14 text-center text-[11px] text-red-700">The register could not be loaded.</div> : rows.length ? (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1260px] text-left text-[10.5px]">
+              <table className="w-full min-w-[980px] table-fixed text-left text-[10.5px]">
                 <thead className="border-b bg-[#FAFBFD] text-[8.5px] uppercase tracking-[0.03em] text-[#64748B]"><tr>
                   <th className="px-5 py-3.5">{title} account</th>
                   <th className="px-3 py-3.5">{title} ID</th>
@@ -111,7 +111,6 @@ export async function StructuredAccountRegister({ type, search = "" }: { type: A
                   <th className="px-3 py-3.5">Assigned RM</th>
                   <th className="px-3 py-3.5">Current stage</th>
                   <th className="px-3 py-3.5">Account status</th>
-                  <th className="px-3 py-3.5">Last updated</th>
                   <th className="px-3 py-3.5">Action</th>
                 </tr></thead>
                 <tbody className="divide-y divide-[#E7ECF3]">{rows.map((row) => {
@@ -122,14 +121,13 @@ export async function StructuredAccountRegister({ type, search = "" }: { type: A
                   const accountId = permanentAccountId(row, app, profileMap.get(row.application_id ?? ""), registrationCode, partnerId);
                   const rm = textValue(app?.draft_data?.associate_name) ?? "Not assigned";
                   return <tr key={row.id} className="transition hover:bg-[#F8FAFF]">
-                    <td className="px-5 py-4"><p className="font-semibold text-[#0F2A55]">{row.display_name}</p><p className="mt-1 text-[8.5px] text-[#64748B]">{[row.city, row.mobile].filter(Boolean).join(" · ") || row.email || "Contact not available"}</p></td>
-                    <td className="px-3 py-4"><p className="font-semibold text-[#0F2A55]">{accountId ?? `${title} ID pending`}</p>{accountId && !accountId.startsWith(`${title}-`) ? <p className="mt-1 text-[8px] text-[#64748B]">Existing issued ID</p> : null}</td>
-                    <td className="px-3 py-4"><p className="font-medium text-[#17203A]">{partnerId ?? "Partner ID pending"}</p></td>
-                    <td className="px-3 py-4"><p className={rm === "Not assigned" ? "font-medium text-amber-700" : "font-medium text-[#17203A]"}>{rm}</p></td>
-                    <td className="px-3 py-4"><StageBadge value={stage} /></td>
-                    <td className="px-3 py-4"><StatusBadge value={accountStatusLabel(row.account_status, stage)} /></td>
-                    <td className="px-3 py-4 text-[#475569]">{formatDate(row.updated_at)}</td>
-                    <td className="px-3 py-4">{row.application_id ? <FreshAccountReviewLink href={`/intermediaries/applications/${row.application_id}`} className="inline-flex rounded-lg bg-[#0F2A55] px-3 py-2 text-[9px] font-semibold text-white hover:bg-[#173A70]">{stage === "Active" ? `View ${title}` : "Continue onboarding"}</FreshAccountReviewLink> : <span className="text-[#94A3B8]">—</span>}</td>
+                    <td className="truncate px-5 py-3.5 font-semibold text-[#0F2A55]" title={row.display_name}>{row.display_name}</td>
+                    <td className="truncate px-3 py-3.5 font-semibold text-[#0F2A55]" title={accountId ?? `${title} ID pending`}>{accountId ?? `${title} ID pending`}</td>
+                    <td className="truncate px-3 py-3.5 font-medium text-[#17203A]" title={partnerId ?? "Partner ID pending"}>{partnerId ?? "Partner ID pending"}</td>
+                    <td className={`truncate px-3 py-3.5 font-medium ${rm === "Not assigned" ? "text-amber-700" : "text-[#17203A]"}`} title={rm}>{rm}</td>
+                    <td className="px-3 py-3.5"><StageBadge value={stage} /></td>
+                    <td className="px-3 py-3.5"><StatusBadge value={accountStatusLabel(row.account_status, stage)} /></td>
+                    <td className="px-3 py-3.5 text-right">{row.application_id ? <FreshAccountReviewLink href={`/intermediaries/applications/${row.application_id}`} className="inline-flex h-8 items-center justify-center rounded-lg border border-[#C9D5E5] bg-white px-3 text-[9px] font-semibold text-[#0F2A55] transition hover:border-[#9AA9FF] hover:bg-[#F7F9FF]">Open</FreshAccountReviewLink> : <span className="text-[#94A3B8]">—</span>}</td>
                   </tr>;
                 })}</tbody>
               </table>
@@ -186,7 +184,6 @@ function accountStatusLabel(status: string, stage: string) {
   return "Under onboarding";
 }
 function textValue(value: unknown) { return typeof value === "string" && value.trim() ? value.trim() : null; }
-function formatDate(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? "—" : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(date); }
-function Metric({ label, value }: { label: string; value: number }) { return <div className="border-r border-[#E2E8F0] px-5 py-4 last:border-r-0"><p className="text-[8.5px] uppercase tracking-[0.04em] text-[#64748B]">{label}</p><p className="mt-1 text-[22px] font-semibold text-[#0F2A55]">{value}</p></div>; }
-function StageBadge({ value }: { value: string }) { const active = value === "Active"; const failed = value.includes("failed"); return <span className={`inline-flex rounded-full px-2.5 py-1 text-[8.5px] font-semibold ${active ? "bg-emerald-50 text-emerald-700" : failed ? "bg-red-50 text-red-700" : "bg-indigo-50 text-indigo-700"}`}>{value}</span>; }
-function StatusBadge({ value }: { value: string }) { const cls = value === "Active" ? "bg-emerald-50 text-emerald-700" : value === "Suspended" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"; return <span className={`inline-flex rounded-full px-2.5 py-1 text-[8.5px] font-semibold ${cls}`}>{value}</span>; }
+function Metric({ label, value, active = false }: { label: string; value: number; active?: boolean }) { return <div className={`inline-flex h-8 items-center gap-2 rounded-lg px-3 text-[9.5px] font-semibold ${active ? "bg-[#0F2A55] text-white" : "text-[#526178]"}`}><span>{label}</span><span className={`rounded-md px-1.5 py-0.5 text-[9px] ${active ? "bg-white/15 text-white" : "bg-[#F1F4F8] text-[#0F2A55]"}`}>{value}</span></div>; }
+function StageBadge({ value }: { value: string }) { const active = value === "Active"; const failed = value.toLowerCase().includes("failed"); return <span className={`inline-flex max-w-full truncate rounded-md border px-2 py-1 text-[8.5px] font-semibold ${active ? "border-emerald-200 bg-emerald-50 text-emerald-700" : failed ? "border-red-200 bg-red-50 text-red-700" : "border-[#DCE5FF] bg-[#F3F6FF] text-[#315FEA]"}`}>{value}</span>; }
+function StatusBadge({ value }: { value: string }) { const cls = value === "Active" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : value === "Suspended" ? "border-red-200 bg-red-50 text-red-700" : "border-amber-200 bg-amber-50 text-amber-700"; return <span className={`inline-flex rounded-md border px-2 py-1 text-[8.5px] font-semibold ${cls}`}>{value}</span>; }
