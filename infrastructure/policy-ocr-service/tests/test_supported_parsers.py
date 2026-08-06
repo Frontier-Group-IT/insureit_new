@@ -1,6 +1,6 @@
 import unittest
 
-from app_runtime import extract_digit, extract_iffco
+from app_runtime_v2 import extract_digit, extract_iffco
 
 
 def values(fields):
@@ -15,7 +15,11 @@ class SupportedParserTests(unittest.TestCase):
         Policy No: D221859721
         Digit Commercial Vehicle Comprehensive Policy
         YOUR POLICY DETAILS
-        Period of Policy From 27-Aug-2025 17:24:59 To 26-Aug-2026 23:59:59
+        Period of Policy
+        From
+        27-Aug-2025 17:24:59
+        To
+        26-Aug-2026 23:59:59
         YOUR VEHICLE IDV
         Total IDV (`)
         3292441.00
@@ -37,6 +41,23 @@ class SupportedParserTests(unittest.TestCase):
         self.assertEqual(result["tp_premium"], "7267")
         self.assertEqual(result["cpa_opted"], "No")
         self.assertEqual(result["cpa_premium"], "0")
+
+    def test_digit_policy_period_year_first_layout(self):
+        page = """
+        Go Digit General Insurance Ltd.
+        Digit Commercial Vehicle Comprehensive Policy
+        Policy No: D221859721
+        Period of Policy
+        From 2025-08-27 17:24:59
+        To 2026-08-26 23:59:59
+        Total IDV 3292441.00
+        Own Damage Premium 27820.86
+        Basic Third-Party Liability 7267.00
+        PA cover for Owner-Driver --
+        """
+        result = values(extract_digit([page]))
+        self.assertEqual(result["policy_start_date"], "2025-08-27")
+        self.assertEqual(result["policy_end_date"], "2026-08-26")
 
     def test_iffco_tokio_commercial_vehicle_schedule(self):
         page = """
