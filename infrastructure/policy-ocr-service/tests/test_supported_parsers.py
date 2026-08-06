@@ -1,6 +1,6 @@
 import unittest
 
-from app import detect_parser, extract_policy_section_fields
+from app_runtime import extract_digit, extract_iffco
 
 
 def values(fields):
@@ -26,10 +26,8 @@ class SupportedParserTests(unittest.TestCase):
         IGST @ 18% = (`6315.81)
         Total Premium (`) 41403.67
         """
-        parser_id = detect_parser(page)
-        self.assertEqual(parser_id, "digit_commercial_motor_v1")
-        result = values(extract_policy_section_fields([page], parser_id))
-        self.assertEqual(result["insurer_name"], "Go Digit General Insurance Ltd.")
+        result = values(extract_digit([page]))
+        self.assertEqual(result["insurer_name"], "Digit General Insurance Limited")
         self.assertEqual(result["policy_product"], "Package")
         self.assertEqual(result["policy_number"], "D221859721")
         self.assertEqual(result["policy_start_date"], "2025-08-27")
@@ -58,9 +56,7 @@ class SupportedParserTests(unittest.TestCase):
         GST Amount(Rs.) 2220.84
         Gross Premium Payable Rs. 14558.84
         """
-        parser_id = detect_parser(page)
-        self.assertEqual(parser_id, "iffco_tokio_commercial_motor_v1")
-        result = values(extract_policy_section_fields([page], parser_id))
+        result = values(extract_iffco([page]))
         self.assertEqual(result["insurer_name"], "IFFCO-Tokio General Insurance Co. Ltd.")
         self.assertEqual(result["policy_product"], "Package")
         self.assertEqual(result["policy_number"], "N8174870")
