@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { extractPolicyDocument, type PolicyOcrField } from "@/app/policies/policy-ocr-actions";
 
@@ -41,33 +41,35 @@ const PRODUCT_ALIASES: Record<string, string[]> = {
   "Long Term Third Party": ["long term third party", "long term liability", "multi year third party"],
 };
 
+const INSURER_ALIASES: Record<string, string[]> = {
+  digit: ["digit", "go digit"],
+  iffco: ["iffco tokio", "iffco-tokio"],
+  newindia: ["new india assurance", "the new india assurance"],
+};
+
 export function PolicyOcrImportPanel() {
   const [open, setOpen] = useState(false);
   const [fields, setFields] = useState<PolicyOcrField[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [model, setModel] = useState<string | null>(null);
+  const [documentName, setDocumentName] = useState("");
   const [parserInfo, setParserInfo] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const formRef = useRef<HTMLFormElement>(null);
 
-  const visibleFields = useMemo(
-    () => fields.filter((field) => APPLY_FIELDS.has(field.key) || VERIFICATION_FIELDS.has(field.key)),
-    [fields],
-  );
-
+  const editableFields = useMemo(() => fields.filter((field) => APPLY_FIELDS.has(field.key)), [fields]);
+  const verificationFields = useMemo(() => fields.filter((field) => VERIFICATION_FIELDS.has(field.key)), [fields]);
   const selectedCount = selected.size;
-  const confidenceSummary = useMemo(() => {
-    const scored = visibleFields.filter((field) => field.confidence !== null);
-    if (!scored.length) return null;
-    return Math.round(scored.reduce((sum, field) => sum + (field.confidence ?? 0), 0) / scored.length * 100);
-  }, [visibleFields]);
+  const hasResult = editableFields.length > 0 || verificationFields.length > 0;
 
   useEffect(() => {
     if (!open) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape" && !pending) setOpen(false); };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !pending) closeModal();
+    };
     window.addEventListener("keydown", onKeyDown);
     return () => {
       document.body.style.overflow = previous;
@@ -75,20 +77,40 @@ export function PolicyOcrImportPanel() {
     };
   }, [open, pending]);
 
+  function resetReview() {
+    setFields([]);
+    setSelected(new Set());
+    setWarnings([]);
+    setParserInfo(null);
+    setError(null);
+  }
+
+  function closeModal() {
+    if (pending) return;
+    setOpen(false);
+    resetReview();
+    setDocumentName("");
+    formRef.current?.reset();
+  }
+
   function submit(formData: FormData) {
     setError(null);
     setFields([]);
     setSelected(new Set());
     setWarnings([]);
-    setModel(null);
     setParserInfo(null);
+
+    const file = formData.get("policy_document");
+    if (file instanceof File) setDocumentName(file.name);
 
     startTransition(async () => {
       const result = await extractPolicyDocument(formData);
-      if (!result.ok) { setError(result.error); return; }
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
       setFields(result.fields);
-      setModel(result.model);
-      setParserInfo(`${result.parserId} · ${result.parserVersion} · ${result.extractionMethod}`);
+      setParserInfo(`${friendlyParserName(result.parserId)} · ${friendlyMethod(result.extractionMethod)}`);
       setWarnings(result.warnings);
       setSelected(new Set(result.fields
         .filter((field) => APPLY_FIELDS.has(field.key) && (field.confidence ?? 0) >= .8)
@@ -105,6 +127,10 @@ export function PolicyOcrImportPanel() {
     });
   }
 
+  function selectAll() {
+    setSelected(new Set(editableFields.map((field) => field.key)));
+  }
+
   function applySelected() {
     const chosen = fields.filter((field) => selected.has(field.key) && APPLY_FIELDS.has(field.key));
     let applied = 0;
@@ -112,87 +138,154 @@ export function PolicyOcrImportPanel() {
 
     for (const field of chosen) {
       const control = findControl(FIELD_TARGETS[field.key] ?? []);
-      if (!control) { skipped.push(field.label); continue; }
+      if (!control) {
+        skipped.push(field.label);
+        continue;
+      }
       const value = valueForControl(field, control);
-      if (!value || !setNativeValue(control, value)) { skipped.push(field.label); continue; }
+      if (!value || !setNativeValue(control, value)) {
+        skipped.push(field.label);
+        continue;
+      }
       applied += 1;
     }
 
     if (!applied) {
-      setError("No selected policy, premium or validity fields could be applied.");
-      return;
-    }
-    if (skipped.length) {
-      setError(`Applied ${applied} fields. Review manually: ${skipped.join(", ")}.`);
+      setError("The selected details could not be applied. Please review the form fields and try again.");
       return;
     }
 
-    setError(null);
     setOpen(false);
-    document.querySelector("main")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    resetReview();
+    setDocumentName("");
+    formRef.current?.reset();
+
+    requestAnimationFrame(() => {
+      const section = findControl(["policy product"])?.closest("section") ?? findControl(["policy product"])?.parentElement;
+      section?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+
+    if (skipped.length) {
+      window.dispatchEvent(new CustomEvent("insureit:policy-import-partial", { detail: { applied, skipped } }));
+    }
   }
 
   const modal = open && typeof document !== "undefined" ? createPortal(
-    <div className="fixed inset-0 z-[9999] grid h-[100dvh] w-screen place-items-center bg-[#071D49]/65 p-3 backdrop-blur-sm sm:p-5" role="dialog" aria-modal="true" aria-label="Read policy copy">
-      <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/60 bg-white shadow-[0_30px_100px_rgba(7,29,73,.45)] sm:max-h-[calc(100dvh-2.5rem)] sm:rounded-3xl">
-        <div className="flex shrink-0 items-start justify-between border-b border-[#E6EBF2] bg-[linear-gradient(135deg,#F8FAFD,#EEF4FB)] px-4 py-4 sm:px-5">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-[15px] font-bold text-[#102A4C]">Read policy copy</h2>
-              <span className="rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-bold text-emerald-700">Section 03 only</span>
+    <div className="fixed inset-0 z-[9999] flex h-[100dvh] w-screen items-center justify-center bg-[#071A38]/70 p-3 backdrop-blur-[3px] sm:p-6" role="dialog" aria-modal="true" aria-labelledby="policy-import-title">
+      <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-[980px] flex-col overflow-hidden rounded-[22px] border border-white/70 bg-white shadow-[0_28px_90px_rgba(4,22,49,.38)] sm:max-h-[calc(100dvh-3rem)]">
+        <header className="flex shrink-0 items-start justify-between border-b border-[#E5EAF1] px-5 py-5 sm:px-7">
+          <div className="pr-4">
+            <div className="mb-2 flex items-center gap-2 text-[9px] font-bold uppercase tracking-[.12em] text-[#55708F]">
+              <span className="grid h-6 w-6 place-items-center rounded-lg bg-[#EAF1FB] text-[#173B67]">03</span>
+              Policy onboarding
             </div>
-            <p className="mt-1 text-[9.5px] text-[#667085]">Only Policy product, premium and validity fields can be copied. Customer and vehicle details are never applied from the policy document.</p>
+            <h2 id="policy-import-title" className="text-[18px] font-bold tracking-[-.01em] text-[#102A4C]">Import policy and premium details</h2>
+            <p className="mt-1.5 max-w-2xl text-[10px] leading-5 text-[#667085]">Upload the policy schedule, confirm the extracted values, and copy the selected details into Policy product, premium &amp; validity.</p>
           </div>
-          <button type="button" onClick={() => !pending && setOpen(false)} disabled={pending} className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#D8DEE9] bg-white text-lg text-[#475467] hover:bg-[#F2F5F9] disabled:opacity-50" aria-label="Close">×</button>
-        </div>
+          <button type="button" onClick={closeModal} disabled={pending} className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#D8E0EA] bg-white text-[20px] font-light text-[#526277] transition hover:bg-[#F4F7FA] disabled:opacity-50" aria-label="Close">×</button>
+        </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5">
-          <form action={submit} className="rounded-2xl border border-[#DCE5F0] bg-[#F8FAFD] p-4">
-            <label className="block text-[9px] font-bold uppercase tracking-[.08em] text-[#475467]">Policy document</label>
-            <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <input name="policy_document" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required className="min-w-0 flex-1 rounded-xl border border-[#D8DEE9] bg-white text-[9.5px] text-[#475569] file:mr-3 file:border-0 file:bg-[#E8EEFF] file:px-4 file:py-3 file:text-[9px] file:font-semibold file:text-[#315FEA]" />
-              <button disabled={pending} className="rounded-xl bg-[#17365D] px-5 py-3 text-[9.5px] font-bold text-white disabled:opacity-50">{pending ? "Reading policy…" : "Read policy copy"}</button>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-7 sm:py-6">
+          <form ref={formRef} action={submit} className="border-b border-[#E7ECF2] pb-6">
+            <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
+              <label className="block">
+                <span className="mb-2 block text-[9px] font-bold uppercase tracking-[.08em] text-[#475467]">Policy document</span>
+                <input
+                  name="policy_document"
+                  type="file"
+                  accept="application/pdf,image/jpeg,image/png,image/webp"
+                  required
+                  disabled={pending}
+                  className="block h-[48px] w-full rounded-xl border border-[#D7DFE9] bg-white text-[10px] text-[#536174] shadow-sm outline-none transition file:mr-4 file:h-full file:border-0 file:border-r file:border-[#D7DFE9] file:bg-[#F2F6FB] file:px-5 file:text-[10px] file:font-semibold file:text-[#173B67] hover:border-[#AEBAC9] focus:border-[#315B9A] disabled:opacity-60"
+                />
+              </label>
+              <button disabled={pending} className="h-[48px] rounded-xl bg-[#173B67] px-7 text-[10px] font-bold text-white shadow-sm transition hover:bg-[#102E52] disabled:cursor-wait disabled:opacity-60">
+                {pending ? "Reading document…" : hasResult ? "Read another document" : "Read document"}
+              </button>
             </div>
-            <p className="mt-2 text-[8.5px] text-[#94A3B8]">Currently optimized for New India Assurance motor policies. Review every extracted value before applying.</p>
+            <p className="mt-2.5 text-[9px] leading-4 text-[#7C899A]">Supported formats: PDF, JPG, PNG and WebP. Customer and vehicle identification details are not copied from this document.</p>
           </form>
 
-          {error ? <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">{error}</p> : null}
-          {warnings.map((warning) => <p key={warning} className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-[9px] text-amber-800">{warning}</p>)}
+          {pending ? <div className="flex items-center gap-3 border-b border-[#E7ECF2] py-6 text-[#42566F]">
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-[#BFD0E5] border-t-[#173B67]" />
+            <div>
+              <p className="text-[10px] font-semibold">Reading policy schedule</p>
+              <p className="mt-0.5 text-[9px] text-[#7A8798]">Keep this window open while the document is processed.</p>
+            </div>
+          </div> : null}
 
-          {visibleFields.length ? <div className="mt-5">
-            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          {error ? <div className="mt-5 rounded-xl border border-[#F2C7C7] bg-[#FFF6F6] px-4 py-3 text-[10px] font-medium text-[#B42318]">{error}</div> : null}
+          {warnings.length ? <div className="mt-5 rounded-xl border border-[#F0D9A8] bg-[#FFFAEE] px-4 py-3">
+            {warnings.map((warning) => <p key={warning} className="text-[9px] leading-4 text-[#7A5514]">{warning}</p>)}
+          </div> : null}
+
+          {hasResult ? <section className="mt-6">
+            <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-[10px] font-semibold text-[#17203A]">{visibleFields.length} relevant fields extracted{model ? ` using ${model}` : ""}{confidenceSummary !== null ? ` · average confidence ${confidenceSummary}%` : ""}</p>
-                {parserInfo ? <p className="mt-1 text-[8px] text-[#94A3B8]">{parserInfo}</p> : null}
+                <h3 className="text-[13px] font-bold text-[#152D4F]">Review extracted details</h3>
+                <p className="mt-1 text-[9px] text-[#728095]">{documentName || "Policy document"}{parserInfo ? ` · ${parserInfo}` : ""}</p>
               </div>
-              <button type="button" onClick={() => setSelected(new Set())} className="self-start rounded-lg border border-[#CBD5E1] px-3 py-2 text-[9px] font-semibold">Clear selection</button>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={selectAll} className="rounded-lg border border-[#CCD6E2] px-3 py-2 text-[9px] font-semibold text-[#29425F] hover:bg-[#F6F8FB]">Select all</button>
+                <button type="button" onClick={() => setSelected(new Set())} className="rounded-lg border border-[#CCD6E2] px-3 py-2 text-[9px] font-semibold text-[#29425F] hover:bg-[#F6F8FB]">Clear</button>
+              </div>
             </div>
 
-            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{visibleFields.map((field) => {
-              const confidence = field.confidence === null ? null : Math.round(field.confidence * 100);
-              const verificationOnly = VERIFICATION_FIELDS.has(field.key);
-              return <label key={field.key} className={`flex gap-3 rounded-xl border p-3 ${verificationOnly ? "cursor-default border-amber-200 bg-amber-50" : selected.has(field.key) ? "cursor-pointer border-[#818CF8] bg-[#F5F3FF]" : "cursor-pointer border-[#E2E8F0] bg-white"}`}>
-                {verificationOnly
-                  ? <span className="mt-0.5 rounded bg-amber-100 px-1.5 py-1 text-[7px] font-bold text-amber-800">CHECK</span>
-                  : <input type="checkbox" checked={selected.has(field.key)} onChange={() => toggle(field.key)} className="mt-1"/>}
-                <span className="min-w-0">
-                  <span className="block text-[8px] font-bold uppercase tracking-wide text-[#64748B]">{field.label}</span>
-                  <span className="mt-1 block break-words text-[10.5px] font-semibold text-[#17203A]">{field.value}</span>
-                  <span className="mt-1 block text-[8px] text-[#94A3B8]">{confidence === null ? "Confidence unavailable" : `${confidence}% confidence`}{field.page ? ` · page ${field.page}` : ""}</span>
-                  {field.evidence ? <span className="mt-1 block line-clamp-2 text-[7.5px] text-[#A0AEC0]">Source: {field.evidence}</span> : null}
-                </span>
-              </label>;
-            })}</div>
-          </div> : null}
+            <div className="overflow-hidden rounded-xl border border-[#DCE3EB]">
+              <div className="hidden grid-cols-[42px_1.1fr_1.25fr_120px] border-b border-[#DCE3EB] bg-[#F5F7FA] px-3 py-2.5 text-[8px] font-bold uppercase tracking-[.08em] text-[#68768A] sm:grid">
+                <span />
+                <span>Form field</span>
+                <span>Extracted value</span>
+                <span>Review status</span>
+              </div>
+              <div className="divide-y divide-[#E5EAF0] bg-white">
+                {editableFields.map((field) => {
+                  const confidence = field.confidence === null ? null : Math.round(field.confidence * 100);
+                  const ready = confidence === null || confidence >= 90;
+                  return <label key={field.key} className={`grid cursor-pointer gap-2 px-3 py-3.5 transition sm:grid-cols-[42px_1.1fr_1.25fr_120px] sm:items-center ${selected.has(field.key) ? "bg-[#F5F8FD]" : "hover:bg-[#FAFBFC]"}`}>
+                    <span className="flex items-center">
+                      <input type="checkbox" checked={selected.has(field.key)} onChange={() => toggle(field.key)} className="h-4 w-4 rounded border-[#B9C4D2] text-[#315B9A] focus:ring-[#AFC5E2]" />
+                    </span>
+                    <span>
+                      <span className="block text-[8px] font-bold uppercase tracking-[.055em] text-[#69778A] sm:hidden">Form field</span>
+                      <span className="mt-0.5 block text-[10px] font-semibold text-[#243A57] sm:mt-0">{field.label}</span>
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-[8px] font-bold uppercase tracking-[.055em] text-[#69778A] sm:hidden">Extracted value</span>
+                      <span className="mt-0.5 block break-words text-[10.5px] font-semibold text-[#121F33] sm:mt-0">{formatFieldValue(field)}</span>
+                      {field.page ? <span className="mt-0.5 block text-[8px] text-[#8A96A6]">Page {field.page}</span> : null}
+                    </span>
+                    <span>
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[8px] font-bold ${ready ? "bg-[#EAF7F0] text-[#18794E]" : "bg-[#FFF4DF] text-[#9A6412]"}`}>{ready ? "Ready" : "Verify"}</span>
+                    </span>
+                  </label>;
+                })}
+              </div>
+            </div>
+
+            {verificationFields.length ? <div className="mt-5">
+              <div className="mb-2 flex items-center justify-between">
+                <h4 className="text-[10px] font-bold text-[#334A67]">Premium totals shown on the policy</h4>
+                <span className="text-[8px] text-[#7B8797]">For comparison only</span>
+              </div>
+              <div className="overflow-hidden rounded-xl border border-[#DFE5EC] bg-[#FAFBFC]">
+                {verificationFields.map((field, index) => <div key={field.key} className={`flex items-center justify-between gap-4 px-4 py-3 ${index ? "border-t border-[#E5EAF0]" : ""}`}>
+                  <span className="text-[9px] font-medium text-[#617086]">{field.label}</span>
+                  <span className="text-[10px] font-bold text-[#213955]">{formatFieldValue(field)}</span>
+                </div>)}
+              </div>
+              <p className="mt-2 text-[8.5px] leading-4 text-[#7A8798]">These totals are not copied. The onboarding form continues to calculate Net Premium, GST and Gross Premium from the selected premium components.</p>
+            </div> : null}
+          </section> : null}
         </div>
 
-        <div className="flex shrink-0 flex-col gap-3 border-t border-[#E6EBF2] bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4">
-          <p className="text-[8.5px] text-[#667085]">Printed Net, GST and Gross are verification-only and never overwrite portal calculations.</p>
+        <footer className="flex shrink-0 flex-col gap-3 border-t border-[#E2E8F0] bg-[#FAFBFC] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+          <p className="text-[9px] text-[#69778A]">{hasResult ? `${selectedCount} of ${editableFields.length} fields selected` : "Review all values before applying them to the form."}</p>
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setOpen(false)} disabled={pending} className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[9.5px] font-semibold disabled:opacity-50">Cancel</button>
-            <button type="button" onClick={applySelected} disabled={!selectedCount || pending} className="rounded-xl bg-[#315FEA] px-5 py-2.5 text-[9.5px] font-bold text-white disabled:opacity-40">Apply Section 03 details ({selectedCount})</button>
+            <button type="button" onClick={closeModal} disabled={pending} className="h-10 rounded-xl border border-[#C9D3DF] bg-white px-5 text-[9.5px] font-semibold text-[#2B405B] transition hover:bg-[#F4F7FA] disabled:opacity-50">Cancel</button>
+            <button type="button" onClick={applySelected} disabled={!selectedCount || pending} className="h-10 rounded-xl bg-[#315B9A] px-6 text-[9.5px] font-bold text-white shadow-sm transition hover:bg-[#264C83] disabled:cursor-not-allowed disabled:opacity-40">Apply selected details</button>
           </div>
-        </div>
+        </footer>
       </div>
     </div>,
     document.body,
@@ -202,6 +295,25 @@ export function PolicyOcrImportPanel() {
     <button type="button" onClick={() => setOpen(true)} className="rounded-xl border border-white/35 bg-white/10 px-4 py-2.5 text-[10px] font-bold text-white shadow-sm transition hover:bg-white/20">Read Policy Copy</button>
     {modal}
   </>;
+}
+
+function friendlyParserName(parserId: string) {
+  if (parserId.startsWith("digit_")) return "Digit commercial vehicle format";
+  if (parserId.startsWith("iffco_tokio_")) return "IFFCO-Tokio commercial vehicle format";
+  if (parserId.startsWith("new_india_")) return "New India motor format";
+  return "Standard motor policy format";
+}
+
+function friendlyMethod(method: string) {
+  return method === "native_pdf_text" ? "digital policy" : "scanned policy";
+}
+
+function formatFieldValue(field: PolicyOcrField) {
+  if (["idv", "od_premium", "tp_premium", "cpa_premium", "total_premium", "tax_amount", "gross_premium"].includes(field.key)) {
+    const number = Number(field.value.replace(/,/g, ""));
+    if (Number.isFinite(number)) return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(number);
+  }
+  return field.value;
 }
 
 function normalizeText(value: string) {
@@ -227,10 +339,8 @@ function findControl(aliases: string[]) {
 function valueForControl(field: PolicyOcrField, control: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement) {
   if (control instanceof HTMLInputElement && control.type === "date") return toIsoDate(field.value);
   if (!(control instanceof HTMLSelectElement)) return field.value;
-
   if (field.key === "policy_product") return matchPolicyProduct(control, field.value);
   if (field.key === "insurer_name") return matchInsurer(control, field.value);
-  if (field.key === "cpa_opted") return matchSimpleOption(control, field.value);
   return matchSimpleOption(control, field.value);
 }
 
@@ -241,19 +351,23 @@ function matchPolicyProduct(control: HTMLSelectElement, rawValue: string) {
 }
 
 function matchInsurer(control: HTMLSelectElement, rawValue: string) {
-  const wantedTokens = new Set(normalizeText(rawValue).split(" ").filter(Boolean));
+  const normalizedRaw = normalizeText(rawValue);
+  const aliasKey = Object.entries(INSURER_ALIASES).find(([, aliases]) => aliases.some((alias) => normalizedRaw.includes(normalizeText(alias))))?.[0];
+  const wantedTokens = new Set(normalizedRaw.split(" ").filter(Boolean));
   let best: { value: string; score: number } | null = null;
 
   for (const option of Array.from(control.options)) {
     if (!option.value) continue;
-    const optionTokens = new Set(normalizeText(option.textContent ?? option.label).split(" ").filter(Boolean));
+    const normalizedOption = normalizeText(option.textContent ?? option.label);
+    const optionTokens = new Set(normalizedOption.split(" ").filter(Boolean));
     if (!optionTokens.size) continue;
-    const overlap = Array.from(wantedTokens).filter((token) => optionTokens.has(token)).length;
-    const score = overlap / Math.max(wantedTokens.size, 1);
+
+    let score = Array.from(wantedTokens).filter((token) => optionTokens.has(token)).length / Math.max(wantedTokens.size, 1);
+    if (aliasKey && INSURER_ALIASES[aliasKey].some((alias) => normalizedOption.includes(normalizeText(alias)))) score = Math.max(score, .95);
     if (!best || score > best.score) best = { value: option.value, score };
   }
 
-  return best && best.score >= .6 ? best.value : "";
+  return best && best.score >= .5 ? best.value : "";
 }
 
 function matchSimpleOption(control: HTMLSelectElement, rawValue: string) {
