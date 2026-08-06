@@ -169,6 +169,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
   const activationDate = intermediary?.activated_at;
   const journey = isPartner ? partnerJourney(profile, documents ?? [], activePartner) : registrationJourney(accountContext, profile, assignment, application);
   const onboardingComplete = isPartner ? activePartner : application.registration_status === "iib_registered" || Boolean(profile.iib_uploaded || profile.iib_uploaded_at);
+  const accountActivated = isPartner ? activePartner : application.registration_status === "iib_registered";
   const returnPath = `/intermediaries/applications/${id}`;
   const accountType = isPartner ? (profile.partner_type === "misp" ? "Business Partner" : "Individual Partner") : `${kind} account`;
 
@@ -186,7 +187,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
         { icon: "link" as IconName, label: "Parent Partner", value: partnerId ?? "Pending" },
         { icon: "rm" as IconName, label: "Assigned RM", value: profile.associate_name ?? "Not assigned" },
         { icon: "portal" as IconName, label: "Portal user status", value: portalLabel(intermediary?.portal_access_status) },
-        { icon: "calendar" as IconName, label: "Activation Date", value: date(intermediary?.activated_at) },
+        { icon: "calendar" as IconName, label: "Activation Date", value: accountActivated ? date(intermediary?.activated_at) : "-" },
       ];
 
   return (
