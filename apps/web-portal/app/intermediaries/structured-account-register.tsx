@@ -32,7 +32,7 @@ type RegistrationRow = { id: string; registration_code: string | null };
 
 const APP_SELECT = "id,registration_status,draft_data,partner_record_id,registration_record_id";
 
-export async function StructuredAccountRegister({ type, search = "" }: { type: AccountType; search?: string }) {
+export async function StructuredAccountRegister({ type, search = "", status = "all" }: { type: AccountType; search?: string; status?: "all" | "active" | "onboarding" }) {
   const profile = await requirePospMispManager();
   const admin = createSupabaseAdminClient();
   const accessibleIds = await getAccessibleIntermediaryIds(profile!.id, profile!.role);
@@ -78,25 +78,36 @@ export async function StructuredAccountRegister({ type, search = "" }: { type: A
   }, { active: 0, onboarding: 0 });
 
   const title = type.toUpperCase();
-  const onboardHref = `/customers/posp-misp/new?partner_type=${type}`;
+  const visibleRows = rows.filter((row) => {
+    if (status === "all") return true;
+    const isActive = stageFor(appMap.get(row.application_id ?? "")) === "Active";
+    return status === "active" ? isActive : !isActive;
+  });
+  const filterHref = (nextStatus: "all" | "active" | "onboarding") => {
+    const params = new URLSearchParams();
+    if (search) params.set("q", search);
+    if (nextStatus !== "all") params.set("status", nextStatus);
+    const query = params.toString();
+    return `/intermediaries/${type}${query ? `?${query}` : ""}`;
+  };
   return (
     <AppShell title={`${title} Register`}>
       <div className="mx-auto max-w-[1480px] space-y-4 pb-6">
         <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
-          <div className="grid items-center gap-3 border-b border-[#E7ECF3] bg-[#FAFBFD] px-4 py-2.5 lg:grid-cols-[auto_minmax(260px,1fr)_auto_auto]">
-            <h2 className="whitespace-nowrap text-[12px] font-semibold text-[#17203A]">{title} Register</h2>
-            <form method="get" className="relative min-w-0">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#94A3B8]" />
-              <input name="q" defaultValue={search} placeholder={`Search ${title} name, ID, Partner ID, mobile or email`} className="h-8 w-full rounded-lg border border-[#D8E1EC] bg-white pl-9 pr-3 text-[10px] text-[#17203A] outline-none placeholder:text-[#94A3B8] focus:border-[#315FEA] focus:ring-2 focus:ring-[#E6ECFF]" />
+          <div className="grid items-center gap-5 border-b border-[#E7ECF3] bg-[#FAFBFD] px-5 py-3.5 lg:grid-cols-[auto_minmax(280px,460px)_1fr]">
+            <h2 className="whitespace-nowrap text-[12.5px] font-semibold text-[#17203A]">{title} Register</h2>
+            <form method="get" className="relative min-w-0 max-w-[460px]">
+              {status !== "all" ? <input type="hidden" name="status" value={status} /> : null}
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#94A3B8]" />
+              <input name="q" defaultValue={search} placeholder={`Search ${title} name, ID, Partner ID, mobile or email`} className="h-9 w-full rounded-lg border border-[#D8E1EC] bg-white pl-9 pr-3 text-[10.5px] text-[#17203A] outline-none placeholder:text-[#94A3B8] focus:border-[#315FEA] focus:ring-2 focus:ring-[#E6ECFF]" />
             </form>
-            <Link href={onboardHref} className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg bg-[#0F2A55] px-3.5 text-[9.5px] font-semibold text-white transition hover:bg-[#173A70]">Onboard {title}</Link>
-            <div className="flex items-center justify-end gap-3 whitespace-nowrap text-[9.5px] font-medium text-[#64748B]">
-              <span>All <strong className="ml-1 text-[#0F2A55]">{rows.length}</strong></span>
-              <span>Active <strong className="ml-1 text-emerald-700">{counts.active}</strong></span>
-              <span>Onboarding <strong className="ml-1 text-amber-700">{counts.onboarding}</strong></span>
+            <div className="flex items-center justify-end gap-1.5 whitespace-nowrap text-[9.5px] font-semibold">
+              <Link href={filterHref("all")} className={`rounded-lg px-2.5 py-1.5 transition ${status === "all" ? "bg-[#0F2A55] text-white" : "text-[#526178] hover:bg-white hover:text-[#0F2A55]"}`}>All <span className="ml-1">{rows.length}</span></Link>
+              <Link href={filterHref("active")} className={`rounded-lg px-2.5 py-1.5 transition ${status === "active" ? "bg-emerald-100 text-emerald-800" : "text-[#526178] hover:bg-emerald-50 hover:text-emerald-700"}`}>Active <span className="ml-1">{counts.active}</span></Link>
+              <Link href={filterHref("onboarding")} className={`rounded-lg px-2.5 py-1.5 transition ${status === "onboarding" ? "bg-amber-100 text-amber-800" : "text-[#526178] hover:bg-amber-50 hover:text-amber-700"}`}>Onboarding <span className="ml-1">{counts.onboarding}</span></Link>
             </div>
           </div>
-          {error ? <div className="px-5 py-14 text-center text-[11px] text-red-700">The register could not be loaded.</div> : rows.length ? (
+          {error ? <div className="px-5 py-14 text-center text-[11px] text-red-700">The register could not be loaded.</div> : visibleRows.length ? (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[940px] table-fixed text-left text-[10.5px]">
                 <thead className="border-b bg-[#FAFBFD] text-[8.5px] uppercase tracking-[0.03em] text-[#64748B]"><tr>
@@ -106,9 +117,9 @@ export async function StructuredAccountRegister({ type, search = "" }: { type: A
                   <th className="px-3 py-3.5">Parent Partner</th>
                   <th className="px-3 py-3.5">Assigned RM</th>
                   <th className="px-3 py-3.5">Account status</th>
-                  <th className="px-3 py-3.5 text-right">Action</th>
+                  <th className="px-3 py-3.5 pr-8 text-right">Action</th>
                 </tr></thead>
-                <tbody className="divide-y divide-[#E7ECF3]">{rows.map((row) => {
+                <tbody className="divide-y divide-[#E7ECF3]">{visibleRows.map((row) => {
                   const app = appMap.get(row.application_id ?? "");
                   const stage = stageFor(app);
                   const partnerId = app?.partner_record_id ? partnerMap.get(app.partner_record_id) : null;
@@ -122,7 +133,7 @@ export async function StructuredAccountRegister({ type, search = "" }: { type: A
                     <td className="truncate px-3 py-3.5 font-medium text-[#17203A]" title={partnerId ?? "Partner ID pending"}>{partnerId ?? "Partner ID pending"}</td>
                     <td className={`truncate px-3 py-3.5 font-medium ${rm === "Not assigned" ? "text-amber-700" : "text-[#17203A]"}`} title={rm}>{rm}</td>
                     <td className="px-3 py-3.5"><StatusBadge value={accountStatusLabel(row.account_status, stage)} /></td>
-                    <td className="px-3 py-3.5 text-right">{row.application_id ? <FreshAccountReviewLink href={`/intermediaries/applications/${row.application_id}`} className="inline-flex h-8 items-center justify-center rounded-lg border border-[#C9D5E5] bg-white px-3 text-[9px] font-semibold text-[#0F2A55] transition hover:border-[#9AA9FF] hover:bg-[#F7F9FF]">Open</FreshAccountReviewLink> : <span className="text-[#94A3B8]">—</span>}</td>
+                    <td className="px-3 py-3.5 pr-8 text-right">{row.application_id ? <FreshAccountReviewLink href={`/intermediaries/applications/${row.application_id}`} className="inline-flex h-8 items-center justify-center rounded-lg border border-[#C9D5E5] bg-white px-3 text-[9px] font-semibold text-[#0F2A55] transition hover:border-[#9AA9FF] hover:bg-[#F7F9FF]">Open</FreshAccountReviewLink> : <span className="text-[#94A3B8]">—</span>}</td>
                   </tr>;
                 })}</tbody>
               </table>
