@@ -6,6 +6,7 @@ import { AccountDeleteControl } from "./account-delete-control";
 import { AccountStatusHeaderStat } from "./account-status-header-stat";
 import { IibPanVerificationReviewCard } from "./iib-pan-verification-review-card";
 import { ReviewCardVisibility } from "./review-card-visibility";
+import { SignedRegistrationDocumentVisibility } from "./signed-registration-document-visibility";
 
 type ApplicationRow = {
   id: string;
@@ -88,6 +89,7 @@ export default async function ApplicationReviewLayout({
       <ReviewCardVisibility applicationId={id}>
         <IibPanVerificationReviewCard applicationId={id} />
       </ReviewCardVisibility>
+      {accountContext !== "partner" ? <SignedRegistrationDocumentVisibility applicationId={id} /> : null}
       {canDelete ? (
         <AccountDeleteControl
           applicationId={id}
