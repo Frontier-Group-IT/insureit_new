@@ -55,10 +55,10 @@ export function IdSuccessModal({ event, applicationId, isPartner, preferredType,
   const title = isPartnerEvent ? "Partner ID created" : `${accountLabel} ID created`;
   const idLabel = isPartnerEvent ? "Partner ID" : `${accountLabel} ID`;
   const contextLabel = isPartnerEvent ? (accountType === "misp" ? "Business Partner" : "Individual Partner") : `${accountLabel} account`;
-  const nextStep = isPartnerEvent && isPartner && !linkedId ? `Create ${accountLabel} ID` : "Continue workflow";
+  const nextStep = isPartnerEvent && isPartner && !linkedId ? `Create ${accountLabel} ID` : "Complete registration";
   const primaryHref = isPartnerEvent && linkedId
     ? freshHref(`/intermediaries/applications/${linkedId}`)
-    : freshHref(`/intermediaries/applications/${applicationId}/workflow?stage=review#training-requirement`);
+    : freshHref(`/intermediaries/applications/${applicationId}/workflow?stage=registration`);
 
   const copyId = async () => {
     if (!generatedId) return;
@@ -128,7 +128,7 @@ export function IdSuccessModal({ event, applicationId, isPartner, preferredType,
             </form>
           ) : (
             <Link href={primaryHref} onClick={() => setVisible(false)} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#635BFF] to-[#4B8DF8] px-4 text-[10.5px] font-semibold text-white shadow-[0_12px_24px_rgba(79,70,229,.22)] transition hover:brightness-105">
-              {isPartnerEvent ? "Open linked account" : "Continue workflow"} <ArrowRight className="h-4 w-4" />
+              {isPartnerEvent ? "Open linked account" : "Continue to registration"} <ArrowRight className="h-4 w-4" />
             </Link>
           )}
         </div>
