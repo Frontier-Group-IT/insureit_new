@@ -10,7 +10,7 @@ from typing import Any, Callable
 
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 
-app = FastAPI(title="INSUREIT Policy OCR", version="0.6.0")
+app = FastAPI(title="INSUREIT Policy OCR", version="0.7.0")
 SECRET = os.environ.get("POLICY_OCR_SERVICE_SECRET", "")
 MAX_BYTES = 15 * 1024 * 1024
 MONEY = r"\d[\d,]*(?:\.\d{1,2})?"
@@ -35,6 +35,13 @@ FIELD_LABELS = {
     "gross_premium": "Printed gross premium",
 }
 
+PARSER_VERSIONS = {
+    "new_india_motor_v1": "new_india_motor_v1.1.0",
+    "digit_commercial_motor_v1": "digit_commercial_motor_v1.0.0",
+    "iffco_tokio_commercial_motor_v1": "iffco_tokio_commercial_motor_v1.0.0",
+    "generic_motor_v1": "generic_motor_v1.1.0",
+}
+
 
 @app.get("/health")
 def health() -> dict[str, str]:
@@ -43,7 +50,7 @@ def health() -> dict[str, str]:
         "service": "insureit-policy-ocr",
         "model": "PDF text first, PaddleOCR fallback",
         "schema": "indian_motor_policy_v1",
-        "version": "0.6.0",
+        "version": "0.7.0",
     }
 
 
@@ -82,18 +89,11 @@ async def extract_policy(
         clean_pages = [sanitize_text(page) for page in pages]
         full_text = "\n".join(clean_pages)
         parser_id = detect_parser(full_text)
-        parser_version = "new_india_motor_v1.1.0" if parser_id == "new_india_motor_v1" else "generic_motor_v1.1.0"
         fields = extract_policy_section_fields(clean_pages, parser_id)
 
         required = {
-            "policy_product",
-            "idv",
-            "od_premium",
-            "tp_premium",
-            "policy_number",
-            "insurer_name",
-            "policy_start_date",
-            "policy_end_date",
+            "policy_product", "idv", "od_premium", "tp_premium",
+            "policy_number", "insurer_name", "policy_start_date", "policy_end_date",
         }
         present = {field["key"] for field in fields}
         missing = sorted(required - present)
@@ -107,7 +107,7 @@ async def extract_policy(
             "model": model_name,
             "schema": schema,
             "parser_id": parser_id,
-            "parser_version": parser_version,
+            "parser_version": PARSER_VERSIONS[parser_id],
             "extraction_method": extraction_method,
             "fields": fields,
             "warnings": warnings,
@@ -139,7 +139,6 @@ def get_pipeline() -> Any:
         with _pipeline_lock:
             if _pipeline is None:
                 from paddleocr import PPStructureV3
-
                 _pipeline = PPStructureV3(
                     lang="en",
                     use_doc_orientation_classify=True,
@@ -196,14 +195,24 @@ def sanitize_text(value: str) -> str:
 
 def detect_parser(text: str) -> str:
     upper = text.upper()
+    if "GO DIGIT GENERAL INSURANCE" in upper or "DIGIT COMMERCIAL VEHICLE" in upper:
+        return "digit_commercial_motor_v1"
+    if "IFFCO-TOKIO GENERAL INSURANCE" in upper or "IFFCO TOKIO GENERAL INSURANCE" in upper:
+        return "iffco_tokio_commercial_motor_v1"
     if "THE NEW INDIA ASSURANCE" in upper or "NEW INDIA ASSURANCE COMPANY" in upper:
         return "new_india_motor_v1"
     return "generic_motor_v1"
 
 
 def extract_policy_section_fields(clean_pages: list[str], parser_id: str) -> list[dict[str, Any]]:
-    full_text = "\n".join(clean_pages)
-    full_upper = full_text.upper()
+    if parser_id == "digit_commercial_motor_v1":
+        return extract_digit_fields(clean_pages)
+    if parser_id == "iffco_tokio_commercial_motor_v1":
+        return extract_iffco_fields(clean_pages)
+    return extract_generic_fields(clean_pages, parser_id)
+
+
+def field_builder() -> tuple[list[dict[str, Any]], Callable[..., None]]:
     fields: list[dict[str, Any]] = []
     seen: set[str] = set()
 
@@ -223,10 +232,128 @@ def extract_policy_section_fields(clean_pages: list[str], parser_id: str) -> lis
             "evidence": evidence[:180],
         })
 
+    return fields, add
+
+
+def extract_digit_fields(pages: list[str]) -> list[dict[str, Any]]:
+    fields, add = field_builder()
+    full = "\n".join(pages)
+    add("insurer_name", "Go Digit General Insurance Ltd.", 0.99, "Go Digit General Insurance Ltd.", 1)
+    add("policy_product", "Package", 0.99, first_matching_line(full, ["COMPREHENSIVE POLICY", "COMPREHENSIVE", "PACKAGE"]), 1)
+
+    result = find_first(pages, [r"Policy\s*No\.?\s*[:\-]?\s*([A-Z]\d{6,15})", r"\b(D\d{6,15})\b"])
+    if result:
+        add("policy_number", compact_identifier(result[0]), 0.99, result[2], result[1])
+
+    period = find_period(pages, extra_patterns=[
+        rf"Period\s*of\s*Policy\s*[:\-]?\s*From\s*({DATE_TOKEN}).{{0,120}}?To\s*({DATE_TOKEN})",
+        rf"From\s*({DATE_TOKEN})\s*(?:\d{{1,2}}:\d{{2}}:\d{{2}})?.{{0,100}}?To\s*({DATE_TOKEN})",
+    ])
+    if not period:
+        period = find_date_pair_after_label(pages, "Period of Policy")
+    if period:
+        start, end, page, evidence = period
+        add("policy_start_date", to_iso_date(start), 0.98, evidence, page)
+        add("policy_end_date", to_iso_date(end), 0.98, evidence, page)
+
+    idv = extract_money_near_labels(pages, ["Total IDV"], chooser=lambda values: max((v for v in values if v >= 1000), default=0))
+    if idv:
+        add("idv", money_string(idv[0]), 0.99, idv[2], idv[1])
+
+    od = find_money_pattern(pages, [rf"Own\s*Damage\s*Premium[^\n]*?({MONEY})", rf"Total\s*OD\s*Premium[^\n]*?({MONEY})"])
+    if od:
+        add("od_premium", money_string(od[0]), 0.99, od[2], od[1])
+
+    tp = find_money_pattern(pages, [rf"Basic\s*Third[-\s]*Party\s*Liability[^\n]*?({MONEY})", rf"Total\s*Act\s*Premium[^\n]*?({MONEY})"])
+    if tp:
+        add("tp_premium", money_string(tp[0]), 0.99, tp[2], tp[1])
+
+    cpa_line = find_line(pages, r"PA\s*cover\s*for\s*Owner[-\s]*Driver")
+    cpa = find_money_pattern(pages, [rf"PA\s*cover\s*for\s*Owner[-\s]*Driver[^\n]*?({MONEY})"])
+    if cpa and cpa[0] > 0:
+        add("cpa_premium", money_string(cpa[0]), 0.98, cpa[2], cpa[1])
+        add("cpa_opted", "Yes", 0.99, cpa[2], cpa[1])
+    else:
+        evidence = cpa_line[2] if cpa_line else "PA cover for Owner-Driver: --"
+        add("cpa_premium", "0", 0.98, evidence, cpa_line[1] if cpa_line else 1)
+        add("cpa_opted", "No", 0.99, evidence, cpa_line[1] if cpa_line else 1)
+
+    net = find_money_pattern(pages, [rf"Net\s*Premium\s*\[?A\+B\]?[^\n]*?({MONEY})", rf"Invoice\s+Number.*?Net\s+Premium.*?\n[^\n]*?\s({MONEY})\s"])
+    tax = find_money_pattern(pages, [rf"IGST\s*@?\s*18%[^\n]*?({MONEY})", rf"Invoice\s+Number.*?Igst.*?\n[^\n]*?\s({MONEY})\s"])
+    gross = find_money_pattern(pages, [rf"Total\s*Premium[^\n]*?({MONEY})", rf"Gross\s*Premium[^\n]*?({MONEY})"])
+    if net:
+        add("total_premium", money_string(net[0]), 0.98, net[2], net[1])
+    if tax:
+        add("tax_amount", money_string(tax[0]), 0.98, tax[2], tax[1])
+    if gross:
+        add("gross_premium", money_string(gross[0]), 0.98, gross[2], gross[1])
+    return fields
+
+
+def extract_iffco_fields(pages: list[str]) -> list[dict[str, Any]]:
+    fields, add = field_builder()
+    full = "\n".join(pages)
+    add("insurer_name", "IFFCO-Tokio General Insurance Co. Ltd.", 0.99, "IFFCO-TOKIO GENERAL INSURANCE CO. LTD.", 1)
+    add("policy_product", "Package", 0.99, first_matching_line(full, ["COVERAGE", "PACKAGE"]), 1)
+
+    result = find_first(pages, [
+        r"P400\s*Policy\s*#\s*([A-Z0-9\-/]{6,30})",
+        r"Policy\s*#\s*([A-Z]\d{6,15})",
+    ])
+    if result:
+        add("policy_number", compact_identifier(result[0]), 0.99, result[2], result[1])
+
+    period = find_period(pages, extra_patterns=[
+        rf"Period\s*of\s*Insurance\s*From\s*[:\-]?\s*({DATE_TOKEN}).{{0,120}}?To\s*[:\-]?\s*(?:Midnight\s*On\s*)?({DATE_TOKEN})",
+        rf"From\s*[:\-]?\s*({DATE_TOKEN})\s*\d{{1,2}}:\d{{2}}:\d{{2}}.{{0,80}}?To\s*[:\-]?\s*(?:Midnight\s*On\s*)?({DATE_TOKEN})",
+    ])
+    if period:
+        start, end, page, evidence = period
+        add("policy_start_date", to_iso_date(start), 0.99, evidence, page)
+        add("policy_end_date", to_iso_date(end), 0.99, evidence, page)
+
+    idv = find_money_pattern(pages, [rf"Total\s*Value\s+Net\s*Premium[^\n]*\n\s*({MONEY})", rf"IDV\s*in\s*Rs\.?[^\n]*?({MONEY})"])
+    if not idv:
+        idv = extract_money_near_labels(pages, ["Total Value", "IDV in Rs"], chooser=lambda values: max((v for v in values if v >= 1000), default=0))
+    if idv:
+        add("idv", money_string(idv[0]), 0.99, idv[2], idv[1])
+
+    od = find_money_pattern(pages, [rf"Net\s*\(A\)\s*({MONEY})"])
+    tp = find_money_pattern(pages, [rf"Net\s*\(B\)\s*({MONEY})"])
+    if od:
+        add("od_premium", money_string(od[0]), 0.99, od[2], od[1])
+    if tp:
+        add("tp_premium", money_string(tp[0]), 0.99, tp[2], tp[1])
+
+    cpa = find_money_pattern(pages, [rf"PA\s*Owner\s*Driver\s*CSI\s*Rs\s*{MONEY}\s+({MONEY})", rf"PA\s*Owner\s*Driver[^\n]*?({MONEY})\s*$"])
+    if cpa and 0 < cpa[0] <= 100000:
+        add("cpa_premium", money_string(cpa[0]), 0.99, cpa[2], cpa[1])
+        add("cpa_opted", "Yes", 0.99, cpa[2], cpa[1])
+    else:
+        add("cpa_premium", "0", 0.85, "No payable CPA premium identified")
+        add("cpa_opted", "No", 0.86, "Derived from CPA amount")
+
+    net = find_money_pattern(pages, [rf"Premium/Taxable\s*Value\s*RS\.?\s*({MONEY})", rf"Taxable\s*Value\(Rs\.\)[^\n]*\n[^\n]*?({MONEY})"])
+    tax = find_money_pattern(pages, [rf"GST\s*Amount\(Rs\.\)[^\n]*\n[^\n]*?({MONEY})", rf"IGST[^\n]*?({MONEY})"])
+    gross = find_money_pattern(pages, [rf"Gross\s*Premium\s*Payable\s*Rs\.?\s*({MONEY})", rf"Gross\s*Premium\s*Payable\(Rs\.\)[^\n]*\n[^\n]*?({MONEY})"])
+    if net:
+        add("total_premium", money_string(net[0]), 0.98, net[2], net[1])
+    if tax:
+        add("tax_amount", money_string(tax[0]), 0.98, tax[2], tax[1])
+    if gross:
+        add("gross_premium", money_string(gross[0]), 0.99, gross[2], gross[1])
+    return fields
+
+
+def extract_generic_fields(pages: list[str], parser_id: str) -> list[dict[str, Any]]:
+    fields, add = field_builder()
+    full_text = "\n".join(pages)
+    full_upper = full_text.upper()
+
     if parser_id == "new_india_motor_v1":
         add("insurer_name", "The New India Assurance Co. Ltd.", 0.99, "The New India Assurance Co. Ltd.", 1)
     else:
-        insurer = find_labeled_text(clean_pages, ["Insurance Company", "Insurer", "Issued By"])
+        insurer = find_labeled_text(pages, ["Insurance Company", "Insurer", "Issued By"])
         if insurer:
             add("insurer_name", insurer[0], 0.78, insurer[2], insurer[1])
 
@@ -234,36 +361,30 @@ def extract_policy_section_fields(clean_pages: list[str], parser_id: str) -> lis
     if product:
         add("policy_product", product, 0.98 if parser_id == "new_india_motor_v1" else 0.86, product_evidence(full_text), 1)
 
-    policy_number = find_first(clean_pages, [
+    policy_number = find_first(pages, [
         r"Policy\s*No\.?\s*[:\-]?\s*([A-Z0-9\-/]{8,30})",
         r"Policy\s*Number\s*[:\-]?\s*([A-Z0-9\-/]{8,30})",
     ])
     if policy_number:
         add("policy_number", compact_identifier(policy_number[0]), 0.98, policy_number[2], policy_number[1])
 
-    period = find_period(clean_pages)
+    period = find_period(pages)
     if period:
         start, end, page, evidence = period
         add("policy_start_date", to_iso_date(start), 0.98, evidence, page)
         add("policy_end_date", to_iso_date(end), 0.98, evidence, page)
 
-    idv = extract_money_near_labels(
-        clean_pages,
-        ["Total IDV", "Total Insured Declared Value", "Insured Declared Value"],
-        chooser=lambda values: max((value for value in values if value >= 1000), default=0),
-    )
-    if idv and idv[0] > 0:
+    idv = extract_money_near_labels(pages, ["Total IDV", "Total Insured Declared Value", "Insured Declared Value"], chooser=lambda values: max((v for v in values if v >= 1000), default=0))
+    od = extract_money_near_labels(pages, ["Net Own Damage Premium (A)", "Net Own Damage Premium", "OD Premium"])
+    tp = extract_money_near_labels(pages, ["Net Liability Premium (B)", "Net Liability Premium", "Third Party Premium"])
+    if idv:
         add("idv", money_string(idv[0]), 0.98, idv[2], idv[1])
-
-    od = extract_money_near_labels(clean_pages, ["Net Own Damage Premium (A)", "Net Own Damage Premium", "OD Premium"])
     if od:
         add("od_premium", money_string(od[0]), 0.98, od[2], od[1])
-
-    tp = extract_money_near_labels(clean_pages, ["Net Liability Premium (B)", "Net Liability Premium", "Third Party Premium"])
     if tp:
         add("tp_premium", money_string(tp[0]), 0.98, tp[2], tp[1])
 
-    cpa = extract_cpa_premium(clean_pages)
+    cpa = extract_cpa_premium(pages)
     if cpa and cpa[0] > 0:
         add("cpa_premium", money_string(cpa[0]), 0.96, cpa[2], cpa[1])
         add("cpa_opted", "Yes", 0.97, cpa[2], cpa[1])
@@ -271,18 +392,14 @@ def extract_policy_section_fields(clean_pages: list[str], parser_id: str) -> lis
         add("cpa_premium", "0", 0.86, "No payable CPA premium identified")
         add("cpa_opted", "No", 0.88, "Derived from CPA amount")
 
-    net = extract_money_near_labels(clean_pages, ["Total Premium (A+B)", "Net Premium"])
-    if net:
-        add("total_premium", money_string(net[0]), 0.97, net[2], net[1])
-
-    tax = extract_money_near_labels(clean_pages, ["IGST", "CGST", "SGST", "GST"])
-    if tax:
-        add("tax_amount", money_string(tax[0]), 0.95, tax[2], tax[1])
-
-    gross = extract_money_near_labels(clean_pages, ["Gross Premium Paid", "Gross Premium", "Total Premium Payable"])
-    if gross:
-        add("gross_premium", money_string(gross[0]), 0.98, gross[2], gross[1])
-
+    for key, labels, confidence in [
+        ("total_premium", ["Total Premium (A+B)", "Net Premium"], 0.97),
+        ("tax_amount", ["IGST", "CGST", "SGST", "GST"], 0.95),
+        ("gross_premium", ["Gross Premium Paid", "Gross Premium", "Total Premium Payable"], 0.98),
+    ]:
+        result = extract_money_near_labels(pages, labels)
+        if result:
+            add(key, money_string(result[0]), confidence, result[2], result[1])
     return fields
 
 
@@ -303,24 +420,60 @@ def classify_policy_product(text_upper: str) -> str | None:
 
 
 def product_evidence(text: str) -> str:
+    return first_matching_line(text, ["PACKAGE POLICY", "COMPREHENSIVE", "LIABILITY ONLY", "THIRD PARTY", "STANDALONE", "SAOD", "BUNDLED", "LONG TERM"])
+
+
+def first_matching_line(text: str, tokens: list[str]) -> str:
     for line in text.splitlines():
-        upper = line.upper()
-        if any(token in upper for token in ("PACKAGE POLICY", "COMPREHENSIVE", "LIABILITY ONLY", "THIRD PARTY", "STANDALONE", "SAOD", "BUNDLED", "LONG TERM")):
+        if any(token in line.upper() for token in tokens):
             return line.strip()
     return "Policy product classification"
 
 
-def find_period(pages: list[str]) -> tuple[str, str, int, str] | None:
-    patterns = [
+def find_period(pages: list[str], extra_patterns: list[str] | None = None) -> tuple[str, str, int, str] | None:
+    patterns = (extra_patterns or []) + [
         rf"Own\s*Damage\s*Period\s*[:\-]?\s*({DATE_TOKEN})(?:\([^)]*\))?\s*To\s*({DATE_TOKEN})",
-        rf"Period\s*of\s*Insurance\s*[:\-]?\s*From\s*({DATE_TOKEN}).{{0,80}}?To\s*({DATE_TOKEN})",
-        rf"Policy\s*Period\s*[:\-]?\s*({DATE_TOKEN}).{{0,80}}?To\s*({DATE_TOKEN})",
+        rf"Period\s*of\s*Insurance\s*[:\-]?\s*From\s*({DATE_TOKEN}).{{0,120}}?To\s*(?:Midnight\s*(?:On|of)?\s*)?({DATE_TOKEN})",
+        rf"Policy\s*Period\s*[:\-]?\s*({DATE_TOKEN}).{{0,120}}?To\s*({DATE_TOKEN})",
     ]
     for page_number, page in enumerate(pages, start=1):
         for pattern in patterns:
             match = re.search(pattern, page, flags=re.IGNORECASE | re.DOTALL)
             if match:
                 return match.group(1), match.group(2), page_number, clean_generic(match.group(0))
+    return None
+
+
+def find_date_pair_after_label(pages: list[str], label: str) -> tuple[str, str, int, str] | None:
+    for page_number, page in enumerate(pages, start=1):
+        index = page.lower().find(label.lower())
+        if index < 0:
+            continue
+        window = page[index:index + 800]
+        dates = re.findall(DATE_TOKEN, window, flags=re.IGNORECASE)
+        if len(dates) >= 2:
+            return dates[0], dates[1], page_number, clean_generic(window[:300])
+    return None
+
+
+def find_money_pattern(pages: list[str], patterns: list[str]) -> tuple[float, int, str] | None:
+    for page_number, page in enumerate(pages, start=1):
+        for pattern in patterns:
+            match = re.search(pattern, page, flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
+            if not match:
+                continue
+            value = parse_money(match.group(1))
+            if value is not None:
+                return value, page_number, clean_generic(match.group(0))
+    return None
+
+
+def find_line(pages: list[str], pattern: str) -> tuple[str, int, str] | None:
+    for page_number, page in enumerate(pages, start=1):
+        for line in page.splitlines():
+            if re.search(pattern, line, flags=re.IGNORECASE):
+                cleaned = clean_generic(line)
+                return cleaned, page_number, cleaned
     return None
 
 
@@ -334,30 +487,21 @@ def extract_money_near_labels(
         lines = page.splitlines()
         for index, line in enumerate(lines):
             normalized_line = normalize_label(line)
-            matched_label = next((label for label in normalized_labels if label in normalized_line), None)
-            if not matched_label:
+            if not any(label in normalized_line for label in normalized_labels):
                 continue
-
-            candidate_lines = [line]
-            if index + 1 < len(lines):
-                candidate_lines.append(lines[index + 1])
-            if index + 2 < len(lines):
-                candidate_lines.append(lines[index + 2])
-
+            candidate_lines = [line] + lines[index + 1:index + 3]
             values: list[float] = []
             for candidate_line in candidate_lines:
                 for token in re.findall(MONEY, candidate_line):
                     number = parse_money(token)
                     if number is not None:
                         values.append(number)
-
             if not values:
                 continue
             selected = chooser(values) if chooser else select_likely_premium(values)
             if selected <= 0:
                 continue
-            evidence = clean_generic(" | ".join(candidate_lines))
-            return selected, page_number, evidence
+            return selected, page_number, clean_generic(" | ".join(candidate_lines))
     return None
 
 
@@ -370,19 +514,10 @@ def select_likely_premium(values: list[float]) -> float:
 
 
 def extract_cpa_premium(pages: list[str]) -> tuple[float, int, str] | None:
-    labels = [
-        "Compulsory Personal Accident",
-        "CPA Cover",
-        "Owner Driver",
-        "PA Cover for Owner Driver",
-    ]
-    result = extract_money_near_labels(pages, labels)
-    if not result:
+    result = extract_money_near_labels(pages, ["Compulsory Personal Accident", "CPA Cover", "Owner Driver", "PA Cover for Owner Driver"])
+    if not result or result[0] <= 0 or result[0] > 100_000:
         return None
-    amount, page, evidence = result
-    if amount <= 0 or amount > 100_000:
-        return None
-    return amount, page, evidence
+    return result
 
 
 def find_first(pages: list[str], patterns: list[str]) -> tuple[str, int, str] | None:
@@ -404,9 +539,8 @@ def find_labeled_text(pages: list[str], labels: list[str]) -> tuple[str, int, st
 
 
 def parse_money(value: str) -> float | None:
-    cleaned = value.replace(",", "").strip()
     try:
-        return float(cleaned)
+        return float(value.replace(",", "").strip())
     except ValueError:
         return None
 
