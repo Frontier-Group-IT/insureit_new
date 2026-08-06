@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-05T18:03:00+05:30",
+  "deploy_requested_at": "2026-08-07T03:00:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT verification and corrective redeploy",
-  "source_commit": "de33134bbaffc391b34f81d1fea4c9cf805e41f2",
-  "release_scope": "Deploy the actual Add Policy component used by /policies/new. Changes include Policy Type label, Direct removed from Intermediary Type, OD/NET basis removed, Retention moved into Projected insurer pay-in, billing fields removed from the main onboarding page, and only the Live Summary card made sticky.",
-  "verification": "The route apps/web-portal/app/policies/new/page.tsx renders PolicyFormAuthbridge from components/policy-form-authbridge.tsx. The requested UI changes were applied to that component in commit 6e42df35d4784e6ada57eda324d5dac86188803c. Vercel production status must reach success before reporting completion.",
+  "source": "ChatGPT controlled production deployment",
+  "source_commit": "8b08adb79f818d81bab2fccbdfd59baa2c46bd85",
+  "release_scope": "Deploy Google Document AI policy OCR with Vercel OIDC Workload Identity Federation and INSUREIT server-side parsers for Digit, IFFCO-Tokio, and New India policy formats. Preserve review-before-apply behavior for Policy Onboarding Section 03 only.",
+  "verification": "Typecheck passed, lint completed with warnings only, and the Next.js production build completed successfully on the verified branch before merge. Vercel production status must reach success and the live OCR workflow must be tested before reporting completion.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
