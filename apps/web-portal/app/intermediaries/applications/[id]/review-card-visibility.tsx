@@ -9,29 +9,59 @@ export function ReviewCardVisibility({ applicationId, children }: { applicationI
   const [target, setTarget] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
-    if (pathname !== `/intermediaries/applications/${applicationId}`) {
+    const reviewPath = `/intermediaries/applications/${applicationId}`;
+    const workflowPath = `/intermediaries/applications/${applicationId}/workflow`;
+    const isReviewPage = pathname === reviewPath;
+    const isWorkflowPage = pathname === workflowPath;
+
+    if (!isReviewPage && !isWorkflowPage) {
       setTarget(null);
       return;
     }
 
-    const header = document.querySelector<HTMLElement>("section.bg-gradient-to-br");
-    const actionRow = Array.from(header?.querySelectorAll<HTMLElement>("div.flex.flex-wrap.items-center.gap-2") ?? [])
-      .find((element) => Boolean(element.querySelector("a, form, button")));
+    let host: HTMLElement | null = null;
+    let hiddenElements: HTMLElement[] = [];
 
-    if (!actionRow) return;
+    if (isReviewPage) {
+      const header = document.querySelector<HTMLElement>("section.bg-gradient-to-br");
+      host = Array.from(header?.querySelectorAll<HTMLElement>("div.flex.flex-wrap.items-center.gap-2") ?? [])
+        .find((element) => Boolean(element.querySelector("a, form, button"))) ?? null;
+    } else {
+      const heading = Array.from(document.querySelectorAll<HTMLHeadingElement>("h1"))
+        .find((element) => element.closest("section")?.textContent?.includes("IIB"));
+      const header = heading?.closest<HTMLElement>("section") ?? null;
+      host = Array.from(header?.querySelectorAll<HTMLElement>("div.flex.flex-wrap.items-center") ?? [])
+        .find((element) => element.textContent?.includes("IIB check")) ?? null;
+
+      if (host) {
+        hiddenElements = Array.from(host.children).filter((element): element is HTMLElement => element instanceof HTMLElement);
+        hiddenElements.forEach((element) => {
+          element.dataset.previousDisplay = element.style.display;
+          element.style.display = "none";
+        });
+      }
+    }
+
+    if (!host) return;
 
     const mount = document.createElement("div");
     mount.dataset.iibPanHeaderStatus = "true";
     mount.className = "shrink-0";
-    actionRow.prepend(mount);
+    host.prepend(mount);
     setTarget(mount);
 
     return () => {
       setTarget(null);
       mount.remove();
+      hiddenElements.forEach((element) => {
+        element.style.display = element.dataset.previousDisplay ?? "";
+        delete element.dataset.previousDisplay;
+      });
     };
   }, [applicationId, pathname]);
 
-  if (pathname !== `/intermediaries/applications/${applicationId}` || !target) return null;
+  const reviewPath = `/intermediaries/applications/${applicationId}`;
+  const workflowPath = `/intermediaries/applications/${applicationId}/workflow`;
+  if ((pathname !== reviewPath && pathname !== workflowPath) || !target) return null;
   return createPortal(children, target);
 }
