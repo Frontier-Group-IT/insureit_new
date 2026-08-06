@@ -3,6 +3,7 @@
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
+const OCR_TIMEOUT_MS = 10 * 60 * 1000;
 const ALLOWED_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
 
 export type PolicyOcrField = {
@@ -36,7 +37,7 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
   body.append("schema", "indian_motor_policy_v1");
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 180_000);
+  const timeout = setTimeout(() => controller.abort(), OCR_TIMEOUT_MS);
   try {
     const response = await fetch(`${serviceUrl}/v1/policy/extract`, {
       method: "POST",
@@ -76,7 +77,9 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
       warnings: Array.isArray(payload?.warnings) ? payload.warnings.map((item) => clean(item, 300)).filter(Boolean) as string[] : [],
     };
   } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") return { ok: false, error: "Policy OCR timed out. Try a smaller or clearer document." };
+    if (error instanceof Error && error.name === "AbortError") {
+      return { ok: false, error: "Policy OCR exceeded the 10-minute processing limit. Check that the OCR container is healthy and try again." };
+    }
     console.error("Policy OCR request failed", error);
     return { ok: false, error: "Policy OCR service could not be reached." };
   } finally {
