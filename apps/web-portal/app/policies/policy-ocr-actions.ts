@@ -12,10 +12,19 @@ export type PolicyOcrField = {
   value: string;
   confidence: number | null;
   page: number | null;
+  evidence: string;
 };
 
 export type PolicyOcrResult =
-  | { ok: true; fields: PolicyOcrField[]; model: string; warnings: string[] }
+  | {
+      ok: true;
+      fields: PolicyOcrField[];
+      model: string;
+      parserId: string;
+      parserVersion: string;
+      extractionMethod: string;
+      warnings: string[];
+    }
   | { ok: false; error: string };
 
 export async function extractPolicyDocument(formData: FormData): Promise<PolicyOcrResult> {
@@ -28,9 +37,7 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
 
   const serviceUrl = process.env.POLICY_OCR_SERVICE_URL?.replace(/\/$/, "");
   const serviceSecret = process.env.POLICY_OCR_SERVICE_SECRET;
-  if (!serviceUrl || !serviceSecret) {
-    return { ok: false, error: "Policy OCR service is not configured on this environment." };
-  }
+  if (!serviceUrl || !serviceSecret) return { ok: false, error: "Policy OCR service is not configured on this environment." };
 
   const body = new FormData();
   body.append("file", file, file.name);
@@ -47,14 +54,22 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
       signal: controller.signal,
     });
     const payload = await response.json().catch(() => null) as {
-      fields?: Array<{ key?: unknown; label?: unknown; value?: unknown; confidence?: unknown; page?: unknown }>;
+      fields?: Array<{ key?: unknown; label?: unknown; value?: unknown; confidence?: unknown; page?: unknown; evidence?: unknown }>;
       model?: unknown;
+      parser_id?: unknown;
+      parser_version?: unknown;
+      extraction_method?: unknown;
       warnings?: unknown;
       error?: unknown;
+      detail?: unknown;
     } | null;
 
     if (!response.ok) {
-      const message = typeof payload?.error === "string" ? payload.error : `OCR service returned ${response.status}.`;
+      const message = typeof payload?.error === "string"
+        ? payload.error
+        : typeof payload?.detail === "string"
+          ? payload.detail
+          : `OCR service returned ${response.status}.`;
       return { ok: false, error: message };
     }
 
@@ -65,6 +80,7 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
         value: clean(field.value, 1000),
         confidence: typeof field.confidence === "number" && Number.isFinite(field.confidence) ? Math.max(0, Math.min(1, field.confidence)) : null,
         page: typeof field.page === "number" && Number.isInteger(field.page) && field.page > 0 ? field.page : null,
+        evidence: clean(field.evidence, 500),
       }))
       .filter((field): field is PolicyOcrField => Boolean(field.key && field.label && field.value));
 
@@ -73,7 +89,10 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
     return {
       ok: true,
       fields,
-      model: clean(payload?.model, 120) || "PaddleOCR",
+      model: clean(payload?.model, 120) || "Policy OCR",
+      parserId: clean(payload?.parser_id, 120) || "generic_motor_v1",
+      parserVersion: clean(payload?.parser_version, 120) || "unknown",
+      extractionMethod: clean(payload?.extraction_method, 120) || "unknown",
       warnings: Array.isArray(payload?.warnings) ? payload.warnings.map((item) => clean(item, 300)).filter(Boolean) as string[] : [],
     };
   } catch (error) {
