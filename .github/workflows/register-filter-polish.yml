@@ -21,6 +21,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: python .github/scripts/polish_register_filters.py
+      - run: python .github/scripts/fix_partner_register_header.py
       - run: npm ci
       - run: npm run typecheck:web
       - run: npm run build:web
