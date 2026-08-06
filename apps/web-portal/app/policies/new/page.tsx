@@ -1,6 +1,7 @@
 import { createInsuranceCompany } from "@/app/master-data-form-actions";
 import { addPolicy } from "@/app/policies/policy-actions";
 import { PolicyFormAuthbridge } from "@/components/policy-form-authbridge";
+import { PolicyOnboardingIntelligence } from "@/components/policy-onboarding-intelligence";
 import { PolicySourceMasterWire } from "@/components/policy-source-master-wire";
 import { AppShell } from "@/components/shell";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
@@ -62,6 +63,7 @@ export default async function NewPolicyPage() {
   return (
     <AppShell title="Add Policy">
       <PolicySourceMasterWire rms={rmOptions} sources={sourceOptions} />
+      <PolicyOnboardingIntelligence />
       <PolicyFormAuthbridge action={addPolicy} createInsurerAction={createInsuranceCompany} customers={customerOptions} vehicles={vehicleOptions} insurers={insurerOptions} submitLabel="Create Policy" />
     </AppShell>
   );
