@@ -45,7 +45,7 @@ type ProfileRow = PospMispWorkflowProfile & Omit<PospMispEditProfile, "aadhaar_e
   existing_registration_confirmed_at: string | null;
   raw_data: Record<string, unknown> | null;
 };
-type ViewStage = "primary" | "documents" | "review";
+type ViewStage = "primary" | "documents" | "registration" | "training" | "agreement" | "iib";
 type Assignment = {
   training_title: string | null;
   training_url: string | null;
@@ -94,8 +94,10 @@ const successes: Record<string, string> = {
   primary_details_saved: "Stage 1 details saved.",
   documents_saved: "Stage 2 documents saved and Partner ID issued.",
   documents_started: "Document stage opened.",
+  registration_completed: "Signed registration form uploaded. Training is now available.",
 };
 const popupEvents = new Set(["documents_completed", "training_assigned", "training_status_updated", "exam_allotted", "exam_passed", "exam_failed", "agreement_sent", "agreement_signed", "onboarding_completed"]);
+const workflowStages: ViewStage[] = ["primary", "documents", "registration", "training", "agreement", "iib"];
 
 export default async function IntermediaryWorkflowPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; success?: string; stage?: string; field?: string }> }) {
   await requirePospMispManager();
@@ -133,43 +135,51 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
   const requiredDocumentTypes = ["aadhaar_front", "aadhaar_back", "pan_copy", "cancelled_cheque", "photograph", ...(profile.gst_number ? ["gst_copy"] : [])];
   const uploadedDocumentTypes = new Set((documents ?? []).filter((document) => Boolean(document.file_name?.trim())).map((document) => document.document_type));
   const documentsComplete = requiredDocumentTypes.every((documentType) => uploadedDocumentTypes.has(documentType));
+  const signedRegistrationUploaded = uploadedDocumentTypes.has("signed_registration_form");
+  const trainingExamComplete = assignment?.exam_status === "passed" || (assignment?.training_status === "completed" && !assignment?.exam_title);
+  const agreementSigned = assignment?.agreement_status === "signed";
+  const iibUploaded = application.registration_status === "iib_registered" || Boolean(profile.iib_uploaded || profile.iib_uploaded_at);
+  const progressedBeyondRegistration = Boolean(assignment?.training_title || profile.training_login_id || assignment?.agreement_signing_url || iibUploaded);
+  const registrationComplete = signedRegistrationUploaded || progressedBeyondRegistration;
   const shouldRefresh = profile.workflow_stage === "pre_iib" && (!panJob || ["pending", "queued", "checking"].includes(panJob.status ?? ""));
-  const unlocked = profile.workflow_stage === "pre_iib" ? ["primary"] : profile.workflow_stage === "iib_processing" ? ["primary", "documents"] : ["primary", "documents", "review"];
   const normalizedError = normalizeWorkflowError(query.error, query.field);
-  const requested = (normalizedError.field ? "primary" : query.stage === "primary" || query.stage === "documents" || query.stage === "review" ? query.stage : null) as ViewStage | null;
-  const defaultView: ViewStage = profile.workflow_stage === "pre_iib" ? "primary" : profile.workflow_stage === "iib_processing" ? "documents" : "review";
-  const viewStage: ViewStage = requested && unlocked.includes(requested) ? requested : defaultView;
+  const requestedStage = normalizedError.field ? "primary" : workflowStages.includes(query.stage as ViewStage) ? query.stage as ViewStage : null;
+  const unlocked = new Set<ViewStage>(["primary"]);
+  if (profile.workflow_stage !== "pre_iib") unlocked.add("documents");
+  if (profile.workflow_stage !== "pre_iib" && profile.workflow_stage !== "iib_processing" && permanentReference) unlocked.add("registration");
+  if (registrationComplete) unlocked.add("training");
+  if (trainingExamComplete || assignment?.agreement_signing_url) unlocked.add("agreement");
+  if (agreementSigned || iibUploaded) unlocked.add("iib");
+  const defaultView: ViewStage = profile.workflow_stage === "pre_iib"
+    ? "primary"
+    : profile.workflow_stage === "iib_processing"
+      ? "documents"
+      : !registrationComplete
+        ? "registration"
+        : !trainingExamComplete
+          ? "training"
+          : !agreementSigned
+            ? "agreement"
+            : "iib";
+  const viewStage: ViewStage = requestedStage && unlocked.has(requestedStage) ? requestedStage : defaultView;
   const docList = (documents ?? []).map((item) => ({ document_type: item.document_type, file_name: item.file_name }));
   const popupEvent = query.success && popupEvents.has(query.success) ? query.success : null;
   const verificationPan = (profile.partner_type === "misp" ? profile.dp_pan_number : profile.pan_number)?.replace(/\s/g, "").toUpperCase() ?? null;
   const iibStatus = resolveIibPanVerificationStatus(panJob, profile.iib_remarks);
   const iibCleared = iibStatus.code === "cleared";
-  const onboardingComplete = context === "partner"
-    ? application.partner_status === "active_partner"
-    : application.registration_status === "iib_registered" || Boolean(profile.iib_uploaded || profile.iib_uploaded_at);
+  const onboardingComplete = context === "partner" ? application.partner_status === "active_partner" : iibUploaded;
 
   let migrationValues = { ...asObject(profile.raw_data), ...asObject(application.draft_data) };
   if (context !== "partner" && application.partner_record_id) {
-    const { data: familyApplications } = await admin
-      .from("intermediary_onboarding_applications")
-      .select("id,draft_data")
-      .eq("partner_record_id", application.partner_record_id)
-      .neq("id", id)
-      .returns<Array<{ id: string; draft_data: Record<string, unknown> | null }>>();
+    const { data: familyApplications } = await admin.from("intermediary_onboarding_applications").select("id,draft_data").eq("partner_record_id", application.partner_record_id).neq("id", id).returns<Array<{ id: string; draft_data: Record<string, unknown> | null }>>();
     const parentApplication = (familyApplications ?? []).find((item) => accountContext(item.draft_data) === "partner");
     if (parentApplication) {
-      const { data: parentProfile } = await admin
-        .from("posp_misp_onboarding_profiles")
-        .select("raw_data")
-        .eq("application_id", parentApplication.id)
-        .maybeSingle<{ raw_data: Record<string, unknown> | null }>();
-      migrationValues = {
-        ...migrationValues,
-        ...asObject(parentProfile?.raw_data),
-        ...asObject(parentApplication.draft_data),
-      };
+      const { data: parentProfile } = await admin.from("posp_misp_onboarding_profiles").select("raw_data").eq("application_id", parentApplication.id).maybeSingle<{ raw_data: Record<string, unknown> | null }>();
+      migrationValues = { ...migrationValues, ...asObject(parentProfile?.raw_data), ...asObject(parentApplication.draft_data) };
     }
   }
+
+  const stageProfile = { ...editProfile, bank_name: profile.bank_name, aadhaar_number: aadhaarLastFour, training_login_id: profile.training_login_id, training_status: profile.training_status, exam_status: profile.exam_status };
 
   return (
     <AppShell title="Intermediary Workflow">
@@ -196,20 +206,21 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
         {!onboardingComplete ? (context === "partner" ? (
           <PartnerTwoStepNavigation applicationId={id} viewStage={viewStage} documentsComplete={documentsComplete} partnerActive={application.partner_status === "active_partner"} />
         ) : (
-          <SixStepNavigation applicationId={id} viewStage={viewStage} registrationStatus={application.registration_status} documentsComplete={documentsComplete} agreementSigned={assignment?.agreement_status === "signed"} />
+          <SixStepNavigation applicationId={id} viewStage={viewStage} documentsComplete={documentsComplete} registrationComplete={registrationComplete} trainingExamComplete={trainingExamComplete} agreementSigned={agreementSigned} iibUploaded={iibUploaded} unlocked={unlocked} />
         )) : null}
 
         <IntermediaryDocumentUploadController applicationId={id} enabled={viewStage === "documents" && editable} showGst={Boolean(profile.gst_number)} />
         <main className="overflow-hidden rounded-2xl border bg-white">
-          {viewStage === "review" ? (
-            <div className="space-y-5 bg-[#F4F7FB] p-4 [&_#qualification-process>section:first-child>div:first-child]:!bg-none [&_#qualification-process>section:first-child>div:first-child]:!bg-[#F8FAFC] [&_#qualification-process>section:first-child>div:first-child]:!text-[#0F172A] [&_#qualification-process>section:first-child>div:first-child_*]:!text-[#0F172A] [&_#qualification-process>section:first-child>div:first-child_p]:!text-[#64748B]">
-              <TrainingExamStage applicationId={id} profile={{ ...editProfile, bank_name: profile.bank_name, aadhaar_number: aadhaarLastFour, training_login_id: profile.training_login_id, training_status: profile.training_status, exam_status: profile.exam_status }} assignment={assignment ?? null} documents={docList} iibVerified={iibCleared} finalType={application.final_type} />
-              <IibSubmissionStage applicationId={id} agreementSigned={assignment?.agreement_status === "signed"} finalType={application.final_type} />
-            </div>
-          ) : (
+          {viewStage === "primary" || viewStage === "documents" ? (
             <div className="space-y-4 bg-[#F4F7FB]">
               <PospMispApplicationEditor applicationId={id} profile={editProfile} workflowStage={profile.workflow_stage} viewStage={viewStage} editable={editable} salesManagers={associates.map((item) => ({ value: item.id, label: item.full_name ?? "Unnamed" }))} banks={(banks ?? []).map((item) => ({ value: item.id, label: item.name }))} oems={(oems ?? []).map((item) => ({ value: item.name, label: item.name }))} documents={docList} actionTargetId={context === "partner" && viewStage === "primary" ? `partner-primary-actions-${id}` : undefined} />
               {viewStage === "primary" ? <div className="px-4 pb-4 sm:px-5 sm:pb-5"><ExistingIntermediaryMigrationEditor applicationId={id} accountType={profile.partner_type} values={migrationValues} editable={editable} />{context === "partner" ? <div id={`partner-primary-actions-${id}`} className="mt-4" /> : null}</div> : null}
+            </div>
+          ) : viewStage === "iib" ? (
+            <div className="bg-[#F4F7FB] p-4"><IibSubmissionStage applicationId={id} agreementSigned={agreementSigned} finalType={application.final_type} /></div>
+          ) : (
+            <div className={`bg-[#F4F7FB] p-4 ${stageVisibilityClass(viewStage)}`}>
+              <TrainingExamStage applicationId={id} profile={stageProfile} assignment={assignment ?? null} documents={docList} iibVerified={iibCleared} finalType={application.final_type} />
             </div>
           )}
         </main>
@@ -241,6 +252,12 @@ function accountContext(draft: Record<string, unknown> | null | undefined) {
 function asObject(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
+function stageVisibilityClass(stage: ViewStage) {
+  if (stage === "registration") return "[&_#training-requirement]:hidden [&_#examination-requirement]:hidden [&_#agreement-requirement]:hidden";
+  if (stage === "training") return "[&_#registration-requirement]:hidden [&_#agreement-requirement]:hidden";
+  if (stage === "agreement") return "[&_#registration-requirement]:hidden [&_#training-requirement]:hidden [&_#examination-requirement]:hidden";
+  return "";
+}
 
 function PartnerTwoStepNavigation({ applicationId, viewStage, documentsComplete, partnerActive }: { applicationId: string; viewStage: ViewStage; documentsComplete: boolean; partnerActive: boolean }) {
   const current = viewStage === "primary" ? 1 : 2;
@@ -255,54 +272,27 @@ function PartnerTwoStepNavigation({ applicationId, viewStage, documentsComplete,
           const number = index + 1;
           const completed = partnerActive || number < current || (number === 1 && current > 1) || (number === 2 && documentsComplete);
           const active = number === current && !completed;
-          return (
-            <Link key={step[0]} href={step[2]} className="relative z-[1] min-w-0 text-center">
-              <span className={`mx-auto grid h-9 w-9 place-items-center rounded-full border text-[11px] font-bold shadow-[0_0_0_7px_#F8FAFC] transition ${completed ? "border-emerald-600 bg-emerald-600 text-white" : active ? "border-[#071D49] bg-[#071D49] text-white" : "border-[#D7E0EB] bg-[#F1F5F9] text-[#94A3B8]"}`}>{completed ? "✓" : number}</span>
-              <span className={`mt-2 block truncate text-[10.5px] font-semibold ${active ? "text-[#071D49]" : completed ? "text-emerald-800" : "text-[#64748B]"}`}>{step[1]}</span>
-              <span className="mt-0.5 block text-[8.5px] font-medium text-[#64748B]">{completed ? "Completed" : active ? "Current" : "Upcoming"}</span>
-            </Link>
-          );
+          return <Link key={step[0]} href={step[2]} className="relative z-[1] min-w-0 text-center"><span className={`mx-auto grid h-9 w-9 place-items-center rounded-full border text-[11px] font-bold shadow-[0_0_0_7px_#F8FAFC] transition ${completed ? "border-emerald-600 bg-emerald-600 text-white" : active ? "border-[#071D49] bg-[#071D49] text-white" : "border-[#D7E0EB] bg-[#F1F5F9] text-[#94A3B8]"}`}>{completed ? "✓" : number}</span><span className={`mt-2 block truncate text-[10.5px] font-semibold ${active ? "text-[#071D49]" : completed ? "text-emerald-800" : "text-[#64748B]"}`}>{step[1]}</span><span className="mt-0.5 block text-[8.5px] font-medium text-[#64748B]">{completed ? "Completed" : active ? "Current" : "Upcoming"}</span></Link>;
         })}
       </div>
     </nav>
   );
 }
 
-function SixStepNavigation({ applicationId, viewStage, registrationStatus, documentsComplete, agreementSigned }: { applicationId: string; viewStage: ViewStage; registrationStatus: string; documentsComplete: boolean; agreementSigned: boolean }) {
-  const current = currentStep(viewStage, registrationStatus);
-  const steps = [
-    ["primary", "Primary details", `/intermediaries/applications/${applicationId}/workflow?stage=primary`],
-    ["documents", "Documents", `/intermediaries/applications/${applicationId}/workflow?stage=documents`],
-    ["registration", "Registration", `/intermediaries/applications/${applicationId}/workflow?stage=review#registration-requirement`],
-    ["training", "Training & Exam", `/intermediaries/applications/${applicationId}/workflow?stage=review#training-requirement`],
-    ["agreement", "Agreement", `/intermediaries/applications/${applicationId}/workflow?stage=review#agreement-requirement`],
-    ["iib", "IIB Upload", `/intermediaries/applications/${applicationId}/workflow?stage=review#iib-submission`],
-  ] as const;
+function SixStepNavigation({ applicationId, viewStage, documentsComplete, registrationComplete, trainingExamComplete, agreementSigned, iibUploaded, unlocked }: { applicationId: string; viewStage: ViewStage; documentsComplete: boolean; registrationComplete: boolean; trainingExamComplete: boolean; agreementSigned: boolean; iibUploaded: boolean; unlocked: Set<ViewStage> }) {
+  const completion: Record<ViewStage, boolean> = { primary: true, documents: documentsComplete, registration: registrationComplete, training: trainingExamComplete, agreement: agreementSigned, iib: iibUploaded };
+  const steps: Array<[ViewStage, string]> = [["primary", "Primary details"], ["documents", "Documents"], ["registration", "Registration"], ["training", "Training & Exam"], ["agreement", "Agreement"], ["iib", "IIB Upload"]];
   return (
     <nav className="overflow-x-auto rounded-2xl border border-[#DCE5EF] bg-white/85 px-5 py-5 shadow-sm backdrop-blur">
       <div className="relative grid min-w-[760px] grid-cols-6 gap-0 before:absolute before:left-[8.4%] before:right-[8.4%] before:top-[18px] before:h-px before:bg-[#CBD5E1] before:content-['']">
-        {steps.map((step, index) => {
-          const number = index + 1;
-          const completed = number < current || (number === 2 && documentsComplete && current > 2) || (number === 5 && agreementSigned && current > 5);
-          const active = number === current;
-          return (
-            <Link key={step[0]} href={step[2]} className="relative z-[1] min-w-0 text-center">
-              <span className={`mx-auto grid h-9 w-9 place-items-center rounded-full border text-[11px] font-bold shadow-[0_0_0_7px_#F8FAFC] transition ${completed ? "border-emerald-600 bg-emerald-600 text-white" : active ? "border-[#071D49] bg-[#071D49] text-white" : "border-[#D7E0EB] bg-[#F1F5F9] text-[#94A3B8]"}`}>{completed ? "✓" : number}</span>
-              <span className={`mt-2 block truncate text-[10.5px] font-semibold ${active ? "text-[#071D49]" : completed ? "text-emerald-800" : "text-[#64748B]"}`}>{step[1]}</span>
-              <span className="mt-0.5 block text-[8.5px] font-medium text-[#64748B]">{completed ? "Completed" : active ? "Current" : "Upcoming"}</span>
-            </Link>
-          );
+        {steps.map(([stage, label], index) => {
+          const completed = completion[stage];
+          const active = stage === viewStage && !completed;
+          const available = unlocked.has(stage);
+          const content = <><span className={`mx-auto grid h-9 w-9 place-items-center rounded-full border text-[11px] font-bold shadow-[0_0_0_7px_#F8FAFC] transition ${completed ? "border-emerald-600 bg-emerald-600 text-white" : active ? "border-[#071D49] bg-[#071D49] text-white" : "border-[#D7E0EB] bg-[#F1F5F9] text-[#94A3B8]"}`}>{completed ? "✓" : index + 1}</span><span className={`mt-2 block truncate text-[10.5px] font-semibold ${active ? "text-[#071D49]" : completed ? "text-emerald-800" : "text-[#64748B]"}`}>{label}</span><span className="mt-0.5 block text-[8.5px] font-medium text-[#64748B]">{completed ? "Completed" : active ? "Current" : "Upcoming"}</span></>;
+          return available ? <Link key={stage} href={`/intermediaries/applications/${applicationId}/workflow?stage=${stage}`} className="relative z-[1] min-w-0 text-center">{content}</Link> : <div key={stage} className="relative z-[1] min-w-0 cursor-not-allowed text-center opacity-75" aria-disabled="true">{content}</div>;
         })}
       </div>
     </nav>
   );
-}
-
-function currentStep(viewStage: ViewStage, status: string) {
-  if (viewStage === "primary") return 1;
-  if (viewStage === "documents") return 2;
-  if (status === "iib_registered" || status.includes("iib")) return 6;
-  if (status.includes("agreement")) return 5;
-  if (status.includes("training") || status.includes("exam")) return 4;
-  return 3;
 }
