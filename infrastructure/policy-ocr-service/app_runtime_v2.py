@@ -54,6 +54,8 @@ def health() -> dict[str, str]:
 
 runtime.digit_period = digit_period
 runtime.iso = iso
+extract_digit = runtime.extract_digit
+extract_iffco = runtime.extract_iffco
 
 for route in app.routes:
     if getattr(route, "path", None) == "/health":
