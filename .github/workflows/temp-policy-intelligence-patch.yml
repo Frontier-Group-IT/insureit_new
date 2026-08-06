@@ -37,4 +37,4 @@ jobs:
             git commit -m "Build policy onboarding intelligence panel"
             git push
           fi
-# trigger: 2026-08-06T23:28+05:30
+# trigger: merge execution
