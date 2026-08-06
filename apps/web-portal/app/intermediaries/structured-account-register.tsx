@@ -90,28 +90,25 @@ export async function StructuredAccountRegister({ type, search = "" }: { type: A
           <Link href={onboardHref} className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl bg-[#0F2A55] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#173A70]">Onboard {title}</Link>
         </div>
 
-        <section className="flex flex-wrap items-center gap-1.5 rounded-xl border border-[#DCE5EF] bg-white p-1.5 shadow-sm">
-          <Metric label="All" value={rows.length} active />
-          <Metric label="Active" value={counts.active} />
-          <Metric label="Onboarding" value={counts.onboarding} />
-        </section>
-
         <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b border-[#E7ECF3] bg-[#FAFBFD] px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E7ECF3] bg-[#FAFBFD] px-4 py-3">
             <h2 className="text-[12px] font-semibold text-[#17203A]">{title} Register</h2>
-            <span className="text-[9.5px] font-medium text-[#64748B]">{rows.length} records</span>
+            <div className="flex items-center gap-3 text-[9.5px] font-medium text-[#64748B]">
+              <span>All <strong className="ml-1 text-[#0F2A55]">{rows.length}</strong></span>
+              <span>Active <strong className="ml-1 text-emerald-700">{counts.active}</strong></span>
+              <span>Onboarding <strong className="ml-1 text-amber-700">{counts.onboarding}</strong></span>
+            </div>
           </div>
           {error ? <div className="px-5 py-14 text-center text-[11px] text-red-700">The register could not be loaded.</div> : rows.length ? (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[980px] table-fixed text-left text-[10.5px]">
+              <table className="w-full min-w-[840px] table-fixed text-left text-[10.5px]">
                 <thead className="border-b bg-[#FAFBFD] text-[8.5px] uppercase tracking-[0.03em] text-[#64748B]"><tr>
                   <th className="px-5 py-3.5">{title} account</th>
                   <th className="px-3 py-3.5">{title} ID</th>
                   <th className="px-3 py-3.5">Parent Partner</th>
                   <th className="px-3 py-3.5">Assigned RM</th>
-                  <th className="px-3 py-3.5">Current stage</th>
                   <th className="px-3 py-3.5">Account status</th>
-                  <th className="px-3 py-3.5">Action</th>
+                  <th className="px-3 py-3.5 text-right">Action</th>
                 </tr></thead>
                 <tbody className="divide-y divide-[#E7ECF3]">{rows.map((row) => {
                   const app = appMap.get(row.application_id ?? "");
@@ -125,7 +122,6 @@ export async function StructuredAccountRegister({ type, search = "" }: { type: A
                     <td className="truncate px-3 py-3.5 font-semibold text-[#0F2A55]" title={accountId ?? `${title} ID pending`}>{accountId ?? `${title} ID pending`}</td>
                     <td className="truncate px-3 py-3.5 font-medium text-[#17203A]" title={partnerId ?? "Partner ID pending"}>{partnerId ?? "Partner ID pending"}</td>
                     <td className={`truncate px-3 py-3.5 font-medium ${rm === "Not assigned" ? "text-amber-700" : "text-[#17203A]"}`} title={rm}>{rm}</td>
-                    <td className="px-3 py-3.5"><StageBadge value={stage} /></td>
                     <td className="px-3 py-3.5"><StatusBadge value={accountStatusLabel(row.account_status, stage)} /></td>
                     <td className="px-3 py-3.5 text-right">{row.application_id ? <FreshAccountReviewLink href={`/intermediaries/applications/${row.application_id}`} className="inline-flex h-8 items-center justify-center rounded-lg border border-[#C9D5E5] bg-white px-3 text-[9px] font-semibold text-[#0F2A55] transition hover:border-[#9AA9FF] hover:bg-[#F7F9FF]">Open</FreshAccountReviewLink> : <span className="text-[#94A3B8]">—</span>}</td>
                   </tr>;
@@ -184,6 +180,5 @@ function accountStatusLabel(status: string, stage: string) {
   return "Under onboarding";
 }
 function textValue(value: unknown) { return typeof value === "string" && value.trim() ? value.trim() : null; }
-function Metric({ label, value, active = false }: { label: string; value: number; active?: boolean }) { return <div className={`inline-flex h-8 items-center gap-2 rounded-lg px-3 text-[9.5px] font-semibold ${active ? "bg-[#0F2A55] text-white" : "text-[#526178]"}`}><span>{label}</span><span className={`rounded-md px-1.5 py-0.5 text-[9px] ${active ? "bg-white/15 text-white" : "bg-[#F1F4F8] text-[#0F2A55]"}`}>{value}</span></div>; }
 function StageBadge({ value }: { value: string }) { const active = value === "Active"; const failed = value.toLowerCase().includes("failed"); return <span className={`inline-flex max-w-full truncate rounded-md border px-2 py-1 text-[8.5px] font-semibold ${active ? "border-emerald-200 bg-emerald-50 text-emerald-700" : failed ? "border-red-200 bg-red-50 text-red-700" : "border-[#DCE5FF] bg-[#F3F6FF] text-[#315FEA]"}`}>{value}</span>; }
 function StatusBadge({ value }: { value: string }) { const cls = value === "Active" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : value === "Suspended" ? "border-red-200 bg-red-50 text-red-700" : "border-amber-200 bg-amber-50 text-amber-700"; return <span className={`inline-flex rounded-md border px-2 py-1 text-[8.5px] font-semibold ${cls}`}>{value}</span>; }
