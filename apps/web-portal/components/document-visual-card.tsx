@@ -36,6 +36,7 @@ const assets: Record<string, { src: string; alt: string; position?: string }> = 
   education_post_graduation_marksheet: { src: "/document-assets/education-certificate.png", alt: "Education certificate visual" },
   training_certificate: { src: "/document-assets/education-certificate.png", alt: "Training certificate visual" },
   registration_certificate: { src: "/document-assets/registration-form.png", alt: "Registration certificate visual" },
+  signed_registration_form: { src: "/document-assets/registration-form.png", alt: "Signed registration form visual" },
   agreement_copy: { src: "/document-assets/agreement-copy.png", alt: "Agreement document visual" },
   gst_copy: { src: "/document-assets/gst-certificate.png", alt: "GST certificate visual" },
   registration_form: { src: "/document-assets/registration-form.png", alt: "Registration form visual" },
@@ -82,7 +83,7 @@ export function DocumentVisualCard({
   const label = status ?? (fileName ? "Uploaded" : required ? "Required" : "Optional");
 
   return (
-    <article id={id} className={`document-visual-card group relative overflow-hidden rounded-[18px] border shadow-[0_16px_38px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_52px_rgba(15,23,42,0.09)] ${toneClasses[resolvedTone]} ${muted ? "opacity-50 hover:opacity-80" : "opacity-100"}`}>
+    <article id={id} data-document-type={type} className={`document-visual-card group relative overflow-hidden rounded-[18px] border shadow-[0_16px_38px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_52px_rgba(15,23,42,0.09)] ${toneClasses[resolvedTone]} ${muted ? "opacity-50 hover:opacity-80" : "opacity-100"}`}>
       {clickTargetId ? <label htmlFor={clickTargetId} className="absolute inset-0 z-10 cursor-pointer" aria-label={`Upload ${title}`} /> : null}
       <div className={`relative overflow-hidden bg-white ${compact ? "h-40" : "h-72"}`}>
         <Image
