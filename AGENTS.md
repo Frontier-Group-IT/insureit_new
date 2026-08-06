@@ -8,12 +8,13 @@ Before doing any work in this repository, read all of the following:
 - `docs/CURRENT_CHAT_HANDOFF.md`
 - `docs/ICALL_AWS_GATEWAY_HANDOFF.md`
 - `docs/AUTHBRIDGE_RC_HANDOFF.md`
+- `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md`
 
 Do this at the beginning of every new ChatGPT/Codex session connected to the repository. Do not ask the user to repeat information already recorded in those files.
 
-Treat `docs/INSUREIT_PROJECT_CONTEXT.md` as the durable technical and business-rule source of truth. Treat `docs/CURRENT_CHAT_HANDOFF.md` as the current conversation continuation state, including active audit findings, selected work, implementation boundaries, and unresolved risks. Treat `docs/ICALL_AWS_GATEWAY_HANDOFF.md` as the source of truth for the iCall APIs, AWS Lightsail fixed-IP gateway, Vercel environment, SSO/iframe integration, CSP history, cookie issue, verified state, and immediate continuation steps. Treat `docs/AUTHBRIDGE_RC_HANDOFF.md` as the source of truth for AuthBridge Detailed RC service 372, its three-step encryption/lookup/decryption contract, AWS gateway route, verified UAT state, security incident, and Policy Onboarding vehicle-registration continuation work.
+Treat `docs/INSUREIT_PROJECT_CONTEXT.md` as the durable technical and business-rule source of truth. Treat `docs/CURRENT_CHAT_HANDOFF.md` as the current conversation continuation state, including active audit findings, selected work, implementation boundaries, and unresolved risks. Treat `docs/ICALL_AWS_GATEWAY_HANDOFF.md` as the source of truth for the iCall APIs, AWS Lightsail fixed-IP gateway, Vercel environment, SSO/iframe integration, CSP history, cookie issue, verified state, and immediate continuation steps. Treat `docs/AUTHBRIDGE_RC_HANDOFF.md` as the source of truth for AuthBridge Detailed RC service 372, its three-step encryption/lookup/decryption contract, AWS gateway route, verified UAT state, security incident, and Policy Onboarding vehicle-registration continuation work. Treat `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md` as the source of truth for policy OCR scope, Google Document AI, Vercel OIDC federation, insurer parsers, test evidence, deployment state, and continuation steps.
 
-Update the durable project context after material workflow, schema, constraint, migration or architecture changes. Update or consolidate the current chat handoff after active work is materially implemented, blocked or verified. Update the iCall gateway handoff after material iCall API, gateway, domain, IP allowlist, CSP, cookie, SSO, iframe, UAT or production changes. Update the AuthBridge handoff after material provider-contract, gateway, field-mapping, Policy Onboarding, UAT, credential, security, or production changes.
+Update the durable project context after material workflow, schema, constraint, migration or architecture changes. Update or consolidate the current chat handoff after active work is materially implemented, blocked or verified. Update the iCall gateway handoff after material iCall API, gateway, domain, IP allowlist, CSP, cookie, SSO, iframe, UAT or production changes. Update the AuthBridge handoff after material provider-contract, gateway, field-mapping, Policy Onboarding, UAT, credential, security, or production changes. Update the policy OCR handoff after material changes to Google authentication, OCR providers, insurer detection/parsers, Section 03 mapping, testing, deployment, privacy controls, or production verification.
 
 Never store secrets, API keys, passwords, tokens, cookies, private keys, full sensitive identity values or MCP credentials in repository context files.
 
@@ -82,6 +83,7 @@ Do not preserve a long failure chronology. Do not state “no changes were made�
 - `docs/CURRENT_CHAT_HANDOFF.md` — only the active continuation state needed by the next session. Rewrite/consolidate stale sections instead of continuously appending.
 - `docs/ICALL_AWS_GATEWAY_HANDOFF.md` — iCall/gateway-specific verified state, blockers and continuation actions.
 - `docs/AUTHBRIDGE_RC_HANDOFF.md` — AuthBridge Detailed RC provider contract, gateway state, Policy Onboarding integration boundaries, security requirements and verification evidence.
+- `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md` — Policy OCR scope, Google/Vercel identity configuration, insurer parser architecture, test evidence, deployment state, durable lessons and continuation actions.
 - `docs/PRODUCTION_READINESS_AUDIT.md` — current source-backed production risks and remediation order.
 - `docs/PRODUCTION_RELEASE_CHECKLIST.md` — reusable evidence-based release gates.
 
@@ -109,6 +111,33 @@ If the answer to either of the first two questions is no, do not save it.
 - A successful GitHub Actions hook request proves only that Vercel accepted the request. Check the Vercel build/deployment result before claiming production success.
 - A committed migration is not proof that it has been applied in Supabase.
 - Do not claim build, deployment, migration or live workflow success without direct evidence.
+
+## Policy OCR and Google Document AI protocol
+
+When modifying Policy Onboarding OCR, insurer-specific extraction, Google Document AI, Vercel OIDC federation, the policy review modal, or Section 03 field application, read and follow:
+
+- `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md`
+- `apps/web-portal/app/policies/policy-ocr-actions.ts`
+- `apps/web-portal/lib/policy-ocr-parsers.ts`
+- `apps/web-portal/components/policy-ocr-import-panel.tsx`
+
+Mandatory safeguards:
+
+- Google Document AI is the OCR/text-reading layer only. Insurer detection and field interpretation remain in the INSUREIT backend.
+- Keep all Google token exchange, service-account impersonation and Document AI calls server-side. Never expose OIDC tokens, Google access tokens or credentials to the browser.
+- Do not create a service-account JSON key unless an explicit security-approved architecture change requires it. Production uses Vercel OIDC Workload Identity Federation and short-lived credentials.
+- OCR may propose only the approved Policy Onboarding Section 03 fields. Never populate customer, insured, owner, vehicle identification, registration, chassis, engine, address, phone, PAN, GST or similar identity fields from the policy document.
+- Maintain review-before-apply behavior. Never silently overwrite manual or saved form data.
+- Printed net premium, GST and gross premium are comparison-only values unless the product schema is explicitly changed.
+- Before claiming support for a new insurer/policy type, obtain representative samples, define an approved mapping, add parser evidence/confidence behavior, and create regression tests.
+- Do not force incompatible products such as United India CPM into motor OD/TP/CPA fields without an approved schema decision.
+- When a parser misses a field, inspect sanitized OCR output from the actual format first. Do not make broad regex changes based on guesses.
+- Do not log or commit raw OCR text, complete policy documents, policyholder PII, vehicle identifiers, credentials or tokens.
+- Keep the 15 MB application file limit and supported MIME checks unless a reviewed capacity/security decision changes them.
+- Preserve local PaddleOCR only as a development/comparison tool unless production fallback is explicitly reintroduced.
+- Run typecheck, lint, build and parser regression tests before merge. Warnings must be reviewed; a successful build is not proof of a successful live OCR journey.
+- Do not remove legacy OCR environment variables until Google OCR has been directly verified in production with the supported Digit, IFFCO-Tokio and New India samples.
+- A queued workflow, deploy-hook acceptance or `Ready` build alone is not full verification. Confirm the exact deployed commit and complete the authenticated live upload/review/apply journey.
 
 ## AuthBridge Detailed RC integration protocol
 
