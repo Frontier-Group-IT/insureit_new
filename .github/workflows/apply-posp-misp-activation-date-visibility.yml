@@ -1,0 +1,60 @@
+name: Apply POSP MISP activation date visibility fix
+
+on:
+  push:
+    branches:
+      - fix/posp-misp-activation-date-visibility-20260806
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/posp-misp-activation-date-visibility-20260806
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Patch review header activation date logic
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('apps/web-portal/app/intermediaries/applications/[id]/page.tsx')
+          text = path.read_text()
+
+          old = '''  const onboardingComplete = isPartner ? activePartner : application.registration_status === "iib_registered" || Boolean(profile.iib_uploaded || profile.iib_uploaded_at);\n  const returnPath = `/intermediaries/applications/${id}`;'''
+          new = '''  const onboardingComplete = isPartner ? activePartner : application.registration_status === "iib_registered" || Boolean(profile.iib_uploaded || profile.iib_uploaded_at);\n  const accountActivated = isPartner ? activePartner : application.registration_status === "iib_registered";\n  const returnPath = `/intermediaries/applications/${id}`;'''
+          if old not in text:
+              raise SystemExit('Could not find onboardingComplete block')
+          text = text.replace(old, new, 1)
+
+          old_stat = '''        { icon: "calendar" as IconName, label: "Activation Date", value: date(intermediary?.activated_at) },'''
+          new_stat = '''        { icon: "calendar" as IconName, label: "Activation Date", value: accountActivated ? date(intermediary?.activated_at) : "-" },'''
+          if old_stat not in text:
+              raise SystemExit('Could not find child activation date stat')
+          text = text.replace(old_stat, new_stat, 1)
+
+          path.write_text(text)
+          PY
+
+      - name: Verify focused behavior
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('apps/web-portal/app/intermediaries/applications/[id]/page.tsx').read_text()
+          assert 'const accountActivated = isPartner ? activePartner : application.registration_status === "iib_registered";' in text
+          assert 'value: accountActivated ? date(intermediary?.activated_at) : "-"' in text
+          PY
+
+      - name: Remove temporary workflow and commit
+        run: |
+          rm .github/workflows/apply-posp-misp-activation-date-visibility.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal/app/intermediaries/applications/'[id]'/page.tsx .github/workflows/apply-posp-misp-activation-date-visibility.yml
+          git commit -m "Hide activation date until POSP or MISP is active"
+          git push origin HEAD:fix/posp-misp-activation-date-visibility-20260806
