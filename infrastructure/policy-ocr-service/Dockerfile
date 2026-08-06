@@ -13,7 +13,8 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py ./
 COPY app_runtime.py ./
+COPY app_runtime_v2.py ./
 COPY tests ./tests
 
 EXPOSE 8000
-CMD ["uvicorn", "app_runtime:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app_runtime_v2:app", "--host", "0.0.0.0", "--port", "8000"]
