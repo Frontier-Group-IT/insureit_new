@@ -29,8 +29,7 @@ type PanelState = {
   marginPercent: number | null;
   marginTone: "neutral" | "healthy" | "warning" | "danger";
 };
-
-type Position = { left: number; width: number; top: number; maxHeight: number };
+type Position = { left: number; width: number; top: number; height: number };
 
 const SECTION_LABELS = ["Source", "Customer", "Premium", "Pay-in", "Payout"];
 const SECTION_TITLES = [
@@ -45,22 +44,18 @@ const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR
 function normalize(value: string | null | undefined) {
   return (value ?? "").trim();
 }
-
 function controlForLabel(root: ParentNode, labelText: string) {
   const labels = Array.from(root.querySelectorAll("label"));
   const label = labels.find((item) => item.textContent?.trim().toLowerCase().startsWith(labelText.toLowerCase()));
   return label?.parentElement?.querySelector("input,select,textarea") as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null;
 }
-
 function valueFor(root: ParentNode, labelText: string) {
   return normalize(controlForLabel(root, labelText)?.value);
 }
-
 function numberFor(root: ParentNode, labelText: string) {
   const parsed = Number(valueFor(root, labelText).replace(/[^0-9.-]/g, ""));
   return Number.isFinite(parsed) ? parsed : 0;
 }
-
 function sectionElements(root: HTMLElement) {
   return SECTION_TITLES.map((title, index) => {
     const heading = Array.from(root.querySelectorAll("h2")).find((item) => item.textContent?.trim() === title);
@@ -69,7 +64,6 @@ function sectionElements(root: HTMLElement) {
     return section;
   });
 }
-
 function hideLegacySummary() {
   for (const node of Array.from(document.querySelectorAll("p"))) {
     if (node.textContent?.trim().toLowerCase() !== "live summary") continue;
@@ -110,7 +104,6 @@ function calculate(root: HTMLElement): PanelState {
   const mandatoryTotal = 14;
   const mandatoryRemaining = sourceMissing.length + vehicleMissing.length + premiumMissing.length;
   const completion = Math.max(0, Math.min(100, Math.round(((mandatoryTotal - mandatoryRemaining) / mandatoryTotal) * 100)));
-
   const od = numberFor(root, "OD premium");
   const tp = numberFor(root, "Third party premium");
   const cpaOpted = valueFor(root, "CPA opted").toLowerCase() !== "no";
@@ -142,29 +135,7 @@ function calculate(root: HTMLElement): PanelState {
   if (grossPremium <= 0 && (policyProduct || policyNumber)) alerts.push({ section: 2, tone: "warning", text: "Gross premium is zero" });
   if (partnerPayout > payinAfterTds && partnerPayout > 0) alerts.unshift({ section: 4, tone: "error", text: "Payout exceeds pay-in" });
 
-  return {
-    completion,
-    ready: mandatoryRemaining === 0 && !(validFrom && validUpto && validUpto < validFrom),
-    mandatoryRemaining,
-    sections,
-    alerts,
-    rcState,
-    rcTone,
-    netPremium,
-    gst,
-    grossPremium,
-    projectedOd,
-    projectedTp,
-    scheme,
-    totalPayin,
-    tds,
-    payinAfterTds,
-    retention,
-    partnerPayout,
-    margin,
-    marginPercent,
-    marginTone,
-  };
+  return { completion, ready: mandatoryRemaining === 0 && !(validFrom && validUpto && validUpto < validFrom), mandatoryRemaining, sections, alerts, rcState, rcTone, netPremium, gst, grossPremium, projectedOd, projectedTp, scheme, totalPayin, tds, payinAfterTds, retention, partnerPayout, margin, marginPercent, marginTone };
 }
 
 export function PolicyOnboardingIntelligence() {
@@ -172,26 +143,21 @@ export function PolicyOnboardingIntelligence() {
   const [position, setPosition] = useState<Position | null>(null);
 
   useEffect(() => {
-    let root: HTMLElement | null = null;
-    let aside: HTMLElement | null = null;
-    let sourceSection: HTMLElement | null = null;
     let grid: HTMLElement | null = null;
     let frame = 0;
-
     const refresh = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         const heading = Array.from(document.querySelectorAll("h1")).find((item) => item.textContent?.trim() === "Policy Onboarding");
-        root = heading?.closest(".mx-auto") as HTMLElement | null;
+        const root = heading?.closest(".mx-auto") as HTMLElement | null;
         if (!root) return;
-        const sections = sectionElements(root);
-        sourceSection = sections[0];
-        aside = root.querySelector("aside") as HTMLElement | null;
+        sectionElements(root);
+        const aside = root.querySelector("aside") as HTMLElement | null;
         grid = aside?.parentElement as HTMLElement | null;
         hideLegacySummary();
         setState(calculate(root));
 
-        if (window.innerWidth < 1280 || !aside || !sourceSection) {
+        if (window.innerWidth < 1280 || !aside) {
           if (grid) grid.style.removeProperty("grid-template-columns");
           setPosition(null);
           return;
@@ -199,12 +165,12 @@ export function PolicyOnboardingIntelligence() {
 
         if (grid) grid.style.gridTemplateColumns = "minmax(0, 1fr) 390px";
         const rect = aside.getBoundingClientRect();
-        const safeTop = 172;
+        const top = 112;
         const actionBar = Array.from(document.querySelectorAll("div.fixed.bottom-0"))[0] as HTMLElement | undefined;
-        const actionBarTop = actionBar?.getBoundingClientRect().top ?? window.innerHeight - 64;
-        const top = Math.max(sourceSection.getBoundingClientRect().top, safeTop);
-        const maxHeight = Math.max(420, actionBarTop - top - 12);
-        setPosition({ left: rect.left, width: rect.width, top, maxHeight });
+        const actionBarTop = actionBar?.getBoundingClientRect().top ?? window.innerHeight - 58;
+        const availableHeight = Math.max(440, actionBarTop - top - 16);
+        const height = Math.min(520, availableHeight);
+        setPosition({ left: rect.left, width: rect.width, top, height });
       });
     };
 
@@ -235,7 +201,7 @@ export function PolicyOnboardingIntelligence() {
 
   if (!state || !position || typeof document === "undefined") return null;
   return createPortal(
-    <div className="fixed z-30" style={{ left: position.left, width: position.width, top: position.top, maxHeight: position.maxHeight }}>
+    <div className="fixed z-30" style={{ left: position.left, width: position.width, top: position.top, height: position.height }}>
       <IntelligenceCard state={state} onNavigate={navigate} />
     </div>,
     document.body,
@@ -244,38 +210,25 @@ export function PolicyOnboardingIntelligence() {
 
 function IntelligenceCard({ state, onNavigate }: { state: PanelState; onNavigate: (index: number) => void }) {
   const marginText = state.marginTone === "healthy" ? "text-emerald-700" : state.marginTone === "warning" ? "text-amber-700" : state.marginTone === "danger" ? "text-red-700" : "text-slate-500";
-  const visibleAlerts = state.alerts.slice(0, 3);
-
-  return <div className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-[0_14px_38px_rgba(15,23,42,.12)]">
-    <div className="border-b bg-[linear-gradient(135deg,#F8FAFF,#EEF4FB)] px-4 py-3">
-      <div className="flex items-start justify-between gap-3">
-        <div><p className="text-[7.5px] font-bold uppercase tracking-[.14em] text-[#4F46E5]">Policy intelligence</p><h3 className="mt-0.5 text-[13px] font-bold text-[#102A4C]">Booking control centre</h3></div>
-        <span className={`rounded-full px-2.5 py-1 text-[7.5px] font-bold ${state.ready ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{state.ready ? "✓ Ready" : "● In progress"}</span>
-      </div>
-      <div className="mt-3 flex items-center gap-3"><strong className="text-[20px] text-[#17365D]">{state.completion}%</strong><div className="h-2 flex-1 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-[linear-gradient(90deg,#4F46E5,#14B8A6)]" style={{ width: `${state.completion}%` }} /></div><span className="text-[8px] font-semibold text-[#667085]">{state.mandatoryRemaining} left</span></div>
+  const visibleAlerts = state.alerts.slice(0, 2);
+  return <div className="h-full overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-[0_14px_38px_rgba(15,23,42,.12)]">
+    <div className="border-b bg-[linear-gradient(135deg,#F8FAFF,#EEF4FB)] px-4 py-2.5">
+      <div className="flex items-start justify-between gap-3"><div><p className="text-[7px] font-bold uppercase tracking-[.14em] text-[#4F46E5]">Policy intelligence</p><h3 className="mt-0.5 text-[12.5px] font-bold text-[#102A4C]">Booking control centre</h3></div><span className={`rounded-full px-2 py-1 text-[7px] font-bold ${state.ready ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{state.ready ? "✓ Ready" : "● In progress"}</span></div>
+      <div className="mt-2 flex items-center gap-2.5"><strong className="text-[18px] text-[#17365D]">{state.completion}%</strong><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-[linear-gradient(90deg,#4F46E5,#14B8A6)]" style={{ width: `${state.completion}%` }} /></div><span className="text-[7.5px] font-semibold text-[#667085]">{state.mandatoryRemaining} left</span></div>
     </div>
 
-    <div className="px-4 py-3">
-      <div className="flex items-start justify-between gap-1 border-b border-[#E8EDF4] pb-3">
-        {state.sections.map((section, index) => {
-          const complete = section.missing.length === 0;
-          return <button key={section.label} type="button" onClick={() => onNavigate(index)} className="group flex min-w-0 flex-1 flex-col items-center gap-1 text-center">
-            <span className={`grid h-6 w-6 place-items-center rounded-full border text-[8px] font-bold ${complete ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}>{complete ? "✓" : section.missing.length}</span>
-            <span className="truncate text-[7.5px] font-semibold text-[#667085] group-hover:text-[#17365D]">{section.label}</span>
-          </button>;
-        })}
+    <div className="px-4 py-2.5">
+      <div className="flex items-start justify-between gap-1 border-b border-[#E8EDF4] pb-2">
+        {state.sections.map((section, index) => { const complete = section.missing.length === 0; return <button key={section.label} type="button" onClick={() => onNavigate(index)} className="group flex min-w-0 flex-1 flex-col items-center gap-0.5 text-center"><span className={`grid h-5 w-5 place-items-center rounded-full border text-[7px] font-bold ${complete ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}>{complete ? "✓" : section.missing.length}</span><span className="truncate text-[7px] font-semibold text-[#667085] group-hover:text-[#17365D]">{section.label}</span></button>; })}
       </div>
 
-      <div className="border-b border-[#E8EDF4] py-3">
-        <div className="flex items-center justify-between"><p className="text-[7.5px] font-bold uppercase tracking-[.12em] text-[#52749E]">Attention</p><StatusPill value={state.rcState} tone={state.rcTone} /></div>
-        <div className="mt-2 space-y-1.5">
-          {visibleAlerts.length ? visibleAlerts.map((alert, index) => <button key={`${alert.text}-${index}`} type="button" onClick={() => onNavigate(alert.section)} className="flex w-full items-center gap-2 text-left"><span className={`h-1.5 w-1.5 shrink-0 rounded-full ${alert.tone === "error" ? "bg-red-500" : alert.tone === "warning" ? "bg-amber-500" : "bg-blue-500"}`} /><span className="truncate text-[8.5px] font-medium text-[#475467]">{alert.text}</span></button>) : <p className="text-[8.5px] font-semibold text-emerald-700">✓ No blocking items</p>}
-          {state.alerts.length > visibleAlerts.length ? <p className="pl-3.5 text-[7.5px] text-[#98A2B3]">+{state.alerts.length - visibleAlerts.length} more</p> : null}
-        </div>
+      <div className="border-b border-[#E8EDF4] py-2">
+        <div className="flex items-center justify-between"><p className="text-[7px] font-bold uppercase tracking-[.12em] text-[#52749E]">Attention</p><StatusPill value={state.rcState} tone={state.rcTone} /></div>
+        <div className="mt-1.5 space-y-1">{visibleAlerts.length ? visibleAlerts.map((alert, index) => <button key={`${alert.text}-${index}`} type="button" onClick={() => onNavigate(alert.section)} className="flex w-full items-center gap-2 text-left"><span className={`h-1.5 w-1.5 shrink-0 rounded-full ${alert.tone === "error" ? "bg-red-500" : alert.tone === "warning" ? "bg-amber-500" : "bg-blue-500"}`} /><span className="truncate text-[8px] font-medium text-[#475467]">{alert.text}</span></button>) : <p className="text-[8px] font-semibold text-emerald-700">✓ No blocking items</p>}{state.alerts.length > visibleAlerts.length ? <p className="pl-3.5 text-[7px] text-[#98A2B3]">+{state.alerts.length - visibleAlerts.length} more</p> : null}</div>
       </div>
 
-      <div className="pt-3">
-        <p className="mb-1.5 text-[7.5px] font-bold uppercase tracking-[.12em] text-[#52749E]">Financial ledger</p>
+      <div className="pt-2">
+        <p className="mb-1 text-[7px] font-bold uppercase tracking-[.12em] text-[#52749E]">Financial ledger</p>
         <LedgerRow label="Net premium" value={money.format(state.netPremium)} />
         <LedgerRow label="GST" value={money.format(state.gst)} muted />
         <LedgerRow label="Gross premium" value={money.format(state.grossPremium)} strong />
@@ -297,13 +250,9 @@ function IntelligenceCard({ state, onNavigate }: { state: PanelState; onNavigate
 
 function StatusPill({ value, tone }: { value: string; tone: "success" | "warning" | "neutral" }) {
   const classes = tone === "success" ? "bg-emerald-50 text-emerald-700" : tone === "warning" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600";
-  return <span className={`rounded-full px-2 py-1 text-[7px] font-bold ${classes}`}>{value}</span>;
+  return <span className={`rounded-full px-2 py-1 text-[6.5px] font-bold ${classes}`}>{value}</span>;
 }
-
 function LedgerRow({ label, value, muted, strong, valueClass = "", suffix }: { label: string; value: string; muted?: boolean; strong?: boolean; valueClass?: string; suffix?: string }) {
-  return <div className="flex items-center justify-between gap-3 border-b border-[#F0F3F7] py-1.5 last:border-b-0"><span className={`text-[8.5px] ${muted ? "text-[#98A2B3]" : strong ? "font-bold text-[#344054]" : "text-[#667085]"}`}>{label}</span><span className="flex items-center gap-2"><span className={`text-[9px] ${strong ? "font-bold" : "font-semibold"} ${valueClass || "text-[#102A4C]"}`}>{value}</span>{suffix ? <span className={`min-w-[42px] text-right text-[7.5px] font-bold ${valueClass || "text-[#667085]"}`}>{suffix}</span> : null}</span></div>;
+  return <div className="flex items-center justify-between gap-3 border-b border-[#F0F3F7] py-[3px] last:border-b-0"><span className={`text-[8px] ${muted ? "text-[#98A2B3]" : strong ? "font-bold text-[#344054]" : "text-[#667085]"}`}>{label}</span><span className="flex items-center gap-1.5"><span className={`text-[8.5px] ${strong ? "font-bold" : "font-semibold"} ${valueClass || "text-[#102A4C]"}`}>{value}</span>{suffix ? <span className={`min-w-[40px] text-right text-[7px] font-bold ${valueClass || "text-[#667085]"}`}>{suffix}</span> : null}</span></div>;
 }
-
-function LedgerDivider() {
-  return <div className="my-1 border-t border-dashed border-[#D8E0EA]" />;
-}
+function LedgerDivider() { return <div className="my-0.5 border-t border-dashed border-[#D8E0EA]" />; }
