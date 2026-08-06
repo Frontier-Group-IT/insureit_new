@@ -1,6 +1,7 @@
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { darkActionClassName, primaryActionClassName, secondaryActionClassName } from "@/components/action-styles";
 import { CompactRegistrationForm } from "./compact-registration-form";
+import { RegistrationStepActions } from "./registration-step-actions";
 import { IcallTrainingDashboard, type IcallTrainingAssignment } from "./icall-training-dashboard";
 import { IcallUatPanel } from "./icall-uat-panel";
 import {
@@ -74,7 +75,8 @@ export function TrainingExamStage({ applicationId, profile, assignment, document
     return <section className="rounded-2xl border border-violet-200 bg-violet-50 p-4"><h2 className="text-[12px] font-semibold text-violet-900">Business Associate onboarding</h2><p className="mt-1 text-[9.5px] text-violet-800">Training, examination and IIB registration do not apply.</p></section>;
   }
 
-  const registrationCompleted = documents.length > 0;
+  const signedRegistrationUploaded = documents.some((document) => document.document_type === "signed_registration_form" && Boolean(document.file_name));
+  const registrationCompleted = signedRegistrationUploaded;
   const trainingAssigned = Boolean(assignment?.training_title && assignment.training_url);
   const trainingCompleted = assignment?.training_status === "completed";
   const examAllotted = Boolean(assignment?.exam_title && assignment.exam_url);
@@ -85,8 +87,8 @@ export function TrainingExamStage({ applicationId, profile, assignment, document
   const isIcall = profile.partner_type === "posp" || profile.partner_type === "misp" || Boolean(assignment?.icall_login_id || assignment?.training_title?.startsWith("iCall"));
   return <div id="qualification-process" className="space-y-4 scroll-mt-24">
 
-    <ProcessSection id="registration-requirement" number="3" title="Registration" subtitle="Verified details and documents." state={registrationCompleted ? "completed" : "current"} statusText={registrationCompleted ? "Registration completed" : "Action required"}>
-      {registrationCompleted ? <OutcomeDetails title="Registration outcome" facts={[{ label: "Result", value: "Completed" }, { label: "Documents", value: String(documents.length) }, { label: "PAN check", value: iibVerified ? "Cleared" : "Review required" }, { label: "Completed on", value: formatDateTime(profile.document_received_at) }]}><div className="border-t border-[#E5EAF0] pt-4"><CompactRegistrationForm profile={profile} iibVerified={iibVerified} documents={documents} /></div></OutcomeDetails> : <CompactRegistrationForm profile={profile} iibVerified={iibVerified} documents={documents} />}
+    <ProcessSection id="registration-requirement" number="3" title="Registration" subtitle="Download the generated form and upload the signed copy." state={registrationCompleted ? "completed" : "current"} statusText={registrationCompleted ? "Signed form uploaded" : "Action required"}>
+      {registrationCompleted ? <OutcomeDetails title="Registration outcome" facts={[{ label: "Result", value: "Completed" }, { label: "POSP / MISP ID", value: profile.external_onboarding_id ?? "-" }, { label: "Signed registration form", value: "Uploaded" }, { label: "PAN check", value: iibVerified ? "Cleared" : "Review required" }]} /> : <div className="space-y-4"><CompactRegistrationForm profile={profile} iibVerified={iibVerified} documents={documents} /><RegistrationStepActions applicationId={applicationId} signedUploaded={signedRegistrationUploaded} /></div>}
     </ProcessSection>
 
     {registrationCompleted ? <ProcessSection id="training-requirement" number="4" title={isIcall ? "Training & Examination" : "Training"} subtitle={isIcall ? "Register, track training progress and fetch the final exam result from iCall." : "Assign and track training."} state={isIcall ? (examPassed ? "completed" : "current") : (trainingCompleted ? "completed" : "current")} statusText={isIcall ? (examPassed ? "Training and exam completed" : examFailed ? "Exam failed" : profile.training_login_id ? "Live status" : "Registration required") : (trainingCompleted ? "Training completed" : "Action required")}>
