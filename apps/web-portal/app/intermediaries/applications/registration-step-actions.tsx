@@ -70,9 +70,8 @@ export function RegistrationStepActions({ applicationId, signedUploaded }: Props
     try {
       const data = new FormData();
       data.set("application_id", applicationId);
-      data.set("document_type", "signed_registration_form");
       data.set("file", file, file.name);
-      const response = await fetch("/api/intermediary-documents/upload", { method: "POST", body: data, credentials: "same-origin", cache: "no-store" });
+      const response = await fetch("/api/intermediary-registration/signed", { method: "POST", body: data, credentials: "same-origin", cache: "no-store" });
       const result = await response.json().catch(() => null) as { ok?: boolean; message?: string } | null;
       if (!response.ok || !result?.ok) throw new Error(result?.message || "Signed registration form could not be uploaded.");
       router.refresh();
