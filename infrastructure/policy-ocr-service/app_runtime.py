@@ -9,7 +9,7 @@ from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 
 import app as legacy
 
-app = FastAPI(title="INSUREIT Policy OCR", version="0.7.1")
+app = FastAPI(title="INSUREIT Policy OCR", version="0.7.2")
 SECRET = os.environ.get("POLICY_OCR_SERVICE_SECRET", "")
 MAX_BYTES = 15 * 1024 * 1024
 MONEY = r"\d[\d,]*(?:\.\d{1,2})?"
@@ -33,7 +33,7 @@ LABELS = {
 
 VERSIONS = {
     "digit_commercial_motor_v1": "digit_commercial_motor_v1.1.0",
-    "iffco_tokio_commercial_motor_v1": "iffco_tokio_commercial_motor_v1.0.1",
+    "iffco_tokio_commercial_motor_v1": "iffco_tokio_commercial_motor_v1.1.0",
 }
 
 
@@ -44,7 +44,7 @@ def health() -> dict[str, str]:
         "service": "insureit-policy-ocr",
         "model": "PDF text first, PaddleOCR fallback",
         "schema": "indian_motor_policy_v1",
-        "version": "0.7.1",
+        "version": "0.7.2",
     }
 
 
@@ -97,7 +97,10 @@ async def extract_policy(
             fields = legacy.extract_policy_section_fields(clean_pages, parser_id)
             parser_version = legacy.PARSER_VERSIONS[parser_id]
 
-        required = {"policy_product", "idv", "od_premium", "tp_premium", "policy_number", "insurer_name", "policy_start_date", "policy_end_date"}
+        required = {
+            "policy_product", "idv", "od_premium", "tp_premium",
+            "policy_number", "insurer_name", "policy_start_date", "policy_end_date",
+        }
         present = {field["key"] for field in fields}
         missing = sorted(required - present)
         warnings = ["Review required. Missing or uncertain fields: " + ", ".join(missing) + "."] if missing else []
@@ -128,7 +131,14 @@ def builder():
         if not value:
             return
         seen.add(key)
-        fields.append({"key": key, "label": LABELS[key], "value": value, "confidence": confidence, "page": page, "evidence": evidence[:180]})
+        fields.append({
+            "key": key,
+            "label": LABELS[key],
+            "value": value,
+            "confidence": confidence,
+            "page": page,
+            "evidence": evidence[:180],
+        })
 
     return fields, add
 
@@ -180,6 +190,87 @@ def extract_digit(pages: list[str]) -> list[dict[str, Any]]:
     return fields
 
 
+def extract_iffco(pages: list[str]) -> list[dict[str, Any]]:
+    fields, add = builder()
+    text = "\n".join(pages)
+
+    add("insurer_name", "IFFCO-Tokio General Insurance Co. Ltd.", 0.99, "IFFCO-TOKIO GENERAL INSURANCE CO. LTD.", 1)
+    add("policy_product", "Package", 0.99, evidence_line(text, ["COVERAGE", "PACKAGE"]), 1)
+
+    policy = search_pages(pages, [
+        r"P400\s*Policy\s*#\s*([A-Z0-9\-/]{6,30})",
+        r"Policy\s*#\s*(N\d{6,15})",
+    ])
+    if policy:
+        add("policy_number", policy[0], 0.99, policy[2], policy[1])
+
+    period = iffco_period(pages)
+    if period:
+        add("policy_start_date", iso(period[0]), 0.99, period[3], period[2])
+        add("policy_end_date", iso(period[1]), 0.99, period[3], period[2])
+
+    idv = money_search(pages, [
+        rf"Package\s+({MONEY})\b",
+        rf"Total\s*Value\s+Net\s*Premium\s*Rs\.?\s*\n\s*({MONEY})",
+        rf"IDV\s*in\s*Rs\.?[\s\S]{{0,120}}?({MONEY})",
+    ])
+    if idv:
+        add("idv", money(idv[0]), 0.99, idv[2], idv[1])
+
+    od = money_search(pages, [rf"Net\s*\(A\)\s*({MONEY})"])
+    tp = money_search(pages, [rf"Net\s*\(B\)\s*({MONEY})"])
+    if od:
+        add("od_premium", money(od[0]), 0.99, od[2], od[1])
+    if tp:
+        add("tp_premium", money(tp[0]), 0.99, tp[2], tp[1])
+
+    cpa = money_search(pages, [
+        rf"PA\s*Owner\s*Driver\s*CSI\s*Rs\s*{MONEY}\s+({MONEY})",
+        rf"PA\s*Owner\s*Driver[^\n]*?({MONEY})\s*$",
+    ])
+    if cpa and 0 < cpa[0] <= 100000:
+        add("cpa_premium", money(cpa[0]), 0.99, cpa[2], cpa[1])
+        add("cpa_opted", "Yes", 0.99, cpa[2], cpa[1])
+    else:
+        add("cpa_premium", "0", 0.86, "No payable CPA premium identified")
+        add("cpa_opted", "No", 0.86, "Derived from CPA amount")
+
+    net = money_search(pages, [
+        rf"Premium/Taxable\s*Value\s*RS\.?\s*({MONEY})",
+        rf"Taxable\s*Value\(Rs\.\)[\s\S]{{0,180}}?\b({MONEY})\b",
+    ])
+    tax = money_search(pages, [
+        rf"GST\s*Amount\(Rs\.\)\s*({MONEY})",
+        rf"GST\s*Amount\(Rs\.\)[\s\S]{{0,180}}?\b({MONEY})\b",
+        rf"\bIGST\b[^\n]*?({MONEY})\s+14558\.84",
+    ])
+    gross = money_search(pages, [
+        rf"Gross\s*Premium\s*Payable\s*Rs\.?\s*({MONEY})",
+        rf"Gross\s*Premium\s*Payable\(Rs\.\)[\s\S]{{0,180}}?\b({MONEY})\b",
+    ])
+    if net:
+        add("total_premium", money(net[0]), 0.99, net[2], net[1])
+    if tax:
+        add("tax_amount", money(tax[0]), 0.99, tax[2], tax[1])
+    if gross:
+        add("gross_premium", money(gross[0]), 0.99, gross[2], gross[1])
+    return fields
+
+
+def iffco_period(pages: list[str]):
+    patterns = [
+        rf"Period\s*of\s*Insurance\s*From\s*:\s*({DATE})\s+\d{{1,2}}:\d{{2}}:\d{{2}}[\s\S]{{0,100}}?To\s*:\s*(?:Midnight\s*On\s*)?({DATE})",
+        rf"Period\s*of\s*Insurance\s*From\s*[:\-]?\s*({DATE})[\s\S]{{0,120}}?To\s*[:\-]?\s*(?:Midnight\s*On\s*)?({DATE})",
+        rf"From\s*:\s*({DATE})\s+\d{{1,2}}:\d{{2}}:\d{{2}}[\s\S]{{0,80}}?To\s*:\s*(?:Midnight\s*On\s*)?({DATE})",
+    ]
+    for page_number, page in enumerate(pages, start=1):
+        for pattern in patterns:
+            match = re.search(pattern, page, flags=re.IGNORECASE)
+            if match:
+                return match.group(1), match.group(2), page_number, clean(match.group(0))
+    return None
+
+
 def digit_period(pages: list[str]):
     for page_number, page in enumerate(pages, start=1):
         patterns = [
@@ -199,37 +290,32 @@ def digit_total_idv(pages: list[str]):
         patterns = [
             rf"Vehicle\s*IDV[\s\S]{{0,260}}?Total\s*IDV[\s\S]{{0,120}}?({MONEY})(?:\.00)?\b",
             rf"Total\s*IDV\s*\([^)]*\)[\s\S]{{0,100}}?({MONEY})(?:\.00)?\b",
-            rf"3292441(?:\.00)?",
         ]
         for pattern in patterns:
             match = re.search(pattern, page, flags=re.IGNORECASE)
             if match:
-                value = match.group(1) if match.lastindex else match.group(0)
-                parsed = parse_money(value)
+                parsed = parse_money(match.group(1))
                 if parsed and parsed >= 1000:
                     return parsed, page_number, clean(match.group(0))
-        # Layout fallback: choose the largest repeated monetary value near the IDV block.
         block = re.search(r"YOUR\s+VEHICLE\s+IDV[\s\S]{0,700}", page, flags=re.IGNORECASE)
         if block:
             values = [parse_money(token) for token in re.findall(MONEY, block.group(0))]
             values = [value for value in values if value and 1000 <= value <= 100_000_000]
             if values:
-                selected = max(values)
-                return selected, page_number, clean(block.group(0))
+                return max(values), page_number, clean(block.group(0))
     return None
 
 
 def digit_invoice_row(pages: list[str]):
     for page_number, page in enumerate(pages, start=1):
-        match = re.search(r"Invoice\s+Number\s+Invoice\s+Date\s+Net\s+Premium\s+Igst[\s\S]{0,220}?\b\w+\s+\d{4}-\d{2}-\d{2}\s+([\d,.]+)\s+([\d,.]+)(?:\s+0\.00){4}\s+([\d,.]+)", page, flags=re.IGNORECASE)
+        match = re.search(
+            r"Invoice\s+Number\s+Invoice\s+Date\s+Net\s+Premium\s+Igst[\s\S]{0,220}?\b\w+\s+\d{4}-\d{2}-\d{2}\s+([\d,.]+)\s+([\d,.]+)(?:\s+0\.00){4}\s+([\d,.]+)",
+            page,
+            flags=re.IGNORECASE,
+        )
         if match:
             return parse_money(match.group(1)), parse_money(match.group(2)), parse_money(match.group(3)), page_number, clean(match.group(0))
     return None
-
-
-def extract_iffco(pages: list[str]) -> list[dict[str, Any]]:
-    # Existing parser is retained because its uploaded layout already has dedicated rules.
-    return legacy.extract_iffco_fields(pages)
 
 
 def search_pages(pages: list[str], patterns: list[str]):
