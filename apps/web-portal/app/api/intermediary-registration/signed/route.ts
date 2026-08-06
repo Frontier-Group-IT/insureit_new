@@ -7,6 +7,34 @@ const DOCUMENT_BUCKET = "customer-documents";
 const MAX_FILE_SIZE = 4 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 
+export async function GET(request: Request) {
+  const applicationId = new URL(request.url).searchParams.get("application_id")?.trim();
+  if (!applicationId) return NextResponse.json({ ok: false, message: "Application ID is required." }, { status: 400 });
+
+  const reviewer = await getScopedPospMispManager(applicationId);
+  if (!reviewer?.id) return NextResponse.json({ ok: false, message: "This application is outside your permitted scope." }, { status: 403 });
+
+  const admin = createSupabaseAdminClient();
+  const { data: document } = await admin
+    .from("intermediary_onboarding_documents")
+    .select("file_name,storage_bucket,storage_path,verification_status,created_at")
+    .eq("application_id", applicationId)
+    .eq("document_type", "signed_registration_form")
+    .maybeSingle<{ file_name: string; storage_bucket: string; storage_path: string; verification_status: string; created_at: string }>();
+
+  if (!document) return NextResponse.json({ ok: true, document: null }, { headers: { "Cache-Control": "no-store" } });
+  const { data: signed } = await admin.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 900);
+  return NextResponse.json({
+    ok: true,
+    document: {
+      file_name: document.file_name,
+      verification_status: document.verification_status,
+      created_at: document.created_at,
+      signed_url: signed?.signedUrl ?? null,
+    },
+  }, { headers: { "Cache-Control": "no-store" } });
+}
+
 export async function POST(request: Request) {
   const data = await request.formData();
   const applicationId = text(data, "application_id");
