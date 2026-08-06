@@ -1,0 +1,37 @@
+name: Validate register filter polish
+
+on:
+  push:
+    branches:
+      - feature/register-filter-polish
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/register-filter-polish
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: python .github/scripts/polish_register_filters.py
+      - run: npm ci
+      - run: npm run typecheck:web
+      - run: npm run build:web
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+          SUPABASE_SERVICE_ROLE_KEY: placeholder
+      - name: Commit implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal/app/intermediaries/structured-account-register.tsx apps/web-portal/app/intermediaries/intermediary-register.tsx apps/web-portal/app/intermediaries/posp/page.tsx apps/web-portal/app/intermediaries/misp/page.tsx
+          git commit -m "Polish intermediary register filters and spacing"
+          git push origin HEAD:feature/register-filter-polish
