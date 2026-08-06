@@ -18,9 +18,10 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: python .github/scripts/redesign_compact_registers.py
+      - run: python .github/scripts/fix_compact_register_typecheck.py
       - run: npm ci
       - run: npm run typecheck:web
       - run: npm run build:web
