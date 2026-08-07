@@ -28,7 +28,16 @@ type PremiumRow = { od_premium: number | null; tp_premium: number | null; cpa_op
 type PayinRow = { payout_basis: string | null; projected_od_percent: number | null; projected_tp_percent: number | null; insurer_scheme_amount: number | null };
 type PayoutRow = { retention_amount: number | null; od_payout_percent: number | null; tp_payout_percent: number | null; status: string | null; payout_date: string | null; voucher_number: string | null };
 type InsurerOption = { id: string; name: string; is_active: boolean };
-type IntermediaryOption = { id: string; intermediary_type: "posp" | "misp" | "partner"; display_name: string; intermediary_code: string | null };
+type IntermediaryOption = {
+  id: string;
+  intermediary_type: "posp" | "misp" | "partner";
+  display_name: string;
+  intermediary_code: string | null;
+  associate_employee_id: string | null;
+  application_id: string | null;
+};
+type ApplicationPartnerRow = { id: string; partner_record_id: string | null };
+type PartnerAssociateRow = { partner_record_id: string | null; associate_employee_id: string | null; created_at: string };
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -65,12 +74,57 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     admin.from("insurance_companies").select("id,name,is_active").eq("is_active", true).order("name", { ascending: true }).returns<InsurerOption[]>(),
     admin.from("insurance_companies").select("id,name,is_active").eq("id", policy.insurance_company_id).maybeSingle<InsurerOption>(),
     loadPospMispAssociates(admin),
-    admin.from("intermediaries").select("id,intermediary_type,display_name,intermediary_code").in("intermediary_type", ["posp","misp","partner"]).eq("account_status", "active").order("display_name", { ascending: true }).returns<IntermediaryOption[]>(),
+    admin.from("intermediaries")
+      .select("id,intermediary_type,display_name,intermediary_code,associate_employee_id,application_id")
+      .in("intermediary_type", ["posp","misp","partner"])
+      .eq("account_status", "active")
+      .order("display_name", { ascending: true })
+      .returns<IntermediaryOption[]>(),
   ]);
 
   const errors = [customerResult.error, vehicleResult.error, premiumResult.error, payinResult.error, payoutResult.error, activeInsurersResult.error, currentInsurerResult.error, intermediariesResult.error].filter(Boolean);
   if (errors.length) throw new Error(`Unable to load policy edit data: ${errors[0]?.message}`);
   if (!customerResult.data || !vehicleResult.data) throw new Error("The linked customer or vehicle record is missing.");
+
+  const intermediaryRows = intermediariesResult.data ?? [];
+  const partnerApplicationIds = intermediaryRows
+    .filter((item) => item.intermediary_type === "partner" && !item.associate_employee_id && item.application_id)
+    .map((item) => item.application_id!)
+    .filter((value, index, values) => values.indexOf(value) === index);
+
+  const partnerApplicationsResult = partnerApplicationIds.length
+    ? await admin
+      .from("intermediary_onboarding_applications")
+      .select("id,partner_record_id")
+      .in("id", partnerApplicationIds)
+      .returns<ApplicationPartnerRow[]>()
+    : { data: [] as ApplicationPartnerRow[], error: null };
+  if (partnerApplicationsResult.error) throw new Error(`Unable to resolve partner RM linkage: ${partnerApplicationsResult.error.message}`);
+
+  const partnerRecordByApplication = new Map(
+    (partnerApplicationsResult.data ?? [])
+      .filter((row) => row.partner_record_id)
+      .map((row) => [row.id, row.partner_record_id!])
+  );
+  const partnerRecordIds = Array.from(new Set(partnerRecordByApplication.values()));
+
+  const partnerAssociatesResult = partnerRecordIds.length
+    ? await admin
+      .from("posp_misp_onboarding_profiles")
+      .select("partner_record_id,associate_employee_id,created_at")
+      .in("partner_record_id", partnerRecordIds)
+      .not("associate_employee_id", "is", null)
+      .order("created_at", { ascending: false })
+      .returns<PartnerAssociateRow[]>()
+    : { data: [] as PartnerAssociateRow[], error: null };
+  if (partnerAssociatesResult.error) throw new Error(`Unable to resolve partner RM assignment: ${partnerAssociatesResult.error.message}`);
+
+  const associateByPartnerRecord = new Map<string, string>();
+  for (const row of partnerAssociatesResult.data ?? []) {
+    if (row.partner_record_id && row.associate_employee_id && !associateByPartnerRecord.has(row.partner_record_id)) {
+      associateByPartnerRecord.set(row.partner_record_id, row.associate_employee_id);
+    }
+  }
 
   const customer = customerResult.data;
   const vehicle = vehicleResult.data;
@@ -84,19 +138,42 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
   if (currentInsurerResult.data) insurerById.set(currentInsurerResult.data.id, currentInsurerResult.data);
   const insurerOptions = Array.from(insurerById.values()).sort((a,b)=>a.name.localeCompare(b.name)).map((insurer)=>({ value: insurer.id, label: insurer.is_active ? insurer.name : `${insurer.name} — Inactive` }));
 
+  const employeeById = new Map(salesEmployees.map((employee) => [employee.id, employee]));
   const rmOptions = salesEmployees.map((employee) => {
     const name = employee.full_name?.trim() || "Unnamed Sales Employee";
     return { value: name, label: employee.employee_code ? `${name} - ${employee.employee_code}` : name };
   });
   if (policy.rm_name && !rmOptions.some((item)=>item.value === policy.rm_name)) rmOptions.push({ value: policy.rm_name, label: `${policy.rm_name} · Saved value` });
 
-  const sourceOptions = (intermediariesResult.data ?? []).filter((item)=>item.intermediary_code?.trim() && item.display_name?.trim()).map((item)=>({
-    type: item.intermediary_type === "posp" ? "POSP" as const : item.intermediary_type === "misp" ? "MISP" as const : "SIBL / Partner" as const,
-    value: item.id, label: item.display_name.trim(), code: item.intermediary_code!.trim(),
-  }));
+  const sourceOptions = intermediaryRows
+    .filter((item)=>item.intermediary_code?.trim() && item.display_name?.trim())
+    .map((item)=>{
+      const partnerRecordId = item.application_id ? partnerRecordByApplication.get(item.application_id) : null;
+      const associateEmployeeId = item.associate_employee_id || (partnerRecordId ? associateByPartnerRecord.get(partnerRecordId) : null) || null;
+      const associate = associateEmployeeId ? employeeById.get(associateEmployeeId) : null;
+      return {
+        type: item.intermediary_type === "posp" ? "POSP" as const : item.intermediary_type === "misp" ? "MISP" as const : "SIBL / Partner" as const,
+        value: item.id,
+        label: item.display_name.trim(),
+        code: item.intermediary_code!.trim(),
+        rmName: associate?.full_name?.trim() || "",
+        rmCode: associate?.employee_code?.trim() || ""
+      };
+    });
+
   if (policy.lead_source?.trim() && policy.intermediary_code?.trim() && policy.intermediary_type) {
     const savedType = policy.intermediary_type === "POSP" ? "POSP" as const : policy.intermediary_type === "MISP" ? "MISP" as const : "SIBL / Partner" as const;
-    if (!sourceOptions.some((item)=>item.type === savedType && item.label.toLowerCase() === policy.lead_source!.trim().toLowerCase())) sourceOptions.push({ type: savedType, value: `saved-${id}`, label: policy.lead_source.trim(), code: policy.intermediary_code.trim() });
+    if (!sourceOptions.some((item)=>item.type === savedType && item.label.toLowerCase() === policy.lead_source!.trim().toLowerCase())) {
+      const savedRm = salesEmployees.find((employee) => employee.full_name?.trim() === policy.rm_name?.trim());
+      sourceOptions.push({
+        type: savedType,
+        value: `saved-${id}`,
+        label: policy.lead_source.trim(),
+        code: policy.intermediary_code.trim(),
+        rmName: policy.rm_name?.trim() || "",
+        rmCode: savedRm?.employee_code?.trim() || ""
+      });
+    }
   }
 
   const values: PolicyEditValues = {
