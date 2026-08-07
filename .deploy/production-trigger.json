@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-08T00:23:00+05:30",
+  "deploy_requested_at": "2026-08-08T00:25:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT New India commercial policy OCR v1.1 exact-row release",
-  "source_commit": "a8aaaeaccf4042e64eb03cd7872ffd5c6f4b83f6",
-  "release_scope": "Deploy current main with the hardened New India Assurance commercial motor OCR v1.1 parser. The release replaces loose nearby-number matching with exact-row extraction for Net Own Damage Premium (A), Net Liability Premium (B), Owner-Driver CPA, Total Premium (A+B), IGST, Gross Premium Paid, Total IDV, and current policy number selection while excluding Previous Policy No. TP continues to exclude the separately stored CPA so INSUREIT's OD + TP + CPA calculation reconciles to the printed net premium.",
-  "verification": "The user pulled current main at a8aaaeaccf4042e64eb03cd7872ffd5c6f4b83f6 and ran npm run typecheck and npm run build successfully; only non-blocking lint warnings remained. GitHub deployment workflow must succeed and Vercel must report READY for the resulting production deployment before production success is claimed.",
+  "source": "ChatGPT uploaded-only application review documents release",
+  "source_commit": "b7041b2fe164dad8dbfc27e3d567620d5a15bc2e",
+  "release_scope": "Deploy current main including PR #216. The Application Review route no longer mounts IntermediaryDocumentReviewPortal, so the server-rendered review page is the single source of truth for document cards. Review now shows only genuinely uploaded documents in stable order, including one Education Marksheet, Signed Registration Certificate when uploaded, uploaded custom/Other Documents, and any remaining uploaded onboarding documents. Empty/optional placeholders are not generated. The editable Documents workflow and its 10-slot model remain unchanged.",
+  "verification": "PR #216 was verified mergeable at exact head 2925e30789c357baac06a4c6c81b83af5e6c071d and squash merged into main as b7041b2fe164dad8dbfc27e3d567620d5a15bc2e. Its final diff contains two application files (+31/-3), the focused temporary GitHub Actions workflow completed successfully, and git diff --check passed. Full lint/typecheck/build were not run for this PR. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
