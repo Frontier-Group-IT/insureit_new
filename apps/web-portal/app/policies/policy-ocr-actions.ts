@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { parsePolicyDocument, type ParsedPolicyField } from "@/lib/policy-ocr-parsers";
+import { refineDigitCommercialPolicy } from "@/lib/policy-ocr-digit-refiner";
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const OCR_TIMEOUT_MS = 120 * 1000;
@@ -107,7 +108,10 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
     const pages = extractPageTexts(payload?.document);
     if (!pages.length) return { ok: false, error: "Google Document AI could not find readable policy text in this document." };
 
-    const parsed = parsePolicyDocument(pages);
+    const baseParsed = parsePolicyDocument(pages);
+    const parsed = baseParsed.parserId === "digit_commercial_motor_v1"
+      ? refineDigitCommercialPolicy(pages, baseParsed)
+      : baseParsed;
     if (!parsed.fields.length) return { ok: false, error: "No supported policy fields could be extracted from this document." };
 
     return {
