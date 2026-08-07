@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-07T13:42:00+05:30",
+  "deploy_requested_at": "2026-08-07T13:45:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT controlled POSP/MISP progress bar refinement release",
-  "source_commit": "a527d8fc35dd33e61baa2355048651da45f0ecd7",
-  "release_scope": "Deploy PR #205 POSP/MISP progress bar refinements: force completed six-stage indicators to green with white checkmarks, remove the POSP/MISP journey heading from the review page, remove six-stage connector lines, and tighten progress-bar spacing near the header. Preserve 18px status indicators, all completion/current/pending calculations, workflow locked/unlocked navigation, the Partner two-step journey, database state, permissions, registration, training/exam, agreement, IIB, and workflow transitions.",
-  "verification": "Focused temporary workflow succeeded and git diff --check passed before merge. Full lint, typecheck, and production build were not run for this change. GitHub Actions must accept the production deploy hook request, and Vercel must report Ready before production success is claimed.",
+  "source": "ChatGPT controlled insurance company master release",
+  "source_commit": "f4aa90d33e74921c3f00376eae0066ad1b4aed78",
+  "release_scope": "Deploy merged PR #202 insurance company master integration: show only active canonical registered insurers for new policies, preserve the currently referenced inactive insurer when editing historical policies, remove branch-name decoration from insurer selectors, align insurer migration history with production Supabase, and standardize canonical registered insurer names while retaining legacy/OCR/former-name aliases. Production Supabase was verified with 35 active canonical insurers, 2 inactive legacy rows, and existing policy foreign keys preserved.",
+  "verification": "Production Supabase migration and data verification completed before merge. PR #202 was mergeable and merged at head b17a8543e55f1b446084016af135049d189bdaba. GitHub Actions must accept the Vercel production deploy-hook request, and Vercel must report Ready before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
