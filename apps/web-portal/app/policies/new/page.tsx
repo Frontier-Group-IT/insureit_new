@@ -11,7 +11,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type CustomerOption = { id: string; contact_name: string };
 type VehicleOption = { id: string; vehicle_no: string; customer_id: string };
-type InsurerOption = { id: string; name: string; branch_name: string | null };
+type InsurerOption = { id: string; name: string };
 type IntermediaryOption = {
   id: string;
   intermediary_type: "posp" | "misp" | "partner";
@@ -29,7 +29,13 @@ export default async function NewPolicyPage() {
   const [customersResult, vehiclesResult, insurersResult, salesEmployees, intermediariesResult] = await Promise.all([
     admin.from("customers").select("id, contact_name").order("created_at", { ascending: false }).returns<CustomerOption[]>(),
     admin.from("vehicles").select("id, vehicle_no, customer_id").order("created_at", { ascending: false }).returns<VehicleOption[]>(),
-    admin.from("insurance_companies").select("id, name, branch_name").order("name", { ascending: true }).returns<InsurerOption[]>(),
+    admin
+      .from("insurance_companies")
+      .select("id, name")
+      .eq("is_active", true)
+      .eq("segment", "general")
+      .order("name", { ascending: true })
+      .returns<InsurerOption[]>(),
     loadPospMispAssociates(admin),
     admin
       .from("intermediaries")
@@ -47,7 +53,7 @@ export default async function NewPolicyPage() {
 
   const customerOptions = (customersResult.data ?? []).map((customer) => ({ value: customer.id, label: customer.contact_name }));
   const vehicleOptions = (vehiclesResult.data ?? []).map((vehicle) => ({ value: vehicle.id, label: vehicle.vehicle_no, customerId: vehicle.customer_id }));
-  const insurerOptions = (insurersResult.data ?? []).map((insurer) => ({ value: insurer.id, label: insurer.branch_name ? `${insurer.name} — ${insurer.branch_name}` : insurer.name }));
+  const insurerOptions = (insurersResult.data ?? []).map((insurer) => ({ value: insurer.id, label: insurer.name }));
   const rmOptions = salesEmployees.map((employee) => {
     const name = employee.full_name?.trim() || "Unnamed Sales Employee";
     return { value: name, label: employee.employee_code ? `${name} - ${employee.employee_code}` : name };
