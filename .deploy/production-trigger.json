@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-07T17:21:00+05:30",
+  "deploy_requested_at": "2026-08-07T22:30:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT intermediary application review document portal removal release",
-  "source_commit": "a0d4ef29818092f476062da78a3a04320cf7efe6",
-  "release_scope": "Deploy the intermediary application review correction that removes the globally mounted IntermediaryDocumentReviewPortal override so the server-rendered applications/[id]/page.tsx Documents section is the sole source of truth. This allows the previously merged uploaded-only document rendering guard to hide empty and optional placeholders while preserving the existing single Education Marksheet behavior. No upload requirements, database behavior, validation, workflow transitions, or onboarding completion logic are changed.",
-  "verification": "PR #210 was mergeable at exact head b08b0e324b3f08a8cfa959c1a61e9c98a919439f and squash-merged into main as a0d4ef29818092f476062da78a3a04320cf7efe6. Final PR diff changed only apps/web-portal/components/shell.tsx with two deletions: the portal import and global portal mount. Full lint/typecheck/build were not run for this PR. GitHub Actions must accept the protected production deploy hook request, and Vercel must report READY for the resulting deployment before production success is claimed.",
+  "source": "ChatGPT POSP/MISP onboarding Overview button removal release",
+  "source_commit": "35d157ef3c06b6a4ac90f099f0b9a52cad79d1c1",
+  "release_scope": "Deploy the UI-only removal of the Overview button from /customers/posp-misp while preserving Import Excel, Add POSP, Add MISP, permissions, filters, onboarding queue logic, routing, and database behavior.",
+  "verification": "PR #211 was mergeable at exact head 4f198ca1af6cf9a5f9c7823ba752c97b8329839b and squash-merged into main as 35d157ef3c06b6a4ac90f099f0b9a52cad79d1c1. Final PR diff changed only apps/web-portal/app/customers/posp-misp/page.tsx. The temporary patch workflow completed successfully and removed itself. Full lint/typecheck/build were not run for this PR. GitHub Actions must succeed and Vercel must report READY before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
