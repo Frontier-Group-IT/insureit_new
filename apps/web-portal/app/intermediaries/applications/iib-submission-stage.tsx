@@ -41,7 +41,7 @@ export async function IibSubmissionStage({ applicationId, agreementSigned, final
 
   if (registered) {
     return <section id="iib-submission" className="scroll-mt-24 overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-100 bg-emerald-50/70 px-5 py-4">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#DCE5EF] bg-[#F4F7FB] px-5 py-4">
         <div>
           <p className="text-[9px] font-semibold uppercase tracking-[.1em] text-emerald-700">Step 6</p>
           <h2 className="mt-1 text-[14px] font-semibold text-[#0F172A]">IIB Registration</h2>
@@ -60,7 +60,7 @@ export async function IibSubmissionStage({ applicationId, agreementSigned, final
   }
 
   return <section id="iib-submission" className="scroll-mt-24 overflow-hidden rounded-2xl border border-[#BFD0E2] bg-white shadow-sm">
-    <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#DCE5EF] bg-[#F8FAFC] px-5 py-4">
+    <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#DCE5EF] bg-[#F4F7FB] px-5 py-4">
       <div>
         <p className="text-[9px] font-semibold uppercase tracking-[.1em] text-[#64748B]">Step 6</p>
         <h2 className="mt-1 text-[14px] font-semibold text-[#0F172A]">IIB Upload</h2>
