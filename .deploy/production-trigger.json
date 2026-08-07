@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-07T13:00:00+05:30",
+  "deploy_requested_at": "2026-08-07T13:26:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT controlled workflow-stage journey layout release",
-  "source_commit": "ca22775432c994a8d6d2b556654b2b6c7bab30f2",
-  "release_scope": "Deploy PR #203 compact POSP/MISP workflow-stage journey layout: remove Completed/Current/Upcoming secondary labels and place the existing status indicator immediately to the right of each stage label on the workflow page. Preserve completion logic, locked/unlocked stages, navigation targets, registration, training/exam, agreement, IIB behavior, permissions, and database state.",
-  "verification": "Focused temporary workflow succeeded and git diff --check passed before merge. Full lint, typecheck, and production build were not run for this change. GitHub Actions must accept the production deploy hook request, and Vercel must report Ready before production success is claimed.",
+  "source": "ChatGPT controlled shared POSP/MISP journey presentation release",
+  "source_commit": "5d1972b122e22f38734d429d46059229f95c7857",
+  "release_scope": "Deploy PR #204 unified six-stage POSP/MISP journey presentation across Application Review and Workflow pages: use one shared visual component, keep completed stages green with white checkmarks, current stage navy, pending stages outlined/muted, remove rectangular label backgrounds, reduce status indicators to 18px diameter, and preserve existing per-page completion logic, locked/unlocked navigation, and Partner two-step journey. No database, permissions, registration, training/exam, agreement, IIB, or workflow transition changes.",
+  "verification": "Focused temporary workflow succeeded and git diff --check passed before merge. Assertions verified shared component usage, label background removal, and 18px indicators. Full lint, typecheck, and production build were not run for this change. GitHub Actions must accept the production deploy hook request, and Vercel must report Ready before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
