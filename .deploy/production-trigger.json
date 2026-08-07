@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-07T03:22:00+05:30",
+  "deploy_requested_at": "2026-08-07T11:17:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT controlled OCR authentication redeploy",
-  "source_commit": "6e3668c48e147d7c0274221bad911603280ae692",
-  "release_scope": "Redeploy Google Document AI policy OCR with corrected Vercel runtime OIDC token retrieval from the x-vercel-oidc-token request header, preserving the server-only STS exchange, service-account impersonation, insurer parsers, and Section 03 review-before-apply workflow.",
-  "verification": "The user pulled main at commit 6e3668c48e147d7c0274221bad911603280ae692. npm run typecheck passed and npm run build completed successfully with warnings only. Vercel must report Ready for the resulting production deployment and the live Digit policy OCR flow must be tested before completion is claimed.",
+  "source": "ChatGPT controlled Policy Onboarding validation dialog release",
+  "source_commit": "c98f6d0644faeb79ac56d1de94f8356894ee360d",
+  "release_scope": "Deploy the Policy Onboarding validation-error presentation update from PR #200: replace the inline submit error banner with a centered React alert dialog using the existing createPortal pattern, semi-transparent overlay, warning icon, and OK dismissal control. No validation rules, calculations, database behavior, AuthBridge calls, or onboarding workflow transitions are changed.",
+  "verification": "Focused patch workflow succeeded and git diff --check passed before merge. Full lint, typecheck, and production build were not run for this change. GitHub Actions must accept the production deploy hook request, and Vercel must report Ready before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
