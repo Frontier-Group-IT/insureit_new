@@ -2,7 +2,6 @@ import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import type { ReactNode } from "react";
 import { requireScopedPospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { IntermediaryDocumentReviewPortal } from "@/components/intermediary-document-review-portal";
 import { AccountDeleteControl } from "./account-delete-control";
 import { AccountStatusHeaderStat } from "./account-status-header-stat";
 import { IibPanVerificationReviewCard } from "./iib-pan-verification-review-card";
@@ -85,7 +84,6 @@ export default async function ApplicationReviewLayout({
   return (
     <>
       {children}
-      <IntermediaryDocumentReviewPortal />
       {accountContext !== "partner" ? <AccountStatusHeaderStat applicationId={id} value={accountStatus} /> : null}
       <ReviewCardVisibility applicationId={id}>
         <IibPanVerificationReviewCard applicationId={id} />
