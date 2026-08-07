@@ -71,10 +71,6 @@ export function buildIntermediaryDocumentSlots({
     ...CUSTOM_DOCUMENT_TYPES.filter((key) => !occupiedCustomKeys.includes(key)),
   ].slice(0, customAllowance);
 
-  for (const key of selectedCustomKeys) {
-    slots.push({ key, title: "Other Document", required: false, custom: true, education: false });
-  }
-
   slots.push({
     key: "signed_registration_form",
     title: "Signed Registration Certificate",
@@ -83,6 +79,10 @@ export function buildIntermediaryDocumentSlots({
     education: false,
     system: true,
   });
+
+  for (const key of selectedCustomKeys) {
+    slots.push({ key, title: "Other Document", required: false, custom: true, education: false });
+  }
 
   return slots;
 }
