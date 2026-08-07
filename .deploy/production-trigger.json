@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-07T11:17:00+05:30",
+  "deploy_requested_at": "2026-08-07T12:33:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT controlled Policy Onboarding validation dialog release",
-  "source_commit": "c98f6d0644faeb79ac56d1de94f8356894ee360d",
-  "release_scope": "Deploy the Policy Onboarding validation-error presentation update from PR #200: replace the inline submit error banner with a centered React alert dialog using the existing createPortal pattern, semi-transparent overlay, warning icon, and OK dismissal control. No validation rules, calculations, database behavior, AuthBridge calls, or onboarding workflow transitions are changed.",
-  "verification": "Focused patch workflow succeeded and git diff --check passed before merge. Full lint, typecheck, and production build were not run for this change. GitHub Actions must accept the production deploy hook request, and Vercel must report Ready before production success is claimed.",
+  "source": "ChatGPT controlled POSP/MISP journey layout release",
+  "source_commit": "a44e4a3f3c318ae6267f4af6bfe5e0f5cf5c27eb",
+  "release_scope": "Deploy PR #201 compact POSP/MISP account journey layout: remove Completed/Current/Pending secondary labels, place each existing status indicator to the right of its step label, preserve completion/current/pending logic and horizontal scrolling, and leave the two-step Partner journey unchanged. No database, permissions, workflow transitions, or onboarding status logic changes.",
+  "verification": "Focused temporary workflow succeeded and git diff --check passed before merge. Full lint, typecheck, and production build were not run for this change. GitHub Actions must accept the production deploy hook request, and Vercel must report Ready before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
