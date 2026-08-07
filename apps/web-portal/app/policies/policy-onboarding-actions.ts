@@ -32,19 +32,19 @@ function cleanName(value: string) { return value.trim().replace(/\s+/g, " "); }
 function canTransferVehicle(role: string | null | undefined) { return role === "manager" || role === "admin" || role === "super_admin" || role === "it_super_user"; }
 function validDate(value: unknown) { return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value); }
 
-function numericPayloadValue(value: unknown, integer = false) {
-  if (value === null || value === undefined || value === "") return "";
+function numericPayloadValue(value: unknown, integer = false, emptyValue = "") {
+  if (value === null || value === undefined || value === "") return emptyValue;
   if (typeof value === "number") {
-    if (!Number.isFinite(value)) return "";
+    if (!Number.isFinite(value)) return emptyValue;
     return String(integer ? Math.trunc(value) : value);
   }
   const text = String(value).trim();
-  if (!text || /^(na|n\/a|null|undefined|nil|not available)$/i.test(text)) return "";
+  if (!text || /^(na|n\/a|null|undefined|nil|not available)$/i.test(text)) return emptyValue;
   const normalized = text.replace(/,/g, "");
   const match = normalized.match(/-?\d+(?:\.\d+)?/);
-  if (!match) return "";
+  if (!match) return emptyValue;
   const parsed = Number(match[0]);
-  if (!Number.isFinite(parsed)) return "";
+  if (!Number.isFinite(parsed)) return emptyValue;
   return String(integer ? Math.trunc(parsed) : parsed);
 }
 
@@ -64,26 +64,27 @@ function sanitizeVehicleNumbers(vehicle: PolicyOnboardingPayload["vehicle"]) {
 }
 
 function sanitizeFinancialNumbers(payload: PolicyOnboardingPayload) {
+  const numberOrZero = (value: unknown) => numericPayloadValue(value, false, "0");
   return {
-    policy: { ...payload.policy, idv: numericPayloadValue(payload.policy.idv) },
+    policy: { ...payload.policy, idv: numberOrZero(payload.policy.idv) },
     premium: {
       ...payload.premium,
-      od: numericPayloadValue(payload.premium.od),
-      tp: numericPayloadValue(payload.premium.tp),
-      cpa: numericPayloadValue(payload.premium.cpa),
+      od: numberOrZero(payload.premium.od),
+      tp: numberOrZero(payload.premium.tp),
+      cpa: numberOrZero(payload.premium.cpa),
     },
     payin: {
       ...payload.payin,
-      odPercent: numericPayloadValue(payload.payin.odPercent),
-      tpPercent: numericPayloadValue(payload.payin.tpPercent),
-      scheme: numericPayloadValue(payload.payin.scheme),
+      odPercent: numberOrZero(payload.payin.odPercent),
+      tpPercent: numberOrZero(payload.payin.tpPercent),
+      scheme: numberOrZero(payload.payin.scheme),
     },
-    billing: { ...payload.billing, billedAmount: numericPayloadValue(payload.billing.billedAmount) },
+    billing: { ...payload.billing, billedAmount: numberOrZero(payload.billing.billedAmount) },
     payout: {
       ...payload.payout,
-      retention: numericPayloadValue(payload.payout.retention),
-      odPercent: numericPayloadValue(payload.payout.odPercent),
-      tpPercent: numericPayloadValue(payload.payout.tpPercent),
+      retention: numberOrZero(payload.payout.retention),
+      odPercent: numberOrZero(payload.payout.odPercent),
+      tpPercent: numberOrZero(payload.payout.tpPercent),
     },
   };
 }
@@ -185,7 +186,7 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
     if (error) {
       if (error.message.includes("OWNERSHIP_CONFLICT")) return { ok: false, kind: "database", error: "Vehicle ownership changed while this form was open. Refresh and review the customer again." };
       if (error.message.toLowerCase().includes("invalid input syntax for type numeric") || error.message.toLowerCase().includes("invalid input syntax for type integer")) {
-        return { ok: false, kind: "database", error: "A numeric vehicle or financial value could not be interpreted. The value has been normalized; please retry the booking." };
+        return { ok: false, kind: "database", error: "A numeric vehicle or financial value could not be interpreted. Please review the entered amounts and retry the booking." };
       }
       return { ok: false, kind: "database", error: error.message };
     }
