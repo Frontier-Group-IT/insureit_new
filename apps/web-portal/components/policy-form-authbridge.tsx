@@ -218,11 +218,15 @@ export function PolicyFormAuthbridge({ action, createInsurerAction, customers, v
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]"><div className="space-y-4">
       <Section number="01" title="Policy source & ownership" subtitle="Who brought the business and how the policy should be classified." badge="Manual + master selections">
         <Field label="Policy issuance date" type="date" value={form.issuanceDate} onChange={e=>update("issuanceDate",e.target.value)} required />
-        <ReadOnly label="Month" value={form.issuanceDate?new Date(`${form.issuanceDate}T00:00:00`).toLocaleDateString("en-US",{month:"short",year:"2-digit"}):"Auto"}/>
+
         <Select label="RM name" value={form.rmName} onChange={e=>update("rmName",e.target.value)} options={["Pramod","Parsottam","Krishan Kumar","Megha","Jayesh","Jatin"]} placeholder="Select RM" required />
         <Select label="Intermediary type" value={form.intermediaryType} onChange={e=>update("intermediaryType",e.target.value)} options={["POSP","MISP","SIBL / Partner"]} placeholder="Select type" required />
         <Field label="Lead source" value={form.leadSource} onChange={e=>update("leadSource",e.target.value)} placeholder="Search person / channel" />
-        <Field label="Intermediary code" value={form.intermediaryCode} onChange={e=>update("intermediaryCode",e.target.value.toUpperCase())} placeholder="POSP/0001" />
+        <SourceDerivedStrip
+          month={form.issuanceDate ? new Date(`${form.issuanceDate}T00:00:00`).toLocaleDateString("en-US", { month: "short", year: "2-digit" }) : "Auto"}
+          code={form.intermediaryCode}
+          onCodeChange={(value) => update("intermediaryCode", value.toUpperCase())}
+        />
         <Select label="Policy type" value={form.businessLine} onChange={e=>update("businessLine",e.target.value)} options={["Motor"]} placeholder="Select policy type" />
       </Section>
 
@@ -231,7 +235,7 @@ export function PolicyFormAuthbridge({ action, createInsurerAction, customers, v
         <Field label="Insured name" value={form.insuredName} onChange={e=>update("insuredName",e.target.value.toUpperCase())} placeholder="Customer / insured name" required />
         <Field label="Phone number" value={form.phoneNo} onChange={e=>update("phoneNo",e.target.value.replace(/\D/g,"").slice(0,10))} placeholder="Mandatory 10 digit mobile" inputMode="numeric" required />
         <Select label="Class of vehicle" value={form.vehicleClass} onChange={e=>changeVehicleClass(e.target.value)} options={Object.keys(vehicleClassMap)} placeholder="Select class" required />
-        <ReadOnly label="Vehicle class description" value={vehicleMeta?.description||"Auto from class"}/>
+        <DerivedDisplay label="Vehicle classification" value={vehicleMeta?.description || "Auto from class"} source="Auto" />
         <Field label="Make" value={form.make} onChange={e=>update("make",e.target.value)} placeholder="Manufacturer" />
         <Field label="Model" value={form.model} onChange={e=>update("model",e.target.value)} placeholder="Model / variant" />
         <Select label="Fuel type" value={form.fuelType} onChange={e=>update("fuelType",e.target.value)} options={["Petrol","Diesel","CNG","Electric","Hybrid","Bi-Fuel","Other"]} placeholder="Select fuel" />
@@ -250,23 +254,32 @@ export function PolicyFormAuthbridge({ action, createInsurerAction, customers, v
         <Field label="Third party premium" type="number" min="0" value={form.tp} onChange={e=>update("tp",e.target.value)} placeholder="₹ 0.00" required />
         <Select label="CPA opted" value={form.cpaOpted} onChange={e=>update("cpaOpted",e.target.value)} options={["Yes","No"]} placeholder="Select" />
         <Field label="CPA amount" type="number" min="0" value={form.cpaOpted==="Yes"?form.cpa:"0"} onChange={e=>update("cpa",e.target.value)} disabled={form.cpaOpted==="No"} placeholder="₹ 0.00" />
-        <ReadOnly label="Net premium" value={money.format(calculations.net)} strong/><ReadOnly label="GST" value={money.format(calculations.gst)} strong/><ReadOnly label="Gross premium" value={money.format(calculations.gross)} strong accent/>
+        <PremiumCalculationBand
+          net={calculations.net}
+          gst={calculations.gst}
+          gross={calculations.gross}
+          gstRule={form.vehicleClass === "GCV" ? "18% OD + CPA · 5% TP" : "18% on Net"}
+        />
         <Field label="Policy number" value={form.policyNo} onChange={e=>update("policyNo",e.target.value.toUpperCase())} placeholder="Policy number" required />
         <div><label className={labelClass}>Insurance company <Required/></label><select className={inputClass} value={form.insurerId} onChange={e=>update("insurerId",e.target.value)}><option value="">Select insurer</option>{insurers.map(i=><option key={i.value} value={i.value}>{i.label}</option>)}</select></div>
         <Field label="Valid from" type="date" value={form.validFrom} onChange={e=>update("validFrom",e.target.value)} required/><Field label="Valid upto" type="date" value={form.validUpto} onChange={e=>update("validUpto",e.target.value)} required/>
       </Section>
 
       <Section number="04" title="Projected insurer pay-in" subtitle="Projected receivable and billing values are saved separately." badge="prototype_v1">
-        <PercentField label="Projected OD pay-in %" value={form.projectedOdPercent} onChange={v=>update("projectedOdPercent",v)}/><ReadOnly label="Projected OD pay-in" value={money.format(calculations.projectedOd)} strong/>
-        <PercentField label="Projected TP pay-in %" value={form.projectedTpPercent} onChange={v=>update("projectedTpPercent",v)}/><ReadOnly label="Projected TP pay-in" value={money.format(calculations.projectedTp)} strong/>
+        <PercentField label="Projected OD pay-in %" value={form.projectedOdPercent} onChange={v=>update("projectedOdPercent",v)}/><CalculatedOutcome label="Projected OD amount" value={money.format(calculations.projectedOd)} />
+        <PercentField label="Projected TP pay-in %" value={form.projectedTpPercent} onChange={v=>update("projectedTpPercent",v)}/><CalculatedOutcome label="Projected TP amount" value={money.format(calculations.projectedTp)} />
         <Field label="Any insurer scheme" type="number" min="0" value={form.insurerScheme} onChange={e=>update("insurerScheme",e.target.value)} placeholder="₹ 0.00"/>
-        <ReadOnly label="Total projected pay-in" value={money.format(calculations.totalPayin)} strong accent/><ReadOnly label="TDS on pay-in" value={money.format(calculations.tds)}/><ReadOnly label="Pay-in after TDS" value={money.format(calculations.payinAfterTds)} strong/>
+        <PayinCalculationBand
+          total={calculations.totalPayin}
+          tds={calculations.tds}
+          afterTds={calculations.payinAfterTds}
+        />
         <Field label="Retention" type="number" min="0" value={form.retention} onChange={e=>update("retention",e.target.value)} placeholder="₹ 0.00"/>
       </Section>
 
       <Section number="05" title="Intermediary payout & settlement" subtitle="Stores the proposed partner payout and settlement status." badge="Finance workflow">
         <PercentField label="Payout OD %" value={form.payoutOdPercent} onChange={v=>update("payoutOdPercent",v)}/><PercentField label="Payout TP %" value={form.payoutTpPercent} onChange={v=>update("payoutTpPercent",v)} disabled={form.payoutBasis==="OD"}/>
-        <ReadOnly label="Gross payout" value={money.format(calculations.grossPayout)} strong accent/>
+        <CalculatedOutcome label="Gross partner payout" value={money.format(calculations.grossPayout)} accent />
         <Select label="Payout status" value={form.payoutStatus} onChange={e=>update("payoutStatus",e.target.value)} options={["Pending","Approved","On Hold","Processed","Paid","Cancelled"]} placeholder="Select status"/>
         <Field label="Payout date" type="date" value={form.payoutDate} onChange={e=>update("payoutDate",e.target.value)}/><Field label="Payout voucher number" value={form.payoutVoucherNo} onChange={e=>update("payoutVoucherNo",e.target.value.toUpperCase())} placeholder="Voucher / reference"/>
         <div className="md:col-span-2 xl:col-span-4"><label className={labelClass}>Remarks</label><textarea className="min-h-20 w-full rounded-xl border border-[#D8DEE9] px-3 py-2 text-[11px] outline-none focus:border-[#315B9A]" value={form.remarks} onChange={e=>update("remarks",e.target.value)} placeholder="Add policy, billing or payout notes"/></div>
@@ -284,6 +297,78 @@ export function PolicyFormAuthbridge({ action, createInsurerAction, customers, v
   </div>;
 }
 
+
+
+function DerivedDisplay({ label, value, source }: { label: string; value: string; source?: string }) {
+  return <div className="min-w-0 border-l-2 border-[#D9E4F2] py-1 pl-3">
+    <div className="flex items-center gap-2">
+      <span className="text-[8px] font-bold uppercase tracking-[.08em] text-[#667085]">{label}</span>
+      {source ? <span className="rounded-full bg-[#EDF7F2] px-1.5 py-0.5 text-[7px] font-bold text-[#18794E]">{source}</span> : null}
+    </div>
+    <div className="mt-1 truncate text-[11px] font-semibold text-[#17365D]">{value || "—"}</div>
+  </div>;
+}
+
+function SourceDerivedStrip({ month, code, onCodeChange }: { month: string; code: string; onCodeChange: (value: string) => void }) {
+  return <div className="md:col-span-2 xl:col-span-2 grid grid-cols-2 gap-5 border-t border-dashed border-[#D9E2F0] pt-2.5">
+    <DerivedDisplay label="Month" value={month} source="Auto" />
+    <div className="min-w-0 border-l-2 border-[#D9E4F2] py-1 pl-3">
+      <label className="flex items-center gap-2 text-[8px] font-bold uppercase tracking-[.08em] text-[#667085]">
+        Intermediary code
+        <span className="rounded-full bg-[#EEF3FF] px-1.5 py-0.5 text-[7px] font-bold text-[#315B9A]">Master</span>
+      </label>
+      <input
+        className="sr-only"
+        value={code}
+        onChange={(event) => onCodeChange(event.target.value)}
+        readOnly={false}
+        tabIndex={-1}
+        aria-label="Intermediary code"
+      />
+      <div className="mt-1 truncate text-[11px] font-semibold text-[#17365D]">{code || "Select a lead source"}</div>
+    </div>
+  </div>;
+}
+
+function PremiumCalculationBand({ net, gst, gross, gstRule }: { net: number; gst: number; gross: number; gstRule: string }) {
+  return <div className="md:col-span-2 xl:col-span-4 overflow-hidden rounded-xl border border-[#DCE6F2] bg-[linear-gradient(90deg,#F8FBFF,#F4F8FD)]">
+    <div className="grid grid-cols-3 divide-x divide-[#DFE7F1]">
+      <CalculationMetric label="Net premium" value={money.format(net)} />
+      <CalculationMetric label="GST" value={money.format(gst)} note={gstRule} />
+      <CalculationMetric label="Gross premium" value={money.format(gross)} accent />
+    </div>
+  </div>;
+}
+
+function PayinCalculationBand({ total, tds, afterTds }: { total: number; tds: number; afterTds: number }) {
+  return <div className="md:col-span-2 xl:col-span-4 overflow-hidden rounded-xl border border-[#DCE6F2] bg-[#F8FAFD]">
+    <div className="grid grid-cols-3 divide-x divide-[#DFE7F1]">
+      <CalculationMetric label="Total projected pay-in" value={money.format(total)} />
+      <CalculationMetric label="TDS" value={money.format(tds)} note="10%" />
+      <CalculationMetric label="Pay-in after TDS" value={money.format(afterTds)} accent />
+    </div>
+  </div>;
+}
+
+function CalculationMetric({ label, value, note, accent = false }: { label: string; value: string; note?: string; accent?: boolean }) {
+  return <div className={`px-3 py-2.5 ${accent ? "bg-[#EEF4FF]" : ""}`}>
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-[7.5px] font-bold uppercase tracking-[.07em] text-[#667085]">{label}</span>
+      {note ? <span className="text-[7px] font-semibold text-[#98A2B3]">{note}</span> : null}
+    </div>
+    <div className={`mt-1 text-[12px] font-bold ${accent ? "text-[#4F46E5]" : "text-[#17365D]"}`}>{value}</div>
+  </div>;
+}
+
+function CalculatedOutcome({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+  return <div className="flex min-h-10 items-center justify-between gap-3 border-b border-dashed border-[#D9E2F0] px-1 py-1">
+    <div>
+      <div className="text-[7.5px] font-bold uppercase tracking-[.07em] text-[#667085]">{label}</div>
+      <div className="mt-0.5 text-[7px] font-medium text-[#98A2B3]">Calculated</div>
+    </div>
+    <div className={`text-[11px] font-bold ${accent ? "text-[#4F46E5]" : "text-[#17365D]"}`}>{value}</div>
+  </div>;
+}
 
 function LiveSummary({ net, gst, gross, payinAfterTds, grossPayout }: { net:number;gst:number;gross:number;payinAfterTds:number;grossPayout:number }) {
   const anchorRef = useRef<HTMLDivElement>(null);
