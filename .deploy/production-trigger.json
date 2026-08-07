@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-07T23:53:00+05:30",
+  "deploy_requested_at": "2026-08-07T23:55:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT signed registration certificate ordering release",
-  "source_commit": "27eb649e805f070bf272ad16484ed6f3fafeb9d3",
-  "release_scope": "Deploy current main including PR #215, which reorders the POSP/MISP Documents grid so Row 2 is Education Marksheet, Signed Registration Certificate, then three Other Document slots. The existing 10-slot cap, GST allowance, uploaded custom-document prioritization, upload/replace/view handlers, document records, validation, and workflow state remain unchanged.",
-  "verification": "PR #215 was verified mergeable at exact head c8664bac7819c66573d10e64744dfcee0fb090e9 and squash merged into main as 27eb649e805f070bf272ad16484ed6f3fafeb9d3. The PR diff was one file (+4/-4) and ordering-only. Full lint/typecheck/build were not run for this PR. GitHub deployment workflow must succeed and Vercel must report READY for the exact trigger commit before production success is claimed.",
+  "source": "ChatGPT New India commercial policy OCR release",
+  "source_commit": "3306b79e7d7e58fd53313140c784901bb155ac94",
+  "release_scope": "Deploy current main including the New India Assurance commercial vehicle OCR refiner and its server-side wiring. For the tested Goods Carrying Vehicle Package policy format, the parser anchors Total IDV, Net Own Damage Premium (A), Net Liability Premium (B), Owner-Driver CPA, Total Premium (A+B), IGST, Gross Premium Paid, policy number, and policy period, while decomposing TP to exclude CPA so INSUREIT's OD + TP + CPA calculation reconciles to the printed net premium. This deployment also includes all newer current-main changes already present above those OCR commits.",
+  "verification": "The user pulled the current main lineage containing the New India OCR refiner and ran npm run typecheck and npm run build successfully; only existing lint warnings remained. The tested source policy values are Package, IDV 4800000, OD 33984, portal TP 44170, CPA 325, net 78479, IGST 8414, gross 86893, policy number 80000031250350127994, valid 2025-12-05 to 2026-12-04. GitHub deployment workflow must succeed and Vercel must report READY before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
