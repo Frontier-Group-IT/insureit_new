@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-07T16:54:00+05:30",
+  "deploy_requested_at": "2026-08-07T17:21:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT intermediary workflow light secondary headers release",
-  "source_commit": "3cb2811a1c8566b9c4b836404ec3efb53dd9c365",
-  "release_scope": "Deploy the corrected intermediary workflow theme so the main applicant/account banner remains the only dark navy header while nested Primary information, Documents, Registration, Training & Examination, Agreement, and IIB Upload section headers use the normal light gray table-style surface. Preserve semantic stage/status accents and all existing completion logic, validation, navigation, iCall integration, document handling, agreement logic, IIB workflow, permissions, and database behavior.",
-  "verification": "npm --prefix apps/web-portal run typecheck passed. npm --prefix apps/web-portal run lint passed with existing warnings only. npm --prefix apps/web-portal run build passed. Local dev server was restarted on port 3001 for visual inspection before deployment.",
+  "source": "ChatGPT intermediary application review document portal removal release",
+  "source_commit": "a0d4ef29818092f476062da78a3a04320cf7efe6",
+  "release_scope": "Deploy the intermediary application review correction that removes the globally mounted IntermediaryDocumentReviewPortal override so the server-rendered applications/[id]/page.tsx Documents section is the sole source of truth. This allows the previously merged uploaded-only document rendering guard to hide empty and optional placeholders while preserving the existing single Education Marksheet behavior. No upload requirements, database behavior, validation, workflow transitions, or onboarding completion logic are changed.",
+  "verification": "PR #210 was mergeable at exact head b08b0e324b3f08a8cfa959c1a61e9c98a919439f and squash-merged into main as a0d4ef29818092f476062da78a3a04320cf7efe6. Final PR diff changed only apps/web-portal/components/shell.tsx with two deletions: the portal import and global portal mount. Full lint/typecheck/build were not run for this PR. GitHub Actions must accept the protected production deploy hook request, and Vercel must report READY for the resulting deployment before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
