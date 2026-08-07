@@ -292,7 +292,37 @@ function registrationJourney(_context: AccountContext, profile: Profile, assignm
   ];
 }
 function stageFor(profile: Profile) { return profile.workflow_stage === "pre_iib" ? "primary" : profile.workflow_stage === "iib_processing" ? "documents" : "review"; }
-function DocumentChecklist({ documents }: { documents: Document[] }) { const education = documents.find((document) => document.document_type.startsWith("education_")); const expected = [...partnerDocuments.filter(([type]) => !type.startsWith("education_")), ["education", "Education Marksheet"] as const]; return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{expected.map(([type, label]) => { const document = type === "education" ? education : documents.find((item) => item.document_type === type); if (!document) return null; return <DocumentStatus key={type} type={type} label={label} document={document} />; })}</div>; }
+function DocumentChecklist({ documents }: { documents: Document[] }) {
+  const education = documents.find((document) => document.document_type.startsWith("education_"));
+  const ordered: Array<{ key: string; type: string; label: string; document: Document }> = [];
+  const used = new Set<string>();
+  const add = (key: string, type: string, label: string, document: Document | undefined) => {
+    if (!document || used.has(document.id)) return;
+    used.add(document.id);
+    ordered.push({ key, type, label, document });
+  };
+
+  for (const [type, label] of partnerDocuments.filter(([type]) => !type.startsWith("education_"))) {
+    add(type, type, label, documents.find((document) => document.document_type === type));
+  }
+  add("education", "education", "Education Marksheet", education);
+  add(
+    "signed_registration_form",
+    "signed_registration_form",
+    "Signed Registration Certificate",
+    documents.find((document) => document.document_type === "signed_registration_form"),
+  );
+
+  documents
+    .filter((document) => document.document_type.startsWith("custom_"))
+    .forEach((document) => add(document.id, document.document_type, "Other Document", document));
+
+  documents
+    .filter((document) => !document.document_type.startsWith("education_") && !document.document_type.startsWith("custom_"))
+    .forEach((document) => add(document.id, document.document_type, pretty(document.document_type), document));
+
+  return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{ordered.map((item) => <DocumentStatus key={item.key} type={item.type} label={item.label} document={item.document} />)}</div>;
+}
 async function DocumentStatus({ type, label, document }: { type: string; label: string; document?: Document }) { const admin = createSupabaseAdminClient(); const { data } = document ? await admin.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 900) : { data: null }; return <DocumentVisualCard type={type} title={label} fileName={document?.file_name} required={type !== "photograph" && type !== "education"} tone={document ? "uploaded" : type === "photograph" || type === "education" ? "optional" : "required"} status={document ? "Uploaded" : type === "photograph" || type === "education" ? "Optional" : "Missing"} meta={document ? date(document.created_at) : "Awaiting upload"} compact action={document && data?.signedUrl ? <a href={data.signedUrl} target="_blank" rel="noreferrer" className={`${secondaryActionClassName} h-8 rounded-lg px-3 text-[9px]`}>Open</a> : null} />; }
 function DocumentsCard({ children }: { children: React.ReactNode }) { return <section className="rounded-2xl border border-[#DCE5EF] bg-white p-5 shadow-sm"><div className="mb-4 flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-xl border border-[#E1E7FF] bg-[#F1F4FF] text-[#4F46E5]"><Icon name="documents" className="h-4.5 w-4.5" /></span><div><h2 className="text-[13px] font-semibold text-[#17203A]">Documents</h2><p className="mt-0.5 text-[9.5px] font-medium text-[#64748B]">Visual checklist for uploaded identity, bank and qualification files.</p></div></div>{children}</section>; }
 function Card({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) { return <section className="rounded-2xl border border-[#DCE5EF] bg-white p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><h2 className="text-[13px] font-semibold">{title}</h2>{typeof count === "number" ? <span className="rounded-full bg-[#EEF2FF] px-2.5 py-1 text-[9px] font-semibold text-[#4338CA]">{count}</span> : null}</div>{children}</section>; }
