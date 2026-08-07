@@ -1,0 +1,39 @@
+name: Temp parent partner review link
+
+on:
+  push:
+    paths:
+      - scripts/temp_parent_partner_review_link.py
+      - .github/workflows/temp-parent-partner-review-link.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Apply focused patch
+        run: python scripts/temp_parent_partner_review_link.py
+      - name: Validate focused diff
+        run: |
+          git diff --check
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('apps/web-portal/app/intermediaries/structured-account-register.tsx').read_text()
+          assert 'partnerApplicationMap' in text
+          assert 'partnerApplicationId' in text
+          assert 'FreshAccountReviewLink href={`/intermediaries/applications/${partnerApplicationId}`}' in text
+          PY
+      - name: Commit app change and remove temporary files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal/app/intermediaries/structured-account-register.tsx
+          git commit -m "Link parent partner IDs to application review"
+          git rm scripts/temp_parent_partner_review_link.py .github/workflows/temp-parent-partner-review-link.yml
+          git commit -m "chore: remove temporary parent partner link patch"
+          git push
