@@ -39,6 +39,12 @@ function validNumber(value: string) {
   return Number.isFinite(parsed) && parsed >= 0;
 }
 
+function validPercent(value: string) {
+  if (value.trim() === "") return true;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 && parsed <= 100;
+}
+
 export async function updatePolicyOnboarding(policyId: string, payload: PolicyEditPayload): Promise<PolicyEditResult> {
   await requirePolicyEditor();
 
@@ -51,19 +57,23 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
   }
   if (payload.policy.validUpto < payload.policy.validFrom) return { ok: false, error: "Policy Valid Upto cannot be before Valid From." };
 
-  const numericValues = [
+  const monetaryValues = [
     payload.policy.idv,
     payload.premium.od,
     payload.premium.tp,
     payload.premium.cpa,
-    payload.payin.odPercent,
-    payload.payin.tpPercent,
     payload.payin.scheme,
     payload.payout.retention,
+  ];
+  if (monetaryValues.some((value) => !validNumber(value))) return { ok: false, error: "Review the premium, scheme and retention values." };
+
+  const percentageValues = [
+    payload.payin.odPercent,
+    payload.payin.tpPercent,
     payload.payout.odPercent,
     payload.payout.tpPercent,
   ];
-  if (numericValues.some((value) => !validNumber(value))) return { ok: false, error: "Review the premium, pay-in and payout numeric values." };
+  if (percentageValues.some((value) => !validPercent(value))) return { ok: false, error: "Pay-in and payout percentages must be between 0 and 100." };
 
   try {
     const admin = createSupabaseAdminClient();
