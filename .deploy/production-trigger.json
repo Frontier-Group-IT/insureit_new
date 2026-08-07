@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-07T14:52:00+05:30",
+  "deploy_requested_at": "2026-08-07T16:32:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT controlled soft gray onboarding stage header release",
-  "source_commit": "22d72e0d8233e279ee85a9d774db3a75b4cc7d16",
-  "release_scope": "Deploy PR #208 soft gray-blue onboarding stage headers across Primary information, Documents, Registration, Training & Examination, Agreement, and IIB Upload while keeping the main applicant/account header unchanged. Preserve semantic stage/status accents and all existing completion logic, validation, navigation, iCall integration, document handling, agreement logic, IIB workflow, permissions, and database behavior.",
-  "verification": "Focused temporary workflow succeeded and git diff --check passed before merge. PR #208 was mergeable and squash merged at exact head a1ec745fb993bbd239c4df4e0bc29d7249ffc498. Full lint, typecheck, and production build were not run for this change. GitHub Actions must accept the production deploy hook request, and Vercel must report Ready before production success is claimed.",
+  "source": "ChatGPT controlled Policy Edit workflow release",
+  "source_commit": "14e5870693454fbdd05a956b4e581503e63db882",
+  "release_scope": "Deploy the new Policy Edit workflow based on the current Policy Onboarding interface, including read-only linked customer/vehicle identity, editable policy/premium/pay-in/payout fields, canonical insurer selection with historical inactive insurer visibility, Policy OCR Section 03 support, atomic server-side update_motor_policy RPC usage, and the current Policy Source/RM linkage contract.",
+  "verification": "npm run typecheck passed on current main; npm run build passed on current main and included /policies/[id]/edit. The update_motor_policy migration is applied in Supabase, its execution is restricted to service_role, and rollback-only database verification confirmed update-in-place behavior without relinking customer/vehicle or creating a duplicate policy. GitHub Actions must accept the protected production deploy hook request, and Vercel must report Ready for the resulting deployment before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
