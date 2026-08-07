@@ -108,8 +108,8 @@ export function IntermediaryDocumentGrid({
   }, [resolvedApplicationId]);
 
   const slots = useMemo(
-    () => buildIntermediaryDocumentSlots({ legacy: resolvedLegacy, hasGst: resolvedHasGst }),
-    [resolvedHasGst, resolvedLegacy],
+    () => buildIntermediaryDocumentSlots({ legacy: resolvedLegacy, hasGst: resolvedHasGst, documents: resolvedDocuments }),
+    [resolvedDocuments, resolvedHasGst, resolvedLegacy],
   );
 
   async function renameCustomDocument(slotKey: string, label: string) {
@@ -122,11 +122,7 @@ export function IntermediaryDocumentGrid({
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
         cache: "no-store",
-        body: JSON.stringify({
-          application_id: resolvedApplicationId,
-          document_type: slotKey,
-          document_label: label,
-        }),
+        body: JSON.stringify({ application_id: resolvedApplicationId, document_type: slotKey, document_label: label }),
       });
       const payload = (await response.json().catch(() => null)) as { ok?: boolean; message?: string } | null;
       if (!response.ok || !payload?.ok) throw new Error(payload?.message || "The document could not be renamed.");
@@ -179,7 +175,17 @@ export function IntermediaryDocumentGrid({
           const inputName = slot.education ? "education_marksheet" : slot.key;
           const inputId = `upload-${slot.key}`;
           const emptyOptional = !existingDocument && !slot.required;
-          const status = missing ? "Action required" : existingDocument ? "Uploaded" : selectedName ? "Ready" : slot.required ? "Required" : "Optional";
+          const status = missing
+            ? "Action required"
+            : existingDocument
+              ? "Uploaded"
+              : selectedName
+                ? "Ready"
+                : slot.system
+                  ? "Registration stage"
+                  : slot.required
+                    ? "Required"
+                    : "Optional";
           const tone = missing ? "error" : existingDocument || selectedName ? "uploaded" : slot.required ? "required" : "optional";
 
           return (
@@ -193,12 +199,14 @@ export function IntermediaryDocumentGrid({
               status={status}
               tone={tone}
               compact
-              muted={emptyOptional && !editable}
+              muted={emptyOptional && !editable && !slot.system}
               action={existingDocument?.href ? (
                 <a href={existingDocument.href} target="_blank" rel="noreferrer" className="inline-flex h-7 items-center rounded-lg border border-[#D7DDF0] bg-white px-2.5 text-[8.5px] font-semibold text-[#24345A] shadow-sm">Open</a>
               ) : null}
             >
-              {editable ? (
+              {slot.system && !existingDocument ? (
+                <p className="text-[8px] font-medium leading-4 text-[#64748B]">This slot is reserved for the signed certificate uploaded during Registration.</p>
+              ) : editable && !slot.system ? (
                 <div className="space-y-2">
                   {slot.education ? (
                     <select
