@@ -92,8 +92,8 @@ export function findDocumentForSlot(slot: IntermediaryDocumentSlot, documents: I
     return documents.find((document) => EDUCATION_DOCUMENT_TYPES.includes(document.document_type as (typeof EDUCATION_DOCUMENT_TYPES)[number]));
   }
   if (slot.key === "registration_certificate") {
-    return documents.find((document) => document.document_type === "registration_certificate")
-      ?? documents.find((document) => document.document_type === "signed_registration_form");
+    return documents.find((document) => document.document_type === "signed_registration_form")
+      ?? documents.find((document) => document.document_type === "registration_certificate");
   }
   return documents.find((document) => document.document_type === slot.key);
 }
