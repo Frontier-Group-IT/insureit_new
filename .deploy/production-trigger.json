@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-07T23:03:00+05:30",
+  "deploy_requested_at": "2026-08-07T23:21:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT Policy Onboarding Section 01 compact source workflow refinement",
-  "source_commit": "3277a7e7b580bce88432ad6892624ce952539795",
-  "release_scope": "Deploy current main including the Policy Onboarding Section 01 compact source-and-ownership layout, searchable intermediary-filtered Lead Source, automatic RM and intermediary-code resolution from Supabase master relationships, and improved readability/color hierarchy for the compact derived metadata line. This deployment also includes all previously merged current-main policy onboarding, AuthBridge, OCR, financial, and UI changes.",
-  "verification": "The compact Section 01 implementation and follow-up metadata readability refinement were validated by GitHub Actions with npm ci, npm run typecheck:web, git diff --check, and focused layout assertions. GitHub deployment workflow must succeed and Vercel must report READY for the resulting production deployment before success is claimed.",
+  "source": "ChatGPT parent Partner review-link release",
+  "source_commit": "dfcd67f56041dbab4d668410c0178396fa1d0a19",
+  "release_scope": "Deploy current main including PR #213, which makes Parent Partner IDs clickable in both POSP and MISP registers and resolves the real parent Partner onboarding application UUID before navigating to the existing Partner Application Review page. Unresolved legacy or pending Partner IDs remain plain text. This deployment also includes all previously merged current-main changes.",
+  "verification": "PR #213 was rebuilt from the then-latest main and validated by a focused GitHub Actions patch workflow plus git diff --check; the final PR diff contained exactly one application file. Full lint/typecheck/build were not run for this focused change. GitHub deployment workflow must succeed and Vercel must report READY before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
