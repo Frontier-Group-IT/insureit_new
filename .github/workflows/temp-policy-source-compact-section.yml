@@ -1,0 +1,45 @@
+name: Temporary policy source compact section
+
+on:
+  push:
+    paths:
+      - scripts/temp_policy_source_compact_section.py
+      - .github/workflows/temp-policy-source-compact-section.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply compact source section patch
+        run: python scripts/temp_policy_source_compact_section.py
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck web portal
+        run: npm run typecheck:web
+      - name: Validate patch
+        run: |
+          git diff --check
+          grep -q 'function CompactSourceMeta' apps/web-portal/components/policy-form-authbridge.tsx
+          grep -q 'Start typing a name' apps/web-portal/components/policy-form-authbridge.tsx
+          grep -q 'label="RM name"' apps/web-portal/components/policy-form-authbridge.tsx
+          grep -q 'label="Intermediary code"' apps/web-portal/components/policy-form-authbridge.tsx
+      - name: Commit application change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal/components/policy-form-authbridge.tsx
+          if git diff --cached --quiet; then
+            echo "No application changes to commit"
+          else
+            git commit -m "Compact policy source and ownership section"
+            git push
+          fi
