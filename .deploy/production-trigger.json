@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-07T22:30:00+05:30",
+  "deploy_requested_at": "2026-08-07T22:40:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT POSP/MISP onboarding Overview button removal release",
-  "source_commit": "35d157ef3c06b6a4ac90f099f0b9a52cad79d1c1",
-  "release_scope": "Deploy the UI-only removal of the Overview button from /customers/posp-misp while preserving Import Excel, Add POSP, Add MISP, permissions, filters, onboarding queue logic, routing, and database behavior.",
-  "verification": "PR #211 was mergeable at exact head 4f198ca1af6cf9a5f9c7823ba752c97b8329839b and squash-merged into main as 35d157ef3c06b6a4ac90f099f0b9a52cad79d1c1. Final PR diff changed only apps/web-portal/app/customers/posp-misp/page.tsx. The temporary patch workflow completed successfully and removed itself. Full lint/typecheck/build were not run for this PR. GitHub Actions must succeed and Vercel must report READY before production success is claimed.",
+  "source": "ChatGPT Digit commercial policy OCR v1.3 release",
+  "source_commit": "814fc4ee6afacd05a59a0837db8d9a5523abe5ad",
+  "release_scope": "Deploy the current verified main, including the hardened Digit commercial motor policy OCR v1.3 refiner and shared PolicyUnifiedForm architecture. The Digit OCR refinement targets current Go Digit commercial vehicle schedules and extracts Policy Product, IDV, OD premium, TP premium, CPA, policy number, insurer, validity dates, and printed premium comparison totals without allowing printed totals to overwrite portal-calculated Net/GST/Gross. This release also includes the already-merged POSP/MISP overview button removal present in current main.",
+  "verification": "Current main 814fc4ee6afacd05a59a0837db8d9a5523abe5ad was pulled and verified locally by the user on 2026-08-07: npm run typecheck passed and npm run build completed successfully. GitHub Actions must succeed and Vercel must report READY before production success is claimed. After deployment, retest the uploaded Digit policy D221859721 and verify IDV 3292441, OD 27820.86, TP 7267, CPA No/0, insurer Go Digit General Insurance Limited, and validity 2025-08-27 to 2026-08-26.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
