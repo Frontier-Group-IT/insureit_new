@@ -1,16 +1,11 @@
-import { createInsuranceCompany } from "@/app/master-data-form-actions";
-import { addPolicy } from "@/app/policies/policy-actions";
-import { PolicyFormAuthbridge } from "@/components/policy-form-authbridge";
 import { PolicyIntelligencePositionGuard } from "@/components/policy-intelligence-position-guard";
 import { PolicyOnboardingIntelligence } from "@/components/policy-onboarding-intelligence";
-import { PolicySourceMasterWire } from "@/components/policy-source-master-wire";
+import { PolicyUnifiedForm, type PolicyRmOption, type PolicySourceOption } from "@/components/policy-unified-form";
 import { AppShell } from "@/components/shell";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-type CustomerOption = { id: string; contact_name: string };
-type VehicleOption = { id: string; vehicle_no: string; customer_id: string };
 type InsurerOption = { id: string; name: string };
 type IntermediaryOption = {
   id: string;
@@ -30,9 +25,7 @@ export default async function NewPolicyPage() {
   await requirePolicyEditor();
   const admin = createSupabaseAdminClient();
 
-  const [customersResult, vehiclesResult, insurersResult, salesEmployees, intermediariesResult] = await Promise.all([
-    admin.from("customers").select("id, contact_name").order("created_at", { ascending: false }).returns<CustomerOption[]>(),
-    admin.from("vehicles").select("id, vehicle_no, customer_id").order("created_at", { ascending: false }).returns<VehicleOption[]>(),
+  const [insurersResult, salesEmployees, intermediariesResult] = await Promise.all([
     admin.from("insurance_companies").select("id, name").eq("is_active", true).order("name", { ascending: true }).returns<InsurerOption[]>(),
     loadPospMispAssociates(admin),
     admin
@@ -44,8 +37,6 @@ export default async function NewPolicyPage() {
       .returns<IntermediaryOption[]>()
   ]);
 
-  if (customersResult.error) throw new Error(`Unable to load customers: ${customersResult.error.message}`);
-  if (vehiclesResult.error) throw new Error(`Unable to load vehicles: ${vehiclesResult.error.message}`);
   if (insurersResult.error) throw new Error(`Unable to load insurers: ${insurersResult.error.message}`);
   if (intermediariesResult.error) throw new Error(`Unable to load intermediary masters: ${intermediariesResult.error.message}`);
 
@@ -90,14 +81,12 @@ export default async function NewPolicyPage() {
   }
 
   const employeeById = new Map(salesEmployees.map((employee) => [employee.id, employee]));
-  const customerOptions = (customersResult.data ?? []).map((customer) => ({ value: customer.id, label: customer.contact_name }));
-  const vehicleOptions = (vehiclesResult.data ?? []).map((vehicle) => ({ value: vehicle.id, label: vehicle.vehicle_no, customerId: vehicle.customer_id }));
   const insurerOptions = (insurersResult.data ?? []).map((insurer) => ({ value: insurer.id, label: insurer.name }));
-  const rmOptions = salesEmployees.map((employee) => {
+  const rmOptions: PolicyRmOption[] = salesEmployees.map((employee) => {
     const name = employee.full_name?.trim() || "Unnamed Sales Employee";
     return { value: name, label: employee.employee_code ? `${name} - ${employee.employee_code}` : name };
   });
-  const sourceOptions = intermediaryRows
+  const sourceOptions: PolicySourceOption[] = intermediaryRows
     .filter((item) => item.intermediary_code?.trim() && item.display_name?.trim())
     .map((item) => {
       const partnerRecordId = item.application_id ? partnerRecordByApplication.get(item.application_id) : null;
@@ -115,10 +104,9 @@ export default async function NewPolicyPage() {
 
   return (
     <AppShell title="Add Policy">
-      <PolicySourceMasterWire rms={rmOptions} sources={sourceOptions} />
       <PolicyOnboardingIntelligence />
       <PolicyIntelligencePositionGuard />
-      <PolicyFormAuthbridge action={addPolicy} createInsurerAction={createInsuranceCompany} customers={customerOptions} vehicles={vehicleOptions} insurers={insurerOptions} submitLabel="Create Policy" />
+      <PolicyUnifiedForm mode="create" insurers={insurerOptions} rms={rmOptions} sources={sourceOptions} />
     </AppShell>
   );
 }
