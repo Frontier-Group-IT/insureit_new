@@ -214,7 +214,6 @@ export function PolicyFormAuthbridge({ action, createInsurerAction, customers, v
       </div>
       <div className="flex gap-1 overflow-x-auto px-3 py-2">{sections.map((section,index)=><button key={section} type="button" onClick={()=>setActiveSection(index)} className={`flex min-w-fit items-center gap-2 rounded-lg px-3 py-2 text-[9.5px] font-semibold ${activeSection===index?"bg-[#EEF2FF] text-[#4338CA]":"text-[#667085] hover:bg-[#F8FAFC]"}`}><span className={`grid h-5 w-5 place-items-center rounded-full text-[8px] ${activeSection===index?"bg-[#4F46E5] text-white":"bg-[#EEF2F6]"}`}>{index+1}</span>{section}</button>)}</div>
     </div>
-    {submitError ? <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">{submitError}</div> : null}
 
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]"><div className="space-y-4">
       <Section number="01" title="Policy source & ownership" subtitle="Who brought the business and how the policy should be classified." badge="Manual + master selections">
@@ -278,6 +277,7 @@ export function PolicyFormAuthbridge({ action, createInsurerAction, customers, v
 
     <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#D9E2F0] bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(15,23,42,.08)] backdrop-blur"><div className="mx-auto flex max-w-[1480px] justify-end gap-2"><Link href="/policies" className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Cancel</Link><button type="button" onClick={submitPolicy} disabled={isSubmitting} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-60">{isSubmitting ? "Booking policy…" : "Book Active Policy"}</button></div></div>
 
+    {submitError ? <ValidationErrorDialog message={submitError} onClose={()=>setSubmitError(null)} /> : null}
     {rcReview ? <RcModal review={rcReview} groups={applyGroups} setGroups={setApplyGroups} onCancel={()=>setRcReview(null)} onUse={useRcDetails}/> : null}
     {customerCandidates ? <CustomerMatchModal candidates={customerCandidates} onChoose={chooseCustomer} onCancel={()=>setCustomerCandidates(null)}/> : null}
     {ownershipConflict ? <OwnershipModal conflict={ownershipConflict} onResolve={resolveOwnership} onCancel={()=>setOwnershipConflict(null)}/> : null}
@@ -323,6 +323,40 @@ function LiveSummary({ net, gst, gross, payinAfterTds, grossPayout }: { net:numb
       document.body,
     ) : null}
   </aside>;
+}
+
+function ValidationErrorDialog({ message, onClose }: { message: string; onClose: () => void }) {
+  const okRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    okRef.current?.focus();
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, []);
+
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[10000] grid min-h-[100dvh] w-screen place-items-center bg-[#071D49]/60 p-4 backdrop-blur-[2px]" role="alertdialog" aria-modal="true" aria-labelledby="policy-validation-title" aria-describedby="policy-validation-message">
+      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-white/70 bg-white shadow-[0_30px_90px_rgba(7,29,73,.42)]">
+        <div className="px-6 pb-5 pt-7 text-center">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-[#FFF3E8] text-[#D45B16] ring-8 ring-[#FFF8F2]" aria-hidden="true">
+            <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.3 3.9 2.7 17.1A2 2 0 0 0 4.4 20h15.2a2 2 0 0 0 1.7-2.9L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+              <path d="M12 9v4" />
+              <path d="M12 17h.01" />
+            </svg>
+          </div>
+          <h2 id="policy-validation-title" className="mt-5 text-[17px] font-bold text-[#102A4C]">Please check the form</h2>
+          <p id="policy-validation-message" className="mx-auto mt-2 max-w-sm text-[12px] leading-5 text-[#667085]">{message}</p>
+        </div>
+        <div className="border-t border-[#E6EBF2] bg-[#F8FAFC] px-6 py-4">
+          <button ref={okRef} type="button" onClick={onClose} className="h-11 w-full rounded-xl bg-[#17365D] px-5 text-[11px] font-bold text-white shadow-sm transition hover:bg-[#102A4C] focus:outline-none focus:ring-2 focus:ring-[#315B9A] focus:ring-offset-2">OK</button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
 }
 
 function ModalShell({ title, subtitle, onClose, children, footer }: { title:string;subtitle:string;onClose:()=>void;children:ReactNode;footer:ReactNode }) {
