@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-07T23:36:00+05:30",
+  "deploy_requested_at": "2026-08-07T23:45:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT POSP/MISP account review parent Partner navigation",
-  "source_commit": "a328d52f225f3ea444abcc2ce96644685397e8f7",
-  "release_scope": "Deploy current main including PR #214, which makes the Parent Partner value in POSP/MISP Application Review header stats link to the resolved parent Partner Application Review page using the real parent application UUID. This deployment also includes all previously merged current-main intermediary, document, OCR, policy onboarding, and UI changes.",
-  "verification": "PR #214 was verified as mergeable at head e576cc8c3fe5b255b82d4ca31a27df41a5f65eb9. Its focused temporary GitHub Actions validation completed successfully and git diff --check passed; full lint/typecheck/build were not run for this PR. GitHub deployment workflow must succeed and Vercel must report READY for the resulting production deployment before success is claimed.",
+  "source": "ChatGPT Policy Onboarding Section 02 compact redesign",
+  "source_commit": "5b5e53dc61bc37f37d7605b13b8c33604a4fc5c4",
+  "release_scope": "Deploy current main including the Policy Onboarding header cleanup and compact Insured & Vehicle Identification Section 02 redesign. Section 02 now uses three dense four-column rows, a compact attached Fetch RC action, RC verification metadata, vehicle classification metadata, a simplified Capacity field with derived basis, and a grouped RTO state/name control. Existing AuthBridge lookup/review/apply, form state, edit protections, customer/vehicle payloads, and booking logic are preserved.",
+  "verification": "The focused Section 02 workflow completed successfully on Node 22. npm ci completed, npm run typecheck:web passed, git diff --check passed, and focused layout assertions passed before the application change was committed. Temporary patch tooling was removed before deployment. GitHub deployment workflow must succeed and Vercel must report success for the exact trigger commit before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
