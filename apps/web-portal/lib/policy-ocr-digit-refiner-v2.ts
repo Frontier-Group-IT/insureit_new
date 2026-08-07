@@ -1,6 +1,6 @@
 import type { ParsedPolicyField, ParsedPolicyResult } from "@/lib/policy-ocr-parsers";
 
-const VERSION = "digit_commercial_motor_v1.5.0";
+const VERSION = "digit_commercial_motor_v1.6.0";
 const MONEY_RE = /[0-9][0-9,]*(?:\.[0-9]{1,2})?/g;
 
 type MoneyHit = { value: number; page: number; evidence: string };
@@ -50,9 +50,9 @@ export function refineDigitCommercialPolicyV2(pages: string[], parsed: ParsedPol
   }
 
   const blockNet = findPrintedNetInPremiumBlock(cleanPages, resolvedIdv);
-  const net = invoice?.net ?? blockNet?.value ?? numeric(fields.get("total_premium"));
-  if (!invoice && blockNet) {
-    setField(fields, "total_premium", "Printed net premium", money(blockNet.value), .97, blockNet.page, blockNet.evidence);
+  const net = blockNet?.value ?? invoice?.net ?? numeric(fields.get("total_premium"));
+  if (blockNet) {
+    setField(fields, "total_premium", "Printed net premium", money(blockNet.value), .99, blockNet.page, blockNet.evidence);
   }
 
   const reconciledPair = findReconciledPremiumPair(cleanPages, net, cpaValue, resolvedIdv);
@@ -81,7 +81,7 @@ export function refineDigitCommercialPolicyV2(pages: string[], parsed: ParsedPol
   if ((od === null || od <= 0) && net !== null && net > 0 && tp !== null && tp >= 0) {
     const derived = round2(net - tp - cpaValue);
     if (isPlausiblePremium(derived, resolvedIdv, net)) {
-      setField(fields, "od_premium", "OD premium", money(derived), .95, invoice?.page ?? blockNet?.page ?? 1, "Derived from Digit printed Net Premium minus TP and CPA after direct OD extraction was unavailable.");
+      setField(fields, "od_premium", "OD premium", money(derived), .99, blockNet?.page ?? invoice?.page ?? 1, "Derived from Digit printed Net Premium minus TP and CPA after direct OD extraction was unavailable.");
       warnings.push("Digit OD premium was recovered using the printed net premium cross-check. Verify once against the policy schedule.");
       od = derived;
     }
@@ -89,7 +89,7 @@ export function refineDigitCommercialPolicyV2(pages: string[], parsed: ParsedPol
   if ((tp === null || tp <= 0) && net !== null && net > 0 && od !== null && od >= 0) {
     const derived = round2(net - od - cpaValue);
     if (isPlausiblePremium(derived, resolvedIdv, net)) {
-      setField(fields, "tp_premium", "Third party premium", money(derived), .95, invoice?.page ?? blockNet?.page ?? 1, "Derived from Digit printed Net Premium minus OD and CPA after direct TP extraction was unavailable.");
+      setField(fields, "tp_premium", "Third party premium", money(derived), .95, blockNet?.page ?? invoice?.page ?? 1, "Derived from Digit printed Net Premium minus OD and CPA after direct TP extraction was unavailable.");
       warnings.push("Digit TP premium was recovered using the printed net premium cross-check. Verify once against the policy schedule.");
       tp = derived;
     }
@@ -225,24 +225,37 @@ function findDirectPremium(pages: string[], label: RegExp, kind: "od" | "tp", id
 }
 
 function findPrintedNetInPremiumBlock(pages: string[], idv: number | null): MoneyHit | null {
-  const block = findPremiumBlock(pages);
-  if (!block) return null;
-  const labels = [
-    /Total\s+Premium\s*\(A\s*\+\s*B\)/i,
-    /Total\s+Premium\s*\[?A\s*\+\s*B\]?/i,
+  const exactLabels = [
+    /Total\s+Net\s+Premium\s*\[?\s*A\s*\+\s*B\s*\]?/i,
+    /Total\s+Net\s+Premium\s*\(?\s*A\s*\+\s*B\s*\)?/i,
+    /Total\s+Premium\s*\[?\s*A\s*\+\s*B\s*\]?/i,
+    /Total\s+Premium\s*\(?\s*A\s*\+\s*B\s*\)?/i,
     /Net\s+Premium/i,
   ];
-  for (const label of labels) {
-    const match = block.text.match(label);
-    if (!match || match.index === undefined) continue;
-    const after = block.text.slice(match.index + match[0].length, match.index + match[0].length + 240);
-    for (const amount of [...after.matchAll(MONEY_RE)]) {
-      const value = parseMoney(amount[0]);
-      if (value !== null && value >= 500 && value <= 10000000 && !isYear(value) && !sameMoney(value, idv)) {
-        return { value, page: block.page, evidence: block.text.slice(match.index, match.index + 320) };
+
+  for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
+    const page = pages[pageIndex];
+    for (const label of exactLabels) {
+      const match = page.match(label);
+      if (!match || match.index === undefined) continue;
+      const start = Math.max(0, match.index - 80);
+      const end = Math.min(page.length, match.index + match[0].length + 320);
+      const window = page.slice(start, end);
+      const labelOffset = match.index - start;
+      const candidates: Array<{ value: number; distance: number }> = [];
+      for (const amount of [...window.matchAll(MONEY_RE)]) {
+        const value = parseMoney(amount[0]);
+        if (value === null || value < 500 || value > 10000000 || isYear(value) || sameMoney(value, idv)) continue;
+        const amountPos = amount.index ?? 0;
+        const distance = Math.abs(amountPos - labelOffset);
+        candidates.push({ value, distance });
       }
+      if (!candidates.length) continue;
+      candidates.sort((a, b) => a.distance - b.distance);
+      return { value: candidates[0].value, page: pageIndex + 1, evidence: window };
     }
   }
+
   return null;
 }
 
@@ -253,7 +266,7 @@ function findPremiumBlock(pages: string[]) {
     if (start < 0) continue;
     const tail = page.slice(start);
     const end = tail.search(/\bNote\s*:/i);
-    return { page: index + 1, text: end > 0 ? tail.slice(0, end) : tail.slice(0, 2400) };
+    return { page: index + 1, text: end > 0 ? tail.slice(0, end) : tail.slice(0, 2600) };
   }
   return null;
 }
@@ -273,14 +286,15 @@ function findCpa(pages: string[]): MoneyHit | null {
 }
 
 function findInvoice(pages: string[]): { net: number; tax: number; gross: number; page: number; evidence: string } | null {
+  const dateToken = "(?:\\d{4}-\\d{1,2}-\\d{1,2}|\\d{1,2}[-/](?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC|\\d{1,2})[-/]\\d{2,4})";
   for (let index = 0; index < pages.length; index += 1) {
     const page = pages[index];
-    const header = page.search(/Invoice\s+Number\s+Invoice\s+Date\s+Net\s+Premium/i);
+    const header = page.search(/Invoice\s+Number[\s\S]{0,100}?Invoice\s+Date[\s\S]{0,100}?Net\s+Premium/i);
     if (header < 0) continue;
-    const window = page.slice(header, header + 1400);
-    const row = window.match(/\b[A-Z]{1,5}\d{5,}\s+(\d{4}-\d{2}-\d{2})\s+([0-9,.]+)\s+([0-9,.]+)\s+([0-9,.]+)\s+([0-9,.]+)\s+([0-9,.]+)\s+([0-9,.]+)\s+([0-9,.]+)/i);
+    const window = page.slice(header, header + 1800);
+    const row = window.match(new RegExp(`\\b[A-Z]{1,6}\\d{4,}\\s+${dateToken}\\s+([0-9,.]+)\\s+([0-9,.]+)\\s+([0-9,.]+)\\s+([0-9,.]+)\\s+([0-9,.]+)\\s+([0-9,.]+)\\s+([0-9,.]+)`, "i"));
     if (row) {
-      const values = row.slice(2, 9).map((item) => parseMoney(item));
+      const values = row.slice(1, 8).map((item) => parseMoney(item));
       if (values.every((item): item is number => item !== null)) {
         const [net, igst, cgst, sgst, utgst, cess, gross] = values;
         return { net, tax: round2(igst + cgst + sgst + utgst + cess), gross, page: index + 1, evidence: row[0] };
