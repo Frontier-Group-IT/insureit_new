@@ -1,0 +1,34 @@
+name: Temp compact document actions
+on:
+  push:
+    paths:
+      - scripts/temp_compact_document_actions.py
+      - .github/workflows/temp-compact-document-actions.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Apply compact document action patch
+        run: python scripts/temp_compact_document_actions.py
+      - name: Validate focused diff
+        run: |
+          git diff --check
+          grep -q 'EyeIcon' apps/web-portal/components/intermediary-document-grid.tsx
+          grep -q 'RefreshIcon' apps/web-portal/components/intermediary-document-grid.tsx
+          grep -q 'PlusIcon' apps/web-portal/components/intermediary-document-grid.tsx
+          ! grep -q '>Replace</label>' apps/web-portal/components/intermediary-document-grid.tsx
+          ! grep -q 'Add document</button>' apps/web-portal/components/intermediary-document-grid.tsx
+      - name: Commit application change and clean temporary files
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/web-portal/components/intermediary-document-grid.tsx
+          git commit -m 'Compact intermediary document card actions'
+          git rm scripts/temp_compact_document_actions.py .github/workflows/temp-compact-document-actions.yml
+          git commit -m 'chore: remove temporary document actions patch files'
+          git push
