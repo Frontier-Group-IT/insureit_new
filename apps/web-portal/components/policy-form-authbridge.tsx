@@ -228,7 +228,7 @@ export function PolicyFormAuthbridge({ action, createInsurerAction, customers, v
           <Select label="Intermediary type" value={form.intermediaryType} onChange={e=>update("intermediaryType",e.target.value)} options={["POSP","MISP","SIBL / Partner"]} placeholder="Select type" required />
           <CompactSourceMeta label="RM" value={form.rmName || "Select lead source"} source={form.rmName ? "Assigned" : undefined} />
           <div className="hidden" aria-hidden="true">
-            <Select label="RM name" value={form.rmName} onChange={e=>update("rmName",e.target.value)} options={[]} placeholder="RM not assigned" />
+            <Field label="RM name" value={form.rmName} onChange={e=>update("rmName",e.target.value)} />
           </div>
         </div>
         <div>
