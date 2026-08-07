@@ -7,8 +7,11 @@ function findPanelWrapper() {
   return title?.closest("div.fixed") as HTMLElement | null;
 }
 
-function findOnboardingHeader() {
-  const title = Array.from(document.querySelectorAll("h1")).find((item) => item.textContent?.trim() === "Policy Onboarding");
+function findPolicyHeader() {
+  const title = Array.from(document.querySelectorAll("h1")).find((item) => {
+    const text = item.textContent?.trim();
+    return text === "Policy Onboarding" || text === "Edit Policy";
+  });
   return title?.closest(".mb-4") as HTMLElement | null;
 }
 
@@ -24,10 +27,10 @@ export function PolicyIntelligencePositionGuard() {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         const panel = findPanelWrapper();
-        const onboardingHeader = findOnboardingHeader();
-        if (!panel || !onboardingHeader || window.innerWidth < 1280) return;
+        const policyHeader = findPolicyHeader();
+        if (!panel || !policyHeader || window.innerWidth < 1280) return;
 
-        const headerBottom = onboardingHeader.getBoundingClientRect().bottom;
+        const headerBottom = policyHeader.getBoundingClientRect().bottom;
         const top = Math.max(104, headerBottom + 12);
         const actionBarTop = findActionBar()?.getBoundingClientRect().top ?? window.innerHeight - 58;
         const availableHeight = Math.max(420, actionBarTop - top - 16);
