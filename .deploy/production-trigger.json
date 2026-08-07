@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-07T23:22:00+05:30",
+  "deploy_requested_at": "2026-08-07T23:36:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT Digit commercial policy OCR v1.6 release",
-  "source_commit": "33bd98a8f8124ac3c6beca702d2f9fadbd11b057",
-  "release_scope": "Deploy current main including the verified Digit commercial motor OCR v1.6 fix from commit 9fe6da1b6070dd137c217d0aea1f4f5e2ea06a82. The v1.6 change broadens Go Digit printed Net Premium anchors (including Total Net Premium [A+B]) and invoice-date parsing so OD premium can be recovered deterministically from printed Net Premium minus TP and CPA. Current main is three commits ahead of that verified OCR commit and additionally contains the already-merged parent Partner review-link change, its prior deployment-trigger metadata, and a temporary helper script; none of those later commits modify the Digit OCR refiner.",
-  "verification": "Digit OCR v1.6 commit 9fe6da1b6070dd137c217d0aea1f4f5e2ea06a82 was pulled and verified locally by the user: npm run typecheck passed and npm run build completed successfully. GitHub comparison confirms current main 33bd98a8f8124ac3c6beca702d2f9fadbd11b057 is three commits ahead and does not further modify apps/web-portal/lib/policy-ocr-digit-refiner-v2.ts. GitHub deployment workflow must succeed and Vercel must report READY before production success is claimed. After deployment, retest Digit policy D221859721 and verify IDV 3292441, OD 27820.86, TP 7267, CPA No/0, insurer Go Digit General Insurance Limited, and validity 2025-08-27 to 2026-08-26.",
+  "source": "ChatGPT POSP/MISP account review parent Partner navigation",
+  "source_commit": "a328d52f225f3ea444abcc2ce96644685397e8f7",
+  "release_scope": "Deploy current main including PR #214, which makes the Parent Partner value in POSP/MISP Application Review header stats link to the resolved parent Partner Application Review page using the real parent application UUID. This deployment also includes all previously merged current-main intermediary, document, OCR, policy onboarding, and UI changes.",
+  "verification": "PR #214 was verified as mergeable at head e576cc8c3fe5b255b82d4ca31a27df41a5f65eb9. Its focused temporary GitHub Actions validation completed successfully and git diff --check passed; full lint/typecheck/build were not run for this PR. GitHub deployment workflow must succeed and Vercel must report READY for the resulting production deployment before success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
