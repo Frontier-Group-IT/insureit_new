@@ -63,6 +63,16 @@ begin
     raise exception 'Policy Valid Upto cannot be before Valid From.';
   end if;
 
+  if v_idv < 0 or v_od < 0 or v_tp < 0 or v_cpa < 0 or v_scheme < 0 or v_retention < 0 then
+    raise exception 'Policy financial values cannot be negative.';
+  end if;
+  if v_projected_od_percent < 0 or v_projected_od_percent > 100
+     or v_projected_tp_percent < 0 or v_projected_tp_percent > 100
+     or v_payout_od_percent < 0 or v_payout_od_percent > 100
+     or v_payout_tp_percent < 0 or v_payout_tp_percent > 100 then
+    raise exception 'Pay-in and payout percentages must be between 0 and 100.';
+  end if;
+
   select coalesce(vehicle_class_code, vehicle_type)
   into v_vehicle_class
   from public.vehicles
@@ -221,4 +231,6 @@ end;
 $$;
 
 revoke all on function public.update_motor_policy(uuid, jsonb) from public;
-grant execute on function public.update_motor_policy(uuid, jsonb) to authenticated;
+revoke all on function public.update_motor_policy(uuid, jsonb) from anon;
+revoke all on function public.update_motor_policy(uuid, jsonb) from authenticated;
+grant execute on function public.update_motor_policy(uuid, jsonb) to service_role;
