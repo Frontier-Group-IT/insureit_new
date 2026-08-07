@@ -10,6 +10,7 @@ export type IntermediaryDocumentSlot = {
   required: boolean;
   custom: boolean;
   education: boolean;
+  system?: boolean;
 };
 
 export const EDUCATION_DOCUMENT_TYPES = [
@@ -31,7 +32,15 @@ const BASE_SLOTS: IntermediaryDocumentSlot[] = [
   { key: "education", title: "Education Marksheet", required: false, custom: false, education: true },
 ];
 
-export function buildIntermediaryDocumentSlots({ legacy, hasGst }: { legacy: boolean; hasGst: boolean }) {
+export function buildIntermediaryDocumentSlots({
+  legacy,
+  hasGst,
+  documents = [],
+}: {
+  legacy: boolean;
+  hasGst: boolean;
+  documents?: IntermediaryDocumentRecord[];
+}) {
   const slots = [...BASE_SLOTS];
 
   if (legacy) {
@@ -49,19 +58,50 @@ export function buildIntermediaryDocumentSlots({ legacy, hasGst }: { legacy: boo
   }
 
   if (hasGst) slots.push({ key: "gst_copy", title: "GST Certificate", required: true, custom: false, education: false });
-  const customCount = hasGst ? 3 : 4;
-  for (let index = 1; index <= customCount; index += 1) {
-    slots.push({ key: `custom_${index}`, title: "Other Document", required: false, custom: true, education: false });
+
+  // New POSP/MISP onboarding always reserves one of the ten visual document slots
+  // for the signed registration certificate. Existing custom documents are kept
+  // visible first, so old records are never silently displaced or deleted.
+  const customAllowance = hasGst ? 2 : 3;
+  const occupiedCustomKeys = CUSTOM_DOCUMENT_TYPES.filter((key) =>
+    documents.some((document) => document.document_type === key && Boolean(document.file_name?.trim())),
+  );
+  const selectedCustomKeys = [
+    ...occupiedCustomKeys,
+    ...CUSTOM_DOCUMENT_TYPES.filter((key) => !occupiedCustomKeys.includes(key)),
+  ].slice(0, customAllowance);
+
+  for (const key of selectedCustomKeys) {
+    slots.push({ key, title: "Other Document", required: false, custom: true, education: false });
   }
+
+  slots.push({
+    key: "signed_registration_form",
+    title: "Signed Registration Certificate",
+    required: false,
+    custom: false,
+    education: false,
+    system: true,
+  });
+
   return slots;
 }
 
 export function findDocumentForSlot(slot: IntermediaryDocumentSlot, documents: IntermediaryDocumentRecord[]) {
-  if (slot.education) return documents.find((document) => EDUCATION_DOCUMENT_TYPES.includes(document.document_type as (typeof EDUCATION_DOCUMENT_TYPES)[number]));
+  if (slot.education) {
+    return documents.find((document) => EDUCATION_DOCUMENT_TYPES.includes(document.document_type as (typeof EDUCATION_DOCUMENT_TYPES)[number]));
+  }
+  if (slot.key === "registration_certificate") {
+    return documents.find((document) => document.document_type === "registration_certificate")
+      ?? documents.find((document) => document.document_type === "signed_registration_form");
+  }
   return documents.find((document) => document.document_type === slot.key);
 }
 
 export function slotTitle(slot: IntermediaryDocumentSlot, document?: IntermediaryDocumentRecord | null) {
+  if (slot.key === "registration_certificate" && document?.document_type === "signed_registration_form") {
+    return "Signed Registration Certificate";
+  }
   if (slot.custom) return document?.document_label?.trim() || document?.file_name?.trim() || slot.title;
   return slot.title;
 }
