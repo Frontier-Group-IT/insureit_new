@@ -48,11 +48,13 @@ export function PolicySourceMasterWire({ rms, sources }: Props) {
       const type = controlForLabel(root, "Intermediary type");
       const lead = controlForLabel(root, "Lead source");
       const code = controlForLabel(root, "Intermediary code");
-      if (!(rm instanceof HTMLSelectElement) || !(type instanceof HTMLSelectElement) || !(lead instanceof HTMLInputElement) || !(code instanceof HTMLInputElement)) return false;
+      if (!(rm instanceof HTMLInputElement || rm instanceof HTMLSelectElement) || !(type instanceof HTMLSelectElement) || !(lead instanceof HTMLInputElement) || !(code instanceof HTMLInputElement)) return false;
 
-      const currentRm = rm.value;
-      rm.replaceChildren(new Option("RM not assigned", ""), ...rms.map((item) => new Option(item.label, item.value)));
-      if (rms.some((item) => item.value === currentRm)) rm.value = currentRm;
+      if (rm instanceof HTMLSelectElement) {
+        const currentRm = rm.value;
+        rm.replaceChildren(new Option("RM not assigned", ""), ...rms.map((item) => new Option(item.label, item.value)));
+        if (rms.some((item) => item.value === currentRm)) rm.value = currentRm;
+      }
 
       const listId = "policy-lead-source-master-options";
       let list = document.getElementById(listId) as HTMLDataListElement | null;
