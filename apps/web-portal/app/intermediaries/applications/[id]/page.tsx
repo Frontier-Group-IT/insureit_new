@@ -235,7 +235,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
           <div className={`grid border-t border-white/15 sm:grid-cols-2 ${isPartner ? "xl:grid-cols-6" : "xl:grid-cols-5"}`}>{stats.map((stat) => <HeaderStat key={stat.label} {...stat} />)}</div>
         </section>
 
-        <section id="overview" className="space-y-4">
+        <section id="overview" className={!isPartner && !onboardingComplete ? "-mt-2 space-y-4" : "space-y-4"}>
           {!onboardingComplete ? <JourneyCard title={isPartner ? "Partner onboarding journey" : `${kind} account journey`} journey={journey} /> : null}
           {!activePartner && isPartner ? (
             <section className="overflow-hidden rounded-2xl border border-[#C7D2FE] bg-gradient-to-r from-[#EEF2FF] via-white to-[#EFF6FF] shadow-[0_12px_28px_rgba(79,70,229,.10)]">
@@ -304,9 +304,9 @@ function CompactSubmit({ label, pendingLabel, secondary = false }: { label: stri
 function JourneyCard({ title, journey }: { title: string; journey: JourneyItem[] }) {
   const detailedStatus = journey.length === 6;
   return (
-    <section className="overflow-x-auto bg-transparent px-0 py-1">
-      <h2 className="mb-4 text-[13px] font-semibold text-[#17203A]">{title}</h2>
-      <div className={`relative grid gap-0 ${detailedStatus ? "min-w-[900px] sm:grid-cols-6 before:top-[9px]" : "min-w-[720px] sm:min-w-0 sm:grid-cols-2 before:top-[21px]"} before:absolute before:left-[8.333%] before:right-[8.333%] before:h-px before:bg-[#D6DEE9] before:content-['']`}>
+    <section className={`overflow-x-auto bg-transparent px-0 ${detailedStatus ? "py-0" : "py-1"}`}>
+      {!detailedStatus ? <h2 className="mb-4 text-[13px] font-semibold text-[#17203A]">{title}</h2> : null}
+      <div className={`relative grid gap-0 ${detailedStatus ? "min-w-[900px] sm:grid-cols-6" : "min-w-[720px] sm:min-w-0 sm:grid-cols-2 before:absolute before:left-[25%] before:right-[25%] before:top-[21px] before:h-px before:bg-[#D6DEE9] before:content-['']"}`}>
         {journey.map((item, index) => <Journey key={item.label} {...item} index={index} detailedStatus={detailedStatus} />)}
       </div>
     </section>

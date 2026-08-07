@@ -284,8 +284,8 @@ function SixStepNavigation({ applicationId, viewStage, documentsComplete, regist
   const completion: Record<ViewStage, boolean> = { primary: true, documents: documentsComplete, registration: registrationComplete, training: trainingExamComplete, agreement: agreementSigned, iib: iibUploaded };
   const steps: Array<[ViewStage, string]> = [["primary", "Primary details"], ["documents", "Documents"], ["registration", "Registration"], ["training", "Training & Exam"], ["agreement", "Agreement"], ["iib", "IIB Upload"]];
   return (
-    <nav className="overflow-x-auto rounded-2xl border border-[#DCE5EF] bg-white/85 px-5 py-5 shadow-sm backdrop-blur">
-      <div className="relative grid min-w-[900px] grid-cols-6 gap-0 before:absolute before:left-[8.4%] before:right-[8.4%] before:top-[9px] before:h-px before:bg-[#CBD5E1] before:content-['']">
+    <nav className="-mt-2 overflow-x-auto rounded-2xl border border-[#DCE5EF] bg-white/85 px-5 py-3 shadow-sm backdrop-blur">
+      <div className="relative grid min-w-[900px] grid-cols-6 gap-0">
         {steps.map(([stage, label], index) => {
           const completed = completion[stage];
           const active = stage === viewStage && !completed;
