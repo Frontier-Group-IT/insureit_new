@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-07T13:45:00+05:30",
+  "deploy_requested_at": "2026-08-07T14:52:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT controlled insurance company master release",
-  "source_commit": "f4aa90d33e74921c3f00376eae0066ad1b4aed78",
-  "release_scope": "Deploy merged PR #202 insurance company master integration: show only active canonical registered insurers for new policies, preserve the currently referenced inactive insurer when editing historical policies, remove branch-name decoration from insurer selectors, align insurer migration history with production Supabase, and standardize canonical registered insurer names while retaining legacy/OCR/former-name aliases. Production Supabase was verified with 35 active canonical insurers, 2 inactive legacy rows, and existing policy foreign keys preserved.",
-  "verification": "Production Supabase migration and data verification completed before merge. PR #202 was mergeable and merged at head b17a8543e55f1b446084016af135049d189bdaba. GitHub Actions must accept the Vercel production deploy-hook request, and Vercel must report Ready before production success is claimed.",
+  "source": "ChatGPT controlled soft gray onboarding stage header release",
+  "source_commit": "22d72e0d8233e279ee85a9d774db3a75b4cc7d16",
+  "release_scope": "Deploy PR #208 soft gray-blue onboarding stage headers across Primary information, Documents, Registration, Training & Examination, Agreement, and IIB Upload while keeping the main applicant/account header unchanged. Preserve semantic stage/status accents and all existing completion logic, validation, navigation, iCall integration, document handling, agreement logic, IIB workflow, permissions, and database behavior.",
+  "verification": "Focused temporary workflow succeeded and git diff --check passed before merge. PR #208 was mergeable and squash merged at exact head a1ec745fb993bbd239c4df4e0bc29d7249ffc498. Full lint, typecheck, and production build were not run for this change. GitHub Actions must accept the production deploy hook request, and Vercel must report Ready before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
