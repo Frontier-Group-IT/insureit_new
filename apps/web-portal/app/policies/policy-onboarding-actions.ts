@@ -31,6 +31,63 @@ function normalizedRegistration(value: string) { return value.trim().toUpperCase
 function cleanName(value: string) { return value.trim().replace(/\s+/g, " "); }
 function canTransferVehicle(role: string | null | undefined) { return role === "manager" || role === "admin" || role === "super_admin" || role === "it_super_user"; }
 function validDate(value: unknown) { return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value); }
+
+function numericPayloadValue(value: unknown, integer = false) {
+  if (value === null || value === undefined || value === "") return "";
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return "";
+    return String(integer ? Math.trunc(value) : value);
+  }
+  const text = String(value).trim();
+  if (!text || /^(na|n\/a|null|undefined|nil|not available)$/i.test(text)) return "";
+  const normalized = text.replace(/,/g, "");
+  const match = normalized.match(/-?\d+(?:\.\d+)?/);
+  if (!match) return "";
+  const parsed = Number(match[0]);
+  if (!Number.isFinite(parsed)) return "";
+  return String(integer ? Math.trunc(parsed) : parsed);
+}
+
+function sanitizeVehicleNumbers(vehicle: PolicyOnboardingPayload["vehicle"]) {
+  return {
+    ...vehicle,
+    manufacturingYear: numericPayloadValue(vehicle.manufacturingYear, true),
+    engineCapacity: numericPayloadValue(vehicle.engineCapacity),
+    seatingCapacity: numericPayloadValue(vehicle.seatingCapacity, true),
+    standingCapacity: numericPayloadValue(vehicle.standingCapacity, true),
+    sleeperCapacity: numericPayloadValue(vehicle.sleeperCapacity, true),
+    grossWeight: numericPayloadValue(vehicle.grossWeight),
+    unladenWeight: numericPayloadValue(vehicle.unladenWeight),
+    wheelBase: numericPayloadValue(vehicle.wheelBase),
+    cylinders: numericPayloadValue(vehicle.cylinders, true),
+  };
+}
+
+function sanitizeFinancialNumbers(payload: PolicyOnboardingPayload) {
+  return {
+    policy: { ...payload.policy, idv: numericPayloadValue(payload.policy.idv) },
+    premium: {
+      ...payload.premium,
+      od: numericPayloadValue(payload.premium.od),
+      tp: numericPayloadValue(payload.premium.tp),
+      cpa: numericPayloadValue(payload.premium.cpa),
+    },
+    payin: {
+      ...payload.payin,
+      odPercent: numericPayloadValue(payload.payin.odPercent),
+      tpPercent: numericPayloadValue(payload.payin.tpPercent),
+      scheme: numericPayloadValue(payload.payin.scheme),
+    },
+    billing: { ...payload.billing, billedAmount: numericPayloadValue(payload.billing.billedAmount) },
+    payout: {
+      ...payload.payout,
+      retention: numericPayloadValue(payload.payout.retention),
+      odPercent: numericPayloadValue(payload.payout.odPercent),
+      tpPercent: numericPayloadValue(payload.payout.tpPercent),
+    },
+  };
+}
+
 function validatePayload(payload: PolicyOnboardingPayload) {
   const phone = normalizedPhone(payload.customer.phone ?? "");
   const registration = normalizedRegistration(String(payload.vehicle.registrationNumber ?? ""));
@@ -108,10 +165,12 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
       rpcCustomer = { ...rpcCustomer, name: existingCustomer.contact_name, phone: existingCustomer.phone };
     }
 
+    const financials = sanitizeFinancialNumbers(payload);
     const rpcPayload = {
       ...payload,
+      ...financials,
       customer: rpcCustomer,
-      vehicle: { ...payload.vehicle, registrationNumber: registration },
+      vehicle: { ...sanitizeVehicleNumbers(payload.vehicle), registrationNumber: registration },
       resolution: {
         selectedCustomerId: effectiveCustomerId,
         confirmOwnershipTransfer: ownershipDecision === "transfer",
@@ -125,6 +184,9 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
     const { data, error } = await admin.rpc("onboard_motor_policy", { p_payload: rpcPayload });
     if (error) {
       if (error.message.includes("OWNERSHIP_CONFLICT")) return { ok: false, kind: "database", error: "Vehicle ownership changed while this form was open. Refresh and review the customer again." };
+      if (error.message.toLowerCase().includes("invalid input syntax for type numeric") || error.message.toLowerCase().includes("invalid input syntax for type integer")) {
+        return { ok: false, kind: "database", error: "A numeric vehicle or financial value could not be interpreted. The value has been normalized; please retry the booking." };
+      }
       return { ok: false, kind: "database", error: error.message };
     }
 
