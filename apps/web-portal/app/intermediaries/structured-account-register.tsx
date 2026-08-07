@@ -69,6 +69,21 @@ export async function StructuredAccountRegister({ type, search = "", status = "a
   ]);
   const partnerMap = new Map((partners ?? []).map((partner) => [partner.id, partner.partner_code]));
   const registrationMap = new Map((registrations ?? []).map((registration) => [registration.id, registration.registration_code]));
+  const { data: partnerApplications } = partnerIds.length
+    ? await admin
+        .from("intermediary_onboarding_applications")
+        .select("id,draft_data,partner_record_id")
+        .in("partner_record_id", partnerIds)
+        .returns<Array<Pick<ApplicationRow, "id" | "draft_data" | "partner_record_id">>>()
+    : { data: [] as Array<Pick<ApplicationRow, "id" | "draft_data" | "partner_record_id">> };
+  const partnerApplicationMap = new Map<string, string>();
+  for (const partnerApplication of partnerApplications ?? []) {
+    const context = partnerApplication.draft_data?.account_context;
+    if (!partnerApplication.partner_record_id || context === "posp" || context === "misp") continue;
+    if (!partnerApplicationMap.has(partnerApplication.partner_record_id)) {
+      partnerApplicationMap.set(partnerApplication.partner_record_id, partnerApplication.id);
+    }
+  }
 
   const counts = rows.reduce((acc, row) => {
     const stage = stageFor(appMap.get(row.application_id ?? ""));
@@ -123,6 +138,7 @@ export async function StructuredAccountRegister({ type, search = "", status = "a
                   const app = appMap.get(row.application_id ?? "");
                   const stage = stageFor(app);
                   const partnerId = app?.partner_record_id ? partnerMap.get(app.partner_record_id) : null;
+                  const partnerApplicationId = app?.partner_record_id ? partnerApplicationMap.get(app.partner_record_id) : null;
                   const registrationCode = app?.registration_record_id ? registrationMap.get(app.registration_record_id) : null;
                   const accountId = permanentAccountId(row, app, profileMap.get(row.application_id ?? ""), registrationCode, partnerId);
                   const rm = textValue(app?.draft_data?.associate_name) ?? "Not assigned";
@@ -130,7 +146,7 @@ export async function StructuredAccountRegister({ type, search = "", status = "a
                     <td className="truncate px-5 py-3.5 font-semibold text-[#0F2A55]" title={row.display_name}>{row.display_name}</td>
                     <td className="truncate px-3 py-3.5 font-medium text-[#17203A]" title={mobile10(row.mobile)}>{mobile10(row.mobile)}</td>
                     <td className="truncate px-3 py-3.5 font-semibold text-[#0F2A55]" title={accountId ?? `${title} ID pending`}>{accountId ?? `${title} ID pending`}</td>
-                    <td className="truncate px-3 py-3.5 font-medium text-[#17203A]" title={partnerId ?? "Partner ID pending"}>{partnerId ?? "Partner ID pending"}</td>
+                    <td className="truncate px-3 py-3.5 font-medium text-[#17203A]" title={partnerId ?? "Partner ID pending"}>{partnerId && partnerApplicationId ? <FreshAccountReviewLink href={`/intermediaries/applications/${partnerApplicationId}`} className="font-semibold text-[#0F2A55] transition hover:text-[#315FEA] hover:underline hover:underline-offset-2">{partnerId}</FreshAccountReviewLink> : partnerId ?? "Partner ID pending"}</td>
                     <td className={`truncate px-3 py-3.5 font-medium ${rm === "Not assigned" ? "text-amber-700" : "text-[#17203A]"}`} title={rm}>{rm}</td>
                     <td className="px-3 py-3.5"><StatusBadge value={accountStatusLabel(row.account_status, stage)} /></td>
                     <td className="px-3 py-3.5 pr-8 text-right">{row.application_id ? <FreshAccountReviewLink href={`/intermediaries/applications/${row.application_id}`} className="inline-flex h-8 items-center justify-center rounded-lg border border-[#C9D5E5] bg-white px-3 text-[9px] font-semibold text-[#0F2A55] transition hover:border-[#9AA9FF] hover:bg-[#F7F9FF]">Open</FreshAccountReviewLink> : <span className="text-[#94A3B8]">—</span>}</td>
