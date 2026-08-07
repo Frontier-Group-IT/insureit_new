@@ -138,31 +138,7 @@ export function IntermediaryDocumentGrid({
     }
   }
 
-  async function deleteCustomDocument(slotKey: string) {
-    if (!resolvedApplicationId || !window.confirm("Delete this custom document?")) return;
-    setMaintenanceBusy(true);
-    setMaintenanceMessage(null);
-    try {
-      const response = await fetch("/api/intermediary-documents/custom", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        cache: "no-store",
-        body: JSON.stringify({ application_id: resolvedApplicationId, document_type: slotKey }),
-      });
-      const payload = (await response.json().catch(() => null)) as { ok?: boolean; message?: string } | null;
-      if (!response.ok || !payload?.ok) throw new Error(payload?.message || "The document could not be deleted.");
-      setResolvedDocuments((current) => current.filter((item) => item.document_type !== slotKey));
-      setCustomLabels((current) => ({ ...current, [slotKey]: "" }));
-      setSelectedNames((current) => ({ ...current, [slotKey]: "" }));
-      onFileSelection?.(slotKey, false);
-      setMaintenanceMessage("Custom document deleted.");
-    } catch (error) {
-      setMaintenanceMessage(error instanceof Error ? error.message : "The document could not be deleted.");
-    } finally {
-      setMaintenanceBusy(false);
-    }
-  }
+
 
   return (
     <>
@@ -200,8 +176,56 @@ export function IntermediaryDocumentGrid({
               tone={tone}
               compact
               muted={emptyOptional && !editable && !slot.system}
-              action={existingDocument?.href ? (
-                <a href={existingDocument.href} target="_blank" rel="noreferrer" className="inline-flex h-7 items-center rounded-lg border border-[#D7DDF0] bg-white px-2.5 text-[8.5px] font-semibold text-[#24345A] shadow-sm">Open</a>
+              action={(existingDocument?.href || (editable && (slot.system ? Boolean(existingDocument) : true))) ? (
+                <div className="flex items-center gap-1.5">
+                  {existingDocument?.href ? (
+                    <a
+                      href={existingDocument.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`View ${title}`}
+                      title="View"
+                      className={compactActionClass}
+                    >
+                      <EyeIcon />
+                    </a>
+                  ) : null}
+                  {editable && slot.system && existingDocument ? (
+                    <a
+                      href={`${pathname}?stage=registration`}
+                      aria-label={`Replace ${title}`}
+                      title="Replace"
+                      className={compactActionClass}
+                    >
+                      <RefreshIcon />
+                    </a>
+                  ) : editable && !slot.system && slot.custom ? (
+                    <button
+                      type="button"
+                      disabled={maintenanceBusy}
+                      onClick={() => setCustomDialog({
+                        slotKey: slot.key,
+                        title,
+                        existingLabel: customLabels[slot.key] ?? existingDocument?.document_label ?? "",
+                        hasExistingDocument: Boolean(existingDocument),
+                      })}
+                      aria-label={existingDocument || selectedName ? `Replace ${title}` : `Add ${title}`}
+                      title={existingDocument || selectedName ? "Replace" : "Add document"}
+                      className={`${compactActionClass} disabled:cursor-not-allowed disabled:opacity-50`}
+                    >
+                      {existingDocument || selectedName ? <RefreshIcon /> : <PlusIcon />}
+                    </button>
+                  ) : editable && !slot.system ? (
+                    <label
+                      htmlFor={inputId}
+                      aria-label={existingDocument || selectedName ? `Replace ${title}` : `Upload ${title}`}
+                      title={existingDocument || selectedName ? "Replace" : "Add document"}
+                      className={`${compactActionClass} cursor-pointer`}
+                    >
+                      {existingDocument || selectedName ? <RefreshIcon /> : <PlusIcon />}
+                    </label>
+                  ) : null}
+                </div>
               ) : null}
             >
               {slot.system && !existingDocument ? (
@@ -222,46 +246,21 @@ export function IntermediaryDocumentGrid({
                   ) : null}
 
                   {slot.custom ? (
-                    <>
-                      <input type="hidden" name={`${slot.key}_label`} value={customLabels[slot.key] ?? existingDocument?.document_label ?? ""} />
-                      <div className="grid gap-1.5">
-                        <button
-                          type="button"
-                          disabled={maintenanceBusy}
-                          onClick={() => setCustomDialog({
-                            slotKey: slot.key,
-                            title,
-                            existingLabel: customLabels[slot.key] ?? existingDocument?.document_label ?? "",
-                            hasExistingDocument: Boolean(existingDocument),
-                          })}
-                          className="inline-flex h-8 w-full items-center justify-center rounded-lg bg-gradient-to-r from-[#635BFF] to-[#4B8DF8] px-3 text-[8.5px] font-semibold text-white disabled:opacity-50"
-                        >
-                          {existingDocument || selectedName ? "Replace / rename" : "Add document"}
-                        </button>
-                        {existingDocument ? (
-                          <button type="button" disabled={maintenanceBusy} onClick={() => void deleteCustomDocument(slot.key)} className="h-7 rounded-lg border border-red-200 bg-red-50 px-2 text-[8px] font-semibold text-red-700 disabled:opacity-50">Delete</button>
-                        ) : null}
-                      </div>
-                    </>
+                    <input type="hidden" name={`${slot.key}_label`} value={customLabels[slot.key] ?? existingDocument?.document_label ?? ""} />
                   ) : (
-                    <>
-                      <input
-                        id={inputId}
-                        name={inputName}
-                        type="file"
-                        required={slot.required && !existingDocument}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={(event) => {
-                          const file = event.currentTarget.files?.[0];
-                          setSelectedNames((current) => ({ ...current, [slot.key]: file?.name ?? "" }));
-                          onFileSelection?.(slot.key, Boolean(file));
-                        }}
-                        className="sr-only"
-                      />
-                      <label htmlFor={inputId} className="inline-flex h-8 w-full cursor-pointer items-center justify-center rounded-lg bg-gradient-to-r from-[#635BFF] to-[#4B8DF8] px-3 text-[8.5px] font-semibold text-white">
-                        {existingDocument ? "Replace" : "Upload"}
-                      </label>
-                    </>
+                    <input
+                      id={inputId}
+                      name={inputName}
+                      type="file"
+                      required={slot.required && !existingDocument}
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={(event) => {
+                        const file = event.currentTarget.files?.[0];
+                        setSelectedNames((current) => ({ ...current, [slot.key]: file?.name ?? "" }));
+                        onFileSelection?.(slot.key, Boolean(file));
+                      }}
+                      className="sr-only"
+                    />
                   )}
                 </div>
               ) : null}
@@ -302,6 +301,36 @@ export function IntermediaryDocumentGrid({
         <input key={slot.key} id={`custom-file-${slot.key}`} name={slot.key} type="file" accept=".pdf,.jpg,.jpeg,.png" className="sr-only" />
       )) : null}
     </>
+  );
+}
+
+const compactActionClass = "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#D7DDF0] bg-white text-[#0F2A55] shadow-[0_4px_12px_rgba(15,23,42,0.08)] transition hover:border-[#B8C7DE] hover:bg-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C7D2FE]";
+
+function EyeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M2.5 12s3.4-5.5 9.5-5.5 9.5 5.5 9.5 5.5-3.4 5.5-9.5 5.5S2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="2.6" />
+    </svg>
+  );
+}
+
+function RefreshIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 7v5h-5" />
+      <path d="M4 17v-5h5" />
+      <path d="M6.1 8.1A7 7 0 0 1 18.7 9L20 12" />
+      <path d="M17.9 15.9A7 7 0 0 1 5.3 15L4 12" />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
   );
 }
 
