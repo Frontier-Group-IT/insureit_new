@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-07T16:37:00+05:30",
+  "deploy_requested_at": "2026-08-07T16:54:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT controlled intermediary application review document display release",
-  "source_commit": "1f311f8e9036a58df660966584752465bd2eb05b",
-  "release_scope": "Deploy the intermediary application review document display change so only uploaded document cards are shown, empty required/optional placeholders are hidden, and the existing single Education Marksheet selection behavior is preserved.",
-  "verification": "Focused GitHub Actions validation for the change passed, including git diff --check. The final PR changed only apps/web-portal/app/intermediaries/applications/[id]/page.tsx (+1/-1). Full lint/typecheck/build were not run. GitHub Actions must accept the protected production deploy hook request, and Vercel must report Ready for the resulting deployment before production success is claimed.",
+  "source": "ChatGPT intermediary workflow light secondary headers release",
+  "source_commit": "3cb2811a1c8566b9c4b836404ec3efb53dd9c365",
+  "release_scope": "Deploy the corrected intermediary workflow theme so the main applicant/account banner remains the only dark navy header while nested Primary information, Documents, Registration, Training & Examination, Agreement, and IIB Upload section headers use the normal light gray table-style surface. Preserve semantic stage/status accents and all existing completion logic, validation, navigation, iCall integration, document handling, agreement logic, IIB workflow, permissions, and database behavior.",
+  "verification": "npm --prefix apps/web-portal run typecheck passed. npm --prefix apps/web-portal run lint passed with existing warnings only. npm --prefix apps/web-portal run build passed. Local dev server was restarted on port 3001 for visual inspection before deployment.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
