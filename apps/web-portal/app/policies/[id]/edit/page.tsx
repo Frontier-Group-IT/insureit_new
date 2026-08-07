@@ -7,7 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type CustomerOption = { id: string; contact_name: string };
 type VehicleOption = { id: string; vehicle_no: string; customer_id: string };
-type InsurerOption = { id: string; name: string; branch_name: string | null };
+type InsurerOption = { id: string; name: string; segment: "general" | "health" | "life" | null; is_active: boolean };
 type PolicyValues = {
   customer_id: string;
   vehicle_id: string;
@@ -27,22 +27,30 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
   const { id } = await params;
   const admin = createSupabaseAdminClient();
 
-  const [policyResult, customersResult, vehiclesResult, insurersResult] = await Promise.all([
-    admin.from("policies").select("customer_id, vehicle_id, insurance_company_id, policy_no, policy_type, insured_declared_value, start_date, end_date").eq("id", id).maybeSingle<PolicyValues>(),
+  const { data: policy, error: policyError } = await admin
+    .from("policies")
+    .select("customer_id, vehicle_id, insurance_company_id, policy_no, policy_type, insured_declared_value, start_date, end_date")
+    .eq("id", id)
+    .maybeSingle<PolicyValues>();
+
+  if (policyError) throw new Error(`Unable to load policy details: ${policyError.message}`);
+  if (!policy) notFound();
+
+  const [customersResult, vehiclesResult, insurersResult] = await Promise.all([
     admin.from("customers").select("id, contact_name").order("created_at", { ascending: false }).returns<CustomerOption[]>(),
     admin.from("vehicles").select("id, vehicle_no, customer_id").order("created_at", { ascending: false }).returns<VehicleOption[]>(),
-    admin.from("insurance_companies").select("id, name, branch_name").order("name", { ascending: true }).returns<InsurerOption[]>()
+    admin.from("insurance_companies").select("id, name, segment, is_active").order("name", { ascending: true }).returns<InsurerOption[]>()
   ]);
 
-  if (policyResult.error) throw new Error(`Unable to load policy details: ${policyResult.error.message}`);
-  if (!policyResult.data) notFound();
   if (customersResult.error) throw new Error(`Unable to load customers: ${customersResult.error.message}`);
   if (vehiclesResult.error) throw new Error(`Unable to load vehicles: ${vehiclesResult.error.message}`);
   if (insurersResult.error) throw new Error(`Unable to load insurers: ${insurersResult.error.message}`);
 
   const customerOptions = (customersResult.data ?? []).map((customer) => ({ value: customer.id, label: customer.contact_name }));
   const vehicleOptions = (vehiclesResult.data ?? []).map((vehicle) => ({ value: vehicle.id, label: vehicle.vehicle_no, customerId: vehicle.customer_id }));
-  const insurerOptions = (insurersResult.data ?? []).map((insurer) => ({ value: insurer.id, label: insurer.branch_name ? `${insurer.name} — ${insurer.branch_name}` : insurer.name }));
+  const insurerOptions = (insurersResult.data ?? [])
+    .filter((insurer) => (insurer.is_active && insurer.segment === "general") || insurer.id === policy.insurance_company_id)
+    .map((insurer) => ({ value: insurer.id, label: insurer.is_active ? insurer.name : `${insurer.name} — inactive` }));
 
   return (
     <AppShell title="Edit Policy">
@@ -52,7 +60,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
         customers={customerOptions}
         vehicles={vehicleOptions}
         insurers={insurerOptions}
-        values={policyResult.data}
+        values={policy}
         submitLabel="Save changes"
       />
     </AppShell>
