@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-07T22:53:00+05:30",
+  "deploy_requested_at": "2026-08-07T22:55:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT Digit commercial policy OCR v1.4 release",
-  "source_commit": "2fd2ff8127fb224856984128bfd841c5127454dc",
-  "release_scope": "Deploy the current verified main including the guarded Digit commercial motor policy OCR v1.4 refiner. This version rejects year-like IDV values, reads Digit IDV and premium blocks using stricter anchors, recovers a missing OD or TP value from the printed net premium when consistency allows, preserves CPA No/0 handling, keeps printed Net/GST/Gross as comparison-only values, and leaves the shared PolicyUnifiedForm architecture unchanged.",
-  "verification": "Current main 2fd2ff8127fb224856984128bfd841c5127454dc was pulled and verified locally by the user on 2026-08-07: npm run typecheck passed and npm run build completed successfully. GitHub Actions must succeed and Vercel must report READY before production success is claimed. After deployment, retest Digit policy D221859721 and verify IDV 3292441, OD 27820.86, TP 7267, CPA No/0, insurer Go Digit General Insurance Limited, and validity 2025-08-27 to 2026-08-26.",
+  "source": "ChatGPT compact intermediary document card actions release",
+  "source_commit": "7ac0f063ec0d27b9686eeb9055658f7f367c6369",
+  "release_scope": "Deploy the compact intermediary document-card action UI. Uploaded documents now use compact Eye and Refresh rounded-square actions, empty uploadable slots use a single compact plus action, the Education Marksheet selector remains intact, and Signed Registration Certificate replacement routes back to Registration. No database schema, document slot allocation, validation rules, upload APIs, permissions, workflow transitions, or document requirements are changed.",
+  "verification": "PR #212 was mergeable at exact head afbb7bbcb3cb988eeb8a748d59cdf6e2f3147c44 and squash-merged into main as 7ac0f063ec0d27b9686eeb9055658f7f367c6369. The focused temporary GitHub Actions patch completed successfully and git diff --check passed; the final PR changed only apps/web-portal/components/intermediary-document-grid.tsx. Full lint/typecheck/build were not run for this PR. GitHub Actions must succeed and Vercel must report READY before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
