@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { parsePolicyDocument, type ParsedPolicyField } from "@/lib/policy-ocr-parsers";
 import { refineDigitCommercialPolicyV2 } from "@/lib/policy-ocr-digit-refiner-v2";
+import { refineNewIndiaCommercialPolicy } from "@/lib/policy-ocr-new-india-refiner";
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const OCR_TIMEOUT_MS = 120 * 1000;
@@ -111,7 +112,9 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
     const baseParsed = parsePolicyDocument(pages);
     const parsed = baseParsed.parserId === "digit_commercial_motor_v1"
       ? refineDigitCommercialPolicyV2(pages, baseParsed)
-      : baseParsed;
+      : baseParsed.parserId === "new_india_motor_v1"
+        ? refineNewIndiaCommercialPolicy(pages, baseParsed)
+        : baseParsed;
     if (!parsed.fields.length) return { ok: false, error: "No supported policy fields could be extracted from this document." };
 
     return {
