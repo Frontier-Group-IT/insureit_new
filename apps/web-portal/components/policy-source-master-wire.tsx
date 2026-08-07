@@ -3,7 +3,14 @@
 import { useEffect } from "react";
 
 type RmOption = { value: string; label: string };
-type SourceOption = { type: "POSP" | "MISP" | "SIBL / Partner"; value: string; label: string; code: string };
+type SourceOption = {
+  type: "POSP" | "MISP" | "SIBL / Partner";
+  value: string;
+  label: string;
+  code: string;
+  rmName: string;
+  rmCode: string;
+};
 
 type Props = {
   rms: RmOption[];
@@ -25,9 +32,6 @@ function dispatchValue(control: HTMLInputElement | HTMLSelectElement, value: str
   const prototype = control instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
   const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
   setter?.call(control, value);
-
-  // React tracks controlled input values internally. Resetting the tracker to the
-  // previous value ensures the following event is treated as a genuine change.
   (control as ReactTrackedControl)._valueTracker?.setValue(previousValue);
   control.dispatchEvent(new Event("input", { bubbles: true }));
   control.dispatchEvent(new Event("change", { bubbles: true }));
@@ -47,7 +51,7 @@ export function PolicySourceMasterWire({ rms, sources }: Props) {
       if (!(rm instanceof HTMLSelectElement) || !(type instanceof HTMLSelectElement) || !(lead instanceof HTMLInputElement) || !(code instanceof HTMLInputElement)) return false;
 
       const currentRm = rm.value;
-      rm.replaceChildren(new Option("Select RM", ""), ...rms.map((item) => new Option(item.label, item.value)));
+      rm.replaceChildren(new Option("RM not assigned", ""), ...rms.map((item) => new Option(item.label, item.value)));
       if (rms.some((item) => item.value === currentRm)) rm.value = currentRm;
 
       const listId = "policy-lead-source-master-options";
@@ -61,7 +65,6 @@ export function PolicySourceMasterWire({ rms, sources }: Props) {
       lead.setAttribute("autocomplete", "off");
       code.readOnly = true;
       code.setAttribute("aria-readonly", "true");
-      code.classList.add("cursor-not-allowed", "bg-[#F8FAFC]");
 
       const optionsForType = () => sources.filter((item) => item.type === type.value);
       const refresh = (clearSelection: boolean) => {
@@ -69,41 +72,40 @@ export function PolicySourceMasterWire({ rms, sources }: Props) {
         list!.replaceChildren(...options.map((item) => {
           const option = document.createElement("option");
           option.value = item.label;
-          option.label = item.code ? `${item.label} · ${item.code}` : item.label;
+          option.label = [item.label, item.code, item.rmName].filter(Boolean).join(" · ");
           return option;
         }));
         lead.placeholder = type.value ? `Search ${type.value === "SIBL / Partner" ? "partner" : type.value}` : "Select intermediary type first";
-        code.placeholder = type.value === "POSP" ? "POSP code" : type.value === "MISP" ? "MISP code" : type.value === "SIBL / Partner" ? "Partner ID" : "Auto-filled from lead source";
         lead.disabled = !type.value;
         if (clearSelection) {
           dispatchValue(lead, "");
           dispatchValue(code, "");
+          dispatchValue(rm, "");
         }
       };
 
       let syncTimer = 0;
-      const syncCode = () => {
-        // Allow React's delegated onChange handler to commit the controlled Lead
-        // Source value before updating the dependent intermediary-code field.
+      const syncSelection = () => {
         window.clearTimeout(syncTimer);
         const selectedLabel = lead.value;
         syncTimer = window.setTimeout(() => {
           const selected = optionsForType().find((item) => item.label.trim().toLowerCase() === selectedLabel.trim().toLowerCase());
           dispatchValue(code, selected?.code ?? "");
+          dispatchValue(rm, selected?.rmName ?? "");
         }, 0);
       };
       const onTypeChange = () => refresh(true);
       type.addEventListener("change", onTypeChange);
-      lead.addEventListener("input", syncCode);
-      lead.addEventListener("change", syncCode);
+      lead.addEventListener("input", syncSelection);
+      lead.addEventListener("change", syncSelection);
       refresh(false);
-      syncCode();
+      syncSelection();
 
       cleanup = () => {
         window.clearTimeout(syncTimer);
         type.removeEventListener("change", onTypeChange);
-        lead.removeEventListener("input", syncCode);
-        lead.removeEventListener("change", syncCode);
+        lead.removeEventListener("input", syncSelection);
+        lead.removeEventListener("change", syncSelection);
       };
       return true;
     };
