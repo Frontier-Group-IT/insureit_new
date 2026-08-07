@@ -19,8 +19,8 @@ jobs:
           fetch-depth: 0
 
       - name: Apply focused React UI patch
-        shell: python
         run: |
+          python - <<'PY'
           from pathlib import Path
 
           path = Path('apps/web-portal/components/policy-form-authbridge.tsx')
@@ -82,6 +82,7 @@ jobs:
           assert 'role="alertdialog"' in text
           assert '>OK</button>' in text
           path.write_text(text)
+          PY
 
       - name: Remove temporary workflow and validate scope
         run: |
