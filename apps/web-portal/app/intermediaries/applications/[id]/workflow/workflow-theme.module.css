@@ -83,32 +83,27 @@
   padding: 0 !important;
 }
 
-/* Primary information, Documents and Final Review section headers. */
+/* Primary information, Documents, Qualification and IIB section headers stay light.
+   The account identity banner above is the only dark navy header on the workflow page. */
 .workflowTheme :global(form[class*="bg-[#F4F7FB]"] > div[class*="space-y-4"] > section > div:first-child),
 .workflowTheme :global(#qualification-process > section > div:first-child),
 .workflowTheme :global(#iib-submission > header) {
-  border-color: rgba(255, 255, 255, 0.16) !important;
-  background: linear-gradient(110deg, var(--workflow-navy), var(--workflow-navy-mid), var(--workflow-navy-end)) !important;
-  color: #fff !important;
+  border-color: var(--workflow-border) !important;
+  background: var(--workflow-surface) !important;
+  color: #0f172a !important;
 }
 
-.workflowTheme :global(form[class*="bg-[#F4F7FB]"] > div[class*="space-y-4"] > section > div:first-child *),
-.workflowTheme :global(#qualification-process > section > div:first-child *),
-.workflowTheme :global(#iib-submission > header *) {
-  color: #fff !important;
+.workflowTheme :global(form[class*="bg-[#F4F7FB]"] > div[class*="space-y-4"] > section > div:first-child h2),
+.workflowTheme :global(form[class*="bg-[#F4F7FB]"] > div[class*="space-y-4"] > section > div:first-child h3),
+.workflowTheme :global(#qualification-process > section > div:first-child h3),
+.workflowTheme :global(#iib-submission > header h2) {
+  color: #0f172a !important;
 }
 
-.workflowTheme :global(#qualification-process > section > div:first-child > div:first-child > span) {
-  border: 1px solid rgba(255, 255, 255, 0.42) !important;
-  background: rgba(255, 255, 255, 0.12) !important;
-  color: #fff !important;
-}
-
-.workflowTheme :global(#qualification-process > section > div:first-child > span),
-.workflowTheme :global(#iib-submission > header > span) {
-  border: 1px solid rgba(255, 255, 255, 0.28) !important;
-  background: rgba(255, 255, 255, 0.12) !important;
-  color: #fff !important;
+.workflowTheme :global(form[class*="bg-[#F4F7FB]"] > div[class*="space-y-4"] > section > div:first-child p),
+.workflowTheme :global(#qualification-process > section > div:first-child p),
+.workflowTheme :global(#iib-submission > header p) {
+  color: #64748b !important;
 }
 
 /* Keep bodies white while matching the review page's padding and section spacing. */
