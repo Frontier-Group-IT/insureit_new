@@ -92,7 +92,14 @@ export function IntermediaryDocumentGrid({
       .then((payload) => {
         if (cancelled) return;
         const nextDocuments = payload.documents ?? [];
-        setResolvedDocuments(nextDocuments);
+        setResolvedDocuments((current) => nextDocuments.map((nextDocument) => {
+          if (nextDocument.href) return nextDocument;
+          const previousDocument = current.find((document) =>
+            document.document_type === nextDocument.document_type
+            && document.file_name === nextDocument.file_name,
+          );
+          return previousDocument?.href ? { ...nextDocument, href: previousDocument.href } : nextDocument;
+        }));
         setResolvedLegacy(payload.legacy === true);
         setResolvedHasGst(payload.has_gst === true);
         setCustomLabels((current) => ({ ...customLabelMap(nextDocuments), ...current }));
@@ -176,19 +183,29 @@ export function IntermediaryDocumentGrid({
               tone={tone}
               compact
               muted={emptyOptional && !editable && !slot.system}
-              action={(existingDocument?.href || (editable && (slot.system ? Boolean(existingDocument) : true))) ? (
+              action={(existingDocument || (editable && (slot.system ? Boolean(existingDocument) : true))) ? (
                 <div className="flex items-center gap-1.5">
-                  {existingDocument?.href ? (
-                    <a
-                      href={existingDocument.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label={`View ${title}`}
-                      title="View"
-                      className={compactActionClass}
-                    >
-                      <EyeIcon />
-                    </a>
+                  {existingDocument ? (
+                    existingDocument.href ? (
+                      <a
+                        href={existingDocument.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label={`View ${title}`}
+                        title="View"
+                        className={compactActionClass}
+                      >
+                        <EyeIcon />
+                      </a>
+                    ) : (
+                      <span
+                        aria-label={`View ${title}`}
+                        title="View"
+                        className={compactActionClass}
+                      >
+                        <EyeIcon />
+                      </span>
+                    )
                   ) : null}
                   {editable && slot.system && existingDocument ? (
                     <a
