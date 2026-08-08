@@ -8,7 +8,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "policy-ocr:iffco-regression": "node --experimental-strip-types scripts/policy-ocr-iffco-regression.ts",
-    "policy-ocr:digit-regression": "node --experimental-strip-types scripts/policy-ocr-digit-regression.ts"
+    "policy-ocr:digit-regression": "node --experimental-strip-types scripts/policy-ocr-digit-regression.ts",
+    "policy-ocr:new-india-regression": "node --experimental-strip-types scripts/policy-ocr-new-india-regression.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.8",
