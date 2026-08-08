@@ -29,12 +29,12 @@ jobs:
       - name: Validate patch
         run: |
           git diff --check
-          grep -q 'CompactSourceMeta label="RM" value={form.rmName||"Select lead source"}/>' apps/web-portal/components/policy-unified-form.tsx
-          grep -q 'CompactSourceMeta label="ID" value={form.intermediaryCode||"Select lead source"}/>' apps/web-portal/components/policy-unified-form.tsx
-          grep -q 'sticky top-\[72px\] z-50 mb-4' apps/web-portal/components/policy-unified-form.tsx
-          grep -q 'onClick={()=>goToSection(index)}' apps/web-portal/components/policy-unified-form.tsx
-          ! grep -q 'source={form.rmName?"Assigned":undefined}' apps/web-portal/components/policy-unified-form.tsx
-          ! grep -q 'label="Intermediary code" value={form.intermediaryCode' apps/web-portal/components/policy-unified-form.tsx
+          grep -Fq 'CompactSourceMeta label="RM" value={form.rmName||"Select lead source"}/>' apps/web-portal/components/policy-unified-form.tsx
+          grep -Fq 'CompactSourceMeta label="ID" value={form.intermediaryCode||"Select lead source"}/>' apps/web-portal/components/policy-unified-form.tsx
+          grep -Fq 'sticky top-[72px] z-50 mb-4' apps/web-portal/components/policy-unified-form.tsx
+          grep -Fq 'onClick={()=>goToSection(index)}' apps/web-portal/components/policy-unified-form.tsx
+          ! grep -Fq 'source={form.rmName?"Assigned":undefined}' apps/web-portal/components/policy-unified-form.tsx
+          ! grep -Fq 'label="Intermediary code" value={form.intermediaryCode' apps/web-portal/components/policy-unified-form.tsx
       - name: Commit application change
         run: |
           git config user.name "github-actions[bot]"
