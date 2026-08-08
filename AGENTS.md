@@ -6,15 +6,16 @@ Before doing any work in this repository, read all of the following:
 
 - `docs/INSUREIT_PROJECT_CONTEXT.md`
 - `docs/CURRENT_CHAT_HANDOFF.md`
+- `docs/PRODUCTION_DOMAIN_HANDOFF.md`
 - `docs/ICALL_AWS_GATEWAY_HANDOFF.md`
 - `docs/AUTHBRIDGE_RC_HANDOFF.md`
 - `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md`
 
 Do this at the beginning of every new ChatGPT/Codex session connected to the repository. Do not ask the user to repeat information already recorded in those files.
 
-Treat `docs/INSUREIT_PROJECT_CONTEXT.md` as the durable technical and business-rule source of truth. Treat `docs/CURRENT_CHAT_HANDOFF.md` as the current conversation continuation state, including active audit findings, selected work, implementation boundaries, and unresolved risks. Treat `docs/ICALL_AWS_GATEWAY_HANDOFF.md` as the source of truth for the iCall APIs, AWS Lightsail fixed-IP gateway, Vercel environment, SSO/iframe integration, CSP history, cookie issue, verified state, and immediate continuation steps. Treat `docs/AUTHBRIDGE_RC_HANDOFF.md` as the source of truth for AuthBridge Detailed RC service 372, its three-step encryption/lookup/decryption contract, AWS gateway route, verified UAT state, security incident, and Policy Onboarding vehicle-registration continuation work. Treat `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md` as the source of truth for policy OCR scope, Google Document AI, Vercel OIDC federation, insurer parsers, test evidence, deployment state, and continuation steps.
+Treat `docs/INSUREIT_PROJECT_CONTEXT.md` as the durable technical and business-rule source of truth. Treat `docs/CURRENT_CHAT_HANDOFF.md` as the current conversation continuation state, including active audit findings, selected work, implementation boundaries, and unresolved risks. Treat `docs/PRODUCTION_DOMAIN_HANDOFF.md` as the source of truth for the canonical production portal domain, GoDaddy DNS, Vercel custom-domain binding, Supabase Auth URL configuration, public portal environment settings, domain-sensitive integration verification, and launch-time DNS safeguards. Treat `docs/ICALL_AWS_GATEWAY_HANDOFF.md` as the source of truth for the iCall APIs, AWS Lightsail fixed-IP gateway, Vercel environment, SSO/iframe integration, CSP history, cookie issue, verified state, and immediate continuation steps. Treat `docs/AUTHBRIDGE_RC_HANDOFF.md` as the source of truth for AuthBridge Detailed RC service 372, its three-step encryption/lookup/decryption contract, AWS gateway route, verified UAT state, security incident, and Policy Onboarding vehicle-registration continuation work. Treat `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md` as the source of truth for policy OCR scope, Google Document AI, Vercel OIDC federation, insurer parsers, test evidence, deployment state, and continuation steps.
 
-Update the durable project context after material workflow, schema, constraint, migration or architecture changes. Update or consolidate the current chat handoff after active work is materially implemented, blocked or verified. Update the iCall gateway handoff after material iCall API, gateway, domain, IP allowlist, CSP, cookie, SSO, iframe, UAT or production changes. Update the AuthBridge handoff after material provider-contract, gateway, field-mapping, Policy Onboarding, UAT, credential, security, or production changes. Update the policy OCR handoff after material changes to Google authentication, OCR providers, insurer detection/parsers, Section 03 mapping, testing, deployment, privacy controls, or production verification.
+Update the durable project context after material workflow, schema, constraint, migration or architecture changes. Update or consolidate the current chat handoff after active work is materially implemented, blocked or verified. Update the production-domain handoff after material production-domain, GoDaddy DNS, Vercel domain, Supabase Auth URL, public-origin, callback/redirect, iframe-origin, or launch-time DNS changes. Update the iCall gateway handoff after material iCall API, gateway, domain, IP allowlist, CSP, cookie, SSO, iframe, UAT or production changes. Update the AuthBridge handoff after material provider-contract, gateway, field-mapping, Policy Onboarding, UAT, credential, security, or production changes. Update the policy OCR handoff after material changes to Google authentication, OCR providers, insurer detection/parsers, Section 03 mapping, testing, deployment, privacy controls, or production verification.
 
 Never store secrets, API keys, passwords, tokens, cookies, private keys, full sensitive identity values or MCP credentials in repository context files.
 
@@ -81,6 +82,7 @@ Do not preserve a long failure chronology. Do not state “no changes were made�
 - `AGENTS.md` — stable operating rules for agents and repository work. Do not use it as project history.
 - `docs/INSUREIT_PROJECT_CONTEXT.md` — durable current business rules, architecture, schema constraints and verified system lessons.
 - `docs/CURRENT_CHAT_HANDOFF.md` — only the active continuation state needed by the next session. Rewrite/consolidate stale sections instead of continuously appending.
+- `docs/PRODUCTION_DOMAIN_HANDOFF.md` — canonical production-domain, DNS, Vercel, Supabase Auth URL, public-origin, iframe-origin and go-live domain state.
 - `docs/ICALL_AWS_GATEWAY_HANDOFF.md` — iCall/gateway-specific verified state, blockers and continuation actions.
 - `docs/AUTHBRIDGE_RC_HANDOFF.md` — AuthBridge Detailed RC provider contract, gateway state, Policy Onboarding integration boundaries, security requirements and verification evidence.
 - `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md` — Policy OCR scope, Google/Vercel identity configuration, insurer parser architecture, test evidence, deployment state, durable lessons and continuation actions.
@@ -111,6 +113,34 @@ If the answer to either of the first two questions is no, do not save it.
 - A successful GitHub Actions hook request proves only that Vercel accepted the request. Check the Vercel build/deployment result before claiming production success.
 - A committed migration is not proof that it has been applied in Supabase.
 - Do not claim build, deployment, migration or live workflow success without direct evidence.
+
+## Production domain and DNS protocol
+
+When changing production domains, DNS, Vercel custom domains, Supabase Auth URLs, public portal URLs, callback/redirect origins, iframe allow-lists, or launch-time domain configuration, read and follow:
+
+- `docs/PRODUCTION_DOMAIN_HANDOFF.md`
+- `docs/ICALL_AWS_GATEWAY_HANDOFF.md` when iCall/iframe behavior is involved
+- `docs/AUTHBRIDGE_RC_HANDOFF.md` when gateway/AuthBridge behavior is involved
+
+Current canonical production application origin is:
+
+```text
+https://portal.insureit.in
+```
+
+The former `https://insureit-drab.vercel.app` hostname is a temporary fallback during stabilization and must not be treated as the canonical production origin. The dedicated production-domain handoff supersedes stale historical URL references elsewhere in repository snapshots.
+
+Mandatory safeguards:
+
+- Do not change unrelated GoDaddy `@`, `www`, MX, TXT, SPF, DKIM, DMARC, email, Microsoft 365, verification or public-site records as part of portal work.
+- Do not create speculative subdomains. Add a hostname only for a concrete implemented service with a defined routing/TLS plan.
+- Before major DNS changes, capture/export the existing DNS state so rollback is possible.
+- Keep `portal.insureit.in` as the canonical web-app origin unless the user explicitly approves another migration.
+- Keep the old Vercel hostname and its Supabase redirect entries until stabilization is complete and remaining domain-sensitive integrations are verified.
+- Do not change AWS gateway, AuthBridge, iCall credentials, Supabase keys or Google Document AI identity settings solely because the public web hostname changes. First prove that the affected server-to-server path actually depends on the browser origin.
+- iCall `Open in new tab` has been verified working from `portal.insureit.in`; the remaining iframe failure is blocked on iCall allowing the new origin in its frame/CSP policy and confirming cross-site session-cookie compatibility. Do not bypass vendor controls with an insecure proxy.
+- A future official gateway hostname such as `api.insureit.in` is optional infrastructure cleanup, not a launch requirement. It would require DNS, TLS, Nginx/server-name, Vercel environment and integration regression work.
+- Verify login/logout, invite/reset links, AuthBridge RC lookup, Policy OCR, document flows and iCall behavior from the official domain before final launch sign-off.
 
 ## Policy OCR and Google Document AI protocol
 
@@ -239,11 +269,11 @@ For all validated forms, especially onboarding, document, account, payment, KYC 
 
 ## Policy Onboarding current operating context (2026-08-07)
 
-Use this section as the compact, current operating contract for Policy Onboarding. It supplements the dedicated AuthBridge/OCR handoffs and the durable project context; it is not a transcript.
+Use this section as the compact, current operating contract for Policy Onboarding. It supplements the dedicated AuthBridge/OCR handoffs and the durable project context; it is not a transcript. Domain references in this historical operating snapshot are superseded by `docs/PRODUCTION_DOMAIN_HANDOFF.md`; the canonical production portal is now `https://portal.insureit.in`.
 
 ### Current verified implementation and production state
 
-- **DEPLOYED:** production URL is `https://insureit-drab.vercel.app`.
+- **DEPLOYED:** canonical production application URL is now `https://portal.insureit.in`; the former `https://insureit-drab.vercel.app` hostname is retained temporarily as a fallback during stabilization.
 - **DEPLOYED:** production trigger commit `4350d888fe2d2799f9f94465744b25c8cbd14bed` completed successfully in Vercel on 2026-08-07. It includes the compact Section 02 redesign, the create-mode header cleanup, the compact Section 01 source/ownership redesign, the Policy Intelligence sidebar work, the AuthBridge RC review workflow, Policy OCR header-modal workflow, and the transactional policy onboarding path available on `main` at trigger time.
 - Do not assume later ordinary commits are live. Automatic Vercel deployment from ordinary commits is disabled; use the explicit production-trigger protocol above.
 - The create-mode Policy Onboarding header intentionally does **not** show `Database enabled`, `AuthBridge UAT · prototype_v1 calculations`, or the explanatory sentence about creating/linking customer and vehicle records. Keep create mode visually clean unless the user explicitly changes this.
@@ -525,13 +555,14 @@ The user is actively redesigning Policy Onboarding one section at a time. Sectio
 
 ## Current INSUREIT implementation context — 2026-08-07
 
-This section is a curated snapshot of current implementation decisions that materially affect future repository work. Treat items marked **IMPLEMENTED** as committed code, not proof of production deployment. Before changing these areas, inspect current `main` and the linked durable handoff files because `main` may have advanced.
+This section is a curated snapshot of current implementation decisions that materially affect future repository work. Treat items marked **IMPLEMENTED** as committed code, not proof of production deployment. Before changing these areas, inspect current `main` and the linked durable handoff files because `main` may have advanced. Production-domain references in this snapshot are superseded by `docs/PRODUCTION_DOMAIN_HANDOFF.md`.
 
 ### Repository, runtime and deployment
 
 - Repository: `Frontier-Group-IT/insureit_new`.
 - Web portal: Next.js 15 + Supabase monorepo; Vercel project root is `apps/web-portal`.
-- Production URL used in current work: `https://insureit-drab.vercel.app`.
+- Canonical production application URL: `https://portal.insureit.in`.
+- Temporary fallback during stabilization: `https://insureit-drab.vercel.app`.
 - **DEPLOYMENT RULE:** automatic Vercel deployment from ordinary Git commits is intentionally disabled. Do not say a merge is live merely because it reached `main`.
 - Production deployment is intentionally triggered only when the user explicitly requests deployment. The protected workflow updates/calls the Vercel deploy hook through `.deploy/production-trigger.json` / `.github/workflows/deploy-production.yml` per the working agreement above.
 - A successful deploy-hook request means Vercel accepted the request; it is not proof that the final Vercel deployment completed. Verify the exact deployment before claiming **DEPLOYED**.
@@ -643,4 +674,3 @@ The following merged PRs/commits are useful landmarks when tracing why the curre
 ### Safe continuation rule
 
 When a new request touches any area above, first fetch the current `main` implementation and reconcile it with this snapshot. Prefer the current code when it intentionally supersedes an older detail. Keep future context updates concise: replace stale rules rather than appending contradictory history, and never convert a proposed or unverified behavior into current fact.
-
