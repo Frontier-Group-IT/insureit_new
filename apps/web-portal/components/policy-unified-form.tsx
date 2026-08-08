@@ -90,7 +90,7 @@ const defaultGroups: ApplyGroups = { ownerIdentity: true, ownerAddress: true, ve
 const inputClass = "h-10 w-full rounded-xl border border-[#D8DEE9] bg-white px-3 text-[11px] font-medium text-[#17203A] outline-none transition placeholder:text-[#98A2B3] hover:border-[#B8C2D1] focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA] disabled:cursor-not-allowed disabled:border-[#E3E8EF] disabled:bg-[#F8FAFC] disabled:text-[#64748B]";
 const labelClass = "mb-1.5 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.055em] text-[#475467]";
 const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
-const sections = ["Source", "Customer & Vehicle", "Policy & Premium", "Insurer Pay-in", "Partner Payout", "Review"];
+const sections = ["Source", "Customer & Vehicle", "Policy & Premium", "Insurer Pay-in", "Partner Payout"];
 const vehicleClassMap: Record<string, { description: string; capacityLabel: string }> = {
   PCP: { description: "Private Car", capacityLabel: "CC" },
   TWP: { description: "Two Wheeler", capacityLabel: "CC" },
@@ -133,6 +133,30 @@ export function PolicyUnifiedForm({ mode, insurers, rms, sources, initialValues 
   const [isSubmitting,startSubmit]=useTransition();
   const isEdit=mode==="edit";
 
+  const sectionProgress=useMemo(()=>{
+    const groups=[
+      [form.issuanceDate,form.businessLine,form.intermediaryType,form.leadSource,form.rmName,form.intermediaryCode],
+      [form.registrationNo,form.insuredName,form.phoneNo,form.vehicleClass,form.make,form.model,form.fuelType,form.manufacturingYear,form.capacity,form.chassisNo,form.engineNo,form.rtoState,form.rtoName],
+      [form.policyProduct,form.policyNo,form.insurerId,form.idv,form.od,form.tp,form.validFrom,form.validUpto],
+      [form.projectedOdPercent,form.projectedTpPercent],
+      [form.payoutOdPercent,form.payoutTpPercent,form.payoutStatus],
+    ];
+    return groups.map(values=>{const filled=values.filter(value=>String(value??"").trim()!=="").length;return{filled,total:values.length,complete:filled===values.length,empty:filled===0,remaining:values.length-filled};});
+  },[form]);
+
+  function goToSection(index:number){setActiveSection(index);document.getElementById(`policy-section-${index+1}`)?.scrollIntoView({behavior:"smooth",block:"start"});}
+
+  useEffect(()=>{
+    const elements=sections.map((_,index)=>document.getElementById(`policy-section-${index+1}`)).filter((item):item is HTMLElement=>Boolean(item));
+    if(!elements.length)return;
+    const observer=new IntersectionObserver(entries=>{
+      const visible=entries.filter(entry=>entry.isIntersecting).sort((a,b)=>a.boundingClientRect.top-b.boundingClientRect.top);
+      if(visible[0]){const index=Number((visible[0].target as HTMLElement).dataset.sectionIndex??0);setActiveSection(index);}
+    },{rootMargin:"-145px 0px -58% 0px",threshold:[0,.05,.2]});
+    elements.forEach(element=>observer.observe(element));
+    return()=>observer.disconnect();
+  },[]);
+
   useEffect(()=>{ if(!rcReview&&!customerCandidates&&!ownershipConflict)return; const previous=document.body.style.overflow; document.body.style.overflow="hidden"; const close=(event:KeyboardEvent)=>{if(event.key==="Escape"){setRcReview(null);setCustomerCandidates(null);setOwnershipConflict(null);}}; window.addEventListener("keydown",close); return()=>{document.body.style.overflow=previous;window.removeEventListener("keydown",close);}; },[rcReview,customerCandidates,ownershipConflict]);
 
   const numeric=(value:string)=>Number(value||0);
@@ -168,16 +192,15 @@ export function PolicyUnifiedForm({ mode, insurers, rms, sources, initialValues 
   return <div className="mx-auto max-w-[1480px] pb-24">
     <datalist id="policy-lead-source-master-options">{availableSources.map(item=><option key={item.value} value={item.label}>{[item.code,item.rmName].filter(Boolean).join(" · ")}</option>)}</datalist>
     <div className="mb-4 overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-[0_10px_30px_rgba(15,23,42,.06)]">
-      <div className="flex flex-col gap-3 border-b border-[#E7ECF3] bg-[linear-gradient(135deg,#071D49_0%,#123B75_60%,#315B9A_100%)] px-5 py-4 text-white lg:flex-row lg:items-center lg:justify-between">
+      <div className="border-b border-[#E7ECF3] bg-[linear-gradient(135deg,#071D49_0%,#123B75_60%,#315B9A_100%)] px-5 py-3.5 text-white">
         <div>{isEdit&&headerBadge?<div className="flex items-center gap-2"><span className="rounded-full bg-white/15 px-2.5 py-1 text-[8px] font-bold uppercase tracking-[.14em]">{headerBadge}</span>{headerMeta?<span className="text-[9px] text-white/70">{headerMeta}</span>:null}</div>:null}<h1 className={isEdit?"mt-2 text-[18px] font-semibold":"text-[18px] font-semibold"}>{headerTitle}</h1>{headerText?<p className="mt-0.5 text-[10px] text-white/70">{headerText}</p>:null}</div>
-        <div className="flex flex-wrap items-center gap-2"><button type="button" onClick={submitPolicy} disabled={isSubmitting} className="rounded-xl bg-white px-5 py-2.5 text-[10px] font-bold text-[#071D49] shadow-sm disabled:opacity-60">{isSubmitting?pendingText:submitText}</button></div>
       </div>
-      <div className="flex gap-1 overflow-x-auto px-3 py-2">{sections.map((section,index)=><button key={section} type="button" onClick={()=>setActiveSection(index)} className={`flex min-w-fit items-center gap-2 rounded-lg px-3 py-2 text-[9.5px] font-semibold ${activeSection===index?"bg-[#EEF2FF] text-[#4338CA]":"text-[#667085] hover:bg-[#F8FAFC]"}`}><span className={`grid h-5 w-5 place-items-center rounded-full text-[8px] ${activeSection===index?"bg-[#4F46E5] text-white":"bg-[#EEF2F6]"}`}>{index+1}</span>{section}</button>)}</div>
+      <div className="sticky top-[72px] z-40 flex gap-1 overflow-x-auto border-b border-[#E3E9F2] bg-white/95 px-3 py-2 shadow-[0_7px_18px_rgba(15,23,42,.07)] backdrop-blur">{sections.map((section,index)=>{const progress=sectionProgress[index];return <button key={section} type="button" onClick={()=>goToSection(index)} title={progress.complete?`${section} complete`:`${progress.remaining} required item${progress.remaining===1?"":"s"} remaining`} className={`group flex min-w-fit items-center gap-2 rounded-lg px-3 py-2 text-[9.5px] font-semibold transition ${activeSection===index?"bg-[#EEF2FF] text-[#4338CA]":"text-[#667085] hover:bg-[#F8FAFC]"}`}><span className={`grid h-5 w-5 place-items-center rounded-full text-[8px] font-bold ${progress.complete?"bg-[#E8F7EF] text-[#14845B]":progress.empty?(activeSection===index?"bg-[#4F46E5] text-white":"bg-[#EEF2F6] text-[#7A8798]"):"bg-[#FFF4D8] text-[#B76E00]"}`}>{progress.complete?<svg aria-hidden="true" viewBox="0 0 20 20" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 10 3 3 7-7"/></svg>:index+1}</span><span>{section}</span>{!progress.complete&&!progress.empty?<span className="text-[7.5px] font-semibold text-[#B76E00]">{progress.remaining} left</span>:null}</button>})}</div>
     </div>
 
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]"><div className="space-y-4">
-      <Section number="01" title="Policy source & ownership" subtitle="Who brought the business and how the policy should be classified.">
-        <div><Field label="Policy issuance date" type="date" value={form.issuanceDate} onChange={e=>update("issuanceDate",e.target.value)} required/><CompactSourceMeta label="Month" value={form.issuanceDate?new Date(`${form.issuanceDate}T00:00:00`).toLocaleDateString("en-US",{month:"short",year:"2-digit"}):"Auto"} source="Auto"/></div>
+      <Section number="01" title="Policy source & ownership">
+        <div><Field label="Policy issuance date" type="date" value={form.issuanceDate} onChange={e=>update("issuanceDate",e.target.value)} required/><CompactSourceMeta label="Month" value={form.issuanceDate?new Date(`${form.issuanceDate}T00:00:00`).toLocaleDateString("en-US",{month:"short",year:"2-digit"}):"—"}/></div>
         <div><Select label="Policy type" value={form.businessLine} onChange={e=>update("businessLine",e.target.value)} options={["Motor"]} placeholder="Select policy type" required/></div>
         <div><Select label="Intermediary type" value={form.intermediaryType} onChange={e=>changeIntermediaryType(e.target.value)} options={["POSP","MISP","SIBL / Partner"]} placeholder="Select type" required/><CompactSourceMeta label="RM" value={form.rmName||"Select lead source"} source={form.rmName?"Assigned":undefined}/><input type="hidden" aria-label="RM name" value={form.rmName} readOnly/></div>
         <div><Field label="Lead source" list="policy-lead-source-master-options" autoComplete="off" value={form.leadSource} onChange={e=>changeLeadSource(e.target.value)} placeholder={form.intermediaryType?"Start typing a name":"Select intermediary type first"} disabled={!form.intermediaryType} required/><CompactSourceMeta label="Intermediary code" value={form.intermediaryCode||"Select lead source"} source={form.intermediaryCode?"Master":undefined}/><input type="hidden" aria-label="Intermediary code" value={form.intermediaryCode} readOnly/></div>
@@ -263,7 +286,7 @@ export function PolicyUnifiedForm({ mode, insurers, rms, sources, initialValues 
   </div>;
 }
 
-function Section({number,title,subtitle,badge,action,children}:{number:string;title:string;subtitle?:string;badge?:string;action?:ReactNode;children:ReactNode}){return <section className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-sm"><div className="flex items-start justify-between border-b bg-[#FBFCFE] px-4 py-3"><div className="flex gap-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-[#17365D] text-[9px] font-bold text-white">{number}</span><div><h2 className="text-[13px] font-semibold">{title}</h2>{subtitle?<p className="mt-0.5 text-[9px] text-[#667085]">{subtitle}</p>:null}</div></div><div className="flex items-center gap-2">{badge?<span className="rounded-full border bg-white px-2.5 py-1 text-[8px] text-[#667085]">{badge}</span>:null}{action}</div></div><div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">{children}</div></section>;}
+function Section({number,title,subtitle,badge,action,children}:{number:string;title:string;subtitle?:string;badge?:string;action?:ReactNode;children:ReactNode}){const index=Math.max(0,Number(number)-1);return <section id={`policy-section-${index+1}`} data-section-index={index} className="scroll-mt-[148px] overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-sm"><div className="flex min-h-12 items-center justify-between border-b bg-[#FBFCFE] px-4 py-2.5"><div className="flex items-center gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#17365D] text-[9px] font-bold text-white">{number}</span><div className="flex min-h-8 flex-col justify-center"><h2 className="text-[13px] font-semibold leading-tight">{title}</h2>{subtitle?<p className="mt-0.5 text-[9px] leading-tight text-[#667085]">{subtitle}</p>:null}</div></div><div className="flex items-center gap-2">{badge?<span className="rounded-full border bg-white px-2.5 py-1 text-[8px] text-[#667085]">{badge}</span>:null}{action}</div></div><div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">{children}</div></section>;}
 function PolicyValidityField({validFrom,validUpto,onFromChange,onUptoChange}:{validFrom:string;validUpto:string;onFromChange:(value:string)=>void;onUptoChange:(value:string)=>void}){return <div><label className={labelClass}>Policy validity <Required/></label><div className="grid h-10 grid-cols-2 overflow-hidden rounded-xl border border-[#D8DEE9] bg-white transition hover:border-[#B8C2D1] focus-within:border-[#315B9A] focus-within:ring-2 focus-within:ring-[#DCE8FA]"><label className="relative min-w-0 border-r border-[#E1E6ED]"><span className="pointer-events-none absolute left-3 top-1 text-[7px] font-bold uppercase tracking-[.06em] text-[#7A8798]">From</span><input aria-label="Valid from" type="date" value={validFrom} onChange={e=>onFromChange(e.target.value)} required className="h-full w-full border-0 bg-transparent px-3 pb-0.5 pt-3 text-[9.5px] font-medium text-[#17203A] outline-none"/></label><label className="relative min-w-0"><span className="pointer-events-none absolute left-3 top-1 text-[7px] font-bold uppercase tracking-[.06em] text-[#7A8798]">Upto</span><input aria-label="Valid upto" type="date" value={validUpto} onChange={e=>onUptoChange(e.target.value)} required className="h-full w-full border-0 bg-transparent px-3 pb-0.5 pt-3 text-[9.5px] font-medium text-[#17203A] outline-none"/></label></div></div>;}
 function Field({label,required,...props}:InputHTMLAttributes<HTMLInputElement>&{label:string}){return <div><label className={labelClass}>{label}{required?<Required/>:null}</label><input {...props} required={required} className={inputClass}/></div>;}
 function Select({label,options,placeholder,required,...props}:SelectHTMLAttributes<HTMLSelectElement>&{label:string;options:string[];placeholder:string}){const unique=Array.from(new Set(options.filter(Boolean)));return <div><label className={labelClass}>{label}{required?<Required/>:null}</label><select {...props} required={required} className={inputClass}><option value="">{placeholder}</option>{unique.map(o=><option key={o} value={o}>{o}</option>)}</select></div>;}
