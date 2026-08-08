@@ -1,11 +1,10 @@
 // @ts-expect-error -- This regression runner is executed directly by Node with --experimental-strip-types, which requires the explicit .ts suffix at runtime.
 import { refineIffcoCommercialPolicyV2 } from "../lib/policy-ocr-iffco-refiner-v2.ts";
-import type { ParsedPolicyResult } from "../lib/policy-ocr-parsers";
+// @ts-expect-error -- Runtime import uses the explicit .ts suffix for Node's strip-types runner.
+import { parsePolicyDocument } from "../lib/policy-ocr-parsers.ts";
 
 type Expected = Record<string, string>;
 type Case = { name: string; pages: string[]; expected: Expected; expectConflict?: boolean };
-
-const EMPTY: ParsedPolicyResult = { parserId: "iffco_tokio_commercial_motor_v1", parserVersion: "fixture", fields: [], warnings: [] };
 
 const cases: Case[] = [
   {
@@ -83,9 +82,15 @@ const cases: Case[] = [
 
 let failures = 0;
 for (const testCase of cases) {
-  const result = refineIffcoCommercialPolicyV2(testCase.pages, EMPTY);
-  const actual = Object.fromEntries(result.fields.map((field) => [field.key, field.value]));
+  const base = parsePolicyDocument(testCase.pages);
   const problems: string[] = [];
+  if (base.parserId !== "iffco_tokio_commercial_motor_v1") {
+    problems.push(`base parser: expected iffco_tokio_commercial_motor_v1, got ${base.parserId}`);
+  }
+  const result = base.parserId === "iffco_tokio_commercial_motor_v1"
+    ? refineIffcoCommercialPolicyV2(testCase.pages, base)
+    : base;
+  const actual = Object.fromEntries(result.fields.map((field) => [field.key, field.value]));
   for (const [key, value] of Object.entries(testCase.expected)) {
     if (actual[key] !== value) problems.push(`${key}: expected ${value}, got ${actual[key] ?? "<missing>"}`);
   }
