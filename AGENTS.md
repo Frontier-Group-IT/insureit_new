@@ -506,3 +506,125 @@ The user is actively redesigning Policy Onboarding one section at a time. Sectio
 - Reuse the compact metadata pattern from Section 01/02 where it genuinely clarifies a parent field.
 - Avoid gratuitous cards, repeated descriptions, duplicated sidebar information, and disabled-input styling for non-editable calculated values.
 - Preserve existing AuthBridge/OCR/database behavior while refining layout unless the user explicitly requests a workflow or schema change.
+
+## Current INSUREIT implementation context — 2026-08-07
+
+This section is a curated snapshot of current implementation decisions that materially affect future repository work. Treat items marked **IMPLEMENTED** as committed code, not proof of production deployment. Before changing these areas, inspect current `main` and the linked durable handoff files because `main` may have advanced.
+
+### Repository, runtime and deployment
+
+- Repository: `Frontier-Group-IT/insureit_new`.
+- Web portal: Next.js 15 + Supabase monorepo; Vercel project root is `apps/web-portal`.
+- Production URL used in current work: `https://insureit-drab.vercel.app`.
+- **DEPLOYMENT RULE:** automatic Vercel deployment from ordinary Git commits is intentionally disabled. Do not say a merge is live merely because it reached `main`.
+- Production deployment is intentionally triggered only when the user explicitly requests deployment. The protected workflow updates/calls the Vercel deploy hook through `.deploy/production-trigger.json` / `.github/workflows/deploy-production.yml` per the working agreement above.
+- A successful deploy-hook request means Vercel accepted the request; it is not proof that the final Vercel deployment completed. Verify the exact deployment before claiming **DEPLOYED**.
+- A committed Supabase migration is not proof that it was applied. Never claim **APPLIED** without target-environment evidence.
+
+### Effective permission model and enforcement
+
+- **IMPLEMENTED:** central employee/role permission overrides use additive tables introduced by migration `supabase/migrations/20260804194500_add_permission_management_foundation.sql`:
+  - `role_permission_overrides`
+  - `employee_permission_overrides`
+  - `permission_change_logs`
+- Permission resolution order is employee override → role override/default capability → no access. Access levels are ordered `none < view < edit < approve/critical`. Data scope supports `self`, `hierarchy`, and `organization` where applicable.
+- The permission-management UI lives under `/system/access-control` and is intended for IT Super User / Super Admin administration. It requires reasons for changes, supports expiration, audit logging, and protects against self-lockout of critical system/user-management access.
+- **IMPLEMENTED:** workflow enforcement was audited so business routes should use their own effective capability rather than unrelated `manage_master_data` or literal-role shortcuts. Examples:
+  - Claims: view claims vs edit/process claims.
+  - Customers: view customers vs edit customers; KYC review uses the KYC review capability.
+  - POSP/MISP/Partner: view register, create onboarding, review onboarding, approval/activation and portal-user actions use their own capabilities.
+  - Employees: view employees vs edit employees; portal-user administration uses critical user-management access.
+  - Vehicles: view vehicles; add/edit requires editable vehicle access.
+  - Policies: view policies; add/edit/OCR requires editable policy access.
+  - Settings/system tools require critical system access.
+- **CRITICAL INVARIANT:** do not reintroduce unrelated role/master-data guards for workflow authorization. Page visibility, navigation/action visibility and server-side mutation guards should all use the same effective capability and minimum level.
+- **IMPLEMENTED:** `it_super_user` is a protected developer role. It must resolve every capability at **approve/critical** level with **organization-wide** scope. Employee or role overrides must not downgrade this role. This was fixed centrally after edit-level workflows incorrectly denied IT Super User even though the role contained every capability.
+
+### POSP / MISP / Partner application-review UI
+
+- The current Application Review page is the visual reference for the POSP/MISP workflow: dark navy header, white header text/actions, compact spacing and clean white content surfaces.
+- **IMPLEMENTED:** the full POSP/MISP workflow route (`/intermediaries/applications/[id]/workflow`) uses a consistent navy header language on Edit Details, Documents, Final Review / Qualification, Registration, Training & Examination, Agreement and IIB stages.
+- Stage navigation is intentionally background-free/minimal. Do not restore large filled stage cards or heavy dashboard styling.
+- The POSP/MISP Application Review page intentionally does **not** show an `Edit details` button. The account-management action remains the intended entry point where applicable. Partner Review may still expose its distinct editing workflow.
+- Partner Edit Details places `Save & Exit` and `Save & return to documents` at the bottom of the page container, after Existing Intermediary Migration, matching onboarding-page layout.
+- Existing POSP/MISP onboarding and Existing Intermediary Migration edit forms intentionally do **not** show a verification/migration remarks input. Historical stored remarks were not deleted solely by that UI change.
+- Success feedback after an edit redirects back to Partner/POSP/MISP review as a transient toast/banner and should auto-hide after about **4 seconds** rather than remain permanently rendered.
+
+### Partner/POSP/MISP form submission behavior
+
+- **LEARNING / IMPLEMENTED:** portalled bottom submit buttons must not disable themselves during the initial click before the browser dispatches the native form submit. That caused `Save & Exit` / `Save & return to documents` to show a loading label indefinitely without navigation.
+- Loading state should begin only after a real validated submit event is detected. Preserve the selected submit intent (`exit` vs `documents`) without blocking the native submit.
+- Current action labels during pending navigation are `Saving & exiting…` and `Saving & opening documents…` (or equivalent current copy). If client validation blocks submission, clear pending state. A recovery timeout may be used to prevent permanent UI lock if navigation is interrupted.
+- Also preserve the broader onboarding freeze rule above: route-post `submitPath` onboarding forms should remain on native browser validation/POST and should not gain React validation handlers that mutate state on click/submit/invalid.
+
+### IIB PAN status and linked-account consistency
+
+- **IMPLEMENTED:** IIB PAN status is presented as a compact persistent status card in Partner/POSP/MISP review headers. The refresh/recheck action belongs **inside the status card**, not as a separate square button beside it.
+- The refresh/check icon should remain visible across review stages. While checking it may spin/disable; with invalid or missing PAN it can remain visible but disabled.
+- Partner, POSP and MISP child records can represent the same PAN with different application IDs. Status lookup therefore must not rely only on current application ID.
+- **AUTHORITATIVE LOOKUP RULE:** resolve IIB status by current application and normalized PAN. When multiple jobs exist for the same PAN, a completed outcome is authoritative over an older/stuck `queued`, `pending` or `checking` duplicate. Show an active checking state only when no completed result exists for that PAN (subject to any newer, explicitly supported recheck semantics in current code).
+- Do not regress to a state where Partner Review shows `IIB cleared` while the linked POSP/MISP child shows `Not checked` or remains stuck on `Checking…` for the same PAN after a completed provider result exists.
+
+### Policy permission lesson
+
+- **LEARNING:** Add Policy previously called an unrelated master-data guard, so employee policy overrides were saved but the user was denied at `/access-denied` when opening Add Policy.
+- Policy pages/actions must use the effective Policies capability. View-only is read-only; edit or critical allows policy creation/editing. Do not gate policy creation on `manage_master_data`.
+
+### Current Partner / POSP / MISP register design
+
+The three intermediary registers are being treated as a shared operational UI family. Preserve a compact, professional insurance-operations style rather than a large AI/dashboard aesthetic.
+
+General design rules:
+
+- One account record per compact desktop table row.
+- No city/location text appended beneath the name.
+- No `Updated` date column in POSP/MISP register tables.
+- Avoid oversized KPI cards, descriptive subtitles such as “Operational directory…”, decorative refresh timestamps, excessive gradients, and other nonessential dashboard copy.
+- Keep the main register surface white/light, with restrained navy/blue accents, thin borders, minimal shadow and compact badges.
+- Mobile can adapt responsively, but desktop/laptop should stay table-first and information-dense.
+
+Current POSP/MISP table direction:
+
+- Columns include `{POSP|MISP} Name`, `Mobile Number`, `{POSP|MISP} ID`, `Parent Partner`, `Assigned RM`, `Account Status`, `Action` (inspect current `main` before changing exact order).
+- Mobile number is displayed as a plain 10-digit number; missing values display a neutral placeholder.
+- The former `Current Stage` column was intentionally removed.
+- POSP/MISP register pages intentionally do **not** show `Onboard POSP` / `Onboard MISP` buttons in the register header.
+- The register header is a single compact row containing register title, a moderate-width search field, and account counters. Search should be somewhat taller than the earlier ultra-compact version but not stretch across the full available width.
+- `All`, `Active`, and `Onboarding` counters are full clickable filter controls—the whole label/count is clickable, not only the number. The active filter has a visible selected state, and switching counters should preserve the current search query.
+- The Action column/header should be right-aligned but padded inward from the outer table border rather than touching the right edge.
+
+Current Partner register direction:
+
+- Uses the same overall header/search/counter/table visual system as POSP/MISP.
+- Columns currently include `Partner Name`, `Mobile Number`, `Partner ID`, `Type`, `Assigned RM`, `Linked account`, `Portal access`, `Status`, `Action` (confirm current `main` before edits).
+- `All`, `Active`, and `Onboarding` are clickable filters and preserve search text.
+- Partner status categories are based on Partner workflow state (`active_partner` vs onboarding), not blindly on a generic intermediary `account_status` database filter.
+- Badge categories intentionally use distinct light tones for scanability: linked-account state, portal-access state and overall account status should not all use the same grey pill. Keep colors light/restrained and accessible.
+- Action controls are padded inward from the right border.
+
+### Recent implementation references
+
+The following merged PRs/commits are useful landmarks when tracing why the current behavior exists. They are implementation references, not deployment evidence:
+
+- PR #173 / merge `69bc23e05156121674e99facad20a701df28a673` — permission-management foundation.
+- PR #175 / merge `5ad3758d326460bf965f027280f6b3405f86a56c` — permission override persistence/redirect verification.
+- PR #176 / merge `9150fcff60299e3f6293fc5d74a1dffd0249d365` — policy permission enforcement for Add Policy.
+- PR #177 / merge `fcce8796649d4529bf82f1d9fe7ef38204649e07` — broad effective-permission workflow audit.
+- PR #178 / merge `0935ae59c3b0c552fe75c10721ff00fb73e3eab0` — POSP/MISP workflow navy theme.
+- PR #180 / merge `903bb5715b6c55c25b5918e488739307c24f118b` — guaranteed full IT Super User access.
+- PR #181 / merge `14889721463d0d74b4ec02ff18cec5347eda723f` — removed POSP/MISP review `Edit details` button.
+- PR #183 / merge `a5b84893f420c9cfccdbf9d6e452947dba5b22e6` — IIB refresh kept inside shared status card.
+- PR #184 / merge `9d38eb88985b13341321bfce4a9ea5daf220e6af` — Partner bottom edit actions.
+- PR #186 / merge `1f60a5a9a4db43789f960d3d9b769d3cedf5bf0c` — linked-PAN IIB fallback and icon visibility.
+- PR #187 / merge `a12b54917e7a18ac99a78d7cb072c6c7aa11f0e1` — completed IIB outcome wins over stale checking job.
+- PR #188 / merge `71c6ba9e719527d830f0f0e77fcb27745e2c2e8b` — removed legacy remarks, pending labels and 4-second success toast.
+- PR #189 / merge `1c3fe015d49fd16a639a8994aa81cbe3c761ddf1` — fixed portalled Partner edit submit hang.
+- PR #190 / merge `116927b463ea0e0050e454f21b38ca4de6a41f5a` — compact Partner/POSP/MISP register redesign.
+- PR #191 / merge `1845f6434c0786be093bd02eb198bb2d6f3b1736` — POSP/MISP count/header cleanup and stage-column removal.
+- PR #194 / merge `16c44de86b1d36f2a1eb9fdcf9fbd3446575c3d7` — unified register headers and 10-digit mobile columns.
+- PR #196 / merge `f866e3ab6bff1ae79d01add4b91c00ebe760e334` — clickable register filters, refined spacing and Partner badge colors.
+
+### Safe continuation rule
+
+When a new request touches any area above, first fetch the current `main` implementation and reconcile it with this snapshot. Prefer the current code when it intentionally supersedes an older detail. Keep future context updates concise: replace stale rules rather than appending contradictory history, and never convert a proposed or unverified behavior into current fact.
+
