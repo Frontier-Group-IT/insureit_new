@@ -71,16 +71,17 @@ export async function saveVehicleManufacturer(id: string | null, formData: FormD
     p_actor: profile.id,
   });
 
-  if (error || !data) redirect(errorUrl(basePath, error?.message ?? "Unable to save vehicle manufacturer."));
+  const savedId = typeof data === "string" ? data : null;
+  if (error || !savedId) redirect(errorUrl(basePath, error?.message ?? "Unable to save vehicle manufacturer."));
 
   revalidatePath("/master-data/vehicle-manufacturers");
-  revalidatePath(`/master-data/vehicle-manufacturers/${data}`);
+  revalidatePath(`/master-data/vehicle-manufacturers/${savedId}`);
   revalidatePath("/vehicles/new");
   revalidatePath("/customers/posp-misp");
-  redirect(`/master-data/vehicle-manufacturers/${data}?success=${id ? "updated" : "created"}`);
+  redirect(`/master-data/vehicle-manufacturers/${savedId}?success=${id ? "updated" : "created"}`);
 }
 
-export async function setVehicleManufacturerActive(id: string, active: boolean) {
+export async function setVehicleManufacturerActive(id: string, active: boolean, _formData?: FormData) {
   const profile = await requireCapability("manage_master_data", "edit");
   if (!profile?.id) redirect("/access-denied");
 
@@ -91,5 +92,6 @@ export async function setVehicleManufacturerActive(id: string, active: boolean) 
   revalidatePath("/master-data/vehicle-manufacturers");
   revalidatePath(`/master-data/vehicle-manufacturers/${id}`);
   revalidatePath("/vehicles/new");
+  revalidatePath("/customers/posp-misp");
   redirect(`/master-data/vehicle-manufacturers/${id}?success=${active ? "activated" : "deactivated"}`);
 }
