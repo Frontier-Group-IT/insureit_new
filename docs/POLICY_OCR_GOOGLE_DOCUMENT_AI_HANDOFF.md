@@ -1,16 +1,12 @@
 # Policy OCR and Google Document AI Handoff
 
-> **Consolidated:** 2026-08-07 03:05 IST
+> **Consolidated:** 2026-08-09 02:15 IST
 >
-> This file is the source of truth for the Policy Onboarding OCR workflow. Read it before modifying policy OCR, insurer parsers, Google Document AI authentication, the review/apply modal, or the production deployment path. Do not store credentials, tokens, private keys, policyholder PII, or raw policy documents in this file.
+> This file is the source of truth for Policy Onboarding OCR. Do not store credentials, tokens, private keys, policyholder PII, vehicle identifiers, raw OCR text, or complete policy documents here.
 
-## 1. Current objective
+## 1. Approved scope
 
-The Policy Onboarding page already exists at `/policies/new`. The user wants uploaded insurer policy schedules to populate only Section 03, **Policy product, premium & validity**, after a visible review step.
-
-The OCR workflow must never automatically populate customer, insured, owner, registration, chassis, engine, address, phone, PAN, GST, or other vehicle/person identification fields.
-
-Approved fields that may be proposed for Section 03:
+Policy OCR may propose only Section 03, **Policy product, premium & validity**:
 
 - Policy product
 - IDV / sum insured
@@ -23,367 +19,274 @@ Approved fields that may be proposed for Section 03:
 - Valid from
 - Valid upto
 
-Verification-only values shown in the modal, not directly copied:
+Comparison-only values:
 
 - Printed net premium
-- Printed GST
+- Printed GST / tax
 - Printed gross premium
 
-## 2. Architecture decision
+OCR must never populate customer, insured, owner, registration, chassis, engine, address, phone, PAN, GST identity data, or similar customer/vehicle identity fields. Review-before-apply is mandatory; OCR must never silently overwrite saved or manually entered values.
 
-**APPROVED AND IMPLEMENTED ARCHITECTURE**
+## 2. Architecture
 
-Production uses Google Document AI Enterprise Document OCR only as the document-reading layer. INSUREIT remains responsible for insurer detection, field extraction, validation, confidence, and review-before-apply behavior.
+**APPROVED / IMPLEMENTED**
 
 ```text
 Policy PDF/image
   -> Next.js server action
-  -> Vercel OIDC token
+  -> Vercel OIDC
   -> Google Workload Identity Federation
   -> short-lived service-account impersonation
-  -> Google Document AI OCR
+  -> Google Document AI Enterprise OCR
   -> normalized page text
   -> INSUREIT insurer detector
-  -> Digit / IFFCO-Tokio / New India parser
+  -> insurer-specific parser/refiner
   -> review modal
-  -> selected Section 03 fields applied to the form
+  -> selected Section 03 fields applied
 ```
 
-Google does not contain the insurer-specific rules. Adding another insurer later means adding or improving a parser in the INSUREIT backend and its regression fixtures/tests. This allows local development and prevents lock-in to Google field extraction.
+Google is the OCR/text-reading layer only. Insurer detection, interpretation, accounting normalization, confidence, warnings, and regression logic stay in INSUREIT.
 
-## 3. Production authentication design
+Primary files:
 
-No service-account JSON key is used.
+- `apps/web-portal/app/policies/policy-ocr-actions.ts`
+- `apps/web-portal/lib/policy-ocr-parsers.ts`
+- `apps/web-portal/lib/policy-ocr-digit-refiner-v2.ts`
+- `apps/web-portal/lib/policy-ocr-iffco-refiner-v2.ts`
+- `apps/web-portal/lib/policy-ocr-new-india-refiner.ts`
+- `apps/web-portal/components/policy-ocr-import-panel.tsx`
 
-Production authentication uses:
+## 3. Production Google identity design
 
-- Vercel OIDC, Global issuer mode
-- Google Workload Identity Federation
-- Short-lived Google access tokens
-- Service-account impersonation
+No service-account JSON key is used. Production uses Vercel OIDC Workload Identity Federation and short-lived Google credentials.
 
-Google/Vercel identifiers currently configured:
+Configured identities:
 
 ```text
-Google Cloud project ID: insureit-policy-ocr-production
-Google Cloud project number: 560319705586
+Google project ID: insureit-policy-ocr-production
+Google project number: 560319705586
 Document AI location: us
-Document AI processor ID: 84d0facf88efc0d7
-Workload Identity Pool ID: vercel-insureit
-Provider ID: vercel
+Processor ID: 84d0facf88efc0d7
+WIF pool: vercel-insureit
+Provider: vercel
 Service account: insureit-ocr-web@insureit-policy-ocr-production.iam.gserviceaccount.com
-Vercel issuer: https://oidc.vercel.com
 Allowed audience: https://vercel.com/antnish1s-projects
 Allowed production subject: owner:antnish1s-projects:project:insureit:environment:production
 ```
 
-The connected service account is visible in Google Cloud under the `vercel-insureit` pool. The provider is enabled and restricted to the exact INSUREIT production subject.
+Never expose Google/Vercel tokens to browser code. Do not create a long-lived Google key unless the architecture is explicitly changed and security-approved.
 
-Never create or commit a JSON key unless the architecture is deliberately changed and security approval is explicit. Never expose any Google credential through `NEXT_PUBLIC_*` variables.
+Legacy `POLICY_OCR_SERVICE_URL` / `POLICY_OCR_SERVICE_SECRET` variables must remain until the Google production journey is directly verified with all supported insurer families.
 
-## 4. Required Vercel production environment variables
+## 4. Current supported pure-motor parser baseline
 
-These were reported by the user as added to Vercel Production:
+The current training scope intentionally excludes United India for now. United India Miscellaneous/Special Type Vehicle and Contractors Plant & Machinery are deferred until a separate approved mapping/schema decision.
+
+### 4.1 IFFCO-TOKIO commercial motor
+
+Dedicated refiner:
+
+- parser ID: `iffco_tokio_commercial_motor_v1`
+- current dedicated refiner family: `iffco_tokio_commercial_motor_v2`
+- regression command: `npm run policy-ocr:iffco-regression`
+- **VERIFIED locally: 10/10 cases passed**
+
+Coverage includes:
+
+- real IFFCO document-layout reconstructions
+- current `P400 Policy #` vs invoice/reference numbers
+- previous-policy avoidance
+- `Net(A)` and `Net(B)` on the same OCR row
+- Section 2/add-on OD premium
+- CPA ₹330 and CPA ₹0
+- CPA declaration conflicts
+- printed Net/GST/Gross reconciliation
+
+Normalized accounting rule:
 
 ```text
-GOOGLE_CLOUD_PROJECT_ID=insureit-policy-ocr-production
-GOOGLE_CLOUD_PROJECT_NUMBER=560319705586
-GOOGLE_WORKLOAD_IDENTITY_POOL_ID=vercel-insureit
-GOOGLE_WORKLOAD_IDENTITY_PROVIDER_ID=vercel
-GOOGLE_SERVICE_ACCOUNT_EMAIL=insureit-ocr-web@insureit-policy-ocr-production.iam.gserviceaccount.com
-GOOGLE_DOCUMENT_AI_LOCATION=us
-GOOGLE_DOCUMENT_AI_PROCESSOR_ID=84d0facf88efc0d7
+OD = Net(A) + Section 2 OD/add-on premium
+CPA = payable Owner-Driver PA row
+TP = Net(B) - CPA
+OD + TP + CPA must reconcile to printed net
 ```
 
-Do not create `VERCEL_OIDC_TOKEN` manually. Vercel supplies it dynamically to the production function.
+If the financial row charges CPA but declaration wording says not applicable/deleted, retain the financial value for reconciliation but raise review/confidence warning.
 
-Legacy variables may still exist and must not be removed until the Google production workflow has been directly verified:
+### 4.2 Go Digit commercial motor
+
+Dedicated refiner version:
 
 ```text
-POLICY_OCR_SERVICE_URL
-POLICY_OCR_SERVICE_SECRET
+digit_commercial_motor_v1.8.0
 ```
 
-## 5. Implemented repository files
-
-### Google request and authentication
-
-`apps/web-portal/app/policies/policy-ocr-actions.ts`
-
-Responsibilities:
-
-- Require a user with policy-edit permission.
-- Validate file type and 15 MB size limit.
-- Read Vercel OIDC token server-side.
-- Exchange the OIDC token through Google STS.
-- Impersonate the dedicated service account.
-- Call the configured Document AI processor.
-- Convert Google output into normalized page text.
-- Pass the pages to the INSUREIT parser layer.
-- Return only reviewable field-level output to the client.
-
-### Insurer detection and extraction
-
-`apps/web-portal/lib/policy-ocr-parsers.ts`
-
-Responsibilities:
-
-- Normalize Google OCR text.
-- Detect supported insurers.
-- Route to dedicated parsers.
-- Extract only Section 03 fields.
-- Build evidence, confidence, parser ID/version, and warnings.
-
-Supported parser IDs:
+Regression command:
 
 ```text
-digit_commercial_motor_v1
-iffco_tokio_commercial_motor_v1
-new_india_motor_v1
-generic_motor_v1
+npm run policy-ocr:digit-regression
 ```
 
-### Review and apply interface
+**VERIFIED locally: 5/5 cases passed.**
 
-`apps/web-portal/components/policy-ocr-import-panel.tsx`
+The pack includes a sanitized reconstruction of the actual Google Document AI reading order plus targeted failures for:
 
-Responsibilities:
+- manufacturing year becoming IDV
+- premium numbers reordered
+- missing direct OD recovered from printed net and TP
+- invoice/reference IDs overriding current policy
+- incorrect OD/TP role assignment
 
-- Professional modal workflow.
-- Upload PDF/JPG/PNG/WebP.
-- Display parser and extraction information.
-- Select fields individually or all at once.
-- Show confidence/review status.
-- Keep printed totals as comparison-only values.
-- Apply only approved Section 03 fields.
-- Close after successful application and scroll to the section.
-
-## 6. Supported and known policy samples
-
-### Digit commercial vehicle policy
-
-Known sample: `A GROUP ENTERPRISES INSURANCE.pdf`
-
-Expected values from prior local tests:
+Digit v1.8 evidence priority:
 
 ```text
-Insurer: Digit General Insurance Limited
+1. Exact labeled OD / TP rows
+2. Derive missing side from printed Net
+3. Numeric-pair reconciliation only as fallback
+```
+
+The dedicated refiner clears weaker base financial guesses before rebuilding IDV/OD/TP/CPA/totals. Explicit invoice Net/GST/Gross columns are stronger evidence than proximity within the premium block.
+
+Known golden sample:
+
+```text
+Policy: D221859721
 Product: Package
 IDV: 3292441
-OD premium: 27820.86
-Third-party premium: 7267
-CPA opted: No
-CPA amount: 0
-Policy number: D221859721
+OD: 27820.86
+TP: 7267
+CPA: No / 0
+Printed net: 35087.86
+GST: 6315.81
+Gross: 41403.67
 Valid from: 2025-08-27
 Valid upto: 2026-08-26
-Printed net premium: 35087.86
-Printed GST: 6315.81
-Printed gross premium: 41403.67
 ```
 
-Google Document AI console testing successfully read the policy number, policy period, IDV, OD, TP, net, GST, and gross values.
+### 4.3 The New India Assurance commercial motor
 
-The previous local parser date issue was fixed with a one-year date-pair fallback. A repeatable local Docker test returned:
+Dedicated refiner version:
 
 ```text
-policy_start_date = 2025-08-27
-policy_end_date = 2026-08-26
+new_india_commercial_motor_v1.2.1
 ```
 
-### IFFCO-Tokio commercial vehicle policy
-
-Known expected values:
+Regression command:
 
 ```text
-Insurer: IFFCO-Tokio General Insurance Co. Ltd.
-Policy number: N8174870
-Product: Package
-IDV: 3391729
-OD premium: 4641
-Third-party premium: 7697
-CPA opted: Yes
-CPA amount: 330
-Valid from: 2026-07-29
-Valid upto: 2027-07-28
-Printed net premium: 12338
-Printed GST: 2220.84
-Printed gross premium: 14558.84
+npm run policy-ocr:new-india-regression
 ```
 
-The parser must not confuse invoice/reference `1-8N1JSC69` with the actual policy number.
+**VERIFIED locally: 5/5 cases passed.**
 
-### New India Assurance motor policy
+Coverage includes:
 
-Known sample involved Charu Mishra. A dedicated `new_india_motor_v1` path exists through the generic motor extractor with New India-specific insurer detection and confidence.
+- real schedule layout
+- NCB/subtotal values not becoming OD
+- current policy vs previous policy
+- ₹15 lakh Owner-Driver coverage limit not becoming CPA premium
+- multiline Owner-Driver row where CPA premium is on the immediate continuation line
+- liability normalization and full premium reconciliation
 
-### United India CPM
-
-Not yet fully supported. The known United India Contractors Plant and Machinery format does not map cleanly to the motor form's OD/TP/CPA structure. Do not claim support or force values into incompatible fields. Implement it only after an approved schema/mapping decision.
-
-## 7. Local development model
-
-The old Python/PaddleOCR service remains useful for local comparison and parser research:
+New India normalized accounting rule:
 
 ```text
-infrastructure/policy-ocr-service/app.py
-infrastructure/policy-ocr-service/app_runtime.py
-infrastructure/policy-ocr-service/app_runtime_v2.py
+OD = Net Own Damage Premium (A)
+CPA = Owner-Driver PA premium row
+TP = Net Liability Premium (B) - CPA
+OD + TP + CPA must reconcile to Total Premium (A+B)
 ```
 
-The local Docker service was rebuilt and verified. It is no longer intended to be the production OCR dependency after Google integration is confirmed.
-
-Future insurer development should follow this pattern:
-
-1. Collect representative, legally permitted sample policies.
-2. Run a sample through Google OCR once.
-3. Save sanitized OCR text/layout as a local test fixture, not the raw sensitive policy.
-4. Add or improve a dedicated parser.
-5. Add regression tests for exact expected fields.
-6. Test locally without repeated Google calls where possible.
-7. Release as beta-supported first.
-8. Improve using verified user corrections.
-
-Later machine-learning experiments may be trained locally, but Google remains the OCR reader unless the architecture changes. A locally trained model is a separate interpretation component and cannot simply replace/upload into Google's OCR processor.
-
-## 8. Relevant commits and pull request
-
-Important historical OCR commits include:
+Known golden schedule:
 
 ```text
-848e36e native PDF text first
-679e197 / de2f600 restrict OCR to Section 03
-875bab1 / c93a584 initial Digit and IFFCO parsers/tests
-0671d6d / 71f4b7b Digit runtime fixes and package tests
-cc73b95 / 6ff8a6f / 12a4b63 IFFCO dates/GST, production tests, modal redesign
-14384e4 / 33377a7 / 9a0cd73 / b77ff08 Digit period fixes/runtime
-acb7a897e447adb55e91c35b158a8a9ced95bc5c robust Digit policy date-pair fallback
+IDV: 4800000
+OD: 33984
+Net Liability (B): 44495
+CPA: 325
+Portal TP: 44170
+Printed net: 78479
+IGST: 8414
+Gross: 86893
+Policy: 80000031250350127994
+Valid from: 2025-12-05
+Valid upto: 2026-12-04
 ```
 
-Google integration:
+Durable New India lesson: do not scan into the next PA row when Owner-Driver premium appears on a continuation line. The semantic row must stop before the next PA label.
+
+## 5. Cross-insurer verification state
+
+**VERIFIED in the user's local environment on 2026-08-09:**
 
 ```text
-PR #199: Use Google Document AI for policy OCR
-Branch: work/google-document-ai-ocr
-Merged commit: 8b08adb79f818d81bab2fccbdfd59baa2c46bd85
-Production trigger commit: 1bfde759edfcda6de4ba7bffa2c04ac6f7dd83b8
+New India regression: 5/5 passed
+Digit regression:     5/5 passed
+IFFCO regression:    10/10 passed
+Typecheck:             passed
+Lint:                  0 errors, 74 warnings
+Next.js build:         passed
 ```
 
-PR #199 changed:
+The `MODULE_TYPELESS_PACKAGE_JSON` warning from Node's `--experimental-strip-types` regression runners is non-fatal. Do not change the whole Next.js package to `"type": "module"` merely to remove this warning without a separate compatibility review.
 
-- `apps/web-portal/app/policies/policy-ocr-actions.ts`
-- `apps/web-portal/lib/policy-ocr-parsers.ts`
-- `apps/web-portal/.env.example`
+These results prove parser/regression/build correctness for the committed baseline. They do **not** prove a production Google OCR user journey.
 
-## 9. Verification evidence
-
-The user ran these checks on `work/google-document-ai-ocr`:
+## 6. Relevant recent parser commits
 
 ```text
-npm install
-npm run typecheck
-npm run lint
-npm run build
+IFFCO regression/build compatibility baseline:
+94445181378eee93376e482c87fc867de79c9b73
+
+IFFCO real-layout routing regression:
+7fb5914451a3e71f0d7b4a356de961b3e2c78c56
+
+Digit v1.8 labeled-premium priority:
+d95b1332c17b546bda9d057781ef48e1a50a91cd
+
+New India v1.2 baseline/refiner + regression:
+4c140352cd0f6fabc8ef63ebcf0a9f09d9f1fd62
+43109b08e51fcf29de08ab8fd2859c9fd08b6181
+76ea8bcd41cdfb0b1c9bb6961e0f3360640f0ac0
+
+New India v1.2.1 CPA row fix:
+691ba3f86d07ca61ac24ae896db5322392fe2499
 ```
 
-Observed results:
+## 7. Release and production state
 
-- Typecheck passed with no errors.
-- Lint completed with 68 warnings and 0 errors.
-- The warnings were existing unused-variable warnings plus one existing hook dependency warning in `policy-ocr-import-panel.tsx`.
-- Next.js production build completed successfully.
-- `/policies/new` was included in the generated route output.
-- `npm install` reported 6 high-severity dependency vulnerabilities; no `npm audit fix --force` was run. Do not run a force upgrade as part of OCR work without a separate dependency review.
+**IMPLEMENTED / LOCALLY VERIFIED:** all three current pure-motor parser families above.
 
-This is build evidence only. It is not proof of a successful production OCR journey.
+**NOT YET VERIFIED:** exact current production deployment of these latest parser commits and authenticated end-to-end Google OCR upload/review/apply behavior for all three insurers.
 
-## 10. Deployment state at handoff
+Ordinary commits do not intentionally deploy production. `.deploy/production-trigger.json` must only be updated when the user explicitly says **deploy now** or **finish and deploy**. A GitHub Actions deploy-hook success is not enough; verify the exact Vercel production commit reaches `Ready`, then test the live authenticated journey.
 
-**IMPLEMENTED:** Google Document AI integration is merged into `main`.
+Do not infer production status from incidental or concurrent changes to `.deploy/production-trigger.json`; inspect exact deployment evidence.
 
-**CONFIGURED BY USER:** Vercel production variables and Vercel OIDC Global mode were reported as set. Google Workload Identity provider and connected service account were visibly configured.
+## 8. Final live verification gate
 
-**DEPLOYMENT TRIGGERED BUT NOT VERIFIED:**
+When the user explicitly approves deployment, use one controlled production release containing the frozen IFFCO, Digit, and New India baseline. Then verify from `https://portal.insureit.in`:
 
-- `.deploy/production-trigger.json` was updated in commit `1bfde759edfcda6de4ba7bffa2c04ac6f7dd83b8`.
-- The normal push-triggered workflow did not appear for that API-created commit.
-- An existing protected deployment workflow job was re-run to call the same Vercel deploy hook.
-- At the last observed state, GitHub Actions run `31006080897` was queued.
-- The re-run is based on an older workflow run/head SHA, although the deploy hook itself is expected to deploy current `main`. This expectation must not be treated as proof.
-- No Vercel build result for the Google OCR release was directly observed.
-- No live policy upload through Google Document AI was directly verified.
+1. Exact production deployment commit is identified and Vercel reports `Ready`.
+2. Sign in with a policy-editor account and open `/policies/new`.
+3. Upload a real Digit policy and verify all expected Section 03 fields.
+4. Upload representative IFFCO policies, including an add-on/Section-2 case and a CPA-conflict case.
+5. Upload the known New India commercial-motor policy.
+6. Confirm only Section 03 changes after Apply.
+7. Confirm printed Net/GST/Gross remain comparison-only.
+8. Inspect server/function logs only for controlled operational errors; never log raw policy/OCR text or credentials.
+9. If live Google OCR reading order differs from regression fixtures, sanitize that exact OCR shape, add a regression case, fix the parser, and rerun all insurer suites before another release.
+10. Only after the complete authenticated journey passes should the OCR release be labeled **DEPLOYED / VERIFIED**.
 
-Therefore the correct current status is **UNVERIFIED PRODUCTION DEPLOYMENT**. Do not state that Google OCR is live until exact Vercel deployment evidence and a live test exist.
+## 9. Development rule for future insurer training
 
-## 11. Immediate continuation steps
+For every new insurer/policy family:
 
-1. Check GitHub Actions run `31006080897` and confirm whether the re-run completed successfully.
-2. Open Vercel Deployments and identify the newest Production deployment.
-3. Confirm the deployed source branch is `main` and inspect the source commit. Prefer evidence that includes or follows trigger commit `1bfde759...` and therefore contains merged OCR commit `8b08adb...`.
-4. Confirm the Vercel deployment reaches `Ready`; inspect build/function logs for OIDC or environment-variable errors.
-5. Sign in to the real production portal with a policy-editor account.
-6. Open `/policies/new`.
-7. Upload the known Digit policy first.
-8. Confirm the modal shows the expected Digit values, including both dates.
-9. Apply the fields and confirm only Section 03 changes.
-10. Repeat with IFFCO-Tokio and New India.
-11. Inspect Vercel function logs for Google STS, IAM Credentials, or Document AI errors without logging policy text or credentials.
-12. Only after all three live tests pass, mark the integration DEPLOYED/VERIFIED and remove obsolete self-hosted OCR variables if no fallback is required.
-
-## 12. Common failure points and durable lessons
-
-### OIDC audience mismatch
-
-Vercel Global mode emits audience:
-
-```text
-https://vercel.com/antnish1s-projects
-```
-
-Google's provider must list that exact value under allowed audiences. An empty list would normally expect the provider resource name and token exchange would fail.
-
-### Subject restriction
-
-The provider condition and service-account principal filter must match exactly:
-
-```text
-owner:antnish1s-projects:project:insureit:environment:production
-```
-
-Changing Vercel team slug, project name, environment name, or issuer mode requires updating Google configuration.
-
-### Issuer mode
-
-Google is configured for Vercel Global issuer:
-
-```text
-https://oidc.vercel.com
-```
-
-Do not switch Vercel to Team mode without updating the Google issuer.
-
-### Do not guess parser fixes
-
-When a parser misses a value, first inspect sanitized Google OCR page text/evidence from the actual policy format. Avoid broad regex changes based on assumptions. Add a regression fixture before releasing the fix.
-
-### Review remains mandatory
-
-OCR is assistive. It must never silently overwrite saved or manually entered fields. High confidence may preselect a field, but the user must review and apply.
-
-### Privacy and logging
-
-Do not log raw OCR text, complete policies, personal identity fields, vehicle identifiers, credentials, OIDC tokens, or Google access tokens. Keep only minimal operational metadata and field-level audit information approved by the product design.
-
-## 13. Future expansion
-
-The architecture is intentionally extensible. Future parser IDs may include:
-
-```text
-united_india_cpm_v1
-icici_lombard_motor_v1
-hdfc_ergo_motor_v1
-bajaj_allianz_motor_v1
-tata_aig_motor_v1
-```
-
-Do not create a parser name merely because an insurer is detected. A supported parser requires representative samples, exact field mapping, tests, confidence/evidence behavior, and a beta-to-supported release decision.
+1. Obtain representative legally permitted samples.
+2. Define the approved Section 03 mapping first.
+3. Capture sanitized actual Google OCR reading order where possible.
+4. Add insurer/family-specific interpretation rather than broad global regexes.
+5. Add golden regression fixtures before release.
+6. Run all existing insurer regressions, typecheck, lint, and build.
+7. Fail uncertain extraction into Review Required; never silently guess.
+8. Keep incompatible non-motor products out of motor OD/TP/CPA until the schema explicitly supports them.
