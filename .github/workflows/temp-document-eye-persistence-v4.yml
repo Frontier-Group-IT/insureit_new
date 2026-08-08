@@ -1,0 +1,118 @@
+name: Temporary document eye persistence v4
+
+on:
+  push:
+    paths:
+      - .github/workflows/temp-document-eye-persistence-v4.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Apply focused inline patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          grid_path = Path('apps/web-portal/components/intermediary-document-grid.tsx')
+          editor_path = Path('apps/web-portal/app/customers/applications/posp-misp-application-editor.tsx')
+
+          grid = grid_path.read_text()
+          old = '        setResolvedDocuments(nextDocuments);'
+          new = '''        setResolvedDocuments((current) => nextDocuments.map((nextDocument) => {
+            if (nextDocument.href) return nextDocument;
+            const previousDocument = current.find((document) =>
+              document.document_type === nextDocument.document_type
+              && document.file_name === nextDocument.file_name,
+            );
+            return previousDocument?.href ? { ...nextDocument, href: previousDocument.href } : nextDocument;
+          }));'''
+          if grid.count(old) != 1:
+              raise SystemExit(f'unexpected setResolvedDocuments match count: {grid.count(old)}')
+          grid = grid.replace(old, new, 1)
+
+          grid = grid.replace(
+              'action={(existingDocument?.href || (editable && (slot.system ? Boolean(existingDocument) : true))) ? (',
+              'action={(existingDocument || (editable && (slot.system ? Boolean(existingDocument) : true))) ? (',
+              1,
+          )
+          old_eye = '''                  {existingDocument?.href ? (
+                    <a
+                      href={existingDocument.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`View ${title}`}
+                      title="View"
+                      className={compactActionClass}
+                    >
+                      <EyeIcon />
+                    </a>
+                  ) : null}'''
+          new_eye = '''                  {existingDocument ? (
+                    existingDocument.href ? (
+                      <a
+                        href={existingDocument.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label={`View ${title}`}
+                        title="View"
+                        className={compactActionClass}
+                      >
+                        <EyeIcon />
+                      </a>
+                    ) : (
+                      <span aria-label={`View ${title}`} title="View" className={compactActionClass}>
+                        <EyeIcon />
+                      </span>
+                    )
+                  ) : null}'''
+          if old_eye not in grid:
+              raise SystemExit('eye action block not found')
+          grid = grid.replace(old_eye, new_eye, 1)
+          grid_path.write_text(grid)
+
+          editor = editor_path.read_text()
+          old_header = '<Header number="2" title="Documents" subtitle="Ten compact slots are shown. GST uses an available Other Document slot when applicable." />'
+          if old_header not in editor:
+              raise SystemExit('documents subtitle header not found')
+          editor = editor.replace(old_header, '<Header number="2" title="Documents" />', 1)
+          old_sig = 'function Header({ number, title, subtitle }: { number: string; title: string; subtitle: string })'
+          new_sig = 'function Header({ number, title, subtitle }: { number: string; title: string; subtitle?: string })'
+          if old_sig not in editor:
+              raise SystemExit('Header signature not found')
+          editor = editor.replace(old_sig, new_sig, 1)
+          old_p = '<p className="mt-0.5 text-[9.8px] text-[#64748B]">{subtitle}</p>'
+          new_p = '{subtitle ? <p className="mt-0.5 text-[9.8px] text-[#64748B]">{subtitle}</p> : null}'
+          if old_p not in editor:
+              raise SystemExit('Header subtitle paragraph not found')
+          editor = editor.replace(old_p, new_p, 1)
+          editor_path.write_text(editor)
+          PY
+      - name: Validate focused diff
+        run: |
+          git diff --check
+          python - <<'PY'
+          from pathlib import Path
+          grid = Path('apps/web-portal/components/intermediary-document-grid.tsx').read_text()
+          editor = Path('apps/web-portal/app/customers/applications/posp-misp-application-editor.tsx').read_text()
+          assert 'setResolvedDocuments((current) => nextDocuments.map' in grid
+          assert 'previousDocument?.href ? { ...nextDocument, href: previousDocument.href } : nextDocument' in grid
+          assert 'action={(existingDocument || (editable' in grid
+          assert 'Ten compact slots are shown. GST uses an available Other Document slot when applicable.' not in editor
+          assert '<Header number="2" title="Documents" />' in editor
+          PY
+      - name: Commit application changes and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/temp-document-eye-persistence-v4.yml
+          git add apps/web-portal/components/intermediary-document-grid.tsx apps/web-portal/app/customers/applications/posp-misp-application-editor.tsx .github/workflows/temp-document-eye-persistence-v4.yml
+          git commit -m "Fix document eye action persistence"
+          git push
