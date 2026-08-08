@@ -93,13 +93,13 @@ export function IntermediaryDocumentGrid({
         if (cancelled) return;
         const nextDocuments = payload.documents ?? [];
         setResolvedDocuments((current) => nextDocuments.map((nextDocument) => {
-  if (nextDocument.href) return nextDocument;
-  const previousDocument = current.find((document) =>
-    document.document_type === nextDocument.document_type
-    && document.file_name === nextDocument.file_name,
-  );
-  return previousDocument?.href ? { ...nextDocument, href: previousDocument.href } : nextDocument;
-}));
+          if (nextDocument.href) return nextDocument;
+          const previousDocument = current.find((document) =>
+            document.document_type === nextDocument.document_type
+            && document.file_name === nextDocument.file_name,
+          );
+          return previousDocument?.href ? { ...nextDocument, href: previousDocument.href } : nextDocument;
+        }));
         setResolvedLegacy(payload.legacy === true);
         setResolvedHasGst(payload.has_gst === true);
         setCustomLabels((current) => ({ ...customLabelMap(nextDocuments), ...current }));
@@ -117,6 +117,12 @@ export function IntermediaryDocumentGrid({
   const slots = useMemo(
     () => buildIntermediaryDocumentSlots({ legacy: resolvedLegacy, hasGst: resolvedHasGst, documents: resolvedDocuments }),
     [resolvedDocuments, resolvedHasGst, resolvedLegacy],
+  );
+  const visibleSlots = useMemo(
+    () => editable
+      ? slots
+      : slots.filter((slot) => Boolean(findDocumentForSlot(slot, resolvedDocuments))),
+    [editable, resolvedDocuments, slots],
   );
 
   async function renameCustomDocument(slotKey: string, label: string) {
@@ -145,12 +151,10 @@ export function IntermediaryDocumentGrid({
     }
   }
 
-
-
   return (
     <>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
-        {slots.map((slot) => {
+        {visibleSlots.map((slot) => {
           const existingDocument = findDocumentForSlot(slot, resolvedDocuments) as GridDocument | undefined;
           const title = slotTitle(slot, existingDocument);
           const missing = missingDocument === slot.key || (slot.education && missingDocument === "education_document_type");
