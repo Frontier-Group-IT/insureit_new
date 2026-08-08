@@ -1,0 +1,39 @@
+name: Temporary document eye persistence
+
+on:
+  push:
+    paths:
+      - scripts/temp_fix_document_eye_persistence.py
+      - .github/workflows/temp-document-eye-persistence.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Apply focused patch
+        run: python scripts/temp_fix_document_eye_persistence.py
+      - name: Validate focused diff
+        run: |
+          git diff --check
+          python - <<'PY'
+          from pathlib import Path
+          grid = Path('apps/web-portal/components/intermediary-document-grid.tsx').read_text()
+          workflow = Path('apps/web-portal/app/intermediaries/applications/[id]/workflow/page.tsx').read_text()
+          assert 'setResolvedDocuments((current) => nextDocuments.map' in grid
+          assert 'action={(existingDocument || (editable' in grid
+          assert 'Ten compact slots are shown. GST uses an available Other Document slot when applicable.' not in workflow
+          PY
+      - name: Commit application changes and remove temporary tooling
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm scripts/temp_fix_document_eye_persistence.py .github/workflows/temp-document-eye-persistence.yml
+          git add apps/web-portal/components/intermediary-document-grid.tsx apps/web-portal/app/intermediaries/applications/'[id]'/workflow/page.tsx scripts/temp_fix_document_eye_persistence.py .github/workflows/temp-document-eye-persistence.yml
+          git commit -m "Fix document eye action persistence"
+          git push
