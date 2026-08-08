@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-08T16:13:00+05:30",
+  "deploy_requested_at": "2026-08-08T16:33:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT simplified intermediary portal users register release",
-  "source_commit": "ba78d19092c8f269cdac6ce5d29b3e336f05e275",
-  "release_scope": "Deploy current main including PR #225. Remove the Portal User Management hero/header, subtitle, Open Partner Register button, and Invited/Active/Suspended metric cards; keep the Portal Accounts table; place a URL-backed search field beside the Portal Accounts title; preserve portal status, invitation timestamps, application links, permissions, and data loading behavior.",
-  "verification": "PR #225 was verified mergeable at exact head 446cc1b4c10de7675f15f27da5d9b3ebbdcdc5bb and squash merged into main as ba78d19092c8f269cdac6ce5d29b3e336f05e275. Its final diff contains one application file (+33/-29). Full lint/typecheck/build were not run for this PR. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
+  "source": "ChatGPT intermediary user account status tabs release",
+  "source_commit": "ad183b670772a72e551c9d36c0d244400a0c8bfd",
+  "release_scope": "Deploy current main including PR #226. Rename Portal Accounts to Intermediatory User Accounts, keep the search box immediately beside the title, and add far-right All / Active / Inactive segmented filters with live counts while preserving search/filter URL state, table columns, application links, invitation timestamps, permissions, and data loading behavior.",
+  "verification": "PR #226 was verified mergeable at exact head 29f60bed1714d118667b31ac993734f5568de9b3 and squash merged into main as ad183b670772a72e551c9d36c0d244400a0c8bfd. Its final diff contains one application file (+48/-8). Full lint/typecheck/build were not run for this PR. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
