@@ -29,8 +29,8 @@ export function refineIffcoCommercialPolicyV2(pages: string[], parsed: ParsedPol
   const idv = findIdv(cleanPages);
   if (idv) setField(fields, "idv", "IDV / Sum insured", money(idv.value), .99, idv.page, idv.evidence);
 
-  const netA = findExactPremium(cleanPages, /Net\s*\(A\)/i);
-  const netB = findExactPremium(cleanPages, /Net\s*\(B\)/i);
+  const netA = findNetPremium(cleanPages, "A");
+  const netB = findNetPremium(cleanPages, "B");
   const cpa = findOwnerDriverPremium(cleanPages);
   const section2 = findSection2Premium(cleanPages);
   const totals = findPrintedTotals(cleanPages);
@@ -85,12 +85,7 @@ export function refineIffcoCommercialPolicyV2(pages: string[], parsed: ParsedPol
     }
   }
 
-  return {
-    parserId: "iffco_tokio_commercial_motor_v2",
-    parserVersion: VERSION,
-    fields,
-    warnings,
-  };
+  return { parserId: "iffco_tokio_commercial_motor_v2", parserVersion: VERSION, fields, warnings };
 }
 
 function findPolicyNumber(pages: string[]): TextHit | null {
@@ -131,19 +126,13 @@ function findIdv(pages: string[]): Hit | null {
   return null;
 }
 
-function findExactPremium(pages: string[], label: RegExp): Hit | null {
+function findNetPremium(pages: string[], side: "A" | "B"): Hit | null {
+  const pattern = new RegExp(`Net\\s*\\(${side}\\)\\s*([0-9][0-9,]*(?:\\.[0-9]{1,2})?)`, "i");
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
-    const lines = pages[pageIndex].split("\n");
-    for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
-      const line = lines[lineIndex];
-      if (!label.test(line)) continue;
-      label.lastIndex = 0;
-      const sameLine = amounts(line).filter((value) => value >= 0 && value < 10000000 && !isYear(value));
-      if (sameLine.length) return { value: sameLine[sameLine.length - 1], page: pageIndex + 1, evidence: line };
-      const nextLine = lines[lineIndex + 1] ?? "";
-      const nextValues = amounts(nextLine).filter((value) => value >= 0 && value < 10000000 && !isYear(value));
-      if (nextValues.length) return { value: nextValues[0], page: pageIndex + 1, evidence: `${line}\n${nextLine}` };
-    }
+    const match = pages[pageIndex].match(pattern);
+    if (!match) continue;
+    const value = number(match[1]);
+    if (value >= 0 && value < 10000000 && !isYear(value)) return { value, page: pageIndex + 1, evidence: match[0] };
   }
   return null;
 }
@@ -154,12 +143,12 @@ function findOwnerDriverPremium(pages: string[]): Hit | null {
     for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
       const line = lines[lineIndex];
       if (!/PA\s+Owner\s+Driver/i.test(line)) continue;
-      const combined = `${line} ${lines[lineIndex + 1] ?? ""}`.trim();
-      const values = amounts(combined).filter((value) => value >= 0 && value <= 1500000 && !isYear(value));
-      if (!values.length) continue;
+      const lineValues = amounts(line).filter((value) => value >= 0 && value <= 1500000 && !isYear(value));
+      const source = lineValues.length ? line : `${line} ${lines[lineIndex + 1] ?? ""}`.trim();
+      const values = lineValues.length ? lineValues : amounts(source).filter((value) => value >= 0 && value <= 1500000 && !isYear(value));
       const premiumCandidates = values.filter((value) => value <= 100000);
       if (!premiumCandidates.length) continue;
-      return { value: premiumCandidates[premiumCandidates.length - 1], page: pageIndex + 1, evidence: combined };
+      return { value: premiumCandidates[premiumCandidates.length - 1], page: pageIndex + 1, evidence: source };
     }
   }
   return null;
@@ -183,11 +172,7 @@ function findPrintedTotals(pages: string[]): { net: Hit | null; tax: Hit | null;
     const page = pages[pageIndex];
     const totalRow = page.match(/GST\s+Details[\s\S]{0,500}?\bTotal\s+([0-9,.]+)\s+([0-9,.]+)\s+([0-9,.]+)/i);
     if (totalRow) {
-      return {
-        net: hit(totalRow[1], pageIndex, totalRow[0]),
-        tax: hit(totalRow[2], pageIndex, totalRow[0]),
-        gross: hit(totalRow[3], pageIndex, totalRow[0]),
-      };
+      return { net: hit(totalRow[1], pageIndex, totalRow[0]), tax: hit(totalRow[2], pageIndex, totalRow[0]), gross: hit(totalRow[3], pageIndex, totalRow[0]) };
     }
 
     const netMatch = page.match(/Premium\/Taxable\s+Value\s+RS\.?\s*([0-9,.]+)/i);
@@ -221,34 +206,16 @@ function setField(fields: ParsedPolicyField[], key: string, label: string, value
   else fields.push(next);
 }
 
-function hit(raw: string, pageIndex: number, evidence: string): Hit {
-  return { value: number(raw), page: pageIndex + 1, evidence };
-}
-
-function amounts(text: string) {
-  return [...text.matchAll(MONEY_RE)].map((match) => number(match[0])).filter(Number.isFinite);
-}
-
-function number(raw: string) {
-  return Number(raw.replace(/,/g, ""));
-}
-
+function hit(raw: string, pageIndex: number, evidence: string): Hit { return { value: number(raw), page: pageIndex + 1, evidence }; }
+function amounts(text: string) { return [...text.matchAll(MONEY_RE)].map((match) => number(match[0])).filter(Number.isFinite); }
+function number(raw: string) { return Number(raw.replace(/,/g, "")); }
 function money(value: number) {
   const rounded = round2(value);
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 }
-
-function round2(value: number) {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}
-
-function close(a: number, b: number) {
-  return Math.abs(a - b) <= TOLERANCE;
-}
-
-function isYear(value: number) {
-  return Number.isInteger(value) && value >= 1900 && value <= 2100;
-}
+function round2(value: number) { return Math.round((value + Number.EPSILON) * 100) / 100; }
+function close(a: number, b: number) { return Math.abs(a - b) <= TOLERANCE; }
+function isYear(value: number) { return Number.isInteger(value) && value >= 1900 && value <= 2100; }
 
 function isoDate(raw: string) {
   const match = raw.match(DATE_RE);
@@ -262,10 +229,5 @@ function isoDate(raw: string) {
 }
 
 function sanitize(text: string) {
-  return text
-    .replace(/\r/g, "\n")
-    .replace(/[\t\f\v]+/g, " ")
-    .replace(/[ ]{2,}/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  return text.replace(/\r/g, "\n").replace(/[\t\f\v]+/g, " ").replace(/[ ]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
 }
