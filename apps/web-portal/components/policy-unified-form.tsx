@@ -192,7 +192,7 @@ export function PolicyUnifiedForm({ mode, insurers, rms, sources, initialValues 
   return <div className="mx-auto max-w-[1480px] pb-24">
     <datalist id="policy-lead-source-master-options">{availableSources.map(item=><option key={item.value} value={item.label}>{[item.code,item.rmName].filter(Boolean).join(" · ")}</option>)}</datalist>
     <div className="overflow-hidden rounded-t-2xl border border-b-0 border-[#D9E2F0] bg-white shadow-[0_10px_30px_rgba(15,23,42,.06)]">
-      <div className="bg-[linear-gradient(135deg,#071D49_0%,#123B75_60%,#315B9A_100%)] px-5 py-3.5 text-white">
+      <div className="flex min-h-[88px] items-center bg-[linear-gradient(135deg,#071D49_0%,#123B75_60%,#315B9A_100%)] px-5 py-3.5 text-white">
         <div>{isEdit&&headerBadge?<div className="flex items-center gap-2"><span className="rounded-full bg-white/15 px-2.5 py-1 text-[8px] font-bold uppercase tracking-[.14em]">{headerBadge}</span>{headerMeta?<span className="text-[9px] text-white/70">{headerMeta}</span>:null}</div>:null}<h1 className={isEdit?"mt-2 text-[18px] font-semibold":"text-[18px] font-semibold"}>{headerTitle}</h1>{headerText?<p className="mt-0.5 text-[10px] text-white/70">{headerText}</p>:null}</div>
       </div>
     </div>
