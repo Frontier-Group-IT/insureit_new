@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { compactLightActionClassName, primaryActionClassName, secondaryActionClassName } from "@/components/action-styles";
+import { compactLightActionClassName, primaryActionClassName } from "@/components/action-styles";
 import { DocumentVisualCard } from "@/components/document-visual-card";
 import { AppShell } from "@/components/shell";
 import { FormSubmitButton } from "@/components/form-submit-button";
@@ -323,7 +323,19 @@ function DocumentChecklist({ documents }: { documents: Document[] }) {
 
   return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{ordered.map((item) => <DocumentStatus key={item.key} type={item.type} label={item.label} document={item.document} />)}</div>;
 }
-async function DocumentStatus({ type, label, document }: { type: string; label: string; document?: Document }) { const admin = createSupabaseAdminClient(); const { data } = document ? await admin.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 900) : { data: null }; return <DocumentVisualCard type={type} title={label} fileName={document?.file_name} required={type !== "photograph" && type !== "education"} tone={document ? "uploaded" : type === "photograph" || type === "education" ? "optional" : "required"} status={document ? "Uploaded" : type === "photograph" || type === "education" ? "Optional" : "Missing"} meta={document ? date(document.created_at) : "Awaiting upload"} compact action={document && data?.signedUrl ? <a href={data.signedUrl} target="_blank" rel="noreferrer" className={`${secondaryActionClassName} h-8 rounded-lg px-3 text-[9px]`}>Open</a> : null} />; }
+async function DocumentStatus({ type, label, document }: { type: string; label: string; document?: Document }) {
+  const admin = createSupabaseAdminClient();
+  const { data } = document ? await admin.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 900) : { data: null };
+  return <DocumentVisualCard type={type} title={label} fileName={document?.file_name} required={type !== "photograph" && type !== "education"} tone={document ? "uploaded" : type === "photograph" || type === "education" ? "optional" : "required"} status={document ? "Uploaded" : type === "photograph" || type === "education" ? "Optional" : "Missing"} meta={document ? date(document.created_at) : "Awaiting upload"} compact action={document && data?.signedUrl ? <a href={data.signedUrl} target="_blank" rel="noreferrer" aria-label={`View ${label}`} title={`View ${label}`} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#D7DDF0] bg-white text-[#0F2A55] shadow-[0_4px_12px_rgba(15,23,42,0.08)] transition hover:border-[#B8C7DE] hover:bg-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C7D2FE]"><EyeIcon /></a> : null} />;
+}
+function EyeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M2.5 12s3.4-5.5 9.5-5.5 9.5 5.5 9.5 5.5-3.4 5.5-9.5 5.5S2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="2.6" />
+    </svg>
+  );
+}
 function DocumentsCard({ children }: { children: React.ReactNode }) { return <section className="rounded-2xl border border-[#DCE5EF] bg-white p-5 shadow-sm"><div className="mb-4 flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-xl border border-[#E1E7FF] bg-[#F1F4FF] text-[#4F46E5]"><Icon name="documents" className="h-4.5 w-4.5" /></span><div><h2 className="text-[13px] font-semibold text-[#17203A]">Documents</h2><p className="mt-0.5 text-[9.5px] font-medium text-[#64748B]">Visual checklist for uploaded identity, bank and qualification files.</p></div></div>{children}</section>; }
 function Card({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) { return <section className="rounded-2xl border border-[#DCE5EF] bg-white p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><h2 className="text-[13px] font-semibold">{title}</h2>{typeof count === "number" ? <span className="rounded-full bg-[#EEF2FF] px-2.5 py-1 text-[9px] font-semibold text-[#4338CA]">{count}</span> : null}</div>{children}</section>; }
 function HeaderStat({ icon, label, value, href }: { icon: IconName; label: string; value: string; href?: string }) { return <div className="flex min-w-0 items-center gap-3 border-white/15 px-4 py-4 xl:border-r xl:last:border-r-0"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/20 bg-white/10 text-white"><Icon name={icon} className="h-4 w-4" /></span><div className="min-w-0"><p className="text-[8px] font-semibold uppercase tracking-[.05em] text-white/60">{label}</p>{href ? <Link href={href} className="mt-1 block truncate text-[10.5px] font-semibold text-white underline-offset-2 transition hover:text-[#C7D2FE] hover:underline">{value}</Link> : <p className="mt-1 truncate text-[10.5px] font-semibold text-white">{value}</p>}</div></div>; }
