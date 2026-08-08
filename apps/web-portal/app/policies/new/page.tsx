@@ -1,5 +1,3 @@
-import { PolicyIntelligencePositionGuard } from "@/components/policy-intelligence-position-guard";
-import { PolicyOnboardingIntelligence } from "@/components/policy-onboarding-intelligence";
 import { PolicyUnifiedForm, type PolicyRmOption, type PolicySourceOption } from "@/components/policy-unified-form";
 import { AppShell } from "@/components/shell";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
@@ -104,8 +102,6 @@ export default async function NewPolicyPage() {
 
   return (
     <AppShell title="Add Policy">
-      <PolicyOnboardingIntelligence />
-      <PolicyIntelligencePositionGuard />
       <PolicyUnifiedForm mode="create" insurers={insurerOptions} rms={rmOptions} sources={sourceOptions} />
     </AppShell>
   );
