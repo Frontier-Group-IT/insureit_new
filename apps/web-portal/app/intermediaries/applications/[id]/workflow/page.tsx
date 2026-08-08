@@ -207,7 +207,7 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
         {!onboardingComplete ? (context === "partner" ? (
           <PartnerTwoStepNavigation applicationId={id} viewStage={viewStage} documentsComplete={documentsComplete} partnerActive={application.partner_status === "active_partner"} />
         ) : (
-          <SixStepNavigation applicationId={id} viewStage={viewStage} documentsComplete={documentsComplete} registrationComplete={registrationComplete} trainingExamComplete={trainingExamComplete} agreementSigned={agreementSigned} iibUploaded={iibUploaded} unlocked={unlocked} />
+          <SixStepNavigation viewStage={viewStage} documentsComplete={documentsComplete} registrationComplete={registrationComplete} trainingExamComplete={trainingExamComplete} agreementSigned={agreementSigned} iibUploaded={iibUploaded} />
         )) : null}
 
         <IntermediaryDocumentUploadController applicationId={id} enabled={viewStage === "documents" && editable} showGst={Boolean(profile.gst_number)} />
@@ -280,18 +280,16 @@ function PartnerTwoStepNavigation({ applicationId, viewStage, documentsComplete,
   );
 }
 
-function SixStepNavigation({ applicationId, viewStage, documentsComplete, registrationComplete, trainingExamComplete, agreementSigned, iibUploaded, unlocked }: { applicationId: string; viewStage: ViewStage; documentsComplete: boolean; registrationComplete: boolean; trainingExamComplete: boolean; agreementSigned: boolean; iibUploaded: boolean; unlocked: Set<ViewStage> }) {
+function SixStepNavigation({ viewStage, documentsComplete, registrationComplete, trainingExamComplete, agreementSigned, iibUploaded }: { viewStage: ViewStage; documentsComplete: boolean; registrationComplete: boolean; trainingExamComplete: boolean; agreementSigned: boolean; iibUploaded: boolean }) {
   const completion: Record<ViewStage, boolean> = { primary: true, documents: documentsComplete, registration: registrationComplete, training: trainingExamComplete, agreement: agreementSigned, iib: iibUploaded };
   const steps: Array<[ViewStage, string]> = [["primary", "Primary details"], ["documents", "Documents"], ["registration", "Registration"], ["training", "Training & Exam"], ["agreement", "Agreement"], ["iib", "IIB Upload"]];
   return (
-    <nav className="-mt-2 overflow-x-auto rounded-2xl border border-[#DCE5EF] bg-white/85 px-5 py-3 shadow-sm backdrop-blur">
+    <nav className="-mt-2 overflow-x-auto rounded-2xl border border-[#DCE5EF] bg-white/85 px-5 py-3 shadow-sm backdrop-blur" aria-label="Onboarding progress">
       <div className="relative grid min-w-[900px] grid-cols-6 gap-0">
         {steps.map(([stage, label], index) => {
           const completed = completion[stage];
           const active = stage === viewStage && !completed;
-          const available = unlocked.has(stage);
-          const content = <IntermediaryJourneyStep label={label} completed={completed} active={active} index={index} />;
-          return available ? <Link key={stage} href={`/intermediaries/applications/${applicationId}/workflow?stage=${stage}`} className="relative z-[1] min-w-0 text-center">{content}</Link> : <div key={stage} className="relative z-[1] min-w-0 cursor-not-allowed text-center opacity-75" aria-disabled="true">{content}</div>;
+          return <div key={stage} className="relative z-[1] min-w-0 cursor-default text-center" aria-current={active ? "step" : undefined}><IntermediaryJourneyStep label={label} completed={completed} active={active} index={index} /></div>;
         })}
       </div>
     </nav>
