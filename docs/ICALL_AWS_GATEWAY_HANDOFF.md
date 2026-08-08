@@ -1,8 +1,8 @@
 # iCall AWS Gateway and SSO Integration Handoff
 
-> **Updated:** 2026-08-05 17:05 IST
+> **Updated:** 2026-08-09 00:43 IST
 >
-> Read this file before changing any iCall, training, SSO, gateway, CSP, or iframe code. Never commit secrets, tokens, cookies, passwords, private keys, full PAN values, or temporary SSO URLs.
+> Read this file before changing any iCall, training, SSO, gateway, CSP, iframe, or production-domain integration behavior. Also read `docs/PRODUCTION_DOMAIN_HANDOFF.md` for the canonical production-domain state. Never commit secrets, tokens, cookies, passwords, private keys, full PAN values, or temporary SSO URLs.
 
 ## Current architecture
 
@@ -24,7 +24,13 @@ Gateway hostname:
 https://insureit.duckdns.org
 ```
 
-Portal UAT origin:
+Canonical production portal origin:
+
+```text
+https://portal.insureit.in
+```
+
+Temporary fallback origin retained during stabilization:
 
 ```text
 https://insureit-drab.vercel.app
@@ -50,9 +56,57 @@ infrastructure/icall-gateway/server.js
 - SSO returns `data.redirectUrl`.
 - A fresh redirect URL works in a top-level browser tab.
 - Redirect URLs are short-lived or single-use and must never be reused.
-- The iframe is permitted by both applications' CSP/frame policy.
-- The iCall iframe currently may fall back to the normal login page because the iCall session cookie was observed with `SameSite=Lax`.
-- Vendor-side requirement remains `SameSite=None; Secure` for cross-site iframe authentication.
+- The INSUREIT application CSP permits `https://www.icallinsurance.com` as a frame source.
+- On the former Vercel origin, prior iframe testing also exposed a cookie compatibility concern because the iCall session cookie was observed with `SameSite=Lax`; the vendor-side requirement remains `SameSite=None; Secure` for cross-site iframe authentication.
+
+## Production-domain migration verification — 2026-08-09
+
+**VERIFIED BY USER**
+
+The INSUREIT production application has moved to:
+
+```text
+https://portal.insureit.in
+```
+
+After the move:
+
+- INSUREIT application workflows generally work from the new domain.
+- iCall SSO successfully generates a fresh provider redirect.
+- `Open in new tab` successfully opens the authenticated iCall training session from the new production domain.
+- The iframe path fails in the browser with `www.icallinsurance.com refused to connect`.
+
+This evidence proves the server-side SSO chain is functioning:
+
+```text
+INSUREIT / Vercel server
+  -> protected AWS gateway
+  -> iCall AuthenticateUser
+  -> fresh www.icallinsurance.com SSO URL
+  -> successful top-level navigation
+```
+
+The remaining failure is therefore in the browser iframe path, not in the AWS relay route or SSO URL generation.
+
+### Required vendor action
+
+Ask iCall to add:
+
+```text
+https://portal.insureit.in
+```
+
+to the iCall site's allowed iframe / CSP `frame-ancestors` configuration.
+
+Also ask iCall to verify that the authentication/session cookie used for iframe SSO supports cross-site iframe use, including `SameSite=None; Secure`. Keep `HttpOnly` enabled where applicable.
+
+Retain `Open in new tab` as the safe working fallback until the iframe is directly verified from the official domain.
+
+### AWS conclusion for this domain migration
+
+The current `infrastructure/icall-gateway/server.js` route is server-to-server and protected by the private relay Bearer secret. It has no browser-origin allow-list that needs to change merely because the public INSUREIT origin moved from the Vercel hostname to `portal.insureit.in`.
+
+Do not modify the AWS gateway, relay secret, iCall token, or Nginx routing merely to address the browser message `www.icallinsurance.com refused to connect`. That symptom is controlled by the embedded iCall site's frame/cookie policy.
 
 ## Internal manager workflow
 
@@ -65,8 +119,6 @@ launchIcallTrainingSso(applicationId, submittedLoginId)
 It validates manager scope, stored login ID and the returned HTTPS host before returning a temporary SSO URL.
 
 ## External intermediary portal implementation
-
-**IMPLEMENTED IN REPOSITORY — NOT DEPLOYED OR UAT-VERIFIED**
 
 Commits:
 
@@ -127,18 +179,17 @@ apps/web-portal/app/intermediary-portal/page.tsx
 - Button labels adapt to status: Start training, Continue training, Go to examination, Reattempt examination, View completion status.
 - Partner UI clearly labels the information as linked qualification.
 
-## Remaining work before release
+## Remaining work before final production sign-off
 
-1. Run lint, TypeScript and production build for the exact commits above.
-2. Review whether a Partner can have multiple linked POSP/MISP children; current implementation selects the most recently updated child. If multiple qualification children are valid, add an explicit child selector rather than relying on latest updated.
-3. Add self-service status synchronization with a provider-call cooldown. Current close behavior reloads saved state but does not itself call iCall status.
-4. Confirm external portal account ownership queries match the production authentication/profile mapping.
-5. Deploy only after explicit user instruction.
-6. Verify POSP, MISP designated person and Partner-linked-child launches in UAT.
-7. Confirm iCall cookie is actually `SameSite=None; Secure; HttpOnly` and iframe opens authenticated.
-8. Test fresh new-tab fallback separately.
-9. Test disabled accounts, missing training registration, no linked child, provider timeout and malformed SSO response.
-10. Confirm no temporary URL, token, full PAN or provider cookie appears in logs or client-visible errors.
+1. Keep `https://portal.insureit.in` as the canonical production origin.
+2. Obtain iCall confirmation that `https://portal.insureit.in` is allowed by their iframe/frame-ancestor configuration.
+3. Confirm iCall's iframe session cookie behavior is compatible with cross-site embedding (`SameSite=None; Secure`).
+4. Verify the iframe again from the official production domain after the vendor change.
+5. Keep the new-tab fallback until iframe verification succeeds.
+6. Review whether a Partner can have multiple linked POSP/MISP children; current implementation selects the most recently updated child. If multiple qualification children are valid, add an explicit child selector rather than relying on latest updated.
+7. Add self-service status synchronization with a provider-call cooldown if still required by the product. Current close behavior reloads saved state but does not itself call iCall status.
+8. Test disabled accounts, missing training registration, no linked child, provider timeout and malformed SSO response.
+9. Confirm no temporary URL, token, full PAN or provider cookie appears in logs or client-visible errors.
 
 ## Safety rules
 
@@ -146,5 +197,6 @@ apps/web-portal/app/intermediary-portal/page.tsx
 - Never trust a browser-supplied application ID, PAN or login ID for self-service launch.
 - Never reuse a redirect URL.
 - Never assign Partner-owned training/exam state; qualification belongs to POSP/MISP.
-- Do not claim implementation is live until the exact commit is deployed and the user journey is directly verified.
+- Do not claim iframe success until it is directly verified from `https://portal.insureit.in`.
 - Do not bypass vendor cookie/CSP controls using an insecure proxy.
+- Do not change the AWS gateway solely because the public web origin changes; first prove a server-to-server gateway failure.
