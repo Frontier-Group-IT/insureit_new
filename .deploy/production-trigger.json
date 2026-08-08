@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-08T16:33:00+05:30",
+  "deploy_requested_at": "2026-08-08T17:07:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT intermediary user account status tabs release",
-  "source_commit": "ad183b670772a72e551c9d36c0d244400a0c8bfd",
-  "release_scope": "Deploy current main including PR #226. Rename Portal Accounts to Intermediatory User Accounts, keep the search box immediately beside the title, and add far-right All / Active / Inactive segmented filters with live counts while preserving search/filter URL state, table columns, application links, invitation timestamps, permissions, and data loading behavior.",
-  "verification": "PR #226 was verified mergeable at exact head 29f60bed1714d118667b31ac993734f5568de9b3 and squash merged into main as ad183b670772a72e551c9d36c0d244400a0c8bfd. Its final diff contains one application file (+48/-8). Full lint/typecheck/build were not run for this PR. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
+  "source": "ChatGPT inactive portal users and partner application links release",
+  "source_commit": "925689bda3d9d9d6a61c082122f28851cfeb119f",
+  "release_scope": "Deploy current main including PR #228. Build Intermediatory User Accounts from Partner records, define Inactive as partners whose portal users have not yet been created, show Not created for those rows, keep Active limited to existing active portal accounts, and make Application Open link use the partner intermediary's own application_id so it opens the corresponding Partner Application Review page.",
+  "verification": "PR #228 was verified mergeable at exact head a919e1bcde9deeacafd4e6c58c5d16632172bb35 and squash merged into main as 925689bda3d9d9d6a61c082122f28851cfeb119f. Its final diff contains one application file (+43/-24). Full lint/typecheck/build were not run for this PR. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
