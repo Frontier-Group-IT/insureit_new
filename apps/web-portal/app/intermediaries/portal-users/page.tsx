@@ -22,6 +22,14 @@ type Intermediary = {
   intermediary_code: string | null;
   intermediary_type: string;
   portal_access_status: string;
+  email: string | null;
+  application_id: string | null;
+  updated_at: string;
+};
+
+type PortalUserRow = {
+  intermediary: Intermediary;
+  account: Account | null;
 };
 
 type StatusFilter = "all" | "active" | "inactive";
@@ -38,7 +46,7 @@ export default async function IntermediaryPortalUsersPage({
   const statusFilter: StatusFilter = query.status === "active" || query.status === "inactive" ? query.status : "all";
   const admin = createSupabaseAdminClient();
 
-  const [{ data: accounts, error }, { data: intermediaries }] = await Promise.all([
+  const [accountsResult, intermediariesResult] = await Promise.all([
     admin
       .from("intermediary_portal_accounts")
       .select("id,intermediary_id,application_id,email,status,invited_at,created_at")
@@ -47,31 +55,41 @@ export default async function IntermediaryPortalUsersPage({
       .returns<Account[]>(),
     admin
       .from("intermediaries")
-      .select("id,display_name,intermediary_code,intermediary_type,portal_access_status")
+      .select("id,display_name,intermediary_code,intermediary_type,portal_access_status,email,application_id,updated_at")
+      .eq("intermediary_type", "partner")
+      .not("application_id", "is", null)
       .order("updated_at", { ascending: false })
       .limit(500)
       .returns<Intermediary[]>(),
   ]);
 
-  const intermediaryMap = new Map((intermediaries ?? []).map((item) => [item.id, item]));
-  const searchedRows = (accounts ?? []).filter((row) => {
+  const loadError = accountsResult.error ?? intermediariesResult.error;
+  const accountMap = new Map((accountsResult.data ?? []).map((item) => [item.intermediary_id, item]));
+  const allRows: PortalUserRow[] = (intermediariesResult.data ?? []).map((intermediary) => ({
+    intermediary,
+    account: accountMap.get(intermediary.id) ?? null,
+  }));
+
+  const searchedRows = allRows.filter(({ intermediary, account }) => {
     if (!normalizedQuery) return true;
-    const intermediary = intermediaryMap.get(row.intermediary_id);
     return [
-      intermediary?.display_name,
-      row.email,
-      intermediary?.intermediary_type,
-      intermediary?.intermediary_code,
-      row.application_id,
+      intermediary.display_name,
+      intermediary.email,
+      account?.email,
+      intermediary.intermediary_type,
+      intermediary.intermediary_code,
+      intermediary.application_id,
     ].some((value) => value?.toLowerCase().includes(normalizedQuery));
   });
-  const resolvedStatus = (row: Account) => intermediaryMap.get(row.intermediary_id)?.portal_access_status ?? row.status;
-  const activeCount = searchedRows.filter((row) => resolvedStatus(row) === "active").length;
-  const inactiveCount = searchedRows.length - activeCount;
+
+  const resolvedStatus = ({ intermediary, account }: PortalUserRow) =>
+    account ? intermediary.portal_access_status || account.status : "not_created";
+  const activeCount = searchedRows.filter((row) => Boolean(row.account) && resolvedStatus(row) === "active").length;
+  const inactiveCount = searchedRows.filter((row) => !row.account).length;
   const rows = searchedRows.filter((row) => {
     if (statusFilter === "all") return true;
-    const isActive = resolvedStatus(row) === "active";
-    return statusFilter === "active" ? isActive : !isActive;
+    if (statusFilter === "inactive") return !row.account;
+    return Boolean(row.account) && resolvedStatus(row) === "active";
   });
 
   const filterHref = (status: StatusFilter) => {
@@ -119,22 +137,22 @@ export default async function IntermediaryPortalUsersPage({
               })}
             </nav>
           </div>
-          {error ? (
-            <div className="px-4 py-12 text-center text-[11px] text-red-700">Portal accounts could not be loaded.</div>
+          {loadError ? (
+            <div className="px-4 py-12 text-center text-[11px] text-red-700">Intermediary user accounts could not be loaded.</div>
           ) : rows.length ? (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[900px] text-left text-[10.5px]">
                 <thead className="border-b text-[8.5px] uppercase text-[#64748B]"><tr><th className="px-4 py-3">User</th><th className="px-3 py-3">Type</th><th className="px-3 py-3">Portal Status</th><th className="px-3 py-3">Invitation</th><th className="px-3 py-3">Application</th></tr></thead>
                 <tbody className="divide-y">
                   {rows.map((row) => {
-                    const intermediary = intermediaryMap.get(row.intermediary_id);
+                    const { intermediary, account } = row;
                     return (
-                      <tr key={row.id} className="hover:bg-[#FAFCFF]">
-                        <td className="px-4 py-3"><p className="font-semibold text-[#0F2A55]">{intermediary?.display_name ?? row.email}</p><p className="mt-0.5 text-[8.5px] text-[#64748B]">{row.email}</p></td>
-                        <td className="px-3 py-3 capitalize">{intermediary?.intermediary_type ?? "-"}</td>
+                      <tr key={intermediary.id} className="hover:bg-[#FAFCFF]">
+                        <td className="px-4 py-3"><p className="font-semibold text-[#0F2A55]">{intermediary.display_name}</p><p className="mt-0.5 text-[8.5px] text-[#64748B]">{account?.email ?? intermediary.email ?? "-"}</p></td>
+                        <td className="px-3 py-3 capitalize">{intermediary.intermediary_type}</td>
                         <td className="px-3 py-3"><Status value={resolvedStatus(row)} /></td>
-                        <td className="px-3 py-3">{row.invited_at ? new Date(row.invited_at).toLocaleString("en-IN") : "-"}</td>
-                        <td className="px-3 py-3">{row.application_id ? <Link href={`/intermediaries/applications/${row.application_id}`} className="font-semibold text-[#4F46E5] hover:underline">Open</Link> : "-"}</td>
+                        <td className="px-3 py-3">{account?.invited_at ? new Date(account.invited_at).toLocaleString("en-IN") : "-"}</td>
+                        <td className="px-3 py-3">{intermediary.application_id ? <Link href={`/intermediaries/applications/${intermediary.application_id}`} className="font-semibold text-[#4F46E5] hover:underline">Open</Link> : "-"}</td>
                       </tr>
                     );
                   })}
@@ -151,5 +169,6 @@ export default async function IntermediaryPortalUsersPage({
 }
 
 function Status({ value }: { value: string }) {
-  return <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-[8.5px] font-semibold capitalize text-slate-700">{value.replaceAll("_", " ")}</span>;
+  const label = value === "not_created" ? "Not created" : value.replaceAll("_", " ");
+  return <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-[8.5px] font-semibold capitalize text-slate-700">{label}</span>;
 }
