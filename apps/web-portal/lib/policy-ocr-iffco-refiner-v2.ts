@@ -4,6 +4,14 @@ const VERSION = "iffco_tokio_commercial_motor_v2.0.0";
 const MONEY_RE = /[0-9][0-9,]*(?:\.[0-9]{1,2})?/g;
 const DATE_RE = /([0-9]{1,2})[\/-]([0-9]{1,2})[\/-]([0-9]{2,4})/;
 const TOLERANCE = 0.05;
+const REPLACE_KEYS = new Set([
+  "insurer_name", "policy_product", "policy_number", "policy_start_date", "policy_end_date",
+  "idv", "od_premium", "tp_premium", "cpa_premium", "cpa_opted",
+  "total_premium", "tax_amount", "gross_premium",
+]);
+const REQUIRED_KEYS = [
+  "policy_product", "idv", "od_premium", "tp_premium", "policy_number", "insurer_name", "policy_start_date", "policy_end_date",
+];
 
 type Hit = { value: number; page: number; evidence: string };
 type TextHit = { value: string; page: number; evidence: string };
@@ -11,7 +19,7 @@ type PeriodHit = { from: string; upto: string; page: number; evidence: string };
 
 export function refineIffcoCommercialPolicyV2(pages: string[], parsed: ParsedPolicyResult): ParsedPolicyResult {
   const cleanPages = pages.map(sanitize);
-  const fields = [...parsed.fields];
+  const fields = parsed.fields.filter((field) => !REPLACE_KEYS.has(field.key));
   const warnings: string[] = [];
 
   setField(fields, "insurer_name", "Insurance company", "IFFCO-TOKIO General Insurance Company Limited", .99, 1, "IFFCO-TOKIO GENERAL INSURANCE CO.LTD");
@@ -84,6 +92,10 @@ export function refineIffcoCommercialPolicyV2(pages: string[], parsed: ParsedPol
       warnings.push(`Review required. IFFCO printed net + GST = ${money(calculatedGross)}, printed gross = ${money(totals.gross.value)}.`);
     }
   }
+
+  const present = new Set(fields.map((field) => field.key));
+  const missing = REQUIRED_KEYS.filter((key) => !present.has(key));
+  if (missing.length) warnings.push(`Review required. Missing or uncertain IFFCO fields: ${missing.join(", ")}.`);
 
   return { parserId: "iffco_tokio_commercial_motor_v2", parserVersion: VERSION, fields, warnings };
 }
