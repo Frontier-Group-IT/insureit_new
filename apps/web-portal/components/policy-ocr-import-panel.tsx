@@ -9,7 +9,6 @@ const APPLY_FIELDS = new Set([
   "idv",
   "od_premium",
   "tp_premium",
-  "cpa_opted",
   "cpa_premium",
   "policy_number",
   "insurer_name",
@@ -24,7 +23,6 @@ const FIELD_TARGETS: Record<string, string[]> = {
   idv: ["idv / sum insured", "idv"],
   od_premium: ["od premium"],
   tp_premium: ["third party premium", "tp premium"],
-  cpa_opted: ["cpa opted"],
   cpa_premium: ["cpa amount", "cpa premium"],
   policy_number: ["policy number"],
   insurer_name: ["insurance company", "insurer"],
@@ -47,7 +45,7 @@ const INSURER_ALIASES: Record<string, string[]> = {
   newindia: ["new india assurance", "the new india assurance"],
 };
 
-export function PolicyOcrImportPanel() {
+export function PolicyOcrImportPanel({ variant = "header" }: { variant?: "header" | "icon" }) {
   const [open, setOpen] = useState(false);
   const [fields, setFields] = useState<PolicyOcrField[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -292,10 +290,12 @@ export function PolicyOcrImportPanel() {
   ) : null;
 
   return <>
-    <button type="button" onClick={() => setOpen(true)} className="rounded-xl border border-white/35 bg-white/10 px-4 py-2.5 text-[10px] font-bold text-white shadow-sm transition hover:bg-white/20">Read Policy Copy</button>
+    {variant==="icon"?<button type="button" onClick={()=>setOpen(true)} aria-label="Read policy copy" title="Read policy copy" className="grid h-8 w-8 place-items-center rounded-lg border border-[#D7E0EA] bg-white text-[#315B9A] shadow-sm transition hover:border-[#B8C8DC] hover:bg-[#F3F7FC] focus:outline-none focus:ring-2 focus:ring-[#DCE8FA]"><PolicyReadIcon/></button>:<button type="button" onClick={() => setOpen(true)} className="rounded-xl border border-white/35 bg-white/10 px-4 py-2.5 text-[10px] font-bold text-white shadow-sm transition hover:bg-white/20">Read Policy Copy</button>}
     {modal}
   </>;
 }
+
+function PolicyReadIcon(){return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[16px] w-[16px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8"/><path d="M14 2v6h6"/><path d="M9 13h3"/><path d="M9 17h2"/><circle cx="17" cy="16" r="3"/><path d="m19.2 18.2 2 2"/></svg>;}
 
 function friendlyParserName(parserId: string) {
   if (parserId.startsWith("digit_")) return "Digit commercial vehicle format";
