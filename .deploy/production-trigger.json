@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-08T15:11:00+05:30",
+  "deploy_requested_at": "2026-08-08T15:30:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT simplified POSP/MISP onboarding register release",
-  "source_commit": "c623b7e50cbb5f2e3d3775dedfb1fe051cc89e71",
-  "release_scope": "Deploy current main including PR #223. Simplify the POSP/MISP onboarding applications page by removing the dark blue header/hero section, action buttons, four metric counters, requested-type and status filters, and Apply filters control; move the search input into the Pending Application Register header while preserving the table, review/open actions, age/status badges, and pagination.",
-  "verification": "PR #223 was verified mergeable at exact head a497668daaddddc6a13f28537bb1ea2c388fba97 and squash merged into main as c623b7e50cbb5f2e3d3775dedfb1fe051cc89e71. Its final diff contains one application file (+20/-13). Full lint/typecheck/build were not run for this PR. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
+  "source": "ChatGPT POSP/MISP segmented register filter release",
+  "source_commit": "fda899a849d876c08c8f3c793ab0f2d8366eb0c4",
+  "release_scope": "Deploy current main including PR #224. Reposition the Pending Application Register search box beside the title, remove the header Page X of Y pill, and add right-aligned All / POSP / MISP segmented controls with live counts while preserving search, type filtering, pagination, table actions, permissions, and onboarding eligibility behavior.",
+  "verification": "PR #224 was verified mergeable at exact head 15cba31055d17b6e63f84bb06fab0d45cf593e25 and squash merged into main as fda899a849d876c08c8f3c793ab0f2d8366eb0c4. Its final diff contains one application file (+24/-11). Full lint/typecheck/build were not run for this PR. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
