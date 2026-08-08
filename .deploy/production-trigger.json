@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-08T11:49:00+05:30",
+  "deploy_requested_at": "2026-08-08T12:54:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT remove legacy application review document portal release",
-  "source_commit": "73d30ae015a08c572a0d4f20943c7dccb2b31322",
-  "release_scope": "Deploy current main including PR #220. Remove the route-level IntermediaryDocumentReviewPortal mount from the POSP/MISP Application Review layout so the server-rendered uploaded-only Documents section remains the sole renderer and the legacy ten-slot subtitle/UI can no longer replace it after page load. No database, storage, upload/replace logic, workflow stages, permissions, or server-rendered review document ordering/filtering are changed.",
-  "verification": "PR #220 was verified mergeable at exact head a64510d567d0e424945e4555116e125999d47482 and squash merged into main as 73d30ae015a08c572a0d4f20943c7dccb2b31322. Its final diff contains one application file with only the portal import and mount removed (0 additions / 2 deletions). Full lint/typecheck/build were not run for this PR. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
+  "source": "ChatGPT workflow stage subtitle removal release",
+  "source_commit": "9e68dad6ac01e5a8dcde2e4d73ba00db06303f62",
+  "release_scope": "Deploy current main including PR #221. Remove the descriptive subtitles beneath the Registration and Training & Examination stage headers in the POSP/MISP onboarding workflow while keeping stage titles, right-side status text, registration outcome, iCall integration, forms, APIs, and workflow transitions unchanged.",
+  "verification": "PR #221 was verified mergeable at exact head 30626284a15b561c561c6a53cd6bb40d594e9d43 and squash merged into main as 9e68dad6ac01e5a8dcde2e4d73ba00db06303f62. Its final diff contains one application file (+4/-4); the focused temporary GitHub Actions workflow completed successfully and git diff --check passed. Full lint/typecheck/build were not run for this PR. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
