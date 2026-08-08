@@ -1,6 +1,6 @@
 import type { ParsedPolicyField, ParsedPolicyResult } from "@/lib/policy-ocr-parsers";
 
-const VERSION = "new_india_commercial_motor_v1.1.0";
+const VERSION = "new_india_commercial_motor_v1.2.0";
 const MONEY_RE = /[0-9][0-9,]*(?:\.[0-9]{1,2})?/g;
 
 type MoneyHit = { value: number; page: number; evidence: string };
@@ -15,6 +15,18 @@ export function refineNewIndiaCommercialPolicy(pages: string[], parsed: ParsedPo
 
   const fields = new Map(parsed.fields.map((field) => [field.key, field]));
   const warnings = parsed.warnings.filter((warning) => !/New India|Missing or uncertain fields/i.test(warning));
+
+  // The dedicated refiner owns all Section 03 values it can interpret. A weak
+  // generic/base-parser guess must never survive when the exact New India anchor
+  // is missing, because historical policy numbers, NCB amounts and coverage
+  // limits appear close to the real values in this format.
+  for (const key of [
+    "policy_product", "idv", "od_premium", "tp_premium", "cpa_opted", "cpa_premium",
+    "policy_number", "insurer_name", "policy_start_date", "policy_end_date",
+    "total_premium", "tax_amount", "gross_premium",
+  ]) {
+    fields.delete(key);
+  }
 
   setField(fields, "insurer_name", "Insurance company", "The New India Assurance Company Limited", .99, 1, "The New India Assurance Co. Ltd.");
 
@@ -50,8 +62,8 @@ export function refineNewIndiaCommercialPolicy(pages: string[], parsed: ParsedPo
     setField(fields, "cpa_opted", "CPA opted", cpaValue > 0 ? "Yes" : "No", .99, cpa.page, cpa.evidence);
     setField(fields, "cpa_premium", "CPA amount", money(cpaValue), .99, cpa.page, cpa.evidence);
   } else {
-    setField(fields, "cpa_opted", "CPA opted", "No", .82, null, "No payable owner-driver CPA row identified");
-    setField(fields, "cpa_premium", "CPA amount", "0", .82, null, "No payable owner-driver CPA row identified");
+    setField(fields, "cpa_opted", "CPA opted", "No", .82, null, "No payable owner-driver CPA premium row identified");
+    setField(fields, "cpa_premium", "CPA amount", "0", .82, null, "No payable owner-driver CPA premium row identified");
   }
 
   if (od) setField(fields, "od_premium", "OD premium", money(od.value), .99, od.page, od.evidence);
@@ -103,28 +115,35 @@ export function refineNewIndiaCommercialPolicy(pages: string[], parsed: ParsedPo
 }
 
 function findCurrentPolicyNumber(pages: string[]): TextHit | null {
-  const candidates = new Map<string, { count: number; page: number; evidence: string }>();
+  const candidates = new Map<string, { count: number; page: number; evidence: string; labeled: boolean }>();
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
-    const page = pages[pageIndex];
-    const lines = page.split("\n");
+    const lines = pages[pageIndex].split("\n");
     for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
       const line = lines[lineIndex];
-      if (/Previous\s+Policy\s+No/i.test(line)) continue;
-      const nearby = `${lines[Math.max(0, lineIndex - 1)] ?? ""} ${line} ${lines[lineIndex + 1] ?? ""}`;
-      if (/Previous\s+Policy\s+No/i.test(nearby)) continue;
-      for (const match of line.matchAll(/\b([0-9]{18,25})\b/g)) {
+      const prev = lines[Math.max(0, lineIndex - 1)] ?? "";
+      const next = lines[lineIndex + 1] ?? "";
+      const nearby = `${prev} ${line} ${next}`;
+      if (/Previous\s+Policy\s+No/i.test(line) || /Previous\s+Policy\s+No/i.test(`${prev} ${line}`)) continue;
+
+      const labeledLine = /Policy\s+No\.?/i.test(line) && !/Previous/i.test(line);
+      const labeledNearby = /Policy\s+No\.?/i.test(nearby) && !/Previous\s+Policy\s+No/i.test(nearby);
+      for (const match of nearby.matchAll(/\b([0-9]{18,25})\b/g)) {
         const value = match[1];
         const entry = candidates.get(value);
         candidates.set(value, {
           count: (entry?.count ?? 0) + 1,
           page: entry?.page ?? pageIndex + 1,
           evidence: entry?.evidence ?? nearby,
+          labeled: Boolean(entry?.labeled || labeledLine || labeledNearby),
         });
       }
     }
   }
   if (!candidates.size) return null;
-  const best = [...candidates.entries()].sort((a, b) => b[1].count - a[1].count)[0];
+  const best = [...candidates.entries()].sort((a, b) => {
+    if (a[1].labeled !== b[1].labeled) return Number(b[1].labeled) - Number(a[1].labeled);
+    return b[1].count - a[1].count;
+  })[0];
   return { value: best[0], page: best[1].page, evidence: best[1].evidence };
 }
 
@@ -165,13 +184,16 @@ function findTotalIdv(pages: string[]): MoneyHit | null {
 function findOwnerDriverCpa(pages: string[]): MoneyHit | null {
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
     const lines = pages[pageIndex].split("\n");
-    for (const line of lines) {
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+      const line = lines[lineIndex];
       if (!/PA\s+Cover\s+For\s+Owner\s+Driver/i.test(line)) continue;
-      const values = amounts(line);
+      const combined = [line, lines[lineIndex + 1] ?? "", lines[lineIndex + 2] ?? ""].join(" ");
+      const values = amounts(combined).filter((value) => value >= 0 && value <= 100000 && !isYear(value));
       if (!values.length) continue;
+      // The row includes the Rs. 15,00,000 coverage limit before the payable
+      // amount. Only the last plausible small amount is the premium.
       const final = values[values.length - 1];
-      if (final < 0 || final > 100000 || isYear(final)) continue;
-      return { value: final, page: pageIndex + 1, evidence: line };
+      return { value: final, page: pageIndex + 1, evidence: combined };
     }
   }
   return null;

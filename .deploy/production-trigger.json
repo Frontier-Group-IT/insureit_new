@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-08T17:07:00+05:30",
+  "deploy_requested_at": "2026-08-09T01:26:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT inactive portal users and partner application links release",
-  "source_commit": "925689bda3d9d9d6a61c082122f28851cfeb119f",
-  "release_scope": "Deploy current main including PR #228. Build Intermediatory User Accounts from Partner records, define Inactive as partners whose portal users have not yet been created, show Not created for those rows, keep Active limited to existing active portal accounts, and make Application Open link use the partner intermediary's own application_id so it opens the corresponding Partner Application Review page.",
-  "verification": "PR #228 was verified mergeable at exact head a919e1bcde9deeacafd4e6c58c5d16632172bb35 and squash merged into main as 925689bda3d9d9d6a61c082122f28851cfeb119f. Its final diff contains one application file (+43/-24). Full lint/typecheck/build were not run for this PR. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
+  "source": "ChatGPT vehicle manufacturer master release",
+  "source_commit": "d95b1332c17b546bda9d057781ef48e1a50a91cd",
+  "release_scope": "Deploy current main with the completed Vehicle Manufacturer/OEM master: canonical legal entities, brands, aliases, segments, source metadata, validated make resolution, manufacturer register/add/review/edit pages, vehicle add/edit integration, POSP/MISP OEM integration, navigation, and the already-applied Supabase manufacturer migrations. Because production deploys current main, later commits already present on main are included in the same batched release.",
+  "verification": "Vehicle manufacturer foundation and canonical seed migrations were applied and database-level manufacturer/brand/alias validation was verified. Local Next.js typecheck/build could not be executed on the user's Windows machine because the machine currently cannot create files/directories and Windows component repair is in progress. This deployment therefore relies on the Vercel production build as the compilation gate. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }

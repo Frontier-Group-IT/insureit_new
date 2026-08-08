@@ -1,6 +1,6 @@
 import type { ParsedPolicyField, ParsedPolicyResult } from "@/lib/policy-ocr-parsers";
 
-const VERSION = "digit_commercial_motor_v1.6.0";
+const VERSION = "digit_commercial_motor_v1.8.0";
 const MONEY_RE = /[0-9][0-9,]*(?:\.[0-9]{1,2})?/g;
 
 type MoneyHit = { value: number; page: number; evidence: string };
@@ -15,6 +15,12 @@ export function refineDigitCommercialPolicyV2(pages: string[], parsed: ParsedPol
   const fields = new Map(parsed.fields.map((field) => [field.key, field]));
   const warnings = parsed.warnings.filter((warning) => !/Digit premium cross-check|Missing or uncertain Digit fields|Digit OD premium|Digit TP premium/i.test(warning));
 
+  // Digit v2 owns financial interpretation. Never allow a weaker base-parser
+  // guess to survive when an exact v2 anchor is unavailable.
+  for (const key of ["idv", "od_premium", "tp_premium", "cpa_opted", "cpa_premium", "total_premium", "tax_amount", "gross_premium"]) {
+    fields.delete(key);
+  }
+
   setField(fields, "insurer_name", "Insurance company", "Go Digit General Insurance Limited", .99, 1, "Go Digit General Insurance Ltd.");
 
   if (/DIGIT\s+COMMERCIAL\s+VEHICLE\s+(?:COMPREHENSIVE|PACKAGE)\s+POLICY/i.test(upper)) {
@@ -26,12 +32,10 @@ export function refineDigitCommercialPolicyV2(pages: string[], parsed: ParsedPol
   }
 
   const idv = findDigitIdv(cleanPages);
-  const currentIdv = numeric(fields.get("idv"));
   if (idv) {
     setField(fields, "idv", "IDV / Sum insured", money(idv.value), .99, idv.page, idv.evidence);
-  } else if (currentIdv !== null && currentIdv >= 1900 && currentIdv <= 2100) {
-    fields.delete("idv");
-    warnings.push("Digit IDV was rejected because the extracted value looked like a manufacturing year. Review the IDV field.");
+  } else {
+    warnings.push("Digit IDV could not be confirmed from the dedicated IDV block. Review the IDV field.");
   }
   const resolvedIdv = numeric(fields.get("idv"));
 
@@ -50,21 +54,21 @@ export function refineDigitCommercialPolicyV2(pages: string[], parsed: ParsedPol
   }
 
   const blockNet = findPrintedNetInPremiumBlock(cleanPages, resolvedIdv);
-  const net = blockNet?.value ?? invoice?.net ?? numeric(fields.get("total_premium"));
-  if (blockNet) {
-    setField(fields, "total_premium", "Printed net premium", money(blockNet.value), .99, blockNet.page, blockNet.evidence);
+  // The invoice row has explicit column semantics (Net/IGST/CGST/SGST/.../Gross)
+  // and is therefore stronger evidence than proximity inside the OCR premium block.
+  const net = invoice?.net ?? blockNet?.value ?? numeric(fields.get("total_premium"));
+  if (!invoice && blockNet) {
+    setField(fields, "total_premium", "Printed net premium", money(blockNet.value), .98, blockNet.page, blockNet.evidence);
+  } else if (invoice && blockNet && Math.abs(invoice.net - blockNet.value) > 1) {
+    warnings.push("Digit premium-block net candidate differed from the invoice net premium; the invoice value was retained.");
   }
 
-  const reconciledPair = findReconciledPremiumPair(cleanPages, net, cpaValue, resolvedIdv);
-  if (reconciledPair) {
-    setField(fields, "od_premium", "OD premium", money(reconciledPair.od), .99, reconciledPair.page, reconciledPair.evidence);
-    setField(fields, "tp_premium", "Third party premium", money(reconciledPair.tp), .99, reconciledPair.page, reconciledPair.evidence);
-  } else {
-    const odDirect = findDirectPremium(cleanPages, /Own\s*Damage\s*Premium/i, "od", resolvedIdv, net);
-    const tpDirect = findDirectPremium(cleanPages, /Basic\s*Third[-\s]*Party\s*Liability/i, "tp", resolvedIdv, net);
-    if (odDirect) setField(fields, "od_premium", "OD premium", money(odDirect.value), .96, odDirect.page, odDirect.evidence);
-    if (tpDirect) setField(fields, "tp_premium", "Third party premium", money(tpDirect.value), .96, tpDirect.page, tpDirect.evidence);
-  }
+  // Semantic labels are stronger evidence than numeric position. Read exact OD/TP
+  // rows first; only use pair reconciliation after direct extraction/derivation fails.
+  const odDirect = findDirectPremium(cleanPages, /Own\s*Damage\s*Premium/i, "od", resolvedIdv, net);
+  const tpDirect = findDirectPremium(cleanPages, /Basic\s*Third[-\s]*Party\s*Liability/i, "tp", resolvedIdv, net);
+  if (odDirect) setField(fields, "od_premium", "OD premium", money(odDirect.value), .99, odDirect.page, odDirect.evidence);
+  if (tpDirect) setField(fields, "tp_premium", "Third party premium", money(tpDirect.value), .99, tpDirect.page, tpDirect.evidence);
 
   let od = numeric(fields.get("od_premium"));
   let tp = numeric(fields.get("tp_premium"));
@@ -81,7 +85,7 @@ export function refineDigitCommercialPolicyV2(pages: string[], parsed: ParsedPol
   if ((od === null || od <= 0) && net !== null && net > 0 && tp !== null && tp >= 0) {
     const derived = round2(net - tp - cpaValue);
     if (isPlausiblePremium(derived, resolvedIdv, net)) {
-      setField(fields, "od_premium", "OD premium", money(derived), .99, blockNet?.page ?? invoice?.page ?? 1, "Derived from Digit printed Net Premium minus TP and CPA after direct OD extraction was unavailable.");
+      setField(fields, "od_premium", "OD premium", money(derived), .99, invoice?.page ?? blockNet?.page ?? 1, "Derived from Digit printed Net Premium minus TP and CPA after direct OD extraction was unavailable.");
       warnings.push("Digit OD premium was recovered using the printed net premium cross-check. Verify once against the policy schedule.");
       od = derived;
     }
@@ -89,9 +93,23 @@ export function refineDigitCommercialPolicyV2(pages: string[], parsed: ParsedPol
   if ((tp === null || tp <= 0) && net !== null && net > 0 && od !== null && od >= 0) {
     const derived = round2(net - od - cpaValue);
     if (isPlausiblePremium(derived, resolvedIdv, net)) {
-      setField(fields, "tp_premium", "Third party premium", money(derived), .95, blockNet?.page ?? invoice?.page ?? 1, "Derived from Digit printed Net Premium minus OD and CPA after direct TP extraction was unavailable.");
+      setField(fields, "tp_premium", "Third party premium", money(derived), .95, invoice?.page ?? blockNet?.page ?? 1, "Derived from Digit printed Net Premium minus OD and CPA after direct TP extraction was unavailable.");
       warnings.push("Digit TP premium was recovered using the printed net premium cross-check. Verify once against the policy schedule.");
       tp = derived;
+    }
+  }
+
+  if ((od === null || od <= 0 || tp === null || tp <= 0) && net !== null && net > 0) {
+    const reconciledPair = findReconciledPremiumPair(cleanPages, net, cpaValue, resolvedIdv);
+    if (reconciledPair) {
+      if (od === null || od <= 0) {
+        setField(fields, "od_premium", "OD premium", money(reconciledPair.od), .92, reconciledPair.page, reconciledPair.evidence);
+        od = reconciledPair.od;
+      }
+      if (tp === null || tp <= 0) {
+        setField(fields, "tp_premium", "Third party premium", money(reconciledPair.tp), .92, reconciledPair.page, reconciledPair.evidence);
+        tp = reconciledPair.tp;
+      }
     }
   }
 
@@ -161,26 +179,10 @@ function findReconciledPremiumPair(pages: string[], net: number | null, cpa: num
   }
   if (!best) return null;
 
-  const odLabel = block.text.search(/Own\s*Damage\s*Premium/i);
-  const tpLabel = block.text.search(/Basic\s*Third[-\s]*Party\s*Liability/i);
-  const aPos = numberPosition(block.text, best.a);
-  const bPos = numberPosition(block.text, best.b);
-
-  let od = best.a;
-  let tp = best.b;
-  if (odLabel >= 0 && tpLabel >= 0 && aPos >= 0 && bPos >= 0) {
-    const aOd = Math.abs(aPos - odLabel);
-    const aTp = Math.abs(aPos - tpLabel);
-    const bOd = Math.abs(bPos - odLabel);
-    const bTp = Math.abs(bPos - tpLabel);
-    if (aOd + bTp > bOd + aTp) {
-      od = best.b;
-      tp = best.a;
-    }
-  } else if (best.b > best.a) {
-    od = best.b;
-    tp = best.a;
-  }
+  // Pair reconciliation is only a last resort. Without reliable direct labels,
+  // Digit commercial motor schedules in our supported family have OD >= TP.
+  const od = Math.max(best.a, best.b);
+  const tp = Math.min(best.a, best.b);
 
   return {
     od,
@@ -199,11 +201,12 @@ function findDirectPremium(pages: string[], label: RegExp, kind: "od" | "tp", id
       const start = match.index ?? 0;
       const after = page.slice(start + match[0].length, start + match[0].length + 260);
       if (/^\s*\[[AB]\]/i.test(after)) continue;
-      const amountMatches = [...after.matchAll(MONEY_RE)];
+      const line = after.split("\n", 1)[0] ?? "";
+      const amountMatches = [...line.matchAll(MONEY_RE)];
       for (const amountMatch of amountMatches) {
         const value = parseMoney(amountMatch[0]);
         if (value === null || !isPlausiblePremium(value, idv, net)) continue;
-        hits.push({ distance: amountMatch.index ?? 999, value, evidence: page.slice(start, start + 320) });
+        hits.push({ distance: amountMatch.index ?? 999, value, evidence: page.slice(start, Math.min(page.length, start + match[0].length + line.length + 20)) });
       }
     }
     if (hits.length) {
@@ -215,8 +218,8 @@ function findDirectPremium(pages: string[], label: RegExp, kind: "od" | "tp", id
   const premiumBlock = findPremiumBlock(pages);
   if (!premiumBlock) return null;
   const pattern = kind === "od"
-    ? /Own\s*Damage\s*Premium[\s\S]{0,180}?([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i
-    : /Basic\s*Third[-\s]*Party\s*Liability[\s\S]{0,180}?([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i;
+    ? /Own\s*Damage\s*Premium[^\n]{0,120}?([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i
+    : /Basic\s*Third[-\s]*Party\s*Liability[^\n]{0,120}?([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i;
   const matched = premiumBlock.text.match(pattern);
   const value = parseMoney(matched?.[1]);
   return value !== null && isPlausiblePremium(value, idv, net)
@@ -238,21 +241,14 @@ function findPrintedNetInPremiumBlock(pages: string[], idv: number | null): Mone
     for (const label of exactLabels) {
       const match = page.match(label);
       if (!match || match.index === undefined) continue;
-      const start = Math.max(0, match.index - 80);
-      const end = Math.min(page.length, match.index + match[0].length + 320);
-      const window = page.slice(start, end);
-      const labelOffset = match.index - start;
-      const candidates: Array<{ value: number; distance: number }> = [];
-      for (const amount of [...window.matchAll(MONEY_RE)]) {
-        const value = parseMoney(amount[0]);
-        if (value === null || value < 500 || value > 10000000 || isYear(value) || sameMoney(value, idv)) continue;
-        const amountPos = amount.index ?? 0;
-        const distance = Math.abs(amountPos - labelOffset);
-        candidates.push({ value, distance });
+      const after = page.slice(match.index + match[0].length, match.index + match[0].length + 160);
+      const direct = after.match(MONEY_RE);
+      for (const raw of direct ?? []) {
+        const value = parseMoney(raw);
+        if (value !== null && value >= 500 && value <= 10000000 && !isYear(value) && !sameMoney(value, idv)) {
+          return { value, page: pageIndex + 1, evidence: page.slice(Math.max(0, match.index - 80), match.index + match[0].length + 220) };
+        }
       }
-      if (!candidates.length) continue;
-      candidates.sort((a, b) => a.distance - b.distance);
-      return { value: candidates[0].value, page: pageIndex + 1, evidence: window };
     }
   }
 
@@ -321,15 +317,6 @@ function uniqueNumbers(values: number[]) {
     seen.add(key);
     return true;
   });
-}
-
-function numberPosition(text: string, value: number) {
-  const variants = [money(value), value.toLocaleString("en-IN", { maximumFractionDigits: 2 }), value.toLocaleString("en-US", { maximumFractionDigits: 2 })];
-  for (const variant of variants) {
-    const index = text.indexOf(variant);
-    if (index >= 0) return index;
-  }
-  return -1;
 }
 
 function isPlausibleIdv(value: number) {
