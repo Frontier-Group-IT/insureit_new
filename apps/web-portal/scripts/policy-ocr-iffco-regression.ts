@@ -1,7 +1,6 @@
 // @ts-expect-error -- This regression runner is executed directly by Node with --experimental-strip-types, which requires the explicit .ts suffix at runtime.
 import { refineIffcoCommercialPolicyV2 } from "../lib/policy-ocr-iffco-refiner-v2.ts";
-// @ts-expect-error -- Same intentional runtime .ts import for Node's strip-types runner.
-import type { ParsedPolicyResult } from "../lib/policy-ocr-parsers.ts";
+import type { ParsedPolicyResult } from "../lib/policy-ocr-parsers";
 
 type Expected = Record<string, string>;
 type Case = { name: string; pages: string[]; expected: Expected; expectConflict?: boolean };
