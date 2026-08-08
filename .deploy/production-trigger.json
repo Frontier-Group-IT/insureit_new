@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-08T10:21:00+05:30",
+  "deploy_requested_at": "2026-08-08T10:56:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT application review compact eye action release",
-  "source_commit": "2cf577f0b7c5e056ca45f4a598520830a5dabb77",
-  "release_scope": "Deploy current main including PR #217. Uploaded document cards on the POSP/MISP Application Review page replace the Open text action with the same compact rounded-square Eye icon style used by the editable Documents workflow. Signed URL and new-tab viewing behavior remain unchanged; Application Review stays view-only with no Replace/Refresh action. Uploaded-only document filtering, ordering, card layout, database, storage, permissions, and workflow behavior are unchanged.",
-  "verification": "PR #217 was verified mergeable at exact head 1f44f0113f848a0e4419b4cb794dbe19ff0682e5 and squash merged into main as 2cf577f0b7c5e056ca45f4a598520830a5dabb77. Its final diff contains one application file (+14/-2); the focused temporary GitHub Actions workflow completed successfully and git diff --check passed. Full lint/typecheck/build were not run for this PR. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
+  "source": "ChatGPT document eye persistence release",
+  "source_commit": "10eda258e0c9f475ed6e26ad7b1ad5b5ec64cdee",
+  "release_scope": "Deploy current main including PR #218. In the POSP/MISP Documents workflow, the Eye/View action is now rendered from the existence of the uploaded document record instead of depending on transient signed-URL availability. A previously valid href is preserved when the client context refresh returns the same document without a usable href, preventing the Eye icon from disappearing after hydration or asynchronous refresh. The Documents stage subtitle 'Ten compact slots are shown. GST uses an available Other Document slot when applicable.' is removed. Upload, replace, slot ordering, registration certificate logic, GST allocation, database, permissions, and workflow transitions are unchanged.",
+  "verification": "PR #218 was verified mergeable at exact head d6f62a424ea809f21fa685d899e683cd887cffcb and squash merged into main as 10eda258e0c9f475ed6e26ad7b1ad5b5ec64cdee. Its final diff contains two application files (+13/-6); the focused temporary GitHub Actions workflow completed successfully and git diff --check passed. Full lint/typecheck/build were not run for this PR. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
