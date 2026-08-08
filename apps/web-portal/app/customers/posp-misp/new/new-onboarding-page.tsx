@@ -15,6 +15,9 @@ export type NewOnboardingQuery = Record<string, string | undefined> & {
   legacy_mode?: string;
 };
 
+type ManufacturerId = { id: string };
+type ManufacturerBrand = { manufacturer_id: string; brand_name: string };
+
 export async function renderNewOnboardingPage(partnerType: OnboardingPartnerType, query: NewOnboardingQuery) {
   const profile = await requirePospMispManager();
   const admin = createSupabaseAdminClient();
@@ -77,14 +80,15 @@ async function loadSalesManagers(admin: ReturnType<typeof createSupabaseAdminCli
 }
 
 async function loadVehicleManufacturers(admin: ReturnType<typeof createSupabaseAdminClient>) {
-  const { data } = await admin
-    .from("vehicle_manufacturers")
-    .select("name")
-    .eq("is_active", true)
-    .order("sort_order", { ascending: true })
-    .order("name", { ascending: true })
-    .returns<Array<{ name: string }>>();
-  return (data ?? []).map((manufacturer) => ({ value: manufacturer.name, label: manufacturer.name }));
+  const [manufacturersResult, brandsResult] = await Promise.all([
+    admin.from("vehicle_manufacturers").select("id").eq("is_active", true).returns<ManufacturerId[]>(),
+    admin.from("vehicle_manufacturer_brands").select("manufacturer_id, brand_name").eq("is_active", true).order("brand_name", { ascending: true }).returns<ManufacturerBrand[]>(),
+  ]);
+  if (manufacturersResult.error || brandsResult.error) throw new Error(`Unable to load vehicle OEMs: ${manufacturersResult.error?.message ?? brandsResult.error?.message}`);
+
+  const activeIds = new Set((manufacturersResult.data ?? []).map((manufacturer) => manufacturer.id));
+  const names = Array.from(new Set((brandsResult.data ?? []).filter((brand) => activeIds.has(brand.manufacturer_id)).map((brand) => brand.brand_name))).sort((a, b) => a.localeCompare(b));
+  return names.map((name) => ({ value: name, label: name }));
 }
 
 async function loadBanks(admin: ReturnType<typeof createSupabaseAdminClient>) {
