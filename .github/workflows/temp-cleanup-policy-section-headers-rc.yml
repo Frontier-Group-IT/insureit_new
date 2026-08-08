@@ -1,0 +1,49 @@
+name: Temporary cleanup policy section headers and RC action
+
+on:
+  push:
+    paths:
+      - scripts/temp_cleanup_policy_section_headers_rc.py
+      - .github/workflows/temp-cleanup-policy-section-headers-rc.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply policy UI cleanup patch
+        run: python scripts/temp_cleanup_policy_section_headers_rc.py
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck web portal
+        run: npm run typecheck:web
+      - name: Validate patch
+        run: |
+          git diff --check
+          grep -q 'Registration No.' apps/web-portal/components/policy-unified-form.tsx
+          grep -q 'RcFetchIcon' apps/web-portal/components/policy-unified-form.tsx
+          ! grep -q 'Verify the registration, then review and apply approved RC details.' apps/web-portal/components/policy-unified-form.tsx
+          ! grep -q 'badge="Manual + calculated"' apps/web-portal/components/policy-unified-form.tsx
+          ! grep -q 'badge="prototype_v1"' apps/web-portal/components/policy-unified-form.tsx
+          ! grep -q 'badge="Finance workflow"' apps/web-portal/components/policy-unified-form.tsx
+      - name: Commit application change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal/components/policy-unified-form.tsx
+          if git diff --cached --quiet; then
+            echo "No application changes to commit"
+          else
+            git commit -m "Clean policy section headers and RC action"
+            git pull --rebase origin main
+            git push origin main
+          fi
