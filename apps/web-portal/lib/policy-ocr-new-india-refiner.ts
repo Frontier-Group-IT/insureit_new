@@ -1,6 +1,6 @@
 import type { ParsedPolicyField, ParsedPolicyResult } from "@/lib/policy-ocr-parsers";
 
-const VERSION = "new_india_commercial_motor_v1.2.0";
+const VERSION = "new_india_commercial_motor_v1.2.1";
 const MONEY_RE = /[0-9][0-9,]*(?:\.[0-9]{1,2})?/g;
 
 type MoneyHit = { value: number; page: number; evidence: string };
@@ -187,13 +187,24 @@ function findOwnerDriverCpa(pages: string[]): MoneyHit | null {
     for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
       const line = lines[lineIndex];
       if (!/PA\s+Cover\s+For\s+Owner\s+Driver/i.test(line)) continue;
-      const combined = [line, lines[lineIndex + 1] ?? "", lines[lineIndex + 2] ?? ""].join(" ");
+
+      const rowParts = [line];
+      for (let offset = 1; offset <= 2; offset += 1) {
+        const continuation = lines[lineIndex + offset] ?? "";
+        if (/PA\s+Cover\s+For/i.test(continuation)) break;
+        rowParts.push(continuation);
+      }
+
+      const combined = rowParts.join(" ");
       const values = amounts(combined).filter((value) => value >= 0 && value <= 100000 && !isYear(value));
       if (!values.length) continue;
-      // The row includes the Rs. 15,00,000 coverage limit before the payable
-      // amount. Only the last plausible small amount is the premium.
-      const final = values[values.length - 1];
-      return { value: final, page: pageIndex + 1, evidence: combined };
+
+      // The Owner-Driver row may include the Rs. 15,00,000 coverage limit and
+      // IMT-15 before the premium. Never read into the next PA row. Prefer the
+      // first plausible premium-sized value after those non-premium tokens.
+      const premiumCandidates = values.filter((value) => value > 20);
+      const premium = premiumCandidates[0] ?? values[0];
+      return { value: premium, page: pageIndex + 1, evidence: combined };
     }
   }
   return null;
