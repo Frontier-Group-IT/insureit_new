@@ -1,6 +1,6 @@
 # Current Chat Handoff
 
-> **Consolidated:** 2026-08-03 18:35 IST
+> **Consolidated:** 2026-08-07 22:05 IST
 >
 > Read this file with `docs/INSUREIT_PROJECT_CONTEXT.md` before continuing work. This is a curated continuation state, not a chat transcript. Never store secrets, tokens, cookies, passwords, private keys, full Aadhaar numbers, full bank-account values, or MCP credentials here.
 
@@ -169,3 +169,20 @@ The Plasmic repository includes `ai/skills/plasmic-designer`, which can control 
 - Vercel deployment: **NOT TRIGGERED**.
 - `.deploy/production-trigger.json` was not modified.
 - No production claim should be made.
+
+## 10. Partner signed-registration certificate projection
+
+**IMPLEMENTED — NOT DEPLOYED/VERIFIED LIVE**
+
+The signed registration certificate remains owned by the POSP/MISP child application as `document_type = signed_registration_form`. It must not be duplicated into the Partner's document rows or copied in storage. The Partner review should project the same child document read-only through a signed storage URL.
+
+Verified root cause on 2026-08-07: `apps/web-portal/app/api/intermediary-documents/context/route.ts` already resolved the linked POSP/MISP and projected `signed_registration_form`, but the canonical review component `IntermediaryDocumentReviewPortal` was not mounted in the application review layout. The server-rendered Partner checklist therefore continued reading only the Partner application's own document rows and could never display the child certificate.
+
+Fix:
+
+- `apps/web-portal/app/intermediaries/applications/[id]/layout.tsx`
+- Commit `158b4829ae20a2f901930720b9f8d87809561367`
+- The layout now mounts `IntermediaryDocumentReviewPortal`, which replaces the review-page document checklist with the shared 10-slot document grid using `/api/intermediary-documents/context`.
+- The context route resolves linked children by canonical `partner_record_id`, with `draft_data.parent_partner_application_id` as fallback, and exposes the same stored certificate object through a temporary signed URL.
+
+No database migration is required for this display fix. Production deployment and authenticated Partner/POSP/MISP verification remain pending.
