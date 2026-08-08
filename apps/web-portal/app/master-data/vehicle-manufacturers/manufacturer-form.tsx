@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { FormSubmitButton } from "@/components/form-submit-button";
@@ -78,7 +79,7 @@ export function ManufacturerForm({
           <Field label="Website"><input className={inputClass} type="url" name="website_url" defaultValue={values.website_url ?? ""} placeholder="https://..." /></Field>
           <Field label="Sort order"><input className={inputClass} type="number" name="sort_order" defaultValue={values.sort_order ?? 1000} min={0} /></Field>
           <Field label="Market status"><select className={inputClass} name="market_status" defaultValue={values.market_status ?? "pending_review"}>{VEHICLE_MANUFACTURER_MARKET_STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
-          <Field label="Record status"><label className="flex h-11 items-center gap-2 rounded-xl border border-[#D8DEEA] bg-white px-3 text-[12px] font-semibold text-[#28344E]"><input type="checkbox" name="is_active" defaultChecked={values.is_active ?? true} /> Active for operational use</label></Field>
+          <Field label="Record status"><span className="flex h-11 items-center gap-2 rounded-xl border border-[#D8DEEA] bg-white px-3 text-[12px] font-semibold text-[#28344E]"><input type="checkbox" name="is_active" defaultChecked={values.is_active ?? true} /> Active for operational use</span></Field>
         </div>
       </Card>
 
@@ -133,6 +134,6 @@ export function ManufacturerForm({
   );
 }
 
-function Field({ label, required = false, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function Field({ label, required = false, children }: { label: string; required?: boolean; children: ReactNode }) {
   return <label className="block"><span className={labelClass}>{label}{required ? " *" : ""}</span>{children}</label>;
 }
