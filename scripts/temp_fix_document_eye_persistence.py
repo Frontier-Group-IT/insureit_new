@@ -1,7 +1,7 @@
 from pathlib import Path
 
 grid_path = Path('apps/web-portal/components/intermediary-document-grid.tsx')
-workflow_path = Path('apps/web-portal/app/intermediaries/applications/[id]/workflow/page.tsx')
+editor_path = Path('apps/web-portal/app/customers/applications/posp-misp-application-editor.tsx')
 
 grid = grid_path.read_text()
 old = '''      .then((payload) => {
@@ -68,16 +68,21 @@ if old not in grid:
 grid = grid.replace(old, new, 1)
 grid_path.write_text(grid)
 
-workflow = workflow_path.read_text()
-subtitle = 'Ten compact slots are shown. GST uses an available Other Document slot when applicable.'
-if subtitle not in workflow:
-    raise SystemExit('documents subtitle not found')
-workflow = workflow.replace(subtitle, '', 1)
-workflow = workflow.replace('<p className="mt-0.5 text-[9px] font-medium text-[#64748B]"></p>', '', 1)
-workflow = workflow.replace('<p className="mt-0.5 text-[9.5px] font-medium text-[#64748B]"></p>', '', 1)
-workflow_path.write_text(workflow)
+editor = editor_path.read_text()
+old = '<Header number="2" title="Documents" subtitle="Ten compact slots are shown. GST uses an available Other Document slot when applicable." />'
+new = '<Header number="2" title="Documents" />'
+if old not in editor:
+    raise SystemExit('documents header subtitle not found')
+editor = editor.replace(old, new, 1)
+old = 'function Header({ number, title, subtitle }: { number: string; title: string; subtitle: string }) { return <div className="flex items-start gap-3 border-b border-[#DCE5EF] bg-[#F4F7FB] px-4 py-3 text-[#0F172A]"><span className="grid h-7 w-7 place-items-center rounded-lg bg-[#071D49] text-[9px] font-bold text-white">{number}</span><div><h3 className="text-[12.5px] font-semibold text-[#0F172A]">{title}</h3><p className="mt-0.5 text-[9.8px] text-[#64748B]">{subtitle}</p></div></div>; }'
+new = 'function Header({ number, title, subtitle }: { number: string; title: string; subtitle?: string }) { return <div className="flex items-start gap-3 border-b border-[#DCE5EF] bg-[#F4F7FB] px-4 py-3 text-[#0F172A]"><span className="grid h-7 w-7 place-items-center rounded-lg bg-[#071D49] text-[9px] font-bold text-white">{number}</span><div><h3 className="text-[12.5px] font-semibold text-[#0F172A]">{title}</h3>{subtitle ? <p className="mt-0.5 text-[9.8px] text-[#64748B]">{subtitle}</p> : null}</div></div>; }'
+if old not in editor:
+    raise SystemExit('Header component signature not found')
+editor = editor.replace(old, new, 1)
+editor_path.write_text(editor)
 
 assert 'setResolvedDocuments((current) => nextDocuments.map' in grid_path.read_text()
 assert 'previousDocument?.href ? { ...nextDocument, href: previousDocument.href } : nextDocument' in grid_path.read_text()
 assert 'action={(existingDocument || (editable' in grid_path.read_text()
-assert subtitle not in workflow_path.read_text()
+assert 'Ten compact slots are shown. GST uses an available Other Document slot when applicable.' not in editor_path.read_text()
+assert '<Header number="2" title="Documents" />' in editor_path.read_text()
