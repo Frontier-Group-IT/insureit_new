@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-08T14:09:00+05:30",
+  "deploy_requested_at": "2026-08-08T15:11:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT POSP/MISP workflow tracker display-only release",
-  "source_commit": "9269e94a7f66adccce49a1196324aaf15b39de26",
-  "release_scope": "Deploy current main including PR #222. Make the six-step POSP/MISP onboarding progress tracker display-only so completed, current, and future stages cannot be clicked, while preserving the existing green completed, navy current, and muted pending visual states. Keep the separate Partner two-step tracker and server-side unlocked stage protection unchanged.",
-  "verification": "PR #222 was verified mergeable at exact head 413b21622ab24e3273beedd1dc418d90f1584676 and squash merged into main as 9269e94a7f66adccce49a1196324aaf15b39de26. Its final diff contains one application file (+4/-6); the focused temporary GitHub Actions workflow completed successfully and git diff --check passed. Full lint/typecheck/build were not run for this PR. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
+  "source": "ChatGPT simplified POSP/MISP onboarding register release",
+  "source_commit": "c623b7e50cbb5f2e3d3775dedfb1fe051cc89e71",
+  "release_scope": "Deploy current main including PR #223. Simplify the POSP/MISP onboarding applications page by removing the dark blue header/hero section, action buttons, four metric counters, requested-type and status filters, and Apply filters control; move the search input into the Pending Application Register header while preserving the table, review/open actions, age/status badges, and pagination.",
+  "verification": "PR #223 was verified mergeable at exact head a497668daaddddc6a13f28537bb1ea2c388fba97 and squash merged into main as c623b7e50cbb5f2e3d3775dedfb1fe051cc89e71. Its final diff contains one application file (+20/-13). Full lint/typecheck/build were not run for this PR. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
