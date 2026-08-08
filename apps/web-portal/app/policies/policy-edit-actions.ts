@@ -63,7 +63,6 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
     payload.premium.tp,
     payload.premium.cpa,
     payload.payin.scheme,
-    payload.payout.retention,
   ];
   if (monetaryValues.some((value) => !validNumber(value))) return { ok: false, error: "Review the premium, scheme and retention values." };
 
