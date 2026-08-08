@@ -1,0 +1,41 @@
+name: Temporary update AGENTS policy context
+
+on:
+  push:
+    paths:
+      - scripts/temp_update_agents_policy_context.py
+      - .github/workflows/temp-update-agents-policy-context.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+      - name: Update AGENTS policy context
+        run: python scripts/temp_update_agents_policy_context.py
+      - name: Validate context update
+        run: |
+          git diff --check
+          grep -q '## Policy Onboarding current operating context (2026-08-07)' AGENTS.md
+          grep -q 'Section 01 — Policy source & ownership' AGENTS.md
+          grep -q 'Section 02 — Insured & vehicle identification' AGENTS.md
+          grep -q 'onboard_motor_policy(p_payload jsonb)' AGENTS.md
+          grep -q '4350d888fe2d2799f9f94465744b25c8cbd14bed' AGENTS.md
+      - name: Commit AGENTS update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add AGENTS.md
+          if git diff --cached --quiet; then
+            echo "No AGENTS changes to commit"
+          else
+            git commit -m "Document current policy onboarding context for agents"
+            git pull --rebase origin main
+            git push origin main
+          fi
