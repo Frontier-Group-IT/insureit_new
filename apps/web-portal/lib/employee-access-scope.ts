@@ -1,5 +1,6 @@
 import type { AppRole, Capability } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { cache } from "react";
 
 const organizationWideRoles: AppRole[] = [
   "super_admin", "admin", "it_super_user", "manager", "director", "sales_operations_head", "backoffice_executive",
@@ -20,7 +21,7 @@ export type EmployeeAccessScope = {
   profileIds: string[];
 };
 
-export async function getEmployeeAccessScope(profileId: string, role: string | null | undefined, capability?: Capability): Promise<EmployeeAccessScope> {
+export const getEmployeeAccessScope = cache(async (profileId: string, role: string | null | undefined, capability?: Capability): Promise<EmployeeAccessScope> => {
   const admin = createSupabaseAdminClient();
   let requestedMode: EmployeeAccessScope["mode"] = organizationWideRoles.includes(role as AppRole)
     ? "organization"
@@ -57,7 +58,7 @@ export async function getEmployeeAccessScope(profileId: string, role: string | n
     : { data: [] as ProfileLink[] };
   const profileIds = Array.from(new Set([profileId, ...(profiles ?? []).map((profile) => profile.id)]));
   return { mode: requestedMode, employeeIds, profileIds };
-}
+});
 
 export async function getAccessibleCustomerIds(profileId: string, role: string | null | undefined, capability: Capability = "view_customers") {
   const scope = await getEmployeeAccessScope(profileId, role, capability);

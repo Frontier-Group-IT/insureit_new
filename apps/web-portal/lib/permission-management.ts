@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { AppRole, Capability } from "@/lib/roles";
 import { hasCapability, roleCapabilities } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -58,7 +59,7 @@ export function permissionModules() {
   return Array.from(new Set(permissionDefinitions.map((item) => item.module)));
 }
 
-export async function getEffectivePermission(profileId: string, role: AppRole, capability: Capability) {
+export const getEffectivePermission = cache(async (profileId: string, role: AppRole, capability: Capability) => {
   // IT Super User is the protected developer role. It must always retain full
   // organisation-wide access and must never be downgraded by role or employee
   // override rows created through the permission-management interface.
@@ -75,7 +76,43 @@ export async function getEffectivePermission(profileId: string, role: AppRole, c
   if (employeeOverride && employeeOverride.access_level !== "inherit") return { access: employeeOverride.access_level as PermissionAccess, scope: employeeOverride.scope_type as PermissionScope, source: "employee_override" as const };
   if (roleOverride) return { access: roleOverride.access_level as PermissionAccess, scope: roleOverride.scope_type as PermissionScope, source: "role_override" as const };
   return { access: rolePermissionAccess(role, capability), scope: "role_default" as const, source: "role" as const };
-}
+});
+
+export const getEffectivePermissionAccessMapForRole = cache(async (profileId: string, role: AppRole) => {
+  if (role === "it_super_user") {
+    return Object.fromEntries(permissionDefinitions.map(({ capability }) => [capability, "approve" as const])) as Partial<Record<Capability, PermissionAccess>>;
+  }
+
+  const admin = createSupabaseAdminClient();
+  const now = new Date().toISOString();
+  const [{ data: employeeOverrides }, { data: roleOverrides }] = await Promise.all([
+    admin
+      .from("employee_permission_overrides")
+      .select("capability,access_level,scope_type,expires_at")
+      .eq("profile_id", profileId)
+      .or(`expires_at.is.null,expires_at.gt.${now}`),
+    admin
+      .from("role_permission_overrides")
+      .select("capability,access_level,scope_type")
+      .eq("role", role),
+  ]);
+
+  const employeeOverrideByCapability = new Map(
+    (employeeOverrides ?? [])
+      .filter((row) => row.access_level !== "inherit")
+      .map((row) => [row.capability as Capability, row.access_level as PermissionAccess]),
+  );
+  const roleOverrideByCapability = new Map(
+    (roleOverrides ?? []).map((row) => [row.capability as Capability, row.access_level as PermissionAccess]),
+  );
+
+  return Object.fromEntries(permissionDefinitions.map(({ capability }) => {
+    const access = employeeOverrideByCapability.get(capability)
+      ?? roleOverrideByCapability.get(capability)
+      ?? rolePermissionAccess(role, capability);
+    return [capability, access] as const;
+  })) as Partial<Record<Capability, PermissionAccess>>;
+});
 
 export function roleCapabilityCount(role: AppRole) {
   return roleCapabilities[role].length;

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Suspense, type ReactNode } from "react";
 import { Manrope, Space_Grotesk } from "next/font/google";
 import { AadhaarMaskNormalizer } from "@/components/aadhaar-mask-normalizer";
-import { FreshDynamicRouteNavigation } from "@/components/fresh-dynamic-route-navigation";
 import { LegacyIntermediaryImportLink } from "@/components/legacy-intermediary-import-link";
 import { RouteProgressBar } from "@/components/loading/route-progress-bar";
 import { SuccessPopup } from "@/components/success-popup";
@@ -39,7 +38,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <LegacyIntermediaryImportLink />
           <ProfessionalFormValidation />
           <SuccessPopup />
-          <FreshDynamicRouteNavigation />
           <RouteProgressBar />
         </Suspense>
       </body>

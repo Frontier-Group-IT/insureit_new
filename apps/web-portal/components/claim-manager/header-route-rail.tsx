@@ -140,6 +140,7 @@ export function HeaderRouteRail({ title }: { title: string }) {
               ) : item.href && !current ? (
                 <Link
                   href={item.href}
+                  prefetch={false}
                   className="group relative shrink-0 rounded-lg px-2 py-1.5 text-[10px] font-semibold text-[#536783] transition hover:bg-white/55 hover:text-[#4338CA]"
                 >
                   <span className="relative z-10">{item.label}</span>

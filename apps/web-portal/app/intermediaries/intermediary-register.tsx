@@ -9,6 +9,7 @@ import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { FreshAccountReviewLink } from "./applications/account-review-back-link";
 import { createLinkedIntermediaryAccount } from "./applications/[id]/account-review-actions";
+import { PartnerRegisterClient, type PartnerRegisterRow } from "./partner-register-client";
 import { createIntermediaryPortalLogin } from "./portal-account-actions";
 import { resendIntermediaryPortalInvite } from "./resend-portal-invite-action";
 
@@ -67,7 +68,6 @@ export async function IntermediaryRegister({
   const effectiveType = selectedType ?? typeFilter;
   const accessibleIds = await getAccessibleIntermediaryIds(profile.id, profile.role);
   const canReview = await hasEffectiveCapability(profile, "review_intermediary_application", "edit");
-  const canCreate = await hasEffectiveCapability(profile, "create_intermediary_application", "edit");
 
   let request = admin
     .from("intermediaries")
@@ -75,10 +75,10 @@ export async function IntermediaryRegister({
     .order("updated_at", { ascending: false })
     .limit(250);
   if (accessibleIds !== null) request = accessibleIds.length ? request.in("id", accessibleIds) : request.in("id", ["00000000-0000-0000-0000-000000000000"]);
-  if (effectiveType && effectiveType !== "partner") request = request.eq("intermediary_type", effectiveType);
+  if (effectiveType) request = request.eq("intermediary_type", effectiveType);
   if (accountStatus && selectedType !== "partner") request = request.eq("account_status", accountStatus);
   if (portalAccess) request = request.eq("portal_access_status", portalAccess);
-  if (search) request = request.or(`display_name.ilike.%${search}%,mobile.ilike.%${search}%,email.ilike.%${search}%,intermediary_code.ilike.%${search}%`);
+  if (search && selectedType !== "partner") request = request.or(`display_name.ilike.%${search}%,mobile.ilike.%${search}%,email.ilike.%${search}%,intermediary_code.ilike.%${search}%`);
 
   const { data, error: loadError } = await request.returns<IntermediaryRow[]>();
   let rows = data ?? [];
@@ -103,9 +103,13 @@ export async function IntermediaryRegister({
     });
   }
 
-  const partnerRecordIds = rows
+  const partnerRecordIds = selectedType === "partner" ? rows
+    .filter((row) => {
+      const application = applicationMap.get(row.application_id as string);
+      return application?.partner_status === "active_partner";
+    })
     .map((row) => applicationMap.get(row.application_id as string)?.partner_record_id)
-    .filter((value): value is string => Boolean(value));
+    .filter((value): value is string => Boolean(value)) : [];
   const { data: relatedApplications } = partnerRecordIds.length
     ? await admin
         .from("intermediary_onboarding_applications")
@@ -120,28 +124,10 @@ export async function IntermediaryRegister({
     if (!linkedApplicationMap.has(related.partner_record_id)) linkedApplicationMap.set(related.partner_record_id, related);
   }
 
-  let countRequest = admin.from("intermediaries").select("id,intermediary_type,application_id");
-  if (accessibleIds !== null) countRequest = accessibleIds.length ? countRequest.in("id", accessibleIds) : countRequest.in("id", ["00000000-0000-0000-0000-000000000000"]);
-  const { data: allCounts } = await countRequest.returns<Array<{ id: string; intermediary_type: IntermediaryType; application_id: string | null }>>();
-  const countAppIds = (allCounts ?? []).map((row) => row.application_id).filter((value): value is string => Boolean(value));
-  const { data: countApps } = countAppIds.length
-    ? await admin.from("intermediary_onboarding_applications").select(APPLICATION_SELECT).in("id", countAppIds).returns<ApplicationState[]>()
-    : { data: [] as ApplicationState[] };
-  const countStatusMap = new Map((countApps ?? []).map((item) => [item.id, item]));
-  const count = (type: IntermediaryType) =>
-    (allCounts ?? []).filter((row) => {
-      if (!row.application_id || row.intermediary_type !== type) return false;
-      const application = countStatusMap.get(row.application_id);
-      return Boolean(application && accountContext(application) === type);
-    }).length;
+  const count = selectedType ? (() => 0) : await buildRegisterCounter(admin, accessibleIds);
 
   const pageTitle = selectedType === "posp" ? "POSP" : selectedType === "misp" ? "MISP" : selectedType === "partner" ? "Partners" : "Overview";
   const searchAction = selectedType ? `/intermediaries/${selectedType}` : "/intermediaries";
-  const onboardingAction = selectedType === "posp"
-    ? { href: "/customers/posp-misp/new?partner_type=posp", label: "Onboard POSP" }
-    : selectedType === "misp"
-      ? { href: "/customers/posp-misp/new?partner_type=misp", label: "Onboard MISP" }
-      : null;
   const successMessage = success === "portal_login_invited"
     ? "Password creation link sent."
     : success === "portal_invite_resent"
@@ -159,6 +145,51 @@ export async function IntermediaryRegister({
       }, { active: 0, onboarding: 0 })
     : { active: 0, onboarding: 0 };
 
+  if (selectedType === "partner") {
+    const clientRows: PartnerRegisterRow[] = partnerCountRows.map((row) => {
+      const app = applicationMap.get(row.application_id as string);
+      const linked = app?.partner_record_id ? linkedApplicationMap.get(app.partner_record_id) : undefined;
+      const allowedType = app?.requested_type ?? row.requested_type;
+      const linkedType = linked ? accountContext(linked) : allowedType;
+      const assignedRm = textValue(app?.draft_data?.associate_name) ?? "Not assigned";
+      const partnerComplete = app?.partner_status === "active_partner";
+      const partnerId = displayIdentity(row, app, "partner");
+      const linkedLabel = linked ? linkedAccountLabel(linkedType, linked.registration_status) : "Not created";
+      return {
+        id: row.id,
+        applicationId: row.application_id as string,
+        displayName: row.display_name,
+        mobile: mobile10(row.mobile),
+        partnerId,
+        accountType: allowedType === "misp" ? "Business" : "Individual",
+        assignedRm,
+        linkedLabel,
+        linkedHref: linked ? `/intermediaries/applications/${linked.id}` : null,
+        portalAccess: portalAccessLabel(row.portal_access_status),
+        partnerStatus: partnerStatusLabel(app?.partner_status ?? row.account_status),
+        active: partnerComplete,
+        createType: allowedType,
+        canCreateLinked: canReview && partnerComplete && !linked,
+        searchText: [
+          row.display_name,
+          mobile10(row.mobile),
+          row.email,
+          row.city,
+          partnerId,
+          assignedRm,
+          linkedLabel,
+          portalAccessLabel(row.portal_access_status),
+          partnerStatusLabel(app?.partner_status ?? row.account_status),
+        ].filter(Boolean).join(" ").toLowerCase(),
+      };
+    });
+    return (
+      <AppShell title={pageTitle}>
+        <PartnerRegisterClient rows={clientRows} initialSearch={search} initialStatus={accountStatus} success={success} error={error} loadError={Boolean(loadError)} />
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell title={pageTitle}>
       <div className="mx-auto max-w-[1480px] space-y-4 pb-6">
@@ -168,7 +199,7 @@ export async function IntermediaryRegister({
 
         <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
           <div className="grid items-center gap-5 border-b border-[#E7ECF3] bg-[#FAFBFD] px-5 py-3.5 lg:grid-cols-[auto_minmax(280px,460px)_1fr]">
-            <h2 className="whitespace-nowrap text-[12.5px] font-semibold text-[#17203A]">{selectedType === "partner" ? "Partner Register" : "Intermediary Register"}</h2>
+            <h2 className="whitespace-nowrap text-[12.5px] font-semibold text-[#17203A]">Intermediary Register</h2>
             <form method="get" action={searchAction} className="relative min-w-0 max-w-[460px]">
               {accountStatus ? <input type="hidden" name="account_status" value={accountStatus} /> : null}
               <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#94A3B8]" />
@@ -181,11 +212,7 @@ export async function IntermediaryRegister({
             </div>
           </div>
           {loadError ? <div className="px-4 py-12 text-center text-[11px] text-red-700">The register could not be loaded.</div> : rows.length ? (
-            selectedType === "partner" ? (
-              <PartnerTable rows={rows} applicationMap={applicationMap} linkedApplicationMap={linkedApplicationMap} canReview={canReview} />
-            ) : (
-              <DefaultIntermediaryTable rows={rows} applicationMap={applicationMap} selectedType={selectedType} canReview={canReview} searchAction={searchAction} />
-            )
+            <DefaultIntermediaryTable rows={rows} applicationMap={applicationMap} selectedType={selectedType} canReview={canReview} searchAction={searchAction} />
           ) : <div className="px-4 py-16 text-center"><p className="text-[12px] font-semibold">No records found</p></div>}
         </section>
       </div>
@@ -323,6 +350,23 @@ function registerFilterHref(base: string, search: string, status: string) {
 function mobile10(value: string | null | undefined) { const digits = value?.replace(/\D/g, "") ?? ""; return digits.length >= 10 ? digits.slice(-10) : digits || "—"; }
 function textValue(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+async function buildRegisterCounter(admin: ReturnType<typeof createSupabaseAdminClient>, accessibleIds: string[] | null) {
+  let countRequest = admin.from("intermediaries").select("id,intermediary_type,application_id");
+  if (accessibleIds !== null) countRequest = accessibleIds.length ? countRequest.in("id", accessibleIds) : countRequest.in("id", ["00000000-0000-0000-0000-000000000000"]);
+  const { data: allCounts } = await countRequest.returns<Array<{ id: string; intermediary_type: IntermediaryType; application_id: string | null }>>();
+  const countAppIds = (allCounts ?? []).map((row) => row.application_id).filter((value): value is string => Boolean(value));
+  const { data: countApps } = countAppIds.length
+    ? await admin.from("intermediary_onboarding_applications").select(APPLICATION_SELECT).in("id", countAppIds).returns<ApplicationState[]>()
+    : { data: [] as ApplicationState[] };
+  const countStatusMap = new Map((countApps ?? []).map((item) => [item.id, item]));
+  return (type: IntermediaryType) =>
+    (allCounts ?? []).filter((row) => {
+      if (!row.application_id || row.intermediary_type !== type) return false;
+      const application = countStatusMap.get(row.application_id);
+      return Boolean(application && accountContext(application) === type);
+    }).length;
 }
 
 function MetricFilter({ label, value, href, active }: { label: string; value: number; href: string; active: boolean }) {

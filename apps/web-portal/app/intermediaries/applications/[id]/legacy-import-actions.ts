@@ -272,4 +272,4 @@ function stringValue(value: unknown) { return typeof value === "string" && value
 function stepError(step: string, error: unknown) { return new Error(`[${step}] ${errorMessage(error)}`); }
 function errorMessage(error: unknown) { if (error instanceof Error) return error.message; if (error && typeof error === "object" && "message" in error) return String((error as { message?: unknown }).message ?? "Unknown database error"); return "Unknown database error"; }
 function importError(error: unknown) { const message = errorMessage(error); if (message.includes("duplicate key") || message.includes("unique constraint")) return "A Partner, POSP, MISP, PAN, Aadhaar, mobile or email value already exists. No records were imported."; if (message.startsWith("[")) return `Legacy import failed at ${message.slice(1, message.indexOf("]"))}. All created records were rolled back.`; return "The existing intermediary could not be imported. No partial linked account was retained."; }
-function redirectFresh(href: string): never { redirect(`${href}${href.includes("?") ? "&" : "?"}fresh=${Date.now()}`); }
+function redirectFresh(href: string): never { redirect(href); }

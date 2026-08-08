@@ -77,7 +77,7 @@ export async function updateIntermediaryAgreementStatus(formData: FormData) {
 }
 
 function redirectFresh(href: string): never {
-  redirect(`${href}${href.includes("?") ? "&" : "?"}fresh=${Date.now()}`);
+  redirect(href);
 }
 
 function text(formData: FormData, key: string) {

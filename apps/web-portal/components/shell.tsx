@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shell";
-import { RefreshOnFocus } from "@/components/refresh-on-focus";
 
 export async function AppShell({ children, title, backHref }: { children: ReactNode; title?: string; backHref?: string }) {
   const resolvedTitle = title ?? "InsureIt";
@@ -22,7 +21,6 @@ export async function AppShell({ children, title, backHref }: { children: ReactN
 
   return (
     <ClaimManagerShell title={resolvedTitle} activeNav={activeNav} backHref={backHref}>
-      <RefreshOnFocus />
       <div className="ui-page-stage relative isolate space-y-4 pb-7">{children}</div>
     </ClaimManagerShell>
   );

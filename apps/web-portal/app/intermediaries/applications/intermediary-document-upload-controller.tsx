@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { freshDynamicRouteUrl } from "@/components/fresh-dynamic-route-navigation";
+import { useRouter } from "next/navigation";
 import { buildIntermediaryDocumentSlots } from "@/lib/intermediary-document-slots";
 
 const LABELS: Record<string, string> = {
@@ -25,11 +25,6 @@ type UploadResult = {
   finalize_required?: boolean;
   maintenance_mode?: boolean;
 };
-type ContextResult = {
-  ok?: boolean;
-  legacy?: boolean;
-  has_gst?: boolean;
-};
 
 export function IntermediaryDocumentUploadController({
   applicationId,
@@ -42,42 +37,9 @@ export function IntermediaryDocumentUploadController({
   showGst?: boolean;
   legacyDocuments?: boolean;
 }) {
+  const router = useRouter();
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [resolvedShowGst, setResolvedShowGst] = useState(showGst);
-  const [resolvedLegacyDocuments, setResolvedLegacyDocuments] = useState(legacyDocuments);
-
-  useEffect(() => {
-    setResolvedShowGst(showGst);
-    setResolvedLegacyDocuments(legacyDocuments);
-  }, [legacyDocuments, showGst]);
-
-  useEffect(() => {
-    if (!enabled) return;
-    let cancelled = false;
-
-    void fetch(`/api/intermediary-documents/context?application_id=${encodeURIComponent(applicationId)}`, {
-      credentials: "same-origin",
-      cache: "no-store",
-    })
-      .then(async (response) => {
-        const result = (await response.json().catch(() => null)) as ContextResult | null;
-        if (!response.ok || !result?.ok) throw new Error("Document context unavailable");
-        return result;
-      })
-      .then((result) => {
-        if (cancelled) return;
-        setResolvedShowGst(result.has_gst === true);
-        setResolvedLegacyDocuments(result.legacy === true);
-      })
-      .catch(() => {
-        // Preserve the server-rendered fallback. Context enhancement must never block uploads.
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [applicationId, enabled]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -95,7 +57,7 @@ export function IntermediaryDocumentUploadController({
       if (!form.reportValidity()) return;
       const formData = new FormData(form);
       const items: UploadItem[] = [];
-      const slots = buildIntermediaryDocumentSlots({ legacy: resolvedLegacyDocuments, hasGst: resolvedShowGst });
+      const slots = buildIntermediaryDocumentSlots({ legacy: legacyDocuments, hasGst: showGst });
 
       for (const slot of slots) {
         if (slot.education) {
@@ -171,11 +133,11 @@ export function IntermediaryDocumentUploadController({
           });
           const finalResult = (await finalResponse.json().catch(() => null)) as { ok?: boolean; message?: string } | null;
           if (!finalResponse.ok || !finalResult?.ok) throw new Error(finalResult?.message || "The document stage could not be saved.");
-          window.location.replace(freshDynamicRouteUrl(`/intermediaries/applications/${applicationId}?success=partner_id_generated`));
+          router.replace(`/intermediaries/applications/${applicationId}?success=partner_id_generated`);
           return;
         }
 
-        window.location.replace(freshDynamicRouteUrl(`/intermediaries/applications/${applicationId}?success=documents_updated`));
+        router.replace(`/intermediaries/applications/${applicationId}?success=documents_updated`);
       } catch (uploadError) {
         setProgress(null);
         setError(uploadError instanceof Error ? uploadError.message : "The documents could not be uploaded.");
@@ -184,7 +146,7 @@ export function IntermediaryDocumentUploadController({
 
     form.addEventListener("submit", handleSubmit, true);
     return () => form.removeEventListener("submit", handleSubmit, true);
-  }, [applicationId, enabled, progress, resolvedLegacyDocuments, resolvedShowGst]);
+  }, [applicationId, enabled, legacyDocuments, progress, router, showGst]);
 
   return (
     <>

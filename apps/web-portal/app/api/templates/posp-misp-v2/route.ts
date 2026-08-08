@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 
-export const dynamic="force-dynamic";
+export const dynamic = "force-static";
+export const revalidate = 86400;
 
 const POSP_HEADERS=["Associate Employee Code","Associate Name","POSP ID","Document Received Date","POS First Name","POS Middle Name","POS Last Name","PAN Number","Mobile Number","Email","Date of Birth","Aadhaar Number","Address","City","State","PIN Code","Bank Name","Account Number","IFSC Code","GST Number"];
 const MISP_HEADERS=["Associate Employee Code","Associate Name","MISP ID","Document Received Date","MISP Name","MISP PAN","OEM Name","GST Number","Company Address","City","State","PIN Code","DP First Name","DP Middle Name","DP Last Name","DP PAN","DP Mobile","DP Email","DP Date of Birth","DP Aadhaar Number","Bank Name","Account Number","IFSC Code"];
@@ -37,5 +38,5 @@ export async function GET(){
   XLSX.utils.book_append_sheet(workbook,misp,"MISP");
   XLSX.utils.book_append_sheet(workbook,master,"Master Data Reference");
   const buffer=XLSX.write(workbook,{type:"buffer",bookType:"xlsx",compression:true});
-  return new NextResponse(buffer,{headers:{"content-type":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","content-disposition":"attachment; filename=POSP_MISP_Bulk_Onboarding_Template_v2.xlsx","cache-control":"no-store"}});
+  return new NextResponse(buffer,{headers:{"content-type":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","content-disposition":"attachment; filename=POSP_MISP_Bulk_Onboarding_Template_v2.xlsx","cache-control":"public, max-age=86400, stale-while-revalidate=604800"}});
 }

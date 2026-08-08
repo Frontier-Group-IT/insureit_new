@@ -1,7 +1,5 @@
 "use client";
 
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-
 type Profile = {
   partner_type: "posp" | "misp";
   external_onboarding_id: string | null;
@@ -52,6 +50,7 @@ export function CompactRegistrationForm({ profile, iibVerified, documents }: Pro
   });
 
   async function downloadPdf() {
+    const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
     const pdf = await PDFDocument.create();
     const page = pdf.addPage([595.28, 841.89]);
     const font = await pdf.embedFont(StandardFonts.Helvetica);

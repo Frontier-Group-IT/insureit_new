@@ -85,4 +85,4 @@ function verificationPan(profile:{partner_type:"posp"|"misp";pan_number:string|n
 async function context(data:FormData){const applicationId=value(data,"application_id");if(!applicationId)redirect("/customers/posp-misp");const profile=await requireScopedPospMispManager(applicationId);return{actorId:profile.id,applicationId,admin:createSupabaseAdminClient()}}
 function value(data:FormData,key:string){const current=data.get(key);return typeof current==="string"&&current.trim()?current.trim():null}
 function redirectTo(applicationId:string,error:string):never{redirectFresh(`${applicationPath(applicationId)}?error=${error}`)}
-function redirectFresh(href:string):never{redirect(`${href}${href.includes("?")?"&":"?"}fresh=${Date.now()}`)}
+function redirectFresh(href:string):never{redirect(href)}

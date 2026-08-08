@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
-import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
+import { getActiveBankOptions, getActiveVehicleManufacturerOptions, getPospMispSalesManagerOptions } from "@/lib/reference-data-cache";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { requireCapability, requirePospMispManager } from "@/lib/master-data-server";
 import { createCustomerOnboarding } from "../actions";
@@ -31,9 +31,9 @@ export default async function NewCustomerPage({ searchParams }: { searchParams: 
   if (partnerType === "posp" || partnerType === "misp") {
     await requirePospMispManager();
     const [salesManagers, oems, banks] = await Promise.all([
-      loadSalesManagers(admin),
-      loadVehicleManufacturers(admin),
-      loadBanks(admin)
+      getPospMispSalesManagerOptions(),
+      getActiveVehicleManufacturerOptions(),
+      getActiveBankOptions()
     ]);
 
     return (
@@ -57,15 +57,7 @@ export default async function NewCustomerPage({ searchParams }: { searchParams: 
   if (partnerType === "dealership") {
     if (dealershipType !== "posp" && dealershipType !== "misp") redirect("/customers/dealership-type");
 
-    const { data: manufacturers } = await admin
-      .from("vehicle_manufacturers")
-      .select("name")
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true })
-      .order("name", { ascending: true })
-      .returns<Array<{ name: string }>>();
-
-    const oems = (manufacturers ?? []).map((manufacturer) => ({ value: manufacturer.name, label: manufacturer.name }));
+    const oems = await getActiveVehicleManufacturerOptions();
 
     return (
       <AppShell title={`Add ${dealershipType.toUpperCase()} Dealership`}>
@@ -95,35 +87,6 @@ export default async function NewCustomerPage({ searchParams }: { searchParams: 
       <CustomerOnboardingForm action={createCustomerOnboarding} partnerType={partnerType} />
     </AppShell>
   );
-}
-
-async function loadSalesManagers(admin: ReturnType<typeof createSupabaseAdminClient>) {
-  const managers = await loadPospMispAssociates(admin);
-  return managers.map((manager) => ({
-    value: manager.id,
-    label: `${manager.full_name?.trim() || "Unnamed Sales Employee"}${manager.employee_code ? ` - ${manager.employee_code}` : ""}`
-  }));
-}
-
-async function loadVehicleManufacturers(admin: ReturnType<typeof createSupabaseAdminClient>) {
-  const { data } = await admin
-    .from("vehicle_manufacturers")
-    .select("name")
-    .eq("is_active", true)
-    .order("sort_order", { ascending: true })
-    .order("name", { ascending: true })
-    .returns<Array<{ name: string }>>();
-  return (data ?? []).map((manufacturer) => ({ value: manufacturer.name, label: manufacturer.name }));
-}
-
-async function loadBanks(admin: ReturnType<typeof createSupabaseAdminClient>) {
-  const { data } = await admin
-    .from("banks")
-    .select("id, name")
-    .eq("is_active", true)
-    .order("name", { ascending: true })
-    .returns<Array<{ id: string; name: string }>>();
-  return (data ?? []).map((bank) => ({ value: bank.id, label: bank.name }));
 }
 
 async function loadActiveGroups(admin: ReturnType<typeof createSupabaseAdminClient>, accessibleCustomerIds: string[] | null): Promise<GroupOption[]> {

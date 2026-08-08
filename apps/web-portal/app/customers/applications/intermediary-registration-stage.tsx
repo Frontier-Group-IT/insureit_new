@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { IntermediaryRegistrationForm } from "./intermediary-registration-form";
 
 type Profile = {
@@ -27,11 +28,13 @@ type Profile = {
 };
 
 export function IntermediaryRegistrationStage({ applicationId, profile, iibVerified, documents }: { applicationId: string; profile: Profile; iibVerified: boolean; documents: Array<{ document_type: string; file_name: string }> }) {
+  const router = useRouter();
+
   return <IntermediaryRegistrationForm
     profile={profile}
     iibVerified={iibVerified}
     documents={documents}
-    onBackToPrimary={() => { window.location.href = `/intermediaries/applications/${applicationId}?stage=primary`; }}
-    onBackToDocuments={() => { window.location.href = `/intermediaries/applications/${applicationId}?stage=documents`; }}
+    onBackToPrimary={() => { router.push(`/intermediaries/applications/${applicationId}?stage=primary`); }}
+    onBackToDocuments={() => { router.push(`/intermediaries/applications/${applicationId}?stage=documents`); }}
   />;
 }

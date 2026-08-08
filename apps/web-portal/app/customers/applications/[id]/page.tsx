@@ -5,7 +5,7 @@ import { AppShell } from "@/components/shell";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { requireApplicationReviewer } from "@/lib/master-data-server";
-import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
+import { getActiveBankOptions, getActiveVehicleManufacturerOptions, getPospMispAssociates } from "@/lib/reference-data-cache";
 import { approveMobileIndividualApplication, requestMobileApplicationChanges } from "../actions";
 import { approveMobileCorporateApplication } from "../corporate-actions";
 import { approveMobileDealershipApplication } from "../dealership-actions";
@@ -14,11 +14,10 @@ import { approvePospMispApplication } from "../posp-misp-actions";
 import { PospMispWorkflowPanel, type PospMispWorkflowProfile } from "../posp-misp-workflow-panel";
 import { PospMispApplicationEditor, type PospMispEditProfile } from "../posp-misp-application-editor";
 import { CorporateReviewWorkspace, DealershipReviewWorkspace, SummaryReviewWorkspace, type ReviewContact } from "../review-workspaces";
-import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type PageProps={params:Promise<{id:string}>;searchParams:Promise<{error?:string;success?:string}>};
 type Application={id:string;partner_type:string|null;status:string;applicant_phone:string|null;applicant_email:string|null;draft_data:Record<string,unknown>|null;created_at:string;updated_at:string;customer_id:string|null};
-type Document={id:string;document_type:string;file_name:string;storage_bucket:string;storage_path:string;verification_status:string};
+type Document={id:string;document_type:string;file_name:string;verification_status:string};
 type SafePospMispProfile=PospMispWorkflowProfile&Omit<PospMispEditProfile,"aadhaar_exists">;
 
 const labels:Record<string,string>={pan_copy:"PAN card",company_pan_copy:"Company PAN copy",aadhaar_front:"Aadhaar front",aadhaar_back:"Aadhaar back",gst_copy:"GST certificate",representative_aadhaar_front:"Representative Aadhaar front",representative_aadhaar_back:"Representative Aadhaar back",representative_pan_copy:"Representative PAN copy",education_certificate:"10th / 12th certificate",education_10th_marksheet:"10th Marksheet",education_12th_marksheet:"12th Marksheet",education_graduation_marksheet:"Graduation Marksheet",education_post_graduation_marksheet:"Post Graduation Marksheet",cancelled_cheque:"Cancelled cheque",photograph:"Photograph",registration_form:"Registration form",agreement_copy:"Agreement copy"};
@@ -30,14 +29,13 @@ export default async function ApplicationReviewPage({params,searchParams}:PagePr
   await requireApplicationReviewer(id);
   const query=await searchParams;
   const supabase=await createServerSupabaseClient();
-  const admin=createSupabaseAdminClient();
   const {data:application}=await supabase.from("customer_onboarding_applications").select("id,partner_type,status,applicant_phone,applicant_email,draft_data,created_at,updated_at,customer_id").eq("id",id).maybeSingle<Application>();
   if(!application)notFound();
   const [{data:documents},{data:contacts}]=await Promise.all([
-    supabase.from("customer_onboarding_documents").select("id,document_type,file_name,storage_bucket,storage_path,verification_status").eq("application_id",id).order("created_at").returns<Document[]>(),
+    supabase.from("customer_onboarding_documents").select("id,document_type,file_name,verification_status").eq("application_id",id).order("created_at").returns<Document[]>(),
     supabase.from("customer_onboarding_contacts").select("contact_role,full_name,phone,email").eq("application_id",id).order("contact_role").returns<ReviewContact[]>()
   ]);
-  const previews=await Promise.all((documents??[]).map(async document=>({...document,url:(await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path,900)).data?.signedUrl??null})));
+  const previews=(documents??[]).map(document=>({...document,url:`/customers/applications/documents/${document.id}/open`}));
   const draft=application.draft_data??{};
   const isCorporate=application.partner_type==="corporate";
   const isDealership=application.partner_type==="dealership";
@@ -45,11 +43,9 @@ export default async function ApplicationReviewPage({params,searchParams}:PagePr
   const supported=["individual_proprietor","group","corporate","dealership","posp","misp"].includes(application.partner_type??"");
   const canReview=supported&&["submitted","under_review","changes_requested"].includes(application.status)&&!application.customer_id;
   const {data:pospMispProfile}=isPospMisp?await supabase.from("posp_misp_onboarding_profiles").select("partner_type,partner_id,associate_employee_id,associate_profile_id,external_onboarding_id,document_received_at,pos_name,pos_first_name,pos_middle_name,pos_last_name,misp_name,applicant_phone,applicant_email,date_of_birth,aadhaar_last_four,pan_number,gst_number,address,city,state,postal_code,bank_id,bank_account_number,bank_ifsc_code,oem_name,dp_name,dp_first_name,dp_middle_name,dp_last_name,dp_phone,dp_email,dp_pan_number,workflow_stage,iib_remarks,iib_uploaded,iib_uploaded_at,training_login_id,training_credentials_shared_flag,training_start_date,training_end_date,training_status,training_certificate_number,exam_status,onboarding_date,requested_account_type,final_account_type,partner_decision").eq("application_id",id).maybeSingle<SafePospMispProfile>():{data:null};
-  const [associates,{data:bankRows},{data:oemRows}]=isPospMisp?await Promise.all([loadPospMispAssociates(admin),admin.from("banks").select("id,name").eq("is_active",true).order("name"),admin.from("vehicle_manufacturers").select("name").eq("is_active",true).order("sort_order").order("name")]):[[],{data:[]},{data:[]}];
+  const [associates,bankOptions,oemOptions]=isPospMisp?await Promise.all([getPospMispAssociates(),getActiveBankOptions(),getActiveVehicleManufacturerOptions()]):[[],[],[]];
   const pospMispEditProfile:PospMispEditProfile|null=pospMispProfile?{...pospMispProfile,aadhaar_exists:Boolean(pospMispProfile.aadhaar_last_four)}:null;
   const salesManagerOptions=(associates??[]).map(manager=>({value:String(manager.id),label:`${manager.full_name||"Unnamed Sales Employee"}${manager.employee_code?` - ${manager.employee_code}`:""}`}));
-  const bankOptions=(bankRows??[]).map(bank=>({value:String(bank.id),label:String(bank.name)}));
-  const oemOptions=(oemRows??[]).map(manufacturer=>({value:String(manufacturer.name),label:String(manufacturer.name)}));
   const canApprove=canReview&&(!isPospMisp||pospMispProfile?.workflow_stage==="completed");
   const pageError=query.error==="application_not_ready"&&!canReview?null:query.error;
   const summaryFields=summaryFor(application.partner_type,draft,application);

@@ -89,7 +89,9 @@ export function SearchFilterBar({
   defaultSearch = "",
   defaultFilter = "all",
   action,
-  compact = false
+  compact = false,
+  onSearchChange,
+  onFilterChange
 }: {
   searchPlaceholder: string;
   filterLabel?: string;
@@ -99,19 +101,22 @@ export function SearchFilterBar({
   defaultFilter?: string;
   action?: ReactNode;
   compact?: boolean;
+  onSearchChange?: (value: string) => void;
+  onFilterChange?: (value: string) => void;
 }) {
   const hasFilters = Boolean(defaultSearch || defaultFilter !== "all");
+  const controlled = Boolean(onSearchChange || onFilterChange);
   return (
-    <form method="get" className={`ui-toolbar ${compact ? "mb-2 rounded-2xl p-2" : "mb-4 rounded-[22px] p-3"}`}>
+    <form method="get" onSubmit={controlled ? (event) => event.preventDefault() : undefined} className={`ui-toolbar ${compact ? "mb-2 rounded-2xl p-2" : "mb-4 rounded-[22px] p-3"}`}>
       <div className={`flex flex-col md:flex-row md:items-center md:justify-between ${compact ? "gap-2" : "gap-3"}`}>
         <label className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B93AA]" />
-          <input name="q" defaultValue={defaultSearch} className={`${compact ? "h-9 w-full rounded-xl pl-9 text-[11px]" : "h-10 w-full rounded-xl pl-10 text-[11.5px]"}`} placeholder={searchPlaceholder} aria-label={searchPlaceholder} />
+          <input name="q" {...(controlled ? { value: defaultSearch } : { defaultValue: defaultSearch })} onChange={onSearchChange ? (event) => onSearchChange(event.target.value) : undefined} className={`${compact ? "h-9 w-full rounded-xl pl-9 text-[11px]" : "h-10 w-full rounded-xl pl-10 text-[11.5px]"}`} placeholder={searchPlaceholder} aria-label={searchPlaceholder} />
         </label>
         <div className={`flex flex-col sm:flex-row sm:items-center ${compact ? "gap-2" : "gap-3"}`}>
-          <label className="relative"><SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#8B93AA]" /><select name={filterName} className={`${compact ? "h-9 min-w-36 rounded-xl pl-9 text-[11px]" : "h-10 min-w-44 rounded-xl pl-9 text-[11.5px]"}`} aria-label={filterLabel} defaultValue={defaultFilter}><option value="all">All {filterLabel.toLowerCase()}</option>{filterOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-          <button type="submit" className={`${primaryActionClassName} ${compact ? "h-9 px-3 text-[9px]" : ""}`}>Apply</button>
-          {hasFilters ? <Link href="?" className={`${secondaryActionClassName} ${compact ? "h-9 px-3 text-[9px]" : ""}`}>Clear</Link> : null}
+          <label className="relative"><SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#8B93AA]" /><select name={filterName} className={`${compact ? "h-9 min-w-36 rounded-xl pl-9 text-[11px]" : "h-10 min-w-44 rounded-xl pl-9 text-[11.5px]"}`} aria-label={filterLabel} {...(controlled ? { value: defaultFilter } : { defaultValue: defaultFilter })} onChange={onFilterChange ? (event) => onFilterChange(event.target.value) : undefined}><option value="all">All {filterLabel.toLowerCase()}</option>{filterOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+          {controlled ? null : <button type="submit" className={`${primaryActionClassName} ${compact ? "h-9 px-3 text-[9px]" : ""}`}>Apply</button>}
+          {hasFilters ? controlled ? <button type="button" onClick={() => { onSearchChange?.(""); onFilterChange?.("all"); }} className={`${secondaryActionClassName} ${compact ? "h-9 px-3 text-[9px]" : ""}`}>Clear</button> : <Link href="?" className={`${secondaryActionClassName} ${compact ? "h-9 px-3 text-[9px]" : ""}`}>Clear</Link> : null}
           {action}
         </div>
       </div>

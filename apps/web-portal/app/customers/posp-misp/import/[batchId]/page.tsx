@@ -5,7 +5,7 @@ import { FormSubmitButton } from "@/components/form-submit-button";
 import { DataError } from "@/components/record-list";
 import { canAccessImportBatch } from "@/lib/employee-access-scope";
 import { requirePospMispManager } from "@/lib/master-data-server";
-import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
+import { getActiveBankOptions, getActiveVehicleManufacturerOptions, getImportSalesManagerOptions } from "@/lib/reference-data-cache";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { ImportRowReviewTableV2 } from "../import-row-review-table-v2";
 import { submitPospMispImportBatchV2 } from "../bulk-submit-v2-actions";
@@ -33,7 +33,7 @@ export default async function PospMispImportBatchPage({params,searchParams}:{par
   const [{data:batch,error:batchError},{data:rows,error:rowsError},salesManagers,oems,banks]=await Promise.all([
     admin.from("posp_misp_import_batches").select("id,file_name,total_rows,valid_rows,invalid_rows,pending_rows,submitted_rows,failed_rows,status,created_at").eq("id",batchId).maybeSingle<Batch>(),
     admin.from("posp_misp_import_rows").select("id,row_number,sheet_name,partner_type,source_data,normalized_data,validation_errors,status,application_id,error_message").eq("import_batch_id",batchId).order("row_number",{ascending:true}).returns<ImportRow[]>(),
-    loadSalesManagers(admin),loadVehicleManufacturers(admin),loadBanks(admin)
+    getImportSalesManagerOptions(),getActiveVehicleManufacturerOptions(),getActiveBankOptions()
   ]);
   const rowIds=(rows??[]).map(row=>row.id);
   const applicationIds=(rows??[]).flatMap(row=>row.application_id?[row.application_id]:[]);
@@ -55,8 +55,5 @@ export default async function PospMispImportBatchPage({params,searchParams}:{par
   </div></AppShell>;
 }
 function Metric({label,value,tone="default"}:{label:string;value:string|number;tone?:"default"|"success"|"warning"|"danger"}){const color=tone==="success"?"text-emerald-700":tone==="warning"?"text-amber-700":tone==="danger"?"text-red-700":"text-[#0F172A]";return <div className="rounded-2xl border border-white/80 bg-white/80 p-4 shadow-sm backdrop-blur"><p className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[#64748B]">{label}</p><p className={`mt-1 text-xl font-semibold capitalize ${color}`}>{value}</p></div>}
-async function loadSalesManagers(admin:ReturnType<typeof createSupabaseAdminClient>){const managers=await loadPospMispAssociates(admin);return managers.map(manager=>({id:manager.id,fullName:manager.full_name?.trim()||"Unnamed Sales Employee",employeeCode:manager.employee_code}))}
-async function loadVehicleManufacturers(admin:ReturnType<typeof createSupabaseAdminClient>){const{data}=await admin.from("vehicle_manufacturers").select("name").eq("is_active",true).order("sort_order",{ascending:true}).order("name",{ascending:true}).returns<Array<{name:string}>>();return(data??[]).map(item=>({value:item.name,label:item.name}))}
-async function loadBanks(admin:ReturnType<typeof createSupabaseAdminClient>){const{data}=await admin.from("banks").select("id,name").eq("is_active",true).order("name").returns<Array<{id:string;name:string}>>();return(data??[]).map(item=>({value:item.id,label:item.name}))}
 function errorMessage(error:string){const messages:Record<string,string>={no_valid_rows:"No valid rows are available for submission.",no_rows_selected:"Select at least one editable row before deleting.",row_missing:"The selected import row could not be found.",row_locked:"Submitted or processing rows cannot be deleted.",row_update_failed:"The row could not be updated.",row_delete_failed:"The selected rows could not be removed.",document_upload_failed:"The document could not be uploaded. Use a PDF, JPG or PNG file no larger than 5 MB.",marksheet_type_required:"Select the marksheet type before uploading the marksheet.",master_data:"Sales employee, bank, or OEM master data could not be validated."};return messages[error]??"The batch could not be updated."}
 function successMessage(success:string,count?:string){const messages:Record<string,string>={submitted:"Ready rows were created and queued for automatic IIB checking.",retried:"Failed rows were retried. Review the Import column for the result.",row_updated:"Row was saved and revalidated using the v2 onboarding fields.",row_removed:"Parsed row was removed from this batch.",rows_removed:`${Number(count)||0} selected row${Number(count)===1?" was":"s were"} removed from this batch.`};return messages[success]??"Saved successfully."}

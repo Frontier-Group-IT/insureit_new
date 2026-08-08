@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { freshDynamicRouteUrl } from "@/components/fresh-dynamic-route-navigation";
 
 export function HistoryBackButton({ fallbackHref = "/dashboard" }: { fallbackHref?: string }) {
   const router = useRouter();
@@ -12,7 +11,7 @@ export function HistoryBackButton({ fallbackHref = "/dashboard" }: { fallbackHre
       type="button"
       onClick={() => {
         if (hasExplicitDestination) {
-          window.location.assign(freshDynamicRouteUrl(fallbackHref));
+          router.push(fallbackHref);
           return;
         }
         if (window.history.length > 1) router.back();

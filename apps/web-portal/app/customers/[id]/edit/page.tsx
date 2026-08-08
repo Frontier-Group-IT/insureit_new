@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 type Customer = { id:string; customer_code:string; contact_name:string; company_name:string|null; phone:string; email:string|null; partner_type:string|null; address_street:string|null; address_locality:string|null; address:string|null; india_location_id:string|null; city:string|null; state:string|null; postal_code:string|null; pan_number:string|null; aadhaar_last_four:string|null; legal_trade_name:string|null; is_gst_registered:boolean; gst_number:string|null; fleet_size_band:string|null; onboarding_status:string; assigned_agent_id:string|null; created_at:string; updated_at:string };
-type DocumentRow = { id:string; document_type:string; file_name:string; storage_bucket:string; storage_path:string; verification_status:string; created_at:string };
+type DocumentRow = { id:string; document_type:string; file_name:string; verification_status:string; created_at:string };
 type VehicleRow = { id:string; vehicle_no:string; vehicle_type:string; make:string|null; model:string|null };
 type AgentRow = { id:string; full_name:string };
 type DealershipProfile = { dealership_type:"posp"|"misp"; dealership_name:string; owner_name:string; oem_name:string|null; yearly_sales_band:string|null };
@@ -35,7 +35,7 @@ export default async function EditCustomerPage({ params, searchParams }: { param
   ]);
   const [{data:customer,error},{data:documents},{data:vehicles}] = await Promise.all([
     admin.from("customers").select("id, customer_code, contact_name, company_name, phone, email, partner_type, address_street, address_locality, address, india_location_id, city, state, postal_code, pan_number, aadhaar_last_four, legal_trade_name, is_gst_registered, gst_number, fleet_size_band, onboarding_status, assigned_agent_id, created_at, updated_at").eq("id",id).maybeSingle<Customer>(),
-    admin.from("customer_documents").select("id, document_type, file_name, storage_bucket, storage_path, verification_status, created_at").eq("customer_id",id).order("created_at",{ascending:false}).returns<DocumentRow[]>(),
+    admin.from("customer_documents").select("id, document_type, file_name, verification_status, created_at").eq("customer_id",id).order("created_at",{ascending:false}).returns<DocumentRow[]>(),
     admin.from("vehicles").select("id, vehicle_no, vehicle_type, make, model").eq("customer_id",id).order("created_at",{ascending:false}).returns<VehicleRow[]>()
   ]);
   if(error||!customer) notFound();
@@ -46,7 +46,7 @@ export default async function EditCustomerPage({ params, searchParams }: { param
   let agentRequest = admin.from("profiles").select("id, full_name").eq("role","agent").eq("is_active",true).order("full_name");
   if (agentIds !== null) agentRequest = agentIds.length ? agentRequest.in("id", agentIds) : agentRequest.in("id", ["00000000-0000-0000-0000-000000000000"]);
   const { data: agents } = await agentRequest.returns<AgentRow[]>();
-  const documentsWithUrls=await Promise.all((documents??[]).map(async(document)=>({...document,signedUrl:(await admin.storage.from(document.storage_bucket).createSignedUrl(document.storage_path,600)).data?.signedUrl??null})));
+  const documentsWithUrls=(documents??[]).map((document)=>({...document,signedUrl:`/customers/documents/${document.id}/open`}));
 
   if(customer.partner_type==="corporate"){
     let groupRequest = admin.from("customers").select("id,customer_code,company_name,contact_name").eq("partner_type","group").eq("onboarding_status","active").order("company_name",{ascending:true});

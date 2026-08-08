@@ -1,6 +1,6 @@
 import type { Capability } from "@/lib/roles";
 import { isAppRole } from "@/lib/roles";
-import { getEffectivePermission, permissionDefinitions, type PermissionAccess } from "@/lib/permission-management";
+import { getEffectivePermission, getEffectivePermissionAccessMapForRole, permissionDefinitions, type PermissionAccess } from "@/lib/permission-management";
 
 export const accessRank: Record<PermissionAccess, number> = { none: 0, view: 1, edit: 2, approve: 3 };
 
@@ -20,19 +20,13 @@ export async function hasAnyEffectiveCapability(
   capabilities: Capability[],
   minimumAccess?: Exclude<PermissionAccess, "none">,
 ) {
-  for (const capability of capabilities) {
-    if (await hasEffectiveCapability(profile, capability, minimumAccess)) return true;
-  }
-  return false;
+  const checks = await Promise.all(capabilities.map((capability) => hasEffectiveCapability(profile, capability, minimumAccess)));
+  return checks.some(Boolean);
 }
 
 export async function getEffectivePermissionAccessMap(
   profile: { id?: string | null; role?: string | null } | null | undefined,
 ): Promise<Partial<Record<Capability, PermissionAccess>>> {
   if (!profile?.id || !isAppRole(profile.role)) return {};
-  const entries = await Promise.all(permissionDefinitions.map(async ({ capability }) => {
-    const permission = await getEffectivePermission(profile.id!, profile.role as import("@/lib/roles").AppRole, capability);
-    return [capability, permission.access] as const;
-  }));
-  return Object.fromEntries(entries) as Partial<Record<Capability, PermissionAccess>>;
+  return getEffectivePermissionAccessMapForRole(profile.id, profile.role);
 }

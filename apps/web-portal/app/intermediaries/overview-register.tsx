@@ -44,6 +44,13 @@ type CanonicalPartner = {
   partner_code: string;
   partner_kind: string;
 };
+type RelatedApplicationState = {
+  id: string;
+  registration_status: string;
+  requested_type: AccountType;
+  partner_record_id: string | null;
+  account_context: string | null;
+};
 
 const APPLICATION_SELECT = "id,registration_status,partner_status,requested_type,draft_data,partner_record_id";
 
@@ -84,8 +91,12 @@ export async function OverviewIntermediaryRegister({ search = "", success, error
 
   const [{ data: relatedApps }, { data: canonicalPartners }] = await Promise.all([
     partnerRecordIds.length
-      ? admin.from("intermediary_onboarding_applications").select(APPLICATION_SELECT).in("partner_record_id", partnerRecordIds).returns<ApplicationState[]>()
-      : Promise.resolve({ data: [] as ApplicationState[] }),
+      ? admin
+          .from("intermediary_onboarding_applications")
+          .select("id,registration_status,requested_type,partner_record_id,account_context:draft_data->>account_context")
+          .in("partner_record_id", partnerRecordIds)
+          .returns<RelatedApplicationState[]>()
+      : Promise.resolve({ data: [] as RelatedApplicationState[] }),
     partnerRecordIds.length
       ? admin.from("partners").select("id,partner_code,partner_kind").in("id", partnerRecordIds).returns<CanonicalPartner[]>()
       : Promise.resolve({ data: [] as CanonicalPartner[] }),
@@ -102,7 +113,7 @@ export async function OverviewIntermediaryRegister({ search = "", success, error
   const profileMap = new Map((intermediaryProfiles ?? []).map((item) => [item.application_id, item]));
   const canonicalPartnerMap = new Map((canonicalPartners ?? []).map((item) => [item.id, item]));
 
-  const linkedMap = new Map<string, ApplicationState>();
+  const linkedMap = new Map<string, RelatedApplicationState>();
   for (const app of relatedApps ?? []) {
     if (!app.partner_record_id || accountContext(app) === "partner") continue;
     linkedMap.set(app.partner_record_id, app);
@@ -267,11 +278,11 @@ export async function OverviewIntermediaryRegister({ search = "", success, error
   );
 }
 
-function accountContext(app: ApplicationState): "partner" | AccountType {
-  const value = app.draft_data?.account_context;
+function accountContext(app: ApplicationState | RelatedApplicationState): "partner" | AccountType {
+  const value = "account_context" in app ? app.account_context : app.draft_data?.account_context;
   return value === "posp" || value === "misp" ? value : "partner";
 }
-function linkedAccountType(app: ApplicationState): AccountType {
+function linkedAccountType(app: ApplicationState | RelatedApplicationState): AccountType {
   const value = accountContext(app);
   return value === "partner" ? app.requested_type : value;
 }
@@ -301,7 +312,7 @@ function partnerLocation(row: IntermediaryRow, app: ApplicationState | undefined
   const state = firstText(profile?.state, textValue(app?.draft_data?.state));
   return [city, state].filter(Boolean).join(", ") || "Location not available";
 }
-function stageFor(app: ApplicationState, type: AccountType) {
+function stageFor(app: ApplicationState | RelatedApplicationState, type: AccountType) {
   const status = app.registration_status?.toLowerCase() ?? "";
   if (status === "iib_registered") return "Active";
   if (status.includes("iib")) return "IIB pending";

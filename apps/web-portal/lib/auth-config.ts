@@ -5,6 +5,7 @@ export type AllowedAdminRole = (typeof allowedAdminRoles)[number];
 
 export const accessTokenCookie = "insureit-access-token";
 export const refreshTokenCookie = "insureit-refresh-token";
+export const sessionRoleCookie = "insureit-session-role";
 
 export type Profile = {
   id: string;

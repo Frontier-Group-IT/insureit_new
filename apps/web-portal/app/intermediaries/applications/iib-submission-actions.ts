@@ -252,8 +252,7 @@ function packetFromDraft(draftData: Record<string, unknown> | null | undefined):
 }
 
 function redirectFresh(href: string): never {
-  const [base, hash = ""] = href.split("#", 2);
-  return redirect(`${base}${base.includes("?") ? "&" : "?"}fresh=${Date.now()}${hash ? `#${hash}` : ""}`);
+  redirect(href);
 }
 
 function text(formData: FormData, key: string) {

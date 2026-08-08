@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { accessTokenCookie, isAuthorizedProfile, refreshTokenCookie, type Profile } from "@/lib/auth-config";
+import { accessTokenCookie, isAuthorizedProfile, refreshTokenCookie, sessionRoleCookie, type Profile } from "@/lib/auth-config";
 import { internalLaunchHome, isIntermediaryLaunchPath, isIntermediaryOnlyLaunch } from "@/lib/launch-scope";
 import { isProtectedPortalPath, safePortalReturnPath } from "@/lib/portal-routes";
 import { hasCapability } from "@/lib/roles";
@@ -64,38 +64,51 @@ async function refreshSession(refreshToken: string): Promise<RefreshedSession | 
   };
 }
 
-function applySessionCookies(response: NextResponse, session: RefreshedSession) {
+function applySessionCookies(response: NextResponse, session: RefreshedSession, role?: string | null) {
   response.cookies.set(accessTokenCookie, session.access_token, { ...cookieOptions, maxAge: session.expires_in });
   response.cookies.set(refreshTokenCookie, session.refresh_token, { ...cookieOptions, maxAge: 60 * 60 * 24 * 30 });
+  if (role) response.cookies.set(sessionRoleCookie, role, { ...cookieOptions, maxAge: session.expires_in });
   return response;
 }
 
 function clearSessionCookies(response: NextResponse) {
   response.cookies.set(accessTokenCookie, "", { ...cookieOptions, maxAge: 0 });
   response.cookies.set(refreshTokenCookie, "", { ...cookieOptions, maxAge: 0 });
+  response.cookies.set(sessionRoleCookie, "", { ...cookieOptions, maxAge: 0 });
   return response;
 }
 
-function redirect(request: NextRequest, pathname: string, session?: RefreshedSession | null) {
-  const response = NextResponse.redirect(new URL(pathname, request.url));
-  return session ? applySessionCookies(response, session) : response;
+function setRoleCookie(response: NextResponse, role?: string | null) {
+  if (role) response.cookies.set(sessionRoleCookie, role, { ...cookieOptions, maxAge: 60 * 60 });
+  return response;
 }
 
-function continueRequest(request: NextRequest, session?: RefreshedSession | null) {
-  if (!session) return NextResponse.next();
+function redirect(request: NextRequest, pathname: string, session?: RefreshedSession | null, role?: string | null) {
+  const response = NextResponse.redirect(new URL(pathname, request.url));
+  return session ? applySessionCookies(response, session, role) : setRoleCookie(response, role);
+}
+
+function continueRequest(request: NextRequest, session?: RefreshedSession | null, role?: string | null) {
+  if (!session) return setRoleCookie(NextResponse.next(), role);
   request.cookies.set(accessTokenCookie, session.access_token);
   request.cookies.set(refreshTokenCookie, session.refresh_token);
+  if (role) request.cookies.set(sessionRoleCookie, role);
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("cookie", request.cookies.toString());
-  return applySessionCookies(NextResponse.next({ request: { headers: requestHeaders } }), session);
+  return applySessionCookies(NextResponse.next({ request: { headers: requestHeaders } }), session, role);
 }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   let accessToken = request.cookies.get(accessTokenCookie)?.value;
   const refreshToken = request.cookies.get(refreshTokenCookie)?.value;
+  const cachedRole = request.cookies.get(sessionRoleCookie)?.value;
   let refreshedSession: RefreshedSession | null = null;
-  let check: SessionCheck = accessToken ? await checkSession(accessToken) : { status: "invalid", role: null };
+  let check: SessionCheck = accessToken && cachedRole
+    ? { status: "authorized", role: cachedRole }
+    : accessToken
+      ? await checkSession(accessToken)
+      : { status: "invalid", role: null };
 
   if (check.status === "invalid" && refreshToken) {
     refreshedSession = await refreshSession(refreshToken);
@@ -105,11 +118,11 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (pathname === "/") return continueRequest(request, refreshedSession);
+  if (pathname === "/") return continueRequest(request, refreshedSession, check.role);
 
   if (pathname === "/login") {
-    if (check.status === "authorized") return redirect(request, check.role === "intermediary" ? "/intermediary-portal" : internalLaunchHome, refreshedSession);
-    if (check.status === "forbidden") return redirect(request, "/access-denied", refreshedSession);
+    if (check.status === "authorized") return redirect(request, check.role === "intermediary" ? "/intermediary-portal" : internalLaunchHome, refreshedSession, check.role);
+    if (check.status === "forbidden") return redirect(request, "/access-denied", refreshedSession, check.role);
     return clearSessionCookies(continueRequest(request));
   }
 
@@ -119,19 +132,19 @@ export async function middleware(request: NextRequest) {
       loginUrl.searchParams.set("next", safePortalReturnPath(`${pathname}${request.nextUrl.search}`));
       return clearSessionCookies(NextResponse.redirect(loginUrl));
     }
-    if (check.status === "forbidden") return redirect(request, "/access-denied", refreshedSession);
-    if (check.role === "intermediary" && !pathname.startsWith("/intermediary-portal")) return redirect(request, "/intermediary-portal", refreshedSession);
-    if (check.role !== "intermediary" && pathname.startsWith("/intermediary-portal")) return redirect(request, internalLaunchHome, refreshedSession);
+    if (check.status === "forbidden") return redirect(request, "/access-denied", refreshedSession, check.role);
+    if (check.role === "intermediary" && !pathname.startsWith("/intermediary-portal")) return redirect(request, "/intermediary-portal", refreshedSession, check.role);
+    if (check.role !== "intermediary" && pathname.startsWith("/intermediary-portal")) return redirect(request, internalLaunchHome, refreshedSession, check.role);
 
     if (isIntermediaryOnlyLaunch && check.role !== "intermediary") {
-      if (!hasCapability(check.role, "view_intermediaries")) return redirect(request, "/access-denied", refreshedSession);
-      if (!isIntermediaryLaunchPath(pathname)) return redirect(request, internalLaunchHome, refreshedSession);
+      if (!hasCapability(check.role, "view_intermediaries")) return redirect(request, "/access-denied", refreshedSession, check.role);
+      if (!isIntermediaryLaunchPath(pathname)) return redirect(request, internalLaunchHome, refreshedSession, check.role);
     }
 
-    return continueRequest(request, refreshedSession);
+    return continueRequest(request, refreshedSession, check.role);
   }
 
-  return continueRequest(request, refreshedSession);
+  return continueRequest(request, refreshedSession, check.role);
 }
 
 export const config = {

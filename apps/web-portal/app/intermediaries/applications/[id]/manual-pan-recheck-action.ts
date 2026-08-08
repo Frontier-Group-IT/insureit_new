@@ -75,7 +75,7 @@ export async function manuallyRecheckIibPan(data: FormData) {
   if (jobError) redirectWith(applicationId, "pan_verification_queue_failed");
 
   revalidatePath(`/intermediaries/applications/${applicationId}`);
-  redirect(`/intermediaries/applications/${applicationId}?success=pan_verification_requeued&fresh=${Date.now()}`);
+  redirect(`/intermediaries/applications/${applicationId}?success=pan_verification_requeued`);
 }
 
 function value(data: FormData, key: string) {
@@ -84,5 +84,5 @@ function value(data: FormData, key: string) {
 }
 
 function redirectWith(applicationId: string, error: string): never {
-  redirect(`/intermediaries/applications/${applicationId}?error=${error}&fresh=${Date.now()}`);
+  redirect(`/intermediaries/applications/${applicationId}?error=${error}`);
 }

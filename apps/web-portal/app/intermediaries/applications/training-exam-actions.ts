@@ -168,7 +168,7 @@ export async function updateIntermediaryExamResult(formData: FormData) {
 }
 
 function redirectFresh(href: string): never {
-  redirect(`${href}${href.includes("?") ? "&" : "?"}fresh=${Date.now()}`);
+  redirect(href);
 }
 
 function value(formData: FormData, name: string) {

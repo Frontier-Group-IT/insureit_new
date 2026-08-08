@@ -22,5 +22,5 @@ export async function approvePospMispApplication(formData:FormData){
  const {error:applicationUpdateError}=await admin.from("intermediary_onboarding_applications").update({status:"approved",final_type:finalType,reviewed_by:reviewer.id,reviewed_at:now,completed_at:now,updated_at:now}).eq("id",applicationId);if(applicationUpdateError)redirectFresh(`${path(applicationId)}?error=intermediary_activation_failed`);
  revalidatePath("/intermediaries");revalidatePath("/customers/posp-misp");revalidatePath(path(applicationId));redirectFresh(`${path(applicationId)}?success=intermediary_activated`);
 }
-function redirectFresh(href:string):never{redirect(`${href}${href.includes("?")?"&":"?"}fresh=${Date.now()}`)}
+function redirectFresh(href:string):never{redirect(href)}
 function value(formData:FormData,name:string){const field=formData.get(name);return typeof field==="string"&&field.trim()?field.trim():null}

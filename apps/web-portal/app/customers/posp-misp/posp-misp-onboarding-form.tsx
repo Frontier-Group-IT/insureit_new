@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { InsureItButtonLoader } from "@/components/loading/insureit-loader";
-import { freshDynamicRouteUrl } from "@/components/fresh-dynamic-route-navigation";
 import { IndianDateField } from "@/components/indian-date-field";
 import { inlineFieldErrorId } from "@/components/inline-field-validation";
 import type { PospMispState } from "./actions";
@@ -38,6 +38,7 @@ const IFSC = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 const GST = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 
 export function PospMispOnboardingForm({ action, submitPath, partnerType, initialError = null, initialField = null, initialValues = {}, salesManagers, oems, banks, legacyFields = null }: Props) {
+  const router = useRouter();
   const [state, formAction] = useActionState(action, { error: null, field: null, applicationId: null });
   const formRef = useRef<HTMLFormElement>(null);
   const touchedRef = useRef(new Set<string>());
@@ -52,9 +53,9 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
       const destination = actionSubmitIntentRef.current === "exit"
         ? "/customers/posp-misp"
         : `/intermediaries/applications/${state.applicationId}/workflow?stage=documents&success=primary_details_saved`;
-      window.location.replace(freshDynamicRouteUrl(destination));
+      router.replace(destination);
     }
-  }, [state.applicationId, state.error]);
+  }, [router, state.applicationId, state.error]);
 
   useEffect(() => {
     const fieldName = state.field ?? initialField;

@@ -57,8 +57,8 @@ export function IdSuccessModal({ event, applicationId, isPartner, preferredType,
   const contextLabel = isPartnerEvent ? (accountType === "misp" ? "Business Partner" : "Individual Partner") : `${accountLabel} account`;
   const nextStep = isPartnerEvent && isPartner && !linkedId ? `Create ${accountLabel} ID` : "Complete registration";
   const primaryHref = isPartnerEvent && linkedId
-    ? freshHref(`/intermediaries/applications/${linkedId}`)
-    : freshHref(`/intermediaries/applications/${applicationId}/workflow?stage=registration`);
+    ? `/intermediaries/applications/${linkedId}`
+    : `/intermediaries/applications/${applicationId}/workflow?stage=registration`;
 
   const copyId = async () => {
     if (!generatedId) return;
@@ -142,9 +142,4 @@ function cleanCurrentSuccessUrl() {
   const url = new URL(window.location.href);
   url.searchParams.delete("success");
   return `${url.pathname}${url.search}${url.hash}`;
-}
-
-function freshHref(href: string) {
-  const [path, hash] = href.split("#");
-  return `${path}${path.includes("?") ? "&" : "?"}fresh=${Date.now()}${hash ? `#${hash}` : ""}`;
 }

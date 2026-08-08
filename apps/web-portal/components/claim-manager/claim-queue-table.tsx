@@ -117,7 +117,7 @@ function ClaimQueueRow({ claim, serial }: { claim: QueueClaimRow; serial: number
       <Cell className="text-center text-[10.5px] font-medium">{claim.claim_no}</Cell>
       <Cell className="text-center text-[10.5px] font-medium">{claim.insurer_claim_no ?? "-"}</Cell>
       <Cell><ProcessCell label={process?.label ?? claim.current_status} keyName={process?.key ?? "default"} /></Cell>
-      <td className="px-1.5 py-1 text-center"><Link href={`/claims/${claim.id}`} className="inline-flex h-6 items-center justify-center rounded-md bg-[#003A83] px-2.5 text-[10.5px] font-medium text-white shadow-[0_2px_6px_rgba(0,58,131,0.16)] transition hover:bg-[#071D49]">Proceed</Link></td>
+      <td className="px-1.5 py-1 text-center"><Link href={`/claims/${claim.id}`} prefetch={false} className="inline-flex h-6 items-center justify-center rounded-md bg-[#003A83] px-2.5 text-[10.5px] font-medium text-white shadow-[0_2px_6px_rgba(0,58,131,0.16)] transition hover:bg-[#071D49]">Proceed</Link></td>
     </tr>
   );
 }
@@ -196,7 +196,7 @@ function QueuePagination({ total, page, pageSize, totalPages, baseParams }: { to
 function PageLink({ children, page, pageSize, baseParams, active = false, disabled = false }: { children: ReactNode; page: number; pageSize: number; baseParams: Record<string, string>; active?: boolean; disabled?: boolean }) {
   const href = disabled ? "#" : `/claims?${new URLSearchParams({ ...baseParams, page: String(page), pageSize: String(pageSize) }).toString()}`;
   const className = `grid h-7 min-w-7 place-items-center rounded-md border px-2 text-[11px] font-medium ${active ? "border-[#003A83] bg-[#003A83] text-white" : disabled ? "pointer-events-none border-[#E4EAF2] bg-[#F8FAFD] text-[#B6C1D1]" : "border-[#DCE4EF] bg-white text-[#071D49] hover:border-[#174EA6] hover:bg-[#F2F7FF]"}`;
-  return <Link href={href} aria-disabled={disabled} className={className}>{children}</Link>;
+  return <Link href={href} prefetch={false} aria-disabled={disabled} className={className}>{children}</Link>;
 }
 
 function paginationItems(page: number, totalPages: number) {

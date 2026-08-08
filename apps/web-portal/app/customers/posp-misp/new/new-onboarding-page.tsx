@@ -1,8 +1,7 @@
 import { AppShell } from "@/components/shell";
 import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
 import { requirePospMispManager } from "@/lib/master-data-server";
-import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
-import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { getActiveBankOptions, getActiveVehicleManufacturerOptions, getPospMispAssociates } from "@/lib/reference-data-cache";
 import { createManualPospMispOnboardingV2 } from "../manual-actions-v2";
 import { LegacyOnboardingFields } from "../legacy-onboarding-fields";
 import { OnboardingFieldPresentation } from "../onboarding-field-presentation";
@@ -17,11 +16,10 @@ export type NewOnboardingQuery = Record<string, string | undefined> & {
 
 export async function renderNewOnboardingPage(partnerType: OnboardingPartnerType, query: NewOnboardingQuery) {
   const profile = await requirePospMispManager();
-  const admin = createSupabaseAdminClient();
   const [salesManagers, oems, banks] = await Promise.all([
-    loadSalesManagers(admin, profile!.id, profile!.role),
-    loadVehicleManufacturers(admin),
-    loadBanks(admin),
+    loadSalesManagers(profile!.id, profile!.role),
+    getActiveVehicleManufacturerOptions(),
+    getActiveBankOptions(),
   ]);
 
   const isMisp = partnerType === "misp";
@@ -62,9 +60,9 @@ function extractInitialValues(query: NewOnboardingQuery) {
   );
 }
 
-async function loadSalesManagers(admin: ReturnType<typeof createSupabaseAdminClient>, profileId: string, role: string) {
+async function loadSalesManagers(profileId: string, role: string) {
   const [managers, scope] = await Promise.all([
-    loadPospMispAssociates(admin),
+    getPospMispAssociates(),
     getEmployeeAccessScope(profileId, role),
   ]);
   const visibleManagers = scope.mode === "organization"
@@ -74,25 +72,4 @@ async function loadSalesManagers(admin: ReturnType<typeof createSupabaseAdminCli
     value: manager.id,
     label: `${manager.full_name?.trim() || "Unnamed Sales Employee"}${manager.employee_code ? ` - ${manager.employee_code}` : ""}`,
   }));
-}
-
-async function loadVehicleManufacturers(admin: ReturnType<typeof createSupabaseAdminClient>) {
-  const { data } = await admin
-    .from("vehicle_manufacturers")
-    .select("name")
-    .eq("is_active", true)
-    .order("sort_order", { ascending: true })
-    .order("name", { ascending: true })
-    .returns<Array<{ name: string }>>();
-  return (data ?? []).map((manufacturer) => ({ value: manufacturer.name, label: manufacturer.name }));
-}
-
-async function loadBanks(admin: ReturnType<typeof createSupabaseAdminClient>) {
-  const { data } = await admin
-    .from("banks")
-    .select("id, name")
-    .eq("is_active", true)
-    .order("name", { ascending: true })
-    .returns<Array<{ id: string; name: string }>>();
-  return (data ?? []).map((bank) => ({ value: bank.id, label: bank.name }));
 }

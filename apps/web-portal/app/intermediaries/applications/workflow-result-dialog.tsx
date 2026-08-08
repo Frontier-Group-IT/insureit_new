@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { freshDynamicRouteUrl } from "@/components/fresh-dynamic-route-navigation";
+import { useRouter } from "next/navigation";
 
 type Props = { applicationId: string; event: string | null };
 type DialogConfig = {
@@ -17,6 +17,7 @@ type DialogConfig = {
 };
 
 export function WorkflowResultDialog({ applicationId, event }: Props) {
+  const router = useRouter();
   const config = event ? configFor(event, applicationId, detectIntermediaryType()) : null;
   const [visible, setVisible] = useState(false);
   const seenKey = event && config ? `workflow-result-dialog:${applicationId}:${event}` : null;
@@ -36,7 +37,7 @@ export function WorkflowResultDialog({ applicationId, event }: Props) {
     setVisible(true);
 
     const onKeyDown = (keyboardEvent: KeyboardEvent) => {
-      if (keyboardEvent.key === "Escape") navigateFresh(`/intermediaries/applications/${applicationId}`);
+      if (keyboardEvent.key === "Escape") router.push(`/intermediaries/applications/${applicationId}`);
     };
     const onPageShow = (pageEvent: PageTransitionEvent) => {
       if (pageEvent.persisted && sessionStorage.getItem(seenKey) === "seen") setVisible(false);
@@ -47,7 +48,7 @@ export function WorkflowResultDialog({ applicationId, event }: Props) {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("pageshow", onPageShow);
     };
-  }, [applicationId, config, event, seenKey]);
+  }, [applicationId, config, event, router, seenKey]);
 
   if (!config || !visible) return null;
   const closeHref = `/intermediaries/applications/${applicationId}`;
@@ -62,13 +63,13 @@ export function WorkflowResultDialog({ applicationId, event }: Props) {
               <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#635BFF]">Success</p>
               <h2 id="process-result-title" className="mt-1 text-[17px] font-semibold leading-tight text-[#0F172A]">{config.title}</h2>
             </div>
-            <button type="button" onClick={() => navigateFresh(closeHref)} aria-label="Close" className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[#E2E8F0] bg-white text-[16px] text-[#64748B] transition hover:bg-[#F8FAFC]">×</button>
+            <button type="button" onClick={() => router.push(closeHref)} aria-label="Close" className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[#E2E8F0] bg-white text-[16px] text-[#64748B] transition hover:bg-[#F8FAFC]">×</button>
           </div>
           <div className={`grid gap-2 border-t border-[#E2E8F0] bg-[#F8FAFC] px-5 py-4 ${config.secondaryHref ? "sm:grid-cols-2" : ""}`}>
             {config.secondaryHref && config.secondaryLabel ? (
-              <button type="button" onClick={() => navigateFresh(config.secondaryHref!)} className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-2.5 text-center text-[10px] font-semibold text-[#334155]">{config.secondaryLabel}</button>
+              <button type="button" onClick={() => router.push(config.secondaryHref!)} className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-2.5 text-center text-[10px] font-semibold text-[#334155]">{config.secondaryLabel}</button>
             ) : null}
-            <button type="button" onClick={() => navigateFresh(config.primaryHref)} className="rounded-xl bg-[#071D49] px-4 py-2.5 text-center text-[10px] font-semibold text-white">{config.primaryLabel}</button>
+            <button type="button" onClick={() => router.push(config.primaryHref)} className="rounded-xl bg-[#071D49] px-4 py-2.5 text-center text-[10px] font-semibold text-white">{config.primaryLabel}</button>
           </div>
         </div>
       </div>
@@ -82,7 +83,7 @@ export function WorkflowResultDialog({ applicationId, event }: Props) {
           {config.celebratory ? (
             <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full border border-white/30 bg-white/15 text-3xl shadow-lg">✓</div>
           ) : null}
-          <button type="button" onClick={() => navigateFresh(closeHref)} aria-label="Close" className={`absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-lg border text-[16px] ${config.celebratory ? "border-white/25 bg-white/10 text-white" : "border-[#DCE5EF] text-[#64748B]"}`}>×</button>
+          <button type="button" onClick={() => router.push(closeHref)} aria-label="Close" className={`absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-lg border text-[16px] ${config.celebratory ? "border-white/25 bg-white/10 text-white" : "border-[#DCE5EF] text-[#64748B]"}`}>×</button>
           <p className={`text-[9px] font-semibold uppercase tracking-[.1em] ${config.celebratory ? "text-blue-100" : "text-[#64748B]"}`}>{config.eyebrow}</p>
           <h2 id="process-result-title" className={`mt-1 text-[18px] font-semibold ${config.celebratory ? "text-white" : "text-[#0F172A]"}`}>{config.title}</h2>
         </div>
@@ -97,9 +98,9 @@ export function WorkflowResultDialog({ applicationId, event }: Props) {
 
         <div className={`grid gap-2 border-t border-[#E2E8F0] bg-[#F8FAFC] px-5 py-4 ${config.secondaryHref ? "sm:grid-cols-2" : ""}`}>
           {config.secondaryHref && config.secondaryLabel ? (
-            <button type="button" onClick={() => navigateFresh(config.secondaryHref!)} className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-2.5 text-center text-[10px] font-semibold text-[#334155]">{config.secondaryLabel}</button>
+            <button type="button" onClick={() => router.push(config.secondaryHref!)} className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-2.5 text-center text-[10px] font-semibold text-[#334155]">{config.secondaryLabel}</button>
           ) : null}
-          <button type="button" onClick={() => navigateFresh(config.primaryHref)} className="rounded-xl bg-[#071D49] px-4 py-2.5 text-center text-[10px] font-semibold text-white">{config.primaryLabel}</button>
+          <button type="button" onClick={() => router.push(config.primaryHref)} className="rounded-xl bg-[#071D49] px-4 py-2.5 text-center text-[10px] font-semibold text-white">{config.primaryLabel}</button>
         </div>
       </div>
     </div>
@@ -110,10 +111,6 @@ function detectIntermediaryType(): "POSP" | "MISP" {
   if (typeof document === "undefined") return "POSP";
   const text = document.body.textContent?.toUpperCase() ?? "";
   return text.includes("MISP ACCOUNT") || text.includes("MISP APPLICATION") ? "MISP" : "POSP";
-}
-
-function navigateFresh(href: string) {
-  window.location.assign(freshDynamicRouteUrl(href));
 }
 
 function configFor(event: string, applicationId: string, intermediaryType: "POSP" | "MISP"): DialogConfig | null {

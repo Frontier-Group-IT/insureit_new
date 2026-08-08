@@ -42,7 +42,7 @@ export async function ClaimManagerShell({ title, backHref = internalLaunchHome, 
             </div>
 
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-              {!isIntermediaryOnlyLaunch && canViewNotifications ? <Link href="/notifications" aria-label="Notifications" className="relative grid h-11 w-11 place-items-center rounded-2xl border border-white/55 bg-white/52 text-[#183456] shadow-[0_8px_24px_rgba(28,39,68,.10)] backdrop-blur-xl hover:border-[#7D91B4] hover:text-[#6759ff]">
+              {!isIntermediaryOnlyLaunch && canViewNotifications ? <Link href="/notifications" prefetch={false} aria-label="Notifications" className="relative grid h-11 w-11 place-items-center rounded-2xl border border-white/55 bg-white/52 text-[#183456] shadow-[0_8px_24px_rgba(28,39,68,.10)] backdrop-blur-xl hover:border-[#7D91B4] hover:text-[#6759ff]">
                 <Bell className="h-[18px] w-[18px]" />
                 <span className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-[#ff6f61] ring-2 ring-white" />
               </Link> : null}

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { requirePospMispManager } from "@/lib/master-data-server";
-import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
+import { getActiveBankOptions, getActiveVehicleManufacturerOptions, getPospMispAssociates } from "@/lib/reference-data-cache";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resolveIibPanVerificationStatus, type IibPanVerificationJob } from "@/lib/iib-pan-verification-status";
 import { PospMispApplicationEditor, type PospMispEditProfile } from "@/app/customers/applications/posp-misp-application-editor";
@@ -114,10 +114,10 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
   ]);
   if (!application || !profile) notFound();
 
-  const [associates, { data: banks }, { data: oems }] = await Promise.all([
-    loadPospMispAssociates(admin),
-    admin.from("banks").select("id,name").eq("is_active", true).order("name").returns<Array<{ id: string; name: string }>>(),
-    admin.from("vehicle_manufacturers").select("name").eq("is_active", true).order("sort_order").order("name").returns<Array<{ name: string }>>(),
+  const [associates, banks, oems] = await Promise.all([
+    getPospMispAssociates(),
+    getActiveBankOptions(),
+    getActiveVehicleManufacturerOptions(),
   ]);
 
   const { aadhaar_number_encrypted, dp_aadhaar_number_encrypted, ...safeProfile } = profile;
@@ -214,7 +214,7 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
         <main className="overflow-hidden rounded-2xl border bg-white">
           {viewStage === "primary" || viewStage === "documents" ? (
             <div className="space-y-4 bg-[#F4F7FB]">
-              <PospMispApplicationEditor applicationId={id} profile={editProfile} workflowStage={profile.workflow_stage} viewStage={viewStage} editable={editable} salesManagers={associates.map((item) => ({ value: item.id, label: item.full_name ?? "Unnamed" }))} banks={(banks ?? []).map((item) => ({ value: item.id, label: item.name }))} oems={(oems ?? []).map((item) => ({ value: item.name, label: item.name }))} documents={docList} actionTargetId={context === "partner" && viewStage === "primary" ? `partner-primary-actions-${id}` : undefined} />
+              <PospMispApplicationEditor applicationId={id} profile={editProfile} workflowStage={profile.workflow_stage} viewStage={viewStage} editable={editable} salesManagers={associates.map((item) => ({ value: item.id, label: item.full_name ?? "Unnamed" }))} banks={banks} oems={oems} documents={docList} actionTargetId={context === "partner" && viewStage === "primary" ? `partner-primary-actions-${id}` : undefined} />
               {viewStage === "primary" ? <div className="px-4 pb-4 sm:px-5 sm:pb-5"><ExistingIntermediaryMigrationEditor applicationId={id} accountType={profile.partner_type} values={migrationValues} editable={editable} />{context === "partner" ? <div id={`partner-primary-actions-${id}`} className="mt-4" /> : null}</div> : null}
             </div>
           ) : viewStage === "iib" ? (
