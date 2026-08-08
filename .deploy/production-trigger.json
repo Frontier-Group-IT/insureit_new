@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-08T12:54:00+05:30",
+  "deploy_requested_at": "2026-08-08T14:09:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT workflow stage subtitle removal release",
-  "source_commit": "9e68dad6ac01e5a8dcde2e4d73ba00db06303f62",
-  "release_scope": "Deploy current main including PR #221. Remove the descriptive subtitles beneath the Registration and Training & Examination stage headers in the POSP/MISP onboarding workflow while keeping stage titles, right-side status text, registration outcome, iCall integration, forms, APIs, and workflow transitions unchanged.",
-  "verification": "PR #221 was verified mergeable at exact head 30626284a15b561c561c6a53cd6bb40d594e9d43 and squash merged into main as 9e68dad6ac01e5a8dcde2e4d73ba00db06303f62. Its final diff contains one application file (+4/-4); the focused temporary GitHub Actions workflow completed successfully and git diff --check passed. Full lint/typecheck/build were not run for this PR. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
+  "source": "ChatGPT POSP/MISP workflow tracker display-only release",
+  "source_commit": "9269e94a7f66adccce49a1196324aaf15b39de26",
+  "release_scope": "Deploy current main including PR #222. Make the six-step POSP/MISP onboarding progress tracker display-only so completed, current, and future stages cannot be clicked, while preserving the existing green completed, navy current, and muted pending visual states. Keep the separate Partner two-step tracker and server-side unlocked stage protection unchanged.",
+  "verification": "PR #222 was verified mergeable at exact head 413b21622ab24e3273beedd1dc418d90f1584676 and squash merged into main as 9269e94a7f66adccce49a1196324aaf15b39de26. Its final diff contains one application file (+4/-6); the focused temporary GitHub Actions workflow completed successfully and git diff --check passed. Full lint/typecheck/build were not run for this PR. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
