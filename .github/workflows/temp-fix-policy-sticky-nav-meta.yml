@@ -1,0 +1,49 @@
+name: Temporary fix policy sticky nav and metadata
+
+on:
+  push:
+    paths:
+      - scripts/temp_fix_policy_sticky_nav_meta.py
+      - .github/workflows/temp-fix-policy-sticky-nav-meta.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply sticky navigator and metadata fix
+        run: python scripts/temp_fix_policy_sticky_nav_meta.py
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck web portal
+        run: npm run typecheck:web
+      - name: Validate patch
+        run: |
+          git diff --check
+          grep -q 'CompactSourceMeta label="RM" value={form.rmName||"Select lead source"}/>' apps/web-portal/components/policy-unified-form.tsx
+          grep -q 'CompactSourceMeta label="ID" value={form.intermediaryCode||"Select lead source"}/>' apps/web-portal/components/policy-unified-form.tsx
+          grep -q 'sticky top-\[72px\] z-50 mb-4' apps/web-portal/components/policy-unified-form.tsx
+          grep -q 'onClick={()=>goToSection(index)}' apps/web-portal/components/policy-unified-form.tsx
+          ! grep -q 'source={form.rmName?"Assigned":undefined}' apps/web-portal/components/policy-unified-form.tsx
+          ! grep -q 'label="Intermediary code" value={form.intermediaryCode' apps/web-portal/components/policy-unified-form.tsx
+      - name: Commit application change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal/components/policy-unified-form.tsx
+          if git diff --cached --quiet; then
+            echo "No application changes to commit"
+          else
+            git commit -m "Fix policy sticky section navigation"
+            git pull --rebase origin main
+            git push origin main
+          fi
