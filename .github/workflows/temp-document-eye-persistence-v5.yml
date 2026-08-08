@@ -1,0 +1,94 @@
+name: Temporary document eye persistence v5
+
+on:
+  push:
+    paths:
+      - .github/workflows/temp-document-eye-persistence-v5.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Apply focused patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          grid_path = Path('apps/web-portal/components/intermediary-document-grid.tsx')
+          editor_path = Path('apps/web-portal/app/customers/applications/posp-misp-application-editor.tsx')
+
+          grid = grid_path.read_text()
+          replacements = [
+            (
+              '        setResolvedDocuments(nextDocuments);',
+              '''        setResolvedDocuments((current) => nextDocuments.map((nextDocument) => {
+            if (nextDocument.href) return nextDocument;
+            const previousDocument = current.find((document) =>
+              document.document_type === nextDocument.document_type
+              && document.file_name === nextDocument.file_name,
+            );
+            return previousDocument?.href ? { ...nextDocument, href: previousDocument.href } : nextDocument;
+          }));''',
+            ),
+            (
+              'action={(existingDocument?.href || (editable && (slot.system ? Boolean(existingDocument) : true))) ? (',
+              'action={(existingDocument || (editable && (slot.system ? Boolean(existingDocument) : true))) ? (',
+            ),
+            (
+              '{existingDocument?.href ? (',
+              '{existingDocument ? (',
+            ),
+            (
+              'href={existingDocument.href}',
+              'href={existingDocument.href || undefined}',
+            ),
+          ]
+          for old, new in replacements:
+            if old not in grid:
+              raise SystemExit(f'grid pattern not found: {old}')
+            grid = grid.replace(old, new, 1)
+          grid_path.write_text(grid)
+
+          editor = editor_path.read_text()
+          old = '<Header number="2" title="Documents" subtitle="Ten compact slots are shown. GST uses an available Other Document slot when applicable." />'
+          if old not in editor:
+            raise SystemExit('documents subtitle header not found')
+          editor = editor.replace(old, '<Header number="2" title="Documents" />', 1)
+          old = 'function Header({ number, title, subtitle }: { number: string; title: string; subtitle: string })'
+          if old not in editor:
+            raise SystemExit('Header signature not found')
+          editor = editor.replace(old, 'function Header({ number, title, subtitle }: { number: string; title: string; subtitle?: string })', 1)
+          old = '<p className="mt-0.5 text-[9.8px] text-[#64748B]">{subtitle}</p>'
+          if old not in editor:
+            raise SystemExit('Header subtitle paragraph not found')
+          editor = editor.replace(old, '{subtitle ? <p className="mt-0.5 text-[9.8px] text-[#64748B]">{subtitle}</p> : null}', 1)
+          editor_path.write_text(editor)
+          PY
+      - name: Validate focused diff
+        run: |
+          git diff --check
+          python - <<'PY'
+          from pathlib import Path
+          grid = Path('apps/web-portal/components/intermediary-document-grid.tsx').read_text()
+          editor = Path('apps/web-portal/app/customers/applications/posp-misp-application-editor.tsx').read_text()
+          assert 'setResolvedDocuments((current) => nextDocuments.map' in grid
+          assert 'action={(existingDocument || (editable' in grid
+          assert '{existingDocument ? (' in grid
+          assert 'href={existingDocument.href || undefined}' in grid
+          assert 'Ten compact slots are shown. GST uses an available Other Document slot when applicable.' not in editor
+          assert '<Header number="2" title="Documents" />' in editor
+          PY
+      - name: Commit app changes and self-remove
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/temp-document-eye-persistence-v5.yml
+          git add apps/web-portal/components/intermediary-document-grid.tsx apps/web-portal/app/customers/applications/posp-misp-application-editor.tsx .github/workflows/temp-document-eye-persistence-v5.yml
+          git commit -m "Fix document eye action persistence"
+          git push
