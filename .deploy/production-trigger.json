@@ -1,10 +1,12 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-09T01:26:00+05:30",
+  "deploy_requested_at": "2026-08-09T02:10:46+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT vehicle manufacturer master release",
-  "source_commit": "d95b1332c17b546bda9d057781ef48e1a50a91cd",
-  "release_scope": "Deploy current main with the completed Vehicle Manufacturer/OEM master: canonical legal entities, brands, aliases, segments, source metadata, validated make resolution, manufacturer register/add/review/edit pages, vehicle add/edit integration, POSP/MISP OEM integration, navigation, and the already-applied Supabase manufacturer migrations. Because production deploys current main, later commits already present on main are included in the same batched release.",
-  "verification": "Vehicle manufacturer foundation and canonical seed migrations were applied and database-level manufacturer/brand/alias validation was verified. Local Next.js typecheck/build could not be executed on the user's Windows machine because the machine currently cannot create files/directories and Windows component repair is in progress. This deployment therefore relies on the Vercel production build as the compilation gate. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
+  "source": "ChatGPT performance optimization release",
+  "source_commit": "ff274a025c5a862d455bd07008c727d6f9c911be",
+  "rollback_ref": "rollback/pre-performance-optimization-20260809-015856",
+  "rollback_commit": "76ea8bcd41cdfb0b1c9bb6961e0f3360640f0ac0",
+  "release_scope": "Deploy current main with the completed portal performance optimization work: cached reference data, faster navigation behavior, client-side list workspaces, optimized shell/session handling, preserved vehicle manufacturer master changes, and the latest OCR regression fixes already present on main.",
+  "verification": "Before this trigger commit, the merged release tree passed npm run typecheck --workspace apps/web-portal, git diff --check, and npm run build --workspace apps/web-portal locally with .env.local. Existing lint warnings are unchanged and non-blocking.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
