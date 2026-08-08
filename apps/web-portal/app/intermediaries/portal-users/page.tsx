@@ -24,8 +24,15 @@ type Intermediary = {
   portal_access_status: string;
 };
 
-export default async function IntermediaryPortalUsersPage() {
+export default async function IntermediaryPortalUsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
   await requirePospMispManager();
+  const query = await searchParams;
+  const q = query.q?.trim().slice(0, 100) ?? "";
+  const normalizedQuery = q.toLowerCase();
   const admin = createSupabaseAdminClient();
 
   const [{ data: accounts, error }, { data: intermediaries }] = await Promise.all([
@@ -44,33 +51,34 @@ export default async function IntermediaryPortalUsersPage() {
   ]);
 
   const intermediaryMap = new Map((intermediaries ?? []).map((item) => [item.id, item]));
-  const rows = accounts ?? [];
-  const invited = rows.filter((row) => row.status === "invited").length;
-  const active = rows.filter((row) => row.status === "active").length;
-  const suspended = rows.filter((row) => row.status === "suspended").length;
+  const rows = (accounts ?? []).filter((row) => {
+    if (!normalizedQuery) return true;
+    const intermediary = intermediaryMap.get(row.intermediary_id);
+    return [
+      intermediary?.display_name,
+      row.email,
+      intermediary?.intermediary_type,
+      intermediary?.intermediary_code,
+      row.application_id,
+    ].some((value) => value?.toLowerCase().includes(normalizedQuery));
+  });
 
   return (
     <AppShell title="Intermediary Portal Users">
-      <div className="mx-auto max-w-[1480px] space-y-4 pb-8">
-        <section className="rounded-2xl border border-[#DCE5EF] bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-[9px] font-bold uppercase tracking-[.14em] text-[#64748B]">Intermediatory</p>
-              <h1 className="mt-1 text-xl font-semibold text-[#10213D]">Portal User Management</h1>
-              <p className="mt-1 text-[10px] text-[#64748B]">Review invitations and portal access for Partners, POSP and MISP users.</p>
-            </div>
-            <Link href="/intermediaries/partner" className="rounded-xl bg-[#0F2A55] px-4 py-2.5 text-[10px] font-semibold text-white">Open Partner Register</Link>
-          </div>
-        </section>
-
-        <section className="grid gap-3 sm:grid-cols-3">
-          <Metric label="Invited" value={invited} />
-          <Metric label="Active" value={active} />
-          <Metric label="Suspended" value={suspended} />
-        </section>
-
+      <div className="mx-auto max-w-[1480px] pb-8">
         <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
-          <div className="border-b bg-[#F8FAFC] px-4 py-3"><h2 className="text-[12px] font-semibold">Portal Accounts</h2></div>
+          <div className="flex flex-col gap-3 border-b bg-[#F8FAFC] px-4 py-3 sm:flex-row sm:items-center">
+            <h2 className="shrink-0 text-[12px] font-semibold text-[#0F172A]">Portal Accounts</h2>
+            <form method="get" className="w-full sm:max-w-[460px]">
+              <input
+                name="q"
+                defaultValue={q}
+                aria-label="Search portal accounts"
+                placeholder="Search name, email, type or application"
+                className="h-10 w-full rounded-lg border border-[#CBD5E1] bg-white px-3 text-[11.5px] outline-none transition focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#DBEAFE]"
+              />
+            </form>
+          </div>
           {error ? (
             <div className="px-4 py-12 text-center text-[11px] text-red-700">Portal accounts could not be loaded.</div>
           ) : rows.length ? (
@@ -94,16 +102,12 @@ export default async function IntermediaryPortalUsersPage() {
               </table>
             </div>
           ) : (
-            <div className="px-4 py-16 text-center text-[11px] text-[#64748B]">No portal accounts have been created yet.</div>
+            <div className="px-4 py-16 text-center text-[11px] text-[#64748B]">{q ? "No portal accounts match your search." : "No portal accounts have been created yet."}</div>
           )}
         </section>
       </div>
     </AppShell>
   );
-}
-
-function Metric({ label, value }: { label: string; value: number }) {
-  return <div className="rounded-2xl border border-[#DCE5EF] bg-white px-4 py-4 shadow-sm"><p className="text-[9px] font-bold uppercase tracking-[.08em] text-[#64748B]">{label}</p><p className="mt-2 text-2xl font-semibold text-[#10213D]">{value}</p></div>;
 }
 
 function Status({ value }: { value: string }) {
