@@ -1,0 +1,25 @@
+name: Run AGENTS policy context update
+
+on:
+  push:
+    paths:
+      - '.github/workflows/run-update-agents-policy-chat-context.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - run: python tools/update_agents_policy_chat_context.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add AGENTS.md
+          git commit -m "Add Policy Onboarding AuthBridge context to AGENTS"
+          git push origin HEAD:main
