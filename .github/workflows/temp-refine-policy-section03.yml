@@ -1,0 +1,50 @@
+name: Temporary refine policy section03
+
+on:
+  push:
+    paths:
+      - scripts/temp_refine_policy_section03.py
+      - .github/workflows/temp-refine-policy-section03.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply Section 03 refinement
+        run: python scripts/temp_refine_policy_section03.py
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck web portal
+        run: npm run typecheck:web
+      - name: Validate patch
+        run: |
+          git diff --check
+          grep -q 'action={<PolicyOcrImportPanel variant="icon"/>}' apps/web-portal/components/policy-unified-form.tsx
+          grep -q 'Policy validity' apps/web-portal/components/policy-unified-form.tsx
+          grep -q 'label="TP premium"' apps/web-portal/components/policy-unified-form.tsx
+          ! grep -q 'label="CPA opted"' apps/web-portal/components/policy-unified-form.tsx
+          ! grep -q '<PremiumCalculationBand' apps/web-portal/components/policy-unified-form.tsx
+          ! grep -q '<PolicyOcrImportPanel/><button' apps/web-portal/components/policy-unified-form.tsx
+          ! grep -q '"cpa_opted",' apps/web-portal/components/policy-ocr-import-panel.tsx
+      - name: Commit application change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal/components/policy-unified-form.tsx apps/web-portal/components/policy-ocr-import-panel.tsx
+          if git diff --cached --quiet; then
+            echo "No application changes to commit"
+          else
+            git commit -m "Refine policy product premium and validity section"
+            git pull --rebase origin main
+            git push origin main
+          fi
