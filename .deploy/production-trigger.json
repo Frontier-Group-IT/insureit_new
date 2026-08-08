@@ -1,10 +1,10 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-08T15:30:00+05:30",
+  "deploy_requested_at": "2026-08-08T16:13:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT POSP/MISP segmented register filter release",
-  "source_commit": "fda899a849d876c08c8f3c793ab0f2d8366eb0c4",
-  "release_scope": "Deploy current main including PR #224. Reposition the Pending Application Register search box beside the title, remove the header Page X of Y pill, and add right-aligned All / POSP / MISP segmented controls with live counts while preserving search, type filtering, pagination, table actions, permissions, and onboarding eligibility behavior.",
-  "verification": "PR #224 was verified mergeable at exact head 15cba31055d17b6e63f84bb06fab0d45cf593e25 and squash merged into main as fda899a849d876c08c8f3c793ab0f2d8366eb0c4. Its final diff contains one application file (+24/-11). Full lint/typecheck/build were not run for this PR. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
+  "source": "ChatGPT simplified intermediary portal users register release",
+  "source_commit": "ba78d19092c8f269cdac6ce5d29b3e336f05e275",
+  "release_scope": "Deploy current main including PR #225. Remove the Portal User Management hero/header, subtitle, Open Partner Register button, and Invited/Active/Suspended metric cards; keep the Portal Accounts table; place a URL-backed search field beside the Portal Accounts title; preserve portal status, invitation timestamps, application links, permissions, and data loading behavior.",
+  "verification": "PR #225 was verified mergeable at exact head 446cc1b4c10de7675f15f27da5d9b3ebbdcdc5bb and squash merged into main as ba78d19092c8f269cdac6ce5d29b3e336f05e275. Its final diff contains one application file (+33/-29). Full lint/typecheck/build were not run for this PR. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
