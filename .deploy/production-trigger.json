@@ -1,12 +1,12 @@
 {
-  "purpose": "Explicitly trigger the final owner-handover source-cleanup production deployment before Super Admin account creation.",
-  "deploy_requested_at": "2026-08-09T17:12:00+05:30",
+  "purpose": "Deploy the owner-handover navigation deduplication before Super Admin account creation.",
+  "deploy_requested_at": "2026-08-09T18:19:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT INSUREIT owner handover final source cleanup",
-  "source_commit": "3f227e900e1ea1fbdf85dfdf18a30ab2a8f60dfc",
-  "rollback_ref": "5d448d18555f5567b4c18799fe0f2c708e667568",
-  "rollback_commit": "5d448d18555f5567b4c18799fe0f2c708e667568",
-  "release_scope": "Deploy current main with the cumulative owner-handover presentation hardening: owner-facing navigation scope, business-facing Intermediatory/iCall copy, controlled error states across Fleet/Policy/Claims/Employees/Access Control, active-staff default in Employee Directory, corrected employee portal invite permissions, sanitized employee create/update/invite failures, and the updated owner handoff readiness record.",
-  "verification": "Source-level handover audit is substantially complete. Anand Wadhwa's company email was verified as anand@frontiervehicles.com from existing company correspondence; no existing Anand employee/profile and no active super_admin profile were found. Final authenticated Super Admin smoke, workflow-header contrast, Account Review action-error presentation and policy OCR runtime wording remain separate checks. GitHub workflow success confirms the Vercel deploy hook request, not final authenticated Vercel readiness.",
+  "source": "ChatGPT INSUREIT owner handover navigation cleanup",
+  "source_commit": "5fe100ef776e18ce25b14065e28238c29bdd856a",
+  "rollback_ref": "43f34f7873e0fb7b268970617d7e51f1e2adfda9",
+  "rollback_commit": "43f34f7873e0fb7b268970617d7e51f1e2adfda9",
+  "release_scope": "Remove duplicate-looking existing POSP/MISP navigation from the business handover experience. Keep Add Existing POSP and Add Existing MISP as the operational one-at-a-time routes. Move bulk POSP/MISP Import and Import History out of owner-facing Onboarding and into the IT Super User Development workspace. Update owner-handoff readiness notes accordingly.",
+  "verification": "Current navigation source confirms one operational Add Existing POSP route and one Add Existing MISP route remain visible in their respective business groups. Bulk import tools are now present only in the IT-only Development section. Additional navigation overlap review found no other equivalent duplicate business actions requiring removal. Final Vercel Ready and authenticated visual smoke remain required.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
