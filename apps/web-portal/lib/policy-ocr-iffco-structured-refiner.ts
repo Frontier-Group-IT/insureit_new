@@ -83,7 +83,7 @@ export function refineIffcoStructuredFinancials(
 
   return {
     ...parsed,
-    parserVersion: `${parsed.parserVersion}+layout-table-v4`,
+    parserVersion: `${parsed.parserVersion}+layout-table-v5`,
     fields,
     warnings,
   };
@@ -92,24 +92,50 @@ export function refineIffcoStructuredFinancials(
 function removeUnsafeFinancialFields(parsed: ParsedPolicyResult, extraWarnings: string[]): ParsedPolicyResult {
   return {
     ...parsed,
-    parserVersion: `${parsed.parserVersion}+layout-table-v4`,
+    parserVersion: `${parsed.parserVersion}+layout-table-v5`,
     fields: parsed.fields.filter((field) => !FINANCIAL_KEYS.has(field.key)),
     warnings: unique([...parsed.warnings, ...extraWarnings]),
   };
 }
 
 function findStructuredPrintedNet(tables: StructuredPolicyTable[]): MoneyHit | null {
+  // Layout Parser commonly emits labels in a header row and values in the following body row.
+  // Bind the Taxable Value / Premium Taxable Value column by index instead of scanning nearby numbers.
   for (const table of tables) {
-    for (const row of table.rows) {
-      const joined = normalize(row.join(" | "));
-      if (!/(?:Net\s+Premium|Premium\s*\/\s*Taxable\s+Value|Taxable\s+Premium)/i.test(joined)) continue;
-      if (/(?:Gross|GST|CGST|SGST|IGST|Tax\s+Amount)/i.test(joined) && !/Taxable\s+Value/i.test(joined)) continue;
-      const candidates = moneyValues(joined).filter(isPlausiblePrintedNetCandidate);
-      if (!candidates.length) continue;
-      return { value: candidates[candidates.length - 1], page: table.page, evidence: safeEvidence(joined) };
+    for (let rowIndex = 0; rowIndex < table.rows.length - 1; rowIndex += 1) {
+      const header = table.rows[rowIndex];
+      const columnIndex = header.findIndex((cell) =>
+        /(?:Premium\s*\/\s*)?Taxable\s+Value(?:\s*\(\s*Rs\.?\s*\))?/i.test(normalize(cell)),
+      );
+      if (columnIndex < 0) continue;
+
+      for (let valueRowIndex = rowIndex + 1; valueRowIndex <= Math.min(rowIndex + 3, table.rows.length - 1); valueRowIndex += 1) {
+        const valueCell = table.rows[valueRowIndex][columnIndex] ?? "";
+        const values = moneyValues(valueCell).filter(isPlausiblePrintedNetCandidate);
+        if (!values.length) continue;
+        const value = values[0];
+        return {
+          value,
+          page: table.page,
+          evidence: safeEvidence(`${header[columnIndex]} | ${valueCell}`),
+        };
+      }
     }
   }
 
+  // Explicit one-row labels remain supported for alternate IFFCO layouts.
+  for (const table of tables) {
+    for (const row of table.rows) {
+      const joined = normalize(row.join(" | "));
+      if (!/(?:Premium\s*\/\s*Taxable\s+Value|Taxable\s+Premium)/i.test(joined)) continue;
+      const candidates = moneyValues(joined).filter(isPlausiblePrintedNetCandidate);
+      if (candidates.length === 1) {
+        return { value: candidates[0], page: table.page, evidence: safeEvidence(joined) };
+      }
+    }
+  }
+
+  // Some older/synthetic fixtures put the bifurcation label and all amounts on one row.
   for (const table of tables) {
     for (const row of table.rows) {
       const joined = normalize(row.join(" | "));
@@ -126,6 +152,41 @@ function findStructuredPrintedNet(tables: StructuredPolicyTable[]): MoneyHit | n
 }
 
 function findStructuredNetFromTaxTotals(tables: StructuredPolicyTable[]): MoneyHit | null {
+  // Column-aware GST detail tables from the real Google Layout Parser response.
+  for (const table of tables) {
+    for (let rowIndex = 0; rowIndex < table.rows.length - 1; rowIndex += 1) {
+      const header = table.rows[rowIndex].map((cell) => normalize(cell));
+      const taxableIndex = header.findIndex((cell) => /(?:Premium\s*\/\s*)?Taxable\s+Value/i.test(cell));
+      const gstIndex = header.findIndex((cell) => /(?:GST\s+Amount|Total\s+GST)/i.test(cell));
+      const grossIndex = header.findIndex((cell) => /Gross\s+Premium(?:\s+Payable)?/i.test(cell));
+      if (taxableIndex < 0 || grossIndex < 0) continue;
+
+      for (let valueRowIndex = rowIndex + 1; valueRowIndex <= Math.min(rowIndex + 3, table.rows.length - 1); valueRowIndex += 1) {
+        const row = table.rows[valueRowIndex];
+        const taxable = firstMoney(row[taxableIndex]);
+        const gross = firstMoney(row[grossIndex]);
+        const gst = gstIndex >= 0 ? firstMoney(row[gstIndex]) : null;
+        if (!taxable || !gross || taxable >= gross || !isPlausiblePrintedNetCandidate(taxable)) continue;
+        if (gst !== null && gst > 0 && isPlausibleGstRelationship(taxable, gst, gross)) {
+          return {
+            value: taxable,
+            page: table.page,
+            evidence: safeEvidence(`${header[taxableIndex]} ${row[taxableIndex]} | ${header[grossIndex]} ${row[grossIndex]} | ${header[gstIndex]} ${row[gstIndex]}`),
+          };
+        }
+        const derivedTax = round2(gross - taxable);
+        if (derivedTax > 0 && isPlausibleGstRelationship(taxable, derivedTax, gross)) {
+          return {
+            value: taxable,
+            page: table.page,
+            evidence: safeEvidence(`${header[taxableIndex]} ${row[taxableIndex]} | ${header[grossIndex]} ${row[grossIndex]}`),
+          };
+        }
+      }
+    }
+  }
+
+  // Label-per-row layouts remain supported.
   for (const table of tables) {
     let gross: MoneyHit | null = null;
     let tax: MoneyHit | null = null;
@@ -252,6 +313,12 @@ function findRowAmount(
     }
   }
   return null;
+}
+
+function firstMoney(text: string | undefined) {
+  if (!text) return null;
+  const values = moneyValues(text).filter((value) => value !== 997134 && !isYear(value));
+  return values.length ? values[0] : null;
 }
 
 function numericField(fields: ParsedPolicyField[], key: string) {
