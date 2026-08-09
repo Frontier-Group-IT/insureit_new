@@ -1,12 +1,12 @@
 {
-  "purpose": "Explicitly trigger one batched Vercel production deployment for the Employee Directory portal invitation flow and branded authentication email handoff state.",
-  "deploy_requested_at": "2026-08-09T16:41:00+05:30",
+  "purpose": "Explicitly trigger the second owner-handover readiness deployment batch for the Intermediatory workspace.",
+  "deploy_requested_at": "2026-08-09T16:40:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT INSUREIT employee portal invitation deployment",
-  "source_commit": "68d61a32a0a904e46939d34925c1e30e0a3ca0e3",
-  "rollback_ref": "12233a3897bf7f41eb1f3a762b54178f045efc5a",
-  "rollback_commit": "12233a3897bf7f41eb1f3a762b54178f045efc5a",
-  "release_scope": "Deploy the Employee Directory portal-access controls added on main: directory-only employee -> Send invite, unconfirmed invited employee -> Resend invite, confirmed employee -> Portal active, role selection for invitations, server-side Supabase Auth Admin invite generation, and critical manage_users permission enforcement. Branded Supabase Auth email delivery through the already configured Resend SMTP path is an external configuration and is not stored in this repository.",
-  "verification": "The branded Supabase invitation email path was directly verified by the user before this deployment. Source inspection confirms invite generation remains server-side and redirects through the configured portal invite URL. No database migration is included in this release. Final Vercel Ready state and an authenticated live Employee Directory Send invite/Resend invite test are still required before calling the application change production-verified.",
+  "source": "ChatGPT INSUREIT owner handover readiness batch 2",
+  "source_commit": "49ad4e4de0b14d7a58faf9a300832d3fd42f73f2",
+  "rollback_ref": "c08aaf606e887b3e0ddac4755a640738e32ad273",
+  "rollback_commit": "c08aaf606e887b3e0ddac4755a640738e32ad273",
+  "release_scope": "Deploy current main with the Intermediatory handover polish: normal POSP/MISP iCall training UI no longer exposes UAT/test-environment terminology; Partner Portal Users now uses business-facing labels, correct active/needs-attention grouping, IST invitation timestamps, and controlled empty/error states; previously deployed owner-facing navigation and Partner register sanitization remain included.",
+  "verification": "Source-level workflow review confirms six explicit onboarding stages and controlled workflow error normalization. The deployment hook result and final Vercel build state remain separate checks; authenticated runtime smoke testing with a real linked Partner/POSP or Partner/MISP family is still required before Intermediatory is marked final PASS.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
