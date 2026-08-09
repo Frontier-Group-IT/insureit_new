@@ -99,21 +99,17 @@ function removeUnsafeFinancialFields(parsed: ParsedPolicyResult, extraWarnings: 
 }
 
 function findStructuredPrintedNet(tables: StructuredPolicyTable[]): MoneyHit | null {
-  // Strongest evidence: an explicitly labelled net/taxable premium row.
   for (const table of tables) {
     for (const row of table.rows) {
       const joined = normalize(row.join(" | "));
       if (!/(?:Net\s+Premium|Premium\s*\/\s*Taxable\s+Value|Taxable\s+Premium)/i.test(joined)) continue;
       if (/(?:Gross|GST|CGST|SGST|IGST|Tax\s+Amount)/i.test(joined) && !/Taxable\s+Value/i.test(joined)) continue;
-      const candidates = moneyValues(joined)
-        .filter(isPlausiblePrintedNetCandidate);
+      const candidates = moneyValues(joined).filter(isPlausiblePrintedNetCandidate);
       if (!candidates.length) continue;
       return { value: candidates[candidates.length - 1], page: table.page, evidence: safeEvidence(joined) };
     }
   }
 
-  // IFFCO schedules often carry a Premium Bifurcation row where OD-side + liability-side = printed net.
-  // Accept this only when the arithmetic itself proves the total; never choose a nearby number by position alone.
   for (const table of tables) {
     for (const row of table.rows) {
       const joined = normalize(row.join(" | "));
@@ -156,8 +152,8 @@ function findStructuredNetFromTaxTotals(tables: StructuredPolicyTable[]): MoneyH
       }
     }
 
-    const taxValue = tax?.value
-      ?? (igst?.value ?? ((cgst?.value ?? 0) + (sgst?.value ?? 0)) || null);
+    const componentTax = (cgst?.value ?? 0) + (sgst?.value ?? 0);
+    const taxValue = tax?.value ?? igst?.value ?? (componentTax > 0 ? componentTax : null);
     if (!gross || taxValue === null || taxValue <= 0 || gross.value <= taxValue) continue;
 
     const net = round2(gross.value - taxValue);
@@ -251,7 +247,6 @@ function findRowAmount(
         .filter((value) => value >= 0 && value <= options.max && !isYear(value) && value !== 997134);
       if (!values.length) continue;
 
-      // Premium schedules normally place the payable premium in the right-most numeric cell.
       const value = values[values.length - 1];
       return { value, page: table.page, evidence: safeEvidence(joined) };
     }
