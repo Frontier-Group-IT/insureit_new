@@ -19,7 +19,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams?: P
 
   const [canManage, canManagePortalAccess] = await Promise.all([
     hasEffectiveCapability(profile, "manage_employees", "edit"),
-    hasEffectiveCapability(profile, "manage_users", "critical"),
+    hasEffectiveCapability(profile, "manage_users", "approve"),
   ]);
   const scope = await getEmployeeAccessScope(profile.id, profile.role);
   const params = (await searchParams) ?? {};
