@@ -175,7 +175,7 @@ export async function lookupPolicyRegistrationRc(registrationNumber: string): Pr
         lookedUpAt: response.lookedUpAt ?? null,
       },
     };
-  } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "Unable to fetch RC details." };
+  } catch {
+    return { ok: false, error: "Vehicle details could not be fetched right now. Please verify the registration number and try again." };
   }
 }
