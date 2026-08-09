@@ -18,10 +18,18 @@ export function refineIffcoStructuredFinancials(
   tables: StructuredPolicyTable[],
   parsed: ParsedPolicyResult,
 ): ParsedPolicyResult {
-  if (!tables.length) return parsed;
+  if (!tables.length) {
+    return removeUnsafeFinancialFields(parsed, [
+      "Review required. IFFCO structured premium-table evidence was unavailable; OD/TP/CPA were withheld rather than guessed from flattened OCR text.",
+    ]);
+  }
 
   const printedNet = numericField(parsed.fields, "total_premium");
-  if (printedNet === null || printedNet <= 0) return parsed;
+  if (printedNet === null || printedNet <= 0) {
+    return removeUnsafeFinancialFields(parsed, [
+      "Review required. IFFCO printed net premium could not be independently verified; OD/TP/CPA were withheld rather than guessed.",
+    ]);
+  }
 
   const basicTp = findRowAmount(tables, /Basic\s+TP\s+Premium/i, { max: printedNet });
   const legalDriver = findRowAmount(tables, /Legal\s+Liability\s+to\s+Driver/i, { max: 5000, ignoreImt: true });
@@ -62,7 +70,7 @@ export function refineIffcoStructuredFinancials(
 
   return {
     ...parsed,
-    parserVersion: `${parsed.parserVersion}+structured-table-v1`,
+    parserVersion: `${parsed.parserVersion}+layout-table-v2`,
     fields,
     warnings,
   };
@@ -71,7 +79,7 @@ export function refineIffcoStructuredFinancials(
 function removeUnsafeFinancialFields(parsed: ParsedPolicyResult, extraWarnings: string[]): ParsedPolicyResult {
   return {
     ...parsed,
-    parserVersion: `${parsed.parserVersion}+structured-table-v1`,
+    parserVersion: `${parsed.parserVersion}+layout-table-v2`,
     fields: parsed.fields.filter((field) => !FINANCIAL_KEYS.has(field.key)),
     warnings: unique([...parsed.warnings, ...extraWarnings]),
   };
