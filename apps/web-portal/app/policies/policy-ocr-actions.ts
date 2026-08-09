@@ -15,6 +15,7 @@ const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const OCR_TIMEOUT_MS = 120 * 1000;
 const ALLOWED_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
 const CLOUD_PLATFORM_SCOPE = "https://www.googleapis.com/auth/cloud-platform";
+const DEFAULT_LAYOUT_PROCESSOR_ID = "b630ad846c5137a1";
 
 export type PolicyOcrField = ParsedPolicyField;
 
@@ -35,20 +36,33 @@ type DocumentAiResponse = {
     text?: string;
     pages?: Array<{
       layout?: { textAnchor?: TextAnchor };
-      tables?: DocumentAiTable[];
     }>;
+    documentLayout?: {
+      blocks?: DocumentLayoutBlock[];
+    };
   };
   error?: { message?: string; status?: string };
 };
 
-type DocumentAiTable = {
-  headerRows?: DocumentAiTableRow[];
-  bodyRows?: DocumentAiTableRow[];
+type DocumentLayoutBlock = {
+  blockId?: string;
+  pageSpan?: { pageStart?: number; pageEnd?: number };
+  textBlock?: {
+    text?: string;
+    blocks?: DocumentLayoutBlock[];
+  };
+  tableBlock?: {
+    headerRows?: DocumentLayoutTableRow[];
+    bodyRows?: DocumentLayoutTableRow[];
+  };
+  listBlock?: {
+    listEntries?: Array<{ blocks?: DocumentLayoutBlock[] }>;
+  };
 };
 
-type DocumentAiTableRow = {
+type DocumentLayoutTableRow = {
   cells?: Array<{
-    layout?: { textAnchor?: TextAnchor };
+    blocks?: DocumentLayoutBlock[];
   }>;
 };
 
@@ -126,7 +140,6 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
     const pages = extractPageTexts(payload?.document);
     if (!pages.length) return { ok: false, error: "Google Document AI could not find readable policy text in this document." };
 
-    const tables = extractStructuredTables(payload?.document);
     const baseParsed = parsePolicyDocument(pages);
     let parsed = baseParsed.parserId === "digit_commercial_motor_v1"
       ? refineDigitCommercialPolicyV2(pages, baseParsed)
@@ -137,6 +150,9 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
           : baseParsed;
 
     if (baseParsed.parserId === "iffco_tokio_commercial_motor_v1") {
+      const tables = file.type === "application/pdf"
+        ? await processLayoutTables({ config, content, mimeType: file.type, accessToken: googleAccessToken, signal: controller.signal })
+        : [];
       parsed = refineIffcoStructuredFinancials(tables, parsed);
     }
 
@@ -145,7 +161,7 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
     return {
       ok: true,
       fields: parsed.fields,
-      model: "Google Document AI Enterprise OCR",
+      model: "Google Document AI Enterprise OCR + Layout Parser",
       parserId: parsed.parserId,
       parserVersion: parsed.parserVersion,
       extractionMethod: "google_document_ai",
@@ -170,9 +186,44 @@ function getGoogleConfig() {
   const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim();
   const location = process.env.GOOGLE_DOCUMENT_AI_LOCATION?.trim();
   const processorId = process.env.GOOGLE_DOCUMENT_AI_PROCESSOR_ID?.trim();
+  const layoutProcessorId = process.env.GOOGLE_DOCUMENT_AI_LAYOUT_PROCESSOR_ID?.trim() || DEFAULT_LAYOUT_PROCESSOR_ID;
 
   if (!projectId || !projectNumber || !poolId || !providerId || !serviceAccountEmail || !location || !processorId) return null;
-  return { projectId, projectNumber, poolId, providerId, serviceAccountEmail, location, processorId };
+  return { projectId, projectNumber, poolId, providerId, serviceAccountEmail, location, processorId, layoutProcessorId };
+}
+
+async function processLayoutTables(args: {
+  config: NonNullable<ReturnType<typeof getGoogleConfig>>;
+  content: string;
+  mimeType: string;
+  accessToken: string;
+  signal: AbortSignal;
+}): Promise<StructuredPolicyTable[]> {
+  const endpoint = `https://${args.config.location}-documentai.googleapis.com/v1/projects/${encodeURIComponent(args.config.projectId)}/locations/${encodeURIComponent(args.config.location)}/processors/${encodeURIComponent(args.config.layoutProcessorId)}:process`;
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${args.accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      rawDocument: { content: args.content, mimeType: args.mimeType },
+      processOptions: {
+        layoutConfig: {
+          enableTableAnnotation: true,
+        },
+      },
+    }),
+    cache: "no-store",
+    signal: args.signal,
+  });
+
+  const payload = await response.json().catch(() => null) as DocumentAiResponse | null;
+  if (!response.ok) {
+    console.error("Google Layout Parser request failed", response.status, payload?.error?.status);
+    return [];
+  }
+  return extractDocumentLayoutTables(payload?.document);
 }
 
 async function getGoogleAccessToken(config: NonNullable<ReturnType<typeof getGoogleConfig>>, subjectToken: string, signal: AbortSignal) {
@@ -253,20 +304,48 @@ function extractPageTexts(document: DocumentAiResponse["document"]): string[] {
   return pages.map((page) => textFromAnchor(text, page.layout?.textAnchor)).map((page) => page.trim()).filter(Boolean);
 }
 
-function extractStructuredTables(document: DocumentAiResponse["document"]): StructuredPolicyTable[] {
-  const text = document?.text ?? "";
-  if (!text.trim()) return [];
-
+function extractDocumentLayoutTables(document: DocumentAiResponse["document"]): StructuredPolicyTable[] {
   const result: StructuredPolicyTable[] = [];
-  for (const [pageIndex, page] of (document?.pages ?? []).entries()) {
-    for (const table of page.tables ?? []) {
-      const rows = [...(table.headerRows ?? []), ...(table.bodyRows ?? [])]
-        .map((row) => (row.cells ?? []).map((cell) => textFromAnchor(text, cell.layout?.textAnchor).trim()))
+  walkLayoutBlocks(document?.documentLayout?.blocks ?? [], result);
+  return result;
+}
+
+function walkLayoutBlocks(blocks: DocumentLayoutBlock[], result: StructuredPolicyTable[]) {
+  for (const block of blocks) {
+    if (block.tableBlock) {
+      const rows = [...(block.tableBlock.headerRows ?? []), ...(block.tableBlock.bodyRows ?? [])]
+        .map((row) => (row.cells ?? []).map((cell) => layoutBlocksText(cell.blocks ?? []).trim()))
         .filter((row) => row.some(Boolean));
-      if (rows.length) result.push({ page: pageIndex + 1, rows });
+      if (rows.length) result.push({ page: normalizeLayoutPage(block.pageSpan?.pageStart), rows });
+    }
+    if (block.textBlock?.blocks?.length) walkLayoutBlocks(block.textBlock.blocks, result);
+    for (const entry of block.listBlock?.listEntries ?? []) {
+      if (entry.blocks?.length) walkLayoutBlocks(entry.blocks, result);
     }
   }
-  return result;
+}
+
+function layoutBlocksText(blocks: DocumentLayoutBlock[]): string {
+  const parts: string[] = [];
+  for (const block of blocks) {
+    if (block.textBlock?.text) parts.push(block.textBlock.text);
+    if (block.textBlock?.blocks?.length) parts.push(layoutBlocksText(block.textBlock.blocks));
+    if (block.tableBlock) {
+      const nestedRows = [...(block.tableBlock.headerRows ?? []), ...(block.tableBlock.bodyRows ?? [])];
+      for (const row of nestedRows) {
+        parts.push((row.cells ?? []).map((cell) => layoutBlocksText(cell.blocks ?? [])).join(" "));
+      }
+    }
+    for (const entry of block.listBlock?.listEntries ?? []) {
+      if (entry.blocks?.length) parts.push(layoutBlocksText(entry.blocks));
+    }
+  }
+  return parts.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+}
+
+function normalizeLayoutPage(pageStart: number | undefined) {
+  if (!Number.isFinite(pageStart)) return 1;
+  return Math.max(1, Number(pageStart));
 }
 
 function textFromAnchor(text: string, anchor: TextAnchor | undefined) {
