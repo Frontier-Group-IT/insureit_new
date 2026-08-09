@@ -10,12 +10,13 @@ Before doing any work in this repository, read all of the following:
 - `docs/ICALL_AWS_GATEWAY_HANDOFF.md`
 - `docs/AUTHBRIDGE_RC_HANDOFF.md`
 - `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md`
+- `docs/PERFORMANCE_OPTIMIZATION_HANDOFF.md`
 
 Do this at the beginning of every new ChatGPT/Codex session connected to the repository. Do not ask the user to repeat information already recorded in those files.
 
-Treat `docs/INSUREIT_PROJECT_CONTEXT.md` as the durable technical and business-rule source of truth. Treat `docs/CURRENT_CHAT_HANDOFF.md` as the current conversation continuation state, including active audit findings, selected work, implementation boundaries, and unresolved risks. Treat `docs/PRODUCTION_DOMAIN_HANDOFF.md` as the source of truth for the canonical production portal domain, GoDaddy DNS, Vercel custom-domain binding, Supabase Auth URL configuration, public portal environment settings, domain-sensitive integration verification, and launch-time DNS safeguards. Treat `docs/ICALL_AWS_GATEWAY_HANDOFF.md` as the source of truth for the iCall APIs, AWS Lightsail fixed-IP gateway, Vercel environment, SSO/iframe integration, CSP history, cookie issue, verified state, and immediate continuation steps. Treat `docs/AUTHBRIDGE_RC_HANDOFF.md` as the source of truth for AuthBridge Detailed RC service 372, its three-step encryption/lookup/decryption contract, AWS gateway route, verified UAT state, security incident, and Policy Onboarding vehicle-registration continuation work. Treat `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md` as the source of truth for policy OCR scope, Google Document AI, Vercel OIDC federation, insurer parsers, test evidence, deployment state, and continuation steps.
+Treat `docs/INSUREIT_PROJECT_CONTEXT.md` as the durable technical and business-rule source of truth. Treat `docs/CURRENT_CHAT_HANDOFF.md` as the current conversation continuation state, including active audit findings, selected work, implementation boundaries, and unresolved risks. Treat `docs/PRODUCTION_DOMAIN_HANDOFF.md` as the source of truth for the canonical production portal domain, GoDaddy DNS, Vercel custom-domain binding, Supabase Auth URL configuration, public portal environment settings, domain-sensitive integration verification, and launch-time DNS safeguards. Treat `docs/ICALL_AWS_GATEWAY_HANDOFF.md` as the source of truth for the iCall APIs, AWS Lightsail fixed-IP gateway, Vercel environment, SSO/iframe integration, CSP history, cookie issue, verified state, and immediate continuation steps. Treat `docs/AUTHBRIDGE_RC_HANDOFF.md` as the source of truth for AuthBridge Detailed RC service 372, its three-step encryption/lookup/decryption contract, AWS gateway route, verified UAT state, security incident, and Policy Onboarding vehicle-registration continuation work. Treat `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md` as the source of truth for policy OCR scope, Google Document AI, Vercel OIDC federation, insurer parsers, test evidence, deployment state, and continuation steps. Treat `docs/PERFORMANCE_OPTIMIZATION_HANDOFF.md` as the source of truth for speed, caching, navigation, bundle, hydration, data-loading, document-open, route-rendering, and performance regression-prevention rules.
 
-Update the durable project context after material workflow, schema, constraint, migration or architecture changes. Update or consolidate the current chat handoff after active work is materially implemented, blocked or verified. Update the production-domain handoff after material production-domain, GoDaddy DNS, Vercel domain, Supabase Auth URL, public-origin, callback/redirect, iframe-origin, or launch-time DNS changes. Update the iCall gateway handoff after material iCall API, gateway, domain, IP allowlist, CSP, cookie, SSO, iframe, UAT or production changes. Update the AuthBridge handoff after material provider-contract, gateway, field-mapping, Policy Onboarding, UAT, credential, security, or production changes. Update the policy OCR handoff after material changes to Google authentication, OCR providers, insurer detection/parsers, Section 03 mapping, testing, deployment, privacy controls, or production verification.
+Update the durable project context after material workflow, schema, constraint, migration or architecture changes. Update or consolidate the current chat handoff after active work is materially implemented, blocked or verified. Update the production-domain handoff after material production-domain, GoDaddy DNS, Vercel domain, Supabase Auth URL, public-origin, callback/redirect, iframe-origin, or launch-time DNS changes. Update the iCall gateway handoff after material iCall API, gateway, domain, IP allowlist, CSP, cookie, SSO, iframe, UAT or production changes. Update the AuthBridge handoff after material provider-contract, gateway, field-mapping, Policy Onboarding, UAT, credential, security, or production changes. Update the policy OCR handoff after material changes to Google authentication, OCR providers, insurer detection/parsers, Section 03 mapping, testing, deployment, privacy controls, or production verification. Update the performance handoff after material speed, caching, navigation, bundle, hydration, server-rendering, data-loading, route-filtering, signed-document URL, middleware, or route-regression findings.
 
 Never store secrets, API keys, passwords, tokens, cookies, private keys, full sensitive identity values or MCP credentials in repository context files.
 
@@ -86,6 +87,7 @@ Do not preserve a long failure chronology. Do not state “no changes were made�
 - `docs/ICALL_AWS_GATEWAY_HANDOFF.md` — iCall/gateway-specific verified state, blockers and continuation actions.
 - `docs/AUTHBRIDGE_RC_HANDOFF.md` — AuthBridge Detailed RC provider contract, gateway state, Policy Onboarding integration boundaries, security requirements and verification evidence.
 - `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md` — Policy OCR scope, Google/Vercel identity configuration, insurer parser architecture, test evidence, deployment state, durable lessons and continuation actions.
+- `docs/PERFORMANCE_OPTIMIZATION_HANDOFF.md` — speed, caching, navigation, bundle, hydration, data-loading, document-open, route-rendering and performance regression-prevention rules.
 - `docs/PRODUCTION_READINESS_AUDIT.md` — current source-backed production risks and remediation order.
 - `docs/PRODUCTION_RELEASE_CHECKLIST.md` — reusable evidence-based release gates.
 
@@ -213,6 +215,33 @@ For full website audits, pre-production checks, release planning, production dep
 A production release is **NO-GO** while any severity-4 finding remains open. A checklist item is not complete without an owner and direct evidence tied to the exact release commit and target environment.
 
 Do not replace the full release checklist with a visual UI review. Production readiness includes authorization, sensitive data, database integrity, migrations, storage, business workflows, integrations, accessibility, performance, observability, backup/restore, deployment verification and rollback.
+
+## Performance optimization protocol
+
+When modifying navigation, page layouts, shared components, middleware, data loading, list/register filters, document views, forms, workflow pages, policy onboarding, intermediary onboarding, or any high-traffic route, read and follow:
+
+- `docs/PERFORMANCE_OPTIMIZATION_HANDOFF.md`
+- `docs/performance-audit-2026-08-07.md` when doing a larger speed audit or regression review
+
+Mandatory safeguards:
+
+- Do not add global `fresh=Date.now()` navigation, timestamp URLs, or link interceptors for ordinary internal routing.
+- Do not use `window.location.assign()` or `window.location.replace()` for normal internal navigation when `Link`, `router.push`, `router.replace`, `router.refresh`, `revalidatePath`, or `revalidateTag` is appropriate.
+- Do not call the server/database for simple status filters, counters, sorting, or search over rows that are already loaded on the client. Use client-side state unless the dataset is intentionally paginated/search-backed.
+- Do not add broad `force-dynamic`, `revalidate = 0`, `no-store`, or cache bypass behavior without a written reason tied to freshness, authorization, or correctness.
+- Do not mount workflow-specific client components, DOM scanners, mutation observers, polling loops, or global listeners in the root layout unless the behavior is truly global and measured.
+- Do not top-level import heavy client libraries such as PDF, spreadsheet, OCR, charting, rich-editor, map, or animation packages unless needed for the initial view. Lazy-load them at the action point or move the work server-side.
+- Do not generate Supabase signed document URLs during page render for every document card. Render metadata first and generate signed URLs only through authorized open/download actions.
+- Do not render or hydrate hidden workflow stages, tabs, or modal-heavy content before the user needs them.
+- Do not duplicate profile, permission, master-data, document-context, or reference-data fetches in the same request/render path. Use request-scoped memoization and stable reference-data caches where appropriate.
+- Keep authorization, mutation validation, provider calls, signed-document access and sensitive data checks server-side and authoritative. Performance fixes must reduce duplicate work, not weaken security.
+- After material performance-sensitive changes, run build/typecheck where relevant and perform browser-level smoke checks on affected routes. Do not claim production speed success without live or repeatable evidence.
+
+Context retention rule for performance:
+
+- If a future agent discovers a reusable performance root cause, failed approach, cache invalidation rule, route-rendering hazard, or navigation/data-loading pattern that should prevent repetition, record it concisely in `docs/PERFORMANCE_OPTIMIZATION_HANDOFF.md`.
+- If the learning is a stable cross-repository operating rule, update `AGENTS.md` as well. If it is workflow/business/schema-specific, update the relevant durable handoff instead.
+- Do not record temporary timing noise, guesses, raw logs, secrets, private data, or every small chat update.
 
 ## Hermes collaboration protocol
 
