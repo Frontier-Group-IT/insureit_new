@@ -16,8 +16,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  verify:
+    name: Run compulsory verification gate
+    uses: ./.github/workflows/verify-web-portal.yml
+
   deploy:
     name: Trigger Vercel production deployment
+    needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -66,6 +71,7 @@ jobs:
             echo "- Branch: \`main\`"
             echo "- Trigger commit: \`${GITHUB_SHA}\`"
             echo "- Requested by: \`${GITHUB_ACTOR}\`"
+            echo "- Verification gate: passed before deploy hook"
             echo
-            echo "This confirms that Vercel accepted the deploy-hook request. Check Vercel for the final build and deployment result."
+            echo "This confirms the repository verification gate passed and Vercel accepted the deploy-hook request. Check Vercel for the final build and deployment result."
           } >> "$GITHUB_STEP_SUMMARY"
