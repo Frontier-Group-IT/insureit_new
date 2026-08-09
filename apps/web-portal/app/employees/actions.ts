@@ -1,6 +1,6 @@
 "use server";
 
-import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
