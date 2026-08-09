@@ -12,7 +12,7 @@ Every route visible to the owner must be classified as one of:
 - **FIX** — remains visible only after the identified owner-facing defect is corrected.
 - **HIDE** — intentionally excluded from owner navigation until implemented/polished.
 
-Do not expose blank routes, UAT/development utilities, raw provider/database errors, placeholder content, or obviously unfinished workflows in the owner-facing navigation.
+Do not expose blank routes, UAT/development utilities, raw provider/database errors, placeholder content, duplicate workflows, or obviously unfinished routes in the owner-facing navigation.
 
 ## Owner account model
 
@@ -34,6 +34,8 @@ Do not expose blank routes, UAT/development utilities, raw provider/database err
 - Development/iCall UAT restricted to `it_super_user`.
 - Super Admin retains business Settings/admin access.
 - Mobile navigation confirmed to use the same filtered source.
+- Duplicate existing-intermediary presentation corrected: individual `Add Existing POSP` / `Add Existing MISP` remain in the business POSP/MISP groups, while bulk `Import POSP / MISP` and `Import Batches` were removed from owner-facing Onboarding and moved to the IT-only Development workspace.
+- Additional sidebar overlap review completed: remaining Add/queue/filter entries represent distinct chooser, create, or filtered-register workflows rather than duplicate business actions.
 
 ### 2. Dashboard — SOURCE PASS / RUNTIME SMOKE PENDING
 
@@ -51,11 +53,7 @@ Do not expose blank routes, UAT/development utilities, raw provider/database err
 - Workflow errors are normalized.
 - Registration completion remains tied to signed registration form for new onboarding, with historical progression preserved.
 - Parent-child registration certificate projection remains intact.
-
-Key commits:
-- `12233a3897bf7f41eb1f3a762b54178f045efc5a`
-- `1882f1930e428a6d96ce8c79230130f456db7a8d`
-- `b5b1a936f48314d1b454e993661ad7c06db3c6fe`
+- Business navigation now exposes one clear individual route for adding existing POSP/MISP accounts; bulk migration/import tools are IT-only.
 
 Known visual FIX:
 - Workflow identity header has a light container with white identity text. Correct during final visual pass without touching workflow logic unnecessarily.
@@ -68,13 +66,6 @@ Known visual FIX:
 - RC lookup no longer exposes provider exception text.
 - Register empty states, filters, search and pagination are presentation-ready at source level.
 
-Key commits:
-- `29af4285073f5598daed427f5ea0199239049043`
-- `2c455644acab32e8d080990dbafe28f816ad118e`
-- `9fccb984e621dec98cc785a63927bfb4fa7db7c2`
-- `dcceb7336fdb739a788dd804c331462f94be6e8e`
-- `f150ec0697f9c12d463bf803509ed9d54f9f3daa`
-
 Runtime checks still required for Add Vehicle, Add Policy, RC lookup and policy OCR.
 
 ### 5. Claims — SOURCE PASS / DEEP WORKFLOW RUNTIME SMOKE PENDING
@@ -83,9 +74,6 @@ Runtime checks still required for Add Vehicle, Add Policy, RC lookup and policy 
 - Register no longer passes raw query error messages to the UI.
 - Claim detail source uses controlled routing and authenticated document-open endpoints; claim lookup failure resolves to not-found rather than dumping query text.
 - Claim document verification page was sanitized in handover batch 1.
-
-Implementation commit:
-- `da3ce22e5ae0cd6a0e244c29d75923a1975c9642`
 
 Runtime checks still required across Documents, Verification, Survey, Under Repair and Settlement journeys.
 
@@ -108,20 +96,14 @@ Runtime checks still required across Documents, Verification, Survey, Under Repa
 - Access Control terminology was simplified from engineering language to standard business access language.
 - Access changes remain audited and organisation scope remains visible.
 
-Implementation commits include:
-- `b72ffa2cac92c4d2b48e4b5bd53c4f0bc753604a`
-- `3fa425fd39ceeeeaa0766f55c59744fe19039893`
-- `7d68c4bb8d73e49e0d935df72bb7827917fa2794`
-- `8229ed36a98f1dd8fcbdc30ebfed5b7d44c7cb93`
-- `ebf051d1c3e4f2445c07f6a534b79c3552efda68`
-
 ### 8. Global polish — PARTIAL SOURCE PASS / FINAL VISUAL SMOKE PENDING
 
 Completed:
 - major owner-visible raw DB/provider error paths sanitized across Intermediatory, Fleet/Policy, Claims and Administration;
-- business navigation no longer exposes blank Reports or IT UAT tools;
+- business navigation no longer exposes blank Reports or IT UAT/import tools;
 - normal onboarding no longer presents UAT/test copy;
-- inactive employee history is not the default owner view.
+- inactive employee history is not the default owner view;
+- duplicate existing-intermediary navigation was consolidated.
 
 Outstanding targeted visual checks:
 - workflow identity header contrast;
@@ -137,7 +119,7 @@ Production checks performed without deleting business data:
 - no active `super_admin` profile currently exists;
 - the only active top technical account remains the existing `it_super_user` account;
 - historical inactive employee records, including an old `DEMO` code, were preserved rather than deleted;
-- Employee Directory now defaults to Active staff so inactive history does not dominate the owner view.
+- Employee Directory defaults to Active staff so inactive history does not dominate the owner view.
 
 ### 10. Owner-account smoke test — BLOCKED BY AUTHENTICATED USER CREATION
 
@@ -185,7 +167,11 @@ Still required:
 - Run: `31310738623` — deploy hook workflow **success**.
 - Scope: Claims and Administration handover cleanup.
 
-Workflow success confirms the Vercel deploy-hook request, not the final authenticated Vercel smoke test.
+### Final source-cleanup batch
+- Trigger: `43f34f7873e0fb7b268970617d7e51f1e2adfda9`
+- Run: `31311347038` — deploy hook workflow **success** and Vercel later reported Ready.
+
+Workflow success confirms the Vercel deploy-hook request; Vercel Ready/runtime visual checks remain separate evidence.
 
 ## Formal production-readiness note
 
