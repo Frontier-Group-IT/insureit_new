@@ -182,7 +182,7 @@ async function getGoogleAccessToken(config: NonNullable<ReturnType<typeof getGoo
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       audience,
-      grant_type: "urn:ietf:params:oauth-grant-type:token-exchange",
+      grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
       requested_token_type: "urn:ietf:params:oauth:token-type:access_token",
       scope: CLOUD_PLATFORM_SCOPE,
       subject_token_type: "urn:ietf:params:oauth:token-type:jwt",
