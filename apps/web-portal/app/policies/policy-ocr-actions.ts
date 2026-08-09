@@ -5,6 +5,10 @@ import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { parsePolicyDocument, type ParsedPolicyField } from "@/lib/policy-ocr-parsers";
 import { refineDigitCommercialPolicyV2 } from "@/lib/policy-ocr-digit-refiner-v2";
 import { refineIffcoCommercialPolicyV2 } from "@/lib/policy-ocr-iffco-refiner-v2";
+import {
+  refineIffcoStructuredFinancials,
+  type StructuredPolicyTable,
+} from "@/lib/policy-ocr-iffco-structured-refiner";
 import { refineNewIndiaCommercialPolicy } from "@/lib/policy-ocr-new-india-refiner";
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
@@ -31,9 +35,21 @@ type DocumentAiResponse = {
     text?: string;
     pages?: Array<{
       layout?: { textAnchor?: TextAnchor };
+      tables?: DocumentAiTable[];
     }>;
   };
   error?: { message?: string; status?: string };
+};
+
+type DocumentAiTable = {
+  headerRows?: DocumentAiTableRow[];
+  bodyRows?: DocumentAiTableRow[];
+};
+
+type DocumentAiTableRow = {
+  cells?: Array<{
+    layout?: { textAnchor?: TextAnchor };
+  }>;
 };
 
 type TextAnchor = {
@@ -110,14 +126,20 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
     const pages = extractPageTexts(payload?.document);
     if (!pages.length) return { ok: false, error: "Google Document AI could not find readable policy text in this document." };
 
+    const tables = extractStructuredTables(payload?.document);
     const baseParsed = parsePolicyDocument(pages);
-    const parsed = baseParsed.parserId === "digit_commercial_motor_v1"
+    let parsed = baseParsed.parserId === "digit_commercial_motor_v1"
       ? refineDigitCommercialPolicyV2(pages, baseParsed)
       : baseParsed.parserId === "iffco_tokio_commercial_motor_v1"
         ? refineIffcoCommercialPolicyV2(pages, baseParsed)
         : baseParsed.parserId === "new_india_motor_v1"
           ? refineNewIndiaCommercialPolicy(pages, baseParsed)
           : baseParsed;
+
+    if (baseParsed.parserId === "iffco_tokio_commercial_motor_v1") {
+      parsed = refineIffcoStructuredFinancials(tables, parsed);
+    }
+
     if (!parsed.fields.length) return { ok: false, error: "No supported policy fields could be extracted from this document." };
 
     return {
@@ -160,7 +182,7 @@ async function getGoogleAccessToken(config: NonNullable<ReturnType<typeof getGoo
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       audience,
-      grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
+      grant_type: "urn:ietf:params:oauth-grant-type:token-exchange",
       requested_token_type: "urn:ietf:params:oauth:token-type:access_token",
       scope: CLOUD_PLATFORM_SCOPE,
       subject_token_type: "urn:ietf:params:oauth:token-type:jwt",
@@ -229,6 +251,22 @@ function extractPageTexts(document: DocumentAiResponse["document"]): string[] {
   if (!pages.length) return [text];
 
   return pages.map((page) => textFromAnchor(text, page.layout?.textAnchor)).map((page) => page.trim()).filter(Boolean);
+}
+
+function extractStructuredTables(document: DocumentAiResponse["document"]): StructuredPolicyTable[] {
+  const text = document?.text ?? "";
+  if (!text.trim()) return [];
+
+  const result: StructuredPolicyTable[] = [];
+  for (const [pageIndex, page] of (document?.pages ?? []).entries()) {
+    for (const table of page.tables ?? []) {
+      const rows = [...(table.headerRows ?? []), ...(table.bodyRows ?? [])]
+        .map((row) => (row.cells ?? []).map((cell) => textFromAnchor(text, cell.layout?.textAnchor).trim()))
+        .filter((row) => row.some(Boolean));
+      if (rows.length) result.push({ page: pageIndex + 1, rows });
+    }
+  }
+  return result;
 }
 
 function textFromAnchor(text: string, anchor: TextAnchor | undefined) {
