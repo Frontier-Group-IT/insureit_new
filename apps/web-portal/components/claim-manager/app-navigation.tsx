@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { BarChart3, CheckSquare2, ChevronRight, ClipboardList, FileChartColumn, FileCheck2, FlaskConical, Gauge, LayoutGrid, Plus, Settings, ShieldCheck, Sparkles, Upload, UserCog, UserPlus, UsersRound } from "lucide-react";
+import { BarChart3, CheckSquare2, ChevronRight, ClipboardList, FileCheck2, FlaskConical, Gauge, LayoutGrid, Plus, Settings, ShieldCheck, Sparkles, Upload, UserCog, UserPlus, UsersRound } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { BrandLockup } from "@/components/brand-lockup";
 import { internalLaunchHome, isIntermediaryOnlyLaunch } from "@/lib/launch-scope";
@@ -85,15 +85,14 @@ export const navigationSections:NavigationSection[]=[
   {href:"/tasks?status=in_progress",label:"In Progress",icon:Gauge,capability:"view_tasks"},
   {href:"/tasks?status=overdue",label:"Overdue",icon:Gauge,capability:"view_tasks"},
   {href:"/tasks?status=completed",label:"Completed",icon:FileCheck2,capability:"view_tasks"}
- ]},
- {key:"reports",label:"Reports",icon:FileChartColumn,tint:"from-[#f1b94a] to-[#ffcf6b]",capability:"view_reports",items:[{href:"/reports",label:"Reports Workspace",icon:FileChartColumn,capability:"view_reports"}]}
+ ]}
 ];
 
 const developmentSection:NavigationSection={key:"development",label:"Development",icon:FlaskConical,tint:"from-[#7C3AED] to-[#2563EB]",capability:"manage_system",items:[{href:"/customers/posp-misp/icall-uat",label:"iCall UAT Integration",icon:FlaskConical,capability:"manage_system"}]};
 
 const permissionRank:Record<PermissionAccess,number>={none:0,view:1,edit:2,approve:3};
 export function permits(permissionAccess:PermissionAccessMap,capability:Capability,minimumAccess:Exclude<PermissionAccess,"none">="view"){return permissionRank[permissionAccess[capability]??"none"]>=permissionRank[minimumAccess]}
-export function visibleNavigationSections(role:string|null|undefined,permissionAccess:PermissionAccessMap){const filterNode=(node:NavigationNode):NavigationNode|null=>{if(!permits(permissionAccess,node.capability,node.minimumAccess))return null;if(node.kind!=="group")return node;const items=node.items.filter(item=>permits(permissionAccess,item.capability,item.minimumAccess));return items.length?{...node,items}:null};const availableSections=isIntermediaryOnlyLaunch?navigationSections.filter(section=>section.key==="distribution"):navigationSections;const sections=availableSections.filter(section=>permits(permissionAccess,section.capability,section.minimumAccess)).map(section=>({...section,items:section.items.map(filterNode).filter((node):node is NavigationNode=>Boolean(node))})).filter(section=>section.items.length);return !isIntermediaryOnlyLaunch&&permits(permissionAccess,"manage_system","approve")?[...sections,developmentSection]:sections}
+export function visibleNavigationSections(role:string|null|undefined,permissionAccess:PermissionAccessMap){const filterNode=(node:NavigationNode):NavigationNode|null=>{if(!permits(permissionAccess,node.capability,node.minimumAccess))return null;if(node.kind!=="group")return node;const items=node.items.filter(item=>permits(permissionAccess,item.capability,item.minimumAccess));return items.length?{...node,items}:null};const availableSections=isIntermediaryOnlyLaunch?navigationSections.filter(section=>section.key==="distribution"):navigationSections;const sections=availableSections.filter(section=>permits(permissionAccess,section.capability,section.minimumAccess)).map(section=>({...section,items:section.items.map(filterNode).filter((node):node is NavigationNode=>Boolean(node))})).filter(section=>section.items.length);return !isIntermediaryOnlyLaunch&&role==="it_super_user"&&permits(permissionAccess,"manage_system","approve")?[...sections,developmentSection]:sections}
 
 export function AppNavigation({activeNav,role,permissionAccess}:Props){
  const pathname=usePathname();const searchParams=useSearchParams();const sections=useMemo(()=>visibleNavigationSections(role,permissionAccess),[role,permissionAccess]);const routeSection=sectionForPath(pathname);const resolved=routeSection??(activeNav!=="dashboard"&&activeNav!=="none"?activeNav:null);const[openSection,setOpenSection]=useState<SectionKey|null>(resolved);const[openGroups,setOpenGroups]=useState<Record<string,boolean>>({});const currentQuery=searchParams.toString();
