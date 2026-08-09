@@ -15,6 +15,11 @@ concurrency:
   group: verify-web-portal-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-public-anon-key
+  NEXT_PUBLIC_PORTAL_URL: https://portal.insureit.in
+
 jobs:
   verify:
     name: OCR regressions, typecheck, lint and build
@@ -70,6 +75,7 @@ jobs:
             echo "- OCR regressions: IFFCO structured, IFFCO, Digit, New India"
             echo "- Static checks: typecheck and lint"
             echo "- Build: Next.js production build"
+            echo "- Build-only public env: non-secret CI placeholders; no production credentials used"
             echo
             echo "A green job is the repository evidence for these checks. No user-local terminal execution is required."
           } >> "$GITHUB_STEP_SUMMARY"
