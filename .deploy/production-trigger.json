@@ -1,12 +1,12 @@
 {
-  "purpose": "Deploy the corrected owner navigation with duplicate-item protection.",
-  "deploy_requested_at": "2026-08-09T21:52:00+05:30",
+  "purpose": "Deploy the root-cause fix for duplicate Add Existing POSP/MISP sidebar entries.",
+  "deploy_requested_at": "2026-08-09T22:03:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT INSUREIT navigation duplicate correction",
-  "source_commit": "9272601198f4d2b915cc8571c774a526f371c125",
-  "rollback_ref": "581fab0ef2b26976ad5b49e718f7796f029baede",
-  "rollback_commit": "581fab0ef2b26976ad5b49e718f7796f029baede",
-  "release_scope": "Deploy current main with the intended Intermediatory navigation: one Add Existing POSP under POSP, one Add Existing MISP under MISP, and Pending Applications only under Onboarding. Add a shared navigation deduplication guard so repeated href+label entries cannot render twice on desktop or mobile even if a future source edit accidentally duplicates an item.",
-  "verification": "Current main was re-read before deployment and contains exactly one literal Add Existing POSP and one literal Add Existing MISP in the shared navigation definition, with no existing-intermediary action under Onboarding. The shared visibility function now deduplicates group items by href+label before both desktop and mobile renderers consume them. No database or business-data changes are included.",
+  "source": "ChatGPT INSUREIT duplicate-sidebar root-cause fix",
+  "source_commit": "0fd8883ceac7129c9d63e82ae67d85873f4f1522",
+  "rollback_ref": "fad200bcf65eb0c6b470ac9dd030261c8d269d39",
+  "rollback_commit": "fad200bcf65eb0c6b470ac9dd030261c8d269d39",
+  "release_scope": "Remove the legacy DOM-mutation code that cloned Add Existing POSP and Add Existing MISP into the rendered sidebar after React navigation had already rendered those actions. Keep the existing application-review legacy import action intact. Current navigation remains one Add Existing POSP under POSP, one Add Existing MISP under MISP, and Pending Applications only under Onboarding.",
+  "verification": "The historical LegacyIntermediaryImportLink component was confirmed to clone sidebar anchors after render, bypassing the React navigation array and its deduplication guard. Commit 0fd8883 removes addSidebarLinks/addSidebarLink entirely and leaves only the review-page Import existing behavior. No database or business-data changes are included.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
