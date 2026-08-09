@@ -29,15 +29,17 @@ Current server flow:
 Policy PDF/image
  -> Next.js server action
  -> Vercel OIDC / Google WIF
- -> Google Document AI Enterprise OCR
- -> page text + Document AI table cell anchors
- -> INSUREIT insurer detector
- -> insurer-specific text refiner
- -> structured financial refiner where available
+ -> Enterprise Document OCR processor
+      -> flattened page text for insurer/product/policy/IDV/dates/comparison totals
+ -> for supported IFFCO PDFs only: dedicated Layout Parser processor
+      -> Document.documentLayout.tableBlock rows/cells
+ -> insurer-specific semantic mapping
  -> accounting reconciliation gate
  -> review modal
  -> selected Section 03 fields applied
 ```
+
+The Layout Parser is a separate processor. Do not assume Enterprise Document OCR returns the Layout Parser `documentLayout` tree.
 
 Primary files:
 
@@ -51,31 +53,54 @@ Primary files:
 
 Production Google identity remains Vercel OIDC Workload Identity Federation with short-lived service-account impersonation. No service-account JSON key is used.
 
-## 3. Verified parser baseline before structured-table change
+## 3. Production Google processors
 
-User-local verification on 2026-08-09:
+Existing Document OCR processor:
 
 ```text
-IFFCO text/regression: 10/10 passed
-Digit regression:       5/5 passed
-New India regression:   5/5 passed
-Typecheck:               passed
-Lint:                    0 errors
-Next.js build:           passed
+Name: insureit-policy-ocr
+ID: 84d0facf88efc0d7
+Type: Document OCR
+Region: us
 ```
 
-These checks preceded the structured-table architecture change and must not be treated as verification of the new commits.
+Dedicated Layout Parser created by the user on 2026-08-09:
 
-## 4. Production learning from IFFCO N8109328
+```text
+Name: insureit-policy-layout
+ID: b630ad846c5137a1
+Type: Layout Parser
+Region: us
+```
+
+The application supports optional `GOOGLE_DOCUMENT_AI_LAYOUT_PROCESSOR_ID`; when absent it currently falls back to the verified project processor ID above. The processor ID is configuration metadata, not a credential. Do not store secrets or service-account keys in repository files.
+
+## 4. Verified parser baseline before dedicated Layout Parser change
+
+User-local verification on 2026-08-09 after the first structured-refiner implementation:
+
+```text
+IFFCO structured regression: 2/2 passed
+IFFCO text regression:      11/11 passed
+Digit regression:            5/5 passed
+New India regression:        5/5 passed
+Typecheck:                    passed
+Lint:                        0 errors / warnings only
+Next.js build:                passed
+```
+
+This proves the semantic/accounting refiner baseline, but it does not verify the new second-call Layout Parser integration. Run the same checks again after the dedicated Layout Parser wiring commit before another release.
+
+## 5. Production learning from IFFCO N8109328
 
 **VERIFIED LEARNING:** flattened OCR text is not reliable enough to assign IFFCO premium-table columns by proximity alone. Live Google OCR correctly recovered insurer, Package product, policy number, IDV, dates and later CPA, but flattened premium interpretation produced unsafe values including OD `1`, TP `997134`/`22409`, where `997134` is table metadata/SAC rather than a premium.
 
 Correct rule:
 
 - Never accept a financial field only because a nearby number follows `Net(A)` / `Net(B)` in flattened reading order.
-- Prefer structured table cells/rows when Google supplies them.
+- Use the dedicated Layout Parser's `Document.documentLayout.tableBlock` structure for premium-table rows.
 - Use labeled liability rows plus accounting reconciliation.
-- If the financial set cannot be proven, withhold OD/TP/CPA instead of auto-applying guesses.
+- If the Layout Parser call fails, returns no usable table rows, or the financial set cannot be proven, withhold OD/TP/CPA instead of auto-applying flattened guesses.
 
 Known N8109328 accounting target:
 
@@ -88,35 +113,37 @@ Printed net = 22739
 OD = 22739 - 7367 - 330 = 15042
 ```
 
-## 5. Structured IFFCO financial pass
+## 6. Structured IFFCO financial pass
 
-**IMPLEMENTED IN REPOSITORY / NOT YET DEPLOYED OR LIVE-VERIFIED**
-
-New file:
-
-```text
-apps/web-portal/lib/policy-ocr-iffco-structured-refiner.ts
-```
+**IMPLEMENTED IN REPOSITORY / NEW DEDICATED LAYOUT PROCESSOR PATH NOT YET DEPLOYED OR LIVE-VERIFIED**
 
 Behavior:
 
-1. Server action preserves Document AI `pages[].tables[]` cell text using each cell `layout.textAnchor`.
-2. Existing IFFCO text refiner still owns insurer/product/policy/IDV/dates and comparison totals.
-3. Structured pass rebuilds OD/TP/CPA from premium-table rows.
-4. For current IFFCO family it uses:
+1. Enterprise OCR remains the first call and provides page text for the existing insurer-specific parser.
+2. If the detected family is IFFCO and the upload is a PDF, the server makes a second authenticated call to the Layout Parser processor `b630ad846c5137a1`.
+3. The request enables Layout Parser table annotation.
+4. The server reads `document.documentLayout.blocks[].tableBlock`, preserving table rows and cell contents.
+5. Existing IFFCO text refiner still owns insurer/product/policy/IDV/dates and printed comparison totals.
+6. Structured pass rebuilds OD/TP/CPA from premium-table rows.
+7. For the current IFFCO family it uses:
    - `Basic TP Premium`
    - `Legal Liability to Driver`
    - `P.A. Owner Driver`
    - independently parsed printed net
-5. Financial values are returned only when `OD + TP + CPA = printed net` within tolerance.
-6. When structured evidence is incomplete or does not reconcile, unsafe financial fields are removed and Review Required is returned.
+8. Financial values are returned only when `OD + TP + CPA = printed net` within tolerance.
+9. If structured tables are unavailable/incomplete or do not reconcile, all IFFCO OD/TP/CPA fields are removed and Review Required is returned.
 
-Relevant implementation commits:
+Relevant dedicated-Layout commits:
+
+```text
+ed48f4d46fef535a35d626850b97026c8251e373  Fail safe when IFFCO structured tables are unavailable
+e49b3ac94adc5051a2a2ef9c39847b92b71e86c3  Use dedicated Layout Parser for IFFCO premium tables
+```
+
+Earlier structured-refiner commits remain part of the history:
 
 ```text
 a63604a773f5c2cdd5eaba08ada83cb0f125daec  Add structured IFFCO table financial refiner
-6e3b37af37b254de367707f5d99cad96816c997b  Wire Document AI table structure into policy OCR
-f16058c0c159ec90f46d4b28a718d3205ab82a7b  Correct Google STS grant type after wiring
 1b5a19e8a31e7a2c7acf62510e3dcb7de94fbbf2  Add structured IFFCO regression
 22d62f0387368ff8d0f1725321e0a286b2b9f5df  Add structured regression command
 ```
@@ -129,12 +156,10 @@ npm run policy-ocr:iffco-structured-regression
 
 The synthetic regression covers:
 
-- repairing the exact production-shaped bad state `OD=1 / TP=22409 / CPA=330` from structured rows to `15042 / 7367 / 330`;
+- repairing the production-shaped bad state `OD=1 / TP=22409 / CPA=330` from structured rows to `15042 / 7367 / 330`;
 - withholding all financial fields when structured CPA evidence is missing.
 
-This regression has been committed but has not yet been run in the user's local environment after these commits.
-
-## 6. Existing insurer scope
+## 7. Existing insurer scope
 
 Supported pure-motor families remain:
 
@@ -144,11 +169,11 @@ Supported pure-motor families remain:
 
 United India remains deferred, including Miscellaneous/Special Type Vehicles and Contractors Plant & Machinery.
 
-## 7. Release discipline / next steps
+## 8. Release discipline / next steps
 
-Ordinary commits do not intentionally deploy production. Do not modify `.deploy/production-trigger.json` unless the user explicitly says `deploy now` or `finish and deploy`.
+Ordinary commits do not intentionally deploy production. Do not modify `.deploy/production-trigger.json` unless the user explicitly says `deploy now` or `finish and deploy` after the current code change.
 
-Before deployment of the structured-table change, run:
+Before deployment of the dedicated Layout Parser integration, run:
 
 ```text
 npm run policy-ocr:iffco-structured-regression
@@ -160,4 +185,4 @@ npm run lint
 npm run build
 ```
 
-After an explicit deployment request, verify the exact Vercel production commit and then upload the same real IFFCO policy again. The target financial result is OD `15042`, TP `7367`, CPA `330`. If Document AI does not supply usable table rows, do not reintroduce proximity guesses; inspect sanitized structural evidence and fail to Review Required instead.
+After explicit deployment approval, verify the exact Vercel production commit and upload the same real IFFCO policy again. Target financial result: OD `15042`, TP `7367`, CPA `330`. If Layout Parser does not supply usable rows, expected safe behavior is Review Required with OD/TP/CPA withheld, not guessed.
