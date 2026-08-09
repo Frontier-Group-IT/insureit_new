@@ -1,12 +1,12 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-09T15:01:00+05:30",
+  "deploy_requested_at": "2026-08-09T15:30:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT policy OCR production hotfix",
-  "source_commit": "eb0fc0c9f2c14f0fd1f82edee12dd298628d697d",
+  "source": "ChatGPT IFFCO scanned OCR extraction hotfix",
+  "source_commit": "d884b484f1920336f2697bde8c2bdc4bedfca2bb",
   "rollback_ref": "rollback/pre-performance-optimization-20260809-015856",
   "rollback_commit": "76ea8bcd41cdfb0b1c9bb6961e0f3360640f0ac0",
-  "release_scope": "Deploy current main with the production OCR hotfix for the live IFFCO misclassification observed with CVI_N8109328.pdf. The hotfix replaces first-match insurer routing with weighted insurer-family evidence so a stray Digit phrase cannot override strong IFFCO P400/header/schedule evidence, adds a regression fixture for that exact conflict, and fixes OCR application of Valid from/Valid upto by resolving the nested date inputs through their aria-labels. Existing Digit, IFFCO and New India parser refiners remain otherwise unchanged.",
-  "verification": "The preceding release baseline was user-verified at New India 5/5, Digit 5/5, IFFCO 10/10, typecheck pass, lint 0 errors, build pass. For this hotfix, the exact live IFFCO misclassification was converted into an additional regression fixture and the TypeScript changes were source-reviewed. The session sandbox could not execute the suite because outbound GitHub/network resolution is unavailable, so post-deploy live verification with CVI_N8109328.pdf is mandatory before calling the hotfix fully verified.",
+  "release_scope": "Deploy current main with the follow-up live IFFCO scanned-policy OCR extraction hardening. Production already identifies CVI_N8109328.pdf as IFFCO-TOKIO and correctly extracts Package, policy number N8109328 and IDV 1600000. This hotfix expands scanned OCR handling for split Net(A)/Net(B) rows, Owner-Driver line/hyphen variants, policy-period dates split across OCR lines, and accounting recovery from printed net when one component row is unreadable. It preserves review-required behavior when CPA cannot be read reliably.",
+  "verification": "This hotfix is driven by direct production evidence from CVI_N8109328.pdf: insurer/product/policy/IDV are now correct, while OD, TP and validity dates remain missing in the live scan. The parser change is narrowly scoped to IFFCO scanned OCR anchors and reconciliation. The session cannot execute the local Node regression/build suite because outbound repository network resolution is unavailable, so the same real policy must be retested after deployment before marking the hotfix verified.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
