@@ -40,8 +40,7 @@ const cases: Case[] = [
     expected: expected("N9000005", "3410730", "4715", "7367", "0", "No", "2026-08-04", "2027-08-03", "12082", "2174.76", "14256.76"),
   },
 
-  // Real-layout fixtures below are sanitized reconstructions of the five supplied IFFCO schedules.
-  // They preserve OCR-relevant line order, labels, premium values and conflicts, but contain no policyholder/vehicle identity data.
+  // Real-layout fixtures below are sanitized reconstructions of the supplied IFFCO schedules.
   {
     name: "real layout: add-on schedule with invoice reference and CPA declaration conflict",
     pages: [
@@ -77,6 +76,14 @@ const cases: Case[] = [
     name: "real layout: new vehicle zero CPA row",
     pages: [realLayoutPage("N9100005", "1-TESTREF5", "04/08/2026", "03/08/2027", 3410730, 4715, 7367, 0, 12082, 2174.76, 14256.76, 100, "0")],
     expected: expected("N9100005", "3410730", "4715", "7367", "0", "No", "2026-08-04", "2027-08-03", "12082", "2174.76", "14256.76"),
+  },
+  {
+    name: "real production failure: stray Digit phrase does not override IFFCO schedule",
+    pages: [
+      `${realLayoutPage("N9100006", "1-TESTREF6", "24/07/2026", "23/07/2027", 1600000, 1122, 7697, 330, 22739, 4093.02, 26832.02, 100, "-1123")}\nGo Digit General Insurance Limited`,
+      `Section 2: Value Auto Coverage\nDepreciation Waver Cover 9600.00 As Per Coverage Wordings\nConsumable 4320.00 As Per Coverage Wordings\nPremium Bifurcation (Rs.)\nSection 1 (Rs.) Section 2 (Rs.) RPI Premium Premium/Taxable Value(Rs.) Total GST Net Premium (Rs.)\n8819.00 13920.00 22739.00 4093.02 26832.02`,
+    ],
+    expected: expected("N9100006", "1600000", "15042", "7367", "330", "Yes", "2026-07-24", "2027-07-23", "22739", "4093.02", "26832.02"),
   },
 ];
 
