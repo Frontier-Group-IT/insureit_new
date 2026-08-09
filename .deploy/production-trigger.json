@@ -1,12 +1,12 @@
 {
-  "purpose": "Deploy the consolidated existing POSP/MISP navigation for owner handover.",
-  "deploy_requested_at": "2026-08-09T21:23:00+05:30",
+  "purpose": "Deploy corrected existing intermediary navigation after owner handover review.",
+  "deploy_requested_at": "2026-08-09T21:39:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT INSUREIT owner handover navigation consolidation",
-  "source_commit": "685232b6e5810cce2d08f930fe3c64fee2ee6e4b",
+  "source": "ChatGPT INSUREIT owner handover navigation correction",
+  "source_commit": "9c88d02e18262d0165d6b5c82b13de56ad73aefc",
   "rollback_ref": "9e54075ad0566c4efbd441f9ab81daeca04ac1a4",
   "rollback_commit": "9e54075ad0566c4efbd441f9ab81daeca04ac1a4",
-  "release_scope": "Remove the repeated Add Existing POSP and Add Existing MISP business actions from their separate POSP/MISP groups. Keep Add POSP and Add MISP for new onboarding. Add one Onboarding > Add Existing POSP / MISP menu entry backed by a dedicated chooser that routes to the existing POSP or MISP legacy onboarding form without changing underlying onboarding logic.",
-  "verification": "Current shared desktop/mobile navigation source now contains no separate Add Existing POSP or Add Existing MISP menu entries. One consolidated Add Existing POSP / MISP entry remains under Onboarding. A protected chooser page requires POSP/MISP manager access and links into the existing legacy-mode routes. No database migration or business-data mutation is included.",
+  "release_scope": "Restore Add Existing POSP under POSP and Add Existing MISP under MISP. Remove the incorrectly added Onboarding > Add Existing POSP / MISP entry and delete its redundant chooser route. Keep Onboarding limited to Pending Applications. No onboarding workflow or database logic changes are included.",
+  "verification": "Current navigation source shows Add Existing POSP only under POSP, Add Existing MISP only under MISP, and Pending Applications as the only Onboarding item. The redundant /customers/posp-misp/existing chooser page has been deleted. No database migration or business-data mutation is included.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
