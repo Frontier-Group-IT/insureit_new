@@ -48,6 +48,15 @@ async function requireEmployeeManager() {
   return profile.id;
 }
 
+async function requireEmployeePortalManager() {
+  const accessToken = await getServerAccessToken();
+  const { profile } = await getAuthenticatedProfile(accessToken);
+  if (!profile?.id || !(await hasEffectiveCapability(profile, "manage_users", "critical"))) {
+    throw new Error("You do not have permission to manage employee portal access.");
+  }
+  return profile.id;
+}
+
 export async function createEmployee(
   _previousState: EmployeeActionState,
   formData: FormData,
@@ -210,6 +219,89 @@ export async function updateEmployee(
     return { status: "success", message: `${employee.full_name}'s details were updated.` };
   } catch (error) {
     return { status: "error", message: friendlyError(error instanceof Error ? error.message : "Could not update employee.") };
+  }
+}
+
+export async function sendEmployeePortalInvite(
+  employeeId: string,
+  _previousState: EmployeeActionState,
+  formData: FormData,
+): Promise<EmployeeActionState> {
+  try {
+    const actorId = await requireEmployeePortalManager();
+    const admin = createSupabaseAdminClient();
+    const { data: employee, error: employeeError } = await admin
+      .from("employees")
+      .select("id, employee_code, full_name, phone, email, department, designation, employment_status")
+      .eq("id", employeeId)
+      .single();
+
+    if (employeeError || !employee) {
+      return { status: "error", message: friendlyError(employeeError?.message ?? "Employee could not be found.") };
+    }
+    if (employee.employment_status !== "active") {
+      return { status: "error", message: "Reactivate this employee before sending portal access." };
+    }
+    if (!employee.email) {
+      return { status: "error", message: "Add a work email to this employee before sending portal access." };
+    }
+
+    const { data: existingProfile, error: profileLookupError } = await admin
+      .from("profiles")
+      .select("id, role")
+      .eq("employee_id", employeeId)
+      .maybeSingle();
+    if (profileLookupError) {
+      return { status: "error", message: friendlyError(profileLookupError.message) };
+    }
+
+    const requestedRole = textValue(formData, "portal_role");
+    const portalRole = existingProfile?.role ?? requestedRole;
+    if (!portalRole || !isAppRole(portalRole) || portalRole === "customer" || portalRole === "intermediary") {
+      return { status: "error", message: "Select a valid staff portal role before sending the invitation." };
+    }
+
+    const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(employee.email, {
+      redirectTo: await getInviteRedirectUrl(),
+      data: {
+        full_name: employee.full_name,
+        phone: employee.phone,
+        app_role: portalRole,
+        employee_id: employee.id,
+      },
+    });
+
+    if (inviteError || !invited.user) {
+      return { status: "error", message: friendlyError(inviteError?.message ?? "Could not send portal invitation.") };
+    }
+
+    const { error: profileError } = await admin.from("profiles").upsert({
+      id: invited.user.id,
+      role: portalRole,
+      full_name: employee.full_name,
+      phone: employee.phone,
+      email: employee.email,
+      employee_code: employee.employee_code,
+      department: employee.department,
+      designation: employee.designation,
+      employee_id: employee.id,
+      is_active: true,
+      created_by: actorId,
+      updated_by: actorId,
+    }, { onConflict: "id" });
+
+    if (profileError) {
+      return { status: "error", message: `Invitation was sent, but the portal profile could not be synchronized: ${friendlyError(profileError.message)}` };
+    }
+
+    revalidatePath("/employees");
+    revalidatePath("/users");
+    return {
+      status: "success",
+      message: existingProfile ? `A fresh portal invitation was sent to ${employee.email}.` : `Portal invitation sent to ${employee.email}.`,
+    };
+  } catch (error) {
+    return { status: "error", message: friendlyError(error instanceof Error ? error.message : "Could not send portal invitation.") };
   }
 }
 
