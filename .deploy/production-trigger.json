@@ -1,12 +1,12 @@
 {
-  "purpose": "Deploy the verified structured Google Document AI table extraction for Policy OCR.",
-  "deploy_requested_at": "2026-08-09T20:38:00+05:30",
+  "purpose": "Deploy the corrected Pending Applications queue for intermediary onboarding.",
+  "deploy_requested_at": "2026-08-09T20:48:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT INSUREIT structured policy OCR release",
-  "source_commit": "6b98e4a9dac39fd4ac39f659f198bff1bd55e5e3",
-  "rollback_ref": "43f34f7873e0fb7b268970617d7e51f1e2adfda9",
-  "rollback_commit": "43f34f7873e0fb7b268970617d7e51f1e2adfda9",
-  "release_scope": "Deploy current main containing the structured Google Document AI table-cell pass for IFFCO commercial motor Policy OCR. The structured financial refiner repairs unsafe flattened-text premium interpretations only when table evidence and accounting reconciliation are sufficient; otherwise it withholds OD/TP instead of guessing. Existing insurer/product/policy/IDV/date extraction remains intact. Current main also includes the already-committed owner-navigation cleanup that followed the OCR implementation.",
-  "verification": "User-provided local verification on 2026-08-09: IFFCO structured regression 2/2 passed; IFFCO regression 11/11 passed; Digit regression 5/5 passed; New India regression 5/5 passed; TypeScript typecheck passed; lint completed with 0 errors and 65 warnings; Next.js 15.5.21 production build compiled successfully and generated 33/33 static pages. The structured regression specifically covers repairing the prior flattened misread and withholding unsafe financial fields when evidence is incomplete. Final Vercel Ready and authenticated live upload/review/apply remain separate verification gates.",
+  "source": "ChatGPT INSUREIT owner handover onboarding-queue correction",
+  "source_commit": "994489da0416cd0d7add04209eec8a27e6f6b294",
+  "rollback_ref": "ea33ad068c4e9ebe356138acd9c4cebbbdd4e03e",
+  "rollback_commit": "ea33ad068c4e9ebe356138acd9c4cebbbdd4e03e",
+  "release_scope": "Make Intermediatory > Onboarding > Pending Applications a precise operational queue: include only open POSP/MISP onboarding files whose Primary Details have completed, whose workflow is at documents_pending/iib_processing, and whose canonical required document set is still incomplete. Required-document completeness uses the shared intermediary document-slot definition, including GST when applicable. Rename the sidebar item to Pending Applications and clarify the queue UI with required-document gaps.",
+  "verification": "Production data was checked immediately before deployment. The stricter rule returns the same one genuine pending onboarding file currently expected, with five required documents missing, while later Training-stage accounts are excluded. Commit comparison shows only the three intended source files plus deployment metadata since the prior production deployment. No database migration or business-data mutation is included.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
