@@ -32,7 +32,7 @@ export default async function DocumentsPage() {
         </div>
         <Link href="/claims?queue=documents" className="rounded-2xl bg-blue-700 px-4 py-3 text-sm font-bold text-white">Open document queue</Link>
       </div>
-      {error ? <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error.message}</div> : null}
+      {error ? <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><p className="font-bold">Document verification is temporarily unavailable.</p><p className="mt-1 text-amber-800">Please try again shortly or open the claim document queue.</p></div> : null}
       <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px] text-left text-sm">
