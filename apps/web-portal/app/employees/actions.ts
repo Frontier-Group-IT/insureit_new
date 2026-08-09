@@ -23,7 +23,9 @@ function friendlyError(message: string) {
   if (message.includes("employees_email_key")) return "That email is already assigned to another employee.";
   if (message.includes("employees_phone_key")) return "That mobile number is already assigned to another employee.";
   if (message.includes("User already registered")) return "A portal login already exists for this email.";
-  return message;
+  if (message.includes("permission to manage employees")) return "You do not have permission to manage employees.";
+  if (message.includes("permission to manage employee portal access")) return "You do not have permission to manage employee portal access.";
+  return "The requested employee update could not be completed. Please try again.";
 }
 
 async function getInviteRedirectUrl() {
@@ -211,7 +213,7 @@ export async function updateEmployee(
       .eq("employee_id", employeeId);
 
     if (profileError) {
-      return { status: "error", message: `Employee was updated, but portal profile sync failed: ${friendlyError(profileError.message)}` };
+      return { status: "error", message: "The employee details were saved, but portal access could not be synchronized. Please try again." };
     }
 
     revalidatePath("/employees");
@@ -252,7 +254,7 @@ export async function sendEmployeePortalInvite(
       .eq("employee_id", employeeId)
       .maybeSingle();
     if (profileLookupError) {
-      return { status: "error", message: friendlyError(profileLookupError.message) };
+      return { status: "error", message: "Portal access details could not be checked. Please try again." };
     }
 
     const requestedRole = textValue(formData, "portal_role");
@@ -291,7 +293,7 @@ export async function sendEmployeePortalInvite(
     }, { onConflict: "id" });
 
     if (profileError) {
-      return { status: "error", message: `Invitation was sent, but the portal profile could not be synchronized: ${friendlyError(profileError.message)}` };
+      return { status: "error", message: "The invitation was sent, but the portal profile could not be synchronized. Please contact the IT administrator before the user signs in." };
     }
 
     revalidatePath("/employees");
@@ -313,7 +315,7 @@ export async function setEmployeeStatus(employeeId: string, nextStatus: "active"
     .update({ employment_status: nextStatus, updated_by: actorId })
     .eq("id", employeeId);
 
-  if (error) throw new Error(friendlyError(error.message));
+  if (error) throw new Error("The employee status could not be changed. Please try again.");
 
   const admin = createSupabaseAdminClient();
   const { error: profileError } = await admin
@@ -321,7 +323,7 @@ export async function setEmployeeStatus(employeeId: string, nextStatus: "active"
     .update({ is_active: nextStatus === "active", updated_by: actorId })
     .eq("employee_id", employeeId);
 
-  if (profileError) throw new Error(`Employee status changed, but portal access sync failed: ${friendlyError(profileError.message)}`);
+  if (profileError) throw new Error("The employee status changed, but portal access could not be synchronized. Please try again.");
 
   revalidatePath("/employees");
   revalidatePath("/organization");
