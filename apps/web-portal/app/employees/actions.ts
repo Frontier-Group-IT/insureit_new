@@ -51,7 +51,7 @@ async function requireEmployeeManager() {
 async function requireEmployeePortalManager() {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!profile?.id || !(await hasEffectiveCapability(profile, "manage_users", "critical"))) {
+  if (!profile?.id || !(await hasEffectiveCapability(profile, "manage_users", "approve"))) {
     throw new Error("You do not have permission to manage employee portal access.");
   }
   return profile.id;
