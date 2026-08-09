@@ -22,8 +22,16 @@ export default async function NewVehiclePage({ searchParams }: { searchParams: P
     admin.from("vehicle_manufacturer_brands").select("manufacturer_id, brand_name").eq("is_active", true).order("brand_name", { ascending: true }).returns<BrandOption[]>(),
   ]);
 
-  if (customersResult.error) throw new Error(`Unable to load customers: ${customersResult.error.message}`);
-  if (manufacturersResult.error || brandsResult.error) throw new Error(`Unable to load vehicle makes: ${manufacturersResult.error?.message ?? brandsResult.error?.message}`);
+  if (customersResult.error || manufacturersResult.error || brandsResult.error) {
+    return (
+      <AppShell title="Add Vehicle">
+        <div className="mx-auto max-w-[900px] rounded-2xl border border-amber-200 bg-amber-50 px-5 py-5 shadow-sm">
+          <h2 className="text-[13px] font-semibold text-amber-900">Vehicle setup information is temporarily unavailable.</h2>
+          <p className="mt-1 text-[10.5px] leading-5 text-amber-800">Customer and vehicle master data could not be loaded. Refresh the page or try again shortly; no information has been changed.</p>
+        </div>
+      </AppShell>
+    );
+  }
 
   const customerOptions = (customersResult.data ?? []).map((customer) => ({ value: customer.id, label: customer.contact_name }));
   const activeManufacturerIds = new Set((manufacturersResult.data ?? []).map((manufacturer) => manufacturer.id));
