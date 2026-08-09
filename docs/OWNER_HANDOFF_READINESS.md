@@ -61,26 +61,38 @@ Pending before final PASS:
 - Runtime verification of KPI links and empty states with current data.
 - Desktop visual check at 1366x768, 1440x900 and 1920x1080.
 
-### 3. Intermediatory — IN PROGRESS
+### 3. Intermediatory — SOURCE PASS WITH ONE VISUAL FIX PENDING / RUNTIME SMOKE PENDING
 
-Completed source-level improvements:
+Completed source-level improvements and verification:
 
-- Partner/POSP/MISP navigation remains business-facing; Reports and Development are not mixed into this workspace.
+- Applications register is intentionally limited to pending Partner onboarding and uses a controlled load-error state.
 - Partner register raw action errors are no longer rendered directly from query/provider text.
-- Partner register load failure and empty states now provide controlled recovery guidance.
-- Existing Partner/POSP/MISP parent-child, document and onboarding routes remain intact after the cleanup.
+- Partner register load failure and empty states provide controlled recovery guidance.
+- POSP and MISP registers use the structured account register and do not expose raw backend failures.
+- Partner Portal Users now groups all non-active states under `Needs attention`, shows business-facing status labels, formats invitation timestamps in IST, and has controlled empty/load-error states.
+- Normal POSP/MISP Training UI no longer exposes `Test integration`, `UAT only`, `iCall UAT` or test-environment wording. The underlying integration remains unchanged; technical UAT tooling stays in the IT Super User Development workspace.
+- Current workflow route explicitly supports the six business stages: Primary, Documents, Registration, Training & Exam, Agreement and IIB Upload.
+- Stage-specific visibility is confirmed: Registration, Training and Agreement pages hide unrelated workflow sections.
+- Workflow error handling uses controlled messages and duplicate-field normalization instead of rendering arbitrary backend text.
+- Registration completion remains tied to the signed registration form for new onboarding; later-stage historical accounts are grandfathered.
+- Existing parent-child document projection and signed registration-certificate behavior remain intact.
 
-Implementation commit:
+Implementation commits:
 
 - `12233a3897bf7f41eb1f3a762b54178f045efc5a` — Sanitize partner register errors for handover
+- `1882f1930e428a6d96ce8c79230130f456db7a8d` — Polish iCall training UI for business handover
+- `b5b1a936f48314d1b454e993661ad7c06db3c6fe` — Polish intermediary portal users for handover
 
-Remaining checks:
+Known visual FIX before final PASS:
 
-- Applications list and account review presentation.
-- Portal Users workspace.
-- Six-stage POSP/MISP workflow presentation and completion states.
-- Registration certificate, Training & Exam, Agreement and IIB stage runtime behavior.
-- Parent/child document visibility with a real linked record.
+- The workflow route header currently uses a translucent white container while the applicant name/permanent-ID text classes are white. Correct the header treatment in the UI polish pass so the identity header has reliable contrast.
+
+Runtime checks still required:
+
+- Partner/POSP/MISP registers with current production data.
+- Application Review and all six workflow stages with one real linked Partner/POSP or Partner/MISP family.
+- Registration certificate visibility on child and parent review pages.
+- Portal User invite/active/disabled states.
 
 ### 4. Customers, Fleet and Policies — NOT STARTED
 
