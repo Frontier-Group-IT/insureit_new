@@ -23,9 +23,15 @@ export default async function NewPolicyPage() {
   await requirePolicyEditor();
   const admin = createSupabaseAdminClient();
 
-  const [insurersResult, salesEmployees, intermediariesResult] = await Promise.all([
+  let salesEmployees: Awaited<ReturnType<typeof loadPospMispAssociates>> = [];
+  try {
+    salesEmployees = await loadPospMispAssociates(admin);
+  } catch {
+    return <SetupError />;
+  }
+
+  const [insurersResult, intermediariesResult] = await Promise.all([
     admin.from("insurance_companies").select("id, name").eq("is_active", true).order("name", { ascending: true }).returns<InsurerOption[]>(),
-    loadPospMispAssociates(admin),
     admin
       .from("intermediaries")
       .select("id,intermediary_type,display_name,intermediary_code,associate_employee_id,application_id")
@@ -35,8 +41,7 @@ export default async function NewPolicyPage() {
       .returns<IntermediaryOption[]>()
   ]);
 
-  if (insurersResult.error) throw new Error(`Unable to load insurers: ${insurersResult.error.message}`);
-  if (intermediariesResult.error) throw new Error(`Unable to load intermediary masters: ${intermediariesResult.error.message}`);
+  if (insurersResult.error || intermediariesResult.error) return <SetupError />;
 
   const intermediaryRows = intermediariesResult.data ?? [];
   const partnerApplicationIds = intermediaryRows
@@ -51,7 +56,7 @@ export default async function NewPolicyPage() {
       .in("id", partnerApplicationIds)
       .returns<ApplicationPartnerRow[]>()
     : { data: [] as ApplicationPartnerRow[], error: null };
-  if (partnerApplicationsResult.error) throw new Error(`Unable to resolve partner RM linkage: ${partnerApplicationsResult.error.message}`);
+  if (partnerApplicationsResult.error) return <SetupError />;
 
   const partnerRecordByApplication = new Map(
     (partnerApplicationsResult.data ?? [])
@@ -69,7 +74,7 @@ export default async function NewPolicyPage() {
       .order("created_at", { ascending: false })
       .returns<PartnerAssociateRow[]>()
     : { data: [] as PartnerAssociateRow[], error: null };
-  if (partnerAssociatesResult.error) throw new Error(`Unable to resolve partner RM assignment: ${partnerAssociatesResult.error.message}`);
+  if (partnerAssociatesResult.error) return <SetupError />;
 
   const associateByPartnerRecord = new Map<string, string>();
   for (const row of partnerAssociatesResult.data ?? []) {
@@ -103,6 +108,17 @@ export default async function NewPolicyPage() {
   return (
     <AppShell title="Add Policy">
       <PolicyUnifiedForm mode="create" insurers={insurerOptions} rms={rmOptions} sources={sourceOptions} />
+    </AppShell>
+  );
+}
+
+function SetupError() {
+  return (
+    <AppShell title="Add Policy">
+      <div className="mx-auto max-w-[900px] rounded-2xl border border-amber-200 bg-amber-50 px-5 py-5 shadow-sm">
+        <h2 className="text-[13px] font-semibold text-amber-900">Policy setup information is temporarily unavailable.</h2>
+        <p className="mt-1 text-[10.5px] leading-5 text-amber-800">Insurer, intermediary or relationship master data could not be loaded. Refresh the page or try again shortly; no policy information has been changed.</p>
+      </div>
     </AppShell>
   );
 }
