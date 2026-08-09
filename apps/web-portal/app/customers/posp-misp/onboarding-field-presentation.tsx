@@ -52,6 +52,17 @@ export function OnboardingFieldPresentation({ children }: { children: ReactNode 
           background-color: #ffffff !important;
           box-shadow: none !important;
         }
+
+        .onboarding-neutral-validation form[data-posp-misp-onboarding-form="true"] > header p,
+        .onboarding-neutral-validation form[data-posp-misp-onboarding-form="true"] > .sticky > p {
+          display: none !important;
+        }
+
+        @media (min-width: 640px) {
+          .onboarding-neutral-validation form[data-posp-misp-onboarding-form="true"] > .sticky {
+            justify-content: flex-end !important;
+          }
+        }
       `}</style>
     </div>
   );
