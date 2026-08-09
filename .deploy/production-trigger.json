@@ -1,12 +1,12 @@
 {
-  "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-09T16:00:00+05:30",
+  "purpose": "Explicitly trigger one batched Vercel production deployment after an owner handover readiness pass.",
+  "deploy_requested_at": "2026-08-09T16:34:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT IFFCO scanned premium sanity hotfix",
-  "source_commit": "30546fbfcecfcd12f8afa76a2dc1481586e25cf0",
-  "rollback_ref": "rollback/pre-performance-optimization-20260809-015856",
-  "rollback_commit": "76ea8bcd41cdfb0b1c9bb6961e0f3360640f0ac0",
-  "release_scope": "Deploy current main with IFFCO commercial motor parser v2.3. Direct production testing of CVI_N8109328.pdf exposed an unsafe split-row fallback that interpreted table metadata as premiums, producing OD 1 and TP 997134 while insurer/product/policy/IDV/dates were correct. v2.3 rejects SAC code 997134 and implausible premium components, validates split Net(A)/Net(B) pairs against printed net, restricts Owner-Driver CPA extraction to the premium-table row, and falls back to labeled liability rows rather than arbitrary nearby numbers.",
-  "verification": "The production screenshot is the evidence for the defect: OD 1, TP 997134 and CPA 0 are invalid for the known IFFCO schedule. The v2.3 source change is narrowly scoped to financial candidate validation and CPA row binding. The full repository regression/typecheck/build suite has not been rerun in this session, so the same real policy must be retested after deployment before this financial hotfix is called production-verified.",
+  "source": "ChatGPT INSUREIT owner handover readiness batch 1",
+  "source_commit": "12233a3897bf7f41eb1f3a762b54178f045efc5a",
+  "rollback_ref": "04adb3beef41bcf8f9ec0bf49b585e83ecc80ee0",
+  "rollback_commit": "04adb3beef41bcf8f9ec0bf49b585e83ecc80ee0",
+  "release_scope": "Owner handover preparation batch 1. Hide unfinished Reports from normal navigation, restrict Development/iCall UAT navigation to the protected IT Super User role, retain Super Admin business Settings access, remove the false permanent notification unread indicator, replace raw database/provider-style error presentation in the claim document verification screen, add the owner handover readiness tracker, and sanitize Partner register action/load error presentation with a more complete empty state.",
+  "verification": "Source-level review confirms owner-visible navigation filtering is shared by desktop and mobile drawer navigation, mobile bottom navigation does not expose Reports or Development, and Partner/POSP/MISP register structures remain intact. No database migration is included. GitHub had no CI status checks for the handover commits, so final Vercel Ready state and live smoke testing are still required before calling this batch production-verified.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
