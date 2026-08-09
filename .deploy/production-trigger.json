@@ -1,12 +1,12 @@
 {
-  "purpose": "Explicitly trigger the third owner-handover readiness deployment batch for Customers, Fleet and Policies.",
+  "purpose": "Explicitly trigger the fourth owner-handover readiness deployment batch for Claims, Tasks and Administration.",
   "deploy_requested_at": "2026-08-09T16:40:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT INSUREIT owner handover readiness batch 3",
-  "source_commit": "b36c7ea78114e1f5b8627ee327f4c1d25f77e9b1",
-  "rollback_ref": "e0455961f2b2addb7e14acce7691b1fb4e8817ed",
-  "rollback_commit": "e0455961f2b2addb7e14acce7691b1fb4e8817ed",
-  "release_scope": "Deploy current main with Customer/Fleet/Policy handover polish: Vehicle and Policy registers no longer expose raw Supabase errors; Add Vehicle and Add Policy use controlled in-page setup failure states instead of framework error pages; RC lookup failures no longer expose provider exception text; previously deployed owner-facing navigation and Intermediatory polish remain included.",
-  "verification": "Source review confirms Customer Register, Vehicle Register and Policy Register have intentional searchable/filterable empty states. Runtime smoke testing of Add Vehicle, Add Policy, RC lookup and policy OCR is still required before this phase is marked final PASS. The deployment workflow only confirms the Vercel hook request; final Vercel Ready state remains a separate check.",
+  "source": "ChatGPT INSUREIT owner handover readiness batch 4",
+  "source_commit": "4379eaa5b5f635d7651e4039a02935867e8f3e94",
+  "rollback_ref": "add1edfe82675ea91adbbfc7dd55a39bb454d8e6",
+  "rollback_commit": "add1edfe82675ea91adbbfc7dd55a39bb454d8e6",
+  "release_scope": "Deploy current main with Claims and Administration handover cleanup: claims register no longer exposes raw query errors; Employee Directory uses a controlled load failure; Access Control save/reset/database errors are converted to business-facing messages; Access Control language is simplified for business administration while keeping audited permissions and organisation scope intact.",
+  "verification": "Source review marks Tasks and Notifications presentation-ready and Claims/Administration source-ready with runtime smoke still pending. Workflow success confirms only the Vercel deploy-hook request; final Vercel Ready state and authenticated owner-style route walkthrough remain separate checks.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
