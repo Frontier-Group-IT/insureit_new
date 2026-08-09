@@ -27,76 +27,71 @@ Do not expose blank routes, UAT/development utilities, raw provider/database err
 ### 1. Owner-visible navigation — SOURCE PASS / RUNTIME SMOKE PENDING
 
 Completed:
-
 - Reports removed from normal desktop and mobile workspace navigation while `/reports` remains unfinished.
 - Development/iCall UAT navigation restricted to `it_super_user`.
 - Super Admin retains Settings and business administration capabilities.
-- Mobile drawer confirmed to use the same `visibleNavigationSections(...)` filtering source.
+- Mobile drawer confirmed to use the same filtered navigation source.
 - Mobile bottom navigation does not expose Reports or Development.
 
-Implementation commit:
+Pending: runtime Super Admin smoke test on desktop and mobile.
 
-- `55714e163b36ade02fa6c12850cfe769668319a9` — Prepare owner-facing navigation for handover
+### 2. Dashboard — SOURCE PASS / RUNTIME SMOKE PENDING
 
-Pending before final PASS:
+Completed:
+- Dashboard business KPI structure is suitable for owner review.
+- No links to hidden Reports or Development areas.
+- Claim document destination no longer exposes raw database errors.
+- False permanent unread notification indicator removed.
 
-- Runtime Super Admin smoke test on desktop and mobile.
-
-### 2. Dashboard — IN PROGRESS
-
-Source review findings:
-
-- Dashboard structure and business KPI presentation are suitable for owner review.
-- Dashboard does not link to the hidden Reports or Development areas.
-- The `Documents to review` destination was useful but its target page exposed raw database error text. This was corrected to a controlled business-facing error state.
-- The global notification bell displayed a red unread indicator unconditionally. The false indicator was removed until a real unread-state source is wired.
-
-Implementation commits:
-
-- `5dce28231e8c8b37f8f9dff3b64404721c64c264` — Remove false unread notification indicator
-- `9a0e4263fe21cfc97e8c651151240f7ef916c63b` — Polish document verification error state for handover
-
-Pending before final PASS:
-
-- Runtime verification of KPI links and empty states with current data.
-- Desktop visual check at 1366x768, 1440x900 and 1920x1080.
+Pending: runtime KPI-link, empty-state and desktop-resolution checks.
 
 ### 3. Intermediatory — SOURCE PASS WITH ONE VISUAL FIX PENDING / RUNTIME SMOKE PENDING
 
-Completed source-level improvements and verification:
-
-- Applications register is intentionally limited to pending Partner onboarding and uses a controlled load-error state.
-- Partner register raw action errors are no longer rendered directly from query/provider text.
-- Partner register load failure and empty states provide controlled recovery guidance.
-- POSP and MISP registers use the structured account register and do not expose raw backend failures.
-- Partner Portal Users now groups all non-active states under `Needs attention`, shows business-facing status labels, formats invitation timestamps in IST, and has controlled empty/load-error states.
-- Normal POSP/MISP Training UI no longer exposes `Test integration`, `UAT only`, `iCall UAT` or test-environment wording. The underlying integration remains unchanged; technical UAT tooling stays in the IT Super User Development workspace.
-- Current workflow route explicitly supports the six business stages: Primary, Documents, Registration, Training & Exam, Agreement and IIB Upload.
-- Stage-specific visibility is confirmed: Registration, Training and Agreement pages hide unrelated workflow sections.
-- Workflow error handling uses controlled messages and duplicate-field normalization instead of rendering arbitrary backend text.
-- Registration completion remains tied to the signed registration form for new onboarding; later-stage historical accounts are grandfathered.
-- Existing parent-child document projection and signed registration-certificate behavior remain intact.
+Completed:
+- Applications register uses a controlled load-error state.
+- Partner register no longer renders raw action/provider errors.
+- POSP/MISP structured registers use controlled failures.
+- Partner Portal Users now uses business-facing labels, correct active/needs-attention grouping, IST invitation timestamps and controlled empty/error states.
+- Normal POSP/MISP iCall training UI no longer exposes UAT/test-environment terminology.
+- Six explicit business stages confirmed: Primary, Documents, Registration, Training & Exam, Agreement, IIB Upload.
+- Stage-specific visibility confirmed.
+- Workflow errors are normalized to controlled messages.
+- Registration completion remains tied to signed registration form for new onboarding, with historical progression preserved.
+- Parent-child registration-certificate projection remains intact.
 
 Implementation commits:
+- `12233a3897bf7f41eb1f3a762b54178f045efc5a`
+- `1882f1930e428a6d96ce8c79230130f456db7a8d`
+- `b5b1a936f48314d1b454e993661ad7c06db3c6fe`
 
-- `12233a3897bf7f41eb1f3a762b54178f045efc5a` — Sanitize partner register errors for handover
-- `1882f1930e428a6d96ce8c79230130f456db7a8d` — Polish iCall training UI for business handover
-- `b5b1a936f48314d1b454e993661ad7c06db3c6fe` — Polish intermediary portal users for handover
+Known visual FIX:
+- Workflow identity header currently has a light container with white identity text classes; correct contrast in the global UI pass.
 
-Known visual FIX before final PASS:
+Runtime checks still required on a real linked Partner/POSP or Partner/MISP family.
 
-- The workflow route header currently uses a translucent white container while the applicant name/permanent-ID text classes are white. Correct the header treatment in the UI polish pass so the identity header has reliable contrast.
+### 4. Customers, Fleet and Policies — SOURCE PASS / RUNTIME SMOKE PENDING
+
+Completed source review and cleanup:
+- Customer Register already presents a polished searchable/filterable business register with controlled server load failure.
+- Customer KYC uses a controlled `loadError` path rather than exposing raw query text.
+- Vehicle Register and Policy Register were visually strong but exposed raw Supabase error messages; both now use controlled business-facing recovery states.
+- Add Vehicle previously threw raw setup/master-data errors into the framework error page; it now renders a controlled in-page setup-unavailable state.
+- Add Policy previously threw insurer/intermediary/RM linkage errors into the framework error page; it now renders a controlled in-page setup-unavailable state.
+- RC lookup previously returned the underlying provider exception message to the policy form; it now returns a stable business-facing retry message.
+- Vehicle and Policy register empty states, filters, search and pagination are presentation-ready at source level.
+
+Implementation commits:
+- `29af4285073f5598daed427f5ea0199239049043` — Sanitize vehicle register errors
+- `2c455644acab32e8d080990dbafe28f816ad118e` — Sanitize policy register errors
+- `9fccb984e621dec98cc785a63927bfb4fa7db7c2` — Polish Add Vehicle setup failures
+- `dcceb7336fdb739a788dd804c331462f94be6e8e` — Polish Add Policy setup failures
+- `f150ec0697f9c12d463bf803509ed9d54f9f3daa` — Sanitize RC lookup failures
 
 Runtime checks still required:
-
-- Partner/POSP/MISP registers with current production data.
-- Application Review and all six workflow stages with one real linked Partner/POSP or Partner/MISP family.
-- Registration certificate visibility on child and parent review pages.
-- Portal User invite/active/disabled states.
-
-### 4. Customers, Fleet and Policies — NOT STARTED
-
-Check Customer Register, KYC, customer onboarding, vehicle register, policy register, add/edit journeys, RC lookup and policy OCR presentation.
+- Customer Register and Customer KYC with current data.
+- Add Vehicle with normal and missing-master scenarios.
+- Policy Register/Add Policy with RC lookup and policy OCR.
+- Verify no provider terminology appears in user-facing OCR failure states.
 
 ### 5. Claims — NOT STARTED
 
@@ -128,14 +123,17 @@ Create only when phases 1–10 have passed or remaining exceptions are explicitl
 
 ## Deployment record
 
-### Handover batch 1 — DEPLOY HOOK SUCCESS / LIVE VERCEL READY STATE NOT YET VERIFIED
-
-- Source code SHA: `12233a3897bf7f41eb1f3a762b54178f045efc5a`
-- Deployment trigger commit: `ab79d76d04ee985e520258513a7b387ada44d47e`
+### Handover batch 1
+- Source SHA: `12233a3897bf7f41eb1f3a762b54178f045efc5a`
+- Trigger: `ab79d76d04ee985e520258513a7b387ada44d47e`
 - GitHub Actions run: `31309989237`
-- Workflow result: **success**
-- Confirmed workflow steps: deploy-hook secret check, Vercel deploy-hook request, deployment summary.
-- Limitation: repository workflow success proves the hook request completed; final Vercel build/Ready state and authenticated live smoke test remain separate checks.
+- Result: deploy hook workflow **success**; final authenticated live smoke still separate.
+
+### Handover batch 2
+- Source SHA: `49ad4e4de0b14d7a58faf9a300832d3fd42f73f2`
+- Trigger: `e0455961f2b2addb7e14acce7691b1fb4e8817ed`
+- GitHub Actions run: `31310303322`
+- Result: deploy hook workflow **success**; final authenticated live smoke still separate.
 
 ## Formal production-readiness note
 
