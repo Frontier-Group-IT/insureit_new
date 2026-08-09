@@ -1,12 +1,12 @@
 {
-  "purpose": "Deploy the corrected Pending Applications queue for intermediary onboarding.",
-  "deploy_requested_at": "2026-08-09T20:48:00+05:30",
+  "purpose": "Deploy the consolidated existing POSP/MISP navigation for owner handover.",
+  "deploy_requested_at": "2026-08-09T21:23:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT INSUREIT owner handover onboarding-queue correction",
-  "source_commit": "994489da0416cd0d7add04209eec8a27e6f6b294",
-  "rollback_ref": "ea33ad068c4e9ebe356138acd9c4cebbbdd4e03e",
-  "rollback_commit": "ea33ad068c4e9ebe356138acd9c4cebbbdd4e03e",
-  "release_scope": "Make Intermediatory > Onboarding > Pending Applications a precise operational queue: include only open POSP/MISP onboarding files whose Primary Details have completed, whose workflow is at documents_pending/iib_processing, and whose canonical required document set is still incomplete. Required-document completeness uses the shared intermediary document-slot definition, including GST when applicable. Rename the sidebar item to Pending Applications and clarify the queue UI with required-document gaps.",
-  "verification": "Production data was checked immediately before deployment. The stricter rule returns the same one genuine pending onboarding file currently expected, with five required documents missing, while later Training-stage accounts are excluded. Commit comparison shows only the three intended source files plus deployment metadata since the prior production deployment. No database migration or business-data mutation is included.",
+  "source": "ChatGPT INSUREIT owner handover navigation consolidation",
+  "source_commit": "685232b6e5810cce2d08f930fe3c64fee2ee6e4b",
+  "rollback_ref": "9e54075ad0566c4efbd441f9ab81daeca04ac1a4",
+  "rollback_commit": "9e54075ad0566c4efbd441f9ab81daeca04ac1a4",
+  "release_scope": "Remove the repeated Add Existing POSP and Add Existing MISP business actions from their separate POSP/MISP groups. Keep Add POSP and Add MISP for new onboarding. Add one Onboarding > Add Existing POSP / MISP menu entry backed by a dedicated chooser that routes to the existing POSP or MISP legacy onboarding form without changing underlying onboarding logic.",
+  "verification": "Current shared desktop/mobile navigation source now contains no separate Add Existing POSP or Add Existing MISP menu entries. One consolidated Add Existing POSP / MISP entry remains under Onboarding. A protected chooser page requires POSP/MISP manager access and links into the existing legacy-mode routes. No database migration or business-data mutation is included.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
