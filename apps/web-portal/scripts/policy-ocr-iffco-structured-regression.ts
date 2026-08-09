@@ -37,6 +37,23 @@ assertField(fixed, "tp_premium", "7367");
 assertField(fixed, "cpa_premium", "330");
 console.log("PASS: structured IFFCO rows repair flattened premium misread");
 
+const withoutFlattenedNet: ParsedPolicyResult = {
+  ...base,
+  fields: base.fields.filter((field) => field.key !== "total_premium"),
+};
+const withBifurcation = refineIffcoStructuredFinancials([{
+  page: 1,
+  rows: [
+    ...structuredTables[0].rows,
+    ["Premium Bifurcation", "8,819.00", "13,920.00", "22,739.00"],
+  ],
+}], withoutFlattenedNet);
+assertField(withBifurcation, "total_premium", "22739");
+assertField(withBifurcation, "od_premium", "15042");
+assertField(withBifurcation, "tp_premium", "7367");
+assertField(withBifurcation, "cpa_premium", "330");
+console.log("PASS: structured IFFCO Premium Bifurcation independently recovers printed net");
+
 const incomplete = refineIffcoStructuredFinancials([{
   page: 1,
   rows: [
@@ -51,7 +68,7 @@ for (const key of ["od_premium", "tp_premium", "cpa_premium"]) {
   }
 }
 console.log("PASS: incomplete structured evidence withholds unsafe financial fields");
-console.log("IFFCO structured regression: 2/2 cases passed.");
+console.log("IFFCO structured regression: 3/3 cases passed.");
 
 function assertField(result: ParsedPolicyResult, key: string, expected: string) {
   const value = result.fields.find((field) => field.key === key)?.value;
