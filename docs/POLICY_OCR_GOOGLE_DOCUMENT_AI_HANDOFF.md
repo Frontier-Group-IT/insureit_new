@@ -1,292 +1,163 @@
 # Policy OCR and Google Document AI Handoff
 
-> **Consolidated:** 2026-08-09 02:15 IST
+> **Consolidated:** 2026-08-09 (IST)
 >
-> This file is the source of truth for Policy Onboarding OCR. Do not store credentials, tokens, private keys, policyholder PII, vehicle identifiers, raw OCR text, or complete policy documents here.
+> Source of truth for Policy Onboarding OCR. Never store credentials, tokens, raw OCR text, complete policy documents, policyholder PII, vehicle identifiers, or secrets here.
 
 ## 1. Approved scope
 
-Policy OCR may propose only Section 03, **Policy product, premium & validity**:
+Policy OCR may propose only Section 03 fields:
 
 - Policy product
 - IDV / sum insured
 - OD premium
 - Third-party premium
-- CPA opted
-- CPA amount
+- CPA opted / amount
 - Policy number
 - Insurance company
-- Valid from
-- Valid upto
+- Valid from / upto
 
-Comparison-only values:
+Printed net, GST/tax and gross premium are comparison-only. OCR must never populate customer/vehicle identity fields. Review-before-apply is mandatory.
 
-- Printed net premium
-- Printed GST / tax
-- Printed gross premium
+## 2. Google / INSUREIT architecture
 
-OCR must never populate customer, insured, owner, registration, chassis, engine, address, phone, PAN, GST identity data, or similar customer/vehicle identity fields. Review-before-apply is mandatory; OCR must never silently overwrite saved or manually entered values.
+Google Document AI remains the reading layer. INSUREIT owns insurer detection, interpretation, accounting normalization, confidence and warnings.
 
-## 2. Architecture
-
-**APPROVED / IMPLEMENTED**
+Current server flow:
 
 ```text
 Policy PDF/image
-  -> Next.js server action
-  -> Vercel OIDC
-  -> Google Workload Identity Federation
-  -> short-lived service-account impersonation
-  -> Google Document AI Enterprise OCR
-  -> normalized page text
-  -> INSUREIT insurer detector
-  -> insurer-specific parser/refiner
-  -> review modal
-  -> selected Section 03 fields applied
+ -> Next.js server action
+ -> Vercel OIDC / Google WIF
+ -> Google Document AI Enterprise OCR
+ -> page text + Document AI table cell anchors
+ -> INSUREIT insurer detector
+ -> insurer-specific text refiner
+ -> structured financial refiner where available
+ -> accounting reconciliation gate
+ -> review modal
+ -> selected Section 03 fields applied
 ```
-
-Google is the OCR/text-reading layer only. Insurer detection, interpretation, accounting normalization, confidence, warnings, and regression logic stay in INSUREIT.
 
 Primary files:
 
 - `apps/web-portal/app/policies/policy-ocr-actions.ts`
 - `apps/web-portal/lib/policy-ocr-parsers.ts`
-- `apps/web-portal/lib/policy-ocr-digit-refiner-v2.ts`
 - `apps/web-portal/lib/policy-ocr-iffco-refiner-v2.ts`
+- `apps/web-portal/lib/policy-ocr-iffco-structured-refiner.ts`
+- `apps/web-portal/lib/policy-ocr-digit-refiner-v2.ts`
 - `apps/web-portal/lib/policy-ocr-new-india-refiner.ts`
 - `apps/web-portal/components/policy-ocr-import-panel.tsx`
 
-## 3. Production Google identity design
+Production Google identity remains Vercel OIDC Workload Identity Federation with short-lived service-account impersonation. No service-account JSON key is used.
 
-No service-account JSON key is used. Production uses Vercel OIDC Workload Identity Federation and short-lived Google credentials.
+## 3. Verified parser baseline before structured-table change
 
-Configured identities:
+User-local verification on 2026-08-09:
 
 ```text
-Google project ID: insureit-policy-ocr-production
-Google project number: 560319705586
-Document AI location: us
-Processor ID: 84d0facf88efc0d7
-WIF pool: vercel-insureit
-Provider: vercel
-Service account: insureit-ocr-web@insureit-policy-ocr-production.iam.gserviceaccount.com
-Allowed audience: https://vercel.com/antnish1s-projects
-Allowed production subject: owner:antnish1s-projects:project:insureit:environment:production
+IFFCO text/regression: 10/10 passed
+Digit regression:       5/5 passed
+New India regression:   5/5 passed
+Typecheck:               passed
+Lint:                    0 errors
+Next.js build:           passed
 ```
 
-Never expose Google/Vercel tokens to browser code. Do not create a long-lived Google key unless the architecture is explicitly changed and security-approved.
+These checks preceded the structured-table architecture change and must not be treated as verification of the new commits.
 
-Legacy `POLICY_OCR_SERVICE_URL` / `POLICY_OCR_SERVICE_SECRET` variables must remain until the Google production journey is directly verified with all supported insurer families.
+## 4. Production learning from IFFCO N8109328
 
-## 4. Current supported pure-motor parser baseline
+**VERIFIED LEARNING:** flattened OCR text is not reliable enough to assign IFFCO premium-table columns by proximity alone. Live Google OCR correctly recovered insurer, Package product, policy number, IDV, dates and later CPA, but flattened premium interpretation produced unsafe values including OD `1`, TP `997134`/`22409`, where `997134` is table metadata/SAC rather than a premium.
 
-The current training scope intentionally excludes United India for now. United India Miscellaneous/Special Type Vehicle and Contractors Plant & Machinery are deferred until a separate approved mapping/schema decision.
+Correct rule:
 
-### 4.1 IFFCO-TOKIO commercial motor
+- Never accept a financial field only because a nearby number follows `Net(A)` / `Net(B)` in flattened reading order.
+- Prefer structured table cells/rows when Google supplies them.
+- Use labeled liability rows plus accounting reconciliation.
+- If the financial set cannot be proven, withhold OD/TP/CPA instead of auto-applying guesses.
 
-Dedicated refiner:
-
-- parser ID: `iffco_tokio_commercial_motor_v1`
-- current dedicated refiner family: `iffco_tokio_commercial_motor_v2`
-- regression command: `npm run policy-ocr:iffco-regression`
-- **VERIFIED locally: 10/10 cases passed**
-
-Coverage includes:
-
-- real IFFCO document-layout reconstructions
-- current `P400 Policy #` vs invoice/reference numbers
-- previous-policy avoidance
-- `Net(A)` and `Net(B)` on the same OCR row
-- Section 2/add-on OD premium
-- CPA ₹330 and CPA ₹0
-- CPA declaration conflicts
-- printed Net/GST/Gross reconciliation
-
-Normalized accounting rule:
+Known N8109328 accounting target:
 
 ```text
-OD = Net(A) + Section 2 OD/add-on premium
-CPA = payable Owner-Driver PA row
-TP = Net(B) - CPA
-OD + TP + CPA must reconcile to printed net
+Basic TP = 7267
+Legal Liability to Driver = 100
+CPA = 330
+TP = 7367
+Printed net = 22739
+OD = 22739 - 7367 - 330 = 15042
 ```
 
-If the financial row charges CPA but declaration wording says not applicable/deleted, retain the financial value for reconciliation but raise review/confidence warning.
+## 5. Structured IFFCO financial pass
 
-### 4.2 Go Digit commercial motor
+**IMPLEMENTED IN REPOSITORY / NOT YET DEPLOYED OR LIVE-VERIFIED**
 
-Dedicated refiner version:
+New file:
 
 ```text
-digit_commercial_motor_v1.8.0
+apps/web-portal/lib/policy-ocr-iffco-structured-refiner.ts
+```
+
+Behavior:
+
+1. Server action preserves Document AI `pages[].tables[]` cell text using each cell `layout.textAnchor`.
+2. Existing IFFCO text refiner still owns insurer/product/policy/IDV/dates and comparison totals.
+3. Structured pass rebuilds OD/TP/CPA from premium-table rows.
+4. For current IFFCO family it uses:
+   - `Basic TP Premium`
+   - `Legal Liability to Driver`
+   - `P.A. Owner Driver`
+   - independently parsed printed net
+5. Financial values are returned only when `OD + TP + CPA = printed net` within tolerance.
+6. When structured evidence is incomplete or does not reconcile, unsafe financial fields are removed and Review Required is returned.
+
+Relevant implementation commits:
+
+```text
+a63604a773f5c2cdd5eaba08ada83cb0f125daec  Add structured IFFCO table financial refiner
+6e3b37af37b254de367707f5d99cad96816c997b  Wire Document AI table structure into policy OCR
+f16058c0c159ec90f46d4b28a718d3205ab82a7b  Correct Google STS grant type after wiring
+1b5a19e8a31e7a2c7acf62510e3dcb7de94fbbf2  Add structured IFFCO regression
+22d62f0387368ff8d0f1725321e0a286b2b9f5df  Add structured regression command
 ```
 
 Regression command:
 
 ```text
+npm run policy-ocr:iffco-structured-regression
+```
+
+The synthetic regression covers:
+
+- repairing the exact production-shaped bad state `OD=1 / TP=22409 / CPA=330` from structured rows to `15042 / 7367 / 330`;
+- withholding all financial fields when structured CPA evidence is missing.
+
+This regression has been committed but has not yet been run in the user's local environment after these commits.
+
+## 6. Existing insurer scope
+
+Supported pure-motor families remain:
+
+- IFFCO-TOKIO commercial motor
+- Go Digit commercial motor
+- The New India Assurance commercial motor
+
+United India remains deferred, including Miscellaneous/Special Type Vehicles and Contractors Plant & Machinery.
+
+## 7. Release discipline / next steps
+
+Ordinary commits do not intentionally deploy production. Do not modify `.deploy/production-trigger.json` unless the user explicitly says `deploy now` or `finish and deploy`.
+
+Before deployment of the structured-table change, run:
+
+```text
+npm run policy-ocr:iffco-structured-regression
+npm run policy-ocr:iffco-regression
 npm run policy-ocr:digit-regression
-```
-
-**VERIFIED locally: 5/5 cases passed.**
-
-The pack includes a sanitized reconstruction of the actual Google Document AI reading order plus targeted failures for:
-
-- manufacturing year becoming IDV
-- premium numbers reordered
-- missing direct OD recovered from printed net and TP
-- invoice/reference IDs overriding current policy
-- incorrect OD/TP role assignment
-
-Digit v1.8 evidence priority:
-
-```text
-1. Exact labeled OD / TP rows
-2. Derive missing side from printed Net
-3. Numeric-pair reconciliation only as fallback
-```
-
-The dedicated refiner clears weaker base financial guesses before rebuilding IDV/OD/TP/CPA/totals. Explicit invoice Net/GST/Gross columns are stronger evidence than proximity within the premium block.
-
-Known golden sample:
-
-```text
-Policy: D221859721
-Product: Package
-IDV: 3292441
-OD: 27820.86
-TP: 7267
-CPA: No / 0
-Printed net: 35087.86
-GST: 6315.81
-Gross: 41403.67
-Valid from: 2025-08-27
-Valid upto: 2026-08-26
-```
-
-### 4.3 The New India Assurance commercial motor
-
-Dedicated refiner version:
-
-```text
-new_india_commercial_motor_v1.2.1
-```
-
-Regression command:
-
-```text
 npm run policy-ocr:new-india-regression
+npm run typecheck
+npm run lint
+npm run build
 ```
 
-**VERIFIED locally: 5/5 cases passed.**
-
-Coverage includes:
-
-- real schedule layout
-- NCB/subtotal values not becoming OD
-- current policy vs previous policy
-- ₹15 lakh Owner-Driver coverage limit not becoming CPA premium
-- multiline Owner-Driver row where CPA premium is on the immediate continuation line
-- liability normalization and full premium reconciliation
-
-New India normalized accounting rule:
-
-```text
-OD = Net Own Damage Premium (A)
-CPA = Owner-Driver PA premium row
-TP = Net Liability Premium (B) - CPA
-OD + TP + CPA must reconcile to Total Premium (A+B)
-```
-
-Known golden schedule:
-
-```text
-IDV: 4800000
-OD: 33984
-Net Liability (B): 44495
-CPA: 325
-Portal TP: 44170
-Printed net: 78479
-IGST: 8414
-Gross: 86893
-Policy: 80000031250350127994
-Valid from: 2025-12-05
-Valid upto: 2026-12-04
-```
-
-Durable New India lesson: do not scan into the next PA row when Owner-Driver premium appears on a continuation line. The semantic row must stop before the next PA label.
-
-## 5. Cross-insurer verification state
-
-**VERIFIED in the user's local environment on 2026-08-09:**
-
-```text
-New India regression: 5/5 passed
-Digit regression:     5/5 passed
-IFFCO regression:    10/10 passed
-Typecheck:             passed
-Lint:                  0 errors, 74 warnings
-Next.js build:         passed
-```
-
-The `MODULE_TYPELESS_PACKAGE_JSON` warning from Node's `--experimental-strip-types` regression runners is non-fatal. Do not change the whole Next.js package to `"type": "module"` merely to remove this warning without a separate compatibility review.
-
-These results prove parser/regression/build correctness for the committed baseline. They do **not** prove a production Google OCR user journey.
-
-## 6. Relevant recent parser commits
-
-```text
-IFFCO regression/build compatibility baseline:
-94445181378eee93376e482c87fc867de79c9b73
-
-IFFCO real-layout routing regression:
-7fb5914451a3e71f0d7b4a356de961b3e2c78c56
-
-Digit v1.8 labeled-premium priority:
-d95b1332c17b546bda9d057781ef48e1a50a91cd
-
-New India v1.2 baseline/refiner + regression:
-4c140352cd0f6fabc8ef63ebcf0a9f09d9f1fd62
-43109b08e51fcf29de08ab8fd2859c9fd08b6181
-76ea8bcd41cdfb0b1c9bb6961e0f3360640f0ac0
-
-New India v1.2.1 CPA row fix:
-691ba3f86d07ca61ac24ae896db5322392fe2499
-```
-
-## 7. Release and production state
-
-**IMPLEMENTED / LOCALLY VERIFIED:** all three current pure-motor parser families above.
-
-**NOT YET VERIFIED:** exact current production deployment of these latest parser commits and authenticated end-to-end Google OCR upload/review/apply behavior for all three insurers.
-
-Ordinary commits do not intentionally deploy production. `.deploy/production-trigger.json` must only be updated when the user explicitly says **deploy now** or **finish and deploy**. A GitHub Actions deploy-hook success is not enough; verify the exact Vercel production commit reaches `Ready`, then test the live authenticated journey.
-
-Do not infer production status from incidental or concurrent changes to `.deploy/production-trigger.json`; inspect exact deployment evidence.
-
-## 8. Final live verification gate
-
-When the user explicitly approves deployment, use one controlled production release containing the frozen IFFCO, Digit, and New India baseline. Then verify from `https://portal.insureit.in`:
-
-1. Exact production deployment commit is identified and Vercel reports `Ready`.
-2. Sign in with a policy-editor account and open `/policies/new`.
-3. Upload a real Digit policy and verify all expected Section 03 fields.
-4. Upload representative IFFCO policies, including an add-on/Section-2 case and a CPA-conflict case.
-5. Upload the known New India commercial-motor policy.
-6. Confirm only Section 03 changes after Apply.
-7. Confirm printed Net/GST/Gross remain comparison-only.
-8. Inspect server/function logs only for controlled operational errors; never log raw policy/OCR text or credentials.
-9. If live Google OCR reading order differs from regression fixtures, sanitize that exact OCR shape, add a regression case, fix the parser, and rerun all insurer suites before another release.
-10. Only after the complete authenticated journey passes should the OCR release be labeled **DEPLOYED / VERIFIED**.
-
-## 9. Development rule for future insurer training
-
-For every new insurer/policy family:
-
-1. Obtain representative legally permitted samples.
-2. Define the approved Section 03 mapping first.
-3. Capture sanitized actual Google OCR reading order where possible.
-4. Add insurer/family-specific interpretation rather than broad global regexes.
-5. Add golden regression fixtures before release.
-6. Run all existing insurer regressions, typecheck, lint, and build.
-7. Fail uncertain extraction into Review Required; never silently guess.
-8. Keep incompatible non-motor products out of motor OD/TP/CPA until the schema explicitly supports them.
+After an explicit deployment request, verify the exact Vercel production commit and then upload the same real IFFCO policy again. The target financial result is OD `15042`, TP `7367`, CPA `330`. If Document AI does not supply usable table rows, do not reintroduce proximity guesses; inspect sanitized structural evidence and fail to Review Required instead.
