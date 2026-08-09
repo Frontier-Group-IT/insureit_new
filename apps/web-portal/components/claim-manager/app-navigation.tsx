@@ -46,9 +46,7 @@ export const navigationSections:NavigationSection[]=[
       {href:"/customers/posp-misp/existing/new?partner_type=misp",label:"Add Existing MISP",icon:UserPlus,capability:"create_intermediary_application"}
     ]},
   {kind:"group",key:"intermediary-onboarding",label:"Onboarding",icon:FileCheck2,capability:"view_intermediaries",items:[
-   {href:"/customers/posp-misp",label:"Applications",icon:FileCheck2,capability:"view_intermediaries"},
-   {href:"/customers/posp-misp/import",label:"Import POSP / MISP",icon:Upload,capability:"create_intermediary_application"},
-   {href:"/customers/posp-misp/import/batches",label:"Import Batches",icon:ClipboardList,capability:"view_intermediaries"}
+   {href:"/customers/posp-misp",label:"Applications",icon:FileCheck2,capability:"view_intermediaries"}
   ]}
  ]},
  {key:"master-data",label:"Customers & Fleet",icon:LayoutGrid,tint:"from-[#6759ff] to-[#8f7cff]",capability:"view_customers",items:[
@@ -88,7 +86,11 @@ export const navigationSections:NavigationSection[]=[
  ]}
 ];
 
-const developmentSection:NavigationSection={key:"development",label:"Development",icon:FlaskConical,tint:"from-[#7C3AED] to-[#2563EB]",capability:"manage_system",items:[{href:"/customers/posp-misp/icall-uat",label:"iCall UAT Integration",icon:FlaskConical,capability:"manage_system"}]};
+const developmentSection:NavigationSection={key:"development",label:"Development",icon:FlaskConical,tint:"from-[#7C3AED] to-[#2563EB]",capability:"manage_system",items:[
+ {href:"/customers/posp-misp/icall-uat",label:"iCall UAT Integration",icon:FlaskConical,capability:"manage_system"},
+ {href:"/customers/posp-misp/import",label:"Bulk POSP / MISP Import",icon:Upload,capability:"manage_system"},
+ {href:"/customers/posp-misp/import/batches",label:"Import History",icon:ClipboardList,capability:"manage_system"}
+]};
 
 const permissionRank:Record<PermissionAccess,number>={none:0,view:1,edit:2,approve:3};
 export function permits(permissionAccess:PermissionAccessMap,capability:Capability,minimumAccess:Exclude<PermissionAccess,"none">="view"){return permissionRank[permissionAccess[capability]??"none"]>=permissionRank[minimumAccess]}
