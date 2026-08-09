@@ -16,11 +16,15 @@ Do not expose blank routes, UAT/development utilities, raw provider/database err
 
 ## Owner account model
 
+- Intended owner: Anand Wadhwa
+- Verified company email from existing company correspondence: `anand@frontiervehicles.com`
 - Intended role: `super_admin`
 - Scope: organisation-wide business access
 - Technical/development workspace: reserved for `it_super_user`
 - Owner landing page: `/dashboard`
-- Account creation: **NOT YET DONE** — create only after visible-route walkthrough passes.
+- Password handling: official Supabase invitation/password-setup flow; do not manually share a password.
+- Formal employee designation: **not yet resolved from source data**. Do not invent it in the employee master.
+- Account creation: **NOT YET DONE** — final employee master designation and authenticated smoke remain.
 
 ## Phase status
 
@@ -58,9 +62,9 @@ Known visual FIX:
 
 ### 4. Customers, Fleet and Policies — SOURCE PASS / RUNTIME SMOKE PENDING
 
-- Customer Register and Customer KYC already use controlled load paths.
+- Customer Register and Customer KYC use controlled load paths.
 - Vehicle/Policy registers no longer expose raw Supabase errors.
-- Add Vehicle/Add Policy now show intentional setup-unavailable states instead of framework errors.
+- Add Vehicle/Add Policy show intentional setup-unavailable states instead of framework errors.
 - RC lookup no longer exposes provider exception text.
 - Register empty states, filters, search and pagination are presentation-ready at source level.
 
@@ -78,10 +82,10 @@ Runtime checks still required for Add Vehicle, Add Policy, RC lookup and policy 
 - Claims register/work queues are structured, searchable and paginated.
 - Register no longer passes raw query error messages to the UI.
 - Claim detail source uses controlled routing and authenticated document-open endpoints; claim lookup failure resolves to not-found rather than dumping query text.
-- Claim document verification page was previously sanitized in handover batch 1.
+- Claim document verification page was sanitized in handover batch 1.
 
 Implementation commit:
-- `da3ce22e5ae0cd6a0e244c29d75923a1975c9642` — Sanitize claims register errors.
+- `da3ce22e5ae0cd6a0e244c29d75923a1975c9642`
 
 Runtime checks still required across Documents, Verification, Survey, Under Repair and Settlement journeys.
 
@@ -96,35 +100,68 @@ Runtime checks still required across Documents, Verification, Survey, Under Repa
 
 - Employee Directory supports role-based portal invitations and clearly differentiates invited/active users.
 - Employee register no longer exposes raw query errors.
+- Employee Directory defaults to Active staff, with inactive history still available by filter.
+- Portal invitation permission check uses the valid `approve` access level.
+- Employee create/update/invite/status failures now use controlled UI messages instead of arbitrary backend text.
 - Settings provides a focused business administration entry point.
 - Access Control database/save/reset failures are converted to controlled administrator messages.
-- Access Control terminology was simplified from engineering language such as `code-defined defaults` / `safe fallback` to standard business access language.
+- Access Control terminology was simplified from engineering language to standard business access language.
 - Access changes remain audited and organisation scope remains visible.
 
-Implementation commits:
-- `b72ffa2cac92c4d2b48e4b5bd53c4f0bc753604a` — Sanitize employee directory errors.
-- `7d68c4bb8d73e49e0d935df72bb7827917fa2794` — Sanitize access-control action errors.
-- `8229ed36a98f1dd8fcbdc30ebfed5b7d44c7cb93` — Polish access-control language.
+Implementation commits include:
+- `b72ffa2cac92c4d2b48e4b5bd53c4f0bc753604a`
+- `3fa425fd39ceeeeaa0766f55c59744fe19039893`
+- `7d68c4bb8d73e49e0d935df72bb7827917fa2794`
+- `8229ed36a98f1dd8fcbdc30ebfed5b7d44c7cb93`
+- `ebf051d1c3e4f2445c07f6a534b79c3552efda68`
 
-### 8. Global polish — NEXT
+### 8. Global polish — PARTIAL SOURCE PASS / FINAL VISUAL SMOKE PENDING
 
-Check/fix:
+Completed:
+- major owner-visible raw DB/provider error paths sanitized across Intermediatory, Fleet/Policy, Claims and Administration;
+- business navigation no longer exposes blank Reports or IT UAT tools;
+- normal onboarding no longer presents UAT/test copy;
+- inactive employee history is not the default owner view.
+
+Outstanding targeted visual checks:
 - workflow identity header contrast;
-- Account Review direct `?error=` presentation;
-- repository-wide visible UAT/test/debug/provider wording;
-- typography/spacing/status consistency at desktop handover resolutions.
+- Account Review direct `?error=` presentation if an action fails;
+- desktop visual smoke at 1366x768, 1440x900 and 1920x1080;
+- policy OCR runtime failure wording.
 
-### 9. Data/demo cleanup — NOT STARTED
+### 9. Data/demo sanity — SOURCE/DATA CHECK PASS WITH NO DELETION
 
-Identify obvious dummy/test records first. Do not delete production/business data without explicit approval.
+Production checks performed without deleting business data:
+- no obvious `test/demo/dummy/sample` customer or intermediary names were found in the primary registers queried;
+- no existing employee/profile for Anand Wadhwa was found;
+- no active `super_admin` profile currently exists;
+- the only active top technical account remains the existing `it_super_user` account;
+- historical inactive employee records, including an old `DEMO` code, were preserved rather than deleted;
+- Employee Directory now defaults to Active staff so inactive history does not dominate the owner view.
 
-### 10. Owner-account smoke test — NOT STARTED
+### 10. Owner-account smoke test — BLOCKED BY AUTHENTICATED USER CREATION
 
-Create/use a test Super Admin profile with the same access model and walk every visible route before sharing the real owner account.
+Required after the owner or a temporary Super Admin invitation is created:
+- sign in through the same invite/password flow the owner will use;
+- verify Dashboard and every visible navigation destination;
+- verify Reports/Development are absent for `super_admin`;
+- verify Settings/Access Control are available;
+- open representative Partner/POSP/MISP, customer, policy, claim and employee records;
+- verify desktop layout and controlled error/empty states.
 
-### 11. Owner account creation — BLOCKED BY READINESS
+### 11. Owner account creation — READY EXCEPT FORMAL DESIGNATION / FINAL SMOKE
 
-Create only after phases 8–10 pass or remaining exceptions are explicitly accepted. Prefer the official email invitation/password-setup flow rather than sharing a manually chosen password.
+Resolved fields:
+- Name: Anand Wadhwa
+- Email: `anand@frontiervehicles.com`
+- Portal role: `super_admin`
+- Data scope: Entire organisation
+- Landing page: Dashboard
+- Authentication: email invite + owner sets password
+
+Still required:
+- exact employee designation to store in Employee Directory (not reliably present in connected correspondence);
+- employee code/department should follow the organisation's preferred master-data convention when the record is created.
 
 ## Deployment record
 
@@ -143,7 +180,12 @@ Create only after phases 8–10 pass or remaining exceptions are explicitly acce
 - Trigger: `add1edfe82675ea91adbbfc7dd55a39bb454d8e6`
 - Run: `31310474523` — deploy hook workflow **success**.
 
-Workflow success confirms the Vercel deploy hook request, not the final authenticated Vercel smoke test.
+### Handover batch 4
+- Trigger: `db0c2cf754253fec392ade399f581e73bd45040a`
+- Run: `31310738623` — deploy hook workflow **success**.
+- Scope: Claims and Administration handover cleanup.
+
+Workflow success confirms the Vercel deploy-hook request, not the final authenticated Vercel smoke test.
 
 ## Formal production-readiness note
 
