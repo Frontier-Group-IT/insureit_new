@@ -1,12 +1,12 @@
 {
-  "purpose": "Deploy concise intermediary onboarding copy for owner-facing handover.",
-  "deploy_requested_at": "2026-08-09T22:17:00+05:30",
+  "purpose": "Deploy the verified IFFCO financial extraction correction based on the real Google Document AI Layout Parser response.",
+  "deploy_requested_at": "2026-08-09T22:53:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT INSUREIT onboarding copy cleanup",
-  "source_commit": "5ed202d08b36b46f911e9a0880ba029ca453a1da",
+  "source": "ChatGPT INSUREIT OCR correction using uploaded Google Layout Parser JSON",
+  "source_commit": "05438126cf7b97fa9efbe85682644f4308bb5a90",
   "rollback_ref": "4289c5a4b256de96d3011c05a06e4629a0ae5a91",
   "rollback_commit": "4289c5a4b256de96d3011c05a06e4629a0ae5a91",
-  "release_scope": "Remove verbose explanatory and developer-style copy from Add POSP, Add MISP, Add Existing POSP and Add Existing MISP. Hide the shared Stage 1/ID issuance helper paragraphs, simplify the existing-account section to concise business labels, remove database/status explanations and per-status helper prose, and remove explanatory copy from Pending Applications while preserving validation, required confirmations and workflow behavior.",
-  "verification": "GitHub Actions Verify web portal run 31324659857 passed for source commit 5ed202d08b36b46f911e9a0880ba029ca453a1da: IFFCO structured regression, IFFCO regression, Digit regression, New India regression, TypeScript typecheck, lint and Next.js production build all succeeded. No database migration or business-data mutation is included.",
+  "release_scope": "Correct IFFCO structured financial extraction to bind Google Layout Parser table headers to body-cell values by column, recover Premium/Taxable Value 22739 from the real GST/premium table shape, handle merged Basic TP and Basic Trailers TP rows without selecting the trailing zero, preserve CPA and Legal Liability extraction, and continue withholding OD/TP/CPA whenever the structured accounting evidence cannot reconcile safely.",
+  "verification": "GitHub Actions Verify web portal run 31326522705 passed for source commit 05438126cf7b97fa9efbe85682644f4308bb5a90: real-layout IFFCO structured regression, full IFFCO regression, Digit regression, New India regression, TypeScript typecheck, lint and Next.js production build all succeeded. The real-layout regression is sanitized from the user-uploaded Google Layout Parser JSON and verifies OD 15042, TP 7367, CPA 330 and printed net 22739.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
