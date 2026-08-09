@@ -1,12 +1,12 @@
 {
-  "purpose": "Deploy the verified Google Document AI Layout Parser policy OCR release.",
-  "deploy_requested_at": "2026-08-09T21:42:00+05:30",
+  "purpose": "Deploy the corrected owner navigation with duplicate-item protection.",
+  "deploy_requested_at": "2026-08-09T21:52:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT INSUREIT policy OCR Layout Parser release",
-  "source_commit": "a20392c5ae649e1a0b2699e2782f27dff12b2b9e",
-  "rollback_ref": "9e54075ad0566c4efbd441f9ab81daeca04ac1a4",
-  "rollback_commit": "9e54075ad0566c4efbd441f9ab81daeca04ac1a4",
-  "release_scope": "Deploy current main containing the two-pass Google Document AI policy OCR architecture: existing Document OCR for insurer/product/policy/IDV/dates and Layout Parser processor b630ad846c5137a1 for IFFCO premium-table structure, with accounting reconciliation and fail-safe withholding of unsafe OD/TP/CPA values.",
-  "verification": "User-local verification passed on current Layout Parser code: IFFCO structured regression 2/2, IFFCO regression 11/11, Digit regression 5/5, New India regression 5/5, typecheck PASS, Next.js production build PASS; lint/build output contained warnings but no errors. Final Vercel Ready and authenticated live OCR upload/review/apply remain required.",
+  "source": "ChatGPT INSUREIT navigation duplicate correction",
+  "source_commit": "9272601198f4d2b915cc8571c774a526f371c125",
+  "rollback_ref": "581fab0ef2b26976ad5b49e718f7796f029baede",
+  "rollback_commit": "581fab0ef2b26976ad5b49e718f7796f029baede",
+  "release_scope": "Deploy current main with the intended Intermediatory navigation: one Add Existing POSP under POSP, one Add Existing MISP under MISP, and Pending Applications only under Onboarding. Add a shared navigation deduplication guard so repeated href+label entries cannot render twice on desktop or mobile even if a future source edit accidentally duplicates an item.",
+  "verification": "Current main was re-read before deployment and contains exactly one literal Add Existing POSP and one literal Add Existing MISP in the shared navigation definition, with no existing-intermediary action under Onboarding. The shared visibility function now deduplicates group items by href+label before both desktop and mobile renderers consume them. No database or business-data changes are included.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
