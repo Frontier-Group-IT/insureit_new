@@ -1,12 +1,12 @@
 {
-  "purpose": "Explicitly trigger a Vercel production deployment for the Employee Directory portal invitation permission fix.",
-  "deploy_requested_at": "2026-08-09T17:04:00+05:30",
+  "purpose": "Explicitly trigger the final owner-handover source-cleanup production deployment before Super Admin account creation.",
+  "deploy_requested_at": "2026-08-09T17:12:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT INSUREIT employee invitation hotfix",
-  "source_commit": "5d448d18555f5567b4c18799fe0f2c708e667568",
-  "rollback_ref": "4379eaa5b5f635d7651e4039a02935867e8f3e94",
-  "rollback_commit": "4379eaa5b5f635d7651e4039a02935867e8f3e94",
-  "release_scope": "Fix the Employee Directory portal invitation permission check so critical-risk manage_users capability is enforced using the valid approve access level. This removes the invalid critical access-level argument that could prevent the new invite UI build from reaching production. Includes Send invite, Resend invite, portal status and server-side Supabase Auth invitation flow already implemented on main.",
-  "verification": "Source review confirms PermissionAccess supports none, view, edit and approve; critical is a risk classification rather than an access level. Both Employee Directory visibility and server action checks now require manage_users at approve level. Final Vercel Ready state and live authenticated smoke test remain required.",
+  "source": "ChatGPT INSUREIT owner handover final source cleanup",
+  "source_commit": "3f227e900e1ea1fbdf85dfdf18a30ab2a8f60dfc",
+  "rollback_ref": "5d448d18555f5567b4c18799fe0f2c708e667568",
+  "rollback_commit": "5d448d18555f5567b4c18799fe0f2c708e667568",
+  "release_scope": "Deploy current main with the cumulative owner-handover presentation hardening: owner-facing navigation scope, business-facing Intermediatory/iCall copy, controlled error states across Fleet/Policy/Claims/Employees/Access Control, active-staff default in Employee Directory, corrected employee portal invite permissions, sanitized employee create/update/invite failures, and the updated owner handoff readiness record.",
+  "verification": "Source-level handover audit is substantially complete. Anand Wadhwa's company email was verified as anand@frontiervehicles.com from existing company correspondence; no existing Anand employee/profile and no active super_admin profile were found. Final authenticated Super Admin smoke, workflow-header contrast, Account Review action-error presentation and policy OCR runtime wording remain separate checks. GitHub workflow success confirms the Vercel deploy hook request, not final authenticated Vercel readiness.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
