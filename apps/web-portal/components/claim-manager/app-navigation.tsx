@@ -46,7 +46,7 @@ export const navigationSections:NavigationSection[]=[
       {href:"/customers/posp-misp/existing/new?partner_type=misp",label:"Add Existing MISP",icon:UserPlus,capability:"create_intermediary_application"}
     ]},
   {kind:"group",key:"intermediary-onboarding",label:"Onboarding",icon:FileCheck2,capability:"view_intermediaries",items:[
-   {href:"/customers/posp-misp",label:"Applications",icon:FileCheck2,capability:"view_intermediaries"}
+   {href:"/customers/posp-misp",label:"Pending Applications",icon:FileCheck2,capability:"view_intermediaries"}
   ]}
  ]},
  {key:"master-data",label:"Customers & Fleet",icon:LayoutGrid,tint:"from-[#6759ff] to-[#8f7cff]",capability:"view_customers",items:[
