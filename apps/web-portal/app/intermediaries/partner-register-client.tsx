@@ -70,7 +70,7 @@ export function PartnerRegisterClient({
   return (
     <div className="mx-auto max-w-[1480px] space-y-4 pb-6">
       {success ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10.5px] font-medium text-emerald-700">{successMessage}</div> : null}
-      {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10.5px] font-medium text-red-700">{decodeURIComponent(error)}</div> : null}
+      {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10.5px] font-medium text-red-700">The requested action could not be completed. Please try again. If the problem continues, contact the system administrator.</div> : null}
       <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
         <div className="grid items-center gap-5 border-b border-[#E7ECF3] bg-[#FAFBFD] px-5 py-3.5 lg:grid-cols-[auto_minmax(280px,460px)_1fr]">
           <h2 className="whitespace-nowrap text-[12.5px] font-semibold text-[#17203A]">Partner Register</h2>
@@ -84,7 +84,7 @@ export function PartnerRegisterClient({
             <FilterButton label="Onboarding" count={counts.onboarding} active={status === "onboarding"} onClick={() => setStatus("onboarding")} className="bg-amber-100 text-amber-800" />
           </div>
         </div>
-        {loadError ? <div className="px-4 py-12 text-center text-[11px] text-red-700">The register could not be loaded.</div> : visibleRows.length ? <PartnerTable rows={visibleRows} /> : <div className="px-4 py-16 text-center"><p className="text-[12px] font-semibold">No records found</p></div>}
+        {loadError ? <div className="px-4 py-12 text-center text-[11px] text-red-700">The register could not be loaded. Please refresh the page and try again.</div> : visibleRows.length ? <PartnerTable rows={visibleRows} /> : <div className="px-4 py-16 text-center"><p className="text-[12px] font-semibold">No records found</p><p className="mt-1 text-[10px] text-[#64748B]">Try changing the search or status filter.</p></div>}
       </section>
     </div>
   );
