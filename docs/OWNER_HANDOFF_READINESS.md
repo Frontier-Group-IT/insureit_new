@@ -63,7 +63,24 @@ Pending before final PASS:
 
 ### 3. Intermediatory — IN PROGRESS
 
-Check Partner/POSP/MISP registers, Applications, Portal Users, onboarding workflows, documents, Registration, Training & Exam, Agreement, IIB, final account review and parent-child relationships.
+Completed source-level improvements:
+
+- Partner/POSP/MISP navigation remains business-facing; Reports and Development are not mixed into this workspace.
+- Partner register raw action errors are no longer rendered directly from query/provider text.
+- Partner register load failure and empty states now provide controlled recovery guidance.
+- Existing Partner/POSP/MISP parent-child, document and onboarding routes remain intact after the cleanup.
+
+Implementation commit:
+
+- `12233a3897bf7f41eb1f3a762b54178f045efc5a` — Sanitize partner register errors for handover
+
+Remaining checks:
+
+- Applications list and account review presentation.
+- Portal Users workspace.
+- Six-stage POSP/MISP workflow presentation and completion states.
+- Registration certificate, Training & Exam, Agreement and IIB stage runtime behavior.
+- Parent/child document visibility with a real linked record.
 
 ### 4. Customers, Fleet and Policies — NOT STARTED
 
@@ -96,6 +113,17 @@ Create a test Super Admin profile identical in access to the intended owner acco
 ### 11. Owner account creation — BLOCKED BY READINESS
 
 Create only when phases 1–10 have passed or remaining exceptions are explicitly accepted.
+
+## Deployment record
+
+### Handover batch 1 — DEPLOY HOOK SUCCESS / LIVE VERCEL READY STATE NOT YET VERIFIED
+
+- Source code SHA: `12233a3897bf7f41eb1f3a762b54178f045efc5a`
+- Deployment trigger commit: `ab79d76d04ee985e520258513a7b387ada44d47e`
+- GitHub Actions run: `31309989237`
+- Workflow result: **success**
+- Confirmed workflow steps: deploy-hook secret check, Vercel deploy-hook request, deployment summary.
+- Limitation: repository workflow success proves the hook request completed; final Vercel build/Ready state and authenticated live smoke test remain separate checks.
 
 ## Formal production-readiness note
 
