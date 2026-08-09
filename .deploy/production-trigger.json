@@ -1,12 +1,12 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-09T13:15:00+05:30",
+  "deploy_requested_at": "2026-08-09T15:01:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT policy OCR hardening release",
-  "source_commit": "7505a273e038f5c529806e0672b8db86b067223c",
+  "source": "ChatGPT policy OCR production hotfix",
+  "source_commit": "eb0fc0c9f2c14f0fd1f82edee12dd298628d697d",
   "rollback_ref": "rollback/pre-performance-optimization-20260809-015856",
   "rollback_commit": "76ea8bcd41cdfb0b1c9bb6961e0f3360640f0ac0",
-  "release_scope": "Deploy current main with the verified commercial motor Policy OCR hardening for IFFCO-TOKIO, Go Digit, and The New India Assurance, including insurer-specific Section 03 normalization, fail-safe parser ownership, current-policy safeguards, CPA handling, premium reconciliation, and sanitized regression suites. United India remains deferred and is not claimed as supported by this release.",
-  "verification": "Immediately before this release request, the user verified on current main: New India regression 5/5 passed, Digit regression 5/5 passed, IFFCO regression 10/10 passed, npm run typecheck passed, npm run lint completed with 0 errors and 74 warnings, and npm run build completed successfully. These are local/build regression gates, not proof of the live Google Document AI upload/review/apply journey.",
+  "release_scope": "Deploy current main with the production OCR hotfix for the live IFFCO misclassification observed with CVI_N8109328.pdf. The hotfix replaces first-match insurer routing with weighted insurer-family evidence so a stray Digit phrase cannot override strong IFFCO P400/header/schedule evidence, adds a regression fixture for that exact conflict, and fixes OCR application of Valid from/Valid upto by resolving the nested date inputs through their aria-labels. Existing Digit, IFFCO and New India parser refiners remain otherwise unchanged.",
+  "verification": "The preceding release baseline was user-verified at New India 5/5, Digit 5/5, IFFCO 10/10, typecheck pass, lint 0 errors, build pass. For this hotfix, the exact live IFFCO misclassification was converted into an additional regression fixture and the TypeScript changes were source-reviewed. The session sandbox could not execute the suite because outbound GitHub/network resolution is unavailable, so post-deploy live verification with CVI_N8109328.pdf is mandatory before calling the hotfix fully verified.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
