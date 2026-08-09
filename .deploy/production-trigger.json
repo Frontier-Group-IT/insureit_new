@@ -1,12 +1,12 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-09T02:10:46+05:30",
+  "deploy_requested_at": "2026-08-09T13:15:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT performance optimization release",
-  "source_commit": "ff274a025c5a862d455bd07008c727d6f9c911be",
+  "source": "ChatGPT policy OCR hardening release",
+  "source_commit": "7505a273e038f5c529806e0672b8db86b067223c",
   "rollback_ref": "rollback/pre-performance-optimization-20260809-015856",
   "rollback_commit": "76ea8bcd41cdfb0b1c9bb6961e0f3360640f0ac0",
-  "release_scope": "Deploy current main with the completed portal performance optimization work: cached reference data, faster navigation behavior, client-side list workspaces, optimized shell/session handling, preserved vehicle manufacturer master changes, and the latest OCR regression fixes already present on main.",
-  "verification": "Before this trigger commit, the merged release tree passed npm run typecheck --workspace apps/web-portal, git diff --check, and npm run build --workspace apps/web-portal locally with .env.local. Existing lint warnings are unchanged and non-blocking.",
+  "release_scope": "Deploy current main with the verified commercial motor Policy OCR hardening for IFFCO-TOKIO, Go Digit, and The New India Assurance, including insurer-specific Section 03 normalization, fail-safe parser ownership, current-policy safeguards, CPA handling, premium reconciliation, and sanitized regression suites. United India remains deferred and is not claimed as supported by this release.",
+  "verification": "Immediately before this release request, the user verified on current main: New India regression 5/5 passed, Digit regression 5/5 passed, IFFCO regression 10/10 passed, npm run typecheck passed, npm run lint completed with 0 errors and 74 warnings, and npm run build completed successfully. These are local/build regression gates, not proof of the live Google Document AI upload/review/apply journey.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
