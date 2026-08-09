@@ -12,11 +12,6 @@ export function LegacyIntermediaryImportLink() {
   useEffect(() => {
     if (!LEGACY_IMPORT_ENABLED) return;
 
-    const addSidebarLinks = () => {
-      addSidebarLink("Add POSP", "Add Existing POSP", "/customers/posp-misp/existing/new?partner_type=posp");
-      addSidebarLink("Add MISP", "Add Existing MISP", "/customers/posp-misp/existing/new?partner_type=misp");
-    };
-
     const addReviewLink = () => {
       const match = pathname.match(REVIEW_ROUTE);
       if (!match) return;
@@ -38,15 +33,10 @@ export function LegacyIntermediaryImportLink() {
       createAction.parentElement?.parentElement?.appendChild(link);
     };
 
-    const apply = () => {
-      addSidebarLinks();
-      addReviewLink();
-    };
-
-    apply();
-    const frame = window.requestAnimationFrame(apply);
-    const timer = window.setTimeout(apply, 120);
-    const observer = new MutationObserver(apply);
+    addReviewLink();
+    const frame = window.requestAnimationFrame(addReviewLink);
+    const timer = window.setTimeout(addReviewLink, 120);
+    const observer = new MutationObserver(addReviewLink);
     observer.observe(document.body, { childList: true, subtree: true });
 
     return () => {
@@ -57,26 +47,4 @@ export function LegacyIntermediaryImportLink() {
   }, [pathname]);
 
   return null;
-}
-
-function addSidebarLink(anchorLabel: string, newLabel: string, href: string) {
-  const marker = `legacy-${newLabel.toLowerCase().replaceAll(" ", "-")}`;
-  if (document.querySelector(`[data-${marker}='true']`)) return;
-
-  const anchors = Array.from(document.querySelectorAll<HTMLAnchorElement>("aside a"));
-  const anchor = anchors.find((item) => item.textContent?.trim().toLowerCase() === anchorLabel.toLowerCase());
-  if (!anchor || !anchor.parentElement) return;
-
-  const link = anchor.cloneNode(true) as HTMLAnchorElement;
-  link.href = href;
-  link.title = newLabel;
-  link.setAttribute(`data-${marker}`, "true");
-
-  const text = link.querySelector("span:last-child");
-  if (text) text.textContent = newLabel;
-  else link.textContent = newLabel;
-
-  link.classList.remove("bg-white", "text-[#17213e]");
-  if (!link.className.includes("text-white/82")) link.className += " text-white/82 hover:bg-white/10 hover:text-white";
-  anchor.insertAdjacentElement("afterend", link);
 }
