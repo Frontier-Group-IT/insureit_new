@@ -26,9 +26,13 @@ export function refineIffcoStructuredFinancials(
 
   const parsedPrintedNet = numericField(parsed.fields, "total_premium");
   const structuredPrintedNet = findStructuredPrintedNet(tables);
+  const structuredTaxDerivedNet = findStructuredNetFromTaxTotals(tables);
+  const parsedTaxDerivedNet = findParsedNetFromTaxTotals(parsed.fields);
   const printedNet = parsedPrintedNet && parsedPrintedNet > 0
-    ? { value: parsedPrintedNet, page: structuredPrintedNet?.page ?? null, evidence: "Printed net from OCR text parser" }
-    : structuredPrintedNet;
+    ? { value: parsedPrintedNet, page: structuredPrintedNet?.page ?? structuredTaxDerivedNet?.page ?? null, evidence: "Printed net from OCR text parser" }
+    : structuredPrintedNet
+      ?? structuredTaxDerivedNet
+      ?? parsedTaxDerivedNet;
 
   if (!printedNet || printedNet.value <= 0) {
     return removeUnsafeFinancialFields(parsed, [
@@ -79,7 +83,7 @@ export function refineIffcoStructuredFinancials(
 
   return {
     ...parsed,
-    parserVersion: `${parsed.parserVersion}+layout-table-v3`,
+    parserVersion: `${parsed.parserVersion}+layout-table-v4`,
     fields,
     warnings,
   };
@@ -88,7 +92,7 @@ export function refineIffcoStructuredFinancials(
 function removeUnsafeFinancialFields(parsed: ParsedPolicyResult, extraWarnings: string[]): ParsedPolicyResult {
   return {
     ...parsed,
-    parserVersion: `${parsed.parserVersion}+layout-table-v3`,
+    parserVersion: `${parsed.parserVersion}+layout-table-v4`,
     fields: parsed.fields.filter((field) => !FINANCIAL_KEYS.has(field.key)),
     warnings: unique([...parsed.warnings, ...extraWarnings]),
   };
@@ -123,6 +127,66 @@ function findStructuredPrintedNet(tables: StructuredPolicyTable[]): MoneyHit | n
   }
 
   return null;
+}
+
+function findStructuredNetFromTaxTotals(tables: StructuredPolicyTable[]): MoneyHit | null {
+  for (const table of tables) {
+    let gross: MoneyHit | null = null;
+    let tax: MoneyHit | null = null;
+    let cgst: MoneyHit | null = null;
+    let sgst: MoneyHit | null = null;
+    let igst: MoneyHit | null = null;
+
+    for (const row of table.rows) {
+      const joined = normalize(row.join(" | "));
+      const values = moneyValues(joined).filter((value) => value >= 0 && value <= 10000000 && value !== 997134 && !isYear(value));
+      if (!values.length) continue;
+      const value = values[values.length - 1];
+
+      if (/(?:Gross\s+Premium|Total\s+Premium|Premium\s+Payable|Grand\s+Total)/i.test(joined) && !/(?:Net|Taxable)/i.test(joined)) {
+        gross = { value, page: table.page, evidence: safeEvidence(joined) };
+      } else if (/(?:Total\s+GST|GST\s+Amount|Tax\s+Amount)/i.test(joined) && !/(?:CGST|SGST|IGST)/i.test(joined)) {
+        tax = { value, page: table.page, evidence: safeEvidence(joined) };
+      } else if (/\bCGST\b/i.test(joined)) {
+        cgst = { value, page: table.page, evidence: safeEvidence(joined) };
+      } else if (/\bSGST\b/i.test(joined)) {
+        sgst = { value, page: table.page, evidence: safeEvidence(joined) };
+      } else if (/\bIGST\b/i.test(joined)) {
+        igst = { value, page: table.page, evidence: safeEvidence(joined) };
+      }
+    }
+
+    const taxValue = tax?.value
+      ?? (igst?.value ?? ((cgst?.value ?? 0) + (sgst?.value ?? 0)) || null);
+    if (!gross || taxValue === null || taxValue <= 0 || gross.value <= taxValue) continue;
+
+    const net = round2(gross.value - taxValue);
+    if (!isPlausiblePrintedNetCandidate(net)) continue;
+    if (!isPlausibleGstRelationship(net, taxValue, gross.value)) continue;
+
+    return {
+      value: net,
+      page: gross.page,
+      evidence: `Structured gross ${money(gross.value)} less tax ${money(taxValue)}`,
+    };
+  }
+  return null;
+}
+
+function findParsedNetFromTaxTotals(fields: ParsedPolicyField[]): MoneyHit | null {
+  const gross = numericField(fields, "gross_premium");
+  const tax = numericField(fields, "tax_amount");
+  if (!gross || !tax || gross <= tax) return null;
+  const net = round2(gross - tax);
+  if (!isPlausiblePrintedNetCandidate(net) || !isPlausibleGstRelationship(net, tax, gross)) return null;
+  const page = fields.find((field) => field.key === "gross_premium")?.page ?? null;
+  return { value: net, page: page ?? 1, evidence: `Printed gross ${money(gross)} less GST ${money(tax)}` };
+}
+
+function isPlausibleGstRelationship(net: number, tax: number, gross: number) {
+  if (!close(round2(net + tax), gross)) return false;
+  const rate = net > 0 ? tax / net : 0;
+  return rate >= 0.05 && rate <= 0.30;
 }
 
 function findAdditiveTotal(values: number[]) {
