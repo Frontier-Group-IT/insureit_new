@@ -41,6 +41,7 @@ const withoutFlattenedNet: ParsedPolicyResult = {
   ...base,
   fields: base.fields.filter((field) => field.key !== "total_premium"),
 };
+
 const withBifurcation = refineIffcoStructuredFinancials([{
   page: 1,
   rows: [
@@ -69,6 +70,43 @@ assertField(withTaxTotals, "tp_premium", "7367");
 assertField(withTaxTotals, "cpa_premium", "330");
 console.log("PASS: structured gross less GST independently recovers printed net");
 
+// Sanitized from the actual Google Layout Parser JSON uploaded from production testing.
+// Google emits the GST table as a header row followed by data rows; labels and values are not in one flattened row.
+const realLayoutShape = refineIffcoStructuredFinancials([
+  {
+    page: 1,
+    rows: [
+      ["Basic TP Premium Basic Trailers TP Premium", "B. Third Party (Rs.)", "7267.00 0.00"],
+      ["Bi Fuel Kit (IMT 25)", "", "0.00"],
+      ["Add:", "", ""],
+      ["Geographical Area Extension (IMT 1)", "", "0.00"],
+      ["PA Owner Driver CSI Rs 1500000", "", "330.00"],
+      ["Legal Liability to Driver (IMT 28)", "", "100.00"],
+      ["Net (B)", "", "7697.00"],
+    ],
+  },
+  {
+    page: 1,
+    rows: [
+      ["Insurance Cover", "SAC", "Taxable Value(Rs.)", "CGST", "GST Rate(%) SGST/UTGST", "IGST", "CGST", "GST Amount (Rs.) SGST/UTGST IGST", "Gross Premium Payable (Rs.)"],
+      ["GST Details", "997134", "22739.00", "", "", "18.00", "", "4093.02", "26832.02"],
+      ["Total", "", "22739.00", "", "", "", "", "4093.02", "26832.02"],
+    ],
+  },
+  {
+    page: 2,
+    rows: [
+      ["Section 1 (Rs.)", "Section 2 (Rs.)", "RPI Premium", "Premium/Taxable Value(Rs.)", "Total GST", "Net Premium (Rs.)"],
+      ["8819.00", "13920.00", "", "22739.00", "4093.02", "26832.02"],
+    ],
+  },
+], withoutFlattenedNet);
+assertField(realLayoutShape, "total_premium", "22739");
+assertField(realLayoutShape, "od_premium", "15042");
+assertField(realLayoutShape, "tp_premium", "7367");
+assertField(realLayoutShape, "cpa_premium", "330");
+console.log("PASS: actual Google Layout Parser header/body table shape recovers IFFCO financials");
+
 const incomplete = refineIffcoStructuredFinancials([{
   page: 1,
   rows: [
@@ -83,7 +121,7 @@ for (const key of ["od_premium", "tp_premium", "cpa_premium"]) {
   }
 }
 console.log("PASS: incomplete structured evidence withholds unsafe financial fields");
-console.log("IFFCO structured regression: 4/4 cases passed.");
+console.log("IFFCO structured regression: 5/5 cases passed.");
 
 function assertField(result: ParsedPolicyResult, key: string, expected: string) {
   const value = result.fields.find((field) => field.key === key)?.value;
