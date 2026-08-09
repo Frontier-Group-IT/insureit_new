@@ -35,7 +35,7 @@ export default async function ClaimsPage({ searchParams }: { searchParams: Promi
 
   return (
     <ClaimManagerShell title={title} backHref="/dashboard" activeNav="dashboard">
-      <ClaimsWorkspace rows={data ?? []} initialParams={params} loadError={error?.message ?? null} />
+      <ClaimsWorkspace rows={data ?? []} initialParams={params} loadError={error ? "The claims register is temporarily unavailable. Please refresh the page or try again shortly." : null} />
     </ClaimManagerShell>
   );
 }
