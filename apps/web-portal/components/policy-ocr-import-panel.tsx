@@ -326,10 +326,22 @@ function normalizeText(value: string) {
 }
 
 function findControl(aliases: string[]) {
+  const normalizedAliases = aliases.map((alias) => alias.toLowerCase().replace(/\s+/g, " ").trim());
+
+  // Composite controls such as Policy validity use aria-labels on their nested inputs,
+  // while the visible parent label is "Policy validity". Prefer aria-label matching so
+  // Valid from / Valid upto are applied to the correct date input.
+  const ariaControls = Array.from(document.querySelectorAll("input[aria-label],select[aria-label],textarea[aria-label]"));
+  for (const control of ariaControls) {
+    const aria = (control.getAttribute("aria-label") ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+    if (!normalizedAliases.some((alias) => aria === alias || aria.startsWith(alias))) continue;
+    if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement) return control;
+  }
+
   const labels = Array.from(document.querySelectorAll("label"));
   for (const label of labels) {
     const text = (label.textContent ?? "").toLowerCase().replace(/\s+/g, " ").trim();
-    if (!aliases.some((alias) => text.startsWith(alias))) continue;
+    if (!normalizedAliases.some((alias) => text.startsWith(alias))) continue;
     const control = label.querySelector("input,select,textarea") ?? label.parentElement?.querySelector("input,select,textarea");
     if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement) return control;
   }
