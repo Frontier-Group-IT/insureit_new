@@ -38,17 +38,18 @@ const REQUIRED = new Set([
 const MONEY = "(?:₹|Rs\\.?|INR)?\\s*([0-9][0-9,]*(?:\\.[0-9]{1,2})?)";
 const DATE = "([0-9]{1,2}[-/](?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC|[0-9]{1,2})[-/][0-9]{2,4}|[0-9]{4}[-/][0-9]{1,2}[-/][0-9]{1,2})";
 
+type InsurerFamily = "digit" | "iffco" | "new_india" | "generic";
+
 export function parsePolicyDocument(pages: string[]): ParsedPolicyResult {
   const cleanPages = pages.map(sanitizeText).filter(Boolean);
-  const text = cleanPages.join("\n");
-  const upper = text.toUpperCase();
+  const family = detectInsurerFamily(cleanPages);
 
   let result: ParsedPolicyResult;
-  if (upper.includes("GO DIGIT GENERAL INSURANCE") || upper.includes("DIGIT COMMERCIAL VEHICLE")) {
+  if (family === "digit") {
     result = parseDigit(cleanPages);
-  } else if (upper.includes("IFFCO-TOKIO GENERAL INSURANCE") || upper.includes("IFFCO TOKIO GENERAL INSURANCE")) {
+  } else if (family === "iffco") {
     result = parseIffco(cleanPages);
-  } else if (upper.includes("THE NEW INDIA ASSURANCE") || upper.includes("NEW INDIA ASSURANCE COMPANY")) {
+  } else if (family === "new_india") {
     result = parseNewIndia(cleanPages);
   } else {
     result = parseGeneric(cleanPages);
@@ -58,6 +59,49 @@ export function parsePolicyDocument(pages: string[]): ParsedPolicyResult {
   const missing = [...REQUIRED].filter((key) => !present.has(key));
   if (missing.length) result.warnings.push(`Review required. Missing or uncertain fields: ${missing.join(", ")}.`);
   return result;
+}
+
+function detectInsurerFamily(pages: string[]): InsurerFamily {
+  const text = pages.join("\n");
+  const upper = text.toUpperCase();
+  const firstPage = (pages[0] ?? "").slice(0, 12000).toUpperCase();
+
+  let digit = 0;
+  let iffco = 0;
+  let newIndia = 0;
+
+  // Insurer names near the beginning of page 1 are the strongest evidence.
+  if (/GO\s+DIGIT\s+GENERAL\s+INSURANCE/.test(firstPage)) digit += 12;
+  if (/IFFCO[-\s]*TOKIO\s+GENERAL\s+INSURANCE/.test(firstPage)) iffco += 12;
+  if (/THE\s+NEW\s+INDIA\s+ASSURANCE|NEW\s+INDIA\s+ASSURANCE\s+COMPANY/.test(firstPage)) newIndia += 12;
+
+  // Family-specific schedule structure is more reliable than one stray insurer phrase.
+  if (/DIGIT\s+COMMERCIAL\s+VEHICLE\s+(?:COMPREHENSIVE|PACKAGE)\s+POLICY/i.test(text)) digit += 8;
+  if (/\bPolicy\s*No\.?\s*[:\-]?\s*D\d{6,15}\b/i.test(text)) digit += 5;
+  if (/Invoice\s+Number\s+Invoice\s+Date\s+Net\s+Premium\s+Igst/i.test(text)) digit += 3;
+
+  if (/P400\s*Policy\s*#\s*N\d{6,15}/i.test(text)) iffco += 10;
+  if (/COMMERCIAL\s+VEHICLE\s+CERTIFICATE\s+OF\s+INSURANCE\s+cum\s+SCHEDULE\s*&\s*TAX\s+INVOICE/i.test(text)) iffco += 6;
+  if (/Net\s*\(A\)[^\n]{0,120}Net\s*\(B\)/i.test(text)) iffco += 3;
+
+  if (/GOODS\s+CARRYING\s+VEHICLE\s+PACKAGE\s+POLICY|COMMERCIAL\s+VEHICLE\s+PACKAGE\s+POLICY/i.test(text)) newIndia += 7;
+  if (/Net\s+Own\s+Damage\s+Premium\s*\(A\)/i.test(text) && /Net\s+Liability\s+Premium\s*\(B\)/i.test(text)) newIndia += 5;
+  if (/\b\d{18,25}\b/.test(text) && /Own\s+Damage\s+Period|Motor\s+Liability\s+Period/i.test(text)) newIndia += 3;
+
+  // Full-document legal-name evidence is useful, but intentionally weaker than page-1/header evidence.
+  if (/GO\s+DIGIT\s+GENERAL\s+INSURANCE/.test(upper)) digit += 2;
+  if (/IFFCO[-\s]*TOKIO\s+GENERAL\s+INSURANCE/.test(upper)) iffco += 2;
+  if (/THE\s+NEW\s+INDIA\s+ASSURANCE|NEW\s+INDIA\s+ASSURANCE\s+COMPANY/.test(upper)) newIndia += 2;
+
+  const ranked = [
+    { family: "digit" as const, score: digit },
+    { family: "iffco" as const, score: iffco },
+    { family: "new_india" as const, score: newIndia },
+  ].sort((a, b) => b.score - a.score);
+
+  if (ranked[0].score < 5) return "generic";
+  if (ranked[0].score === ranked[1].score) return "generic";
+  return ranked[0].family;
 }
 
 function parseDigit(pages: string[]): ParsedPolicyResult {
