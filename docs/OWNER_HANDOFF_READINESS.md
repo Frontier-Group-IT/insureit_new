@@ -24,35 +24,44 @@ Do not expose blank routes, UAT/development utilities, raw provider/database err
 
 ## Phase status
 
-### 1. Owner-visible navigation — IN PROGRESS
+### 1. Owner-visible navigation — SOURCE PASS / RUNTIME SMOKE PENDING
 
 Completed:
 
-- Reports removed from normal navigation while `/reports` remains unfinished.
+- Reports removed from normal desktop and mobile workspace navigation while `/reports` remains unfinished.
 - Development/iCall UAT navigation restricted to `it_super_user`.
 - Super Admin retains Settings and business administration capabilities.
+- Mobile drawer confirmed to use the same `visibleNavigationSections(...)` filtering source.
+- Mobile bottom navigation does not expose Reports or Development.
 
 Implementation commit:
 
 - `55714e163b36ade02fa6c12850cfe769668319a9` — Prepare owner-facing navigation for handover
 
-Remaining in this phase:
+Pending before final PASS:
 
-- Audit all still-visible navigation destinations.
-- Decide whether import/migration utilities remain owner-visible after visual/functional review.
-- Confirm mobile navigation inherits the same filtered navigation source.
+- Runtime Super Admin smoke test on desktop and mobile.
 
-### 2. Dashboard — NOT STARTED
+### 2. Dashboard — IN PROGRESS
 
-Check:
+Source review findings:
 
-- Business KPIs are meaningful and trustworthy.
-- No dashboard card links to hidden/unfinished routes.
-- Empty/error states are professional.
-- Greeting/profile display is appropriate for the owner.
-- No provider/developer terminology is exposed.
+- Dashboard structure and business KPI presentation are suitable for owner review.
+- Dashboard does not link to the hidden Reports or Development areas.
+- The `Documents to review` destination was useful but its target page exposed raw database error text. This was corrected to a controlled business-facing error state.
+- The global notification bell displayed a red unread indicator unconditionally. The false indicator was removed until a real unread-state source is wired.
 
-### 3. Intermediatory — NOT STARTED
+Implementation commits:
+
+- `5dce28231e8c8b37f8f9dff3b64404721c64c264` — Remove false unread notification indicator
+- `9a0e4263fe21cfc97e8c651151240f7ef916c63b` — Polish document verification error state for handover
+
+Pending before final PASS:
+
+- Runtime verification of KPI links and empty states with current data.
+- Desktop visual check at 1366x768, 1440x900 and 1920x1080.
+
+### 3. Intermediatory — IN PROGRESS
 
 Check Partner/POSP/MISP registers, Applications, Portal Users, onboarding workflows, documents, Registration, Training & Exam, Agreement, IIB, final account review and parent-child relationships.
 
