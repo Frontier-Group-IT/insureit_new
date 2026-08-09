@@ -54,6 +54,21 @@ assertField(withBifurcation, "tp_premium", "7367");
 assertField(withBifurcation, "cpa_premium", "330");
 console.log("PASS: structured IFFCO Premium Bifurcation independently recovers printed net");
 
+const withTaxTotals = refineIffcoStructuredFinancials([{
+  page: 1,
+  rows: [
+    ...structuredTables[0].rows,
+    ["CGST @ 9%", "2,046.51"],
+    ["SGST @ 9%", "2,046.51"],
+    ["Gross Premium", "26,832.02"],
+  ],
+}], withoutFlattenedNet);
+assertField(withTaxTotals, "total_premium", "22739");
+assertField(withTaxTotals, "od_premium", "15042");
+assertField(withTaxTotals, "tp_premium", "7367");
+assertField(withTaxTotals, "cpa_premium", "330");
+console.log("PASS: structured gross less GST independently recovers printed net");
+
 const incomplete = refineIffcoStructuredFinancials([{
   page: 1,
   rows: [
@@ -68,7 +83,7 @@ for (const key of ["od_premium", "tp_premium", "cpa_premium"]) {
   }
 }
 console.log("PASS: incomplete structured evidence withholds unsafe financial fields");
-console.log("IFFCO structured regression: 3/3 cases passed.");
+console.log("IFFCO structured regression: 4/4 cases passed.");
 
 function assertField(result: ParsedPolicyResult, key: string, expected: string) {
   const value = result.fields.find((field) => field.key === key)?.value;
