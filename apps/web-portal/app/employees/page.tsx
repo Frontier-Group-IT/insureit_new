@@ -81,7 +81,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams?: P
             {canManage ? <Link href="/employees/new" className="inline-flex h-10 items-center gap-2 rounded-md bg-[#071D49] px-4 text-[11px] font-semibold text-white"><Plus className="h-4 w-4" />Add employee</Link> : null}
           </div>
         </section>
-        <EmployeeDirectoryWorkspace employees={employees} managers={managers} portalRoles={portalRoles} canManage={canManage} canManagePortalAccess={canManagePortalAccess} initialQuery={params.q?.trim() ?? ""} initialStatus={initialStatus} loadError={error?.message ?? null} />
+        <EmployeeDirectoryWorkspace employees={employees} managers={managers} portalRoles={portalRoles} canManage={canManage} canManagePortalAccess={canManagePortalAccess} initialQuery={params.q?.trim() ?? ""} initialStatus={initialStatus} loadError={error ? "The employee directory is temporarily unavailable. Please refresh the page or try again shortly." : null} />
       </div>
     </AppShell>
   );
