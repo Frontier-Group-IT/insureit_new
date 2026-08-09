@@ -24,14 +24,19 @@ export function refineIffcoStructuredFinancials(
     ]);
   }
 
-  const printedNet = numericField(parsed.fields, "total_premium");
-  if (printedNet === null || printedNet <= 0) {
+  const parsedPrintedNet = numericField(parsed.fields, "total_premium");
+  const structuredPrintedNet = findStructuredPrintedNet(tables);
+  const printedNet = parsedPrintedNet && parsedPrintedNet > 0
+    ? { value: parsedPrintedNet, page: structuredPrintedNet?.page ?? null, evidence: "Printed net from OCR text parser" }
+    : structuredPrintedNet;
+
+  if (!printedNet || printedNet.value <= 0) {
     return removeUnsafeFinancialFields(parsed, [
       "Review required. IFFCO printed net premium could not be independently verified; OD/TP/CPA were withheld rather than guessed.",
     ]);
   }
 
-  const basicTp = findRowAmount(tables, /Basic\s+TP\s+Premium/i, { max: printedNet });
+  const basicTp = findRowAmount(tables, /Basic\s+TP\s+Premium/i, { max: printedNet.value });
   const legalDriver = findRowAmount(tables, /Legal\s+Liability\s+to\s+Driver/i, { max: 5000, ignoreImt: true });
   const cpa = findOwnerDriverPremium(tables);
 
@@ -42,21 +47,25 @@ export function refineIffcoStructuredFinancials(
   }
 
   const tp = round2(basicTp.value + (legalDriver?.value ?? 0));
-  const od = round2(printedNet - tp - cpa.value);
-  const reconciles = od >= 0 && close(round2(od + tp + cpa.value), printedNet);
+  const od = round2(printedNet.value - tp - cpa.value);
+  const reconciles = od >= 0 && close(round2(od + tp + cpa.value), printedNet.value);
 
-  if (!reconciles || tp > printedNet || cpa.value > printedNet) {
+  if (!reconciles || tp > printedNet.value || cpa.value > printedNet.value) {
     return removeUnsafeFinancialFields(parsed, [
       "Review required. IFFCO structured premium rows did not reconcile to the printed net premium; OD/TP/CPA were withheld rather than guessed.",
     ]);
   }
 
   const fields = parsed.fields.filter((field) => !FINANCIAL_KEYS.has(field.key));
+  if (!numericField(fields, "total_premium")) {
+    setField(fields, "total_premium", "Printed net premium", money(printedNet.value), .99, printedNet.page, printedNet.evidence);
+  }
+
   const evidence = [
     `Basic TP ${money(basicTp.value)} (${basicTp.evidence})`,
     legalDriver ? `Legal Liability ${money(legalDriver.value)} (${legalDriver.evidence})` : null,
     `CPA ${money(cpa.value)} (${cpa.evidence})`,
-    `Printed net ${money(printedNet)}`,
+    `Printed net ${money(printedNet.value)} (${printedNet.evidence})`,
   ].filter(Boolean).join(" | ");
 
   setField(fields, "od_premium", "OD premium", money(od), .99, basicTp.page, `${evidence} | OD = printed net - TP - CPA`);
@@ -65,12 +74,12 @@ export function refineIffcoStructuredFinancials(
   setField(fields, "cpa_opted", "CPA opted", cpa.value > 0 ? "Yes" : "No", .99, cpa.page, cpa.evidence);
 
   const warnings = parsed.warnings.filter((warning) =>
-    !/IFFCO.*(?:OD|TP|CPA|premium components|Owner-Driver CPA row|liability rows)/i.test(warning),
+    !/IFFCO.*(?:OD|TP|CPA|premium components|Owner-Driver CPA row|liability rows|printed net premium)/i.test(warning),
   );
 
   return {
     ...parsed,
-    parserVersion: `${parsed.parserVersion}+layout-table-v2`,
+    parserVersion: `${parsed.parserVersion}+layout-table-v3`,
     fields,
     warnings,
   };
@@ -79,10 +88,63 @@ export function refineIffcoStructuredFinancials(
 function removeUnsafeFinancialFields(parsed: ParsedPolicyResult, extraWarnings: string[]): ParsedPolicyResult {
   return {
     ...parsed,
-    parserVersion: `${parsed.parserVersion}+layout-table-v2`,
+    parserVersion: `${parsed.parserVersion}+layout-table-v3`,
     fields: parsed.fields.filter((field) => !FINANCIAL_KEYS.has(field.key)),
     warnings: unique([...parsed.warnings, ...extraWarnings]),
   };
+}
+
+function findStructuredPrintedNet(tables: StructuredPolicyTable[]): MoneyHit | null {
+  // Strongest evidence: an explicitly labelled net/taxable premium row.
+  for (const table of tables) {
+    for (const row of table.rows) {
+      const joined = normalize(row.join(" | "));
+      if (!/(?:Net\s+Premium|Premium\s*\/\s*Taxable\s+Value|Taxable\s+Premium)/i.test(joined)) continue;
+      if (/(?:Gross|GST|CGST|SGST|IGST|Tax\s+Amount)/i.test(joined) && !/Taxable\s+Value/i.test(joined)) continue;
+      const candidates = moneyValues(joined)
+        .filter(isPlausiblePrintedNetCandidate);
+      if (!candidates.length) continue;
+      return { value: candidates[candidates.length - 1], page: table.page, evidence: safeEvidence(joined) };
+    }
+  }
+
+  // IFFCO schedules often carry a Premium Bifurcation row where OD-side + liability-side = printed net.
+  // Accept this only when the arithmetic itself proves the total; never choose a nearby number by position alone.
+  for (const table of tables) {
+    for (const row of table.rows) {
+      const joined = normalize(row.join(" | "));
+      if (!/Premium\s+Bifurcation/i.test(joined)) continue;
+      const values = moneyValues(joined).filter(isPlausiblePrintedNetCandidate);
+      const reconciled = findAdditiveTotal(values);
+      if (reconciled !== null) {
+        return { value: reconciled, page: table.page, evidence: safeEvidence(joined) };
+      }
+    }
+  }
+
+  return null;
+}
+
+function findAdditiveTotal(values: number[]) {
+  for (let i = 0; i < values.length; i += 1) {
+    for (let j = i + 1; j < values.length; j += 1) {
+      for (let k = 0; k < values.length; k += 1) {
+        if (k === i || k === j) continue;
+        const total = values[k];
+        if (total <= values[i] || total <= values[j]) continue;
+        if (close(round2(values[i] + values[j]), total)) return total;
+      }
+    }
+  }
+  return null;
+}
+
+function isPlausiblePrintedNetCandidate(value: number) {
+  return Number.isFinite(value)
+    && value >= 100
+    && value <= 10000000
+    && value !== 997134
+    && !isYear(value);
 }
 
 function findOwnerDriverPremium(tables: StructuredPolicyTable[]): MoneyHit | null {
