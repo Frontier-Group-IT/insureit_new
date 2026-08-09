@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { appRoles, roleLabels } from "@/lib/roles";
 import { type EmployeeRow } from "./employee-forms";
 import { EmployeeDirectoryWorkspace } from "./employee-directory-workspace";
 
@@ -15,7 +17,10 @@ export default async function EmployeesPage({ searchParams }: { searchParams?: P
   const { profile } = await getAuthenticatedProfile(accessToken);
   if (!profile?.id || !(await hasEffectiveCapability(profile, "view_employees", "view"))) redirect("/access-denied");
 
-  const canManage = await hasEffectiveCapability(profile, "manage_employees", "edit");
+  const [canManage, canManagePortalAccess] = await Promise.all([
+    hasEffectiveCapability(profile, "manage_employees", "edit"),
+    hasEffectiveCapability(profile, "manage_users", "critical"),
+  ]);
   const scope = await getEmployeeAccessScope(profile.id, profile.role);
   const params = (await searchParams) ?? {};
   const initialStatus = params.status === "active" || params.status === "inactive" ? params.status : "";
@@ -23,7 +28,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams?: P
 
   let query = supabase
     .from("employees")
-    .select("id, employee_code, full_name, phone, email, department, designation, vertical, location, reporting_manager_id, reporting_manager_employee_code, employment_status, portal_profile:profiles!profiles_employee_id_fkey(id)")
+    .select("id, employee_code, full_name, phone, email, department, designation, vertical, location, reporting_manager_id, reporting_manager_employee_code, employment_status, portal_profile:profiles!profiles_employee_id_fkey(id, role)")
     .order("full_name");
   let managerQuery = supabase.from("employees").select("id, employee_code, full_name").eq("employment_status", "active").order("full_name");
 
@@ -34,11 +39,34 @@ export default async function EmployeesPage({ searchParams }: { searchParams?: P
   }
 
   const [{ data, error }, managerResult] = await Promise.all([query, managerQuery]);
-  const employees = (data ?? []).map((row) => {
+  const profileRows = (data ?? []).map((row) => {
     const portalProfile = Array.isArray(row.portal_profile) ? row.portal_profile[0] : row.portal_profile;
-    return { ...row, profile_id: portalProfile?.id ?? null } as EmployeeRow;
+    return { row, portalProfile };
   });
+
+  const authStatusById = new Map<string, "invited" | "active">();
+  const profileIds = profileRows.map(({ portalProfile }) => portalProfile?.id).filter((id): id is string => Boolean(id));
+  if (profileIds.length) {
+    const admin = createSupabaseAdminClient();
+    const { data: authUsers, error: authUsersError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (!authUsersError) {
+      for (const user of authUsers.users) {
+        if (!profileIds.includes(user.id)) continue;
+        authStatusById.set(user.id, user.email_confirmed_at ? "active" : "invited");
+      }
+    }
+  }
+
+  const employees = profileRows.map(({ row, portalProfile }) => ({
+    ...row,
+    profile_id: portalProfile?.id ?? null,
+    portal_role: portalProfile?.role ?? null,
+    portal_status: portalProfile?.id ? (authStatusById.get(portalProfile.id) ?? "active") : "none",
+  })) as EmployeeRow[];
   const managers = managerResult.data ?? [];
+  const portalRoles = appRoles
+    .filter((role) => role !== "customer" && role !== "intermediary")
+    .map((role) => ({ value: role, label: roleLabels[role] }));
   const scopeLabel = scope.mode === "hierarchy" ? "Showing your reporting hierarchy." : scope.mode === "self" ? "Showing your employee record." : null;
 
   return (
@@ -53,7 +81,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams?: P
             {canManage ? <Link href="/employees/new" className="inline-flex h-10 items-center gap-2 rounded-md bg-[#071D49] px-4 text-[11px] font-semibold text-white"><Plus className="h-4 w-4" />Add employee</Link> : null}
           </div>
         </section>
-        <EmployeeDirectoryWorkspace employees={employees} managers={managers} canManage={canManage} initialQuery={params.q?.trim() ?? ""} initialStatus={initialStatus} loadError={error?.message ?? null} />
+        <EmployeeDirectoryWorkspace employees={employees} managers={managers} portalRoles={portalRoles} canManage={canManage} canManagePortalAccess={canManagePortalAccess} initialQuery={params.q?.trim() ?? ""} initialStatus={initialStatus} loadError={error?.message ?? null} />
       </div>
     </AppShell>
   );
