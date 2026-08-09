@@ -1,12 +1,12 @@
 {
-  "purpose": "Explicitly trigger the fourth owner-handover readiness deployment batch for Claims, Tasks and Administration.",
-  "deploy_requested_at": "2026-08-09T16:40:00+05:30",
+  "purpose": "Explicitly trigger a Vercel production deployment for the Employee Directory portal invitation permission fix.",
+  "deploy_requested_at": "2026-08-09T17:04:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT INSUREIT owner handover readiness batch 4",
-  "source_commit": "4379eaa5b5f635d7651e4039a02935867e8f3e94",
-  "rollback_ref": "add1edfe82675ea91adbbfc7dd55a39bb454d8e6",
-  "rollback_commit": "add1edfe82675ea91adbbfc7dd55a39bb454d8e6",
-  "release_scope": "Deploy current main with Claims and Administration handover cleanup: claims register no longer exposes raw query errors; Employee Directory uses a controlled load failure; Access Control save/reset/database errors are converted to business-facing messages; Access Control language is simplified for business administration while keeping audited permissions and organisation scope intact.",
-  "verification": "Source review marks Tasks and Notifications presentation-ready and Claims/Administration source-ready with runtime smoke still pending. Workflow success confirms only the Vercel deploy-hook request; final Vercel Ready state and authenticated owner-style route walkthrough remain separate checks.",
+  "source": "ChatGPT INSUREIT employee invitation hotfix",
+  "source_commit": "5d448d18555f5567b4c18799fe0f2c708e667568",
+  "rollback_ref": "4379eaa5b5f635d7651e4039a02935867e8f3e94",
+  "rollback_commit": "4379eaa5b5f635d7651e4039a02935867e8f3e94",
+  "release_scope": "Fix the Employee Directory portal invitation permission check so critical-risk manage_users capability is enforced using the valid approve access level. This removes the invalid critical access-level argument that could prevent the new invite UI build from reaching production. Includes Send invite, Resend invite, portal status and server-side Supabase Auth invitation flow already implemented on main.",
+  "verification": "Source review confirms PermissionAccess supports none, view, edit and approve; critical is a risk classification rather than an access level. Both Employee Directory visibility and server action checks now require manage_users at approve level. Final Vercel Ready state and live authenticated smoke test remain required.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
