@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { FormSubmitButton } from "@/components/form-submit-button";
-import { createEmployee, updateEmployee, type EmployeeActionState } from "./actions";
+import { createEmployee, sendEmployeePortalInvite, updateEmployee, type EmployeeActionState } from "./actions";
 
 export type EmployeeRow = {
   id: string;
@@ -18,10 +18,12 @@ export type EmployeeRow = {
   reporting_manager_employee_code: string | null;
   employment_status: "active" | "inactive";
   profile_id: string | null;
+  portal_role: string | null;
+  portal_status: "none" | "invited" | "active";
 };
 
+export type PortalRoleOption = { value: string; label: string };
 type ManagerOption = Pick<EmployeeRow, "id" | "employee_code" | "full_name">;
-type PortalRoleOption = { value: string; label: string };
 
 const inputClass = "h-10 w-full rounded-md border border-[#CBD8E8] bg-white px-3 text-[12px] text-[#101828] outline-none transition focus:border-[#0B63CE] focus:ring-2 focus:ring-[#0B63CE]/10";
 const labelClass = "grid gap-1.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-[#52657B]";
@@ -73,6 +75,45 @@ export function EmployeeEditForm({ employee, managers }: { employee: EmployeeRow
       <EmployeeFields employee={employee} managers={managers} />
       <ActionMessage state={state} />
       <FormSubmitButton label="Save changes" pendingLabel="Saving" className="inline-flex h-9 items-center justify-center rounded-md bg-[#071D49] px-4 text-[11px] font-semibold text-white disabled:opacity-70" />
+    </form>
+  );
+}
+
+export function EmployeePortalInviteForm({ employee, portalRoles }: { employee: EmployeeRow; portalRoles: PortalRoleOption[] }) {
+  const action = sendEmployeePortalInvite.bind(null, employee.id);
+  const [state, formAction] = useActionState(action, initialEmployeeActionState);
+  const selectedRole = employee.portal_role && portalRoles.some((role) => role.value === employee.portal_role)
+    ? employee.portal_role
+    : portalRoles[0]?.value ?? "";
+  const isResend = employee.portal_status === "invited";
+
+  return (
+    <form action={formAction} className="grid gap-3 rounded-lg border border-[#CFE2FF] bg-[#F5F9FF] p-3">
+      <div>
+        <p className="text-[11px] font-semibold text-[#071D49]">Portal access</p>
+        <p className="mt-0.5 text-[10px] leading-4 text-[#667085]">
+          {isResend
+            ? `The account has not been activated yet. Send a fresh invitation to ${employee.email ?? "the employee's work email"}.`
+            : `Send an INSUREIT account invitation to ${employee.email ?? "the employee's work email"}.`}
+        </p>
+      </div>
+      <label className={labelClass}>
+        Portal role
+        <select name="portal_role" className={inputClass} defaultValue={selectedRole} disabled={isResend} required>
+          {portalRoles.map((role) => <option key={role.value} value={role.value}>{role.label}</option>)}
+        </select>
+        {isResend && employee.portal_role ? <input type="hidden" name="portal_role" value={employee.portal_role} /> : null}
+      </label>
+      {!employee.email ? <p className="rounded-md border border-[#F4C7C7] bg-[#FFF5F5] px-3 py-2 text-[10px] font-medium text-[#B42318]">Add a work email and save the employee before sending portal access.</p> : null}
+      <ActionMessage state={state} />
+      <div>
+        <FormSubmitButton
+          label={isResend ? "Resend invite" : "Send invite"}
+          pendingLabel={isResend ? "Resending" : "Sending"}
+          className="inline-flex h-9 items-center justify-center rounded-md bg-[#071D49] px-4 text-[10px] font-semibold text-white disabled:opacity-60"
+          disabled={!employee.email || employee.employment_status !== "active"}
+        />
+      </div>
     </form>
   );
 }
