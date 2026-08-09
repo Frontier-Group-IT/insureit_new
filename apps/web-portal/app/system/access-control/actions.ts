@@ -58,7 +58,7 @@ export async function saveEmployeePermissionOverride(formData: FormData) {
     .eq("profile_id", profileId)
     .eq("capability", capability)
     .maybeSingle();
-  if (existingError) redirectWithMessage(returnTo, "error", existingError.message);
+  if (existingError) redirectWithMessage(returnTo, "error", "Current access settings could not be loaded. Please try again.");
 
   if (access === "inherit" && scope === "inherit") {
     const { error: deleteError } = await admin
@@ -66,7 +66,7 @@ export async function saveEmployeePermissionOverride(formData: FormData) {
       .delete()
       .eq("profile_id", profileId)
       .eq("capability", capability);
-    if (deleteError) redirectWithMessage(returnTo, "error", deleteError.message);
+    if (deleteError) redirectWithMessage(returnTo, "error", "The custom permission could not be removed. Please try again.");
   } else {
     const { data: saved, error: saveError } = await admin
       .from("employee_permission_overrides")
@@ -84,7 +84,7 @@ export async function saveEmployeePermissionOverride(formData: FormData) {
       .select("profile_id,capability,access_level,scope_type")
       .single();
 
-    if (saveError) redirectWithMessage(returnTo, "error", saveError.message);
+    if (saveError) redirectWithMessage(returnTo, "error", "The permission change could not be saved. Please try again.");
     if (!saved || saved.access_level !== access || saved.scope_type !== scope) {
       redirectWithMessage(returnTo, "error", "The permission could not be verified after saving. Please try again.");
     }
@@ -102,7 +102,7 @@ export async function saveEmployeePermissionOverride(formData: FormData) {
     change_type: access === "inherit" && scope === "inherit" ? "employee_reset" : "employee_override",
     reason,
   });
-  if (auditError) redirectWithMessage(returnTo, "error", `Permission saved, but audit logging failed: ${auditError.message}`);
+  if (auditError) redirectWithMessage(returnTo, "error", "The permission was saved, but its audit record could not be completed. Please contact the system administrator before making another change.");
 
   revalidatePath("/system/access-control");
   revalidatePath(`/system/access-control/employees/${profileId}`);
@@ -121,7 +121,7 @@ export async function resetEmployeePermissionOverrides(formData: FormData) {
     .from("employee_permission_overrides")
     .select("capability,access_level,scope_type")
     .eq("profile_id", profileId);
-  if (rowsError) redirectWithMessage(returnTo, "error", rowsError.message);
+  if (rowsError) redirectWithMessage(returnTo, "error", "Current custom permissions could not be loaded. Please try again.");
 
   if (rows?.length) {
     const { error: auditError } = await admin.from("permission_change_logs").insert(rows.map((row) => ({
@@ -135,11 +135,11 @@ export async function resetEmployeePermissionOverrides(formData: FormData) {
       change_type: "employee_reset",
       reason,
     })));
-    if (auditError) redirectWithMessage(returnTo, "error", auditError.message);
+    if (auditError) redirectWithMessage(returnTo, "error", "The reset could not be recorded in the access audit. No further access changes should be made until this is reviewed.");
   }
 
   const { error: deleteError } = await admin.from("employee_permission_overrides").delete().eq("profile_id", profileId);
-  if (deleteError) redirectWithMessage(returnTo, "error", deleteError.message);
+  if (deleteError) redirectWithMessage(returnTo, "error", "Custom permissions could not be reset. Please try again.");
 
   revalidatePath("/system/access-control");
   revalidatePath(returnTo);
