@@ -1,4 +1,4 @@
-import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell, Card, PageHeader } from "@/components/shell";
@@ -43,36 +43,36 @@ export default async function AccessControlPage({ searchParams }: { searchParams
 
   return <AppShell title="Access Control">
     <div className="mx-auto max-w-[1480px] space-y-4 pb-8">
-      <PageHeader title="Employee Access & Permissions" description="See role permissions in plain language, review every active portal employee, and apply audited employee-specific overrides without changing the existing role defaults." />
+      <PageHeader title="Employee Access & Permissions" description="Review portal roles, organisation access and employee-specific exceptions. Permission changes are recorded for audit." />
       {params.success ? <Notice tone="success" text={params.success} /> : null}
       {params.error ? <Notice tone="error" text={params.error} /> : null}
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <Metric label="Active portal employees" value={(profiles ?? []).length} />
         <Metric label="Roles in use" value={new Set((profiles ?? []).map((row) => row.role)).size} />
-        <Metric label="Custom permission profiles" value={customUsers} />
-        <Metric label="High privilege users" value={highPrivilege} />
+        <Metric label="Custom access profiles" value={customUsers} />
+        <Metric label="Administrative users" value={highPrivilege} />
         <Metric label="Available permissions" value={permissionDefinitions.length} />
       </section>
 
       <Card>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div><h2 className="text-[15px] font-semibold text-[#17203A]">Employees & effective access</h2><p className="mt-1 text-[10.5px] text-[#64748B]">Role access remains the default. Custom overrides are clearly counted and can be reset at any time.</p></div>
+          <div><h2 className="text-[15px] font-semibold text-[#17203A]">Employees & effective access</h2><p className="mt-1 text-[10.5px] text-[#64748B]">Each employee starts with their assigned role. Approved exceptions are shown separately and can be reset when no longer required.</p></div>
           <form className="flex flex-wrap gap-2">
             <input name="q" defaultValue={params.q ?? ""} placeholder="Search employee, role or location" className="h-10 w-64 rounded-xl border border-[#D8E1EC] bg-white px-3 text-[10.5px]" />
             <select name="role" defaultValue={roleFilter} className="h-10 rounded-xl border border-[#D8E1EC] bg-white px-3 text-[10.5px]"><option value="">All roles</option>{appRoles.filter((role) => !["customer", "intermediary"].includes(role)).map((role) => <option key={role} value={role}>{roleLabels[role]}</option>)}</select>
             <button className="h-10 rounded-xl bg-[#1E2A5A] px-4 text-[10.5px] font-semibold text-white">Apply</button>
           </form>
         </div>
-        <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[980px] text-left text-[10.5px]"><thead><tr className="border-y border-[#E2E8F0] bg-[#F8FAFC] text-[8.5px] uppercase tracking-[.05em] text-[#64748B]"><th className="px-3 py-3">Employee</th><th className="px-3 py-3">Designation</th><th className="px-3 py-3">Assigned role</th><th className="px-3 py-3">Role permissions</th><th className="px-3 py-3">Custom overrides</th><th className="px-3 py-3">Data scope</th><th className="px-3 py-3 text-right">Action</th></tr></thead><tbody className="divide-y divide-[#EDF2F7]">{users.map(({ profile, employee }) => { const role = isAppRole(profile.role) ? profile.role : "customer"; return <tr key={profile.id} className="hover:bg-[#FAFCFF]"><td className="px-3 py-3"><p className="font-semibold text-[#0F2A55]">{employee!.full_name}</p><p className="mt-0.5 text-[9px] text-[#64748B]">{employee!.employee_code} · {employee!.location ?? "No location"}</p></td><td className="px-3 py-3"><p>{employee!.designation}</p><p className="mt-0.5 text-[9px] text-[#64748B]">{employee!.department ?? "-"}</p></td><td className="px-3 py-3"><Badge>{roleLabels[role]}</Badge></td><td className="px-3 py-3">{roleCapabilities[role].length} permissions</td><td className="px-3 py-3"><span className={overrideCount.get(profile.id) ? "font-semibold text-[#4F46E5]" : "text-[#94A3B8]"}>{overrideCount.get(profile.id) ?? 0} custom</span></td><td className="px-3 py-3">{defaultScope(role)}</td><td className="px-3 py-3 text-right"><Link href={`/system/access-control/employees/${profile.id}`} className="inline-flex h-9 items-center rounded-xl bg-[#172554] px-4 text-[10px] font-semibold text-white">Manage</Link></td></tr>; })}</tbody></table></div>
+        <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[980px] text-left text-[10.5px]"><thead><tr className="border-y border-[#E2E8F0] bg-[#F8FAFC] text-[8.5px] uppercase tracking-[.05em] text-[#64748B]"><th className="px-3 py-3">Employee</th><th className="px-3 py-3">Designation</th><th className="px-3 py-3">Assigned role</th><th className="px-3 py-3">Role permissions</th><th className="px-3 py-3">Custom access</th><th className="px-3 py-3">Data scope</th><th className="px-3 py-3 text-right">Action</th></tr></thead><tbody className="divide-y divide-[#EDF2F7]">{users.map(({ profile, employee }) => { const role = isAppRole(profile.role) ? profile.role : "customer"; return <tr key={profile.id} className="hover:bg-[#FAFCFF]"><td className="px-3 py-3"><p className="font-semibold text-[#0F2A55]">{employee!.full_name}</p><p className="mt-0.5 text-[9px] text-[#64748B]">{employee!.employee_code} · {employee!.location ?? "No location"}</p></td><td className="px-3 py-3"><p>{employee!.designation}</p><p className="mt-0.5 text-[9px] text-[#64748B]">{employee!.department ?? "-"}</p></td><td className="px-3 py-3"><Badge>{roleLabels[role]}</Badge></td><td className="px-3 py-3">{roleCapabilities[role].length} permissions</td><td className="px-3 py-3"><span className={overrideCount.get(profile.id) ? "font-semibold text-[#4F46E5]" : "text-[#94A3B8]"}>{overrideCount.get(profile.id) ?? 0} custom</span></td><td className="px-3 py-3">{defaultScope(role)}</td><td className="px-3 py-3 text-right"><Link href={`/system/access-control/employees/${profile.id}`} className="inline-flex h-9 items-center rounded-xl bg-[#172554] px-4 text-[10px] font-semibold text-white">Manage</Link></td></tr>; })}</tbody></table></div>
       </Card>
 
       <Card>
-        <div className="flex items-center justify-between"><div><h2 className="text-[15px] font-semibold text-[#17203A]">Role permission overview</h2><p className="mt-1 text-[10.5px] text-[#64748B]">Current code-defined defaults, grouped into business-friendly modules.</p></div><span className="rounded-full bg-[#EEF2FF] px-3 py-1 text-[9px] font-semibold text-[#4338CA]">Safe fallback active</span></div>
+        <div className="flex items-center justify-between"><div><h2 className="text-[15px] font-semibold text-[#17203A]">Role permission overview</h2><p className="mt-1 text-[10.5px] text-[#64748B]">Standard role permissions grouped by business area.</p></div><span className="rounded-full bg-[#EEF2FF] px-3 py-1 text-[9px] font-semibold text-[#4338CA]">Standard role access</span></div>
         <div className="mt-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-3">{permissionModules().map((module) => <div key={module} className="rounded-2xl border border-[#E2E8F0] bg-[#FAFCFF] p-4"><h3 className="text-[11px] font-semibold text-[#17203A]">{module}</h3><div className="mt-3 space-y-2">{permissionDefinitions.filter((item) => item.module === module).map((item) => <div key={item.capability} className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-medium text-[#24345A]">{item.label}</p><p className="mt-0.5 text-[8.5px] text-[#94A3B8]">{item.description}</p></div><Risk value={item.risk} /></div>)}</div></div>)}</div>
       </Card>
 
-      <Card><h2 className="text-[15px] font-semibold text-[#17203A]">Recent permission changes</h2><div className="mt-3 space-y-2">{audit?.length ? audit.map((row) => <div key={row.id} className="flex flex-col gap-1 rounded-xl border border-[#E2E8F0] px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-[10px] font-semibold text-[#24345A]">{friendlyCapability(row.capability)} → {row.new_access}</p><p className="text-[8.5px] text-[#64748B]">{row.reason}</p></div><span className="text-[8.5px] text-[#94A3B8]">{new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" }).format(new Date(row.created_at))}</span></div>) : <p className="text-[10px] text-[#94A3B8]">No permission changes have been recorded yet.</p>}</div></Card>
+      <Card><h2 className="text-[15px] font-semibold text-[#17203A]">Recent access changes</h2><div className="mt-3 space-y-2">{audit?.length ? audit.map((row) => <div key={row.id} className="flex flex-col gap-1 rounded-xl border border-[#E2E8F0] px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-[10px] font-semibold text-[#24345A]">{friendlyCapability(row.capability)} → {row.new_access}</p><p className="text-[8.5px] text-[#64748B]">{row.reason}</p></div><span className="text-[8.5px] text-[#94A3B8]">{new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" }).format(new Date(row.created_at))}</span></div>) : <p className="text-[10px] text-[#94A3B8]">No access changes have been recorded yet.</p>}</div></Card>
     </div>
   </AppShell>;
 }
