@@ -38,7 +38,7 @@ export default async function VehiclesPage() {
 
   return (
     <AppShell title="Vehicles">
-      {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[11px] font-medium text-red-700">{error.message}</div> : <VehicleWorkspace rows={data ?? []} />}
+      {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3"><p className="text-[11px] font-semibold text-red-700">The vehicle register is temporarily unavailable.</p><p className="mt-1 text-[9.5px] text-[#64748B]">Please refresh the page or try again shortly.</p></div> : <VehicleWorkspace rows={data ?? []} />}
     </AppShell>
   );
 }
