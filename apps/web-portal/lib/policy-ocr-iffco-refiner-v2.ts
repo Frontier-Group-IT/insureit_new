@@ -1,6 +1,6 @@
 import type { ParsedPolicyField, ParsedPolicyResult } from "@/lib/policy-ocr-parsers";
 
-const VERSION = "iffco_tokio_commercial_motor_v2.2.0";
+const VERSION = "iffco_tokio_commercial_motor_v2.3.0";
 const MONEY_RE = /[0-9][0-9,]*(?:\.[0-9]{1,2})?/g;
 const DATE_RE = /([0-9]{1,2})[\/-]([0-9]{1,2})[\/-]([0-9]{2,4})/;
 const DATE_TOKEN_RE = /[0-9]{1,2}[\/-][0-9]{1,2}[\/-][0-9]{2,4}/g;
@@ -38,16 +38,16 @@ export function refineIffcoCommercialPolicyV2(pages: string[], parsed: ParsedPol
   const idv = findIdv(cleanPages);
   if (idv) setField(fields, "idv", "IDV / Sum insured", money(idv.value), .99, idv.page, idv.evidence);
 
-  let netA = findNetPremium(cleanPages, "A");
-  let netB = findNetPremium(cleanPages, "B");
-  const paired = findPairedNetPremiumRow(cleanPages);
+  const totals = findPrintedTotals(cleanPages);
+  let netA = findNetPremium(cleanPages, "A", totals.net?.value ?? null);
+  let netB = findNetPremium(cleanPages, "B", totals.net?.value ?? null);
+  const paired = findPairedNetPremiumRow(cleanPages, totals.net?.value ?? null);
   netA ??= paired?.a ?? null;
   netB ??= paired?.b ?? null;
 
   const cpa = findOwnerDriverPremium(cleanPages);
   const section2 = findSection2Premium(cleanPages);
-  const totals = findPrintedTotals(cleanPages);
-  const fallbackTp = netB ? null : findFallbackTpExcludingCpa(cleanPages);
+  const fallbackTp = netB ? null : findFallbackTpExcludingCpa(cleanPages, totals.net?.value ?? null);
 
   const cpaValue = cpa?.value ?? 0;
   const section2Value = section2?.value ?? 0;
@@ -59,20 +59,22 @@ export function refineIffcoCommercialPolicyV2(pages: string[], parsed: ParsedPol
       : null;
 
   if (totals.net && normalizedTp !== null && normalizedOd === null && cpa) {
-    normalizedOd = round2(totals.net.value - normalizedTp - cpaValue);
+    const recovered = round2(totals.net.value - normalizedTp - cpaValue);
+    if (isPlausibleComponent(recovered, totals.net.value)) normalizedOd = recovered;
   }
   if (totals.net && normalizedOd !== null && normalizedTp === null && cpa) {
-    normalizedTp = round2(totals.net.value - normalizedOd - cpaValue);
+    const recovered = round2(totals.net.value - normalizedOd - cpaValue);
+    if (isPlausibleComponent(recovered, totals.net.value)) normalizedTp = recovered;
   }
 
   if (totals.net && netB && (!netA || (section2Value === 0 && !close(round2(netA.value + netB.value), totals.net.value)))) {
     const recoveredOd = round2(totals.net.value - netB.value);
-    if (recoveredOd >= 0) normalizedOd = recoveredOd;
+    if (isPlausibleComponent(recoveredOd, totals.net.value)) normalizedOd = recoveredOd;
   }
 
   const declarationConflict = cpaValue > 0 && hasCpaDeclarationConflict(cleanPages);
 
-  if (normalizedOd !== null && normalizedOd >= 0) {
+  if (normalizedOd !== null && isPlausibleComponent(normalizedOd, totals.net?.value ?? null)) {
     const evidence = netA
       ? section2Value > 0 && section2
         ? `${netA.evidence} | OD add-on/Section 2 premium ${money(section2Value)} (${section2.evidence})`
@@ -83,7 +85,7 @@ export function refineIffcoCommercialPolicyV2(pages: string[], parsed: ParsedPol
     setField(fields, "od_premium", "OD premium", money(normalizedOd), netA ? .99 : .9, netA?.page ?? totals.net?.page ?? null, evidence);
   }
 
-  if (normalizedTp !== null && normalizedTp >= 0) {
+  if (normalizedTp !== null && isPlausibleComponent(normalizedTp, totals.net?.value ?? null)) {
     const evidence = netB
       ? cpaValue > 0 && cpa
         ? `${netB.evidence} | normalized as Net(B) less separately stored Owner-Driver CPA ${money(cpaValue)}`
@@ -190,7 +192,7 @@ function findIdv(pages: string[]): Hit | null {
   return null;
 }
 
-function findNetPremium(pages: string[], side: "A" | "B"): Hit | null {
+function findNetPremium(pages: string[], side: "A" | "B", printedNet: number | null): Hit | null {
   const label = new RegExp(`Net\\s*\\(\\s*${side}\\s*\\)|Net\\s*${side}`, "i");
   const direct = new RegExp(`(?:Net\\s*\\(\\s*${side}\\s*\\)|Net\\s*${side})[ \\t]*[:\\-]?[ \\t]*([0-9][0-9,]*(?:\\.[0-9]{1,2})?)`, "i");
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
@@ -198,7 +200,7 @@ function findNetPremium(pages: string[], side: "A" | "B"): Hit | null {
     const match = page.match(direct);
     if (match) {
       const value = number(match[1]);
-      if (validPremium(value)) return { value, page: pageIndex + 1, evidence: match[0] };
+      if (isPlausibleComponent(value, printedNet)) return { value, page: pageIndex + 1, evidence: match[0] };
     }
 
     const labelMatch = label.exec(page);
@@ -207,13 +209,13 @@ function findNetPremium(pages: string[], side: "A" | "B"): Hit | null {
     const opposite = side === "A" ? /Net\s*\(\s*B\s*\)|Net\s*B/i : /Net\s*\(\s*A\s*\)|Net\s*A/i;
     if (opposite.test(around)) continue;
     const after = page.slice(labelMatch.index + labelMatch[0].length, labelMatch.index + labelMatch[0].length + 100);
-    const candidates = amounts(after).filter(validPremium);
+    const candidates = amounts(after).filter((value) => isPlausibleComponent(value, printedNet));
     if (candidates.length) return { value: candidates[0], page: pageIndex + 1, evidence: `${labelMatch[0]} ${after.slice(0, 80)}`.trim() };
   }
   return null;
 }
 
-function findPairedNetPremiumRow(pages: string[]): { a: Hit; b: Hit } | null {
+function findPairedNetPremiumRow(pages: string[], printedNet: number | null): { a: Hit; b: Hit } | null {
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
     const page = pages[pageIndex];
     const aMatch = /Net\s*\(\s*A\s*\)/i.exec(page);
@@ -224,25 +226,13 @@ function findPairedNetPremiumRow(pages: string[]): { a: Hit; b: Hit } | null {
     const secondEnd = Math.max(aMatch.index + aMatch[0].length, bMatch.index + bMatch[0].length);
     if (secondEnd - firstIndex > 220) continue;
 
-    const afterLabels = page.slice(secondEnd, secondEnd + 260);
-    const values = amounts(afterLabels).filter(validPremium);
-    if (values.length >= 2) {
+    const sourceWindow = page.slice(secondEnd, secondEnd + 300);
+    const candidates = amounts(sourceWindow).filter((value) => isPlausibleComponent(value, printedNet));
+    const pair = choosePlausiblePair(candidates, printedNet);
+    if (pair) {
       return {
-        a: { value: values[0], page: pageIndex + 1, evidence: page.slice(firstIndex, Math.min(page.length, secondEnd + 180)) },
-        b: { value: values[1], page: pageIndex + 1, evidence: page.slice(firstIndex, Math.min(page.length, secondEnd + 180)) },
-      };
-    }
-
-    const lines = page.split("\n");
-    for (let index = 0; index < lines.length; index += 1) {
-      const header = lines.slice(index, index + 4).join(" ");
-      if (!/Net\s*\(\s*A\s*\)/i.test(header) || !/Net\s*\(\s*B\s*\)/i.test(header)) continue;
-      const source = lines.slice(index, index + 8).join(" | ");
-      const lineValues = amounts(lines.slice(index + 1, index + 8).join(" ")).filter(validPremium);
-      if (lineValues.length < 2) continue;
-      return {
-        a: { value: lineValues[0], page: pageIndex + 1, evidence: source },
-        b: { value: lineValues[1], page: pageIndex + 1, evidence: source },
+        a: { value: pair[0], page: pageIndex + 1, evidence: page.slice(firstIndex, Math.min(page.length, secondEnd + 220)) },
+        b: { value: pair[1], page: pageIndex + 1, evidence: page.slice(firstIndex, Math.min(page.length, secondEnd + 220)) },
       };
     }
   }
@@ -252,35 +242,45 @@ function findPairedNetPremiumRow(pages: string[]): { a: Hit; b: Hit } | null {
 function findOwnerDriverPremium(pages: string[]): Hit | null {
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
     const page = pages[pageIndex];
-    const match = /PA\s+Owner[-\s]*Driver/i.exec(page);
-    if (!match || match.index === undefined) continue;
+    const tableStart = page.search(/A\.\s*Own\s+Damage|Basic\s+TP\s+Premium|Third\s+Party\s*\(Rs\.?\)/i);
+    const tableEndMatch = /Co-Insurance|Premium\/Taxable|Gross\s+Premium|Net\s*\(\s*B\s*\)/i.exec(tableStart >= 0 ? page.slice(tableStart) : page);
+    const segmentStart = tableStart >= 0 ? tableStart : 0;
+    const segmentEnd = tableEndMatch?.index !== undefined ? segmentStart + tableEndMatch.index + 260 : Math.min(page.length, segmentStart + 2600);
+    const segment = page.slice(segmentStart, segmentEnd);
+    const regex = /P\.?A\.?\s+Owner[-\s]*Driver/gi;
+    let match: RegExpExecArray | null;
+    let zeroHit: Hit | null = null;
 
-    const start = match.index;
-    const rawWindow = page.slice(start, start + 240);
-    const nextRow = rawWindow.search(/\b(?:Legal\s+Liability|Hire\s+Reward|LL\s+to|PA\s+to\s+Passenger|Net\s*\()/i);
-    const window = nextRow > 0 ? rawWindow.slice(0, nextRow) : rawWindow;
-    const values = amounts(window).filter((value) => value >= 0 && value <= 1500000 && !isYear(value));
-
-    const coverageIndex = values.findIndex((value) => value > 100000);
-    if (coverageIndex >= 0) {
-      const premium = values.slice(coverageIndex + 1).find((value) => value >= 0 && value <= 100000);
-      if (premium !== undefined) return { value: premium, page: pageIndex + 1, evidence: window };
+    while ((match = regex.exec(segment))) {
+      const absoluteIndex = segmentStart + (match.index ?? 0);
+      const rawWindow = page.slice(absoluteIndex, absoluteIndex + 420);
+      const nextRow = rawWindow.slice(match[0].length).search(/\b(?:Legal\s+Liability|Hire\s+Reward|LL\s+to|PA\s+to\s+Passenger|Net\s*\(|Basic\s+TP)/i);
+      const window = nextRow >= 0 ? rawWindow.slice(0, match[0].length + nextRow) : rawWindow;
+      const cleaned = window.replace(/\(\s*IMT\s*\d+\s*\)/gi, " ").replace(/\bIMT\s*\d+\b/gi, " ");
+      const values = amounts(cleaned).filter((value) => value >= 0 && value <= 1500000 && !isYear(value));
+      const coverageIndex = values.findIndex((value) => value >= 100000);
+      const premiumCandidates = coverageIndex >= 0
+        ? values.slice(coverageIndex + 1).filter((value) => value >= 0 && value <= 5000)
+        : values.filter((value) => value >= 0 && value <= 5000);
+      const positive = premiumCandidates.find((value) => value > 0);
+      if (positive !== undefined) return { value: positive, page: pageIndex + 1, evidence: window };
+      if (premiumCandidates.includes(0) && !zeroHit) zeroHit = { value: 0, page: pageIndex + 1, evidence: window };
     }
 
-    const premium = values.find((value) => value >= 0 && value <= 100000);
-    if (premium !== undefined) return { value: premium, page: pageIndex + 1, evidence: window };
+    if (zeroHit) return zeroHit;
   }
   return null;
 }
 
-function findFallbackTpExcludingCpa(pages: string[]): Hit | null {
+function findFallbackTpExcludingCpa(pages: string[], printedNet: number | null): Hit | null {
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
     const page = pages[pageIndex];
     const basic = amountAfterLabel(page, /Basic\s+TP\s+Premium/i, 120, { ignoreImt: false });
-    if (basic === null || basic <= 0 || basic > 1000000) continue;
+    if (basic === null || basic <= 0 || !isPlausibleComponent(basic, printedNet)) continue;
 
     const legalDriver = amountAfterLabel(page, /Legal\s+Liability\s+to\s+Driver/i, 130, { ignoreImt: true }) ?? 0;
     const value = round2(basic + Math.max(0, legalDriver));
+    if (!isPlausibleComponent(value, printedNet)) continue;
     return {
       value,
       page: pageIndex + 1,
@@ -297,7 +297,7 @@ function amountAfterLabel(page: string, label: RegExp, maxChars: number, options
   if (options.ignoreImt) window = window.replace(/\(\s*IMT\s*\d+\s*\)/gi, " ").replace(/\bIMT\s*\d+\b/gi, " ");
   const nextLabel = window.search(/\b(?:Basic|Legal|PA\s+Owner|LL\s+to|Geographical|Overturning|Hire\s+Reward|Net\s*\()/i);
   if (nextLabel > 0) window = window.slice(0, nextLabel);
-  const values = amounts(window).filter((value) => value >= 0 && value <= 1000000 && !isYear(value));
+  const values = amounts(window).filter((value) => value >= 0 && value <= 250000 && !isYear(value) && value !== 997134);
   return values.length ? values[0] : null;
 }
 
@@ -308,7 +308,7 @@ function findSection2Premium(pages: string[]): Hit | null {
     const match = page.match(/Premium\s+Bifurcation[\s\S]{0,300}?Section\s*1\s*\(Rs\.?\)\s+Section\s*2\s*\(Rs\.?\)[\s\S]{0,260}?\n?\s*([0-9,.]+)\s+([0-9,.]+)\s+([0-9,.]+)\s+([0-9,.]+)\s+([0-9,.]+)/i);
     if (match) {
       const value = number(match[2]);
-      if (value >= 0 && value < 10000000) return { value, page: pageIndex + 1, evidence: match[0] };
+      if (value >= 0 && value < 250000) return { value, page: pageIndex + 1, evidence: match[0] };
     }
   }
   return null;
@@ -319,7 +319,12 @@ function findPrintedTotals(pages: string[]): { net: Hit | null; tax: Hit | null;
     const page = pages[pageIndex];
     const totalRow = page.match(/GST\s+Details[\s\S]{0,650}?\bTotal\s+([0-9,.]+)\s+([0-9,.]+)\s+([0-9,.]+)/i);
     if (totalRow) {
-      return { net: hit(totalRow[1], pageIndex, totalRow[0]), tax: hit(totalRow[2], pageIndex, totalRow[0]), gross: hit(totalRow[3], pageIndex, totalRow[0]) };
+      const net = number(totalRow[1]);
+      const tax = number(totalRow[2]);
+      const gross = number(totalRow[3]);
+      if (isPlausiblePrintedTotals(net, tax, gross)) {
+        return { net: hit(totalRow[1], pageIndex, totalRow[0]), tax: hit(totalRow[2], pageIndex, totalRow[0]), gross: hit(totalRow[3], pageIndex, totalRow[0]) };
+      }
     }
 
     const netMatch = page.match(/Premium\/Taxable\s+Value\s+RS\.?\s*([0-9,.]+)/i);
@@ -327,23 +332,14 @@ function findPrintedTotals(pages: string[]): { net: Hit | null; tax: Hit | null;
     if (netMatch && grossMatch) {
       const net = number(netMatch[1]);
       const gross = number(grossMatch[1]);
-      if (net >= 0 && gross >= net) {
+      const tax = round2(gross - net);
+      if (isPlausiblePrintedTotals(net, tax, gross)) {
         return {
           net: { value: net, page: pageIndex + 1, evidence: netMatch[0] },
-          tax: { value: round2(gross - net), page: pageIndex + 1, evidence: `${netMatch[0]} | ${grossMatch[0]}` },
+          tax: { value: tax, page: pageIndex + 1, evidence: `${netMatch[0]} | ${grossMatch[0]}` },
           gross: { value: gross, page: pageIndex + 1, evidence: grossMatch[0] },
         };
       }
-    }
-
-    const net = amountAfterLabel(page, /Premium\/Taxable\s+Value(?:\s+RS\.?)?/i, 140, { ignoreImt: false });
-    const gross = amountAfterLabel(page, /Gross\s+Premium\s+Payable(?:\s+Rs\.?)?/i, 140, { ignoreImt: false });
-    if (net !== null && gross !== null && gross >= net) {
-      return {
-        net: { value: net, page: pageIndex + 1, evidence: "Premium/Taxable Value OCR window" },
-        tax: { value: round2(gross - net), page: pageIndex + 1, evidence: "Derived from printed net and gross" },
-        gross: { value: gross, page: pageIndex + 1, evidence: "Gross Premium Payable OCR window" },
-      };
     }
   }
   return { net: null, tax: null, gross: null };
@@ -363,6 +359,32 @@ function setField(fields: ParsedPolicyField[], key: string, label: string, value
   else fields.push(next);
 }
 
+function choosePlausiblePair(values: number[], printedNet: number | null): [number, number] | null {
+  for (let i = 0; i < values.length; i += 1) {
+    for (let j = i + 1; j < values.length; j += 1) {
+      const a = values[i];
+      const b = values[j];
+      if (!isPlausibleComponent(a, printedNet) || !isPlausibleComponent(b, printedNet)) continue;
+      if (printedNet !== null && round2(a + b) > printedNet + TOLERANCE) continue;
+      if (a <= 5 && b > 50000) continue;
+      return [a, b];
+    }
+  }
+  return null;
+}
+
+function isPlausibleComponent(value: number, printedNet: number | null) {
+  if (!Number.isFinite(value) || value < 0 || value > 250000 || isYear(value) || value === 997134) return false;
+  if (printedNet !== null && value > printedNet + TOLERANCE) return false;
+  return true;
+}
+
+function isPlausiblePrintedTotals(net: number, tax: number, gross: number) {
+  if (![net, tax, gross].every(Number.isFinite)) return false;
+  if (net <= 0 || gross < net || tax < 0 || net > 1000000 || gross > 1500000) return false;
+  return close(round2(net + tax), gross);
+}
+
 function hit(raw: string, pageIndex: number, evidence: string): Hit { return { value: number(raw), page: pageIndex + 1, evidence }; }
 function amounts(text: string) { return [...text.matchAll(MONEY_RE)].map((match) => number(match[0])).filter(Number.isFinite); }
 function number(raw: string) { return Number(raw.replace(/,/g, "")); }
@@ -373,7 +395,6 @@ function money(value: number) {
 function round2(value: number) { return Math.round((value + Number.EPSILON) * 100) / 100; }
 function close(a: number, b: number) { return Math.abs(a - b) <= TOLERANCE; }
 function isYear(value: number) { return Number.isInteger(value) && value >= 1900 && value <= 2100; }
-function validPremium(value: number) { return value >= 0 && value < 10000000 && !isYear(value); }
 
 function isAnnualPeriod(from: string, upto: string) {
   const start = Date.parse(`${from}T00:00:00Z`);
