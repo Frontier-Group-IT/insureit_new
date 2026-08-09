@@ -1,12 +1,12 @@
 {
-  "purpose": "Deploy the owner-handover navigation deduplication before Super Admin account creation.",
-  "deploy_requested_at": "2026-08-09T18:19:00+05:30",
+  "purpose": "Deploy the verified structured Google Document AI table extraction for Policy OCR.",
+  "deploy_requested_at": "2026-08-09T20:38:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT INSUREIT owner handover navigation cleanup",
-  "source_commit": "5fe100ef776e18ce25b14065e28238c29bdd856a",
+  "source": "ChatGPT INSUREIT structured policy OCR release",
+  "source_commit": "6b98e4a9dac39fd4ac39f659f198bff1bd55e5e3",
   "rollback_ref": "43f34f7873e0fb7b268970617d7e51f1e2adfda9",
   "rollback_commit": "43f34f7873e0fb7b268970617d7e51f1e2adfda9",
-  "release_scope": "Remove duplicate-looking existing POSP/MISP navigation from the business handover experience. Keep Add Existing POSP and Add Existing MISP as the operational one-at-a-time routes. Move bulk POSP/MISP Import and Import History out of owner-facing Onboarding and into the IT Super User Development workspace. Update owner-handoff readiness notes accordingly.",
-  "verification": "Current navigation source confirms one operational Add Existing POSP route and one Add Existing MISP route remain visible in their respective business groups. Bulk import tools are now present only in the IT-only Development section. Additional navigation overlap review found no other equivalent duplicate business actions requiring removal. Final Vercel Ready and authenticated visual smoke remain required.",
+  "release_scope": "Deploy current main containing the structured Google Document AI table-cell pass for IFFCO commercial motor Policy OCR. The structured financial refiner repairs unsafe flattened-text premium interpretations only when table evidence and accounting reconciliation are sufficient; otherwise it withholds OD/TP instead of guessing. Existing insurer/product/policy/IDV/date extraction remains intact. Current main also includes the already-committed owner-navigation cleanup that followed the OCR implementation.",
+  "verification": "User-provided local verification on 2026-08-09: IFFCO structured regression 2/2 passed; IFFCO regression 11/11 passed; Digit regression 5/5 passed; New India regression 5/5 passed; TypeScript typecheck passed; lint completed with 0 errors and 65 warnings; Next.js 15.5.21 production build compiled successfully and generated 33/33 static pages. The structured regression specifically covers repairing the prior flattened misread and withholding unsafe financial fields when evidence is incomplete. Final Vercel Ready and authenticated live upload/review/apply remain separate verification gates.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
