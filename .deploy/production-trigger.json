@@ -1,12 +1,12 @@
 {
-  "purpose": "Explicitly trigger the second owner-handover readiness deployment batch for the Intermediatory workspace.",
+  "purpose": "Explicitly trigger the third owner-handover readiness deployment batch for Customers, Fleet and Policies.",
   "deploy_requested_at": "2026-08-09T16:40:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT INSUREIT owner handover readiness batch 2",
-  "source_commit": "49ad4e4de0b14d7a58faf9a300832d3fd42f73f2",
-  "rollback_ref": "c08aaf606e887b3e0ddac4755a640738e32ad273",
-  "rollback_commit": "c08aaf606e887b3e0ddac4755a640738e32ad273",
-  "release_scope": "Deploy current main with the Intermediatory handover polish: normal POSP/MISP iCall training UI no longer exposes UAT/test-environment terminology; Partner Portal Users now uses business-facing labels, correct active/needs-attention grouping, IST invitation timestamps, and controlled empty/error states; previously deployed owner-facing navigation and Partner register sanitization remain included.",
-  "verification": "Source-level workflow review confirms six explicit onboarding stages and controlled workflow error normalization. The deployment hook result and final Vercel build state remain separate checks; authenticated runtime smoke testing with a real linked Partner/POSP or Partner/MISP family is still required before Intermediatory is marked final PASS.",
+  "source": "ChatGPT INSUREIT owner handover readiness batch 3",
+  "source_commit": "b36c7ea78114e1f5b8627ee327f4c1d25f77e9b1",
+  "rollback_ref": "e0455961f2b2addb7e14acce7691b1fb4e8817ed",
+  "rollback_commit": "e0455961f2b2addb7e14acce7691b1fb4e8817ed",
+  "release_scope": "Deploy current main with Customer/Fleet/Policy handover polish: Vehicle and Policy registers no longer expose raw Supabase errors; Add Vehicle and Add Policy use controlled in-page setup failure states instead of framework error pages; RC lookup failures no longer expose provider exception text; previously deployed owner-facing navigation and Intermediatory polish remain included.",
+  "verification": "Source review confirms Customer Register, Vehicle Register and Policy Register have intentional searchable/filterable empty states. Runtime smoke testing of Add Vehicle, Add Policy, RC lookup and policy OCR is still required before this phase is marked final PASS. The deployment workflow only confirms the Vercel hook request; final Vercel Ready state remains a separate check.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
