@@ -1,12 +1,12 @@
 {
-  "purpose": "Deploy corrected existing intermediary navigation after owner handover review.",
-  "deploy_requested_at": "2026-08-09T21:39:00+05:30",
+  "purpose": "Deploy the verified Google Document AI Layout Parser policy OCR release.",
+  "deploy_requested_at": "2026-08-09T21:42:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT INSUREIT owner handover navigation correction",
-  "source_commit": "9c88d02e18262d0165d6b5c82b13de56ad73aefc",
+  "source": "ChatGPT INSUREIT policy OCR Layout Parser release",
+  "source_commit": "a20392c5ae649e1a0b2699e2782f27dff12b2b9e",
   "rollback_ref": "9e54075ad0566c4efbd441f9ab81daeca04ac1a4",
   "rollback_commit": "9e54075ad0566c4efbd441f9ab81daeca04ac1a4",
-  "release_scope": "Restore Add Existing POSP under POSP and Add Existing MISP under MISP. Remove the incorrectly added Onboarding > Add Existing POSP / MISP entry and delete its redundant chooser route. Keep Onboarding limited to Pending Applications. No onboarding workflow or database logic changes are included.",
-  "verification": "Current navigation source shows Add Existing POSP only under POSP, Add Existing MISP only under MISP, and Pending Applications as the only Onboarding item. The redundant /customers/posp-misp/existing chooser page has been deleted. No database migration or business-data mutation is included.",
+  "release_scope": "Deploy current main containing the two-pass Google Document AI policy OCR architecture: existing Document OCR for insurer/product/policy/IDV/dates and Layout Parser processor b630ad846c5137a1 for IFFCO premium-table structure, with accounting reconciliation and fail-safe withholding of unsafe OD/TP/CPA values.",
+  "verification": "User-local verification passed on current Layout Parser code: IFFCO structured regression 2/2, IFFCO regression 11/11, Digit regression 5/5, New India regression 5/5, typecheck PASS, Next.js production build PASS; lint/build output contained warnings but no errors. Final Vercel Ready and authenticated live OCR upload/review/apply remain required.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
