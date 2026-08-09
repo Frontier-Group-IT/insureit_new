@@ -1,12 +1,12 @@
 {
-  "purpose": "Deploy the root-cause fix for duplicate Add Existing POSP/MISP sidebar entries.",
-  "deploy_requested_at": "2026-08-09T22:03:00+05:30",
+  "purpose": "Deploy concise intermediary onboarding copy for owner-facing handover.",
+  "deploy_requested_at": "2026-08-09T22:17:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT INSUREIT duplicate-sidebar root-cause fix",
-  "source_commit": "0fd8883ceac7129c9d63e82ae67d85873f4f1522",
-  "rollback_ref": "fad200bcf65eb0c6b470ac9dd030261c8d269d39",
-  "rollback_commit": "fad200bcf65eb0c6b470ac9dd030261c8d269d39",
-  "release_scope": "Remove the legacy DOM-mutation code that cloned Add Existing POSP and Add Existing MISP into the rendered sidebar after React navigation had already rendered those actions. Keep the existing application-review legacy import action intact. Current navigation remains one Add Existing POSP under POSP, one Add Existing MISP under MISP, and Pending Applications only under Onboarding.",
-  "verification": "The historical LegacyIntermediaryImportLink component was confirmed to clone sidebar anchors after render, bypassing the React navigation array and its deduplication guard. Commit 0fd8883 removes addSidebarLinks/addSidebarLink entirely and leaves only the review-page Import existing behavior. No database or business-data changes are included.",
+  "source": "ChatGPT INSUREIT onboarding copy cleanup",
+  "source_commit": "5ed202d08b36b46f911e9a0880ba029ca453a1da",
+  "rollback_ref": "4289c5a4b256de96d3011c05a06e4629a0ae5a91",
+  "rollback_commit": "4289c5a4b256de96d3011c05a06e4629a0ae5a91",
+  "release_scope": "Remove verbose explanatory and developer-style copy from Add POSP, Add MISP, Add Existing POSP and Add Existing MISP. Hide the shared Stage 1/ID issuance helper paragraphs, simplify the existing-account section to concise business labels, remove database/status explanations and per-status helper prose, and remove explanatory copy from Pending Applications while preserving validation, required confirmations and workflow behavior.",
+  "verification": "GitHub Actions Verify web portal run 31324659857 passed for source commit 5ed202d08b36b46f911e9a0880ba029ca453a1da: IFFCO structured regression, IFFCO regression, Digit regression, New India regression, TypeScript typecheck, lint and Next.js production build all succeeded. No database migration or business-data mutation is included.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
