@@ -37,15 +37,16 @@ export const navigationSections:NavigationSection[]=[
   ]},
   {kind:"group",key:"posp",label:"POSP",icon:UsersRound,capability:"view_intermediaries",items:[
       {href:"/intermediaries/posp",label:"All POSP",icon:UsersRound,capability:"view_intermediaries"},
-      {href:"/intermediaries/posp/new",label:"Add POSP",icon:UserPlus,capability:"create_intermediary_application"}
+      {href:"/intermediaries/posp/new",label:"Add POSP",icon:UserPlus,capability:"create_intermediary_application"},
+      {href:"/customers/posp-misp/existing/new?partner_type=posp",label:"Add Existing POSP",icon:UserPlus,capability:"create_intermediary_application"}
     ]},
   {kind:"group",key:"misp",label:"MISP",icon:UsersRound,capability:"view_intermediaries",items:[
       {href:"/intermediaries/misp",label:"All MISP",icon:UsersRound,capability:"view_intermediaries"},
-      {href:"/intermediaries/misp/new",label:"Add MISP",icon:UserPlus,capability:"create_intermediary_application"}
+      {href:"/intermediaries/misp/new",label:"Add MISP",icon:UserPlus,capability:"create_intermediary_application"},
+      {href:"/customers/posp-misp/existing/new?partner_type=misp",label:"Add Existing MISP",icon:UserPlus,capability:"create_intermediary_application"}
     ]},
   {kind:"group",key:"intermediary-onboarding",label:"Onboarding",icon:FileCheck2,capability:"view_intermediaries",items:[
-   {href:"/customers/posp-misp",label:"Pending Applications",icon:FileCheck2,capability:"view_intermediaries"},
-   {href:"/customers/posp-misp/existing",label:"Add Existing POSP / MISP",icon:UserPlus,capability:"create_intermediary_application"}
+   {href:"/customers/posp-misp",label:"Pending Applications",icon:FileCheck2,capability:"view_intermediaries"}
   ]}
  ]},
  {key:"master-data",label:"Customers & Fleet",icon:LayoutGrid,tint:"from-[#6759ff] to-[#8f7cff]",capability:"view_customers",items:[
