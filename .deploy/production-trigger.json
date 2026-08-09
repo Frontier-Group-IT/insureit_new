@@ -1,12 +1,12 @@
 {
   "purpose": "Explicitly trigger one batched Vercel production deployment after a development session.",
-  "deploy_requested_at": "2026-08-09T15:30:00+05:30",
+  "deploy_requested_at": "2026-08-09T15:39:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT IFFCO scanned OCR extraction hotfix",
-  "source_commit": "d884b484f1920336f2697bde8c2bdc4bedfca2bb",
+  "source": "ChatGPT IFFCO scanned premium recovery hotfix",
+  "source_commit": "cd36c268f89ebbeaf704c99ba9dac45f24fab29e",
   "rollback_ref": "rollback/pre-performance-optimization-20260809-015856",
   "rollback_commit": "76ea8bcd41cdfb0b1c9bb6961e0f3360640f0ac0",
-  "release_scope": "Deploy current main with the follow-up live IFFCO scanned-policy OCR extraction hardening. Production already identifies CVI_N8109328.pdf as IFFCO-TOKIO and correctly extracts Package, policy number N8109328 and IDV 1600000. This hotfix expands scanned OCR handling for split Net(A)/Net(B) rows, Owner-Driver line/hyphen variants, policy-period dates split across OCR lines, and accounting recovery from printed net when one component row is unreadable. It preserves review-required behavior when CPA cannot be read reliably.",
-  "verification": "This hotfix is driven by direct production evidence from CVI_N8109328.pdf: insurer/product/policy/IDV are now correct, while OD, TP and validity dates remain missing in the live scan. The parser change is narrowly scoped to IFFCO scanned OCR anchors and reconciliation. The session cannot execute the local Node regression/build suite because outbound repository network resolution is unavailable, so the same real policy must be retested after deployment before marking the hotfix verified.",
+  "release_scope": "Deploy current main with IFFCO commercial motor parser v2.2. Production validation of CVI_N8109328.pdf now confirms insurer routing, Package product, policy number N8109328, IDV 1600000, Valid From 2026-07-24 and Valid Upto 2027-07-23. This follow-up targets the remaining scanned-table defect: OD, TP and CPA. It adds tolerant split Net(A)/Net(B) handling, binds CPA after the Owner-Driver CSI coverage amount instead of taking a later row, recovers TP from Basic TP plus readable Legal Liability to Driver when Net(B) is unavailable, and derives OD from printed net only when CPA and TP evidence are present. Missing CPA is downgraded so zero is not auto-applied as a trustworthy value.",
+  "verification": "Direct production screenshots verify insurer/product/policy/IDV/date extraction and application. The new v2.2 TypeScript file was syntax-checked with Node's strip-types parser and two focused local scenarios were executed: a split Net(A)/Net(B) OCR layout and a layout with Net(A)/Net(B) absent but Basic TP, Legal Liability, CPA and printed net present. Both produced OD 15042, TP 7367 and CPA 330 for the N8109328 accounting pattern. The full repository regression/typecheck/build suite was not executed in this session, so the same real policy must be retested after deployment before the financial hotfix is marked production-verified.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
