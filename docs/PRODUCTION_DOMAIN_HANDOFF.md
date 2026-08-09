@@ -211,3 +211,69 @@ Do not add `admin`, `app`, `login`, `auth`, `api`, `staging`, or similar hostnam
 - iCall iframe on new domain: **BLOCKED on provider frame/cookie configuration**
 - AWS/AuthBridge domain-specific changes: **not required by current architecture; direct feature regression still recommended before launch**
 - Removal of old Vercel fallback: **NOT YET APPROVED / NOT YET RECOMMENDED**
+
+## 12. Branded authentication email setup
+
+**APPLIED / VERIFIED BY USER — 2026-08-09**
+
+The client's normal company email remains hosted in Microsoft 365 / Exchange Online. Existing Microsoft 365 root-domain mail routing must remain untouched.
+
+A dedicated Microsoft 365 shared mailbox identity was created for automated INSUREIT mail:
+
+```text
+INSUREIT Notifications <no-reply@insureit.in>
+```
+
+The mailbox identity is not used as a browser/client credential and no mailbox password is stored in the repository.
+
+Resend is used as the transactional SMTP delivery provider for Supabase Auth. The sending domain `insureit.in` was verified in Resend with the provider-issued records added in GoDaddy:
+
+- DKIM TXT under `resend._domainkey`
+- return-path MX under `send`
+- SPF TXT under `send`
+
+Resend receiving is intentionally disabled; Microsoft 365 continues receiving normal company mail.
+
+Supabase Auth Custom SMTP is configured to use Resend with sender identity:
+
+```text
+Sender name: INSUREIT
+Sender email: no-reply@insureit.in
+```
+
+Do not store the Resend API/SMTP credential in repository context, GitHub, screenshots, or browser code.
+
+The Supabase Invite User email template was customized with INSUREIT branding and the production portal activation flow. A real invitation sent through Supabase was received successfully from the branded sender, so the outbound path is **VERIFIED BY USER**:
+
+```text
+Supabase Auth -> Resend SMTP -> recipient
+```
+
+The Reset Password template was prepared during the same setup, but a complete password-reset user journey should still be explicitly tested before launch if no newer evidence exists.
+
+### Employee Directory invitation implementation
+
+**IMPLEMENTED IN REPOSITORY — NOT YET DEPLOYED/VERIFIED LIVE**
+
+The Employee Directory now has server-side portal invitation support for employees with critical user-management access:
+
+- directory-only employee -> `Send invite`
+- unconfirmed invited employee -> `Resend invite`
+- confirmed employee -> `Portal active`
+- invite action requires a valid work email and staff portal role
+- invited/active status is derived server-side from the Supabase Auth user state rather than only the existence of a profile row
+- invitation continues to redirect through `https://portal.insureit.in/invite`
+- invitation generation remains server-side using the Supabase Auth Admin API; no secret/service-role credential is exposed to the browser
+- portal-user administration remains gated by the effective `manage_users` capability at critical level
+
+Implementation commits on `main` include:
+
+```text
+f7cc5e9cceb24e4d3420a1fe4dec6e7a677e16e9  Add employee portal invitation action
+d70b4f0b5472fbc628e8ebfbe00d3ac685a01a15  Add employee portal invitation form
+55082a91be8690d85841cdf7ad8163d200e2379c  Add portal invite controls to employee directory
+5d1df763403fbad049f67bf8c37eebf1462eaa13  Show employee portal invitation status
+5b1f7e95fbd945789a5cbd6666c8be650e6bdfa9  Clean employee invitation action imports
+```
+
+Automatic Vercel deployment from ordinary commits remains disabled. Do not claim this Employee Directory UI is live until an explicit production deployment is requested and the exact deployment plus invite/resend/activation journey is verified.
