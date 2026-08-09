@@ -23,7 +23,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams?: P
   ]);
   const scope = await getEmployeeAccessScope(profile.id, profile.role);
   const params = (await searchParams) ?? {};
-  const initialStatus = params.status === "active" || params.status === "inactive" ? params.status : "";
+  const initialStatus = params.status === "inactive" ? "inactive" : "active";
   const supabase = await createServerSupabaseClient();
 
   let query = supabase
