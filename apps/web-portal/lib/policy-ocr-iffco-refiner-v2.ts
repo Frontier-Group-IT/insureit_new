@@ -1,8 +1,9 @@
 import type { ParsedPolicyField, ParsedPolicyResult } from "@/lib/policy-ocr-parsers";
 
-const VERSION = "iffco_tokio_commercial_motor_v2.0.0";
+const VERSION = "iffco_tokio_commercial_motor_v2.1.0";
 const MONEY_RE = /[0-9][0-9,]*(?:\.[0-9]{1,2})?/g;
 const DATE_RE = /([0-9]{1,2})[\/-]([0-9]{1,2})[\/-]([0-9]{2,4})/;
+const DATE_TOKEN_RE = /[0-9]{1,2}[\/-][0-9]{1,2}[\/-][0-9]{2,4}/g;
 const TOLERANCE = 0.05;
 const REPLACE_KEYS = new Set([
   "insurer_name", "policy_product", "policy_number", "policy_start_date", "policy_end_date",
@@ -37,38 +38,67 @@ export function refineIffcoCommercialPolicyV2(pages: string[], parsed: ParsedPol
   const idv = findIdv(cleanPages);
   if (idv) setField(fields, "idv", "IDV / Sum insured", money(idv.value), .99, idv.page, idv.evidence);
 
-  const netA = findNetPremium(cleanPages, "A");
-  const netB = findNetPremium(cleanPages, "B");
+  let netA = findNetPremium(cleanPages, "A");
+  let netB = findNetPremium(cleanPages, "B");
+  const paired = findPairedNetPremiumRow(cleanPages);
+  netA ??= paired?.a ?? null;
+  netB ??= paired?.b ?? null;
+
   const cpa = findOwnerDriverPremium(cleanPages);
   const section2 = findSection2Premium(cleanPages);
   const totals = findPrintedTotals(cleanPages);
 
   const cpaValue = cpa?.value ?? 0;
   const section2Value = section2?.value ?? 0;
-  const normalizedOd = netA ? round2(netA.value + section2Value) : null;
-  const normalizedTp = netB ? round2(Math.max(0, netB.value - cpaValue)) : null;
-  const declarationConflict = cpaValue > 0 && hasCpaDeclarationConflict(cleanPages);
+  let normalizedOd = netA ? round2(netA.value + section2Value) : null;
+  let normalizedTp = netB ? round2(Math.max(0, netB.value - cpaValue)) : null;
 
-  if (normalizedOd !== null && netA) {
-    const evidence = section2Value > 0 && section2
-      ? `${netA.evidence} | OD add-on/Section 2 premium ${money(section2Value)} (${section2.evidence})`
-      : netA.evidence;
-    setField(fields, "od_premium", "OD premium", money(normalizedOd), .99, netA.page, evidence);
+  // Accounting recovery for scanned OCR where one exact premium row is split or omitted.
+  // Printed Net = normalized OD + normalized TP + CPA.
+  if (totals.net && normalizedTp !== null && normalizedOd === null) {
+    normalizedOd = round2(totals.net.value - normalizedTp - cpaValue);
+  }
+  if (totals.net && normalizedOd !== null && normalizedTp === null) {
+    normalizedTp = round2(totals.net.value - normalizedOd - cpaValue);
+  }
+  // If Net(B) is available, OD can be recovered without needing a separately readable Section-2 row:
+  // printed net = (NetA + Section2) + NetB.
+  if (totals.net && netB && (!netA || (section2Value === 0 && !close(round2((netA.value ?? 0) + netB.value), totals.net.value)))) {
+    const recoveredOd = round2(totals.net.value - netB.value);
+    if (recoveredOd >= 0) normalizedOd = recoveredOd;
   }
 
-  if (normalizedTp !== null && netB) {
-    const evidence = cpaValue > 0 && cpa
-      ? `${netB.evidence} | normalized as Net(B) less separately stored Owner-Driver CPA ${money(cpaValue)}`
-      : netB.evidence;
-    setField(fields, "tp_premium", "Third party premium", money(normalizedTp), .99, netB.page, evidence);
+  const declarationConflict = cpaValue > 0 && hasCpaDeclarationConflict(cleanPages);
+
+  if (normalizedOd !== null && normalizedOd >= 0) {
+    const evidence = netA
+      ? section2Value > 0 && section2
+        ? `${netA.evidence} | OD add-on/Section 2 premium ${money(section2Value)} (${section2.evidence})`
+        : netA.evidence
+      : totals.net && normalizedTp !== null
+        ? `${totals.net.evidence} | OD recovered by printed-net reconciliation`
+        : "OD recovered by IFFCO accounting reconciliation";
+    setField(fields, "od_premium", "OD premium", money(normalizedOd), netA ? .99 : .9, netA?.page ?? totals.net?.page ?? null, evidence);
+  }
+
+  if (normalizedTp !== null && normalizedTp >= 0) {
+    const evidence = netB
+      ? cpaValue > 0 && cpa
+        ? `${netB.evidence} | normalized as Net(B) less separately stored Owner-Driver CPA ${money(cpaValue)}`
+        : netB.evidence
+      : totals.net && normalizedOd !== null
+        ? `${totals.net.evidence} | TP recovered by printed-net reconciliation`
+        : "TP recovered by IFFCO accounting reconciliation";
+    setField(fields, "tp_premium", "Third party premium", money(normalizedTp), netB ? .99 : .9, netB?.page ?? totals.net?.page ?? null, evidence);
   }
 
   if (cpa) {
     setField(fields, "cpa_premium", "CPA amount", money(cpaValue), declarationConflict ? .72 : .99, cpa.page, cpa.evidence);
     setField(fields, "cpa_opted", "CPA opted", cpaValue > 0 ? "Yes" : "No", declarationConflict ? .72 : .99, cpa.page, cpa.evidence);
   } else {
-    setField(fields, "cpa_premium", "CPA amount", "0", .82, null, "No payable PA Owner Driver premium identified in the premium table");
-    setField(fields, "cpa_opted", "CPA opted", "No", .82, null, "Derived from missing payable Owner-Driver premium");
+    setField(fields, "cpa_premium", "CPA amount", "0", .72, null, "No payable PA Owner Driver premium identified in the scanned premium table; verify manually");
+    setField(fields, "cpa_opted", "CPA opted", "No", .72, null, "Derived from missing payable Owner-Driver premium; verify manually");
+    warnings.push("Review required. IFFCO Owner-Driver CPA row was not read reliably from the scanned premium table. Verify CPA before applying.");
   }
 
   if (totals.net) setField(fields, "total_premium", "Printed net premium", money(totals.net.value), .99, totals.net.page, totals.net.evidence);
@@ -112,11 +142,25 @@ function findPolicyNumber(pages: string[]): TextHit | null {
 function findPeriod(pages: string[]): PeriodHit | null {
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
     const page = pages[pageIndex];
-    const match = page.match(/Period\s+of\s+Insurance\s+From\s*:?\s*([0-9]{1,2}[\/-][0-9]{1,2}[\/-][0-9]{2,4})(?:\s+[0-9:]+)?[\s\S]{0,100}?To\s*:?\s*(?:Midnight\s+On\s*)?([0-9]{1,2}[\/-][0-9]{1,2}[\/-][0-9]{2,4})/i);
-    if (!match) continue;
-    const from = isoDate(match[1]);
-    const upto = isoDate(match[2]);
-    if (from && upto) return { from, upto, page: pageIndex + 1, evidence: match[0] };
+    const exact = page.match(/Period\s+of\s+Insurance\s+From\s*:?\s*([0-9]{1,2}[\/-][0-9]{1,2}[\/-][0-9]{2,4})(?:\s+[0-9:]+)?[\s\S]{0,140}?To\s*:?\s*(?:Midnight\s+On\s*)?([0-9]{1,2}[\/-][0-9]{1,2}[\/-][0-9]{2,4})/i);
+    if (exact) {
+      const from = isoDate(exact[1]);
+      const upto = isoDate(exact[2]);
+      if (from && upto) return { from, upto, page: pageIndex + 1, evidence: exact[0] };
+    }
+
+    const marker = page.search(/Period\s+of\s+Insurance|Insurance\s+Period/i);
+    if (marker < 0) continue;
+    const window = page.slice(marker, marker + 520);
+    const tokens = [...window.matchAll(DATE_TOKEN_RE)].map((match) => match[0]);
+    for (let first = 0; first < tokens.length; first += 1) {
+      for (let second = first + 1; second < tokens.length; second += 1) {
+        const from = isoDate(tokens[first]);
+        const upto = isoDate(tokens[second]);
+        if (!from || !upto || !isAnnualPeriod(from, upto)) continue;
+        return { from, upto, page: pageIndex + 1, evidence: window.slice(0, 320) };
+      }
+    }
   }
   return null;
 }
@@ -139,12 +183,36 @@ function findIdv(pages: string[]): Hit | null {
 }
 
 function findNetPremium(pages: string[], side: "A" | "B"): Hit | null {
-  const pattern = new RegExp(`Net\\s*\\(${side}\\)\\s*([0-9][0-9,]*(?:\\.[0-9]{1,2})?)`, "i");
+  const patterns = [
+    new RegExp(`Net\\s*\\(\\s*${side}\\s*\\)\\s*[:\\-]?\\s*([0-9][0-9,]*(?:\\.[0-9]{1,2})?)`, "i"),
+    new RegExp(`Net\\s*${side}\\s*[:\\-]?\\s*([0-9][0-9,]*(?:\\.[0-9]{1,2})?)`, "i"),
+  ];
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
-    const match = pages[pageIndex].match(pattern);
-    if (!match) continue;
-    const value = number(match[1]);
-    if (value >= 0 && value < 10000000 && !isYear(value)) return { value, page: pageIndex + 1, evidence: match[0] };
+    for (const pattern of patterns) {
+      const match = pages[pageIndex].match(pattern);
+      if (!match) continue;
+      const value = number(match[1]);
+      if (value >= 0 && value < 10000000 && !isYear(value)) return { value, page: pageIndex + 1, evidence: match[0] };
+    }
+  }
+  return null;
+}
+
+function findPairedNetPremiumRow(pages: string[]): { a: Hit; b: Hit } | null {
+  for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
+    const lines = pages[pageIndex].split("\n");
+    for (let index = 0; index < lines.length; index += 1) {
+      const header = lines.slice(index, index + 2).join(" ");
+      if (!/Net\s*\(\s*A\s*\)/i.test(header) || !/Net\s*\(\s*B\s*\)/i.test(header)) continue;
+      const source = lines.slice(index, index + 4).join(" | ");
+      const afterHeader = lines.slice(index + 1, index + 4).join(" ");
+      const values = amounts(afterHeader).filter((value) => value >= 0 && value < 10000000 && !isYear(value));
+      if (values.length < 2) continue;
+      return {
+        a: { value: values[0], page: pageIndex + 1, evidence: source },
+        b: { value: values[1], page: pageIndex + 1, evidence: source },
+      };
+    }
   }
   return null;
 }
@@ -153,11 +221,10 @@ function findOwnerDriverPremium(pages: string[]): Hit | null {
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
     const lines = pages[pageIndex].split("\n");
     for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
-      const line = lines[lineIndex];
-      if (!/PA\s+Owner\s+Driver/i.test(line)) continue;
-      const lineValues = amounts(line).filter((value) => value >= 0 && value <= 1500000 && !isYear(value));
-      const source = lineValues.length ? line : `${line} ${lines[lineIndex + 1] ?? ""}`.trim();
-      const values = lineValues.length ? lineValues : amounts(source).filter((value) => value >= 0 && value <= 1500000 && !isYear(value));
+      const labelWindow = lines.slice(lineIndex, lineIndex + 2).join(" ");
+      if (!/PA\s+Owner[-\s]*Driver/i.test(labelWindow)) continue;
+      const source = lines.slice(lineIndex, lineIndex + 3).join(" ").trim();
+      const values = amounts(source).filter((value) => value >= 0 && value <= 1500000 && !isYear(value));
       const premiumCandidates = values.filter((value) => value <= 100000);
       if (!premiumCandidates.length) continue;
       return { value: premiumCandidates[premiumCandidates.length - 1], page: pageIndex + 1, evidence: source };
@@ -170,7 +237,7 @@ function findSection2Premium(pages: string[]): Hit | null {
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
     const page = pages[pageIndex];
     if (!/Premium\s+Bifurcation/i.test(page) || !/Section\s*2\s*\(Rs\.?\)/i.test(page)) continue;
-    const match = page.match(/Premium\s+Bifurcation[\s\S]{0,260}?Section\s*1\s*\(Rs\.?\)\s+Section\s*2\s*\(Rs\.?\)[\s\S]{0,220}?\n?\s*([0-9,.]+)\s+([0-9,.]+)\s+([0-9,.]+)\s+([0-9,.]+)\s+([0-9,.]+)/i);
+    const match = page.match(/Premium\s+Bifurcation[\s\S]{0,300}?Section\s*1\s*\(Rs\.?\)\s+Section\s*2\s*\(Rs\.?\)[\s\S]{0,260}?\n?\s*([0-9,.]+)\s+([0-9,.]+)\s+([0-9,.]+)\s+([0-9,.]+)\s+([0-9,.]+)/i);
     if (match) {
       const value = number(match[2]);
       if (value >= 0 && value < 10000000) return { value, page: pageIndex + 1, evidence: match[0] };
@@ -182,7 +249,7 @@ function findSection2Premium(pages: string[]): Hit | null {
 function findPrintedTotals(pages: string[]): { net: Hit | null; tax: Hit | null; gross: Hit | null } {
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
     const page = pages[pageIndex];
-    const totalRow = page.match(/GST\s+Details[\s\S]{0,500}?\bTotal\s+([0-9,.]+)\s+([0-9,.]+)\s+([0-9,.]+)/i);
+    const totalRow = page.match(/GST\s+Details[\s\S]{0,650}?\bTotal\s+([0-9,.]+)\s+([0-9,.]+)\s+([0-9,.]+)/i);
     if (totalRow) {
       return { net: hit(totalRow[1], pageIndex, totalRow[0]), tax: hit(totalRow[2], pageIndex, totalRow[0]), gross: hit(totalRow[3], pageIndex, totalRow[0]) };
     }
@@ -228,6 +295,14 @@ function money(value: number) {
 function round2(value: number) { return Math.round((value + Number.EPSILON) * 100) / 100; }
 function close(a: number, b: number) { return Math.abs(a - b) <= TOLERANCE; }
 function isYear(value: number) { return Number.isInteger(value) && value >= 1900 && value <= 2100; }
+
+function isAnnualPeriod(from: string, upto: string) {
+  const start = Date.parse(`${from}T00:00:00Z`);
+  const end = Date.parse(`${upto}T00:00:00Z`);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return false;
+  const days = Math.round((end - start) / 86400000);
+  return days >= 360 && days <= 370;
+}
 
 function isoDate(raw: string) {
   const match = raw.match(DATE_RE);
