@@ -1,0 +1,38 @@
+name: Temporary POSP primary workflow redesign
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/temp_redesign_posp_primary_workflow.py'
+      - '.github/workflows/temp-redesign-posp-primary-workflow.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Apply POSP primary redesign
+        run: python scripts/temp_redesign_posp_primary_workflow.py
+      - name: Validate patch
+        run: |
+          git diff --check
+          grep -F 'CompactSectionHeader number="01" title="Identity & contact"' apps/web-portal/app/customers/applications/posp-misp-application-editor.tsx
+          grep -F 'embeddedAction' apps/web-portal/app/customers/applications/posp-misp-application-editor.tsx
+          grep -F 'label={isMisp ? "Save & return to documents" : "Upload Documents"}' apps/web-portal/app/customers/applications/posp-misp-application-editor.tsx
+      - name: Typecheck web portal
+        run: |
+          npm ci
+          npm run typecheck:web
+      - name: Commit application change
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/web-portal/app/customers/applications/posp-misp-application-editor.tsx
+          git commit -m 'Redesign POSP primary workflow details'
+          git push
