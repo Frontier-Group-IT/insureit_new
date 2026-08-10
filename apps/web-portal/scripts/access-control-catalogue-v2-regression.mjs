@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   accessLevels,
   dataScopes,
@@ -99,6 +101,81 @@ for (const role of roleMatrixV2.filter((entry) => entry.code !== "it_super_user"
   }
 }
 
+// Phase 4 database seed must remain a byte-independent semantic mirror of the
+// TypeScript shadow catalogue/matrix. This checks the static migration without
+// applying it to any Supabase project.
+const migrationPath = resolve(
+  process.cwd(),
+  "../../supabase/migrations/20260810140000_access_control_v2_shadow_rbac_foundation.sql",
+);
+const migrationSql = readFileSync(migrationPath, "utf8");
+
+function sectionBetween(startMarker, endMarker) {
+  const start = migrationSql.indexOf(startMarker);
+  const end = migrationSql.indexOf(endMarker, start + startMarker.length);
+  if (start < 0 || end < 0 || end <= start) fail(`cannot locate migration section ${startMarker}`);
+  return migrationSql.slice(start, end);
+}
+
+const roleSeedSection = sectionBetween(
+  "insert into public.access_roles_v2",
+  "-- Canonical V2 permission catalogue.",
+);
+for (const role of roleMatrixV2) {
+  const marker = `('${role.code}'`;
+  if (!roleSeedSection.includes(marker)) fail(`Phase 4 SQL role seed is missing ${role.code}`);
+}
+
+const permissionSeedSection = sectionBetween(
+  "insert into public.access_permissions_v2",
+  "-- Seed role defaults from the approved Phase 3 shadow matrix.",
+);
+for (const permission of permissionCatalogueV2) {
+  const marker = `('${permission.key}'`;
+  if (!permissionSeedSection.includes(marker)) fail(`Phase 4 SQL permission seed is missing ${permission.key}`);
+}
+
+const sqlPermissionKeys = Array.from(permissionSeedSection.matchAll(/\('([^']+)'\s*,\s*'[^']+'/g), (match) => match[1]);
+if (new Set(sqlPermissionKeys).size !== permissionCatalogueV2.length) {
+  fail(`Phase 4 SQL permission seed count ${new Set(sqlPermissionKeys).size} does not match catalogue ${permissionCatalogueV2.length}`);
+}
+
+const grantsSection = sectionBetween(
+  "with role_grants(role_code, permission_key, access_level, scope_type) as (",
+  ")\ninsert into public.access_role_permissions_v2",
+);
+const sqlGrantMatches = Array.from(
+  grantsSection.matchAll(/\('([^']+)'\s*,\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*(null|'[^']+')\)/g),
+);
+const sqlGrants = new Set(
+  sqlGrantMatches.map((match) => {
+    const scope = match[4] === "null" ? "" : match[4].slice(1, -1);
+    return `${match[1]}|${match[2]}|${match[3]}|${scope}`;
+  }),
+);
+const matrixGrants = new Set(
+  roleMatrixV2.flatMap((role) =>
+    role.grants.map((entry) => `${role.code}|${entry.permission}|${entry.access}|${entry.scope ?? ""}`),
+  ),
+);
+
+for (const expected of matrixGrants) {
+  if (!sqlGrants.has(expected)) fail(`Phase 4 SQL grant seed is missing ${expected}`);
+}
+for (const actual of sqlGrants) {
+  if (!matrixGrants.has(actual)) fail(`Phase 4 SQL grant seed contains unexpected grant ${actual}`);
+}
+if (sqlGrants.size !== matrixGrants.size) {
+  fail(`Phase 4 SQL grant count ${sqlGrants.size} does not match matrix ${matrixGrants.size}`);
+}
+
+if (!migrationSql.includes("revoke all on table public.employee_role_assignments_v2 from anon, authenticated")) {
+  fail("Phase 4 employee role assignment table must remain inaccessible to normal clients");
+}
+if (!migrationSql.includes("Phase 4 shadow foundation must not auto-assign employees")) {
+  fail("Phase 4 migration is missing the no-auto-assignment invariant");
+}
+
 const criticalPermissions = permissionCatalogueV2.filter((permission) => permission.risk === "critical");
 if (!criticalPermissions.length) fail("catalogue unexpectedly contains no critical permissions");
 
@@ -108,5 +185,7 @@ console.log(JSON.stringify({
   criticalPermissionCount: criticalPermissions.length,
   roleCount: roleMatrixV2.length,
   assignableRoleCount: roleMatrixV2.filter((role) => role.assignable).length,
+  sqlRoleGrantCount: sqlGrants.size,
+  phase4SqlParity: "ok",
   status: "ok",
 }, null, 2));
