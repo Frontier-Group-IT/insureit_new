@@ -1,4 +1,4 @@
-import { permissionCatalogueV2ByKey, type DataScope, type PermissionKeyV2 } from "./access-control-catalogue-v2";
+import type { DataScope, PermissionKeyV2 } from "./access-control-catalogue-v2";
 import type { EffectivePermissionDecisionV2 } from "./access-control-effective-v2";
 
 export type ScopeTargetV2 = {
@@ -95,13 +95,13 @@ export function scopeAllowsTargetV2(
 }
 
 /**
- * Applies an effective permission decision to one target record. Permissions
- * that do not require record scope remain governed only by the permission
- * decision itself; scoped permissions require at least one granted scope to
- * match the target.
+ * Applies an effective permission decision to one target record. The caller
+ * explicitly supplies whether the permission requires record scope so this
+ * evaluator stays independent from catalogue/database lookups.
  */
 export function evaluateScopedAccessV2(
   decision: EffectivePermissionDecisionV2,
+  scopeRequired: boolean,
   actor: ScopeActorContextV2,
   target: ScopeTargetV2,
 ): ScopedAccessDecisionV2 {
@@ -115,18 +115,7 @@ export function evaluateScopedAccessV2(
     };
   }
 
-  const definition = permissionCatalogueV2ByKey.get(decision.permission);
-  if (!definition) {
-    return {
-      permission: decision.permission,
-      allowed: false,
-      matchedScope: null,
-      evaluatedScopes: decision.scopes,
-      reason: "Permission is not present in the V2 catalogue.",
-    };
-  }
-
-  if (!definition.scopeRequired) {
+  if (!scopeRequired) {
     return {
       permission: decision.permission,
       allowed: true,
