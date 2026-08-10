@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the approved clickable linked POSP/MISP summary ID from PR #232 to production.",
-  "deploy_requested_at": "2026-08-10T11:38:00+05:30",
+  "purpose": "Deploy the approved linked POSP/MISP Eye placement fix from PR #233 to production.",
+  "deploy_requested_at": "2026-08-10T12:06:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT linked POSP/MISP summary ID release",
-  "source_commit": "21118c72506dfc992d1cc63fa445045282a94e46",
-  "release_scope": "Deploy PR #232. Make the linked POSP/MISP ID in Partner Application Review clickable, route it to the existing linked POSP/MISP application review page, show a compact Eye icon as part of the same click target, keep Not Created non-interactive, and preserve existing linked-account discovery, Parent Partner styling, database queries, permissions, activation, and workflow behavior.",
-  "verification": "PR #232 was squash merged into main as 21118c72506dfc992d1cc63fa445045282a94e46. Final PR app diff is one file, +4/-2. Full lint/typecheck/build were not run before merge. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
+  "source": "ChatGPT linked POSP/MISP Eye placement release",
+  "source_commit": "79c6430eff8f6a743d56b652f4fb1b00298db648",
+  "release_scope": "Deploy PR #233. Move the linked POSP/MISP Eye icon beside the POSP ID/MISP ID label, keep the Eye independently clickable, keep the linked ID value separately clickable to the same linked application review route, preserve Not Created as non-interactive, and leave all other summary stats, application relationships, permissions, workflow logic, and routing unchanged.",
+  "verification": "PR #233 was squash merged into main as 79c6430eff8f6a743d56b652f4fb1b00298db648. Final PR app diff is one file, +1/-1. Full lint/typecheck/build were not run before merge. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
