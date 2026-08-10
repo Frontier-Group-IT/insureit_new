@@ -44,7 +44,7 @@ Do not expose blank routes, UAT/development utilities, raw provider/database err
 - Claim-document destination no longer exposes raw database errors.
 - False permanent notification unread dot removed.
 
-### 3. Intermediatory — SOURCE PASS WITH ONE VISUAL FIX PENDING / RUNTIME SMOKE PENDING
+### 3. Intermediatory — SOURCE PASS / RUNTIME SMOKE PENDING
 
 - Partner/POSP/MISP registers use controlled failure states.
 - Portal Users uses business-facing status grouping and IST timestamps.
@@ -54,9 +54,8 @@ Do not expose blank routes, UAT/development utilities, raw provider/database err
 - Registration completion remains tied to signed registration form for new onboarding, with historical progression preserved.
 - Parent-child registration certificate projection remains intact.
 - Business navigation now exposes one clear individual route for adding existing POSP/MISP accounts; bulk migration/import tools are IT-only.
-
-Known visual FIX:
-- Workflow identity header has a light container with white identity text. Correct during final visual pass without touching workflow logic unnecessarily.
+- Workflow identity header contrast is corrected in current source: the identity header uses a dark navy container with white identity text.
+- Account Review no longer renders arbitrary `?error=` query text directly; known business cases are mapped and all other action failures fall back to a controlled message.
 
 ### 4. Customers, Fleet and Policies — SOURCE PASS / RUNTIME SMOKE PENDING
 
@@ -65,8 +64,9 @@ Known visual FIX:
 - Add Vehicle/Add Policy show intentional setup-unavailable states instead of framework errors.
 - RC lookup no longer exposes provider exception text.
 - Register empty states, filters, search and pagination are presentation-ready at source level.
+- Policy document failure messages are business-facing and no longer expose Google, Vercel, authentication, provider-status or raw service wording to the user.
 
-Runtime checks still required for Add Vehicle, Add Policy, RC lookup and policy OCR.
+Runtime checks still required for Add Vehicle, Add Policy, RC lookup and policy document import.
 
 ### 5. Claims — SOURCE PASS / DEEP WORKFLOW RUNTIME SMOKE PENDING
 
@@ -96,20 +96,21 @@ Runtime checks still required across Documents, Verification, Survey, Under Repa
 - Access Control terminology was simplified from engineering language to standard business access language.
 - Access changes remain audited and organisation scope remains visible.
 
-### 8. Global polish — PARTIAL SOURCE PASS / FINAL VISUAL SMOKE PENDING
+### 8. Global polish — SOURCE PASS / FINAL VISUAL SMOKE PENDING
 
 Completed:
 - major owner-visible raw DB/provider error paths sanitized across Intermediatory, Fleet/Policy, Claims and Administration;
 - business navigation no longer exposes blank Reports or IT UAT/import tools;
 - normal onboarding no longer presents UAT/test copy;
 - inactive employee history is not the default owner view;
-- duplicate existing-intermediary navigation was consolidated.
+- duplicate existing-intermediary navigation was consolidated;
+- workflow identity header contrast confirmed corrected in current source;
+- Account Review direct query-error presentation sanitized;
+- policy document runtime failure copy sanitized at source level.
 
 Outstanding targeted visual checks:
-- workflow identity header contrast;
-- Account Review direct `?error=` presentation if an action fails;
 - desktop visual smoke at 1366x768, 1440x900 and 1920x1080;
-- policy OCR runtime failure wording.
+- authenticated runtime verification of representative owner-visible workflows after a Super Admin login is available.
 
 ### 9. Data/demo sanity — SOURCE/DATA CHECK PASS WITH NO DELETION
 
@@ -144,6 +145,14 @@ Resolved fields:
 Still required:
 - exact employee designation to store in Employee Directory (not reliably present in connected correspondence);
 - employee code/department should follow the organisation's preferred master-data convention when the record is created.
+
+## Final source-polish verification
+
+- Policy failure-message commit: `89f96b3b52dc54931d1cb83c1e27c638b86eb8b2`.
+- Account Review error-sanitization commit: `b7ffb578c2328e9c6052c4e7759257f218cd0dda`.
+- Compulsory verification run: `31383268403` — **success** on `b7ffb578c2328e9c6052c4e7759257f218cd0dda`.
+- Verified checks: Access Control V2 catalogue/scope/lifecycle regressions, employee portal governance regression, IFFCO structured regression, IFFCO regression, Digit regression, New India regression, TypeScript typecheck, lint and production build.
+- Production deployment for this final source-polish batch has **not** been triggered from this record; deployment remains a separate explicit action and does not substitute for authenticated runtime smoke.
 
 ## Deployment record
 
