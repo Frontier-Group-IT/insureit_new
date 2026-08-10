@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the interactive hover states for POSP/MISP ID and Portal Access header actions.",
-  "deploy_requested_at": "2026-08-10T15:40:00+05:30",
+  "purpose": "Deploy the Partner Register success-toast update from PR #242.",
+  "deploy_requested_at": "2026-08-10T16:19:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #241 and deploy with the protected GitHub Actions production flow",
-  "source_commit": "ca021c71e7ca2fa03bcdccdabab6ecbeddf9bba2",
-  "release_scope": "Deploy the account-review header interaction update from PR #241: subtle hover/focus feedback for clickable POSP/MISP ID and Portal Access blocks, while preserving existing navigation, portal account actions, permissions, workflows, and all non-interactive header stats.",
-  "verification": "PR #241 verification run 31377714009 passed all configured access-control regressions, Policy OCR regressions, TypeScript typecheck, lint, and production build. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook; Vercel READY must be verified separately.",
+  "source": "ChatGPT explicit request to merge PR #242 and deploy with the protected GitHub Actions production flow",
+  "source_commit": "6146d1f96a0249605b387184b2ce69e2a5887691",
+  "release_scope": "Deploy the Partner Register UI update that replaces the full-width success banner with the existing temporary WorkflowSuccessToast, preserving contextual success messages, automatic dismissal, manual dismissal, success-query cleanup, and existing persistent error handling. No server actions, permissions, intermediary workflows, database logic, or unrelated UI behavior are changed.",
+  "verification": "PR #242 verification run 31380736407 passed all configured access-control regressions, Policy OCR regressions, TypeScript typecheck, lint, and production build. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook; Vercel READY must be verified separately.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
