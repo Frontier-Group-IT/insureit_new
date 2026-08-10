@@ -167,7 +167,7 @@ begin
     set window_started_at = v_limit.window_started_at,
         request_count = v_limit.request_count + 1,
         active_lease_id = v_lease_id,
-        active_until = v_now + interval '35 seconds',
+        active_until = v_now + interval '90 seconds',
         updated_at = v_now
     where actor_profile_id = p_actor_profile_id;
   return query select 'allowed'::text, v_lease_id;

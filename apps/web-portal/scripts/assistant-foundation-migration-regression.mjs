@@ -27,6 +27,7 @@ for (const rpc of ["stage_assistant_knowledge_import", "transition_assistant_kno
 for (const rpc of ["acquire_assistant_request_lease", "release_assistant_request_lease"]) {
   if (!normalized.includes(`function public.${rpc}`)) fail(`${rpc} must provide a shared server-side request boundary`);
 }
+if (!normalized.includes("active_until = v_now + interval '90 seconds'")) fail("shared concurrency lease must cover the maximum bounded provider/tool runtime");
 if (!normalized.includes("revoke all on function public.search_approved_assistant_knowledge") || !normalized.includes("from public, anon, authenticated")) {
   fail("approved knowledge RPC must not be executable by browser roles");
 }
