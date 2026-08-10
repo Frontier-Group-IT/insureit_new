@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the parent Partner eye-link update from PR #246.",
-  "deploy_requested_at": "2026-08-10T17:28:00+05:30",
+  "purpose": "Deploy the optional POSP/MISP last-name and refined legacy IIB registration update from PR #247.",
+  "deploy_requested_at": "2026-08-10T17:53:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #246 and deploy with the protected GitHub Actions production flow",
-  "source_commit": "83479ee8e83433ab7a3e9919f6b12543df7d55da",
-  "release_scope": "Deploy the POSP/MISP Application Review header update that adds a clickable eye icon immediately beside the Parent Partner label and links it to the resolved parent Partner Application Review page, while keeping the Partner ID as plain text and preserving all existing relationship resolution, workflows, permissions, portal access, and account-status behavior.",
-  "verification": "PR #246 verification run 31385854552 passed the configured Verify web portal workflow. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook; Vercel READY must be verified separately.",
+  "source": "ChatGPT explicit request to merge PR #247 and deploy with the protected GitHub Actions production flow",
+  "source_commit": "7e40cb25dd68cc21fe4e03c0960c04e2b0e428c9",
+  "release_scope": "Deploy the onboarding validation update that makes POSP Last Name and MISP Designated Person Last Name optional in the UI, client validation, and server-side submission flow, and removes Submitted from the selectable legacy IIB registration dropdown while preserving backward compatibility for historical submitted records and the existing iib_submitted workflow mapping.",
+  "verification": "PR #247 verification run 31387628781 passed the configured Verify web portal workflow. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook; Vercel READY must be verified separately.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
