@@ -1,10 +1,10 @@
 {
   "purpose": "Deploy the approved Portal Access summary card actions from PR #235 to production.",
-  "deploy_requested_at": "2026-08-10T12:37:00+05:30",
+  "deploy_requested_at": "2026-08-10T12:41:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT Portal Access card release",
+  "source": "ChatGPT Portal Access card release retrigger",
   "source_commit": "37c49979c2bc0bd334e59a24298efec3972ecbef",
-  "release_scope": "Deploy PR #235. Rename Portal user status to Portal Access for Partner and POSP/MISP application review, show Create User for not_created, Resend Link for invited, preserve meaningful read-only states such as Active and Suspended, make Create User and Resend Link actionable through the existing server actions, preserve existing top-right controls, card styling, Assigned RM/Activation Date layout, database, permissions, activation, invitation, and workflow behavior.",
-  "verification": "PR #235 was squash merged into main as 37c49979c2bc0bd334e59a24298efec3972ecbef. Final PR app diff is one file, +14/-4. Full lint/typecheck/build were not run before merge. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
+  "release_scope": "Deploy PR #235. Rename Portal user status to Portal Access for Partner and POSP/MISP application review, show Create User for not_created, Resend Link for invited, preserve meaningful read-only states such as Active and Suspended, make Create User and Resend Link actionable through the existing server actions, preserve existing top-right controls, card styling, Assigned RM/Activation Date layout, database, permissions, activation, invitation, and workflow behavior. Retrigger after a newer main commit cancelled the prior production workflow.",
+  "verification": "PR #235 was squash merged into main as 37c49979c2bc0bd334e59a24298efec3972ecbef. The first production workflow run was cancelled by a newer main push before verification completed, so this retrigger must complete successfully and Vercel must report READY for the exact resulting deployment before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
