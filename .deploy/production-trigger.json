@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the approved Application Review legacy Account Status injection removal from the latest main branch.",
-  "deploy_requested_at": "2026-08-10T14:24:00+05:30",
+  "purpose": "Deploy the approved Application Review Edit details pencil-icon change.",
+  "deploy_requested_at": "2026-08-10T14:44:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit deploy request after PR #239 merge; retriggered after a newer main push superseded the first run",
-  "source_commit": "70fea32714b6796a6d964e8c20fc8729d06116bd",
-  "release_scope": "Deploy the latest main branch, which includes PR #239 removing the legacy AccountStatusHeaderStat client portal mount from the intermediary Application Review layout so the declarative six-column summary in page.tsx is the single Account Status render. Preserve the newer main access-workspace audit-schema alignment and all current IIB PAN review, delete safeguards, permissions, routing, onboarding, linked-account behavior, Portal Access actions, and other existing behavior.",
-  "verification": "The production deployment workflow must pass the compulsory regression, employee portal governance, TypeScript, lint, and production build gate before triggering Vercel. Production success must not be claimed until the exact Vercel deployment for this trigger commit reports READY.",
+  "source": "ChatGPT explicit deploy request after PR #240 merge",
+  "source_commit": "32d412290ee0e72bf4aeb0d9dbbc513e17be8560",
+  "release_scope": "Deploy PR #240: replace the Partner Application Review header Edit details text with a compact centered pencil icon while preserving the existing edit workflow route, outlined secondary-button treatment, accessibility label/title, and all current routing, permissions, portal-access, onboarding, IIB PAN review, and other main-branch behavior.",
+  "verification": "The production deployment workflow must pass the compulsory regressions, employee portal governance, TypeScript, lint, and production build gate before triggering Vercel. Production success must not be claimed until the exact Vercel deployment for this trigger commit reports READY.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
