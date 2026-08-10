@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the approved Application Review legacy Account Status injection removal.",
+  "purpose": "Deploy the approved Application Review legacy Account Status injection removal from the latest main branch.",
   "deploy_requested_at": "2026-08-10T14:24:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit deploy request after PR #239 merge",
-  "source_commit": "1b41d9ed61d349e6b8ffcd992cf9fee905483722",
-  "release_scope": "Deploy PR #239: remove the legacy AccountStatusHeaderStat client portal mount from the intermediary Application Review layout so the declarative six-column summary in page.tsx is the single Account Status render. Preserve IIB PAN review, delete safeguards, permissions, routing, onboarding, linked-account behavior, Portal Access actions, and all other current main behavior.",
-  "verification": "The production deployment workflow must pass the compulsory regression, TypeScript, lint, and production build gate before triggering Vercel. Production success must not be claimed until the exact Vercel deployment for this trigger commit reports READY.",
+  "source": "ChatGPT explicit deploy request after PR #239 merge; retriggered after a newer main push superseded the first run",
+  "source_commit": "70fea32714b6796a6d964e8c20fc8729d06116bd",
+  "release_scope": "Deploy the latest main branch, which includes PR #239 removing the legacy AccountStatusHeaderStat client portal mount from the intermediary Application Review layout so the declarative six-column summary in page.tsx is the single Account Status render. Preserve the newer main access-workspace audit-schema alignment and all current IIB PAN review, delete safeguards, permissions, routing, onboarding, linked-account behavior, Portal Access actions, and other existing behavior.",
+  "verification": "The production deployment workflow must pass the compulsory regression, employee portal governance, TypeScript, lint, and production build gate before triggering Vercel. Production success must not be claimed until the exact Vercel deployment for this trigger commit reports READY.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
