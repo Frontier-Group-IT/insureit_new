@@ -1,0 +1,37 @@
+name: Temporary align partner bottom sections
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/temp_align_partner_bottom_sections.py'
+      - '.github/workflows/temp-align-partner-bottom-sections.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Apply width alignment
+        run: python scripts/temp_align_partner_bottom_sections.py
+      - name: Validate patch
+        run: |
+          git diff --check
+          grep -F 'className="pb-4 sm:pb-5"' apps/web-portal/app/intermediaries/applications/'[id]'/workflow/page.tsx
+          ! grep -F 'className="px-4 pb-4 sm:px-5 sm:pb-5"' apps/web-portal/app/intermediaries/applications/'[id]'/workflow/page.tsx
+      - name: Typecheck web portal
+        run: |
+          npm ci
+          npm run typecheck:web
+      - name: Commit application change
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/web-portal/app/intermediaries/applications/'[id]'/workflow/page.tsx
+          git commit -m 'Align partner bottom sections width'
+          git push
