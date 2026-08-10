@@ -7,7 +7,7 @@
     "build": "next build",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "access-control:v2-regression": "node --experimental-strip-types scripts/access-control-catalogue-v2-regression.ts",
+    "access-control:v2-regression": "node --experimental-strip-types scripts/access-control-catalogue-v2-regression.mjs",
     "policy-ocr:iffco-regression": "node --experimental-strip-types scripts/policy-ocr-iffco-regression.ts",
     "policy-ocr:iffco-structured-regression": "node --experimental-strip-types scripts/policy-ocr-iffco-structured-regression.ts",
     "policy-ocr:digit-regression": "node --experimental-strip-types scripts/policy-ocr-digit-regression.ts",
