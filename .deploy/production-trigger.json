@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #238 application review summary column equalization to production after explicit user approval.",
-  "deploy_requested_at": "2026-08-10T14:01:00+05:30",
+  "purpose": "Deploy the verified Phase 6 employee portal lifecycle governance hardening.",
+  "deploy_requested_at": "2026-08-10T14:15:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT application review summary layout release",
-  "source_commit": "39e26fbc97bdcef27ad93b1edc0a50d33b010fa1",
-  "release_scope": "Deploy PR #238. Standardize Partner and POSP/MISP application review summary bars to equal-width responsive columns, add the existing intermediary account_status as a dedicated Account Status block for POSP/MISP reviews, use 2/3/6 responsive grid columns, and tighten Portal Access label/value spacing to match Activation Date. Preserve the dark blue header, icons, portal access actions, Parent Partner and linked-account navigation, onboarding, permissions, database and routing logic.",
-  "verification": "PR #238 was squash merged into main as 39e26fbc97bdcef27ad93b1edc0a50d33b010fa1. Final feature diff is one application file, +5/-4. Full lint/typecheck/build were not run on the feature branch. The production deployment workflow must pass its compulsory verification gate and Vercel must report READY for the exact resulting deployment before production success is claimed.",
+  "source": "ChatGPT access-control rebuild Phase 6",
+  "source_commit": "9a4bb24d7663d6976f9321d0e8527cdac1ba9ca2",
+  "release_scope": "Deploy the governed employee portal lifecycle service and existing employee-action integration. Employee creation with portal access now requires portal-user management authority; linked portal accounts require portal-user management authority for suspend/restore; deactivation suspends Supabase Auth as well as employee/profile access; restore re-enables the internal states before Auth; self-suspension, final active Super Admin suspension, final active IT Super User suspension, normal assignment of IT Super User, and Admin escalation to Super Admin are blocked; lifecycle events are written to audit_logs. Preserve the current legacy role/RLS authorization engine and do not apply the shadow V2 RBAC migration or V2 role assignments.",
+  "verification": "Verify web portal run 31371417281 passed on source commit 9a4bb24d7663d6976f9321d0e8527cdac1ba9ca2: V2 catalogue regression, V2 scope/compatibility regression, V2 lifecycle regression, 12-case employee portal governance regression, all OCR regressions, TypeScript, lint, and Next.js production build. The production deployment workflow must still pass its compulsory verification gate; GitHub workflow success proves the deploy hook, not independent Vercel READY.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
