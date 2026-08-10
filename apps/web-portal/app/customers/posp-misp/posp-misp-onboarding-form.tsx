@@ -164,14 +164,11 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
                 <IndianDateField label="Documents received" name="document_received_at" defaultValue={initialValues.document_received_at} inputClassName={dateInputClass} {...dateValidationHandlers} />
                 <SelectField label="RM" name="associate_employee_id" required options={salesManagers} placeholder="Select RM" defaultValue={initialValues.associate_employee_id} {...selectValidationHandlers} />
                 <div className="md:col-span-2 xl:col-span-3">
-                  <div className="mb-1.5 flex items-center gap-2">
-                    <span className="text-[10.5px] font-semibold text-[#344054]">Applicant name</span>
-                    <span className="rounded-full bg-[#EAF1F8] px-2 py-0.5 text-[8.5px] font-semibold text-[#315B6B]">Same applicant</span>
-                  </div>
-                  <div className="grid min-w-0 gap-2 rounded-xl border border-[#D9E2F0] bg-[#F8FAFC] p-2.5 md:grid-cols-3">
-                    <Field label="First Name" name="pos_first_name" required defaultValue={initialValues.pos_first_name} {...inputValidationHandlers} />
-                    <Field label="Middle Name" name="pos_middle_name" defaultValue={initialValues.pos_middle_name} {...inputValidationHandlers} />
-                    <Field label="Last Name" name="pos_last_name" required defaultValue={initialValues.pos_last_name} {...inputValidationHandlers} />
+                  <label className={labelClass}>Applicant name *</label>
+                  <div className="grid min-w-0 gap-2 md:grid-cols-3">
+                    <Field label="First Name" name="pos_first_name" required hideLabel placeholder="First name" defaultValue={initialValues.pos_first_name} {...inputValidationHandlers} />
+                    <Field label="Middle Name" name="pos_middle_name" hideLabel placeholder="Middle name" defaultValue={initialValues.pos_middle_name} {...inputValidationHandlers} />
+                    <Field label="Last Name" name="pos_last_name" required hideLabel placeholder="Last name" defaultValue={initialValues.pos_last_name} {...inputValidationHandlers} />
                   </div>
                 </div>
               </div>
@@ -274,9 +271,9 @@ function PanInput({ label, name, compact = false, defaultValue, error, onBlur, o
   return <div data-field-container className={`min-w-0 ${compact ? "" : "xl:col-span-2"}`}><label className={labelClass} htmlFor={name}>{label} *</label><input id={name} name={name} defaultValue={defaultValue} required pattern="[A-Za-z]{5}[0-9]{4}[A-Za-z]" maxLength={10} minLength={10} aria-invalid={Boolean(error)} aria-describedby={error ? errorId : undefined} onBlur={onBlur} onInput={event => { event.currentTarget.value = event.currentTarget.value.toUpperCase().replace(/\s/g, ""); onInput?.(event); }} className={`${inputClass} font-mono tracking-[0.03em]`} /><p id={errorId} data-field-error hidden={!error} className="mt-1.5 text-[9.5px] font-semibold text-red-600">{error}</p></div>;
 }
 function Section({ title, children }: { title: string; children: React.ReactNode }) { return <section className="border-b border-[#E2E8F0] px-3 py-4 sm:px-5 sm:py-5"><h3 className="mb-4 text-[12px] font-semibold text-[#0F172A]">{title}</h3><div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">{children}</div></section>; }
-function Field({ label, name, required = false, transform, onInput, error, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; name: string; transform?: "uppercase"; error?: string }) {
+function Field({ label, name, required = false, transform, onInput, error, hideLabel = false, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; name: string; transform?: "uppercase"; error?: string; hideLabel?: boolean }) {
   const errorId = inlineFieldErrorId(name);
-  return <div data-field-container className="min-w-0"><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} required={required} aria-invalid={Boolean(error)} aria-describedby={error ? errorId : undefined} className={inputClass} onInput={event => { if (transform === "uppercase") event.currentTarget.value = event.currentTarget.value.toUpperCase().replace(/\s/g, ""); onInput?.(event); }} {...props} /><p id={errorId} data-field-error hidden={!error} className="mt-1.5 text-[9.5px] font-semibold text-red-600">{error}</p></div>;
+  return <div data-field-container className="min-w-0"><label className={hideLabel ? "sr-only" : labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} required={required} aria-invalid={Boolean(error)} aria-describedby={error ? errorId : undefined} className={inputClass} onInput={event => { if (transform === "uppercase") event.currentTarget.value = event.currentTarget.value.toUpperCase().replace(/\s/g, ""); onInput?.(event); }} {...props} /><p id={errorId} data-field-error hidden={!error} className="mt-1.5 text-[9.5px] font-semibold text-red-600">{error}</p></div>;
 }
 function SelectField({ label, name, required = false, options, placeholder, error, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { label: string; name: string; options: SelectOption[]; placeholder: string; error?: string }) {
   const errorId = inlineFieldErrorId(name);
