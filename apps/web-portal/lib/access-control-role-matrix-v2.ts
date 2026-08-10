@@ -1,6 +1,5 @@
 import type { AppRole } from "@/lib/roles";
 import type { AccessLevel, DataScope, PermissionKeyV2 } from "@/lib/access-control-catalogue-v2";
-import { permissionCatalogueV2 } from "@/lib/access-control-catalogue-v2";
 
 export type EmployeeRoleCodeV2 = Exclude<AppRole, "customer" | "intermediary">;
 export type RoleCategoryV2 = "business" | "administrative" | "technical" | "compatibility";
@@ -34,20 +33,58 @@ const commonUser: readonly RoleGrantV2[] = [
   grant("notifications.view", "view", "self"),
 ];
 
-function maximumGrant(permission: (typeof permissionCatalogueV2)[number], preferredScope: DataScope): RoleGrantV2 {
-  const access = permission.allowedAccess[permission.allowedAccess.length - 1];
-  const scope = permission.scopeRequired
-    ? permission.allowedScopes.includes(preferredScope as never)
-      ? preferredScope
-      : permission.allowedScopes[0]
-    : undefined;
-  return grant(permission.key, access, scope);
-}
+const allTechnicalGrants: readonly RoleGrantV2[] = [
+  grant("dashboard.view", "view"),
+  grant("claims.view", "view", "organization"),
+  grant("claims.edit", "edit", "organization"),
+  grant("claims.verify_documents", "approve", "organization"),
+  grant("claims.assign_surveyor", "approve", "organization"),
+  grant("claims.change_stage", "approve", "organization"),
+  grant("intermediaries.view", "view", "organization"),
+  grant("intermediaries.application.create", "edit", "organization"),
+  grant("intermediaries.application.review", "edit", "organization"),
+  grant("intermediaries.application.approve", "approve", "organization"),
+  grant("intermediaries.activate", "approve", "organization"),
+  grant("intermediaries.portal_users.manage", "approve", "organization"),
+  grant("intermediaries.training.manage", "edit", "organization"),
+  grant("intermediaries.agreement.manage", "approve", "organization"),
+  grant("intermediaries.iib.manage", "approve", "organization"),
+  grant("intermediaries.delete", "approve", "organization"),
+  grant("customers.view", "view", "organization"),
+  grant("customers.create", "edit", "organization"),
+  grant("customers.edit", "edit", "organization"),
+  grant("kyc.view", "view", "organization"),
+  grant("kyc.review", "edit", "organization"),
+  grant("kyc.approve", "approve", "organization"),
+  grant("employees.view", "view", "organization"),
+  grant("employees.create", "edit", "organization"),
+  grant("employees.edit", "edit", "organization"),
+  grant("employees.deactivate", "approve", "organization"),
+  grant("organisation.view", "view", "organization"),
+  grant("vehicles.view", "view", "organization"),
+  grant("vehicles.create", "edit", "organization"),
+  grant("vehicles.edit", "edit", "organization"),
+  grant("policies.view", "view", "organization"),
+  grant("policies.create", "edit", "organization"),
+  grant("policies.edit", "edit", "organization"),
+  grant("tasks.view", "view", "organization"),
+  grant("tasks.create", "edit", "organization"),
+  grant("tasks.assign", "approve", "organization"),
+  grant("tasks.edit", "edit", "organization"),
+  grant("reports.view", "view", "organization"),
+  grant("notifications.view", "view", "self"),
+  grant("admin.portal_users.manage", "approve"),
+  grant("admin.roles.manage", "approve"),
+  grant("admin.permissions.manage", "approve"),
+  grant("admin.audit.view", "view"),
+  grant("master_data.manage", "approve"),
+  grant("system.manage", "approve"),
+  grant("system.integrations.configure", "approve"),
+];
 
-const allTechnicalGrants = permissionCatalogueV2.map((permission) => maximumGrant(permission, "organization"));
-const allBusinessAdminGrants = permissionCatalogueV2
-  .filter((permission) => permission.key !== "system.integrations.configure")
-  .map((permission) => maximumGrant(permission, "organization"));
+const allBusinessAdminGrants = allTechnicalGrants.filter(
+  (entry) => entry.permission !== "system.integrations.configure",
+);
 
 export const roleMatrixV2: readonly RoleDefinitionV2[] = [
   {
