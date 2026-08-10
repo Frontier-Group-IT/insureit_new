@@ -13,13 +13,20 @@ import {
 type Props = { partnerType:"posp"|"misp"; initialValues?:Record<string,string> };
 type StatusOption = { readonly value:string; readonly label:string };
 
+const ACTIVATION_DATE_ERROR = "Activation date cannot be earlier than onboarding date.";
+
 export function LegacyOnboardingFields({ partnerType, initialValues = {} }: Props) {
   const [trainingStatus, setTrainingStatus] = useState(() => initialStatus(LEGACY_TRAINING_OPTIONS, initialValues.legacy_training_status, DEFAULT_LEGACY_WORKFLOW.trainingStatus));
   const [examStatus, setExamStatus] = useState(() => initialStatus(LEGACY_EXAM_OPTIONS, initialValues.legacy_exam_status, DEFAULT_LEGACY_WORKFLOW.examStatus));
   const [agreementStatus, setAgreementStatus] = useState(() => initialStatus(LEGACY_AGREEMENT_OPTIONS, initialValues.legacy_agreement_status, DEFAULT_LEGACY_WORKFLOW.agreementStatus));
   const [iibUploadStatus, setIibUploadStatus] = useState(() => initialStatus(LEGACY_IIB_UPLOAD_OPTIONS, initialValues.legacy_iib_upload_status, DEFAULT_LEGACY_WORKFLOW.iibUploadStatus));
   const [iibRegistrationStatus, setIibRegistrationStatus] = useState(() => initialStatus(LEGACY_IIB_REGISTRATION_OPTIONS, initialValues.legacy_iib_registration_status, DEFAULT_LEGACY_WORKFLOW.iibRegistrationStatus));
+  const [originalOnboardingDate, setOriginalOnboardingDate] = useState(initialValues.legacy_original_onboarding_date ?? "");
+  const [originalActivationDate, setOriginalActivationDate] = useState(initialValues.legacy_original_activation_date ?? "");
   const registrationLabel = partnerType === "misp" ? "Existing MISP ID" : "Existing POSP ID";
+  const activationDateError = originalOnboardingDate && originalActivationDate && originalActivationDate < originalOnboardingDate
+    ? ACTIVATION_DATE_ERROR
+    : null;
 
   return (
     <section className="border-t border-amber-200 bg-amber-50/70 px-3 py-4 sm:px-5 sm:py-5" data-legacy-onboarding-fields="true">
@@ -30,8 +37,8 @@ export function LegacyOnboardingFields({ partnerType, initialValues = {} }: Prop
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Field label="Existing Partner ID" name="legacy_partner_code" defaultValue={initialValues.legacy_partner_code} placeholder="PART-2024-00127" required />
         <Field label={registrationLabel} name="legacy_registration_code" defaultValue={initialValues.legacy_registration_code} placeholder={partnerType === "misp" ? "MISP-2023-00018" : "POSP-2024-00481"} required />
-        <Field label="Original onboarding date" name="legacy_original_onboarding_date" type="date" defaultValue={initialValues.legacy_original_onboarding_date} required />
-        <Field label="Active / associated since" name="legacy_original_activation_date" type="date" defaultValue={initialValues.legacy_original_activation_date} required />
+        <Field label="Original onboarding date" name="legacy_original_onboarding_date" type="date" value={originalOnboardingDate} onChange={(event) => setOriginalOnboardingDate(event.currentTarget.value)} required />
+        <Field label="Active / associated since" name="legacy_original_activation_date" type="date" value={originalActivationDate} min={originalOnboardingDate || undefined} onChange={(event) => setOriginalActivationDate(event.currentTarget.value)} error={activationDateError} required />
       </div>
 
       <div className="mt-5 rounded-2xl border border-amber-200 bg-white p-3.5 sm:p-4">
@@ -54,11 +61,12 @@ export function LegacyOnboardingFields({ partnerType, initialValues = {} }: Prop
   );
 }
 
-function Field({ label, name, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label:string; name:string }) {
+function Field({ label, name, error = null, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label:string; name:string; error?:string|null }) {
   return (
     <label className="min-w-0">
       <span className="mb-1.5 block text-[10.5px] font-semibold text-[#344054]">{label}{props.required ? " *" : ""}</span>
-      <input name={name} data-label={label} className="h-11 w-full min-w-0 rounded-xl border border-[#CBD5E1] bg-white px-3.5 text-[12px] text-[#17203A] outline-none placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]" {...props} />
+      <input name={name} data-label={label} aria-invalid={Boolean(error)} aria-describedby={error ? `${name}-error` : undefined} className={`h-11 w-full min-w-0 rounded-xl border bg-white px-3.5 text-[12px] text-[#17203A] outline-none placeholder:text-[#98A2B3] focus:ring-2 ${error ? "border-red-400 focus:border-red-500 focus:ring-red-100" : "border-[#CBD5E1] focus:border-[#4F46E5] focus:ring-[#E0E7FF]"}`} {...props} />
+      {error ? <p id={`${name}-error`} className="mt-1.5 text-[9.5px] font-semibold text-red-600">{error}</p> : null}
     </label>
   );
 }
