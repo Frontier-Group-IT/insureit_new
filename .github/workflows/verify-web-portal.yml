@@ -52,6 +52,9 @@ jobs:
       - name: Access control V2 portal lifecycle regression
         run: npm run access-control:v2-lifecycle-regression
 
+      - name: Employee portal governance regression
+        run: npm run access-control:portal-governance-regression
+
       - name: IFFCO structured regression
         run: npm run policy-ocr:iffco-structured-regression
 
@@ -81,7 +84,7 @@ jobs:
             echo "## Web portal verification gate"
             echo
             echo "- Commit: \`${GITHUB_SHA}\`"
-            echo "- Access control: V2 catalogue, scope, legacy compatibility and portal lifecycle regressions"
+            echo "- Access control: V2 catalogue, scope, legacy compatibility, portal lifecycle and employee portal governance regressions"
             echo "- OCR regressions: IFFCO structured, IFFCO, Digit, New India"
             echo "- Static checks: typecheck and lint"
             echo "- Build: Next.js production build"
