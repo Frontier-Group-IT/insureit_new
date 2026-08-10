@@ -7,6 +7,8 @@ import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessTok
 import { appRoles, designationOptions, roleLabels } from "@/lib/roles";
 import { UserManagementWorkspace, type ProfileRow } from "./user-management-workspace";
 
+type ProfileRecord = Omit<ProfileRow, "direct_reports">;
+
 export default async function UsersPage({ searchParams }: { searchParams?: Promise<{ q?: string; role?: string; status?: string }> }) {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
@@ -14,15 +16,26 @@ export default async function UsersPage({ searchParams }: { searchParams?: Promi
 
   const params = (await searchParams) ?? {};
   const supabase = await createServerSupabaseClient();
-  const [{ data, error }, managersResult] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, full_name, email, role, phone, employee_code, reporting_manager_id, department, designation, is_active, direct_reports:profiles!profiles_reporting_manager_id_fkey(count)")
-      .order("created_at", { ascending: false })
-      .returns<ProfileRow[]>(),
-    supabase.from("profiles").select("id, full_name, role").eq("is_active", true).order("full_name"),
-  ]);
-  const managers = managersResult.data ?? [];
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, email, role, phone, employee_code, reporting_manager_id, department, designation, is_active")
+    .order("created_at", { ascending: false })
+    .returns<ProfileRecord[]>();
+
+  const profiles = data ?? [];
+  const directReportCounts = new Map<string, number>();
+  for (const item of profiles) {
+    if (!item.reporting_manager_id) continue;
+    directReportCounts.set(item.reporting_manager_id, (directReportCounts.get(item.reporting_manager_id) ?? 0) + 1);
+  }
+
+  const users: ProfileRow[] = profiles.map((item) => ({
+    ...item,
+    direct_reports: [{ count: directReportCounts.get(item.id) ?? 0 }],
+  }));
+  const managers = profiles
+    .filter((item) => item.is_active)
+    .map((item) => ({ id: item.id, full_name: item.full_name, role: item.role }));
   const employeeRoles = appRoles.filter((item) => item !== "customer");
 
   return (
@@ -48,7 +61,7 @@ export default async function UsersPage({ searchParams }: { searchParams?: Promi
         </form>
       </section>
 
-      <UserManagementWorkspace users={data ?? []} managers={managers} initialQuery={params.q?.trim() ?? ""} initialRole={params.role ?? ""} initialStatus={params.status ?? ""} loadError={error?.message ?? null} />
+      <UserManagementWorkspace users={users} managers={managers} initialQuery={params.q?.trim() ?? ""} initialRole={params.role ?? ""} initialStatus={params.status ?? ""} loadError={error ? "User records could not be loaded. Please refresh and try again." : null} />
     </AppShell>
   );
 }
