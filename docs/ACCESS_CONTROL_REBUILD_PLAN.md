@@ -66,7 +66,7 @@ Customer and Intermediary are external portal roles and should stay outside the 
 
 Capabilities are grouped by business module and classified by risk.
 
-Current resolution order is:
+Current TypeScript resolution order is:
 1. protected IT Super User behaviour
 2. active employee-specific override
 3. role-level database override
@@ -105,12 +105,46 @@ Important Phase 1 findings:
 `apps/web-portal/app/customers/page.tsx` explicitly requires `view_customers`, calls `getAccessibleCustomerIds(profile.id, profile.role)`, and filters the service-role customer query by those IDs. This is the current best example of capability + scoped record access working together.
 
 #### Claims
-`apps/web-portal/app/claims/page.tsx` currently queries claims through the authenticated server Supabase client and does not call the central effective-permission/scope helpers in the page itself. Access therefore depends on route/navigation protection and/or database RLS. Phase 1 must inventory the corresponding RLS policies and claim server actions before defining the target cut-over.
+`apps/web-portal/app/claims/page.tsx` currently queries claims through the authenticated server Supabase client and does not call the central effective-permission/scope helpers in the page itself. Its row visibility is therefore primarily constrained by database RLS functions/policies.
 
 #### Tasks
-`apps/web-portal/app/tasks/page.tsx` similarly queries `claim_tasks` through the authenticated server client without an explicit central scope decision in the page. Its effective record visibility must therefore be traced through RLS and task actions.
+`apps/web-portal/app/tasks/page.tsx` similarly queries `claim_tasks` through the authenticated server client without an explicit central scope decision in the page. RLS applies claim/customer-based visibility and assignment checks.
+
+#### Vehicles and Policies
+RLS policies constrain reads through customer access and constrain writes through customer access plus sales-management functions. These rules are role-name driven inside Postgres rather than derived from the TypeScript permission engine.
+
+#### Employees and Profiles
+RLS protects employee/profile reads and writes through database functions such as `can_view_employee_record`, `can_manage_employees`, `can_access_profile` and `can_manage_users`.
+
+#### Intermediatories
+RLS uses `can_access_intermediary_owner` / `can_access_intermediary_application`, again based on hard-coded role groups and downline membership.
 
 These findings confirm that authorization is presently mixed across application-level capability checks, application-level scoped ID filtering and database RLS. Phase 5/9 must unify the decision model without weakening existing RLS protections.
+
+### Database authorization function audit
+The production database contains an additional hard-coded role model in security-definer functions used by RLS. This means changing `roles.ts` alone is not sufficient to change real access safely.
+
+Critical findings:
+
+1. **Role source can disagree.** `current_app_role()` prefers JWT `app_role` / app metadata / user metadata before falling back to `profiles.role`. A profile-role update can therefore temporarily or persistently disagree with RLS if Auth metadata/token claims are stale or inconsistent.
+
+2. **Employee-management mismatch.** TypeScript currently gives the generic `manager` role all operational capabilities, including `manage_employees`, but database `can_manage_employees()` only permits Super Admin, Admin and IT Super User. The application layer can therefore say an action is allowed while RLS rejects the write.
+
+3. **User-management is separately hard-coded.** `can_manage_users()` also permits only Super Admin, Admin and IT Super User, independently of `role_permission_overrides` or employee overrides.
+
+4. **Business-data scope is broader in Postgres than the TypeScript scope helper.** `can_access_full_business_data()` currently includes Super Admin, Admin, IT Super User, Director, Manager, Backoffice Executive, Claim Processor and Field Executive. In particular, Claim Processor and Field Executive receive full-business-data treatment in this database helper even though the target model should normally constrain them to claims/assigned work.
+
+5. **Sales write authority is role-name driven.** `can_manage_sales_records()` contains a fixed list of Operations Head, Backoffice Executive, Sales Head, Zonal Head, Area Sales Head, Sales Manager and Agent. It does not consult capability overrides.
+
+6. **Claim update rules are separately hard-coded.** `can_update_claim_status()` currently names only Manager and Claim Processor. This does not directly mirror TypeScript `manage_claims` capability assignments.
+
+7. **Profile visibility has its own hierarchy model.** `can_access_profile()` and `can_view_employee_record()` contain special-case role logic for administrators, Director, Operations/Backoffice and sales hierarchy roles.
+
+8. **Intermediary visibility has another role grouping.** `can_access_intermediary_owner()` directly names administrative/operations roles and otherwise uses `get_user_downline()`.
+
+9. **Downline source differs from the TypeScript helper.** Database `get_user_downline()` walks `profiles.reporting_manager_id`, while `employee-access-scope.ts` walks `employees.reporting_manager_id` and then resolves profiles. Both trees must be proven synchronized before the new model relies on one canonical hierarchy source.
+
+10. **RLS policies are permissive and cumulative.** Multiple policies can apply to the same table. The rebuild must evaluate the effective OR-combination of policies rather than interpreting any single policy in isolation.
 
 ### Current override and audit model
 Existing database tables already provide useful foundations:
@@ -140,18 +174,21 @@ This snapshot is diagnostic only and must not be treated as a permanent role cat
 ## Key deficiencies to fix
 
 1. Role defaults are primarily hard-coded and require a code deployment to change.
-2. The role-level override table exists but has no complete role-management UI/workflow.
-3. `profiles.role` supports only one role per employee.
-4. Designation and security role are conceptually too easy to confuse.
-5. Access-level resolution and scope resolution are separate and can diverge.
-6. Scope defaults are hard-coded by role instead of being derived from the same role-permission source of truth.
-7. Several capabilities are too broad for long-term administration.
-8. Access Control is employee-exception oriented rather than full user governance.
-9. Portal lifecycle states such as no access, invited, active, suspended and disabled are not first-class in the access workspace.
-10. There is no dedicated role editor, permission catalogue, access-review workspace or comprehensive security timeline.
-11. Generic roles such as `manager` require business review before being retained as security roles.
-12. Internal-role validation is inconsistent between employee creation and later invitation.
-13. Current authorization is split between app permission checks, app scope filters and RLS; this needs one documented policy and one explainable resolver.
+2. A second hard-coded role model exists in Postgres RLS helper functions.
+3. The role-level override table exists but has no complete role-management UI/workflow.
+4. `profiles.role` supports only one role per employee.
+5. Designation and security role are conceptually too easy to confuse.
+6. Access-level resolution and scope resolution are separate and can diverge.
+7. Scope defaults are hard-coded by role instead of being derived from the same role-permission source of truth.
+8. JWT role metadata and `profiles.role` can disagree.
+9. Employees and profiles contain parallel reporting-manager relationships that must be reconciled.
+10. Several capabilities are too broad for long-term administration.
+11. Access Control is employee-exception oriented rather than full user governance.
+12. Portal lifecycle states such as no access, invited, active, suspended and disabled are not first-class in the access workspace.
+13. There is no dedicated role editor, permission catalogue, access-review workspace or comprehensive security timeline.
+14. Generic roles such as `manager` require business review before being retained as security roles.
+15. Internal-role validation is inconsistent between employee creation and later invitation.
+16. Current authorization is split between app permission checks, app scope filters and RLS; this needs one documented policy and one explainable resolver.
 
 ## Target authorization model
 
@@ -283,13 +320,15 @@ Completed so far:
 - Inventory employee creation/invite/update/activation lifecycle.
 - Identify the shared employee-access-scope helper and its current precedence limitations.
 - Confirm Customers uses capability + scoped ID filtering.
-- Confirm Claims and Tasks need RLS/action-level tracing because their pages do not invoke the central scope helper directly.
+- Confirm Claims and Tasks rely heavily on RLS for record visibility.
+- Inventory core RLS policies for Customers, Claims, Tasks, Fleet, Policies, Employees, Profiles and Intermediatories.
+- Inventory the principal RLS security-definer functions and their hard-coded role groups.
+- Identify JWT/profile role precedence and employee/profile hierarchy duplication as migration risks.
 
 Remaining:
-- Inventory every module/route/action that depends on authorization.
-- Inventory RLS policies for employee/customer/intermediary/claim/task/fleet/policy access.
 - Inventory navigation-only guards versus server-side guards.
 - Inventory all privileged actions (approval, activation, user management, exports, master data, integrations).
+- Inventory remaining tables used by KYC, reports/exports and notifications where access decisions matter.
 - Produce full current-state -> target-state compatibility mapping.
 
 Exit gate: canonical audit accepted and no unresolved ambiguity about existing access semantics.
@@ -364,7 +403,8 @@ Each module gets authorization/scoping tests before production cut-over.
 - `apps/web-portal/app/claims/page.tsx`
 - `apps/web-portal/app/tasks/page.tsx`
 - module-specific record queries and server actions
-- Supabase RLS policies and Auth user lifecycle
+- Supabase RLS policies and security-definer authorization functions
+- Auth user lifecycle and JWT role metadata
 
 ## Phase 1 safety rule
 No role, capability, employee override, portal access, database permission row or production user state will be modified during the audit. Phase 1 changes are documentation/test inventory only.
