@@ -46,6 +46,9 @@ jobs:
       - name: Access control V2 catalogue regression
         run: npm run access-control:v2-regression
 
+      - name: Access control V2 scope and compatibility regression
+        run: npm run access-control:v2-scope-regression
+
       - name: IFFCO structured regression
         run: npm run policy-ocr:iffco-structured-regression
 
@@ -75,7 +78,7 @@ jobs:
             echo "## Web portal verification gate"
             echo
             echo "- Commit: \`${GITHUB_SHA}\`"
-            echo "- Access control: V2 catalogue integrity regression"
+            echo "- Access control: V2 catalogue, scope and legacy compatibility regressions"
             echo "- OCR regressions: IFFCO structured, IFFCO, Digit, New India"
             echo "- Static checks: typecheck and lint"
             echo "- Build: Next.js production build"
