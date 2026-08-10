@@ -1,10 +1,10 @@
 {
-  "purpose": "Retry deployment of the approved application review header action cleanup from PR #236 to production.",
-  "deploy_requested_at": "2026-08-10T13:14:00+05:30",
+  "purpose": "Deploy the current verified main branch to production after explicit user approval.",
+  "deploy_requested_at": "2026-08-10T13:22:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT application review header action cleanup retry",
-  "source_commit": "5e2f89d1e62bbf4c541c89f0155c8b0b5079fd5b",
-  "release_scope": "Retry deployment of PR #236. Remove the top-right Open linked account action and top-right Create user / Resend link portal actions from Partner application review, preserve Edit details and the IIB PAN status chip, keep linked POSP/MISP navigation through the clickable linked ID + Eye, keep Create User / Resend Link in the Portal Access summary card, preserve linked-account creation when no linked account exists, preserve POSP/MISP Manage account behavior, and leave database, permissions, onboarding, activation, portal-user creation, invitation, linked-account creation, and routing logic unchanged.",
-  "verification": "PR #236 was merged into main as 5e2f89d1e62bbf4c541c89f0155c8b0b5079fd5b. The previous production workflow failed in the unrelated Access control V2 catalogue regression before Vercel was triggered. This is an explicit retry against the same main state. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
+  "source": "ChatGPT explicit deploy now request",
+  "source_commit": "4f0cb742ed703403bd7057199a6b7e5e4330d8a6",
+  "release_scope": "Deploy the current verified main branch, including the approved Policy Onboarding UI refinements and the latest Add POSP onboarding layout improvements such as the compact Applicant name control with First name, Middle name, and Last name placeholders. Preserve existing onboarding, financial, database, permissions, OCR, AuthBridge, iCall, and document workflow logic unless already changed by the verified main branch.",
+  "verification": "Canonical Verify web portal workflow run 31367650614 completed successfully for source commit 4f0cb742ed703403bd7057199a6b7e5e4330d8a6, including access-control regression, all policy OCR regressions, TypeScript typecheck, lint, and Next.js production build. The production deployment workflow must run its compulsory verification gate again and Vercel must report READY before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
