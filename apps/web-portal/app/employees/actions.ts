@@ -7,6 +7,10 @@ import { headers } from "next/headers";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { isAppRole } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import {
+  governedInviteEmployeePortalUser,
+  governedSetEmployeePortalStatus,
+} from "@/lib/employee-portal-governance";
 
 export type EmployeeActionState = {
   status: "idle" | "success" | "error";
@@ -22,9 +26,22 @@ function friendlyError(message: string) {
   if (message.includes("employees_employee_code_key")) return "That employee code is already in use.";
   if (message.includes("employees_email_key")) return "That email is already assigned to another employee.";
   if (message.includes("employees_phone_key")) return "That mobile number is already assigned to another employee.";
-  if (message.includes("User already registered")) return "A portal login already exists for this email.";
+  if (message.includes("User already registered") || message.toLowerCase().includes("already been registered")) return "A portal login already exists for this email.";
   if (message.includes("permission to manage employees")) return "You do not have permission to manage employees.";
   if (message.includes("permission to manage employee portal access")) return "You do not have permission to manage employee portal access.";
+  if (message.includes("cannot suspend your own portal access")) return "You cannot suspend your own portal access.";
+  if (message.includes("final active Super Admin")) return "The final active Super Admin account cannot be suspended.";
+  if (message.includes("final active IT Super User")) return "The final active IT Super User account cannot be suspended.";
+  if (message.includes("protected technical role")) return "IT Super User is a protected technical role and cannot be assigned through normal user management.";
+  if (message.includes("Only a Super Admin or IT Super User")) return "Only a Super Admin or IT Super User can assign Super Admin access.";
+  if (message.includes("Reactivate this employee")) return "Reactivate this employee before sending portal access.";
+  if (message.includes("Add a work email")) return "Add a work email to this employee before sending portal access.";
+  if (message.includes("Select a valid staff portal role")) return "Select a valid staff portal role before sending the invitation.";
+  if (message.includes("portal profile could not be synchronized")) return message;
+  if (message.includes("portal authentication") || message.includes("Authentication was suspended")) return message;
+  if (message.includes("employee directory status could not be synchronized")) return message;
+  if (message.includes("employee could not be reactivated")) return message;
+  if (message.includes("employee was not restored")) return message;
   return "The requested employee update could not be completed. Please try again.";
 }
 
@@ -44,19 +61,19 @@ async function getInviteRedirectUrl() {
 async function requireEmployeeManager() {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!profile?.id || !(await hasEffectiveCapability(profile, "manage_employees", "edit"))) {
+  if (!profile?.id || !isAppRole(profile.role) || !(await hasEffectiveCapability(profile, "manage_employees", "edit"))) {
     throw new Error("You do not have permission to manage employees.");
   }
-  return profile.id;
+  return { id: profile.id, role: profile.role, profile };
 }
 
 async function requireEmployeePortalManager() {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!profile?.id || !(await hasEffectiveCapability(profile, "manage_users", "approve"))) {
+  if (!profile?.id || !isAppRole(profile.role) || !(await hasEffectiveCapability(profile, "manage_users", "approve"))) {
     throw new Error("You do not have permission to manage employee portal access.");
   }
-  return profile.id;
+  return { id: profile.id, role: profile.role, profile };
 }
 
 export async function createEmployee(
@@ -64,7 +81,8 @@ export async function createEmployee(
   formData: FormData,
 ): Promise<EmployeeActionState> {
   try {
-    const actorId = await requireEmployeeManager();
+    const actor = await requireEmployeeManager();
+    const actorId = actor.id;
     const supabase = await createServerSupabaseClient();
     const fullName = textValue(formData, "full_name");
     const employeeCode = textValue(formData, "employee_code");
@@ -77,8 +95,11 @@ export async function createEmployee(
     if (!fullName || !employeeCode || !department || !designation) {
       return { status: "error", message: "Employee code, name, department, and designation are required." };
     }
-    if (createPortalAccess && (!email || !portalRole || !isAppRole(portalRole) || portalRole === "customer")) {
+    if (createPortalAccess && (!email || !portalRole || !isAppRole(portalRole) || portalRole === "customer" || portalRole === "intermediary")) {
       return { status: "error", message: "A valid work email and staff role are required for portal access." };
+    }
+    if (createPortalAccess && !(await hasEffectiveCapability(actor.profile, "manage_users", "approve"))) {
+      return { status: "error", message: "You may create employee records, but you do not have permission to create portal access." };
     }
 
     const { data: employee, error: employeeError } = await supabase
@@ -105,42 +126,22 @@ export async function createEmployee(
       return { status: "error", message: friendlyError(employeeError?.message ?? "Could not create employee.") };
     }
 
-    if (createPortalAccess && email && portalRole) {
-      const admin = createSupabaseAdminClient();
-      const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
-        redirectTo: await getInviteRedirectUrl(),
-        data: {
-          full_name: fullName,
-          phone: employee.phone,
-          app_role: portalRole,
-          employee_id: employee.id,
-        },
-      });
-
-      if (inviteError || !invited.user) {
+    if (createPortalAccess && portalRole && isAppRole(portalRole)) {
+      try {
+        await governedInviteEmployeePortalUser({
+          actorProfileId: actor.id,
+          actorRole: actor.role,
+          employeeId: employee.id,
+          requestedRole: portalRole,
+          redirectTo: await getInviteRedirectUrl(),
+        });
+      } catch (inviteError) {
+        const admin = createSupabaseAdminClient();
         await admin.from("employees").delete().eq("id", employee.id);
-        return { status: "error", message: friendlyError(inviteError?.message ?? "Could not send portal invitation.") };
-      }
-
-      const { error: profileError } = await admin.from("profiles").upsert({
-        id: invited.user.id,
-        role: portalRole,
-        full_name: fullName,
-        phone: employee.phone,
-        email,
-        employee_code: employee.employee_code,
-        department: employee.department,
-        designation: employee.designation,
-        employee_id: employee.id,
-        is_active: true,
-        created_by: actorId,
-        updated_by: actorId,
-      }, { onConflict: "id" });
-
-      if (profileError) {
-        await admin.auth.admin.deleteUser(invited.user.id);
-        await admin.from("employees").delete().eq("id", employee.id);
-        return { status: "error", message: friendlyError(profileError.message) };
+        return {
+          status: "error",
+          message: friendlyError(inviteError instanceof Error ? inviteError.message : "Could not send portal invitation."),
+        };
       }
     }
 
@@ -164,7 +165,8 @@ export async function updateEmployee(
   formData: FormData,
 ): Promise<EmployeeActionState> {
   try {
-    const actorId = await requireEmployeeManager();
+    const actor = await requireEmployeeManager();
+    const actorId = actor.id;
     const supabase = await createServerSupabaseClient();
     const fullName = textValue(formData, "full_name");
     const employeeCode = textValue(formData, "employee_code");
@@ -230,77 +232,27 @@ export async function sendEmployeePortalInvite(
   formData: FormData,
 ): Promise<EmployeeActionState> {
   try {
-    const actorId = await requireEmployeePortalManager();
-    const admin = createSupabaseAdminClient();
-    const { data: employee, error: employeeError } = await admin
-      .from("employees")
-      .select("id, employee_code, full_name, phone, email, department, designation, employment_status")
-      .eq("id", employeeId)
-      .single();
-
-    if (employeeError || !employee) {
-      return { status: "error", message: friendlyError(employeeError?.message ?? "Employee could not be found.") };
-    }
-    if (employee.employment_status !== "active") {
-      return { status: "error", message: "Reactivate this employee before sending portal access." };
-    }
-    if (!employee.email) {
-      return { status: "error", message: "Add a work email to this employee before sending portal access." };
-    }
-
-    const { data: existingProfile, error: profileLookupError } = await admin
-      .from("profiles")
-      .select("id, role")
-      .eq("employee_id", employeeId)
-      .maybeSingle();
-    if (profileLookupError) {
-      return { status: "error", message: "Portal access details could not be checked. Please try again." };
-    }
-
+    const actor = await requireEmployeePortalManager();
     const requestedRole = textValue(formData, "portal_role");
-    const portalRole = existingProfile?.role ?? requestedRole;
-    if (!portalRole || !isAppRole(portalRole) || portalRole === "customer" || portalRole === "intermediary") {
+    if (requestedRole && !isAppRole(requestedRole)) {
       return { status: "error", message: "Select a valid staff portal role before sending the invitation." };
     }
 
-    const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(employee.email, {
+    const result = await governedInviteEmployeePortalUser({
+      actorProfileId: actor.id,
+      actorRole: actor.role,
+      employeeId,
+      requestedRole: requestedRole && isAppRole(requestedRole) ? requestedRole : null,
       redirectTo: await getInviteRedirectUrl(),
-      data: {
-        full_name: employee.full_name,
-        phone: employee.phone,
-        app_role: portalRole,
-        employee_id: employee.id,
-      },
     });
-
-    if (inviteError || !invited.user) {
-      return { status: "error", message: friendlyError(inviteError?.message ?? "Could not send portal invitation.") };
-    }
-
-    const { error: profileError } = await admin.from("profiles").upsert({
-      id: invited.user.id,
-      role: portalRole,
-      full_name: employee.full_name,
-      phone: employee.phone,
-      email: employee.email,
-      employee_code: employee.employee_code,
-      department: employee.department,
-      designation: employee.designation,
-      employee_id: employee.id,
-      is_active: true,
-      created_by: actorId,
-      updated_by: actorId,
-    }, { onConflict: "id" });
-
-    if (profileError) {
-      return { status: "error", message: "The invitation was sent, but the portal profile could not be synchronized. Please contact the IT administrator before the user signs in." };
-    }
 
     revalidatePath("/employees");
     revalidatePath("/users");
     return {
       status: "success",
-      message: existingProfile ? `A fresh portal invitation was sent to ${employee.email}.` : `Portal invitation sent to ${employee.email}.`,
+      message: result.profile
+        ? `A fresh portal invitation was sent to ${result.employee.email}.`
+        : `Portal invitation sent to ${result.employee.email}.`,
     };
   } catch (error) {
     return { status: "error", message: friendlyError(error instanceof Error ? error.message : "Could not send portal invitation.") };
@@ -308,23 +260,15 @@ export async function sendEmployeePortalInvite(
 }
 
 export async function setEmployeeStatus(employeeId: string, nextStatus: "active" | "inactive") {
-  const actorId = await requireEmployeeManager();
-  const supabase = await createServerSupabaseClient();
-  const { error } = await supabase
-    .from("employees")
-    .update({ employment_status: nextStatus, updated_by: actorId })
-    .eq("id", employeeId);
-
-  if (error) throw new Error("The employee status could not be changed. Please try again.");
-
-  const admin = createSupabaseAdminClient();
-  const { error: profileError } = await admin
-    .from("profiles")
-    .update({ is_active: nextStatus === "active", updated_by: actorId })
-    .eq("employee_id", employeeId);
-
-  if (profileError) throw new Error("The employee status changed, but portal access could not be synchronized. Please try again.");
+  const actor = await requireEmployeeManager();
+  await governedSetEmployeePortalStatus({
+    actorProfileId: actor.id,
+    actorRole: actor.role,
+    employeeId,
+    nextStatus,
+  });
 
   revalidatePath("/employees");
   revalidatePath("/organization");
+  revalidatePath("/users");
 }
