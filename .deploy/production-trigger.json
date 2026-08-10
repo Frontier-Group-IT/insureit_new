@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the intermediary document 10 MB upload-limit update from PR #245.",
-  "deploy_requested_at": "2026-08-10T17:06:00+05:30",
+  "purpose": "Deploy the parent Partner eye-link update from PR #246.",
+  "deploy_requested_at": "2026-08-10T17:28:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #245 and deploy with the protected GitHub Actions production flow",
-  "source_commit": "c0cfec839798f7db098f5b8898c3f44c0bab100d",
-  "release_scope": "Deploy the intermediary document upload validation update that raises the per-file limit from 4 MB to 10 MB in both the browser-side controller and the server upload API, while preserving accepted PDF/JPG/PNG types, document slot rules, permissions, storage paths, workflow stages, and replacement behavior.",
-  "verification": "PR #245 verification run 31384104616 passed the configured Verify web portal workflow. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook; Vercel READY must be verified separately.",
+  "source": "ChatGPT explicit request to merge PR #246 and deploy with the protected GitHub Actions production flow",
+  "source_commit": "83479ee8e83433ab7a3e9919f6b12543df7d55da",
+  "release_scope": "Deploy the POSP/MISP Application Review header update that adds a clickable eye icon immediately beside the Parent Partner label and links it to the resolved parent Partner Application Review page, while keeping the Partner ID as plain text and preserving all existing relationship resolution, workflows, permissions, portal access, and account-status behavior.",
+  "verification": "PR #246 verification run 31385854552 passed the configured Verify web portal workflow. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook; Vercel READY must be verified separately.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
