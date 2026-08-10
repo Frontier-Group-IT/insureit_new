@@ -22,16 +22,18 @@ const actions = await readFile(new URL("../app/system/assistant-knowledge/action
 for (const required of [
   '"use server"', "getAuthenticatedProfile", "getServerAccessToken", "manage_assistant_knowledge",
   "parseAssistantKnowledgeWorkbook", "createHash", "buildAssistantKnowledgeImportPlan",
-  'from("assistant_knowledge_imports")', 'from("assistant_knowledge_import_rows")',
-  'from("assistant_knowledge_entries")', "revalidatePath", "publishAssistantKnowledgeEntry", "retireAssistantKnowledgeEntry",
+  'rpc("stage_assistant_knowledge_import"', 'rpc("transition_assistant_knowledge_entry"',
+  "revalidatePath", "publishAssistantKnowledgeEntry", "retireAssistantKnowledgeEntry",
 ]) assert.ok(actions.includes(required), `knowledge actions missing ${required}`);
 assert.doesNotMatch(actions, /raw_file|file_bytes|storage\.from|console\.(?:log|error)/, "knowledge actions do not persist raw workbooks or leak content");
+assert.doesNotMatch(actions, /from\("assistant_knowledge_(?:imports|import_rows|entries)"\)\.(?:insert|update|delete)/, "knowledge lifecycle writes must use atomic server-only RPCs");
 assert.match(actions, /hasEffectiveCapability\([^)]*"manage_assistant_knowledge"[^)]*"approve"/, "knowledge mutations require current effective approval access");
 
 const page = await readFile(new URL("../app/system/assistant-knowledge/page.tsx", import.meta.url), "utf8");
 assert.match(page, /manage_assistant_knowledge/, "knowledge page is permission guarded");
 assert.match(page, /Download controlled template/, "knowledge page exposes the controlled template");
 assert.match(page, /Draft|Published|Retired/, "knowledge page shows lifecycle state");
+assert.match(page, /content\.slice\(0, 320\)/, "approvers must see a bounded content preview before publication");
 
 const template = await readFile(new URL("../app/api/templates/assistant-knowledge-v1/route.ts", import.meta.url), "utf8");
 for (const required of ["Metadata", "Knowledge", "content_version", "Required Capabilities", "manage_assistant_knowledge", "no-store"]) {

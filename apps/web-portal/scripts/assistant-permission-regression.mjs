@@ -38,6 +38,9 @@ if (!permissionManagementSource.includes('manage_assistant_knowledge: { module: 
 if (!permissionManagementSource.includes('capability === "use_assistant" ? "view"')) {
   fail("assistant use must be explicitly classified as view-level access");
 }
+for (const contract of ["employeeOverrideError || roleOverrideError", "employeeOverridesError || roleOverridesError", "permission_override_lookup_failed"]) {
+  if (!permissionManagementSource.includes(contract)) fail(`effective permission resolution must fail closed: ${contract}`);
+}
 
 for (const capability of ["use_assistant", "manage_assistant_knowledge"]) {
   const shadowKeys = permissionsForLegacyCapability(capability);

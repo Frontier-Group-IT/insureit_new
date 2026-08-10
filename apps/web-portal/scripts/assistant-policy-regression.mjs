@@ -5,7 +5,7 @@ import {
   validateAssistantRequest,
   validateRequestEnvelope,
 } from "../lib/assistant/policy.ts";
-import { createInMemoryAssistantLimiter } from "../lib/assistant/limits.ts";
+import { acquireDistributedAssistantLease, createInMemoryAssistantLimiter } from "../lib/assistant/limits.ts";
 
 let now = 1_000;
 const limiter = createInMemoryAssistantLimiter({ maxRequests: 2, windowMs: 1_000, maxConcurrent: 1, now: () => now });
@@ -19,6 +19,19 @@ if (secondLease.ok) secondLease.release();
 assert.deepEqual(limiter.acquire("employee-1"), { ok: false, reason: "rate" });
 now += 1_001;
 assert.equal(limiter.acquire("employee-1").ok, true);
+
+const distributedCalls = [];
+const distributedLease = await acquireDistributedAssistantLease({
+  async rpc(name, args) {
+    distributedCalls.push({ name, args });
+    return name === "acquire_assistant_request_lease"
+      ? { data: [{ status: "allowed", lease_id: "11111111-1111-4111-8111-111111111111" }], error: null }
+      : { data: true, error: null };
+  },
+}, "employee-1");
+assert.equal(distributedLease.ok, true);
+if (distributedLease.ok) await distributedLease.release();
+assert.deepEqual(distributedCalls.map((call) => call.name), ["acquire_assistant_request_lease", "release_assistant_request_lease"]);
 
 const valid = validateAssistantRequest({
   messages: [{ role: "user", content: "Where can I find active policies?" }],
@@ -56,4 +69,4 @@ assert.deepEqual(validateAssistantOutput({ answer: "External", links: [{ label: 
 assert.deepEqual(validateAssistantOutput({ answer: "Unsupported [9]", links: [], citations: [] }), { ok: false, code: "unsafe_output" });
 assert.deepEqual(validateAssistantOutput({ answer: "x".repeat(8_001), links: [], citations: [] }), { ok: false, code: "unsafe_output" });
 
-console.log(JSON.stringify({ cases: 17, status: "ok" }));
+console.log(JSON.stringify({ cases: 20, status: "ok" }));

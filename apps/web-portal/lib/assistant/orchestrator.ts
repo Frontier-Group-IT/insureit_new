@@ -43,8 +43,8 @@ function safeNavigation(candidate: NavigationCandidate): boolean {
   return Boolean(candidate.label && candidate.href.startsWith("/") && !candidate.href.startsWith("//") && !/[\\\r\n]/.test(candidate.href));
 }
 
-async function auditSafely(writer: AssistantUsageAuditWriter, event: AssistantAuditEvent): Promise<void> {
-  try { await writer.write(event); } catch { /* Auditing must not leak provider/tool data or turn a safe denial into an unsafe response. */ }
+async function auditRequired(writer: AssistantUsageAuditWriter, event: AssistantAuditEvent): Promise<void> {
+  await writer.write(event);
 }
 
 export async function runAssistant(input: {
@@ -68,31 +68,35 @@ export async function runAssistant(input: {
   let toolCharacters = 0;
   let usedTool = false;
   let requestErrorCode: string | undefined;
+  const fail = (code: NonNullable<AssistantRunResult["code"]>, answer: string) => {
+    requestErrorCode = code;
+    return abstention(code, answer);
+  };
 
   try {
     for (let round = 0; round <= MAX_TOOL_ROUNDS; round += 1) {
       const result = await input.provider.complete({ messages: providerMessages });
       if (result.kind === "final") {
-        if (!usedTool) return abstention("no_approved_source", "I couldn't find an approved source for that request. Please use the relevant portal module or ask an authorised colleague.");
+        if (!usedTool) return fail("no_approved_source", "I couldn't find an approved source for that request. Please use the relevant portal module or ask an authorised colleague.");
         const validated = validateAssistantOutput(result.output);
-        if (!validated.ok) return abstention("unsafe_provider_output", "I couldn't safely verify that response. Please use the relevant portal module.");
+        if (!validated.ok) return fail("unsafe_provider_output", "I couldn't safely verify that response. Please use the relevant portal module.");
         if (sourceById.size > 0 && validated.value.citations.length === 0) {
-          return abstention("unsafe_provider_output", "I couldn't safely verify that response. Please use the relevant portal module.");
+          return fail("unsafe_provider_output", "I couldn't safely verify that response. Please use the relevant portal module.");
         }
         for (const citation of validated.value.citations) {
           const source = sourceById.get(citation.id);
-          if (!source || source.title !== citation.title || (citation.href !== undefined && citation.href !== source.href)) {
-            return abstention("unsafe_provider_output", "I couldn't safely verify that response. Please use the relevant portal module.");
+          if (!source || source.title !== citation.title || (citation.href !== undefined && citation.href !== source.href) || !validated.value.answer.includes(`[${citation.id}]`)) {
+            return fail("unsafe_provider_output", "I couldn't safely verify that response. Please use the relevant portal module.");
           }
         }
         for (const link of validated.value.links) {
           if (!allowedHrefs.has(link.href)) {
-            return abstention("unsafe_provider_output", "I couldn't safely verify that response. Please use the relevant portal module.");
+            return fail("unsafe_provider_output", "I couldn't safely verify that response. Please use the relevant portal module.");
           }
         }
         return validated.value;
       }
-      if (round === MAX_TOOL_ROUNDS) return abstention("tool_budget_exceeded", "I couldn't complete that request within the safe lookup limit.");
+      if (round === MAX_TOOL_ROUNDS) return fail("tool_budget_exceeded", "I couldn't complete that request within the safe lookup limit.");
       usedTool = true;
       providerMessages.push({ role: "assistant", content: "", toolCalls: result.calls });
       for (const call of result.calls) {
@@ -101,7 +105,7 @@ export async function runAssistant(input: {
         try {
           toolResult = await executeTool(call, input, sourceById, allowedHrefs);
         } catch {
-          await auditSafely(input.audit, {
+          await auditRequired(input.audit, {
             actorProfileId: input.actor.profileId,
             capability: "use_assistant",
             eventType: "tool",
@@ -114,7 +118,7 @@ export async function runAssistant(input: {
           });
           throw new Error("assistant_tool_unavailable");
         }
-        await auditSafely(input.audit, {
+        await auditRequired(input.audit, {
           actorProfileId: input.actor.profileId,
           capability: "use_assistant",
           eventType: "tool",
@@ -126,22 +130,22 @@ export async function runAssistant(input: {
           route: input.currentPath,
         });
         if (call.name === "search_approved_knowledge" && toolResult.rowCount === 0) {
-          return abstention("no_approved_source", "I couldn't find an approved source for that request. Please use the relevant portal module or ask an authorised colleague.");
+          return fail("no_approved_source", "I couldn't find an approved source for that request. Please use the relevant portal module or ask an authorised colleague.");
         }
         if (call.name === "search_navigation" && toolResult.rowCount === 0) {
-          return abstention("no_approved_destination", "I couldn't find an approved portal destination for that request.");
+          return fail("no_approved_destination", "I couldn't find an approved portal destination for that request.");
         }
         toolCharacters += toolResult.content.length;
-        if (toolCharacters > MAX_TOOL_RESULT_CHARACTERS) return abstention("tool_budget_exceeded", "I couldn't complete that request within the safe lookup limit.");
+        if (toolCharacters > MAX_TOOL_RESULT_CHARACTERS) return fail("tool_budget_exceeded", "I couldn't complete that request within the safe lookup limit.");
         providerMessages.push({ role: "tool", toolCallId: call.id, content: toolResult.content });
       }
     }
-    return abstention("tool_budget_exceeded", "I couldn't complete that request within the safe lookup limit.");
+    return fail("tool_budget_exceeded", "I couldn't complete that request within the safe lookup limit.");
   } catch (error) {
     requestErrorCode = "assistant_request_failed";
     throw error;
   } finally {
-    await auditSafely(input.audit, { actorProfileId: input.actor.profileId, capability: "use_assistant", eventType: "request", allowed: !requestErrorCode, rowCount: 0, latencyMs: Date.now() - startedAt, errorCode: requestErrorCode, route: input.currentPath });
+    await auditRequired(input.audit, { actorProfileId: input.actor.profileId, capability: "use_assistant", eventType: "request", allowed: !requestErrorCode, rowCount: 0, latencyMs: Date.now() - startedAt, errorCode: requestErrorCode, route: input.currentPath });
   }
 }
 

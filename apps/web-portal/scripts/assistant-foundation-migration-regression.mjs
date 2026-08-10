@@ -9,7 +9,7 @@ const migrationName = "20260810153000_assistant_knowledge_foundation.sql";
 const sql = readFileSync(resolve(process.cwd(), `../../supabase/migrations/${migrationName}`), "utf8");
 const normalized = sql.toLowerCase();
 
-for (const table of ["assistant_knowledge_imports", "assistant_knowledge_import_rows", "assistant_knowledge_entries", "assistant_usage_events"]) {
+for (const table of ["assistant_knowledge_imports", "assistant_knowledge_import_rows", "assistant_knowledge_entries", "assistant_usage_events", "assistant_request_limits"]) {
   if (!normalized.includes(`create table if not exists public.${table}`)) fail(`missing ${table}`);
   if (!normalized.includes(`alter table public.${table} enable row level security`)) fail(`${table} must enable RLS`);
   if (!normalized.includes(`revoke all on table public.${table} from anon, authenticated`)) fail(`${table} must deny normal clients by default`);
@@ -20,6 +20,12 @@ if (!normalized.includes("tsvector") || !normalized.includes("using gin") || !no
 }
 for (const contract of ["required_capabilities", "effective_from", "effective_to", "is_revoked", "search_approved_assistant_knowledge", "websearch_to_tsquery", "security invoker", "to service_role"]) {
   if (!normalized.includes(contract)) fail(`approved knowledge search contract is missing ${contract}`);
+}
+for (const rpc of ["stage_assistant_knowledge_import", "transition_assistant_knowledge_entry"]) {
+  if (!normalized.includes(`function public.${rpc}`) || !normalized.includes(`revoke all on function public.${rpc}`)) fail(`${rpc} must be an atomic service-only RPC`);
+}
+for (const rpc of ["acquire_assistant_request_lease", "release_assistant_request_lease"]) {
+  if (!normalized.includes(`function public.${rpc}`)) fail(`${rpc} must provide a shared server-side request boundary`);
 }
 if (!normalized.includes("revoke all on function public.search_approved_assistant_knowledge") || !normalized.includes("from public, anon, authenticated")) {
   fail("approved knowledge RPC must not be executable by browser roles");
@@ -45,4 +51,4 @@ for (const key of ["assistant.use", "assistant.knowledge.manage"]) {
 if (normalized.includes("insert into public.access_role_permissions_v2")) fail("shadow V2 assistant entries must not create grants");
 if (!normalized.includes("legacy permission resolution remains authoritative")) fail("migration must state the V2 non-authorization boundary");
 
-console.log(JSON.stringify({ migrationName, denyByDefaultTables: 4, fts: "gin", rawPromptOrAnswerColumns: 0, v2GrantRows: 0, status: "ok" }, null, 2));
+console.log(JSON.stringify({ migrationName, denyByDefaultTables: 5, fts: "gin", rawPromptOrAnswerColumns: 0, v2GrantRows: 0, status: "ok" }, null, 2));

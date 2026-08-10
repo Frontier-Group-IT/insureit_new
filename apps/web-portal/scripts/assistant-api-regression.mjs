@@ -45,6 +45,21 @@ const uncitedKnowledge = await runAssistant({
 });
 assert.equal(uncitedKnowledge.code, "unsafe_provider_output", "knowledge answers require a verified citation");
 
+const detachedCitation = await runAssistant({
+  actor,
+  messages: [{ role: "user", content: "How do I renew?" }],
+  currentPath: "/policies",
+  provider: createFakeAssistantProvider([
+    { kind: "tool_calls", calls: [{ id: "detached-1", name: "search_approved_knowledge", query: "policy renewal" }] },
+    { kind: "final", output: { answer: "Use an unrelated process.", links: [], citations: [{ id: "source-1", title: "Renewal guide" }] } },
+  ]),
+  knowledgeRepository: { async searchApprovedActive() { return [{ id: "source-1", title: "Renewal guide", excerpt: "Approved renewal steps.", requiredCapabilities: ["view_policies"] }]; } },
+  navigationResolver: { async search() { return []; } },
+  can: async () => true,
+  audit: { async write() {} },
+});
+assert.equal(detachedCitation.code, "unsafe_provider_output", "citation IDs must be attached to the answer text");
+
 const noSourceFake = createFakeAssistantProvider([{ kind: "tool_calls", calls: [{ id: "none", name: "search_approved_knowledge", query: "unknown" }] }]);
 const abstained = await runAssistant({
   actor,
@@ -58,6 +73,17 @@ const abstained = await runAssistant({
 });
 assert.equal(abstained.code, "no_approved_source");
 assert.equal(noSourceFake.calls.length, 1);
+
+await assert.rejects(() => runAssistant({
+  actor,
+  messages: [{ role: "user", content: "Where are policies?" }],
+  currentPath: "/dashboard",
+  provider: createFakeAssistantProvider([{ kind: "tool_calls", calls: [{ id: "audit-1", name: "search_navigation", query: "policies" }] }]),
+  knowledgeRepository: { async searchApprovedActive() { return []; } },
+  navigationResolver: { async search() { return [{ label: "Policies", href: "/policies", requiredCapability: "view_policies" }]; } },
+  can: async () => true,
+  audit: { async write() { throw new Error("audit_unavailable"); } },
+}), /audit_unavailable/, "assistant access fails closed when required metadata auditing is unavailable");
 
 const inventedLinkFake = createFakeAssistantProvider([
   { kind: "tool_calls", calls: [{ id: "nav-1", name: "search_navigation", query: "policies" }] },
@@ -157,7 +183,7 @@ assert.equal(JSON.stringify(auditRows).includes("renewal policy"), false);
 const routeSource = await readFile(new URL("../app/api/assistant/chat/route.ts", import.meta.url), "utf8");
 for (const required of [
   "validateRequestEnvelope", "maxBodyBytes", "getAuthenticatedProfile", "isInternalEmployeeRole",
-  "use_assistant", "getEffectivePermissionAccessMap", "assistantLimiter.acquire", "createConfiguredAssistantProvider",
+  "use_assistant", "getEffectivePermissionAccessMap", "acquireDistributedAssistantLease", "createConfiguredAssistantProvider",
   "createPostgresKnowledgeRepository", "createMetadataOnlyAssistantAuditWriter", "Cache-Control", "no-store",
   "createPermissionAwareNavigationResolver", "capability_denied",
 ]) assert.equal(routeSource.includes(required), true, `route missing ${required}`);
@@ -170,4 +196,4 @@ for (const forbidden of ["console.log", "console.error", "messages:", "answer:"]
 const navigationSource = await readFile(new URL("../lib/assistant/navigation.ts", import.meta.url), "utf8");
 assert.match(navigationSource, /navigationCatalogue/, "server navigation resolver derives from the shared permission catalogue");
 
-console.log(JSON.stringify({ cases: 32, status: "ok" }));
+console.log(JSON.stringify({ cases: 34, status: "ok" }));

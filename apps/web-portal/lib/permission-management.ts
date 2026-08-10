@@ -71,10 +71,11 @@ export const getEffectivePermission = cache(async (profileId: string, role: AppR
 
   const admin = createSupabaseAdminClient();
   const now = new Date().toISOString();
-  const [{ data: employeeOverride }, { data: roleOverride }] = await Promise.all([
+  const [{ data: employeeOverride, error: employeeOverrideError }, { data: roleOverride, error: roleOverrideError }] = await Promise.all([
     admin.from("employee_permission_overrides").select("access_level,scope_type,expires_at").eq("profile_id", profileId).eq("capability", capability).or(`expires_at.is.null,expires_at.gt.${now}`).maybeSingle(),
     admin.from("role_permission_overrides").select("access_level,scope_type").eq("role", role).eq("capability", capability).maybeSingle(),
   ]);
+  if (employeeOverrideError || roleOverrideError) throw new Error("permission_override_lookup_failed");
   if (employeeOverride && employeeOverride.access_level !== "inherit") return { access: employeeOverride.access_level as PermissionAccess, scope: employeeOverride.scope_type as PermissionScope, source: "employee_override" as const };
   if (roleOverride) return { access: roleOverride.access_level as PermissionAccess, scope: roleOverride.scope_type as PermissionScope, source: "role_override" as const };
   return { access: rolePermissionAccess(role, capability), scope: "role_default" as const, source: "role" as const };
@@ -87,7 +88,7 @@ export const getEffectivePermissionAccessMapForRole = cache(async (profileId: st
 
   const admin = createSupabaseAdminClient();
   const now = new Date().toISOString();
-  const [{ data: employeeOverrides }, { data: roleOverrides }] = await Promise.all([
+  const [{ data: employeeOverrides, error: employeeOverridesError }, { data: roleOverrides, error: roleOverridesError }] = await Promise.all([
     admin
       .from("employee_permission_overrides")
       .select("capability,access_level,scope_type,expires_at")
@@ -98,6 +99,7 @@ export const getEffectivePermissionAccessMapForRole = cache(async (profileId: st
       .select("capability,access_level,scope_type")
       .eq("role", role),
   ]);
+  if (employeeOverridesError || roleOverridesError) throw new Error("permission_override_lookup_failed");
 
   const employeeOverrideByCapability = new Map(
     (employeeOverrides ?? [])

@@ -46,33 +46,12 @@ export async function uploadAssistantKnowledgeWorkbook(formData: FormData) {
   }
 
   const admin = createSupabaseAdminClient();
-  const { data: importRecord, error: importError } = await admin.from("assistant_knowledge_imports").insert(plan.importRow).select("id").single<{ id: string }>();
-  if (importError || !importRecord) redirectError("The validated import could not be created.");
-
-  const { data: stagedRows, error: rowsError } = await admin.from("assistant_knowledge_import_rows")
-    .insert(plan.importRows.map((row) => ({ ...row, import_id: importRecord.id })))
-    .select("id,row_number")
-    .returns<Array<{ id: string; row_number: number }>>();
-  if (rowsError || !stagedRows || stagedRows.length !== plan.importRows.length) {
-    await admin.from("assistant_knowledge_imports").delete().eq("id", importRecord.id);
-    redirectError("The validated workbook rows could not be staged.");
-  }
-
-  const rowIds = new Map(stagedRows.map((row) => [row.row_number, row.id]));
-  const { error: entriesError } = await admin.from("assistant_knowledge_entries").insert(plan.entries.map((entry, index) => ({
-    ...entry,
-    import_id: importRecord.id,
-    import_row_id: rowIds.get(index + 2) ?? null,
-  })));
-  if (entriesError) {
-    await admin.from("assistant_knowledge_imports").delete().eq("id", importRecord.id);
-    redirectError("This content version conflicts with existing knowledge or could not be staged.");
-  }
-
-  await Promise.all([
-    admin.from("assistant_knowledge_import_rows").update({ status: "imported" }).eq("import_id", importRecord.id),
-    admin.from("assistant_knowledge_imports").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", importRecord.id),
-  ]);
+  const stagedEntries = plan.entries.map((entry, index) => ({ ...entry, row_number: plan.importRows[index].row_number }));
+  const { data: importId, error: importError } = await admin.rpc("stage_assistant_knowledge_import", {
+    p_import: plan.importRow,
+    p_entries: stagedEntries,
+  });
+  if (importError || typeof importId !== "string") redirectError("This content version conflicts with existing knowledge or could not be staged.");
   revalidatePath("/system/assistant-knowledge");
   redirect("/system/assistant-knowledge?success=Workbook validated and staged as draft knowledge.");
 }
@@ -82,23 +61,12 @@ async function updateEntryLifecycle(formData: FormData, action: "publish" | "ret
   const id = String(formData.get("entry_id") ?? "");
   if (!ENTRY_ID.test(id)) redirectError("The selected knowledge entry is invalid.");
   const admin = createSupabaseAdminClient();
-  const now = new Date().toISOString();
-  const update = action === "publish"
-    ? { status: "published", is_revoked: false, published_by: profile.id, published_at: now, retired_by: null, retired_at: null, effective_from: now, updated_by: profile.id, updated_at: now }
-    : { status: "retired", is_revoked: true, retired_by: profile.id, retired_at: now, updated_by: profile.id, updated_at: now };
-  const requiredStatus = action === "publish" ? "draft" : "published";
-  const { data, error } = await admin.from("assistant_knowledge_entries").update(update).eq("id", id).eq("status", requiredStatus).select("id").maybeSingle<{ id: string }>();
-  if (error || !data) redirectError(`The knowledge entry could not be ${action === "publish" ? "published" : "retired"}.`);
-  await admin.from("assistant_usage_events").insert({
-    actor_profile_id: profile.id,
-    capability: "manage_assistant_knowledge",
-    decision: "allowed",
-    tool_name: action === "publish" ? "assistant_knowledge_publish" : "assistant_knowledge_retire",
-    route: "/system/assistant-knowledge",
-    row_count: 1,
-    latency_ms: 0,
-    error_code: null,
+  const { data, error } = await admin.rpc("transition_assistant_knowledge_entry", {
+    p_entry_id: id,
+    p_action: action,
+    p_actor_id: profile.id,
   });
+  if (error || !data) redirectError(`The knowledge entry could not be ${action === "publish" ? "published" : "retired"}.`);
   revalidatePath("/system/assistant-knowledge");
   redirect(`/system/assistant-knowledge?success=${action === "publish" ? "Knowledge published." : "Knowledge retired."}`);
 }

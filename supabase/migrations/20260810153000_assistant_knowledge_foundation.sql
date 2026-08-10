@@ -83,6 +83,15 @@ create table if not exists public.assistant_usage_events (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.assistant_request_limits (
+  actor_profile_id uuid primary key references public.profiles(id) on delete cascade,
+  window_started_at timestamptz not null default now(),
+  request_count integer not null default 0 check (request_count >= 0),
+  active_lease_id uuid null,
+  active_until timestamptz null,
+  updated_at timestamptz not null default now()
+);
+
 create index if not exists assistant_knowledge_imports_created_at_idx on public.assistant_knowledge_imports(created_at desc);
 create index if not exists assistant_knowledge_import_rows_import_idx on public.assistant_knowledge_import_rows(import_id, row_number);
 create index if not exists assistant_knowledge_entries_status_route_idx on public.assistant_knowledge_entries(status, route);
@@ -91,6 +100,7 @@ create index if not exists assistant_knowledge_entries_search_idx on public.assi
 create index if not exists assistant_usage_events_actor_created_idx on public.assistant_usage_events(actor_profile_id, created_at desc);
 create index if not exists assistant_usage_events_created_at_idx on public.assistant_usage_events(created_at desc);
 
+drop function if exists public.search_approved_assistant_knowledge(text, integer);
 create or replace function public.search_approved_assistant_knowledge(p_query text, p_capabilities text[], p_limit integer default 5)
 returns table (
   source_id uuid,
@@ -126,17 +136,173 @@ $$;
 revoke all on function public.search_approved_assistant_knowledge(text, text[], integer) from public, anon, authenticated;
 grant execute on function public.search_approved_assistant_knowledge(text, text[], integer) to service_role;
 
+create or replace function public.acquire_assistant_request_lease(p_actor_profile_id uuid)
+returns table (status text, lease_id uuid)
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_limit public.assistant_request_limits%rowtype;
+  v_now timestamptz := now();
+  v_lease_id uuid := gen_random_uuid();
+begin
+  insert into public.assistant_request_limits(actor_profile_id)
+    values (p_actor_profile_id) on conflict (actor_profile_id) do nothing;
+  select * into v_limit from public.assistant_request_limits
+    where actor_profile_id = p_actor_profile_id for update;
+  if v_limit.window_started_at <= v_now - interval '60 seconds' then
+    v_limit.window_started_at := v_now;
+    v_limit.request_count := 0;
+  end if;
+  if v_limit.active_until is not null and v_limit.active_until > v_now then
+    return query select 'concurrency'::text, null::uuid;
+    return;
+  end if;
+  if v_limit.request_count >= 20 then
+    return query select 'rate'::text, null::uuid;
+    return;
+  end if;
+  update public.assistant_request_limits
+    set window_started_at = v_limit.window_started_at,
+        request_count = v_limit.request_count + 1,
+        active_lease_id = v_lease_id,
+        active_until = v_now + interval '35 seconds',
+        updated_at = v_now
+    where actor_profile_id = p_actor_profile_id;
+  return query select 'allowed'::text, v_lease_id;
+end;
+$$;
+
+revoke all on function public.acquire_assistant_request_lease(uuid) from public, anon, authenticated;
+grant execute on function public.acquire_assistant_request_lease(uuid) to service_role;
+
+create or replace function public.release_assistant_request_lease(p_actor_profile_id uuid, p_lease_id uuid)
+returns boolean
+language sql
+security invoker
+set search_path = public
+as $$
+  update public.assistant_request_limits
+    set active_lease_id = null, active_until = null, updated_at = now()
+    where actor_profile_id = p_actor_profile_id and active_lease_id = p_lease_id
+  returning true;
+$$;
+
+revoke all on function public.release_assistant_request_lease(uuid, uuid) from public, anon, authenticated;
+grant execute on function public.release_assistant_request_lease(uuid, uuid) to service_role;
+
+create or replace function public.stage_assistant_knowledge_import(p_import jsonb, p_entries jsonb)
+returns uuid
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_import_id uuid;
+  v_import_row_id uuid;
+  v_entry jsonb;
+  v_count integer;
+begin
+  if jsonb_typeof(p_import) <> 'object' or jsonb_typeof(p_entries) <> 'array' then
+    raise exception 'invalid_assistant_knowledge_import';
+  end if;
+  v_count := jsonb_array_length(p_entries);
+  if v_count < 1 or v_count > 1000 then raise exception 'invalid_assistant_knowledge_entry_count'; end if;
+
+  insert into public.assistant_knowledge_imports (
+    file_name, file_sha256, template_version, content_version, knowledge_base_name,
+    owner_label, classification, status, total_rows, valid_rows, invalid_rows,
+    created_by, completed_at
+  ) values (
+    p_import->>'file_name', p_import->>'file_sha256', p_import->>'template_version',
+    (p_import->>'content_version')::integer, p_import->>'knowledge_base_name',
+    p_import->>'owner_label', p_import->>'classification', 'completed', v_count, v_count, 0,
+    (p_import->>'created_by')::uuid, now()
+  ) returning id into v_import_id;
+
+  for v_entry in select value from jsonb_array_elements(p_entries)
+  loop
+    insert into public.assistant_knowledge_import_rows (
+      import_id, row_number, route, title, content, tags, source_reference,
+      required_capabilities, status, validation_errors
+    ) values (
+      v_import_id, (v_entry->>'row_number')::integer, v_entry->>'route', v_entry->>'title',
+      v_entry->>'content', array(select jsonb_array_elements_text(coalesce(v_entry->'tags', '[]'::jsonb))),
+      v_entry->>'source_reference', array(select jsonb_array_elements_text(v_entry->'required_capabilities')),
+      'imported', '{}'::text[]
+    ) returning id into v_import_row_id;
+
+    insert into public.assistant_knowledge_entries (
+      import_id, import_row_id, route, title, content, tags, source_reference,
+      required_capabilities, version, status, is_revoked, created_by, updated_by
+    ) values (
+      v_import_id, v_import_row_id, v_entry->>'route', v_entry->>'title', v_entry->>'content',
+      array(select jsonb_array_elements_text(coalesce(v_entry->'tags', '[]'::jsonb))),
+      v_entry->>'source_reference', array(select jsonb_array_elements_text(v_entry->'required_capabilities')),
+      (p_import->>'content_version')::integer, 'draft', false,
+      (p_import->>'created_by')::uuid, (p_import->>'created_by')::uuid
+    );
+  end loop;
+  return v_import_id;
+end;
+$$;
+
+revoke all on function public.stage_assistant_knowledge_import(jsonb, jsonb) from public, anon, authenticated;
+grant execute on function public.stage_assistant_knowledge_import(jsonb, jsonb) to service_role;
+
+create or replace function public.transition_assistant_knowledge_entry(p_entry_id uuid, p_action text, p_actor_id uuid)
+returns boolean
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_now timestamptz := now();
+begin
+  if p_action = 'publish' then
+    update public.assistant_knowledge_entries
+      set status = 'published', is_revoked = false, published_by = p_actor_id,
+          published_at = v_now, retired_by = null, retired_at = null,
+          effective_from = v_now, updated_by = p_actor_id, updated_at = v_now
+      where id = p_entry_id and status = 'draft';
+  elsif p_action = 'retire' then
+    update public.assistant_knowledge_entries
+      set status = 'retired', is_revoked = true, retired_by = p_actor_id,
+          retired_at = v_now, effective_to = v_now, updated_by = p_actor_id, updated_at = v_now
+      where id = p_entry_id and status = 'published' and is_revoked = false;
+  else
+    raise exception 'invalid_assistant_knowledge_transition';
+  end if;
+  if not found then return false; end if;
+
+  insert into public.assistant_usage_events (
+    actor_profile_id, capability, decision, tool_name, route, row_count, latency_ms, error_code
+  ) values (
+    p_actor_id, 'manage_assistant_knowledge', 'allowed',
+    case when p_action = 'publish' then 'assistant_knowledge_publish' else 'assistant_knowledge_retire' end,
+    '/system/assistant-knowledge', 1, 0, null
+  );
+  return true;
+end;
+$$;
+
+revoke all on function public.transition_assistant_knowledge_entry(uuid, text, uuid) from public, anon, authenticated;
+grant execute on function public.transition_assistant_knowledge_entry(uuid, text, uuid) to service_role;
+
 -- Deny by default: Phase 1 exposes no client policy. Trusted server code must
 -- still perform authoritative legacy permission checks before service-role use.
 alter table public.assistant_knowledge_imports enable row level security;
 alter table public.assistant_knowledge_import_rows enable row level security;
 alter table public.assistant_knowledge_entries enable row level security;
 alter table public.assistant_usage_events enable row level security;
+alter table public.assistant_request_limits enable row level security;
 
 revoke all on table public.assistant_knowledge_imports from anon, authenticated;
 revoke all on table public.assistant_knowledge_import_rows from anon, authenticated;
 revoke all on table public.assistant_knowledge_entries from anon, authenticated;
 revoke all on table public.assistant_usage_events from anon, authenticated;
+revoke all on table public.assistant_request_limits from anon, authenticated;
 
 comment on table public.assistant_knowledge_imports is 'Controlled assistant workbook import metadata; deny-by-default RLS.';
 comment on table public.assistant_knowledge_import_rows is 'Validated assistant workbook rows; populated only after application-layer content screening.';

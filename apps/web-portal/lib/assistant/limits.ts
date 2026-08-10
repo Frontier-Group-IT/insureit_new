@@ -51,3 +51,27 @@ export function createInMemoryAssistantLimiter(options: LimiterOptions = {}): As
 }
 
 export const assistantLimiter = createInMemoryAssistantLimiter();
+
+type DistributedLimitClient = {
+  rpc(name: "acquire_assistant_request_lease" | "release_assistant_request_lease", args: Record<string, unknown>): PromiseLike<{ data: unknown; error: unknown }>;
+};
+export type DistributedAssistantLimitLease =
+  | { ok: false; reason: "rate" | "concurrency" }
+  | { ok: true; release(): Promise<void> };
+
+export async function acquireDistributedAssistantLease(client: DistributedLimitClient, profileId: string): Promise<DistributedAssistantLimitLease> {
+  const { data, error } = await client.rpc("acquire_assistant_request_lease", { p_actor_profile_id: profileId });
+  const row = Array.isArray(data) ? data[0] as { status?: unknown; lease_id?: unknown } | undefined : undefined;
+  if (error || !row || (row.status !== "allowed" && row.status !== "rate" && row.status !== "concurrency")) throw new Error("assistant_limit_unavailable");
+  if (row.status !== "allowed") return { ok: false, reason: row.status };
+  if (typeof row.lease_id !== "string") throw new Error("assistant_limit_invalid_response");
+  let released = false;
+  return {
+    ok: true,
+    async release() {
+      if (released) return;
+      released = true;
+      await client.rpc("release_assistant_request_lease", { p_actor_profile_id: profileId, p_lease_id: row.lease_id });
+    },
+  };
+}

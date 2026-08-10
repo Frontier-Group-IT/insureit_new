@@ -9,7 +9,7 @@ import { permissionDefinitions } from "@/lib/permission-management";
 import { isAppRole, type Capability } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createMetadataOnlyAssistantAuditWriter } from "@/lib/assistant/audit";
-import { assistantLimiter } from "@/lib/assistant/limits";
+import { acquireDistributedAssistantLease } from "@/lib/assistant/limits";
 import { createPermissionAwareNavigationResolver } from "@/lib/assistant/navigation";
 import { runAssistant } from "@/lib/assistant/orchestrator";
 import { ASSISTANT_LIMITS, isInternalEmployeeRole, validateAssistantRequest, validateRequestEnvelope } from "@/lib/assistant/policy";
@@ -86,7 +86,12 @@ export async function POST(request: Request) {
   const validated = validateAssistantRequest(parsed.value);
   if (!validated.ok) return json({ error: validated.code }, 400);
 
-  const lease = assistantLimiter.acquire(profile.id);
+  let lease;
+  try {
+    lease = await acquireDistributedAssistantLease(admin, profile.id);
+  } catch {
+    return json({ error: "assistant_unavailable" }, 503);
+  }
   if (!lease.ok) {
     return NextResponse.json(
       { error: lease.reason === "rate" ? "rate_limited" : "request_in_progress" },
@@ -112,6 +117,6 @@ export async function POST(request: Request) {
     }
     return json({ error: "assistant_unavailable" }, 503);
   } finally {
-    lease.release();
+    try { await lease.release(); } catch { /* An expired database lease fails closed until its short TTL elapses. */ }
   }
 }

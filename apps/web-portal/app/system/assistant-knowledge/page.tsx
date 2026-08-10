@@ -10,6 +10,7 @@ type EntryRow = {
   id: string;
   route: string;
   title: string;
+  content: string;
   source_reference: string;
   required_capabilities: string[];
   version: number;
@@ -31,7 +32,7 @@ export default async function AssistantKnowledgePage({ searchParams }: { searchP
   const params = await searchParams;
   const admin = createSupabaseAdminClient();
   const { data } = await admin.from("assistant_knowledge_entries")
-    .select("id,route,title,source_reference,required_capabilities,version,status,is_revoked,created_at,published_at,retired_at")
+    .select("id,route,title,content,source_reference,required_capabilities,version,status,is_revoked,created_at,published_at,retired_at")
     .order("created_at", { ascending: false })
     .limit(250)
     .returns<EntryRow[]>();
@@ -63,7 +64,7 @@ export default async function AssistantKnowledgePage({ searchParams }: { searchP
       <Card>
         <div><h2 className="text-[15px] font-semibold text-[#17203A]">Knowledge lifecycle</h2><p className="mt-1 text-[10px] text-[#64748B]">Published entries are searchable only while active and not revoked.</p></div>
         <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[1050px] text-left text-[10px]"><thead><tr className="border-y border-[#E2E8F0] bg-[#F8FAFC] text-[8px] uppercase tracking-[.05em] text-[#64748B]"><th className="px-3 py-3">Knowledge</th><th className="px-3 py-3">Route</th><th className="px-3 py-3">Capabilities</th><th className="px-3 py-3">Version</th><th className="px-3 py-3">Status</th><th className="px-3 py-3 text-right">Action</th></tr></thead><tbody className="divide-y divide-[#EDF2F7]">
-          {entries.map((entry) => <tr key={entry.id}><td className="px-3 py-3"><p className="font-semibold text-[#17203A]">{entry.title}</p><p className="mt-0.5 text-[8.5px] text-[#94A3B8]">{entry.source_reference}</p></td><td className="px-3 py-3 font-mono text-[8.5px] text-[#475569]">{entry.route}</td><td className="px-3 py-3 text-[8.5px] text-[#64748B]">{entry.required_capabilities.join(", ")}</td><td className="px-3 py-3">v{entry.version}</td><td className="px-3 py-3"><Status value={entry.status} revoked={entry.is_revoked} /></td><td className="px-3 py-3 text-right">{entry.status === "draft" ? <LifecycleForm action={publishAssistantKnowledgeEntry} id={entry.id} label="Publish" /> : entry.status === "published" && !entry.is_revoked ? <LifecycleForm action={retireAssistantKnowledgeEntry} id={entry.id} label="Retire" /> : <span className="text-[#94A3B8]">No action</span>}</td></tr>)}
+          {entries.map((entry) => <tr key={entry.id}><td className="px-3 py-3"><p className="font-semibold text-[#17203A]">{entry.title}</p><p className="mt-0.5 text-[8.5px] text-[#94A3B8]">{entry.source_reference}</p><p className="mt-2 max-w-xl whitespace-pre-wrap text-[9px] leading-4 text-[#475569]">{entry.content.slice(0, 320)}{entry.content.length > 320 ? "…" : ""}</p></td><td className="px-3 py-3 font-mono text-[8.5px] text-[#475569]">{entry.route}</td><td className="px-3 py-3 text-[8.5px] text-[#64748B]">{entry.required_capabilities.join(", ")}</td><td className="px-3 py-3">v{entry.version}</td><td className="px-3 py-3"><Status value={entry.status} revoked={entry.is_revoked} /></td><td className="px-3 py-3 text-right">{entry.status === "draft" ? <LifecycleForm action={publishAssistantKnowledgeEntry} id={entry.id} label="Publish" /> : entry.status === "published" && !entry.is_revoked ? <LifecycleForm action={retireAssistantKnowledgeEntry} id={entry.id} label="Retire" /> : <span className="text-[#94A3B8]">No action</span>}</td></tr>)}
           {!entries.length ? <tr><td colSpan={6} className="px-4 py-10 text-center text-[#94A3B8]">No assistant knowledge has been staged.</td></tr> : null}
         </tbody></table></div>
       </Card>
