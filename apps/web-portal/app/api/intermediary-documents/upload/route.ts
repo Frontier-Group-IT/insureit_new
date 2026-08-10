@@ -4,7 +4,7 @@ import { getPospMispManager, getScopedPospMispManager } from "@/lib/master-data-
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const DOCUMENT_BUCKET = "customer-documents";
-const MAX_FILE_SIZE = 4 * 1024 * 1024;
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_CUSTOM_LABEL_LENGTH = 60;
 const ALLOWED_FILE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 const EDUCATION_TYPES = new Set([
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, message: "Use a PDF, JPG or PNG file." }, { status: 400 });
   }
   if (selected.size > MAX_FILE_SIZE) {
-    return NextResponse.json({ ok: false, message: "Each document must be 4 MB or smaller." }, { status: 413 });
+    return NextResponse.json({ ok: false, message: "Each document must be 10 MB or smaller." }, { status: 413 });
   }
 
   const admin = createSupabaseAdminClient();
