@@ -16,7 +16,7 @@ const LABELS: Record<string, string> = {
   registration_certificate: "Registration certificate",
   agreement_copy: "Agreement copy",
 };
-const MAX_FILE_SIZE = 4 * 1024 * 1024;
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 type UploadItem = { documentType: string; fieldName: string; file: File; label: string; documentLabel?: string | null };
 type UploadResult = {
@@ -96,7 +96,7 @@ export function IntermediaryDocumentUploadController({
 
       const oversized = items.find((item) => item.file.size > MAX_FILE_SIZE);
       if (oversized) {
-        setError(`${oversized.label} must be 4 MB or smaller.`);
+        setError(`${oversized.label} must be 10 MB or smaller.`);
         return;
       }
 
