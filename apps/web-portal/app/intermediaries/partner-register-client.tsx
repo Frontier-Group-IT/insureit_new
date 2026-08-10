@@ -6,6 +6,7 @@ import { compactDarkActionClassName, compactPrimaryActionClassName } from "@/com
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { FreshAccountReviewLink } from "./applications/account-review-back-link";
 import { createLinkedIntermediaryAccount } from "./applications/[id]/account-review-actions";
+import { WorkflowSuccessToast } from "./applications/workflow-success-toast";
 
 export type PartnerRegisterRow = {
   id: string;
@@ -69,7 +70,7 @@ export function PartnerRegisterClient({
 
   return (
     <div className="mx-auto max-w-[1480px] space-y-4 pb-6">
-      {success ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10.5px] font-medium text-emerald-700">{successMessage}</div> : null}
+      {success ? <WorkflowSuccessToast message={successMessage} durationMs={4000} /> : null}
       {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10.5px] font-medium text-red-700">The requested action could not be completed. Please try again. If the problem continues, contact the system administrator.</div> : null}
       <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
         <div className="grid items-center gap-5 border-b border-[#E7ECF3] bg-[#FAFBFD] px-5 py-3.5 lg:grid-cols-[auto_minmax(280px,460px)_1fr]">
