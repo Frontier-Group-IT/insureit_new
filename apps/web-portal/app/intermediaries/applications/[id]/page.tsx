@@ -196,7 +196,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
     : [
         { icon: "account" as IconName, label: "Account Type", value: accountType },
         { icon: "id" as IconName, label: "Account Status", value: intermediary?.account_status ? pretty(intermediary.account_status) : "Under Onboarding" },
-        { icon: "link" as IconName, label: "Parent Partner", value: partnerId ?? "Pending", href: parentApplication ? `/intermediaries/applications/${parentApplication.id}` : undefined },
+        { icon: "link" as IconName, label: "Parent Partner", value: partnerId ?? "Pending", href: parentApplication ? `/intermediaries/applications/${parentApplication.id}` : undefined, showViewIcon: Boolean(parentApplication) },
         { icon: "rm" as IconName, label: "Assigned RM", value: profile.associate_name ?? "Not assigned" },
         { icon: "portal" as IconName, label: "Portal Access", value: portalAccessLabel(intermediary?.portal_access_status), portalAction: portalAccessAction(intermediary?.portal_access_status), intermediaryId: intermediary?.id, returnPath },
         { icon: "calendar" as IconName, label: "Activation Date", value: accountActivated ? date(intermediary?.activated_at) : "-" },
