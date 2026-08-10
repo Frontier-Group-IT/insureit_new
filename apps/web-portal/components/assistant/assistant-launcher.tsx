@@ -96,7 +96,6 @@ export function AssistantLauncher({ navigation }: Props) {
         body: JSON.stringify({
           message: cleanQuestion,
           pathname,
-          navigation: availableNavigation,
           history: messages.slice(-10).map(({ role, text }) => ({ role, text })),
         }),
       });

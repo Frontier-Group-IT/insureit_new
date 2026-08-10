@@ -130,9 +130,9 @@ for (const required of [
   "previousFocusRef.current?.focus()",
   "AbortController",
   "pathname",
-  "navigation",
   "md:",
 ]) assert.ok(assistantSource.includes(required), `assistant UI includes ${required}`);
+assert.doesNotMatch(assistantSource, /navigation:\s*availableNavigation/, "client does not submit authorization-sensitive navigation scope");
 assert.doesNotMatch(assistantSource, /dangerouslySetInnerHTML/, "assistant renders no arbitrary HTML");
 assert.doesNotMatch(assistantSource, /localStorage|sessionStorage|indexedDB/, "conversation history remains ephemeral in component memory");
 assert.ok(
