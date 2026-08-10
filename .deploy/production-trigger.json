@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the verified Phase 7 employee Access Profile workspace rebuild.",
-  "deploy_requested_at": "2026-08-10T14:53:00+05:30",
+  "purpose": "Deploy the interactive hover states for POSP/MISP ID and Portal Access header actions.",
+  "deploy_requested_at": "2026-08-10T15:40:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit continuation request during Access Control Phase 7",
-  "source_commit": "9911cc35c7321bdc7386fd35d77d62535c61fee3",
-  "release_scope": "Deploy the six-tab employee Access Profile workspace: Overview, Roles, Permissions, Data Scope, Portal Access, and History. Preserve the current live permission override actions, add temporary-access expiry input already supported by the backend, show read-only V2 role context, route role/lifecycle management through existing governed paths, and keep the V2 database/RLS migration inactive.",
-  "verification": "Exact-head verification run 31374733017 passed all access-control regressions, employee portal governance regression, TypeScript, lint, and production build. The production deployment workflow must complete before the Vercel hook is considered invoked; production READY must not be claimed without separate Vercel evidence.",
+  "source": "ChatGPT explicit request to merge PR #241 and deploy with the protected GitHub Actions production flow",
+  "source_commit": "ca021c71e7ca2fa03bcdccdabab6ecbeddf9bba2",
+  "release_scope": "Deploy the account-review header interaction update from PR #241: subtle hover/focus feedback for clickable POSP/MISP ID and Portal Access blocks, while preserving existing navigation, portal account actions, permissions, workflows, and all non-interactive header stats.",
+  "verification": "PR #241 verification run 31377714009 passed all configured access-control regressions, Policy OCR regressions, TypeScript typecheck, lint, and production build. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook; Vercel READY must be verified separately.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
