@@ -55,6 +55,9 @@ jobs:
       - name: Employee portal governance regression
         run: npm run access-control:portal-governance-regression
 
+      - name: INSUREIT assistant security and behavior regressions
+        run: npm run assistant:regression
+
       - name: IFFCO structured regression
         run: npm run policy-ocr:iffco-structured-regression
 
@@ -85,6 +88,7 @@ jobs:
             echo
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo "- Access control: V2 catalogue, scope, legacy compatibility, portal lifecycle and employee portal governance regressions"
+            echo "- Assistant: permissions, schema, workbook safety, navigation, policy and API regressions"
             echo "- OCR regressions: IFFCO structured, IFFCO, Digit, New India"
             echo "- Static checks: typecheck and lint"
             echo "- Build: Next.js production build"
