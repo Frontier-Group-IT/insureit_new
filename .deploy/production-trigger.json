@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the approved Portal Access summary card actions from PR #235 to production.",
-  "deploy_requested_at": "2026-08-10T12:41:00+05:30",
+  "purpose": "Deploy the approved application review header action cleanup from PR #236 to production.",
+  "deploy_requested_at": "2026-08-10T12:59:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT Portal Access card release retrigger",
-  "source_commit": "37c49979c2bc0bd334e59a24298efec3972ecbef",
-  "release_scope": "Deploy PR #235. Rename Portal user status to Portal Access for Partner and POSP/MISP application review, show Create User for not_created, Resend Link for invited, preserve meaningful read-only states such as Active and Suspended, make Create User and Resend Link actionable through the existing server actions, preserve existing top-right controls, card styling, Assigned RM/Activation Date layout, database, permissions, activation, invitation, and workflow behavior. Retrigger after a newer main commit cancelled the prior production workflow.",
-  "verification": "PR #235 was squash merged into main as 37c49979c2bc0bd334e59a24298efec3972ecbef. The first production workflow run was cancelled by a newer main push before verification completed, so this retrigger must complete successfully and Vercel must report READY for the exact resulting deployment before production success is claimed.",
+  "source": "ChatGPT application review header action cleanup release",
+  "source_commit": "5e2f89d1e62bbf4c541c89f0155c8b0b5079fd5b",
+  "release_scope": "Deploy PR #236. Remove the top-right Open linked account action and top-right Create user / Resend link portal actions from Partner application review, preserve Edit details and the IIB PAN status chip, keep linked POSP/MISP navigation through the clickable linked ID + Eye, keep Create User / Resend Link in the Portal Access summary card, preserve linked-account creation when no linked account exists, preserve POSP/MISP Manage account behavior, and leave database, permissions, onboarding, activation, portal-user creation, invitation, linked-account creation, and routing logic unchanged.",
+  "verification": "PR #236 was squash merged into main as 5e2f89d1e62bbf4c541c89f0155c8b0b5079fd5b. Final PR app diff is one file, +6/-21. Full lint/typecheck/build were not run before merge. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
