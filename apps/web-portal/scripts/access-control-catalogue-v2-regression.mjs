@@ -8,6 +8,7 @@ import {
 } from "../lib/access-control-catalogue-v2.ts";
 import { appRoles } from "../lib/roles.ts";
 import { roleMatrixV2 } from "../lib/access-control-role-matrix-v2.ts";
+import { resolveEffectivePermissionV2 } from "../lib/access-control-effective-v2.ts";
 
 function fail(message) {
   throw new Error(`[access-control-v2] ${message}`);
@@ -176,6 +177,91 @@ if (!migrationSql.includes("Phase 4 shadow foundation must not auto-assign emplo
   fail("Phase 4 migration is missing the no-auto-assignment invariant");
 }
 
+// Phase 5 shadow resolver behavioural gates.
+const fixedNow = new Date("2026-08-10T08:00:00.000Z");
+function decide(input) {
+  return resolveEffectivePermissionV2({ employeeActive: true, portalIdentityActive: true, now: fixedNow, ...input }, roleMatrixV2);
+}
+function expectDecision(name, decision, expected) {
+  for (const [key, value] of Object.entries(expected)) {
+    const actual = decision[key];
+    if (Array.isArray(value)) {
+      if (JSON.stringify(actual) !== JSON.stringify(value)) fail(`${name}: expected ${key}=${JSON.stringify(value)}, got ${JSON.stringify(actual)}`);
+    } else if (actual !== value) {
+      fail(`${name}: expected ${key}=${String(value)}, got ${String(actual)}`);
+    }
+  }
+}
+
+expectDecision(
+  "inactive employee",
+  resolveEffectivePermissionV2({ permission: "claims.view", employeeActive: false, portalIdentityActive: true, assignments: [{ roleCode: "claims_head", isActive: true }], now: fixedNow }, roleMatrixV2),
+  { allowed: false, access: "none", source: "inactive_identity" },
+);
+
+expectDecision(
+  "expired temporary role",
+  decide({ permission: "claims.view", assignments: [{ roleCode: "claims_head", isActive: true, endsAt: "2026-08-10T07:59:59.000Z" }] }),
+  { allowed: false, access: "none", source: "no_grant" },
+);
+
+expectDecision(
+  "claim processor assigned claim",
+  decide({ permission: "claims.edit", assignments: [{ roleCode: "claim_processor", isActive: true }] }),
+  { allowed: true, access: "edit", scopes: ["assigned"], source: "role_grant" },
+);
+
+expectDecision(
+  "claim processor cannot assign tasks",
+  decide({ permission: "tasks.assign", assignments: [{ roleCode: "claim_processor", isActive: true }] }),
+  { allowed: false, access: "none", source: "no_grant" },
+);
+
+expectDecision(
+  "claim processor creates only self followup",
+  decide({ permission: "tasks.create", assignments: [{ roleCode: "claim_processor", isActive: true }] }),
+  { allowed: true, access: "edit", scopes: ["self"], source: "role_grant" },
+);
+
+expectDecision(
+  "employee deny overrides role grant",
+  decide({
+    permission: "customers.view",
+    assignments: [{ roleCode: "sales_head", isActive: true }],
+    overrides: [{ permission: "customers.view", access: "none", isActive: true, reason: "Temporary restriction" }],
+  }),
+  { allowed: false, access: "none", source: "employee_deny" },
+);
+
+expectDecision(
+  "expired employee deny is ignored",
+  decide({
+    permission: "customers.view",
+    assignments: [{ roleCode: "sales_head", isActive: true }],
+    overrides: [{ permission: "customers.view", access: "none", isActive: true, expiresAt: "2026-08-10T07:59:59.000Z" }],
+  }),
+  { allowed: true, access: "view", scopes: ["hierarchy"], source: "role_grant" },
+);
+
+expectDecision(
+  "strongest multi-role grant",
+  decide({
+    permission: "claims.verify_documents",
+    assignments: [{ roleCode: "claim_processor", isActive: true }, { roleCode: "claims_head", isActive: true }],
+  }),
+  { allowed: true, access: "approve", scopes: ["organization"], source: "role_grant" },
+);
+
+expectDecision(
+  "protected IT grant ignores ordinary deny",
+  decide({
+    permission: "system.integrations.configure",
+    assignments: [{ roleCode: "it_super_user", isActive: true }],
+    overrides: [{ permission: "system.integrations.configure", access: "none", isActive: true, reason: "Should not downgrade protected role" }],
+  }),
+  { allowed: true, access: "approve", source: "protected_role" },
+);
+
 const criticalPermissions = permissionCatalogueV2.filter((permission) => permission.risk === "critical");
 if (!criticalPermissions.length) fail("catalogue unexpectedly contains no critical permissions");
 
@@ -187,5 +273,6 @@ console.log(JSON.stringify({
   assignableRoleCount: roleMatrixV2.filter((role) => role.assignable).length,
   sqlRoleGrantCount: sqlGrants.size,
   phase4SqlParity: "ok",
+  phase5ResolverCases: 8,
   status: "ok",
 }, null, 2));
