@@ -32,7 +32,7 @@ create table if not exists public.assistant_knowledge_import_rows (
   content text not null,
   tags text[] not null default '{}',
   source_reference text not null,
-  required_capabilities text[] not null,
+  required_capabilities text[] not null check (cardinality(required_capabilities) > 0),
   status text not null check (status in ('valid','invalid','imported','rejected')),
   validation_errors text[] not null default '{}',
   created_at timestamptz not null default now(),
@@ -48,7 +48,7 @@ create table if not exists public.assistant_knowledge_entries (
   content text not null,
   tags text[] not null default '{}',
   source_reference text not null,
-  required_capabilities text[] not null,
+  required_capabilities text[] not null check (cardinality(required_capabilities) > 0),
   version integer not null default 1 check (version > 0),
   status text not null default 'draft' check (status in ('draft','published','retired')),
   effective_from timestamptz null,
@@ -91,7 +91,7 @@ create index if not exists assistant_knowledge_entries_search_idx on public.assi
 create index if not exists assistant_usage_events_actor_created_idx on public.assistant_usage_events(actor_profile_id, created_at desc);
 create index if not exists assistant_usage_events_created_at_idx on public.assistant_usage_events(created_at desc);
 
-create or replace function public.search_approved_assistant_knowledge(p_query text, p_limit integer default 5)
+create or replace function public.search_approved_assistant_knowledge(p_query text, p_capabilities text[], p_limit integer default 5)
 returns table (
   source_id uuid,
   title text,
@@ -114,6 +114,7 @@ as $$
   where length(trim(coalesce(p_query, ''))) between 1 and 500
     and entry.status = 'published'
     and entry.is_revoked = false
+    and entry.required_capabilities <@ coalesce(p_capabilities, '{}'::text[])
     and (entry.effective_from is null or entry.effective_from <= now())
     and (entry.effective_to is null or entry.effective_to > now())
     and entry.search_document @@ websearch_to_tsquery('english'::regconfig, left(trim(p_query), 500))
@@ -122,8 +123,8 @@ as $$
   limit least(greatest(coalesce(p_limit, 5), 1), 5);
 $$;
 
-revoke all on function public.search_approved_assistant_knowledge(text, integer) from public, anon, authenticated;
-grant execute on function public.search_approved_assistant_knowledge(text, integer) to service_role;
+revoke all on function public.search_approved_assistant_knowledge(text, text[], integer) from public, anon, authenticated;
+grant execute on function public.search_approved_assistant_knowledge(text, text[], integer) to service_role;
 
 -- Deny by default: Phase 1 exposes no client policy. Trusted server code must
 -- still perform authoritative legacy permission checks before service-role use.

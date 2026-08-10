@@ -4,12 +4,13 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { accessTokenCookie } from "@/lib/auth-config";
 import { getAuthenticatedProfile } from "@/lib/auth";
-import { getEffectivePermission } from "@/lib/permission-management";
-import { isAppRole } from "@/lib/roles";
+import { accessRank, getEffectivePermissionAccessMap } from "@/lib/effective-permissions";
+import { permissionDefinitions } from "@/lib/permission-management";
+import { isAppRole, type Capability } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createMetadataOnlyAssistantAuditWriter } from "@/lib/assistant/audit";
 import { assistantLimiter } from "@/lib/assistant/limits";
-import { assistantNavigationResolver } from "@/lib/assistant/navigation";
+import { createPermissionAwareNavigationResolver } from "@/lib/assistant/navigation";
 import { runAssistant } from "@/lib/assistant/orchestrator";
 import { ASSISTANT_LIMITS, isInternalEmployeeRole, validateAssistantRequest, validateRequestEnvelope } from "@/lib/assistant/policy";
 import { createPostgresKnowledgeRepository } from "@/lib/assistant/postgres-knowledge";
@@ -66,8 +67,19 @@ export async function POST(request: Request) {
     return json({ error: "assistant_forbidden" }, 403);
   }
 
-  const assistantPermission = await getEffectivePermission(profile.id, role, ASSISTANT_CAPABILITY);
-  if (assistantPermission.access === "none") return json({ error: "assistant_forbidden" }, 403);
+  const admin = createSupabaseAdminClient();
+  const audit = createMetadataOnlyAssistantAuditWriter(admin);
+  const permissionAccess = await getEffectivePermissionAccessMap(profile);
+  const canCapability = (capability: Capability) => {
+    const minimum = permissionDefinitions.find((definition) => definition.capability === capability)?.roleAccess ?? "view";
+    return accessRank[permissionAccess[capability] ?? "none"] >= accessRank[minimum];
+  };
+  if (!canCapability(ASSISTANT_CAPABILITY)) {
+    try {
+      await audit.write({ actorProfileId: profile.id, capability: ASSISTANT_CAPABILITY, eventType: "request", allowed: false, rowCount: 0, latencyMs: 0, errorCode: "capability_denied" });
+    } catch { /* A failed audit write must not turn a denial into access. */ }
+    return json({ error: "assistant_forbidden" }, 403);
+  }
 
   const parsed = await readBoundedJson(request);
   if (!parsed.ok) return json({ error: parsed.code }, parsed.status);
@@ -83,15 +95,15 @@ export async function POST(request: Request) {
   }
 
   try {
-    const admin = createSupabaseAdminClient();
+    const allowedKnowledgeCapabilities = permissionDefinitions.map((definition) => definition.capability).filter(canCapability);
     const result = await runAssistant({
       actor: { profileId: profile.id, role },
       ...validated.value,
       provider: createConfiguredAssistantProvider(),
-      knowledgeRepository: createPostgresKnowledgeRepository(admin),
-      navigationResolver: assistantNavigationResolver,
-      can: async (capability) => (await getEffectivePermission(profile.id, role, capability)).access !== "none",
-      audit: createMetadataOnlyAssistantAuditWriter(admin),
+      knowledgeRepository: createPostgresKnowledgeRepository(admin, allowedKnowledgeCapabilities),
+      navigationResolver: createPermissionAwareNavigationResolver(permissionAccess, { role, intermediaryOnly: false }),
+      can: async (capability) => canCapability(capability),
+      audit,
     });
     return json(result);
   } catch (error) {

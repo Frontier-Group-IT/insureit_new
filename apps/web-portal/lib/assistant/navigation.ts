@@ -1,7 +1,7 @@
 import type { Capability } from "../roles.ts";
 import type { AssistantActor, NavigationCandidate, NavigationResolver } from "./orchestrator.ts";
 // @ts-expect-error Direct Node strip-types regressions require the explicit .ts extension.
-import { developmentNavigationSection, navigationCatalogue } from "../navigation-catalogue.ts";
+import { developmentNavigationSection, navigationCatalogue, visibleNavigationCatalogue, type NavigationPermissionMap } from "../navigation-catalogue.ts";
 
 export type StaticNavigationEntry = NavigationCandidate & { keywords?: string[] };
 
@@ -10,6 +10,18 @@ const DEFAULT_NAVIGATION: StaticNavigationEntry[] = [...navigationCatalogue, dev
     ? node.items.map((entry) => ({ label: entry.label, href: entry.href, requiredCapability: entry.capability, keywords: [section.label, node.label] }))
     : [{ label: node.label, href: node.href, requiredCapability: node.capability, keywords: [section.label] }]),
 );
+
+export function createPermissionAwareNavigationResolver(
+  permissionAccess: NavigationPermissionMap,
+  options: { role: string | null | undefined; intermediaryOnly: boolean },
+): NavigationResolver {
+  const entries = visibleNavigationCatalogue(permissionAccess, options).flatMap((section) =>
+    section.items.flatMap((node) => node.kind === "group"
+      ? node.items.map((entry) => ({ label: entry.label, href: entry.href, requiredCapability: entry.capability, keywords: [section.label, node.label] }))
+      : [{ label: node.label, href: node.href, requiredCapability: node.capability, keywords: [section.label] }]),
+  );
+  return createStaticNavigationResolver(entries);
+}
 
 function safeEntry(entry: StaticNavigationEntry): boolean {
   return Boolean(entry.label.trim() && entry.href.startsWith("/") && !entry.href.startsWith("//") && !/[\\\r\n]/.test(entry.href));

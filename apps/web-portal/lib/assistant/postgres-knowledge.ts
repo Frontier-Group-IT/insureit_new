@@ -12,7 +12,7 @@ const capabilities = new Set<Capability>([
 ]);
 
 type RpcResult = { data: unknown; error: { message?: string } | null };
-type FixedRpcClient = { rpc(name: typeof RPC_NAME, args: { p_query: string; p_limit: number }): PromiseLike<RpcResult> };
+type FixedRpcClient = { rpc(name: typeof RPC_NAME, args: { p_query: string; p_capabilities: Capability[]; p_limit: number }): PromiseLike<RpcResult> };
 type KnowledgeRpcRow = {
   source_id?: unknown;
   title?: unknown;
@@ -37,11 +37,12 @@ function mapRow(row: KnowledgeRpcRow): ApprovedKnowledgeSource | null {
   };
 }
 
-export function createPostgresKnowledgeRepository(client: FixedRpcClient): ApprovedKnowledgeRepository {
+export function createPostgresKnowledgeRepository(client: FixedRpcClient, allowedCapabilities: Capability[]): ApprovedKnowledgeRepository {
+  const serverDerivedCapabilities = [...new Set(allowedCapabilities.filter((capability) => capabilities.has(capability)))];
   return {
     async searchApprovedActive(query, limit) {
       const boundedLimit = Math.max(1, Math.min(MAX_RESULTS, Math.trunc(limit)));
-      const { data, error } = await client.rpc(RPC_NAME, { p_query: query, p_limit: boundedLimit });
+      const { data, error } = await client.rpc(RPC_NAME, { p_query: query, p_capabilities: serverDerivedCapabilities, p_limit: boundedLimit });
       if (error) throw new Error("knowledge_search_unavailable");
       if (!Array.isArray(data)) throw new Error("knowledge_search_invalid_response");
       return data.map((row) => mapRow(row as KnowledgeRpcRow)).filter((row): row is ApprovedKnowledgeSource => row !== null).slice(0, boundedLimit);

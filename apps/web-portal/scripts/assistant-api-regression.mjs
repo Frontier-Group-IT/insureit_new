@@ -99,9 +99,9 @@ const postgresRepository = createPostgresKnowledgeRepository({
     rpcCalls.push({ name, args });
     return { data: [{ source_id: "s1", title: "Approved", excerpt: "Safe", internal_path: "/knowledge/s1", required_capabilities: ["view_policies"] }], error: null };
   },
-});
+}, ["view_policies"]);
 assert.equal((await postgresRepository.searchApprovedActive("renewal", 99)).length, 1);
-assert.deepEqual(rpcCalls, [{ name: "search_approved_assistant_knowledge", args: { p_query: "renewal", p_limit: 5 } }]);
+assert.deepEqual(rpcCalls, [{ name: "search_approved_assistant_knowledge", args: { p_query: "renewal", p_capabilities: ["view_policies"], p_limit: 5 } }]);
 
 const queried = [];
 const repository = {
@@ -157,10 +157,11 @@ assert.equal(JSON.stringify(auditRows).includes("renewal policy"), false);
 const routeSource = await readFile(new URL("../app/api/assistant/chat/route.ts", import.meta.url), "utf8");
 for (const required of [
   "validateRequestEnvelope", "maxBodyBytes", "getAuthenticatedProfile", "isInternalEmployeeRole",
-  "use_assistant", "getEffectivePermission", "assistantLimiter.acquire", "createConfiguredAssistantProvider",
+  "use_assistant", "getEffectivePermissionAccessMap", "assistantLimiter.acquire", "createConfiguredAssistantProvider",
   "createPostgresKnowledgeRepository", "createMetadataOnlyAssistantAuditWriter", "Cache-Control", "no-store",
+  "createPermissionAwareNavigationResolver", "capability_denied",
 ]) assert.equal(routeSource.includes(required), true, `route missing ${required}`);
-assert.match(routeSource, /createPostgresKnowledgeRepository\(admin\)/, "fixed knowledge RPC uses the server-only client after explicit authorization");
+assert.match(routeSource, /createPostgresKnowledgeRepository\(admin,\s*allowedKnowledgeCapabilities\)/, "fixed knowledge RPC receives only server-derived capabilities");
 assert.doesNotMatch(routeSource, /createSupabaseWithAccessToken/, "deny-by-default knowledge tables are not queried with the browser-scoped client");
 for (const forbidden of ["console.log", "console.error", "messages:", "answer:"]) {
   assert.equal(routeSource.includes(forbidden), false, `route must not log or persist content marker ${forbidden}`);

@@ -99,6 +99,7 @@ assert.deepEqual(
 );
 
 const appNavigationSource = readFileSync(new URL("../components/claim-manager/app-navigation.tsx", import.meta.url), "utf8");
+assert.match(appNavigationSource, /pathname===\"\/system\/assistant-knowledge\"[^;]*return\"development\"/, "knowledge administration activates the development sidebar section");
 assert.match(appNavigationSource, /from "@\/lib\/navigation-catalogue"/, "sidebar consumes the shared catalogue");
 assert.doesNotMatch(appNavigationSource, /href:\s*"\/claims"/, "sidebar does not retain a second route catalogue");
 

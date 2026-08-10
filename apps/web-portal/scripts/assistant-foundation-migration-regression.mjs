@@ -24,6 +24,8 @@ for (const contract of ["required_capabilities", "effective_from", "effective_to
 if (!normalized.includes("revoke all on function public.search_approved_assistant_knowledge") || !normalized.includes("from public, anon, authenticated")) {
   fail("approved knowledge RPC must not be executable by browser roles");
 }
+if (!normalized.includes("p_capabilities text[]") || !normalized.includes("required_capabilities <@ coalesce(p_capabilities")) fail("knowledge search must pre-filter rows by server-derived capabilities");
+if (!normalized.includes("cardinality(required_capabilities) > 0")) fail("knowledge rows must require at least one capability");
 if (normalized.includes("security definer")) fail("approved knowledge search must not be security definer");
 if (!normalized.includes("content_version integer") || !normalized.includes("unique(route, title, version)")) {
   fail("knowledge imports and entries must retain explicit content versions");
