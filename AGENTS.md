@@ -104,6 +104,26 @@ If the answer to either of the first two questions is no, do not save it.
 
 ### Current working agreement
 
+### Unresolved CI/type-safety blocker — compulsory resolution attempt
+
+**BLOCKED / MANDATORY FOR ALL FUTURE AGENTS:** the web-portal production verification gate is currently failing before TypeScript, lint and build can run. Although this has been discussed as a TypeScript-related deployment blocker, the directly verified failing step is the Access control V2 catalogue regression.
+
+Current verified failure:
+
+```text
+npm run access-control:v2-regression
+Error: [access-control-v2] claim_processor requests invalid scope assigned for tasks.create
+```
+
+Operational rule until resolved:
+
+- Every future agent that works in this repository must first check whether this blocker still exists and make a reasonable attempt to resolve the underlying access-control catalogue/regression mismatch before proceeding with unrelated deployment work.
+- Do not bypass, weaken, skip or remove the compulsory verification gate to work around this failure.
+- Inspect the current access-control catalogue, regression script and relevant role/scope definitions; fix the underlying mismatch only when supported by current repository rules and intended authorization behavior.
+- After any attempted fix, rerun the canonical GitHub verification workflow and require the Access control V2 regression, TypeScript typecheck, lint and production build to pass for the exact commit before treating the blocker as resolved.
+- While this blocker remains open, agents must explicitly report that production deployment is blocked when the gate prevents Vercel from being triggered.
+- Once the underlying error is genuinely fixed and the canonical verification gate is green, remove this unresolved-blocker section from `AGENTS.md` or move only a concise reusable lesson to an isolated resolved/history section. Do not leave stale unresolved instructions in active agent guidance.
+
 ### Compulsory GitHub CI verification protocol
 
 **MANDATORY FOR ALL AGENTS:** do not ask the user to run routine repository verification commands on their local PC/WSL when the same checks can run in GitHub Actions.
