@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the verified Phase 6 employee portal lifecycle governance hardening.",
-  "deploy_requested_at": "2026-08-10T14:15:00+05:30",
+  "purpose": "Deploy the approved Application Review legacy Account Status injection removal.",
+  "deploy_requested_at": "2026-08-10T14:24:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT access-control rebuild Phase 6",
-  "source_commit": "9a4bb24d7663d6976f9321d0e8527cdac1ba9ca2",
-  "release_scope": "Deploy the governed employee portal lifecycle service and existing employee-action integration. Employee creation with portal access now requires portal-user management authority; linked portal accounts require portal-user management authority for suspend/restore; deactivation suspends Supabase Auth as well as employee/profile access; restore re-enables the internal states before Auth; self-suspension, final active Super Admin suspension, final active IT Super User suspension, normal assignment of IT Super User, and Admin escalation to Super Admin are blocked; lifecycle events are written to audit_logs. Preserve the current legacy role/RLS authorization engine and do not apply the shadow V2 RBAC migration or V2 role assignments.",
-  "verification": "Verify web portal run 31371417281 passed on source commit 9a4bb24d7663d6976f9321d0e8527cdac1ba9ca2: V2 catalogue regression, V2 scope/compatibility regression, V2 lifecycle regression, 12-case employee portal governance regression, all OCR regressions, TypeScript, lint, and Next.js production build. The production deployment workflow must still pass its compulsory verification gate; GitHub workflow success proves the deploy hook, not independent Vercel READY.",
+  "source": "ChatGPT explicit deploy request after PR #239 merge",
+  "source_commit": "1b41d9ed61d349e6b8ffcd992cf9fee905483722",
+  "release_scope": "Deploy PR #239: remove the legacy AccountStatusHeaderStat client portal mount from the intermediary Application Review layout so the declarative six-column summary in page.tsx is the single Account Status render. Preserve IIB PAN review, delete safeguards, permissions, routing, onboarding, linked-account behavior, Portal Access actions, and all other current main behavior.",
+  "verification": "The production deployment workflow must pass the compulsory regression, TypeScript, lint, and production build gate before triggering Vercel. Production success must not be claimed until the exact Vercel deployment for this trigger commit reports READY.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
