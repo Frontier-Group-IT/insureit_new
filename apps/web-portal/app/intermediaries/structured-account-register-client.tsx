@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Eye, Search } from "lucide-react";
 import { FreshAccountReviewLink } from "./applications/account-review-back-link";
 
 type AccountType = "posp" | "misp";
@@ -118,7 +118,7 @@ export function StructuredAccountRegisterClient({
                     <td className="truncate px-3 py-3.5 font-medium text-[#17203A]" title={row.partnerId ?? "Partner ID pending"}>{row.partnerId && row.partnerApplicationId ? <FreshAccountReviewLink href={`/intermediaries/applications/${row.partnerApplicationId}`} className="font-semibold text-[#0F2A55] transition hover:text-[#315FEA] hover:underline hover:underline-offset-2">{row.partnerId}</FreshAccountReviewLink> : row.partnerId ?? "Partner ID pending"}</td>
                     <td className={`truncate px-3 py-3.5 font-medium ${row.rm === "Not assigned" ? "text-amber-700" : "text-[#17203A]"}`} title={row.rm}>{row.rm}</td>
                     <td className="px-3 py-3.5"><StatusBadge value={row.accountStatus} /></td>
-                    <td className="px-3 py-3.5 pr-8 text-right">{row.applicationId ? <FreshAccountReviewLink href={`/intermediaries/applications/${row.applicationId}`} className="inline-flex h-8 items-center justify-center rounded-lg border border-[#C9D5E5] bg-white px-3 text-[9px] font-semibold text-[#0F2A55] transition hover:border-[#9AA9FF] hover:bg-[#F7F9FF]">Open</FreshAccountReviewLink> : <span className="text-[#94A3B8]">-</span>}</td>
+                    <td className="px-3 py-3.5 pr-8 text-right">{row.applicationId ? <FreshAccountReviewLink href={`/intermediaries/applications/${row.applicationId}`} aria-label="View application" title="View application" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#C9D5E5] bg-white text-[#0F2A55] transition hover:border-[#9AA9FF] hover:bg-[#F7F9FF] hover:text-[#315FEA]"><Eye className="h-3.5 w-3.5" aria-hidden="true" /></FreshAccountReviewLink> : <span className="text-[#94A3B8]">-</span>}</td>
                   </tr>
                 ))}
               </tbody>
