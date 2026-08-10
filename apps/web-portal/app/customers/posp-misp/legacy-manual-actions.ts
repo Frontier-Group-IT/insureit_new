@@ -13,6 +13,8 @@ import {
 
 type CreateState = PospMispState & { applicationId?: string | null };
 
+const ACTIVATION_DATE_ERROR = "Activation date cannot be earlier than onboarding date.";
+
 export async function createLegacyPartnerOnboarding(state: CreateState, data: FormData): Promise<CreateState> {
   const partnerCode = code(data, "legacy_partner_code");
   const registrationCode = code(data, "legacy_registration_code");
@@ -30,6 +32,7 @@ export async function createLegacyPartnerOnboarding(state: CreateState, data: Fo
   if (partnerCode.startsWith("PENDING-") || registrationCode.startsWith("PENDING-")) return { error: "Temporary PENDING identifiers cannot be used.", field: "legacy_partner_code", applicationId: null };
   if (partnerCode === registrationCode) return { error: "Partner ID and POSP/MISP ID must be different.", field: "legacy_registration_code", applicationId: null };
   if (!originalOnboardingDate || !originalActivationDate) return { error: "Original onboarding and association dates are required.", field: "legacy_original_onboarding_date", applicationId: null };
+  if (originalActivationDate < originalOnboardingDate) return { error: ACTIVATION_DATE_ERROR, field: "legacy_original_activation_date", applicationId: null };
   if (!isLegacyTrainingStatus(trainingStatus)) return { error: "Select a valid Training status.", field: "legacy_training_status", applicationId: null };
   if (!isLegacyExamStatus(examStatus)) return { error: "Select a valid Exam status.", field: "legacy_exam_status", applicationId: null };
   if (!isLegacyAgreementStatus(agreementStatus)) return { error: "Select a valid Agreement status.", field: "legacy_agreement_status", applicationId: null };
