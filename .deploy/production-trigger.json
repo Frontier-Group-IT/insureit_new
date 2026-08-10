@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the approved Application Review Edit details pencil-icon change.",
-  "deploy_requested_at": "2026-08-10T14:44:00+05:30",
+  "purpose": "Deploy the verified Phase 7 employee Access Profile workspace rebuild.",
+  "deploy_requested_at": "2026-08-10T14:53:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit deploy request after PR #240 merge",
-  "source_commit": "32d412290ee0e72bf4aeb0d9dbbc513e17be8560",
-  "release_scope": "Deploy PR #240: replace the Partner Application Review header Edit details text with a compact centered pencil icon while preserving the existing edit workflow route, outlined secondary-button treatment, accessibility label/title, and all current routing, permissions, portal-access, onboarding, IIB PAN review, and other main-branch behavior.",
-  "verification": "The production deployment workflow must pass the compulsory regressions, employee portal governance, TypeScript, lint, and production build gate before triggering Vercel. Production success must not be claimed until the exact Vercel deployment for this trigger commit reports READY.",
+  "source": "ChatGPT explicit continuation request during Access Control Phase 7",
+  "source_commit": "9911cc35c7321bdc7386fd35d77d62535c61fee3",
+  "release_scope": "Deploy the six-tab employee Access Profile workspace: Overview, Roles, Permissions, Data Scope, Portal Access, and History. Preserve the current live permission override actions, add temporary-access expiry input already supported by the backend, show read-only V2 role context, route role/lifecycle management through existing governed paths, and keep the V2 database/RLS migration inactive.",
+  "verification": "Exact-head verification run 31374733017 passed all access-control regressions, employee portal governance regression, TypeScript, lint, and production build. The production deployment workflow must complete before the Vercel hook is considered invoked; production READY must not be claimed without separate Vercel evidence.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
