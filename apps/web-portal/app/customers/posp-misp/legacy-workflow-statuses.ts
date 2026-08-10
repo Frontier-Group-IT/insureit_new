@@ -38,7 +38,6 @@ export const LEGACY_IIB_REGISTRATION_OPTIONS = [
   { value: "not_ready", label: "Not ready" },
   { value: "ready_for_submission", label: "Ready for submission" },
   { value: "submission_in_progress", label: "Submission in progress" },
-  { value: "submitted", label: "Submitted" },
   { value: "registered", label: "Registered" },
   { value: "failed", label: "Failed" },
   { value: "manual_review", label: "Manual review" },
@@ -50,7 +49,7 @@ export type LegacyTrainingStatus = OptionValue<typeof LEGACY_TRAINING_OPTIONS>;
 export type LegacyExamStatus = OptionValue<typeof LEGACY_EXAM_OPTIONS>;
 export type LegacyAgreementStatus = OptionValue<typeof LEGACY_AGREEMENT_OPTIONS>;
 export type LegacyIibUploadStatus = OptionValue<typeof LEGACY_IIB_UPLOAD_OPTIONS>;
-export type LegacyIibRegistrationStatus = OptionValue<typeof LEGACY_IIB_REGISTRATION_OPTIONS>;
+export type LegacyIibRegistrationStatus = OptionValue<typeof LEGACY_IIB_REGISTRATION_OPTIONS> | "submitted";
 
 export type LegacyWorkflowSelection = {
   trainingStatus: LegacyTrainingStatus;
@@ -72,7 +71,10 @@ const TRAINING_VALUES = new Set(LEGACY_TRAINING_OPTIONS.map((option) => option.v
 const EXAM_VALUES = new Set(LEGACY_EXAM_OPTIONS.map((option) => option.value));
 const AGREEMENT_VALUES = new Set(LEGACY_AGREEMENT_OPTIONS.map((option) => option.value));
 const IIB_UPLOAD_VALUES = new Set(LEGACY_IIB_UPLOAD_OPTIONS.map((option) => option.value));
-const IIB_REGISTRATION_VALUES = new Set(LEGACY_IIB_REGISTRATION_OPTIONS.map((option) => option.value));
+const IIB_REGISTRATION_VALUES = new Set<LegacyIibRegistrationStatus>([
+  ...LEGACY_IIB_REGISTRATION_OPTIONS.map((option) => option.value),
+  "submitted",
+]);
 
 export function isLegacyTrainingStatus(value: unknown): value is LegacyTrainingStatus {
   return typeof value === "string" && TRAINING_VALUES.has(value as LegacyTrainingStatus);
