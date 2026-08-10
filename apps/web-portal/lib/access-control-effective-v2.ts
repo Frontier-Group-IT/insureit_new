@@ -1,5 +1,5 @@
 import type { AccessLevel, DataScope, PermissionKeyV2 } from "@/lib/access-control-catalogue-v2";
-import type { EmployeeRoleCodeV2, RoleDefinitionV2 } from "@/lib/access-control-role-matrix-v2";
+import type { EmployeeRoleCodeV2, RoleDefinitionV2, RoleGrantV2 } from "@/lib/access-control-role-matrix-v2";
 
 export type V2RoleAssignment = {
   roleCode: EmployeeRoleCodeV2;
@@ -125,7 +125,7 @@ export function resolveEffectivePermissionV2(
   const activeAssignments = input.assignments.filter((assignment) => assignmentIsCurrent(assignment, now));
   const activeRoles = activeAssignments
     .map((assignment) => roleByCode.get(assignment.roleCode))
-    .filter((role): role is RoleDefinitionV2 => Boolean(role?.isActive ?? true));
+    .filter((role): role is RoleDefinitionV2 => Boolean(role));
 
   const protectedItRole = activeRoles.find((role) => role.code === "it_super_user" && role.status === "protected");
   if (protectedItRole) {
@@ -167,9 +167,11 @@ export function resolveEffectivePermissionV2(
     };
   }
 
-  const roleGrants = activeRoles
-    .map((role) => ({ role, grant: role.grants.find((grant) => grant.permission === input.permission) }))
-    .filter((entry): entry is { role: RoleDefinitionV2; grant: NonNullable<(typeof entry)["grant"]> } => Boolean(entry.grant));
+  const roleGrants: Array<{ role: RoleDefinitionV2; grant: RoleGrantV2 }> = [];
+  for (const role of activeRoles) {
+    const roleGrant = role.grants.find((grant) => grant.permission === input.permission);
+    if (roleGrant) roleGrants.push({ role, grant: roleGrant });
+  }
 
   if (!roleGrants.length) {
     return noAccess(input.permission, "no_grant", "No active role grants this permission.", activeRoles.map((role) => role.code));
