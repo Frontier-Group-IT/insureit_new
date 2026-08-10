@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the current verified main branch to production after explicit user approval.",
-  "deploy_requested_at": "2026-08-10T13:22:00+05:30",
+  "purpose": "Deploy PR #238 application review summary column equalization to production after explicit user approval.",
+  "deploy_requested_at": "2026-08-10T14:01:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit deploy now request",
-  "source_commit": "4f0cb742ed703403bd7057199a6b7e5e4330d8a6",
-  "release_scope": "Deploy the current verified main branch, including the approved Policy Onboarding UI refinements and the latest Add POSP onboarding layout improvements such as the compact Applicant name control with First name, Middle name, and Last name placeholders. Preserve existing onboarding, financial, database, permissions, OCR, AuthBridge, iCall, and document workflow logic unless already changed by the verified main branch.",
-  "verification": "Canonical Verify web portal workflow run 31367650614 completed successfully for source commit 4f0cb742ed703403bd7057199a6b7e5e4330d8a6, including access-control regression, all policy OCR regressions, TypeScript typecheck, lint, and Next.js production build. The production deployment workflow must run its compulsory verification gate again and Vercel must report READY before production success is claimed.",
+  "source": "ChatGPT application review summary layout release",
+  "source_commit": "39e26fbc97bdcef27ad93b1edc0a50d33b010fa1",
+  "release_scope": "Deploy PR #238. Standardize Partner and POSP/MISP application review summary bars to equal-width responsive columns, add the existing intermediary account_status as a dedicated Account Status block for POSP/MISP reviews, use 2/3/6 responsive grid columns, and tighten Portal Access label/value spacing to match Activation Date. Preserve the dark blue header, icons, portal access actions, Parent Partner and linked-account navigation, onboarding, permissions, database and routing logic.",
+  "verification": "PR #238 was squash merged into main as 39e26fbc97bdcef27ad93b1edc0a50d33b010fa1. Final feature diff is one application file, +5/-4. Full lint/typecheck/build were not run on the feature branch. The production deployment workflow must pass its compulsory verification gate and Vercel must report READY for the exact resulting deployment before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
