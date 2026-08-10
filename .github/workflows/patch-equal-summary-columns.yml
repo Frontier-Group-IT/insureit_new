@@ -1,0 +1,31 @@
+name: Patch equal application review summary columns
+
+on:
+  push:
+    branches:
+      - fix/equalize-application-review-summary-columns-20260810
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/equalize-application-review-summary-columns-20260810
+      - name: Apply focused patch
+        run: python .tmp/patch_equal_summary.py
+      - name: Remove temporary patch files
+        run: |
+          rm -f .tmp/patch_equal_summary.py
+          rm -f .github/workflows/patch-equal-summary-columns.yml
+      - name: Commit focused app change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal/app/intermediaries/applications/'[id]'/page.tsx .tmp/patch_equal_summary.py .github/workflows/patch-equal-summary-columns.yml
+          git commit -m "Equalize application review summary columns"
+          git push origin HEAD:fix/equalize-application-review-summary-columns-20260810
