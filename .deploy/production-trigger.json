@@ -1,12 +1,10 @@
 {
-  "purpose": "Deploy the approved INSUREIT organization logo from the mobile app to the web portal shared brand lockup.",
-  "deploy_requested_at": "2026-08-10T00:20:00+05:30",
+  "purpose": "Explicitly trigger one Vercel production deployment for the approved POSP/MISP action icon update.",
+  "deploy_requested_at": "2026-08-10T10:16:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT INSUREIT owner-handover branding correction",
-  "source_commit": "6dad47fd69332952f88dfb594922fff6669f73cc",
-  "rollback_ref": "d6e6fd3d7f4d5b8b014c870af9a4db43bbbc9cf3",
-  "rollback_commit": "d6e6fd3d7f4d5b8b014c870af9a4db43bbbc9cf3",
-  "release_scope": "Replace the web portal shared BrandLockup shield artwork with the exact approved mobile-app organization logo at apps/mobile-app/assets/brand/logo (2).png while preserving the existing insureit wordmark, tagline, responsive sizing, and inverse sidebar treatment.",
-  "verification": "GitHub Actions Verify web portal run 31330156051 passed for source commit 6dad47fd69332952f88dfb594922fff6669f73cc: IFFCO structured regression, IFFCO regression, Digit regression, New India regression, TypeScript typecheck, lint and Next.js production build all succeeded.",
+  "source": "ChatGPT POSP/MISP eye action release",
+  "source_commit": "01d00f508000779d35a0871ad23453f923fd72d6",
+  "release_scope": "Deploy PR #229. Replace the text Open action in the shared POSP/MISP register table with a compact Lucide Eye icon while preserving the exact application review destination, accessibility labels, rows without application IDs, search, filters, status logic, permissions, IDs, and routing behavior.",
+  "verification": "PR #229 was verified mergeable at exact head 7c75952600b6f0db0d6178e2f2ccb0156ed518b2 and squash merged into main as 01d00f508000779d35a0871ad23453f923fd72d6. Its final diff contains one shared application file (+2/-2). Full lint/typecheck/build were not run for this PR. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
