@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { requireScopedPospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { AccountDeleteControl } from "./account-delete-control";
-import { AccountStatusHeaderStat } from "./account-status-header-stat";
 import { IibPanVerificationReviewCard } from "./iib-pan-verification-review-card";
 import { ReviewCardVisibility } from "./review-card-visibility";
 
@@ -21,7 +20,6 @@ type ProfileRow = {
 
 type IntermediaryRow = {
   intermediary_code: string | null;
-  account_status: string | null;
 };
 
 export default async function ApplicationReviewLayout({
@@ -49,7 +47,7 @@ export default async function ApplicationReviewLayout({
       .maybeSingle<ProfileRow>(),
     admin
       .from("intermediaries")
-      .select("intermediary_code,account_status")
+      .select("intermediary_code")
       .eq("application_id", id)
       .maybeSingle<IntermediaryRow>(),
   ]);
@@ -61,7 +59,6 @@ export default async function ApplicationReviewLayout({
   const accountIdentifier = accountContext === "partner"
     ? permanentValue(profile.partner_id)
     : permanentValue(intermediary?.intermediary_code) ?? permanentValue(profile.external_onboarding_id);
-  const accountStatus = pretty(intermediary?.account_status ?? application.registration_status ?? "pending");
 
   let linkedAccountCount = 0;
   if (canDelete && accountContext === "partner") {
@@ -84,7 +81,6 @@ export default async function ApplicationReviewLayout({
   return (
     <>
       {children}
-      {accountContext !== "partner" ? <AccountStatusHeaderStat applicationId={id} value={accountStatus} /> : null}
       <ReviewCardVisibility applicationId={id}>
         <IibPanVerificationReviewCard applicationId={id} />
       </ReviewCardVisibility>
@@ -103,8 +99,4 @@ export default async function ApplicationReviewLayout({
 function permanentValue(value: string | null | undefined) {
   if (!value || value.startsWith("PENDING-")) return null;
   return value;
-}
-
-function pretty(value: string) {
-  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
