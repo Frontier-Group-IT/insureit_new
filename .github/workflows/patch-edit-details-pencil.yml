@@ -1,0 +1,34 @@
+name: Patch edit details pencil icon
+
+on:
+  push:
+    branches:
+      - feature/edit-details-pencil-icon-20260810
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/edit-details-pencil-icon-20260810
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Apply focused patch
+        run: python .github/scripts/patch-edit-details-pencil.py
+      - name: Remove temporary patch files
+        run: |
+          rm .github/scripts/patch-edit-details-pencil.py
+          rm .github/workflows/patch-edit-details-pencil.yml
+      - name: Commit focused application change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal/app/intermediaries/applications/[id]/page.tsx .github/scripts/patch-edit-details-pencil.py .github/workflows/patch-edit-details-pencil.yml
+          git commit -m "Replace Edit details text with pencil icon"
+          git push
