@@ -1,10 +1,10 @@
 {
   "purpose": "Deploy the legacy activation-date ordering validation update from PR #248.",
-  "deploy_requested_at": "2026-08-10T18:27:00+05:30",
+  "deploy_requested_at": "2026-08-10T18:31:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #248 and deploy with the protected GitHub Actions production flow",
+  "source": "ChatGPT explicit request to merge PR #248 and deploy with the protected GitHub Actions production flow; retriggered after the first workflow run was cancelled before verification.",
   "source_commit": "ebcabb4a4b66a37ef450ddd92bd166349e9d25e2",
   "release_scope": "Deploy the existing POSP/MISP onboarding validation that prevents Active / associated since from being earlier than Original onboarding date, shows the exact validation message, constrains the activation date picker minimum, and enforces the same rule server-side before application records are created.",
-  "verification": "PR #248 verification run 31390418656 passed the configured Verify web portal workflow. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook; Vercel READY must be verified separately.",
+  "verification": "PR #248 verification run 31390418656 passed the configured Verify web portal workflow. The first production workflow run 31390692487 was cancelled before verification, so this retrigger must complete the compulsory verification gate before invoking the Vercel deploy hook; Vercel READY must be verified separately.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
