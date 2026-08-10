@@ -9,6 +9,7 @@ create table if not exists public.assistant_knowledge_imports (
   file_name text not null,
   file_sha256 text not null check (file_sha256 ~ '^[0-9a-f]{64}$'),
   template_version text not null,
+  content_version integer not null check (content_version > 0),
   knowledge_base_name text not null,
   owner_label text not null,
   classification text not null check (classification = 'internal'),
@@ -65,7 +66,7 @@ create table if not exists public.assistant_knowledge_entries (
   search_document tsvector generated always as (
     to_tsvector('english'::regconfig, coalesce(title, '') || ' ' || coalesce(content, '') || ' ' || coalesce(source_reference, ''))
   ) stored,
-  unique(route, title)
+  unique(route, title, version)
 );
 
 create table if not exists public.assistant_usage_events (
@@ -85,6 +86,7 @@ create table if not exists public.assistant_usage_events (
 create index if not exists assistant_knowledge_imports_created_at_idx on public.assistant_knowledge_imports(created_at desc);
 create index if not exists assistant_knowledge_import_rows_import_idx on public.assistant_knowledge_import_rows(import_id, row_number);
 create index if not exists assistant_knowledge_entries_status_route_idx on public.assistant_knowledge_entries(status, route);
+create unique index if not exists assistant_knowledge_entries_one_published_idx on public.assistant_knowledge_entries(route, title) where status = 'published' and is_revoked = false;
 create index if not exists assistant_knowledge_entries_search_idx on public.assistant_knowledge_entries using gin(search_document);
 create index if not exists assistant_usage_events_actor_created_idx on public.assistant_usage_events(actor_profile_id, created_at desc);
 create index if not exists assistant_usage_events_created_at_idx on public.assistant_usage_events(created_at desc);

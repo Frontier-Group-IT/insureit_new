@@ -24,11 +24,14 @@ if (JSON.stringify(ASSISTANT_KNOWLEDGE_HEADERS) !== JSON.stringify(["Route", "Ti
 
 const metadata = validateAssistantMetadata([
   { Key: "template_version", Value: "1" },
+  { Key: "content_version", Value: "1" },
   { Key: "knowledge_base_name", Value: "Operations handbook" },
   { Key: "owner", Value: "IT" },
   { Key: "classification", Value: "internal" },
 ]);
-if (metadata.classification !== "internal" || metadata.templateVersion !== "1") fail("valid metadata was not normalized");
+if (metadata.classification !== "internal" || metadata.templateVersion !== "1" || metadata.contentVersion !== 1) fail("valid metadata was not normalized");
+
+expectReject("invalid content version", () => validateAssistantMetadata([{ Key: "template_version", Value: "1" }, { Key: "content_version", Value: "latest" }, { Key: "knowledge_base_name", Value: "KB" }, { Key: "owner", Value: "IT" }, { Key: "classification", Value: "internal" }]), "content_version");
 
 const valid = validateAssistantKnowledgeRow({
   Route: "/claims/intake",
@@ -50,6 +53,6 @@ expectReject("formula-like text", () => validateAssistantKnowledgeRow({ Route: "
 expectReject("likely secret", () => validateAssistantKnowledgeRow({ Route: "/claims", Title: "Safe", Content: "api_key = sk_live_12345678901234567890", Tags: "safe", "Source Reference": "SOP-1" }, 2), "secret");
 expectReject("PAN", () => validateAssistantKnowledgeRow({ Route: "/claims", Title: "Safe", Content: "Customer PAN is ABCDE1234F", Tags: "safe", "Source Reference": "SOP-1" }, 2), "sensitive identifier");
 expectReject("Aadhaar", () => validateAssistantKnowledgeRow({ Route: "/claims", Title: "Safe", Content: "Aadhaar 1234 5678 9012", Tags: "safe", "Source Reference": "SOP-1" }, 2), "sensitive identifier");
-expectReject("unexpected metadata", () => validateAssistantMetadata([{ Key: "template_version", Value: "1" }, { Key: "knowledge_base_name", Value: "KB" }, { Key: "owner", Value: "IT" }, { Key: "classification", Value: "internal" }, { Key: "prompt", Value: "store this" }]), "metadata key");
+expectReject("unexpected metadata", () => validateAssistantMetadata([{ Key: "template_version", Value: "1" }, { Key: "content_version", Value: "1" }, { Key: "knowledge_base_name", Value: "KB" }, { Key: "owner", Value: "IT" }, { Key: "classification", Value: "internal" }, { Key: "prompt", Value: "store this" }]), "metadata key");
 
-console.log(JSON.stringify({ validRows: 1, rejectedThreatCases: 10, metadataContract: "ok", status: "ok" }, null, 2));
+console.log(JSON.stringify({ validRows: 1, rejectedThreatCases: 11, metadataContract: "ok", status: "ok" }, null, 2));

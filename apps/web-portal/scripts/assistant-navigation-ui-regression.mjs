@@ -59,6 +59,7 @@ assert.deepEqual(catalogueRoutes, [
   "/customers/posp-misp/icall-uat",
   "/customers/posp-misp/import",
   "/customers/posp-misp/import/batches",
+  "/system/assistant-knowledge",
 ], "shared catalogue preserves every existing sidebar route and order");
 
 const claimsOnly = visibleNavigationCatalogue(
@@ -85,6 +86,12 @@ const superUserSections = visibleNavigationCatalogue(
   { role: "it_super_user", intermediaryOnly: false },
 );
 assert.deepEqual(superUserSections.map((section) => section.key), ["development"], "development sidebar parity keeps the super-user approval gate");
+assert.equal(superUserSections[0].items.some((item) => item.kind === "item" && item.href === "/system/assistant-knowledge"), false, "knowledge administration respects an effective capability denial");
+const knowledgeManagerSections = visibleNavigationCatalogue(
+  { manage_system: "approve", manage_assistant_knowledge: "approve" },
+  { role: "it_super_user", intermediaryOnly: false },
+);
+assert.equal(knowledgeManagerSections[0].items.some((item) => item.kind === "item" && item.href === "/system/assistant-knowledge"), true, "knowledge administration appears only with effective approval access");
 assert.deepEqual(
   visibleNavigationCatalogue({ manage_system: "approve" }, { role: "manager", intermediaryOnly: false }),
   [],

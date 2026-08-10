@@ -108,6 +108,7 @@ export const developmentNavigationSection: NavigationCatalogueSection = { key: "
   item("/customers/posp-misp/icall-uat", "iCall UAT Integration", "flask", "manage_system"),
   item("/customers/posp-misp/import", "Bulk POSP / MISP Import", "upload", "manage_system"),
   item("/customers/posp-misp/import/batches", "Import History", "clipboard-list", "manage_system"),
+  item("/system/assistant-knowledge", "Assistant Knowledge", "sparkles", "manage_assistant_knowledge", "approve"),
 ] };
 
 const permissionRank: Record<PermissionAccess, number> = { none: 0, view: 1, edit: 2, approve: 3 };
@@ -137,7 +138,7 @@ export function visibleNavigationCatalogue(permissionAccess: NavigationPermissio
     .filter((section) => navigationPermits(permissionAccess, section.capability, section.minimumAccess))
     .map((section) => ({ ...section, items: section.items.map(filterNode).filter((node): node is NavigationCatalogueNode => Boolean(node)) }))
     .filter((section) => section.items.length);
-  return !options.intermediaryOnly && options.role === "it_super_user" && navigationPermits(permissionAccess, "manage_system", "approve")
-    ? [...sections, developmentNavigationSection]
-    : sections;
+  if (options.intermediaryOnly || options.role !== "it_super_user" || !navigationPermits(permissionAccess, "manage_system", "approve")) return sections;
+  const development = { ...developmentNavigationSection, items: developmentNavigationSection.items.map(filterNode).filter((node): node is NavigationCatalogueNode => Boolean(node)) };
+  return development.items.length ? [...sections, development] : sections;
 }

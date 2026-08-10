@@ -13,6 +13,7 @@ function workbookFile({ extraSheet = false, hiddenKnowledge = false, formula = f
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
     ["Key", "Value"],
     ["template_version", "1"],
+    ["content_version", "1"],
     ["knowledge_base_name", "Operations"],
     ["owner", "IT"],
     ["classification", "internal"],
@@ -50,7 +51,7 @@ function injectEntry(file, name, content = "<x/>") {
 }
 
 const parsed = await parseAssistantKnowledgeWorkbook(workbookFile());
-if (parsed.metadata.knowledgeBaseName !== "Operations" || parsed.entries.length !== 1 || parsed.entries[0].route !== "/claims/intake" || parsed.entries[0].requiredCapabilities[0] !== "view_claims") {
+if (parsed.metadata.knowledgeBaseName !== "Operations" || parsed.metadata.contentVersion !== 1 || parsed.entries.length !== 1 || parsed.entries[0].route !== "/claims/intake" || parsed.entries[0].requiredCapabilities[0] !== "view_claims") {
   fail("valid controlled workbook did not parse");
 }
 await expectReject("unexpected sheet", workbookFile({ extraSheet: true }), "exactly the metadata and knowledge sheets");

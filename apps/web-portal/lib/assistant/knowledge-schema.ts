@@ -3,7 +3,7 @@ export const ASSISTANT_KNOWLEDGE_HEADERS = ["Route", "Title", "Content", "Tags",
 export const ASSISTANT_WORKBOOK_SHEETS = ["Metadata", "Knowledge"] as const;
 export const ASSISTANT_TEMPLATE_VERSION = "1" as const;
 
-const METADATA_KEYS = ["template_version", "knowledge_base_name", "owner", "classification"] as const;
+const METADATA_KEYS = ["template_version", "content_version", "knowledge_base_name", "owner", "classification"] as const;
 const MAX_TITLE = 160;
 const MAX_CONTENT = 12_000;
 const MAX_SOURCE_REFERENCE = 240;
@@ -19,6 +19,7 @@ const APPROVED_CONTENT_CAPABILITIES = new Set([
 
 export type AssistantKnowledgeMetadata = {
   templateVersion: "1";
+  contentVersion: number;
   knowledgeBaseName: string;
   owner: string;
   classification: "internal";
@@ -88,9 +89,11 @@ export function validateAssistantMetadata(rows: Array<Record<string, unknown>>):
     if (!values.has(key)) throw new AssistantKnowledgeValidationError(`Required metadata key is missing: ${key}.`);
   }
   if (values.get("template_version") !== ASSISTANT_TEMPLATE_VERSION) throw new AssistantKnowledgeValidationError("Unsupported template_version.");
+  if (!/^[1-9][0-9]{0,5}$/.test(values.get("content_version") ?? "")) throw new AssistantKnowledgeValidationError("Metadata content_version must be an integer from 1 to 999999.");
   if (values.get("classification")?.toLowerCase() !== "internal") throw new AssistantKnowledgeValidationError("Metadata classification must be internal.");
   return {
     templateVersion: ASSISTANT_TEMPLATE_VERSION,
+    contentVersion: Number(values.get("content_version")),
     knowledgeBaseName: values.get("knowledge_base_name")!,
     owner: values.get("owner")!,
     classification: "internal",

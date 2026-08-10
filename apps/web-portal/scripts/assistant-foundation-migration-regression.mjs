@@ -25,6 +25,12 @@ if (!normalized.includes("revoke all on function public.search_approved_assistan
   fail("approved knowledge RPC must not be executable by browser roles");
 }
 if (normalized.includes("security definer")) fail("approved knowledge search must not be security definer");
+if (!normalized.includes("content_version integer") || !normalized.includes("unique(route, title, version)")) {
+  fail("knowledge imports and entries must retain explicit content versions");
+}
+if (!normalized.includes("assistant_knowledge_entries_one_published_idx") || !normalized.includes("where status = 'published' and is_revoked = false")) {
+  fail("only one published version may be active for a route and title");
+}
 for (const forbidden of ["raw_prompt", "prompt_text", "raw_answer", "answer_text", "conversation_body", "provider_payload"]) {
   if (normalized.includes(forbidden)) fail(`usage schema must not contain ${forbidden}`);
 }
