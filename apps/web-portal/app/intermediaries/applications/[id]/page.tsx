@@ -213,7 +213,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
             <div className="flex flex-wrap items-center gap-2">
               {isPartner ? (
                 activePartner ? (
-                  linked ? <CompactLink href={`/intermediaries/applications/${linked.id}`} label="Open linked account" /> : (
+                  linked ? <CompactLink href={`/intermediaries/applications/${linked.id}`} label="OPEN POSP/MISP ACCOUNT" /> : (
                     <form action={createLinkedIntermediaryAccount}>
                       <input type="hidden" name="application_id" value={id} />
                       <input type="hidden" name="registration_type" value={profile.partner_type} />
