@@ -120,6 +120,10 @@ const partnerDocuments = [
   ["education_post_graduation_marksheet", "Education Marksheet"],
 ] as const;
 const modalSuccessEvents = new Set(["partner_id_generated", "documents_saved", "linked_posp_account_created", "linked_misp_account_created", "legacy_intermediary_imported"]);
+const reviewErrorMessages: Record<string, string> = {
+  linked_account_invalid: "The linked account request is invalid. Please refresh the page and try again.",
+  partner_account_required: "Activate the Partner account before creating a linked POSP/MISP account.",
+};
 
 export default async function IntermediaryAccountReviewPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; success?: string }> }) {
   const { id } = await params;
@@ -202,7 +206,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
     <AppShell title={`${isPartner ? "Partner" : kind} Account Review`}>
       <div className="mx-auto max-w-[1480px] space-y-4 pb-8">
         <IdSuccessModal event={query.success} applicationId={id} isPartner={isPartner} preferredType={profile.partner_type} partnerId={partnerId} registrationId={registrationId} linkedId={linked?.id} />
-        {query.error ? <Notice tone="error" text={decode(query.error)} /> : null}
+        {query.error ? <Notice tone="error" text={reviewErrorMessage(query.error)} /> : null}
         {query.success && !modalSuccessEvents.has(query.success) ? <WorkflowSuccessToast message={successMessage(query.success)} durationMs={4000} /> : null}
 
         <section className="overflow-hidden rounded-2xl border border-[#173E7B] bg-gradient-to-br from-[#071D49] via-[#0A2B65] to-[#0C4A9A] text-white shadow-[0_18px_45px_rgba(7,29,73,.18)]">
@@ -385,5 +389,9 @@ function maskAadhaar(value: string | null | undefined) { return value ? `**** ${
 function maskAccount(value: string | null) { return value ? `•••• ${value.slice(-4)}` : "Not available"; }
 function asObject(value: unknown): Record<string, unknown> { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
 function decode(value: string) { try { return decodeURIComponent(value); } catch { return value; } }
+function reviewErrorMessage(value: string) {
+  const decoded = decode(value).trim();
+  return reviewErrorMessages[decoded] ?? "The requested account action could not be completed. Please review the account details and try again.";
+}
 function successMessage(value: string) { if (value === "portal_login_invited") return "Portal user created and invitation sent."; if (value === "portal_invite_resent") return "Portal login link resent."; if (value === "pan_verification_requeued") return "PAN recheck added to the IIB queue."; if (value.startsWith("linked_")) return "Linked account application created."; return "Action completed successfully."; }
 function date(value: string | null | undefined) { if (!value) return "-"; const parsed = new Date(value); return Number.isNaN(parsed.getTime()) ? value : new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" }).format(parsed); }
