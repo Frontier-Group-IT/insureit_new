@@ -219,7 +219,7 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
           {viewStage === "primary" || viewStage === "documents" ? (
             <div className="space-y-4 bg-[#F4F7FB]">
               <PospMispApplicationEditor applicationId={id} profile={editProfile} workflowStage={profile.workflow_stage} viewStage={viewStage} editable={editable} salesManagers={associates.map((item) => ({ value: item.id, label: item.full_name ?? "Unnamed" }))} banks={banks} oems={oems} documents={docList} actionTargetId={context === "partner" && viewStage === "primary" ? `partner-primary-actions-${id}` : undefined} />
-              {viewStage === "primary" ? <div className="px-4 pb-4 sm:px-5 sm:pb-5"><ExistingIntermediaryMigrationEditor applicationId={id} accountType={profile.partner_type} values={migrationValues} editable={editable} />{context === "partner" ? <div id={`partner-primary-actions-${id}`} className="mt-4" /> : null}</div> : null}
+              {viewStage === "primary" ? <div className="pb-4 sm:pb-5"><ExistingIntermediaryMigrationEditor applicationId={id} accountType={profile.partner_type} values={migrationValues} editable={editable} />{context === "partner" ? <div id={`partner-primary-actions-${id}`} className="mt-4" /> : null}</div> : null}
             </div>
           ) : viewStage === "iib" ? (
             <div className="bg-[#F4F7FB] p-4"><IibSubmissionStage applicationId={id} agreementSigned={agreementSigned} finalType={application.final_type} /></div>
