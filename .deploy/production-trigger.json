@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the Partner Register success-toast update from PR #242.",
-  "deploy_requested_at": "2026-08-10T16:19:00+05:30",
+  "purpose": "Deploy the Documents section subtext removal from PR #243.",
+  "deploy_requested_at": "2026-08-10T16:31:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #242 and deploy with the protected GitHub Actions production flow",
-  "source_commit": "6146d1f96a0249605b387184b2ce69e2a5887691",
-  "release_scope": "Deploy the Partner Register UI update that replaces the full-width success banner with the existing temporary WorkflowSuccessToast, preserving contextual success messages, automatic dismissal, manual dismissal, success-query cleanup, and existing persistent error handling. No server actions, permissions, intermediary workflows, database logic, or unrelated UI behavior are changed.",
-  "verification": "PR #242 verification run 31380736407 passed all configured access-control regressions, Policy OCR regressions, TypeScript typecheck, lint, and production build. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook; Vercel READY must be verified separately.",
+  "source": "ChatGPT explicit request to merge PR #243 and deploy with the protected GitHub Actions production flow",
+  "source_commit": "b9033b9028840b74617fe21dea8be5c06699d87a",
+  "release_scope": "Deploy the intermediary application review UI copy update that removes the descriptive Documents section subtext 'Visual checklist for uploaded identity, bank and qualification files.' while preserving the Documents title, icon, spacing, document cards, rendering, permissions, workflows, server actions, and data behavior.",
+  "verification": "PR #243 verification run 31381612977 passed all configured access-control regressions, Policy OCR regressions, TypeScript typecheck, lint, and production build. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook; Vercel READY must be verified separately.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
