@@ -32,6 +32,7 @@ export type PermissionModule =
   | "Tasks"
   | "Reports"
   | "Notifications"
+  | "Assistant"
   | "Administration"
   | "Master Data"
   | "System";
@@ -101,6 +102,9 @@ export const permissionCatalogueV2 = [
   { key: "reports.view", module: "Reports", label: "View reports", description: "View management reports when the reporting workspace is enabled.", risk: "sensitive", allowedAccess: ["view"], allowedScopes: hierarchyScopes, scopeRequired: true },
   { key: "notifications.view", module: "Notifications", label: "View notifications", description: "View notifications relevant to the signed-in user.", risk: "standard", allowedAccess: ["view"], allowedScopes: ["self"], scopeRequired: true },
 
+  { key: "assistant.use", module: "Assistant", label: "Use assistant", description: "Shadow equivalent for internal assistant use; legacy authorization remains authoritative.", risk: "sensitive", allowedAccess: ["view"], allowedScopes: hierarchyScopes, scopeRequired: true },
+  { key: "assistant.knowledge.manage", module: "Assistant", label: "Manage assistant knowledge", description: "Shadow equivalent for controlled assistant knowledge administration; legacy authorization remains authoritative.", risk: "critical", allowedAccess: ["approve"], allowedScopes: adminScope, scopeRequired: false },
+
   { key: "admin.portal_users.manage", module: "Administration", label: "Manage employee portal users", description: "Invite, enable, suspend and restore employee portal identities.", risk: "critical", allowedAccess: ["approve"], allowedScopes: adminScope, scopeRequired: false },
   { key: "admin.roles.manage", module: "Administration", label: "Manage roles", description: "Create, update, assign and retire business security roles.", risk: "critical", allowedAccess: ["approve"], allowedScopes: adminScope, scopeRequired: false },
   { key: "admin.permissions.manage", module: "Administration", label: "Manage permissions", description: "Change role permissions and employee-specific access exceptions.", risk: "critical", allowedAccess: ["approve"], allowedScopes: adminScope, scopeRequired: false },
@@ -135,6 +139,8 @@ export const legacyCapabilityCompatibilityMap: Record<LegacyCapability, readonly
   manage_tasks: ["tasks.create", "tasks.assign", "tasks.edit"],
   view_reports: ["reports.view"],
   view_notifications: ["notifications.view"],
+  use_assistant: ["assistant.use"],
+  manage_assistant_knowledge: ["assistant.knowledge.manage"],
   manage_users: ["admin.portal_users.manage"],
   manage_master_data: ["master_data.manage"],
   manage_system: ["admin.roles.manage", "admin.permissions.manage", "admin.audit.view", "intermediaries.delete", "system.manage", "system.integrations.configure"],

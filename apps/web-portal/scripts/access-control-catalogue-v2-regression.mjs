@@ -22,6 +22,7 @@ if (uniqueKeys.size !== keys.length) {
 }
 
 const permissionByKey = new Map(permissionCatalogueV2.map((permission) => [permission.key, permission]));
+const shadowCatalogueOnlyKeys = new Set(["assistant.use", "assistant.knowledge.manage"]);
 const validAccess = new Set(accessLevels.filter((level) => level !== "none"));
 const validScopes = new Set(dataScopes);
 
@@ -85,8 +86,13 @@ const itSuperUser = roleMatrixV2.find((role) => role.code === "it_super_user");
 if (!itSuperUser || itSuperUser.status !== "protected" || itSuperUser.assignable) {
   fail("IT Super User must remain protected and non-assignable");
 }
-if (itSuperUser.grants.length !== permissionCatalogueV2.length) {
-  fail("IT Super User must cover every V2 permission");
+if (itSuperUser.grants.length !== permissionCatalogueV2.length - shadowCatalogueOnlyKeys.size) {
+  fail("IT Super User must cover every role-granted V2 permission");
+}
+for (const role of roleMatrixV2) {
+  if (role.grants.some((grant) => shadowCatalogueOnlyKeys.has(grant.permission))) {
+    fail(`${role.code} must not receive a shadow-only assistant V2 grant`);
+  }
 }
 
 for (const code of ["manager", "agent"]) {
@@ -109,7 +115,11 @@ const migrationPath = resolve(
   process.cwd(),
   "../../supabase/migrations/20260810140000_access_control_v2_shadow_rbac_foundation.sql",
 );
-const migrationSql = readFileSync(migrationPath, "utf8");
+const migrationSql = readFileSync(migrationPath, "utf8").replaceAll(String.fromCharCode(13, 10), "\n");
+const assistantMigrationSql = readFileSync(resolve(
+  process.cwd(),
+  "../../supabase/migrations/20260810153000_assistant_knowledge_foundation.sql",
+), "utf8").replaceAll(String.fromCharCode(13, 10), "\n");
 
 function sectionBetween(startMarker, endMarker) {
   const start = migrationSql.indexOf(startMarker);
@@ -133,12 +143,14 @@ const permissionSeedSection = sectionBetween(
 );
 for (const permission of permissionCatalogueV2) {
   const marker = `('${permission.key}'`;
-  if (!permissionSeedSection.includes(marker)) fail(`Phase 4 SQL permission seed is missing ${permission.key}`);
+  if (!permissionSeedSection.includes(marker) && !assistantMigrationSql.includes(marker)) {
+    fail(`SQL permission seeds are missing ${permission.key}`);
+  }
 }
 
 const sqlPermissionKeys = Array.from(permissionSeedSection.matchAll(/\('([^']+)'\s*,\s*'[^']+'/g), (match) => match[1]);
-if (new Set(sqlPermissionKeys).size !== permissionCatalogueV2.length) {
-  fail(`Phase 4 SQL permission seed count ${new Set(sqlPermissionKeys).size} does not match catalogue ${permissionCatalogueV2.length}`);
+if (new Set(sqlPermissionKeys).size !== permissionCatalogueV2.length - shadowCatalogueOnlyKeys.size) {
+  fail(`Phase 4 SQL permission seed count ${new Set(sqlPermissionKeys).size} does not match its role-granted catalogue subset`);
 }
 
 const grantsSection = sectionBetween(

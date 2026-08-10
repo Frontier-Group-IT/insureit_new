@@ -38,6 +38,8 @@ const labels: Record<Capability, Omit<PermissionDefinition, "capability" | "role
   manage_tasks: { module: "Tasks", label: "Edit and assign tasks", description: "Create, assign, update and close tasks.", risk: "sensitive" },
   view_reports: { module: "Reports", label: "View reports", description: "Open reports and management summaries.", risk: "sensitive" },
   view_notifications: { module: "Notifications", label: "View notifications", description: "Open system and workflow notifications.", risk: "standard" },
+  use_assistant: { module: "Assistant", label: "Use assistant", description: "Use the internal read-only assistant within existing permissions and data scope.", risk: "sensitive" },
+  manage_assistant_knowledge: { module: "Assistant", label: "Manage assistant knowledge", description: "Import, review and publish controlled assistant knowledge workbooks.", risk: "critical" },
   manage_users: { module: "Administration", label: "Manage portal users", description: "Create and manage internal portal user access.", risk: "critical" },
   manage_master_data: { module: "Administration", label: "Manage master data", description: "Create and edit operational master data.", risk: "high" },
   manage_system: { module: "Administration", label: "Manage system settings", description: "Access development, configuration and system controls.", risk: "critical" },
@@ -46,7 +48,7 @@ const labels: Record<Capability, Omit<PermissionDefinition, "capability" | "role
 export const permissionDefinitions: PermissionDefinition[] = Object.entries(labels).map(([capability, definition]) => ({
   capability: capability as Capability,
   ...definition,
-  roleAccess: capability.startsWith("view_") ? "view" : definition.risk === "critical" || capability.startsWith("approve_") || capability.startsWith("activate_") ? "approve" : "edit",
+  roleAccess: capability === "use_assistant" ? "view" : capability.startsWith("view_") ? "view" : definition.risk === "critical" || capability.startsWith("approve_") || capability.startsWith("activate_") ? "approve" : "edit",
 }));
 
 export function rolePermissionAccess(role: string | null | undefined, capability: Capability): PermissionAccess {
