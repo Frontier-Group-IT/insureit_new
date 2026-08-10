@@ -94,14 +94,14 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
   if (file.size > MAX_FILE_SIZE) return { ok: false, error: "The policy document must be 15 MB or smaller." };
 
   const config = getGoogleConfig();
-  if (!config) return { ok: false, error: "Google policy OCR is not configured on this environment." };
+  if (!config) return { ok: false, error: "Policy document reading is temporarily unavailable. Please contact the administrator if the issue continues." };
 
   const requestHeaders = await headers();
   const subjectToken = process.env.VERCEL_OIDC_TOKEN
     || requestHeaders.get("x-vercel-oidc-token")
     || process.env.GOOGLE_WORKLOAD_IDENTITY_SUBJECT_TOKEN;
   if (!subjectToken) {
-    return { ok: false, error: "Secure Google authentication is unavailable. Redeploy the production application with Vercel OIDC enabled." };
+    return { ok: false, error: "Policy document reading is temporarily unavailable. Please contact the administrator if the issue continues." };
   }
 
   const controller = new AbortController();
@@ -138,7 +138,7 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
     }
 
     const pages = extractPageTexts(payload?.document);
-    if (!pages.length) return { ok: false, error: "Google Document AI could not find readable policy text in this document." };
+    if (!pages.length) return { ok: false, error: "No readable policy text was found in this document. Try a clearer PDF or image." };
 
     const baseParsed = parsePolicyDocument(pages);
     let parsed = baseParsed.parserId === "digit_commercial_motor_v1"
@@ -156,7 +156,7 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
       parsed = refineIffcoStructuredFinancials(tables, parsed);
     }
 
-    if (!parsed.fields.length) return { ok: false, error: "No supported policy fields could be extracted from this document." };
+    if (!parsed.fields.length) return { ok: false, error: "No supported policy details could be read from this document. Please review the file and enter the details manually if needed." };
 
     return {
       ok: true,
@@ -169,10 +169,10 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
     };
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      return { ok: false, error: "Policy OCR exceeded the two-minute processing limit. Please try the document again." };
+      return { ok: false, error: "The policy document took too long to read. Please try again." };
     }
     console.error("Google policy OCR failed", safeErrorName(error));
-    return { ok: false, error: "Google policy OCR could not process this document." };
+    return { ok: false, error: "The policy document could not be read. Please try again." };
   } finally {
     clearTimeout(timeout);
   }
@@ -359,12 +359,12 @@ function textFromAnchor(text: string, anchor: TextAnchor | undefined) {
 }
 
 function documentAiError(status: number, providerMessage?: string) {
-  if (status === 400) return "Google could not process this file. Check that it is a valid, readable policy PDF or image.";
-  if (status === 401 || status === 403) return "Google policy OCR authentication or permission is not active yet.";
-  if (status === 413) return "The policy document is too large for online OCR processing.";
-  if (status === 429) return "Google policy OCR is temporarily busy. Please try again shortly.";
-  if (providerMessage?.toLowerCase().includes("page")) return "This policy has more pages than the current online OCR limit.";
-  return `Google policy OCR returned ${status}.`;
+  if (status === 400) return "This file could not be read. Check that it is a valid, clear policy PDF or image.";
+  if (status === 401 || status === 403) return "Policy document reading is temporarily unavailable. Please try again later.";
+  if (status === 413) return "The policy document is too large to process online.";
+  if (status === 429) return "Policy document reading is temporarily busy. Please try again shortly.";
+  if (providerMessage?.toLowerCase().includes("page")) return "This policy has more pages than the current processing limit.";
+  return "The policy document could not be read. Please try again.";
 }
 
 function safeErrorName(error: unknown) {
