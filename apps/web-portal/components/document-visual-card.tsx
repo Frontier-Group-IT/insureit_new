@@ -64,6 +64,13 @@ const badgeClasses: Record<Tone, string> = {
   error: "border-red-200 bg-red-50 text-red-700",
 };
 
+function uploadedDocumentTitle(fileName: string | null | undefined) {
+  if (!fileName) return null;
+  const baseName = fileName.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, "") ?? "";
+  const cleaned = baseName.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+  return cleaned || null;
+}
+
 export function DocumentVisualCard({
   type,
   title,
@@ -81,6 +88,7 @@ export function DocumentVisualCard({
   const asset = assets[type] ?? fallbackAsset;
   const resolvedTone = tone ?? (fileName ? "uploaded" : required ? "required" : "optional");
   const label = status ?? (fileName ? "Uploaded" : required ? "Required" : "Optional");
+  const displayTitle = type.startsWith("custom_") && title === "Other Document" ? uploadedDocumentTitle(fileName) ?? title : title;
 
   return (
     <article id={id} data-document-type={type} className={`document-visual-card group relative overflow-hidden rounded-[18px] border shadow-[0_16px_38px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_52px_rgba(15,23,42,0.09)] ${toneClasses[resolvedTone]} ${muted ? "opacity-50 hover:opacity-80" : "opacity-100"}`}>
@@ -101,7 +109,7 @@ export function DocumentVisualCard({
       <div className="absolute inset-x-2.5 bottom-2.5 z-20 rounded-xl border border-white/75 bg-white/84 p-2.5 shadow-[0_12px_28px_rgba(15,23,42,0.11)] backdrop-blur-sm">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <h3 className="line-clamp-2 text-[10.5px] font-semibold leading-4 text-[#0F172A]">{title}{required ? <span className="ml-1 text-red-500">*</span> : null}</h3>
+            <h3 className="line-clamp-2 text-[10.5px] font-semibold leading-4 text-[#0F172A]">{displayTitle}{required ? <span className="ml-1 text-red-500">*</span> : null}</h3>
           </div>
           {action ? <div className="relative z-30 shrink-0">{action}</div> : null}
         </div>
