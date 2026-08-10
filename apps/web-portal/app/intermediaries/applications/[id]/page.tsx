@@ -212,30 +212,15 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {isPartner ? (
-                activePartner ? (
-                  linked ? <CompactLink href={`/intermediaries/applications/${linked.id}`} label="Open linked account" /> : (
-                    <form action={createLinkedIntermediaryAccount}>
-                      <input type="hidden" name="application_id" value={id} />
-                      <input type="hidden" name="registration_type" value={profile.partner_type} />
-                      <CompactSubmit label={profile.partner_type === "misp" ? "Create MISP ID" : "Create POSP ID"} pendingLabel={profile.partner_type === "misp" ? "Creating MISP ID…" : "Creating POSP ID…"} />
-                    </form>
-                  )
+                activePartner && !linked ? (
+                  <form action={createLinkedIntermediaryAccount}>
+                    <input type="hidden" name="application_id" value={id} />
+                    <input type="hidden" name="registration_type" value={profile.partner_type} />
+                    <CompactSubmit label={profile.partner_type === "misp" ? "Create MISP ID" : "Create POSP ID"} pendingLabel={profile.partner_type === "misp" ? "Creating MISP ID…" : "Creating POSP ID…"} />
+                  </form>
                 ) : null
               ) : <CompactLink href={`/intermediaries/applications/${id}/workflow?stage=${stageFor(profile)}`} label={`Manage ${kind} account`} />}
               {isPartner ? <CompactLink href={`/intermediaries/applications/${id}/workflow?stage=primary`} label="Edit details" secondary /> : null}
-              {activePartner && intermediary?.portal_access_status === "not_created" ? (
-                <form action={createIntermediaryPortalLogin}>
-                  <input type="hidden" name="intermediary_id" value={intermediary.id} />
-                  <input type="hidden" name="return_path" value={returnPath} />
-                  <CompactSubmit label="Create user" pendingLabel="Creating user…" secondary />
-                </form>
-              ) : activePartner && intermediary?.portal_access_status === "invited" ? (
-                <form action={resendIntermediaryPortalInvite}>
-                  <input type="hidden" name="intermediary_id" value={intermediary.id} />
-                  <input type="hidden" name="return_path" value={returnPath} />
-                  <CompactSubmit label="Resend link" pendingLabel="Sending link…" secondary />
-                </form>
-              ) : null}
             </div>
           </div>
           <div className={`grid border-t border-white/15 sm:grid-cols-2 ${isPartner ? "xl:grid-cols-6" : "xl:grid-cols-5"}`}>{stats.map((stat) => <HeaderStat key={stat.label} {...stat} />)}</div>
