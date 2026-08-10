@@ -1,0 +1,30 @@
+name: Patch application review header actions
+on:
+  push:
+    branches:
+      - feature/remove-application-review-header-actions-20260810
+    paths:
+      - tmp/remove-header-actions.py
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/remove-application-review-header-actions-20260810
+          fetch-depth: 0
+      - name: Apply focused UI patch
+        run: python tmp/remove-header-actions.py
+      - name: Remove temporary patch files
+        run: |
+          rm tmp/remove-header-actions.py
+          rm .github/workflows/patch-remove-application-review-header-actions.yml
+      - name: Commit final application diff
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Remove redundant application review header actions"
+          git push origin HEAD:feature/remove-application-review-header-actions-20260810
