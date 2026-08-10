@@ -161,16 +161,24 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
           <div className="space-y-4">
             <PospSection id="posp-section-1" number="01" title="Identity & contact">
               <div className="grid min-w-0 gap-3 md:col-span-2 md:grid-cols-2 xl:col-span-4 xl:grid-cols-5">
+                <IndianDateField label="Documents received" name="document_received_at" defaultValue={initialValues.document_received_at} inputClassName={dateInputClass} {...dateValidationHandlers} />
                 <SelectField label="RM" name="associate_employee_id" required options={salesManagers} placeholder="Select RM" defaultValue={initialValues.associate_employee_id} {...selectValidationHandlers} />
-                <Field label="First Name" name="pos_first_name" required defaultValue={initialValues.pos_first_name} {...inputValidationHandlers} />
-                <Field label="Middle Name" name="pos_middle_name" defaultValue={initialValues.pos_middle_name} {...inputValidationHandlers} />
-                <Field label="Last Name" name="pos_last_name" required defaultValue={initialValues.pos_last_name} {...inputValidationHandlers} />
-                <IndianDateField label="Date of Birth" name="date_of_birth" required defaultValue={initialValues.date_of_birth} inputClassName={dateInputClass} {...dateValidationHandlers} />
+                <div className="md:col-span-2 xl:col-span-3">
+                  <div className="mb-1.5 flex items-center gap-2">
+                    <span className="text-[10.5px] font-semibold text-[#344054]">Applicant name</span>
+                    <span className="rounded-full bg-[#EAF1F8] px-2 py-0.5 text-[8.5px] font-semibold text-[#315B6B]">Same applicant</span>
+                  </div>
+                  <div className="grid min-w-0 gap-2 rounded-xl border border-[#D9E2F0] bg-[#F8FAFC] p-2.5 md:grid-cols-3">
+                    <Field label="First Name" name="pos_first_name" required defaultValue={initialValues.pos_first_name} {...inputValidationHandlers} />
+                    <Field label="Middle Name" name="pos_middle_name" defaultValue={initialValues.pos_middle_name} {...inputValidationHandlers} />
+                    <Field label="Last Name" name="pos_last_name" required defaultValue={initialValues.pos_last_name} {...inputValidationHandlers} />
+                  </div>
+                </div>
               </div>
               <div className="grid min-w-0 gap-3 md:col-span-2 md:grid-cols-2 xl:col-span-4 xl:grid-cols-5">
-                <IndianDateField label="Documents received" name="document_received_at" defaultValue={initialValues.document_received_at} inputClassName={dateInputClass} {...dateValidationHandlers} />
                 <PanInput label="PAN" name="pan_number" compact defaultValue={initialValues.pan_number} {...inputValidationHandlers} />
                 <Field label="Aadhaar" name="aadhaar_number" required inputMode="numeric" pattern="[0-9]{12}" maxLength={12} minLength={12} defaultValue={initialValues.aadhaar_number} {...inputValidationHandlers} />
+                <IndianDateField label="Date of Birth" name="date_of_birth" required defaultValue={initialValues.date_of_birth} inputClassName={dateInputClass} {...dateValidationHandlers} />
                 <Field label="Mobile" name="applicant_phone" required inputMode="tel" pattern="(?:\+91)?[6-9][0-9]{9}" defaultValue={initialValues.applicant_phone} {...inputValidationHandlers} />
                 <Field label="Email" name="applicant_email" type="email" required defaultValue={initialValues.applicant_email} {...inputValidationHandlers} />
               </div>
