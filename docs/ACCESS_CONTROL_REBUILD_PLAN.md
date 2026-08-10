@@ -14,6 +14,26 @@ Rebuild employee access management into a robust role-based and scoped authoriza
 3. `profiles` is the portal identity and currently stores one `role` plus `employee_id` linkage and active state.
 4. Employee existence and portal access are separate concepts, but the current UI does not expose that distinction strongly enough.
 
+### Current employee/portal lifecycle behaviour
+`apps/web-portal/app/employees/actions.ts` currently handles employee creation, employee updates, invitations and active/inactive synchronization.
+
+Observed behaviour:
+- Employee creation requires employee code, name, department and designation.
+- Portal access is optional at employee creation.
+- Creating portal access immediately sends a Supabase Auth invitation and then upserts a `profiles` row.
+- If Auth invitation fails during create-with-access, the newly created employee row is deleted.
+- If profile creation fails after Auth invitation, the invited Auth user and newly created employee row are deleted.
+- Updating employee identity fields synchronizes the linked profile fields.
+- Setting an employee inactive sets `employees.employment_status = inactive` and linked `profiles.is_active = false`.
+- Reactivating reverses the profile active flag.
+- Auth-user suspension/ban state is not currently modeled as a separate lifecycle state by these actions.
+- Portal invitation status, acceptance date, last sign-in, suspension and explicit offboarding are not first-class employee-access states in this workflow.
+
+Audit inconsistency to resolve in Phase 2/6:
+- `createEmployee` rejects `customer` as an internal portal role but does not explicitly reject `intermediary`.
+- `sendEmployeePortalInvite` correctly rejects both `customer` and `intermediary`.
+This should be unified behind one canonical internal-role validator.
+
 ### Current role model
 The application currently defines portal roles in `apps/web-portal/lib/roles.ts`. Role capability defaults are code-defined through `roleCapabilities`.
 
@@ -61,7 +81,36 @@ Current stored scope values are:
 
 The UI presents these as Own records, Reporting hierarchy and Entire organisation.
 
-Important audit finding: access level resolution is centralized, but scope is not yet a first-class record-level authorization decision throughout the application. Phase 1 therefore treats data-scope enforcement as a major cut-over requirement rather than a UI-only feature.
+A shared helper already exists at `apps/web-portal/lib/employee-access-scope.ts`. This is an important foundation and means the rebuild does not start from zero.
+
+Current scope-helper behaviour:
+- hard-codes organisation-wide roles: Super Admin, Admin, IT Super User, Manager, Director, Operations Head and Backoffice Executive.
+- hard-codes hierarchy roles: Sales Head, Zonal Head, Area Sales Head and Sales Manager.
+- defaults other internal roles to self scope.
+- supports active employee-specific scope override for a capability.
+- resolves reporting descendants from `employees.reporting_manager_id`.
+- resolves linked profile IDs for those employees.
+- provides customer, intermediary application, intermediary, import-batch and employee/profile scope helpers.
+
+Important Phase 1 findings:
+1. The scope helper uses hard-coded role categories instead of the role permission configuration.
+2. It reads `employee_permission_overrides.scope_type` but does not consult `role_permission_overrides.scope_type`, even though effective permission access does consult role overrides.
+3. Therefore access-level resolution and scope resolution can diverge.
+4. Scope modes are limited to organization / hierarchy / self / none.
+5. Customer and intermediary modules already have a path toward centralized scoping, but other modules must be audited individually.
+
+### Confirmed module-scope observations
+
+#### Customers
+`apps/web-portal/app/customers/page.tsx` explicitly requires `view_customers`, calls `getAccessibleCustomerIds(profile.id, profile.role)`, and filters the service-role customer query by those IDs. This is the current best example of capability + scoped record access working together.
+
+#### Claims
+`apps/web-portal/app/claims/page.tsx` currently queries claims through the authenticated server Supabase client and does not call the central effective-permission/scope helpers in the page itself. Access therefore depends on route/navigation protection and/or database RLS. Phase 1 must inventory the corresponding RLS policies and claim server actions before defining the target cut-over.
+
+#### Tasks
+`apps/web-portal/app/tasks/page.tsx` similarly queries `claim_tasks` through the authenticated server client without an explicit central scope decision in the page. Its effective record visibility must therefore be traced through RLS and task actions.
+
+These findings confirm that authorization is presently mixed across application-level capability checks, application-level scoped ID filtering and database RLS. Phase 5/9 must unify the decision model without weakening existing RLS protections.
 
 ### Current override and audit model
 Existing database tables already provide useful foundations:
@@ -94,12 +143,15 @@ This snapshot is diagnostic only and must not be treated as a permanent role cat
 2. The role-level override table exists but has no complete role-management UI/workflow.
 3. `profiles.role` supports only one role per employee.
 4. Designation and security role are conceptually too easy to confuse.
-5. Scope values are stored but record-level scope enforcement is not consistently centralized.
-6. Several capabilities are too broad for long-term administration.
-7. Access Control is employee-exception oriented rather than full user governance.
-8. Portal lifecycle states such as no access, invited, active, suspended and disabled are not first-class in the access workspace.
-9. There is no dedicated role editor, permission catalogue, access-review workspace or comprehensive security timeline.
-10. Generic roles such as `manager` require business review before being retained as security roles.
+5. Access-level resolution and scope resolution are separate and can diverge.
+6. Scope defaults are hard-coded by role instead of being derived from the same role-permission source of truth.
+7. Several capabilities are too broad for long-term administration.
+8. Access Control is employee-exception oriented rather than full user governance.
+9. Portal lifecycle states such as no access, invited, active, suspended and disabled are not first-class in the access workspace.
+10. There is no dedicated role editor, permission catalogue, access-review workspace or comprehensive security timeline.
+11. Generic roles such as `manager` require business review before being retained as security roles.
+12. Internal-role validation is inconsistent between employee creation and later invitation.
+13. Current authorization is split between app permission checks, app scope filters and RLS; this needs one documented policy and one explainable resolver.
 
 ## Target authorization model
 
@@ -224,13 +276,21 @@ Record invitations, activations, suspensions, role assignment/removal, permissio
 ## Implementation phases
 
 ### Phase 1 - Authorization audit [IN PROGRESS]
-- Inventory current roles and capability defaults.
-- Inventory database access-control tables and current live usage.
-- Inventory user-management lifecycle and employee/profile/Auth linkage.
-- Identify every module/route/action that depends on authorization.
-- Identify every module that applies its own hierarchy/ownership filtering.
-- Produce current-state -> target-state mapping.
-- No live permission behaviour change.
+Completed so far:
+- Inventory current roles and code-defined capability defaults.
+- Inventory permission resolution and protected IT role behaviour.
+- Inventory database access-control tables and live role/override usage.
+- Inventory employee creation/invite/update/activation lifecycle.
+- Identify the shared employee-access-scope helper and its current precedence limitations.
+- Confirm Customers uses capability + scoped ID filtering.
+- Confirm Claims and Tasks need RLS/action-level tracing because their pages do not invoke the central scope helper directly.
+
+Remaining:
+- Inventory every module/route/action that depends on authorization.
+- Inventory RLS policies for employee/customer/intermediary/claim/task/fleet/policy access.
+- Inventory navigation-only guards versus server-side guards.
+- Inventory all privileged actions (approval, activation, user management, exports, master data, integrations).
+- Produce full current-state -> target-state compatibility mapping.
 
 Exit gate: canonical audit accepted and no unresolved ambiguity about existing access semantics.
 
@@ -294,12 +354,17 @@ Each module gets authorization/scoping tests before production cut-over.
 - `apps/web-portal/lib/roles.ts`
 - `apps/web-portal/lib/permission-management.ts`
 - `apps/web-portal/lib/effective-permissions.ts`
+- `apps/web-portal/lib/employee-access-scope.ts`
+- `apps/web-portal/app/employees/actions.ts`
 - `apps/web-portal/app/system/access-control/page.tsx`
 - `apps/web-portal/app/system/access-control/actions.ts`
 - `apps/web-portal/app/system/access-control/employees/[id]/page.tsx`
-- employee creation/invitation actions and forms
 - application navigation capability filtering
+- `apps/web-portal/app/customers/page.tsx`
+- `apps/web-portal/app/claims/page.tsx`
+- `apps/web-portal/app/tasks/page.tsx`
 - module-specific record queries and server actions
+- Supabase RLS policies and Auth user lifecycle
 
 ## Phase 1 safety rule
 No role, capability, employee override, portal access, database permission row or production user state will be modified during the audit. Phase 1 changes are documentation/test inventory only.
