@@ -133,6 +133,10 @@ for (const required of [
   "md:",
 ]) assert.ok(assistantSource.includes(required), `assistant UI includes ${required}`);
 assert.doesNotMatch(assistantSource, /navigation:\s*availableNavigation/, "client does not submit authorization-sensitive navigation scope");
+assert.match(assistantSource, /messages:\s*\[/, "client submits the bounded API message contract");
+assert.match(assistantSource, /currentPath:\s*pathname/, "client submits the validated current-path contract");
+assert.doesNotMatch(assistantSource, /\bmessage:\s*cleanQuestion/, "client does not use the obsolete single-message contract");
+assert.doesNotMatch(assistantSource, /\bhistory:/, "client does not use the obsolete history contract");
 assert.doesNotMatch(assistantSource, /dangerouslySetInnerHTML/, "assistant renders no arbitrary HTML");
 assert.doesNotMatch(assistantSource, /localStorage|sessionStorage|indexedDB/, "conversation history remains ephemeral in component memory");
 assert.ok(

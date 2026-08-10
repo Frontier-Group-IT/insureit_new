@@ -94,9 +94,11 @@ export function AssistantLauncher({ navigation }: Props) {
         cache: "no-store",
         signal: controller.signal,
         body: JSON.stringify({
-          message: cleanQuestion,
-          pathname,
-          history: messages.slice(-10).map(({ role, text }) => ({ role, text })),
+          messages: [
+            ...messages.slice(-10).map(({ role, text }) => ({ role, content: text })),
+            { role: "user", content: cleanQuestion },
+          ],
+          currentPath: pathname,
         }),
       });
       if (!response.ok) throw new Error(`assistant_${response.status}`);
