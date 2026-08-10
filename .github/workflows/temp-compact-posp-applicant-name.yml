@@ -1,0 +1,34 @@
+name: Temporary compact POSP applicant name
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/temp_compact_posp_applicant_name.py'
+      - '.github/workflows/temp-compact-posp-applicant-name.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Apply compact applicant name patch
+        run: python scripts/temp_compact_posp_applicant_name.py
+      - name: Validate patch
+        run: |
+          git diff --check
+          grep -F 'Applicant name *' apps/web-portal/app/customers/posp-misp/posp-misp-onboarding-form.tsx
+          grep -F 'placeholder="First name"' apps/web-portal/app/customers/posp-misp/posp-misp-onboarding-form.tsx
+          ! grep -F 'Same applicant' apps/web-portal/app/customers/posp-misp/posp-misp-onboarding-form.tsx
+      - name: Commit application change
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/web-portal/app/customers/posp-misp/posp-misp-onboarding-form.tsx
+          git commit -m 'Compact POSP applicant name control'
+          git push
