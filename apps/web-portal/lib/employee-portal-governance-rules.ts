@@ -17,12 +17,22 @@ export type EmployeePortalGovernanceGuardResult =
   | { allowed: true }
   | { allowed: false; reason: string };
 
+const portalManagerRoles: readonly AppRole[] = ["super_admin", "admin", "it_super_user"];
+
 /** Pure security rules for employee portal lifecycle operations. */
 export function evaluateEmployeePortalGovernanceGuard(
   input: EmployeePortalGovernanceGuardInput,
 ): EmployeePortalGovernanceGuardResult {
   if ((input.operation === "suspend" || input.operation === "restore") && !input.targetProfileId) {
     return { allowed: true };
+  }
+
+  if (
+    (input.operation === "suspend" || input.operation === "restore")
+    && input.targetProfileId
+    && !portalManagerRoles.includes(input.actorRole)
+  ) {
+    return { allowed: false, reason: "You do not have permission to manage employee portal access." };
   }
 
   if (input.operation === "suspend" && input.targetProfileId === input.actorProfileId) {
@@ -34,6 +44,10 @@ export function evaluateEmployeePortalGovernanceGuard(
       const label = input.targetRole === "super_admin" ? "Super Admin" : "IT Super User";
       return { allowed: false, reason: `The final active ${label} account cannot be suspended.` };
     }
+  }
+
+  if (input.operation === "invite" && !portalManagerRoles.includes(input.actorRole)) {
+    return { allowed: false, reason: "You do not have permission to manage employee portal access." };
   }
 
   if (input.operation === "invite" && input.assigningRole === "it_super_user" && !input.targetHasExistingProfile) {
