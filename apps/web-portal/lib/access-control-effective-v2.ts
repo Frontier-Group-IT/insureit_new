@@ -179,10 +179,7 @@ export function resolveEffectivePermissionV2(
 
   const strongestRank = Math.max(...roleGrants.map(({ grant }) => accessRank[grant.access]));
   const strongest = roleGrants.filter(({ grant }) => accessRank[grant.access] === strongestRank);
-  const access = strongest[0]?.grant.access ?? "none";
-  if (access === "none") {
-    return noAccess(input.permission, "no_grant", "Active roles do not grant this permission.", activeRoles.map((role) => role.code));
-  }
+  const access = strongest[0].grant.access;
 
   return {
     permission: input.permission,
