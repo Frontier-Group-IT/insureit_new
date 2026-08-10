@@ -1,5 +1,5 @@
-import { permissionCatalogueV2ByKey, type DataScope, type PermissionKeyV2 } from "@/lib/access-control-catalogue-v2";
-import type { EffectivePermissionDecisionV2 } from "@/lib/access-control-effective-v2";
+import { permissionCatalogueV2ByKey, type DataScope, type PermissionKeyV2 } from "./access-control-catalogue-v2";
+import type { EffectivePermissionDecisionV2 } from "./access-control-effective-v2";
 
 export type ScopeTargetV2 = {
   principalEmployeeIds?: readonly string[];
