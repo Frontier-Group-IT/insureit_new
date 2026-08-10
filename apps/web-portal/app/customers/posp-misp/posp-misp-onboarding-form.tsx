@@ -147,7 +147,6 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h1 className="text-[18px] font-semibold">POSP Onboarding</h1>
               <div className="flex items-center gap-2">
-                <Link href="/customers/posp-misp/import" className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-[9.5px] font-semibold text-white transition hover:bg-white/15">Import Excel</Link>
                 <Link href={backHref} className="rounded-lg border border-white/20 px-3 py-2 text-[9.5px] font-semibold text-white/90 transition hover:bg-white/10">Back</Link>
               </div>
             </div>
@@ -161,25 +160,29 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
 
           <div className="space-y-4">
             <PospSection id="posp-section-1" number="01" title="Identity & contact">
-              <SelectField label="RM" name="associate_employee_id" required options={salesManagers} placeholder="Select RM" defaultValue={initialValues.associate_employee_id} {...selectValidationHandlers} />
-              <PanInput label="PAN" name="pan_number" compact defaultValue={initialValues.pan_number} {...inputValidationHandlers} />
-              <IndianDateField label="Documents received" name="document_received_at" defaultValue={initialValues.document_received_at} inputClassName={dateInputClass} {...dateValidationHandlers} />
-              <Field label="Aadhaar" name="aadhaar_number" required inputMode="numeric" pattern="[0-9]{12}" maxLength={12} minLength={12} defaultValue={initialValues.aadhaar_number} {...inputValidationHandlers} />
-
-              <Field label="First Name" name="pos_first_name" required defaultValue={initialValues.pos_first_name} {...inputValidationHandlers} />
-              <Field label="Middle Name" name="pos_middle_name" defaultValue={initialValues.pos_middle_name} {...inputValidationHandlers} />
-              <Field label="Last Name" name="pos_last_name" required defaultValue={initialValues.pos_last_name} {...inputValidationHandlers} />
-              <IndianDateField label="Date of Birth" name="date_of_birth" required defaultValue={initialValues.date_of_birth} inputClassName={dateInputClass} {...dateValidationHandlers} />
-
-              <Field label="Mobile" name="applicant_phone" required inputMode="tel" pattern="(?:\+91)?[6-9][0-9]{9}" defaultValue={initialValues.applicant_phone} {...inputValidationHandlers} />
-              <div className="md:col-span-1 xl:col-span-3"><Field label="Email" name="applicant_email" type="email" required defaultValue={initialValues.applicant_email} {...inputValidationHandlers} /></div>
+              <div className="grid min-w-0 gap-3 md:col-span-2 md:grid-cols-2 xl:col-span-4 xl:grid-cols-5">
+                <SelectField label="RM" name="associate_employee_id" required options={salesManagers} placeholder="Select RM" defaultValue={initialValues.associate_employee_id} {...selectValidationHandlers} />
+                <Field label="First Name" name="pos_first_name" required defaultValue={initialValues.pos_first_name} {...inputValidationHandlers} />
+                <Field label="Middle Name" name="pos_middle_name" defaultValue={initialValues.pos_middle_name} {...inputValidationHandlers} />
+                <Field label="Last Name" name="pos_last_name" required defaultValue={initialValues.pos_last_name} {...inputValidationHandlers} />
+                <IndianDateField label="Date of Birth" name="date_of_birth" required defaultValue={initialValues.date_of_birth} inputClassName={dateInputClass} {...dateValidationHandlers} />
+              </div>
+              <div className="grid min-w-0 gap-3 md:col-span-2 md:grid-cols-2 xl:col-span-4 xl:grid-cols-5">
+                <IndianDateField label="Documents received" name="document_received_at" defaultValue={initialValues.document_received_at} inputClassName={dateInputClass} {...dateValidationHandlers} />
+                <PanInput label="PAN" name="pan_number" compact defaultValue={initialValues.pan_number} {...inputValidationHandlers} />
+                <Field label="Aadhaar" name="aadhaar_number" required inputMode="numeric" pattern="[0-9]{12}" maxLength={12} minLength={12} defaultValue={initialValues.aadhaar_number} {...inputValidationHandlers} />
+                <Field label="Mobile" name="applicant_phone" required inputMode="tel" pattern="(?:\+91)?[6-9][0-9]{9}" defaultValue={initialValues.applicant_phone} {...inputValidationHandlers} />
+                <Field label="Email" name="applicant_email" type="email" required defaultValue={initialValues.applicant_email} {...inputValidationHandlers} />
+              </div>
             </PospSection>
 
             <PospSection id="posp-section-2" number="02" title="Address">
-              <div className="md:col-span-2 xl:col-span-4"><Field label="Address" name="address" required defaultValue={initialValues.address} {...inputValidationHandlers} /></div>
-              <Field label="City" name="city" required defaultValue={initialValues.city} {...inputValidationHandlers} />
-              <Field label="State" name="state" required defaultValue={initialValues.state} {...inputValidationHandlers} />
-              <Field label="PIN Code" name="postal_code" required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} minLength={6} defaultValue={initialValues.postal_code} {...inputValidationHandlers} />
+              <div className="grid min-w-0 gap-3 md:col-span-2 md:grid-cols-2 xl:col-span-4 xl:grid-cols-5">
+                <div className="md:col-span-2 xl:col-span-2"><Field label="Address" name="address" required defaultValue={initialValues.address} {...inputValidationHandlers} /></div>
+                <Field label="City" name="city" required defaultValue={initialValues.city} {...inputValidationHandlers} />
+                <Field label="State" name="state" required defaultValue={initialValues.state} {...inputValidationHandlers} />
+                <Field label="PIN Code" name="postal_code" required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} minLength={6} defaultValue={initialValues.postal_code} {...inputValidationHandlers} />
+              </div>
             </PospSection>
 
             <PospSection id="posp-section-3" number="03" title="Bank & tax">
@@ -194,10 +197,10 @@ export function PospMispOnboardingForm({ action, submitPath, partnerType, initia
             <div className="mx-auto flex max-w-[1480px] justify-end gap-2">
               {submitPath ? <>
                 <RouteSubmitButton intent="exit" activeIntent={routeSubmitIntent} label="Save & Exit" pendingLabel="Saving & exiting…" secondary />
-                <RouteSubmitButton intent="documents" activeIntent={routeSubmitIntent} label="Save & Continue" pendingLabel="Saving & opening documents…" />
+                <RouteSubmitButton intent="documents" activeIntent={routeSubmitIntent} label="Upload Documents" pendingLabel="Saving & opening documents…" />
               </> : <>
                 <FormSubmitButton name="submit_intent" value="exit" label="Save & Exit" pendingLabel="Saving & exiting…" className="rounded-xl border border-[#CBD5E1] bg-white px-5 py-2.5 text-[11px] font-semibold text-[#334155] hover:border-[#94A3B8] hover:bg-[#F8FAFC]" />
-                <FormSubmitButton name="submit_intent" value="documents" label="Save & Continue" pendingLabel="Saving & opening documents…" className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[11px] font-semibold text-white hover:bg-[#102A49]" />
+                <FormSubmitButton name="submit_intent" value="documents" label="Upload Documents" pendingLabel="Saving & opening documents…" className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[11px] font-semibold text-white hover:bg-[#102A49]" />
               </>}
             </div>
           </div>
