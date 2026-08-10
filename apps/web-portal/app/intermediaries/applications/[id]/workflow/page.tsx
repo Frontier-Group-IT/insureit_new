@@ -187,6 +187,7 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
       <WorkflowResultDialog applicationId={id} event={popupEvent} />
       <WorkflowErrorDialog applicationId={id} message={normalizedError.message} field={normalizedError.field} />
       <div className="mx-auto max-w-[1480px] space-y-4 pb-8">
+        <div>
         <section className="overflow-hidden rounded-t-2xl border border-b-0 border-[#17365D] bg-[#17365D] px-4 py-4 text-white sm:px-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
@@ -209,6 +210,7 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
         ) : (
           <SixStepNavigation viewStage={viewStage} documentsComplete={documentsComplete} registrationComplete={registrationComplete} trainingExamComplete={trainingExamComplete} agreementSigned={agreementSigned} iibUploaded={iibUploaded} />
         )) : null}
+        </div>
 
         {query.success && !popupEvent ? <WorkflowSuccessToast message={successes[query.success] ?? "Saved successfully."} /> : null}
 
@@ -268,7 +270,7 @@ function PartnerTwoStepNavigation({ applicationId, viewStage, documentsComplete,
     ["documents", "Documents", `/intermediaries/applications/${applicationId}/workflow?stage=documents`],
   ] as const;
   return (
-    <nav className="sticky top-[66px] z-30 mb-4 grid grid-cols-2 overflow-hidden rounded-b-2xl border border-t-0 border-[#D9E2F0] bg-white/95 shadow-[0_7px_18px_rgba(15,23,42,.08)] backdrop-blur" aria-label="Onboarding progress">
+    <nav className="sticky top-[66px] z-30 grid grid-cols-2 overflow-hidden rounded-b-2xl border border-t-0 border-[#D9E2F0] bg-white/95 shadow-[0_7px_18px_rgba(15,23,42,.08)] backdrop-blur" aria-label="Onboarding progress">
       {steps.map(([stage, label, href], index) => {
         const completed = partnerActive || (stage === "primary" && viewStage !== "primary") || (stage === "documents" && documentsComplete);
         const active = stage === viewStage;
@@ -282,7 +284,7 @@ function SixStepNavigation({ viewStage, documentsComplete, registrationComplete,
   const completion: Record<ViewStage, boolean> = { primary: true, documents: documentsComplete, registration: registrationComplete, training: trainingExamComplete, agreement: agreementSigned, iib: iibUploaded };
   const steps: Array<[ViewStage, string]> = [["primary", "Primary details"], ["documents", "Documents"], ["registration", "Registration"], ["training", "Training & Exam"], ["agreement", "Agreement"], ["iib", "IIB Upload"]];
   return (
-    <nav className="sticky top-[66px] z-30 mb-4 overflow-x-auto rounded-b-2xl border border-t-0 border-[#D9E2F0] bg-white/95 shadow-[0_7px_18px_rgba(15,23,42,.08)] backdrop-blur" aria-label="Onboarding progress">
+    <nav className="sticky top-[66px] z-30 overflow-x-auto rounded-b-2xl border border-t-0 border-[#D9E2F0] bg-white/95 shadow-[0_7px_18px_rgba(15,23,42,.08)] backdrop-blur" aria-label="Onboarding progress">
       <div className="grid min-w-[780px] grid-cols-6">
         {steps.map(([stage, label], index) => {
           const completed = completion[stage];
