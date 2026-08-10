@@ -59,43 +59,43 @@ function decide(permission, roleCode) {
 const claimProcessorEdit = decide("claims.edit", "claim_processor");
 expect(
   "claim processor assigned claim inside scope",
-  evaluateScopedAccessV2(claimProcessorEdit, actor, { assigneeEmployeeIds: ["emp-self"] }).allowed,
+  evaluateScopedAccessV2(claimProcessorEdit, true, actor, { assigneeEmployeeIds: ["emp-self"] }).allowed,
   true,
 );
 expect(
   "claim processor unassigned claim outside scope",
-  evaluateScopedAccessV2(claimProcessorEdit, actor, { assigneeEmployeeIds: ["emp-other"] }).allowed,
+  evaluateScopedAccessV2(claimProcessorEdit, true, actor, { assigneeEmployeeIds: ["emp-other"] }).allowed,
   false,
 );
 
 const claimProcessorTaskCreate = decide("tasks.create", "claim_processor");
 expect(
   "claim processor self followup inside scope",
-  evaluateScopedAccessV2(claimProcessorTaskCreate, actor, { principalEmployeeIds: ["emp-self"] }).allowed,
+  evaluateScopedAccessV2(claimProcessorTaskCreate, true, actor, { principalEmployeeIds: ["emp-self"] }).allowed,
   true,
 );
 expect(
   "claim processor cannot create another employee followup",
-  evaluateScopedAccessV2(claimProcessorTaskCreate, actor, { principalEmployeeIds: ["emp-other"] }).allowed,
+  evaluateScopedAccessV2(claimProcessorTaskCreate, true, actor, { principalEmployeeIds: ["emp-other"] }).allowed,
   false,
 );
 
 const salesHeadCustomerView = decide("customers.view", "sales_head");
 expect(
   "sales head hierarchy customer inside scope",
-  evaluateScopedAccessV2(salesHeadCustomerView, actor, { principalEmployeeIds: ["emp-child"] }).allowed,
+  evaluateScopedAccessV2(salesHeadCustomerView, true, actor, { principalEmployeeIds: ["emp-child"] }).allowed,
   true,
 );
 expect(
   "sales head unrelated customer outside hierarchy",
-  evaluateScopedAccessV2(salesHeadCustomerView, actor, { principalEmployeeIds: ["emp-other"] }).allowed,
+  evaluateScopedAccessV2(salesHeadCustomerView, true, actor, { principalEmployeeIds: ["emp-other"] }).allowed,
   false,
 );
 
 const adminRoleManage = decide("admin.roles.manage", "super_admin");
 expect(
   "unscoped administration permission does not require target ownership",
-  evaluateScopedAccessV2(adminRoleManage, actor, { principalEmployeeIds: ["emp-other"] }).allowed,
+  evaluateScopedAccessV2(adminRoleManage, false, actor, { principalEmployeeIds: ["emp-other"] }).allowed,
   true,
 );
 
