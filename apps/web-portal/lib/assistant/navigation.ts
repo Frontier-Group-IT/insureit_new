@@ -7,8 +7,8 @@ export type StaticNavigationEntry = NavigationCandidate & { keywords?: string[] 
 
 const DEFAULT_NAVIGATION: StaticNavigationEntry[] = [...navigationCatalogue, developmentNavigationSection].flatMap((section) =>
   section.items.flatMap((node) => node.kind === "group"
-    ? node.items.map((entry) => ({ label: entry.label, href: entry.href, requiredCapability: entry.capability, keywords: [section.label, node.label] }))
-    : [{ label: node.label, href: node.href, requiredCapability: node.capability, keywords: [section.label] }]),
+    ? node.items.map((entry) => ({ label: entry.label, href: entry.href, requiredCapability: entry.capability, requiredAccess: entry.minimumAccess, keywords: [section.label, node.label] }))
+    : [{ label: node.label, href: node.href, requiredCapability: node.capability, requiredAccess: node.minimumAccess, keywords: [section.label] }]),
 );
 
 export function createPermissionAwareNavigationResolver(
@@ -17,8 +17,8 @@ export function createPermissionAwareNavigationResolver(
 ): NavigationResolver {
   const entries = visibleNavigationCatalogue(permissionAccess, options).flatMap((section) =>
     section.items.flatMap((node) => node.kind === "group"
-      ? node.items.map((entry) => ({ label: entry.label, href: entry.href, requiredCapability: entry.capability, keywords: [section.label, node.label] }))
-      : [{ label: node.label, href: node.href, requiredCapability: node.capability, keywords: [section.label] }]),
+      ? node.items.map((entry) => ({ label: entry.label, href: entry.href, requiredCapability: entry.capability, requiredAccess: entry.minimumAccess, keywords: [section.label, node.label] }))
+      : [{ label: node.label, href: node.href, requiredCapability: node.capability, requiredAccess: node.minimumAccess, keywords: [section.label] }]),
   );
   return createStaticNavigationResolver(entries);
 }
@@ -32,6 +32,7 @@ export function createStaticNavigationResolver(entries: StaticNavigationEntry[] 
     label: entry.label.trim().slice(0, 120),
     href: entry.href,
     requiredCapability: entry.requiredCapability as Capability | undefined,
+    requiredAccess: entry.requiredAccess,
     searchText: [entry.label, entry.href, ...(entry.keywords ?? [])].join(" ").toLowerCase(),
   }));
   return {
@@ -43,7 +44,7 @@ export function createStaticNavigationResolver(entries: StaticNavigationEntry[] 
       return catalogue
         .filter((entry) => terms.some((term) => entry.searchText.includes(term)))
         .slice(0, 8)
-        .map(({ label, href, requiredCapability }) => ({ label, href, requiredCapability }));
+        .map(({ label, href, requiredCapability, requiredAccess }) => ({ label, href, requiredCapability, ...(requiredAccess ? { requiredAccess } : {}) }));
     },
   };
 }

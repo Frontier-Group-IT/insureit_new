@@ -58,6 +58,7 @@ export async function uploadAssistantKnowledgeWorkbook(formData: FormData) {
 
 async function updateEntryLifecycle(formData: FormData, action: "publish" | "retire") {
   const profile = await requireAssistantKnowledgeManager();
+  if (action === "publish" && String(formData.get("content_reviewed") ?? "") !== "yes") redirectError("Review the complete knowledge content before publication.");
   const id = String(formData.get("entry_id") ?? "");
   if (!ENTRY_ID.test(id)) redirectError("The selected knowledge entry is invalid.");
   const admin = createSupabaseAdminClient();

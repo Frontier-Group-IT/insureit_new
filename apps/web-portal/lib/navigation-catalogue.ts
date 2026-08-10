@@ -116,6 +116,34 @@ export function navigationPermits(permissionAccess: NavigationPermissionMap, cap
   return permissionRank[permissionAccess[capability] ?? "none"] >= permissionRank[minimumAccess];
 }
 
+export function navigationRouteRequirements(href: string) {
+  for (const exactOnly of [true, false]) {
+    for (const section of [...navigationCatalogue, developmentNavigationSection]) {
+      for (const node of section.items) {
+        const items = node.kind === "group" ? node.items : [node];
+        const entry = items.find((candidate) => exactOnly ? candidate.href === href : candidate.href.split(/[?#]/, 1)[0] === href);
+        if (!entry) continue;
+        return [
+          { capability: section.capability, minimumAccess: section.minimumAccess ?? "view" },
+          ...(node.kind === "group" ? [{ capability: node.capability, minimumAccess: node.minimumAccess ?? "view" }] : []),
+          { capability: entry.capability, minimumAccess: entry.minimumAccess ?? "view" },
+        ];
+      }
+    }
+  }
+  return [];
+}
+
+export function navigationRouteRequirement(href: string) {
+  const requirements = navigationRouteRequirements(href);
+  return requirements.at(-1);
+}
+
+export function navigationRoutePermitted(permissionAccess: NavigationPermissionMap, href: string) {
+  const requirements = navigationRouteRequirements(href);
+  return requirements.length > 0 && requirements.every((entry) => navigationPermits(permissionAccess, entry.capability, entry.minimumAccess));
+}
+
 function dedupeItems(items: NavigationCatalogueItem[]) {
   const seen = new Set<string>();
   return items.filter((entry) => {

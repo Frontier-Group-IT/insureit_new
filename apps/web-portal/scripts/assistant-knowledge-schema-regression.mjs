@@ -20,7 +20,7 @@ function expectReject(name, callback, fragment) {
 }
 
 if (JSON.stringify(ASSISTANT_METADATA_HEADERS) !== JSON.stringify(["Key", "Value"])) fail("Metadata headers drifted");
-if (JSON.stringify(ASSISTANT_KNOWLEDGE_HEADERS) !== JSON.stringify(["Route", "Title", "Content", "Tags", "Source Reference", "Required Capabilities"])) fail("Knowledge headers drifted");
+if (JSON.stringify(ASSISTANT_KNOWLEDGE_HEADERS) !== JSON.stringify(["Route", "Title", "Content", "Tags", "Source Reference", "Required Capabilities", "Minimum Access"])) fail("Knowledge headers drifted");
 
 const metadata = validateAssistantMetadata([
   { Key: "template_version", Value: "1" },
@@ -40,8 +40,11 @@ const valid = validateAssistantKnowledgeRow({
   Tags: "claims, intake",
   "Source Reference": "SOP-CLAIMS-01",
   "Required Capabilities": "view_claims",
+  "Minimum Access": "edit",
 }, 2);
-if (valid.route !== "/claims/intake" || valid.tags.join("|") !== "claims|intake" || valid.requiredCapabilities.join("|") !== "view_claims") fail("valid knowledge row was not normalized");
+if (valid.route !== "/claims/intake" || valid.tags.join("|") !== "claims|intake" || valid.requiredCapabilities.join("|") !== "view_claims" || valid.requiredAccess !== "edit") fail("valid knowledge row was not normalized");
+
+expectReject("invalid minimum access", () => validateAssistantKnowledgeRow({ Route: "/claims", Title: "Safe", Content: "Safe operational content.", Tags: "safe", "Source Reference": "SOP-1", "Required Capabilities": "view_claims", "Minimum Access": "none" }, 2), "minimum access");
 
 expectReject("unknown capability", () => validateAssistantKnowledgeRow({ Route: "/claims", Title: "Safe", Content: "Safe operational content.", Tags: "safe", "Source Reference": "SOP-1", "Required Capabilities": "become_superuser" }, 2), "capabilit");
 expectReject("missing capability", () => validateAssistantKnowledgeRow({ Route: "/claims", Title: "Safe", Content: "Safe operational content.", Tags: "safe", "Source Reference": "SOP-1", "Required Capabilities": "" }, 2), "required");

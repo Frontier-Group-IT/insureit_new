@@ -23,11 +23,11 @@ export async function GET() {
     ["classification", "internal"],
   ]);
   const knowledge = XLSX.utils.aoa_to_sheet([
-    ["Route", "Title", "Content", "Tags", "Source Reference", "Required Capabilities"],
-    ["/claims", "Claim intake checklist", "Follow the approved claim intake checklist.", "claims, intake", "SOP-CLAIMS-01", "view_claims"],
+    ["Route", "Title", "Content", "Tags", "Source Reference", "Required Capabilities", "Minimum Access"],
+    ["/claims", "Claim intake checklist", "Follow the approved claim intake checklist.", "claims, intake", "SOP-CLAIMS-01", "view_claims", "view"],
   ]);
   metadata["!cols"] = [{ wch: 26 }, { wch: 70 }];
-  knowledge["!cols"] = [{ wch: 28 }, { wch: 34 }, { wch: 72 }, { wch: 28 }, { wch: 28 }, { wch: 34 }];
+  knowledge["!cols"] = [{ wch: 28 }, { wch: 34 }, { wch: 72 }, { wch: 28 }, { wch: 28 }, { wch: 34 }, { wch: 18 }];
   XLSX.utils.book_append_sheet(workbook, metadata, "Metadata");
   XLSX.utils.book_append_sheet(workbook, knowledge, "Knowledge");
   const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx", compression: true });

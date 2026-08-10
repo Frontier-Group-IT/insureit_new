@@ -1,5 +1,5 @@
 export const ASSISTANT_METADATA_HEADERS = ["Key", "Value"] as const;
-export const ASSISTANT_KNOWLEDGE_HEADERS = ["Route", "Title", "Content", "Tags", "Source Reference", "Required Capabilities"] as const;
+export const ASSISTANT_KNOWLEDGE_HEADERS = ["Route", "Title", "Content", "Tags", "Source Reference", "Required Capabilities", "Minimum Access"] as const;
 export const ASSISTANT_WORKBOOK_SHEETS = ["Metadata", "Knowledge"] as const;
 export const ASSISTANT_TEMPLATE_VERSION = "1" as const;
 
@@ -32,6 +32,7 @@ export type AssistantKnowledgeEntry = {
   tags: string[];
   sourceReference: string;
   requiredCapabilities: string[];
+  requiredAccess: "view" | "edit" | "approve";
 };
 
 export class AssistantKnowledgeValidationError extends Error {
@@ -115,5 +116,9 @@ export function validateAssistantKnowledgeRow(row: Record<string, unknown>, rowN
   if (!requiredCapabilities.length || requiredCapabilities.length > MAX_REQUIRED_CAPABILITIES || requiredCapabilities.some((capability) => !APPROVED_CONTENT_CAPABILITIES.has(capability))) {
     throw new AssistantKnowledgeValidationError(`Required Capabilities in row ${rowNumber} must contain 1-${MAX_REQUIRED_CAPABILITIES} approved legacy capability names.`);
   }
-  return { route, title, content, tags, sourceReference, requiredCapabilities };
+  const requiredAccess = required(row["Minimum Access"], `Minimum Access in row ${rowNumber}`, 7).toLowerCase();
+  if (requiredAccess !== "view" && requiredAccess !== "edit" && requiredAccess !== "approve") {
+    throw new AssistantKnowledgeValidationError(`Minimum Access in row ${rowNumber} must be view, edit or approve.`);
+  }
+  return { route, title, content, tags, sourceReference, requiredCapabilities, requiredAccess };
 }

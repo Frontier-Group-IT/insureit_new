@@ -8,6 +8,7 @@ import {
 import {
   developmentNavigationSection,
   navigationCatalogue,
+  navigationRoutePermitted,
   visibleNavigationCatalogue,
 } from "../lib/navigation-catalogue.ts";
 
@@ -80,6 +81,10 @@ assert.ok(
   editableFleet.some((section) => section.items.some((node) => node.kind === "group" && node.items.some((item) => item.href === "/vehicles/new"))),
   "minimum edit access exposes editable routes",
 );
+assert.equal(navigationRoutePermitted({ view_policies: "view" }, "/policies/new"), false, "view access cannot open an edit-only route");
+assert.equal(navigationRoutePermitted({ view_policies: "edit" }, "/policies/new"), false, "a child capability cannot bypass its parent navigation floor");
+assert.equal(navigationRoutePermitted({ view_customers: "view", view_vehicles: "view", view_policies: "edit" }, "/policies/new"), true, "all section, group, and item floors authorize the route");
+assert.equal(navigationRoutePermitted({ view_intermediaries: "view", create_intermediary_application: "edit" }, "/customers/posp-misp/existing/new"), true, "normalized workbook paths can match approved query-specific catalogue destinations");
 
 const superUserSections = visibleNavigationCatalogue(
   { manage_system: "approve" },

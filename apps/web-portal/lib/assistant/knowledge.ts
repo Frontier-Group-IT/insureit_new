@@ -1,4 +1,5 @@
 import type { Capability } from "../roles.ts";
+import type { PermissionAccess } from "../permission-management.ts";
 
 export const KNOWLEDGE_RPC_NAME = "search_approved_assistant_knowledge" as const;
 export const KNOWLEDGE_RESULT_LIMIT = 5;
@@ -11,6 +12,7 @@ export type ApprovedKnowledgeSource = {
   excerpt: string;
   href?: string;
   requiredCapabilities: Capability[];
+  requiredAccess: Exclude<PermissionAccess, "none">;
 };
 
 export interface ApprovedKnowledgeRepository {
@@ -18,7 +20,7 @@ export interface ApprovedKnowledgeRepository {
   searchApprovedActive(query: string, limit: number): Promise<ApprovedKnowledgeSource[]>;
 }
 
-export type CapabilityCheck = (capability: Capability) => Promise<boolean>;
+export type CapabilityCheck = (capability: Capability, minimumAccess?: Exclude<PermissionAccess, "none">) => Promise<boolean>;
 
 function cleanUntrustedText(value: string, limit: number): string {
   return value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, " ").slice(0, limit).trim();
@@ -41,7 +43,7 @@ export async function searchApprovedKnowledge(input: {
     if (!candidate?.id || !candidate.title || !candidate.excerpt) continue;
     if (candidate.href && !isInternalHref(candidate.href)) continue;
     const capabilities = Array.isArray(candidate.requiredCapabilities) ? candidate.requiredCapabilities : [];
-    const decisions = await Promise.all(capabilities.map((capability) => input.can(capability)));
+    const decisions = await Promise.all(capabilities.map((capability) => input.can(capability, candidate.requiredAccess)));
     if (decisions.some((decision) => !decision)) continue;
     const title = cleanUntrustedText(candidate.title, 200);
     const excerpt = cleanUntrustedText(candidate.excerpt, KNOWLEDGE_EXCERPT_LIMIT);

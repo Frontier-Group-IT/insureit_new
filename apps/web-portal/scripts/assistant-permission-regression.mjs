@@ -41,6 +41,14 @@ if (!permissionManagementSource.includes('capability === "use_assistant" ? "view
 for (const contract of ["employeeOverrideError || roleOverrideError", "employeeOverridesError || roleOverridesError", "permission_override_lookup_failed"]) {
   if (!permissionManagementSource.includes(contract)) fail(`effective permission resolution must fail closed: ${contract}`);
 }
+for (const contract of ["getEffectivePermissionFresh", "getEffectivePermissionAccessMapForRoleFresh"]) {
+  if (!permissionManagementSource.includes(`export async function ${contract}`)) fail(`per-tool authorization requires uncached resolver ${contract}`);
+}
+
+const assistantRouteSource = readFileSync(resolve(process.cwd(), "app/api/assistant/chat/route.ts"), "utf8");
+if (!assistantRouteSource.includes('.from("profiles").select("id,role,is_active")')) fail("each assistant tool authorization must re-read current role and active status");
+if (!assistantRouteSource.includes("getEffectivePermissionFresh") || !assistantRouteSource.includes("getEffectivePermissionAccessMapForRoleFresh")) fail("assistant tool authorization must bypass React request caches");
+if (assistantRouteSource.includes("hasEffectiveCapability(profile")) fail("assistant route must not reuse cached effective authorization");
 
 for (const capability of ["use_assistant", "manage_assistant_knowledge"]) {
   const shadowKeys = permissionsForLegacyCapability(capability);

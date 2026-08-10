@@ -15,6 +15,7 @@ const fake = createFakeAssistantProvider([
   { kind: "final", output: { answer: "Follow the approved renewal guide [source-1].", links: [{ label: "Renewal guide", href: "/knowledge/renewals" }], citations: [{ id: "source-1", title: "Renewal guide", href: "/knowledge/renewals" }] } },
 ]);
 const orchestrated = await runAssistant({
+  requestId: "request-1",
   actor,
   messages: [{ role: "user", content: "How do I renew?" }],
   currentPath: "/dashboard",
@@ -29,6 +30,7 @@ assert.equal(fake.calls.length, 2);
 assert.equal(fake.calls[1].messages.some((message) => message.role === "tool" && message.content.includes("untrusted_data")), true);
 assert.equal(fake.calls[1].messages.some((message) => message.role === "assistant" && message.toolCalls?.[0]?.id === "call-1"), true);
 assert.equal(auditEvents.some((event) => event.toolName === "search_approved_knowledge" && event.rowCount === 1), true);
+assert.equal(auditEvents.every((event) => event.requestId === "request-1"), true, "one request id correlates tool and request audit events");
 
 const uncitedKnowledge = await runAssistant({
   actor,
@@ -123,27 +125,32 @@ const rpcCalls = [];
 const postgresRepository = createPostgresKnowledgeRepository({
   async rpc(name, args) {
     rpcCalls.push({ name, args });
-    return { data: [{ source_id: "s1", title: "Approved", excerpt: "Safe", internal_path: "/knowledge/s1", required_capabilities: ["view_policies"] }], error: null };
+    return { data: [{ source_id: "s1", title: "Approved", excerpt: "Safe", internal_path: "/policies/new", required_capabilities: ["view_policies"], required_access: "edit", route_required_permissions: { view_customers: "view", view_vehicles: "view", view_policies: "edit" } }], error: null };
   },
-}, ["view_policies"]);
-assert.equal((await postgresRepository.searchApprovedActive("renewal", 99)).length, 1);
-assert.deepEqual(rpcCalls, [{ name: "search_approved_assistant_knowledge", args: { p_query: "renewal", p_capabilities: ["view_policies"], p_limit: 5 } }]);
+}, async () => ({ view_policies: "view" }));
+assert.equal((await postgresRepository.searchApprovedActive("renewal", 99)).length, 0, "view-only access cannot receive edit-oriented knowledge");
+assert.deepEqual(rpcCalls, [{ name: "search_approved_assistant_knowledge", args: { p_query: "renewal", p_capability_access: { view_policies: "view" }, p_limit: 5 } }]);
+
+const editRepository = createPostgresKnowledgeRepository({
+  async rpc() { return { data: [{ source_id: "s1", title: "Approved", excerpt: "Safe", internal_path: "/policies/new", required_capabilities: ["view_policies"], required_access: "edit", route_required_permissions: { view_customers: "view", view_vehicles: "view", view_policies: "edit" } }], error: null }; },
+}, async () => ({ view_customers: "view", view_vehicles: "view", view_policies: "edit" }));
+assert.equal((await editRepository.searchApprovedActive("renewal", 5)).length, 1);
 
 const queried = [];
 const repository = {
   async searchApprovedActive(query, limit) {
     queried.push({ query, limit });
     return [
-      { id: "allowed", title: "Policy guide", excerpt: "Approved instructions", href: "/knowledge/policy", requiredCapabilities: ["view_policies"] },
-      { id: "denied", title: "Claim guide", excerpt: "Should never reach the model", href: "/knowledge/claim", requiredCapabilities: ["view_claims"] },
-      { id: "bad-link", title: "External", excerpt: "Unsafe", href: "https://evil.example", requiredCapabilities: [] },
+      { id: "allowed", title: "Policy guide", excerpt: "Approved instructions", href: "/knowledge/policy", requiredCapabilities: ["view_policies"], requiredAccess: "edit" },
+      { id: "denied", title: "Claim guide", excerpt: "Should never reach the model", href: "/knowledge/claim", requiredCapabilities: ["view_claims"], requiredAccess: "view" },
+      { id: "bad-link", title: "External", excerpt: "Unsafe", href: "https://evil.example", requiredCapabilities: [], requiredAccess: "view" },
     ];
   },
 };
 const searched = await searchApprovedKnowledge({
   query: "policy",
   repository,
-  can: async (capability) => capability === "view_policies",
+  can: async (capability, minimumAccess) => capability === "view_policies" && minimumAccess === "edit",
 });
 assert.deepEqual(queried, [{ query: "policy", limit: 5 }]);
 assert.deepEqual(searched.map((source) => source.id), ["allowed"]);
@@ -168,26 +175,46 @@ const auditWriter = createMetadataOnlyAssistantAuditWriter({
   },
 });
 await auditWriter.write({
+  requestId: "request-audit-1",
   actorProfileId: actor.profileId,
   capability: "use_assistant",
   eventType: "tool",
   toolName: "search_navigation",
   allowed: true,
+  decision: "allowed",
   rowCount: 2,
   latencyMs: 12,
 });
-assert.equal(auditRows.length, 1);
-assert.deepEqual(Object.keys(auditRows[0]).sort(), ["actor_profile_id", "capability", "decision", "error_code", "latency_ms", "route", "row_count", "tool_name"]);
+await auditWriter.write({
+  requestId: "request-audit-2",
+  actorProfileId: actor.profileId,
+  capability: "use_assistant",
+  eventType: "request",
+  decision: "denied",
+  allowed: false,
+  rowCount: 0,
+  latencyMs: 1,
+  errorCode: "capability_denied",
+});
+assert.equal(auditRows.length, 2);
+assert.deepEqual(Object.keys(auditRows[0]).sort(), ["actor_profile_id", "capability", "decision", "error_code", "latency_ms", "request_id", "route", "row_count", "tool_name"]);
+assert.equal(auditRows[1].decision, "denied", "capability denial is not misclassified as an infrastructure error");
 assert.equal(JSON.stringify(auditRows).includes("renewal policy"), false);
 
 const routeSource = await readFile(new URL("../app/api/assistant/chat/route.ts", import.meta.url), "utf8");
+assert.ok(routeSource.indexOf("const authenticated =") < routeSource.indexOf("const envelope = validateRequestEnvelope"), "envelope denials are classified after authentication");
+assert.match(routeSource, /if \(!envelope\.ok\) return auditedResponse\("denied", envelope\.code/, "authenticated envelope denials require correlated auditing");
 for (const required of [
   "validateRequestEnvelope", "maxBodyBytes", "getAuthenticatedProfile", "isInternalEmployeeRole",
   "use_assistant", "getEffectivePermissionAccessMap", "acquireDistributedAssistantLease", "createConfiguredAssistantProvider",
   "createPostgresKnowledgeRepository", "createMetadataOnlyAssistantAuditWriter", "Cache-Control", "no-store",
   "createPermissionAwareNavigationResolver", "capability_denied",
+  "randomUUID", "requestId", "auditAuthenticatedRequest",
 ]) assert.equal(routeSource.includes(required), true, `route missing ${required}`);
-assert.match(routeSource, /createPostgresKnowledgeRepository\(admin,\s*allowedKnowledgeCapabilities\)/, "fixed knowledge RPC receives only server-derived capabilities");
+assert.doesNotMatch(routeSource, /catch\s*\{\s*\/\* A failed audit write must not turn a denial into access/, "authenticated denial auditing must not be suppressed");
+assert.match(routeSource, /createPostgresKnowledgeRepository\(admin,\s*resolvePermissionAccess\)/, "fixed knowledge RPC resolves fresh server-derived access levels for every search");
+assert.match(routeSource, /getEffectivePermissionFresh\(currentProfile\.id, currentProfile\.role, capability\)/, "each tool authorization bypasses request caching");
+assert.match(routeSource, /from\("profiles"\)\.select\("id,role,is_active"\)/, "each tool authorization revalidates current role and active status");
 assert.doesNotMatch(routeSource, /createSupabaseWithAccessToken/, "deny-by-default knowledge tables are not queried with the browser-scoped client");
 for (const forbidden of ["console.log", "console.error", "messages:", "answer:"]) {
   assert.equal(routeSource.includes(forbidden), false, `route must not log or persist content marker ${forbidden}`);

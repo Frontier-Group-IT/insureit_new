@@ -1,4 +1,5 @@
 import type { Capability } from "../roles.ts";
+import type { PermissionAccess } from "../permission-management.ts";
 // @ts-expect-error Direct Node strip-types regressions require the explicit .ts extension.
 import { searchApprovedKnowledge, type ApprovedKnowledgeRepository, type CapabilityCheck } from "./knowledge.ts";
 // @ts-expect-error Direct Node strip-types regressions require the explicit .ts extension.
@@ -9,17 +10,19 @@ const MAX_TOOL_ROUNDS = 3;
 const MAX_TOOL_RESULT_CHARACTERS = 10_000;
 
 export type AssistantActor = { profileId: string; role: string };
-export type NavigationCandidate = { label: string; href: string; requiredCapability?: Capability };
+export type NavigationCandidate = { label: string; href: string; requiredCapability?: Capability; requiredAccess?: Exclude<PermissionAccess, "none"> };
 export interface NavigationResolver {
   search(query: string, actor: AssistantActor): Promise<NavigationCandidate[]>;
 }
 
 export type AssistantAuditEvent = {
+  requestId: string;
   actorProfileId: string;
   capability: "use_assistant";
   eventType: "tool" | "request";
   toolName?: "search_navigation" | "search_approved_knowledge";
   allowed: boolean;
+  decision: "allowed" | "denied" | "error";
   rowCount: number;
   latencyMs: number;
   errorCode?: string;
@@ -48,6 +51,7 @@ async function auditRequired(writer: AssistantUsageAuditWriter, event: Assistant
 }
 
 export async function runAssistant(input: {
+  requestId: string;
   actor: AssistantActor;
   messages: AssistantInputMessage[];
   currentPath: string;
@@ -68,8 +72,10 @@ export async function runAssistant(input: {
   let toolCharacters = 0;
   let usedTool = false;
   let requestErrorCode: string | undefined;
+  let requestDecision: AssistantAuditEvent["decision"] = "allowed";
   const fail = (code: NonNullable<AssistantRunResult["code"]>, answer: string) => {
     requestErrorCode = code;
+    requestDecision = "denied";
     return abstention(code, answer);
   };
 
@@ -106,11 +112,13 @@ export async function runAssistant(input: {
           toolResult = await executeTool(call, input, sourceById, allowedHrefs);
         } catch {
           await auditRequired(input.audit, {
+            requestId: input.requestId,
             actorProfileId: input.actor.profileId,
             capability: "use_assistant",
             eventType: "tool",
             toolName: call.name,
             allowed: false,
+            decision: "error",
             rowCount: 0,
             latencyMs: Date.now() - toolStartedAt,
             errorCode: "tool_failed",
@@ -119,11 +127,13 @@ export async function runAssistant(input: {
           throw new Error("assistant_tool_unavailable");
         }
         await auditRequired(input.audit, {
+          requestId: input.requestId,
           actorProfileId: input.actor.profileId,
           capability: "use_assistant",
           eventType: "tool",
           toolName: call.name,
           allowed: toolResult.allowed,
+          decision: toolResult.allowed ? "allowed" : "denied",
           rowCount: toolResult.rowCount,
           latencyMs: Date.now() - toolStartedAt,
           errorCode: toolResult.errorCode,
@@ -143,9 +153,10 @@ export async function runAssistant(input: {
     return fail("tool_budget_exceeded", "I couldn't complete that request within the safe lookup limit.");
   } catch (error) {
     requestErrorCode = "assistant_request_failed";
+    requestDecision = "error";
     throw error;
   } finally {
-    await auditRequired(input.audit, { actorProfileId: input.actor.profileId, capability: "use_assistant", eventType: "request", allowed: !requestErrorCode, rowCount: 0, latencyMs: Date.now() - startedAt, errorCode: requestErrorCode, route: input.currentPath });
+    await auditRequired(input.audit, { requestId: input.requestId, actorProfileId: input.actor.profileId, capability: "use_assistant", eventType: "request", allowed: requestDecision === "allowed", decision: requestDecision, rowCount: 0, latencyMs: Date.now() - startedAt, errorCode: requestErrorCode, route: input.currentPath });
   }
 }
 
@@ -168,7 +179,7 @@ async function executeTool(
     const allowed: NavigationCandidate[] = [];
     for (const candidate of candidates) {
       if (!safeNavigation(candidate)) continue;
-      if (candidate.requiredCapability && !(await input.can(candidate.requiredCapability))) continue;
+      if (candidate.requiredCapability && !(await input.can(candidate.requiredCapability, candidate.requiredAccess))) continue;
       allowed.push(candidate);
       allowedHrefs.add(candidate.href);
     }

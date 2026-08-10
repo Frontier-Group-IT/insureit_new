@@ -4,6 +4,7 @@ type AuditInsertResult = { error: { message?: string } | null };
 type AuditClient = {
   from(table: "assistant_usage_events"): {
     insert(row: {
+      request_id: string;
       actor_profile_id: string;
       capability: "use_assistant";
       decision: "allowed" | "denied" | "error";
@@ -21,9 +22,10 @@ export function createMetadataOnlyAssistantAuditWriter(client: AuditClient): Ass
   return {
     async write(event: AssistantAuditEvent) {
       const { error } = await client.from("assistant_usage_events").insert({
+        request_id: event.requestId,
         actor_profile_id: event.actorProfileId,
         capability: event.capability,
-        decision: event.errorCode ? "error" : event.allowed ? "allowed" : "denied",
+        decision: event.decision,
         tool_name: event.toolName ?? null,
         route: event.route ?? null,
         row_count: Math.max(0, Math.trunc(event.rowCount)),

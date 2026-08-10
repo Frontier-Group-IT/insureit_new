@@ -19,8 +19,8 @@ function workbookFile({ extraSheet = false, hiddenKnowledge = false, formula = f
     ["classification", "internal"],
   ]), "Metadata");
   const knowledge = XLSX.utils.aoa_to_sheet([
-    ["Route", "Title", "Content", "Tags", "Source Reference", "Required Capabilities"],
-    ["/claims/intake", "Claim intake", "Follow the approved claim intake checklist.", "claims, intake", "SOP-CLAIMS-01", "view_claims"],
+    ["Route", "Title", "Content", "Tags", "Source Reference", "Required Capabilities", "Minimum Access"],
+    ["/claims/intake", "Claim intake", "Follow the approved claim intake checklist.", "claims, intake", "SOP-CLAIMS-01", "view_claims", "view"],
   ]);
   if (formula) knowledge.A2 = { t: "s", f: "HYPERLINK(\"https://evil.example\")", v: "/claims/intake" };
   XLSX.utils.book_append_sheet(workbook, knowledge, "Knowledge");
@@ -51,7 +51,7 @@ function injectEntry(file, name, content = "<x/>") {
 }
 
 const parsed = await parseAssistantKnowledgeWorkbook(workbookFile());
-if (parsed.metadata.knowledgeBaseName !== "Operations" || parsed.metadata.contentVersion !== 1 || parsed.entries.length !== 1 || parsed.entries[0].route !== "/claims/intake" || parsed.entries[0].requiredCapabilities[0] !== "view_claims") {
+if (parsed.metadata.knowledgeBaseName !== "Operations" || parsed.metadata.contentVersion !== 1 || parsed.entries.length !== 1 || parsed.entries[0].route !== "/claims/intake" || parsed.entries[0].requiredCapabilities[0] !== "view_claims" || parsed.entries[0].requiredAccess !== "view") {
   fail("valid controlled workbook did not parse");
 }
 await expectReject("unexpected sheet", workbookFile({ extraSheet: true }), "exactly the metadata and knowledge sheets");

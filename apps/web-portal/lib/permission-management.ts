@@ -61,7 +61,7 @@ export function permissionModules() {
   return Array.from(new Set(permissionDefinitions.map((item) => item.module)));
 }
 
-export const getEffectivePermission = cache(async (profileId: string, role: AppRole, capability: Capability) => {
+export async function getEffectivePermissionFresh(profileId: string, role: AppRole, capability: Capability) {
   // IT Super User is the protected developer role. It must always retain full
   // organisation-wide access and must never be downgraded by role or employee
   // override rows created through the permission-management interface.
@@ -79,9 +79,11 @@ export const getEffectivePermission = cache(async (profileId: string, role: AppR
   if (employeeOverride && employeeOverride.access_level !== "inherit") return { access: employeeOverride.access_level as PermissionAccess, scope: employeeOverride.scope_type as PermissionScope, source: "employee_override" as const };
   if (roleOverride) return { access: roleOverride.access_level as PermissionAccess, scope: roleOverride.scope_type as PermissionScope, source: "role_override" as const };
   return { access: rolePermissionAccess(role, capability), scope: "role_default" as const, source: "role" as const };
-});
+}
 
-export const getEffectivePermissionAccessMapForRole = cache(async (profileId: string, role: AppRole) => {
+export const getEffectivePermission = cache(getEffectivePermissionFresh);
+
+export async function getEffectivePermissionAccessMapForRoleFresh(profileId: string, role: AppRole) {
   if (role === "it_super_user") {
     return Object.fromEntries(permissionDefinitions.map(({ capability }) => [capability, "approve" as const])) as Partial<Record<Capability, PermissionAccess>>;
   }
@@ -116,7 +118,9 @@ export const getEffectivePermissionAccessMapForRole = cache(async (profileId: st
       ?? rolePermissionAccess(role, capability);
     return [capability, access] as const;
   })) as Partial<Record<Capability, PermissionAccess>>;
-});
+}
+
+export const getEffectivePermissionAccessMapForRole = cache(getEffectivePermissionAccessMapForRoleFresh);
 
 export function roleCapabilityCount(role: AppRole) {
   return roleCapabilities[role].length;
