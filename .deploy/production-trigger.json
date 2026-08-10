@@ -1,10 +1,10 @@
 {
-  "purpose": "Explicitly retrigger the Vercel production deployment for the approved POSP/MISP Eye action after the deployment-blocking TypeScript correction.",
-  "deploy_requested_at": "2026-08-10T10:22:00+05:30",
+  "purpose": "Deploy the approved clickable linked POSP/MISP summary ID from PR #232 to production.",
+  "deploy_requested_at": "2026-08-10T11:38:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT POSP/MISP eye action release with typecheck correction",
-  "source_commit": "deb37969685d5990bb563719f025454facd0bb46",
-  "release_scope": "Deploy PR #229 plus corrective PR #230. Replace the POSP/MISP text Open action with a compact Eye icon, keep the exact application review destination, retain an accessible sr-only View application label, and preserve rows without application IDs, search, filters, status logic, permissions, IDs, and routing behavior.",
-  "verification": "Initial production run #96 failed at TypeScript because FreshAccountReviewLink does not accept title. Corrective PR #230 removes unsupported link props and keeps accessibility with an sr-only label; it was squash merged into main as deb37969685d5990bb563719f025454facd0bb46. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
+  "source": "ChatGPT linked POSP/MISP summary ID release",
+  "source_commit": "21118c72506dfc992d1cc63fa445045282a94e46",
+  "release_scope": "Deploy PR #232. Make the linked POSP/MISP ID in Partner Application Review clickable, route it to the existing linked POSP/MISP application review page, show a compact Eye icon as part of the same click target, keep Not Created non-interactive, and preserve existing linked-account discovery, Parent Partner styling, database queries, permissions, activation, and workflow behavior.",
+  "verification": "PR #232 was squash merged into main as 21118c72506dfc992d1cc63fa445045282a94e46. Final PR app diff is one file, +4/-2. Full lint/typecheck/build were not run before merge. GitHub deployment workflow must succeed and Vercel must report READY for the exact resulting production deployment before production success is claimed.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
