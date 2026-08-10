@@ -4,6 +4,8 @@ import {
   legacyCapabilityCompatibilityMap,
   permissionCatalogueV2,
 } from "../lib/access-control-catalogue-v2.ts";
+import { appRoles } from "../lib/roles.ts";
+import { roleMatrixV2 } from "../lib/access-control-role-matrix-v2.ts";
 
 function fail(message) {
   throw new Error(`[access-control-v2] ${message}`);
@@ -16,6 +18,7 @@ if (uniqueKeys.size !== keys.length) {
   fail(`duplicate permission keys: ${Array.from(new Set(duplicates)).join(", ")}`);
 }
 
+const permissionByKey = new Map(permissionCatalogueV2.map((permission) => [permission.key, permission]));
 const validAccess = new Set(accessLevels.filter((level) => level !== "none"));
 const validScopes = new Set(dataScopes);
 
@@ -44,6 +47,58 @@ for (const [legacyCapability, mappedPermissions] of Object.entries(legacyCapabil
   }
 }
 
+const employeeRoleCodes = appRoles.filter((role) => role !== "customer" && role !== "intermediary");
+const matrixRoleCodes = roleMatrixV2.map((role) => role.code);
+if (new Set(matrixRoleCodes).size !== matrixRoleCodes.length) fail("role matrix contains duplicate role codes");
+for (const role of employeeRoleCodes) {
+  if (!matrixRoleCodes.includes(role)) fail(`employee role ${role} is missing from the V2 role matrix`);
+}
+for (const role of matrixRoleCodes) {
+  if (!employeeRoleCodes.includes(role)) fail(`V2 role matrix contains unexpected employee role ${role}`);
+}
+
+for (const role of roleMatrixV2) {
+  if (!validScopes.has(role.defaultScope)) fail(`${role.code} has invalid default scope ${role.defaultScope}`);
+  if (role.status !== "active" && role.assignable) fail(`${role.code} is ${role.status} but still assignable`);
+  const grantKeys = role.grants.map((grant) => grant.permission);
+  if (new Set(grantKeys).size !== grantKeys.length) fail(`${role.code} contains duplicate permission grants`);
+
+  for (const roleGrant of role.grants) {
+    const permission = permissionByKey.get(roleGrant.permission);
+    if (!permission) fail(`${role.code} references missing permission ${roleGrant.permission}`);
+    if (!permission.allowedAccess.includes(roleGrant.access)) {
+      fail(`${role.code} requests invalid access ${roleGrant.access} for ${roleGrant.permission}`);
+    }
+    if (permission.scopeRequired && !roleGrant.scope) {
+      fail(`${role.code} must declare a scope for ${roleGrant.permission}`);
+    }
+    if (roleGrant.scope && !permission.allowedScopes.includes(roleGrant.scope)) {
+      fail(`${role.code} requests invalid scope ${roleGrant.scope} for ${roleGrant.permission}`);
+    }
+  }
+}
+
+const itSuperUser = roleMatrixV2.find((role) => role.code === "it_super_user");
+if (!itSuperUser || itSuperUser.status !== "protected" || itSuperUser.assignable) {
+  fail("IT Super User must remain protected and non-assignable");
+}
+if (itSuperUser.grants.length !== permissionCatalogueV2.length) {
+  fail("IT Super User must cover every V2 permission");
+}
+
+for (const code of ["manager", "agent"]) {
+  const role = roleMatrixV2.find((entry) => entry.code === code);
+  if (!role || role.status !== "compatibility" || role.assignable) {
+    fail(`${code} must remain a non-assignable compatibility role during migration`);
+  }
+}
+
+for (const role of roleMatrixV2.filter((entry) => entry.code !== "it_super_user")) {
+  if (role.grants.some((grant) => grant.permission === "system.integrations.configure")) {
+    fail(`${role.code} must not receive protected integration configuration in the shadow matrix`);
+  }
+}
+
 const criticalPermissions = permissionCatalogueV2.filter((permission) => permission.risk === "critical");
 if (!criticalPermissions.length) fail("catalogue unexpectedly contains no critical permissions");
 
@@ -51,5 +106,7 @@ console.log(JSON.stringify({
   permissionCount: permissionCatalogueV2.length,
   legacyCapabilityCount: Object.keys(legacyCapabilityCompatibilityMap).length,
   criticalPermissionCount: criticalPermissions.length,
+  roleCount: roleMatrixV2.length,
+  assignableRoleCount: roleMatrixV2.filter((role) => role.assignable).length,
   status: "ok",
 }, null, 2));
