@@ -191,6 +191,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
       ]
     : [
         { icon: "account" as IconName, label: "Account Type", value: accountType },
+        { icon: "id" as IconName, label: "Account Status", value: intermediary?.account_status ? pretty(intermediary.account_status) : "Under Onboarding" },
         { icon: "link" as IconName, label: "Parent Partner", value: partnerId ?? "Pending", href: parentApplication ? `/intermediaries/applications/${parentApplication.id}` : undefined },
         { icon: "rm" as IconName, label: "Assigned RM", value: profile.associate_name ?? "Not assigned" },
         { icon: "portal" as IconName, label: "Portal Access", value: portalAccessLabel(intermediary?.portal_access_status), portalAction: portalAccessAction(intermediary?.portal_access_status), intermediaryId: intermediary?.id, returnPath },
@@ -223,7 +224,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
               {isPartner ? <CompactLink href={`/intermediaries/applications/${id}/workflow?stage=primary`} label="Edit details" secondary /> : null}
             </div>
           </div>
-          <div className={`grid border-t border-white/15 sm:grid-cols-2 ${isPartner ? "xl:grid-cols-6" : "xl:grid-cols-5"}`}>{stats.map((stat) => <HeaderStat key={stat.label} {...stat} />)}</div>
+          <div className="grid border-t border-white/15 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">{stats.map((stat) => <HeaderStat key={stat.label} {...stat} />)}</div>
         </section>
 
         <section id="overview" className={!isPartner && !onboardingComplete ? "-mt-2 space-y-4" : "space-y-4"}>
@@ -324,13 +325,13 @@ function Card({ title, count, children }: { title: string; count?: number; child
 type PortalAccessAction = "create_user" | "resend_link";
 function HeaderStat({ icon, label, value, href, showViewIcon = false, portalAction, intermediaryId, returnPath }: { icon: IconName; label: string; value: string; href?: string; showViewIcon?: boolean; portalAction?: PortalAccessAction; intermediaryId?: string; returnPath?: string }) {
   const portalActionNode = portalAction && intermediaryId && returnPath ? (
-    <form action={portalAction === "create_user" ? createIntermediaryPortalLogin : resendIntermediaryPortalInvite} className="mt-1">
+    <form action={portalAction === "create_user" ? createIntermediaryPortalLogin : resendIntermediaryPortalInvite} className="mt-0.5 leading-none">
       <input type="hidden" name="intermediary_id" value={intermediaryId} />
       <input type="hidden" name="return_path" value={returnPath} />
-      <FormSubmitButton label={value} pendingLabel={portalAction === "create_user" ? "Creating…" : "Sending…"} className="h-auto min-h-0 p-0 text-[10.5px] font-semibold text-white underline-offset-2 transition hover:text-[#C7D2FE] hover:underline" />
+      <FormSubmitButton label={value} pendingLabel={portalAction === "create_user" ? "Creating…" : "Sending…"} className="h-auto min-h-0 p-0 text-[10.5px] font-semibold leading-[1.15] text-white underline-offset-2 transition hover:text-[#C7D2FE] hover:underline" />
     </form>
   ) : null;
-  return <div className="flex min-w-0 items-center gap-3 border-white/15 px-4 py-4 xl:border-r xl:last:border-r-0"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/20 bg-white/10 text-white"><Icon name={icon} className="h-4 w-4" /></span><div className="min-w-0"><div className="flex items-center gap-1.5"><p className="text-[8px] font-semibold uppercase tracking-[.05em] text-white/60">{label}</p>{href && showViewIcon ? <Link href={href} aria-label={`View ${label} application`} className="inline-flex shrink-0 text-white/70 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"><EyeIcon /></Link> : null}</div>{portalActionNode ?? (href ? <Link href={href} className="mt-1 block truncate text-[10.5px] font-semibold text-white underline-offset-2 transition hover:text-[#C7D2FE] hover:underline">{value}</Link> : <p className="mt-1 truncate text-[10.5px] font-semibold text-white">{value}</p>)}</div></div>;
+  return <div className="flex min-w-0 items-center gap-3 border-white/15 px-4 py-4 xl:border-r xl:last:border-r-0"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/20 bg-white/10 text-white"><Icon name={icon} className="h-4 w-4" /></span><div className="min-w-0 flex-1"><div className="flex min-w-0 items-center gap-1.5"><p className="truncate text-[8px] font-semibold uppercase leading-none tracking-[.05em] text-white/60">{label}</p>{href && showViewIcon ? <Link href={href} aria-label={`View ${label} application`} className="inline-flex shrink-0 text-white/70 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"><EyeIcon /></Link> : null}</div>{portalActionNode ?? (href ? <Link href={href} className="mt-0.5 block truncate text-[10.5px] font-semibold leading-[1.15] text-white underline-offset-2 transition hover:text-[#C7D2FE] hover:underline">{value}</Link> : <p className="mt-0.5 truncate text-[10.5px] font-semibold leading-[1.15] text-white">{value}</p>)}</div></div>;
 }
 function Info({ label, value }: { label: string; value: string }) { return <div className="flex min-w-0 items-baseline gap-1.5 text-[10.5px] leading-5"><dt className="shrink-0 font-semibold text-[#64748B]">{label}:</dt><dd className="min-w-0 break-words font-semibold text-[#0F172A]">{value}</dd></div>; }
 function Id({ value, active = false }: { value: string; active?: boolean }) { return <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold">{value}{active ? <span className="grid h-4 w-4 place-items-center rounded-full bg-emerald-500 text-white"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-2.5 w-2.5" aria-hidden="true"><path d="M3.5 8.5 6.5 11 12.5 5" /></svg></span> : null}</span>; }
