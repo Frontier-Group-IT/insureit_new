@@ -103,19 +103,31 @@ export function PospMispApplicationEditor({ applicationId, profile, workflowStag
   const showReview = activeView === "review";
   const slots = useMemo(() => buildIntermediaryDocumentSlots({ legacy: legacyDocuments, hasGst: Boolean(profile.gst_number) }), [legacyDocuments, profile.gst_number]);
   const requiredSlots = slots.filter((slot) => slot.required);
-  const documentsReady = requiredSlots.every((slot) => Boolean(findDocumentForSlot(slot, documents)) || selectedFiles[slot.key]);
+  const requiredUploadedCount = requiredSlots.filter((slot) => Boolean(findDocumentForSlot(slot, documents)) || selectedFiles[slot.key]).length;
+  const requiredRemainingCount = Math.max(requiredSlots.length - requiredUploadedCount, 0);
+  const documentsReady = requiredRemainingCount === 0;
   const actionBar = editable && (showPrimary || showDocuments) ? (
-    <div className={`${actionTargetId ? "flex flex-col gap-3 rounded-2xl border border-[#DCE5EF] bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between" : "sticky bottom-0 z-10 flex items-center justify-between gap-3 border-t border-[#DCE5EF] bg-white/95 px-5 py-3 backdrop-blur"}`}>
-      {showDocuments ? <Link href={`/intermediaries/applications/${applicationId}/workflow?stage=primary`} className="rounded-xl border px-4 py-2.5 text-[10.5px] font-semibold">Back to Primary</Link> : <span />}
-      <div className="text-right">
-        {showDocuments && !documentsReady ? <p className="mb-1 text-[8.5px] font-semibold text-amber-700">Attach every mandatory document before saving.</p> : null}
-        {showPrimary ? (
+    <div className={`${actionTargetId ? "flex flex-col gap-3 rounded-2xl border border-[#DCE5EF] bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between" : showDocuments ? "fixed bottom-0 left-0 right-0 z-40 border-t border-[#D9E2F0] bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(15,23,42,.08)] backdrop-blur" : "sticky bottom-0 z-10 flex items-center justify-between gap-3 border-t border-[#DCE5EF] bg-white/95 px-5 py-3 backdrop-blur"}`}>
+      {showDocuments ? (
+        <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-[9.5px] font-medium text-[#64748B]">
+            <span className="font-semibold text-[#334155]">Required documents: {requiredUploadedCount}/{requiredSlots.length} uploaded</span>
+            {!documentsReady ? <span className="ml-2 text-amber-700">· {requiredRemainingCount} left</span> : <span className="ml-2 text-emerald-700">· Complete</span>}
+          </div>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Link href={`/intermediaries/applications/${applicationId}/workflow?stage=primary`} className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-2.5 text-[10.5px] font-semibold text-[#334155] hover:border-[#94A3B8] hover:bg-[#F8FAFC]">Back to Primary</Link>
+            <FormSubmitButton form={formId} label="Save Documents" pendingLabel="Saving documents…" className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10.5px] font-semibold text-white hover:bg-[#102A49]" />
+          </div>
+        </div>
+      ) : <>
+        <span />
+        <div className="text-right">
           <div className="flex flex-col gap-2 sm:flex-row">
             <FormSubmitButton form={formId} name="submit_intent" value="exit" label="Save & Exit" pendingLabel="Saving & exiting…" forcePending={submittingIntent === "exit"} className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-2.5 text-[10.5px] font-semibold text-[#334155] hover:border-[#94A3B8] hover:bg-[#F8FAFC]" />
             <FormSubmitButton form={formId} name="submit_intent" value="documents" label="Save & return to documents" pendingLabel="Saving & opening documents…" forcePending={submittingIntent === "documents"} />
           </div>
-        ) : <FormSubmitButton form={formId} label="Save documents" pendingLabel="Saving" />}
-      </div>
+        </div>
+      </>}
     </div>
   ) : null;
 
@@ -183,7 +195,7 @@ export function PospMispApplicationEditor({ applicationId, profile, workflowStag
           </section>
         ) : null}
 
-        {showDocuments ? <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm"><Header number="2" title="Documents" /><div className="p-4"><IntermediaryDocumentGrid documents={documents} legacy={legacyDocuments} hasGst={Boolean(profile.gst_number)} editable={editable} missingDocument={missingDocument} onFileSelection={handleFileChange} /></div></section> : null}
+        {showDocuments ? <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm"><div className="flex flex-col gap-2 border-b border-[#E4EAF1] bg-[#FBFCFE] px-4 py-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-[13px] font-semibold text-[#17203A]">Documents</h2><p className="mt-0.5 text-[9px] font-medium text-[#64748B]">{requiredUploadedCount} of {requiredSlots.length} required documents uploaded</p></div><span className={`w-fit rounded-full px-2.5 py-1 text-[8.5px] font-semibold ${documentsReady ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{documentsReady ? "Required complete" : `${requiredRemainingCount} required left`}</span></div><div className="p-4"><IntermediaryDocumentGrid documents={documents} legacy={legacyDocuments} hasGst={Boolean(profile.gst_number)} editable={editable} missingDocument={missingDocument} onFileSelection={handleFileChange} /></div></section> : null}
 
         {showReview ? <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm"><Header number="3" title="Final review" subtitle="Review the saved details and attached documents." /><div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3"><Summary label="Application type" value={profile.partner_type.toUpperCase()} /><Summary label="Partner ID" value={profile.partner_id ?? "Pending until Stage 2"} /><Summary label="Applicant" value={(isMisp ? profile.misp_name : profile.pos_name) ?? "-"} /><Summary label="Email" value={(isMisp ? profile.dp_email : profile.applicant_email) ?? "-"} /><Summary label="Documents" value={`${documents.length} attached`} /><Summary label="PAN used for IIB" value={(isMisp ? profile.dp_pan_number : profile.pan_number) ?? "-"} /></div></section> : null}
       </div>

@@ -36,32 +36,7 @@
   background: rgba(255, 255, 255, 0.12) !important;
 }
 
-/* Stage rail: no card/background, only the step indicators and connector. */
-.workflowTheme :global([class*="max-w-[1480px]"] > nav) {
-  border: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
-  padding: 0.65rem 0.25rem !important;
-}
-
-.workflowTheme :global([class*="max-w-[1480px]"] > nav a > span:first-child) {
-  box-shadow: none !important;
-}
-
-.workflowTheme :global([class*="max-w-[1480px]"] > nav span[class*="bg-emerald-600"]) {
-  border-color: var(--workflow-navy) !important;
-  background: transparent !important;
-  color: var(--workflow-navy) !important;
-}
-
-.workflowTheme :global([class*="max-w-[1480px]"] > nav span[class*="bg-[#F1F5F9]"]) {
-  background: transparent !important;
-}
-
-.workflowTheme :global([class*="max-w-[1480px]"] > nav span[class*="text-emerald-800"]) {
-  color: var(--workflow-navy) !important;
-}
+/* Workflow navigation now uses the compact sticky onboarding bar from the shared onboarding visual language. */
 
 /* Remove the outer card treatment and use the same compact vertical rhythm as Account Review. */
 .workflowTheme :global([class*="max-w-[1480px]"] > main) {

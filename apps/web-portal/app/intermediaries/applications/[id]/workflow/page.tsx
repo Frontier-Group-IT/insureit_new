@@ -13,7 +13,6 @@ import { IibSubmissionStage } from "@/app/intermediaries/applications/iib-submis
 import { WorkflowResultDialog } from "@/app/intermediaries/applications/workflow-result-dialog";
 import { WorkflowErrorDialog } from "@/app/intermediaries/applications/workflow-error-dialog";
 import { WorkflowSuccessToast } from "@/app/intermediaries/applications/workflow-success-toast";
-import { IntermediaryJourneyStep } from "@/app/intermediaries/applications/intermediary-journey-step";
 import { IntermediaryDocumentUploadController } from "@/app/intermediaries/applications/intermediary-document-upload-controller";
 import { ExistingIntermediaryMigrationEditor } from "../existing-intermediary-migration-editor";
 
@@ -188,27 +187,30 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
       <WorkflowResultDialog applicationId={id} event={popupEvent} />
       <WorkflowErrorDialog applicationId={id} message={normalizedError.message} field={normalizedError.field} />
       <div className="mx-auto max-w-[1480px] space-y-4 pb-8">
-        <section className="rounded-2xl border border-[#DCE5EF] bg-white/80 px-5 py-4 shadow-sm backdrop-blur">
+        <section className="overflow-hidden rounded-t-2xl border border-b-0 border-[#17365D] bg-[#17365D] px-4 py-4 text-white sm:px-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-xl font-semibold text-white">{title}</h1>
-              {permanentReference ? <span className="rounded-lg border border-white/25 bg-white/10 px-2.5 py-1 text-[9.5px] font-semibold text-white">{permanentReference}</span> : null}
-              {onboardingComplete ? <span className="rounded-full border border-emerald-300/60 bg-emerald-400/20 px-2.5 py-1 text-[9px] font-bold text-emerald-50">✓ Onboarding complete</span> : null}
+            <div className="min-w-0">
+              <h1 className="text-[18px] font-semibold text-white">{profile.partner_type.toUpperCase()} Onboarding</h1>
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-[9.5px] font-medium text-white/75">
+                <span className="truncate">{title}</span>
+                {permanentReference ? <><span className="text-white/35">·</span><span>{permanentReference}</span></> : null}
+                {onboardingComplete ? <><span className="text-white/35">·</span><span>Onboarding complete</span></> : null}
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="font-mono text-[15px] font-semibold tracking-wide text-[#334155]">{maskPan(verificationPan)}</span>
-              <span title={iibStatus.detail ?? iibStatus.label} className={`rounded-lg px-3 py-1.5 text-[9.5px] font-semibold ${iibStatus.badgeClassName}`}>{iibStatus.code === "cleared" ? "✓ " : ""}{iibStatus.label}</span>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="font-mono text-[11px] font-semibold tracking-wide text-white/90">{maskPan(verificationPan)}</span>
+              <span title={iibStatus.detail ?? iibStatus.label} className={`rounded-lg border border-white/20 bg-white/10 px-2.5 py-1.5 text-[9px] font-semibold text-white ${iibStatus.badgeClassName}`}>{iibStatus.code === "cleared" ? "✓ " : ""}{iibStatus.label}</span>
             </div>
           </div>
         </section>
-
-        {query.success && !popupEvent ? <WorkflowSuccessToast message={successes[query.success] ?? "Saved successfully."} /> : null}
 
         {!onboardingComplete ? (context === "partner" ? (
           <PartnerTwoStepNavigation applicationId={id} viewStage={viewStage} documentsComplete={documentsComplete} partnerActive={application.partner_status === "active_partner"} />
         ) : (
           <SixStepNavigation viewStage={viewStage} documentsComplete={documentsComplete} registrationComplete={registrationComplete} trainingExamComplete={trainingExamComplete} agreementSigned={agreementSigned} iibUploaded={iibUploaded} />
         )) : null}
+
+        {query.success && !popupEvent ? <WorkflowSuccessToast message={successes[query.success] ?? "Saved successfully."} /> : null}
 
         <IntermediaryDocumentUploadController applicationId={id} enabled={viewStage === "documents" && editable} showGst={Boolean(profile.gst_number)} />
         <main className="overflow-hidden rounded-2xl border bg-white">
@@ -261,21 +263,17 @@ function stageVisibilityClass(stage: ViewStage) {
 }
 
 function PartnerTwoStepNavigation({ applicationId, viewStage, documentsComplete, partnerActive }: { applicationId: string; viewStage: ViewStage; documentsComplete: boolean; partnerActive: boolean }) {
-  const current = viewStage === "primary" ? 1 : 2;
   const steps = [
     ["primary", "Primary details", `/intermediaries/applications/${applicationId}/workflow?stage=primary`],
-    ["documents", "Partner documents", `/intermediaries/applications/${applicationId}/workflow?stage=documents`],
+    ["documents", "Documents", `/intermediaries/applications/${applicationId}/workflow?stage=documents`],
   ] as const;
   return (
-    <nav className="rounded-2xl border border-[#DCE5EF] bg-white/85 px-5 py-5 shadow-sm backdrop-blur">
-      <div className="relative mx-auto grid max-w-[760px] grid-cols-2 gap-0 before:absolute before:left-[25%] before:right-[25%] before:top-[18px] before:h-px before:bg-[#CBD5E1] before:content-['']">
-        {steps.map((step, index) => {
-          const number = index + 1;
-          const completed = partnerActive || number < current || (number === 1 && current > 1) || (number === 2 && documentsComplete);
-          const active = number === current && !completed;
-          return <Link key={step[0]} href={step[2]} className="relative z-[1] min-w-0 text-center"><span className={`mx-auto grid h-9 w-9 place-items-center rounded-full border text-[11px] font-bold shadow-[0_0_0_7px_#F8FAFC] transition ${completed ? "border-emerald-600 bg-emerald-600 text-white" : active ? "border-[#071D49] bg-[#071D49] text-white" : "border-[#D7E0EB] bg-[#F1F5F9] text-[#94A3B8]"}`}>{completed ? "✓" : number}</span><span className={`mt-2 block truncate text-[10.5px] font-semibold ${active ? "text-[#071D49]" : completed ? "text-emerald-800" : "text-[#64748B]"}`}>{step[1]}</span><span className="mt-0.5 block text-[8.5px] font-medium text-[#64748B]">{completed ? "Completed" : active ? "Current" : "Upcoming"}</span></Link>;
-        })}
-      </div>
+    <nav className="sticky top-[66px] z-30 mb-4 grid grid-cols-2 overflow-hidden rounded-b-2xl border border-t-0 border-[#D9E2F0] bg-white/95 shadow-[0_7px_18px_rgba(15,23,42,.08)] backdrop-blur" aria-label="Onboarding progress">
+      {steps.map(([stage, label, href], index) => {
+        const completed = partnerActive || (stage === "primary" && viewStage !== "primary") || (stage === "documents" && documentsComplete);
+        const active = stage === viewStage;
+        return <Link key={stage} href={href} aria-current={active ? "step" : undefined} className={`flex min-w-0 items-center justify-center gap-2 px-3 py-2.5 text-[9.5px] font-semibold transition ${index === 0 ? "border-r border-[#E4EAF1]" : ""} ${active ? "bg-[#EEF2FF] text-[#3730A3]" : "text-[#526277] hover:bg-[#F7F9FC] hover:text-[#17365D]"}`}><span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[8px] font-bold ${completed ? "bg-emerald-50 text-emerald-700" : active ? "bg-[#4F46E5] text-white" : "bg-[#EEF3F8] text-[#64748B]"}`}>{completed ? "✓" : index + 1}</span><span className="truncate">{label}</span>{completed ? <span className="hidden text-[8px] font-semibold text-emerald-700 sm:inline">Complete</span> : active ? <span className="hidden text-[8px] font-semibold text-[#4F46E5] sm:inline">Current</span> : null}</Link>;
+      })}
     </nav>
   );
 }
@@ -284,12 +282,12 @@ function SixStepNavigation({ viewStage, documentsComplete, registrationComplete,
   const completion: Record<ViewStage, boolean> = { primary: true, documents: documentsComplete, registration: registrationComplete, training: trainingExamComplete, agreement: agreementSigned, iib: iibUploaded };
   const steps: Array<[ViewStage, string]> = [["primary", "Primary details"], ["documents", "Documents"], ["registration", "Registration"], ["training", "Training & Exam"], ["agreement", "Agreement"], ["iib", "IIB Upload"]];
   return (
-    <nav className="-mt-2 overflow-x-auto rounded-2xl border border-[#DCE5EF] bg-white/85 px-5 py-3 shadow-sm backdrop-blur" aria-label="Onboarding progress">
-      <div className="relative grid min-w-[900px] grid-cols-6 gap-0">
+    <nav className="sticky top-[66px] z-30 mb-4 overflow-x-auto rounded-b-2xl border border-t-0 border-[#D9E2F0] bg-white/95 shadow-[0_7px_18px_rgba(15,23,42,.08)] backdrop-blur" aria-label="Onboarding progress">
+      <div className="grid min-w-[780px] grid-cols-6">
         {steps.map(([stage, label], index) => {
           const completed = completion[stage];
-          const active = stage === viewStage && !completed;
-          return <div key={stage} className="relative z-[1] min-w-0 cursor-default text-center" aria-current={active ? "step" : undefined}><IntermediaryJourneyStep label={label} completed={completed} active={active} index={index} /></div>;
+          const active = stage === viewStage;
+          return <div key={stage} aria-current={active ? "step" : undefined} className={`flex min-w-0 items-center justify-center gap-2 px-2.5 py-2.5 text-[9px] font-semibold ${index < steps.length - 1 ? "border-r border-[#E4EAF1]" : ""} ${active ? "bg-[#EEF2FF] text-[#3730A3]" : "text-[#526277]"}`}><span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[8px] font-bold ${completed ? "bg-emerald-50 text-emerald-700" : active ? "bg-[#4F46E5] text-white" : "bg-[#EEF3F8] text-[#64748B]"}`}>{completed ? "✓" : index + 1}</span><span className="truncate">{label}</span></div>;
         })}
       </div>
     </nav>
