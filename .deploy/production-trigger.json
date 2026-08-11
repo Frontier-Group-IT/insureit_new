@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #259 MISP address single-row layout to production.",
-  "deploy_requested_at": "2026-08-11T13:19:00+05:30",
+  "purpose": "Deploy PR #260 Add MISP field grid rearrangement to production.",
+  "deploy_requested_at": "2026-08-11T13:35:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #259 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
-  "source_commit": "4796d6d0f9e21871e600c4278a57b5a45086feea",
-  "release_scope": "Deploy the modern Add MISP Address section layout adjustment so Address, City, State, and PIN Code remain on one desktop row while preserving responsive wrapping on smaller screens and leaving all validation, field names, submit behavior, backend logic, and other UI unchanged.",
-  "verification": "PR #259 Verify web portal run 31470458767 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
+  "source": "ChatGPT explicit request to merge PR #260 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
+  "source_commit": "455324fe55b0907fba2c6c3180db5658ee54fa71",
+  "release_scope": "Deploy the modern Add MISP onboarding layout refinement so MISP details use one five-field desktop row, DP Name uses a 3fr area beside DP Date of Birth at 1fr, and DP Contact, DP Email, DP PAN No, and DP Aadhaar Number use one equal-width row, while preserving responsive wrapping and leaving validation, field names, required status, submit behavior, backend logic, and workflow unchanged.",
+  "verification": "PR #260 Verify web portal run 31471593566 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
