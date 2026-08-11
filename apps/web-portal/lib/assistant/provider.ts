@@ -105,6 +105,7 @@ export function createOpenAICompatibleProvider(config: ProviderConfig): Assistan
             }),
             tools: ASSISTANT_TOOL_DEFINITIONS,
             tool_choice: "auto",
+            response_format: { type: "json_object" },
             temperature: 0,
             max_tokens: 800,
           }),
