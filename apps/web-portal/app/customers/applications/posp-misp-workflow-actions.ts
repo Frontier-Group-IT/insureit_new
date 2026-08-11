@@ -32,7 +32,7 @@ export async function retryPospMispPanVerification(data:FormData){
  const {error:profileError}=await admin.from("posp_misp_onboarding_profiles").update({...profilePanUpdate,iib_remarks:null,iib_upload_status:"pending",iib_uploaded:false,iib_uploaded_at:null,iib_completed_at:null,requested_account_type:profile.partner_type,final_account_type:resetFinalType,partner_decision:"not_applicable",workflow_stage:resetStage,record_source:"new_onboarding",updated_by:actorId,updated_at:now}).eq("id",profile.id);
  if(profileError)redirectTo(applicationId,"pan_verification_reset_failed");await admin.from("pan_verification_jobs").delete().eq("application_id",applicationId);
  const {error:jobError}=await admin.from("pan_verification_jobs").insert({application_id:applicationId,onboarding_profile_id:profile.id,partner_type:profile.partner_type,pan_number:panNumber,status:"pending",result_code:null,result_message:null,requested_at:now,started_at:null,completed_at:null,attempt_count:0,last_error:null,checked_by_device:null,requested_by:actorId,updated_at:now});
- if(jobError)redirectTo(applicationId,"pan_verification_queue_failed");await admin.from("intermediary_onboarding_applications").update({registration_status:"pan_checking",updated_at:now}).eq("id",applicationId);revalidatePath(applicationPath(applicationId));redirectFresh(`${applicationPath(applicationId)}?success=pan_verification_requeued`);
+ if(jobError)redirectTo(applicationId,"pan_verification_queue_failed");await admin.from("intermediary_onboarding_applications").update({registration_status:"pan_checking",updated_at:now}).eq("id",applicationId);revalidatePath(applicationPath(applicationId));
 }
 
 export async function decidePospMispPartnerRoute(data:FormData){
