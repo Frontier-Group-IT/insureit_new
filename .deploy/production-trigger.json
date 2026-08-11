@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #262 Add Existing POSP modern onboarding layout to production.",
-  "deploy_requested_at": "2026-08-11T14:21:00+05:30",
+  "purpose": "Deploy PR #263 shared Existing Account label configuration to production.",
+  "deploy_requested_at": "2026-08-11T14:56:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #262 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
-  "source_commit": "5b1fd21d6c765da0bfe2d18331a6d3479042be03",
-  "release_scope": "Deploy the Add Existing POSP onboarding modernization so the legacy existing-POSP flow uses the same modern visual shell as Add POSP, including the fourth Existing account details section for historical IDs, original dates, workflow statuses, and confirmation, while preserving the legacy submit route, field names, activation-date validation, backend/database behavior, normal Add POSP flow, Add MISP flow, and Add Existing MISP flow.",
-  "verification": "PR #262 Verify web portal run 31474149623 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
+  "source": "ChatGPT explicit request to merge PR #263 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
+  "source_commit": "ee2e192bc8a620716d25ecc771c2ac68b9d675b3",
+  "release_scope": "Deploy the Existing Account / Existing Intermediary Migration label-source fix so Partner Application Review/Edit and legacy onboarding render the shared configured labels instead of hardcoded JSX strings, while preserving dynamic POSP/MISP registration ID labels, all existing legacy_* form keys, autosave behavior, database synchronization, and workflow status values.",
+  "verification": "PR #263 Verify web portal run 31477551970 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
