@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #251 mobile-number validation update to production.",
-  "deploy_requested_at": "2026-08-11T10:29:00+05:30",
+  "purpose": "Deploy PR #252 +91 mobile validation hotfix to production.",
+  "deploy_requested_at": "2026-08-11T10:44:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #251 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
-  "source_commit": "b6eeda28bf1675563160e871745fe4783a4c1e83",
-  "release_scope": "Deploy the intermediary application editor update that accepts either a 10-digit Indian mobile number or +91 followed by the 10-digit Indian mobile number for POSP applicant_phone and MISP dp_phone inputs, while keeping existing backend normalization unchanged.",
-  "verification": "PR #251 verification run 31460112100 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
+  "source": "ChatGPT explicit request to merge PR #252 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
+  "source_commit": "59604c7144163d80bdac6ec43068d6bc3f0994e3",
+  "release_scope": "Deploy the intermediary Application Review/Edit mobile validation hotfix so POSP applicant_phone and MISP dp_phone accept either a 10-digit Indian mobile number or +91 followed by the 10-digit Indian mobile number, including the custom inline validation path and runtime pattern synchronization.",
+  "verification": "PR #252 Verify web portal run 31460949696 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
