@@ -9,6 +9,7 @@ import {
   LEGACY_IIB_UPLOAD_OPTIONS,
   LEGACY_TRAINING_OPTIONS,
 } from "./legacy-workflow-statuses";
+import { LEGACY_ONBOARDING_LABELS, legacyRegistrationLabel } from "./legacy-onboarding-labels";
 
 type Props = { partnerType:"posp"|"misp"; initialValues?:Record<string,string> };
 type StatusOption = { readonly value:string; readonly label:string };
@@ -23,7 +24,7 @@ export function LegacyOnboardingFields({ partnerType, initialValues = {} }: Prop
   const [iibRegistrationStatus, setIibRegistrationStatus] = useState(() => initialStatus(LEGACY_IIB_REGISTRATION_OPTIONS, initialValues.legacy_iib_registration_status, DEFAULT_LEGACY_WORKFLOW.iibRegistrationStatus));
   const [originalOnboardingDate, setOriginalOnboardingDate] = useState(initialValues.legacy_original_onboarding_date ?? "");
   const [originalActivationDate, setOriginalActivationDate] = useState(initialValues.legacy_original_activation_date ?? "");
-  const registrationLabel = partnerType === "misp" ? "Existing MISP ID" : "Existing POSP ID";
+  const registrationLabel = legacyRegistrationLabel(partnerType);
   const activationDateError = originalOnboardingDate && originalActivationDate && originalActivationDate < originalOnboardingDate
     ? ACTIVATION_DATE_ERROR
     : null;
@@ -31,25 +32,25 @@ export function LegacyOnboardingFields({ partnerType, initialValues = {} }: Prop
   return (
     <section className="border-t border-amber-200 bg-amber-50/70 px-3 py-4 sm:px-5 sm:py-5" data-legacy-onboarding-fields="true">
       <div className="mb-4">
-        <h3 className="text-[12px] font-semibold text-[#0F172A]">Existing account details</h3>
+        <h3 className="text-[12px] font-semibold text-[#0F172A]">{LEGACY_ONBOARDING_LABELS.sectionTitle}</h3>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Field label="Existing Partner ID" name="legacy_partner_code" defaultValue={initialValues.legacy_partner_code} placeholder="PART-2024-00127" required />
+        <Field label={LEGACY_ONBOARDING_LABELS.partnerId} name="legacy_partner_code" defaultValue={initialValues.legacy_partner_code} placeholder="PART-2024-00127" required />
         <Field label={registrationLabel} name="legacy_registration_code" defaultValue={initialValues.legacy_registration_code} placeholder={partnerType === "misp" ? "MISP-2023-00018" : "POSP-2024-00481"} required />
-        <Field label="Original onboarding date" name="legacy_original_onboarding_date" type="date" value={originalOnboardingDate} onChange={(event) => setOriginalOnboardingDate(event.currentTarget.value)} required />
-        <Field label="Active / associated since" name="legacy_original_activation_date" type="date" value={originalActivationDate} min={originalOnboardingDate || undefined} onChange={(event) => setOriginalActivationDate(event.currentTarget.value)} error={activationDateError} required />
+        <Field label={LEGACY_ONBOARDING_LABELS.originalOnboardingDate} name="legacy_original_onboarding_date" type="date" value={originalOnboardingDate} onChange={(event) => setOriginalOnboardingDate(event.currentTarget.value)} required />
+        <Field label={LEGACY_ONBOARDING_LABELS.originalActivationDate} name="legacy_original_activation_date" type="date" value={originalActivationDate} min={originalOnboardingDate || undefined} onChange={(event) => setOriginalActivationDate(event.currentTarget.value)} error={activationDateError} required />
       </div>
 
       <div className="mt-5 rounded-2xl border border-amber-200 bg-white p-3.5 sm:p-4">
-        <p className="text-[10.5px] font-semibold text-[#17203A]">Workflow status</p>
+        <p className="text-[10.5px] font-semibold text-[#17203A]">{LEGACY_ONBOARDING_LABELS.workflowTitle}</p>
 
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-          <StatusSelect label="Training" name="legacy_training_status" value={trainingStatus} options={LEGACY_TRAINING_OPTIONS} onChange={setTrainingStatus} />
-          <StatusSelect label="Exam" name="legacy_exam_status" value={examStatus} options={LEGACY_EXAM_OPTIONS} onChange={setExamStatus} />
-          <StatusSelect label="Agreement" name="legacy_agreement_status" value={agreementStatus} options={LEGACY_AGREEMENT_OPTIONS} onChange={setAgreementStatus} />
-          <StatusSelect label="IIB file upload" name="legacy_iib_upload_status" value={iibUploadStatus} options={LEGACY_IIB_UPLOAD_OPTIONS} onChange={setIibUploadStatus} />
-          <StatusSelect label="IIB registration" name="legacy_iib_registration_status" value={iibRegistrationStatus} options={LEGACY_IIB_REGISTRATION_OPTIONS} onChange={setIibRegistrationStatus} />
+          <StatusSelect label={LEGACY_ONBOARDING_LABELS.trainingStatus} name="legacy_training_status" value={trainingStatus} options={LEGACY_TRAINING_OPTIONS} onChange={setTrainingStatus} />
+          <StatusSelect label={LEGACY_ONBOARDING_LABELS.examStatus} name="legacy_exam_status" value={examStatus} options={LEGACY_EXAM_OPTIONS} onChange={setExamStatus} />
+          <StatusSelect label={LEGACY_ONBOARDING_LABELS.agreementStatus} name="legacy_agreement_status" value={agreementStatus} options={LEGACY_AGREEMENT_OPTIONS} onChange={setAgreementStatus} />
+          <StatusSelect label={LEGACY_ONBOARDING_LABELS.iibUploadStatus} name="legacy_iib_upload_status" value={iibUploadStatus} options={LEGACY_IIB_UPLOAD_OPTIONS} onChange={setIibUploadStatus} />
+          <StatusSelect label={LEGACY_ONBOARDING_LABELS.iibRegistrationStatus} name="legacy_iib_registration_status" value={iibRegistrationStatus} options={LEGACY_IIB_REGISTRATION_OPTIONS} onChange={setIibRegistrationStatus} />
         </div>
       </div>
 
