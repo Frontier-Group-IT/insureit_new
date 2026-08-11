@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #261 Add Existing MISP modern onboarding layout to production.",
-  "deploy_requested_at": "2026-08-11T13:55:00+05:30",
+  "purpose": "Deploy PR #262 Add Existing POSP modern onboarding layout to production.",
+  "deploy_requested_at": "2026-08-11T14:21:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #261 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
-  "source_commit": "8256ba128d9a75e47f8a6444471d9121a161e4d3",
-  "release_scope": "Deploy the Add Existing MISP onboarding modernization so the legacy existing-MISP flow uses the same modern visual shell as Add MISP, including the fifth Existing account details section for historical IDs, original dates, workflow statuses, and confirmation, while preserving the legacy submit route, field names, activation-date validation, backend/database behavior, normal Add MISP flow, and Add Existing POSP flow.",
-  "verification": "PR #261 Verify web portal run 31472915704 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
+  "source": "ChatGPT explicit request to merge PR #262 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
+  "source_commit": "5b1fd21d6c765da0bfe2d18331a6d3479042be03",
+  "release_scope": "Deploy the Add Existing POSP onboarding modernization so the legacy existing-POSP flow uses the same modern visual shell as Add POSP, including the fourth Existing account details section for historical IDs, original dates, workflow statuses, and confirmation, while preserving the legacy submit route, field names, activation-date validation, backend/database behavior, normal Add POSP flow, Add MISP flow, and Add Existing MISP flow.",
+  "verification": "PR #262 Verify web portal run 31474149623 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
