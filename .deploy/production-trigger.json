@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #265 Partner Register filter tab interaction refinement to production.",
-  "deploy_requested_at": "2026-08-11T15:41:00+05:30",
+  "purpose": "Deploy PR #266 Partner Register grey hover-only filter styling to production.",
+  "deploy_requested_at": "2026-08-11T16:05:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #265 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
-  "source_commit": "6f767a214a4051ebf3a4ad1981702b3551731d28",
-  "release_scope": "Deploy the Partner Register filter tab interaction update so All, Active and Onboarding render as plain text by default, gain the rounded blue pill treatment on hover, and retain the rounded selected treatment only after an explicit filter selection, while preserving search, counts, filtering, URL synchronization, permissions, data queries, and table behavior.",
-  "verification": "PR #265 Verify web portal run 31480995804 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
+  "source": "ChatGPT explicit request to merge PR #266 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
+  "source_commit": "27c23c75b1c766c858c2e0e80f581dadf1047497",
+  "release_scope": "Deploy the Partner Register filter styling refinement so All, Active and Onboarding remain plain text whenever not hovered, including the currently selected filter, and show a rounded light-grey pill only while the pointer is over the tab, while preserving filtering behavior, counts, selected state, URL synchronization, accessibility state, permissions, data queries, and table behavior.",
+  "verification": "PR #266 Verify web portal run 31482716664 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
