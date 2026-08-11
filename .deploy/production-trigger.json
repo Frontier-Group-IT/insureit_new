@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #272 Existing Intermediary Migration deliberate-save update to production.",
-  "deploy_requested_at": "2026-08-11T18:08:00+05:30",
+  "purpose": "Deploy PR #273 migration deliberate-save resilience fix to production.",
+  "deploy_requested_at": "2026-08-11T18:28:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #272 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
-  "source_commit": "80e8024074a085056c3a4f8ab55fefdfabbb55d9",
-  "release_scope": "Deploy the Existing Intermediary Migration save-flow update so migration legacy_* fields no longer autosave independently and are instead saved together with the primary editor when using Save & Exit or Upload Documents, while preserving migration synchronization, activation-date validation, cancel behavior, permissions, routing, and document workflow behavior.",
-  "verification": "PR #272 Verify web portal run 31492010405 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
+  "source": "ChatGPT explicit request to merge PR #273 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
+  "source_commit": "c8a258e37463c2b921b54efe5a4fb6ce059ad99c",
+  "release_scope": "Deploy the Existing Intermediary Migration deliberate-save resilience fix so authoritative migration application/profile data can save successfully even if optional linked workflow assignment or intermediary register synchronization cannot be completed, while preserving activation-date validation, existing migration values, permissions, routing, Save & Exit, Upload Documents, and document workflow behavior.",
+  "verification": "PR #273 Verify web portal run 31493717945 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
