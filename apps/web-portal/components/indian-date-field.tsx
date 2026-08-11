@@ -16,7 +16,8 @@ type Props = {
   onBlur?: FocusEventHandler<HTMLInputElement>;
 };
 
-const defaultInputClassName = "h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 pr-10 text-[11px] font-medium text-[#17203A] outline-none transition focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF] disabled:bg-[#F8FAFC] disabled:text-[#64748B]";
+const defaultInputClassName = "h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[11px] font-medium text-[#17203A] outline-none transition focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF] disabled:bg-[#F8FAFC] disabled:text-[#64748B]";
+const dateControlClassName = "!pr-10 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-10 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0";
 
 export function IndianDateField({ label, name, defaultValue, required = false, disabled = false, inputClassName, error = null, onBlur }: Props) {
   const [value, setValue] = useState(() => normalizeImportedDate(defaultValue) ?? "");
@@ -45,7 +46,7 @@ export function IndianDateField({ label, name, defaultValue, required = false, d
             const input = event.currentTarget as HTMLInputElement & { showPicker?: () => void };
             input.showPicker?.();
           }}
-          className={inputClassName ?? defaultInputClassName}
+          className={`${inputClassName ?? defaultInputClassName} ${dateControlClassName}`}
         />
         <CalendarDays className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
       </div>
