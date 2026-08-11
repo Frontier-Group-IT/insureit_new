@@ -46,7 +46,7 @@ export function PartnerRegisterClient({
   const [search, setSearch] = useState(initialSearch);
   const initialFilter = initialStatus === "active" || initialStatus === "onboarding" ? initialStatus : "";
   const [status, setStatus] = useState(initialFilter);
-  const [selectedFilter, setSelectedFilter] = useState<PartnerFilter>(initialFilter);
+  const [selectedFilter, setSelectedFilter] = useState<PartnerFilter>(initialFilter || "all");
   const normalized = search.trim().toLowerCase();
   const searchedRows = useMemo(() => normalized ? rows.filter((row) => row.searchText.includes(normalized)) : rows, [normalized, rows]);
   const counts = useMemo(() => searchedRows.reduce((acc, row) => {
@@ -106,7 +106,7 @@ function FilterButton({ label, count, active, onClick }: { label: string; count:
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className="rounded-full px-2.5 py-1.5 text-[#526178] transition-colors duration-150 hover:bg-[#E7E7E7] hover:text-[#17203A]"
+      className={`rounded-full px-2.5 py-1.5 transition-colors duration-150 ${active ? "bg-[#E7E7E7] text-[#17203A]" : "text-[#526178] hover:bg-[#E7E7E7] hover:text-[#17203A]"}`}
     >
       {label} <span className="ml-1">{count}</span>
     </button>
