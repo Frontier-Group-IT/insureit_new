@@ -123,6 +123,7 @@ export function PospMispApplicationEditor({ applicationId, profile, workflowStag
         <span />
         <div className="text-right">
           <div className="flex flex-col gap-2 sm:flex-row">
+            <Link href={`/intermediaries/applications/${applicationId}`} aria-label="Cancel editing and return to application review" title="Cancel editing" className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-red-200 bg-red-50 text-red-600 transition hover:border-red-300 hover:bg-red-100 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-200"><svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg></Link>
             <FormSubmitButton form={formId} name="submit_intent" value="exit" label="Save & Exit" pendingLabel="Saving & exiting…" forcePending={submittingIntent === "exit"} className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-2.5 text-[10.5px] font-semibold text-[#334155] hover:border-[#94A3B8] hover:bg-[#F8FAFC]" />
             <FormSubmitButton form={formId} name="submit_intent" value="documents" label={isMisp ? "Save & return to documents" : "Upload Documents"} pendingLabel={isMisp ? "Saving & opening documents…" : "Saving & opening documents…"} forcePending={submittingIntent === "documents"} />
           </div>
