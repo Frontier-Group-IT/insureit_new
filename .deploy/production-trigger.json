@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #263 shared Existing Account label configuration to production.",
-  "deploy_requested_at": "2026-08-11T14:56:00+05:30",
+  "purpose": "Deploy PR #264 Existing Intermediary Migration autosave persistence fix to production.",
+  "deploy_requested_at": "2026-08-11T15:25:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #263 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
-  "source_commit": "ee2e192bc8a620716d25ecc771c2ac68b9d675b3",
-  "release_scope": "Deploy the Existing Account / Existing Intermediary Migration label-source fix so Partner Application Review/Edit and legacy onboarding render the shared configured labels instead of hardcoded JSX strings, while preserving dynamic POSP/MISP registration ID labels, all existing legacy_* form keys, autosave behavior, database synchronization, and workflow status values.",
-  "verification": "PR #263 Verify web portal run 31477551970 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
+  "source": "ChatGPT explicit request to merge PR #264 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
+  "source_commit": "8af5888181bbd2885c6ba4c70836b90bf0cb67d3",
+  "release_scope": "Deploy the Existing Intermediary Migration autosave persistence fix so edits made while a previous autosave request is in flight remain queued and are automatically submitted once that request finishes, while preserving the existing 700 ms debounce, legacy_* field names, server action payload keys, database synchronization, workflow status values, labels, and layout.",
+  "verification": "PR #264 Verify web portal run 31479805638 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
