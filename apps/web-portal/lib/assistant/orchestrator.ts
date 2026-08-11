@@ -9,6 +9,56 @@ import type { AssistantProvider, AssistantProviderMessage, AssistantToolCall } f
 const MAX_TOOL_ROUNDS = 3;
 const MAX_TOOL_RESULT_CHARACTERS = 10_000;
 
+const AMBIGUOUS_TOPICS: Record<string, string> = {
+  posp: "POSP",
+  misp: "MISP",
+  policy: "policies",
+  policies: "policies",
+  claim: "claims",
+  claims: "claims",
+  kyc: "KYC",
+  customer: "customers",
+  customers: "customers",
+  vehicle: "vehicles",
+  vehicles: "vehicles",
+  task: "tasks",
+  tasks: "tasks",
+};
+
+function normalizeIntent(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function deterministicConversation(messages: AssistantInputMessage[]): AssistantOutput | null {
+  const latest = [...messages].reverse().find((message) => message.role === "user")?.content ?? "";
+  const normalized = normalizeIntent(latest);
+  if (/^(hi|hello|hey|good morning|good afternoon|good evening)$/.test(normalized)) {
+    return {
+      answer: "Hello! I can help you find permitted portal pages and explain approved INSUREIT procedures. Try “Take me to POSP onboarding” or “How do I add a policy?”",
+      links: [],
+      citations: [],
+    };
+  }
+  const topic = AMBIGUOUS_TOPICS[normalized];
+  if (topic) {
+    return {
+      answer: `What would you like to do with ${topic}? For example, ask me to open the register, create a new record, or explain an approved procedure.`,
+      links: [],
+      citations: [],
+    };
+  }
+  return null;
+}
+
+function explicitNavigationQuery(messages: AssistantInputMessage[]): string | null {
+  const latest = [...messages].reverse().find((message) => message.role === "user")?.content.trim() ?? "";
+  if (!latest || latest.length > 500) return null;
+  const normalized = normalizeIntent(latest);
+  if (!/\b(open|go to|take me|where is|where can i|show me|find|navigate|create|add|new|onboard|upload)\b/.test(normalized)) return null;
+  if (/\b(how|what|why|explain|procedure|steps)\b/.test(normalized)) return null;
+  return latest;
+}
+
 export type AssistantActor = { profileId: string; role: string };
 export type NavigationCandidate = { label: string; href: string; requiredCapability?: Capability; requiredAccess?: Exclude<PermissionAccess, "none"> };
 export interface NavigationResolver {
@@ -80,6 +130,35 @@ export async function runAssistant(input: {
   };
 
   try {
+    const conversational = deterministicConversation(input.messages);
+    if (conversational) return conversational;
+
+    const navigationQuery = explicitNavigationQuery(input.messages);
+    if (navigationQuery) {
+      const toolStartedAt = Date.now();
+      const candidates = await searchAllowedNavigation(navigationQuery, input);
+      await auditRequired(input.audit, {
+        requestId: input.requestId,
+        actorProfileId: input.actor.profileId,
+        capability: "use_assistant",
+        eventType: "tool",
+        toolName: "search_navigation",
+        allowed: candidates.length > 0,
+        decision: candidates.length > 0 ? "allowed" : "denied",
+        rowCount: candidates.length,
+        latencyMs: Date.now() - toolStartedAt,
+        errorCode: candidates.length > 0 ? undefined : "no_approved_destination",
+        route: input.currentPath,
+      });
+      if (!candidates.length) return fail("no_approved_destination", "I couldn't find a permitted portal destination for that request.");
+      const primary = candidates[0];
+      return {
+        answer: `Open ${primary.label}.`,
+        links: candidates.slice(0, 3).map(({ label, href }) => ({ label, href })),
+        citations: [],
+      };
+    }
+
     for (let round = 0; round <= MAX_TOOL_ROUNDS; round += 1) {
       const result = await input.provider.complete({ messages: providerMessages });
       if (result.kind === "final") {
@@ -175,15 +254,20 @@ async function executeTool(
     return { allowed: true, rowCount: sources.length, content: JSON.stringify({ untrusted_data: true, sources }) };
   }
   if (call.name === "search_navigation") {
-    const candidates = (await input.navigationResolver.search(call.query, input.actor)).slice(0, 8);
-    const allowed: NavigationCandidate[] = [];
-    for (const candidate of candidates) {
-      if (!safeNavigation(candidate)) continue;
-      if (candidate.requiredCapability && !(await input.can(candidate.requiredCapability, candidate.requiredAccess))) continue;
-      allowed.push(candidate);
-      allowedHrefs.add(candidate.href);
-    }
+    const allowed = await searchAllowedNavigation(call.query, input);
+    for (const candidate of allowed) allowedHrefs.add(candidate.href);
     return { allowed: true, rowCount: allowed.length, content: JSON.stringify({ untrusted_data: true, destinations: allowed }) };
   }
   return { allowed: false, rowCount: 0, content: JSON.stringify({ untrusted_data: true, error: "tool_not_allowed" }), errorCode: "tool_not_allowed" };
+}
+
+async function searchAllowedNavigation(query: string, input: Parameters<typeof runAssistant>[0]): Promise<NavigationCandidate[]> {
+  const candidates = (await input.navigationResolver.search(query, input.actor)).slice(0, 8);
+  const allowed: NavigationCandidate[] = [];
+  for (const candidate of candidates) {
+    if (!safeNavigation(candidate)) continue;
+    if (candidate.requiredCapability && !(await input.can(candidate.requiredCapability, candidate.requiredAccess))) continue;
+    allowed.push(candidate);
+  }
+  return allowed;
 }

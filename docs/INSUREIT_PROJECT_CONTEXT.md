@@ -4,6 +4,14 @@
 >
 > This is the durable project context for developers and AI agents working on the INSUREIT repository. Read this file before changing intermediary, Partner, POSP, MISP, onboarding, document, registration, portal-user, or IIB workflows. Update it after material business-rule, schema, workflow, or architecture changes.
 
+## Employee assistant safety architecture (2026-08-11)
+
+- The employee assistant is read-only and available only to authenticated internal roles with the `use_assistant` capability.
+- Greetings, ambiguous single-topic prompts, and explicit navigation requests use deterministic handling. Navigation results come from the shared permission-aware navigation catalogue and are reauthorized server-side; the language model cannot create or grant destinations.
+- Procedural answers must use published, active `assistant_knowledge_entries`, filtered by effective permission access and route ancestry. Factual knowledge responses require exact source citations and are rejected when citations or links cannot be verified.
+- Provider prompts, answers, tool queries, results, API keys, and provider error bodies must not be logged or stored. Operational auditing is metadata-only.
+- The starter knowledge set is versioned as a Supabase migration and contains only repository-verified workflow guidance. Applying the migration to one environment is not evidence that it is applied elsewhere.
+
 ## 1. Repository and operating model
 
 - Repository: `Frontier-Group-IT/insureit_new`

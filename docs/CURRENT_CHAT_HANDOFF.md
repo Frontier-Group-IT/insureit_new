@@ -1,12 +1,23 @@
 # Current Chat Handoff
 
-> **Consolidated:** 2026-08-09 (IST)
+> **Consolidated:** 2026-08-11 (IST)
 >
 > Read with `docs/INSUREIT_PROJECT_CONTEXT.md` and `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md`. Never store secrets, raw OCR text, policyholder PII, or complete policy documents here.
 
 ## Active track
 
-Policy Onboarding OCR hardening is the immediate active work. Production portal is `https://portal.insureit.in`. Ordinary commits do not intentionally deploy production; `.deploy/production-trigger.json` is changed only after the user explicitly says `deploy now` or `finish and deploy`.
+The isolated employee-assistant Preview on branch `agent/assistant-preview` / PR #249 is the immediate active work. Production portal is `https://portal.insureit.in`; no assistant work in this track is production-deployed. Ordinary commits do not intentionally deploy production; `.deploy/production-trigger.json` is changed only after the user explicitly says `deploy now` or `finish and deploy`.
+
+## Assistant Preview continuation state
+
+- **VERIFIED:** Vercel Preview uses the OpenRouter OpenAI-compatible endpoint with a user-managed Preview-only key and `google/gemma-4-26b-a4b-it:free`. Never store or repeat the key.
+- **VERIFIED:** assistant provider connectivity works. The former Vercel AI Gateway path was blocked by `403 customer_verification_required`; direct OpenRouter Preview requests now return controlled assistant responses.
+- **IMPLEMENTED:** provider requests require JSON output and log bounded provider error metadata only. Prompts, answers, keys, and provider bodies are not logged.
+- **IMPLEMENTED:** exact greetings and ambiguous single-topic prompts are answered or clarified deterministically without model quota. Explicit navigation requests are resolved deterministically through the existing permission-aware catalogue; model output cannot grant routes.
+- **IMPLEMENTED:** navigation aliases and scoring distinguish actions such as create/add/onboard from list/register requests for POSP, MISP, customers, vehicles, policies, claims, KYC, and tasks.
+- **APPLIED (test project only):** migration `seed_assistant_starter_knowledge` is applied to Supabase project `jzuqlcysyqtyydukveir`. Five published, permission-scoped starter entries cover POSP onboarding, Policy Onboarding, claims, customer KYC, and task views. A direct permission-scoped RPC query returned the Policy Onboarding entry; count verification returned five active starter entries.
+- **UNVERIFIED:** the latest deterministic navigation and starter-knowledge changes still require exact-commit CI, Vercel Ready verification, and authenticated browser checks after the next push.
+- **CLEANUP REQUIRED AFTER TESTING:** remove/deactivate the temporary Preview deployment/configuration and testing resources as previously requested; do not touch production environments while doing so.
 
 ## Verified pre-change parser baseline
 

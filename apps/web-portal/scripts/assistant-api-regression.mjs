@@ -76,6 +76,57 @@ const abstained = await runAssistant({
 assert.equal(abstained.code, "no_approved_source");
 assert.equal(noSourceFake.calls.length, 1);
 
+const greetingProvider = createFakeAssistantProvider([]);
+const greeting = await runAssistant({
+  requestId: "request-greeting",
+  actor,
+  messages: [{ role: "user", content: "Hi" }],
+  currentPath: "/dashboard",
+  provider: greetingProvider,
+  knowledgeRepository: { async searchApprovedActive() { return []; } },
+  navigationResolver: { async search() { return []; } },
+  can: async () => true,
+  audit: { async write() {} },
+});
+assert.match(greeting.answer, /Hello!/);
+assert.equal(greetingProvider.calls.length, 0, "greetings do not spend provider quota");
+
+const clarificationProvider = createFakeAssistantProvider([]);
+const clarification = await runAssistant({
+  requestId: "request-clarification",
+  actor,
+  messages: [{ role: "user", content: "POSP" }],
+  currentPath: "/dashboard",
+  provider: clarificationProvider,
+  knowledgeRepository: { async searchApprovedActive() { return []; } },
+  navigationResolver: { async search() { return []; } },
+  can: async () => true,
+  audit: { async write() {} },
+});
+assert.match(clarification.answer, /What would you like to do with POSP/);
+assert.equal(clarificationProvider.calls.length, 0, "ambiguous topics request clarification without model guessing");
+
+const deterministicNavigationAudit = [];
+const deterministicNavigationProvider = createFakeAssistantProvider([]);
+const pospNavigation = createStaticNavigationResolver([
+  { label: "All POSP", href: "/intermediaries/posp", requiredCapability: "view_intermediaries" },
+  { label: "Add POSP", href: "/intermediaries/posp/new", requiredCapability: "create_intermediary_application", requiredAccess: "edit" },
+]);
+const deterministicNavigation = await runAssistant({
+  requestId: "request-navigation",
+  actor,
+  messages: [{ role: "user", content: "Take me to POSP onboarding" }],
+  currentPath: "/dashboard",
+  provider: deterministicNavigationProvider,
+  knowledgeRepository: { async searchApprovedActive() { return []; } },
+  navigationResolver: pospNavigation,
+  can: async () => true,
+  audit: { async write(event) { deterministicNavigationAudit.push(event); } },
+});
+assert.equal(deterministicNavigation.links[0]?.href, "/intermediaries/posp/new");
+assert.equal(deterministicNavigationProvider.calls.length, 0, "explicit navigation is deterministic and quota-free");
+assert.equal(deterministicNavigationAudit.some((event) => event.toolName === "search_navigation" && event.decision === "allowed"), true);
+
 await assert.rejects(() => runAssistant({
   actor,
   messages: [{ role: "user", content: "Where are policies?" }],
@@ -167,6 +218,13 @@ assert.deepEqual(await navigation.search("renewal policy", actor), [
 ]);
 assert.deepEqual(await navigation.search("x".repeat(501), actor), []);
 
+const rankedNavigation = createStaticNavigationResolver([
+  { label: "All POSP", href: "/intermediaries/posp", requiredCapability: "view_intermediaries" },
+  { label: "Add POSP", href: "/intermediaries/posp/new", requiredCapability: "create_intermediary_application", requiredAccess: "edit" },
+]);
+assert.equal((await rankedNavigation.search("create a new posp", actor))[0]?.href, "/intermediaries/posp/new", "action intent ranks creation above the register");
+assert.equal((await rankedNavigation.search("show all posp", actor))[0]?.href, "/intermediaries/posp", "list intent ranks the register first");
+
 const auditRows = [];
 const auditWriter = createMetadataOnlyAssistantAuditWriter({
   from(table) {
@@ -223,4 +281,4 @@ for (const forbidden of ["console.log", "console.error", "messages:", "answer:"]
 const navigationSource = await readFile(new URL("../lib/assistant/navigation.ts", import.meta.url), "utf8");
 assert.match(navigationSource, /navigationCatalogue/, "server navigation resolver derives from the shared permission catalogue");
 
-console.log(JSON.stringify({ cases: 34, status: "ok" }));
+console.log(JSON.stringify({ cases: 41, status: "ok" }));
