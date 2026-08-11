@@ -6,6 +6,7 @@ import { createManualPospMispOnboardingV2 } from "../manual-actions-v2";
 import { LegacyOnboardingFields } from "../legacy-onboarding-fields";
 import { OnboardingFieldPresentation } from "../onboarding-field-presentation";
 import { PospMispOnboardingForm } from "../posp-misp-onboarding-form";
+import { MispExistingModernOnboardingForm } from "./misp-existing-modern-onboarding-form";
 import { MispModernOnboardingForm } from "./misp-modern-onboarding-form";
 
 export type OnboardingPartnerType = "posp" | "misp";
@@ -36,15 +37,26 @@ export async function renderNewOnboardingPage(partnerType: OnboardingPartnerType
   return (
     <AppShell title={title} backHref={backHref}>
       <OnboardingFieldPresentation>
-        {isMisp && !legacyMode ? (
-          <MispModernOnboardingForm
-            initialError={query.form_error ?? null}
-            initialField={query.form_field ?? null}
-            initialValues={initialValues}
-            salesManagers={salesManagers}
-            oems={oems}
-            banks={banks}
-          />
+        {isMisp ? (
+          legacyMode ? (
+            <MispExistingModernOnboardingForm
+              initialError={query.form_error ?? null}
+              initialField={query.form_field ?? null}
+              initialValues={initialValues}
+              salesManagers={salesManagers}
+              oems={oems}
+              banks={banks}
+            />
+          ) : (
+            <MispModernOnboardingForm
+              initialError={query.form_error ?? null}
+              initialField={query.form_field ?? null}
+              initialValues={initialValues}
+              salesManagers={salesManagers}
+              oems={oems}
+              banks={banks}
+            />
+          )
         ) : (
           <PospMispOnboardingForm
             action={createManualPospMispOnboardingV2}
