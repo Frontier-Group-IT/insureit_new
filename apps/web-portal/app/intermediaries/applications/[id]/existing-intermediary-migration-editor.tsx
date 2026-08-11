@@ -9,6 +9,7 @@ import {
   LEGACY_IIB_UPLOAD_OPTIONS,
   LEGACY_TRAINING_OPTIONS,
 } from "@/app/customers/posp-misp/legacy-workflow-statuses";
+import { LEGACY_ONBOARDING_LABELS, legacyRegistrationLabel } from "@/app/customers/posp-misp/legacy-onboarding-labels";
 import { updateExistingIntermediaryMigrationDetails, type MigrationSaveState } from "./existing-intermediary-migration-actions";
 
 type Props = {
@@ -24,7 +25,7 @@ const labelClass = "mb-1.5 block text-[9.5px] font-semibold uppercase tracking-[
 const initialState: MigrationSaveState = { ok: true, message: "Migration fields save automatically." };
 
 export function ExistingIntermediaryMigrationEditor({ applicationId, accountType, values, editable }: Props) {
-  const registrationLabel = accountType === "misp" ? "Existing MISP ID" : "Existing POSP ID";
+  const registrationLabel = legacyRegistrationLabel(accountType);
   const [state, formAction, pending] = useActionState(updateExistingIntermediaryMigrationDetails, initialState);
   const formRef = useRef<HTMLFormElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -68,18 +69,18 @@ export function ExistingIntermediaryMigrationEditor({ applicationId, accountType
       <form ref={formRef} action={formAction} onChange={scheduleSave} onBlur={flushOnFocusLeave} className="space-y-5 p-5">
         <input type="hidden" name="application_id" value={applicationId} />
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <Field label="Existing Partner ID" name="legacy_partner_code" defaultValue={value(values, "legacy_partner_code")} disabled={!editable} />
+          <Field label={LEGACY_ONBOARDING_LABELS.partnerId} name="legacy_partner_code" defaultValue={value(values, "legacy_partner_code")} disabled={!editable} />
           <Field label={registrationLabel} name="legacy_registration_code" defaultValue={value(values, "legacy_registration_code")} disabled={!editable} />
-          <DateField label="Original Onboarding Date" name="legacy_original_onboarding_date" defaultValue={value(values, "legacy_original_onboarding_date")} disabled={!editable} />
-          <DateField label="Original Activation Date" name="legacy_original_activation_date" defaultValue={value(values, "legacy_original_activation_date")} disabled={!editable} />
+          <DateField label={LEGACY_ONBOARDING_LABELS.originalOnboardingDate} name="legacy_original_onboarding_date" defaultValue={value(values, "legacy_original_onboarding_date")} disabled={!editable} />
+          <DateField label={LEGACY_ONBOARDING_LABELS.originalActivationDate} name="legacy_original_activation_date" defaultValue={value(values, "legacy_original_activation_date")} disabled={!editable} />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <Select label="Training Status" name="legacy_training_status" defaultValue={selectedValue(LEGACY_TRAINING_OPTIONS, value(values, "legacy_training_status"), DEFAULT_LEGACY_WORKFLOW.trainingStatus)} options={LEGACY_TRAINING_OPTIONS} disabled={!editable} />
-          <Select label="Exam Status" name="legacy_exam_status" defaultValue={selectedValue(LEGACY_EXAM_OPTIONS, value(values, "legacy_exam_status"), DEFAULT_LEGACY_WORKFLOW.examStatus)} options={LEGACY_EXAM_OPTIONS} disabled={!editable} />
-          <Select label="Agreement Status" name="legacy_agreement_status" defaultValue={selectedValue(LEGACY_AGREEMENT_OPTIONS, value(values, "legacy_agreement_status"), DEFAULT_LEGACY_WORKFLOW.agreementStatus)} options={LEGACY_AGREEMENT_OPTIONS} disabled={!editable} />
-          <Select label="IIB Upload Status" name="legacy_iib_upload_status" defaultValue={selectedValue(LEGACY_IIB_UPLOAD_OPTIONS, value(values, "legacy_iib_upload_status"), DEFAULT_LEGACY_WORKFLOW.iibUploadStatus)} options={LEGACY_IIB_UPLOAD_OPTIONS} disabled={!editable} />
-          <Select label="IIB Registration Status" name="legacy_iib_registration_status" defaultValue={selectedValue(LEGACY_IIB_REGISTRATION_OPTIONS, value(values, "legacy_iib_registration_status"), DEFAULT_LEGACY_WORKFLOW.iibRegistrationStatus)} options={LEGACY_IIB_REGISTRATION_OPTIONS} disabled={!editable} />
+          <Select label={LEGACY_ONBOARDING_LABELS.trainingStatus} name="legacy_training_status" defaultValue={selectedValue(LEGACY_TRAINING_OPTIONS, value(values, "legacy_training_status"), DEFAULT_LEGACY_WORKFLOW.trainingStatus)} options={LEGACY_TRAINING_OPTIONS} disabled={!editable} />
+          <Select label={LEGACY_ONBOARDING_LABELS.examStatus} name="legacy_exam_status" defaultValue={selectedValue(LEGACY_EXAM_OPTIONS, value(values, "legacy_exam_status"), DEFAULT_LEGACY_WORKFLOW.examStatus)} options={LEGACY_EXAM_OPTIONS} disabled={!editable} />
+          <Select label={LEGACY_ONBOARDING_LABELS.agreementStatus} name="legacy_agreement_status" defaultValue={selectedValue(LEGACY_AGREEMENT_OPTIONS, value(values, "legacy_agreement_status"), DEFAULT_LEGACY_WORKFLOW.agreementStatus)} options={LEGACY_AGREEMENT_OPTIONS} disabled={!editable} />
+          <Select label={LEGACY_ONBOARDING_LABELS.iibUploadStatus} name="legacy_iib_upload_status" defaultValue={selectedValue(LEGACY_IIB_UPLOAD_OPTIONS, value(values, "legacy_iib_upload_status"), DEFAULT_LEGACY_WORKFLOW.iibUploadStatus)} options={LEGACY_IIB_UPLOAD_OPTIONS} disabled={!editable} />
+          <Select label={LEGACY_ONBOARDING_LABELS.iibRegistrationStatus} name="legacy_iib_registration_status" defaultValue={selectedValue(LEGACY_IIB_REGISTRATION_OPTIONS, value(values, "legacy_iib_registration_status"), DEFAULT_LEGACY_WORKFLOW.iibRegistrationStatus)} options={LEGACY_IIB_REGISTRATION_OPTIONS} disabled={!editable} />
         </div>
 
       </form>
