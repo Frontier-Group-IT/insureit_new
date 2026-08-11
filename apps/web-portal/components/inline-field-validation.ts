@@ -2,6 +2,8 @@ export type ValidatedControl = HTMLInputElement | HTMLSelectElement | HTMLTextAr
 
 const FORMAT_MESSAGE = "Please match the requested format.";
 const REQUIRED_MESSAGE = "This field is required.";
+const INDIAN_MOBILE = /^(?:[6-9][0-9]{9}|\+91[6-9][0-9]{9})$/;
+const INDIAN_MOBILE_FIELDS = new Set(["applicant_phone", "dp_phone"]);
 
 export function validateInlineControl(control: ValidatedControl, force = false) {
   if (control.disabled || control.type === "hidden") return true;
@@ -62,9 +64,11 @@ export function inlineFieldErrorId(name: string) {
 }
 
 function matchesConfiguredFormat(control: ValidatedControl) {
-  if (!control.value.trim()) return true;
+  const value = control.value.trim();
+  if (!value) return true;
 
   if (control instanceof HTMLInputElement) {
+    if (INDIAN_MOBILE_FIELDS.has(control.name)) return INDIAN_MOBILE.test(value);
     if (control.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(control.value)) return false;
     if (control.minLength > 0 && control.value.length < control.minLength) return false;
     if (control.maxLength > 0 && control.value.length > control.maxLength) return false;
