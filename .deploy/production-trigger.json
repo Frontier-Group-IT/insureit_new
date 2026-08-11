@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #254 footer Close action positioning update to production.",
-  "deploy_requested_at": "2026-08-11T11:17:00+05:30",
+  "purpose": "Deploy PR #255 manage account LogIn icon update to production.",
+  "deploy_requested_at": "2026-08-11T11:37:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #254 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
-  "source_commit": "fc12961f3d4117d47eba61d3a72b302544c41c66",
-  "release_scope": "Deploy the Partner Application Review/Edit footer action layout change so the existing red Close (X) action is positioned at the far left while Save & Exit and Upload Documents remain grouped on the right, with no styling, workflow, validation, backend, or behavior changes.",
-  "verification": "PR #254 Verify web portal run 31462694565 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
+  "source": "ChatGPT explicit request to merge PR #255 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
+  "source_commit": "e110885da7841f276e041df398d971775b4cb992",
+  "release_scope": "Deploy the Partner Application Review header change so the existing Manage POSP/MISP account text action is replaced by a compact LogIn icon beside the IIB PAN status while preserving the exact existing workflow destination, styling family, accessibility text, permissions, and functionality.",
+  "verification": "PR #255 Verify web portal run 31463795585 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
