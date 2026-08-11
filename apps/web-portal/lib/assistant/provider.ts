@@ -111,7 +111,27 @@ export function createOpenAICompatibleProvider(config: ProviderConfig): Assistan
           signal: controller.signal,
           cache: "no-store",
         });
-        if (!response.ok) throw new AssistantProviderError("provider_unavailable");
+        if (!response.ok) {
+          let providerCode: string | undefined;
+          let providerType: string | undefined;
+          try {
+            const errorPayload = await response.clone().json() as { error?: { code?: unknown; type?: unknown } };
+            if (typeof errorPayload.error?.code === "string") providerCode = errorPayload.error.code.slice(0, 100);
+            if (typeof errorPayload.error?.type === "string") providerType = errorPayload.error.type.slice(0, 100);
+          } catch {
+            // Provider error bodies are intentionally not logged or returned.
+          }
+          console.error(JSON.stringify({
+            level: "error",
+            message: "assistant_provider_http_error",
+            endpoint: `${endpoint.origin}${endpoint.pathname}`,
+            model: config.model,
+            status: response.status,
+            providerCode,
+            providerType,
+          }));
+          throw new AssistantProviderError("provider_unavailable");
+        }
         const payload = await response.json() as { choices?: Array<{ message?: { content?: unknown; tool_calls?: unknown } }> };
         const message = payload.choices?.[0]?.message;
         if (!message) throw new AssistantProviderError("provider_invalid_response");
@@ -129,6 +149,13 @@ export function createOpenAICompatibleProvider(config: ProviderConfig): Assistan
       } catch (error) {
         if (error instanceof AssistantProviderError) throw error;
         if (controller.signal.aborted) throw new AssistantProviderError("provider_timeout");
+        console.error(JSON.stringify({
+          level: "error",
+          message: "assistant_provider_network_error",
+          endpoint: `${endpoint.origin}${endpoint.pathname}`,
+          model: config.model,
+          errorName: error instanceof Error ? error.name : "unknown",
+        }));
         throw new AssistantProviderError("provider_unavailable");
       } finally {
         clearTimeout(timer);
