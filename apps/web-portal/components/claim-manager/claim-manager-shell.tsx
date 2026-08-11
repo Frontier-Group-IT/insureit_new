@@ -1,4 +1,4 @@
-import { Suspense, type ReactNode } from "react";
+import { Suspense, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
@@ -18,20 +18,23 @@ type Props = {
   activeNav?: "dashboard" | "claims" | "master-data" | "distribution" | "tasks" | "reports" | "none";
 };
 
+type SidebarStyle = CSSProperties & { "--portal-sidebar-width": string };
+
 export async function ClaimManagerShell({ title, backHref = internalLaunchHome, children, activeNav = "claims" }: Props) {
   const accessToken = await getServerAccessToken();
   const { user, profile } = await getAuthenticatedProfile(accessToken);
   const role = profile?.role;
   const permissionAccess = await getEffectivePermissionAccessMap(profile);
   const canViewNotifications = (permissionAccess.view_notifications ?? "none") !== "none";
+  const shellStyle: SidebarStyle = { "--portal-sidebar-width": "284px" };
 
   return (
-    <div className="min-h-screen text-[#10213D]">
-      <Suspense fallback={<div className="fixed inset-y-0 left-0 hidden w-[268px] bg-[#111A35] lg:block" />}>
+    <div id="portal-shell-root" className="min-h-screen text-[#10213D]" style={shellStyle}>
+      <Suspense fallback={<div className="fixed inset-y-0 left-0 hidden w-[284px] bg-[#0B1430] lg:block" />}>
         <AppNavigation activeNav={activeNav} role={role} permissionAccess={permissionAccess} />
       </Suspense>
 
-      <div className="lg:pl-[268px]">
+      <div className="transition-[padding-left] duration-300 ease-out lg:pl-[var(--portal-sidebar-width)]">
         <header className="sticky top-0 z-40 border-b border-[#476184]/35 bg-[linear-gradient(110deg,rgba(188,203,224,0.88),rgba(203,215,232,0.82),rgba(230,236,245,0.72))] shadow-[0_12px_36px_rgba(18,40,75,0.14)] backdrop-blur-2xl supports-[backdrop-filter]:bg-[linear-gradient(110deg,rgba(167,187,215,0.74),rgba(198,212,231,0.68),rgba(226,234,245,0.60))]">
           <div className="flex min-h-[66px] items-center justify-between gap-2 px-2.5 py-2 sm:px-4 lg:px-6">
             <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
