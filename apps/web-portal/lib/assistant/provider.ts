@@ -150,7 +150,16 @@ export function createOpenAICompatibleProvider(config: ProviderConfig): Assistan
         }
       } catch (error) {
         if (error instanceof AssistantProviderError) throw error;
-        if (controller.signal.aborted) throw new AssistantProviderError("provider_timeout");
+        if (controller.signal.aborted) {
+          console.error(JSON.stringify({
+            level: "error",
+            message: "assistant_provider_timeout",
+            endpoint: `${endpoint.origin}${endpoint.pathname}`,
+            model: config.model,
+            timeoutMs,
+          }));
+          throw new AssistantProviderError("provider_timeout");
+        }
         console.error(JSON.stringify({
           level: "error",
           message: "assistant_provider_network_error",
@@ -171,5 +180,6 @@ export function createConfiguredAssistantProvider(env: NodeJS.ProcessEnv = proce
     apiUrl: env.ASSISTANT_API_URL ?? "",
     apiKey: env.ASSISTANT_API_KEY ?? "",
     model: env.ASSISTANT_MODEL ?? "",
+    timeoutMs: 30_000,
   });
 }

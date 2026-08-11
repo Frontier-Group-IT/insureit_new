@@ -23,6 +23,7 @@ import { AssistantProviderError, createConfiguredAssistantProvider } from "@/lib
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+export const maxDuration = 45;
 
 const RESPONSE_HEADERS = { "Cache-Control": "no-store", Pragma: "no-cache" } as const;
 const ASSISTANT_CAPABILITY = "use_assistant" as const;
