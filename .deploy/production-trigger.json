@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #271 Partner Register open-action styling update to production.",
-  "deploy_requested_at": "2026-08-11T17:20:00+05:30",
+  "purpose": "Deploy PR #272 Existing Intermediary Migration deliberate-save update to production.",
+  "deploy_requested_at": "2026-08-11T18:08:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #271 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
-  "source_commit": "c748a34d8acf87f222aeac020eb5b941d6445ff6",
-  "release_scope": "Deploy the Partner Register action styling update so Open, Open POSP, and Open MISP use blue-outline actions with transparent/white background by default and a rounded light-grey hover background, while preserving centered Action column alignment, navigation behavior, Create POSP/MISP actions, filtering, permissions, data, backend logic, and workflows.",
-  "verification": "PR #271 Verify web portal run 31488262579 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
+  "source": "ChatGPT explicit request to merge PR #272 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
+  "source_commit": "80e8024074a085056c3a4f8ab55fefdfabbb55d9",
+  "release_scope": "Deploy the Existing Intermediary Migration save-flow update so migration legacy_* fields no longer autosave independently and are instead saved together with the primary editor when using Save & Exit or Upload Documents, while preserving migration synchronization, activation-date validation, cancel behavior, permissions, routing, and document workflow behavior.",
+  "verification": "PR #272 Verify web portal run 31492010405 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
