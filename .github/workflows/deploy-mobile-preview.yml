@@ -1,3 +1,4 @@
+# Review-only deployment for the self-managed claims feature branch. Never targets production.
 name: Deploy mobile browser preview
 
 on:
