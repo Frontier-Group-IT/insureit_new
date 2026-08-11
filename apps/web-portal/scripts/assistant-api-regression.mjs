@@ -17,7 +17,7 @@ const fake = createFakeAssistantProvider([
 const orchestrated = await runAssistant({
   requestId: "request-1",
   actor,
-  messages: [{ role: "user", content: "How do I renew?" }],
+  messages: [{ role: "user", content: "Renew my policy" }],
   currentPath: "/dashboard",
   provider: fake,
   knowledgeRepository: { async searchApprovedActive() { return [{ id: "source-1", title: "Renewal guide", excerpt: "Open policies and review renewal.", href: "/knowledge/renewals", requiredCapabilities: ["view_policies"] }]; } },
@@ -34,7 +34,7 @@ assert.equal(auditEvents.every((event) => event.requestId === "request-1"), true
 
 const uncitedKnowledge = await runAssistant({
   actor,
-  messages: [{ role: "user", content: "How do I renew?" }],
+  messages: [{ role: "user", content: "Renew my policy" }],
   currentPath: "/policies",
   provider: createFakeAssistantProvider([
     { kind: "tool_calls", calls: [{ id: "uncited-1", name: "search_approved_knowledge", query: "policy renewal" }] },
@@ -49,7 +49,7 @@ assert.equal(uncitedKnowledge.code, "unsafe_provider_output", "knowledge answers
 
 const detachedCitation = await runAssistant({
   actor,
-  messages: [{ role: "user", content: "How do I renew?" }],
+  messages: [{ role: "user", content: "Renew my policy" }],
   currentPath: "/policies",
   provider: createFakeAssistantProvider([
     { kind: "tool_calls", calls: [{ id: "detached-1", name: "search_approved_knowledge", query: "policy renewal" }] },
@@ -74,7 +74,47 @@ const abstained = await runAssistant({
   audit: { async write() {} },
 });
 assert.equal(abstained.code, "no_approved_source");
-assert.equal(noSourceFake.calls.length, 1);
+assert.equal(noSourceFake.calls.length, 0, "explicit procedure questions abstain without spending provider quota when no source exists");
+
+const deterministicKnowledgeAudit = [];
+const deterministicKnowledgeProvider = createFakeAssistantProvider([]);
+const deterministicKnowledge = await runAssistant({
+  requestId: "request-approved-knowledge",
+  actor,
+  messages: [{ role: "user", content: "How can I onboard a POSP?" }],
+  currentPath: "/dashboard",
+  provider: deterministicKnowledgeProvider,
+  knowledgeRepository: { async searchApprovedActive() { return [{ id: "posp-onboarding", title: "POSP onboarding", excerpt: "Open Add POSP and complete the approved onboarding form.", href: "/intermediaries/posp/new", requiredCapabilities: ["create_intermediary_application"], requiredAccess: "edit" }]; } },
+  navigationResolver: { async search() { return []; } },
+  can: async () => true,
+  audit: { async write(event) { deterministicKnowledgeAudit.push(event); } },
+});
+assert.match(deterministicKnowledge.answer, /approved onboarding form\. \[posp-onboarding\]/);
+assert.equal(deterministicKnowledge.links[0]?.href, "/intermediaries/posp/new");
+assert.equal(deterministicKnowledge.citations[0]?.id, "posp-onboarding");
+assert.equal(deterministicKnowledgeProvider.calls.length, 0, "approved procedure lookup is deterministic and quota-free");
+assert.equal(deterministicKnowledgeAudit.some((event) => event.toolName === "search_approved_knowledge" && event.decision === "allowed"), true);
+
+const liveCountAudit = [];
+const liveCountProvider = createFakeAssistantProvider([]);
+const liveCount = await runAssistant({
+  requestId: "request-live-count",
+  actor,
+  messages: [{ role: "user", content: "How many POSP accounts are active right now?" }],
+  currentPath: "/dashboard",
+  provider: liveCountProvider,
+  knowledgeRepository: { async searchApprovedActive() { return []; } },
+  navigationResolver: createStaticNavigationResolver([
+    { label: "All POSP", href: "/intermediaries/posp", requiredCapability: "view_intermediaries" },
+    { label: "Add POSP", href: "/intermediaries/posp/new", requiredCapability: "create_intermediary_application", requiredAccess: "edit" },
+  ]),
+  can: async () => true,
+  audit: { async write(event) { liveCountAudit.push(event); } },
+});
+assert.match(liveCount.answer, /Live operational counts are not enabled/);
+assert.equal(liveCount.links[0]?.href, "/intermediaries/posp");
+assert.equal(liveCountProvider.calls.length, 0, "unsupported live counts do not call the model provider");
+assert.equal(liveCountAudit.some((event) => event.errorCode === "live_operational_data_not_enabled"), true);
 
 const greetingProvider = createFakeAssistantProvider([]);
 const greeting = await runAssistant({
@@ -224,6 +264,7 @@ const rankedNavigation = createStaticNavigationResolver([
 ]);
 assert.equal((await rankedNavigation.search("create a new posp", actor))[0]?.href, "/intermediaries/posp/new", "action intent ranks creation above the register");
 assert.equal((await rankedNavigation.search("show all posp", actor))[0]?.href, "/intermediaries/posp", "list intent ranks the register first");
+assert.equal((await rankedNavigation.search("how many posp accounts are active right now", actor))[0]?.href, "/intermediaries/posp", "live-count wording resolves to the relevant register");
 
 const auditRows = [];
 const auditWriter = createMetadataOnlyAssistantAuditWriter({
@@ -281,4 +322,4 @@ for (const forbidden of ["console.log", "console.error", "messages:", "answer:"]
 const navigationSource = await readFile(new URL("../lib/assistant/navigation.ts", import.meta.url), "utf8");
 assert.match(navigationSource, /navigationCatalogue/, "server navigation resolver derives from the shared permission catalogue");
 
-console.log(JSON.stringify({ cases: 41, status: "ok" }));
+console.log(JSON.stringify({ cases: 49, status: "ok" }));

@@ -59,6 +59,21 @@ function explicitNavigationQuery(messages: AssistantInputMessage[]): string | nu
   return latest;
 }
 
+function explicitKnowledgeQuery(messages: AssistantInputMessage[]): string | null {
+  const latest = [...messages].reverse().find((message) => message.role === "user")?.content.trim() ?? "";
+  if (!latest || latest.length > 500) return null;
+  const normalized = normalizeIntent(latest);
+  if (!/\b(how|what|why|explain|procedure|steps|guide|know)\b/.test(normalized)) return null;
+  if (/\b(how many|count|total|right now|currently active|currently pending)\b/.test(normalized)) return null;
+  return latest;
+}
+
+function liveOperationalQuery(messages: AssistantInputMessage[]): string | null {
+  const latest = [...messages].reverse().find((message) => message.role === "user")?.content.trim() ?? "";
+  if (!latest || latest.length > 500) return null;
+  return /\b(how many|count|total|right now|currently active|currently pending)\b/.test(normalizeIntent(latest)) ? latest : null;
+}
+
 export type AssistantActor = { profileId: string; role: string };
 export type NavigationCandidate = { label: string; href: string; requiredCapability?: Capability; requiredAccess?: Exclude<PermissionAccess, "none"> };
 export interface NavigationResolver {
@@ -133,6 +148,30 @@ export async function runAssistant(input: {
     const conversational = deterministicConversation(input.messages);
     if (conversational) return conversational;
 
+    const liveQuery = liveOperationalQuery(input.messages);
+    if (liveQuery) {
+      const toolStartedAt = Date.now();
+      const candidates = await searchAllowedNavigation(liveQuery, input);
+      await auditRequired(input.audit, {
+        requestId: input.requestId,
+        actorProfileId: input.actor.profileId,
+        capability: "use_assistant",
+        eventType: "tool",
+        toolName: "search_navigation",
+        allowed: candidates.length > 0,
+        decision: candidates.length > 0 ? "allowed" : "denied",
+        rowCount: candidates.length,
+        latencyMs: Date.now() - toolStartedAt,
+        errorCode: "live_operational_data_not_enabled",
+        route: input.currentPath,
+      });
+      return {
+        answer: "Live operational counts are not enabled for the assistant yet. Use the relevant permitted register to view the current total.",
+        links: candidates.slice(0, 3).map(({ label, href }) => ({ label, href })),
+        citations: [],
+      };
+    }
+
     const navigationQuery = explicitNavigationQuery(input.messages);
     if (navigationQuery) {
       const toolStartedAt = Date.now();
@@ -156,6 +195,32 @@ export async function runAssistant(input: {
         answer: `Open ${primary.label}.`,
         links: candidates.slice(0, 3).map(({ label, href }) => ({ label, href })),
         citations: [],
+      };
+    }
+
+    const knowledgeQuery = explicitKnowledgeQuery(input.messages);
+    if (knowledgeQuery) {
+      const toolStartedAt = Date.now();
+      const sources = await searchApprovedKnowledge({ query: knowledgeQuery, repository: input.knowledgeRepository, can: input.can });
+      await auditRequired(input.audit, {
+        requestId: input.requestId,
+        actorProfileId: input.actor.profileId,
+        capability: "use_assistant",
+        eventType: "tool",
+        toolName: "search_approved_knowledge",
+        allowed: sources.length > 0,
+        decision: sources.length > 0 ? "allowed" : "denied",
+        rowCount: sources.length,
+        latencyMs: Date.now() - toolStartedAt,
+        errorCode: sources.length > 0 ? undefined : "no_approved_source",
+        route: input.currentPath,
+      });
+      if (!sources.length) return fail("no_approved_source", "I couldn't find an approved source for that request. Please use the relevant portal module or ask an authorised colleague.");
+      const primary = sources[0];
+      return {
+        answer: `${primary.excerpt} [${primary.id}]`,
+        links: primary.href ? [{ label: primary.title, href: primary.href }] : [],
+        citations: [{ id: primary.id, title: primary.title, ...(primary.href ? { href: primary.href } : {}) }],
       };
     }
 

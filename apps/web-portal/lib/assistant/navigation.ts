@@ -24,7 +24,9 @@ const NAVIGATION_ALIASES: Record<string, string[]> = {
   "/tasks?status=overdue": ["overdue tasks", "late tasks"],
 };
 
-const SEARCH_STOP_WORDS = new Set(["a", "an", "can", "could", "for", "i", "is", "me", "please", "the", "to", "where", "you"]);
+const SEARCH_STOP_WORDS = new Set([
+  "a", "accounts", "active", "an", "are", "can", "could", "count", "currently", "for", "how", "i", "is", "many", "me", "now", "please", "right", "the", "to", "total", "where", "you",
+]);
 
 const DEFAULT_NAVIGATION: StaticNavigationEntry[] = [...navigationCatalogue, developmentNavigationSection].flatMap((section) =>
   section.items.flatMap((node) => node.kind === "group"
@@ -72,7 +74,7 @@ export function createStaticNavigationResolver(entries: StaticNavigationEntry[] 
           if (matchedTerms.length === terms.length) score += 20;
           if (entry.labelText === normalized) score += 40;
           if (/\b(add|create|new|onboard|upload)\b/.test(normalized)) score += /\b(add|new)\b/.test(entry.labelText) ? 25 : -10;
-          if (/\b(list|register|show|view|find|all)\b/.test(normalized)) score += /\b(all|register)\b/.test(entry.labelText) ? 20 : 0;
+          if (/\b(list|register|show|view|find|all|count|total|how many)\b/.test(normalized)) score += /\b(all|register)\b/.test(entry.labelText) ? 20 : 0;
           if (/\b(existing)\b/.test(normalized)) score += entry.searchText.includes("existing") ? 30 : -15;
           return { entry, score };
         })
