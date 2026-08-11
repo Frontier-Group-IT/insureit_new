@@ -40,6 +40,33 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Detect generated lockfile changes
+        id: lockfile
+        shell: bash
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload generated lockfile for repair
+        if: steps.lockfile.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-package-lock-${{ github.sha }}
+          path: package-lock.json
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Require synchronized dependency lockfile
+        if: steps.lockfile.outputs.changed == 'true'
+        shell: bash
+        run: |
+          echo "::error::package-lock.json is out of sync with package.json. Download the generated-package-lock artifact and commit it."
+          git diff -- package-lock.json
+          exit 1
+
       - name: Mobile typecheck
         run: npm run typecheck:mobile
 
@@ -65,9 +92,10 @@ jobs:
             echo "## Mobile app review gate"
             echo
             echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Dependency lockfile: must remain synchronized"
             echo "- Static checks: TypeScript typecheck and Expo lint"
             echo "- Review build: Expo web export"
-            echo "- Artifact: \`mobile-web-review-${GITHUB_SHA}\` (retained for 14 days)"
+            echo "- Artifact: \`mobile-web-review-${GITHUB_SHA}\` (retained for 14 days after a green run)"
             echo "- Production deployment: not triggered by this workflow"
             echo
             echo "The artifact is a browser-review build. Native-only behavior such as device permissions, secure storage and Android-specific integrations still requires a native Expo/EAS verification pass."
