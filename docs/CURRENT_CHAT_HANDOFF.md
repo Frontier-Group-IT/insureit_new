@@ -10,7 +10,7 @@ The isolated employee-assistant Preview on branch `agent/assistant-preview` / PR
 
 ## Assistant Preview continuation state
 
-- **USER-CONFIGURED / UNVERIFIED:** Vercel Preview uses the OpenRouter OpenAI-compatible endpoint with a user-managed Preview-only key. On 2026-08-11 the user changed `ASSISTANT_MODEL` from verified `google/gemma-4-26b-a4b-it:free` to `inclusionai/ling-3.0-tiny:free`; redeploy and live structured-output/tool-call verification are required. Never store or repeat the key.
+- **USER-CONFIGURED / REDEPLOY PENDING:** Vercel Preview uses the OpenRouter OpenAI-compatible endpoint with a user-managed Preview-only key. The user restored `ASSISTANT_MODEL` to verified `google/gemma-4-26b-a4b-it:free` after `inclusionai/ling-3.0-tiny:free` returned HTTP 400 for the required tools plus structured-output request. Never store or repeat the key.
 - **VERIFIED:** assistant provider connectivity works. The former Vercel AI Gateway path was blocked by `403 customer_verification_required`; direct OpenRouter Preview requests now return controlled assistant responses.
 - **IMPLEMENTED:** provider requests require JSON output and log bounded provider error metadata only. Prompts, answers, keys, and provider bodies are not logged.
 - **IMPLEMENTED:** exact greetings and ambiguous single-topic prompts are answered or clarified deterministically without model quota. Explicit navigation requests are resolved deterministically through the existing permission-aware catalogue; model output cannot grant routes.
