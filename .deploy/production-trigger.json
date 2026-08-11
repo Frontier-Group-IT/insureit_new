@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #256 onboarding header back navigation to production.",
-  "deploy_requested_at": "2026-08-11T11:50:00+05:30",
+  "purpose": "Deploy PR #257 onboarding header back button removal to production.",
+  "deploy_requested_at": "2026-08-11T12:11:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #256 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
-  "source_commit": "10ef808a289c01088bcc8eae1a9b4010b4f35b72",
-  "release_scope": "Deploy the POSP/MISP onboarding workflow header change adding a compact ArrowLeft back action beside the onboarding heading, using deterministic previous-stage navigation with a safe fallback to the Application Review page, while preserving all existing workflow behavior, styling, forms, permissions, and other UI.",
-  "verification": "PR #256 Verify web portal run 31464684425 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
+  "source": "ChatGPT explicit request to merge PR #257 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
+  "source_commit": "f51d5fae27a469905d77ffc33ba248cb71df32cb",
+  "release_scope": "Deploy the POSP/MISP onboarding workflow header cleanup that removes the recently added Back/ArrowLeft button and related previous-stage navigation logic, restoring the previous header layout while preserving all other workflow behavior, styling, forms, permissions, and functionality.",
+  "verification": "PR #257 Verify web portal run 31465928058 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
