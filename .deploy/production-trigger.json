@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #269 Partner Application Review continue-arrow icon update to production.",
-  "deploy_requested_at": "2026-08-11T16:55:00+05:30",
+  "purpose": "Deploy PR #270 Partner Register action column alignment fix to production.",
+  "deploy_requested_at": "2026-08-11T17:06:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #269 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
-  "source_commit": "d00df9109fd90eac2c1bbbd80ecf44c87ca9bd58",
-  "release_scope": "Deploy the Partner Application Review header action update so the previous login/enter-style icon is replaced by a standard right-facing continue arrow, the tooltip and accessibility label read Continue POSP onboarding / Continue MISP onboarding, and the existing compact styling, workflow URL, current-stage routing, permissions, PAN status behavior, data, and backend logic remain unchanged.",
-  "verification": "PR #269 Verify web portal run 31486434815 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
+  "source": "ChatGPT explicit request to merge PR #270 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
+  "source_commit": "08375427f6bae68d780053bf732c29017f0e1921",
+  "release_scope": "Deploy the Partner Register table alignment update so the ACTION column header and row-level action controls are centered consistently within the column, while preserving existing button styles, links, filtering, search, routing, permissions, data, backend behavior, and workflows.",
+  "verification": "PR #270 Verify web portal run 31487336951 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
