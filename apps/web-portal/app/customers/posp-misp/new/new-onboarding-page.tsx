@@ -6,6 +6,7 @@ import { createManualPospMispOnboardingV2 } from "../manual-actions-v2";
 import { LegacyOnboardingFields } from "../legacy-onboarding-fields";
 import { OnboardingFieldPresentation } from "../onboarding-field-presentation";
 import { PospMispOnboardingForm } from "../posp-misp-onboarding-form";
+import { MispModernOnboardingForm } from "./misp-modern-onboarding-form";
 
 export type OnboardingPartnerType = "posp" | "misp";
 export type NewOnboardingQuery = Record<string, string | undefined> & {
@@ -35,18 +36,29 @@ export async function renderNewOnboardingPage(partnerType: OnboardingPartnerType
   return (
     <AppShell title={title} backHref={backHref}>
       <OnboardingFieldPresentation>
-        <PospMispOnboardingForm
-          action={createManualPospMispOnboardingV2}
-          submitPath={legacyMode ? "/customers/posp-misp/new/legacy-submit" : "/customers/posp-misp/new/submit"}
-          partnerType={partnerType}
-          initialError={query.form_error ?? null}
-          initialField={query.form_field ?? null}
-          initialValues={initialValues}
-          salesManagers={salesManagers}
-          oems={oems}
-          banks={banks}
-          legacyFields={legacyMode ? <LegacyOnboardingFields partnerType={partnerType} initialValues={initialValues} /> : null}
-        />
+        {isMisp && !legacyMode ? (
+          <MispModernOnboardingForm
+            initialError={query.form_error ?? null}
+            initialField={query.form_field ?? null}
+            initialValues={initialValues}
+            salesManagers={salesManagers}
+            oems={oems}
+            banks={banks}
+          />
+        ) : (
+          <PospMispOnboardingForm
+            action={createManualPospMispOnboardingV2}
+            submitPath={legacyMode ? "/customers/posp-misp/new/legacy-submit" : "/customers/posp-misp/new/submit"}
+            partnerType={partnerType}
+            initialError={query.form_error ?? null}
+            initialField={query.form_field ?? null}
+            initialValues={initialValues}
+            salesManagers={salesManagers}
+            oems={oems}
+            banks={banks}
+            legacyFields={legacyMode ? <LegacyOnboardingFields partnerType={partnerType} initialValues={initialValues} /> : null}
+          />
+        )}
       </OnboardingFieldPresentation>
     </AppShell>
   );
