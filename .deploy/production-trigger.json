@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #257 onboarding header back button removal to production.",
-  "deploy_requested_at": "2026-08-11T12:11:00+05:30",
+  "purpose": "Deploy PR #258 Add MISP onboarding layout alignment to production.",
+  "deploy_requested_at": "2026-08-11T12:33:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #257 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
-  "source_commit": "f51d5fae27a469905d77ffc33ba248cb71df32cb",
-  "release_scope": "Deploy the POSP/MISP onboarding workflow header cleanup that removes the recently added Back/ArrowLeft button and related previous-stage navigation logic, restoring the previous header layout while preserving all other workflow behavior, styling, forms, permissions, and functionality.",
-  "verification": "PR #257 Verify web portal run 31465928058 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
+  "source": "ChatGPT explicit request to merge PR #258 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
+  "source_commit": "237ecaac4db4c6cc172d7c7381cab0c9dacba032",
+  "release_scope": "Deploy the Add MISP onboarding UI alignment so the new MISP application page uses the same modern visual shell as Add POSP, including the blue onboarding header, sticky section navigation, numbered cards, matching field spacing, and fixed bottom action bar, while preserving all existing MISP fields, validation, save intents, POST routes, backend workflow, and legacy existing-MISP flow.",
+  "verification": "PR #258 Verify web portal run 31467361891 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
