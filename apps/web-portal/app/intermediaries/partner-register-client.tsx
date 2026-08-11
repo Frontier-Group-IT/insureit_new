@@ -106,7 +106,7 @@ function FilterButton({ label, count, active, onClick }: { label: string; count:
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-lg px-2.5 py-1.5 transition-colors duration-150 ${active ? "bg-[#315FEA] text-white shadow-sm" : "text-[#526178] hover:bg-[#315FEA] hover:text-white"}`}
+      className="rounded-full px-2.5 py-1.5 text-[#526178] transition-colors duration-150 hover:bg-[#E7E7E7] hover:text-[#17203A]"
     >
       {label} <span className="ml-1">{count}</span>
     </button>
