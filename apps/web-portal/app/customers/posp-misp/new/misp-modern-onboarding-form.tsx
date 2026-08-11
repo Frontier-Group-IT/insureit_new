@@ -77,10 +77,12 @@ export function MispModernOnboardingForm({ initialError = null, initialField = n
           </MispSection>
 
           <MispSection id="misp-section-3" number="03" title="Address">
-            <div className="md:col-span-2 xl:col-span-2"><Field label="Address" name="address" required defaultValue={initialValues.address} error={errorFor("address")} /></div>
-            <Field label="City" name="city" required defaultValue={initialValues.city} error={errorFor("city")} />
-            <Field label="State" name="state" required defaultValue={initialValues.state} error={errorFor("state")} />
-            <Field label="PIN Code" name="postal_code" required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} minLength={6} defaultValue={initialValues.postal_code} error={errorFor("postal_code")} />
+            <div className="grid min-w-0 gap-3 md:col-span-2 md:grid-cols-2 xl:col-span-4 xl:grid-cols-5">
+              <div className="md:col-span-2 xl:col-span-2"><Field label="Address" name="address" required defaultValue={initialValues.address} error={errorFor("address")} /></div>
+              <Field label="City" name="city" required defaultValue={initialValues.city} error={errorFor("city")} />
+              <Field label="State" name="state" required defaultValue={initialValues.state} error={errorFor("state")} />
+              <Field label="PIN Code" name="postal_code" required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} minLength={6} defaultValue={initialValues.postal_code} error={errorFor("postal_code")} />
+            </div>
           </MispSection>
 
           <MispSection id="misp-section-4" number="04" title="Bank & tax">
