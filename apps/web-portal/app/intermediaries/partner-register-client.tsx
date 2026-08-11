@@ -26,6 +26,8 @@ export type PartnerRegisterRow = {
   searchText: string;
 };
 
+type PartnerFilter = "" | "all" | "active" | "onboarding";
+
 export function PartnerRegisterClient({
   rows,
   initialSearch,
@@ -42,7 +44,9 @@ export function PartnerRegisterClient({
   loadError: boolean;
 }) {
   const [search, setSearch] = useState(initialSearch);
-  const [status, setStatus] = useState(initialStatus === "active" || initialStatus === "onboarding" ? initialStatus : "");
+  const initialFilter = initialStatus === "active" || initialStatus === "onboarding" ? initialStatus : "";
+  const [status, setStatus] = useState(initialFilter);
+  const [selectedFilter, setSelectedFilter] = useState<PartnerFilter>(initialFilter);
   const normalized = search.trim().toLowerCase();
   const searchedRows = useMemo(() => normalized ? rows.filter((row) => row.searchText.includes(normalized)) : rows, [normalized, rows]);
   const counts = useMemo(() => searchedRows.reduce((acc, row) => {
@@ -68,6 +72,11 @@ export function PartnerRegisterClient({
         ? "Documents saved and Partner activated."
         : "Action completed.";
 
+  function selectFilter(next: Exclude<PartnerFilter, "">) {
+    setSelectedFilter(next);
+    setStatus(next === "all" ? "" : next);
+  }
+
   return (
     <div className="mx-auto max-w-[1480px] space-y-4 pb-6">
       {success ? <WorkflowSuccessToast message={successMessage} durationMs={4000} /> : null}
@@ -80,9 +89,9 @@ export function PartnerRegisterClient({
             <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search partner name, mobile, email or ID" className="h-9 w-full rounded-lg border border-[#D8E1EC] bg-white pl-9 pr-3 text-[10.5px] text-[#17203A] outline-none placeholder:text-[#94A3B8] focus:border-[#315FEA] focus:ring-2 focus:ring-[#E6ECFF]" />
           </form>
           <div className="flex items-center justify-end gap-1.5 whitespace-nowrap text-[9.5px] font-semibold">
-            <FilterButton label="All" count={searchedRows.length} active={!status} onClick={() => setStatus("")} className="bg-[#0F2A55] text-white" />
-            <FilterButton label="Active" count={counts.active} active={status === "active"} onClick={() => setStatus("active")} className="bg-emerald-100 text-emerald-800" />
-            <FilterButton label="Onboarding" count={counts.onboarding} active={status === "onboarding"} onClick={() => setStatus("onboarding")} className="bg-amber-100 text-amber-800" />
+            <FilterButton label="All" count={searchedRows.length} active={selectedFilter === "all"} onClick={() => selectFilter("all")} />
+            <FilterButton label="Active" count={counts.active} active={selectedFilter === "active"} onClick={() => selectFilter("active")} />
+            <FilterButton label="Onboarding" count={counts.onboarding} active={selectedFilter === "onboarding"} onClick={() => selectFilter("onboarding")} />
           </div>
         </div>
         {loadError ? <div className="px-4 py-12 text-center text-[11px] text-red-700">The register could not be loaded. Please refresh the page and try again.</div> : visibleRows.length ? <PartnerTable rows={visibleRows} /> : <div className="px-4 py-16 text-center"><p className="text-[12px] font-semibold">No records found</p><p className="mt-1 text-[10px] text-[#64748B]">Try changing the search or status filter.</p></div>}
@@ -91,8 +100,17 @@ export function PartnerRegisterClient({
   );
 }
 
-function FilterButton({ label, count, active, onClick, className }: { label: string; count: number; active: boolean; onClick: () => void; className: string }) {
-  return <button type="button" onClick={onClick} className={`rounded-lg px-2.5 py-1.5 transition ${active ? className : "text-[#526178] hover:bg-white hover:text-[#0F2A55]"}`}>{label} <span className="ml-1">{count}</span></button>;
+function FilterButton({ label, count, active, onClick }: { label: string; count: number; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`rounded-lg px-2.5 py-1.5 transition-colors duration-150 ${active ? "bg-[#315FEA] text-white shadow-sm" : "text-[#526178] hover:bg-[#315FEA] hover:text-white"}`}
+    >
+      {label} <span className="ml-1">{count}</span>
+    </button>
+  );
 }
 
 function PartnerTable({ rows }: { rows: PartnerRegisterRow[] }) {
