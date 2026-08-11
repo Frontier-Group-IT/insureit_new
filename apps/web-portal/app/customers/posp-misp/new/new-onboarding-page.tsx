@@ -3,11 +3,11 @@ import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
 import { requirePospMispManager } from "@/lib/master-data-server";
 import { getActiveBankOptions, getActiveVehicleManufacturerOptions, getPospMispAssociates } from "@/lib/reference-data-cache";
 import { createManualPospMispOnboardingV2 } from "../manual-actions-v2";
-import { LegacyOnboardingFields } from "../legacy-onboarding-fields";
 import { OnboardingFieldPresentation } from "../onboarding-field-presentation";
 import { PospMispOnboardingForm } from "../posp-misp-onboarding-form";
 import { MispExistingModernOnboardingForm } from "./misp-existing-modern-onboarding-form";
 import { MispModernOnboardingForm } from "./misp-modern-onboarding-form";
+import { PospExistingModernOnboardingForm } from "./posp-existing-modern-onboarding-form";
 
 export type OnboardingPartnerType = "posp" | "misp";
 export type NewOnboardingQuery = Record<string, string | undefined> & {
@@ -57,10 +57,18 @@ export async function renderNewOnboardingPage(partnerType: OnboardingPartnerType
               banks={banks}
             />
           )
+        ) : legacyMode ? (
+          <PospExistingModernOnboardingForm
+            initialError={query.form_error ?? null}
+            initialField={query.form_field ?? null}
+            initialValues={initialValues}
+            salesManagers={salesManagers}
+            banks={banks}
+          />
         ) : (
           <PospMispOnboardingForm
             action={createManualPospMispOnboardingV2}
-            submitPath={legacyMode ? "/customers/posp-misp/new/legacy-submit" : "/customers/posp-misp/new/submit"}
+            submitPath="/customers/posp-misp/new/submit"
             partnerType={partnerType}
             initialError={query.form_error ?? null}
             initialField={query.form_field ?? null}
@@ -68,7 +76,6 @@ export async function renderNewOnboardingPage(partnerType: OnboardingPartnerType
             salesManagers={salesManagers}
             oems={oems}
             banks={banks}
-            legacyFields={legacyMode ? <LegacyOnboardingFields partnerType={partnerType} initialValues={initialValues} /> : null}
           />
         )}
       </OnboardingFieldPresentation>
