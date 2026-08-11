@@ -33,6 +33,21 @@ export function ExistingIntermediaryMigrationEditor({ applicationId, accountType
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
+  useEffect(() => {
+    if (!editable || pending || !dirtyRef.current) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      submitDirtyForm();
+    }, 50);
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [editable, pending, state.savedAt]);
+
   if (!isExistingMigrationRecord(values)) return null;
 
   function submitDirtyForm() {
@@ -47,7 +62,10 @@ export function ExistingIntermediaryMigrationEditor({ applicationId, accountType
     if (!editable) return;
     dirtyRef.current = true;
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(submitDirtyForm, 700);
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      submitDirtyForm();
+    }, 700);
   }
 
   function flushOnFocusLeave(event: React.FocusEvent<HTMLFormElement>) {
