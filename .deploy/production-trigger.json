@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #267 selected Partner Register grey filter highlight to production.",
-  "deploy_requested_at": "2026-08-11T16:19:00+05:30",
+  "purpose": "Deploy PR #268 shared date calendar icon overlap fix to production.",
+  "deploy_requested_at": "2026-08-11T16:32:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #267 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
-  "source_commit": "3f39402bf7d7efe076b8bb264222c2656cee6230",
-  "release_scope": "Deploy the Partner Register filter refinement so the currently selected All, Active or Onboarding filter remains highlighted with the rounded light-grey pill, non-selected filters stay plain text until hovered, and All is selected by default when no explicit account status filter is present, while preserving filtering, counts, URL synchronization, accessibility state, search, permissions, data queries, and table behavior.",
-  "verification": "PR #267 Verify web portal run 31483663087 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
+  "source": "ChatGPT explicit request to merge PR #268 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
+  "source_commit": "c8e98200fafd87b8c74aac4d26bef182345e5a7a",
+  "release_scope": "Deploy the shared IndianDateField fix so application date inputs show one correctly aligned calendar icon, retain sufficient right-side padding even when forms provide custom input classes, hide the browser-native WebKit calendar indicator visually while preserving picker interaction, and keep existing date values, validation, payloads, database behavior, and save workflows unchanged.",
+  "verification": "PR #268 Verify web portal run 31484789421 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
