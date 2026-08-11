@@ -1,12 +1,58 @@
 # Current Chat Handoff
 
-> **Consolidated:** 2026-08-09 (IST)
+> **Consolidated:** 2026-08-12 (IST)
 >
 > Read with `docs/INSUREIT_PROJECT_CONTEXT.md` and `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md`. Never store secrets, raw OCR text, policyholder PII, or complete policy documents here.
 
 ## Active track
 
-Policy Onboarding OCR hardening is the immediate active work. Production portal is `https://portal.insureit.in`. Ordinary commits do not intentionally deploy production; `.deploy/production-trigger.json` is changed only after the user explicitly says `deploy now` or `finish and deploy`.
+Policy Onboarding OCR hardening remains an active production-sensitive track. Production portal is `https://portal.insureit.in`. Ordinary commits do not intentionally deploy production; `.deploy/production-trigger.json` is changed only after the user explicitly says `deploy now` or `finish and deploy`.
+
+A separate UI preview track is also open for the portal navigation redesign. It is intentionally isolated from `main` until the user tests and approves the preview.
+
+## Navigation redesign preview — 2026-08-12
+
+**IMPLEMENTED / PREVIEW ONLY / NOT MERGED**
+
+Branch:
+
+```text
+feature/insureit-shield-rail-navigation
+```
+
+Draft PR:
+
+```text
+#275 Redesign portal navigation with INSUREIT Shield Rail
+```
+
+Scope:
+
+- Replaces the deep nested desktop sidebar with a two-part Shield Rail + contextual destination panel.
+- Keeps permission-aware workspace visibility and existing routes.
+- Flattens workspace navigation and moves create/import links into a compact Quick actions area.
+- Adds permission-aware navigation search with Ctrl/Cmd+K.
+- Adds a remembered collapsed desktop rail whose width is reflected by the portal shell.
+- Rebuilds mobile drawer navigation as workspace -> destination drill-in instead of nested accordions.
+- Changes mobile `More` into a real full-navigation launcher rather than a Settings link.
+- Preserves mobile focus trap, Escape handling, scroll lock and focus return.
+- Adds clearer `aria-current`, dialog and expanded-state semantics.
+- Renames the visible workspace label from `Intermediatory` to `Intermediary`.
+
+Primary files:
+
+```text
+apps/web-portal/components/claim-manager/app-navigation.tsx
+apps/web-portal/components/claim-manager/mobile-navigation.tsx
+apps/web-portal/components/claim-manager/mobile-bottom-navigation.tsx
+apps/web-portal/components/claim-manager/claim-manager-shell.tsx
+```
+
+Boundary:
+
+- No claim, Partner/POSP/MISP workflow, Supabase schema, AuthBridge, iCall, OCR or production deployment-trigger behavior is intentionally changed.
+- Do not merge PR #275 until the user has tested the preview and explicitly approves the navigation direction.
+- If the user rejects the visual/interaction direction, revise or close the preview branch rather than changing production `main`.
 
 ## Verified pre-change parser baseline
 
@@ -46,7 +92,7 @@ Printed net = 22739
 OD = 22739 - 7367 - 330 = 15042
 ```
 
-## Current implementation
+## Current OCR implementation
 
 **IMPLEMENTED / NOT YET DEPLOYED OR VERIFIED:** a second IFFCO financial pass now consumes Google Document AI table cell anchors (`pages[].tables[]`) instead of relying only on flattened page text.
 
@@ -76,9 +122,9 @@ f16058c0c159ec90f46d4b28a718d3205ab82a7b
 22d62f0387368ff8d0f1725321e0a286b2b9f5df
 ```
 
-## Immediate next step
+## Immediate OCR next step
 
-Before any deployment, user/local environment should run:
+Before any deployment, use the repository verification workflow for:
 
 ```text
 npm run policy-ocr:iffco-structured-regression
