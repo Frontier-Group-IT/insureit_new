@@ -1,0 +1,82 @@
+name: Verify mobile app
+
+on:
+  push:
+    branches:
+      - feature/self-managed-claims
+    paths:
+      - 'apps/mobile-app/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/verify-mobile-app.yml'
+  pull_request:
+    paths:
+      - 'apps/mobile-app/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/verify-mobile-app.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-mobile-app-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ci-placeholder.supabase.co' }}
+  EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'ci-placeholder-public-anon-key' }}
+
+jobs:
+  verify:
+    name: typecheck, lint and Expo web review build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Mobile typecheck
+        run: npm run typecheck:mobile
+
+      - name: Mobile lint
+        run: npm run lint:mobile
+
+      - name: Build Expo web review export
+        run: npm run build:mobile:web
+
+      - name: Upload browser review build
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-web-review-${{ github.sha }}
+          path: apps/mobile-app/dist-web
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Verification summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Mobile app review gate"
+            echo
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Static checks: TypeScript typecheck and Expo lint"
+            echo "- Review build: Expo web export"
+            echo "- Artifact: \`mobile-web-review-${GITHUB_SHA}\` (retained for 14 days)"
+            echo "- Production deployment: not triggered by this workflow"
+            echo
+            echo "The artifact is a browser-review build. Native-only behavior such as device permissions, secure storage and Android-specific integrations still requires a native Expo/EAS verification pass."
+          } >> "$GITHUB_STEP_SUMMARY"
