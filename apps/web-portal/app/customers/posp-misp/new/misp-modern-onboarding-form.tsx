@@ -53,27 +53,33 @@ export function MispModernOnboardingForm({ initialError = null, initialField = n
 
         <div className="space-y-4">
           <MispSection id="misp-section-1" number="01" title="MISP details">
-            <IndianDateField label="Documents received" name="document_received_at" defaultValue={initialValues.document_received_at} inputClassName={inputClass} />
-            <SelectField label="RM" name="associate_employee_id" required options={salesManagers} placeholder="Select RM" defaultValue={initialValues.associate_employee_id} error={errorFor("associate_employee_id")} />
-            <Field label="MISP Name" name="misp_name" required defaultValue={initialValues.misp_name} error={errorFor("misp_name")} />
-            <PanField label="MISP PAN" name="pan_number" defaultValue={initialValues.pan_number} error={errorFor("pan_number")} />
-            <SelectField label="OEM Name" name="oem_name" required options={oems} placeholder="Select OEM" defaultValue={initialValues.oem_name} error={errorFor("oem_name")} />
+            <div className="grid min-w-0 gap-3 md:col-span-2 md:grid-cols-2 xl:col-span-4 xl:grid-cols-5">
+              <IndianDateField label="Documents received" name="document_received_at" defaultValue={initialValues.document_received_at} inputClassName={inputClass} />
+              <SelectField label="OEM Name" name="oem_name" required options={oems} placeholder="Select OEM" defaultValue={initialValues.oem_name} error={errorFor("oem_name")} />
+              <SelectField label="RM" name="associate_employee_id" required options={salesManagers} placeholder="Select RM" defaultValue={initialValues.associate_employee_id} error={errorFor("associate_employee_id")} />
+              <Field label="MISP Name" name="misp_name" required defaultValue={initialValues.misp_name} error={errorFor("misp_name")} />
+              <PanField label="MISP PAN" name="pan_number" defaultValue={initialValues.pan_number} error={errorFor("pan_number")} />
+            </div>
           </MispSection>
 
           <MispSection id="misp-section-2" number="02" title="Designated Person (DP)">
-            <div className="md:col-span-2 xl:col-span-4">
-              <label className={labelClass}>DP Name *</label>
-              <div className="grid min-w-0 gap-2 md:grid-cols-3">
-                <Field label="DP First Name" name="dp_first_name" required hideLabel placeholder="First name" defaultValue={initialValues.dp_first_name} error={errorFor("dp_first_name")} />
-                <Field label="DP Middle Name" name="dp_middle_name" hideLabel placeholder="Middle name" defaultValue={initialValues.dp_middle_name} error={errorFor("dp_middle_name")} />
-                <Field label="DP Last Name" name="dp_last_name" hideLabel placeholder="Last name" defaultValue={initialValues.dp_last_name} error={errorFor("dp_last_name")} />
+            <div className="grid min-w-0 gap-3 md:col-span-2 md:grid-cols-2 xl:col-span-4 xl:grid-cols-4">
+              <div className="md:col-span-2 xl:col-span-3">
+                <label className={labelClass}>DP Name *</label>
+                <div className="grid min-w-0 gap-2 md:grid-cols-3">
+                  <Field label="DP First Name" name="dp_first_name" required hideLabel placeholder="First name" defaultValue={initialValues.dp_first_name} error={errorFor("dp_first_name")} />
+                  <Field label="DP Middle Name" name="dp_middle_name" hideLabel placeholder="Middle name" defaultValue={initialValues.dp_middle_name} error={errorFor("dp_middle_name")} />
+                  <Field label="DP Last Name" name="dp_last_name" hideLabel placeholder="Last name" defaultValue={initialValues.dp_last_name} error={errorFor("dp_last_name")} />
+                </div>
               </div>
+              <IndianDateField label="DP Date of Birth" name="date_of_birth" required defaultValue={initialValues.date_of_birth} inputClassName={inputClass} />
             </div>
-            <Field label="DP Contact" name="dp_phone" required inputMode="tel" pattern="(?:\+91)?[6-9][0-9]{9}" defaultValue={initialValues.dp_phone} error={errorFor("dp_phone")} />
-            <Field label="DP Email" name="dp_email" required type="email" defaultValue={initialValues.dp_email} error={errorFor("dp_email")} />
-            <PanField label="DP PAN No" name="dp_pan_number" defaultValue={initialValues.dp_pan_number} error={errorFor("dp_pan_number")} />
-            <IndianDateField label="DP Date of Birth" name="date_of_birth" required defaultValue={initialValues.date_of_birth} inputClassName={inputClass} />
-            <Field label="DP Aadhaar Number" name="aadhaar_number" required inputMode="numeric" pattern="[0-9]{12}" maxLength={12} minLength={12} defaultValue={initialValues.aadhaar_number} error={errorFor("aadhaar_number")} />
+            <div className="grid min-w-0 gap-3 md:col-span-2 md:grid-cols-2 xl:col-span-4 xl:grid-cols-4">
+              <Field label="DP Contact" name="dp_phone" required inputMode="tel" pattern="(?:\+91)?[6-9][0-9]{9}" defaultValue={initialValues.dp_phone} error={errorFor("dp_phone")} />
+              <Field label="DP Email" name="dp_email" required type="email" defaultValue={initialValues.dp_email} error={errorFor("dp_email")} />
+              <PanField label="DP PAN No" name="dp_pan_number" defaultValue={initialValues.dp_pan_number} error={errorFor("dp_pan_number")} />
+              <Field label="DP Aadhaar Number" name="aadhaar_number" required inputMode="numeric" pattern="[0-9]{12}" maxLength={12} minLength={12} defaultValue={initialValues.aadhaar_number} error={errorFor("aadhaar_number")} />
+            </div>
           </MispSection>
 
           <MispSection id="misp-section-3" number="03" title="Address">
