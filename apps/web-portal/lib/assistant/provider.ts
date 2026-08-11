@@ -112,6 +112,7 @@ export function createOpenAICompatibleProvider(config: ProviderConfig): Assistan
           cache: "no-store",
         });
         if (!response.ok) {
+          // Keep diagnostics metadata-only: provider bodies can contain sensitive request context.
           let providerCode: string | undefined;
           let providerType: string | undefined;
           try {
