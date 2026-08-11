@@ -162,6 +162,11 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
             ? "agreement"
             : "iib";
   const viewStage: ViewStage = requestedStage && unlocked.has(requestedStage) ? requestedStage : defaultView;
+  const currentStageIndex = workflowStages.indexOf(viewStage);
+  const previousStage = currentStageIndex > 0 ? workflowStages[currentStageIndex - 1] : null;
+  const backHref = previousStage && unlocked.has(previousStage)
+    ? `/intermediaries/applications/${id}/workflow?stage=${previousStage}`
+    : `/intermediaries/applications/${id}`;
   const docList = (documents ?? []).map((item) => ({ document_type: item.document_type, file_name: item.file_name }));
   const popupEvent = query.success && popupEvents.has(query.success) ? query.success : null;
   const verificationPan = (profile.partner_type === "misp" ? profile.dp_pan_number : profile.pan_number)?.replace(/\s/g, "").toUpperCase() ?? null;
@@ -190,12 +195,17 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
         <div>
         <section className="overflow-hidden rounded-t-2xl border border-b-0 border-[#17365D] bg-[#17365D] px-4 py-4 text-white sm:px-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <h1 className="text-[18px] font-semibold text-white">{profile.partner_type.toUpperCase()} Onboarding</h1>
-              <div className="mt-1 flex flex-wrap items-center gap-2 text-[9.5px] font-medium text-white/75">
-                <span className="truncate">{title}</span>
-                {permanentReference ? <><span className="text-white/35">·</span><span>{permanentReference}</span></> : null}
-                {onboardingComplete ? <><span className="text-white/35">·</span><span>Onboarding complete</span></> : null}
+            <div className="flex min-w-0 items-center gap-3">
+              <Link href={backHref} aria-label="Go back" title="Go back" className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-white/20 bg-white/10 text-white/85 transition hover:border-white/30 hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+                <ArrowLeftIcon />
+              </Link>
+              <div className="min-w-0">
+                <h1 className="text-[18px] font-semibold text-white">{profile.partner_type.toUpperCase()} Onboarding</h1>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-[9.5px] font-medium text-white/75">
+                  <span className="truncate">{title}</span>
+                  {permanentReference ? <><span className="text-white/35">·</span><span>{permanentReference}</span></> : null}
+                  {onboardingComplete ? <><span className="text-white/35">·</span><span>Onboarding complete</span></> : null}
+                </div>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2.5">
@@ -245,6 +255,14 @@ function normalizeWorkflowError(raw: string | undefined, field: string | undefin
   return { message: errors[raw] ?? "The requested change could not be saved. Review the entered information and try again.", field: field ?? null };
 }
 
+function ArrowLeftIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 12H5" />
+      <path d="m12 19-7-7 7-7" />
+    </svg>
+  );
+}
 function maskPan(value: string | null) {
   if (!value) return "PAN pending";
   const pan = value.toUpperCase();
