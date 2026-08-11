@@ -3,6 +3,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { updateExistingIntermediaryMigrationDetails } from "@/app/intermediaries/applications/[id]/existing-intermediary-migration-actions";
 import { requireScopedPospMispManager } from "@/lib/master-data-server";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { encryptSensitiveValue } from "@/lib/sensitive-data";
@@ -35,6 +36,8 @@ export async function updateIntermediaryApplication(data:FormData){
  const activePartnerAccount=application?.partner_status==="active_partner";
  const editableStatus=Boolean(application&&(["submitted","under_review","changes_requested"].includes(application.status)||activePartnerAccount));
  if(!application||!profile||!editableStatus)redirectFresh(`${path(applicationId)}?error=posp_misp_edit_locked`);
+ const hasExistingMigration=value(data,"existing_migration_present")==="true";
+ if(hasExistingMigration){const originalOnboarding=value(data,"legacy_original_onboarding_date");const originalActivation=value(data,"legacy_original_activation_date");if(originalOnboarding&&originalActivation&&originalActivation<originalOnboarding)redirectFresh(`${path(applicationId)}?error=posp_misp_edit_invalid&field=legacy_original_activation_date&stage=primary`)}
 
  const editSection=value(data,"edit_section")??"primary";
  if(editSection==="documents"){
@@ -88,6 +91,7 @@ export async function updateIntermediaryApplication(data:FormData){
   if(advanceError||!advanced)redirectFresh(`${path(applicationId)}?error=workflow_save_failed&stage=primary`);
   await admin.from("intermediary_onboarding_applications").update({final_type:type,registration_status:"documents_pending",updated_at:now}).eq("id",applicationId);
  }
+ if(hasExistingMigration){const migrationState=await updateExistingIntermediaryMigrationDetails({ok:true,message:""},data);if(!migrationState.ok)redirectFresh(`${path(applicationId)}?error=posp_misp_edit_failed&stage=primary`)}
  revalidatePath(path(applicationId));revalidatePath(`/intermediaries/applications/${applicationId}`);
  if(submitIntent==="exit"){
   const partnerApplicationId=await resolvePartnerReviewApplicationId(admin,application);
