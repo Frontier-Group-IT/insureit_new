@@ -224,7 +224,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
                     <CompactSubmit label={profile.partner_type === "misp" ? "Create MISP ID" : "Create POSP ID"} pendingLabel={profile.partner_type === "misp" ? "Creating MISP ID…" : "Creating POSP ID…"} />
                   </form>
                 ) : null
-              ) : <CompactLink href={`/intermediaries/applications/${id}/workflow?stage=${stageFor(profile)}`} label={`Manage ${kind} account`} />}
+              ) : <Link href={`/intermediaries/applications/${id}/workflow?stage=${stageFor(profile)}`} aria-label={`Manage ${kind} account`} title={`Manage ${kind} account`} className={`${compactLightActionClassName} h-9 w-9 px-0`}><svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 text-white/75" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><path d="m10 17 5-5-5-5" /><path d="M15 12H3" /></svg></Link>}
               {isPartner ? <Link href={`/intermediaries/applications/${id}/workflow?stage=primary`} aria-label="Edit details" title="Edit details" className={`${compactLightActionClassName} h-9 w-9 px-0`}><PencilIcon /></Link> : null}
             </div>
           </div>
