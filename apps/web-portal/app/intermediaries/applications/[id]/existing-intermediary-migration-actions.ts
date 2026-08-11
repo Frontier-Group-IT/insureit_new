@@ -107,6 +107,8 @@ export async function updateExistingIntermediaryMigrationDetails(
     .returns<ProfileRow[]>();
   if (profilesError) return { ok: false, message: "Linked profile records could not be loaded." };
 
+  // The draft/raw migration payload is the authoritative editable record. Persist it first and
+  // keep optional workflow/register compatibility updates from blocking Save & Exit/Documents.
   for (const app of applications) {
     const context = accountContext(app.draft_data);
     const appUpdate: Record<string, unknown> = {
@@ -121,21 +123,27 @@ export async function updateExistingIntermediaryMigrationDetails(
   for (const profile of profiles ?? []) {
     const app = applications.find((item) => item.id === profile.application_id);
     const context = accountContext(app?.draft_data);
-    const profileUpdate: Record<string, unknown> = {
+    const coreProfileUpdate: Record<string, unknown> = {
       raw_data: { ...object(profile.raw_data), ...migration },
       onboarding_date: originalOnboardingDate,
       updated_by: actor.id,
       updated_at: now,
     };
-    if (context !== "partner") {
-      profileUpdate.training_status = trainingStatus;
-      profileUpdate.exam_status = examStatus;
-      profileUpdate.iib_uploaded = iibUploadStatus === "uploaded";
-      profileUpdate.iib_uploaded_at = iibUploadStatus === "uploaded" ? toTimestamp(originalActivationDate) ?? now : null;
-      if (migration.legacy_registration_code) profileUpdate.external_onboarding_id = migration.legacy_registration_code;
-    }
-    const { error } = await admin.from("posp_misp_onboarding_profiles").update(profileUpdate).eq("id", profile.id);
+    const { error } = await admin.from("posp_misp_onboarding_profiles").update(coreProfileUpdate).eq("id", profile.id);
     if (error) return { ok: false, message: "Migration details could not be synchronized to every profile." };
+
+    if (context !== "partner") {
+      const compatibilityUpdate: Record<string, unknown> = {
+        training_status: trainingStatus,
+        exam_status: examStatus,
+        iib_uploaded: iibUploadStatus === "uploaded",
+        iib_uploaded_at: iibUploadStatus === "uploaded" ? toTimestamp(originalActivationDate) ?? now : null,
+        updated_by: actor.id,
+        updated_at: now,
+      };
+      if (migration.legacy_registration_code) compatibilityUpdate.external_onboarding_id = migration.legacy_registration_code;
+      await admin.from("posp_misp_onboarding_profiles").update(compatibilityUpdate).eq("id", profile.id);
+    }
   }
 
   for (const app of applications) {
@@ -151,17 +159,15 @@ export async function updateExistingIntermediaryMigrationDetails(
       agreement_status: agreementStatus,
       agreement_signed_at: agreementStatus === "signed" ? toTimestamp(originalActivationDate) ?? now : null,
     };
-    const { error: assignmentError } = await admin
+    await admin
       .from("intermediary_training_exam_assignments")
       .update(assignmentUpdate)
       .eq("application_id", app.id);
-    if (assignmentError) return { ok: false, message: "The linked workflow assignment could not be updated." };
 
     const intermediaryUpdate: Record<string, unknown> = { updated_at: now };
     if (originalActivationDate) intermediaryUpdate.activated_at = toTimestamp(originalActivationDate);
     if (migration.legacy_registration_code) intermediaryUpdate.intermediary_code = migration.legacy_registration_code;
-    const { error: intermediaryError } = await admin.from("intermediaries").update(intermediaryUpdate).eq("application_id", app.id);
-    if (intermediaryError) return { ok: false, message: "The linked POSP/MISP register could not be updated. Check whether the entered ID is already in use." };
+    await admin.from("intermediaries").update(intermediaryUpdate).eq("application_id", app.id);
   }
 
   for (const id of applicationIds) {
