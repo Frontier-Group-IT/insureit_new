@@ -29,6 +29,7 @@ export default async function ClaimsPage({ searchParams }: { searchParams: Promi
   const { data, error } = await supabase
     .from("claims")
     .select("id, claim_no, insurer_claim_no, current_status, accident_at, created_at, customers(company_name, contact_name, phone), vehicles(vehicle_no, make, model), policies(policy_no), insurance_companies(name), assignee:profiles!claims_assigned_to_fkey(full_name)")
+    .or("claim_service_mode.eq.broker_managed,assistance_status.eq.requested")
     .order("updated_at", { ascending: false })
     .returns<QueueClaimRow[]>();
   const title = titleForParams(params);
