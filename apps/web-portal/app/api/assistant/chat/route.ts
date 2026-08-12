@@ -15,7 +15,7 @@ import { isAppRole, type Capability } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createMetadataOnlyAssistantAuditWriter } from "@/lib/assistant/audit";
 import { acquireDistributedAssistantLease } from "@/lib/assistant/limits";
-import { createPermissionAwareNavigationResolver } from "@/lib/assistant/navigation";
+import { assistantNavigationResolver, createPermissionAwareNavigationResolver } from "@/lib/assistant/navigation";
 import { runAssistant, type AssistantUsageAuditWriter } from "@/lib/assistant/orchestrator";
 import { ASSISTANT_LIMITS, isInternalEmployeeRole, validateAssistantRequest, validateRequestEnvelope } from "@/lib/assistant/policy";
 import { createPostgresKnowledgeRepository } from "@/lib/assistant/postgres-knowledge";
@@ -183,6 +183,30 @@ export async function POST(request: Request) {
         async search(query, actor) {
           const authorization = await resolveCurrentAuthorization();
           return createPermissionAwareNavigationResolver(authorization.permissionAccess, { role: authorization.role, intermediaryOnly: false }).search(query, actor);
+        },
+        async diagnose(query, actor) {
+          const [authorization, candidates] = await Promise.all([
+            resolveCurrentAuthorization(),
+            assistantNavigationResolver.search(query, actor),
+          ]);
+          const destination = candidates[0];
+          if (!destination) return null;
+          const configuredRequiredAccess = destination.requiredAccess
+            ?? permissionDefinitions.find((definition) => definition.capability === destination.requiredCapability)?.roleAccess
+            ?? "view";
+          const requiredAccess = configuredRequiredAccess === "none" ? "view" : configuredRequiredAccess;
+          const currentAccess = destination.requiredCapability ? authorization.permissionAccess[destination.requiredCapability] ?? "none" : "approve";
+          const visible = !destination.requiredCapability || ACCESS_RANK[currentAccess] >= ACCESS_RANK[requiredAccess];
+          const visibleResolver = createPermissionAwareNavigationResolver(authorization.permissionAccess, { role: authorization.role, intermediaryOnly: false });
+          const alternatives = await visibleResolver.search(query, actor);
+          return {
+            label: destination.label,
+            href: destination.href,
+            visible,
+            requiredAccess,
+            permissionLabel: permissionDefinitions.find((definition) => definition.capability === destination.requiredCapability)?.label,
+            alternatives,
+          };
         },
       },
       can: canCapability,

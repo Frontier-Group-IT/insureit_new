@@ -8,7 +8,8 @@
 
 - The employee assistant is read-only and available only to authenticated internal roles with the `use_assistant` capability.
 - Greetings, ambiguous single-topic prompts, and explicit navigation requests use deterministic handling. Navigation results come from the shared permission-aware navigation catalogue and are reauthorized server-side; the language model cannot create or grant destinations.
-- Procedural answers must use published, active `assistant_knowledge_entries`, filtered by effective permission access and route ancestry. Factual knowledge responses require exact source citations and are rejected when citations or links cannot be verified.
+- Procedural answers must use published, active `assistant_knowledge_entries`, filtered by effective permission access and route ancestry. Retrieved sources and permitted destinations are evidence for model synthesis, not verbatim final answers. Factual knowledge responses require exact source metadata and are rejected when citations or links cannot be verified; raw source UUIDs are not printed in conversational text.
+- Missing-menu questions compare the requested destination with current effective permission access. The assistant may explain that an action is hidden and name the required permission level, but it cannot grant access. General, non-account-specific insurance/customer-service explanations may use model knowledge only when they include no internal links or citations and do not claim INSUREIT workflow facts, live status, coverage decisions, prices or legal conclusions.
 - Provider prompts, answers, tool queries, results, API keys, and provider error bodies must not be logged or stored. Operational auditing is metadata-only.
 - The starter knowledge set is versioned as a Supabase migration and contains only repository-verified workflow guidance. Applying the migration to one environment is not evidence that it is applied elsewhere.
 

@@ -54,14 +54,14 @@ const detachedCitation = await runAssistant({
   currentPath: "/policies",
   provider: createFakeAssistantProvider([
     { kind: "tool_calls", calls: [{ id: "detached-1", name: "search_approved_knowledge", query: "policy renewal" }] },
-    { kind: "final", output: { answer: "Use an unrelated process.", links: [], citations: [{ id: "source-1", title: "Renewal guide" }] } },
+    { kind: "final", output: { answer: "Use an unrelated process.", links: [], citations: [{ id: "source-1", title: "Invented guide" }] } },
   ]),
   knowledgeRepository: { async searchApprovedActive() { return [{ id: "source-1", title: "Renewal guide", excerpt: "Approved renewal steps.", requiredCapabilities: ["view_policies"] }]; } },
   navigationResolver: { async search() { return []; } },
   can: async () => true,
   audit: { async write() {} },
 });
-assert.equal(detachedCitation.code, "unsafe_provider_output", "citation IDs must be attached to the answer text");
+assert.equal(detachedCitation.code, "unsafe_provider_output", "citation metadata must exactly match a retrieved source");
 
 const noSourceFake = createFakeAssistantProvider([{ kind: "tool_calls", calls: [{ id: "none", name: "search_approved_knowledge", query: "unknown" }] }]);
 const abstained = await runAssistant({
@@ -78,7 +78,9 @@ assert.equal(abstained.code, "no_approved_source");
 assert.equal(noSourceFake.calls.length, 0, "explicit procedure questions abstain without spending provider quota when no source exists");
 
 const deterministicKnowledgeAudit = [];
-const deterministicKnowledgeProvider = createFakeAssistantProvider([]);
+const deterministicKnowledgeProvider = createFakeAssistantProvider([
+  { kind: "final", output: { answer: "To onboard a POSP, open Add POSP and complete the approved form.", links: [{ label: "POSP onboarding", href: "/intermediaries/posp/new" }], citations: [{ id: "posp-onboarding", title: "POSP onboarding", href: "/intermediaries/posp/new" }] } },
+]);
 const deterministicKnowledge = await runAssistant({
   requestId: "request-approved-knowledge",
   actor,
@@ -90,10 +92,10 @@ const deterministicKnowledge = await runAssistant({
   can: async () => true,
   audit: { async write(event) { deterministicKnowledgeAudit.push(event); } },
 });
-assert.match(deterministicKnowledge.answer, /approved onboarding form\. \[posp-onboarding\]/);
+assert.match(deterministicKnowledge.answer, /approved form\./);
 assert.equal(deterministicKnowledge.links[0]?.href, "/intermediaries/posp/new");
 assert.equal(deterministicKnowledge.citations[0]?.id, "posp-onboarding");
-assert.equal(deterministicKnowledgeProvider.calls.length, 0, "approved procedure lookup is deterministic and quota-free");
+assert.equal(deterministicKnowledgeProvider.calls.length, 1, "approved procedure evidence is synthesized by the provider");
 assert.equal(deterministicKnowledgeAudit.some((event) => event.toolName === "search_approved_knowledge" && event.decision === "allowed"), true);
 
 const liveCountAudit = [];
@@ -189,6 +191,29 @@ const capabilities = await runAssistant({
   navigationResolver: pospNavigation, can: async () => true, audit: { async write() {} },
 });
 assert.match(capabilities.answer, /live permission-scoped totals/);
+
+const missingMenu = await runAssistant({
+  requestId: "request-missing-menu", actor,
+  messages: [{ role: "user", content: "Why can't I see the Add Policy button in the menu bar?" }], currentPath: "/dashboard",
+  provider: createFakeAssistantProvider([]), knowledgeRepository: { async searchApprovedActive() { return []; } },
+  navigationResolver: {
+    async search() { return [{ label: "Policy Register", href: "/policies", requiredCapability: "view_policies" }]; },
+    async diagnose() { return { label: "Add Policy", href: "/policies/new", visible: false, requiredAccess: "edit", permissionLabel: "View policies", alternatives: [{ label: "Policy Register", href: "/policies", requiredCapability: "view_policies" }] }; },
+  },
+  can: async () => true, audit: { async write() {} },
+});
+assert.match(missingMenu.answer, /hidden because your current account does not have/);
+assert.match(missingMenu.answer, /edit access/);
+assert.equal(missingMenu.links[0]?.href, "/policies");
+
+const generalSupport = await runAssistant({
+  requestId: "request-general-support", actor,
+  messages: [{ role: "user", content: "What is an insurance deductible?" }], currentPath: "/dashboard",
+  provider: createFakeAssistantProvider([{ kind: "final", output: { answer: "A deductible is the portion a policyholder generally pays before eligible insurance coverage contributes. Exact terms depend on the policy.", links: [], citations: [] } }]),
+  knowledgeRepository: { async searchApprovedActive() { return []; } }, navigationResolver: { async search() { return []; } },
+  can: async () => true, audit: { async write() {} },
+});
+assert.match(generalSupport.answer, /Exact terms depend on the policy/);
 
 const contextualNavigation = await runAssistant({
   requestId: "request-context-navigation", actor,
