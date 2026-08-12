@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #283 Partner application review layout cleanup to production.",
-  "deploy_requested_at": "2026-08-12T13:35:00+05:30",
-  "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #283 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
-  "source_commit": "1e67572381d74dabb4d6788400d483883fa524fb",
-  "release_scope": "Deploy the Partner application review cleanup so the Partner onboarding journey tracker is removed from Partner review pages, empty Documents sections stay hidden until at least one document exists, POSP/MISP journeys remain unchanged, and the Partner documents pending CTA remains available for incomplete Partner applications.",
-  "verification": "PR #283 Verify web portal run 31576705520 completed successfully for head 88e622e8411b29b4a0ed00b078b94bf12b3fa2b9 before merge. The protected production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
-  "instructions": "Update this file only after the user explicitly requests deployment."
+  "purpose": "Deploy PR #284 Partner Register UI update to production.",
+  "deploy_requested_at": "2026-08-12T13:49:00+05:30",
+  "requested_by": "explicit user request",
+  "source": "Merge PR #284 into main and deploy using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "9125c6e22b6e5499cc60382dc2d938b9265f9257",
+  "release_scope": "Partner Register Eye view icons and linked-account active badge tone update.",
+  "verification": "PR #284 Verify web portal run 31577951909 passed before merge. Production workflow must run its compulsory verification gate before the Vercel deploy hook.",
+  "instructions": "Update this file only after explicit deployment approval."
 }
