@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the Reports workspace and release-blocker security remediation to production.",
-  "deploy_requested_at": "2026-08-12T23:48:25+05:30",
+  "purpose": "Deploy PR #290 PayIn billed-only tracking to production.",
+  "deploy_requested_at": "2026-08-13T00:45:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Release the Reports workspace and confirmed severity-4 source remediations using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "272c158c4db668470e8fb53048e54dd24a23adf5",
-  "release_scope": "Reports workspace catalogue and Reports navigation from commit 29ae814663af6a500ad89d539bf6cdfce5b31930, plus record-scoped intermediary review/workflow access, parent-application authorization for intermediary document signed URLs, the existing hierarchy-scoped customer register, and a compulsory release-blocker security regression.",
-  "verification": "GitHub Actions verification run 31626794624 passed for source commit 272c158c4db668470e8fb53048e54dd24a23adf5, including access-control regressions, OCR regressions, typecheck, lint and the Next.js production build. The production workflow must rerun the same compulsory gate for this trigger commit before invoking the Vercel deploy hook.",
+  "source": "Merge PR #290 into main and deploy using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "835200d275102b3ee765648185cd492ebb34dace",
+  "release_scope": "Policy PayIn tracking stops at Billed: removes the Received status, insurer receipt panel, Mark as Received action, receipt fields, and backend receipt transition; preserves billing through Unbilled, Billing details incomplete, and Billed.",
+  "verification": "PR #290 verification passed, including access-control regressions, release-blocker security regression, OCR regressions, typecheck, lint, and the Next.js production build. The production workflow must rerun its compulsory verification gate before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
