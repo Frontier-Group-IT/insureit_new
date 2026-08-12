@@ -10,11 +10,23 @@
 
 ## 1. Release recommendation
 
-**Current recommendation: NO-GO for production.**
+**Original 2026-08-02 recommendation: NO-GO for production.**
 
-The portal has a strong visual foundation, a centralized role model, private-document patterns, security headers, and substantial workflow logic. However, production release should be blocked until the severity-4 security and data-integrity findings in this report are fixed and independently verified.
+At the time of the audit, production release was blocked by the severity-4 security and data-integrity findings below. The remediation update records their later source status; deployment and live verification remain separate evidence gates.
 
 A release is allowed only when every mandatory checkpoint in `docs/PRODUCTION_RELEASE_CHECKLIST.md` has evidence and no open severity-4 finding remains.
+
+### Severity-4 remediation update (2026-08-12)
+
+**IMPLEMENTED:** the five severity-4 source findings recorded by this audit are closed in the current release candidate. This status does not by itself prove deployment, live authorization behavior, migration state, or completion of the remaining release checklist.
+
+- **PR-01:** intermediary workflow pages remove encrypted Aadhaar values before constructing client props and expose only last-four/existence state.
+- **PR-02:** intermediary account review, workflow layout/page, document upload, document open, activation, and record mutations enforce application/intermediary hierarchy scope before privileged reads or writes.
+- **PR-03:** the customer register resolves `getAccessibleCustomerIds(...)` and applies the resulting ID filter before the service-role query returns rows.
+- **PR-04:** Partner activation uses the atomic, idempotent `finalize_partner_activation_v2(...)` database function and reports success only when a permanent Partner ID is returned.
+- **PR-05:** the legacy `updateClaimStatus(...)` wrapper delegates to `advanceClaimWorkflow(...)`, which enforces claim-stage capability and canonical transition rules.
+
+Regression evidence is maintained by `apps/web-portal/scripts/release-blocker-security-regression.mjs` and the compulsory GitHub verification workflow. A production decision still requires a green run for the exact release commit plus final Vercel and live-route checks.
 
 ## 2. Audit scope
 

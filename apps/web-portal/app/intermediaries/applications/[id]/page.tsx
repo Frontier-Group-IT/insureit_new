@@ -4,7 +4,7 @@ import { compactLightActionClassName, primaryActionClassName } from "@/component
 import { DocumentVisualCard } from "@/components/document-visual-card";
 import { AppShell } from "@/components/shell";
 import { FormSubmitButton } from "@/components/form-submit-button";
-import { requirePospMispManager } from "@/lib/master-data-server";
+import { requireScopedPospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createIntermediaryPortalLogin } from "@/app/intermediaries/portal-account-actions";
 import { resendIntermediaryPortalInvite } from "@/app/intermediaries/resend-portal-invite-action";
@@ -128,7 +128,7 @@ const reviewErrorMessages: Record<string, string> = {
 export default async function IntermediaryAccountReviewPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; success?: string }> }) {
   const { id } = await params;
   const query = await searchParams;
-  await requirePospMispManager();
+  await requireScopedPospMispManager(id);
   const admin = createSupabaseAdminClient();
 
   const [{ data: application }, { data: profile }, { data: assignment }, { data: documents }, { data: intermediary }, { data: panJob }] = await Promise.all([

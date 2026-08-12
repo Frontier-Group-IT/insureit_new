@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/shell";
-import { requirePospMispManager } from "@/lib/master-data-server";
+import { requireScopedPospMispManager } from "@/lib/master-data-server";
 import { getActiveBankOptions, getActiveVehicleManufacturerOptions, getPospMispAssociates } from "@/lib/reference-data-cache";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resolveIibPanVerificationStatus, type IibPanVerificationJob } from "@/lib/iib-pan-verification-status";
@@ -100,8 +100,8 @@ const popupEvents = new Set(["documents_completed", "training_assigned", "traini
 const workflowStages: ViewStage[] = ["primary", "documents", "registration", "training", "agreement", "iib"];
 
 export default async function IntermediaryWorkflowPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; success?: string; stage?: string; field?: string; migration_error?: string }> }) {
-  await requirePospMispManager();
   const { id } = await params;
+  await requireScopedPospMispManager(id);
   const query = await searchParams;
   const admin = createSupabaseAdminClient();
   const [{ data: application }, { data: profile }, { data: documents }, { data: panJob }, { data: assignment }] = await Promise.all([
