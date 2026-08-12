@@ -157,13 +157,18 @@ function PartnerTable({ rows }: { rows: PartnerRegisterRow[] }) {
 }
 
 function renderAction(row: PartnerRegisterRow) {
-  const targetLabel = row.linkedHref ? row.createType.toUpperCase() : "partner";
-  const href = row.linkedHref ?? `/intermediaries/applications/${row.applicationId}`;
-  if (!row.active || row.linkedHref) {
+  if (row.linkedHref) {
     return (
-      <FreshAccountReviewLink href={href} className={partnerOpenActionClassName}>
+      <FreshAccountReviewLink href={row.linkedHref} className={partnerOpenActionClassName}>
+        View {row.createType.toUpperCase()}
+      </FreshAccountReviewLink>
+    );
+  }
+  if (!row.active) {
+    return (
+      <FreshAccountReviewLink href={`/intermediaries/applications/${row.applicationId}`} className={partnerOpenActionClassName}>
         <Eye className="h-4 w-4" aria-hidden="true" />
-        <span className="sr-only">View {targetLabel} details</span>
+        <span className="sr-only">View partner details</span>
       </FreshAccountReviewLink>
     );
   }
