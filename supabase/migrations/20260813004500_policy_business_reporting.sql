@@ -13,12 +13,7 @@ language sql
 stable
 set search_path = public
 as $$
-with params as (
-  select
-    greatest(coalesce(p_page, 1), 1) as page_no,
-    least(greatest(coalesce(p_page_size, 25), 1), 200) as page_size
-),
-scope_base as (
+with scope_base as (
   select
     p.id,
     p.policy_no,
@@ -163,10 +158,10 @@ filter_intermediaries as (
 ),
 row_page as (
   select f.*
-  from filtered f, params p
+  from filtered f
   order by f.business_date desc, f.created_at desc, f.policy_no
-  offset ((p.page_no - 1) * p.page_size)
-  limit (select page_size from params)
+  offset ((greatest(coalesce(p_page, 1), 1) - 1) * least(greatest(coalesce(p_page_size, 25), 1), 200))
+  limit least(greatest(coalesce(p_page_size, 25), 1), 200)
 ),
 register_rows as (
   select coalesce(jsonb_agg(jsonb_build_object(
@@ -207,8 +202,8 @@ select jsonb_build_object(
   'register', jsonb_build_object(
     'rows', (select rows from register_rows),
     'total_count', (select count(*)::bigint from filtered),
-    'page', (select page_no from params),
-    'page_size', (select page_size from params)
+    'page', greatest(coalesce(p_page, 1), 1),
+    'page_size', least(greatest(coalesce(p_page_size, 25), 1), 200)
   )
 );
 $$;
