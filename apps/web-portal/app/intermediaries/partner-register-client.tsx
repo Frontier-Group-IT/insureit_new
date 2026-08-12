@@ -28,6 +28,7 @@ export type PartnerRegisterRow = {
 
 type PartnerFilter = "" | "all" | "active" | "onboarding";
 
+const PARTNER_PAGE_SIZE = 10;
 const partnerOpenActionClassName = "inline-flex h-9 items-center justify-center whitespace-nowrap rounded-lg border border-[#315FEA] bg-transparent px-3 text-[9px] font-semibold text-[#315FEA] transition-colors duration-150 hover:bg-[#E7E7E7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#818CF8] focus-visible:ring-offset-2 active:translate-y-px";
 
 export function PartnerRegisterClient({
@@ -49,6 +50,7 @@ export function PartnerRegisterClient({
   const initialFilter = initialStatus === "active" || initialStatus === "onboarding" ? initialStatus : "";
   const [status, setStatus] = useState(initialFilter);
   const [selectedFilter, setSelectedFilter] = useState<PartnerFilter>(initialFilter || "all");
+  const [currentPage, setCurrentPage] = useState(1);
   const normalized = search.trim().toLowerCase();
   const searchedRows = useMemo(() => normalized ? rows.filter((row) => row.searchText.includes(normalized)) : rows, [normalized, rows]);
   const counts = useMemo(() => searchedRows.reduce((acc, row) => {
@@ -57,6 +59,12 @@ export function PartnerRegisterClient({
     return acc;
   }, { active: 0, onboarding: 0 }), [searchedRows]);
   const visibleRows = status === "active" ? searchedRows.filter((row) => row.active) : status === "onboarding" ? searchedRows.filter((row) => !row.active) : searchedRows;
+  const totalRecords = visibleRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalRecords / PARTNER_PAGE_SIZE));
+  const pageStartIndex = (currentPage - 1) * PARTNER_PAGE_SIZE;
+  const pageRows = visibleRows.slice(pageStartIndex, pageStartIndex + PARTNER_PAGE_SIZE);
+  const showingStart = totalRecords === 0 ? 0 : pageStartIndex + 1;
+  const showingEnd = totalRecords === 0 ? 0 : Math.min(pageStartIndex + PARTNER_PAGE_SIZE, totalRecords);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -65,6 +73,10 @@ export function PartnerRegisterClient({
     const nextUrl = `/intermediaries/partner${params.size ? `?${params.toString()}` : ""}`;
     if (`${window.location.pathname}${window.location.search}` !== nextUrl) window.history.replaceState(null, "", nextUrl);
   }, [search, status]);
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [totalPages]);
 
   const successMessage = success === "portal_login_invited"
     ? "Password creation link sent."
@@ -77,6 +89,7 @@ export function PartnerRegisterClient({
   function selectFilter(next: Exclude<PartnerFilter, "">) {
     setSelectedFilter(next);
     setStatus(next === "all" ? "" : next);
+    setCurrentPage(1);
   }
 
   return (
@@ -88,7 +101,7 @@ export function PartnerRegisterClient({
           <h2 className="whitespace-nowrap text-[12.5px] font-semibold text-[#17203A]">Partner Register</h2>
           <form onSubmit={(event) => event.preventDefault()} className="relative min-w-0 max-w-[460px]">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#94A3B8]" />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search partner name, mobile, email or ID" className="h-9 w-full rounded-lg border border-[#D8E1EC] bg-white pl-9 pr-3 text-[10.5px] text-[#17203A] outline-none placeholder:text-[#94A3B8] focus:border-[#315FEA] focus:ring-2 focus:ring-[#E6ECFF]" />
+            <input value={search} onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }} placeholder="Search partner name, mobile, email or ID" className="h-9 w-full rounded-lg border border-[#D8E1EC] bg-white pl-9 pr-3 text-[10.5px] text-[#17203A] outline-none placeholder:text-[#94A3B8] focus:border-[#315FEA] focus:ring-2 focus:ring-[#E6ECFF]" />
           </form>
           <div className="flex items-center justify-end gap-1.5 whitespace-nowrap text-[9.5px] font-semibold">
             <FilterButton label="All" count={searchedRows.length} active={selectedFilter === "all"} onClick={() => selectFilter("all")} />
@@ -96,7 +109,31 @@ export function PartnerRegisterClient({
             <FilterButton label="Onboarding" count={counts.onboarding} active={selectedFilter === "onboarding"} onClick={() => selectFilter("onboarding")} />
           </div>
         </div>
-        {loadError ? <div className="px-4 py-12 text-center text-[11px] text-red-700">The register could not be loaded. Please refresh the page and try again.</div> : visibleRows.length ? <PartnerTable rows={visibleRows} /> : <div className="px-4 py-16 text-center"><p className="text-[12px] font-semibold">No records found</p><p className="mt-1 text-[10px] text-[#64748B]">Try changing the search or status filter.</p></div>}
+        {loadError ? <div className="px-4 py-12 text-center text-[11px] text-red-700">The register could not be loaded. Please refresh the page and try again.</div> : pageRows.length ? <PartnerTable rows={pageRows} /> : <div className="px-4 py-16 text-center"><p className="text-[12px] font-semibold">No records found</p><p className="mt-1 text-[10px] text-[#64748B]">Try changing the search or status filter.</p></div>}
+        {!loadError ? (
+          <div className="flex flex-col gap-3 border-t border-[#E7ECF3] bg-white px-4 py-3.5 text-[10px] text-[#64748B] sm:flex-row sm:items-center sm:justify-between">
+            <span>Showing {showingStart}–{showingEnd} of {totalRecords}</span>
+            <div className="flex items-center gap-3 self-end sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                disabled={currentPage <= 1}
+                className="inline-flex h-8 items-center justify-center rounded-lg border border-[#DCE5EF] bg-white px-3 font-medium text-[#526178] transition-colors enabled:hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#B6C0CF]"
+              >
+                Previous
+              </button>
+              <span className="min-w-[42px] text-center font-medium text-[#526178]">{currentPage} / {totalPages}</span>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                disabled={currentPage >= totalPages}
+                className="inline-flex h-8 items-center justify-center rounded-lg border border-[#DCE5EF] bg-white px-3 font-medium text-[#526178] transition-colors enabled:hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#B6C0CF]"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        ) : null}
       </section>
     </div>
   );
