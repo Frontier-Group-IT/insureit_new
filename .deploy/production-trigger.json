@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the Customer, Vehicle and Policy register redesign to production.",
-  "deploy_requested_at": "2026-08-12T23:38:18+05:30",
+  "purpose": "Deploy the Reports workspace and release-blocker security remediation to production.",
+  "deploy_requested_at": "2026-08-12T23:48:25+05:30",
   "requested_by": "explicit user request",
-  "source": "Deploy the broker portfolio register redesign using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "6a394b4778183f8be70b5cf60579267f29fd6659",
-  "release_scope": "Redesigned Customer, Vehicle and Policy registers with shared portfolio register components, operational metrics, saved views, filters, responsive desktop tables and mobile cards, while preserving existing authorization and business workflows. Deployment head also includes the already-merged reports workspace catalogue commit 29ae814663af6a500ad89d539bf6cdfce5b31930.",
-  "verification": "GitHub Actions verification run 31625935275 passed for deployment head 29ae814663af6a500ad89d539bf6cdfce5b31930; requested feature commit 6a394b4778183f8be70b5cf60579267f29fd6659 is an ancestor. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
+  "source": "Release the Reports workspace and confirmed severity-4 source remediations using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "272c158c4db668470e8fb53048e54dd24a23adf5",
+  "release_scope": "Reports workspace catalogue and Reports navigation from commit 29ae814663af6a500ad89d539bf6cdfce5b31930, plus record-scoped intermediary review/workflow access, parent-application authorization for intermediary document signed URLs, the existing hierarchy-scoped customer register, and a compulsory release-blocker security regression.",
+  "verification": "GitHub Actions verification run 31626794624 passed for source commit 272c158c4db668470e8fb53048e54dd24a23adf5, including access-control regressions, OCR regressions, typecheck, lint and the Next.js production build. The production workflow must rerun the same compulsory gate for this trigger commit before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
