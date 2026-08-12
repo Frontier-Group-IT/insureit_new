@@ -34,8 +34,11 @@ type ApplicationRow = {
 type ProfileRow = {
   id: string;
   application_id: string;
+  partner_record_id: string | null;
   raw_data: Record<string, unknown> | null;
 };
+type ApplicationReferenceRow = { application_id: string };
+type RegistrationReferenceRow = { application_id: string | null };
 
 export async function updateExistingIntermediaryMigrationDetails(
   _previous: MigrationSaveState,
@@ -46,12 +49,21 @@ export async function updateExistingIntermediaryMigrationDetails(
 
   const actor = await requireScopedPospMispManager(applicationId);
   const admin = createSupabaseAdminClient();
-  const { data: current, error: currentError } = await admin
-    .from("intermediary_onboarding_applications")
-    .select("id,partner_record_id,draft_data")
-    .eq("id", applicationId)
-    .maybeSingle<ApplicationRow>();
-  if (currentError || !current) return { ok: false, message: "The migration record could not be found." };
+  const [{ data: current, error: currentError }, { data: currentProfile, error: currentProfileError }] = await Promise.all([
+    admin
+      .from("intermediary_onboarding_applications")
+      .select("id,partner_record_id,draft_data")
+      .eq("id", applicationId)
+      .maybeSingle<ApplicationRow>(),
+    admin
+      .from("posp_misp_onboarding_profiles")
+      .select("id,application_id,partner_record_id,raw_data")
+      .eq("application_id", applicationId)
+      .maybeSingle<ProfileRow>(),
+  ]);
+  if (currentError || !current || currentProfileError || !currentProfile) {
+    return { ok: false, message: "The migration record could not be found." };
+  }
 
   const originalOnboardingDate = dateValue(formData, "legacy_original_onboarding_date");
   const originalActivationDate = dateValue(formData, "legacy_original_activation_date");
@@ -88,31 +100,81 @@ export async function updateExistingIntermediaryMigrationDetails(
     iibRegistrationStatus,
   });
 
+  const partnerRecordId = current.partner_record_id ?? currentProfile.partner_record_id;
   let applications: ApplicationRow[] = [current];
-  if (current.partner_record_id) {
+  if (partnerRecordId) {
     const { data, error } = await admin
       .from("intermediary_onboarding_applications")
       .select("id,partner_record_id,draft_data")
-      .eq("partner_record_id", current.partner_record_id)
+      .eq("partner_record_id", partnerRecordId)
       .returns<ApplicationRow[]>();
     if (error) return { ok: false, message: "Linked account records could not be loaded." };
-    applications = data?.length ? data : [current];
+    applications = uniqueApplications([current, ...(data ?? [])]);
   }
 
   const applicationIds = applications.map((item) => item.id);
   const { data: profiles, error: profilesError } = await admin
     .from("posp_misp_onboarding_profiles")
-    .select("id,application_id,raw_data")
+    .select("id,application_id,partner_record_id,raw_data")
     .in("application_id", applicationIds)
     .returns<ProfileRow[]>();
   if (profilesError) return { ok: false, message: "Linked profile records could not be loaded." };
 
-  // The draft/raw migration payload is the authoritative editable record. Persist it first and
-  // keep optional workflow/register compatibility updates from blocking Save & Exit/Documents.
+  if (migration.legacy_partner_code) {
+    const { data: duplicatePartnerProfiles, error } = await admin
+      .from("posp_misp_onboarding_profiles")
+      .select("application_id")
+      .eq("partner_id", migration.legacy_partner_code)
+      .returns<ApplicationReferenceRow[]>();
+    if (error) return { ok: false, message: "The Partner ID could not be validated." };
+    if ((duplicatePartnerProfiles ?? []).some((row) => !applicationIds.includes(row.application_id))) {
+      return { ok: false, message: "The Existing Partner ID is already used by another account." };
+    }
+  }
+
+  if (migration.legacy_registration_code) {
+    const [profileReferences, intermediaryReferences, registrationReferences] = await Promise.all([
+      admin
+        .from("posp_misp_onboarding_profiles")
+        .select("application_id")
+        .eq("external_onboarding_id", migration.legacy_registration_code)
+        .returns<ApplicationReferenceRow[]>(),
+      admin
+        .from("intermediaries")
+        .select("application_id")
+        .eq("intermediary_code", migration.legacy_registration_code)
+        .returns<ApplicationReferenceRow[]>(),
+      admin
+        .from("intermediary_registrations")
+        .select("application_id")
+        .eq("registration_code", migration.legacy_registration_code)
+        .returns<RegistrationReferenceRow[]>(),
+    ]);
+    if (profileReferences.error || intermediaryReferences.error || registrationReferences.error) {
+      return { ok: false, message: "The POSP/MISP ID could not be validated." };
+    }
+    const registrationInUse = [
+      ...(profileReferences.data ?? []),
+      ...(intermediaryReferences.data ?? []),
+      ...(registrationReferences.data ?? []).filter((row): row is { application_id: string } => Boolean(row.application_id)),
+    ].some((row) => !applicationIds.includes(row.application_id));
+    if (registrationInUse) {
+      return { ok: false, message: "The Existing POSP/MISP ID is already used by another account." };
+    }
+  }
+
+  // The draft/raw migration payload remains the editable source, while canonical IDs are kept in
+  // sync so review headers, partner lists and linked-account cards always read the latest values.
   for (const app of applications) {
     const context = accountContext(app.draft_data);
+    const canonicalDraft = {
+      ...object(app.draft_data),
+      ...migration,
+      ...(context !== "partner" && migration.legacy_partner_code ? { linked_partner_code: migration.legacy_partner_code } : {}),
+      ...(context !== "partner" && migration.legacy_registration_code ? { issued_registration_code: migration.legacy_registration_code } : {}),
+    };
     const appUpdate: Record<string, unknown> = {
-      draft_data: { ...object(app.draft_data), ...migration },
+      draft_data: canonicalDraft,
       updated_at: now,
     };
     if (context !== "partner") appUpdate.registration_status = workflowRegistrationStatus;
@@ -123,12 +185,23 @@ export async function updateExistingIntermediaryMigrationDetails(
   for (const profile of profiles ?? []) {
     const app = applications.find((item) => item.id === profile.application_id);
     const context = accountContext(app?.draft_data);
+    const canonicalRaw = {
+      ...object(profile.raw_data),
+      ...migration,
+      ...(context !== "partner" && migration.legacy_partner_code ? { linked_partner_code: migration.legacy_partner_code } : {}),
+      ...(context !== "partner" && migration.legacy_registration_code ? { issued_registration_code: migration.legacy_registration_code } : {}),
+    };
     const coreProfileUpdate: Record<string, unknown> = {
-      raw_data: { ...object(profile.raw_data), ...migration },
+      raw_data: canonicalRaw,
       onboarding_date: originalOnboardingDate,
       updated_by: actor.id,
       updated_at: now,
     };
+    if (migration.legacy_partner_code) coreProfileUpdate.partner_id = migration.legacy_partner_code;
+    if (context !== "partner" && migration.legacy_registration_code) {
+      coreProfileUpdate.external_onboarding_id = migration.legacy_registration_code;
+      coreProfileUpdate.existing_registration_code = migration.legacy_registration_code;
+    }
     const { error } = await admin.from("posp_misp_onboarding_profiles").update(coreProfileUpdate).eq("id", profile.id);
     if (error) return { ok: false, message: "Migration details could not be synchronized to every profile." };
 
@@ -141,7 +214,6 @@ export async function updateExistingIntermediaryMigrationDetails(
         updated_by: actor.id,
         updated_at: now,
       };
-      if (migration.legacy_registration_code) compatibilityUpdate.external_onboarding_id = migration.legacy_registration_code;
       await admin.from("posp_misp_onboarding_profiles").update(compatibilityUpdate).eq("id", profile.id);
     }
   }
@@ -168,6 +240,13 @@ export async function updateExistingIntermediaryMigrationDetails(
     if (originalActivationDate) intermediaryUpdate.activated_at = toTimestamp(originalActivationDate);
     if (migration.legacy_registration_code) intermediaryUpdate.intermediary_code = migration.legacy_registration_code;
     await admin.from("intermediaries").update(intermediaryUpdate).eq("application_id", app.id);
+
+    if (migration.legacy_registration_code) {
+      await admin
+        .from("intermediary_registrations")
+        .update({ registration_code: migration.legacy_registration_code, updated_at: now })
+        .eq("application_id", app.id);
+    }
   }
 
   for (const id of applicationIds) {
@@ -185,6 +264,9 @@ export async function updateExistingIntermediaryMigrationDetails(
 function accountContext(draft: Record<string, unknown> | null | undefined) {
   const context = draft?.account_context;
   return context === "posp" || context === "misp" ? context : "partner";
+}
+function uniqueApplications(applications: ApplicationRow[]) {
+  return Array.from(new Map(applications.map((application) => [application.id, application])).values());
 }
 function toTimestamp(value: string | null) { return value ? `${value}T00:00:00.000Z` : null; }
 function text(data: FormData, key: string) { const value = data.get(key); return typeof value === "string" && value.trim() ? value.trim() : null; }
