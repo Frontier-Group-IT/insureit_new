@@ -4,6 +4,60 @@
 >
 > Read with `docs/INSUREIT_PROJECT_CONTEXT.md` and `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md`. Never store secrets, raw OCR text, policyholder PII, or complete policy documents here.
 
+## Self-managed claims continuation checkpoint — 2026-08-12
+
+A separate claim-development track is active on branch `feature/self-managed-claims` in Draft PR #274. Its browser review URL is `https://frontier-group-it.github.io/insureit_new/`. The user explicitly chose to connect that preview to the original InsureIT Supabase project, so preview writes are real database writes even though the code/deployment branch is isolated.
+
+The product model now separates three concepts:
+
+- `policy_service_source`: `sibl | external`
+- `claim_service_mode`: `broker_managed | self_managed`
+- `assistance_status`: `not_requested | requested | accepted | declined | cancelled`
+
+Do not fold assistance into the service mode and do not overload operational `claims.current_status` with customer-owned self-tracking state.
+
+Live additive migrations already applied and committed on the feature branch:
+
+- `20260812050614_claim_service_mode_foundation.sql`
+- `20260812051129_claim_control_number_by_service_source.sql`
+- `20260812051532_create_self_managed_claim_rpc.sql`
+
+Important verified behavior:
+
+- all pre-existing claims remained `broker_managed`
+- existing policies were deliberately NOT auto-classified as SIBL/external because historical intermediary metadata is not reliable enough
+- self-managed claims use `claim_milestones` with customer RLS rather than operational claim-status transitions
+- explicit external claims receive `EXT/####`; broker/unknown claims retain existing `SIBL/####` numbering
+- the customer RPC creates the self-managed claim + completed Spot Intimation atomically
+- ordinary self-managed claims are excluded from the web Claims Desk default register; broker-managed claims and explicit assistance requests remain visible
+
+Reviewable mobile slice currently deployed:
+
+- Start/Add Claim service-mode choice
+- existing Broker-Managed path remains the current `report-accident` flow
+- Self-Managed Spot Intimation (step 1/9) is functional
+- dedicated nine-stage self-managed tracker is functional
+- Spot Status (step 2/9) is functional
+- self-managed claims reopen in the self-managed tracker from customer/group claim lists
+- persistent notice: `This claim is being tracked by you. Sankalp is not processing this claim unless you request assistance.`
+
+Exact deployed revision passed mobile typecheck, mobile lint, Expo web export, browser artifact upload, web access-control regressions, insurer regressions, web typecheck, web lint and web production build.
+
+Still pending and must NOT be described as complete:
+
+- milestone forms 3–9
+- claim document vault/bulk upload
+- financial summary/calculations
+- Request Sankalp Assistance accept/decline workflow
+- full portal Broker Managed / Self Managed / Assistance Requested views
+- CRM/renewal insights
+- self-managed notifications/reminders
+- final summary/export/share
+- native Android verification
+- explicit persistent classification workflow for historical policies
+
+Safety rule: because this branch shares the live Supabase database, keep every new migration small, additive/backward-compatible, verify it immediately, and do not create/delete test customer records or claims on the user's behalf. Let the user create any review claim from the preview.
+
 ## Active track
 
 Policy Onboarding OCR hardening is the immediate active work. Production portal is `https://portal.insureit.in`. Ordinary commits do not intentionally deploy production; `.deploy/production-trigger.json` is changed only after the user explicitly says `deploy now` or `finish and deploy`.
