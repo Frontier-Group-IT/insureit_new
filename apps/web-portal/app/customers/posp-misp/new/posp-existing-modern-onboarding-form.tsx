@@ -57,7 +57,7 @@ export function PospExistingModernOnboardingForm({ initialError = null, initialF
 
         <header className="overflow-hidden rounded-t-2xl border border-b-0 border-[#17365D] bg-[#17365D] px-4 py-4 text-white sm:px-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h1 className="text-[18px] font-semibold">POSP Onboarding</h1>
+            <h1 className="text-[18px] font-semibold">Existing POSP Onboarding</h1>
             <div className="flex items-center gap-2">
               <Link href="/intermediaries/posp" className="rounded-lg border border-white/20 px-3 py-2 text-[9.5px] font-semibold text-white/90 transition hover:bg-white/10">Back</Link>
             </div>
@@ -117,7 +117,6 @@ export function PospExistingModernOnboardingForm({ initialError = null, initialF
               <Field label="Original onboarding date" name="legacy_original_onboarding_date" type="date" required value={originalOnboardingDate} onChange={(event) => setOriginalOnboardingDate(event.currentTarget.value)} error={errorFor("legacy_original_onboarding_date")} />
               <Field label="Active / associated since" name="legacy_original_activation_date" type="date" required value={originalActivationDate} min={originalOnboardingDate || undefined} onChange={(event) => setOriginalActivationDate(event.currentTarget.value)} error={activationDateError ?? errorFor("legacy_original_activation_date")} />
             </div>
-
             <div className="md:col-span-2 xl:col-span-4 rounded-xl border border-[#E2E8F0] bg-[#FAFBFD] p-3.5 sm:p-4">
               <p className="text-[10.5px] font-semibold text-[#17203A]">Workflow status</p>
               <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
