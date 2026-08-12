@@ -14,7 +14,7 @@ import type { Claim, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
 const fleetSketch = require('../../assets/vehicles/truck sketch.png');
 
 type Mode = 'fleet' | 'policies' | 'claims';
-type RecordRow = { id: string; customerId: string; accountName: string; title: string; subtitle: string; meta: string; status: string; tone: 'blue' | 'green' | 'orange' | 'red' };
+type RecordRow = { id: string; customerId: string; accountName: string; title: string; subtitle: string; meta: string; status: string; tone: 'blue' | 'green' | 'orange' | 'red'; claimServiceMode?: string };
 
 export function GroupRecordsScreen({ mode }: { mode: Mode }) {
   const router = useLoadingRouter();
@@ -68,7 +68,7 @@ export function GroupRecordsScreen({ mode }: { mode: Mode }) {
         if (active) setRows(next);
       } else {
         const { data } = await supabase.from('claims').select('*').in('customer_id', ids).order('created_at', { ascending: false });
-        const next = ((data ?? []) as Claim[]).map((claim) => ({ id: claim.id, customerId: claim.customer_id, accountName: accountNames.get(claim.customer_id) ?? 'Associated Account', title: claim.claim_no, subtitle: claim.current_status, meta: claim.accident_at ? `Incident ${formatDate(claim.accident_at)}` : 'Incident date not available', status: ['Closed','Settled','Claim Complete'].includes(claim.current_status) ? 'Completed' : /pending|awaited|document/i.test(claim.current_status) ? 'Action Required' : 'Open', tone: ['Closed','Settled','Claim Complete'].includes(claim.current_status) ? 'green' : /pending|awaited|document/i.test(claim.current_status) ? 'orange' : 'blue' } as RecordRow));
+        const next = ((data ?? []) as Claim[]).map((claim) => ({ id: claim.id, customerId: claim.customer_id, accountName: accountNames.get(claim.customer_id) ?? 'Associated Account', title: claim.claim_no, subtitle: claim.current_status, meta: claim.accident_at ? `Incident ${formatDate(claim.accident_at)}` : 'Incident date not available', status: ['Closed','Settled','Claim Complete'].includes(claim.current_status) ? 'Completed' : /pending|awaited|document/i.test(claim.current_status) ? 'Action Required' : 'Open', tone: ['Closed','Settled','Claim Complete'].includes(claim.current_status) ? 'green' : /pending|awaited|document/i.test(claim.current_status) ? 'orange' : 'blue', claimServiceMode: (claim as Claim & { claim_service_mode?: string }).claim_service_mode } as RecordRow));
         if (active) setRows(next);
       }
     } finally { if (active) setLoading(false); }
@@ -80,13 +80,13 @@ export function GroupRecordsScreen({ mode }: { mode: Mode }) {
   const title = mode === 'fleet' ? `${portfolioLabel} Fleet` : mode === 'policies' ? `${portfolioLabel} Policies` : `${portfolioLabel} Claims`;
   const summary = mode === 'fleet' ? `${rows.length} vehicles across ${contexts.length} account${contexts.length === 1 ? '' : 's'}` : mode === 'policies' ? `${rows.length} policies across the portfolio` : `${rows.length} claims across the portfolio`;
   const icon = mode === 'fleet' ? 'truck-outline' : mode === 'policies' ? 'file-document-outline' : 'shield-check-outline';
-  const action = mode === 'fleet' ? { label: 'Add Vehicle', icon: 'truck-plus-outline' as const, href: '/customer/add-vehicle' as const } : mode === 'policies' ? { label: 'Add Policy', icon: 'shield-plus-outline' as const, href: '/customer/add-policy' as const } : { label: 'Add Claim', icon: 'file-plus-outline' as const, href: '/customer/report-accident' as const };
+  const action = mode === 'fleet' ? { label: 'Add Vehicle', icon: 'truck-plus-outline' as const, href: '/customer/add-vehicle' as const } : mode === 'policies' ? { label: 'Add Policy', icon: 'shield-plus-outline' as const, href: '/customer/add-policy' as const } : { label: 'Add Claim', icon: 'file-plus-outline' as const, href: '/customer/start-claim' as const };
 
   return <GroupPageShell title={title} subtitle={summary} icon={icon} loading={loading} rightAction={<Pressable accessibilityRole="button" onPress={() => router.push(action.href)} style={styles.headerAction}><MaterialCommunityIcons name={action.icon} size={16} color={palette.navy} /><Text style={styles.headerActionText}>{action.label}</Text></Pressable>}>
     {loading ? <LoadingState /> : <>
       <View style={styles.searchBox}><MaterialCommunityIcons name="magnify" size={20} color="#7A8799" /><TextInput value={query} onChangeText={setQuery} placeholder={`Search ${mode === 'fleet' ? 'vehicle or customer' : mode === 'policies' ? 'policy or customer' : 'claim, vehicle or customer'}`} placeholderTextColor="#9AA6B6" style={styles.searchInput} /></View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.accountFilters}>{showAllFilter ? <Pressable onPress={() => setAccountId('all')} style={[styles.filterChip, accountId === 'all' && styles.filterChipActive]}><Text style={[styles.filterText, accountId === 'all' && styles.filterTextActive]}>All Accounts</Text></Pressable> : null}{contexts.map((context) => <Pressable key={context.customer_id} onPress={() => setAccountId(context.customer_id)} style={[styles.filterChip, accountId === context.customer_id && styles.filterChipActive]}><Text numberOfLines={1} style={[styles.filterText, accountId === context.customer_id && styles.filterTextActive]}>{customerAccountTitle(context)}</Text></Pressable>)}</ScrollView>
-      {!filtered.length ? <EmptyState title={`No ${mode}`} body={`No matching ${mode} records were found for this portfolio.`} /> : filtered.map((row) => <Pressable key={row.id} onPress={() => openRecord(router, mode, row.id)} style={({ pressed }) => [styles.recordCard, pressed && styles.recordCardPressed]}>
+      {!filtered.length ? <EmptyState title={`No ${mode}`} body={`No matching ${mode} records were found for this portfolio.`} /> : filtered.map((row) => <Pressable key={row.id} onPress={() => openRecord(router, mode, row)} style={({ pressed }) => [styles.recordCard, pressed && styles.recordCardPressed]}>
         <View style={[styles.accent, { backgroundColor: tone(row.tone).accent }]} />
         {mode === 'fleet' ? <Image source={fleetSketch} resizeMode="contain" style={styles.fleetCardImage} /> : null}
         <View style={[styles.recordIcon, { backgroundColor: tone(row.tone).soft }]}><MaterialCommunityIcons name={mode === 'fleet' ? 'truck-outline' : mode === 'policies' ? 'file-document-outline' : 'shield-check-outline'} size={23} color={tone(row.tone).accent} /></View>
@@ -97,10 +97,10 @@ export function GroupRecordsScreen({ mode }: { mode: Mode }) {
   </GroupPageShell>;
 }
 
-function openRecord(router: ReturnType<typeof useLoadingRouter>, mode: Mode, id: string) {
-  if (mode === 'claims') return router.push({ pathname: '/customer/claim-detail', params: { id } });
-  if (mode === 'fleet') return router.push({ pathname: '/customer/vehicle-detail', params: { id } });
-  return router.push({ pathname: '/customer/policy-detail', params: { id } } as any);
+function openRecord(router: ReturnType<typeof useLoadingRouter>, mode: Mode, row: RecordRow) {
+  if (mode === 'claims') return router.push(row.claimServiceMode === 'self_managed' ? { pathname: '/customer/self-managed-claim-detail', params: { id: row.id } } : { pathname: '/customer/claim-detail', params: { id: row.id } });
+  if (mode === 'fleet') return router.push({ pathname: '/customer/vehicle-detail', params: { id: row.id } });
+  return router.push({ pathname: '/customer/policy-detail', params: { id: row.id } } as any);
 }
 
 function tone(value: RecordRow['tone']) { if (value === 'green') return { accent: '#12805C', soft: '#E8F8F0' }; if (value === 'orange') return { accent: '#B7791F', soft: '#FFF4E2' }; if (value === 'red') return { accent: '#C43838', soft: '#FDECEC' }; return { accent: '#0B63CE', soft: '#EEF5FF' }; }
