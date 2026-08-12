@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #273 migration deliberate-save resilience fix to production.",
-  "deploy_requested_at": "2026-08-11T18:28:00+05:30",
+  "purpose": "Deploy PR #276 existing POSP/MISP onboarding heading clarification to production.",
+  "deploy_requested_at": "2026-08-12T10:19:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #273 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
-  "source_commit": "c8a258e37463c2b921b54efe5a4fb6ce059ad99c",
-  "release_scope": "Deploy the Existing Intermediary Migration deliberate-save resilience fix so authoritative migration application/profile data can save successfully even if optional linked workflow assignment or intermediary register synchronization cannot be completed, while preserving activation-date validation, existing migration values, permissions, routing, Save & Exit, Upload Documents, and document workflow behavior.",
-  "verification": "PR #273 Verify web portal run 31493717945 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
+  "source": "ChatGPT explicit request to merge PR #276 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
+  "source_commit": "4a4bdc308699fe52252a07f4b108e789786329f4",
+  "release_scope": "Deploy the UI-text update that labels the existing onboarding flows as Existing POSP Onboarding and Existing MISP Onboarding while leaving normal new POSP/MISP onboarding headings and all routing, validation, save logic, workflow status, document flow, and backend behavior unchanged.",
+  "verification": "PR #276 Verify web portal run 31564432678 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
