@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
+import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel";
 import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -36,10 +37,22 @@ export default async function PoliciesPage() {
     .order("created_at", { ascending: false });
   if (scope.mode !== "organization") query = query.in("customers.created_by", scope.profileIds);
   const { data, error } = await query.returns<PolicyRow[]>();
+  const rows = data ?? [];
 
   return (
     <AppShell title="Policies">
-      {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3"><p className="text-[11px] font-semibold text-red-700">The policy register is temporarily unavailable.</p><p className="mt-1 text-[9.5px] text-[#64748B]">Please refresh the page or try again shortly.</p></div> : <PolicyWorkspace rows={data ?? []} />}
+      {profile.role === "it_super_user" && !error ? (
+        <ItSuperUserDeletePanel
+          entity="policy"
+          title="Delete policy master record"
+          records={rows.map((policy) => ({
+            id: policy.id,
+            label: policy.policy_no,
+            detail: [policy.vehicles?.vehicle_no, policy.customers?.contact_name, policy.insurance_companies?.name].filter(Boolean).join(" • ")
+          }))}
+        />
+      ) : null}
+      {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3"><p className="text-[11px] font-semibold text-red-700">The policy register is temporarily unavailable.</p><p className="mt-1 text-[9.5px] text-[#64748B]">Please refresh the page or try again shortly.</p></div> : <PolicyWorkspace rows={rows} />}
     </AppShell>
   );
 }
