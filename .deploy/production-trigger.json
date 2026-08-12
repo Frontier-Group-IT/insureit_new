@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #276 existing POSP/MISP onboarding heading clarification to production.",
-  "deploy_requested_at": "2026-08-12T10:22:00+05:30",
+  "purpose": "Deploy PR #277 canonical intermediary ID synchronization fix to production.",
+  "deploy_requested_at": "2026-08-12T10:36:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #276 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
-  "source_commit": "4a4bdc308699fe52252a07f4b108e789786329f4",
-  "release_scope": "Deploy the UI-text update that labels the existing onboarding flows as Existing POSP Onboarding and Existing MISP Onboarding while leaving normal new POSP/MISP onboarding headings and all routing, validation, save logic, workflow status, document flow, and backend behavior unchanged.",
-  "verification": "PR #276 Verify web portal run 31564432678 completed successfully before merge. The first production run was cancelled by the concurrent generic push verification; Verify web portal push run 31564622010 then completed successfully, so this trigger retries the protected production workflow after concurrency cleared.",
+  "source": "ChatGPT explicit request to merge PR #277 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
+  "source_commit": "44105d555f410a1d5b45bfe5c4aa65c16e4da0f9",
+  "release_scope": "Deploy the Existing Intermediary Migration canonical ID synchronization fix so edited Existing Partner ID and Existing POSP/MISP ID values propagate into the canonical profile, intermediary and registration records used by Application Review and related lists, while resolving the full linked account family and preventing duplicate ID assignment. Preserve deliberate Save & Exit / Upload Documents behavior, activation-date validation, permissions, workflow status and existing revalidation behavior.",
+  "verification": "PR #277 Verify web portal run 31565367930 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
