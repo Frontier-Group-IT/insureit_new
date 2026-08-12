@@ -1,4 +1,5 @@
-# Review-only deployment for the self-managed claims feature branch. Never targets production.
+# Review-only deployment for the self-managed claims feature branch. Never targets production hosting.
+# The browser preview intentionally connects to the existing original InsureIT Supabase project.
 name: Deploy mobile browser preview
 
 on:
@@ -22,8 +23,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ci-placeholder.supabase.co' }}
-  EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'ci-placeholder-public-anon-key' }}
+  EXPO_PUBLIC_SUPABASE_URL: https://ilzhsfqqjyppzzvfscmh.supabase.co
+  EXPO_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj
   MOBILE_PREVIEW_BASE_PATH: /insureit_new
 
 jobs:
@@ -143,11 +144,8 @@ jobs:
             echo
             if [ "${{ steps.pages.outputs.enabled }}" = "true" ]; then
               echo "- Hosted preview: ${{ steps.deployment.outputs.page_url }}"
-              if [ "$EXPO_PUBLIC_SUPABASE_URL" = "https://ci-placeholder.supabase.co" ]; then
-                echo "- Backend connection: build-only placeholder (GitHub Actions mobile preview variables are not configured)"
-              else
-                echo "- Backend connection: repository-provided mobile preview environment"
-              fi
+              echo "- Backend connection: original InsureIT Supabase project"
+              echo "- Data warning: preview actions use the same database and RLS as the original app"
             else
               echo "- Hosted preview: not deployed because GitHub Pages is not enabled for this repository"
               echo "- Safe state: no production website or Expo production channel was changed"
