@@ -423,6 +423,7 @@ The following migrations were introduced during the legacy-onboarding repair seq
 
 - `20260812170500_policy_onboarding_unregistered_vehicle_mode.sql` - **APPLIED** to Supabase project `ilzhsfqqjyppzzvfscmh` on 2026-08-12; updates `onboard_motor_policy(...)` to accept `vehicle.registrationMode='unregistered'`, use internal pending references, and allow registration-pending policy snapshots.
 - `20260812171500_fix_unregistered_vehicle_chassis_lookup.sql` - **APPLIED** to Supabase project `ilzhsfqqjyppzzvfscmh` on 2026-08-12; follow-up fix ensuring the live RPC uses chassis lookup for registration-pending vehicles.
+- `20260812173500_fix_unregistered_vehicle_validation.sql` - **APPLIED** to Supabase project `ilzhsfqqjyppzzvfscmh` on 2026-08-12; follow-up fix ensuring the live RPC no longer requires registration number when `vehicle.registrationMode='unregistered'`.
 
 Important lesson: several early repair functions failed because the live `partners` or `intermediaries` table had additional non-null/check constraints. New repair SQL should introspect or explicitly include all known required columns and should not guess constrained statuses.
 

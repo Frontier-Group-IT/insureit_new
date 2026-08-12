@@ -37,9 +37,10 @@ Supabase project `ilzhsfqqjyppzzvfscmh` has the backend RPC support applied:
 ```text
 20260812170500_policy_onboarding_unregistered_vehicle_mode.sql
 20260812171500_fix_unregistered_vehicle_chassis_lookup.sql
+20260812173500_fix_unregistered_vehicle_validation.sql
 ```
 
-Live function verification confirmed `onboard_motor_policy(jsonb)` reads `vehicle.registrationMode`, stores `REGISTRATION PENDING` in the non-null policy snapshot registration field, preserves registered lookup by `vehicle_no_normalized`, and uses chassis lookup for unregistered vehicles. The Supabase connector rejected a longer cleanup-in-same-statement smoke query, so no live create/delete data smoke was completed.
+Live function verification confirmed `onboard_motor_policy(jsonb)` reads `vehicle.registrationMode`, stores `REGISTRATION PENDING` in the non-null policy snapshot registration field, preserves registered lookup by `vehicle_no_normalized`, uses chassis lookup for unregistered vehicles, and no longer contains the old `Insured name, valid 10 digit phone and registration number are required.` validation message. The Supabase connector rejected a longer cleanup-in-same-statement smoke query, so no live create/delete data smoke was completed.
 
 ## Sales hierarchy portfolio visibility
 
