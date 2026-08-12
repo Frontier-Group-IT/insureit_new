@@ -10,6 +10,26 @@ Policy Onboarding OCR hardening remains an active workstream. Production portal 
 
 A separate master-data administration change was added on 2026-08-12: protected deletion controls for existing customers, vehicles, policies, and claims are available only to the `it_super_user` role in the Customers, Vehicles, Policies, and Claims registries. Customer/vehicle/policy deletion and the later claim-delete extension are both deployed to production.
 
+Insurance Company master-data navigation was added and deployed on 2026-08-12. The canonical insurer master route is now under Master Data at `/master-data/insurance-companies`, with the create route at `/master-data/insurance-companies/new`; legacy `/insurance-companies` routes still exist for compatibility.
+
+Production evidence:
+
+```text
+Feature commit: d57a8c65ad82e902ef6e79d4b9b264f30b37cdbd
+Production trigger commit: 5f84ad14368cbaa9d70c2990d1794499d4aa609b
+GitHub Actions production run: 31588015641
+Verification gate: success
+Deploy hook job: success
+Vercel deployment: dpl_CWAT5kA1msyNUkhjguAHPcUPkq17
+Vercel state: READY
+Vercel URL: insureit-5ro2cs638-antnish1s-projects.vercel.app
+Production alias: portal.insureit.in
+Production smoke: unauthenticated GET /master-data/insurance-companies and /master-data/insurance-companies/new returned 307, expected auth redirect.
+Runtime errors: no route-scoped Vercel runtime errors found in the selected post-deploy window.
+```
+
+Live Supabase readiness was verified before deployment: `insurance_companies` and `insurance_company_aliases` exist with RLS policies and indexes, with 37 companies, 35 active companies and 50 aliases. No database migration was required for this feature.
+
 ## IT Super User master-record and claim deletion controls
 
 Implemented on `main` on 2026-08-12.
