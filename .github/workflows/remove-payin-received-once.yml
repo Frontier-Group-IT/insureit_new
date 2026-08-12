@@ -1,0 +1,31 @@
+name: Remove PayIn Received workflow once
+
+on:
+  push:
+    branches:
+      - agent/remove-payin-received
+    paths:
+      - tools/remove_payin_received_patch.py
+      - .github/workflows/remove-payin-received-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/remove-payin-received
+      - name: Apply billed-only PayIn cleanup
+        run: python tools/remove_payin_received_patch.py
+      - name: Remove temporary patch tooling
+        run: rm tools/remove_payin_received_patch.py .github/workflows/remove-payin-received-once.yml
+      - name: Commit final cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Remove PayIn received workflow"
+          git push origin HEAD:agent/remove-payin-received
