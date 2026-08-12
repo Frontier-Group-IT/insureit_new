@@ -19,6 +19,8 @@ type CustomerRow = {
   fleet_size_band: string | null;
   onboarding_status: string;
   vehicles: { count: number }[];
+  policies: { count: number }[];
+  claims: { count: number }[];
 };
 
 export const dynamic = "force-dynamic";
@@ -42,7 +44,7 @@ export default async function CustomersPage() {
 
   let request = admin
     .from("customers")
-    .select("id, customer_code, partner_type, company_name, contact_name, phone, city, fleet_size_band, onboarding_status, vehicles(count)")
+    .select("id, customer_code, partner_type, company_name, contact_name, phone, city, fleet_size_band, onboarding_status, vehicles(count), policies(count), claims(count)")
     .order("created_at", { ascending: false });
   if (accessibleIds !== null) request = request.in("id", accessibleIds);
   const customersResult = await request.returns<CustomerRow[]>();
