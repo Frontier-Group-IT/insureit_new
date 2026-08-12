@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel";
-import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
+import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { VehicleWorkspace } from "./vehicle-workspace";
@@ -23,10 +23,10 @@ export default async function VehiclesPage() {
   const profile = await requireCapability("view_vehicles");
   if (!profile) redirect("/access-denied");
 
-  const scope = await getEmployeeAccessScope(profile.id, profile.role);
+  const accessibleCustomerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_vehicles");
   const admin = createSupabaseAdminClient();
 
-  if (scope.mode !== "organization" && !scope.profileIds.length) {
+  if (accessibleCustomerIds !== null && !accessibleCustomerIds.length) {
     return <AppShell title="Vehicles"><VehicleWorkspace rows={[]} /></AppShell>;
   }
 
@@ -34,7 +34,7 @@ export default async function VehiclesPage() {
     .from("vehicles")
     .select("id, vehicle_no, vehicle_type, make, model, permit_no, customers!inner(company_name, contact_name, created_by)")
     .order("created_at", { ascending: false });
-  if (scope.mode !== "organization") query = query.in("customers.created_by", scope.profileIds);
+  if (accessibleCustomerIds !== null) query = query.in("customer_id", accessibleCustomerIds);
   const { data, error } = await query.returns<VehicleRow[]>();
   const rows = data ?? [];
 
