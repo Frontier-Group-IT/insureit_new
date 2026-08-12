@@ -8,7 +8,7 @@
 
 Policy Onboarding OCR hardening remains an active workstream. Production portal is `https://portal.insureit.in`. Ordinary commits do not intentionally deploy production; `.deploy/production-trigger.json` is changed only after the user explicitly says `deploy now` or `finish and deploy`.
 
-A separate master-data administration change was added on 2026-08-12: protected deletion controls for existing customers, vehicles, policies, and claims are available only to the `it_super_user` role in the Customers, Vehicles, Policies, and Claims registries. The customer/vehicle/policy controls were deployed to production earlier on 2026-08-12; the subsequent claim-delete extension is implemented and verified on `main` but is not yet deployed.
+A separate master-data administration change was added on 2026-08-12: protected deletion controls for existing customers, vehicles, policies, and claims are available only to the `it_super_user` role in the Customers, Vehicles, Policies, and Claims registries. Customer/vehicle/policy deletion and the later claim-delete extension are both deployed to production.
 
 ## IT Super User master-record and claim deletion controls
 
@@ -34,15 +34,12 @@ Security and behavior rules:
 - Customer deletion is blocked while linked vehicles, policies, or claims exist.
 - Vehicle deletion is blocked while linked policies or claims exist.
 - Policy deletion is blocked while linked claims exist.
-- Claims can now be explicitly deleted by `it_super_user` so the dependency chain can be cleared before deleting a policy, vehicle, or customer.
-- Claim deletion deletes only the selected claim as the root record. Existing database `ON DELETE CASCADE` relationships remove linked `claim_documents` metadata, `claim_status_history`, `claim_tasks`, and `notifications`; the linked policy, vehicle, and customer remain intact.
-- Before claim deletion, claim-document storage bucket/path metadata is collected. After the database delete succeeds, the server makes a best-effort cleanup of the corresponding stored files. A storage cleanup failure does not recreate the already-deleted claim.
-- This prevents the existing `ON DELETE CASCADE` customer -> vehicle/policy and vehicle -> policy relationships from silently deleting dependent master data.
-- A remaining database foreign-key reference is treated as a safe block rather than bypassed.
-- Successful deletion writes an `audit_logs` entry with the actor, table, record id, and deletion source. Claim audit entries also note that claim-linked cascade rows were involved and how many storage-file cleanup attempts were made.
-- Customer Auth/profile identities are intentionally not deleted by this feature; the request covered master records only. Auth identity removal must remain a separate explicit operation.
-- No Supabase migration is required for this feature.
-- Do not weaken customer/vehicle/policy dependency checks or convert them to cascade deletion without explicit product approval.
+- Claims can be explicitly deleted by `it_super_user` so the dependency chain can be cleared before deleting a policy, vehicle, or customer.
+- Claim deletion deletes only the selected claim as the root record. Existing database `ON DELETE CASCADE` relationships remove linked claim metadata rows; linked policy, vehicle, and customer remain intact.
+- Before claim deletion, claim-document storage bucket/path metadata is collected. After database delete succeeds, the server makes a best-effort cleanup of corresponding stored files.
+- Successful deletion writes an `audit_logs` entry with actor, table, record id, and deletion source.
+- Customer Auth/profile identities are intentionally not deleted by this feature; Auth identity removal remains a separate explicit operation.
+- Do not weaken customer/vehicle/policy dependency checks or convert them to broad cascade deletion without explicit product approval.
 
 Original customer/vehicle/policy implementation commits:
 
@@ -54,9 +51,9 @@ bd0a8d6e57503552f14d5813b003acf683eac0de
 87e59f659c050d8d447d4f8a44a0dace8a5fac15
 ```
 
-The original feature verification for head `87e59f659c050d8d447d4f8a44a0dace8a5fac15` was GitHub Actions run `31571721254`, result SUCCESS.
+Original feature verification: GitHub Actions run `31571721254`, SUCCESS.
 
-Production deployment of the original customer/vehicle/policy controls:
+Production deployment of original customer/vehicle/policy controls:
 
 ```text
 Deployment trigger commit: 0b74c06dbeb678a55299c0ec3031645ba4a4412c
@@ -74,26 +71,53 @@ ed9549d35a46d43c2a36cd62a5686629804a3770
 ae67335110df70884d4724005bcd39551b1bc7ce
 ```
 
-Verification for claim-delete feature head `ae67335110df70884d4724005bcd39551b1bc7ce`:
+Claim-delete feature verification: GitHub Actions run `31573206603`, SUCCESS.
+
+Claim-delete production deployment:
 
 ```text
-GitHub Actions workflow: Verify web portal
-Run: 31573206603
-Result: SUCCESS
-Access Control V2 catalogue regression: passed
-Access Control V2 scope/compatibility regression: passed
-Access Control V2 portal lifecycle regression: passed
-Employee portal governance regression: passed
-IFFCO structured regression: passed
-IFFCO regression: passed
-Digit regression: passed
-New India regression: passed
-Typecheck: passed
-Lint: passed
-Production build: passed
+Deployment trigger commit: 2b8852469fcb1fe5232a1ce5f18686c2b08e9c7b
+GitHub Actions production run: 31573488279
+Vercel deployment: dpl_5w8MUsVTEZK4wEubL4TtJMybofWM
+Production state: READY
+Alias: portal.insureit.in
 ```
 
-No production deployment has been triggered for the claim-delete extension. Wait for explicit user approval before changing `.deploy/production-trigger.json`.
+## Customer deletion cascade hotfix
+
+On 2026-08-12, live production testing showed a dependency-free customer could still fail deletion with a generic foreign-key message.
+
+Root cause found in the live Supabase Postgres log:
+
+- deleting a customer cascades deletion into `customer_documents`;
+- `trg_capture_customer_document_delete_activity` is an `AFTER DELETE` trigger on `customer_documents`;
+- its function attempted to insert a `customer_activity_events` row using `old.customer_id` even though the parent customer was being deleted;
+- PostgreSQL rejected that insert on `customer_activity_events_customer_id_fkey`, rolling back the customer deletion.
+
+Production database fix applied through Supabase migration:
+
+```text
+20260812073421_fix_customer_document_delete_activity_on_customer_cascade.sql
+```
+
+The function `capture_customer_document_delete_activity()` now first checks whether the customer still exists. If the customer row no longer exists because the document deletion is part of a parent-customer cascade, it skips creation of the activity event. Explicit individual customer-document deletion still creates the activity event while the customer exists.
+
+The same migration is committed to the repository in:
+
+```text
+supabase/migrations/20260812073421_fix_customer_document_delete_activity_on_customer_cascade.sql
+```
+
+Validation performed against the affected live customer inside a transaction:
+
+```text
+BEGIN;
+DELETE customer;
+confirmed delete_would_succeed = true;
+ROLLBACK;
+```
+
+The rollback preserved the live customer while proving the exact deletion now succeeds at database level. No portal code deployment is required for this database-only hotfix.
 
 ## Verified pre-change parser baseline
 
@@ -108,7 +132,7 @@ Lint:                  0 errors
 Build:                 passed
 ```
 
-Do not reuse this as proof that the new structured-table commits pass.
+Do not reuse this as proof that newer structured-table commits pass.
 
 ## Live production findings
 
@@ -135,7 +159,7 @@ OD = 22739 - 7367 - 330 = 15042
 
 ## Current implementation
 
-**IMPLEMENTED / NOT YET DEPLOYED OR VERIFIED:** a second IFFCO financial pass now consumes Google Document AI table cell anchors (`pages[].tables[]`) instead of relying only on flattened page text.
+A second IFFCO financial pass consumes Google Document AI table cell anchors (`pages[].tables[]`) instead of relying only on flattened page text.
 
 New file:
 
@@ -143,15 +167,13 @@ New file:
 apps/web-portal/lib/policy-ocr-iffco-structured-refiner.ts
 ```
 
-Server action now extracts structured table rows and runs the structured IFFCO refiner after the existing text refiner. The structured pass rebuilds OD/TP/CPA from labeled premium rows and only returns them when the complete financial equation reconciles to printed net. If evidence is incomplete, financial fields are withheld rather than guessed.
+Server action extracts structured table rows and runs the structured IFFCO refiner after the existing text refiner. The structured pass rebuilds OD/TP/CPA from labeled premium rows and only returns them when the complete financial equation reconciles to printed net. If evidence is incomplete, financial fields are withheld rather than guessed.
 
-Regression added:
+Regression:
 
 ```text
 npm run policy-ocr:iffco-structured-regression
 ```
-
-It covers the exact production-shaped bad state and the fail-safe missing-CPA case.
 
 Relevant commits:
 
@@ -165,6 +187,8 @@ f16058c0c159ec90f46d4b28a718d3205ab82a7b
 
 ## Immediate next step
 
-For OCR deployment, continue to follow the regression and explicit-deploy gate in `AGENTS.md`. For deletion administration, the complete dependency order is now: delete claim -> delete policy -> delete vehicle -> delete customer, with each step only when the user actually intends to remove that record. The claim-delete extension is verified green but must not be deployed until the user explicitly requests deployment.
+For deletion administration, use the dependency order claim -> policy -> vehicle -> customer when those linked records actually exist. If a dependency-free customer still fails deletion, inspect current Postgres logs before altering dependency rules. The customer-document activity cascade bug described above has already been fixed in production.
+
+For OCR deployment, continue to follow the regression and explicit-deploy gate in `AGENTS.md`.
 
 United India remains deferred.
