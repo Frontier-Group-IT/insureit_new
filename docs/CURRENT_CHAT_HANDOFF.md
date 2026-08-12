@@ -30,7 +30,7 @@ Runtime errors: no route-scoped Vercel runtime errors found in the selected post
 
 Live Supabase readiness was verified before deployment: `insurance_companies` and `insurance_company_aliases` exist with RLS policies and indexes, with 37 companies, 35 active companies and 50 aliases. No database migration was required for this feature.
 
-Policy Onboarding registration-pending vehicle support was implemented on 2026-08-12 and is pending code deployment. Section 02 now has a compact `Registered / Unregistered` toggle in the top-right header, defaulting to `Registered`. In `Unregistered` mode, the registration field is disabled/optional, AuthBridge lookup is disabled, and chassis plus engine numbers are required.
+Policy Onboarding registration-pending vehicle support was implemented and deployed on 2026-08-12. Section 02 now has a compact `Registered / Unregistered` toggle in the top-right header, defaulting to `Registered`. In `Unregistered` mode, the registration field is disabled/optional, AuthBridge lookup is disabled, and chassis plus engine numbers are required.
 
 Supabase project `ilzhsfqqjyppzzvfscmh` has the backend RPC support applied:
 
@@ -41,6 +41,23 @@ Supabase project `ilzhsfqqjyppzzvfscmh` has the backend RPC support applied:
 ```
 
 Live function verification confirmed `onboard_motor_policy(jsonb)` reads `vehicle.registrationMode`, stores `REGISTRATION PENDING` in the non-null policy snapshot registration field, preserves registered lookup by `vehicle_no_normalized`, uses chassis lookup for unregistered vehicles, and no longer contains the old `Insured name, valid 10 digit phone and registration number are required.` validation message. The Supabase connector rejected a longer cleanup-in-same-statement smoke query, so no live create/delete data smoke was completed.
+
+Production deployment evidence:
+
+```text
+Feature commit: d2b52254a54b780e4f94c9f0d625013014101137
+Supabase validation hotfix commit: 38468e18be13d2b5f7e6e395bc49b708ab7175ab
+Production trigger commit: 0aa17920483cb37ec6794d0109ad2a9c1a00b7dc
+GitHub Actions production run: 31595290043
+Verification gate: success
+Deploy hook job: success
+Vercel deployment: dpl_ELqa7BwMfx7ccYuC4rHkK9VjMrso
+Vercel state: READY
+Vercel URL: insureit-9827schml-antnish1s-projects.vercel.app
+Production alias: portal.insureit.in
+Production smoke: unauthenticated GET /policies/new returned 307 to /login?next=%2Fpolicies%2Fnew.
+Runtime errors: no /policies/new route-scoped Vercel runtime errors found in the selected post-deploy window.
+```
 
 ## Sales hierarchy portfolio visibility
 
