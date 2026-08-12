@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Partner Register linked-account action labels to production.",
-  "deploy_requested_at": "2026-08-12T16:39:00+05:30",
+  "purpose": "Deploy Policy Onboarding unregistered vehicle support to production.",
+  "deploy_requested_at": "2026-08-12T17:10:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #288 and deploy using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "94c21d632545eb574d141ddb55f2ed551e602b1f",
-  "release_scope": "Update Partner Register actions so rows with an existing linked POSP or MISP show View POSP or View MISP text buttons, while incomplete Partner rows keep the Eye action and eligible rows keep Create POSP/Create MISP.",
-  "verification": "Verify web portal run 31590621016 passed for PR #288 before merge. The production workflow must run its compulsory verification gate before the Vercel deploy hook.",
+  "source": "Commit unregistered vehicle support and deploy using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "d2b52254b44ade35173c85d0ea139d7329ecf79b",
+  "release_scope": "Add Registered/Unregistered toggle to Policy Onboarding Section 02, allow registration-pending new vehicles using chassis and engine identity, disable AuthBridge lookup for unregistered vehicles, and use the updated onboard_motor_policy RPC already applied in Supabase.",
+  "verification": "Verify web portal run 31592273608 passed for d2b52254 before production trigger. Production workflow must run its compulsory verification gate before the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
