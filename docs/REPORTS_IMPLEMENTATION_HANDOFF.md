@@ -6,34 +6,32 @@
 
 ## Current state
 
-Reports Phase 1 is implemented and verified on `main`, but is **not intentionally deployed to production yet**. Do not modify `.deploy/production-trigger.json` unless the user explicitly says `deploy now` or `finish and deploy`.
+**IMPLEMENTED / APPLIED / DEPLOYED / VERIFIED:** Reports Phase 1 is live on the canonical production portal at `https://portal.insureit.in/reports`.
 
-The previous `/reports` page was a static catalogue/blueprint with seven report families and 23 planned report cards. Phase 1 replaces that user-facing catalogue with a real, professional Business / Policy Production reporting workspace backed by live Supabase data.
+The previous `/reports` page was a static catalogue/blueprint with seven report families and 23 planned report cards. Phase 1 replaces that user-facing catalogue with a real Business / Policy Production reporting workspace backed by live Supabase data.
 
 ## Phase 1 user experience
 
-`apps/web-portal/app/reports/page.tsx` now provides:
+`apps/web-portal/app/reports/page.tsx` provides:
 
-- neutral professional report layout instead of multi-colour concept cards;
+- neutral professional report layout;
 - data-scope label and current as-of timestamp;
 - quick periods: Last 90 days (default), Month to date, Year to date, All time;
 - custom From / To dates;
 - Insurance Company, Relationship Manager and Partner / intermediary filters;
-- live KPI strip: Policies, Gross Premium, Net Premium, Average Premium, contributing intermediaries;
+- KPI strip: Policies, Gross Premium, Net Premium, Average Premium, contributing intermediaries;
 - monthly premium-production trend;
 - OD / TP / CPA premium composition;
 - insurer contribution table with policy count, gross premium and share;
 - RM production table with policy count, intermediary count and gross premium;
 - paginated Policy Business Register with drill-through to policy detail;
 - responsive mobile register cards;
-- controlled CSV export using the exact same authorization scope and active report filters;
+- controlled CSV export using the same authorization scope and active report filters;
 - explicit unavailable state if the reporting service fails; figures are never estimated or substituted.
 
 ## Access-control rule
 
-Reports do not implement a separate ownership model.
-
-The server loader uses:
+Reports do not implement a separate ownership model. The server loader uses:
 
 ```text
 requireCapability("view_reports")
@@ -41,7 +39,7 @@ getAccessibleCustomerIds(profile.id, profile.role, "view_reports")
 getEmployeeAccessScope(profile.id, profile.role, "view_reports")
 ```
 
-Therefore the report follows the same effective role/override scope model as the rest of the portal:
+Therefore:
 
 - organization-scoped report viewers receive organization data;
 - reporting-hierarchy viewers receive only customers/business in the employee/intermediary hierarchy resolved by the common access-scope engine;
@@ -52,15 +50,14 @@ Do not add an unrestricted report/export query to work around scope filtering.
 
 ## Reporting backend
 
-Migration file:
+Applied migrations in the original Supabase project `ilzhsfqqjyppzzvfscmh`:
 
 ```text
-supabase/migrations/20260813004500_policy_business_reporting.sql
+20260813004500_policy_business_reporting.sql
+20260813005000_lock_policy_business_reporting.sql
 ```
 
-Live original Supabase project `ilzhsfqqjyppzzvfscmh` has the migration applied.
-
-Function:
+The reporting function is:
 
 ```text
 public.get_policy_business_report(
@@ -75,16 +72,7 @@ public.get_policy_business_report(
 ) returns jsonb
 ```
 
-It performs server-side aggregation and pagination rather than loading the full policy dataset into the browser. Returned sections are:
-
-- `summary`
-- `trend`
-- `insurers`
-- `rms`
-- `filters`
-- paginated `register`
-
-Primary data sources:
+It performs server-side aggregation and pagination over:
 
 ```text
 policies
@@ -95,23 +83,13 @@ insurance_companies
 intermediaries
 ```
 
-The business date is `coalesce(policies.issuance_date::date, policies.created_at::date)`.
+Business date is `coalesce(policies.issuance_date::date, policies.created_at::date)`.
 
 ### RPC security
 
-Second migration:
+The reporting RPC is deliberately not executable by `PUBLIC`, `anon`, or `authenticated`. Execute privilege is granted only to `service_role` plus database owner/postgres. The browser does not submit its own authorization scope directly to the RPC; the Next.js server resolves the effective customer scope first and calls the RPC through the server-only admin client.
 
-```text
-supabase/migrations/20260813005000_lock_policy_business_reporting.sql
-```
-
-This is also applied to the live original Supabase project.
-
-The reporting RPC is deliberately **not executable** by `PUBLIC`, `anon`, or `authenticated`. Execute privilege is granted only to `service_role` (plus database owner/postgres). The browser never supplies its own scope directly to the RPC. The Next.js server resolves authorization first, then calls the RPC with the scoped customer ID set through the server-only admin client.
-
-Privilege verification against `information_schema.routine_privileges` confirmed only `postgres` and `service_role` execute grants for this RPC.
-
-Supabase security advisor was run after the DDL. It reported pre-existing project-wide lints but did not flag the new reporting RPC as publicly executable. Do not conflate the existing advisor backlog with this new function.
+Privilege verification confirmed only `postgres` and `service_role` execute grants. Supabase security advisor was run after the DDL and did not flag the new reporting RPC as publicly executable. Existing unrelated project-wide advisor findings remain separate backlog.
 
 ## Server files
 
@@ -121,22 +99,18 @@ apps/web-portal/lib/reports/policy-business-export.ts
 apps/web-portal/app/reports/export/policy-business/route.ts
 ```
 
-`policy-business.ts` resolves dates/filters, common access scope, calls the service-role-only RPC and normalizes the JSON payload.
-
-`policy-business-export.ts` reuses the same scope and filters, reads in server-side pages of 200 and has a hard 10,000-row limit.
-
-The CSV route:
+The CSV export:
 
 - requires `view_reports`;
 - exports only the authorized/filter-matched dataset;
 - includes business/policy/customer/vehicle/insurer/RM/intermediary and premium fields;
-- does not export PAN, Aadhaar, phone or raw OCR information;
-- returns HTTP 422 and asks the user to narrow filters when more than 10,000 rows match instead of silently truncating;
+- excludes PAN, Aadhaar, phone and raw OCR information;
+- uses a hard 10,000-row limit and returns HTTP 422 asking the user to narrow filters if exceeded;
 - uses `Cache-Control: private, no-store`.
 
 ## Live smoke evidence
 
-A live RPC smoke against the current 90-day business set returned:
+A live reporting smoke against the current sample portfolio returned:
 
 ```text
 Policies: 4
@@ -150,35 +124,14 @@ Insurers: 3
 Intermediaries: 1
 ```
 
-The monthly trend currently resolves one June policy and three July policies.
-
-The insurer split currently resolves three insurers, and RM production resolves the four policies to Parsottam with one intermediary.
-
-A separate live SQL reconstruction of the user-provided Jatin -> Parsottam -> Anmol hierarchy passed the resulting accessible customer IDs into the reporting RPC and produced the same 4-policy scoped summary. This validates that the reporting aggregate is compatible with the hierarchy model rather than exposing organization totals to the Sales Head.
-
-Do not encode these live counts in UI code; they are smoke evidence only and will change as business data changes.
+A separate live SQL reconstruction of the Jatin -> Parsottam -> Anmol hierarchy passed the resulting accessible customer IDs into the reporting RPC and produced the same four-policy scoped summary. These counts are smoke evidence only and must never be encoded in UI code.
 
 ## Verification
 
-Initial feature head `1d0d86f322e6a8ec1cee68852e658db389cb4f58` passed all access-control/security/OCR regressions but failed TypeScript only because `requireCapability()` had a nullable inferred return type.
-
-The shared helper was tightened without changing authorization behavior:
+Final feature verification before release:
 
 ```text
-apps/web-portal/lib/master-data-server.ts
-```
-
-`requireCapability()` now explicitly rejects a null profile before checking the effective capability, allowing TypeScript to correctly infer a non-null returned profile.
-
-Final verified head:
-
-```text
-b0d086e14ee9bbb66ec16ae030bc376db102c057
-```
-
-Canonical GitHub Actions verification:
-
-```text
+Feature head: b0d086e14ee9bbb66ec16ae030bc376db102c057
 Workflow: Verify web portal
 Run: 31632806025
 Result: SUCCESS
@@ -196,17 +149,36 @@ Lint: passed
 Production build: passed
 ```
 
-## Production state
+The shared `requireCapability()` helper now explicitly rejects a null profile before checking the effective capability. This was a TypeScript narrowing fix and did not weaken authorization behavior.
 
-The two Supabase reporting migrations are already applied because the server-side reporting backend had to be smoke-tested against the original project.
+## Production deployment evidence
 
-The new web Reports UI/export code is committed and verified on `main`, but no Reports-specific production trigger was created in this work. Do not claim the new web page is live until a deployment containing this head is verified on Vercel and aliased to `portal.insureit.in`.
+User explicitly requested deployment on 2026-08-13 IST.
+
+```text
+Reports handoff pre-trigger head: 0180ad6e9966da06d2fa7142927e2be04f2bc5a9
+Production trigger commit: 0e80c0f8ff21c305736a02bc48cfbcec1447d03c
+GitHub Actions production run: 31633330860
+Compulsory verification gate: SUCCESS
+Trigger Vercel production deployment job: SUCCESS
+Vercel deployment: dpl_oTejS9amPxmTKA8VoLzKAKUqotyc
+Vercel URL: insureit-6bbp6x61p-antnish1s-projects.vercel.app
+Vercel state: READY
+Production alias: portal.insureit.in
+Alias error: none
+```
+
+Production smoke after READY:
+
+- unauthenticated `https://portal.insureit.in/reports` resolved successfully through the production deployment and served the expected login page because Reports is protected;
+- the response was served from the canonical `portal.insureit.in` alias;
+- Vercel runtime-error check for `/reports` and `/reports/export/policy-business` found no runtime errors in the selected post-deploy window.
+
+Do not treat the unauthenticated smoke as proof of every authenticated filter/export interaction. The deployment, routing and protected-entry behavior are verified; authenticated business validation should use normal user testing when product review is requested.
 
 ## Planned next phases
 
-Continue only after user review/approval of Phase 1 direction.
-
-Recommended sequence:
+Recommended sequence after Phase 1 review:
 
 1. Distribution: RM performance, intermediary business, onboarding pipeline.
 2. Renewals: expiry-based due/expired/premium-at-risk first; do not invent conversion/lost-reason metrics until a real renewal lifecycle exists.
