@@ -1,730 +1,337 @@
-import {
-  AlertTriangle,
-  ArrowRight,
-  BarChart3,
-  CalendarClock,
-  CarFront,
-  CheckCircle2,
-  ClipboardCheck,
-  Download,
-  FileBarChart2,
-  FileCheck2,
-  Filter,
-  Landmark,
-  LineChart,
-  LockKeyhole,
-  PieChart,
-  RefreshCw,
-  Search,
-  ShieldCheck,
-  SlidersHorizontal,
-  Sparkles,
-  Table2,
-  TimerReset,
-  UsersRound,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import Link from "next/link";
+import { Download, ExternalLink, Filter, RefreshCw } from "lucide-react";
 import { AppShell } from "@/components/shell";
+import { requireCapability } from "@/lib/master-data-server";
+import {
+  loadPolicyBusinessReport,
+  reportScopeLabel,
+  type PolicyBusinessQuery,
+  type PolicyBusinessReport,
+} from "@/lib/reports/policy-business";
 
-type ReportTone = "blue" | "green" | "amber" | "red" | "teal" | "violet" | "slate";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-type ReportDefinition = {
-  title: string;
-  category: string;
-  owner: string;
-  cadence: string;
-  sensitivity: string;
-  description: string;
-  icon: LucideIcon;
-  tone: ReportTone;
-  metrics: string[];
-  filters: string[];
-  outputs: string[];
-  workflow: string;
-};
+const PERIODS = [
+  { key: "90d", label: "Last 90 days" },
+  { key: "mtd", label: "Month to date" },
+  { key: "ytd", label: "Year to date" },
+  { key: "all", label: "All time" },
+] as const;
 
-const toneStyles: Record<ReportTone, { icon: string; border: string; text: string; chip: string }> = {
-  blue: {
-    icon: "bg-[#eaf2ff] text-[#215dc8]",
-    border: "border-[#cfe0ff]",
-    text: "text-[#215dc8]",
-    chip: "bg-[#f3f7ff] text-[#285da9]",
-  },
-  green: {
-    icon: "bg-[#e9f8ef] text-[#16854f]",
-    border: "border-[#cdebd9]",
-    text: "text-[#16854f]",
-    chip: "bg-[#f1fbf5] text-[#21734b]",
-  },
-  amber: {
-    icon: "bg-[#fff7e6] text-[#b77912]",
-    border: "border-[#f5ddb0]",
-    text: "text-[#b77912]",
-    chip: "bg-[#fff9ec] text-[#92620d]",
-  },
-  red: {
-    icon: "bg-[#fff0ed] text-[#cf4d43]",
-    border: "border-[#f4c9c4]",
-    text: "text-[#cf4d43]",
-    chip: "bg-[#fff6f4] text-[#b0443c]",
-  },
-  teal: {
-    icon: "bg-[#e7fbfa] text-[#078f93]",
-    border: "border-[#bfeceb]",
-    text: "text-[#078f93]",
-    chip: "bg-[#effdfc] text-[#087c80]",
-  },
-  violet: {
-    icon: "bg-[#f0edff] text-[#6251e8]",
-    border: "border-[#d8d0ff]",
-    text: "text-[#6251e8]",
-    chip: "bg-[#f7f5ff] text-[#5b4ce5]",
-  },
-  slate: {
-    icon: "bg-[#eef2f7] text-[#475569]",
-    border: "border-[#d9e1ec]",
-    text: "text-[#475569]",
-    chip: "bg-[#f6f8fb] text-[#526174]",
-  },
-};
+type PageProps = { searchParams: Promise<PolicyBusinessQuery> };
 
-const reportCategories = [
-  { label: "Business", count: 4, icon: BarChart3 },
-  { label: "Distribution", count: 3, icon: UsersRound },
-  { label: "Renewals", count: 3, icon: CalendarClock },
-  { label: "Claims", count: 3, icon: ShieldCheck },
-  { label: "Operations", count: 4, icon: TimerReset },
-  { label: "Compliance", count: 3, icon: LockKeyhole },
-  { label: "Finance", count: 3, icon: Landmark },
-];
+export default async function ReportsPage({ searchParams }: PageProps) {
+  const profile = await requireCapability("view_reports");
+  const query = await searchParams;
 
-const summaryTiles = [
-  {
-    label: "Report families",
-    value: "7",
-    detail: "Business, distribution, renewals, claims, operations, compliance and finance",
-    icon: FileBarChart2,
-    tone: "blue" as ReportTone,
-  },
-  {
-    label: "Management views",
-    value: "23",
-    detail: "Designed as governed report blueprints before live data wiring",
-    icon: Table2,
-    tone: "violet" as ReportTone,
-  },
-  {
-    label: "Primary workflow",
-    value: "Filter",
-    detail: "Choose scope, date range and owner before generating output",
-    icon: SlidersHorizontal,
-    tone: "teal" as ReportTone,
-  },
-  {
-    label: "Export posture",
-    value: "Gated",
-    detail: "Exports should respect role, hierarchy and sensitive-data masking",
-    icon: Download,
-    tone: "amber" as ReportTone,
-  },
-];
+  let payload: Awaited<ReturnType<typeof loadPolicyBusinessReport>> | null = null;
+  let loadError = false;
+  try {
+    payload = await loadPolicyBusinessReport(profile, query);
+  } catch (error) {
+    console.error("[reports] policy business report failed", error instanceof Error ? error.message : "unknown error");
+    loadError = true;
+  }
 
-const reports: ReportDefinition[] = [
-  {
-    title: "Policy Business Register",
-    category: "Business",
-    owner: "Operations / Sales",
-    cadence: "Daily, month-end",
-    sensitivity: "Sensitive",
-    description: "Issued policy portfolio by insurer, product, customer, vehicle, intermediary and RM.",
-    icon: FileCheck2,
-    tone: "blue",
-    metrics: ["Policy count", "Gross premium", "OD / TP / CPA split", "IDV / sum insured"],
-    filters: ["Issue date", "Insurer", "Product", "RM", "Partner / POSP / MISP"],
-    outputs: ["Register table", "Premium trend", "Insurer mix", "CSV / XLSX export"],
-    workflow: "Start from date range, narrow by business owner, then drill into policy records.",
-  },
-  {
-    title: "Premium Production Summary",
-    category: "Business",
-    owner: "Leadership",
-    cadence: "Daily, weekly",
-    sensitivity: "Sensitive",
-    description: "Top-line premium movement across insurers, lines of business and sales hierarchy.",
-    icon: LineChart,
-    tone: "green",
-    metrics: ["Gross premium", "Average premium", "New business", "Product mix"],
-    filters: ["Current month", "Quarter", "Insurer", "Hierarchy", "Business source"],
-    outputs: ["KPI strip", "Trend chart", "Leaderboard", "Printable summary"],
-    workflow: "Use as the leadership snapshot before drilling into RM or intermediary performance.",
-  },
-  {
-    title: "Insurer Performance Report",
-    category: "Business",
-    owner: "Management",
-    cadence: "Weekly, monthly",
-    sensitivity: "Internal",
-    description: "Compare policy count, premium, claims and operational quality by insurer.",
-    icon: PieChart,
-    tone: "violet",
-    metrics: ["Policies", "Premium", "Open claims", "OCR review rate"],
-    filters: ["Insurer", "Product", "Period", "RM", "Claim status"],
-    outputs: ["Insurer cards", "Policy/claim matrix", "Exception list"],
-    workflow: "Identify insurers with high volume, pending work or data-quality issues.",
-  },
-  {
-    title: "Vehicle Portfolio Report",
-    category: "Business",
-    owner: "Operations",
-    cadence: "Weekly",
-    sensitivity: "Sensitive",
-    description: "Fleet under management by vehicle status, manufacturer, registration state and policy coverage.",
-    icon: CarFront,
-    tone: "teal",
-    metrics: ["Vehicles", "Covered vehicles", "Registration pending", "Uninsured exposure"],
-    filters: ["Customer", "Manufacturer", "Registration status", "Policy status"],
-    outputs: ["Fleet register", "Coverage gap list", "Manufacturer summary"],
-    workflow: "Review customer fleet coverage and prioritize missing or expiring policy action.",
-  },
-  {
-    title: "RM Performance Report",
-    category: "Distribution",
-    owner: "Sales Head",
-    cadence: "Daily, weekly",
-    sensitivity: "Hierarchy-scoped",
-    description: "Business contribution, renewals and work-in-progress by relationship manager.",
-    icon: UsersRound,
-    tone: "green",
-    metrics: ["Assigned partners", "Policies", "Premium", "Renewals due"],
-    filters: ["Sales hierarchy", "RM", "Partner type", "Period"],
-    outputs: ["RM leaderboard", "Portfolio drill-down", "Renewal workload"],
-    workflow: "Sales heads compare teams while RMs see only their accessible portfolio.",
-  },
-  {
-    title: "Partner / POSP / MISP Business Report",
-    category: "Distribution",
-    owner: "Distribution",
-    cadence: "Weekly, monthly",
-    sensitivity: "Hierarchy-scoped",
-    description: "Business, onboarding health and active account status for distribution partners.",
-    icon: Sparkles,
-    tone: "teal",
-    metrics: ["Active accounts", "Policy count", "Premium", "Pending onboarding"],
-    filters: ["Partner", "POSP", "MISP", "Assigned RM", "Registration status"],
-    outputs: ["Partner cards", "Account register", "Business trend"],
-    workflow: "Move from high-level partner health to linked POSP/MISP activity and records.",
-  },
-  {
-    title: "Intermediary Onboarding Pipeline",
-    category: "Distribution",
-    owner: "Operations",
-    cadence: "Daily",
-    sensitivity: "Sensitive",
-    description: "Partner, POSP and MISP applications by stage, status, aging and required action.",
-    icon: ClipboardCheck,
-    tone: "amber",
-    metrics: ["Applications", "Stage aging", "Training pending", "IIB pending"],
-    filters: ["Account type", "Stage", "RM", "Status", "Age bucket"],
-    outputs: ["Stage funnel", "Aging table", "Action queue"],
-    workflow: "Use stage and age filters to unblock applications before they become stale.",
-  },
-  {
-    title: "Renewal Pipeline",
-    category: "Renewals",
-    owner: "Sales / Operations",
-    cadence: "Daily",
-    sensitivity: "Sensitive",
-    description: "Policies expiring soon with customer, vehicle, insurer, intermediary and owner context.",
-    icon: CalendarClock,
-    tone: "amber",
-    metrics: ["Due in 7 days", "Due in 30 days", "Expired", "Renewed"],
-    filters: ["Expiry window", "RM", "Insurer", "Customer", "Intermediary"],
-    outputs: ["Renewal queue", "Owner workload", "Aging summary"],
-    workflow: "Filter by expiry window, assign follow-up, then open the policy or customer record.",
-  },
-  {
-    title: "Lost Renewal Analysis",
-    category: "Renewals",
-    owner: "Leadership",
-    cadence: "Monthly",
-    sensitivity: "Internal",
-    description: "Renewals not converted, grouped by reason, product, insurer, RM and intermediary.",
-    icon: AlertTriangle,
-    tone: "red",
-    metrics: ["Lost count", "Lost premium", "Reason mix", "At-risk owners"],
-    filters: ["Expiry month", "RM", "Insurer", "Loss reason"],
-    outputs: ["Reason chart", "Lost-policy table", "Owner comparison"],
-    workflow: "Review non-renewals after month close and decide retention interventions.",
-  },
-  {
-    title: "Renewal Conversion Tracker",
-    category: "Renewals",
-    owner: "Sales Head",
-    cadence: "Weekly",
-    sensitivity: "Hierarchy-scoped",
-    description: "Conversion progress by RM and intermediary for policies that entered the renewal window.",
-    icon: CheckCircle2,
-    tone: "green",
-    metrics: ["Conversion rate", "Pending follow-up", "Renewed premium", "Expired unpaid"],
-    filters: ["Window", "RM", "Partner", "Product"],
-    outputs: ["Conversion funnel", "Follow-up queue", "RM comparison"],
-    workflow: "Track whether renewal work is moving from due to contacted to closed.",
-  },
-  {
-    title: "Claims Aging Report",
-    category: "Claims",
-    owner: "Claims Head",
-    cadence: "Daily",
-    sensitivity: "Sensitive",
-    description: "Open claims by stage, age bucket, insurer, customer, vehicle and pending dependency.",
-    icon: ShieldCheck,
-    tone: "red",
-    metrics: ["Open claims", "Average age", "Overdue claims", "Stage bottlenecks"],
-    filters: ["Claim status", "Age bucket", "Insurer", "RM", "Customer"],
-    outputs: ["Aging table", "Stage heatmap", "Overdue queue"],
-    workflow: "Find old claims, identify pending blockers, then open claim detail for action.",
-  },
-  {
-    title: "Claims Settlement Summary",
-    category: "Claims",
-    owner: "Claims / Finance",
-    cadence: "Weekly, monthly",
-    sensitivity: "Sensitive",
-    description: "Settled and open claim values once settlement/payment fields are available.",
-    icon: Landmark,
-    tone: "blue",
-    metrics: ["Settled claims", "Outstanding claims", "Settlement amount", "Average cycle time"],
-    filters: ["Settlement period", "Insurer", "Product", "Status"],
-    outputs: ["Settlement summary", "Claim rows", "Insurer comparison"],
-    workflow: "Reconcile claims handling outcomes with insurer and finance follow-up.",
-  },
-  {
-    title: "Claims Document Exception Report",
-    category: "Claims",
-    owner: "Claims Operations",
-    cadence: "Daily",
-    sensitivity: "Sensitive",
-    description: "Claims blocked because required documents are missing, rejected or awaiting review.",
-    icon: FileCheck2,
-    tone: "amber",
-    metrics: ["Missing documents", "Returned documents", "Pending review", "Oldest blocker"],
-    filters: ["Document type", "Claim status", "Age", "Owner"],
-    outputs: ["Exception queue", "Customer contact list", "Claim drill-down"],
-    workflow: "Resolve document gaps before survey, repair or settlement stages stall.",
-  },
-  {
-    title: "Customer KYC Workload",
-    category: "Operations",
-    owner: "Operations",
-    cadence: "Daily",
-    sensitivity: "Sensitive",
-    description: "Customer onboarding and KYC applications by status, reviewer and aging.",
-    icon: ClipboardCheck,
-    tone: "violet",
-    metrics: ["Submitted", "Under review", "Changes requested", "Aging"],
-    filters: ["Customer type", "Status", "Reviewer", "Age bucket"],
-    outputs: ["Queue table", "Reviewer workload", "Aging summary"],
-    workflow: "Use as the daily queue for customer onboarding and KYC review work.",
-  },
-  {
-    title: "Policy OCR Processing Report",
-    category: "Operations",
-    owner: "Operations / IT",
-    cadence: "Weekly",
-    sensitivity: "Sensitive",
-    description: "OCR usage, review-required outcomes and insurer parser coverage without exposing raw OCR text.",
-    icon: RefreshCw,
-    tone: "teal",
-    metrics: ["Uploads", "Accepted fields", "Review required", "Parser family"],
-    filters: ["Insurer", "Processor result", "User", "Date"],
-    outputs: ["OCR summary", "Warning categories", "Unsupported insurer list"],
-    workflow: "Improve parser quality by finding insurer formats that frequently require manual review.",
-  },
-  {
-    title: "AuthBridge RC Lookup Report",
-    category: "Operations",
-    owner: "Operations / IT",
-    cadence: "Weekly",
-    sensitivity: "Sensitive",
-    description: "RC lookup attempts, success, timeout and user-declined application outcomes.",
-    icon: Search,
-    tone: "blue",
-    metrics: ["Lookup attempts", "Successful lookups", "Timeouts", "Applied details"],
-    filters: ["Date", "Status", "User", "Vehicle mode"],
-    outputs: ["Usage summary", "Failure table", "Latency buckets"],
-    workflow: "Track provider reliability and credit usage without storing raw provider responses.",
-  },
-  {
-    title: "Task SLA Report",
-    category: "Operations",
-    owner: "Operations",
-    cadence: "Daily",
-    sensitivity: "Internal",
-    description: "Open, overdue and completed tasks by owner, workflow area and priority.",
-    icon: TimerReset,
-    tone: "amber",
-    metrics: ["Open tasks", "Overdue", "Completed", "Average age"],
-    filters: ["Owner", "Priority", "Status", "Workflow area"],
-    outputs: ["SLA cards", "Owner workload", "Task rows"],
-    workflow: "Use for daily review of operational follow-ups and delayed work.",
-  },
-  {
-    title: "Portal User Access Report",
-    category: "Compliance",
-    owner: "IT / Compliance",
-    cadence: "Weekly, monthly",
-    sensitivity: "Restricted",
-    description: "Employee and intermediary portal access status, invitations and disabled accounts.",
-    icon: LockKeyhole,
-    tone: "slate",
-    metrics: ["Active users", "Pending invites", "Disabled users", "Critical roles"],
-    filters: ["Role", "Access status", "Department", "Invitation date"],
-    outputs: ["Access register", "Pending invite list", "Critical access review"],
-    workflow: "Review portal access regularly and confirm privileged access remains intentional.",
-  },
-  {
-    title: "Audit Activity Report",
-    category: "Compliance",
-    owner: "IT / Compliance",
-    cadence: "Weekly, month-end",
-    sensitivity: "Restricted",
-    description: "Sensitive actions such as master-record deletion, permission updates and workflow overrides.",
-    icon: ClipboardCheck,
-    tone: "red",
-    metrics: ["Sensitive actions", "Deletes", "Permission changes", "Actor count"],
-    filters: ["Actor", "Action type", "Module", "Date"],
-    outputs: ["Audit table", "Actor summary", "Exception export"],
-    workflow: "Start from restricted actions, then inspect actor and record context.",
-  },
-  {
-    title: "Master Data Quality Report",
-    category: "Compliance",
-    owner: "Operations / IT",
-    cadence: "Weekly",
-    sensitivity: "Internal",
-    description: "Missing aliases, inactive reference rows, duplicate-like names and incomplete records.",
-    icon: Table2,
-    tone: "violet",
-    metrics: ["Missing aliases", "Inactive records", "Duplicate signals", "Incomplete records"],
-    filters: ["Master type", "Status", "Issue type", "Updated date"],
-    outputs: ["Quality score", "Issue queue", "Master-data links"],
-    workflow: "Resolve reference-data issues before they affect OCR, policy entry or reporting.",
-  },
-  {
-    title: "Premium Collection Report",
-    category: "Finance",
-    owner: "Finance",
-    cadence: "Daily, month-end",
-    sensitivity: "Restricted",
-    description: "Premium receivable, collected and pending reconciliation once finance fields are connected.",
-    icon: Landmark,
-    tone: "green",
-    metrics: ["Receivable", "Collected", "Outstanding", "Reconciliation pending"],
-    filters: ["Policy period", "Insurer", "Customer", "RM"],
-    outputs: ["Collection summary", "Outstanding list", "Reconciliation queue"],
-    workflow: "Match issued business against payment and reconciliation state.",
-  },
-  {
-    title: "Commission Basis Report",
-    category: "Finance",
-    owner: "Finance / Management",
-    cadence: "Monthly",
-    sensitivity: "Restricted",
-    description: "Premium and policy basis for commission calculation before payout rules are finalized.",
-    icon: FileBarChart2,
-    tone: "blue",
-    metrics: ["Eligible premium", "Policy count", "Business source", "Chargeback candidates"],
-    filters: ["Intermediary", "RM", "Insurer", "Product", "Month"],
-    outputs: ["Commission basis table", "Intermediary summary", "Exception list"],
-    workflow: "Validate business basis before applying commission schedules or payout approvals.",
-  },
-  {
-    title: "Month-End Management Pack",
-    category: "Finance",
-    owner: "Leadership",
-    cadence: "Monthly",
-    sensitivity: "Restricted",
-    description: "Single management pack combining production, renewals, claims, operations and finance sections.",
-    icon: FileBarChart2,
-    tone: "slate",
-    metrics: ["Premium", "Policies", "Renewal conversion", "Open risk items"],
-    filters: ["Month", "Business unit", "Hierarchy", "Product"],
-    outputs: ["Executive PDF", "Workbook export", "Exception appendix"],
-    workflow: "Generate after operational reports are validated and month-end data is locked.",
-  },
-];
-
-const buildSteps = [
-  "Select report family and report type",
-  "Choose date range, role scope and business owner",
-  "Generate preview with masked sensitive fields",
-  "Drill into source records for investigation",
-  "Export or save view only when permission allows",
-];
-
-export default function ReportsPage() {
-  const featuredReports = reports.slice(0, 6);
+  const report = payload?.report ?? emptyReport();
+  const filters = payload?.filters;
+  const scopeLabel = reportScopeLabel(payload?.scopeMode ?? "none");
+  const pageCount = Math.max(1, Math.ceil(report.register.total_count / Math.max(report.register.page_size, 1)));
+  const exportHref = filters ? buildHref("/reports/export/policy-business", {
+    period: "custom",
+    from: filters.fromDate ?? undefined,
+    to: filters.toDate ?? undefined,
+    insurer: filters.insurerId ?? undefined,
+    rm: filters.rmName ?? undefined,
+    intermediary: filters.intermediaryCode ?? undefined,
+  }) : "#";
 
   return (
     <AppShell title="Reports">
-      <div className="mx-auto max-w-[1540px] space-y-5 pb-8">
-        <section className="overflow-hidden rounded-[28px] border border-white/70 bg-[#111a35] px-4 py-5 text-white shadow-[0_28px_80px_rgba(17,26,53,.22)] sm:px-6 lg:px-8">
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,.85fr)] lg:items-end">
-            <div className="min-w-0">
-              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-[#90e8e5]">Management intelligence</p>
-              <h1 className="mt-2 portal-display text-[24px] font-semibold leading-tight sm:text-[30px] lg:text-[36px]">
-                Reports built for decisions, review and export control
-              </h1>
-              <p className="mt-3 max-w-3xl text-[12px] leading-5 text-white/72 sm:text-[13px]">
-                A full reporting workspace for policy business, distribution, renewals, claims, operations, compliance and finance. The page defines the complete report catalogue and workflow without inventing live figures.
-              </p>
-            </div>
-
-            <div className="grid gap-2 rounded-[22px] border border-white/12 bg-white/8 p-3 backdrop-blur-xl sm:grid-cols-2">
-              <ControlPill icon={CalendarClock} label="Date range" value="Month to date" />
-              <ControlPill icon={Filter} label="Scope" value="Role based" />
-              <ControlPill icon={SlidersHorizontal} label="Filters" value="Report first" />
-              <ControlPill icon={Download} label="Exports" value="Permission gated" />
+      <div className="mx-auto max-w-[1560px] space-y-4 pb-8">
+        <header className="portal-card overflow-hidden">
+          <div className="border-b border-[#e8ecf2] px-5 py-5 sm:px-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#5265d8]">Business reporting</p>
+                <h1 className="mt-1 text-[26px] font-semibold tracking-[-0.025em] text-[#13203b] sm:text-[30px]">Policy production & portfolio</h1>
+                <p className="mt-2 max-w-3xl text-[11px] leading-5 text-[#66758a] sm:text-[12px]">
+                  Live policy production, premium composition and ownership performance. Every figure is calculated from the policy register inside your authorised business scope.
+                </p>
+              </div>
+              <div className="grid min-w-[280px] grid-cols-2 gap-2 text-[10px] sm:min-w-[360px]">
+                <HeaderFact label="Data scope" value={scopeLabel} />
+                <HeaderFact label="As of" value={asOfLabel()} />
+              </div>
             </div>
           </div>
+
+          <div className="px-5 py-4 sm:px-6">
+            <div className="flex flex-wrap gap-2">
+              {PERIODS.map((period) => (
+                <Link
+                  key={period.key}
+                  href={`/reports?period=${period.key}`}
+                  className={`rounded-lg border px-3 py-2 text-[10px] font-bold transition ${filters?.period === period.key ? "border-[#223a78] bg-[#223a78] text-white" : "border-[#dfe5ee] bg-white text-[#506077] hover:border-[#bfc9db] hover:text-[#23365f]"}`}
+                >
+                  {period.label}
+                </Link>
+              ))}
+            </div>
+
+            <form action="/reports" method="get" className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-[150px_150px_minmax(180px,1fr)_minmax(170px,1fr)_minmax(190px,1fr)_auto_auto]">
+              <input type="hidden" name="period" value="custom" />
+              <FilterField label="From">
+                <input name="from" type="date" defaultValue={filters?.fromDate ?? ""} className={inputClass} />
+              </FilterField>
+              <FilterField label="To">
+                <input name="to" type="date" defaultValue={filters?.toDate ?? ""} className={inputClass} />
+              </FilterField>
+              <FilterField label="Insurance company">
+                <select name="insurer" defaultValue={filters?.insurerId ?? ""} className={inputClass}>
+                  <option value="">All insurers</option>
+                  {report.filters.insurers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                </select>
+              </FilterField>
+              <FilterField label="Relationship manager">
+                <select name="rm" defaultValue={filters?.rmName ?? ""} className={inputClass}>
+                  <option value="">All RMs</option>
+                  {report.filters.rms.map((name) => <option key={name} value={name}>{name}</option>)}
+                </select>
+              </FilterField>
+              <FilterField label="Partner / intermediary">
+                <select name="intermediary" defaultValue={filters?.intermediaryCode ?? ""} className={inputClass}>
+                  <option value="">All intermediaries</option>
+                  {report.filters.intermediaries.map((item) => (
+                    <option key={item.code} value={item.code}>{item.name}{item.name !== item.code ? ` · ${item.code}` : ""}</option>
+                  ))}
+                </select>
+              </FilterField>
+              <button type="submit" className="mt-auto inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#172a5c] px-4 text-[10.5px] font-bold text-white transition hover:bg-[#213a78]">
+                <Filter className="h-3.5 w-3.5" /> Apply
+              </button>
+              <Link href="/reports" className="mt-auto inline-flex h-10 items-center justify-center rounded-lg border border-[#dfe5ee] bg-white px-4 text-[10.5px] font-bold text-[#526174] transition hover:border-[#c8d1df] hover:bg-[#f8fafc]">
+                Reset
+              </Link>
+            </form>
+          </div>
+        </header>
+
+        {loadError ? (
+          <section className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4">
+            <p className="text-[12px] font-bold text-red-700">The reporting service is temporarily unavailable.</p>
+            <p className="mt-1 text-[10.5px] text-red-600/80">No figures are being estimated or substituted. Refresh the page after a moment.</p>
+          </section>
+        ) : null}
+
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="Policy business summary">
+          <Metric label="Policies" value={formatInteger(report.summary.policy_count)} detail={`${formatInteger(report.summary.active_policy_count)} active`} />
+          <Metric label="Gross premium" value={formatCurrency(report.summary.gross_premium)} detail={`${formatInteger(report.summary.insurer_count)} insurers`} />
+          <Metric label="Net premium" value={formatCurrency(report.summary.net_premium)} detail="Before GST / tax" />
+          <Metric label="Average premium" value={formatCurrency(report.summary.average_premium)} detail="Per policy" />
+          <Metric label="Intermediaries" value={formatInteger(report.summary.intermediary_count)} detail="Contributing to selected business" />
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Reports summary">
-          {summaryTiles.map((tile) => (
-            <SummaryTile key={tile.label} tile={tile} />
-          ))}
+        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,.85fr)]">
+          <article className="portal-card p-5 sm:p-6">
+            <SectionHeading title="Premium production trend" description="Gross written premium by business month for the selected period." />
+            <PremiumTrend rows={report.trend} />
+          </article>
+          <article className="portal-card p-5 sm:p-6">
+            <SectionHeading title="Premium composition" description="Core premium components from structured policy premium details." />
+            <PremiumComposition report={report} />
+          </article>
         </section>
 
-        <section className="portal-card p-4 sm:p-5">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <section className="grid gap-4 xl:grid-cols-2">
+          <article className="portal-card overflow-hidden">
+            <div className="border-b border-[#e9edf3] px-5 py-4">
+              <SectionHeading title="Insurance company contribution" description="Policy volume and gross premium share by insurer." />
+            </div>
+            <InsurerTable rows={report.insurers} />
+          </article>
+          <article className="portal-card overflow-hidden">
+            <div className="border-b border-[#e9edf3] px-5 py-4">
+              <SectionHeading title="RM production" description="Business contribution by relationship manager within the authorised scope." />
+            </div>
+            <RmTable rows={report.rms} />
+          </article>
+        </section>
+
+        <section className="portal-card overflow-hidden">
+          <div className="flex flex-col gap-3 border-b border-[#e9edf3] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-[8.5px] font-black uppercase tracking-[0.16em] text-[#6759ff]">Report catalogue</p>
-              <h2 className="mt-1 text-[17px] font-semibold text-[#14213c]">Browse by business question</h2>
+              <SectionHeading title="Policy business register" description={`${formatInteger(report.register.total_count)} policies match the selected filters.`} />
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-              {reportCategories.map((category) => {
-                const Icon = category.icon;
-                return (
-                  <a
-                    key={category.label}
-                    href={`#${category.label.toLowerCase()}`}
-                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#e1e5ed] bg-white px-3 text-[10px] font-bold text-[#536174] transition hover:border-[#cfc8ff] hover:text-[#6759ff]"
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    <span>{category.label}</span>
-                    <span className="rounded-full bg-[#eef2f7] px-1.5 py-0.5 text-[8.5px] text-[#6b778b]">{category.count}</span>
-                  </a>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
-          <div className="space-y-5">
-            <section className="portal-card overflow-hidden">
-              <div className="border-b border-[#edf0f5] p-4 sm:p-5">
-                <SectionTitle eyebrow="Featured workspace" title="First reports to wire when data aggregation begins" />
-              </div>
-              <div className="grid gap-0 divide-y divide-[#edf0f5] lg:grid-cols-2 lg:divide-x lg:divide-y-0">
-                {featuredReports.map((report) => (
-                  <FeaturedReport key={report.title} report={report} />
-                ))}
-              </div>
-            </section>
-
-            {reportCategories.map((category) => (
-              <section key={category.label} id={category.label.toLowerCase()} className="portal-card scroll-mt-24 p-4 sm:p-5">
-                <SectionTitle eyebrow={category.label} title={`${category.label} reports`} />
-                <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                  {reports
-                    .filter((report) => report.category === category.label)
-                    .map((report) => (
-                      <ReportCard key={report.title} report={report} />
-                    ))}
-                </div>
-              </section>
-            ))}
+            <a
+              href={exportHref}
+              aria-disabled={loadError}
+              className={`inline-flex h-9 items-center justify-center gap-2 rounded-lg border px-3 text-[10px] font-bold ${loadError ? "pointer-events-none border-[#e5e8ee] bg-[#f5f6f8] text-[#a3adbb]" : "border-[#cad4e4] bg-white text-[#263b69] transition hover:border-[#9eacc3] hover:bg-[#f8fafc]"}`}
+            >
+              <Download className="h-3.5 w-3.5" /> Export CSV
+            </a>
           </div>
 
-          <aside className="space-y-5 xl:sticky xl:top-24 xl:self-start">
-            <section className="portal-card p-4 sm:p-5">
-              <SectionTitle eyebrow="Workflow" title="How reports should run" />
-              <ol className="mt-4 space-y-3">
-                {buildSteps.map((step, index) => (
-                  <li key={step} className="flex gap-3">
-                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-xl bg-[#eef2ff] text-[10px] font-black text-[#5b4ce5]">
-                      {index + 1}
-                    </span>
-                    <p className="pt-1 text-[11px] font-semibold leading-4 text-[#334155]">{step}</p>
-                  </li>
-                ))}
-              </ol>
-            </section>
+          <PolicyRegister rows={report.register.rows} />
 
-            <section className="portal-card p-4 sm:p-5">
-              <SectionTitle eyebrow="Governance" title="Rules before live data" />
-              <div className="mt-4 space-y-3 text-[11px] leading-5 text-[#526174]">
-                <Rule icon={LockKeyhole} text="Respect existing role and hierarchy scopes for every report and export." />
-                <Rule icon={ShieldCheck} text="Mask or omit sensitive identity fields unless a workflow explicitly requires them." />
-                <Rule icon={RefreshCw} text="Generate expensive results only after filters are selected." />
-                <Rule icon={Download} text="Treat exported files as controlled outputs with auditability." />
-              </div>
-            </section>
-
-            <section className="portal-card p-4 sm:p-5">
-              <SectionTitle eyebrow="Preview controls" title="Default report filters" />
-              <div className="mt-4 grid gap-2">
-                {["Date range", "Business scope", "Insurer", "RM / hierarchy", "Partner / POSP / MISP", "Product", "Status"].map((filter) => (
-                  <div key={filter} className="flex items-center justify-between rounded-xl border border-[#e5e9f0] bg-[#fafbfe] px-3 py-2">
-                    <span className="text-[10.5px] font-bold text-[#334155]">{filter}</span>
-                    <span className="text-[9px] font-semibold text-[#8290a4]">planned</span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </aside>
+          <div className="flex flex-col gap-3 border-t border-[#e9edf3] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[10px] font-semibold text-[#6f7d90]">
+              {registerRange(report.register.page, report.register.page_size, report.register.total_count)}
+            </p>
+            <div className="flex items-center gap-2">
+              <PaginationLink disabled={report.register.page <= 1} href={filters ? pageHref(filters, report.register.page - 1) : "#"}>Previous</PaginationLink>
+              <span className="min-w-16 text-center text-[10px] font-bold text-[#34445f]">{report.register.page} / {pageCount}</span>
+              <PaginationLink disabled={report.register.page >= pageCount} href={filters ? pageHref(filters, report.register.page + 1) : "#"}>Next</PaginationLink>
+            </div>
+          </div>
         </section>
       </div>
     </AppShell>
   );
 }
 
-function ControlPill({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
+const inputClass = "h-10 w-full rounded-lg border border-[#dfe5ee] bg-white px-3 text-[10.5px] font-semibold text-[#26364f] outline-none transition focus:border-[#7788bd] focus:ring-2 focus:ring-[#dfe5ff]";
+
+function HeaderFact({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-xl border border-[#e3e8ef] bg-[#f8fafc] px-3 py-2.5"><p className="text-[8px] font-black uppercase tracking-[0.12em] text-[#8995a6]">{label}</p><p className="mt-1 truncate text-[10.5px] font-bold text-[#2d3e5b]">{value}</p></div>;
+}
+
+function FilterField({ label, children }: { label: string; children: React.ReactNode }) {
+  return <label className="block"><span className="mb-1 block text-[8.5px] font-black uppercase tracking-[0.08em] text-[#7b8799]">{label}</span>{children}</label>;
+}
+
+function Metric({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/8 px-3 py-2">
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white/12 text-white">
-        <Icon className="h-4 w-4" />
-      </span>
-      <div className="min-w-0">
-        <p className="text-[8.5px] font-bold uppercase tracking-[0.12em] text-white/50">{label}</p>
-        <p className="truncate text-[11px] font-bold text-white">{value}</p>
+    <article className="portal-card px-4 py-4 sm:px-5">
+      <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#7c899b]">{label}</p>
+      <p className="mt-2 text-[23px] font-semibold tracking-[-0.03em] text-[#14213c]">{value}</p>
+      <p className="mt-2 border-t border-[#edf0f4] pt-2 text-[9.5px] font-medium text-[#78869a]">{detail}</p>
+    </article>
+  );
+}
+
+function SectionHeading({ title, description }: { title: string; description: string }) {
+  return <div><h2 className="text-[14px] font-bold text-[#1b2943]">{title}</h2><p className="mt-1 text-[9.8px] leading-4 text-[#7a8798]">{description}</p></div>;
+}
+
+function PremiumTrend({ rows }: { rows: PolicyBusinessReport["trend"] }) {
+  if (!rows.length) return <EmptyBlock text="No policy production falls inside the selected period." />;
+  const max = Math.max(...rows.map((row) => row.gross_premium), 1);
+  return (
+    <div className="mt-5 space-y-3">
+      {rows.map((row) => (
+        <div key={row.month} className="grid grid-cols-[78px_minmax(0,1fr)_100px] items-center gap-3">
+          <div><p className="text-[10px] font-bold text-[#35445d]">{formatMonth(row.month)}</p><p className="text-[8.5px] text-[#8a96a7]">{formatInteger(row.policy_count)} policies</p></div>
+          <div className="h-2.5 overflow-hidden rounded-full bg-[#edf1f6]"><div className="h-full rounded-full bg-[#3559a8]" style={{ width: `${Math.max((row.gross_premium / max) * 100, 2)}%` }} /></div>
+          <p className="text-right text-[10px] font-bold tabular-nums text-[#23334f]">{formatCurrency(row.gross_premium)}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PremiumComposition({ report }: { report: PolicyBusinessReport }) {
+  const total = report.summary.net_premium || 1;
+  const rows = [
+    { label: "Own damage", value: report.summary.od_premium },
+    { label: "Third party", value: report.summary.tp_premium },
+    { label: "CPA", value: report.summary.cpa_amount },
+  ];
+  return (
+    <div className="mt-5 space-y-4">
+      {rows.map((row) => (
+        <div key={row.label}>
+          <div className="flex items-end justify-between gap-3"><p className="text-[10.5px] font-semibold text-[#536174]">{row.label}</p><p className="text-[13px] font-bold tabular-nums text-[#21324f]">{formatCurrency(row.value)}</p></div>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#edf1f6]"><div className="h-full rounded-full bg-[#516dab]" style={{ width: `${Math.min((row.value / total) * 100, 100)}%` }} /></div>
+        </div>
+      ))}
+      <div className="grid grid-cols-2 gap-2 border-t border-[#e9edf3] pt-4">
+        <HeaderFact label="Net premium" value={formatCurrency(report.summary.net_premium)} />
+        <HeaderFact label="Gross premium" value={formatCurrency(report.summary.gross_premium)} />
       </div>
     </div>
   );
 }
 
-function SummaryTile({ tile }: { tile: (typeof summaryTiles)[number] }) {
-  const Icon = tile.icon;
-  const tone = toneStyles[tile.tone];
-
+function InsurerTable({ rows }: { rows: PolicyBusinessReport["insurers"] }) {
+  if (!rows.length) return <EmptyBlock text="No insurer contribution is available for the selected period." />;
   return (
-    <section className="portal-card p-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#7a879a]">{tile.label}</p>
-          <p className="portal-display mt-3 text-[28px] font-semibold leading-none text-[#13203b]">{tile.value}</p>
-        </div>
-        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl ${tone.icon}`}>
-          <Icon className="h-5 w-5" />
-        </span>
-      </div>
-      <p className="mt-4 border-t border-[#edf0f5] pt-3 text-[10px] leading-4 text-[#718096]">{tile.detail}</p>
-    </section>
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[560px] border-collapse text-left">
+        <thead><tr className="bg-[#f8fafc] text-[8.5px] font-black uppercase tracking-[0.08em] text-[#7c899b]"><th className="px-5 py-3">Insurance company</th><th className="px-3 py-3 text-right">Policies</th><th className="px-3 py-3 text-right">Gross premium</th><th className="px-5 py-3 text-right">Share</th></tr></thead>
+        <tbody className="divide-y divide-[#edf0f4]">
+          {rows.map((row) => <tr key={row.id} className="text-[10.5px]"><td className="px-5 py-3.5 font-semibold text-[#283851]">{row.name}</td><td className="px-3 py-3.5 text-right font-semibold tabular-nums text-[#536174]">{formatInteger(row.policy_count)}</td><td className="px-3 py-3.5 text-right font-bold tabular-nums text-[#283851]">{formatCurrency(row.gross_premium)}</td><td className="px-5 py-3.5 text-right font-semibold tabular-nums text-[#536174]">{formatPercent(row.share_percent)}</td></tr>)}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
-function FeaturedReport({ report }: { report: ReportDefinition }) {
-  const Icon = report.icon;
-  const tone = toneStyles[report.tone];
-
+function RmTable({ rows }: { rows: PolicyBusinessReport["rms"] }) {
+  if (!rows.length) return <EmptyBlock text="No RM-attributed business is available for the selected period." />;
   return (
-    <article className="p-4 sm:p-5">
-      <div className="flex items-start gap-3">
-        <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl ${tone.icon}`}>
-          <Icon className="h-5 w-5" />
-        </span>
-        <div className="min-w-0">
-          <p className={`text-[8.5px] font-black uppercase tracking-[0.14em] ${tone.text}`}>{report.category}</p>
-          <h3 className="mt-1 text-[13px] font-bold text-[#17213e]">{report.title}</h3>
-          <p className="mt-1 text-[10.5px] leading-4 text-[#68758a]">{report.description}</p>
-        </div>
-      </div>
-      <div className="mt-4 grid gap-2 sm:grid-cols-2">
-        <MiniFact label="Owner" value={report.owner} />
-        <MiniFact label="Cadence" value={report.cadence} />
-      </div>
-    </article>
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[560px] border-collapse text-left">
+        <thead><tr className="bg-[#f8fafc] text-[8.5px] font-black uppercase tracking-[0.08em] text-[#7c899b]"><th className="px-5 py-3">Relationship manager</th><th className="px-3 py-3 text-right">Policies</th><th className="px-3 py-3 text-right">Partners</th><th className="px-5 py-3 text-right">Gross premium</th></tr></thead>
+        <tbody className="divide-y divide-[#edf0f4]">
+          {rows.map((row) => <tr key={row.name} className="text-[10.5px]"><td className="px-5 py-3.5 font-semibold text-[#283851]">{row.name}</td><td className="px-3 py-3.5 text-right font-semibold tabular-nums text-[#536174]">{formatInteger(row.policy_count)}</td><td className="px-3 py-3.5 text-right font-semibold tabular-nums text-[#536174]">{formatInteger(row.intermediary_count)}</td><td className="px-5 py-3.5 text-right font-bold tabular-nums text-[#283851]">{formatCurrency(row.gross_premium)}</td></tr>)}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
-function ReportCard({ report }: { report: ReportDefinition }) {
-  const Icon = report.icon;
-  const tone = toneStyles[report.tone];
-
+function PolicyRegister({ rows }: { rows: PolicyBusinessReport["register"]["rows"] }) {
+  if (!rows.length) return <EmptyBlock text="No policy records match the selected filters." />;
   return (
-    <article className={`rounded-2xl border ${tone.border} bg-white p-4 shadow-[0_12px_30px_rgba(29,40,70,.05)]`}>
-      <div className="flex items-start gap-3">
-        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl ${tone.icon}`}>
-          <Icon className="h-4.5 w-4.5" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-[13px] font-bold text-[#17213e]">{report.title}</h3>
-            <span className={`rounded-full px-2 py-0.5 text-[8.5px] font-bold ${tone.chip}`}>{report.sensitivity}</span>
-          </div>
-          <p className="mt-1 text-[10.5px] leading-4 text-[#68758a]">{report.description}</p>
-        </div>
+    <>
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full min-w-[1180px] border-collapse text-left">
+          <thead><tr className="bg-[#f8fafc] text-[8.2px] font-black uppercase tracking-[0.07em] text-[#7c899b]"><th className="px-5 py-3">Business date</th><th className="px-3 py-3">Policy</th><th className="px-3 py-3">Customer / vehicle</th><th className="px-3 py-3">Insurer</th><th className="px-3 py-3">RM / intermediary</th><th className="px-3 py-3 text-right">OD</th><th className="px-3 py-3 text-right">TP</th><th className="px-3 py-3 text-right">Gross</th><th className="px-5 py-3 text-center">Open</th></tr></thead>
+          <tbody className="divide-y divide-[#edf0f4]">
+            {rows.map((row) => (
+              <tr key={row.id} className="text-[10px] transition hover:bg-[#fbfcfe]">
+                <td className="px-5 py-3.5 font-semibold text-[#4b5a70]">{formatDate(row.business_date)}</td>
+                <td className="px-3 py-3.5"><p className="font-bold text-[#24344f]">{row.policy_no}</p><p className="mt-0.5 text-[8.8px] text-[#8490a1]">{row.policy_type} · {row.status}</p></td>
+                <td className="px-3 py-3.5"><p className="max-w-[200px] truncate font-semibold text-[#34445d]" title={row.customer_name}>{row.customer_name}</p><p className="mt-0.5 text-[8.8px] text-[#8490a1]">{row.vehicle_no}</p></td>
+                <td className="px-3 py-3.5"><p className="max-w-[190px] truncate font-semibold text-[#4b5a70]" title={row.insurer_name}>{row.insurer_name}</p></td>
+                <td className="px-3 py-3.5"><p className="font-semibold text-[#4b5a70]">{row.rm_name ?? "Unassigned"}</p><p className="mt-0.5 text-[8.8px] text-[#8490a1]">{row.intermediary_code ?? "—"}</p></td>
+                <td className="px-3 py-3.5 text-right font-semibold tabular-nums text-[#536174]">{formatCurrency(row.od_premium)}</td>
+                <td className="px-3 py-3.5 text-right font-semibold tabular-nums text-[#536174]">{formatCurrency(row.tp_premium)}</td>
+                <td className="px-3 py-3.5 text-right font-bold tabular-nums text-[#24344f]">{formatCurrency(row.gross_premium)}</td>
+                <td className="px-5 py-3.5 text-center"><Link href={`/policies/${row.id}`} aria-label={`Open policy ${row.policy_no}`} className="inline-grid h-8 w-8 place-items-center rounded-lg border border-[#d9e1ec] text-[#425b8f] transition hover:border-[#aebbd0] hover:bg-[#f5f8fc]"><ExternalLink className="h-3.5 w-3.5" /></Link></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-
-      <div className="mt-4 grid gap-3">
-        <ReportList icon={BarChart3} title="Measures" items={report.metrics} />
-        <ReportList icon={Filter} title="Filters" items={report.filters} />
-        <ReportList icon={Download} title="Outputs" items={report.outputs} />
-      </div>
-
-      <div className="mt-4 rounded-xl border border-[#edf0f5] bg-[#fafbfe] px-3 py-2.5">
-        <p className="text-[8.5px] font-black uppercase tracking-[0.14em] text-[#7a879a]">Workflow</p>
-        <p className="mt-1 text-[10.5px] leading-4 text-[#334155]">{report.workflow}</p>
-      </div>
-    </article>
-  );
-}
-
-function ReportList({ icon: Icon, title, items }: { icon: LucideIcon; title: string; items: string[] }) {
-  return (
-    <div>
-      <p className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.12em] text-[#7a879a]">
-        <Icon className="h-3.5 w-3.5" />
-        {title}
-      </p>
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {items.map((item) => (
-          <span key={item} className="rounded-full border border-[#e4e9f2] bg-[#fbfcff] px-2 py-1 text-[9.5px] font-semibold text-[#526174]">
-            {item}
-          </span>
+      <div className="divide-y divide-[#edf0f4] md:hidden">
+        {rows.map((row) => (
+          <article key={row.id} className="px-4 py-4">
+            <div className="flex items-start justify-between gap-3"><div><p className="text-[11px] font-bold text-[#24344f]">{row.policy_no}</p><p className="mt-1 text-[9px] text-[#8490a1]">{formatDate(row.business_date)} · {row.vehicle_no}</p></div><Link href={`/policies/${row.id}`} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#d9e1ec] px-2.5 text-[9.5px] font-bold text-[#425b8f]">Open <ExternalLink className="h-3 w-3" /></Link></div>
+            <p className="mt-3 text-[10px] font-semibold text-[#40506a]">{row.customer_name}</p><p className="mt-1 text-[9px] text-[#758398]">{row.insurer_name}</p>
+            <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-[#f8fafc] p-3 text-center"><MiniAmount label="OD" value={row.od_premium} /><MiniAmount label="TP" value={row.tp_premium} /><MiniAmount label="Gross" value={row.gross_premium} /></div>
+          </article>
         ))}
       </div>
-    </div>
+    </>
   );
 }
 
-function MiniFact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-[#e5e9f0] bg-[#fafbfe] px-3 py-2">
-      <p className="text-[8.5px] font-black uppercase tracking-[0.12em] text-[#8a96a8]">{label}</p>
-      <p className="mt-1 truncate text-[10.5px] font-bold text-[#334155]">{value}</p>
-    </div>
-  );
-}
+function MiniAmount({ label, value }: { label: string; value: number }) { return <div><p className="text-[8px] font-black uppercase tracking-[0.08em] text-[#8a96a7]">{label}</p><p className="mt-1 text-[10px] font-bold text-[#293a56]">{formatCurrency(value)}</p></div>; }
+function EmptyBlock({ text }: { text: string }) { return <div className="px-5 py-10 text-center"><RefreshCw className="mx-auto h-5 w-5 text-[#a7b0bd]" /><p className="mt-2 text-[10px] font-semibold text-[#7a8798]">{text}</p></div>; }
+function PaginationLink({ href, disabled, children }: { href: string; disabled: boolean; children: React.ReactNode }) { return disabled ? <span className="rounded-lg border border-[#e8ebf0] bg-[#f6f7f9] px-3 py-2 text-[9.5px] font-bold text-[#b3bbc6]">{children}</span> : <Link href={href} className="rounded-lg border border-[#d9e1ec] bg-white px-3 py-2 text-[9.5px] font-bold text-[#405476] transition hover:border-[#b7c1d0] hover:bg-[#f8fafc]">{children}</Link>; }
 
-function Rule({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
-  return (
-    <div className="flex gap-3 rounded-xl border border-[#e5e9f0] bg-[#fafbfe] p-3">
-      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[#6759ff]" />
-      <p>{text}</p>
-    </div>
-  );
+function pageHref(filters: NonNullable<Awaited<ReturnType<typeof loadPolicyBusinessReport>>["filters"]>, page: number) {
+  return buildHref("/reports", { period: "custom", from: filters.fromDate ?? undefined, to: filters.toDate ?? undefined, insurer: filters.insurerId ?? undefined, rm: filters.rmName ?? undefined, intermediary: filters.intermediaryCode ?? undefined, page: String(Math.max(page, 1)) });
 }
-
-function SectionTitle({ eyebrow, title }: { eyebrow: string; title: string }) {
-  return (
-    <div className="flex items-start justify-between gap-4">
-      <div>
-        <p className="text-[8.5px] font-black uppercase tracking-[0.16em] text-[#6759ff]">{eyebrow}</p>
-        <h2 className="mt-1 text-[16px] font-semibold text-[#14213c]">{title}</h2>
-      </div>
-      <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-[#a0aabd]" />
-    </div>
-  );
-}
+function buildHref(path: string, params: Record<string, string | undefined>) { const search = new URLSearchParams(); Object.entries(params).forEach(([key, value]) => { if (value) search.set(key, value); }); const suffix = search.toString(); return suffix ? `${path}?${suffix}` : path; }
+function registerRange(page: number, pageSize: number, total: number) { if (!total) return "Showing 0 of 0"; const start = (page - 1) * pageSize + 1; const end = Math.min(page * pageSize, total); return `Showing ${formatInteger(start)}–${formatInteger(end)} of ${formatInteger(total)}`; }
+function formatCurrency(value: number) { return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0); }
+function formatInteger(value: number) { return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value || 0); }
+function formatPercent(value: number) { return `${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 1 }).format(value || 0)}%`; }
+function formatDate(value: string) { if (!value) return "—"; return new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }).format(new Date(`${value}T00:00:00+05:30`)); }
+function formatMonth(value: string) { if (!value) return "—"; return new Intl.DateTimeFormat("en-IN", { month: "short", year: "2-digit", timeZone: "Asia/Kolkata" }).format(new Date(`${value}T00:00:00+05:30`)); }
+function asOfLabel() { return new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" }).format(new Date()); }
+function emptyReport(): PolicyBusinessReport { return { summary: { policy_count: 0, active_policy_count: 0, gross_premium: 0, net_premium: 0, od_premium: 0, tp_premium: 0, cpa_amount: 0, average_premium: 0, insurer_count: 0, intermediary_count: 0 }, trend: [], insurers: [], rms: [], filters: { insurers: [], rms: [], intermediaries: [] }, register: { rows: [], total_count: 0, page: 1, page_size: 25 } }; }
