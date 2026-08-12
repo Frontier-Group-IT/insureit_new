@@ -41,6 +41,16 @@ export type ClaimMilestone = {
   updated_at: string;
 };
 
+export const CLAIM_SERVICE_MODE_LABELS: Record<ClaimServiceMode, string> = {
+  broker_managed: 'Broker Managed',
+  self_managed: 'Self Managed',
+};
+
+export const POLICY_SERVICE_SOURCE_LABELS: Record<PolicyServiceSource, string> = {
+  sibl: 'Sankalp / SIBL',
+  external: 'External Policy',
+};
+
 export const SELF_MANAGED_CLAIM_NOTICE =
   'This claim is being tracked by you. Sankalp is not processing this claim unless you request assistance.';
 
