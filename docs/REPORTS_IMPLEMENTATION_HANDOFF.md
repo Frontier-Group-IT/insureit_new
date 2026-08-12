@@ -6,92 +6,63 @@
 
 ## Current state
 
-**IMPLEMENTED / APPLIED / DEPLOYED / VERIFIED:** Reports Phase 1 is live on the canonical production portal at `https://portal.insureit.in/reports`.
+Reports Phase 1 Business / Policy Production is **DEPLOYED** at `https://portal.insureit.in/reports`.
 
-The previous `/reports` page was a static catalogue/blueprint with seven report families and 23 planned report cards. Phase 1 replaces that user-facing catalogue with a real Business / Policy Production reporting workspace backed by live Supabase data.
+Reports Phase 2 Distribution and the user-requested Phase 1 text cleanup are **IMPLEMENTED / APPLIED / UNDER FINAL CI VERIFICATION**, but are **not intentionally deployed** yet. Do not update `.deploy/production-trigger.json` until the user explicitly requests deployment.
 
-## Phase 1 user experience
+The reports product is data-first and table-first. Keep only main page/section names, filters, factual KPI labels, status labels, table headers and actions. Do not reintroduce explanatory dashboard copy such as data-scope descriptions, as-of cards, report-purpose paragraphs or decorative helper text unless the user explicitly asks.
 
-`apps/web-portal/app/reports/page.tsx` provides:
+## Phase 1 — Business / Policy Production
 
-- neutral professional report layout;
-- data-scope label and current as-of timestamp;
-- quick periods: Last 90 days (default), Month to date, Year to date, All time;
-- custom From / To dates;
-- Insurance Company, Relationship Manager and Partner / intermediary filters;
-- KPI strip: Policies, Gross Premium, Net Premium, Average Premium, contributing intermediaries;
-- monthly premium-production trend;
-- OD / TP / CPA premium composition;
-- insurer contribution table with policy count, gross premium and share;
-- RM production table with policy count, intermediary count and gross premium;
-- paginated Policy Business Register with drill-through to policy detail;
-- responsive mobile register cards;
-- controlled CSV export using the same authorization scope and active report filters;
-- explicit unavailable state if the reporting service fails; figures are never estimated or substituted.
-
-## Access-control rule
-
-Reports do not implement a separate ownership model. The server loader uses:
+Route:
 
 ```text
-requireCapability("view_reports")
-getAccessibleCustomerIds(profile.id, profile.role, "view_reports")
-getEmployeeAccessScope(profile.id, profile.role, "view_reports")
+/reports
 ```
 
-Therefore:
+Current UI contains:
 
-- organization-scoped report viewers receive organization data;
-- reporting-hierarchy viewers receive only customers/business in the employee/intermediary hierarchy resolved by the common access-scope engine;
-- self-scoped viewers receive only their portfolio;
-- no `view_reports` capability means the page/export route is denied.
+- page heading `Policy production & portfolio`;
+- `Business` / `Distribution` report navigation;
+- Last 90 days, MTD, YTD, All time and custom date filtering;
+- insurer, RM and intermediary filters;
+- Policies, Gross Premium, Net Premium, Average Premium and Intermediaries KPIs;
+- Premium production trend;
+- Premium composition;
+- Insurance company contribution;
+- RM production;
+- paginated Policy business register;
+- scoped CSV export.
 
-Do not add an unrestricted report/export query to work around scope filtering.
+Removed on 2026-08-13 at user request:
 
-## Reporting backend
+- descriptive report subtitle;
+- `Data scope` display;
+- `As of` display;
+- KPI explanatory subtitles;
+- section explanatory paragraphs;
+- verbose empty/error helper text.
 
-Applied migrations in the original Supabase project `ilzhsfqqjyppzzvfscmh`:
+Keep reports professional, neutral and information-dense rather than decorative.
+
+### Phase 1 backend
+
+Applied original Supabase migrations:
 
 ```text
-20260813004500_policy_business_reporting.sql
-20260813005000_lock_policy_business_reporting.sql
+20260812192044 policy_business_reporting
+20260812192238 lock_policy_business_reporting
 ```
 
-The reporting function is:
+Function:
 
 ```text
-public.get_policy_business_report(
-  p_customer_ids uuid[],
-  p_from_date date,
-  p_to_date date,
-  p_insurer_id uuid,
-  p_rm_name text,
-  p_intermediary_code text,
-  p_page integer,
-  p_page_size integer
-) returns jsonb
+public.get_policy_business_report(...)
 ```
 
-It performs server-side aggregation and pagination over:
+It aggregates `policies`, `policy_premium_details`, `customers`, `vehicles`, `insurance_companies` and `intermediaries` server-side. It is executable only by `service_role` plus database owner/postgres.
 
-```text
-policies
-policy_premium_details
-customers
-vehicles
-insurance_companies
-intermediaries
-```
-
-Business date is `coalesce(policies.issuance_date::date, policies.created_at::date)`.
-
-### RPC security
-
-The reporting RPC is deliberately not executable by `PUBLIC`, `anon`, or `authenticated`. Execute privilege is granted only to `service_role` plus database owner/postgres. The browser does not submit its own authorization scope directly to the RPC; the Next.js server resolves the effective customer scope first and calls the RPC through the server-only admin client.
-
-Privilege verification confirmed only `postgres` and `service_role` execute grants. Supabase security advisor was run after the DDL and did not flag the new reporting RPC as publicly executable. Existing unrelated project-wide advisor findings remain separate backlog.
-
-## Server files
+Server files:
 
 ```text
 apps/web-portal/lib/reports/policy-business.ts
@@ -99,92 +70,153 @@ apps/web-portal/lib/reports/policy-business-export.ts
 apps/web-portal/app/reports/export/policy-business/route.ts
 ```
 
-The CSV export:
+The export uses the same authorization/filter scope, excludes PAN/Aadhaar/phone/raw OCR data and enforces a 10,000-row hard limit.
 
-- requires `view_reports`;
-- exports only the authorized/filter-matched dataset;
-- includes business/policy/customer/vehicle/insurer/RM/intermediary and premium fields;
-- excludes PAN, Aadhaar, phone and raw OCR information;
-- uses a hard 10,000-row limit and returns HTTP 422 asking the user to narrow filters if exceeded;
-- uses `Cache-Control: private, no-store`.
-
-## Live smoke evidence
-
-A live reporting smoke against the current sample portfolio returned:
+Phase 1 production evidence:
 
 ```text
-Policies: 4
-Active policies: 4
-Gross premium: 294681.8574
-Net premium: 268334.93
-OD premium: 99462.93
-TP premium: 168872
-CPA: 0
-Insurers: 3
-Intermediaries: 1
+Production trigger commit: 0e80c0f8ff21c305736a02bc48cfbcec1447d03c
+GitHub Actions production run: 31633330860
+Vercel deployment: dpl_oTejS9amPxmTKA8VoLzKAKUqotyc
+State: READY
+Alias: portal.insureit.in
+Runtime error check: none for Reports routes in selected post-deploy window
 ```
 
-A separate live SQL reconstruction of the Jatin -> Parsottam -> Anmol hierarchy passed the resulting accessible customer IDs into the reporting RPC and produced the same four-policy scoped summary. These counts are smoke evidence only and must never be encoded in UI code.
+## Phase 2 — Distribution
+
+Route:
+
+```text
+/reports/distribution
+```
+
+Implemented UI:
+
+- page heading `Distribution performance`;
+- Business / Distribution navigation;
+- Last 90 days, MTD, YTD, All time and custom date filters;
+- RM, intermediary type and account-status filters;
+- KPIs: Intermediaries, Active, Producing, Policies, Gross Premium, Open Onboarding;
+- RM performance table: intermediaries, active, producing, policies, customers, gross premium;
+- Intermediary business table: code/name, type, RM, account status, policies, customers, gross premium, last business, application drill-through;
+- onboarding stage counts: Open, Compliance, Training, Exam, Agreement, IIB, Completed, Rejected;
+- paginated Onboarding pipeline table with applicant/type/RM/stage/age/training/exam/agreement/IIB and application drill-through.
+
+Server loader:
+
+```text
+apps/web-portal/lib/reports/distribution.ts
+```
+
+It reuses the existing access-control engine:
+
+```text
+requireCapability("view_reports")
+getAccessibleIntermediaryIds(profile.id, profile.role, "view_reports")
+getAccessibleIntermediaryApplicationIds(profile.id, profile.role, "view_reports")
+getEmployeeAccessScope(profile.id, profile.role, "view_reports")
+```
+
+Therefore organization users receive organization data, hierarchy users receive only intermediary/application records inside their employee hierarchy, and self-scoped users receive only their assigned portfolio. Do not create a separate Reports ownership system.
+
+### Phase 2 backend
+
+Applied original Supabase migrations:
+
+```text
+20260812200001 distribution_reporting
+20260812200534 fix_distribution_reporting_rm_assignment
+```
+
+Repository replay files:
+
+```text
+supabase/migrations/20260812200001_distribution_reporting.sql
+supabase/migrations/20260812200534_fix_distribution_reporting_rm_assignment.sql
+```
+
+Function:
+
+```text
+public.get_distribution_report(...)
+```
+
+Returned sections:
+
+```text
+summary
+rms
+intermediaries
+onboarding_summary
+onboarding
+filters
+```
+
+Primary sources:
+
+```text
+intermediaries
+posp_misp_onboarding_profiles
+intermediary_onboarding_applications
+intermediary_training_exam_assignments
+employees
+policies
+policy_premium_details
+```
+
+The function is `SECURITY DEFINER` with a fixed `search_path = public`. Execute privilege is revoked from `PUBLIC`, `anon` and `authenticated`; live privilege inspection confirms only `postgres` and `service_role` can execute it.
+
+### Canonical RM attribution rule
+
+Some Partner records do not carry `intermediaries.associate_employee_id` even though the onboarding profile contains the correct RM assignment. Distribution reporting must therefore resolve RM as:
+
+```text
+coalesce(intermediaries.associate_employee_id,
+         posp_misp_onboarding_profiles.associate_employee_id)
+```
+
+Do not regress to intermediary-row-only RM attribution.
+
+Live validation after this fix confirmed the user-provided hierarchy example resolves:
+
+```text
+Anmol Wadhwa -> Parsottam
+Intermediaries: 1
+Producing intermediaries: 1
+Customers: 4
+Policies: 4
+Gross premium: 294681.8574
+```
+
+These values are smoke evidence only and must never be hard-coded.
+
+A broader organization smoke currently returns 34 intermediaries, 31 active intermediaries, 18 Partners, 16 POSP, 4 policies and 35 onboarding applications. These figures will change with live data.
+
+## Access-control invariant
+
+Reports must never bypass normal portal access scope. Every report and future export must resolve authorization server-side before using the Supabase admin client/RPC.
+
+Do not expose reporting RPC execute access to browser roles merely to simplify client-side filtering.
 
 ## Verification
 
-Final feature verification before release:
+Phase 1 pre-release verification:
 
 ```text
 Feature head: b0d086e14ee9bbb66ec16ae030bc376db102c057
-Workflow: Verify web portal
-Run: 31632806025
+Workflow run: 31632806025
 Result: SUCCESS
-Access Control V2 catalogue regression: passed
-Access Control V2 scope and compatibility regression: passed
-Access Control V2 portal lifecycle regression: passed
-Employee portal governance regression: passed
-Release blocker security regression: passed
-IFFCO structured regression: passed
-IFFCO regression: passed
-Digit regression: passed
-New India regression: passed
-Typecheck: passed
-Lint: passed
-Production build: passed
 ```
 
-The shared `requireCapability()` helper now explicitly rejects a null profile before checking the effective capability. This was a TypeScript narrowing fix and did not weaken authorization behavior.
+Phase 2 final verification must be recorded here after the exact final head completes the canonical `Verify web portal` workflow. Required checks include access-control regressions, release-blocker security regression, OCR regressions, TypeScript, lint and Next.js production build.
 
-## Production deployment evidence
+## Next phases
 
-User explicitly requested deployment on 2026-08-13 IST.
+After Phase 2 review:
 
-```text
-Reports handoff pre-trigger head: 0180ad6e9966da06d2fa7142927e2be04f2bc5a9
-Production trigger commit: 0e80c0f8ff21c305736a02bc48cfbcec1447d03c
-GitHub Actions production run: 31633330860
-Compulsory verification gate: SUCCESS
-Trigger Vercel production deployment job: SUCCESS
-Vercel deployment: dpl_oTejS9amPxmTKA8VoLzKAKUqotyc
-Vercel URL: insureit-6bbp6x61p-antnish1s-projects.vercel.app
-Vercel state: READY
-Production alias: portal.insureit.in
-Alias error: none
-```
-
-Production smoke after READY:
-
-- unauthenticated `https://portal.insureit.in/reports` resolved successfully through the production deployment and served the expected login page because Reports is protected;
-- the response was served from the canonical `portal.insureit.in` alias;
-- Vercel runtime-error check for `/reports` and `/reports/export/policy-business` found no runtime errors in the selected post-deploy window.
-
-Do not treat the unauthenticated smoke as proof of every authenticated filter/export interaction. The deployment, routing and protected-entry behavior are verified; authenticated business validation should use normal user testing when product review is requested.
-
-## Planned next phases
-
-Recommended sequence after Phase 1 review:
-
-1. Distribution: RM performance, intermediary business, onboarding pipeline.
-2. Renewals: expiry-based due/expired/premium-at-risk first; do not invent conversion/lost-reason metrics until a real renewal lifecycle exists.
-3. Claims: portfolio, aging, financial and document-exception reporting.
-4. Finance: insurer projected pay-in / billed pay-in / intermediary payout / margin reporting, aligned with the current PayIn workflow state.
-5. Operations and Governance: KYC/onboarding workload, AuthBridge usage, audit and permission/access reports.
-6. Month-end management pack only after component reports are trusted.
-
-Keep reports data-rich and table-first. Use charts sparingly and only when they improve interpretation. Status colours should be semantic, not decorative.
+1. Renewals: expiry-based due/expired/premium-at-risk reporting first. Do not invent conversion/lost-reason metrics until a real renewal lifecycle exists.
+2. Claims: portfolio, aging, financial and document-exception reporting.
+3. Finance: insurer projected pay-in / billed pay-in / intermediary payout / margin reporting aligned with the current billed-only PayIn workflow.
+4. Operations and Governance: KYC/onboarding workload, AuthBridge usage, audit and permission/access reports.
+5. Month-end management pack only after component reports are trusted.
