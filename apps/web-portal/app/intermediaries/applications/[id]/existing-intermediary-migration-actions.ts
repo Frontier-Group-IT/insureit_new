@@ -181,7 +181,7 @@ export async function updateExistingIntermediaryMigrationDetails(
 
 function migrationSyncMessage(error: unknown) {
   const message = errorMessage(error);
-  if (message.includes("already used")) return message;
+  if (message.includes("already used") || message.includes("already exists")) return message;
   if (message.includes("Partner ID and POSP/MISP ID")) return message;
   if (message.includes("PENDING")) return message;
   if (message.includes("Activation date")) return message;

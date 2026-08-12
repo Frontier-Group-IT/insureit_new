@@ -149,6 +149,8 @@ Use only values accepted by the current live database constraints. Do not invent
 
 **APPLIED 2026-08-12:** Existing Intermediary Migration edits must be synchronized through `public.sync_existing_intermediary_migration(...)`, introduced by `20260812120000_atomic_existing_intermediary_migration_sync.sql`. Do not reintroduce separate draft/profile/register updates from the server action; earlier partial-save behavior let the edit section show new IDs while Partner/POSP/MISP canonical rows stayed stale. The RPC updates application draft JSON, profile identifiers/raw data, `partners.partner_code`, `intermediaries.intermediary_code`, `intermediary_registrations.registration_code`, and assignment statuses in one transaction, including temporary code moves to allow safe Partner/POSP/MISP ID swaps under unique indexes.
 
+**APPLIED 2026-08-12:** `20260812153000_fix_existing_intermediary_profile_id_swap.sql` extends the RPC to temporarily free `posp_misp_onboarding_profiles.external_onboarding_id` before writing final Partner/POSP/MISP IDs. This is required because `validate_posp_misp_external_onboarding_id_trigger` is row-level and can reject an otherwise valid family swap while a sibling profile still holds the old target ID.
+
 ### 5.3 Activation rule
 
 A legacy POSP/MISP is considered fully active only when all of these are true:
@@ -393,6 +395,7 @@ The following migrations were introduced during the legacy-onboarding repair seq
 - `202608010014_backfill_legacy_partner_record_links.sql`
 - `20260802143500_sync_registered_iib_application_status.sql`
 - `20260812120000_atomic_existing_intermediary_migration_sync.sql` — **APPLIED** to Supabase project `ilzhsfqqjyppzzvfscmh` on 2026-08-12; installs `sync_existing_intermediary_migration(...)`.
+- `20260812153000_fix_existing_intermediary_profile_id_swap.sql` — **APPLIED** to Supabase project `ilzhsfqqjyppzzvfscmh` on 2026-08-12; updates `sync_existing_intermediary_migration(...)` to temp-move profile `external_onboarding_id` values during family ID swaps.
 
 Important lesson: several early repair functions failed because the live `partners` or `intermediaries` table had additional non-null/check constraints. New repair SQL should introspect or explicitly include all known required columns and should not guess constrained statuses.
 

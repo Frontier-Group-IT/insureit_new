@@ -172,6 +172,25 @@ Production target: production
 
 Supabase rollback-only RPC smoke test could not be completed because the SQL tool rejected the multi-statement transaction wrapper with `INVALID_ARGUMENT`; function installation was verified by querying `pg_proc`.
 
+### Existing Intermediary Migration profile-ID swap hotfix
+
+**APPLIED 2026-08-12:** live production retry for application `8cfae297-39d6-4f6a-aa09-5267177d6ed1` still failed when correcting the visible IDs to Partner `PT00003` and POSP `SIB/2026/05/0010`.
+
+Root cause: the previous RPC temporarily moved `intermediaries.intermediary_code` and `intermediary_registrations.registration_code`, but did not temporarily move `posp_misp_onboarding_profiles.external_onboarding_id`. The profile table has a row-level duplicate trigger, so a valid parent/child family ID swap could still fail while a sibling profile retained the old target ID during the statement.
+
+New migration:
+
+```text
+supabase/migrations/20260812153000_fix_existing_intermediary_profile_id_swap.sql
+```
+
+Supabase project `ilzhsfqqjyppzzvfscmh` recorded the migration as `20260812094322_fix_existing_intermediary_profile_id_swap`. Verification query confirmed the live function now includes:
+
+- profile duplicate guard for Partner/POSP/MISP IDs outside the current family
+- temporary `SYNC-*` move for `posp_misp_onboarding_profiles.external_onboarding_id`
+
+No direct data repair was run. The deployed portal already calls the RPC, so the user should retry `Save & Exit` from the Existing Intermediary Migration section.
+
 ## Previous OCR Track
 
 ## Verified pre-change parser baseline
