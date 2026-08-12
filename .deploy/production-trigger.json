@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #287 register pagination update to production.",
-  "deploy_requested_at": "2026-08-12T14:49:00+05:30",
+  "purpose": "Deploy insurance companies master data navigation to production.",
+  "deploy_requested_at": "2026-08-12T16:05:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #287 into main and deploy using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "3758256a01027de6b44f8c4de3b0dc5a443f5260",
-  "release_scope": "Add 10-row pagination footers to POSP Register, MISP Register, and Intermediary Portal Users while preserving existing columns, badges, actions, filters, and workflows.",
-  "verification": "PR #287 Verify web portal run 31582370489 passed before merge. Production workflow must run its compulsory verification gate before the Vercel deploy hook.",
+  "source": "Commit insurance companies master data navigation and deploy using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "d57a8c65ad82e902ef6e79d4b9b264f30b37cdbd",
+  "release_scope": "Add Insurance Companies and Add Insurance Company under Master Data, expose canonical /master-data/insurance-companies routes, keep insurer master backend actions, and verify live Supabase insurer-master readiness.",
+  "verification": "Verify web portal run 31587471839 passed for d57a8c65 before production trigger. Production workflow must run its compulsory verification gate before the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
