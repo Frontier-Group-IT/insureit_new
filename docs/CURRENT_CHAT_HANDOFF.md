@@ -44,13 +44,30 @@ Implementation commits in this sequence:
 
 ```text
 f928a951fbca0504499ebcfb2903203a94b2c19c
- e23f0a98cb2b2f2af52823cf6c5b15aab89d9cba
- bd0a8d6e57503552f14d5813b003acf683eac0de
- 2e1e7f907fbaac888941e5ffe0a1ecbb441163df
- 87e59f659c050d8d447d4f8a44a0dace8a5fac15
+e23f0a98cb2b2f2af52823cf6c5b15aab89d9cba
+bd0a8d6e57503552f14d5813b003acf683eac0de
+2e1e7f907fbaac888941e5ffe0a1ecbb441163df
+87e59f659c050d8d447d4f8a44a0dace8a5fac15
 ```
 
-The GitHub `Verify web portal` workflow for head `87e59f659c050d8d447d4f8a44a0dace8a5fac15` passed access-control regressions, OCR regressions, TypeScript, and lint; production build was still running when this handoff section was written. Re-check workflow run `31571721254` before calling verification complete.
+Verification for feature head `87e59f659c050d8d447d4f8a44a0dace8a5fac15`:
+
+```text
+GitHub Actions workflow: Verify web portal
+Run: 31571721254
+Result: SUCCESS
+Access Control V2 catalogue regression: passed
+Access Control V2 scope/compatibility regression: passed
+Access Control V2 portal lifecycle regression: passed
+Employee portal governance regression: passed
+IFFCO structured regression: passed
+IFFCO regression: passed
+Digit regression: passed
+New India regression: passed
+Typecheck: passed
+Lint: passed
+Production build: passed
+```
 
 No production deployment was triggered by this work.
 
@@ -124,6 +141,6 @@ f16058c0c159ec90f46d4b28a718d3205ab82a7b
 
 ## Immediate next step
 
-For OCR deployment, continue to follow the regression and explicit-deploy gate in `AGENTS.md`. For the master-record delete feature, first confirm the latest `Verify web portal` workflow is green; then wait for explicit deployment approval. After deployment, test with disposable dependency-free records and separately verify that customer/vehicle/policy records with linked dependencies are rejected with a clear message.
+For OCR deployment, continue to follow the regression and explicit-deploy gate in `AGENTS.md`. For the master-record delete feature, verification is green; wait for explicit deployment approval. After deployment, test with disposable dependency-free records and separately verify that customer/vehicle/policy records with linked dependencies are rejected with a clear message.
 
 United India remains deferred.
