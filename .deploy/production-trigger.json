@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #277 canonical intermediary ID synchronization fix to production.",
-  "deploy_requested_at": "2026-08-12T10:36:00+05:30",
+  "purpose": "Deploy PR #278 Existing Intermediary Migration family duplicate-detection fix to production.",
+  "deploy_requested_at": "2026-08-12T10:48:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #277 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
-  "source_commit": "44105d555f410a1d5b45bfe5c4aa65c16e4da0f9",
-  "release_scope": "Deploy the Existing Intermediary Migration canonical ID synchronization fix so edited Existing Partner ID and Existing POSP/MISP ID values propagate into the canonical profile, intermediary and registration records used by Application Review and related lists, while resolving the full linked account family and preventing duplicate ID assignment. Preserve deliberate Save & Exit / Upload Documents behavior, activation-date validation, permissions, workflow status and existing revalidation behavior.",
-  "verification": "PR #277 Verify web portal run 31565367930 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
+  "source": "ChatGPT explicit request to merge PR #278 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
+  "source_commit": "5b7552409a7b30f8fdc104ea61de7130ab02a58d",
+  "release_scope": "Deploy the Existing Intermediary Migration save fix that resolves the complete root Partner plus linked POSP/MISP application family before duplicate-ID validation, including children linked through draft_data.parent_partner_application_id, so the account's own linked POSP/MISP ID is not misclassified as an external duplicate. Preserve the canonical Partner/POSP/MISP ID synchronization from PR #277, deliberate Save & Exit / Upload Documents behavior, activation-date validation, permissions, workflow status, and revalidation behavior.",
+  "verification": "PR #278 Verify web portal run 31566067508 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
