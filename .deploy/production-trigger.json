@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #281 registration-ID synchronization fix to production.",
-  "deploy_requested_at": "2026-08-12T13:02:00+05:30",
+  "purpose": "Deploy PR #283 Partner application review layout cleanup to production.",
+  "deploy_requested_at": "2026-08-12T13:35:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #281 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
-  "source_commit": "5b3df38f8d154569244c29c56666d65180ad35fa",
-  "release_scope": "Deploy the Existing Intermediary Migration registration-ID synchronization fix so an edited POSP or MISP ID is synchronized only to the matching linked child account's canonical profile, intermediary and registration records, while Partner ID synchronization across the family remains intact and sibling registration IDs remain unchanged.",
-  "verification": "PR #281 Verify web portal run 31574297156 completed successfully for head 64825d987077e4b6d0abce361472b6cd06d32d8f before merge. The protected production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
+  "source": "ChatGPT explicit request to merge PR #283 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
+  "source_commit": "1e67572381d74dabb4d6788400d483883fa524fb",
+  "release_scope": "Deploy the Partner application review cleanup so the Partner onboarding journey tracker is removed from Partner review pages, empty Documents sections stay hidden until at least one document exists, POSP/MISP journeys remain unchanged, and the Partner documents pending CTA remains available for incomplete Partner applications.",
+  "verification": "PR #283 Verify web portal run 31576705520 completed successfully for head 88e622e8411b29b4a0ed00b078b94bf12b3fa2b9 before merge. The protected production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
