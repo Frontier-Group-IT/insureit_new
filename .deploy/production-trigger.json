@@ -1,10 +1,10 @@
 {
   "purpose": "Deploy the Customer, Vehicle and Policy register redesign to production.",
-  "deploy_requested_at": "2026-08-12T23:34:55+05:30",
+  "deploy_requested_at": "2026-08-12T23:38:18+05:30",
   "requested_by": "explicit user request",
   "source": "Deploy the broker portfolio register redesign using the protected GitHub Actions production deployment workflow.",
   "source_commit": "6a394b4778183f8be70b5cf60579267f29fd6659",
-  "release_scope": "Redesigned Customer, Vehicle and Policy registers with shared portfolio register components, operational metrics, saved views, filters, responsive desktop tables and mobile cards, while preserving existing authorization and business workflows.",
-  "verification": "GitHub Actions verification run 31625410035 passed for source commit 6a394b4778183f8be70b5cf60579267f29fd6659. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
+  "release_scope": "Redesigned Customer, Vehicle and Policy registers with shared portfolio register components, operational metrics, saved views, filters, responsive desktop tables and mobile cards, while preserving existing authorization and business workflows. Deployment head also includes the already-merged reports workspace catalogue commit 29ae814663af6a500ad89d539bf6cdfce5b31930.",
+  "verification": "GitHub Actions verification run 31625935275 passed for deployment head 29ae814663af6a500ad89d539bf6cdfce5b31930; requested feature commit 6a394b4778183f8be70b5cf60579267f29fd6659 is an ancestor. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
