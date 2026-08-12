@@ -52,11 +52,11 @@ export default async function InsuranceCompanyReviewPage({ params, searchParams 
   const successMessage = query.success ? successMessages[query.success] : null;
 
   return (
-    <AppShell title="Insurance Company Review" backHref="/insurance-companies">
+    <AppShell title="Insurance Company Review" backHref="/master-data/insurance-companies">
       <PageHeader
         title={company.name}
         description={`${company.segment ? segmentLabel[company.segment] : "Legacy / unclassified"} · SIBPL code ${company.sibpl_code || "not assigned"}`}
-        action={<div className="flex flex-wrap gap-2"><Link href={`/insurance-companies/${id}/edit`} className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#CBD5E1] bg-white px-4 text-[10px] font-bold text-[#17365D] hover:bg-[#F8FAFC]"><Pencil className="h-3.5 w-3.5" />Edit</Link>{company.portal_status === "configured" && company.portal_url ? <a href={company.portal_url} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#17365D] px-4 text-[10px] font-bold text-white hover:bg-[#102A4C]">Open portal <ExternalLink className="h-3.5 w-3.5" /></a> : null}</div>}
+        action={<div className="flex flex-wrap gap-2"><Link href={`/master-data/insurance-companies/${id}/edit`} className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#CBD5E1] bg-white px-4 text-[10px] font-bold text-[#17365D] hover:bg-[#F8FAFC]"><Pencil className="h-3.5 w-3.5" />Edit</Link>{company.portal_status === "configured" && company.portal_url ? <a href={company.portal_url} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#17365D] px-4 text-[10px] font-bold text-white hover:bg-[#102A4C]">Open portal <ExternalLink className="h-3.5 w-3.5" /></a> : null}</div>}
       />
 
       {successMessage ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[11px] font-medium text-emerald-700">{successMessage}</div> : null}

@@ -33,7 +33,7 @@ export default async function EditInsuranceCompanyPage({ params, searchParams }:
   if (!data) notFound();
 
   return (
-    <AppShell title="Edit Insurance Company" backHref={`/insurance-companies/${id}`}>
+    <AppShell title="Edit Insurance Company" backHref={`/master-data/insurance-companies/${id}`}>
       <PageHeader title="Edit Insurance Company" description="Update the canonical insurer master without changing the UUID referenced by policies and claims." />
       <Card className="mx-auto max-w-4xl">
         <div className="mb-5 border-b border-[#E7ECF3] pb-4">
@@ -41,7 +41,7 @@ export default async function EditInsuranceCompanyPage({ params, searchParams }:
           <h2 className="mt-1 text-[15px] font-bold text-[#17203A]">{data.name}</h2>
           <p className="mt-1 text-[10px] leading-4 text-[#667085]">Editing this record preserves all existing policy, claim and surveyor references.</p>
         </div>
-        <InsuranceCompanyMasterForm action={updateInsuranceCompanyMaster.bind(null, id)} values={data} submitLabel="Save Changes" cancelHref={`/insurance-companies/${id}`} error={query.error ?? null} />
+        <InsuranceCompanyMasterForm action={updateInsuranceCompanyMaster.bind(null, id)} values={data} submitLabel="Save Changes" cancelHref={`/master-data/insurance-companies/${id}`} error={query.error ?? null} />
       </Card>
     </AppShell>
   );

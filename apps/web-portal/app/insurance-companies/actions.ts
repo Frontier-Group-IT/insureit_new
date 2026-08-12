@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireMasterDataManager } from "@/lib/master-data-server";
+import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+
+const INSURER_MASTER_PATH = "/master-data/insurance-companies";
 
 const segments = ["general", "life", "health"] as const;
 type InsurerSegment = (typeof segments)[number];
@@ -84,8 +86,8 @@ function buildPayload(formData: FormData) {
 }
 
 export async function createInsuranceCompanyMaster(formData: FormData) {
-  const profile = await requireMasterDataManager();
-  const basePath = "/insurance-companies/new";
+  const profile = await requireCapability("manage_master_data", "edit");
+  const basePath = `${INSURER_MASTER_PATH}/new`;
   let payload: ReturnType<typeof buildPayload>;
   try {
     payload = buildPayload(formData);
@@ -113,14 +115,15 @@ export async function createInsuranceCompanyMaster(formData: FormData) {
   if (error || !data) redirect(errorUrl(basePath, `Insurance company could not be created: ${error?.message ?? "Unknown error"}`));
 
   await auditInsurerChange(profile?.id, "insurance_company_created", data.id, null, data);
+  revalidatePath(INSURER_MASTER_PATH);
   revalidatePath("/insurance-companies");
   revalidatePath("/policies/new");
-  redirect(`/insurance-companies/${data.id}?success=created`);
+  redirect(`${INSURER_MASTER_PATH}/${data.id}?success=created`);
 }
 
 export async function updateInsuranceCompanyMaster(id: string, formData: FormData) {
-  const profile = await requireMasterDataManager();
-  const basePath = `/insurance-companies/${id}/edit`;
+  const profile = await requireCapability("manage_master_data", "edit");
+  const basePath = `${INSURER_MASTER_PATH}/${id}/edit`;
   let payload: ReturnType<typeof buildPayload>;
   try {
     payload = buildPayload(formData);
@@ -136,7 +139,7 @@ export async function updateInsuranceCompanyMaster(id: string, formData: FormDat
     .maybeSingle<Record<string, unknown> & { id: string }>();
 
   if (existingError) redirect(errorUrl(basePath, `Unable to load insurer: ${existingError.message}`));
-  if (!existing) redirect("/insurance-companies?error=Insurance%20company%20not%20found");
+  if (!existing) redirect(`${INSURER_MASTER_PATH}?error=Insurance%20company%20not%20found`);
 
   const { data: duplicate, error: duplicateError } = await admin
     .from("insurance_companies")
@@ -159,14 +162,16 @@ export async function updateInsuranceCompanyMaster(id: string, formData: FormDat
   if (error || !data) redirect(errorUrl(basePath, `Insurance company could not be updated: ${error?.message ?? "Unknown error"}`));
 
   await auditInsurerChange(profile?.id, "insurance_company_updated", id, existing, data);
+  revalidatePath(INSURER_MASTER_PATH);
   revalidatePath("/insurance-companies");
+  revalidatePath(`${INSURER_MASTER_PATH}/${id}`);
   revalidatePath(`/insurance-companies/${id}`);
   revalidatePath("/policies/new");
-  redirect(`/insurance-companies/${id}?success=updated`);
+  redirect(`${INSURER_MASTER_PATH}/${id}?success=updated`);
 }
 
 export async function setInsuranceCompanyActive(id: string, nextActive: boolean) {
-  const profile = await requireMasterDataManager();
+  const profile = await requireCapability("manage_master_data", "edit");
   const admin = createSupabaseAdminClient();
 
   const { data: existing, error: existingError } = await admin
@@ -175,7 +180,7 @@ export async function setInsuranceCompanyActive(id: string, nextActive: boolean)
     .eq("id", id)
     .maybeSingle<{ id: string; name: string; is_active: boolean }>();
 
-  if (existingError || !existing) redirect(errorUrl("/insurance-companies", existingError?.message ?? "Insurance company not found."));
+  if (existingError || !existing) redirect(errorUrl(INSURER_MASTER_PATH, existingError?.message ?? "Insurance company not found."));
 
   const { data, error } = await admin
     .from("insurance_companies")
@@ -184,11 +189,13 @@ export async function setInsuranceCompanyActive(id: string, nextActive: boolean)
     .select("id,name,is_active")
     .single<{ id: string; name: string; is_active: boolean }>();
 
-  if (error || !data) redirect(errorUrl(`/insurance-companies/${id}`, `Status could not be updated: ${error?.message ?? "Unknown error"}`));
+  if (error || !data) redirect(errorUrl(`${INSURER_MASTER_PATH}/${id}`, `Status could not be updated: ${error?.message ?? "Unknown error"}`));
 
   await auditInsurerChange(profile?.id, nextActive ? "insurance_company_activated" : "insurance_company_deactivated", id, existing, data);
+  revalidatePath(INSURER_MASTER_PATH);
   revalidatePath("/insurance-companies");
+  revalidatePath(`${INSURER_MASTER_PATH}/${id}`);
   revalidatePath(`/insurance-companies/${id}`);
   revalidatePath("/policies/new");
-  redirect(`/insurance-companies/${id}?success=${nextActive ? "activated" : "deactivated"}`);
+  redirect(`${INSURER_MASTER_PATH}/${id}?success=${nextActive ? "activated" : "deactivated"}`);
 }

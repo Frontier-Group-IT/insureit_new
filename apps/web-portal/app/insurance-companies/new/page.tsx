@@ -11,7 +11,7 @@ export default async function NewInsuranceCompanyPage({ searchParams }: { search
   const params = await searchParams;
 
   return (
-    <AppShell title="Add Insurance Company" backHref="/insurance-companies">
+    <AppShell title="Add Insurance Company" backHref="/master-data/insurance-companies">
       <PageHeader title="Add Insurance Company" description="Create one canonical insurer record for policy onboarding, reporting and document matching." />
       <Card className="mx-auto max-w-4xl">
         <div className="mb-5 border-b border-[#E7ECF3] pb-4">
@@ -19,7 +19,7 @@ export default async function NewInsuranceCompanyPage({ searchParams }: { search
           <h2 className="mt-1 text-[15px] font-bold text-[#17203A]">Registered company details</h2>
           <p className="mt-1 text-[10px] leading-4 text-[#667085]">Store the legal company identity and business portal only. Portal usernames and passwords are intentionally excluded from this master.</p>
         </div>
-        <InsuranceCompanyMasterForm action={createInsuranceCompanyMaster} submitLabel="Create Insurance Company" cancelHref="/insurance-companies" error={params.error ?? null} />
+        <InsuranceCompanyMasterForm action={createInsuranceCompanyMaster} submitLabel="Create Insurance Company" cancelHref="/master-data/insurance-companies" error={params.error ?? null} />
       </Card>
     </AppShell>
   );

@@ -53,7 +53,7 @@ export function InsuranceCompanyRegister({ rows }: { rows: InsuranceCompanyRegis
             <h1 className="mt-1 text-[20px] font-semibold tracking-[-.02em] text-[#102A4C]">Insurance Companies</h1>
             <p className="mt-1 max-w-2xl text-[10px] leading-4 text-[#667085]">Canonical insurer names used by policy onboarding, historical policies and policy-document matching.</p>
           </div>
-          <Link href="/insurance-companies/new" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-4 text-[10px] font-bold text-white shadow-sm hover:bg-[#102A4C]"><Plus className="h-4 w-4" />Add Insurance Company</Link>
+          <Link href="/master-data/insurance-companies/new" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-4 text-[10px] font-bold text-white shadow-sm hover:bg-[#102A4C]"><Plus className="h-4 w-4" />Add Insurance Company</Link>
         </div>
 
         <div className="grid grid-cols-2 gap-px bg-[#E8EDF4] sm:grid-cols-5">
@@ -87,12 +87,12 @@ export function InsuranceCompanyRegister({ rows }: { rows: InsuranceCompanyRegis
             <tbody className="divide-y divide-[#EDF1F6]">
               {visible.map((row) => (
                 <tr key={row.id} className="bg-white text-[10.5px] text-[#334155] hover:bg-[#FBFCFE]">
-                  <td className="max-w-[360px] px-4 py-3"><div className="flex items-start gap-2.5"><span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#EEF4FB] text-[#315B9A]"><ShieldCheck className="h-3.5 w-3.5" /></span><div><Link href={`/insurance-companies/${row.id}`} className="font-bold leading-4 text-[#17203A] hover:text-[#315B9A]">{row.name}</Link><p className="mt-0.5 text-[8px] text-[#98A2B3]">Updated {new Date(row.updated_at).toLocaleDateString("en-IN")}</p></div></div></td>
+                  <td className="max-w-[360px] px-4 py-3"><div className="flex items-start gap-2.5"><span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#EEF4FB] text-[#315B9A]"><ShieldCheck className="h-3.5 w-3.5" /></span><div><Link href={`/master-data/insurance-companies/${row.id}`} className="font-bold leading-4 text-[#17203A] hover:text-[#315B9A]">{row.name}</Link><p className="mt-0.5 text-[8px] text-[#98A2B3]">Updated {new Date(row.updated_at).toLocaleDateString("en-IN")}</p></div></div></td>
                   <td className="px-4 py-3"><span className="rounded-full border border-[#DCE5F0] bg-[#F8FAFD] px-2.5 py-1 text-[8.5px] font-bold text-[#52647D]">{row.segment ? segmentLabel[row.segment] : "Legacy / unclassified"}</span></td>
                   <td className="px-4 py-3 font-semibold text-[#17203A]">{row.sibpl_code || "—"}</td>
                   <td className="px-4 py-3">{row.portal_status === "configured" && row.portal_url ? <a href={row.portal_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 font-semibold text-[#315B9A] hover:underline">Open portal <ExternalLink className="h-3 w-3" /></a> : <span className={`text-[9px] font-semibold ${row.portal_status === "pending" ? "text-amber-700" : "text-[#98A2B3]"}`}>{row.portal_status === "pending" ? "Pending" : "Not provided"}</span>}</td>
                   <td className="px-4 py-3"><span className={`rounded-full px-2.5 py-1 text-[8.5px] font-bold ${row.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>{row.is_active ? "Active" : "Inactive"}</span></td>
-                  <td className="px-4 py-3 text-right"><Link href={`/insurance-companies/${row.id}`} className="rounded-lg border border-[#D6DFEB] bg-white px-3 py-2 text-[9px] font-bold text-[#17365D] hover:bg-[#F8FAFD]">Review</Link></td>
+                  <td className="px-4 py-3 text-right"><Link href={`/master-data/insurance-companies/${row.id}`} className="rounded-lg border border-[#D6DFEB] bg-white px-3 py-2 text-[9px] font-bold text-[#17365D] hover:bg-[#F8FAFD]">Review</Link></td>
                 </tr>
               ))}
               {!visible.length ? <tr><td colSpan={6} className="px-4 py-12 text-center"><p className="text-[11px] font-semibold text-[#475467]">No insurance companies match these filters.</p><p className="mt-1 text-[9px] text-[#98A2B3]">Clear the search or change segment/status.</p></td></tr> : null}

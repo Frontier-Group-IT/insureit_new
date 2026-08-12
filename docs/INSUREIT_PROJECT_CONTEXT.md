@@ -377,6 +377,11 @@ This migration must be applied before claiming the live safeguard is active.
 - `apps/web-portal/app/intermediaries/intermediary-register.tsx`
   - Partner/POSP/MISP register presentation and actions
 
+- `apps/web-portal/app/master-data/insurance-companies`
+  - Canonical Insurance Company master route under Master Data
+  - Uses the existing `insurance_companies` and `insurance_company_aliases` tables for policy onboarding, reporting and OCR/name matching
+  - Create/update/activate mutations require `manage_master_data` with edit access and write audit-log entries
+
 ## 12. Migration and repair history
 
 The following migrations were introduced during the legacy-onboarding repair sequence. Some were responses to live-schema differences and may have failed before later replacements were added. Always inspect Supabase migration history and current function definitions before assuming all are applied.
