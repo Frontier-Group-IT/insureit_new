@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy Onboarding unregistered vehicle validation hotfix to production.",
-  "deploy_requested_at": "2026-08-12T17:41:13+05:30",
+  "purpose": "Deploy the Customer, Vehicle and Policy register redesign to production.",
+  "deploy_requested_at": "2026-08-12T23:34:55+05:30",
   "requested_by": "explicit user request",
-  "source": "Deploy the unregistered vehicle onboarding validation hotfix using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "38468e18be13d2b5f7e6e395bc49b708ab7175ab",
-  "release_scope": "Allow Policy Onboarding with vehicle.registrationMode='unregistered' to save without a registration number while still requiring chassis and engine numbers. Includes repository migration record for the Supabase hotfix already applied to the live project.",
-  "verification": "Production workflow must run its compulsory verification gate before the Vercel deploy hook. Live Supabase onboard_motor_policy(jsonb) verification already confirmed the old registration-required validation message is no longer present.",
+  "source": "Deploy the broker portfolio register redesign using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "6a394b4778183f8be70b5cf60579267f29fd6659",
+  "release_scope": "Redesigned Customer, Vehicle and Policy registers with shared portfolio register components, operational metrics, saved views, filters, responsive desktop tables and mobile cards, while preserving existing authorization and business workflows.",
+  "verification": "GitHub Actions verification run 31625410035 passed for source commit 6a394b4778183f8be70b5cf60579267f29fd6659. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
