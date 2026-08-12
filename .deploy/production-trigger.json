@@ -1,11 +1,10 @@
 {
-  "purpose": "Deploy PR #284 Partner Register UI update to production.",
-  "deploy_requested_at": "2026-08-12T13:56:00+05:30",
+  "purpose": "Deploy PR #286 Partner Register pagination footer to production.",
+  "deploy_requested_at": "2026-08-12T14:07:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #284 into main and deploy using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "9125c6e22b6e5499cc60382dc2d938b9265f9257",
-  "release_scope": "Partner Register Eye view icons and linked-account active badge tone update.",
-  "verification": "PR #284 Verify web portal run 31577951909 passed before merge. Production workflow must run its compulsory verification gate before the Vercel deploy hook.",
-  "retry_reason": "Retry after the first production workflow was cancelled by a subsequent repository housekeeping commit during the reusable verification job.",
+  "source": "Merge PR #286 into main and deploy using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "600fdc79afe16994a19f176cb50177168c8faaa1",
+  "release_scope": "Partner Register client-side pagination at 10 rows per page with Showing X–Y of Z footer and compact Previous / page indicator / Next controls, preserving all existing table columns, badges, linked-account styling, Eye action icons, routes, and workflows.",
+  "verification": "PR #286 Verify web portal run 31579158104 passed before merge. Production workflow must run its compulsory verification gate before the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
