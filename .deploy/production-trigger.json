@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy insurance companies master data navigation to production.",
-  "deploy_requested_at": "2026-08-12T16:05:00+05:30",
+  "purpose": "Deploy Partner Register linked-account action labels to production.",
+  "deploy_requested_at": "2026-08-12T16:39:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Commit insurance companies master data navigation and deploy using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "d57a8c65ad82e902ef6e79d4b9b264f30b37cdbd",
-  "release_scope": "Add Insurance Companies and Add Insurance Company under Master Data, expose canonical /master-data/insurance-companies routes, keep insurer master backend actions, and verify live Supabase insurer-master readiness.",
-  "verification": "Verify web portal run 31587471839 passed for d57a8c65 before production trigger. Production workflow must run its compulsory verification gate before the Vercel deploy hook.",
+  "source": "Merge PR #288 and deploy using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "94c21d632545eb574d141ddb55f2ed551e602b1f",
+  "release_scope": "Update Partner Register actions so rows with an existing linked POSP or MISP show View POSP or View MISP text buttons, while incomplete Partner rows keep the Eye action and eligible rows keep Create POSP/Create MISP.",
+  "verification": "Verify web portal run 31590621016 passed for PR #288 before merge. The production workflow must run its compulsory verification gate before the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
