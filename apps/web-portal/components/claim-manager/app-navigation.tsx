@@ -85,6 +85,14 @@ export const navigationSections:NavigationSection[]=[
   {href:"/tasks?status=in_progress",label:"In Progress",icon:Gauge,capability:"view_tasks"},
   {href:"/tasks?status=overdue",label:"Overdue",icon:Gauge,capability:"view_tasks"},
   {href:"/tasks?status=completed",label:"Completed",icon:FileCheck2,capability:"view_tasks"}
+ ]},
+ {key:"reports",label:"Reports",icon:BarChart3,tint:"from-[#3156b8] to-[#17bfc5]",capability:"view_reports",items:[
+  {href:"/reports",label:"Report Workspace",icon:BarChart3,capability:"view_reports"},
+  {href:"/reports#business",label:"Business Reports",icon:BarChart3,capability:"view_reports"},
+  {href:"/reports#distribution",label:"Distribution Reports",icon:UsersRound,capability:"view_reports"},
+  {href:"/reports#renewals",label:"Renewal Reports",icon:Gauge,capability:"view_reports"},
+  {href:"/reports#claims",label:"Claims Reports",icon:ShieldCheck,capability:"view_reports"},
+  {href:"/reports#compliance",label:"Compliance Reports",icon:FileCheck2,capability:"view_reports"}
  ]}
 ];
 
