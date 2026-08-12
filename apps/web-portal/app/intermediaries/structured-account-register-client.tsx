@@ -24,6 +24,8 @@ export type StructuredAccountRegisterRow = {
   searchText: string;
 };
 
+const ACCOUNT_PAGE_SIZE = 10;
+
 export function StructuredAccountRegisterClient({
   type,
   title,
@@ -41,6 +43,7 @@ export function StructuredAccountRegisterClient({
 }) {
   const [search, setSearch] = useState(initialSearch);
   const [status, setStatus] = useState<StructuredAccountStatus>(initialStatus);
+  const [currentPage, setCurrentPage] = useState(1);
   const normalizedSearch = search.trim().toLowerCase();
 
   const searchedRows = useMemo(
@@ -61,6 +64,13 @@ export function StructuredAccountRegisterClient({
     () => searchedRows.filter((row) => status === "all" || (status === "active" ? row.stage === "Active" : row.stage !== "Active")),
     [searchedRows, status],
   );
+  const totalRecords = visibleRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalRecords / ACCOUNT_PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const pageStartIndex = (safePage - 1) * ACCOUNT_PAGE_SIZE;
+  const pageRows = visibleRows.slice(pageStartIndex, pageStartIndex + ACCOUNT_PAGE_SIZE);
+  const showingStart = totalRecords === 0 ? 0 : pageStartIndex + 1;
+  const showingEnd = totalRecords === 0 ? 0 : Math.min(pageStartIndex + ACCOUNT_PAGE_SIZE, totalRecords);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -73,6 +83,11 @@ export function StructuredAccountRegisterClient({
     }
   }, [search, status, type]);
 
+  function selectStatus(next: StructuredAccountStatus) {
+    setStatus(next);
+    setCurrentPage(1);
+  }
+
   return (
     <div className="mx-auto max-w-[1480px] space-y-4 pb-6">
       <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
@@ -82,20 +97,20 @@ export function StructuredAccountRegisterClient({
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#94A3B8]" />
             <input
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }}
               placeholder={`Search ${title} name, ID, Partner ID, mobile or email`}
               className="h-9 w-full rounded-lg border border-[#D8E1EC] bg-white pl-9 pr-3 text-[10.5px] text-[#17203A] outline-none placeholder:text-[#94A3B8] focus:border-[#315FEA] focus:ring-2 focus:ring-[#E6ECFF]"
             />
           </form>
           <div className="flex items-center justify-end gap-1.5 whitespace-nowrap text-[9.5px] font-semibold">
-            <StatusFilter label="All" value={searchedRows.length} active={status === "all"} onClick={() => setStatus("all")} activeClassName="bg-[#0F2A55] text-white" idleClassName="text-[#526178] hover:bg-white hover:text-[#0F2A55]" />
-            <StatusFilter label="Active" value={counts.active} active={status === "active"} onClick={() => setStatus("active")} activeClassName="bg-emerald-100 text-emerald-800" idleClassName="text-[#526178] hover:bg-emerald-50 hover:text-emerald-700" />
-            <StatusFilter label="Onboarding" value={counts.onboarding} active={status === "onboarding"} onClick={() => setStatus("onboarding")} activeClassName="bg-amber-100 text-amber-800" idleClassName="text-[#526178] hover:bg-amber-50 hover:text-amber-700" />
+            <StatusFilter label="All" value={searchedRows.length} active={status === "all"} onClick={() => selectStatus("all")} activeClassName="bg-[#0F2A55] text-white" idleClassName="text-[#526178] hover:bg-white hover:text-[#0F2A55]" />
+            <StatusFilter label="Active" value={counts.active} active={status === "active"} onClick={() => selectStatus("active")} activeClassName="bg-emerald-100 text-emerald-800" idleClassName="text-[#526178] hover:bg-emerald-50 hover:text-emerald-700" />
+            <StatusFilter label="Onboarding" value={counts.onboarding} active={status === "onboarding"} onClick={() => selectStatus("onboarding")} activeClassName="bg-amber-100 text-amber-800" idleClassName="text-[#526178] hover:bg-amber-50 hover:text-amber-700" />
           </div>
         </div>
         {loadError ? (
           <div className="px-5 py-14 text-center text-[11px] text-red-700">The register could not be loaded.</div>
-        ) : visibleRows.length ? (
+        ) : pageRows.length ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[940px] table-fixed text-left text-[10.5px]">
               <thead className="border-b bg-[#FAFBFD] text-[8.5px] uppercase tracking-[0.03em] text-[#64748B]">
@@ -110,7 +125,7 @@ export function StructuredAccountRegisterClient({
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E7ECF3]">
-                {visibleRows.map((row) => (
+                {pageRows.map((row) => (
                   <tr key={row.id} className="transition hover:bg-[#F8FAFF]">
                     <td className="truncate px-5 py-3.5 font-semibold text-[#0F2A55]" title={row.displayName}>{row.displayName}</td>
                     <td className="truncate px-3 py-3.5 font-medium text-[#17203A]" title={row.mobile}>{row.mobile}</td>
@@ -130,6 +145,30 @@ export function StructuredAccountRegisterClient({
             <p className="mt-1 text-[9.5px] text-[#64748B]">Create the first {title} account or change the search term.</p>
           </div>
         )}
+        {!loadError ? (
+          <div className="flex flex-col gap-3 border-t border-[#E7ECF3] bg-white px-4 py-3.5 text-[10px] text-[#64748B] sm:flex-row sm:items-center sm:justify-between">
+            <span>Showing {showingStart}–{showingEnd} of {totalRecords}</span>
+            <div className="flex items-center gap-3 self-end sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                disabled={safePage <= 1}
+                className="inline-flex h-8 items-center justify-center rounded-lg border border-[#DCE5EF] bg-white px-3 font-medium text-[#526178] transition-colors enabled:hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#B6C0CF]"
+              >
+                Previous
+              </button>
+              <span className="min-w-[42px] text-center font-medium text-[#526178]">{safePage} / {totalPages}</span>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                disabled={safePage >= totalPages}
+                className="inline-flex h-8 items-center justify-center rounded-lg border border-[#DCE5EF] bg-white px-3 font-medium text-[#526178] transition-colors enabled:hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#B6C0CF]"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        ) : null}
       </section>
     </div>
   );
