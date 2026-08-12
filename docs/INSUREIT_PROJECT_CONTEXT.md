@@ -147,6 +147,8 @@ The selected values must be saved consistently to:
 
 Use only values accepted by the current live database constraints. Do not invent enum values.
 
+**APPLIED 2026-08-12:** Existing Intermediary Migration edits must be synchronized through `public.sync_existing_intermediary_migration(...)`, introduced by `20260812120000_atomic_existing_intermediary_migration_sync.sql`. Do not reintroduce separate draft/profile/register updates from the server action; earlier partial-save behavior let the edit section show new IDs while Partner/POSP/MISP canonical rows stayed stale. The RPC updates application draft JSON, profile identifiers/raw data, `partners.partner_code`, `intermediaries.intermediary_code`, `intermediary_registrations.registration_code`, and assignment statuses in one transaction, including temporary code moves to allow safe Partner/POSP/MISP ID swaps under unique indexes.
+
 ### 5.3 Activation rule
 
 A legacy POSP/MISP is considered fully active only when all of these are true:
@@ -345,6 +347,10 @@ This migration must be applied before claiming the live safeguard is active.
   - Transfers legacy registration reservation
   - Writes historical stage state
 
+- `apps/web-portal/app/intermediaries/applications/[id]/existing-intermediary-migration-actions.ts`
+  - Saves Existing Intermediary Migration corrections
+  - Must call `sync_existing_intermediary_migration(...)` rather than issuing separate downstream Supabase updates
+
 - `apps/web-portal/app/intermediaries/applications/[id]/page.tsx`
   - Partner/POSP/MISP account review presentation
   - Journey display
@@ -386,6 +392,7 @@ The following migrations were introduced during the legacy-onboarding repair seq
 - `202608010013_sync_partner_ids_to_register.sql`
 - `202608010014_backfill_legacy_partner_record_links.sql`
 - `20260802143500_sync_registered_iib_application_status.sql`
+- `20260812120000_atomic_existing_intermediary_migration_sync.sql` — **APPLIED** to Supabase project `ilzhsfqqjyppzzvfscmh` on 2026-08-12; installs `sync_existing_intermediary_migration(...)`.
 
 Important lesson: several early repair functions failed because the live `partners` or `intermediaries` table had additional non-null/check constraints. New repair SQL should introspect or explicitly include all known required columns and should not guess constrained statuses.
 
@@ -422,6 +429,7 @@ As of this consolidation:
 - Active linked accounts can be edited without forcing the workflow backward.
 - IIB packet preparation has a draft-data fallback.
 - Registered IIB accounts have code and migration safeguards against regression.
+- Existing Intermediary Migration edits now use an applied atomic RPC for canonical ID/status synchronization.
 
 Still verify in the live environment:
 
@@ -431,6 +439,7 @@ Still verify in the live environment:
 - Legacy POSP and MISP creation works for both fully complete and partially complete historical stage combinations.
 - Register IDs appear for all historical formats.
 - Edit primary details and replace documents work for approved/active legacy accounts.
+- Existing Intermediary Migration edits should be re-saved on any affected record whose draft IDs already differ from canonical Partner/POSP/MISP rows; direct data repair requires confirming the intended Partner ID and POSP/MISP ID first.
 - No duplicate Partner, registration, profile, or intermediary rows are created on repeated clicks.
 
 ## 15. Mandatory verification checklist for future changes

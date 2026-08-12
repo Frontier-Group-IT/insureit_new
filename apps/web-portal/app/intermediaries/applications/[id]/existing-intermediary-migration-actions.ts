@@ -38,9 +38,9 @@ type ProfileRow = {
   partner_type: string | null;
   raw_data: Record<string, unknown> | null;
 };
-type ApplicationReferenceRow = { application_id: string };
-type RegistrationReferenceRow = { application_id: string | null };
-type RegistrationContext = "posp" | "misp";
+type MigrationSyncResult = {
+  application_ids?: unknown;
+};
 
 export async function updateExistingIntermediaryMigrationDetails(
   _previous: MigrationSaveState,
@@ -94,7 +94,6 @@ export async function updateExistingIntermediaryMigrationDetails(
     legacy_migration_updated_at: now,
     legacy_migration_updated_by: actor.id,
   };
-  const { legacy_registration_code: _legacyRegistrationCode, ...sharedMigration } = migration;
   const workflowRegistrationStatus = registrationStatusForLegacyWorkflow({
     trainingStatus,
     examStatus,
@@ -110,7 +109,6 @@ export async function updateExistingIntermediaryMigrationDetails(
   const partnerRecordId = current.partner_record_id ?? currentProfile.partner_record_id;
 
   let applications: ApplicationRow[] = [current];
-
   if (partnerRecordId) {
     const { data, error } = await admin
       .from("intermediary_onboarding_applications")
@@ -155,188 +153,19 @@ export async function updateExistingIntermediaryMigrationDetails(
     applications = uniqueApplications([...applications, ...(partnerLinkedApplications ?? [])]);
   }
 
-  const applicationIds = applications.map((item) => item.id);
-  const { data: profiles, error: profilesError } = await admin
-    .from("posp_misp_onboarding_profiles")
-    .select("id,application_id,partner_record_id,partner_type,raw_data")
-    .in("application_id", applicationIds)
-    .returns<ProfileRow[]>();
-  if (profilesError) return { ok: false, message: "Linked profile records could not be loaded." };
+  const { data: syncResult, error: syncError } = await admin.rpc("sync_existing_intermediary_migration", {
+    p_application_id: applicationId,
+    p_actor_id: actor.id,
+    p_migration: migration,
+    p_registration_status: workflowRegistrationStatus,
+  });
+  if (syncError) return { ok: false, message: migrationSyncMessage(syncError) };
 
-  const registrationContext = resolveRegistrationContext(current, currentProfile);
-  let registrationTargetApplicationId: string | null = null;
-  if (migration.legacy_registration_code) {
-    if (!registrationContext) {
-      return { ok: false, message: "The POSP/MISP account type for this registration ID could not be resolved." };
-    }
-    if (currentContext === registrationContext) {
-      registrationTargetApplicationId = current.id;
-    } else {
-      const matchingChildren = applications.filter((app) => accountContext(app.draft_data) === registrationContext);
-      if (matchingChildren.length !== 1) {
-        return {
-          ok: false,
-          message: matchingChildren.length === 0
-            ? `The linked ${registrationContext.toUpperCase()} account could not be found.`
-            : `More than one linked ${registrationContext.toUpperCase()} account was found; the registration ID could not be synchronized safely.`,
-        };
-      }
-      registrationTargetApplicationId = matchingChildren[0].id;
-    }
-  }
-  const registrationMetadataApplicationIds = new Set(
-    [current.id, registrationTargetApplicationId].filter((value): value is string => Boolean(value)),
-  );
-  const registrationCanonicalApplicationIds = new Set(
-    [registrationTargetApplicationId].filter((value): value is string => Boolean(value)),
-  );
-
-  if (migration.legacy_partner_code) {
-    const { data: duplicatePartnerProfiles, error } = await admin
-      .from("posp_misp_onboarding_profiles")
-      .select("application_id")
-      .eq("partner_id", migration.legacy_partner_code)
-      .returns<ApplicationReferenceRow[]>();
-    if (error) return { ok: false, message: "The Partner ID could not be validated." };
-    if ((duplicatePartnerProfiles ?? []).some((row) => !applicationIds.includes(row.application_id))) {
-      return { ok: false, message: "The Existing Partner ID is already used by another account." };
-    }
-  }
-
-  if (migration.legacy_registration_code) {
-    const [profileReferences, intermediaryReferences, registrationReferences] = await Promise.all([
-      admin
-        .from("posp_misp_onboarding_profiles")
-        .select("application_id")
-        .eq("external_onboarding_id", migration.legacy_registration_code)
-        .returns<ApplicationReferenceRow[]>(),
-      admin
-        .from("intermediaries")
-        .select("application_id")
-        .eq("intermediary_code", migration.legacy_registration_code)
-        .returns<ApplicationReferenceRow[]>(),
-      admin
-        .from("intermediary_registrations")
-        .select("application_id")
-        .eq("registration_code", migration.legacy_registration_code)
-        .returns<RegistrationReferenceRow[]>(),
-    ]);
-    if (profileReferences.error || intermediaryReferences.error || registrationReferences.error) {
-      return { ok: false, message: "The POSP/MISP ID could not be validated." };
-    }
-    const allowedRegistrationApplicationIds = new Set([
-      current.id,
-      ...registrationCanonicalApplicationIds,
-    ]);
-    const registrationInUse = [
-      ...(profileReferences.data ?? []),
-      ...(intermediaryReferences.data ?? []),
-      ...(registrationReferences.data ?? []).filter((row): row is { application_id: string } => Boolean(row.application_id)),
-    ].some((row) => !allowedRegistrationApplicationIds.has(row.application_id));
-    if (registrationInUse) {
-      return { ok: false, message: "The Existing POSP/MISP ID is already used by another account." };
-    }
-  }
-
-  // Shared migration details still synchronize across the account family. The registration code itself
-  // is stored only on the edited migration record and its matching POSP/MISP child, so sibling account
-  // IDs remain independent while the intended child stays fully synchronized.
-  for (const app of applications) {
-    const context = accountContext(app.draft_data);
-    const receivesRegistrationMetadata = registrationMetadataApplicationIds.has(app.id);
-    const canonicalDraft = {
-      ...object(app.draft_data),
-      ...sharedMigration,
-      ...(receivesRegistrationMetadata ? { legacy_registration_code: migration.legacy_registration_code } : {}),
-      ...(context !== "partner" && migration.legacy_partner_code ? { linked_partner_code: migration.legacy_partner_code } : {}),
-      ...(registrationCanonicalApplicationIds.has(app.id) && migration.legacy_registration_code
-        ? { issued_registration_code: migration.legacy_registration_code }
-        : {}),
-    };
-    const appUpdate: Record<string, unknown> = {
-      draft_data: canonicalDraft,
-      updated_at: now,
-    };
-    if (context !== "partner") appUpdate.registration_status = workflowRegistrationStatus;
-    const { error } = await admin.from("intermediary_onboarding_applications").update(appUpdate).eq("id", app.id);
-    if (error) return { ok: false, message: "Migration details could not be synchronized to every application." };
-  }
-
-  for (const profile of profiles ?? []) {
-    const app = applications.find((item) => item.id === profile.application_id);
-    const context = accountContext(app?.draft_data);
-    const receivesRegistrationMetadata = registrationMetadataApplicationIds.has(profile.application_id);
-    const canonicalRaw = {
-      ...object(profile.raw_data),
-      ...sharedMigration,
-      ...(receivesRegistrationMetadata ? { legacy_registration_code: migration.legacy_registration_code } : {}),
-      ...(context !== "partner" && migration.legacy_partner_code ? { linked_partner_code: migration.legacy_partner_code } : {}),
-      ...(registrationCanonicalApplicationIds.has(profile.application_id) && migration.legacy_registration_code
-        ? { issued_registration_code: migration.legacy_registration_code }
-        : {}),
-    };
-    const coreProfileUpdate: Record<string, unknown> = {
-      raw_data: canonicalRaw,
-      onboarding_date: originalOnboardingDate,
-      updated_by: actor.id,
-      updated_at: now,
-    };
-    if (migration.legacy_partner_code) coreProfileUpdate.partner_id = migration.legacy_partner_code;
-    if (registrationCanonicalApplicationIds.has(profile.application_id) && migration.legacy_registration_code) {
-      coreProfileUpdate.external_onboarding_id = migration.legacy_registration_code;
-      coreProfileUpdate.existing_registration_code = migration.legacy_registration_code;
-    }
-    const { error } = await admin.from("posp_misp_onboarding_profiles").update(coreProfileUpdate).eq("id", profile.id);
-    if (error) {
-      const detail = error.message.replace(/\s+/g, " ").trim().slice(0, 400);
-      return { ok: false, message: `Profile synchronization failed: ${detail || "Unknown database error."}` };
-    }
-
-    if (context !== "partner") {
-      const compatibilityUpdate: Record<string, unknown> = {
-        training_status: trainingStatus,
-        exam_status: examStatus,
-        iib_uploaded: iibUploadStatus === "uploaded",
-        iib_uploaded_at: iibUploadStatus === "uploaded" ? toTimestamp(originalActivationDate) ?? now : null,
-        updated_by: actor.id,
-        updated_at: now,
-      };
-      await admin.from("posp_misp_onboarding_profiles").update(compatibilityUpdate).eq("id", profile.id);
-    }
-  }
-
-  for (const app of applications) {
-    if (accountContext(app.draft_data) === "partner") continue;
-
-    const assignmentUpdate: Record<string, unknown> = {
-      updated_at: now,
-      training_status: trainingStatus,
-      training_completed_at: trainingStatus === "completed" ? toTimestamp(originalActivationDate) ?? now : null,
-      exam_status: examStatus,
-      exam_completed_at: ["passed", "failed", "attempts_exhausted"].includes(examStatus) ? toTimestamp(originalActivationDate) ?? now : null,
-      exam_passed_at: examStatus === "passed" ? toTimestamp(originalActivationDate) ?? now : null,
-      agreement_status: agreementStatus,
-      agreement_signed_at: agreementStatus === "signed" ? toTimestamp(originalActivationDate) ?? now : null,
-    };
-    await admin
-      .from("intermediary_training_exam_assignments")
-      .update(assignmentUpdate)
-      .eq("application_id", app.id);
-
-    const intermediaryUpdate: Record<string, unknown> = { updated_at: now };
-    if (originalActivationDate) intermediaryUpdate.activated_at = toTimestamp(originalActivationDate);
-    if (registrationCanonicalApplicationIds.has(app.id) && migration.legacy_registration_code) {
-      intermediaryUpdate.intermediary_code = migration.legacy_registration_code;
-    }
-    await admin.from("intermediaries").update(intermediaryUpdate).eq("application_id", app.id);
-
-    if (registrationCanonicalApplicationIds.has(app.id) && migration.legacy_registration_code) {
-      await admin
-        .from("intermediary_registrations")
-        .update({ registration_code: migration.legacy_registration_code, updated_at: now })
-        .eq("application_id", app.id);
-    }
-  }
+  const result = asMigrationSyncResult(syncResult);
+  const syncedIds = Array.isArray(result.application_ids)
+    ? result.application_ids.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    : [];
+  const applicationIds = uniqueStrings([...syncedIds, ...applications.map((item) => item.id)]);
 
   for (const id of applicationIds) {
     revalidatePath(`/intermediaries/applications/${id}`);
@@ -350,22 +179,34 @@ export async function updateExistingIntermediaryMigrationDetails(
   return { ok: true, message: "Migration details saved and synchronized.", savedAt: now };
 }
 
+function migrationSyncMessage(error: unknown) {
+  const message = errorMessage(error);
+  if (message.includes("already used")) return message;
+  if (message.includes("Partner ID and POSP/MISP ID")) return message;
+  if (message.includes("PENDING")) return message;
+  if (message.includes("Activation date")) return message;
+  if (message.includes("not linked to a Partner record")) return "Activate or link the Partner record before editing migration details.";
+  return "Migration details could not be synchronized. No partial changes were saved.";
+}
 function accountContext(draft: Record<string, unknown> | null | undefined) {
   const context = draft?.account_context;
   return context === "posp" || context === "misp" ? context : "partner";
 }
-function resolveRegistrationContext(application: ApplicationRow, profile: ProfileRow): RegistrationContext | null {
-  const context = accountContext(application.draft_data);
-  if (context === "posp" || context === "misp") return context;
-  if (profile.partner_type === "posp" || profile.partner_type === "misp") return profile.partner_type;
-  const draftPartnerType = object(application.draft_data).partner_type;
-  return draftPartnerType === "posp" || draftPartnerType === "misp" ? draftPartnerType : null;
+function errorMessage(error: unknown) {
+  if (error instanceof Error && error.message) return error.message;
+  if (error && typeof error === "object" && "message" in error && typeof (error as { message?: unknown }).message === "string") return (error as { message: string }).message;
+  return "Unknown database error";
+}
+function asMigrationSyncResult(value: unknown): MigrationSyncResult {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as MigrationSyncResult : {};
 }
 function uniqueApplications(applications: ApplicationRow[]) {
   return Array.from(new Map(applications.map((application) => [application.id, application])).values());
 }
+function uniqueStrings(values: string[]) {
+  return Array.from(new Set(values));
+}
 function recordText(value: unknown) { return typeof value === "string" && value.trim() ? value.trim() : null; }
-function toTimestamp(value: string | null) { return value ? `${value}T00:00:00.000Z` : null; }
 function text(data: FormData, key: string) { const value = data.get(key); return typeof value === "string" && value.trim() ? value.trim() : null; }
 function optionalText(data: FormData, key: string) { return text(data, key); }
 function dateValue(data: FormData, key: string) { const value = text(data, key); return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null; }

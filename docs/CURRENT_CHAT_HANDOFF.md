@@ -119,6 +119,47 @@ ROLLBACK;
 
 The rollback preserved the live customer while proving the exact deletion now succeeds at database level. No portal code deployment is required for this database-only hotfix.
 
+## Existing Intermediary Migration Fix
+
+**IMPLEMENTED / APPLIED / DEPLOYMENT REQUESTED:** the partial-save risk in `apps/web-portal/app/intermediaries/applications/[id]/existing-intermediary-migration-actions.ts` was removed. The action now calls the Supabase RPC `sync_existing_intermediary_migration(...)` instead of updating application draft JSON, profiles, assignments and registers through separate unchecked Supabase calls.
+
+New migration:
+
+```text
+supabase/migrations/20260812120000_atomic_existing_intermediary_migration_sync.sql
+```
+
+Supabase project `ilzhsfqqjyppzzvfscmh` confirmed the function was applied on 2026-08-12 with signature:
+
+```text
+sync_existing_intermediary_migration(p_application_id uuid, p_actor_id uuid, p_migration jsonb, p_registration_status text)
+```
+
+The RPC updates, in one transaction:
+
+- application `draft_data` and linked account `registration_status`
+- `posp_misp_onboarding_profiles` Partner/POSP/MISP identifiers and raw migration data
+- `partners.partner_code`
+- `intermediaries.intermediary_code` / `onboarding_id`
+- `intermediary_registrations.registration_code` and historical statuses
+- `intermediary_training_exam_assignments` historical statuses
+
+The RPC temporarily moves family intermediary/registration codes to generated `SYNC-*` values inside the transaction before writing final IDs. This is required so a correction can safely swap Partner and POSP/MISP IDs under unique indexes.
+
+Affected live-family diagnosis for application `8cfae297-39d6-4f6a-aa09-5267177d6ed1` showed the draft migration values already differed from canonical Partner/profile/register rows. No direct data repair was run because the intended Partner ID vs POSP ID needs explicit confirmation from the user; re-saving the Existing Intermediary Migration section after confirming the visible values should invoke the new atomic sync.
+
+Verification run:
+
+```text
+npm run typecheck  # passed
+npm run lint       # passed with existing warnings only
+npm run build      # passed after rerun with elevated spawn permission
+```
+
+Supabase rollback-only RPC smoke test could not be completed because the SQL tool rejected the multi-statement transaction wrapper with `INVALID_ARGUMENT`; function installation was verified by querying `pg_proc`.
+
+## Previous OCR Track
+
 ## Verified pre-change parser baseline
 
 User-local baseline before the latest structured-table architecture work:
