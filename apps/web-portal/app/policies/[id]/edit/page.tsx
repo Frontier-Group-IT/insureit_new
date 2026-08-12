@@ -22,6 +22,7 @@ type VehicleRow = {
 };
 type PremiumRow = { od_premium: number | null; tp_premium: number | null; cpa_opted: boolean | null; cpa_amount: number | null };
 type PayinRow = { payout_basis: string | null; projected_od_percent: number | null; projected_tp_percent: number | null; insurer_scheme_amount: number | null };
+type BillingRow = { bill_number: string | null; billed_amount: number | null; bill_date: string | null; status: string | null };
 type PayoutRow = { retention_amount: number | null; od_payout_percent: number | null; tp_payout_percent: number | null; status: string | null; payout_date: string | null; voucher_number: string | null };
 type InsurerOption = { id: string; name: string; is_active: boolean };
 type IntermediaryOption = {
@@ -61,11 +62,12 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
   if (!policyResult.data) notFound();
   const policy = policyResult.data;
 
-  const [customerResult, vehicleResult, premiumResult, payinResult, payoutResult, activeInsurersResult, currentInsurerResult, salesEmployees, intermediariesResult] = await Promise.all([
+  const [customerResult, vehicleResult, premiumResult, payinResult, billingResult, payoutResult, activeInsurersResult, currentInsurerResult, salesEmployees, intermediariesResult] = await Promise.all([
     admin.from("customers").select("id,contact_name,phone").eq("id", policy.customer_id).maybeSingle<CustomerRow>(),
     admin.from("vehicles").select("id,vehicle_no,vehicle_type,vehicle_class_code,vehicle_class_description,make,model,year,chassis_no,engine_no,fuel_type,engine_capacity_cc,seating_capacity,gvw_kg,rto_name,rto_state").eq("id", policy.vehicle_id).maybeSingle<VehicleRow>(),
     admin.from("policy_premium_details").select("od_premium,tp_premium,cpa_opted,cpa_amount").eq("policy_id", id).maybeSingle<PremiumRow>(),
     admin.from("policy_payin_details").select("payout_basis,projected_od_percent,projected_tp_percent,insurer_scheme_amount").eq("policy_id", id).maybeSingle<PayinRow>(),
+    admin.from("policy_payin_bills").select("bill_number,billed_amount,bill_date,status").eq("policy_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle<BillingRow>(),
     admin.from("policy_intermediary_payouts").select("retention_amount,od_payout_percent,tp_payout_percent,status,payout_date,voucher_number").eq("policy_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle<PayoutRow>(),
     admin.from("insurance_companies").select("id,name,is_active").eq("is_active", true).order("name", { ascending: true }).returns<InsurerOption[]>(),
     admin.from("insurance_companies").select("id,name,is_active").eq("id", policy.insurance_company_id).maybeSingle<InsurerOption>(),
@@ -78,7 +80,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
       .returns<IntermediaryOption[]>(),
   ]);
 
-  const errors = [customerResult.error, vehicleResult.error, premiumResult.error, payinResult.error, payoutResult.error, activeInsurersResult.error, currentInsurerResult.error, intermediariesResult.error].filter(Boolean);
+  const errors = [customerResult.error, vehicleResult.error, premiumResult.error, payinResult.error, billingResult.error, payoutResult.error, activeInsurersResult.error, currentInsurerResult.error, intermediariesResult.error].filter(Boolean);
   if (errors.length) throw new Error(`Unable to load policy edit data: ${errors[0]?.message}`);
   if (!customerResult.data || !vehicleResult.data) throw new Error("The linked customer or vehicle record is missing.");
 
@@ -126,6 +128,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
   const vehicle = vehicleResult.data;
   const premium = premiumResult.data;
   const payin = payinResult.data;
+  const billing = billingResult.data;
   const payout = payoutResult.data;
   const vehicleClass = vehicle.vehicle_class_code || vehicle.vehicle_type || "MISD";
 
@@ -212,6 +215,10 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     projectedOdPercent: stringValue(payin?.projected_od_percent),
     projectedTpPercent: stringValue(payin?.projected_tp_percent),
     insurerScheme: stringValue(payin?.insurer_scheme_amount),
+    payinBillNo: billing?.bill_number ?? "",
+    payinBilledAmount: stringValue(billing?.billed_amount),
+    payinBillDate: billing?.bill_date ?? "",
+    payinStatus: billing?.status ?? "Unbilled",
     retention: stringValue(payout?.retention_amount),
     payoutOdPercent: stringValue(payout?.od_payout_percent),
     payoutTpPercent: stringValue(payout?.tp_payout_percent),
