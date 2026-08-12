@@ -382,6 +382,25 @@ This migration must be applied before claiming the live safeguard is active.
   - Uses the existing `insurance_companies` and `insurance_company_aliases` tables for policy onboarding, reporting and OCR/name matching
   - Create/update/activate mutations require `manage_master_data` with edit access and write audit-log entries
 
+### 11.1 Policy Onboarding registration-pending vehicles
+
+**APPLIED 2026-08-12:** Policy Onboarding supports two vehicle registration modes in Section 02:
+
+- `registered` is the default. Vehicle registration number is required, AuthBridge RC lookup is available, and duplicate/ownership checks use normalized registration number.
+- `unregistered` is for new vehicles whose permanent RC number has not yet been issued. Registration number is optional/disabled, AuthBridge lookup is unavailable, and chassis number plus engine number are required.
+
+The canonical save path remains `onboard_motor_policy(p_payload jsonb)`. Do not add a parallel save path for registration-pending vehicles.
+
+Current storage rule:
+
+- `vehicles.vehicle_no` remains `not null unique`, so unregistered vehicles receive an internal `PENDING-<chassis>` vehicle reference.
+- `vehicles.vehicle_no_normalized` stays null for unregistered vehicles so RC search/deduplication is not polluted by fake values.
+- `vehicles.registration_status` is saved as `registration_pending`.
+- `policy_party_snapshots.registration_number` stores `REGISTRATION PENDING` because that snapshot column is currently non-null.
+- Existing ownership checks for unregistered vehicles use chassis number. Registered vehicles continue to use normalized RC number.
+
+Do not enter fake registration values such as `NEW`, `NA`, `TEMP`, or `APPLIEDFOR` into the RC field. When the permanent RC number is later available, add a reviewed update flow that compares AuthBridge chassis/engine evidence before marking the vehicle as registered.
+
 ## 12. Migration and repair history
 
 The following migrations were introduced during the legacy-onboarding repair sequence. Some were responses to live-schema differences and may have failed before later replacements were added. Always inspect Supabase migration history and current function definitions before assuming all are applied.
@@ -401,6 +420,9 @@ The following migrations were introduced during the legacy-onboarding repair seq
 - `20260802143500_sync_registered_iib_application_status.sql`
 - `20260812120000_atomic_existing_intermediary_migration_sync.sql` — **APPLIED** to Supabase project `ilzhsfqqjyppzzvfscmh` on 2026-08-12; installs `sync_existing_intermediary_migration(...)`.
 - `20260812153000_fix_existing_intermediary_profile_id_swap.sql` — **APPLIED** to Supabase project `ilzhsfqqjyppzzvfscmh` on 2026-08-12; updates `sync_existing_intermediary_migration(...)` to temp-move profile `external_onboarding_id` values during family ID swaps.
+
+- `20260812170500_policy_onboarding_unregistered_vehicle_mode.sql` - **APPLIED** to Supabase project `ilzhsfqqjyppzzvfscmh` on 2026-08-12; updates `onboard_motor_policy(...)` to accept `vehicle.registrationMode='unregistered'`, use internal pending references, and allow registration-pending policy snapshots.
+- `20260812171500_fix_unregistered_vehicle_chassis_lookup.sql` - **APPLIED** to Supabase project `ilzhsfqqjyppzzvfscmh` on 2026-08-12; follow-up fix ensuring the live RPC uses chassis lookup for registration-pending vehicles.
 
 Important lesson: several early repair functions failed because the live `partners` or `intermediaries` table had additional non-null/check constraints. New repair SQL should introspect or explicitly include all known required columns and should not guess constrained statuses.
 

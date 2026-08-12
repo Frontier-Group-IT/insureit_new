@@ -30,6 +30,17 @@ Runtime errors: no route-scoped Vercel runtime errors found in the selected post
 
 Live Supabase readiness was verified before deployment: `insurance_companies` and `insurance_company_aliases` exist with RLS policies and indexes, with 37 companies, 35 active companies and 50 aliases. No database migration was required for this feature.
 
+Policy Onboarding registration-pending vehicle support was implemented on 2026-08-12 and is pending code deployment. Section 02 now has a compact `Registered / Unregistered` toggle in the top-right header, defaulting to `Registered`. In `Unregistered` mode, the registration field is disabled/optional, AuthBridge lookup is disabled, and chassis plus engine numbers are required.
+
+Supabase project `ilzhsfqqjyppzzvfscmh` has the backend RPC support applied:
+
+```text
+20260812170500_policy_onboarding_unregistered_vehicle_mode.sql
+20260812171500_fix_unregistered_vehicle_chassis_lookup.sql
+```
+
+Live function verification confirmed `onboard_motor_policy(jsonb)` reads `vehicle.registrationMode`, stores `REGISTRATION PENDING` in the non-null policy snapshot registration field, preserves registered lookup by `vehicle_no_normalized`, and uses chassis lookup for unregistered vehicles. The Supabase connector rejected a longer cleanup-in-same-statement smoke query, so no live create/delete data smoke was completed.
+
 ## IT Super User master-record and claim deletion controls
 
 Implemented on `main` on 2026-08-12.

@@ -28,6 +28,8 @@ type VehicleOwnerRow = { id: string; vehicle_no: string; vehicle_no_normalized: 
 
 function normalizedPhone(value: string) { return value.replace(/\D/g, "").slice(-10); }
 function normalizedRegistration(value: string) { return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+function normalizedVehicleIdentity(value: unknown) { return String(value ?? "").trim().toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+function registrationMode(payload: PolicyOnboardingPayload) { return payload.vehicle.registrationMode === "unregistered" ? "unregistered" : "registered"; }
 function cleanName(value: string) { return value.trim().replace(/\s+/g, " "); }
 function canTransferVehicle(role: string | null | undefined) { return role === "manager" || role === "admin" || role === "super_admin" || role === "it_super_user"; }
 function validDate(value: unknown) { return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value); }
@@ -92,10 +94,14 @@ function sanitizeFinancialNumbers(payload: PolicyOnboardingPayload) {
 function validatePayload(payload: PolicyOnboardingPayload) {
   const phone = normalizedPhone(payload.customer.phone ?? "");
   const registration = normalizedRegistration(String(payload.vehicle.registrationNumber ?? ""));
+  const mode = registrationMode(payload);
+  const chassis = normalizedVehicleIdentity(payload.vehicle.chassisNumber);
+  const engine = normalizedVehicleIdentity(payload.vehicle.engineNumber);
   const name = cleanName(payload.customer.name ?? "");
   if (!name) return "Enter the insured/customer name.";
   if (!/^[6-9][0-9]{9}$/.test(phone)) return "Enter a valid 10 digit Indian mobile number.";
-  if (!registration) return "Enter the vehicle registration number.";
+  if (mode === "registered" && !registration) return "Enter the vehicle registration number.";
+  if (mode === "unregistered" && (!chassis || !engine)) return "Enter chassis number and engine number for an unregistered vehicle.";
   if (!payload.vehicle.classCode) return "Select the vehicle class.";
   if (!payload.policy.insuranceCompanyId) return "Select an insurance company.";
   if (!payload.policy.policyNumber) return "Enter the policy number.";
@@ -123,8 +129,16 @@ async function findCustomerById(id: string) {
   return data;
 }
 async function findVehicleOwner(registration: string) {
+  if (!registration) return null;
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin.from("vehicles").select("id, vehicle_no, vehicle_no_normalized, customer_id, customers(contact_name, phone)").eq("vehicle_no_normalized", registration).maybeSingle<VehicleOwnerRow>();
+  if (error) throw new Error(error.message);
+  return data;
+}
+async function findVehicleOwnerByChassis(chassis: string) {
+  if (!chassis) return null;
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin.from("vehicles").select("id, vehicle_no, vehicle_no_normalized, customer_id, customers(contact_name, phone)").eq("chassis_no", chassis).maybeSingle<VehicleOwnerRow>();
   if (error) throw new Error(error.message);
   return data;
 }
@@ -137,6 +151,9 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
   const phone = normalizedPhone(payload.customer.phone);
   const name = cleanName(payload.customer.name);
   const registration = normalizedRegistration(String(payload.vehicle.registrationNumber));
+  const mode = registrationMode(payload);
+  const chassis = normalizedVehicleIdentity(payload.vehicle.chassisNumber);
+  const engine = normalizedVehicleIdentity(payload.vehicle.engineNumber);
   const selectedCustomerId = payload.resolution?.selectedCustomerId?.trim() || null;
   const createNewCustomer = payload.resolution?.createNewCustomer === true;
 
@@ -146,15 +163,16 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
       if (candidates.length) return { ok: false, kind: "customer_match", candidates };
     }
 
-    const vehicle = await findVehicleOwner(registration);
+    const vehicle = mode === "unregistered" ? await findVehicleOwnerByChassis(chassis) : await findVehicleOwner(registration);
     let effectiveCustomerId = selectedCustomerId;
     const ownershipDecision = payload.resolution?.ownershipDecision ?? null;
+    const vehicleDisplay = vehicle?.vehicle_no?.startsWith("PENDING-") ? "Registration pending vehicle" : vehicle?.vehicle_no ?? "";
 
     if (vehicle && effectiveCustomerId && vehicle.customer_id !== effectiveCustomerId && !ownershipDecision) {
-      return { ok: false, kind: "ownership_conflict", conflict: { vehicleId: vehicle.id, registrationNumber: vehicle.vehicle_no, customerId: vehicle.customer_id, customerName: vehicle.customers?.contact_name ?? "Existing customer", customerPhone: vehicle.customers?.phone ?? "", canTransfer: canTransferVehicle(profile.role) } };
+      return { ok: false, kind: "ownership_conflict", conflict: { vehicleId: vehicle.id, registrationNumber: vehicleDisplay, customerId: vehicle.customer_id, customerName: vehicle.customers?.contact_name ?? "Existing customer", customerPhone: vehicle.customers?.phone ?? "", canTransfer: canTransferVehicle(profile.role) } };
     }
     if (vehicle && !effectiveCustomerId && createNewCustomer && !ownershipDecision) {
-      return { ok: false, kind: "ownership_conflict", conflict: { vehicleId: vehicle.id, registrationNumber: vehicle.vehicle_no, customerId: vehicle.customer_id, customerName: vehicle.customers?.contact_name ?? "Existing customer", customerPhone: vehicle.customers?.phone ?? "", canTransfer: canTransferVehicle(profile.role) } };
+      return { ok: false, kind: "ownership_conflict", conflict: { vehicleId: vehicle.id, registrationNumber: vehicleDisplay, customerId: vehicle.customer_id, customerName: vehicle.customers?.contact_name ?? "Existing customer", customerPhone: vehicle.customers?.phone ?? "", canTransfer: canTransferVehicle(profile.role) } };
     }
     if (vehicle && ownershipDecision === "keep_existing") effectiveCustomerId = vehicle.customer_id;
     if (ownershipDecision === "transfer" && !canTransferVehicle(profile.role)) return { ok: false, kind: "permission", error: "Only a Manager or Administrator can transfer vehicle ownership." };
@@ -171,7 +189,7 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
       ...payload,
       ...financials,
       customer: rpcCustomer,
-      vehicle: { ...sanitizeVehicleNumbers(payload.vehicle), registrationNumber: registration },
+      vehicle: { ...sanitizeVehicleNumbers(payload.vehicle), registrationMode: mode, registrationNumber: registration, chassisNumber: chassis, engineNumber: engine },
       resolution: {
         selectedCustomerId: effectiveCustomerId,
         confirmOwnershipTransfer: ownershipDecision === "transfer",
