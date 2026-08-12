@@ -429,7 +429,7 @@ As of this consolidation:
 - Active linked accounts can be edited without forcing the workflow backward.
 - IIB packet preparation has a draft-data fallback.
 - Registered IIB accounts have code and migration safeguards against regression.
-- Existing Intermediary Migration edits now use an applied atomic RPC for canonical ID/status synchronization.
+- Existing Intermediary Migration edits now use an applied atomic RPC for canonical ID/status synchronization. **DEPLOYED 2026-08-12:** production trigger commit `0d48d1c750ec7d1e26697391e370eaecb36b5fed`, GitHub Actions run `31581565649`, Vercel deployment `dpl_6eBut6oTAU4r4KZJPrAtftMYmB96`, state `READY`.
 
 Still verify in the live environment:
 

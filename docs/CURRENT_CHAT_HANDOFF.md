@@ -121,7 +121,7 @@ The rollback preserved the live customer while proving the exact deletion now su
 
 ## Existing Intermediary Migration Fix
 
-**IMPLEMENTED / APPLIED / DEPLOYMENT REQUESTED:** the partial-save risk in `apps/web-portal/app/intermediaries/applications/[id]/existing-intermediary-migration-actions.ts` was removed. The action now calls the Supabase RPC `sync_existing_intermediary_migration(...)` instead of updating application draft JSON, profiles, assignments and registers through separate unchecked Supabase calls.
+**IMPLEMENTED / APPLIED / DEPLOYED:** the partial-save risk in `apps/web-portal/app/intermediaries/applications/[id]/existing-intermediary-migration-actions.ts` was removed. The action now calls the Supabase RPC `sync_existing_intermediary_migration(...)` instead of updating application draft JSON, profiles, assignments and registers through separate unchecked Supabase calls.
 
 New migration:
 
@@ -154,6 +154,20 @@ Verification run:
 npm run typecheck  # passed
 npm run lint       # passed with existing warnings only
 npm run build      # passed after rerun with elevated spawn permission
+```
+
+Production deployment evidence:
+
+```text
+Fix commit: 33109ffd2ed089d56600cc09e7a7d435810a21ba
+Production trigger commit: 0d48d1c750ec7d1e26697391e370eaecb36b5fed
+GitHub Actions production run: 31581565649
+Verification gate: success
+Deploy hook job: success
+Vercel deployment: dpl_6eBut6oTAU4r4KZJPrAtftMYmB96
+Vercel state: READY
+Vercel project: insureit
+Production target: production
 ```
 
 Supabase rollback-only RPC smoke test could not be completed because the SQL tool rejected the multi-statement transaction wrapper with `INVALID_ARGUMENT`; function installation was verified by querying `pg_proc`.
