@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Existing Intermediary Migration atomic sync fix to production.",
-  "deploy_requested_at": "2026-08-12T14:14:05+05:30",
-  "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to deploy now using the repository's protected GitHub Actions production deployment schema.",
-  "source_commit": "33109ffd2ed089d56600cc09e7a7d435810a21ba",
-  "release_scope": "Deploy the Existing Intermediary Migration atomic synchronization fix. The save action now calls sync_existing_intermediary_migration so application draft data, profile identifiers, Partner code, POSP/MISP register code, registration record code, and historical workflow statuses synchronize in one Supabase transaction.",
-  "verification": "Local npm run typecheck passed, npm run lint passed with existing warnings only, npm run build passed before final rebase. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
-  "instructions": "Update this file only after the user explicitly requests deployment."
+  "purpose": "Deploy PR #287 register pagination update to production.",
+  "deploy_requested_at": "2026-08-12T14:49:00+05:30",
+  "requested_by": "explicit user request",
+  "source": "Merge PR #287 into main and deploy using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "3758256a01027de6b44f8c4de3b0dc5a443f5260",
+  "release_scope": "Add 10-row pagination footers to POSP Register, MISP Register, and Intermediary Portal Users while preserving existing columns, badges, actions, filters, and workflows.",
+  "verification": "PR #287 Verify web portal run 31582370489 passed before merge. Production workflow must run its compulsory verification gate before the Vercel deploy hook.",
+  "instructions": "Update this file only after explicit deployment approval."
 }
