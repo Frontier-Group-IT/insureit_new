@@ -1,0 +1,44 @@
+name: Patch self-managed Start Claim entry
+
+on:
+  push:
+    branches:
+      - feature/self-managed-claims
+    paths:
+      - '.github/workflows/patch-start-claim-entry.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/self-managed-claims
+          fetch-depth: 0
+      - name: Route Start Claim through service choice
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('apps/mobile-app/components/group/group-home-screen.tsx')
+          text = path.read_text()
+          old = 'label="Start Claim" disabled={underReview} onPress={() => router.push(\'/customer/report-accident\')}'
+          new = 'label="Start Claim" disabled={underReview} onPress={() => router.push(\'/customer/start-claim\')}'
+          if old not in text:
+              raise SystemExit('Expected Start Claim route not found; refusing broad patch')
+          if text.count(old) != 1:
+              raise SystemExit(f'Expected exactly one Start Claim route, found {text.count(old)}')
+          path.write_text(text.replace(old, new, 1))
+          PY
+          rm .github/workflows/patch-start-claim-entry.yml
+      - name: Commit isolated route patch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/mobile-app/components/group/group-home-screen.tsx .github/workflows/patch-start-claim-entry.yml
+          git commit -m "Route Start Claim through service mode choice"
+          git push origin HEAD:feature/self-managed-claims
