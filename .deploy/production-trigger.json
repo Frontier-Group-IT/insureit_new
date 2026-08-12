@@ -1,9 +1,9 @@
 {
   "purpose": "Deploy current main with PR #290 PayIn billed-only tracking to production.",
-  "deploy_requested_at": "2026-08-13T00:54:00+05:30",
+  "deploy_requested_at": "2026-08-13T00:56:00+05:30",
   "requested_by": "explicit user request",
   "source": "Deploy the current main snapshot using the protected GitHub Actions production deployment workflow after PR #290 was merged.",
-  "source_commit": "4afc567fcd6333cb56d59b78d340554fd534c941",
+  "source_commit": "1d0d86f322e6a8ec1cee68852e658db389cb4f58",
   "release_scope": "Includes PR #290, where Policy PayIn tracking stops at Billed and the Received workflow is removed, plus the newer main commits present before this deployment trigger.",
   "verification": "PR #290 verification passed. The production workflow must verify this exact current-main snapshot with access-control regressions, release-blocker security regression, OCR regressions, typecheck, lint, and the Next.js production build before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
