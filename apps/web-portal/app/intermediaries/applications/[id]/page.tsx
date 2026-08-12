@@ -232,7 +232,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
         </section>
 
         <section id="overview" className={!isPartner && !onboardingComplete ? "-mt-2 space-y-4" : "space-y-4"}>
-          {!onboardingComplete ? <JourneyCard title={isPartner ? "Partner onboarding journey" : `${kind} account journey`} journey={journey} /> : null}
+          {!isPartner && !onboardingComplete ? <JourneyCard title={`${kind} account journey`} journey={journey} /> : null}
           {!activePartner && isPartner ? (
             <section className="overflow-hidden rounded-2xl border border-[#C7D2FE] bg-gradient-to-r from-[#EEF2FF] via-white to-[#EFF6FF] shadow-[0_12px_28px_rgba(79,70,229,.10)]">
               <div className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
@@ -257,7 +257,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
           <Card title="Address, bank and tax"><dl className="grid gap-x-4 gap-y-2 sm:grid-cols-2"><Info label="Address" value={completeAddress(profile)} /><Info label="PIN code" value={profile.postal_code ?? "-"} /><Info label="Bank" value={profile.bank_name ?? "-"} /><Info label="Account" value={maskAccount(profile.bank_account_number)} /><Info label="IFSC" value={profile.bank_ifsc_code ?? "-"} /><Info label="GST" value={profile.gst_number ?? "Not applicable"} /></dl></Card>
         </section>
 
-        <section id="documents"><DocumentsCard><DocumentChecklist documents={documents ?? []} /></DocumentsCard></section>
+        {(documents ?? []).length > 0 ? <section id="documents"><DocumentsCard><DocumentChecklist documents={documents ?? []} /></DocumentsCard></section> : null}
       </div>
     </AppShell>
   );
