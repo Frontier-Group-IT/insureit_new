@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy IT Super User claim deletion control to production.",
-  "deploy_requested_at": "2026-08-12T12:48:00+05:30",
+  "purpose": "Deploy PR #281 registration-ID synchronization fix to production.",
+  "deploy_requested_at": "2026-08-12T13:02:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit production deployment request after the IT Super User claim deletion feature passed the compulsory web portal verification workflow.",
-  "source_commit": "9ad5ff75a6afd4bbca48255630e9eb8295f5e6d7",
-  "release_scope": "Deploy the IT Super User-only claim deletion control so linked claims can be removed before deleting policies, vehicles, or customers. Preserve exact server-side it_super_user authorization, typed DELETE confirmation, audit logging, existing claim child-table cascade behavior, best-effort claim-document storage cleanup, and all existing master-record deletion dependency protections and unrelated portal behavior.",
-  "verification": "Feature verification run 31573206603 completed successfully for feature head ae67335110df70884d4724005bcd39551b1bc7ce, including access-control regressions, OCR regressions, TypeScript, lint and the Next.js production build. The protected production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
+  "source": "ChatGPT explicit request to merge PR #281 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
+  "source_commit": "5b3df38f8d154569244c29c56666d65180ad35fa",
+  "release_scope": "Deploy the Existing Intermediary Migration registration-ID synchronization fix so an edited POSP or MISP ID is synchronized only to the matching linked child account's canonical profile, intermediary and registration records, while Partner ID synchronization across the family remains intact and sibling registration IDs remain unchanged.",
+  "verification": "PR #281 Verify web portal run 31574297156 completed successfully for head 64825d987077e4b6d0abce361472b6cd06d32d8f before merge. The protected production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
