@@ -43,6 +43,8 @@ export type Capability =
   | "manage_tasks"
   | "view_reports"
   | "view_notifications"
+  | "use_assistant"
+  | "manage_assistant_knowledge"
   | "manage_users"
   | "manage_master_data"
   | "manage_system";
@@ -55,7 +57,7 @@ const ALL_OPERATIONAL: Capability[] = [
   "manage_master_data"
 ];
 
-export const roleCapabilities: Record<AppRole, readonly Capability[]> = {
+const baseRoleCapabilities: Record<AppRole, readonly Capability[]> = {
   super_admin: [...ALL_OPERATIONAL, "manage_users", "manage_system"],
   admin: [...ALL_OPERATIONAL, "manage_users", "manage_system"],
   it_super_user: [...ALL_OPERATIONAL, "manage_users", "manage_system"],
@@ -109,6 +111,19 @@ export const roleCapabilities: Record<AppRole, readonly Capability[]> = {
   customer: [],
   intermediary: []
 };
+
+// Phase-one pilot: every internal portal role may use the assistant, while the
+// protected IT role alone receives knowledge-administration authority.
+export const roleCapabilities = Object.fromEntries(appRoles.map((role) => [
+  role,
+  role === "customer" || role === "intermediary"
+    ? baseRoleCapabilities[role]
+    : [
+        ...baseRoleCapabilities[role],
+        "use_assistant" as const,
+        ...(role === "it_super_user" ? ["manage_assistant_knowledge" as const] : []),
+      ],
+])) as Record<AppRole, readonly Capability[]>;
 
 export function hasCapability(role: string | null | undefined, capability: Capability) {
   return Boolean(role && isAppRole(role) && roleCapabilities[role].includes(capability));

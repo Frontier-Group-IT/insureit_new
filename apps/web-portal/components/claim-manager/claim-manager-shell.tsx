@@ -10,6 +10,9 @@ import { AppNavigation } from "@/components/claim-manager/app-navigation";
 import { MobileNavigation } from "@/components/claim-manager/mobile-navigation";
 import { MobileBottomNavigation } from "@/components/claim-manager/mobile-bottom-navigation";
 import { HeaderRouteRail } from "@/components/claim-manager/header-route-rail";
+import { AssistantLauncher } from "@/components/assistant/assistant-launcher";
+import { visibleNavigationCatalogue } from "@/lib/navigation-catalogue";
+import type { PermissionAccess } from "@/lib/permission-management";
 
 type Props = {
   title: string;
@@ -24,6 +27,13 @@ export async function ClaimManagerShell({ title, backHref = internalLaunchHome, 
   const role = profile?.role;
   const permissionAccess = await getEffectivePermissionAccessMap(profile);
   const canViewNotifications = (permissionAccess.view_notifications ?? "none") !== "none";
+  // `use_assistant` is supplied by the assistant permission-foundation branch.
+  // String-key access keeps this UI branch type-safe before that Capability union lands.
+  const assistantAccess = (permissionAccess as Record<string, PermissionAccess | undefined>).use_assistant ?? "none";
+  const canUseAssistant = Boolean(user && profile && role !== "customer" && role !== "intermediary" && assistantAccess !== "none");
+  const assistantNavigation = canUseAssistant
+    ? visibleNavigationCatalogue(permissionAccess, { role, intermediaryOnly: isIntermediaryOnlyLaunch })
+    : [];
 
   return (
     <div className="min-h-screen text-[#10213D]">
@@ -57,6 +67,7 @@ export async function ClaimManagerShell({ title, backHref = internalLaunchHome, 
         </main>
       </div>
 
+      {canUseAssistant ? <AssistantLauncher navigation={assistantNavigation} /> : null}
       <MobileBottomNavigation role={role} permissionAccess={permissionAccess} />
     </div>
   );

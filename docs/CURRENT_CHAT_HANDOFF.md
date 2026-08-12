@@ -1,12 +1,24 @@
 # Current Chat Handoff
 
-> **Consolidated:** 2026-08-09 (IST)
+> **Consolidated:** 2026-08-12 (IST)
 >
 > Read with `docs/INSUREIT_PROJECT_CONTEXT.md` and `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md`. Never store secrets, raw OCR text, policyholder PII, or complete policy documents here.
 
 ## Active track
 
-Policy Onboarding OCR hardening is the immediate active work. Production portal is `https://portal.insureit.in`. Ordinary commits do not intentionally deploy production; `.deploy/production-trigger.json` is changed only after the user explicitly says `deploy now` or `finish and deploy`.
+The isolated employee-assistant Preview on branch `agent/assistant-preview` / PR #249 is the immediate active work. Production portal is `https://portal.insureit.in`; no assistant work in this track is production-deployed. Ordinary commits do not intentionally deploy production; `.deploy/production-trigger.json` is changed only after the user explicitly says `deploy now` or `finish and deploy`.
+
+## Assistant Preview continuation state
+
+- **VERIFIED (real-time baseline commit `034439be`):** GitHub Actions run `31564067821` passed and Vercel Preview deployment `dpl_8r1YYT62F5mkXNJoVXRuJHAtLPJA` reached `READY` at the branch alias. This baseline provides aggregate-only permission-scoped live metrics for POSP/MISP/Partner, customers, vehicles, policies, claims and tasks; it never returns raw record data to the model.
+- **VERIFIED (expanded assistant commit `433d26fd`):** common typo correction, deterministic capabilities/help responses, conversational follow-up context, intent-based knowledge-search fallback, category-filtered Group/Corporate/Dealership/Individual Proprietor customer counts, and broader workflow/customer-service knowledge are implemented. GitHub Actions run `31565350562` passed assistant/security regressions, all required OCR regressions, typecheck, lint and the production build. Vercel deployment for the exact commit completed successfully at `https://insureit-8dwjdau34-antnish1s-projects.vercel.app`. Authenticated browser verification remains required. Never store or repeat the user-managed Preview OpenRouter key.
+- **IMPLEMENTED / PREVIEW VERIFICATION PENDING:** the reasoning upgrade replaces verbatim first-source answers with multi-source model synthesis, adds effective-permission diagnostics for missing menu/actions, allows bounded general insurance/customer-service explanations, supplies permitted destinations alongside knowledge, and removes raw source UUIDs from conversational text. The exact screenshot question about a missing Add Policy menu now resolves against `view_policies` edit access. Local typecheck, assistant regressions and lint pass; canonical CI and the resulting Preview deployment remain pending.
+- **VERIFIED:** assistant provider connectivity works. The former Vercel AI Gateway path was blocked by `403 customer_verification_required`; direct OpenRouter Preview requests now return controlled assistant responses.
+- **IMPLEMENTED:** provider requests require JSON output and log bounded provider error metadata only. Prompts, answers, keys, and provider bodies are not logged.
+- **IMPLEMENTED:** exact greetings and ambiguous single-topic prompts are answered or clarified deterministically without model quota. Explicit navigation requests are resolved deterministically through the existing permission-aware catalogue; model output cannot grant routes.
+- **IMPLEMENTED:** navigation aliases and scoring distinguish actions such as create/add/onboard from list/register requests for POSP, MISP, customers, vehicles, policies, claims, KYC, and tasks.
+- **APPLIED (test project only):** migrations `seed_assistant_starter_knowledge` and `expand_assistant_workflow_and_customer_service_knowledge` are applied to Supabase project `jzuqlcysyqtyydukveir`. Nineteen published, permission-scoped entries now cover assistant capabilities, POSP/MISP/Partner meanings and onboarding, customer onboarding/KYC/review, policies/renewals/OCR, claims and replacement documents, vehicles/fleet, tasks and forgot-password support. Direct permission-scoped RPC searches verified representative POSP, password, capabilities, customer-onboarding and claim-document results.
+- **CLEANUP REQUIRED AFTER TESTING:** remove/deactivate the temporary Preview deployment/configuration and testing resources as previously requested; do not touch production environments while doing so.
 
 ## Verified pre-change parser baseline
 

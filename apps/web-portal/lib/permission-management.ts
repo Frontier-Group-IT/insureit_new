@@ -38,6 +38,8 @@ const labels: Record<Capability, Omit<PermissionDefinition, "capability" | "role
   manage_tasks: { module: "Tasks", label: "Edit and assign tasks", description: "Create, assign, update and close tasks.", risk: "sensitive" },
   view_reports: { module: "Reports", label: "View reports", description: "Open reports and management summaries.", risk: "sensitive" },
   view_notifications: { module: "Notifications", label: "View notifications", description: "Open system and workflow notifications.", risk: "standard" },
+  use_assistant: { module: "Assistant", label: "Use assistant", description: "Use the internal read-only assistant within existing permissions and data scope.", risk: "sensitive" },
+  manage_assistant_knowledge: { module: "Assistant", label: "Manage assistant knowledge", description: "Import, review and publish controlled assistant knowledge workbooks.", risk: "critical" },
   manage_users: { module: "Administration", label: "Manage portal users", description: "Create and manage internal portal user access.", risk: "critical" },
   manage_master_data: { module: "Administration", label: "Manage master data", description: "Create and edit operational master data.", risk: "high" },
   manage_system: { module: "Administration", label: "Manage system settings", description: "Access development, configuration and system controls.", risk: "critical" },
@@ -46,7 +48,7 @@ const labels: Record<Capability, Omit<PermissionDefinition, "capability" | "role
 export const permissionDefinitions: PermissionDefinition[] = Object.entries(labels).map(([capability, definition]) => ({
   capability: capability as Capability,
   ...definition,
-  roleAccess: capability.startsWith("view_") ? "view" : definition.risk === "critical" || capability.startsWith("approve_") || capability.startsWith("activate_") ? "approve" : "edit",
+  roleAccess: capability === "use_assistant" ? "view" : capability.startsWith("view_") ? "view" : definition.risk === "critical" || capability.startsWith("approve_") || capability.startsWith("activate_") ? "approve" : "edit",
 }));
 
 export function rolePermissionAccess(role: string | null | undefined, capability: Capability): PermissionAccess {
@@ -59,7 +61,7 @@ export function permissionModules() {
   return Array.from(new Set(permissionDefinitions.map((item) => item.module)));
 }
 
-export const getEffectivePermission = cache(async (profileId: string, role: AppRole, capability: Capability) => {
+export async function getEffectivePermissionFresh(profileId: string, role: AppRole, capability: Capability) {
   // IT Super User is the protected developer role. It must always retain full
   // organisation-wide access and must never be downgraded by role or employee
   // override rows created through the permission-management interface.
@@ -69,23 +71,26 @@ export const getEffectivePermission = cache(async (profileId: string, role: AppR
 
   const admin = createSupabaseAdminClient();
   const now = new Date().toISOString();
-  const [{ data: employeeOverride }, { data: roleOverride }] = await Promise.all([
+  const [{ data: employeeOverride, error: employeeOverrideError }, { data: roleOverride, error: roleOverrideError }] = await Promise.all([
     admin.from("employee_permission_overrides").select("access_level,scope_type,expires_at").eq("profile_id", profileId).eq("capability", capability).or(`expires_at.is.null,expires_at.gt.${now}`).maybeSingle(),
     admin.from("role_permission_overrides").select("access_level,scope_type").eq("role", role).eq("capability", capability).maybeSingle(),
   ]);
+  if (employeeOverrideError || roleOverrideError) throw new Error("permission_override_lookup_failed");
   if (employeeOverride && employeeOverride.access_level !== "inherit") return { access: employeeOverride.access_level as PermissionAccess, scope: employeeOverride.scope_type as PermissionScope, source: "employee_override" as const };
   if (roleOverride) return { access: roleOverride.access_level as PermissionAccess, scope: roleOverride.scope_type as PermissionScope, source: "role_override" as const };
   return { access: rolePermissionAccess(role, capability), scope: "role_default" as const, source: "role" as const };
-});
+}
 
-export const getEffectivePermissionAccessMapForRole = cache(async (profileId: string, role: AppRole) => {
+export const getEffectivePermission = cache(getEffectivePermissionFresh);
+
+export async function getEffectivePermissionAccessMapForRoleFresh(profileId: string, role: AppRole) {
   if (role === "it_super_user") {
     return Object.fromEntries(permissionDefinitions.map(({ capability }) => [capability, "approve" as const])) as Partial<Record<Capability, PermissionAccess>>;
   }
 
   const admin = createSupabaseAdminClient();
   const now = new Date().toISOString();
-  const [{ data: employeeOverrides }, { data: roleOverrides }] = await Promise.all([
+  const [{ data: employeeOverrides, error: employeeOverridesError }, { data: roleOverrides, error: roleOverridesError }] = await Promise.all([
     admin
       .from("employee_permission_overrides")
       .select("capability,access_level,scope_type,expires_at")
@@ -96,6 +101,7 @@ export const getEffectivePermissionAccessMapForRole = cache(async (profileId: st
       .select("capability,access_level,scope_type")
       .eq("role", role),
   ]);
+  if (employeeOverridesError || roleOverridesError) throw new Error("permission_override_lookup_failed");
 
   const employeeOverrideByCapability = new Map(
     (employeeOverrides ?? [])
@@ -112,7 +118,9 @@ export const getEffectivePermissionAccessMapForRole = cache(async (profileId: st
       ?? rolePermissionAccess(role, capability);
     return [capability, access] as const;
   })) as Partial<Record<Capability, PermissionAccess>>;
-});
+}
+
+export const getEffectivePermissionAccessMapForRole = cache(getEffectivePermissionAccessMapForRoleFresh);
 
 export function roleCapabilityCount(role: AppRole) {
   return roleCapabilities[role].length;

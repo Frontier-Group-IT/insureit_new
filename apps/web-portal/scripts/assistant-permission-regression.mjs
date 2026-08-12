@@ -1,0 +1,70 @@
+import {
+  permissionCatalogueV2,
+  permissionsForLegacyCapability,
+} from "../lib/access-control-catalogue-v2.ts";
+import {
+  appRoles,
+  hasCapability,
+  roleCapabilities,
+} from "../lib/roles.ts";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+function fail(message) {
+  throw new Error(`[assistant-permissions] ${message}`);
+}
+
+const internalRoles = appRoles.filter((role) => role !== "customer" && role !== "intermediary");
+for (const role of internalRoles) {
+  if (!hasCapability(role, "use_assistant")) fail(`${role} must receive the internal assistant pilot grant`);
+}
+for (const role of ["customer", "intermediary"]) {
+  if (hasCapability(role, "use_assistant")) fail(`${role} must not receive internal assistant access`);
+}
+for (const role of appRoles) {
+  const expected = role === "it_super_user";
+  if (hasCapability(role, "manage_assistant_knowledge") !== expected) {
+    fail(`${role} has an unsafe assistant knowledge management default`);
+  }
+}
+
+const permissionManagementSource = readFileSync(resolve(process.cwd(), "lib/permission-management.ts"), "utf8");
+if (!permissionManagementSource.includes('use_assistant: { module: "Assistant"')) {
+  fail("use_assistant is missing from the authoritative permission catalogue");
+}
+if (!permissionManagementSource.includes('manage_assistant_knowledge: { module: "Assistant"')) {
+  fail("manage_assistant_knowledge is missing from the authoritative permission catalogue");
+}
+if (!permissionManagementSource.includes('capability === "use_assistant" ? "view"')) {
+  fail("assistant use must be explicitly classified as view-level access");
+}
+for (const contract of ["employeeOverrideError || roleOverrideError", "employeeOverridesError || roleOverridesError", "permission_override_lookup_failed"]) {
+  if (!permissionManagementSource.includes(contract)) fail(`effective permission resolution must fail closed: ${contract}`);
+}
+for (const contract of ["getEffectivePermissionFresh", "getEffectivePermissionAccessMapForRoleFresh"]) {
+  if (!permissionManagementSource.includes(`export async function ${contract}`)) fail(`per-tool authorization requires uncached resolver ${contract}`);
+}
+
+const assistantRouteSource = readFileSync(resolve(process.cwd(), "app/api/assistant/chat/route.ts"), "utf8");
+if (!assistantRouteSource.includes('.from("profiles").select("id,role,is_active")')) fail("each assistant tool authorization must re-read current role and active status");
+if (!assistantRouteSource.includes("getEffectivePermissionFresh") || !assistantRouteSource.includes("getEffectivePermissionAccessMapForRoleFresh")) fail("assistant tool authorization must bypass React request caches");
+if (assistantRouteSource.includes("hasEffectiveCapability(profile")) fail("assistant route must not reuse cached effective authorization");
+
+for (const capability of ["use_assistant", "manage_assistant_knowledge"]) {
+  const shadowKeys = permissionsForLegacyCapability(capability);
+  if (shadowKeys.length !== 1 || !permissionCatalogueV2.some((entry) => entry.key === shadowKeys[0])) {
+    fail(`${capability} is missing its shadow V2 catalogue entry`);
+  }
+}
+
+if (!roleCapabilities.it_super_user.includes("manage_assistant_knowledge")) {
+  fail("IT Super User must explicitly retain assistant knowledge management");
+}
+
+console.log(JSON.stringify({
+  internalPilotRoles: internalRoles.length,
+  externalRolesDenied: 2,
+  managementRoles: ["it_super_user"],
+  shadowCatalogueOnly: true,
+  status: "ok",
+}, null, 2));

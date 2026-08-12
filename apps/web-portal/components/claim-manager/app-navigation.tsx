@@ -7,95 +7,39 @@ import { BarChart3, CheckSquare2, ChevronRight, ClipboardList, FileCheck2, Flask
 import type { LucideIcon } from "lucide-react";
 import { BrandLockup } from "@/components/brand-lockup";
 import { internalLaunchHome, isIntermediaryOnlyLaunch } from "@/lib/launch-scope";
-import type { Capability } from "@/lib/roles";
-import type { PermissionAccess } from "@/lib/permission-management";
+import {
+ navigationCatalogue,
+ navigationPermits,
+ visibleNavigationCatalogue,
+ type NavigationCatalogueGroup,
+ type NavigationCatalogueItem,
+ type NavigationCatalogueNode,
+ type NavigationCatalogueSection,
+ type NavigationPermissionMap,
+ type NavigationSectionKey,
+} from "@/lib/navigation-catalogue";
 
-type SectionKey="claims"|"distribution"|"master-data"|"tasks"|"reports"|"development";
+type SectionKey=NavigationSectionKey;
 type ActiveNav="dashboard"|SectionKey|"none";
-export type NavigationItem={kind?:"item";href:string;label:string;icon:LucideIcon;capability:Capability;minimumAccess?:Exclude<PermissionAccess,"none">};
-export type NavigationGroup={kind:"group";key:string;label:string;icon:LucideIcon;capability:Capability;minimumAccess?:Exclude<PermissionAccess,"none">;items:NavigationItem[]};
+export type NavigationItem=Omit<NavigationCatalogueItem,"kind"|"presentationKey">&{kind?:"item";icon:LucideIcon};
+export type NavigationGroup=Omit<NavigationCatalogueGroup,"items"|"presentationKey">&{icon:LucideIcon;items:NavigationItem[]};
 export type NavigationNode=NavigationItem|NavigationGroup;
-export type NavigationSection={key:SectionKey;label:string;icon:LucideIcon;tint:string;capability:Capability;minimumAccess?:Exclude<PermissionAccess,"none">;items:NavigationNode[]};
-type PermissionAccessMap=Partial<Record<Capability,PermissionAccess>>;
+export type NavigationSection=Omit<NavigationCatalogueSection,"items"|"presentationKey">&{icon:LucideIcon;items:NavigationNode[]};
+type PermissionAccessMap=NavigationPermissionMap;
 type Props={activeNav:ActiveNav;role:string|null|undefined;permissionAccess:PermissionAccessMap};
 
-export const navigationSections:NavigationSection[]=[
- {key:"claims",label:"Claims",icon:ShieldCheck,tint:"from-[#ff6f61] to-[#ff9f68]",capability:"view_claims",items:[
-  {href:"/claims",label:"All Claims",icon:ClipboardList,capability:"view_claims"},
-  {kind:"group",key:"claim-queues",label:"Work Queues",icon:Gauge,capability:"view_claims",items:[
-   {href:"/claims?queue=documents",label:"Documents",icon:FileCheck2,capability:"view_claims"},
-   {href:"/claims?journey=spot-intimation",label:"Verification",icon:CheckSquare2,capability:"manage_claims"},
-   {href:"/claims?journey=spot-surveyor-assigned",label:"Survey",icon:Gauge,capability:"manage_claims"},
-   {href:"/claims?journey=under-repair",label:"Under Repair",icon:Settings,capability:"manage_claims"},
-   {href:"/claims?journey=payment-advice-received",label:"Settlement",icon:BarChart3,capability:"manage_claims"}
-  ]}
- ]},
- {key:"distribution",label:"Intermediatory",icon:Sparkles,tint:"from-[#17c7c9] to-[#6759ff]",capability:"view_intermediaries",items:[
-  {kind:"group",key:"partners",label:"Partners",icon:UsersRound,capability:"view_intermediaries",items:[
-   {href:"/intermediaries/partner",label:"All Partner",icon:UsersRound,capability:"view_intermediaries"},
-   {href:"/intermediaries/portal-users",label:"Portal Users",icon:UserCog,capability:"review_intermediary_application"}
-  ]},
-  {kind:"group",key:"posp",label:"POSP",icon:UsersRound,capability:"view_intermediaries",items:[
-      {href:"/intermediaries/posp",label:"All POSP",icon:UsersRound,capability:"view_intermediaries"},
-      {href:"/intermediaries/posp/new",label:"Add POSP",icon:UserPlus,capability:"create_intermediary_application"},
-      {href:"/customers/posp-misp/existing/new?partner_type=posp",label:"Add Existing POSP",icon:UserPlus,capability:"create_intermediary_application"}
-    ]},
-  {kind:"group",key:"misp",label:"MISP",icon:UsersRound,capability:"view_intermediaries",items:[
-      {href:"/intermediaries/misp",label:"All MISP",icon:UsersRound,capability:"view_intermediaries"},
-      {href:"/intermediaries/misp/new",label:"Add MISP",icon:UserPlus,capability:"create_intermediary_application"},
-      {href:"/customers/posp-misp/existing/new?partner_type=misp",label:"Add Existing MISP",icon:UserPlus,capability:"create_intermediary_application"}
-    ]},
-  {kind:"group",key:"intermediary-onboarding",label:"Onboarding",icon:FileCheck2,capability:"view_intermediaries",items:[
-   {href:"/customers/posp-misp",label:"Pending Applications",icon:FileCheck2,capability:"view_intermediaries"}
-  ]}
- ]},
- {key:"master-data",label:"Customers & Fleet",icon:LayoutGrid,tint:"from-[#6759ff] to-[#8f7cff]",capability:"view_customers",items:[
-  {kind:"group",key:"customers",label:"Customers",icon:UsersRound,capability:"view_customers",items:[
-   {href:"/customers",label:"Customer Register",icon:UsersRound,capability:"view_customers"},
-   {href:"/customers?choose_partner=1",label:"Add Customer",icon:Plus,capability:"manage_customers"},
-   {href:"/customers/applications",label:"Onboarding Applications",icon:FileCheck2,capability:"review_kyc"},
-   {href:"/customer-kyc",label:"Customer KYC",icon:FileCheck2,capability:"view_kyc"}
-  ]},
-  {kind:"group",key:"customer-types",label:"Add by Customer Type",icon:UserPlus,capability:"manage_customers",items:[
-   {href:"/customers/new?partner_type=individual_proprietor",label:"Individual / Proprietor",icon:UserPlus,capability:"manage_customers"},
-   {href:"/customers/dealership-type",label:"Dealership",icon:UserPlus,capability:"manage_customers"},
-   {href:"/customers/new?partner_type=corporate",label:"Corporate",icon:UserPlus,capability:"manage_customers"},
-   {href:"/customers/new?partner_type=group",label:"Group",icon:UserPlus,capability:"manage_customers"}
-  ]},
-  {kind:"group",key:"fleet",label:"Fleet Management",icon:Gauge,capability:"view_vehicles",items:[
-   {href:"/vehicles",label:"Vehicle Register",icon:Gauge,capability:"view_vehicles"},
-   {href:"/vehicles/new",label:"Add Vehicle",icon:Plus,capability:"view_vehicles",minimumAccess:"edit"},
-   {href:"/policies",label:"Policy Register",icon:ShieldCheck,capability:"view_policies"},
-   {href:"/policies/new",label:"Add Policy",icon:Plus,capability:"view_policies",minimumAccess:"edit"}
-  ]},
-  {kind:"group",key:"reference-master",label:"Master Data",icon:Settings,capability:"manage_master_data",items:[
-   {href:"/master-data/vehicle-manufacturers",label:"Vehicle Manufacturers",icon:Settings,capability:"manage_master_data"},
-   {href:"/master-data/vehicle-manufacturers/new",label:"Add Manufacturer",icon:Plus,capability:"manage_master_data",minimumAccess:"edit"}
-  ]},
-  {kind:"group",key:"employees",label:"Employees",icon:UsersRound,capability:"view_employees",items:[
-   {href:"/employees",label:"Employee Directory",icon:UsersRound,capability:"view_employees"},
-   {href:"/employees/new",label:"Add Employee",icon:UserPlus,capability:"manage_employees",minimumAccess:"edit"}
-  ]}
- ]},
- {key:"tasks",label:"Tasks",icon:CheckSquare2,tint:"from-[#17c7c9] to-[#62ddd3]",capability:"view_tasks",items:[
-  {href:"/tasks",label:"All Tasks",icon:CheckSquare2,capability:"view_tasks"},
-  {href:"/tasks?status=open",label:"Open",icon:ClipboardList,capability:"view_tasks"},
-  {href:"/tasks?status=in_progress",label:"In Progress",icon:Gauge,capability:"view_tasks"},
-  {href:"/tasks?status=overdue",label:"Overdue",icon:Gauge,capability:"view_tasks"},
-  {href:"/tasks?status=completed",label:"Completed",icon:FileCheck2,capability:"view_tasks"}
- ]}
-];
-
-const developmentSection:NavigationSection={key:"development",label:"Development",icon:FlaskConical,tint:"from-[#7C3AED] to-[#2563EB]",capability:"manage_system",items:[
- {href:"/customers/posp-misp/icall-uat",label:"iCall UAT Integration",icon:FlaskConical,capability:"manage_system"},
- {href:"/customers/posp-misp/import",label:"Bulk POSP / MISP Import",icon:Upload,capability:"manage_system"},
- {href:"/customers/posp-misp/import/batches",label:"Import History",icon:ClipboardList,capability:"manage_system"}
-]};
-
-const permissionRank:Record<PermissionAccess,number>={none:0,view:1,edit:2,approve:3};
-export function permits(permissionAccess:PermissionAccessMap,capability:Capability,minimumAccess:Exclude<PermissionAccess,"none">="view"){return permissionRank[permissionAccess[capability]??"none"]>=permissionRank[minimumAccess]}
-function dedupeNavigationItems(items:NavigationItem[]){const seen=new Set<string>();return items.filter(item=>{const key=`${item.href}::${item.label}`;if(seen.has(key))return false;seen.add(key);return true})}
-export function visibleNavigationSections(role:string|null|undefined,permissionAccess:PermissionAccessMap){const filterNode=(node:NavigationNode):NavigationNode|null=>{if(!permits(permissionAccess,node.capability,node.minimumAccess))return null;if(node.kind!=="group")return node;const items=dedupeNavigationItems(node.items.filter(item=>permits(permissionAccess,item.capability,item.minimumAccess)));return items.length?{...node,items}:null};const availableSections=isIntermediaryOnlyLaunch?navigationSections.filter(section=>section.key==="distribution"):navigationSections;const sections=availableSections.filter(section=>permits(permissionAccess,section.capability,section.minimumAccess)).map(section=>({...section,items:section.items.map(filterNode).filter((node):node is NavigationNode=>Boolean(node))})).filter(section=>section.items.length);return !isIntermediaryOnlyLaunch&&role==="it_super_user"&&permits(permissionAccess,"manage_system","approve")?[...sections,developmentSection]:sections}
+const navigationIcons:Record<string,LucideIcon>={
+ "bar-chart":BarChart3,"check-square":CheckSquare2,"clipboard-list":ClipboardList,"file-check":FileCheck2,
+ flask:FlaskConical,gauge:Gauge,"layout-grid":LayoutGrid,plus:Plus,settings:Settings,"shield-check":ShieldCheck,
+ sparkles:Sparkles,upload:Upload,"user-cog":UserCog,"user-plus":UserPlus,users:UsersRound,
+};
+function iconFor(key:string){return navigationIcons[key]??LayoutGrid}
+function toNavigationItem(entry:NavigationCatalogueItem):NavigationItem{const{presentationKey,...serializable}=entry;return {...serializable,kind:undefined,icon:iconFor(presentationKey)}}
+function toNavigationNode(node:NavigationCatalogueNode):NavigationNode{if(node.kind==="item")return toNavigationItem(node);const{presentationKey,...serializable}=node;return {...serializable,icon:iconFor(presentationKey),items:node.items.map(toNavigationItem)}}
+function toNavigationSection(section:NavigationCatalogueSection):NavigationSection{const{presentationKey,...serializable}=section;return {...serializable,icon:iconFor(presentationKey),items:section.items.map(toNavigationNode)}}
+export const navigationSections:NavigationSection[]=navigationCatalogue.map(toNavigationSection);
+export const permits=navigationPermits;
+export function visibleNavigationSections(role:string|null|undefined,permissionAccess:PermissionAccessMap){return visibleNavigationCatalogue(permissionAccess,{role,intermediaryOnly:isIntermediaryOnlyLaunch}).map(toNavigationSection)}
 
 export function AppNavigation({activeNav,role,permissionAccess}:Props){
  const pathname=usePathname();const searchParams=useSearchParams();const sections=useMemo(()=>visibleNavigationSections(role,permissionAccess),[role,permissionAccess]);const routeSection=sectionForPath(pathname);const resolved=routeSection??(activeNav!=="dashboard"&&activeNav!=="none"?activeNav:null);const[openSection,setOpenSection]=useState<SectionKey|null>(resolved);const[openGroups,setOpenGroups]=useState<Record<string,boolean>>({});const currentQuery=searchParams.toString();
@@ -104,5 +48,5 @@ export function AppNavigation({activeNav,role,permissionAccess}:Props){
 }
 function NavigationGroupView({sectionKey,group,pathname,currentQuery,open,onToggle}:{sectionKey:SectionKey;group:NavigationGroup;pathname:string;currentQuery:string;open:boolean;onToggle:()=>void}){const Icon=group.icon;const active=group.items.some(item=>isCurrent(item.href,pathname,currentQuery));return <div className="rounded-xl"><button type="button" onClick={onToggle} className={`group flex min-h-9 w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-[10.5px] font-semibold transition-all duration-200 ease-out motion-reduce:transform-none hover:translate-x-0.5 hover:shadow-[0_8px_20px_rgba(4,10,28,.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 ${active?"bg-white/12 text-white hover:bg-white/[0.16]":"text-white/82 hover:bg-white/10 hover:text-white"}`}><Icon className="h-3.5 w-3.5 transition-transform duration-200 ease-out motion-reduce:transform-none group-hover:scale-105"/><span className="flex-1 truncate">{group.label}</span><ChevronRight className={`h-3.5 w-3.5 transition-transform duration-200 ease-out motion-reduce:transform-none group-hover:translate-x-0.5 ${open?"rotate-90":""}`}/></button>{open?<div className="ml-3 mt-1 space-y-1 border-l border-white/12 pl-2">{group.items.map(item=><NavigationLink key={`${sectionKey}:${item.href}`} item={item} pathname={pathname} currentQuery={currentQuery}/>)}</div>:null}</div>}
 function NavigationLink({item,pathname,currentQuery}:{item:NavigationItem;pathname:string;currentQuery:string}){const active=isCurrent(item.href,pathname,currentQuery);const Icon=item.icon;return <Link href={item.href} prefetch={false} title={item.label} className={`group flex min-h-9 items-center gap-2 rounded-xl px-2.5 py-2 text-[10.5px] font-semibold transition-all duration-200 ease-out motion-reduce:transform-none hover:translate-x-0.5 hover:shadow-[0_8px_20px_rgba(4,10,28,.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 ${active?"bg-white text-[#17213e] hover:bg-white":"text-white/82 hover:bg-white/10 hover:text-white"}`}><Icon className={`h-3.5 w-3.5 transition-transform duration-200 ease-out motion-reduce:transform-none group-hover:scale-105 ${active?"text-[#6759ff]":"text-white/60"}`}/><span className="truncate">{item.label}</span></Link>}
-export function sectionForPath(pathname:string):SectionKey|null{if(pathname==="/customers/posp-misp/icall-uat")return"development";if(pathname==="/claims"||pathname.startsWith("/claims/"))return"claims";if(pathname==="/intermediaries"||pathname.startsWith("/intermediaries/")||pathname==="/customers/posp-misp"||pathname.startsWith("/customers/posp-misp/"))return"distribution";if(pathname==="/tasks"||pathname.startsWith("/tasks/"))return"tasks";if(pathname==="/reports"||pathname.startsWith("/reports/"))return"reports";if(pathname==="/master-data"||pathname.startsWith("/master-data/")||pathname==="/employees"||pathname.startsWith("/employees/")||pathname==="/customers"||pathname.startsWith("/customers/")||pathname==="/customer-kyc"||pathname.startsWith("/customer-kyc/")||pathname==="/vehicles"||pathname.startsWith("/vehicles/")||pathname==="/policies"||pathname.startsWith("/policies/"))return"master-data";return null}
+export function sectionForPath(pathname:string):SectionKey|null{if(pathname==="/customers/posp-misp/icall-uat"||pathname==="/system/assistant-knowledge")return"development";if(pathname==="/claims"||pathname.startsWith("/claims/"))return"claims";if(pathname==="/intermediaries"||pathname.startsWith("/intermediaries/")||pathname==="/customers/posp-misp"||pathname.startsWith("/customers/posp-misp/"))return"distribution";if(pathname==="/tasks"||pathname.startsWith("/tasks/"))return"tasks";if(pathname==="/reports"||pathname.startsWith("/reports/"))return"reports";if(pathname==="/master-data"||pathname.startsWith("/master-data/")||pathname==="/employees"||pathname.startsWith("/employees/")||pathname==="/customers"||pathname.startsWith("/customers/")||pathname==="/customer-kyc"||pathname.startsWith("/customer-kyc/")||pathname==="/vehicles"||pathname.startsWith("/vehicles/")||pathname==="/policies"||pathname.startsWith("/policies/"))return"master-data";return null}
 export function isCurrent(href:string,pathname:string,currentQuery:string){const[targetPath,targetQuery=""]=href.split("?");if(pathname!==targetPath)return false;if(!targetQuery)return currentQuery.length===0;const expected=new URLSearchParams(targetQuery);const current=new URLSearchParams(currentQuery);return Array.from(expected.entries()).every(([key,value])=>current.get(key)===value)}
