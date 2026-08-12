@@ -6,6 +6,7 @@ import { createFakeAssistantProvider } from "../lib/assistant/fake-provider.ts";
 import { runAssistant } from "../lib/assistant/orchestrator.ts";
 import { createMetadataOnlyAssistantAuditWriter } from "../lib/assistant/audit.ts";
 import { createStaticNavigationResolver } from "../lib/assistant/navigation.ts";
+import { isOperationalSummaryQuery } from "../lib/assistant/operational-contract.ts";
 import { readFile } from "node:fs/promises";
 
 const actor = { profileId: "employee-1", role: "relationship_manager" };
@@ -108,13 +109,17 @@ const liveCount = await runAssistant({
     { label: "All POSP", href: "/intermediaries/posp", requiredCapability: "view_intermediaries" },
     { label: "Add POSP", href: "/intermediaries/posp/new", requiredCapability: "create_intermediary_application", requiredAccess: "edit" },
   ]),
+  operationalRepository: { async summarize() { return { metrics: [{ key: "posp_active", label: "Active POSP accounts", value: 7, href: "/intermediaries/posp" }], asOf: "2026-08-11T12:00:00.000Z", scope: "organization" }; } },
   can: async () => true,
   audit: { async write(event) { liveCountAudit.push(event); } },
 });
-assert.match(liveCount.answer, /Live operational counts are not enabled/);
+assert.match(liveCount.answer, /Active POSP accounts: 7/);
 assert.equal(liveCount.links[0]?.href, "/intermediaries/posp");
 assert.equal(liveCountProvider.calls.length, 0, "unsupported live counts do not call the model provider");
-assert.equal(liveCountAudit.some((event) => event.errorCode === "live_operational_data_not_enabled"), true);
+assert.equal(liveCountAudit.some((event) => event.toolName === "get_operational_summary" && event.decision === "allowed"), true);
+assert.equal(isOperationalSummaryQuery("Is there any inactive partner?"), true);
+assert.equal(isOperationalSummaryQuery("Give me a dashboard overview"), true);
+assert.equal(isOperationalSummaryQuery("Explain POSP onboarding"), false);
 
 const greetingProvider = createFakeAssistantProvider([]);
 const greeting = await runAssistant({
@@ -207,7 +212,7 @@ const provider = createOpenAICompatibleProvider({
 const providerResult = await provider.complete({ messages: [{ role: "user", content: "policy" }] });
 assert.equal(providerResult.kind, "final");
 assert.equal(providerRequest.model, "test-model");
-assert.deepEqual(providerRequest.tools.map((tool) => tool.function.name), ["search_navigation", "search_approved_knowledge"]);
+assert.deepEqual(providerRequest.tools.map((tool) => tool.function.name), ["search_navigation", "search_approved_knowledge", "get_operational_summary"]);
 
 const failedProvider = createOpenAICompatibleProvider({ apiUrl: "https://provider.example", apiKey: "secret", model: "m", fetchImpl: async () => new Response("sensitive upstream body", { status: 500 }) });
 await assert.rejects(() => failedProvider.complete({ messages: [] }), (error) => error instanceof AssistantProviderError && error.message === "provider_unavailable" && !error.message.includes("sensitive"));
@@ -322,4 +327,4 @@ for (const forbidden of ["console.log", "console.error", "messages:", "answer:"]
 const navigationSource = await readFile(new URL("../lib/assistant/navigation.ts", import.meta.url), "utf8");
 assert.match(navigationSource, /navigationCatalogue/, "server navigation resolver derives from the shared permission catalogue");
 
-console.log(JSON.stringify({ cases: 49, status: "ok" }));
+console.log(JSON.stringify({ cases: 52, status: "ok" }));

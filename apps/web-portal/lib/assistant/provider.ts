@@ -5,7 +5,7 @@ export type AssistantProviderMessage = {
   toolCalls?: AssistantToolCall[];
 };
 
-export type AssistantToolName = "search_navigation" | "search_approved_knowledge";
+export type AssistantToolName = "search_navigation" | "search_approved_knowledge" | "get_operational_summary";
 export type AssistantToolCall = { id: string; name: AssistantToolName; query: string };
 export type AssistantProviderResult =
   | { kind: "final"; output: unknown }
@@ -32,6 +32,14 @@ export const ASSISTANT_TOOL_DEFINITIONS = [
       parameters: { type: "object", additionalProperties: false, properties: { query: { type: "string", maxLength: 500 } }, required: ["query"] },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "get_operational_summary",
+      description: "Return current permission-scoped aggregate counts for INSUREIT operations. Never returns raw records or personal data.",
+      parameters: { type: "object", additionalProperties: false, properties: { query: { type: "string", maxLength: 500 } }, required: ["query"] },
+    },
+  },
 ] as const;
 
 export class AssistantProviderError extends Error {
@@ -55,11 +63,11 @@ type ProviderConfig = {
 function parseToolCall(value: unknown): AssistantToolCall | null {
   if (!value || typeof value !== "object") return null;
   const call = value as { id?: unknown; function?: { name?: unknown; arguments?: unknown } };
-  if (typeof call.id !== "string" || !call.function || (call.function.name !== "search_navigation" && call.function.name !== "search_approved_knowledge") || typeof call.function.arguments !== "string") return null;
+  if (typeof call.id !== "string" || !call.function || !["search_navigation", "search_approved_knowledge", "get_operational_summary"].includes(String(call.function.name)) || typeof call.function.arguments !== "string") return null;
   try {
     const args = JSON.parse(call.function.arguments) as Record<string, unknown>;
     if (Object.keys(args).length !== 1 || typeof args.query !== "string" || !args.query.trim() || args.query.length > 500) return null;
-    return { id: call.id, name: call.function.name, query: args.query.trim() };
+    return { id: call.id, name: call.function.name as AssistantToolName, query: args.query.trim() };
   } catch {
     return null;
   }

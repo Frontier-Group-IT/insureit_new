@@ -19,6 +19,7 @@ import { createPermissionAwareNavigationResolver } from "@/lib/assistant/navigat
 import { runAssistant, type AssistantUsageAuditWriter } from "@/lib/assistant/orchestrator";
 import { ASSISTANT_LIMITS, isInternalEmployeeRole, validateAssistantRequest, validateRequestEnvelope } from "@/lib/assistant/policy";
 import { createPostgresKnowledgeRepository } from "@/lib/assistant/postgres-knowledge";
+import { createOperationalSummaryRepository } from "@/lib/assistant/operational";
 import { AssistantProviderError, createConfiguredAssistantProvider } from "@/lib/assistant/provider";
 
 export const dynamic = "force-dynamic";
@@ -177,6 +178,7 @@ export async function POST(request: Request) {
       ...validated.value,
       provider,
       knowledgeRepository: createPostgresKnowledgeRepository(admin, resolvePermissionAccess),
+      operationalRepository: createOperationalSummaryRepository({ admin, profileId: profile.id, role, can: canCapability }),
       navigationResolver: {
         async search(query, actor) {
           const authorization = await resolveCurrentAuthorization();
