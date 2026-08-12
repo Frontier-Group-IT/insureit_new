@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #279 Existing Intermediary Migration server-error messaging improvement to production.",
-  "deploy_requested_at": "2026-08-12T11:42:00+05:30",
+  "purpose": "Deploy PR #280 profile synchronization database-error diagnostic to production.",
+  "deploy_requested_at": "2026-08-12T12:12:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #279 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
-  "source_commit": "c040d0e3659fbf8f50074405b860cad73209b8dd",
-  "release_scope": "Deploy the Existing Intermediary Migration frontend diagnostic improvement so deliberate user-facing server-action failure messages are preserved and shown in the existing workflow error dialog instead of being replaced by the generic primary-save error. Keep raw Supabase/Postgres exception details hidden and preserve all existing validation rules, database behavior, ID synchronization, permissions, workflow progression, and save behavior.",
-  "verification": "PR #279 Verify web portal run 31568994831 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
+  "source": "ChatGPT explicit request to merge PR #280 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
+  "source_commit": "13661bcc6a12222ab7d6fc293bb9b772dbccb455",
+  "release_scope": "Deploy the diagnostic improvement for Existing Intermediary Migration so a failing canonical posp_misp_onboarding_profiles synchronization surfaces the sanitized Supabase/Postgres error message in the existing workflow error dialog. Preserve all existing validation rules, ID synchronization behavior, database schema, permissions, workflow progression, and deliberate Save & Exit / Upload Documents behavior.",
+  "verification": "PR #280 Verify web portal run 31570918986 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
