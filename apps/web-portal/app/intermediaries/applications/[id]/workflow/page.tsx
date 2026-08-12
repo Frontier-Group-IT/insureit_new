@@ -99,7 +99,7 @@ const successes: Record<string, string> = {
 const popupEvents = new Set(["documents_completed", "training_assigned", "training_status_updated", "exam_allotted", "exam_passed", "exam_failed", "agreement_sent", "agreement_signed", "onboarding_completed"]);
 const workflowStages: ViewStage[] = ["primary", "documents", "registration", "training", "agreement", "iib"];
 
-export default async function IntermediaryWorkflowPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; success?: string; stage?: string; field?: string }> }) {
+export default async function IntermediaryWorkflowPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; success?: string; stage?: string; field?: string; migration_error?: string }> }) {
   await requirePospMispManager();
   const { id } = await params;
   const query = await searchParams;
@@ -143,6 +143,7 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
   const registrationComplete = signedRegistrationUploaded || progressedBeyondRegistration;
   const shouldRefresh = profile.workflow_stage === "pre_iib" && (!panJob || ["pending", "queued", "checking"].includes(panJob.status ?? ""));
   const normalizedError = normalizeWorkflowError(query.error, query.field);
+  const workflowErrorMessage = query.error === "posp_misp_edit_failed" && query.migration_error?.trim() ? query.migration_error.trim() : normalizedError.message;
   const requestedStage = normalizedError.field ? "primary" : workflowStages.includes(query.stage as ViewStage) ? query.stage as ViewStage : null;
   const unlocked = new Set<ViewStage>(["primary"]);
   if (profile.workflow_stage !== "pre_iib") unlocked.add("documents");
@@ -185,7 +186,7 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
     <AppShell title="Intermediary Workflow">
       <PanVerificationAutoRefresh enabled={shouldRefresh} />
       <WorkflowResultDialog applicationId={id} event={popupEvent} />
-      <WorkflowErrorDialog applicationId={id} message={normalizedError.message} field={normalizedError.field} />
+      <WorkflowErrorDialog applicationId={id} message={workflowErrorMessage} field={normalizedError.field} />
       <div className="mx-auto max-w-[1480px] space-y-4 pb-8">
         <div>
         <section className="overflow-hidden rounded-t-2xl border border-b-0 border-[#17365D] bg-[#17365D] px-4 py-4 text-white sm:px-5">
