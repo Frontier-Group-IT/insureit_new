@@ -18,7 +18,7 @@ type Props = {
   activeNav?: "dashboard" | "claims" | "master-data" | "distribution" | "tasks" | "reports" | "none";
 };
 
-// Desktop content spacing follows the Shield Rail's persisted expanded/collapsed width.
+// Keep desktop content aligned with the Shield Rail's persisted expanded/collapsed width.
 type SidebarStyle = CSSProperties & { "--portal-sidebar-width": string };
 
 export async function ClaimManagerShell({ title, backHref = internalLaunchHome, children, activeNav = "claims" }: Props) {
