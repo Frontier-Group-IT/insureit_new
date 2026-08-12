@@ -1,0 +1,153 @@
+# Review-only deployment for the self-managed claims feature branch. Never targets production hosting.
+# The browser preview intentionally connects to the existing original InsureIT Supabase project.
+name: Deploy mobile browser preview
+
+on:
+  push:
+    branches:
+      - feature/self-managed-claims
+    paths:
+      - 'apps/mobile-app/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-mobile-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: insureit-mobile-browser-preview
+  cancel-in-progress: true
+
+env:
+  EXPO_PUBLIC_SUPABASE_URL: https://ilzhsfqqjyppzzvfscmh.supabase.co
+  EXPO_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj
+  MOBILE_PREVIEW_BASE_PATH: /insureit_new
+
+jobs:
+  deploy-preview:
+    name: Build and deploy review site when Pages is enabled
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Check whether GitHub Pages is enabled
+        id: pages
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          status=$(curl --silent --output /tmp/pages.json --write-out "%{http_code}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pages")
+
+          if [ "$status" = "200" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "GitHub Pages is not enabled yet; hosted preview deployment is being skipped safely."
+          fi
+
+      - name: Checkout repository
+        if: steps.pages.outputs.enabled == 'true'
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        if: steps.pages.outputs.enabled == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        if: steps.pages.outputs.enabled == 'true'
+        run: npm install --no-audit --no-fund
+
+      - name: Configure Expo Router review base path
+        if: steps.pages.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'apps/mobile-app/app.json';
+          const config = JSON.parse(fs.readFileSync(path, 'utf8'));
+          config.expo.experiments = {
+            ...(config.expo.experiments || {}),
+            baseUrl: process.env.MOBILE_PREVIEW_BASE_PATH,
+          };
+          fs.writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`);
+          NODE
+
+      - name: Build Expo web preview
+        if: steps.pages.outputs.enabled == 'true'
+        run: npm run build:mobile:web
+
+      - name: Prepare GitHub Pages SPA fallback and PWA paths
+        if: steps.pages.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const base = process.env.MOBILE_PREVIEW_BASE_PATH;
+          const dist = path.join('apps', 'mobile-app', 'dist-web');
+          const indexPath = path.join(dist, 'index.html');
+          let html = fs.readFileSync(indexPath, 'utf8');
+          html = html
+            .replace('href="/manifest.webmanifest"', `href="${base}/manifest.webmanifest"`)
+            .replace('href="/pwa/icon-192.png"', `href="${base}/pwa/icon-192.png"`);
+          fs.writeFileSync(indexPath, html);
+          fs.copyFileSync(indexPath, path.join(dist, '404.html'));
+
+          const manifestPath = path.join(dist, 'manifest.webmanifest');
+          const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+          manifest.start_url = `${base}/`;
+          manifest.scope = `${base}/`;
+          manifest.icons = (manifest.icons || []).map((icon) => ({
+            ...icon,
+            src: icon.src.startsWith('/') ? `${base}${icon.src}` : icon.src,
+          }));
+          fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+          fs.writeFileSync(path.join(dist, '.nojekyll'), '');
+          NODE
+
+      - name: Configure GitHub Pages
+        if: steps.pages.outputs.enabled == 'true'
+        uses: actions/configure-pages@v5
+
+      - name: Upload GitHub Pages artifact
+        if: steps.pages.outputs.enabled == 'true'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: apps/mobile-app/dist-web
+
+      - name: Deploy browser preview
+        if: steps.pages.outputs.enabled == 'true'
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Preview summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## InsureIT mobile browser preview"
+            echo
+            if [ "${{ steps.pages.outputs.enabled }}" = "true" ]; then
+              echo "- Hosted preview: ${{ steps.deployment.outputs.page_url }}"
+              echo "- Backend connection: original InsureIT Supabase project"
+              echo "- Data warning: preview actions use the same database and RLS as the original app"
+            else
+              echo "- Hosted preview: not deployed because GitHub Pages is not enabled for this repository"
+              echo "- Safe state: no production website or Expo production channel was changed"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

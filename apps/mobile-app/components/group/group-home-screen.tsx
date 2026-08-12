@@ -167,7 +167,7 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
         <View style={styles.quickActionGrid}>
           <QuickAction icon="account-plus-outline" label="Add Account" disabled={underReview} onPress={() => router.push('/customer/group/add-account')} />
           <QuickAction icon="truck-plus-outline" label="Add Vehicle" disabled={underReview} onPress={() => router.push('/customer/add-vehicle')} />
-          <QuickAction icon="shield-plus-outline" label="Start Claim" disabled={underReview} onPress={() => router.push('/customer/report-accident')} />
+          <QuickAction icon="shield-plus-outline" label="Start Claim" disabled={underReview} onPress={() => router.push('/customer/start-claim')} />
           <QuickAction icon="file-document-plus-outline" label="Get Quote" disabled={underReview} onPress={() => router.push('/customer/insurance-quote')} />
         </View>
       </View>

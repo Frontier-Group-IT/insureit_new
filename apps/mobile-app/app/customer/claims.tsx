@@ -103,7 +103,7 @@ export default function ClaimsScreen() {
         const policyExpiredBeforeIncident = isIncidentAfterPolicyExpiry(claim, policy);
 
         return (
-          <Pressable key={claim.id} accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/claim-detail', params: { id: claim.id } })} style={[styles.claimCard, { backgroundColor: tone.background, borderColor: tone.border }]}>
+          <Pressable key={claim.id} accessibilityRole="button" onPress={() => router.push((claim as Claim & { claim_service_mode?: string }).claim_service_mode === 'self_managed' ? { pathname: '/customer/self-managed-claim-detail', params: { id: claim.id } } : { pathname: '/customer/claim-detail', params: { id: claim.id } })} style={[styles.claimCard, { backgroundColor: tone.background, borderColor: tone.border }]}>
             <View style={[styles.accentBar, { backgroundColor: tone.accent }]} />
 
             <View style={styles.claimTop}>
