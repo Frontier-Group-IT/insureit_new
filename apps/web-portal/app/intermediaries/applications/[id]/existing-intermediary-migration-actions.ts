@@ -100,8 +100,13 @@ export async function updateExistingIntermediaryMigrationDetails(
     iibRegistrationStatus,
   });
 
+  const currentDraft = object(current.draft_data);
+  const parentApplicationId = recordText(currentDraft.parent_partner_application_id);
+  const familyRootApplicationId = accountContext(current.draft_data) === "partner" ? current.id : parentApplicationId;
   const partnerRecordId = current.partner_record_id ?? currentProfile.partner_record_id;
+
   let applications: ApplicationRow[] = [current];
+
   if (partnerRecordId) {
     const { data, error } = await admin
       .from("intermediary_onboarding_applications")
@@ -109,7 +114,41 @@ export async function updateExistingIntermediaryMigrationDetails(
       .eq("partner_record_id", partnerRecordId)
       .returns<ApplicationRow[]>();
     if (error) return { ok: false, message: "Linked account records could not be loaded." };
-    applications = uniqueApplications([current, ...(data ?? [])]);
+    applications = uniqueApplications([...applications, ...(data ?? [])]);
+  }
+
+  if (familyRootApplicationId && familyRootApplicationId !== current.id) {
+    const { data: parentApplication, error: parentError } = await admin
+      .from("intermediary_onboarding_applications")
+      .select("id,partner_record_id,draft_data")
+      .eq("id", familyRootApplicationId)
+      .maybeSingle<ApplicationRow>();
+    if (parentError) return { ok: false, message: "The parent Partner record could not be loaded." };
+    if (parentApplication) applications = uniqueApplications([...applications, parentApplication]);
+  }
+
+  const rootId = familyRootApplicationId ?? (accountContext(current.draft_data) === "partner" ? current.id : null);
+  if (rootId) {
+    const { data: linkedChildren, error: linkedChildrenError } = await admin
+      .from("intermediary_onboarding_applications")
+      .select("id,partner_record_id,draft_data")
+      .contains("draft_data", { parent_partner_application_id: rootId })
+      .returns<ApplicationRow[]>();
+    if (linkedChildrenError) return { ok: false, message: "Linked POSP/MISP records could not be loaded." };
+    applications = uniqueApplications([...applications, ...(linkedChildren ?? [])]);
+  }
+
+  const discoveredPartnerRecordIds = Array.from(
+    new Set(applications.map((item) => item.partner_record_id).filter((value): value is string => Boolean(value))),
+  );
+  if (discoveredPartnerRecordIds.length) {
+    const { data: partnerLinkedApplications, error: partnerLinkedError } = await admin
+      .from("intermediary_onboarding_applications")
+      .select("id,partner_record_id,draft_data")
+      .in("partner_record_id", discoveredPartnerRecordIds)
+      .returns<ApplicationRow[]>();
+    if (partnerLinkedError) return { ok: false, message: "Linked account records could not be loaded." };
+    applications = uniqueApplications([...applications, ...(partnerLinkedApplications ?? [])]);
   }
 
   const applicationIds = applications.map((item) => item.id);
@@ -268,6 +307,7 @@ function accountContext(draft: Record<string, unknown> | null | undefined) {
 function uniqueApplications(applications: ApplicationRow[]) {
   return Array.from(new Map(applications.map((application) => [application.id, application])).values());
 }
+function recordText(value: unknown) { return typeof value === "string" && value.trim() ? value.trim() : null; }
 function toTimestamp(value: string | null) { return value ? `${value}T00:00:00.000Z` : null; }
 function text(data: FormData, key: string) { const value = data.get(key); return typeof value === "string" && value.trim() ? value.trim() : null; }
 function optionalText(data: FormData, key: string) { return text(data, key); }
