@@ -1,12 +1,58 @@
 # Current Chat Handoff
 
-> **Consolidated:** 2026-08-09 (IST)
+> **Consolidated:** 2026-08-12 (IST)
 >
 > Read with `docs/INSUREIT_PROJECT_CONTEXT.md` and `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md`. Never store secrets, raw OCR text, policyholder PII, or complete policy documents here.
 
 ## Active track
 
-Policy Onboarding OCR hardening is the immediate active work. Production portal is `https://portal.insureit.in`. Ordinary commits do not intentionally deploy production; `.deploy/production-trigger.json` is changed only after the user explicitly says `deploy now` or `finish and deploy`.
+Policy Onboarding OCR hardening remains an active workstream. Production portal is `https://portal.insureit.in`. Ordinary commits do not intentionally deploy production; `.deploy/production-trigger.json` is changed only after the user explicitly says `deploy now` or `finish and deploy`.
+
+A separate master-data administration change was added on 2026-08-12: protected deletion controls for existing customers, vehicles, and policies are now available only to the `it_super_user` role in the Customers, Vehicles, and Policies registries.
+
+## IT Super User master-record deletion controls
+
+Implemented on `main` on 2026-08-12.
+
+Files:
+
+```text
+apps/web-portal/app/master-record-delete-actions.ts
+apps/web-portal/components/it-super-user-delete-panel.tsx
+apps/web-portal/app/customers/page.tsx
+apps/web-portal/app/vehicles/page.tsx
+apps/web-portal/app/policies/page.tsx
+```
+
+Security and behavior rules:
+
+- The deletion panel renders only when the authenticated server profile role is exactly `it_super_user`.
+- The server action independently re-authenticates and rejects every role except exact `it_super_user`; UI visibility is not the security boundary.
+- Deletion uses the server-only Supabase admin client only after this exact role check.
+- The UI requires selecting the exact record and typing `DELETE` before permanent deletion.
+- Customer deletion is blocked while linked vehicles, policies, or claims exist.
+- Vehicle deletion is blocked while linked policies or claims exist.
+- Policy deletion is blocked while linked claims exist.
+- This prevents the existing `ON DELETE CASCADE` customer -> vehicle/policy and vehicle -> policy relationships from silently deleting dependent master data.
+- A remaining database foreign-key reference is treated as a safe block rather than bypassed.
+- Successful deletion writes an `audit_logs` entry with the actor, table, record id, and deletion source.
+- Customer Auth/profile identities are intentionally not deleted by this feature; the request covered master records only. Auth identity removal must remain a separate explicit operation.
+- No Supabase migration is required for this feature.
+- Do not weaken these dependency checks or convert them to cascade deletion without explicit product approval.
+
+Implementation commits in this sequence:
+
+```text
+f928a951fbca0504499ebcfb2903203a94b2c19c
+ e23f0a98cb2b2f2af52823cf6c5b15aab89d9cba
+ bd0a8d6e57503552f14d5813b003acf683eac0de
+ 2e1e7f907fbaac888941e5ffe0a1ecbb441163df
+ 87e59f659c050d8d447d4f8a44a0dace8a5fac15
+```
+
+The GitHub `Verify web portal` workflow for head `87e59f659c050d8d447d4f8a44a0dace8a5fac15` passed access-control regressions, OCR regressions, TypeScript, and lint; production build was still running when this handoff section was written. Re-check workflow run `31571721254` before calling verification complete.
+
+No production deployment was triggered by this work.
 
 ## Verified pre-change parser baseline
 
@@ -78,18 +124,6 @@ f16058c0c159ec90f46d4b28a718d3205ab82a7b
 
 ## Immediate next step
 
-Before any deployment, user/local environment should run:
-
-```text
-npm run policy-ocr:iffco-structured-regression
-npm run policy-ocr:iffco-regression
-npm run policy-ocr:digit-regression
-npm run policy-ocr:new-india-regression
-npm run typecheck
-npm run lint
-npm run build
-```
-
-If these pass, wait for explicit deployment approval. After deployment, upload the same IFFCO file and verify OD `15042`, TP `7367`, CPA `330`. If Google returns no usable structured table rows, preserve Review Required and inspect sanitized structural evidence; do not add another proximity-based numeric guess.
+For OCR deployment, continue to follow the regression and explicit-deploy gate in `AGENTS.md`. For the master-record delete feature, first confirm the latest `Verify web portal` workflow is green; then wait for explicit deployment approval. After deployment, test with disposable dependency-free records and separately verify that customer/vehicle/policy records with linked dependencies are rejected with a clear message.
 
 United India remains deferred.
