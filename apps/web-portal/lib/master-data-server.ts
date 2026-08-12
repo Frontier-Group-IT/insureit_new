@@ -7,7 +7,7 @@ import type { Capability } from "@/lib/roles";
 export async function requireCapability(capability: Capability, minimumAccess?: "view" | "edit" | "approve") {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!(await hasEffectiveCapability(profile, capability, minimumAccess))) redirect("/access-denied");
+  if (!profile || !(await hasEffectiveCapability(profile, capability, minimumAccess))) redirect("/access-denied");
   return profile;
 }
 
