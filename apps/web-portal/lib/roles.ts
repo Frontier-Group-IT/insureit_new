@@ -94,8 +94,8 @@ export const roleCapabilities: Record<AppRole, readonly Capability[]> = {
     "manage_tasks", "view_reports", "view_notifications"
   ],
   relationship_manager: [
-    "view_dashboard", "view_intermediaries", "create_intermediary_application", "view_customers",
-    "manage_customers", "view_kyc", "view_tasks", "view_notifications"
+    "view_dashboard", "view_claims", "view_intermediaries", "create_intermediary_application", "view_customers",
+    "manage_customers", "view_kyc", "view_vehicles", "view_policies", "view_tasks", "view_notifications"
   ],
   claims_head: ["view_dashboard", "view_claims", "manage_claims", "view_tasks", "manage_tasks", "view_reports", "view_notifications"],
   claim_processor: ["view_dashboard", "view_claims", "manage_claims", "view_tasks", "manage_tasks", "view_notifications"],
