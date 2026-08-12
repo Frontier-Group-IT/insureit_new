@@ -28,6 +28,12 @@ const SEARCH_STOP_WORDS = new Set([
   "a", "accounts", "active", "an", "are", "can", "could", "count", "currently", "for", "how", "i", "is", "many", "me", "now", "please", "right", "the", "to", "total", "where", "you",
 ]);
 
+const SEARCH_CORRECTIONS: Record<string, string> = {
+  opent: "open", opne: "open", poen: "open", cliams: "claims", cliam: "claim",
+  polciy: "policy", polcies: "policies", custmer: "customer", custmers: "customers",
+  vechicle: "vehicle", vechicles: "vehicles", dashbord: "dashboard", onboardng: "onboarding",
+};
+
 const DEFAULT_NAVIGATION: StaticNavigationEntry[] = [...navigationCatalogue, developmentNavigationSection].flatMap((section) =>
   section.items.flatMap((node) => node.kind === "group"
     ? node.items.map((entry) => ({ label: entry.label, href: entry.href, requiredCapability: entry.capability, requiredAccess: entry.minimumAccess, keywords: [section.label, node.label] }))
@@ -62,7 +68,7 @@ export function createStaticNavigationResolver(entries: StaticNavigationEntry[] 
   return {
     async search(query: string, _actor: AssistantActor) {
       void _actor;
-      const normalized = query.trim().toLowerCase();
+      const normalized = query.trim().toLowerCase().replace(/[^a-z0-9/?=&]+/g, " ").split(/\s+/).map((word) => SEARCH_CORRECTIONS[word] ?? word).join(" ").trim();
       if (!normalized || normalized.length > 500) return [];
       const terms = normalized.split(/\s+/).filter((term) => term && !SEARCH_STOP_WORDS.has(term)).slice(0, 8);
       if (!terms.length) return [];
@@ -74,6 +80,7 @@ export function createStaticNavigationResolver(entries: StaticNavigationEntry[] 
           if (matchedTerms.length === terms.length) score += 20;
           if (entry.labelText === normalized) score += 40;
           if (/\b(add|create|new|onboard|upload)\b/.test(normalized)) score += /\b(add|new)\b/.test(entry.labelText) ? 25 : -10;
+          if (/\b(open|page)\b/.test(normalized) && !/\b(add|create|new|onboard|upload)\b/.test(normalized)) score += /\b(all|register)\b/.test(entry.labelText) ? 20 : 0;
           if (/\b(list|register|show|view|find|all|count|total|how many)\b/.test(normalized)) score += /\b(all|register)\b/.test(entry.labelText) ? 20 : 0;
           if (/\b(existing)\b/.test(normalized)) score += entry.searchText.includes("existing") ? 30 : -15;
           return { entry, score };

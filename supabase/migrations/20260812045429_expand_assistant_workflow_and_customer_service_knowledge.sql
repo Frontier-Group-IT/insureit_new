@@ -1,0 +1,62 @@
+-- Approved operational guidance derived from the current portal navigation and
+-- implemented workflows. This is retrieval knowledge, not model fine-tuning.
+-- Every entry retains the capability floor of its destination.
+
+insert into public.assistant_knowledge_entries (
+  route, title, content, tags, source_reference, required_capabilities,
+  required_access, route_required_permissions, version, status,
+  effective_from, is_revoked, published_at
+)
+values
+  ('/dashboard', 'INSUREIT assistant capabilities',
+   'The INSUREIT Assistant can open permitted portal destinations, explain approved portal workflows, answer general portal and customer-service questions from published knowledge, and show current aggregate operational metrics that the employee is allowed to view. It is read-only. It cannot update records, approve work, expose restricted personal data, provide unrestricted database access, or bypass employee permissions.',
+   array['assistant','help','capabilities','chatbot'], 'apps/web-portal/lib/assistant/orchestrator.ts', array['view_dashboard'], 'view', '{"view_dashboard":"view"}'::jsonb, 1, 'published', now(), false, now()),
+  ('/intermediaries/posp', 'What a POSP account means in INSUREIT',
+   'In the INSUREIT portal, POSP is a distinct intermediary account context. POSP records have their own register, onboarding route, existing-person linking route, application review stages, assigned relationship context, activation state, and permission-controlled portal access. POSP must not be treated as MISP or Partner because their account contexts and workflows are distinct.',
+   array['posp','definition','account','intermediary'], 'docs/INSUREIT_PROJECT_CONTEXT.md; apps/web-portal/lib/navigation-catalogue.ts', array['view_intermediaries'], 'view', '{"view_intermediaries":"view"}'::jsonb, 1, 'published', now(), false, now()),
+  ('/intermediaries/misp', 'What a MISP account means in INSUREIT',
+   'In the INSUREIT portal, MISP is a distinct intermediary account context with a dedicated register, onboarding route, existing-record linking route, application workflow, and permission-controlled access. MISP must remain separate from POSP and Partner in filters, counts, onboarding, and account status.',
+   array['misp','definition','account','intermediary'], 'docs/INSUREIT_PROJECT_CONTEXT.md; apps/web-portal/lib/navigation-catalogue.ts', array['view_intermediaries'], 'view', '{"view_intermediaries":"view"}'::jsonb, 1, 'published', now(), false, now()),
+  ('/intermediaries/partner', 'Partner account workflow',
+   'Partner is a parent account context in INSUREIT and is separate from POSP and MISP. Use All Partner to review permitted Partner accounts. Portal user creation or invitation is available only through the permission-controlled Partner account workflow and requires an active eligible account.',
+   array['partner','account','portal user','invitation'], 'apps/web-portal/lib/navigation-catalogue.ts; apps/web-portal/app/intermediaries/portal-account-actions.ts', array['view_intermediaries'], 'view', '{"view_intermediaries":"view"}'::jsonb, 1, 'published', now(), false, now()),
+  ('/customers', 'Customer onboarding entry point',
+   'Use Add Customer to begin customer onboarding, then select the correct customer type. Supported portal entry points include Individual / Proprietor, Dealership, Corporate, and Group. Customer types have different forms and must not be interchanged. Submitted onboarding records are reviewed from Onboarding Applications according to the employee permissions.',
+   array['customer','onboarding','group','corporate','dealership','individual'], 'apps/web-portal/lib/navigation-catalogue.ts', array['view_customers','manage_customers'], 'view', '{"view_customers":"view","manage_customers":"edit"}'::jsonb, 1, 'published', now(), false, now()),
+  ('/customers/applications', 'Customer onboarding review and corrections',
+   'Customer onboarding applications can be submitted, reviewed, approved, rejected, or returned for changes according to the implemented workflow and reviewer permissions. When changes are requested, correct the identified fields or documents and resubmit through the application rather than creating a duplicate customer.',
+   array['customer','application','review','correction','resubmit'], 'docs/INSUREIT_PROJECT_CONTEXT.md; apps/web-portal/lib/navigation-catalogue.ts', array['view_customers','review_kyc'], 'view', '{"view_customers":"view","review_kyc":"edit"}'::jsonb, 1, 'published', now(), false, now()),
+  ('/customer-kyc', 'General customer KYC guidance',
+   'Use Customer KYC to review permitted customer KYC information and Onboarding Applications to review onboarding submissions. Verification and correction actions depend on the employee permission level. Do not disclose or copy full PAN, Aadhaar, bank-account, or other sensitive identity values into chat.',
+   array['customer','kyc','documents','privacy','correction'], 'docs/INSUREIT_PROJECT_CONTEXT.md; apps/web-portal/lib/navigation-catalogue.ts', array['view_customers','view_kyc'], 'view', '{"view_customers":"view","view_kyc":"view"}'::jsonb, 1, 'published', now(), false, now()),
+  ('/policies', 'Policy register and renewal questions',
+   'Use Policy Register to find permitted policy records and review current, expiring, or expired coverage information. A dashboard or assistant count is an operational indicator only; open the policy record to verify dates and details before advising a customer or taking action.',
+   array['policy','renewal','expired','expiring','customer query'], 'apps/web-portal/lib/navigation-catalogue.ts; apps/web-portal/lib/operations-dashboard.ts', array['view_policies'], 'view', '{"view_policies":"view"}'::jsonb, 1, 'published', now(), false, now()),
+  ('/policies/new', 'Policy copy reading and review',
+   'Read Policy Copy can extract approved policy and premium fields for review during Policy Onboarding. OCR proposals are not saved automatically and must be reviewed before applying. OCR must not populate customer, owner, registration, chassis, engine, address, phone, PAN, GST, or similar identity fields from the policy document.',
+   array['policy','ocr','read policy copy','review','privacy'], 'docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md', array['view_policies'], 'view', '{"view_policies":"edit"}'::jsonb, 1, 'published', now(), false, now()),
+  ('/claims', 'General customer claim query guidance',
+   'Use All Claims to locate a permitted claim and review its current stage. Claim work queues cover documents, verification, survey, under repair, and settlement. When answering a customer, confirm the current claim record and latest stage instead of promising an outcome or settlement date that is not recorded.',
+   array['claim','customer query','status','documents','survey','settlement'], 'apps/web-portal/lib/navigation-catalogue.ts; apps/web-portal/lib/manager-dashboard.ts', array['view_claims'], 'view', '{"view_claims":"view"}'::jsonb, 1, 'published', now(), false, now()),
+  ('/claims', 'Claim document replacement and verification',
+   'Claim documents may be pending, verified, or rejected. If a replacement is requested, upload the replacement through the claim workflow. A new upload remains pending until an authorized reviewer verifies it. Do not ask a customer to send sensitive documents through chat.',
+   array['claim','document','replacement','upload','verification'], 'apps/web-portal/app/actions.ts; apps/web-portal/components/final-documents/final-documents-actions.ts', array['view_claims'], 'view', '{"view_claims":"view"}'::jsonb, 1, 'published', now(), false, now()),
+  ('/vehicles', 'Vehicle and fleet questions',
+   'Use Vehicle Register for permitted fleet and vehicle records. Vehicle totals are scope-aware. Open the linked record to verify make, model, registration, policy association, and other details; the assistant does not expose vehicle identifiers or raw vehicle records in chat.',
+   array['vehicle','fleet','customer query','register'], 'apps/web-portal/lib/navigation-catalogue.ts', array['view_vehicles'], 'view', '{"view_vehicles":"view"}'::jsonb, 1, 'published', now(), false, now()),
+  ('/tasks', 'Task ownership and follow-up guidance',
+   'Use All Tasks for permitted tasks, or the Open, In Progress, Overdue, and Completed views. For hierarchy or self-scoped employees, assistant totals are limited to tasks assigned within their accessible scope. Opening a task is required to verify its owner, due date, and follow-up details.',
+   array['task','follow-up','overdue','assigned','scope'], 'apps/web-portal/lib/navigation-catalogue.ts; apps/web-portal/lib/employee-access-scope.ts', array['view_tasks'], 'view', '{"view_tasks":"view"}'::jsonb, 1, 'published', now(), false, now()),
+  ('/forgot-password', 'Portal password reset guidance',
+   'If a portal user cannot sign in because the password is forgotten, use Forgot Password from the sign-in page and complete the authorized reset flow. Do not ask the user to share a password, reset token, session cookie, OTP, or API key in chat.',
+   array['password','forgot password','login','customer query','security'], 'apps/web-portal/components/login-form.tsx', array['view_dashboard'], 'view', '{"view_dashboard":"view"}'::jsonb, 1, 'published', now(), false, now())
+on conflict (route, title, version) do update
+set content = excluded.content,
+    tags = excluded.tags,
+    source_reference = excluded.source_reference,
+    required_capabilities = excluded.required_capabilities,
+    required_access = excluded.required_access,
+    route_required_permissions = excluded.route_required_permissions,
+    status = 'published', effective_from = excluded.effective_from,
+    effective_to = null, is_revoked = false, published_at = excluded.published_at,
+    retired_at = null, updated_at = now();

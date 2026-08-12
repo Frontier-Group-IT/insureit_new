@@ -6,7 +6,7 @@ import { createFakeAssistantProvider } from "../lib/assistant/fake-provider.ts";
 import { runAssistant } from "../lib/assistant/orchestrator.ts";
 import { createMetadataOnlyAssistantAuditWriter } from "../lib/assistant/audit.ts";
 import { createStaticNavigationResolver } from "../lib/assistant/navigation.ts";
-import { isOperationalSummaryQuery } from "../lib/assistant/operational-contract.ts";
+import { classifyCustomerCategory, isOperationalSummaryQuery } from "../lib/assistant/operational-contract.ts";
 import { readFile } from "node:fs/promises";
 
 const actor = { profileId: "employee-1", role: "relationship_manager" };
@@ -120,6 +120,8 @@ assert.equal(liveCountAudit.some((event) => event.toolName === "get_operational_
 assert.equal(isOperationalSummaryQuery("Is there any inactive partner?"), true);
 assert.equal(isOperationalSummaryQuery("Give me a dashboard overview"), true);
 assert.equal(isOperationalSummaryQuery("Explain POSP onboarding"), false);
+assert.equal(classifyCustomerCategory("how many total group customers I have"), "group");
+assert.equal(classifyCustomerCategory("total corporate customers"), "corporate");
 
 const greetingProvider = createFakeAssistantProvider([]);
 const greeting = await runAssistant({
@@ -171,6 +173,50 @@ const deterministicNavigation = await runAssistant({
 assert.equal(deterministicNavigation.links[0]?.href, "/intermediaries/posp/new");
 assert.equal(deterministicNavigationProvider.calls.length, 0, "explicit navigation is deterministic and quota-free");
 assert.equal(deterministicNavigationAudit.some((event) => event.toolName === "search_navigation" && event.decision === "allowed"), true);
+
+const typoNavigation = await runAssistant({
+  requestId: "request-typo-navigation", actor,
+  messages: [{ role: "user", content: "Can you opent the POSP page" }], currentPath: "/dashboard",
+  provider: createFakeAssistantProvider([]), knowledgeRepository: { async searchApprovedActive() { return []; } },
+  navigationResolver: pospNavigation, can: async () => true, audit: { async write() {} },
+});
+assert.equal(typoNavigation.links[0]?.href, "/intermediaries/posp", "common navigation typos remain deterministic");
+
+const capabilities = await runAssistant({
+  requestId: "request-capabilities", actor,
+  messages: [{ role: "user", content: "OK then what can you do?" }], currentPath: "/dashboard",
+  provider: createFakeAssistantProvider([]), knowledgeRepository: { async searchApprovedActive() { return []; } },
+  navigationResolver: pospNavigation, can: async () => true, audit: { async write() {} },
+});
+assert.match(capabilities.answer, /live permission-scoped totals/);
+
+const contextualNavigation = await runAssistant({
+  requestId: "request-context-navigation", actor,
+  messages: [{ role: "user", content: "I need the POSP register" }, { role: "assistant", content: "What would you like to do?" }, { role: "user", content: "Open it" }],
+  currentPath: "/dashboard", provider: createFakeAssistantProvider([]),
+  knowledgeRepository: { async searchApprovedActive() { return []; } }, navigationResolver: pospNavigation,
+  can: async () => true, audit: { async write() {} },
+});
+assert.equal(contextualNavigation.links[0]?.href, "/intermediaries/posp", "follow-up navigation uses the preceding user topic");
+
+const contextualCount = await runAssistant({
+  requestId: "request-context-count", actor,
+  messages: [{ role: "user", content: "Tell me about POSP accounts" }, { role: "assistant", content: "What would you like to know?" }, { role: "user", content: "How many are active?" }],
+  currentPath: "/dashboard", provider: createFakeAssistantProvider([]),
+  knowledgeRepository: { async searchApprovedActive() { return []; } }, navigationResolver: pospNavigation,
+  operationalRepository: { async summarize(query) { assert.match(query, /POSP accounts/); return { metrics: [{ key: "posp_active", label: "Active POSP accounts", value: 7, href: "/intermediaries/posp" }], asOf: "2026-08-12T12:00:00.000Z", scope: "organization" }; } },
+  can: async () => true, audit: { async write() {} },
+});
+assert.match(contextualCount.answer, /Active POSP accounts: 7/);
+
+const fallbackQueries = [];
+const fallbackKnowledge = await searchApprovedKnowledge({
+  query: "A customer says they cannot login because they forgot their password",
+  repository: { async searchApprovedActive(query) { fallbackQueries.push(query); return query === "forgot password" ? [{ id: "password-help", title: "Forgot password", excerpt: "Use Forgot Password on the sign-in page.", href: "/forgot-password", requiredCapabilities: [], requiredAccess: "view" }] : []; } },
+  can: async () => true,
+});
+assert.equal(fallbackKnowledge[0]?.id, "password-help");
+assert.deepEqual(fallbackQueries, ["A customer says they cannot login because they forgot their password", "forgot password"]);
 
 await assert.rejects(() => runAssistant({
   actor,
@@ -327,4 +373,4 @@ for (const forbidden of ["console.log", "console.error", "messages:", "answer:"]
 const navigationSource = await readFile(new URL("../lib/assistant/navigation.ts", import.meta.url), "utf8");
 assert.match(navigationSource, /navigationCatalogue/, "server navigation resolver derives from the shared permission catalogue");
 
-console.log(JSON.stringify({ cases: 52, status: "ok" }));
+console.log(JSON.stringify({ cases: 57, status: "ok" }));

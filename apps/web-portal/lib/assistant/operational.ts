@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAccessibleCustomerIds, getAccessibleIntermediaryApplicationIds, getEmployeeAccessScope } from "@/lib/employee-access-scope";
 import type { Capability } from "@/lib/roles";
 import type { PermissionAccess } from "@/lib/permission-management";
-import type { OperationalMetric, OperationalSummaryRepository } from "./operational-contract";
+import { classifyCustomerCategory, type OperationalMetric, type OperationalSummaryRepository } from "./operational-contract";
 
 type CapabilityCheck = (capability: Capability, minimumAccess?: Exclude<PermissionAccess, "none">) => Promise<boolean>;
 type ApplicationRow = { id: string; requested_type: string; partner_status: string | null; draft_data: Record<string, unknown> | null };
@@ -57,7 +57,15 @@ export function createOperationalSummaryRepository(input: {
       }
 
       if (wantsCustomers && await input.can("view_customers")) {
-        metrics.push(metric("customers_total", "Customers", await count(input.admin, "customers", customerIds === null ? undefined : { column: "id", values: customerIds }), "/customers"));
+        const category = classifyCustomerCategory(normalized);
+        let request = input.admin.from("customers").select("id", { count: "exact", head: true });
+        if (customerIds !== null) request = customerIds.length ? request.in("id", customerIds) : request.in("id", ["00000000-0000-0000-0000-000000000000"]);
+        if (category) request = request.eq("partner_type", category);
+        if (/\bactive\b/.test(normalized)) request = request.eq("onboarding_status", "active");
+        const result = await request;
+        if (result.error) throw new Error("operational_customer_query_failed");
+        const categoryLabel = category === "individual_proprietor" ? "Individual / Proprietor" : category ? title(category) : "Customer";
+        metrics.push(metric(`customers_${category ?? "total"}`, `${categoryLabel} customers`, result.count ?? 0, "/customers"));
       }
       if (wantsVehicles && await input.can("view_vehicles")) {
         metrics.push(metric("vehicles_total", "Vehicles", await count(input.admin, "vehicles", customerIds === null ? undefined : { column: "customer_id", values: customerIds ?? [] }), "/vehicles"));

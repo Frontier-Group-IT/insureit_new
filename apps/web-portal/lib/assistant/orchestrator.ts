@@ -28,7 +28,24 @@ const AMBIGUOUS_TOPICS: Record<string, string> = {
 };
 
 function normalizeIntent(value: string) {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const corrections: Record<string, string> = {
+    opent: "open", opne: "open", poen: "open", cliams: "claims", cliam: "claim",
+    polciy: "policy", polcies: "policies", custmer: "customer", custmers: "customers",
+    vechicle: "vehicle", vechicles: "vehicles", dashbord: "dashboard", onboardng: "onboarding",
+  };
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().split(/\s+/).map((word) => corrections[word] ?? word).join(" ");
+}
+
+const DOMAIN_TOPIC = /\b(posp|misp|partner|customer|policy|claim|vehicle|fleet|task|kyc|dashboard|intermediar)/;
+
+function contextualUserQuery(messages: AssistantInputMessage[]): string {
+  const userMessages = messages.filter((message) => message.role === "user");
+  const latest = userMessages.at(-1)?.content.trim() ?? "";
+  const normalized = normalizeIntent(latest);
+  if (userMessages.length < 2 || DOMAIN_TOPIC.test(normalized)) return latest;
+  if (!/\b(it|that|there|this|those|they|them|active|pending)\b/.test(normalized)) return latest;
+  const previous = userMessages.at(-2)?.content.trim() ?? "";
+  return previous ? `${latest} (context: ${previous})` : latest;
 }
 
 function deterministicConversation(messages: AssistantInputMessage[]): AssistantOutput | null {
@@ -37,6 +54,13 @@ function deterministicConversation(messages: AssistantInputMessage[]): Assistant
   if (/^(hi|hello|hey|good morning|good afternoon|good evening)$/.test(normalized)) {
     return {
       answer: "Hello! I can help you find permitted portal pages and explain approved INSUREIT procedures. Try “Take me to POSP onboarding” or “How do I add a policy?”",
+      links: [],
+      citations: [],
+    };
+  }
+  if (/\b(what can you do|how can you help|your capabilities|what do you do|help me use this portal)\b/.test(normalized)) {
+    return {
+      answer: "I can open portal pages, explain approved INSUREIT workflows, answer general customer-service questions, and report live permission-scoped totals for customers, Partners, POSP, MISP, vehicles, policies, claims, and tasks. I am read-only: I do not change records, reveal restricted data, or bypass your access permissions. Try “open the POSP page”, “how do I onboard a customer?”, or “how many Group customers do I have?”",
       links: [],
       citations: [],
     };
@@ -53,7 +77,7 @@ function deterministicConversation(messages: AssistantInputMessage[]): Assistant
 }
 
 function explicitNavigationQuery(messages: AssistantInputMessage[]): string | null {
-  const latest = [...messages].reverse().find((message) => message.role === "user")?.content.trim() ?? "";
+  const latest = contextualUserQuery(messages);
   if (!latest || latest.length > 500) return null;
   const normalized = normalizeIntent(latest);
   if (!/\b(open|go to|take me|where is|where can i|show me|find|navigate|create|add|new|onboard|upload)\b/.test(normalized)) return null;
@@ -62,17 +86,19 @@ function explicitNavigationQuery(messages: AssistantInputMessage[]): string | nu
 }
 
 function explicitKnowledgeQuery(messages: AssistantInputMessage[]): string | null {
-  const latest = [...messages].reverse().find((message) => message.role === "user")?.content.trim() ?? "";
+  const latest = contextualUserQuery(messages);
   if (!latest || latest.length > 500) return null;
   const normalized = normalizeIntent(latest);
-  if (!/\b(how|what|why|explain|procedure|steps|guide|know)\b/.test(normalized)) return null;
+  if (!/\b(how|what|why|explain|procedure|steps|guide|know|password|login|renewal|coverage|document|replacement|support|customer service|help with)\b/.test(normalized)) return null;
   if (/\b(how many|count|total|right now|currently active|currently pending)\b/.test(normalized)) return null;
   return latest;
 }
 
 function liveOperationalQuery(messages: AssistantInputMessage[]): string | null {
-  const latest = [...messages].reverse().find((message) => message.role === "user")?.content.trim() ?? "";
+  const latest = contextualUserQuery(messages);
   if (!latest || latest.length > 500) return null;
+  const normalized = normalizeIntent(latest);
+  if (/\b(open|go to|take me|navigate)\b/.test(normalized) && !/\b(how many|count|total|currently|active|inactive|pending|overdue|expired|expiring|overview|summary)\b/.test(normalized)) return null;
   return isOperationalSummaryQuery(latest) ? latest : null;
 }
 

@@ -1,6 +1,6 @@
 # Current Chat Handoff
 
-> **Consolidated:** 2026-08-11 (IST)
+> **Consolidated:** 2026-08-12 (IST)
 >
 > Read with `docs/INSUREIT_PROJECT_CONTEXT.md` and `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md`. Never store secrets, raw OCR text, policyholder PII, or complete policy documents here.
 
@@ -10,13 +10,13 @@ The isolated employee-assistant Preview on branch `agent/assistant-preview` / PR
 
 ## Assistant Preview continuation state
 
-- **IMPLEMENTED / REAL-TIME PREVIEW DEPLOYMENT PENDING:** Vercel Preview uses the OpenRouter OpenAI-compatible endpoint with a user-managed Preview-only key and restored `google/gemma-4-26b-a4b-it:free`. Explicit procedure questions use deterministic permission-scoped knowledge lookup. The branch now adds aggregate-only real-time operational summaries for permitted POSP/MISP/Partner, customer, vehicle, policy, claim and task metrics. These queries reuse effective capabilities plus organization/hierarchy/self access scopes and never return raw rows, names, phones, policy/claim/vehicle identifiers or other personal data to the model. Local typecheck, lint (existing warnings only), and all assistant regressions pass. The local production build is blocked only by absent local Supabase public environment variables; canonical GitHub CI and Preview deployment remain pending. Never store or repeat the key.
+- **VERIFIED (real-time baseline commit `034439be`):** GitHub Actions run `31564067821` passed and Vercel Preview deployment `dpl_8r1YYT62F5mkXNJoVXRuJHAtLPJA` reached `READY` at the branch alias. This baseline provides aggregate-only permission-scoped live metrics for POSP/MISP/Partner, customers, vehicles, policies, claims and tasks; it never returns raw record data to the model.
+- **IMPLEMENTED / DEPLOYMENT PENDING:** the next assistant expansion adds common typo correction, deterministic capabilities/help responses, conversational follow-up context, intent-based knowledge-search fallback, category-filtered Group/Corporate/Dealership/Individual Proprietor customer counts, and broader workflow/customer-service knowledge. Local typecheck, assistant API regressions and lint pass; lint reports only pre-existing warnings. GitHub CI and Vercel Preview verification remain pending for this exact change set. Never store or repeat the user-managed Preview OpenRouter key.
 - **VERIFIED:** assistant provider connectivity works. The former Vercel AI Gateway path was blocked by `403 customer_verification_required`; direct OpenRouter Preview requests now return controlled assistant responses.
 - **IMPLEMENTED:** provider requests require JSON output and log bounded provider error metadata only. Prompts, answers, keys, and provider bodies are not logged.
 - **IMPLEMENTED:** exact greetings and ambiguous single-topic prompts are answered or clarified deterministically without model quota. Explicit navigation requests are resolved deterministically through the existing permission-aware catalogue; model output cannot grant routes.
 - **IMPLEMENTED:** navigation aliases and scoring distinguish actions such as create/add/onboard from list/register requests for POSP, MISP, customers, vehicles, policies, claims, KYC, and tasks.
-- **APPLIED (test project only):** migration `seed_assistant_starter_knowledge` is applied to Supabase project `jzuqlcysyqtyydukveir`. Five published, permission-scoped starter entries cover POSP onboarding, Policy Onboarding, claims, customer KYC, and task views. A direct permission-scoped RPC query returned the Policy Onboarding entry; count verification returned five active starter entries.
-- **VERIFIED (implementation commit `dd4cbb5`):** GitHub Actions run `31471331526` passed the assistant/security regressions, OCR regressions, typecheck, lint, and production build. Vercel Preview deployment `dpl_7TJ1XXYC1o4YcXf8W1z8bjtvmJej` reached `READY`. Authenticated browser verification of the new greeting, clarification, navigation-ranking, and starter-knowledge journeys remains required.
+- **APPLIED (test project only):** migrations `seed_assistant_starter_knowledge` and `expand_assistant_workflow_and_customer_service_knowledge` are applied to Supabase project `jzuqlcysyqtyydukveir`. Nineteen published, permission-scoped entries now cover assistant capabilities, POSP/MISP/Partner meanings and onboarding, customer onboarding/KYC/review, policies/renewals/OCR, claims and replacement documents, vehicles/fleet, tasks and forgot-password support. Direct permission-scoped RPC searches verified representative POSP, password, capabilities, customer-onboarding and claim-document results.
 - **CLEANUP REQUIRED AFTER TESTING:** remove/deactivate the temporary Preview deployment/configuration and testing resources as previously requested; do not touch production environments while doing so.
 
 ## Verified pre-change parser baseline
