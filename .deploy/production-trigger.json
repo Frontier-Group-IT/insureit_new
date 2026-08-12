@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Partner Register Review action label to production.",
-  "deploy_requested_at": "2026-08-12T17:05:00+05:30",
+  "purpose": "Deploy reporting-hierarchy portfolio access controls to production.",
+  "deploy_requested_at": "2026-08-12T17:18:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #289 and deploy using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "f69a95aefcc0bfbdc1e082009f71cb6449c6b717",
-  "release_scope": "Replace the pending Partner Eye action with the Review text action while preserving View POSP, View MISP, Create POSP, Create MISP, routing, pagination, filters, badges, and table layout.",
-  "verification": "Verify web portal run 31592508616 passed for fc27c7ae before merge. Production workflow must run its compulsory verification gate before the Vercel deploy hook.",
+  "source": "Deploy the verified hierarchy access implementation using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "838d283eefe2c52c4b35f54b13e11437ed79e200",
+  "release_scope": "Enable Sales Head and Relationship Manager portfolio visibility through employee reporting hierarchy -> assigned intermediary/partner -> linked customers -> vehicles -> policies -> claims, including claim-detail and claim-document authorization.",
+  "verification": "Verify web portal run 31593047827 passed for 838d283eefe2c52c4b35f54b13e11437ed79e200. Production workflow must run its compulsory verification gate before the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
