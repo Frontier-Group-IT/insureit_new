@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-export type DeletableMasterEntity = "customer" | "vehicle" | "policy";
+export type DeletableMasterEntity = "customer" | "vehicle" | "policy" | "claim";
 export type MasterRecordDeleteResult = { ok: true } | { ok: false; error: string };
 
 type Dependency = {
@@ -14,7 +14,7 @@ type Dependency = {
 };
 
 const entityConfig: Record<DeletableMasterEntity, {
-  table: "customers" | "vehicles" | "policies";
+  table: "customers" | "vehicles" | "policies" | "claims";
   label: string;
   revalidate: string[];
   dependencies: Dependency[];
@@ -22,7 +22,7 @@ const entityConfig: Record<DeletableMasterEntity, {
   customer: {
     table: "customers",
     label: "customer",
-    revalidate: ["/customers", "/vehicles", "/policies"],
+    revalidate: ["/customers", "/vehicles", "/policies", "/claims"],
     dependencies: [
       { table: "vehicles", column: "customer_id", label: "vehicle" },
       { table: "policies", column: "customer_id", label: "policy" },
@@ -32,7 +32,7 @@ const entityConfig: Record<DeletableMasterEntity, {
   vehicle: {
     table: "vehicles",
     label: "vehicle",
-    revalidate: ["/vehicles", "/policies"],
+    revalidate: ["/vehicles", "/policies", "/claims"],
     dependencies: [
       { table: "policies", column: "vehicle_id", label: "policy" },
       { table: "claims", column: "vehicle_id", label: "claim" }
@@ -41,10 +41,16 @@ const entityConfig: Record<DeletableMasterEntity, {
   policy: {
     table: "policies",
     label: "policy",
-    revalidate: ["/policies"],
+    revalidate: ["/policies", "/claims"],
     dependencies: [
       { table: "claims", column: "policy_id", label: "claim" }
     ]
+  },
+  claim: {
+    table: "claims",
+    label: "claim",
+    revalidate: ["/claims", "/policies", "/vehicles", "/customers"],
+    dependencies: []
   }
 };
 
@@ -61,7 +67,7 @@ export async function deleteMasterRecord(entity: DeletableMasterEntity, id: stri
   const { profile } = await getAuthenticatedProfile(accessToken);
 
   if (!profile?.id || profile.role !== "it_super_user") {
-    return { ok: false, error: "Only the IT Super User can delete customer, vehicle or policy master records." };
+    return { ok: false, error: "Only the IT Super User can permanently delete customer, vehicle, policy or claim records." };
   }
 
   if (!(entity in entityConfig) || !isUuid(id)) {
@@ -95,6 +101,20 @@ export async function deleteMasterRecord(entity: DeletableMasterEntity, id: stri
     }
   }
 
+  const claimFiles: Array<{ storage_bucket: string; storage_path: string }> = [];
+  if (entity === "claim") {
+    const { data: documents, error: documentsError } = await admin
+      .from("claim_documents")
+      .select("storage_bucket, storage_path")
+      .eq("claim_id", id)
+      .returns<Array<{ storage_bucket: string; storage_path: string }>>();
+
+    if (documentsError) {
+      return { ok: false, error: `Unable to verify linked claim documents: ${documentsError.message}` };
+    }
+    claimFiles.push(...(documents ?? []).filter((document) => document.storage_bucket && document.storage_path));
+  }
+
   const { error: deleteError } = await admin.from(config.table).delete().eq("id", id);
   if (deleteError) {
     const referenced = deleteError.code === "23503" || /foreign key|violates/i.test(deleteError.message);
@@ -106,12 +126,28 @@ export async function deleteMasterRecord(entity: DeletableMasterEntity, id: stri
     };
   }
 
+  if (entity === "claim" && claimFiles.length) {
+    const filesByBucket = new Map<string, string[]>();
+    for (const file of claimFiles) {
+      const paths = filesByBucket.get(file.storage_bucket) ?? [];
+      paths.push(file.storage_path);
+      filesByBucket.set(file.storage_bucket, paths);
+    }
+    await Promise.allSettled(
+      Array.from(filesByBucket.entries()).map(([bucket, paths]) => admin.storage.from(bucket).remove(paths))
+    );
+  }
+
   await admin.from("audit_logs").insert({
     actor_id: profile.id,
     action: `delete_${entity}`,
     table_name: config.table,
     record_id: id,
-    old_data: { id, deletion_source: "it_super_user_master_data_control" }
+    old_data: {
+      id,
+      deletion_source: "it_super_user_master_data_control",
+      ...(entity === "claim" ? { cascaded_claim_records: true, storage_files_cleanup_attempted: claimFiles.length } : {})
+    }
   });
 
   config.revalidate.forEach((path) => revalidatePath(path));
