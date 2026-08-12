@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy reporting-hierarchy portfolio access controls to production.",
-  "deploy_requested_at": "2026-08-12T17:18:00+05:30",
+  "purpose": "Deploy Policy Onboarding unregistered vehicle validation hotfix to production.",
+  "deploy_requested_at": "2026-08-12T17:41:13+05:30",
   "requested_by": "explicit user request",
-  "source": "Deploy the verified hierarchy access implementation using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "838d283eefe2c52c4b35f54b13e11437ed79e200",
-  "release_scope": "Enable Sales Head and Relationship Manager portfolio visibility through employee reporting hierarchy -> assigned intermediary/partner -> linked customers -> vehicles -> policies -> claims, including claim-detail and claim-document authorization.",
-  "verification": "Verify web portal run 31593047827 passed for 838d283eefe2c52c4b35f54b13e11437ed79e200. Production workflow must run its compulsory verification gate before the Vercel deploy hook.",
+  "source": "Deploy the unregistered vehicle onboarding validation hotfix using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "38468e18be13d2b5f7e6e395bc49b708ab7175ab",
+  "release_scope": "Allow Policy Onboarding with vehicle.registrationMode='unregistered' to save without a registration number while still requiring chassis and engine numbers. Includes repository migration record for the Supabase hotfix already applied to the live project.",
+  "verification": "Production workflow must run its compulsory verification gate before the Vercel deploy hook. Live Supabase onboard_motor_policy(jsonb) verification already confirmed the old registration-required validation message is no longer present.",
   "instructions": "Update this file only after explicit deployment approval."
 }
