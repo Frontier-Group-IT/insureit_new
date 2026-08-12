@@ -10,9 +10,16 @@ const hierarchyRoles: AppRole[] = ["sales_head", "zonal_head", "asm", "sales_man
 type EmployeeLink = { id: string; reporting_manager_id: string | null };
 type ProfileLink = { id: string; employee_id: string | null };
 type ApplicationLink = { application_id: string };
-type IntermediaryLink = { id: string; application_id: string | null };
+type IntermediaryLink = {
+  id: string;
+  application_id: string | null;
+  intermediary_code?: string | null;
+  associate_employee_id?: string | null;
+  associate_profile_id?: string | null;
+};
 type ImportRowLink = { import_batch_id: string; normalized_data: Record<string, unknown> | null };
 type CustomerLink = { id: string };
+type CustomerIdLink = { customer_id: string };
 type ScopeOverride = { scope_type: string; expires_at: string | null };
 
 export type EmployeeAccessScope = {
@@ -63,15 +70,51 @@ export const getEmployeeAccessScope = cache(async (profileId: string, role: stri
 export async function getAccessibleCustomerIds(profileId: string, role: string | null | undefined, capability: Capability = "view_customers") {
   const scope = await getEmployeeAccessScope(profileId, role, capability);
   if (scope.mode === "organization") return null;
-  if (!scope.profileIds.length) return [];
+  if (!scope.profileIds.length && !scope.employeeIds.length) return [];
 
-  const filters = [
-    `created_by.in.(${scope.profileIds.join(",")})`,
-    `assigned_agent_id.in.(${scope.profileIds.join(",")})`,
-  ];
   const admin = createSupabaseAdminClient();
-  const { data } = await admin.from("customers").select("id").or(filters.join(",")).returns<CustomerLink[]>();
-  return Array.from(new Set((data ?? []).map((row) => row.id).filter(Boolean)));
+  const customerIds = new Set<string>();
+
+  if (scope.profileIds.length) {
+    const filters = [
+      `created_by.in.(${scope.profileIds.join(",")})`,
+      `assigned_agent_id.in.(${scope.profileIds.join(",")})`,
+    ];
+    const { data } = await admin.from("customers").select("id").or(filters.join(",")).returns<CustomerLink[]>();
+    for (const row of data ?? []) if (row.id) customerIds.add(row.id);
+  }
+
+  const intermediaryIds = await getAccessibleIntermediaryIds(profileId, role, capability);
+  if (intermediaryIds?.length) {
+    const [{ data: customerLinks }, { data: intermediaries }] = await Promise.all([
+      admin
+        .from("intermediary_customer_links")
+        .select("customer_id")
+        .in("intermediary_id", intermediaryIds)
+        .returns<CustomerIdLink[]>(),
+      admin
+        .from("intermediaries")
+        .select("id,application_id,intermediary_code")
+        .in("id", intermediaryIds)
+        .returns<IntermediaryLink[]>(),
+    ]);
+
+    for (const row of customerLinks ?? []) if (row.customer_id) customerIds.add(row.customer_id);
+
+    const intermediaryCodes = Array.from(new Set(
+      (intermediaries ?? []).map((row) => row.intermediary_code).filter((code): code is string => Boolean(code))
+    ));
+    if (intermediaryCodes.length) {
+      const { data: policyCustomers } = await admin
+        .from("policies")
+        .select("customer_id")
+        .in("intermediary_code", intermediaryCodes)
+        .returns<CustomerIdLink[]>();
+      for (const row of policyCustomers ?? []) if (row.customer_id) customerIds.add(row.customer_id);
+    }
+  }
+
+  return Array.from(customerIds);
 }
 
 export async function getAccessibleIntermediaryApplicationIds(profileId: string, role: string | null | undefined, capability: Capability = "view_intermediaries") {
@@ -109,12 +152,36 @@ export async function getAccessibleImportBatchIds(profileId: string, role: strin
 }
 
 export async function getAccessibleIntermediaryIds(profileId: string, role: string | null | undefined, capability: Capability = "view_intermediaries") {
-  const applicationIds = await getAccessibleIntermediaryApplicationIds(profileId, role, capability);
-  if (applicationIds === null) return null;
-  if (!applicationIds.length) return [];
+  const scope = await getEmployeeAccessScope(profileId, role, capability);
+  if (scope.mode === "organization") return null;
+  if (!scope.employeeIds.length && !scope.profileIds.length) return [];
+
   const admin = createSupabaseAdminClient();
-  const { data } = await admin.from("intermediaries").select("id,application_id").in("application_id", applicationIds).returns<IntermediaryLink[]>();
-  return Array.from(new Set((data ?? []).map((row) => row.id)));
+  const intermediaryIds = new Set<string>();
+  const directFilters: string[] = [];
+  if (scope.profileIds.length) directFilters.push(`associate_profile_id.in.(${scope.profileIds.join(",")})`);
+  if (scope.employeeIds.length) directFilters.push(`associate_employee_id.in.(${scope.employeeIds.join(",")})`);
+
+  if (directFilters.length) {
+    const { data: directIntermediaries } = await admin
+      .from("intermediaries")
+      .select("id,application_id,associate_employee_id,associate_profile_id")
+      .or(directFilters.join(","))
+      .returns<IntermediaryLink[]>();
+    for (const row of directIntermediaries ?? []) if (row.id) intermediaryIds.add(row.id);
+  }
+
+  const applicationIds = await getAccessibleIntermediaryApplicationIds(profileId, role, capability);
+  if (applicationIds?.length) {
+    const { data: applicationIntermediaries } = await admin
+      .from("intermediaries")
+      .select("id,application_id")
+      .in("application_id", applicationIds)
+      .returns<IntermediaryLink[]>();
+    for (const row of applicationIntermediaries ?? []) if (row.id) intermediaryIds.add(row.id);
+  }
+
+  return Array.from(intermediaryIds);
 }
 
 export async function canAccessCustomer(profileId: string, role: string | null | undefined, customerId: string, capability: Capability = "view_customers") {
