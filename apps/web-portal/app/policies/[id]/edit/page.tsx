@@ -3,6 +3,7 @@ import { PolicyUnifiedForm, type PolicyRmOption, type PolicySourceOption, type P
 import { AppShell } from "@/components/shell";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
+import { loadPolicyPayinBilling } from "@/app/policies/policy-payin-billing-actions";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type PolicyRow = {
@@ -78,6 +79,9 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
       .returns<IntermediaryOption[]>(),
   ]);
 
+  const billingResult = await loadPolicyPayinBilling(id);
+  if (!billingResult.ok) throw new Error(`Unable to load policy PayIn billing: ${billingResult.error}`);
+
   const errors = [customerResult.error, vehicleResult.error, premiumResult.error, payinResult.error, payoutResult.error, activeInsurersResult.error, currentInsurerResult.error, intermediariesResult.error].filter(Boolean);
   if (errors.length) throw new Error(`Unable to load policy edit data: ${errors[0]?.message}`);
   if (!customerResult.data || !vehicleResult.data) throw new Error("The linked customer or vehicle record is missing.");
@@ -127,6 +131,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
   const premium = premiumResult.data;
   const payin = payinResult.data;
   const payout = payoutResult.data;
+  const billing = billingResult.billing;
   const vehicleClass = vehicle.vehicle_class_code || vehicle.vehicle_type || "MISD";
 
   const insurerById = new Map<string, InsurerOption>();
@@ -212,6 +217,13 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     projectedOdPercent: stringValue(payin?.projected_od_percent),
     projectedTpPercent: stringValue(payin?.projected_tp_percent),
     insurerScheme: stringValue(payin?.insurer_scheme_amount),
+    payinBillNo: billing.billNumber,
+    payinBilledAmount: billing.billedAmount,
+    payinBillDate: billing.billDate,
+    payinStatus: billing.status,
+    payinReceivedAmount: billing.receivedAmount,
+    payinReceivedDate: billing.receivedDate,
+    payinReceiptReference: billing.receiptReference,
     retention: stringValue(payout?.retention_amount),
     payoutOdPercent: stringValue(payout?.od_payout_percent),
     payoutTpPercent: stringValue(payout?.tp_payout_percent),
