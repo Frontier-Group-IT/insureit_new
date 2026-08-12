@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { DataError } from "@/components/record-list";
+import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -51,6 +52,17 @@ export default async function CustomersPage() {
     <AppShell title="Customers">
       <DealershipEntryActivator />
       <div className="mx-auto max-w-[1480px]">
+        {profile.role === "it_super_user" && !customersResult.error ? (
+          <ItSuperUserDeletePanel
+            entity="customer"
+            title="Delete customer master record"
+            records={rows.map((customer) => ({
+              id: customer.id,
+              label: customer.contact_name,
+              detail: `${customer.customer_code} • ${customer.phone}`
+            }))}
+          />
+        ) : null}
         {customersResult.error ? (
           <DataError message="The customer register could not be loaded." />
         ) : (
