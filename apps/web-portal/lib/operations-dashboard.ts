@@ -1,4 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
+import { getScopedOperationsDashboardData } from "@/lib/scoped-operations-dashboard";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type RecentApplication = {
   id: string;
@@ -57,6 +60,21 @@ const openTaskStatuses = ["open", "in_progress"];
 const activeOnboardingStatuses = ["submitted", "under_review", "changes_requested"];
 
 export async function getOperationsDashboardData(supabase: SupabaseClient): Promise<OperationsDashboardData> {
+  const { data: authData } = await supabase.auth.getUser();
+  const authUserId = authData.user?.id;
+  if (authUserId) {
+    const admin = createSupabaseAdminClient();
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("id,role")
+      .eq("id", authUserId)
+      .maybeSingle<{ id: string; role: string | null }>();
+    if (profile?.id) {
+      const customerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_customers");
+      if (customerIds !== null) return getScopedOperationsDashboardData(customerIds);
+    }
+  }
+
   const rpcResult = await supabase.rpc("get_operations_dashboard");
   const rpcDashboard = normalizeRpcDashboard(rpcResult.data);
   if (!rpcResult.error && rpcDashboard) return rpcDashboard;
