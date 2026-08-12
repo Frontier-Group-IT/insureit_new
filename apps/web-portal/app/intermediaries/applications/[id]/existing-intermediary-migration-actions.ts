@@ -242,7 +242,10 @@ export async function updateExistingIntermediaryMigrationDetails(
       coreProfileUpdate.existing_registration_code = migration.legacy_registration_code;
     }
     const { error } = await admin.from("posp_misp_onboarding_profiles").update(coreProfileUpdate).eq("id", profile.id);
-    if (error) return { ok: false, message: "Migration details could not be synchronized to every profile." };
+    if (error) {
+      const detail = error.message.replace(/\s+/g, " ").trim().slice(0, 400);
+      return { ok: false, message: `Profile synchronization failed: ${detail || "Unknown database error."}` };
+    }
 
     if (context !== "partner") {
       const compatibilityUpdate: Record<string, unknown> = {
