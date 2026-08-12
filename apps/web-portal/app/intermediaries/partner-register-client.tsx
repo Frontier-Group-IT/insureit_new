@@ -124,13 +124,9 @@ function renderAction(row: PartnerRegisterRow) {
   const href = row.linkedHref ?? `/intermediaries/applications/${row.applicationId}`;
   if (!row.active || row.linkedHref) {
     return (
-      <FreshAccountReviewLink
-        href={href}
-        className={partnerOpenActionClassName}
-        aria-label={`View ${targetLabel} details`}
-        title={`View ${targetLabel} details`}
-      >
+      <FreshAccountReviewLink href={href} className={partnerOpenActionClassName}>
         <Eye className="h-4 w-4" aria-hidden="true" />
+        <span className="sr-only">View {targetLabel} details</span>
       </FreshAccountReviewLink>
     );
   }
