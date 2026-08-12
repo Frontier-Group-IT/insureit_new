@@ -8,7 +8,7 @@
 
 Reports Phase 1 Business / Policy Production is **DEPLOYED** at `https://portal.insureit.in/reports`.
 
-Reports Phase 2 Distribution and the user-requested Phase 1 text cleanup are **IMPLEMENTED / APPLIED / UNDER FINAL CI VERIFICATION**, but are **not intentionally deployed** yet. Do not update `.deploy/production-trigger.json` until the user explicitly requests deployment.
+Reports Phase 2 Distribution and the user-requested Phase 1 text cleanup are **IMPLEMENTED / APPLIED / VERIFIED**, but are **not intentionally deployed** yet. Do not update `.deploy/production-trigger.json` until the user explicitly requests deployment.
 
 The reports product is data-first and table-first. Keep only main page/section names, filters, factual KPI labels, status labels, table headers and actions. Do not reintroduce explanatory dashboard copy such as data-scope descriptions, as-of cards, report-purpose paragraphs or decorative helper text unless the user explicitly asks.
 
@@ -209,7 +209,28 @@ Workflow run: 31632806025
 Result: SUCCESS
 ```
 
-Phase 2 final verification must be recorded here after the exact final head completes the canonical `Verify web portal` workflow. Required checks include access-control regressions, release-blocker security regression, OCR regressions, TypeScript, lint and Next.js production build.
+Phase 2 verification:
+
+```text
+Verified feature/handoff head: b82c75d1262aef47b9b969f37421d39081201c05
+Workflow: Verify web portal
+Run: 31636132810
+Result: SUCCESS
+Access Control V2 catalogue regression: passed
+Access Control V2 scope and compatibility regression: passed
+Access Control V2 portal lifecycle regression: passed
+Employee portal governance regression: passed
+Release blocker security regression: passed
+IFFCO structured regression: passed
+IFFCO regression: passed
+Digit regression: passed
+New India regression: passed
+Typecheck: passed
+Lint: passed
+Production build: passed
+```
+
+The later commit that only records this verification evidence changes documentation, not application/runtime code.
 
 ## Next phases
 
