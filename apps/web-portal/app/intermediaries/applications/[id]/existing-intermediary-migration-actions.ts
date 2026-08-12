@@ -35,10 +35,12 @@ type ProfileRow = {
   id: string;
   application_id: string;
   partner_record_id: string | null;
+  partner_type: string | null;
   raw_data: Record<string, unknown> | null;
 };
 type ApplicationReferenceRow = { application_id: string };
 type RegistrationReferenceRow = { application_id: string | null };
+type RegistrationContext = "posp" | "misp";
 
 export async function updateExistingIntermediaryMigrationDetails(
   _previous: MigrationSaveState,
@@ -57,7 +59,7 @@ export async function updateExistingIntermediaryMigrationDetails(
       .maybeSingle<ApplicationRow>(),
     admin
       .from("posp_misp_onboarding_profiles")
-      .select("id,application_id,partner_record_id,raw_data")
+      .select("id,application_id,partner_record_id,partner_type,raw_data")
       .eq("application_id", applicationId)
       .maybeSingle<ProfileRow>(),
   ]);
@@ -92,6 +94,7 @@ export async function updateExistingIntermediaryMigrationDetails(
     legacy_migration_updated_at: now,
     legacy_migration_updated_by: actor.id,
   };
+  const { legacy_registration_code: _legacyRegistrationCode, ...sharedMigration } = migration;
   const workflowRegistrationStatus = registrationStatusForLegacyWorkflow({
     trainingStatus,
     examStatus,
@@ -101,8 +104,9 @@ export async function updateExistingIntermediaryMigrationDetails(
   });
 
   const currentDraft = object(current.draft_data);
+  const currentContext = accountContext(current.draft_data);
   const parentApplicationId = recordText(currentDraft.parent_partner_application_id);
-  const familyRootApplicationId = accountContext(current.draft_data) === "partner" ? current.id : parentApplicationId;
+  const familyRootApplicationId = currentContext === "partner" ? current.id : parentApplicationId;
   const partnerRecordId = current.partner_record_id ?? currentProfile.partner_record_id;
 
   let applications: ApplicationRow[] = [current];
@@ -127,7 +131,7 @@ export async function updateExistingIntermediaryMigrationDetails(
     if (parentApplication) applications = uniqueApplications([...applications, parentApplication]);
   }
 
-  const rootId = familyRootApplicationId ?? (accountContext(current.draft_data) === "partner" ? current.id : null);
+  const rootId = familyRootApplicationId ?? (currentContext === "partner" ? current.id : null);
   if (rootId) {
     const { data: linkedChildren, error: linkedChildrenError } = await admin
       .from("intermediary_onboarding_applications")
@@ -154,10 +158,38 @@ export async function updateExistingIntermediaryMigrationDetails(
   const applicationIds = applications.map((item) => item.id);
   const { data: profiles, error: profilesError } = await admin
     .from("posp_misp_onboarding_profiles")
-    .select("id,application_id,partner_record_id,raw_data")
+    .select("id,application_id,partner_record_id,partner_type,raw_data")
     .in("application_id", applicationIds)
     .returns<ProfileRow[]>();
   if (profilesError) return { ok: false, message: "Linked profile records could not be loaded." };
+
+  const registrationContext = resolveRegistrationContext(current, currentProfile);
+  let registrationTargetApplicationId: string | null = null;
+  if (migration.legacy_registration_code) {
+    if (!registrationContext) {
+      return { ok: false, message: "The POSP/MISP account type for this registration ID could not be resolved." };
+    }
+    if (currentContext === registrationContext) {
+      registrationTargetApplicationId = current.id;
+    } else {
+      const matchingChildren = applications.filter((app) => accountContext(app.draft_data) === registrationContext);
+      if (matchingChildren.length !== 1) {
+        return {
+          ok: false,
+          message: matchingChildren.length === 0
+            ? `The linked ${registrationContext.toUpperCase()} account could not be found.`
+            : `More than one linked ${registrationContext.toUpperCase()} account was found; the registration ID could not be synchronized safely.`,
+        };
+      }
+      registrationTargetApplicationId = matchingChildren[0].id;
+    }
+  }
+  const registrationMetadataApplicationIds = new Set(
+    [current.id, registrationTargetApplicationId].filter((value): value is string => Boolean(value)),
+  );
+  const registrationCanonicalApplicationIds = new Set(
+    [registrationTargetApplicationId].filter((value): value is string => Boolean(value)),
+  );
 
   if (migration.legacy_partner_code) {
     const { data: duplicatePartnerProfiles, error } = await admin
@@ -192,25 +224,34 @@ export async function updateExistingIntermediaryMigrationDetails(
     if (profileReferences.error || intermediaryReferences.error || registrationReferences.error) {
       return { ok: false, message: "The POSP/MISP ID could not be validated." };
     }
+    const allowedRegistrationApplicationIds = new Set([
+      current.id,
+      ...registrationCanonicalApplicationIds,
+    ]);
     const registrationInUse = [
       ...(profileReferences.data ?? []),
       ...(intermediaryReferences.data ?? []),
       ...(registrationReferences.data ?? []).filter((row): row is { application_id: string } => Boolean(row.application_id)),
-    ].some((row) => !applicationIds.includes(row.application_id));
+    ].some((row) => !allowedRegistrationApplicationIds.has(row.application_id));
     if (registrationInUse) {
       return { ok: false, message: "The Existing POSP/MISP ID is already used by another account." };
     }
   }
 
-  // The draft/raw migration payload remains the editable source, while canonical IDs are kept in
-  // sync so review headers, partner lists and linked-account cards always read the latest values.
+  // Shared migration details still synchronize across the account family. The registration code itself
+  // is stored only on the edited migration record and its matching POSP/MISP child, so sibling account
+  // IDs remain independent while the intended child stays fully synchronized.
   for (const app of applications) {
     const context = accountContext(app.draft_data);
+    const receivesRegistrationMetadata = registrationMetadataApplicationIds.has(app.id);
     const canonicalDraft = {
       ...object(app.draft_data),
-      ...migration,
+      ...sharedMigration,
+      ...(receivesRegistrationMetadata ? { legacy_registration_code: migration.legacy_registration_code } : {}),
       ...(context !== "partner" && migration.legacy_partner_code ? { linked_partner_code: migration.legacy_partner_code } : {}),
-      ...(context !== "partner" && migration.legacy_registration_code ? { issued_registration_code: migration.legacy_registration_code } : {}),
+      ...(registrationCanonicalApplicationIds.has(app.id) && migration.legacy_registration_code
+        ? { issued_registration_code: migration.legacy_registration_code }
+        : {}),
     };
     const appUpdate: Record<string, unknown> = {
       draft_data: canonicalDraft,
@@ -224,11 +265,15 @@ export async function updateExistingIntermediaryMigrationDetails(
   for (const profile of profiles ?? []) {
     const app = applications.find((item) => item.id === profile.application_id);
     const context = accountContext(app?.draft_data);
+    const receivesRegistrationMetadata = registrationMetadataApplicationIds.has(profile.application_id);
     const canonicalRaw = {
       ...object(profile.raw_data),
-      ...migration,
+      ...sharedMigration,
+      ...(receivesRegistrationMetadata ? { legacy_registration_code: migration.legacy_registration_code } : {}),
       ...(context !== "partner" && migration.legacy_partner_code ? { linked_partner_code: migration.legacy_partner_code } : {}),
-      ...(context !== "partner" && migration.legacy_registration_code ? { issued_registration_code: migration.legacy_registration_code } : {}),
+      ...(registrationCanonicalApplicationIds.has(profile.application_id) && migration.legacy_registration_code
+        ? { issued_registration_code: migration.legacy_registration_code }
+        : {}),
     };
     const coreProfileUpdate: Record<string, unknown> = {
       raw_data: canonicalRaw,
@@ -237,7 +282,7 @@ export async function updateExistingIntermediaryMigrationDetails(
       updated_at: now,
     };
     if (migration.legacy_partner_code) coreProfileUpdate.partner_id = migration.legacy_partner_code;
-    if (context !== "partner" && migration.legacy_registration_code) {
+    if (registrationCanonicalApplicationIds.has(profile.application_id) && migration.legacy_registration_code) {
       coreProfileUpdate.external_onboarding_id = migration.legacy_registration_code;
       coreProfileUpdate.existing_registration_code = migration.legacy_registration_code;
     }
@@ -280,10 +325,12 @@ export async function updateExistingIntermediaryMigrationDetails(
 
     const intermediaryUpdate: Record<string, unknown> = { updated_at: now };
     if (originalActivationDate) intermediaryUpdate.activated_at = toTimestamp(originalActivationDate);
-    if (migration.legacy_registration_code) intermediaryUpdate.intermediary_code = migration.legacy_registration_code;
+    if (registrationCanonicalApplicationIds.has(app.id) && migration.legacy_registration_code) {
+      intermediaryUpdate.intermediary_code = migration.legacy_registration_code;
+    }
     await admin.from("intermediaries").update(intermediaryUpdate).eq("application_id", app.id);
 
-    if (migration.legacy_registration_code) {
+    if (registrationCanonicalApplicationIds.has(app.id) && migration.legacy_registration_code) {
       await admin
         .from("intermediary_registrations")
         .update({ registration_code: migration.legacy_registration_code, updated_at: now })
@@ -306,6 +353,13 @@ export async function updateExistingIntermediaryMigrationDetails(
 function accountContext(draft: Record<string, unknown> | null | undefined) {
   const context = draft?.account_context;
   return context === "posp" || context === "misp" ? context : "partner";
+}
+function resolveRegistrationContext(application: ApplicationRow, profile: ProfileRow): RegistrationContext | null {
+  const context = accountContext(application.draft_data);
+  if (context === "posp" || context === "misp") return context;
+  if (profile.partner_type === "posp" || profile.partner_type === "misp") return profile.partner_type;
+  const draftPartnerType = object(application.draft_data).partner_type;
+  return draftPartnerType === "posp" || draftPartnerType === "misp" ? draftPartnerType : null;
 }
 function uniqueApplications(applications: ApplicationRow[]) {
   return Array.from(new Map(applications.map((application) => [application.id, application])).values());
