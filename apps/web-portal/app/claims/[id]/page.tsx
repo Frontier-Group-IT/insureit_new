@@ -1,9 +1,10 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shell";
 import { SpotSurveyWorkspace, type SpotSurveyClaim, type SpotSurveyDocument, type SpotSurveyVerification, type SurveyorDetails } from "@/components/spot-survey/spot-survey-workspace-v2";
-import { createServerSupabaseClient } from "@/lib/auth-server";
-import type { ClaimStatus } from "@/lib/claim-workflow";
-import { operationsQueueForStatus } from "@/lib/claim-workflow";
+import { operationsQueueForStatus, type ClaimStatus } from "@/lib/claim-workflow";
+import { canAccessCustomer } from "@/lib/employee-access-scope";
+import { requireCapability } from "@/lib/master-data-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type ClaimDetail = SpotSurveyClaim & {
   customer_id: string;
@@ -35,43 +36,44 @@ type StageDetailRow = {
 
 export default async function ClaimDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const supabase = await createServerSupabaseClient();
+  const profile = await requireCapability("view_claims");
+  if (!profile?.id) redirect("/access-denied");
 
-  const [{ data: claim, error }, { data: documents }] = await Promise.all([
-    supabase
-      .from("claims")
-      .select("id, claim_no, insurer_claim_no, customer_id, current_status, accident_at, accident_location, accident_description, estimated_loss, approved_amount, settlement_amount, updated_at, created_at, customers(company_name, contact_name, phone, email), vehicles(vehicle_no, vehicle_type, make, model), policies(policy_no, policy_type, start_date, end_date), insurance_companies(name, contact_email, contact_phone)")
-      .eq("id", id)
-      .maybeSingle<ClaimDetail>(),
-    supabase
+  const admin = createSupabaseAdminClient();
+  const { data: claim, error } = await admin
+    .from("claims")
+    .select("id, claim_no, insurer_claim_no, customer_id, current_status, accident_at, accident_location, accident_description, estimated_loss, approved_amount, settlement_amount, updated_at, created_at, customers(company_name, contact_name, phone, email), vehicles(vehicle_no, vehicle_type, make, model), policies(policy_no, policy_type, start_date, end_date), insurance_companies(name, contact_email, contact_phone)")
+    .eq("id", id)
+    .maybeSingle<ClaimDetail>();
+
+  if (error || !claim) notFound();
+  if (!(await canAccessCustomer(profile.id, profile.role, claim.customer_id, "view_claims"))) notFound();
+
+  const [{ data: documents }, { data: verificationRows }, { data: stageRows }] = await Promise.all([
+    admin
       .from("claim_documents")
       .select("id, document_type, file_name, storage_bucket, storage_path, verification_status, rejection_reason, created_at")
       .eq("claim_id", id)
       .order("created_at", { ascending: false })
-      .returns<ClaimDocument[]>()
-  ]);
-
-  if (error || !claim) notFound();
-
-  const signedDocs: SpotSurveyDocument[] = (documents ?? []).map((document) => ({
-    ...document,
-    signedUrl: `/claim-documents/${document.id}/open`
-  }));
-
-  const [{ data: verificationRows }, { data: stageRows }] = await Promise.all([
-    supabase
+      .returns<ClaimDocument[]>(),
+    admin
       .from("claim_document_verifications")
       .select("id, claim_id, document_id, document_type, verification_type, incident_date, is_valid, invalid_reason, details, created_at")
       .eq("claim_id", id)
       .order("created_at", { ascending: false })
       .returns<SpotSurveyVerification[]>(),
-    supabase
+    admin
       .from("claim_stage_details")
       .select("id, claim_id, details, created_at")
       .eq("claim_id", id)
       .order("created_at", { ascending: false })
       .returns<StageDetailRow[]>()
   ]);
+
+  const signedDocs: SpotSurveyDocument[] = (documents ?? []).map((document) => ({
+    ...document,
+    signedUrl: `/claim-documents/${document.id}/open`
+  }));
 
   const stageVerifications = (stageRows ?? [])
     .filter((row) => row.details?.verification_type === "spot_survey_document")
