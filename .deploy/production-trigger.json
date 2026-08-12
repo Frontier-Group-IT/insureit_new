@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #280 profile synchronization database-error diagnostic to production.",
-  "deploy_requested_at": "2026-08-12T12:12:00+05:30",
+  "purpose": "Deploy IT Super User delete controls for customers, vehicles and policies to production.",
+  "deploy_requested_at": "2026-08-12T12:30:00+05:30",
   "requested_by": "Nishant Mishra",
-  "source": "ChatGPT explicit request to merge PR #280 into main and deploy using the repository's protected GitHub Actions production deployment schema.",
-  "source_commit": "13661bcc6a12222ab7d6fc293bb9b772dbccb455",
-  "release_scope": "Deploy the diagnostic improvement for Existing Intermediary Migration so a failing canonical posp_misp_onboarding_profiles synchronization surfaces the sanitized Supabase/Postgres error message in the existing workflow error dialog. Preserve all existing validation rules, ID synchronization behavior, database schema, permissions, workflow progression, and deliberate Save & Exit / Upload Documents behavior.",
-  "verification": "PR #280 Verify web portal run 31570918986 completed successfully before merge. The production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
+  "source": "ChatGPT explicit production deployment request after the IT Super User deletion feature passed the compulsory web portal verification workflow.",
+  "source_commit": "8029e58589dc330a521f833cf0ec7b99768ab051",
+  "release_scope": "Deploy the IT Super User-only deletion controls for customer, vehicle and policy master records. Preserve server-side role enforcement, dependency blocking to prevent unintended cascading deletion, DELETE confirmation, audit logging, existing customer Auth/profile identities, existing Supabase schema, and all unrelated portal behavior.",
+  "verification": "Feature verification run 31571721254 completed successfully, including access-control regressions, OCR regressions, TypeScript, lint and the Next.js production build. The protected production deployment workflow must run its compulsory verification gate again before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after the user explicitly requests deployment."
 }
