@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Eye, Search } from "lucide-react";
 import { compactPrimaryActionClassName } from "@/components/action-styles";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { FreshAccountReviewLink } from "./applications/account-review-back-link";
@@ -120,8 +120,16 @@ function PartnerTable({ rows }: { rows: PartnerRegisterRow[] }) {
 }
 
 function renderAction(row: PartnerRegisterRow) {
-  if (!row.active) return <FreshAccountReviewLink href={`/intermediaries/applications/${row.applicationId}`} className={partnerOpenActionClassName}>Open</FreshAccountReviewLink>;
-  if (row.linkedHref) return <FreshAccountReviewLink href={row.linkedHref} className={partnerOpenActionClassName}>Open {row.createType.toUpperCase()}</FreshAccountReviewLink>;
+  const targetLabel = row.linkedHref ? row.createType.toUpperCase() : "partner";
+  const href = row.linkedHref ?? `/intermediaries/applications/${row.applicationId}`;
+  if (!row.active || row.linkedHref) {
+    return (
+      <FreshAccountReviewLink href={href} className={partnerOpenActionClassName}>
+        <Eye className="h-4 w-4" aria-hidden="true" />
+        <span className="sr-only">View {targetLabel} details</span>
+      </FreshAccountReviewLink>
+    );
+  }
   if (!row.canCreateLinked) return <span className="text-[#94A3B8]">-</span>;
   return <form action={createLinkedIntermediaryAccount}><input type="hidden" name="application_id" value={row.applicationId} /><input type="hidden" name="registration_type" value={row.createType} /><FormSubmitButton label={`Create ${row.createType.toUpperCase()}`} pendingLabel={`Creating ${row.createType.toUpperCase()}...`} className={compactPrimaryActionClassName} /></form>;
 }
@@ -129,7 +137,7 @@ function renderAction(row: PartnerRegisterRow) {
 function Status({ value, tone = "default" }: { value: string; tone?: "default" | "linked" | "portal" | "account" }) {
   const normalized = value.toLowerCase();
   const cls = tone === "linked"
-    ? "border-violet-200 bg-violet-50 text-violet-700"
+    ? normalized.includes("active") ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-violet-200 bg-violet-50 text-violet-700"
     : tone === "portal"
       ? "border-sky-200 bg-sky-50 text-sky-700"
       : tone === "account"
