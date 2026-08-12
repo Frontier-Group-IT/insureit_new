@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Eye, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { compactPrimaryActionClassName } from "@/components/action-styles";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { FreshAccountReviewLink } from "./applications/account-review-back-link";
@@ -167,8 +167,7 @@ function renderAction(row: PartnerRegisterRow) {
   if (!row.active) {
     return (
       <FreshAccountReviewLink href={`/intermediaries/applications/${row.applicationId}`} className={partnerOpenActionClassName}>
-        <Eye className="h-4 w-4" aria-hidden="true" />
-        <span className="sr-only">View partner details</span>
+        Review
       </FreshAccountReviewLink>
     );
   }
