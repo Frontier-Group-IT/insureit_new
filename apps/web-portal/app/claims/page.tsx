@@ -49,6 +49,7 @@ export default async function ClaimsPage({ searchParams }: { searchParams: Promi
 
 function titleForParams(params: SearchParams) {
   if (params.queue === "assistance") return "External Claim Assistance Requests";
+  if (params.queue === "managed") return "Managed Claims";
   if (params.journey && customerJourneyTitles[params.journey]) return customerJourneyTitles[params.journey];
   const operationalQueue = operationsQueueForKey(params.queue);
   if (operationalQueue) return operationalQueue.label;
