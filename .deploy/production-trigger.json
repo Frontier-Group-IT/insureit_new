@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy verified Claims Reporting to production.",
-  "deploy_requested_at": "2026-08-13T11:36:00+05:30",
+  "purpose": "Deploy CPA-inclusive Policy PayIn and payout calculations to production.",
+  "deploy_requested_at": "2026-08-13T11:54:00+05:30",
   "requested_by": "explicit user request",
   "source": "Deploy the latest verified main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "9a668ebf0b59c8347338d7c71d59bc7de56c6489",
-  "release_scope": "Release Reports Phase 4 Claims Reporting, including /reports/claims, hierarchy-scoped claims analytics, aging/status/insurer/document-exception views, paginated claim register, and scoped CSV export. The Claims reporting backend migration 20260813055613 is already applied to the original Supabase project. The latest main snapshot also includes previously verified main changes.",
-  "verification": "Claims feature head ca3d991cf4c6eaf3de4b2f001084a49ae129a302 passed Verify web portal run 31672137151, including access-control regressions, release-blocker security regression, OCR regressions, TypeScript, lint, and production build. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
+  "source_commit": "1895b009b218d2308c07d1e883e29bb515d416fd",
+  "release_scope": "Release the Policy Onboarding and Edit Policy calculation correction where opted CPA is included in the TP-side base for insurer PayIn and intermediary payout. Existing stored PayIn/payout values have already been backfilled in Supabase, and calculation version cpa_in_tp_v2 has been applied. The latest main snapshot also includes previously committed main changes.",
+  "verification": "The production workflow must run the compulsory access-control, security, OCR, TypeScript, lint and production-build verification gate before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
