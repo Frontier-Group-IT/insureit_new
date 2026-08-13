@@ -18,6 +18,7 @@ export function ReportQueryShortcuts({
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const currentQuery = searchParams.toString();
   const activeFilterCount = Array.from(searchParams.entries()).filter(([key, value]) => {
     if (!value) return false;
     if (key === "period" || key === "horizon") return false;
@@ -32,7 +33,7 @@ export function ReportQueryShortcuts({
         {options.map((option) => (
           <Link
             key={option.value}
-            href={buildHref(pathname, searchParams, param, option.value)}
+            href={buildHref(pathname, currentQuery, param, option.value)}
             className={`rounded-lg border px-3 py-2 text-[10px] font-bold transition ${activeValue === option.value ? "border-[#223a78] bg-[#223a78] text-white" : "border-[#dfe5ee] bg-white text-[#506077] hover:border-[#bfc9db] hover:text-[#23365f]"}`}
           >
             {option.label}
@@ -48,8 +49,8 @@ export function ReportQueryShortcuts({
   );
 }
 
-function buildHref(pathname: string, current: URLSearchParams, param: "period" | "horizon", value: string) {
-  const next = new URLSearchParams(current.toString());
+function buildHref(pathname: string, currentQuery: string, param: "period" | "horizon", value: string) {
+  const next = new URLSearchParams(currentQuery);
   next.set(param, value);
 
   if (param === "period") {
@@ -57,7 +58,7 @@ function buildHref(pathname: string, current: URLSearchParams, param: "period" |
     next.delete("to");
   }
 
-  for (const key of Array.from(next.keys())) {
+  for (const [key] of Array.from(next.entries())) {
     if (key.toLowerCase().includes("page")) next.delete(key);
   }
 
