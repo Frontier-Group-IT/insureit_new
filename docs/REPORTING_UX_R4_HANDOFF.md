@@ -1,7 +1,7 @@
 # Reporting UX R4 Handoff
 
 Date: 2026-08-13
-Status: IMPLEMENTED / VERIFIED / MERGED. Not intentionally deployed by R4.
+Status: IMPLEMENTED / VERIFIED / MERGED / DEPLOYED.
 
 ## Scope
 
@@ -49,8 +49,28 @@ The first R4 PR #320 was closed without merge after `main` advanced during verif
 
 ## Release state
 
-R4 is merged into `main`. No R4 production trigger was created by this phase. Do not label R4 DEPLOYED until a later explicitly approved production release includes and verifies the merged R4 snapshot.
+R4 was not deployed by a dedicated R4 trigger. It became part of a later explicitly approved production snapshot after the compact Policy Portfolio release advanced `main`.
+
+Production evidence:
+
+```text
+R4 merge commit: d185b8c73ff9f629bdf481dcdc5a519d4e239c53
+Production snapshot: ee6f455f79d059aef85c5df613c8f1b7b8d5d914
+Relationship: production snapshot is 5 commits ahead of the R4 merge; R4 merge is its merge-base/ancestor
+GitHub production workflow: 31702267423 (run #221)
+Workflow result: SUCCESS
+Referenced compulsory verification workflow: verify-web-portal.yml at ee6f455f79d059aef85c5df613c8f1b7b8d5d914
+Vercel deployment: dpl_89NXAGuzMkPdPa2i4m4F4gaeF9Ug
+Vercel state: READY
+Vercel target: production
+Production alias: portal.insureit.in
+Alias error: none
+Post-deploy Reports runtime errors: none in the checked 3-hour window
+Unauthenticated production probe: /reports/business returned the login page successfully, confirming the protected route is reachable and auth enforcement remains active
+```
+
+The server-side production probe cannot visually inspect authenticated mobile record-card rendering. Before R5, perform a brief logged-in visual smoke check on desktop and a narrow/mobile viewport for explicit `Open` actions, wide-table card conversion, readable labels, and stacked pagination.
 
 ## Next phase
 
-R5 remains Management Pack workflow refinement, including Close Month confirmation and clearer Live/Frozen state handling. R5 must not be bundled into R4 without a separate request.
+R5 remains Management Pack workflow refinement, including Close Month confirmation and clearer Live/Frozen state handling. R5 must not begin until the R4 logged-in visual smoke check is accepted.
