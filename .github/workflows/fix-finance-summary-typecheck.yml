@@ -1,0 +1,37 @@
+name: One-time finance summary typecheck repair
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: ${{ !contains(github.event.head_commit.message, '[finance-summary-fixed]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Repair empty finance summary
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('apps/web-portal/app/reports/finance/page.tsx')
+          s=p.read_text()
+          old='pending_payout_count:0},insurers:[]'
+          new='pending_payout_count:0,missing_payin_count:0,negative_retention_count:0},insurers:[]'
+          if old not in s:
+              raise SystemExit('Expected finance fallback summary not found')
+          p.write_text(s.replace(old,new,1))
+          PY
+      - name: Commit repair
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal/app/reports/finance/page.tsx
+          git commit -m "fix: align finance fallback summary type [finance-summary-fixed]"
+          git push origin HEAD:main
