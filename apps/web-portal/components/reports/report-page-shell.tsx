@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Download, Filter } from "lucide-react";
 import type { ReactNode } from "react";
+import { ReportFilterSubmitGuard } from "@/components/reports/report-query-shortcuts";
 
 export const reportInputClass = "h-10 w-full rounded-lg border border-[#dfe5ee] bg-white px-3 text-[10.5px] font-semibold text-[#26364f] outline-none transition focus:border-[#7788bd] focus:ring-2 focus:ring-[#dfe5ff]";
 
@@ -26,7 +27,8 @@ export function ReportPageShell({
   controlsClassName?: string;
 }) {
   return (
-    <div className={`mx-auto max-w-[1560px] space-y-4 pb-8 ${className}`}>
+    <div className={`report-page-shell mx-auto max-w-[1560px] space-y-4 pb-8 ${className}`}>
+      <ReportFilterSubmitGuard />
       <header className={`portal-card overflow-hidden ${headerClassName}`}>
         <div className="flex flex-col gap-3 border-b border-[#e8ecf2] px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
