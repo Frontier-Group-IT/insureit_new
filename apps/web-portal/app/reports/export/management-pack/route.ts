@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { requireCapability } from "@/lib/master-data-server";
 import { loadManagementPack, managementPackCsvRows } from "@/lib/reports/management-pack";
+import { loadManagementPackSnapshot } from "@/lib/reports/management-pack-archive";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -10,19 +11,25 @@ export async function GET(request: NextRequest) {
   if (!profile) return new Response("Access denied", { status: 403 });
 
   const month = request.nextUrl.searchParams.get("month") || undefined;
-  const pack = await loadManagementPack(profile, { month });
+  const snapshotId = request.nextUrl.searchParams.get("snapshot") || undefined;
+  const archived = snapshotId ? await loadManagementPackSnapshot(profile.id, snapshotId) : null;
+  if (snapshotId && !archived) return new Response("Snapshot not found", { status: 404 });
+  const pack = archived?.pack ?? await loadManagementPack(profile, { month });
   const dataRows = managementPackCsvRows(pack);
   const rows: Array<Array<string | number>> = [
     ["Month", pack.filters.month],
     ["From", pack.filters.fromDate],
     ["To", pack.filters.toDate],
     ["Scope", pack.scopeMode],
+    ["Snapshot", archived ? "Frozen" : "Live"],
+    ...(archived ? [["Captured", archived.capturedAt] as Array<string | number>] : []),
     [],
     ["Section", "Metric", "Value"],
     ...dataRows,
   ];
   const csv = rows.map((row) => row.map(escapeCsv).join(",")).join("\r\n");
-  const filename = `INSUREIT_Management_Pack_${pack.filters.month}.csv`;
+  const suffix = archived ? "_Frozen" : "";
+  const filename = `INSUREIT_Management_Pack_${pack.filters.month}${suffix}.csv`;
 
   return new Response(`\uFEFF${csv}`, {
     headers: {
