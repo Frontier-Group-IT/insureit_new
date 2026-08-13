@@ -250,7 +250,7 @@ export default function SelfManagedDocumentsScreen() {
         <MaterialCommunityIcons name="shield-check-outline" size={21} color="#0A6B4B" />
         <View style={{ flex: 1 }}>
           <Text style={styles.infoTitle}>Your claim record</Text>
-          <Text style={styles.infoText}>These files support your self-tracked claim. They are saved in InsureIt but are not sent into Sankalp's document-verification queue unless Sankalp later accepts assistance for this claim.</Text>
+          <Text style={styles.infoText}>These files support your self-tracked claim. They are saved in InsureIt but do not enter the Sankalp document-verification queue unless Sankalp later accepts assistance for this claim.</Text>
         </View>
       </View>
 
