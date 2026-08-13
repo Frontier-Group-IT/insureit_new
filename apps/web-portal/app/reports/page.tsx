@@ -30,10 +30,10 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
 
   return (
     <AppShell title="Reports">
-      <div className="mx-auto max-w-[1560px] space-y-4 pb-8">
+      <div className="report-page-shell mx-auto max-w-[1560px] space-y-4 pb-8">
         <header className="portal-card overflow-hidden">
           <div className="px-5 py-5 sm:px-6">
-            <h1 className="text-[26px] font-semibold tracking-[-0.025em] text-[#13203b] sm:text-[30px]">Reports</h1>
+            <h1 className="report-title text-[26px] font-semibold tracking-[-0.025em] text-[#13203b] sm:text-[30px]">Reports</h1>
           </div>
         </header>
 

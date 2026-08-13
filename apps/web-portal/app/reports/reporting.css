@@ -1,0 +1,370 @@
+.report-page-shell {
+  --report-ink: #15233d;
+  --report-muted: #66758a;
+  --report-subtle: #8894a5;
+  --report-border: #dfe5ed;
+  --report-border-soft: #ebeff4;
+  --report-surface: #ffffff;
+  --report-surface-muted: #f8fafc;
+  --report-navy: #18305f;
+  --report-navy-hover: #223f78;
+  --report-info: #315ea8;
+  --report-info-bg: #eff5ff;
+  --report-success: #18794e;
+  --report-success-bg: #edf8f2;
+  --report-warning: #9a6700;
+  --report-warning-bg: #fff7df;
+  --report-danger: #b42318;
+  --report-danger-bg: #fff0ee;
+  color: var(--report-ink);
+}
+
+/* Reports are intentionally flatter and denser than the general portal UI. */
+.report-page-shell .portal-card {
+  border-color: var(--report-border);
+  border-radius: 14px;
+  background: var(--report-surface);
+  box-shadow: 0 1px 2px rgba(16, 33, 61, 0.025), 0 7px 24px rgba(16, 33, 61, 0.035);
+  backdrop-filter: none;
+}
+
+.report-page-shell .portal-card::before {
+  display: none;
+}
+
+.report-page-shell > header.portal-card {
+  box-shadow: 0 1px 2px rgba(16, 33, 61, 0.025), 0 5px 18px rgba(16, 33, 61, 0.03);
+}
+
+.report-page-shell .report-title,
+.report-page-shell > header h1 {
+  font-family: var(--font-display), var(--font-manrope), sans-serif;
+  font-size: clamp(1.55rem, 1.3rem + 0.7vw, 1.9rem);
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.028em;
+  color: var(--report-ink);
+}
+
+.report-page-shell h2 {
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+  line-height: 1.35;
+  letter-spacing: -0.012em;
+  color: var(--report-ink) !important;
+}
+
+.report-page-shell .report-controls {
+  background: #fcfdff;
+}
+
+.report-page-shell .report-filter-label,
+.report-page-shell label > span:first-child {
+  font-size: 0.61rem !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.075em !important;
+  color: #6f7d91 !important;
+}
+
+.report-page-shell input,
+.report-page-shell select {
+  min-height: 40px;
+  border-color: var(--report-border) !important;
+  border-radius: 9px !important;
+  font-size: 0.69rem !important;
+  font-weight: 600 !important;
+  color: #2d3b52 !important;
+  box-shadow: none !important;
+}
+
+.report-page-shell input:hover,
+.report-page-shell select:hover {
+  border-color: #b9c5d7 !important;
+}
+
+.report-page-shell input:focus,
+.report-page-shell select:focus {
+  border-color: #6f84b3 !important;
+  box-shadow: 0 0 0 3px rgba(49, 94, 168, 0.11) !important;
+}
+
+.report-page-shell button,
+.report-page-shell a {
+  letter-spacing: 0;
+}
+
+.report-page-shell .report-primary-action {
+  background: var(--report-navy) !important;
+  border-radius: 9px !important;
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+}
+
+.report-page-shell .report-primary-action:hover {
+  background: var(--report-navy-hover) !important;
+}
+
+.report-page-shell .report-secondary-action {
+  border-color: var(--report-border) !important;
+  border-radius: 9px !important;
+  background: #fff !important;
+  color: #495a72 !important;
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+}
+
+.report-page-shell .report-secondary-action:hover {
+  border-color: #bdc8d7 !important;
+  background: var(--report-surface-muted) !important;
+}
+
+/* KPI tier 1: direct grid children using the portal-card metric pattern. */
+.report-page-shell > section.grid > article.portal-card {
+  min-height: 92px;
+  padding: 16px 18px !important;
+}
+
+.report-page-shell > section.grid > article.portal-card > p:first-child {
+  font-size: 0.62rem !important;
+  font-weight: 750 !important;
+  line-height: 1.25;
+  letter-spacing: 0.065em !important;
+  color: #6f7d91 !important;
+}
+
+.report-page-shell > section.grid > article.portal-card > p:nth-child(2),
+.report-page-shell > section.grid > article.portal-card > p:last-child:not(:first-child) {
+  margin-top: 0.55rem !important;
+  font-size: clamp(1.18rem, 1.03rem + 0.35vw, 1.42rem) !important;
+  font-weight: 650 !important;
+  line-height: 1.15;
+  letter-spacing: -0.026em !important;
+  color: var(--report-ink) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* KPI tier 2 / pipeline / exception summary cards. */
+.report-page-shell > section.grid > article.rounded-xl:not(.portal-card),
+.report-page-shell > section.grid > a.rounded-xl,
+.report-page-shell .portal-card .grid > div.rounded-xl {
+  border-color: var(--report-border) !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+.report-page-shell > section.grid > article.rounded-xl:not(.portal-card) > p:first-child,
+.report-page-shell > section.grid > a.rounded-xl > p:first-child,
+.report-page-shell .portal-card .grid > div.rounded-xl > p:first-child {
+  font-size: 0.6rem !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.06em !important;
+  color: #758297 !important;
+}
+
+.report-page-shell > section.grid > article.rounded-xl:not(.portal-card) > p:last-child,
+.report-page-shell .portal-card .grid > div.rounded-xl > p:last-child {
+  font-size: 1.1rem !important;
+  font-weight: 650 !important;
+  color: #22324b !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Section headers use one factual hierarchy. */
+.report-page-shell .portal-card > div.border-b {
+  border-color: var(--report-border-soft) !important;
+}
+
+.report-page-shell section.portal-card > div.border-b,
+.report-page-shell article.portal-card > div.border-b {
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+}
+
+/* Tables: readable, compact, consistent. */
+.report-page-shell table {
+  border-collapse: collapse;
+  color: #35445a;
+}
+
+.report-page-shell table thead tr {
+  background: var(--report-surface-muted) !important;
+}
+
+.report-page-shell table thead th {
+  padding-top: 0.72rem !important;
+  padding-bottom: 0.72rem !important;
+  font-size: 0.59rem !important;
+  font-weight: 750 !important;
+  line-height: 1.25;
+  letter-spacing: 0.055em !important;
+  color: #728095 !important;
+  white-space: nowrap;
+}
+
+.report-page-shell table tbody {
+  font-size: 0.69rem;
+}
+
+.report-page-shell table tbody tr {
+  border-color: var(--report-border-soft) !important;
+}
+
+.report-page-shell table tbody tr:hover {
+  background: #fbfcfe !important;
+}
+
+.report-page-shell table tbody td {
+  padding-top: 0.76rem !important;
+  padding-bottom: 0.76rem !important;
+  line-height: 1.35;
+  vertical-align: middle;
+}
+
+.report-page-shell table td.text-right,
+.report-page-shell table th.text-right,
+.report-page-shell .tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.report-page-shell table tbody td p:first-child {
+  color: #283850;
+}
+
+.report-page-shell table tbody td p + p {
+  margin-top: 0.15rem;
+  font-size: 0.61rem !important;
+  color: #7d899a !important;
+}
+
+/* Open-record buttons are deliberately quiet until R4 makes actions explicit. */
+.report-page-shell table a.inline-grid {
+  border-color: #d7dfe9 !important;
+  border-radius: 8px !important;
+  color: #415f91 !important;
+  background: #fff;
+}
+
+.report-page-shell table a.inline-grid:hover {
+  border-color: #afbed2 !important;
+  background: #f7f9fc;
+}
+
+/* Semantic exception/status palette. Existing report markup already uses these tones. */
+.report-page-shell .text-red-700,
+.report-page-shell .text-red-600 {
+  color: var(--report-danger) !important;
+}
+
+.report-page-shell .bg-red-50 {
+  background: var(--report-danger-bg) !important;
+}
+
+.report-page-shell .border-red-200 {
+  border-color: #f1c4bf !important;
+}
+
+.report-page-shell .text-amber-700,
+.report-page-shell .text-amber-600 {
+  color: var(--report-warning) !important;
+}
+
+.report-page-shell .bg-amber-50 {
+  background: var(--report-warning-bg) !important;
+}
+
+.report-page-shell .border-amber-200 {
+  border-color: #ecd49a !important;
+}
+
+.report-page-shell .text-emerald-700,
+.report-page-shell .text-emerald-600 {
+  color: var(--report-success) !important;
+}
+
+.report-page-shell .bg-emerald-50 {
+  background: var(--report-success-bg) !important;
+}
+
+.report-page-shell .border-emerald-200 {
+  border-color: #b9ddcb !important;
+}
+
+.report-page-shell .text-blue-700,
+.report-page-shell .text-blue-600 {
+  color: var(--report-info) !important;
+}
+
+.report-page-shell .bg-blue-50 {
+  background: var(--report-info-bg) !important;
+}
+
+.report-page-shell .border-blue-200 {
+  border-color: #bfd0eb !important;
+}
+
+/* Status chips across reports share geometry and type regardless of semantic tone. */
+.report-page-shell span.rounded-full.border,
+.report-page-shell span.rounded-md.border {
+  font-size: 0.61rem !important;
+  font-weight: 700 !important;
+  line-height: 1.2;
+  letter-spacing: 0.01em !important;
+}
+
+/* Error and empty states are factual, not decorative. */
+.report-page-shell .report-error {
+  border-radius: 10px !important;
+  border-color: #efc2bd !important;
+  background: var(--report-danger-bg) !important;
+  color: var(--report-danger) !important;
+  font-size: 0.69rem !important;
+}
+
+.report-page-shell .report-empty {
+  color: #7a8798 !important;
+  font-size: 0.68rem !important;
+}
+
+/* Pagination uses the same density as filters and table controls. */
+.report-page-shell table + div.border-t,
+.report-page-shell section.portal-card > div.border-t {
+  border-color: var(--report-border-soft) !important;
+  color: #6f7d91 !important;
+}
+
+.report-page-shell table + div.border-t a,
+.report-page-shell section.portal-card > div.border-t a {
+  border-color: var(--report-border) !important;
+  border-radius: 8px !important;
+  background: #fff;
+  color: #475a75 !important;
+}
+
+/* Print remains restrained and ink-friendly for the Management Pack. */
+@media print {
+  .report-page-shell {
+    --report-border: #d6dbe3;
+    --report-border-soft: #e5e8ed;
+  }
+
+  .report-page-shell .portal-card {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+}
+
+@media (max-width: 639px) {
+  .report-page-shell > section.grid > article.portal-card {
+    min-height: 82px;
+  }
+
+  .report-page-shell table thead th {
+    font-size: 0.57rem !important;
+  }
+
+  .report-page-shell table tbody {
+    font-size: 0.66rem;
+  }
+}
