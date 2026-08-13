@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the GCV mandatory positive CPA validation to production.",
-  "deploy_requested_at": "2026-08-13T16:10:00+05:30",
+  "purpose": "Deploy the Customer Register and Add Customer route synchronization fix to production.",
+  "deploy_requested_at": "2026-08-13T16:20:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #310 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "f4363d4f00b3ce599d7a908aaa55738f16ed7e7c",
-  "release_scope": "Deploy the current main snapshot including conditional CPA validation for GCV policies: CPA is mandatory, must be greater than zero, is included in Section 03 completion, and is enforced in both new-policy onboarding and policy edit server actions. Preserve CPA optional behavior for non-GCV vehicle classes and preserve all existing policy calculations and database schema.",
-  "verification": "Verify web portal run 31691691810 passed for PR #310. The production workflow must rerun the compulsory verification gate against the exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #311 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "7c8bec76fb3d25bcace54be306b1ced42a3357a0",
+  "release_scope": "Deploy the current main snapshot including the URL-driven Customer Register/Add Customer chooser synchronization. Ensure /customers and /customers?choose_partner=1 immediately render the matching content, sidebar active state stays aligned, and browser back/forward navigation works without manual refresh. Preserve all existing customer table, filters, onboarding options, UI styling, and backend functionality.",
+  "verification": "Verify web portal run 31692637668 passed for PR #311. The production workflow must rerun the compulsory verification gate against the exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
