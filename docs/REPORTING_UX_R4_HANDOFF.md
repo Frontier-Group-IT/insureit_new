@@ -1,7 +1,7 @@
 # Reporting UX R4 Handoff
 
 Date: 2026-08-13
-Status: IMPLEMENTED on feature branch; verification pending.
+Status: IMPLEMENTED / VERIFIED / MERGED. Not intentionally deployed by R4.
 
 ## Scope
 
@@ -23,9 +23,33 @@ Implemented:
 
 This implementation deliberately avoids duplicating each report dataset into a second client-rendered mobile tree. The existing server-rendered table remains the source of truth; the scoped enhancer adds labels/classes only after render. Report loaders and database reads are unchanged.
 
+## Verification
+
+Final PR: #321 `R4 report registers and mobile usability (rebased)`
+Final feature head: `cfa3ffad61b30ed7e8fed321fef716ad9a814c81`
+Verification workflow: `31701768608` (run #631)
+Result: SUCCESS
+Merge commit: `d185b8c73ff9f629bdf481dcdc5a519d4e239c53`
+
+Passed:
+- Access Control V2 catalogue regression
+- Access Control V2 scope and compatibility regression
+- Access Control V2 portal lifecycle regression
+- Employee portal governance regression
+- Release blocker security regression
+- IFFCO structured regression
+- IFFCO regression
+- Digit regression
+- New India regression
+- TypeScript typecheck
+- lint
+- Next.js production build
+
+The first R4 PR #320 was closed without merge after `main` advanced during verification. R4 was replayed onto the then-current main commit `71445fd45287023791afd5542f3390d15ae58ef3` and the exact rebased head above was reverified before merge.
+
 ## Release state
 
-R4 must pass the compulsory GitHub web-portal verification gate before merge. Ordinary R4 commits must not update `.deploy/production-trigger.json`. Production deployment requires a separate explicit user request.
+R4 is merged into `main`. No R4 production trigger was created by this phase. Do not label R4 DEPLOYED until a later explicitly approved production release includes and verifies the merged R4 snapshot.
 
 ## Next phase
 
