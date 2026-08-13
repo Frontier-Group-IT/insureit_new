@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #303 sidebar navigation cleanup to production.",
-  "deploy_requested_at": "2026-08-13T13:49:00+05:30",
+  "purpose": "Deploy PR #305 customer document upload paperclip UI to production.",
+  "deploy_requested_at": "2026-08-13T14:07:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Deploy the latest main snapshot containing PR #303 using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "4ef6df77fed821ff63812958fffa5e546fd0e541",
-  "release_scope": "Release the Customers & Fleet sidebar cleanup that removes the Add by Customer Type group and its four child links while leaving the underlying onboarding routes intact. Fleet Management now follows Customers directly. This deployment also includes newer main changes that landed after PR #303.",
-  "verification": "PR #303 verification run 31681294998 passed successfully before merge. The production workflow must rerun the compulsory verification gate against the latest main snapshot before invoking the Vercel deploy hook.",
+  "source": "Merge PR #305 and deploy the latest verified main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "56b5048e2b37cece9cfde92fd1182b362a46de3e",
+  "release_scope": "Release the customer onboarding document upload refinement that replaces the Required text on required document upload controls with the Lucide Paperclip icon while preserving required asterisks, validation, file selection behavior and Ready state. Include the latest main snapshot at this release checkpoint.",
+  "verification": "PR #305 verification run 31682370782 passed successfully before merge. The production workflow must rerun the compulsory verification gate against main before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
