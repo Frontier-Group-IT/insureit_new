@@ -25,6 +25,7 @@ export type StructuredAccountRegisterRow = {
 };
 
 const ACCOUNT_PAGE_SIZE = 10;
+const SELECTED_FILTER_CLASS = "bg-[#E7E7E7] text-[#17203A]";
 
 export function StructuredAccountRegisterClient({
   type,
@@ -103,9 +104,9 @@ export function StructuredAccountRegisterClient({
             />
           </form>
           <div className="flex items-center justify-end gap-1.5 whitespace-nowrap text-[9.5px] font-semibold">
-            <StatusFilter label="All" value={searchedRows.length} active={status === "all"} onClick={() => selectStatus("all")} activeClassName="bg-[#0F2A55] text-white" idleClassName="text-[#526178] hover:bg-white hover:text-[#0F2A55]" />
-            <StatusFilter label="Active" value={counts.active} active={status === "active"} onClick={() => selectStatus("active")} activeClassName="bg-emerald-100 text-emerald-800" idleClassName="text-[#526178] hover:bg-emerald-50 hover:text-emerald-700" />
-            <StatusFilter label="Onboarding" value={counts.onboarding} active={status === "onboarding"} onClick={() => selectStatus("onboarding")} activeClassName="bg-amber-100 text-amber-800" idleClassName="text-[#526178] hover:bg-amber-50 hover:text-amber-700" />
+            <StatusFilter label="All" value={searchedRows.length} active={status === "all"} onClick={() => selectStatus("all")} activeClassName={SELECTED_FILTER_CLASS} idleClassName="text-[#526178] hover:bg-white hover:text-[#0F2A55]" />
+            <StatusFilter label="Active" value={counts.active} active={status === "active"} onClick={() => selectStatus("active")} activeClassName={SELECTED_FILTER_CLASS} idleClassName="text-[#526178] hover:bg-emerald-50 hover:text-emerald-700" />
+            <StatusFilter label="Onboarding" value={counts.onboarding} active={status === "onboarding"} onClick={() => selectStatus("onboarding")} activeClassName={SELECTED_FILTER_CLASS} idleClassName="text-[#526178] hover:bg-amber-50 hover:text-amber-700" />
           </div>
         </div>
         {loadError ? (
