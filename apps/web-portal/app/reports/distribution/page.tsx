@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { ExternalLink, Filter } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { AppShell } from "@/components/shell";
+import { ReportQueryShortcuts } from "@/components/reports/report-query-shortcuts";
+import { ReportApplyButton, ReportEmptyState, ReportFilterField, ReportPageShell, ReportResetLink, reportInputClass } from "@/components/reports/report-page-shell";
 import { requireCapability } from "@/lib/master-data-server";
 import {
   loadDistributionReport,
@@ -13,10 +15,10 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const PERIODS = [
-  { key: "90d", label: "Last 90 days" },
-  { key: "mtd", label: "Month to date" },
-  { key: "ytd", label: "Year to date" },
-  { key: "all", label: "All time" },
+  { value: "90d", label: "Last 90 days" },
+  { value: "mtd", label: "Month to date" },
+  { value: "ytd", label: "Year to date" },
+  { value: "all", label: "All time" },
 ] as const;
 
 type PageProps = { searchParams: Promise<DistributionQuery> };
@@ -41,60 +43,40 @@ export default async function DistributionReportsPage({ searchParams }: PageProp
 
   return (
     <AppShell title="Reports">
-      <div className="mx-auto max-w-[1560px] space-y-4 pb-8">
-        <header className="portal-card overflow-hidden">
-          <div className="border-b border-[#e8ecf2] px-5 py-5 sm:px-6">
-            <h1 className="text-[26px] font-semibold tracking-[-0.025em] text-[#13203b] sm:text-[30px]">Distribution performance</h1>
-            <ReportTabs />
-          </div>
-
-          <div className="px-5 py-4 sm:px-6">
-            <div className="flex flex-wrap gap-2">
-              {PERIODS.map((period) => (
-                <Link
-                  key={period.key}
-                  href={`/reports/distribution?period=${period.key}`}
-                  className={`rounded-lg border px-3 py-2 text-[10px] font-bold transition ${filters.period === period.key ? "border-[#223a78] bg-[#223a78] text-white" : "border-[#dfe5ee] bg-white text-[#506077] hover:border-[#bfc9db] hover:text-[#23365f]"}`}
-                >
-                  {period.label}
-                </Link>
-              ))}
-            </div>
-
-            <form action="/reports/distribution" method="get" className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-[150px_150px_minmax(190px,1fr)_150px_170px_auto_auto]">
-              <input type="hidden" name="period" value="custom" />
-              <FilterField label="From"><input name="from" type="date" defaultValue={filters.fromDate ?? ""} className={inputClass} /></FilterField>
-              <FilterField label="To"><input name="to" type="date" defaultValue={filters.toDate ?? ""} className={inputClass} /></FilterField>
-              <FilterField label="Relationship manager">
-                <select name="rm" defaultValue={filters.rmEmployeeId ?? ""} className={inputClass}>
-                  <option value="">All RMs</option>
-                  {report.filters.rms.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-                </select>
-              </FilterField>
-              <FilterField label="Type">
-                <select name="type" defaultValue={filters.intermediaryType ?? ""} className={inputClass}>
-                  <option value="">All types</option>
-                  <option value="partner">Partner</option>
-                  <option value="posp">POSP</option>
-                  <option value="misp">MISP</option>
-                </select>
-              </FilterField>
-              <FilterField label="Account status">
-                <select name="status" defaultValue={filters.accountStatus ?? ""} className={inputClass}>
-                  <option value="">All statuses</option>
-                  {report.filters.account_statuses.map((status) => <option key={status} value={status}>{labelize(status)}</option>)}
-                </select>
-              </FilterField>
-              <button type="submit" className="mt-auto inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#172a5c] px-4 text-[10.5px] font-bold text-white transition hover:bg-[#213a78]">
-                <Filter className="h-3.5 w-3.5" /> Apply
-              </button>
-              <Link href="/reports/distribution" className="mt-auto inline-flex h-10 items-center justify-center rounded-lg border border-[#dfe5ee] bg-white px-4 text-[10.5px] font-bold text-[#526174] transition hover:border-[#c8d1df] hover:bg-[#f8fafc]">Reset</Link>
-            </form>
-          </div>
-        </header>
-
-        {loadError ? <ErrorBanner /> : null}
-
+      <ReportPageShell
+        title="Distribution performance"
+        loadError={loadError}
+        controls={<>
+          <ReportQueryShortcuts label="Period" param="period" activeValue={filters.period} options={PERIODS} />
+          <form action="/reports/distribution" method="get" className="grid gap-2 md:grid-cols-2 xl:grid-cols-[150px_150px_minmax(190px,1fr)_150px_170px_auto_auto]">
+            <input type="hidden" name="period" value="custom" />
+            <ReportFilterField label="From"><input name="from" type="date" defaultValue={filters.fromDate ?? ""} className={reportInputClass} /></ReportFilterField>
+            <ReportFilterField label="To"><input name="to" type="date" defaultValue={filters.toDate ?? ""} className={reportInputClass} /></ReportFilterField>
+            <ReportFilterField label="Relationship manager">
+              <select name="rm" defaultValue={filters.rmEmployeeId ?? ""} className={reportInputClass}>
+                <option value="">All RMs</option>
+                {report.filters.rms.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+              </select>
+            </ReportFilterField>
+            <ReportFilterField label="Type">
+              <select name="type" defaultValue={filters.intermediaryType ?? ""} className={reportInputClass}>
+                <option value="">All types</option>
+                <option value="partner">Partner</option>
+                <option value="posp">POSP</option>
+                <option value="misp">MISP</option>
+              </select>
+            </ReportFilterField>
+            <ReportFilterField label="Account status">
+              <select name="status" defaultValue={filters.accountStatus ?? ""} className={reportInputClass}>
+                <option value="">All statuses</option>
+                {report.filters.account_statuses.map((status) => <option key={status} value={status}>{labelize(status)}</option>)}
+              </select>
+            </ReportFilterField>
+            <ReportApplyButton />
+            <ReportResetLink href="/reports/distribution" />
+          </form>
+        </>}
+      >
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
           <Metric label="Intermediaries" value={formatInteger(report.summary.intermediary_count)} />
           <Metric label="Active" value={formatInteger(report.summary.active_intermediary_count)} />
@@ -145,24 +127,9 @@ export default async function DistributionReportsPage({ searchParams }: PageProp
             nextHref={distributionHref(filters, report.intermediaries.page, report.onboarding.page + 1)}
           />
         </section>
-      </div>
+      </ReportPageShell>
     </AppShell>
   );
-}
-
-const inputClass = "h-10 w-full rounded-lg border border-[#dfe5ee] bg-white px-3 text-[10.5px] font-semibold text-[#26364f] outline-none transition focus:border-[#7788bd] focus:ring-2 focus:ring-[#dfe5ff]";
-
-function ReportTabs() {
-  return (
-    <nav className="mt-4 flex flex-wrap gap-2">
-      <Link href="/reports" className="rounded-lg border border-[#dfe5ee] bg-white px-3 py-2 text-[10px] font-bold text-[#506077]">Business</Link>
-      <Link href="/reports/distribution" className="rounded-lg border border-[#223a78] bg-[#223a78] px-3 py-2 text-[10px] font-bold text-white">Distribution</Link>
-    </nav>
-  );
-}
-
-function FilterField({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="block"><span className="mb-1 block text-[8.5px] font-black uppercase tracking-[0.08em] text-[#7b8799]">{label}</span>{children}</label>;
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
@@ -270,8 +237,7 @@ function PageLink({ href, disabled, children }: { href: string; disabled: boolea
   return disabled ? <span className="rounded-lg border border-[#e8ebf0] bg-[#f6f7f9] px-3 py-2 text-[9.5px] font-bold text-[#b3bbc6]">{children}</span> : <Link href={href} className="rounded-lg border border-[#d9e1ec] bg-white px-3 py-2 text-[9.5px] font-bold text-[#405476]">{children}</Link>;
 }
 
-function ErrorBanner() { return <section className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-[11px] font-bold text-red-700">Reporting service unavailable.</section>; }
-function EmptyRow() { return <div className="px-5 py-10 text-center text-[10px] font-semibold text-[#7a8798]">No data</div>; }
+function EmptyRow() { return <ReportEmptyState />; }
 
 function distributionHref(filters: DistributionFilters, page: number, onboardingPage: number) {
   const search = new URLSearchParams();
