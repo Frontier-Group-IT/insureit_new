@@ -1,0 +1,88 @@
+name: Temporary full mobile UX review patch
+
+on:
+  push:
+    branches: [feature/self-managed-claims]
+    paths:
+      - .github/workflows/tmp-full-mobile-ux-review.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/self-managed-claims
+          fetch-depth: 0
+      - name: Apply customer journey consistency fixes
+        shell: python
+        run: |
+          from pathlib import Path
+
+          # 1) Remove duplicate completion card and fold its copy into the hero completion state.
+          p = Path('apps/mobile-app/app/customer/self-managed-claim-detail.tsx')
+          s = p.read_text(encoding='utf-8-sig')
+          s = s.replace("<Text style={styles.currentStageLabel}>{next ? 'CURRENT STEP' : 'JOURNEY COMPLETE'}</Text>\n            <Text style={styles.currentStageTitle}>{next?.label ?? 'All milestones recorded'}</Text>\n            <Text style={styles.currentStageHint}>{next ? 'Update this when the insurer or workshop moves the claim forward.' : 'Your claim history is complete and ready for reference.'}</Text>", "<Text style={styles.currentStageLabel}>{next ? 'CURRENT STEP' : 'CLAIM HISTORY COMPLETE'}</Text>\n            <Text style={styles.currentStageTitle}>{next?.label ?? 'All 9 milestones are recorded'}</Text>\n            <Text style={styles.currentStageHint}>{next ? 'Update this when the insurer or workshop moves the claim forward.' : 'This claim now stays available as a completed record. You can still review stages and documents whenever needed.'}</Text>")
+          start = s.find("      {journeyComplete ? (\n        <View style={styles.completionCard}>")
+          if start != -1:
+              end = s.find("\n\n      <View style={styles.infoCard}>", start)
+              if end == -1: raise SystemExit('completion card end not found')
+              s = s[:start] + "      <View style={styles.infoCard}>" + s[end + len("\n\n      <View style={styles.infoCard}>"):]
+          # remove now-unused journeyComplete declaration and styles
+          s = s.replace("  const journeyComplete = completed === SELF_MANAGED_MILESTONES.length;\n", "")
+          for prefix in ['completionCard:', 'completionIcon:', 'completionEyebrow:', 'completionTitle:', 'completionText:']:
+              import re
+              s = re.sub(r"\n  " + re.escape(prefix) + r" \{[^\n]*\},", "", s)
+          p.write_text(s, encoding='utf-8')
+
+          # 2) Preserve exact selected Sankalp policy into incident report.
+          p = Path('apps/mobile-app/app/customer/start-claim.tsx')
+          s = p.read_text(encoding='utf-8-sig')
+          s = s.replace("router.push({ pathname: '/customer/report-accident', params: { vehicleId: selectedVehicle.id } });", "router.push({ pathname: '/customer/report-accident', params: { vehicleId: selectedVehicle.id, policyId: selectedPolicy.id } });")
+          p.write_text(s, encoding='utf-8')
+
+          p = Path('apps/mobile-app/app/customer/report-accident.tsx')
+          s = p.read_text(encoding='utf-8-sig')
+          s = s.replace("const { vehicleId } = useLocalSearchParams<{ vehicleId?: string }>();", "const { vehicleId, policyId } = useLocalSearchParams<{ vehicleId?: string; policyId?: string }>();")
+          old = """  const selectedPolicy = useMemo(() => {\n    if (!selectedVehicle) return null;\n    return policies.find((item) => item.vehicle_id === selectedVehicle.id) ?? null;\n  }, [policies, selectedVehicle]);"""
+          new = """  const selectedPolicy = useMemo(() => {\n    if (!selectedVehicle) return null;\n    const routedPolicy = policyId ? policies.find((item) => item.id === policyId && item.vehicle_id === selectedVehicle.id) : null;\n    return routedPolicy ?? policies.find((item) => item.vehicle_id === selectedVehicle.id) ?? null;\n  }, [policies, policyId, selectedVehicle]);"""
+          if old not in s: raise SystemExit('report accident selected policy block not found')
+          s = s.replace(old, new)
+          p.write_text(s, encoding='utf-8')
+
+          # 3) My Claims: load every operational context, not only the profile's primary customer.
+          p = Path('apps/mobile-app/app/customer/claims.tsx')
+          s = p.read_text(encoding='utf-8-sig')
+          s = s.replace("import { getCurrentSession, getCustomerForUser } from '@/lib/auth';", "import { getCurrentSession } from '@/lib/auth';\nimport { getOperationalCustomerContexts } from '@/lib/customer-context';")
+          old = """      const customer = await getCustomerForUser(session.user.id);\n      if (customer) {\n        const [claimResult, vehicleResult, policyResult, externalResult, insurerResult] = await Promise.all([\n          supabase.from('claims').select('*').eq('customer_id', customer.id).order('created_at', { ascending: false }),\n          supabase.from('vehicles').select('*').eq('customer_id', customer.id),\n          supabase.from('policies').select('*').eq('customer_id', customer.id),\n          supabase.from('external_policies').select('id,policy_no,insurance_company_id,end_date').eq('customer_id', customer.id),\n          supabase.from('insurance_companies').select('*'),\n        ]);\n        setClaims((claimResult.data ?? []) as ExtendedClaim[]);\n        setVehicles(vehicleResult.data ?? []);\n        setPolicies(policyResult.data ?? []);\n        setExternalPolicies((externalResult.data ?? []) as ExternalPolicy[]);\n        setInsurers(insurerResult.data ?? []);\n      }"""
+          new = """      const contexts = await getOperationalCustomerContexts();\n      const customerIds = contexts.map((item) => item.customer_id);\n      if (customerIds.length) {\n        const [claimResult, vehicleResult, policyResult, externalResult, insurerResult] = await Promise.all([\n          supabase.from('claims').select('*').in('customer_id', customerIds).order('created_at', { ascending: false }),\n          supabase.from('vehicles').select('*').in('customer_id', customerIds),\n          supabase.from('policies').select('*').in('customer_id', customerIds),\n          supabase.from('external_policies').select('id,policy_no,insurance_company_id,end_date').in('customer_id', customerIds),\n          supabase.from('insurance_companies').select('*'),\n        ]);\n        setClaims((claimResult.data ?? []) as ExtendedClaim[]);\n        setVehicles(vehicleResult.data ?? []);\n        setPolicies(policyResult.data ?? []);\n        setExternalPolicies((externalResult.data ?? []) as ExternalPolicy[]);\n        setInsurers(insurerResult.data ?? []);\n      }"""
+          if old not in s: raise SystemExit('claims load block not found')
+          s = s.replace(old, new)
+          s = s.replace("if (status === 'Closed' || status === 'Settled') return 'Completed';", "if (status === 'Closed' || status === 'Settled' || status === 'Claim Complete') return 'Completed';")
+          s = s.replace("if (status === 'Closed' || status === 'Settled') return { accent: '#12805C', soft: '#E8F8F0' };", "if (status === 'Closed' || status === 'Settled' || status === 'Claim Complete') return { accent: '#12805C', soft: '#E8F8F0' };")
+          s = s.replace("if (status === 'Closed' || status === 'Settled') return 'check-circle-outline';", "if (status === 'Closed' || status === 'Settled' || status === 'Claim Complete') return 'check-circle-outline';")
+          p.write_text(s, encoding='utf-8')
+
+          # 4) Notifications: use truthful controls — back and mark-all-read.
+          p = Path('apps/mobile-app/components/notifications-inbox.tsx')
+          s = p.read_text(encoding='utf-8-sig')
+          old = """        <View style={styles.headerIconButton}>\n          <MaterialCommunityIcons name=\"menu\" size={22} color={palette.ink} />\n        </View>"""
+          new = """        <Pressable accessibilityRole=\"button\" accessibilityLabel=\"Go back\" onPress={() => router.back()} style={styles.headerIconButton}>\n          <MaterialCommunityIcons name=\"arrow-left\" size={22} color={palette.ink} />\n        </Pressable>"""
+          if old not in s: raise SystemExit('notification menu block not found')
+          s = s.replace(old, new)
+          old = """        <Pressable accessibilityRole=\"button\" onPress={() => void markAllRead()} style={styles.headerIconButton}>\n          <MaterialCommunityIcons name=\"cog-outline\" size={22} color={palette.ink} />\n        </Pressable>"""
+          new = """        <Pressable accessibilityRole=\"button\" accessibilityLabel=\"Mark all notifications read\" onPress={() => void markAllRead()} style={styles.headerIconButton}>\n          <MaterialCommunityIcons name=\"email-check-outline\" size={22} color={palette.ink} />\n        </Pressable>"""
+          if old not in s: raise SystemExit('notification cog block not found')
+          s = s.replace(old, new)
+          p.write_text(s, encoding='utf-8')
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/mobile-app/app/customer/self-managed-claim-detail.tsx apps/mobile-app/app/customer/start-claim.tsx apps/mobile-app/app/customer/report-accident.tsx apps/mobile-app/app/customer/claims.tsx apps/mobile-app/components/notifications-inbox.tsx
+          git commit -m "Polish full customer claim journey UX"
+          git push origin HEAD:feature/self-managed-claims
