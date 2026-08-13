@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Reporting UX R5 to production.",
-  "deploy_requested_at": "2026-08-13T22:07:00+05:30",
+  "purpose": "Deploy PR #326 to production.",
+  "deploy_requested_at": "2026-08-13T22:09:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Reporting UX R5 PR #325 is merged into main.",
-  "source_commit": "c9ab9493ab24d68ed87f28566aedc66105b1bb66",
-  "release_scope": "Deploy the R5 Management Pack workflow refinement: Close Month confirmation, clearer Live Pack versus Frozen Snapshot states, and explicit switching between live and frozen views while preserving existing snapshot integrity, authorization, calculations, and database rules.",
-  "verification": "R5 verification run 31720808218 passed on final head 6b05522a23b61df57d874f11ca3ed8899ca2a53b. Re-run the protected verification gate on this exact deployment-trigger snapshot before invoking Vercel.",
+  "source": "PR #326 merged into main.",
+  "source_commit": "739b02c3ed9aae37b7b23b96269c72695a15e296",
+  "release_scope": "Customer Edit KYC & GST Details desktop layout: keep PAN Number, Aadhaar, Legal Trade Name, and GST Number in one four-column row while preserving existing validation, values, checkbox behavior, form logic, and backend functionality.",
+  "verification": "PR verification run 31721739524 was still in progress at merge time. Re-run and require the protected verification gate to pass on this exact deployment-trigger snapshot before invoking Vercel.",
   "instructions": "Update this file only after explicit deployment approval."
 }
