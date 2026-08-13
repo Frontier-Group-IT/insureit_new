@@ -182,40 +182,33 @@ export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
         </div>
 
         <div className="hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[1180px] table-fixed text-left text-[11px] text-[#1E293B]">
+          <table className="w-full min-w-[820px] table-fixed text-left text-[11px] text-[#1E293B]">
             <thead className="sticky top-0 z-10 border-b border-[#E2E8F0] bg-[#F8FAFC] text-[9px] font-bold uppercase tracking-[0.06em] text-[#64748B]">
               <tr>
-                <th className="w-10 px-3 py-3"><input aria-label="Select all customers on this page" type="checkbox" checked={allPageSelected} ref={(element) => { if (element) element.indeterminate = somePageSelected && !allPageSelected; }} onChange={toggleCurrentPage} className="h-4 w-4" /></th>
-                <th className="w-[230px] px-3 py-3">Customer</th>
-                <th className="w-[170px] px-3 py-3">Type / location</th>
-                <th className="w-[132px] px-3 py-3">Mobile</th>
-                <th className="w-[92px] px-3 py-3 text-center">Fleet</th>
-                <th className="w-[94px] px-3 py-3 text-center">Policies</th>
-                <th className="w-[92px] px-3 py-3 text-center">Claims</th>
-                <th className="w-[126px] px-3 py-3">Status</th>
-                <th className="w-[150px] px-3 py-3">Next action</th>
-                <th className="w-[68px] px-3 py-3 text-center">More</th>
+                <th className="w-9 px-2.5 py-2.5"><input aria-label="Select all customers on this page" type="checkbox" checked={allPageSelected} ref={(element) => { if (element) element.indeterminate = somePageSelected && !allPageSelected; }} onChange={toggleCurrentPage} className="h-4 w-4" /></th>
+                <th className="w-[240px] px-2.5 py-2.5">Customer</th>
+                <th className="w-[190px] px-2.5 py-2.5">Type / location</th>
+                <th className="w-[145px] px-2.5 py-2.5">Mobile</th>
+                <th className="w-[126px] px-2.5 py-2.5">Status</th>
+                <th className="w-[160px] px-2.5 py-2.5">Next action</th>
+                <th className="w-[60px] px-2.5 py-2.5 text-center">More</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EEF2F6]">
               {pageRows.map((customer) => (
-                <tr key={customer.id} className={`h-14 ${selectedIds.has(customer.id) ? "bg-[#F5F3FF]" : "hover:bg-[#FAFCFF]"}`}>
-                  <td className="px-3"><input aria-label={`Select ${customer.contact_name}`} type="checkbox" checked={selectedIds.has(customer.id)} onChange={() => toggleRow(customer.id)} className="h-4 w-4" /></td>
-                  <td className="px-3">
+                <tr key={customer.id} className={`h-11 ${selectedIds.has(customer.id) ? "bg-[#F5F3FF]" : "hover:bg-[#FAFCFF]"}`}>
+                  <td className="px-2.5"><input aria-label={`Select ${customer.contact_name}`} type="checkbox" checked={selectedIds.has(customer.id)} onChange={() => toggleRow(customer.id)} className="h-4 w-4" /></td>
+                  <td className="px-2.5">
                     <Link href={`/customers/${customer.id}/edit`} className="block truncate text-[12.5px] font-bold text-[#0F172A] hover:text-[#17365D]">{customer.contact_name}</Link>
-                    <p className="mt-0.5 truncate text-[9.5px] text-[#64748B]">{customer.company_name ?? customer.customer_code}</p>
                   </td>
-                  <td className="px-3">
+                  <td className="px-2.5">
                     <p className="truncate font-semibold text-[#334155]">{customer.partner_type ? partnerLabels[customer.partner_type] ?? customer.partner_type : "Not classified"}</p>
                     <p className="mt-0.5 truncate text-[9.5px] text-[#64748B]">{customer.city ?? "Location not set"}</p>
                   </td>
-                  <td className="px-3 tabular-nums">{customer.phone}</td>
-                  <td className="px-3 text-center"><CountCell value={vehicleCount(customer)} hint={customer.fleet_size_band ? fleetLabels[customer.fleet_size_band] ?? customer.fleet_size_band : "band n/a"} /></td>
-                  <td className="px-3 text-center"><CountCell value={policyCount(customer)} hint="policies" /></td>
-                  <td className="px-3 text-center"><CountCell value={claimCount(customer)} hint="claims" warn={claimCount(customer) > 0} /></td>
-                  <td className="px-3"><CustomerStatus status={customer.onboarding_status} /></td>
-                  <td className="px-3"><NextAction customer={customer} /></td>
-                  <td className="px-3 text-center"><RowActions customer={customer} /></td>
+                  <td className="px-2.5 tabular-nums">{customer.phone}</td>
+                  <td className="px-2.5"><CustomerStatus status={customer.onboarding_status} /></td>
+                  <td className="px-2.5"><NextAction customer={customer} /></td>
+                  <td className="px-2.5 text-center"><RowActions customer={customer} /></td>
                 </tr>
               ))}
             </tbody>
