@@ -68,7 +68,13 @@ export function ReportFilterSubmitGuard() {
       const fromInput = form.querySelector<HTMLInputElement>('input[name="from"]');
       const toInput = form.querySelector<HTMLInputElement>('input[name="to"]');
       const datesChanged = [fromInput, toInput].some((input) => input && input.value !== input.defaultValue);
-      periodInput.value = datesChanged ? "custom" : currentPeriod;
+      const useCustomDates = datesChanged || currentPeriod === "custom";
+      periodInput.value = useCustomDates ? "custom" : currentPeriod;
+
+      if (!useCustomDates) {
+        if (fromInput) fromInput.disabled = true;
+        if (toInput) toInput.disabled = true;
+      }
     };
 
     document.addEventListener("submit", onSubmit, true);
