@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #299 Customer Portfolio reference layout to production after the first deploy run was superseded by newer main pushes.",
-  "deploy_requested_at": "2026-08-13T12:31:00+05:30",
+  "purpose": "Deploy PR #300 Customer Portfolio title alignment and Inactive tab label to production.",
+  "deploy_requested_at": "2026-08-13T12:58:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Deploy the latest verified main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "8cd9cb3d2911c2b61cbd29b2568d542dc084d3ad",
-  "release_scope": "Release the compact Customer Portfolio layout on /customers: remove the four summary metric cards, move KYC Applications and Add Customer into the header top-right, place customer search followed by All partner types in the compact filter row, keep only All/Active/Pending tabs on the right, and preserve the customer table, data, actions, selection behavior, and pagination. Vehicle and Policy Portfolio layouts remain unchanged. The latest main snapshot also includes subsequent verified main changes.",
-  "verification": "PR #299 verification run 31675580955 passed before merge, and latest main verification run 31675980507 passed successfully after subsequent main pushes. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
+  "source": "Merge PR #300 and deploy the latest main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "438466866165dcdac4b06c4a601a3ac3ef810aa9",
+  "release_scope": "Release the Customer Portfolio header refinement on /customers: center-align the Customer Portfolio title while keeping the icon on the left and KYC Applications / Add Customer actions on the right, and rename the visible Pending tab to Inactive while preserving its existing filter behavior and counts. Customer table, data, actions, filters, status badges, and pagination remain unchanged.",
+  "verification": "PR #300 verification run 31677595196 passed successfully before merge. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
