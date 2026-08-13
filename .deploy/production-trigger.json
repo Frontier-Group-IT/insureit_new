@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #297 policy register header cleanup to production after prior deploy runs were superseded by newer main pushes.",
-  "deploy_requested_at": "2026-08-13T11:20:00+05:30",
+  "purpose": "Deploy verified Claims Reporting to production.",
+  "deploy_requested_at": "2026-08-13T11:36:00+05:30",
   "requested_by": "explicit user request",
   "source": "Deploy the latest verified main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "d6bc93d42b5c62fc3d390b5f392779c42e914a5e",
-  "release_scope": "Release the Policy Portfolio header cleanup on /policies by removing the Coverage register eyebrow and the descriptive helper sentence, while preserving the title, metrics, toolbar, table, filters, pagination, and all policy workflows. The latest main snapshot also includes subsequent verified main changes.",
-  "verification": "PR #297 verification run 31671154549 passed before merge, and latest main verification run 31671585929 passed successfully after subsequent main pushes. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
+  "source_commit": "9a668ebf0b59c8347338d7c71d59bc7de56c6489",
+  "release_scope": "Release Reports Phase 4 Claims Reporting, including /reports/claims, hierarchy-scoped claims analytics, aging/status/insurer/document-exception views, paginated claim register, and scoped CSV export. The Claims reporting backend migration 20260813055613 is already applied to the original Supabase project. The latest main snapshot also includes previously verified main changes.",
+  "verification": "Claims feature head ca3d991cf4c6eaf3de4b2f001084a49ae129a302 passed Verify web portal run 31672137151, including access-control regressions, release-blocker security regression, OCR regressions, TypeScript, lint, and production build. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
