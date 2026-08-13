@@ -1,6 +1,14 @@
 name: Verify mobile app
 
 on:
+  push:
+    branches:
+      - feature/self-managed-claims
+    paths:
+      - 'apps/mobile-app/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/verify-mobile-app.yml'
   pull_request:
     paths:
       - 'apps/mobile-app/**'
