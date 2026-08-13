@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BadgeCheck, CalendarDays, CarFront, Phone, UserRound, type LucideIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import { FormSubmitButton } from "@/components/form-submit-button";
 
@@ -82,6 +83,14 @@ export function CustomerProfileEditor({ customer, documents, vehicles, agents, a
           <div className="flex items-center gap-1.5"><Link href="/customers" className="inline-flex h-8 items-center rounded-md border border-[var(--border)] bg-white px-3 text-[10.5px] font-semibold text-[var(--text)] hover:bg-[#F8FAFD]">Back</Link><FormSubmitButton label="Save changes" /></div>
         </section>
 
+        <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5" aria-label="Customer summary">
+          <SummaryCard icon={UserRound} label="Partner Type" value={partnerTypeLabel(customer.partner_type)} />
+          <SummaryCard icon={CarFront} label="Fleet Size" value={fleetSizeLabel(customer.fleet_size_band)} />
+          <SummaryCard icon={Phone} label="Mobile" value={customer.phone || "Not set"} />
+          <SummaryCard icon={BadgeCheck} label="Customer Code" value={customer.customer_code || "Not set"} />
+          <SummaryCard icon={CalendarDays} label="Active Since" value={formatDate(customer.created_at)} />
+        </section>
+
         <div className="grid gap-2 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-2">
             <Panel title="Customer profile"><div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3"><Field label="Customer name" name="contact_name" defaultValue={customer.contact_name} required /><ReadOnlyField label="Login mobile" value={customer.phone} hint="Linked with OTP account" /><Field label="Email" name="email" type="email" defaultValue={customer.email ?? ""} /><SelectField label="Partner type" name="partner_type" defaultValue={customer.partner_type ?? "individual_proprietor"} options={[["individual_proprietor","Individual / Proprietor"],["dealership","Dealership"],["corporate","Corporate"],["group","Group"]]} /><SelectField label="Fleet size" name="fleet_size_band" defaultValue={customer.fleet_size_band ?? ""} options={[["","Select fleet size"],["less_than_5","Less than 5"],["5_to_20","5–20"],["20_to_50","20–50"],["more_than_50","More than 50"]]} /><SelectField label="Onboarding status" name="onboarding_status" defaultValue={customer.onboarding_status} options={[["active","Active"],["documents_pending","KYC incomplete"],["inactive","Inactive"]]} /><SelectField label="Assigned agent" name="assigned_agent_id" defaultValue={customer.assigned_agent_id ?? ""} options={[["","No assigned agent"],...agents.map((agent) => [agent.id, agent.full_name] as [string,string])]} /></div></Panel>
@@ -109,6 +118,9 @@ export function CustomerProfileEditor({ customer, documents, vehicles, agents, a
   );
 }
 
+function SummaryCard({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
+  return <article className="flex min-w-0 items-center gap-2.5 rounded-xl border border-[#DCE5FB] bg-[#F6F8FF] px-3 py-2.5 shadow-[0_4px_14px_rgba(15,42,85,0.04)]"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[#E3E9FA] bg-white text-[#315FEA]"><Icon className="h-4 w-4" strokeWidth={1.8} /></span><div className="min-w-0"><p className="text-[8.5px] font-semibold uppercase tracking-[0.07em] text-[#77849A]">{label}</p><p className="mt-0.5 truncate text-[11px] font-semibold text-[#17203A]" title={value}>{value}</p></div></article>;
+}
 function ValidationPopup({ message, onClose }: { message: string; onClose: () => void }) { return <div className="fixed inset-0 z-[160] grid place-items-center bg-[#0F172A]/35 px-4 backdrop-blur-[2px]" role="alertdialog" aria-modal="true" aria-labelledby="validation-title"><div className="w-full max-w-[420px] overflow-hidden rounded-2xl border border-white/70 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.28)]"><div className="flex items-start gap-3 border-b border-[#F1D7D7] bg-[#FFF7F7] px-5 py-4"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-red-100 text-[18px] text-red-700">!</span><div><h3 id="validation-title" className="text-[14px] font-semibold text-[#7F1D1D]">Complete GST details</h3><p className="mt-1 text-[11.5px] leading-5 text-[#9F3232]">{message}</p></div></div><div className="flex justify-end px-5 py-3"><button type="button" autoFocus onClick={onClose} className="inline-flex h-9 items-center justify-center rounded-md bg-[#4F46E5] px-4 text-[11px] font-semibold text-white shadow-sm hover:bg-[#4338CA]">Go to field</button></div></div></div>; }
 function Panel({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) { return <section id={id} className="scroll-mt-20 rounded-[var(--radius-panel)] border border-[var(--border)] bg-white shadow-[var(--shadow-panel)]"><div className="border-b border-[var(--border)] px-3 py-2"><h3 className="text-[11.5px] font-semibold text-[var(--text)]">{title}</h3></div><div className="p-3">{children}</div></section>; }
 function Field({ label, name, defaultValue = "", type = "text", required = false, maxLength, uppercase = false }: { label: string; name: string; defaultValue?: string; type?: string; required?: boolean; maxLength?: number; uppercase?: boolean }) { return <div><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} type={type} required={required} maxLength={maxLength} defaultValue={defaultValue} className={`${inputClass} ${uppercase ? "uppercase" : ""}`} onInput={uppercase ? (event) => { event.currentTarget.value = event.currentTarget.value.toUpperCase(); } : undefined} /></div>; }
@@ -119,4 +131,6 @@ function DocumentStatus({ status }: { status: string }) { const label = status =
 function documentLabel(type: string) { return ({ pan_copy: "PAN Copy", aadhaar_front: "Aadhaar Front", aadhaar_back: "Aadhaar Back", gst_copy: "GST Copy" } as Record<string,string>)[type] ?? type.replaceAll("_", " "); }
 function EmptyText({ text }: { text: string }) { return <p className="rounded-md border border-dashed border-[#D8E0EA] px-3 py-5 text-center text-[9.5px] text-[var(--muted)]">{text}</p>; }
 function Info({ label, value }: { label: string; value: string }) { return <div className="flex items-center justify-between gap-3"><dt className="text-[var(--muted)]">{label}</dt><dd className="text-right font-semibold text-[var(--text)]">{value}</dd></div>; }
+function partnerTypeLabel(value: string | null) { return ({ individual_proprietor: "Individual / Proprietor", dealership: "Dealership", corporate: "Corporate", group: "Group" } as Record<string,string>)[value ?? ""] ?? (value ? value.replaceAll("_", " ") : "Not set"); }
+function fleetSizeLabel(value: string | null) { return ({ less_than_5: "1–4", "5_to_20": "5–20", "20_to_50": "20–50", more_than_50: "51–Unlimited" } as Record<string,string>)[value ?? ""] ?? (value?.trim() || "Not set"); }
 function formatDate(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? "—" : new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(date); }
