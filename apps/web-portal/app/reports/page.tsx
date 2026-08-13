@@ -1,72 +1,74 @@
 import Link from "next/link";
-import { Download, ExternalLink, Filter } from "lucide-react";
+import { redirect } from "next/navigation";
+import { ArrowRight, BarChart3, CheckCircle2 } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { requireCapability } from "@/lib/master-data-server";
-import { loadPolicyBusinessReport, type PolicyBusinessFilters, type PolicyBusinessQuery, type PolicyBusinessReport } from "@/lib/reports/policy-business";
+import { visibleReportFamilies } from "@/lib/reports/navigation";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-const PERIODS = [{ key: "90d", label: "Last 90 days" }, { key: "mtd", label: "Month to date" }, { key: "ytd", label: "Year to date" }, { key: "all", label: "All time" }] as const;
-type Props = { searchParams: Promise<PolicyBusinessQuery> };
+type Query = Record<string, string | string[] | undefined>;
+type Props = { searchParams: Promise<Query> };
 
-export default async function ReportsPage({ searchParams }: Props) {
+const BUSINESS_QUERY_KEYS = ["period", "from", "to", "insurer", "rm", "intermediary", "page"];
+
+export default async function ReportsOverviewPage({ searchParams }: Props) {
   const profile = await requireCapability("view_reports");
   if (!profile) return null;
-  const [query, canViewGovernance] = await Promise.all([searchParams, hasEffectiveCapability(profile, "manage_users")]);
-  let payload: Awaited<ReturnType<typeof loadPolicyBusinessReport>> | null = null;
-  let loadError = false;
-  try { payload = await loadPolicyBusinessReport(profile, query); }
-  catch (error) { console.error("[reports] policy business report failed", error instanceof Error ? error.message : "unknown error"); loadError = true; }
-  const report = payload?.report ?? emptyReport();
-  const filters = payload?.filters ?? fallbackFilters();
-  const pages = Math.max(1, Math.ceil(report.register.total_count / Math.max(report.register.page_size, 1)));
-  const exportHref = href("/reports/export/policy-business", filters);
+  const query = await searchParams;
 
-  return <AppShell title="Reports"><div className="mx-auto max-w-[1560px] space-y-4 pb-8">
-    <header className="portal-card overflow-hidden">
-      <div className="border-b border-[#e8ecf2] px-5 py-5 sm:px-6"><h1 className="text-[26px] font-semibold tracking-[-0.025em] text-[#13203b] sm:text-[30px]">Policy production & portfolio</h1><ReportTabs canViewGovernance={canViewGovernance} /></div>
-      <div className="px-5 py-4 sm:px-6">
-        <div className="flex flex-wrap gap-2">{PERIODS.map(x => <Link key={x.key} href={`/reports?period=${x.key}`} className={`rounded-lg border px-3 py-2 text-[10px] font-bold ${filters.period === x.key ? "border-[#223a78] bg-[#223a78] text-white" : "border-[#dfe5ee] bg-white text-[#506077]"}`}>{x.label}</Link>)}</div>
-        <form action="/reports" method="get" className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-[145px_145px_minmax(180px,1fr)_minmax(170px,1fr)_minmax(190px,1fr)_auto_auto]">
-          <input type="hidden" name="period" value="custom" />
-          <Field label="From"><input name="from" type="date" defaultValue={filters.fromDate ?? ""} className={inputClass} /></Field>
-          <Field label="To"><input name="to" type="date" defaultValue={filters.toDate ?? ""} className={inputClass} /></Field>
-          <Field label="Insurance company"><select name="insurer" defaultValue={filters.insurerId ?? ""} className={inputClass}><option value="">All insurers</option>{report.filters.insurers.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select></Field>
-          <Field label="Relationship manager"><select name="rm" defaultValue={filters.rmName ?? ""} className={inputClass}><option value="">All RMs</option>{report.filters.rms.map(x => <option key={x} value={x}>{x}</option>)}</select></Field>
-          <Field label="Partner / intermediary"><select name="intermediary" defaultValue={filters.intermediaryCode ?? ""} className={inputClass}><option value="">All intermediaries</option>{report.filters.intermediaries.map(x => <option key={x.code} value={x.code}>{x.name}{x.name !== x.code ? ` · ${x.code}` : ""}</option>)}</select></Field>
-          <button className="mt-auto inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#172a5c] px-4 text-[10.5px] font-bold text-white"><Filter className="h-3.5 w-3.5" />Apply</button>
-          <Link href="/reports" className="mt-auto inline-flex h-10 items-center justify-center rounded-lg border border-[#dfe5ee] bg-white px-4 text-[10.5px] font-bold text-[#526174]">Reset</Link>
-        </form>
+  if (BUSINESS_QUERY_KEYS.some((key) => query[key] !== undefined)) {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(query)) {
+      if (Array.isArray(value)) value.forEach((item) => params.append(key, item));
+      else if (typeof value === "string") params.set(key, value);
+    }
+    redirect(`/reports/business${params.size ? `?${params.toString()}` : ""}`);
+  }
+
+  const canViewGovernance = await hasEffectiveCapability(profile, "manage_users");
+  const families = visibleReportFamilies(canViewGovernance);
+
+  return (
+    <AppShell title="Reports">
+      <div className="mx-auto max-w-[1560px] space-y-4 pb-8">
+        <header className="portal-card overflow-hidden">
+          <div className="px-5 py-5 sm:px-6">
+            <h1 className="text-[26px] font-semibold tracking-[-0.025em] text-[#13203b] sm:text-[30px]">Reports</h1>
+          </div>
+        </header>
+
+        <section className="grid gap-3 md:grid-cols-2">
+          <Link href="/reports/management-pack" className="portal-card group flex items-center justify-between gap-4 p-5 transition hover:border-[#b7c5da] sm:p-6">
+            <div className="flex items-center gap-3">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#172a5c] text-white"><BarChart3 className="h-4.5 w-4.5" /></span>
+              <div><p className="text-[12px] font-bold text-[#1b2943]">Management Pack</p><p className="mt-1 text-[9.5px] font-semibold text-[#778397]">Executive</p></div>
+            </div>
+            <ArrowRight className="h-4 w-4 text-[#748096] transition group-hover:translate-x-0.5" />
+          </Link>
+          <Link href="/reports/readiness" className="portal-card group flex items-center justify-between gap-4 p-5 transition hover:border-[#b7c5da] sm:p-6">
+            <div className="flex items-center gap-3">
+              <span className="grid h-10 w-10 place-items-center rounded-xl border border-[#dbe3ed] bg-[#f8fafc] text-[#31528f]"><CheckCircle2 className="h-4.5 w-4.5" /></span>
+              <div><p className="text-[12px] font-bold text-[#1b2943]">Readiness</p><p className="mt-1 text-[9.5px] font-semibold text-[#778397]">Controls & Data Quality</p></div>
+            </div>
+            <ArrowRight className="h-4 w-4 text-[#748096] transition group-hover:translate-x-0.5" />
+          </Link>
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-2">
+          {families.map((family) => (
+            <article key={family.key} className="portal-card overflow-hidden">
+              <div className="border-b border-[#e9edf3] px-5 py-4"><h2 className="text-[14px] font-bold text-[#1b2943]">{family.label}</h2></div>
+              <div className="divide-y divide-[#edf0f4]">
+                {family.destinations.map((destination) => (
+                  <Link key={destination.href} href={destination.href} className="group flex items-center justify-between gap-3 px-5 py-4 text-[11px] font-semibold text-[#34445e] transition hover:bg-[#fafbfd] hover:text-[#203f79]">
+                    <span>{destination.label}</span><ArrowRight className="h-3.5 w-3.5 text-[#7c899b] transition group-hover:translate-x-0.5" />
+                  </Link>
+                ))}
+              </div>
+            </article>
+          ))}
+        </section>
       </div>
-    </header>
-    {loadError ? <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-[11px] font-bold text-red-700">Reporting service unavailable.</div> : null}
-    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"><Metric label="Policies" value={integer(report.summary.policy_count)} /><Metric label="Gross premium" value={currency(report.summary.gross_premium)} /><Metric label="Net premium" value={currency(report.summary.net_premium)} /><Metric label="Average premium" value={currency(report.summary.average_premium)} /><Metric label="Intermediaries" value={integer(report.summary.intermediary_count)} /></section>
-    <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,.85fr)]"><article className="portal-card p-5 sm:p-6"><HeaderTitle title="Premium production trend" /><Trend rows={report.trend} /></article><article className="portal-card p-5 sm:p-6"><HeaderTitle title="Premium composition" /><Composition report={report} /></article></section>
-    <section className="grid gap-4 xl:grid-cols-2"><article className="portal-card overflow-hidden"><Header title="Insurance company contribution" /><InsurerTable rows={report.insurers} /></article><article className="portal-card overflow-hidden"><Header title="RM production" /><RmTable rows={report.rms} /></article></section>
-    <section className="portal-card overflow-hidden"><div className="flex items-center justify-between border-b border-[#e9edf3] px-5 py-4"><h2 className="text-[14px] font-bold text-[#1b2943]">Policy business register</h2><a href={exportHref} className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#cad4e4] bg-white px-3 text-[10px] font-bold text-[#263b69]"><Download className="h-3.5 w-3.5" />Export CSV</a></div><Register rows={report.register.rows} /><Pagination page={report.register.page} pages={pages} total={report.register.total_count} prev={href("/reports", filters, Math.max(1, report.register.page - 1))} next={href("/reports", filters, report.register.page + 1)} /></section>
-  </div></AppShell>;
+    </AppShell>
+  );
 }
-
-const inputClass = "h-10 w-full rounded-lg border border-[#dfe5ee] bg-white px-3 text-[10.5px] font-semibold text-[#26364f] outline-none focus:border-[#7788bd] focus:ring-2 focus:ring-[#dfe5ff]";
-function ReportTabs({ canViewGovernance }: { canViewGovernance: boolean }) { return <nav className="mt-4 flex flex-wrap gap-2"><Tab href="/reports" label="Business" active /><Tab href="/reports/distribution" label="Distribution" /><Tab href="/reports/renewals" label="Renewals" /><Tab href="/reports/claims" label="Claims" /><Tab href="/reports/finance" label="Finance" /><Tab href="/reports/operations" label="Operations" />{canViewGovernance ? <Tab href="/reports/governance" label="Governance" /> : null}<Tab href="/reports/management-pack" label="Management Pack" /><Tab href="/reports/readiness" label="Readiness" /></nav>; }
-function Tab({ href, label, active = false }: { href: string; label: string; active?: boolean }) { return <Link href={href} className={`rounded-lg border px-3 py-2 text-[10px] font-bold ${active ? "border-[#223a78] bg-[#223a78] text-white" : "border-[#dfe5ee] bg-white text-[#506077]"}`}>{label}</Link>; }
-function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label><span className="mb-1 block text-[8.5px] font-black uppercase tracking-[.08em] text-[#7b8799]">{label}</span>{children}</label>; }
-function Metric({ label, value }: { label: string; value: string }) { return <article className="portal-card px-4 py-4 sm:px-5"><p className="text-[9px] font-black uppercase tracking-[.1em] text-[#7c899b]">{label}</p><p className="mt-2 text-[23px] font-semibold tracking-[-.03em] text-[#14213c]">{value}</p></article>; }
-function HeaderTitle({ title }: { title: string }) { return <h2 className="text-[14px] font-bold text-[#1b2943]">{title}</h2>; }
-function Header({ title }: { title: string }) { return <div className="border-b border-[#e9edf3] px-5 py-4"><HeaderTitle title={title} /></div>; }
-function Trend({ rows }: { rows: PolicyBusinessReport["trend"] }) { if (!rows.length) return <Empty />; const max = Math.max(...rows.map(x => x.gross_premium), 1); return <div className="mt-5 space-y-3">{rows.map(x => <div key={x.month} className="grid grid-cols-[78px_minmax(0,1fr)_100px] items-center gap-3"><div><p className="text-[10px] font-bold text-[#35445d]">{month(x.month)}</p><p className="text-[8.5px] text-[#8a96a7]">{integer(x.policy_count)}</p></div><div className="h-2.5 overflow-hidden rounded-full bg-[#edf1f6]"><div className="h-full rounded-full bg-[#3559a8]" style={{ width: `${Math.max((x.gross_premium / max) * 100, 2)}%` }} /></div><p className="text-right text-[10px] font-bold tabular-nums text-[#23334f]">{currency(x.gross_premium)}</p></div>)}</div>; }
-function Composition({ report }: { report: PolicyBusinessReport }) { const total = report.summary.net_premium || 1; const rows = [{ label: "Own damage", value: report.summary.od_premium }, { label: "Third party", value: report.summary.tp_premium }, { label: "CPA", value: report.summary.cpa_amount }]; return <div className="mt-5 space-y-4">{rows.map(x => <div key={x.label}><div className="flex items-end justify-between gap-3"><p className="text-[10.5px] font-semibold text-[#536174]">{x.label}</p><p className="text-[13px] font-bold tabular-nums text-[#21324f]">{currency(x.value)}</p></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#edf1f6]"><div className="h-full rounded-full bg-[#516dab]" style={{ width: `${Math.min((x.value / total) * 100, 100)}%` }} /></div></div>)}</div>; }
-function InsurerTable({ rows }: { rows: PolicyBusinessReport["insurers"] }) { if (!rows.length) return <Empty />; return <div className="overflow-x-auto"><table className="w-full min-w-[560px]"><thead><tr className="bg-[#f8fafc] text-[8.5px] font-black uppercase tracking-[.08em] text-[#7c899b]"><th className="px-5 py-3 text-left">Insurance company</th><th className="px-3 py-3 text-right">Policies</th><th className="px-3 py-3 text-right">Gross premium</th><th className="px-5 py-3 text-right">Share</th></tr></thead><tbody className="divide-y divide-[#edf0f4]">{rows.map(x => <tr key={x.id} className="text-[10.5px]"><td className="px-5 py-3.5 font-semibold">{x.name}</td><td className="px-3 py-3.5 text-right">{integer(x.policy_count)}</td><td className="px-3 py-3.5 text-right font-bold">{currency(x.gross_premium)}</td><td className="px-5 py-3.5 text-right">{percent(x.share_percent)}</td></tr>)}</tbody></table></div>; }
-function RmTable({ rows }: { rows: PolicyBusinessReport["rms"] }) { if (!rows.length) return <Empty />; return <div className="overflow-x-auto"><table className="w-full min-w-[560px]"><thead><tr className="bg-[#f8fafc] text-[8.5px] font-black uppercase tracking-[.08em] text-[#7c899b]"><th className="px-5 py-3 text-left">Relationship manager</th><th className="px-3 py-3 text-right">Policies</th><th className="px-3 py-3 text-right">Partners</th><th className="px-5 py-3 text-right">Gross premium</th></tr></thead><tbody className="divide-y divide-[#edf0f4]">{rows.map(x => <tr key={x.name} className="text-[10.5px]"><td className="px-5 py-3.5 font-semibold">{x.name}</td><td className="px-3 py-3.5 text-right">{integer(x.policy_count)}</td><td className="px-3 py-3.5 text-right">{integer(x.intermediary_count)}</td><td className="px-5 py-3.5 text-right font-bold">{currency(x.gross_premium)}</td></tr>)}</tbody></table></div>; }
-function Register({ rows }: { rows: PolicyBusinessReport["register"]["rows"] }) { if (!rows.length) return <Empty />; return <div className="overflow-x-auto"><table className="w-full min-w-[1180px]"><thead><tr className="bg-[#f8fafc] text-[8.2px] font-black uppercase tracking-[.07em] text-[#7c899b]"><th className="px-5 py-3 text-left">Business date</th><th className="px-3 py-3 text-left">Policy</th><th className="px-3 py-3 text-left">Customer / vehicle</th><th className="px-3 py-3 text-left">Insurer</th><th className="px-3 py-3 text-left">RM / intermediary</th><th className="px-3 py-3 text-right">OD</th><th className="px-3 py-3 text-right">TP</th><th className="px-3 py-3 text-right">Gross</th><th className="px-5 py-3 text-center">Open</th></tr></thead><tbody className="divide-y divide-[#edf0f4]">{rows.map(x => <tr key={x.id} className="text-[10px] hover:bg-[#fbfcfe]"><td className="px-5 py-3.5 font-semibold">{date(x.business_date)}</td><td className="px-3 py-3.5"><p className="font-bold">{x.policy_no}</p><p className="text-[8.5px] text-[#8490a1]">{x.policy_type} · {x.status}</p></td><td className="px-3 py-3.5"><p className="font-semibold">{x.customer_name}</p><p className="text-[8.5px] text-[#8490a1]">{x.vehicle_no}</p></td><td className="px-3 py-3.5">{x.insurer_name}</td><td className="px-3 py-3.5"><p className="font-semibold">{x.rm_name ?? "Unassigned"}</p><p className="text-[8.5px] text-[#8490a1]">{x.intermediary_code ?? "—"}</p></td><td className="px-3 py-3.5 text-right">{currency(x.od_premium)}</td><td className="px-3 py-3.5 text-right">{currency(x.tp_premium)}</td><td className="px-3 py-3.5 text-right font-bold">{currency(x.gross_premium)}</td><td className="px-5 py-3.5 text-center"><Link href={`/policies/${x.id}`} className="inline-grid h-8 w-8 place-items-center rounded-lg border border-[#d9e1ec] text-[#425b8f]"><ExternalLink className="h-3.5 w-3.5" /></Link></td></tr>)}</tbody></table></div>; }
-function Pagination({ page, pages, total, prev, next }: { page: number; pages: number; total: number; prev: string; next: string }) { return <div className="flex items-center justify-between border-t border-[#edf0f4] px-5 py-3 text-[9.5px] text-[#738095]"><span>{integer(total)} records</span><div className="flex items-center gap-2"><Link href={page <= 1 ? "#" : prev} className={`rounded-md border px-3 py-1.5 font-bold ${page <= 1 ? "pointer-events-none opacity-40" : ""}`}>Previous</Link><span>{page} / {pages}</span><Link href={page >= pages ? "#" : next} className={`rounded-md border px-3 py-1.5 font-bold ${page >= pages ? "pointer-events-none opacity-40" : ""}`}>Next</Link></div></div>; }
-function Empty() { return <div className="px-5 py-10 text-center text-[10px] font-semibold text-[#7a8798]">No data</div>; }
-function href(path: string, f: PolicyBusinessFilters, page?: number) { const s = new URLSearchParams(); s.set("period", "custom"); if (f.fromDate) s.set("from", f.fromDate); if (f.toDate) s.set("to", f.toDate); if (f.insurerId) s.set("insurer", f.insurerId); if (f.rmName) s.set("rm", f.rmName); if (f.intermediaryCode) s.set("intermediary", f.intermediaryCode); if (page) s.set("page", String(page)); return `${path}?${s}`; }
-function currency(v: number) { return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(v || 0); }
-function integer(v: number) { return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(v || 0); }
-function percent(v: number) { return `${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 1 }).format(v || 0)}%`; }
-function date(v: string) { return v ? new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }).format(new Date(`${v}T00:00:00+05:30`)) : "—"; }
-function month(v: string) { return v ? new Intl.DateTimeFormat("en-IN", { month: "short", year: "2-digit", timeZone: "Asia/Kolkata" }).format(new Date(`${v}T00:00:00+05:30`)) : "—"; }
-function fallbackFilters(): PolicyBusinessFilters { return { period: "90d", fromDate: null, toDate: null, insurerId: null, rmName: null, intermediaryCode: null, page: 1 }; }
-function emptyReport(): PolicyBusinessReport { return { summary: { policy_count: 0, active_policy_count: 0, gross_premium: 0, net_premium: 0, od_premium: 0, tp_premium: 0, cpa_amount: 0, average_premium: 0, insurer_count: 0, intermediary_count: 0 }, trend: [], insurers: [], rms: [], filters: { insurers: [], rms: [], intermediaries: [] }, register: { rows: [], total_count: 0, page: 1, page_size: 25 } }; }
