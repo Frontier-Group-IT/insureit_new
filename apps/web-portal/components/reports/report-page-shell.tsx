@@ -6,25 +6,36 @@ export const reportInputClass = "h-10 w-full rounded-lg border border-[#dfe5ee] 
 
 export function ReportPageShell({
   title,
+  titleAccessory,
   actions,
   controls,
   loadError = false,
   children,
+  className = "",
+  headerClassName = "",
+  controlsClassName = "",
 }: {
   title: string;
+  titleAccessory?: ReactNode;
   actions?: ReactNode;
   controls?: ReactNode;
   loadError?: boolean;
   children: ReactNode;
+  className?: string;
+  headerClassName?: string;
+  controlsClassName?: string;
 }) {
   return (
-    <div className="mx-auto max-w-[1560px] space-y-4 pb-8">
-      <header className="portal-card overflow-hidden">
+    <div className={`mx-auto max-w-[1560px] space-y-4 pb-8 ${className}`}>
+      <header className={`portal-card overflow-hidden ${headerClassName}`}>
         <div className="flex flex-col gap-3 border-b border-[#e8ecf2] px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <h1 className="text-[26px] font-semibold tracking-[-0.025em] text-[#13203b] sm:text-[30px]">{title}</h1>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h1 className="text-[26px] font-semibold tracking-[-0.025em] text-[#13203b] sm:text-[30px]">{title}</h1>
+            {titleAccessory}
+          </div>
           {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
         </div>
-        {controls ? <div className="px-5 py-4 sm:px-6">{controls}</div> : null}
+        {controls ? <div className={`px-5 py-4 sm:px-6 ${controlsClassName}`}>{controls}</div> : null}
       </header>
       {loadError ? <ReportErrorBanner /> : null}
       {children}
@@ -49,10 +60,10 @@ export function ReportApplyButton({ label = "Apply" }: { label?: string }) {
   );
 }
 
-export function ReportResetLink({ href }: { href: string }) {
+export function ReportResetLink({ href, label = "Reset" }: { href: string; label?: string }) {
   return (
     <Link href={href} className="mt-auto inline-flex h-10 items-center justify-center rounded-lg border border-[#dfe5ee] bg-white px-4 text-[10.5px] font-bold text-[#526174] transition hover:border-[#c8d1df] hover:bg-[#f8fafc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7788bd] focus-visible:ring-offset-2">
-      Reset
+      {label}
     </Link>
   );
 }
@@ -65,10 +76,10 @@ export function ReportExportLink({ href, label = "Export CSV" }: { href: string;
   );
 }
 
-export function ReportErrorBanner() {
+export function ReportErrorBanner({ message = "Reporting service unavailable." }: { message?: string }) {
   return (
     <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-[11px] font-bold text-red-700">
-      Reporting service unavailable.
+      {message}
     </div>
   );
 }
