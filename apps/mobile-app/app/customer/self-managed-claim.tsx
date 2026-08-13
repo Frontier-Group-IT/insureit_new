@@ -1,10 +1,11 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import { AppDatePicker } from '@/components/design-system';
 import { Button, Card, LoadingState, Message, Screen, TextField } from '@/components/ui';
 import { SELF_MANAGED_CLAIM_NOTICE } from '@/lib/claim-service-mode';
 import { supabase } from '@/lib/supabase';
+import { palette } from '@/lib/theme';
 import type { Policy, Vehicle } from '@/lib/types';
 
 type CustomerPolicy = Policy & { policy_service_source?: 'sibl' | 'external' | null };
@@ -64,8 +65,10 @@ export default function SelfManagedClaimScreen() {
   if (loading) return <Screen title="Spot Intimation"><LoadingState label="Opening policy" /></Screen>;
   return <Screen title="Spot Intimation" subtitle="Self-tracked claim • Step 1 of 9" showLogout>
     {message ? <Message type="error">{message}</Message> : null}
-    {policy ? <Card title={policy.policy_no} subtitle={`${vehicle?.vehicle_no ?? 'Vehicle'} • Policy added by you`}><Message type="info">{SELF_MANAGED_CLAIM_NOTICE}</Message></Card> : null}
-    <Card title="Accident details" subtitle="Date and time are required">
+    {policy ? <Card><Text style={{ color: palette.navy, fontSize: 15, fontWeight: '900' }}>{policy.policy_no}</Text><Text style={{ color: palette.slate, fontSize: 11, fontWeight: '700', marginTop: 3 }}>{vehicle?.vehicle_no ?? 'Vehicle'} • Policy added by you</Text><View style={{ height: 10 }} /><Message type="info">{SELF_MANAGED_CLAIM_NOTICE}</Message></Card> : null}
+    <Card>
+      <Text style={{ color: palette.navy, fontSize: 14, fontWeight: '900', marginBottom: 3 }}>Accident details</Text>
+      <Text style={{ color: palette.slate, fontSize: 10.5, fontWeight: '600', marginBottom: 12 }}>Date and time are required</Text>
       <AppDatePicker label="Accident Date *" value={date} onChange={setDate} maxDate={new Date().toISOString().slice(0, 10)} />
       <View style={{ height: 10 }} />
       <TextField label="Accident Time *" placeholder="HH:MM" value={time} onChangeText={setTime} keyboardType="numbers-and-punctuation" />
