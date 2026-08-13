@@ -10,87 +10,25 @@ import { supabase } from '@/lib/supabase';
 import { palette, radii } from '@/lib/theme';
 import type { InsuranceCompany, Policy, Vehicle } from '@/lib/types';
 
+type ExternalPolicy = { id:string; customer_id:string; vehicle_id:string; insurance_company_id:string; policy_no:string; policy_type:string; start_date:string; end_date:string; premium_amount:number|null; insured_declared_value:number|null };
+type PortfolioPolicy = { id:string; source:'sankalp'|'external'; vehicle_id:string; insurance_company_id:string; policy_no:string; policy_type:string; end_date:string };
+
 export default function PoliciesScreen() {
-  const router = useRouter();
-  const [policies, setPolicies] = useState<Policy[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [companies, setCompanies] = useState<InsuranceCompany[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-    async function load() {
-      const session = await getCurrentSession();
-      if (!session?.user) return router.replace('/login');
-      const contexts = await getOperationalCustomerContexts();
-      const ids = contexts.map((context) => context.customer_id);
-      if (ids.length) {
-        const [policyResult, vehicleResult, companyResult] = await Promise.all([
-          supabase.from('policies').select('*').in('customer_id', ids).order('end_date', { ascending: true }),
-          supabase.from('vehicles').select('*').in('customer_id', ids),
-          supabase.from('insurance_companies').select('*'),
-        ]);
-        if (!active) return;
-        setPolicies(policyResult.data ?? []);
-        setVehicles(vehicleResult.data ?? []);
-        setCompanies(companyResult.data ?? []);
-      }
-      if (active) setLoading(false);
-    }
-    void load();
-    return () => { active = false; };
-  }, [router]);
-
-  if (loading) return <Screen title="My Policies"><LoadingState /></Screen>;
-
-  return (
-    <Screen title="My Policies" subtitle={`${policies.length} polic${policies.length === 1 ? 'y' : 'ies'}`} showLogout>
-      {policies.length === 0 ? <EmptyState title="No policies yet" body="Policy records will appear here." /> : policies.map((policy) => {
-        const vehicle = vehicles.find((item) => item.id === policy.vehicle_id);
-        const company = companies.find((item) => item.id === policy.insurance_company_id);
-        const days = daysUntil(policy.end_date);
-        const tone = days < 0 ? 'expired' : days <= 30 ? 'due' : 'active';
-        return (
-          <Pressable key={policy.id} onPress={() => router.push({ pathname: '/customer/policy-detail', params: { id: policy.id } } as any)} style={({ pressed }) => [styles.policyRow, pressed && styles.policyRowPressed]}>
-            <View style={styles.policyIcon}>
-              <MaterialCommunityIcons name="shield-outline" size={21} color={palette.emerald} />
-            </View>
-            <View style={styles.policyCopy}>
-              <Text style={styles.vehicleNo}>{vehicle?.vehicle_no ?? 'Vehicle unavailable'}</Text>
-              <Text style={styles.insurerName} numberOfLines={1}>{company?.name ?? 'Insurer pending'}</Text>
-              <Text style={styles.policyMeta} numberOfLines={1}>{policy.policy_no} - {policy.policy_type || 'Policy'} - Ends {formatDate(policy.end_date)}</Text>
-            </View>
-            <View style={[styles.statusPill, tone === 'expired' && styles.statusExpired, tone === 'due' && styles.statusDue]}>
-              <Text style={[styles.statusText, tone === 'expired' && styles.statusExpiredText, tone === 'due' && styles.statusDueText]}>{tone === 'expired' ? 'Expired' : tone === 'due' ? 'Renewal' : 'Active'}</Text>
-            </View>
-          </Pressable>
-        );
-      })}
-    </Screen>
-  );
+  const router=useRouter(); const [sankalp,setSankalp]=useState<Policy[]>([]); const [external,setExternal]=useState<ExternalPolicy[]>([]); const [vehicles,setVehicles]=useState<Vehicle[]>([]); const [companies,setCompanies]=useState<InsuranceCompany[]>([]); const [loading,setLoading]=useState(true);
+  useEffect(()=>{let active=true; void(async()=>{const session=await getCurrentSession(); if(!session?.user)return router.replace('/login'); const contexts=await getOperationalCustomerContexts(); const ids=contexts.map(c=>c.customer_id); if(ids.length){const [a,b,c,d]=await Promise.all([supabase.from('policies').select('*').in('customer_id',ids).order('end_date',{ascending:true}),supabase.from('external_policies').select('*').in('customer_id',ids).order('end_date',{ascending:true}),supabase.from('vehicles').select('*').in('customer_id',ids),supabase.from('insurance_companies').select('*')]); if(!active)return; setSankalp((a.data??[]) as Policy[]); setExternal((b.data??[]) as ExternalPolicy[]); setVehicles((c.data??[]) as Vehicle[]); setCompanies((d.data??[]) as InsuranceCompany[]);} if(active)setLoading(false);})(); return()=>{active=false};},[router]);
+  if(loading)return <Screen title="My Policies"><LoadingState/></Screen>;
+  const total=sankalp.length+external.length;
+  return <Screen title="My Policies" subtitle={`${total} polic${total===1?'y':'ies'} across your insurance portfolio`} showLogout>
+    <View style={styles.summary}><View><Text style={styles.summaryNo}>{total}</Text><Text style={styles.summaryLabel}>Total policies</Text></View><View style={styles.summarySplit}><Count label="Sankalp Serviced" value={sankalp.length} tone="green"/><Count label="External" value={external.length} tone="blue"/></View></View>
+    <SectionHeader title="Sankalp Serviced" subtitle="Policies placed and serviced through Sankalp" icon="shield-check-outline" />
+    {sankalp.length? sankalp.map(p=><PolicyCard key={p.id} policy={{...p,source:'sankalp'}} vehicles={vehicles} companies={companies} onPress={()=>router.push({pathname:'/customer/policy-detail',params:{id:p.id}} as any)}/>):<EmptyState title="No Sankalp policies" body="Policies serviced by Sankalp will appear here."/>}
+    <View style={styles.sectionGap}/>
+    <View style={styles.externalHead}><SectionHeader title="External Policies" subtitle="Outside policies stored only for your tracking" icon="folder-account-outline"/><Pressable onPress={()=>router.push('/customer/add-policy')} style={styles.addButton}><MaterialCommunityIcons name="plus" size={16} color="#0A43A3"/><Text style={styles.addText}>Add external</Text></Pressable></View>
+    {external.length? external.map(p=><PolicyCard key={p.id} policy={{...p,source:'external'}} vehicles={vehicles} companies={companies}/>):<EmptyState title="No external policies" body="Add an outside policy to track renewals and self-managed claims without adding it to Sankalp business."/>}
+  </Screen>;
 }
-
-function formatDate(value?: string | null) {
-  if (!value) return '-';
-  return new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
-function daysUntil(value: string) {
-  return Math.ceil((new Date(value).getTime() - Date.now()) / 86400000);
-}
-
-const styles = StyleSheet.create({
-  policyRow: { flexDirection: 'row', alignItems: 'center', gap: 11, backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.line, borderRadius: radii.md, padding: 12, marginBottom: 9, shadowColor: '#10233F', shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
-  policyRowPressed: { opacity: 0.86, transform: [{ scale: 0.985 }] },
-  policyIcon: { width: 40, height: 40, borderRadius: radii.sm, backgroundColor: palette.emeraldSoft, alignItems: 'center', justifyContent: 'center' },
-  policyCopy: { flex: 1, minWidth: 0 },
-  vehicleNo: { color: palette.ink, fontSize: 16, fontWeight: '900' },
-  insurerName: { color: palette.navy, fontSize: 12.5, fontWeight: '800', marginTop: 2 },
-  policyMeta: { color: palette.slate, fontSize: 11.5, fontWeight: '600', marginTop: 3 },
-  statusPill: { borderRadius: 999, backgroundColor: palette.emeraldSoft, paddingHorizontal: 9, paddingVertical: 5 },
-  statusExpired: { backgroundColor: '#FDECEC' },
-  statusDue: { backgroundColor: '#FFF4E2' },
-  statusText: { color: palette.emerald, fontSize: 9.5, fontWeight: '900' },
-  statusExpiredText: { color: '#C43838' },
-  statusDueText: { color: '#B7791F' },
-});
+function PolicyCard({policy,vehicles,companies,onPress}:{policy:PortfolioPolicy;vehicles:Vehicle[];companies:InsuranceCompany[];onPress?:()=>void}){const vehicle=vehicles.find(v=>v.id===policy.vehicle_id); const company=companies.find(c=>c.id===policy.insurance_company_id); const days=daysUntil(policy.end_date); const tone=days<0?'expired':days<=30?'due':'active'; return <Pressable disabled={!onPress} onPress={onPress} style={({pressed})=>[styles.card,policy.source==='external'&&styles.externalCard,pressed&&styles.pressed]}><View style={[styles.icon,policy.source==='external'&&styles.externalIcon]}><MaterialCommunityIcons name={policy.source==='sankalp'?'shield-check-outline':'file-document-outline'} size={21} color={policy.source==='sankalp'?palette.emerald:'#0A43A3'}/></View><View style={styles.copy}><View style={styles.badgeRow}><Text style={[styles.sourceBadge,policy.source==='external'&&styles.externalBadge]}>{policy.source==='sankalp'?'SANKALP SERVICED':'EXTERNAL POLICY'}</Text></View><Text style={styles.vehicle}>{vehicle?.vehicle_no??'Vehicle unavailable'}</Text><Text style={styles.insurer} numberOfLines={1}>{company?.name??'Insurer'}</Text><Text style={styles.meta} numberOfLines={1}>{policy.policy_no} • Ends {formatDate(policy.end_date)}</Text></View><View style={[styles.status,tone==='expired'&&styles.expired,tone==='due'&&styles.due]}><Text style={[styles.statusText,tone==='expired'&&styles.expiredText,tone==='due'&&styles.dueText]}>{tone==='expired'?'Expired':tone==='due'?'Renewal':'Active'}</Text></View></Pressable>}
+function SectionHeader({title,subtitle,icon}:{title:string;subtitle:string;icon:keyof typeof MaterialCommunityIcons.glyphMap}){return <View style={styles.sectionHead}><View style={styles.sectionIcon}><MaterialCommunityIcons name={icon} size={18} color="#0A43A3"/></View><View><Text style={styles.sectionTitle}>{title}</Text><Text style={styles.sectionSub}>{subtitle}</Text></View></View>}
+function Count({label,value,tone}:{label:string;value:number;tone:'green'|'blue'}){return <View style={styles.count}><Text style={[styles.countNo,tone==='blue'&&styles.countBlue]}>{value}</Text><Text style={styles.countLabel}>{label}</Text></View>}
+function formatDate(v:string){return new Date(v).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})} function daysUntil(v:string){return Math.ceil((new Date(v).getTime()-Date.now())/86400000)}
+const styles=StyleSheet.create({summary:{borderRadius:18,backgroundColor:'#082A66',padding:15,flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:16},summaryNo:{color:'#FFF',fontSize:28,fontWeight:'900'},summaryLabel:{color:'#BFD3F2',fontSize:10,fontWeight:'800'},summarySplit:{flexDirection:'row',gap:16},count:{alignItems:'center'},countNo:{color:'#56D29A',fontSize:18,fontWeight:'900'},countBlue:{color:'#80B7FF'},countLabel:{color:'#DDE9FA',fontSize:8.5,fontWeight:'800',marginTop:2},sectionHead:{flexDirection:'row',gap:9,alignItems:'center',marginBottom:9},sectionIcon:{width:34,height:34,borderRadius:11,backgroundColor:'#EAF2FF',alignItems:'center',justifyContent:'center'},sectionTitle:{color:palette.navy,fontSize:14,fontWeight:'900'},sectionSub:{color:'#667085',fontSize:9.5,fontWeight:'600',marginTop:1},externalHead:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},addButton:{flexDirection:'row',gap:3,alignItems:'center',paddingHorizontal:9,paddingVertical:7,borderRadius:10,backgroundColor:'#EAF2FF'},addText:{color:'#0A43A3',fontSize:9.5,fontWeight:'900'},sectionGap:{height:14},card:{flexDirection:'row',alignItems:'center',gap:10,backgroundColor:'#FFF',borderWidth:1,borderColor:palette.line,borderRadius:radii.md,padding:12,marginBottom:9},externalCard:{borderColor:'#C9DCF5',backgroundColor:'#FBFDFF'},pressed:{opacity:.86},icon:{width:40,height:40,borderRadius:12,backgroundColor:palette.emeraldSoft,alignItems:'center',justifyContent:'center'},externalIcon:{backgroundColor:'#EAF2FF'},copy:{flex:1,minWidth:0},badgeRow:{flexDirection:'row',marginBottom:2},sourceBadge:{color:'#147354',fontSize:7.8,fontWeight:'900',letterSpacing:.45},externalBadge:{color:'#0A43A3'},vehicle:{color:palette.ink,fontSize:15,fontWeight:'900'},insurer:{color:palette.navy,fontSize:11.5,fontWeight:'800',marginTop:1},meta:{color:palette.slate,fontSize:10.5,fontWeight:'600',marginTop:2},status:{borderRadius:999,backgroundColor:palette.emeraldSoft,paddingHorizontal:8,paddingVertical:5},expired:{backgroundColor:'#FDECEC'},due:{backgroundColor:'#FFF4E2'},statusText:{color:palette.emerald,fontSize:8.8,fontWeight:'900'},expiredText:{color:'#C43838'},dueText:{color:'#B7791F'}});
