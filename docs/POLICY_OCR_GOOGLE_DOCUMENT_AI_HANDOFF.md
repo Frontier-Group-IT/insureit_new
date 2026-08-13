@@ -246,6 +246,35 @@ Production smoke: unauthenticated GET /policies/new returned 307 to /login?next=
 Runtime errors: no error/fatal logs found for deployment dpl_VdesEUrHCNQ2EATHjTQEUqQvqJE5 in the checked post-deploy window.
 ```
 
+### OCR date/premium hotfix - 2026-08-14
+
+**IMPLEMENTED / DEPLOYED:** live testing of the additional-insurer OCR flow showed two concrete issues after the first deployment:
+
+- extracted ISO validity dates such as `2025-08-14` were applied into the visible `DD/MM/YYYY` mask, producing malformed values such as `20/25/0814`;
+- flattened OCR values near CPA/GST labels could promote small table, percentage or reference tokens such as `1`, `2`, `5`, `15`, `18` or `28` into Section 03 fields or comparison totals.
+
+Fix:
+
+- `components/policy-ocr-import-panel.tsx` now applies OCR validity dates through the hidden native `type=date` control behind the formatted input, so React form state remains ISO and the visible UI displays `DD/MM/YYYY`.
+- `lib/policy-ocr-additional-motor-refiner.ts` now rejects non-numeric policy-number labels, blocks tiny/reference CPA candidates unless the value is explicit zero or a realistic premium, filters GST percentage/reference values, and derives printed GST from gross minus net when direct OCR tax evidence is unsafe.
+- `scripts/policy-ocr-additional-regression.ts` now includes the observed Shriram real-layout premium shape plus negative fixtures for National GST `5%`, National IMT `28`, and United India `Policy Number : CUSTOMER`.
+
+Verification:
+
+```text
+Fix commit: 4eed29c3efcc393c8df750cc3579347cfb4d19f1
+GitHub verification run: 31735620677, success
+Local checks: policy-ocr:all-regressions, typecheck, lint, build passed
+Production trigger commit: 86d2d3d9c7e61ecf3512e754c780fa57446e772e
+GitHub production run: 31735852329, verification gate success and deploy hook success
+Vercel deployment: dpl_2oCyiTgMGWvV5SdUoUFifSyZWUSF
+Vercel state: READY
+Vercel URL: insureit-qq5rirujv-antnish1s-projects.vercel.app
+Production alias: portal.insureit.in
+Production smoke: unauthenticated GET /policies/new returned 307 to /login?next=%2Fpolicies%2Fnew.
+Runtime errors: no error/fatal logs found for deployment dpl_2oCyiTgMGWvV5SdUoUFifSyZWUSF in the checked post-deploy window.
+```
+
 United India Miscellaneous/Special Type Vehicles and Contractors Plant & Machinery remain deferred unless representative samples and approved Section 03 mapping are provided.
 
 ## 8. Release discipline / next steps
