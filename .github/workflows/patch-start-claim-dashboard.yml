@@ -1,0 +1,39 @@
+name: Patch Start Claim dashboard
+
+on:
+  push:
+    branches:
+      - feature/self-managed-claims
+    paths:
+      - '.github/workflows/patch-start-claim-dashboard.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/self-managed-claims
+          fetch-depth: 0
+      - name: Replace Exchange Vehicle with Start Claim
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('apps/mobile-app/app/customer/home.tsx')
+          text = path.read_text()
+          text = text.replace("const exchangeVehicleIcon = require('../../assets/brand/exchange-vehicle-icon.png');\n", "")
+          old = '<ActionTile imageSource={exchangeVehicleIcon} title="Exchange Vehicle" body="Exchange old vehicle" onPress={() => router.push(\'/customer/support\')} tone="green" />'
+          new = '<ActionTile icon="shield-plus-outline" title="Start Claim" body="Report insurance claim" onPress={() => router.push(\'/customer/start-claim\')} tone="green" />'
+          if old not in text:
+              raise SystemExit('Expected Exchange Vehicle action not found')
+          path.write_text(text.replace(old, new))
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/mobile-app/app/customer/home.tsx
+          git commit -m "Replace Exchange Vehicle with Start Claim"
+          git push origin HEAD:feature/self-managed-claims
