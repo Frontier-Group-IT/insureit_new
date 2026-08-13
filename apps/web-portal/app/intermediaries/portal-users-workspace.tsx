@@ -66,7 +66,7 @@ export function IntermediaryPortalUsersWorkspace({ rows, initialQuery, initialSt
             ["inactive", "Needs attention", inactiveCount],
           ] as const).map(([value, label, count]) => {
             const selected = statusFilter === value;
-            return <button key={value} type="button" onClick={() => selectStatus(value)} aria-current={selected ? "page" : undefined} className={`rounded-lg px-3 py-2 text-[10px] font-semibold transition ${selected ? "bg-[#4F46E5] text-white shadow-sm" : "text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A]"}`}>{label} <span className="ml-1 opacity-80">{count}</span></button>;
+            return <button key={value} type="button" onClick={() => selectStatus(value)} aria-current={selected ? "page" : undefined} className={`rounded-lg px-3 py-2 text-[10px] font-semibold transition ${selected ? "bg-[#E7E7E7] text-[#17203A]" : "text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A]"}`}>{label} <span className="ml-1 opacity-80">{count}</span></button>;
           })}
         </nav>
       </div>
