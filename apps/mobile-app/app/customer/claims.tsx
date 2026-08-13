@@ -1,4 +1,4 @@
-﻿import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -11,10 +11,14 @@ import { palette } from '@/lib/theme';
 import type { Claim, ClaimStatus, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
 
 type ClaimFilter = 'All' | 'Open' | 'Action Required' | 'Completed';
+type CustomerClaim = Claim & {
+  claim_service_mode?: 'broker_managed' | 'self_managed' | null;
+  assistance_status?: 'not_requested' | 'requested' | 'accepted' | 'declined' | 'cancelled' | null;
+};
 
 export default function ClaimsScreen() {
   const router = useRouter();
-  const [claims, setClaims] = useState<Claim[]>([]);
+  const [claims, setClaims] = useState<CustomerClaim[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [insurers, setInsurers] = useState<InsuranceCompany[]>([]);
@@ -36,7 +40,7 @@ export default function ClaimsScreen() {
           supabase.from('insurance_companies').select('*'),
         ]);
 
-        setClaims(claimResult.data ?? []);
+        setClaims((claimResult.data ?? []) as CustomerClaim[]);
         setVehicles(vehicleResult.data ?? []);
         setPolicies(policyResult.data ?? []);
         setInsurers(insurerResult.data ?? []);
@@ -101,9 +105,17 @@ export default function ClaimsScreen() {
         const insurer = insurers.find((item) => item.id === insurerId);
         const tone = claimTone(claim.current_status);
         const policyExpiredBeforeIncident = isIncidentAfterPolicyExpiry(claim, policy);
+        const selfTracked = claim.claim_service_mode === 'self_managed';
+        const completed = ['Closed', 'Settled', 'Claim Complete'].includes(claim.current_status);
+        const assistanceRequested = selfTracked && !completed && claim.assistance_status === 'requested';
 
         return (
-          <Pressable key={claim.id} accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/claim-detail', params: { id: claim.id } })} style={[styles.claimCard, { backgroundColor: tone.background, borderColor: tone.border }]}>
+          <Pressable
+            key={claim.id}
+            accessibilityRole="button"
+            onPress={() => router.push({ pathname: selfTracked ? '/customer/self-managed-claim-detail' : '/customer/claim-detail', params: { id: claim.id } })}
+            style={[styles.claimCard, { backgroundColor: tone.background, borderColor: tone.border }]}
+          >
             <View style={[styles.accentBar, { backgroundColor: tone.accent }]} />
 
             <View style={styles.claimTop}>
@@ -112,7 +124,7 @@ export default function ClaimsScreen() {
               </View>
 
               <View style={styles.claimTitleCopy}>
-                <Text style={[styles.stageLabel, { color: tone.accent }]}>{claimStageLabel(claim.current_status)}</Text>
+                <Text style={[styles.stageLabel, { color: tone.accent }]}>{selfTracked && !completed ? 'SELF TRACKED' : claimStageLabel(claim.current_status)}</Text>
                 <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle?.vehicle_no ?? 'Vehicle linked'}</Text>
               </View>
 
@@ -120,6 +132,13 @@ export default function ClaimsScreen() {
                 <Text style={styles.statusBadgeText} numberOfLines={2}>{claim.current_status}</Text>
               </View>
             </View>
+
+            {assistanceRequested ? (
+              <View style={styles.assistancePill}>
+                <MaterialCommunityIcons name="clock-outline" size={13} color="#805700" />
+                <Text style={styles.assistancePillText}>Assistance Requested</Text>
+              </View>
+            ) : null}
 
             <View style={styles.numberRow}>
               <View style={styles.numberBox}>
@@ -146,7 +165,7 @@ export default function ClaimsScreen() {
             ) : null}
 
             <View style={styles.cardFooter}>
-              <Text style={styles.footerHint}>View claim details</Text>
+              <Text style={styles.footerHint}>{selfTracked ? 'Open claim tracker' : 'View claim details'}</Text>
               <MaterialCommunityIcons name="chevron-right" size={20} color={tone.accent} />
             </View>
           </Pressable>
@@ -171,14 +190,14 @@ function InfoPair({ leftLabel, leftValue, rightLabel, rightValue }: { leftLabel:
   );
 }
 
-function matchesFilter(claim: Claim, filter: ClaimFilter) {
+function matchesFilter(claim: CustomerClaim, filter: ClaimFilter) {
   if (filter === 'All') return true;
   if (filter === 'Completed') return ['Closed', 'Settled', 'Claim Complete'].includes(claim.current_status);
   if (filter === 'Action Required') return claim.current_status.includes('Document') || claim.current_status.includes('Awaited') || claim.current_status.includes('Pending');
   return !['Closed', 'Settled', 'Claim Complete', 'Rejected'].includes(claim.current_status);
 }
 
-function countForFilter(filter: ClaimFilter, claims: Claim[]) {
+function countForFilter(filter: ClaimFilter, claims: CustomerClaim[]) {
   return claims.filter((claim) => matchesFilter(claim, filter)).length;
 }
 
@@ -188,12 +207,12 @@ function claimStageLabel(status: ClaimStatus) {
   if (status.includes('Approval') || status.includes('Estimate')) return 'APPROVAL STAGE';
   if (status.includes('Repair') || status.includes('DO') || status.includes('RA')) return 'REPAIR / DO STAGE';
   if (status.includes('Payment') || status.includes('Settlement')) return 'PAYMENT STAGE';
-  if (status === 'Closed' || status === 'Settled') return 'COMPLETED';
+  if (status === 'Closed' || status === 'Settled' || status === 'Claim Complete') return 'COMPLETED';
   return 'CLAIM STAGE';
 }
 
 function claimTone(status: ClaimStatus) {
-  if (status === 'Closed' || status === 'Settled') return { accent: '#12805C', soft: '#E8F8F0', background: '#F7FFFB', border: '#BFEBD0' };
+  if (status === 'Closed' || status === 'Settled' || status === 'Claim Complete') return { accent: '#12805C', soft: '#E8F8F0', background: '#F7FFFB', border: '#BFEBD0' };
   if (status === 'Rejected') return { accent: '#C43838', soft: '#FDECEC', background: '#FFF7F7', border: '#F2C6C6' };
   if (status.includes('Payment') || status.includes('Settlement')) return { accent: '#B7791F', soft: '#FFF4E2', background: '#FFFCF5', border: '#F7DCA2' };
   if (status.includes('Repair') || status.includes('DO') || status.includes('RA')) return { accent: '#7C3AED', soft: '#F0E9FF', background: '#FCFAFF', border: '#D8C8FF' };
@@ -206,7 +225,7 @@ function statusIcon(status: ClaimStatus): keyof typeof MaterialCommunityIcons.gl
   if (status.includes('Survey')) return 'clipboard-search-outline';
   if (status.includes('Repair')) return 'wrench-outline';
   if (status.includes('Payment') || status.includes('Settlement')) return 'bank-transfer';
-  if (status === 'Closed' || status === 'Settled') return 'check-circle-outline';
+  if (status === 'Closed' || status === 'Settled' || status === 'Claim Complete') return 'check-circle-outline';
   if (status === 'Rejected') return 'close-circle-outline';
   return 'shield-check-outline';
 }
@@ -216,7 +235,7 @@ function formatDate(value?: string | null) {
   return new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-function isIncidentAfterPolicyExpiry(claim: Claim, policy?: Policy | null) {
+function isIncidentAfterPolicyExpiry(claim: CustomerClaim, policy?: Policy | null) {
   const incident = claim.accident_at ? new Date(claim.accident_at) : null;
   const expiry = policyExpiryEndOfDay(policy?.end_date);
   if (!incident || Number.isNaN(incident.getTime()) || !expiry) return false;
@@ -234,14 +253,12 @@ function policyExpiryEndOfDay(value?: string | null) {
 const styles = StyleSheet.create({
   searchSection: { marginTop: -22, marginBottom: 10 },
   searchHeading: { color: palette.navy, fontSize: 13, fontWeight: '900', marginBottom: 7 },
-
   filterScroller: { maxHeight: 42, marginBottom: 12 },
   filterWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 14 },
   filterChip: { height: 34, borderRadius: 999, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center' },
   filterChipActive: { backgroundColor: palette.navy, borderColor: palette.navy },
   filterText: { color: palette.slate, fontSize: 11.5, fontWeight: '900' },
   filterTextActive: { color: '#FFFFFF' },
-
   claimCard: { borderWidth: 1, borderRadius: 18, padding: 12, paddingLeft: 17, marginBottom: 10, overflow: 'hidden', shadowColor: palette.ink, shadowOpacity: 0.055, shadowRadius: 10, elevation: 2 },
   accentBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5 },
   claimTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -251,12 +268,12 @@ const styles = StyleSheet.create({
   vehicleNo: { color: palette.ink, fontSize: 17, fontWeight: '900', marginTop: 1 },
   statusBadge: { maxWidth: 126, minHeight: 34, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
   statusBadgeText: { color: '#FFFFFF', fontSize: 10.2, lineHeight: 13, fontWeight: '900', textAlign: 'center' },
-
+  assistancePill: { alignSelf: 'flex-start', marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, backgroundColor: '#FFF4CC', paddingHorizontal: 9, paddingVertical: 5 },
+  assistancePillText: { color: '#805700', fontSize: 9.5, fontWeight: '900' },
   numberRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
   numberBox: { flex: 1, backgroundColor: 'rgba(255,255,255,0.82)', borderWidth: 1, borderColor: '#DCE8F4', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 7 },
   numberLabel: { color: palette.slate, fontSize: 9.3, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.4 },
   numberValue: { color: palette.ink, fontSize: 11.7, lineHeight: 15, fontWeight: '900', marginTop: 2 },
-
   infoBox: { marginTop: 10, paddingTop: 9, borderTopWidth: 1, borderTopColor: '#E5ECF5', gap: 5 },
   infoPairRow: { flexDirection: 'row', gap: 8 },
   infoPairHalf: { flex: 1, minWidth: 0 },
@@ -264,7 +281,6 @@ const styles = StyleSheet.create({
   infoPairLabel: { color: palette.slate, fontSize: 10.2, fontWeight: '900' },
   expiredClaimWarning: { marginTop: 9, borderRadius: 12, borderWidth: 1, borderColor: '#FDA29B', backgroundColor: '#FEF3F2', paddingHorizontal: 9, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 7 },
   expiredClaimWarningText: { color: '#B42318', fontSize: 10.8, fontWeight: '900', flex: 1 },
-
   cardFooter: { marginTop: 10, paddingTop: 9, borderTopWidth: 1, borderTopColor: '#E5ECF5', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   footerHint: { color: palette.slate, fontSize: 11.5, fontWeight: '900' },
 });
