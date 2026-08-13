@@ -141,7 +141,7 @@ export function CustomerProfileEditor({ customer, documents, vehicles, agents, a
                 GST Registered
               </label>
             </div>
-            <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <Field label="PAN number" name="pan_number" defaultValue={customer.pan_number ?? ""} maxLength={10} uppercase />
               <ReadOnlyField label="Aadhaar" value={customer.aadhaar_last_four ? `**** ${customer.aadhaar_last_four}` : "Not available"} />
               <Field label="Legal trade name" name="legal_trade_name" defaultValue={customer.legal_trade_name ?? customer.company_name ?? ""} />
