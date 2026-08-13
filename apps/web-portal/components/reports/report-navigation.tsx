@@ -12,7 +12,11 @@ export function ReportNavigation({ canViewGovernance }: Props) {
   const families = visibleReportFamilies(canViewGovernance);
   const activeFamily = reportFamilyForPath(pathname);
   const activeDestinations = families.find((family) => family.key === activeFamily)?.destinations ?? [];
-  const mobileValue = pathname === "/reports" ? "/reports" : families.flatMap((family) => family.destinations).find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))?.href ?? "/reports";
+  const activeDestination = families
+    .flatMap((family) => family.destinations)
+    .toSorted((a, b) => b.href.length - a.href.length)
+    .find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+  const mobileValue = pathname === "/reports" ? "/reports" : activeDestination?.href ?? "/reports";
 
   return (
     <div className="reports-nav-shell mb-4 print:hidden">
@@ -27,7 +31,7 @@ export function ReportNavigation({ canViewGovernance }: Props) {
           ))}
         </div>
 
-        <div className="md:hidden p-3">
+        <div className="p-3 md:hidden">
           <label className="block">
             <span className="mb-1 block text-[9px] font-black uppercase tracking-[0.08em] text-[#7b8799]">Reports</span>
             <select
@@ -48,7 +52,7 @@ export function ReportNavigation({ canViewGovernance }: Props) {
         {activeFamily ? (
           <div className="hidden items-center gap-1 overflow-x-auto px-3 py-2 md:flex">
             {activeDestinations.map((destination) => (
-              <Link key={destination.href} href={destination.href} className={reportClass(pathname === destination.href || pathname.startsWith(`${destination.href}/`))}>
+              <Link key={destination.href} href={destination.href} className={reportClass(activeDestination?.href === destination.href)}>
                 {destination.label}
               </Link>
             ))}
