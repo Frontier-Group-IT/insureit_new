@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { Filter } from "lucide-react";
 import { AppShell } from "@/components/shell";
+import { ReportQueryShortcuts } from "@/components/reports/report-query-shortcuts";
+import { ReportApplyButton, ReportEmptyState, ReportFilterField, ReportPageShell, ReportResetLink, reportInputClass } from "@/components/reports/report-page-shell";
 import { requireCapability } from "@/lib/master-data-server";
 import { loadGovernanceReport, type GovernanceQuery, type GovernanceReport } from "@/lib/reports/governance";
 
 export const dynamic="force-dynamic";
 export const revalidate=0;
-const PERIODS=[{key:"30d",label:"Last 30 days"},{key:"90d",label:"Last 90 days"},{key:"ytd",label:"Year to date"},{key:"all",label:"All time"}] as const;
+const PERIODS=[{value:"30d",label:"Last 30 days"},{value:"90d",label:"Last 90 days"},{value:"ytd",label:"Year to date"},{value:"all",label:"All time"}] as const;
 type Props={searchParams:Promise<GovernanceQuery>};
 
 export default async function GovernancePage({searchParams}:Props){
@@ -15,26 +16,29 @@ export default async function GovernancePage({searchParams}:Props){
  try{payload=await loadGovernanceReport(query)}catch(error){console.error("[reports] governance report failed",error instanceof Error?error.message:"unknown error");loadError=true}
  const report=payload?.report??emptyReport(); const filters=payload?.filters??{period:"30d" as const,fromDate:null,toDate:null,action:null,page:1};
  const pages=Math.max(1,Math.ceil(report.audit_register.total_count/Math.max(report.audit_register.page_size,1)));
- return <AppShell title="Reports"><div className="mx-auto max-w-[1560px] space-y-4 pb-8">
-  <header className="portal-card overflow-hidden">
-   <div className="border-b border-[#e8ecf2] px-5 py-5 sm:px-6"><h1 className="text-[26px] font-semibold tracking-[-.025em] text-[#13203b] sm:text-[30px]">Governance</h1><Tabs/></div>
-   <div className="px-5 py-4 sm:px-6"><div className="flex flex-wrap gap-2">{PERIODS.map(x=><Link key={x.key} href={`/reports/governance?period=${x.key}`} className={`rounded-lg border px-3 py-2 text-[10px] font-bold ${filters.period===x.key?"border-[#223a78] bg-[#223a78] text-white":"border-[#dfe5ee] bg-white text-[#506077]"}`}>{x.label}</Link>)}</div>
-    <form action="/reports/governance" method="get" className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-[150px_150px_minmax(220px,1fr)_auto_auto]"><input type="hidden" name="period" value="custom"/><Field label="From"><input name="from" type="date" defaultValue={filters.fromDate??""} className={inputClass}/></Field><Field label="To"><input name="to" type="date" defaultValue={filters.toDate??""} className={inputClass}/></Field><Field label="Audit action"><select name="action" defaultValue={filters.action??""} className={inputClass}><option value="">All actions</option>{report.audit_actions.map(x=><option key={x.action} value={x.action}>{label(x.action)} ({integer(x.event_count)})</option>)}</select></Field><button className="mt-auto inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#172a5c] px-4 text-[10.5px] font-bold text-white"><Filter className="h-3.5 w-3.5"/>Apply</button><Link href="/reports/governance" className="mt-auto inline-flex h-10 items-center justify-center rounded-lg border border-[#dfe5ee] bg-white px-4 text-[10.5px] font-bold text-[#526174]">Reset</Link></form>
-   </div>
-  </header>
-  {loadError?<div className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-[11px] font-bold text-red-700">Reporting service unavailable.</div>:null}
+ return <AppShell title="Reports"><ReportPageShell
+  title="Governance"
+  loadError={loadError}
+  controls={<>
+   <ReportQueryShortcuts label="Period" param="period" activeValue={filters.period} options={PERIODS}/>
+   <form action="/reports/governance" method="get" className="grid gap-2 md:grid-cols-2 xl:grid-cols-[150px_150px_minmax(220px,1fr)_auto_auto]">
+    <input type="hidden" name="period" value="custom"/>
+    <ReportFilterField label="From"><input name="from" type="date" defaultValue={filters.fromDate??""} className={reportInputClass}/></ReportFilterField>
+    <ReportFilterField label="To"><input name="to" type="date" defaultValue={filters.toDate??""} className={reportInputClass}/></ReportFilterField>
+    <ReportFilterField label="Audit action"><select name="action" defaultValue={filters.action??""} className={reportInputClass}><option value="">All actions</option>{report.audit_actions.map(x=><option key={x.action} value={x.action}>{label(x.action)} ({integer(x.event_count)})</option>)}</select></ReportFilterField>
+    <ReportApplyButton/>
+    <ReportResetLink href="/reports/governance"/>
+   </form>
+  </>}
+ >
   <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6"><Metric label="Profiles" value={integer(report.summary.profile_count)}/><Metric label="Active" value={integer(report.summary.active_profile_count)}/><Metric label="Inactive" value={integer(report.summary.inactive_profile_count)}/><Metric label="Employee overrides" value={integer(report.summary.active_employee_override_count)}/><Metric label="Permission changes" value={integer(report.summary.permission_change_count)}/><Metric label="Audit events" value={integer(report.summary.audit_event_count)}/></section>
   <section className="grid gap-4 xl:grid-cols-2"><Card title="Role distribution"><SimpleRows rows={report.role_distribution.map(x=>[roleLabel(x.role),integer(x.profile_count)])}/></Card><Card title="Active override mix"><SimpleRows rows={report.override_breakdown.map(x=>[`${label(x.access_level)} · ${label(x.scope_type)}`,integer(x.override_count)])}/></Card></section>
   <section className="portal-card overflow-hidden"><Header title="Active employee overrides"/><Overrides rows={report.active_overrides}/></section>
   <section className="portal-card overflow-hidden"><Header title="Permission changes"/><PermissionChanges rows={report.permission_changes}/></section>
   <section className="portal-card overflow-hidden"><Header title="Audit activity"/><AuditRows rows={report.audit_register.rows}/><Pagination page={report.audit_register.page} pages={pages} total={report.audit_register.total_count} prev={pageHref(filters,Math.max(1,report.audit_register.page-1))} next={pageHref(filters,report.audit_register.page+1)}/></section>
- </div></AppShell>
+ </ReportPageShell></AppShell>
 }
 
-const inputClass="h-10 w-full rounded-lg border border-[#dfe5ee] bg-white px-3 text-[10.5px] font-semibold text-[#26364f] outline-none focus:border-[#7788bd] focus:ring-2 focus:ring-[#dfe5ff]";
-function Tabs(){return <nav className="mt-4 flex flex-wrap gap-2"><Tab href="/reports" label="Business"/><Tab href="/reports/distribution" label="Distribution"/><Tab href="/reports/renewals" label="Renewals"/><Tab href="/reports/claims" label="Claims"/><Tab href="/reports/finance" label="Finance"/><Tab href="/reports/operations" label="Operations"/><Tab href="/reports/governance" label="Governance" active/></nav>}
-function Tab({href,label,active=false}:{href:string;label:string;active?:boolean}){return <Link href={href} className={`rounded-lg border px-3 py-2 text-[10px] font-bold ${active?"border-[#223a78] bg-[#223a78] text-white":"border-[#dfe5ee] bg-white text-[#506077]"}`}>{label}</Link>}
-function Field({label:fieldLabel,children}:{label:string;children:React.ReactNode}){return <label><span className="mb-1 block text-[8.5px] font-black uppercase tracking-[.08em] text-[#7b8799]">{fieldLabel}</span>{children}</label>}
 function Metric({label:metricLabel,value}:{label:string;value:string}){return <article className="portal-card px-4 py-4 sm:px-5"><p className="text-[9px] font-black uppercase tracking-[.1em] text-[#7c899b]">{metricLabel}</p><p className="mt-2 text-[23px] font-semibold tracking-[-.03em] text-[#14213c]">{value}</p></article>}
 function Card({title,children}:{title:string;children:React.ReactNode}){return <article className="portal-card overflow-hidden"><Header title={title}/>{children}</article>}
 function Header({title}:{title:string}){return <div className="border-b border-[#e9edf3] px-5 py-4"><h2 className="text-[14px] font-bold text-[#1b2943]">{title}</h2></div>}
@@ -43,7 +47,7 @@ function Overrides({rows}:{rows:GovernanceReport["active_overrides"]}){if(!rows.
 function PermissionChanges({rows}:{rows:GovernanceReport["permission_changes"]}){if(!rows.length)return <Empty/>;return <div className="overflow-x-auto"><table className="w-full min-w-[1120px]"><thead><tr className="bg-[#f8fafc] text-[8.5px] font-black uppercase tracking-[.07em] text-[#7c899b]"><th className="px-5 py-3 text-left">Time</th><th className="px-3 py-3 text-left">Target</th><th className="px-3 py-3 text-left">Capability</th><th className="px-3 py-3 text-left">Access</th><th className="px-3 py-3 text-left">Scope</th><th className="px-3 py-3 text-left">Changed by</th><th className="px-5 py-3 text-left">Reason</th></tr></thead><tbody className="divide-y divide-[#edf0f4]">{rows.map(x=><tr key={x.id} className="text-[10px]"><td className="px-5 py-3.5">{dateTime(x.created_at)}</td><td className="px-3 py-3.5"><p className="font-bold">{x.target_name}</p><p className="text-[8.5px] text-[#8792a3]">{roleLabel(x.target_role??"")}</p></td><td className="px-3 py-3.5">{label(x.capability??x.change_type??"change")}</td><td className="px-3 py-3.5">{transition(x.previous_access,x.new_access)}</td><td className="px-3 py-3.5">{transition(x.previous_scope,x.new_scope)}</td><td className="px-3 py-3.5">{x.changed_by_name}</td><td className="px-5 py-3.5 text-[#5f6c7e]">{x.reason??"—"}</td></tr>)}</tbody></table></div>}
 function AuditRows({rows}:{rows:GovernanceReport["audit_register"]["rows"]}){if(!rows.length)return <Empty/>;return <div className="overflow-x-auto"><table className="w-full min-w-[760px]"><thead><tr className="bg-[#f8fafc] text-[8.5px] font-black uppercase tracking-[.07em] text-[#7c899b]"><th className="px-5 py-3 text-left">Time</th><th className="px-3 py-3 text-left">Action</th><th className="px-3 py-3 text-left">Area</th><th className="px-5 py-3 text-left">Actor</th></tr></thead><tbody className="divide-y divide-[#edf0f4]">{rows.map(x=><tr key={x.id} className="text-[10px]"><td className="px-5 py-3.5">{dateTime(x.created_at)}</td><td className="px-3 py-3.5 font-bold">{label(x.action)}</td><td className="px-3 py-3.5">{label(x.table_name??"system")}</td><td className="px-5 py-3.5">{x.actor_name}</td></tr>)}</tbody></table></div>}
 function Pagination({page,pages,total,prev,next}:{page:number;pages:number;total:number;prev:string;next:string}){return <div className="flex items-center justify-between border-t border-[#edf0f4] px-5 py-3 text-[9.5px] text-[#738095]"><span>{integer(total)} records</span><div className="flex items-center gap-2"><Link href={page<=1?"#":prev} className={`rounded-md border px-3 py-1.5 font-bold ${page<=1?"pointer-events-none opacity-40":""}`}>Previous</Link><span>{page} / {pages}</span><Link href={page>=pages?"#":next} className={`rounded-md border px-3 py-1.5 font-bold ${page>=pages?"pointer-events-none opacity-40":""}`}>Next</Link></div></div>}
-function Empty(){return <div className="px-5 py-8 text-center text-[10.5px] text-[#8a96a7]">No records.</div>}
+function Empty(){return <ReportEmptyState/>}
 function emptyReport():GovernanceReport{return{summary:{profile_count:0,active_profile_count:0,inactive_profile_count:0,active_employee_override_count:0,role_override_count:0,permission_change_count:0,audit_event_count:0},role_distribution:[],override_breakdown:[],active_overrides:[],permission_changes:[],audit_actions:[],audit_register:{rows:[],total_count:0,page:1,page_size:25}}}
 function pageHref(filters:{period:string;fromDate:string|null;toDate:string|null;action:string|null},page:number){const p=new URLSearchParams();p.set("period","custom");if(filters.fromDate)p.set("from",filters.fromDate);if(filters.toDate)p.set("to",filters.toDate);if(filters.action)p.set("action",filters.action);p.set("page",String(page));return `/reports/governance?${p.toString()}`}
 function integer(v:number){return new Intl.NumberFormat("en-IN").format(v)}
