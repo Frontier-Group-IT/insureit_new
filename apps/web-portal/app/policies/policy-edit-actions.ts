@@ -5,6 +5,7 @@ import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export type PolicyEditPayload = {
+  vehicleClass: string;
   policy: {
     issuanceDate: string;
     rmName: string;
@@ -56,6 +57,10 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
     return { ok: false, error: "Enter valid policy issuance and validity dates." };
   }
   if (payload.policy.validUpto < payload.policy.validFrom) return { ok: false, error: "Policy Valid Upto cannot be before Valid From." };
+  const cpaAmount = Number(payload.premium.cpa);
+  if (payload.vehicleClass.trim().toUpperCase() === "GCV" && (!payload.premium.cpaOpted || !Number.isFinite(cpaAmount) || cpaAmount <= 0)) {
+    return { ok: false, error: "CPA amount is mandatory for GCV policies and must be greater than 0." };
+  }
 
   const monetaryValues = [
     payload.policy.idv,
