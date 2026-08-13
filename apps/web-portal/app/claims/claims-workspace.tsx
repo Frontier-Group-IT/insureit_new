@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { type QueueClaimRow } from "@/components/claim-manager/claim-queue-table";
 import { claimStatuses, isCustomerActionAwaited, isDocumentVerificationPending, isManagerActionRequired, isOpenClaimStatus, operationsQueueForKey, operationsQueueForStatus, terminalClaimStatuses, type ClaimStatus } from "@/lib/claim-workflow";
+import type { AssistanceQueueClaimRow } from "./page";
 
 type SearchParams = { queue?: string; journey?: string; status?: string; q?: string; page?: string; pageSize?: string };
 const allowedPageSizes = [5, 10, 20, 50, 100];
@@ -24,7 +24,7 @@ const customerJourneyStages = [
   { key: "journey-complete", label: "Journey Complete", statuses: ["Claim Complete", "Settled", "Closed"] as ClaimStatus[] },
 ] as const;
 
-export function ClaimsWorkspace({ rows, initialParams, loadError }: { rows: QueueClaimRow[]; initialParams: SearchParams; loadError: string | null }) {
+export function ClaimsWorkspace({ rows, initialParams, loadError }: { rows: AssistanceQueueClaimRow[]; initialParams: SearchParams; loadError: string | null }) {
   const [query, setQuery] = useState(initialParams.q ?? "");
   const [selectedStatus, setSelectedStatus] = useState(initialParams.status && initialParams.status !== "all" ? initialParams.status : "");
   const [page, setPage] = useState(Math.max(1, Number(initialParams.page ?? "1") || 1));
@@ -32,10 +32,13 @@ export function ClaimsWorkspace({ rows, initialParams, loadError }: { rows: Queu
   const [pageSize, setPageSize] = useState(allowedPageSizes.includes(requestedPageSize) ? requestedPageSize : 10);
   const selectedJourney = customerJourneyForKey(initialParams.journey);
   const normalized = query.trim().toLowerCase();
+  const assistanceCount = rows.filter((claim) => claim.assistance_status === "requested").length;
+  const managedCount = rows.filter((claim) => claim.claim_service_mode === "broker_managed").length;
   const visibleRows = useMemo(() => rows.filter((claim) => {
-    const process = operationsQueueForStatus(claim.current_status)?.label;
-    const haystack = [claim.claim_no, claim.insurer_claim_no, claim.current_status, process, claim.customers?.company_name, claim.customers?.contact_name, claim.customers?.phone, claim.vehicles?.vehicle_no, claim.vehicles?.make, claim.vehicles?.model, claim.policies?.policy_no, claim.insurance_companies?.name, claim.assignee?.full_name].filter(Boolean).join(" ").toLowerCase();
-    return matchesQueue(claim.current_status, initialParams.queue) && (!selectedJourney || selectedJourney.statuses.includes(claim.current_status)) && (!selectedStatus || claim.current_status === selectedStatus) && (!normalized || haystack.includes(normalized));
+    const process = claim.assistance_status === "requested" ? "Assistance Requested" : operationsQueueForStatus(claim.current_status)?.label;
+    const policyNumber = claim.policies?.policy_no ?? claim.external_policies?.policy_no;
+    const haystack = [claim.claim_no, claim.insurer_claim_no, claim.current_status, process, claim.customers?.company_name, claim.customers?.contact_name, claim.customers?.phone, claim.vehicles?.vehicle_no, claim.vehicles?.make, claim.vehicles?.model, policyNumber, claim.insurance_companies?.name, claim.assignee?.full_name].filter(Boolean).join(" ").toLowerCase();
+    return matchesQueue(claim, initialParams.queue) && (!selectedJourney || selectedJourney.statuses.includes(claim.current_status)) && (!selectedStatus || claim.current_status === selectedStatus) && (!normalized || haystack.includes(normalized));
   }), [initialParams.queue, normalized, rows, selectedJourney, selectedStatus]);
   useEffect(() => { setPage(1); }, [query, selectedStatus, pageSize]);
   useEffect(() => {
@@ -51,8 +54,12 @@ export function ClaimsWorkspace({ rows, initialParams, loadError }: { rows: Queu
   }, [initialParams.journey, initialParams.queue, page, pageSize, query, selectedStatus]);
 
   return <>
+    <div className="mb-3 flex flex-wrap items-center gap-2">
+      <Link href="/claims?queue=managed" className={`rounded-lg border px-3 py-2 text-[11px] font-semibold transition ${initialParams.queue === "managed" ? "border-[#003A83] bg-[#003A83] text-white" : "border-[#D8E1ED] bg-white text-[#17345F] hover:bg-[#F5F8FC]"}`}>Managed Claims <span className="ml-1 opacity-75">{managedCount}</span></Link>
+      <Link href="/claims?queue=assistance" className={`rounded-lg border px-3 py-2 text-[11px] font-semibold transition ${initialParams.queue === "assistance" ? "border-[#A66A00] bg-[#FFF4D6] text-[#7B5200]" : "border-[#E3D3A8] bg-white text-[#7B5200] hover:bg-[#FFF9E9]"}`}>Assistance Requests <span className="ml-1 rounded-full bg-[#F5C84C] px-1.5 py-0.5 text-[9px] text-[#543700]">{assistanceCount}</span></Link>
+    </div>
     <div className="mb-2 grid grid-cols-[145px_1fr] items-center gap-3 max-lg:grid-cols-1">
-      <div><p className="whitespace-nowrap text-[12px] font-medium leading-none text-[#071D49]">Total Claims <span className="text-[11px] font-normal text-[#5C6878]">(All Stages)</span></p><p className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-[#003A83]">{visibleRows.length}</p></div>
+      <div><p className="whitespace-nowrap text-[12px] font-medium leading-none text-[#071D49]">Total Claims <span className="text-[11px] font-normal text-[#5C6878]">(This View)</span></p><p className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-[#003A83]">{visibleRows.length}</p></div>
       <form onSubmit={(event) => event.preventDefault()} className="flex items-center gap-2 max-md:flex-col max-md:items-stretch">
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by customer, vehicle no., claim no., policy no., control no." aria-label="Search claims" className="h-10 flex-1 rounded-lg border border-[#CCD6E4] bg-white px-3.5 text-[12px] font-normal text-[#071D49] shadow-sm outline-none placeholder:text-[#7A8797] focus:border-[#174EA6] focus:ring-4 focus:ring-blue-100" />
         <select value={selectedStatus || "all"} onChange={(event) => setSelectedStatus(event.target.value === "all" ? "" : event.target.value)} aria-label="Filter by status" className="h-10 w-[220px] rounded-lg border border-[#D4DDE9] bg-white px-3 text-[12px] font-medium text-[#071D49] shadow-sm outline-none focus:border-[#174EA6] max-md:w-full"><option value="all">All statuses</option>{claimStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select>
@@ -63,7 +70,7 @@ export function ClaimsWorkspace({ rows, initialParams, loadError }: { rows: Queu
   </>;
 }
 
-function LocalClaimQueueTable({ rows, page, pageSize, onPageChange, onPageSizeChange }: { rows: QueueClaimRow[]; page: number; pageSize: number; onPageChange: (page: number) => void; onPageSizeChange: (pageSize: number) => void }) {
+function LocalClaimQueueTable({ rows, page, pageSize, onPageChange, onPageSizeChange }: { rows: AssistanceQueueClaimRow[]; page: number; pageSize: number; onPageChange: (page: number) => void; onPageSizeChange: (pageSize: number) => void }) {
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const safePage = Math.min(Math.max(page, 1), totalPages);
   const start = (safePage - 1) * pageSize;
@@ -74,9 +81,12 @@ function LocalClaimQueueTable({ rows, page, pageSize, onPageChange, onPageSizeCh
         <table className="w-full min-w-[1120px] border-separate border-spacing-y-0 text-left text-[11px] leading-tight text-[#071D49]">
           <thead><tr className="bg-[#003A83] text-center text-[10.5px] font-medium tracking-[0.01em] text-white"><th className="rounded-tl-lg px-2 py-2">Sr. No.</th><th className="px-2 py-2">Customer / Mobile</th><th className="px-2 py-2">Vehicle No.</th><th className="px-2 py-2">Vehicle</th><th className="px-2 py-2">Loss Date</th><th className="px-2 py-2">Insurer</th><th className="px-2 py-2">Policy</th><th className="px-2 py-2">Control No.</th><th className="px-2 py-2">Claim No.</th><th className="px-2 py-2">Process</th><th className="rounded-tr-lg px-2 py-2">Action</th></tr></thead>
           <tbody>{visibleRows.length ? visibleRows.map((claim, index) => {
-            const process = operationsQueueForStatus(claim.current_status);
+            const assistanceRequested = claim.assistance_status === "requested";
+            const process = assistanceRequested ? "Assistance Requested" : operationsQueueForStatus(claim.current_status)?.label ?? claim.current_status;
             const customer = claim.customers?.company_name ?? claim.customers?.contact_name ?? "-";
-            return <tr key={claim.id} className="group bg-white align-middle shadow-[0_1px_0_rgba(226,232,240,0.86)] transition hover:bg-[#F8FBFF]"><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{start + index + 1}</td><td className="border-r border-[#E7ECF3] px-2 py-2"><span className="block font-medium">{customer}</span><span className="text-[10px] text-[#344256]">{claim.customers?.phone ?? "-"}</span></td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.vehicles?.vehicle_no ?? "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{[claim.vehicles?.make, claim.vehicles?.model].filter(Boolean).join(" ") || "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{formatDate(claim.accident_at ?? claim.created_at)}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.insurance_companies?.name ?? "InsureIT"}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.policies?.policy_no ?? "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.claim_no}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.insurer_claim_no ?? "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2">{process?.label ?? claim.current_status}</td><td className="px-2 py-2 text-center"><Link href={`/claims/${claim.id}`} className="inline-flex h-7 items-center justify-center rounded-md bg-[#003A83] px-3 text-[10.5px] font-medium text-white">Proceed</Link></td></tr>;
+            const policyNumber = claim.policies?.policy_no ?? claim.external_policies?.policy_no ?? "-";
+            const href = assistanceRequested ? `/claims/${claim.id}/assistance` : `/claims/${claim.id}`;
+            return <tr key={claim.id} className={`group align-middle shadow-[0_1px_0_rgba(226,232,240,0.86)] transition hover:bg-[#F8FBFF] ${assistanceRequested ? "bg-[#FFFCF3]" : "bg-white"}`}><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{start + index + 1}</td><td className="border-r border-[#E7ECF3] px-2 py-2"><span className="block font-medium">{customer}</span><span className="text-[10px] text-[#344256]">{claim.customers?.phone ?? "-"}</span></td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.vehicles?.vehicle_no ?? "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{[claim.vehicles?.make, claim.vehicles?.model].filter(Boolean).join(" ") || "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{formatDate(claim.accident_at ?? claim.created_at)}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.insurance_companies?.name ?? "InsureIT"}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{policyNumber}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.claim_no}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.insurer_claim_no ?? "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2">{assistanceRequested ? <span className="rounded-full bg-[#FFF0BF] px-2 py-1 text-[9.5px] font-semibold text-[#805700]">{process}</span> : process}</td><td className="px-2 py-2 text-center"><Link href={href} className={`inline-flex h-7 items-center justify-center rounded-md px-3 text-[10.5px] font-medium text-white ${assistanceRequested ? "bg-[#9A6700]" : "bg-[#003A83]"}`}>{assistanceRequested ? "Review" : "Proceed"}</Link></td></tr>;
           }) : <tr><td className="px-3 py-8 text-center text-sm text-slate-500" colSpan={11}>No matching claims found.</td></tr>}</tbody>
         </table>
       </div>
@@ -90,15 +100,18 @@ function LocalClaimQueueTable({ rows, page, pageSize, onPageChange, onPageSizeCh
 }
 
 function customerJourneyForKey(key?: string) { return customerJourneyStages.find((stage) => stage.key === key); }
-function matchesQueue(status: ClaimStatus, queue?: string) {
+function matchesQueue(claim: AssistanceQueueClaimRow, queue?: string) {
+  if (claim.assistance_status === "requested") return !queue || queue === "assistance";
+  if (queue === "assistance") return false;
+  if (queue === "managed") return claim.claim_service_mode === "broker_managed";
   if (!queue) return true;
   const operationalQueue = operationsQueueForKey(queue);
-  if (operationalQueue) return operationalQueue.statuses.includes(status);
-  if (queue === "active") return isOpenClaimStatus(status);
-  if (queue === "documents") return isDocumentVerificationPending(status);
-  if (queue === "customer-action") return isCustomerActionAwaited(status);
-  if (queue === "manager-action") return isManagerActionRequired(status);
-  if (queue === "closed") return terminalClaimStatuses.includes(status);
+  if (operationalQueue) return operationalQueue.statuses.includes(claim.current_status);
+  if (queue === "active") return isOpenClaimStatus(claim.current_status);
+  if (queue === "documents") return isDocumentVerificationPending(claim.current_status);
+  if (queue === "customer-action") return isCustomerActionAwaited(claim.current_status);
+  if (queue === "manager-action") return isManagerActionRequired(claim.current_status);
+  if (queue === "closed") return terminalClaimStatuses.includes(claim.current_status);
   return true;
 }
 function formatDate(value?: string | null) {
