@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #326 to production.",
-  "deploy_requested_at": "2026-08-13T22:09:00+05:30",
+  "purpose": "Deploy PR #327 to production.",
+  "deploy_requested_at": "2026-08-13T22:35:00+05:30",
   "requested_by": "explicit user request",
-  "source": "PR #326 merged into main.",
-  "source_commit": "739b02c3ed9aae37b7b23b96269c72695a15e296",
-  "release_scope": "Customer Edit KYC & GST Details desktop layout: keep PAN Number, Aadhaar, Legal Trade Name, and GST Number in one four-column row while preserving existing validation, values, checkbox behavior, form logic, and backend functionality.",
-  "verification": "PR verification run 31721739524 was still in progress at merge time. Re-run and require the protected verification gate to pass on this exact deployment-trigger snapshot before invoking Vercel.",
+  "source": "PR #327 merged into main.",
+  "source_commit": "4d1abdfb8cac6e27df50a169bd72937a9ad387de",
+  "release_scope": "Customer Portfolio table UI: show only Partner Type in the existing partner-type column and remove the displayed city/location line while preserving all existing data, filtering, selection, status, actions, pagination, and backend behavior.",
+  "verification": "Run the protected verification gate on this exact deployment-trigger snapshot before invoking Vercel.",
   "instructions": "Update this file only after explicit deployment approval."
 }
