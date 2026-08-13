@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy reporting workspace through Governance to production.",
-  "deploy_requested_at": "2026-08-13T13:44:00+05:30",
+  "purpose": "Deploy PR #303 sidebar navigation cleanup to production.",
+  "deploy_requested_at": "2026-08-13T13:46:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Deploy the latest verified main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "54f16d6e2f13c30162edcb18b5a28ab41e85a02d",
-  "release_scope": "Release the reporting workspace through Business, Distribution, Renewals, Claims, Finance, Operations and restricted Governance reporting, including current main changes already merged before this explicit release checkpoint.",
-  "verification": "The production workflow must run the compulsory access-control, security, OCR, TypeScript, lint and production-build verification gate before invoking the Vercel deploy hook.",
+  "source": "Merge PR #303 and deploy the latest verified main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "507c140c9e565b6092cf31a95580c810b5b94c53",
+  "release_scope": "Release the Customers & Fleet sidebar cleanup that removes the Add by Customer Type group and its four child links while leaving the underlying onboarding routes intact. Fleet Management now follows Customers directly. The latest main snapshot also includes newer merged main changes.",
+  "verification": "PR #303 verification run 31681294998 passed successfully before merge. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
