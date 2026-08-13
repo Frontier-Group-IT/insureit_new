@@ -1,4 +1,4 @@
-﻿import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -15,7 +15,7 @@ import type { IndiaLocation, InsuranceCompany, Policy, Vehicle } from '@/lib/typ
 
 export default function ReportAccidentScreen() {
   const router = useRouter();
-  const { vehicleId } = useLocalSearchParams<{ vehicleId?: string }>();
+  const { vehicleId, policyId } = useLocalSearchParams<{ vehicleId?: string; policyId?: string }>();
 
   const [contexts, setContexts] = useState<CustomerAccountContext[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
@@ -122,8 +122,9 @@ export default function ReportAccidentScreen() {
 
   const selectedPolicy = useMemo(() => {
     if (!selectedVehicle) return null;
-    return policies.find((item) => item.vehicle_id === selectedVehicle.id) ?? null;
-  }, [policies, selectedVehicle]);
+    const routedPolicy = policyId ? policies.find((item) => item.id === policyId && item.vehicle_id === selectedVehicle.id) : null;
+    return routedPolicy ?? policies.find((item) => item.vehicle_id === selectedVehicle.id) ?? null;
+  }, [policies, policyId, selectedVehicle]);
 
   useEffect(() => {
     setExpiryWarningAcknowledged(false);

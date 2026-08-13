@@ -125,15 +125,15 @@ export function NotificationsInbox({ audience }: { audience: 'customer' | 'staff
     <Screen title="Notifications" showTitleHeader={false}>
       {message ? <Message type="error">{message}</Message> : null}
       <View style={styles.pageHeader}>
-        <View style={styles.headerIconButton}>
-          <MaterialCommunityIcons name="menu" size={22} color={palette.ink} />
-        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.back()} style={styles.headerIconButton}>
+          <MaterialCommunityIcons name="arrow-left" size={22} color={palette.ink} />
+        </Pressable>
         <View style={styles.headerCopy}>
           <Text style={styles.pageTitle}>Notifications</Text>
           <Text style={styles.pageSubtitle}>Stay informed. Stay in control.</Text>
         </View>
-        <Pressable accessibilityRole="button" onPress={() => void markAllRead()} style={styles.headerIconButton}>
-          <MaterialCommunityIcons name="cog-outline" size={22} color={palette.ink} />
+        <Pressable accessibilityRole="button" accessibilityLabel="Mark all notifications read" onPress={() => void markAllRead()} style={styles.headerIconButton}>
+          <MaterialCommunityIcons name="email-check-outline" size={22} color={palette.ink} />
         </Pressable>
       </View>
 

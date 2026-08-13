@@ -5,7 +5,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppSearchBar } from '@/components/design-system';
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
-import { getCurrentSession, getCustomerForUser } from '@/lib/auth';
+import { getCurrentSession } from '@/lib/auth';
+import { getOperationalCustomerContexts } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Claim, ClaimStatus, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
@@ -33,13 +34,14 @@ export default function ClaimsScreen() {
     async function load() {
       const session = await getCurrentSession();
       if (!session?.user) return router.replace('/login');
-      const customer = await getCustomerForUser(session.user.id);
-      if (customer) {
+      const contexts = await getOperationalCustomerContexts();
+      const customerIds = contexts.map((item) => item.customer_id);
+      if (customerIds.length) {
         const [claimResult, vehicleResult, policyResult, externalResult, insurerResult] = await Promise.all([
-          supabase.from('claims').select('*').eq('customer_id', customer.id).order('created_at', { ascending: false }),
-          supabase.from('vehicles').select('*').eq('customer_id', customer.id),
-          supabase.from('policies').select('*').eq('customer_id', customer.id),
-          supabase.from('external_policies').select('id,policy_no,insurance_company_id,end_date').eq('customer_id', customer.id),
+          supabase.from('claims').select('*').in('customer_id', customerIds).order('created_at', { ascending: false }),
+          supabase.from('vehicles').select('*').in('customer_id', customerIds),
+          supabase.from('policies').select('*').in('customer_id', customerIds),
+          supabase.from('external_policies').select('id,policy_no,insurance_company_id,end_date').in('customer_id', customerIds),
           supabase.from('insurance_companies').select('*'),
         ]);
         setClaims((claimResult.data ?? []) as ExtendedClaim[]);
@@ -180,11 +182,11 @@ function claimStageLabel(status: ClaimStatus) {
   if (status.includes('Approval') || status.includes('Estimate')) return 'Approval';
   if (status.includes('Repair') || status.includes('DO') || status.includes('RA')) return 'Repair / DO';
   if (status.includes('Payment') || status.includes('Settlement')) return 'Payment';
-  if (status === 'Closed' || status === 'Settled') return 'Completed';
+  if (status === 'Closed' || status === 'Settled' || status === 'Claim Complete') return 'Completed';
   return 'Claim journey';
 }
 function claimTone(status: ClaimStatus) {
-  if (status === 'Closed' || status === 'Settled') return { accent: '#12805C', soft: '#E8F8F0' };
+  if (status === 'Closed' || status === 'Settled' || status === 'Claim Complete') return { accent: '#12805C', soft: '#E8F8F0' };
   if (status === 'Rejected') return { accent: '#C43838', soft: '#FDECEC' };
   if (status.includes('Payment') || status.includes('Settlement')) return { accent: '#B7791F', soft: '#FFF4E2' };
   if (status.includes('Repair') || status.includes('DO') || status.includes('RA')) return { accent: '#7C3AED', soft: '#F0E9FF' };
@@ -196,7 +198,7 @@ function statusIcon(status: ClaimStatus): keyof typeof MaterialCommunityIcons.gl
   if (status.includes('Survey')) return 'clipboard-search-outline';
   if (status.includes('Repair')) return 'wrench-outline';
   if (status.includes('Payment') || status.includes('Settlement')) return 'bank-transfer';
-  if (status === 'Closed' || status === 'Settled') return 'check-circle-outline';
+  if (status === 'Closed' || status === 'Settled' || status === 'Claim Complete') return 'check-circle-outline';
   if (status === 'Rejected') return 'close-circle-outline';
   return 'shield-check-outline';
 }

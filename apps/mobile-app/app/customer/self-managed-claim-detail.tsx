@@ -109,7 +109,6 @@ export default function SelfManagedClaimDetailScreen() {
     [map],
   );
   const progress = Math.round((completed / SELF_MANAGED_MILESTONES.length) * 100);
-  const journeyComplete = completed === SELF_MANAGED_MILESTONES.length;
   const recentActivity = useMemo(
     () => milestones
       .filter((item) => ['completed', 'not_applicable'].includes(item.milestone_status))
@@ -179,9 +178,9 @@ export default function SelfManagedClaimDetailScreen() {
         <View style={styles.currentStageCard}>
           <View style={styles.currentStageIcon}><MaterialCommunityIcons name={next ? 'flag-outline' : 'check-decagram'} size={20} color="#FFFFFF" /></View>
           <View style={styles.flexOne}>
-            <Text style={styles.currentStageLabel}>{next ? 'CURRENT STEP' : 'JOURNEY COMPLETE'}</Text>
-            <Text style={styles.currentStageTitle}>{next?.label ?? 'All milestones recorded'}</Text>
-            <Text style={styles.currentStageHint}>{next ? 'Update this when the insurer or workshop moves the claim forward.' : 'Your claim history is complete and ready for reference.'}</Text>
+            <Text style={styles.currentStageLabel}>{next ? 'CURRENT STEP' : 'CLAIM HISTORY COMPLETE'}</Text>
+            <Text style={styles.currentStageTitle}>{next?.label ?? 'All 9 milestones are recorded'}</Text>
+            <Text style={styles.currentStageHint}>{next ? 'Update this when the insurer or workshop moves the claim forward.' : 'This claim now stays available as a completed record. You can still review stages and documents whenever needed.'}</Text>
           </View>
           {next && next.key !== 'spot_intimation' ? (
             <Pressable style={styles.currentStageAction} onPress={() => openMilestone(next.key)}>
@@ -190,17 +189,6 @@ export default function SelfManagedClaimDetailScreen() {
           ) : null}
         </View>
       </View>
-
-      {journeyComplete ? (
-        <View style={styles.completionCard}>
-          <View style={styles.completionIcon}><MaterialCommunityIcons name="check-decagram" size={24} color="#FFFFFF" /></View>
-          <View style={styles.flexOne}>
-            <Text style={styles.completionEyebrow}>CLAIM HISTORY COMPLETE</Text>
-            <Text style={styles.completionTitle}>All 9 milestones are recorded</Text>
-            <Text style={styles.completionText}>This claim now stays available as a completed record. You can still review stages and documents whenever needed.</Text>
-          </View>
-        </View>
-      ) : null}
 
       <View style={styles.infoCard}>
         <View style={styles.infoGrid}>
@@ -421,11 +409,6 @@ const styles = StyleSheet.create({
   statusTextActive: { color: '#0A43A3' },
   milestoneFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', borderTopWidth: 1, borderTopColor: '#E7ECF2', marginTop: 9, paddingTop: 8 },
   milestoneFooterText: { color: '#0A43A3', fontSize: 9, fontWeight: '900' },
-  completionCard: { flexDirection: 'row', gap: 11, alignItems: 'center', padding: 14, borderRadius: 18, backgroundColor: '#EAF8F0', borderWidth: 1, borderColor: '#B7E2C9', marginBottom: 12 },
-  completionIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#14845C', alignItems: 'center', justifyContent: 'center' },
-  completionEyebrow: { color: '#147A57', fontSize: 8, fontWeight: '900', letterSpacing: 0.7 },
-  completionTitle: { color: '#105D45', fontSize: 13, fontWeight: '900', marginTop: 1 },
-  completionText: { color: '#4E6F61', fontSize: 9.5, lineHeight: 14, fontWeight: '600', marginTop: 2 },
   activityCard: { borderRadius: 18, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E1E8F0', padding: 13, marginBottom: 12 },
   activityHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 },
   activityRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#EEF1F5' },

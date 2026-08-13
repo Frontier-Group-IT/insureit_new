@@ -117,7 +117,7 @@ export default function StartClaimScreen() {
   function continueClaim() {
     if (!selectedPolicy || !selectedVehicle) return;
     if (selectedPolicy.source === 'sankalp') {
-      router.push({ pathname: '/customer/report-accident', params: { vehicleId: selectedVehicle.id } });
+      router.push({ pathname: '/customer/report-accident', params: { vehicleId: selectedVehicle.id, policyId: selectedPolicy.id } });
       return;
     }
     router.push({ pathname: '/customer/self-managed-claim', params: { externalPolicyId: selectedPolicy.id } });
