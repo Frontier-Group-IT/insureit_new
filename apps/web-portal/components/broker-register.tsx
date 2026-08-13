@@ -27,6 +27,8 @@ export function BrokerRegisterShell({
   metrics: Array<{ label: string; value: string | number; hint: string; tone?: MetricTone }>;
   children: ReactNode;
 }) {
+  const showSupportingCopy = title !== "Customer Portfolio";
+
   return (
     <section className="mx-auto max-w-[1480px] overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
       <div className="border-b border-[#E5ECF5] bg-[#F8FAFC] px-4 py-4 sm:px-5">
@@ -34,9 +36,9 @@ export function BrokerRegisterShell({
           <div className="flex min-w-0 items-start gap-3">
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#17365D] text-white shadow-[0_10px_22px_rgba(23,54,93,0.18)]">{icon}</span>
             <div className="min-w-0">
-              <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#64748B]">{eyebrow}</p>
-              <h2 className="mt-1 text-[18px] font-semibold leading-tight text-[#0F172A]">{title}</h2>
-              <p className="mt-1 max-w-2xl text-[11.5px] leading-5 text-[#64748B]">{description}</p>
+              {showSupportingCopy ? <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#64748B]">{eyebrow}</p> : null}
+              <h2 className={showSupportingCopy ? "mt-1 text-[18px] font-semibold leading-tight text-[#0F172A]" : "text-[18px] font-semibold leading-tight text-[#0F172A]"}>{title}</h2>
+              {showSupportingCopy ? <p className="mt-1 max-w-2xl text-[11.5px] leading-5 text-[#64748B]">{description}</p> : null}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
