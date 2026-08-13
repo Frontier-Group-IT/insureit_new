@@ -97,7 +97,7 @@ export default async function CustomerApplicationsPage({ searchParams }: { searc
             <span className="sr-only">Search applications</span>
             <input name="q" defaultValue={q ?? ""} placeholder="Search name, mobile, email or external ID" className="h-9 w-full rounded-md border border-[#CBD5E1] bg-[#F8FAFC] px-3 text-[11.5px] text-[#0F172A] outline-none placeholder:text-[#8A97A8] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]" />
           </label>
-          <QueueSelect name="partner" defaultValue={partner ?? ""} label="Partner type" options={partnerOptions} />
+          <QueueSelect name="partner" defaultValue={partner ?? ""} label="Customer type" options={partnerOptions} />
           <QueueSelect name="status" defaultValue={status ?? ""} label="Status" options={statusOptions} />
           <QueueSelect name="source" defaultValue={source ?? ""} label="Source" options={[["customer_app", "Mobile app"], ["manager_portal", "Manager portal"]]} />
           <div className="flex gap-2">
@@ -111,7 +111,7 @@ export default async function CustomerApplicationsPage({ searchParams }: { searc
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1160px] text-left text-[11px]">
                 <thead className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[9.5px] uppercase tracking-[0.04em] text-[#64748B]">
-                  <tr><th className="px-3 py-2.5">Applicant</th><th className="px-3 py-2.5">Partner</th><th className="px-3 py-2.5">Location</th><th className="px-3 py-2.5">Documents</th><th className="px-3 py-2.5">Source</th><th className="px-3 py-2.5">Queue Age</th><th className="px-3 py-2.5">Status</th><th className="px-3 py-2.5">Updated</th><th className="px-3 py-2.5">Action</th></tr>
+                  <tr><th className="px-3 py-2.5">Applicant</th><th className="px-3 py-2.5">Customer Type</th><th className="px-3 py-2.5">Location</th><th className="px-3 py-2.5">Documents</th><th className="px-3 py-2.5">Source</th><th className="px-3 py-2.5">Queue Age</th><th className="px-3 py-2.5">Status</th><th className="px-3 py-2.5">Updated</th><th className="px-3 py-2.5">Action</th></tr>
                 </thead>
                 <tbody className="divide-y divide-[#EEF2F6]">
                   {rows.map((application) => (
@@ -144,7 +144,7 @@ export default async function CustomerApplicationsPage({ searchParams }: { searc
 }
 
 function QueueSelect({ name, defaultValue, label, options }: { name: string; defaultValue: string; label: string; options: readonly (readonly [string, string])[] }) {
-  const allLabel = label === "Status" ? "All statuses" : label === "Partner type" ? "All partner types" : "All sources";
+  const allLabel = label === "Status" ? "All statuses" : label === "Customer type" ? "All customer types" : "All sources";
   return <select name={name} defaultValue={defaultValue} aria-label={label} className="h-9 rounded-md border border-[#CBD5E1] bg-white px-2.5 text-[11px] text-[#334155] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]"><option value="">{allLabel}</option>{options.map(([value, optionLabel]) => <option key={value} value={value}>{optionLabel}</option>)}</select>;
 }
 
