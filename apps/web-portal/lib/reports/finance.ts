@@ -6,7 +6,7 @@ type ViewerProfile={id:string;role:string|null};
 export type FinanceQuery={period?:string;from?:string;to?:string;insurer?:string;rm?:string;intermediary?:string;billing?:string;page?:string};
 export type FinanceFilters={period:"90d"|"mtd"|"ytd"|"all"|"custom";fromDate:string|null;toDate:string|null;insurerId:string|null;rmName:string|null;intermediaryCode:string|null;billingStatus:string|null;page:number};
 export type FinanceReport={
- summary:{policy_count:number;gross_premium:number;projected_payin:number;payin_after_tds:number;billed_amount:number;gross_payout:number;retention_amount:number;unbilled_count:number;billing_incomplete_count:number;billed_count:number;pending_payout_count:number;missing_payin_count:number;negative_retention_count:number};
+ summary:{policy_count:number;gross_premium:number;projected_payin:number;payin_after_tds:number;billed_amount:number;gross_payout:number;retention_amount:number;unbilled_count:number;billing_incomplete_count:number;billed_count:number;pending_payout_count:number;missing_payin_count?:number;negative_retention_count?:number};
  insurers:Array<{id:string|null;insurer_name:string;policy_count:number;gross_premium:number;projected_payin:number;payin_after_tds:number;billed_amount:number;gross_payout:number;retention_amount:number}>;
  rms:Array<{rm_name:string;policy_count:number;projected_payin:number;billed_amount:number;gross_payout:number;retention_amount:number}>;
  billing:Array<{billing_status:string;policy_count:number;projected_payin:number;billed_amount:number;sort_order:number}>;
