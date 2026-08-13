@@ -169,7 +169,7 @@ Supported pure-motor families remain:
 
 ### Multi-insurer training increment - 2026-08-14
 
-**IMPLEMENTED / NOT DEPLOYED:** the first non-IFFCO training increment adds detection, semantic refinement, sanitized regression fixtures, and CI coverage for five additional insurer families represented by the user's supplied policy copies:
+**IMPLEMENTED / DEPLOYED:** the first non-IFFCO training increment adds detection, semantic refinement, sanitized regression fixtures, and CI coverage for five additional insurer families represented by the user's supplied policy copies:
 
 - Shriram General motor package schedule
 - The Oriental Insurance Company motor package schedule
@@ -228,7 +228,23 @@ Remaining work:
 - Run real Google Document AI upload checks for each supplied sample in a protected environment and compare against the sanitized expectations.
 - Add layout-table refiners for National/Oriental/Shriram if real Document AI table output remains ambiguous.
 - Confirm Universal Sompo bundled-product mapping with the business owner before treating private-car bundled policies as fully supported in production.
-- This increment is not deployed. Do not claim live production support until an explicit deployment and authenticated upload/review/apply verification are completed.
+- Complete authenticated upload/review/apply tests with the supplied real policy PDFs before claiming full live OCR journey verification.
+
+Production deployment evidence:
+
+```text
+Feature commit: bec9938b27bf4a2ee667ca5c1c0aad0426d65d44
+Production trigger commit: 4f075cb8b0f2c7f034bcf8a0f475f4499e16cc95
+GitHub Actions production run: 31733565073
+Verification gate: success
+Deploy hook job: success, Vercel response HTTP 201, job tefhOzPVay0jNLNPV0Fr
+Vercel deployment: dpl_VdesEUrHCNQ2EATHjTQEUqQvqJE5
+Vercel state: READY
+Vercel URL: insureit-10jo5y5f9-antnish1s-projects.vercel.app
+Production alias: portal.insureit.in
+Production smoke: unauthenticated GET /policies/new returned 307 to /login?next=%2Fpolicies%2Fnew.
+Runtime errors: no error/fatal logs found for deployment dpl_VdesEUrHCNQ2EATHjTQEUqQvqJE5 in the checked post-deploy window.
+```
 
 United India Miscellaneous/Special Type Vehicles and Contractors Plant & Machinery remain deferred unless representative samples and approved Section 03 mapping are provided.
 
