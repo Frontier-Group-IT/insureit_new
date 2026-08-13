@@ -19,7 +19,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: verify-mobile-app-${{ github.event.pull_request.number || github.ref }}
@@ -59,18 +59,8 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Commit generated lockfile on integration branch
-        if: steps.lockfile.outputs.changed == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/feature/self-managed-production-integration-v2'
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          git commit -m "Sync mobile dependency lockfile"
-          git push origin HEAD:feature/self-managed-production-integration-v2
-
       - name: Upload generated lockfile for repair
-        if: steps.lockfile.outputs.changed == 'true' && github.event_name != 'push'
+        if: steps.lockfile.outputs.changed == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: generated-package-lock-${{ github.sha }}
@@ -79,7 +69,7 @@ jobs:
           retention-days: 3
 
       - name: Require synchronized dependency lockfile
-        if: steps.lockfile.outputs.changed == 'true' && github.event_name != 'push'
+        if: steps.lockfile.outputs.changed == 'true'
         shell: bash
         run: |
           echo "::error::package-lock.json is out of sync with package.json. Download the generated-package-lock artifact and commit it."
