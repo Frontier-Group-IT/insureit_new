@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the sidebar cleanup that removes the Customer KYC menu item.",
-  "deploy_requested_at": "2026-08-13T15:08:00+05:30",
+  "purpose": "Deploy the Customer Profile summary strip to production.",
+  "deploy_requested_at": "2026-08-13T15:18:00+05:30",
   "requested_by": "explicit user request",
-  "source": "The change is already committed on main. Trigger the protected GitHub Actions production deployment for the current main snapshot.",
-  "source_commit": "f75f8699d3729a6a84b47e53d0c75a76c83ad7c3",
-  "release_scope": "Deploy the current main snapshot including removal of only the Customer KYC sidebar item under Customers, with all other sidebar items, styling and functionality unchanged.",
-  "verification": "Verify web portal run 31687233338 completed successfully for source commit f75f8699d3729a6a84b47e53d0c75a76c83ad7c3. The production workflow must rerun the compulsory verification gate for the exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #307 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "fefe2e4d0eac5240afd8e4e2ec5c3fdb53866e22",
+  "release_scope": "Deploy the current main snapshot including the compact five-card Customer Profile summary strip showing Partner Type, Fleet Size, Mobile, Customer Code and Active Since, with fleet-size ranges presented from 1 through Unlimited and Not set when absent. Preserve all existing profile editing, documents, vehicles, validation, sidebar and save workflows.",
+  "verification": "Verify web portal run 31688141888 passed for PR #307. The production workflow must rerun the compulsory verification gate against the exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
