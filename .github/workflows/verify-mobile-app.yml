@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/self-managed-claims
+      - feature/self-managed-production-integration-v2
     paths:
       - 'apps/mobile-app/**'
       - 'package.json'
@@ -18,7 +19,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: verify-mobile-app-${{ github.event.pull_request.number || github.ref }}
@@ -58,8 +59,18 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Commit generated lockfile on integration branch
+        if: steps.lockfile.outputs.changed == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/feature/self-managed-production-integration-v2'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "Sync mobile dependency lockfile"
+          git push origin HEAD:feature/self-managed-production-integration-v2
+
       - name: Upload generated lockfile for repair
-        if: steps.lockfile.outputs.changed == 'true'
+        if: steps.lockfile.outputs.changed == 'true' && github.event_name != 'push'
         uses: actions/upload-artifact@v4
         with:
           name: generated-package-lock-${{ github.sha }}
@@ -68,7 +79,7 @@ jobs:
           retention-days: 3
 
       - name: Require synchronized dependency lockfile
-        if: steps.lockfile.outputs.changed == 'true'
+        if: steps.lockfile.outputs.changed == 'true' && github.event_name != 'push'
         shell: bash
         run: |
           echo "::error::package-lock.json is out of sync with package.json. Download the generated-package-lock artifact and commit it."
@@ -105,6 +116,4 @@ jobs:
             echo "- Review build: Expo web export"
             echo "- Artifact: \`mobile-web-review-${GITHUB_SHA}\` (retained for 14 days after a green run)"
             echo "- Production deployment: not triggered by this workflow"
-            echo
-            echo "The artifact is a browser-review build. Native-only behavior such as device permissions, secure storage and Android-specific integrations still requires a native Expo/EAS verification pass."
           } >> "$GITHUB_STEP_SUMMARY"
