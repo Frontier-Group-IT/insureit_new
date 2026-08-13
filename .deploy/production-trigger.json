@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #297 policy register header cleanup to production.",
-  "deploy_requested_at": "2026-08-13T11:11:00+05:30",
+  "purpose": "Deploy PR #297 policy register header cleanup to production after the first deploy run was cancelled by a newer main push.",
+  "deploy_requested_at": "2026-08-13T11:17:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Deploy the current verified main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "f571e04e808a8d65b2d2a52b6c861c5cfb3c9043",
-  "release_scope": "Release the Policy Portfolio header cleanup on /policies by removing the Coverage register eyebrow and the descriptive helper sentence, while preserving the title, metrics, toolbar, table, filters, pagination, and all policy workflows.",
-  "verification": "PR #297 verification run 31671154549 passed successfully before merge. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
+  "source": "Deploy the latest verified main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "2aefad1c10a823bcded2bdb51ad2b6e4e36ebe70",
+  "release_scope": "Release the Policy Portfolio header cleanup on /policies by removing the Coverage register eyebrow and the descriptive helper sentence, while preserving the title, metrics, toolbar, table, filters, pagination, and all policy workflows. The latest main snapshot also includes subsequent verified main changes.",
+  "verification": "PR #297 verification run 31671154549 passed before merge, and latest main verification run 31671384963 passed successfully after the subsequent main push. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
