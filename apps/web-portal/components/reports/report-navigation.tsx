@@ -12,9 +12,8 @@ export function ReportNavigation({ canViewGovernance }: Props) {
   const families = visibleReportFamilies(canViewGovernance);
   const activeFamily = reportFamilyForPath(pathname);
   const activeDestinations = families.find((family) => family.key === activeFamily)?.destinations ?? [];
-  const activeDestination = families
-    .flatMap((family) => family.destinations)
-    .toSorted((a, b) => b.href.length - a.href.length)
+  const activeDestination = [...families.flatMap((family) => family.destinations)]
+    .sort((a, b) => b.href.length - a.href.length)
     .find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
   const mobileValue = pathname === "/reports" ? "/reports" : activeDestination?.href ?? "/reports";
 
