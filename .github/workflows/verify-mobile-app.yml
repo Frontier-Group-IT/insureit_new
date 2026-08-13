@@ -5,6 +5,7 @@ on:
     branches:
       - feature/self-managed-claims
       - feature/self-managed-production-integration-v2
+      - feature/self-managed-production-integration-v3
     paths:
       - 'apps/mobile-app/**'
       - 'package.json'
