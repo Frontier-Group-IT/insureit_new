@@ -53,8 +53,7 @@ export const navigationSections:NavigationSection[]=[
   {kind:"group",key:"customers",label:"Customers",icon:UsersRound,capability:"view_customers",items:[
    {href:"/customers",label:"Customer Register",icon:UsersRound,capability:"view_customers"},
    {href:"/customers?choose_partner=1",label:"Add Customer",icon:Plus,capability:"manage_customers"},
-   {href:"/customers/applications",label:"Onboarding Applications",icon:FileCheck2,capability:"review_kyc"},
-   {href:"/customer-kyc",label:"Customer KYC",icon:FileCheck2,capability:"view_kyc"}
+   {href:"/customers/applications",label:"Onboarding Applications",icon:FileCheck2,capability:"review_kyc"}
   ]},
   {kind:"group",key:"fleet",label:"Fleet Management",icon:Gauge,capability:"view_vehicles",items:[
    {href:"/vehicles",label:"Vehicle Register",icon:Gauge,capability:"view_vehicles"},
