@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the KYC Applications customer type label update to production.",
-  "deploy_requested_at": "2026-08-13T14:50:00+05:30",
+  "purpose": "Retry production deployment for the KYC Applications customer type label update on the latest main snapshot.",
+  "deploy_requested_at": "2026-08-13T14:52:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #306 and deploy the verified latest main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "4ac024bf30f84b99cb95d45ac510e0d57c964013",
-  "release_scope": "Update /customers/applications so the visible Partner column and partner-type filter presentation use Customer Type terminology, while preserving the existing partner query parameter, partner_type data field, filter behavior, row values, and workflows. Include newer main changes already present in the same release snapshot.",
-  "verification": "Verify web portal run 31686056947 passed for PR #306. The production workflow must rerun the compulsory verification gate against the exact main snapshot before invoking the Vercel deploy hook.",
+  "source": "PR #306 is merged. Retry the protected GitHub Actions production deployment against the latest main snapshot after the first deployment run was cancelled when main advanced during its production build.",
+  "source_commit": "58f95edf887344662b8d023bccfbd73533892943",
+  "release_scope": "Deploy the latest main snapshot, including the /customers/applications terminology change from Partner to Customer Type while preserving the existing partner query parameter, partner_type data field, filter behavior, row values, and workflows, together with newer main changes already present in the same snapshot.",
+  "verification": "Verify web portal run 31686056947 passed for PR #306. Initial production run 31686344926 passed regressions, typecheck and lint but was cancelled during production build because main moved. This retry must rerun the compulsory verification gate against the exact latest main snapshot before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
