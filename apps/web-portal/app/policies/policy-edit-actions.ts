@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-source";
 
 export type PolicyEditPayload = {
   vehicleClass: string;
@@ -80,10 +81,13 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
   if (percentageValues.some((value) => !validPercent(value))) return { ok: false, error: "Pay-in and payout percentages must be between 0 and 100." };
 
   try {
+    const sourceResolution = await resolvePolicyIntermediarySource(payload.policy);
+    if (!sourceResolution.ok) return { ok: false, error: sourceResolution.error };
+    const normalizedPayload = { ...payload, policy: { ...payload.policy, ...sourceResolution.source } };
     const admin = createSupabaseAdminClient();
     const { data, error } = await admin.rpc("update_motor_policy", {
       p_policy_id: policyId,
-      p_payload: payload,
+      p_payload: normalizedPayload,
     });
     if (error) return { ok: false, error: error.message };
 

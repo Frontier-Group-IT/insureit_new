@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-source";
 
 export type PolicyCustomerCandidate = { id: string; name: string; phone: string; city: string | null; state: string | null };
 export type PolicyOwnershipConflict = { vehicleId: string; registrationNumber: string; customerId: string; customerName: string; customerPhone: string; canTransfer: boolean };
@@ -150,6 +151,9 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
   const profile = await requirePolicyEditor();
   const validationError = validatePayload(payload);
   if (validationError) return { ok: false, kind: "validation", error: validationError };
+  const sourceResolution = await resolvePolicyIntermediarySource(payload.policy);
+  if (!sourceResolution.ok) return { ok: false, kind: "validation", error: sourceResolution.error };
+  payload = { ...payload, policy: { ...payload.policy, ...sourceResolution.source }, customer: { ...payload.customer, source: sourceResolution.source.leadSource } };
 
   const phone = normalizedPhone(payload.customer.phone);
   const name = cleanName(payload.customer.name);
