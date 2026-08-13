@@ -47,7 +47,8 @@ export function BrokerRegisterShell({
   const showSupportingCopy = title !== "Customer Portfolio" && title !== "Vehicle Portfolio" && title !== "Policy Portfolio";
   const customerReferenceLayout = title === "Customer Portfolio";
   const vehicleReferenceLayout = title === "Vehicle Portfolio";
-  const compactReferenceLayout = customerReferenceLayout || vehicleReferenceLayout;
+  const policyReferenceLayout = title === "Policy Portfolio";
+  const compactReferenceLayout = customerReferenceLayout || vehicleReferenceLayout || policyReferenceLayout;
   const childItems = Children.toArray(children);
   const firstChild = childItems[0];
   const compactToolbar =
