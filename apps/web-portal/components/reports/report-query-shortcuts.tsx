@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 export type ReportShortcut = { value: string; label: string };
@@ -19,6 +20,9 @@ export function ReportQueryShortcuts({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentQuery = searchParams.toString();
+  const displayedOptions = param === "period" && !options.some((option) => option.value === "custom")
+    ? [...options, { value: "custom", label: "Custom" }]
+    : options;
   const activeFilterCount = Array.from(searchParams.entries()).filter(([key, value]) => {
     if (!value) return false;
     if (key === "period" || key === "horizon") return false;
@@ -30,7 +34,7 @@ export function ReportQueryShortcuts({
     <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         <span className="mr-1 text-[8.5px] font-black uppercase tracking-[0.08em] text-[#7b8799]">{label}</span>
-        {options.map((option) => (
+        {displayedOptions.map((option) => (
           <Link
             key={option.value}
             href={buildHref(pathname, currentQuery, param, option.value)}
@@ -49,6 +53,31 @@ export function ReportQueryShortcuts({
   );
 }
 
+export function ReportFilterSubmitGuard() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentPeriod = searchParams.get("period") ?? defaultPeriod(pathname);
+
+  useEffect(() => {
+    const onSubmit = (event: SubmitEvent) => {
+      const form = event.target instanceof HTMLFormElement ? event.target : null;
+      if (!form || !form.closest(".report-page-shell")) return;
+      const periodInput = form.querySelector<HTMLInputElement>('input[type="hidden"][name="period"]');
+      if (!periodInput) return;
+
+      const fromInput = form.querySelector<HTMLInputElement>('input[name="from"]');
+      const toInput = form.querySelector<HTMLInputElement>('input[name="to"]');
+      const datesChanged = [fromInput, toInput].some((input) => input && input.value !== input.defaultValue);
+      periodInput.value = datesChanged ? "custom" : currentPeriod;
+    };
+
+    document.addEventListener("submit", onSubmit, true);
+    return () => document.removeEventListener("submit", onSubmit, true);
+  }, [currentPeriod]);
+
+  return null;
+}
+
 function buildHref(pathname: string, currentQuery: string, param: "period" | "horizon", value: string) {
   const next = new URLSearchParams(currentQuery);
   next.set(param, value);
@@ -64,4 +93,8 @@ function buildHref(pathname: string, currentQuery: string, param: "period" | "ho
 
   const query = next.toString();
   return query ? `${pathname}?${query}` : pathname;
+}
+
+function defaultPeriod(pathname: string) {
+  return pathname === "/reports/governance" ? "30d" : "90d";
 }
