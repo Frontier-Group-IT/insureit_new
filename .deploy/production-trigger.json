@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #305 customer document upload paperclip UI to production.",
-  "deploy_requested_at": "2026-08-13T14:07:00+05:30",
+  "purpose": "Deploy PR #304 policy billing details collapse and date-icon alignment to production.",
+  "deploy_requested_at": "2026-08-13T14:15:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #305 and deploy the latest verified main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "56b5048e2b37cece9cfde92fd1182b362a46de3e",
-  "release_scope": "Release the customer onboarding document upload refinement that replaces the Required text on required document upload controls with the Lucide Paperclip icon while preserving required asterisks, validation, file selection behavior and Ready state. Include the latest main snapshot at this release checkpoint.",
-  "verification": "PR #305 verification run 31682370782 passed successfully before merge. The production workflow must rerun the compulsory verification gate against main before invoking the Vercel deploy hook.",
+  "source": "Merge PR #304 and deploy the latest verified main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "48a47036af8a6a58f5f56d546cde999798f52acf",
+  "release_scope": "Release the Policy Onboarding Section 04 refinement that hides PayIn Billed Amt Rs., PayIn Bill No., PayIn Bill Date and PayIn Status behind the Billing Details expansion control while preserving all calculations and persistence, and fixes vertical alignment of the calendar icon in formatted date inputs. Include the latest main snapshot at this release checkpoint.",
+  "verification": "PR #304 verification run 31681914148 passed successfully before merge. The production workflow must rerun the compulsory verification gate against main before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
