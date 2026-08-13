@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy OCR additional-insurer training to production.",
-  "deploy_requested_at": "2026-08-14T00:29:04+05:30",
+  "purpose": "Deploy Policy OCR date apply and premium-guard fixes to production.",
+  "deploy_requested_at": "2026-08-14T00:56:10+05:30",
   "requested_by": "explicit user request",
-  "source": "Direct main commit with Policy OCR additional-insurer training.",
-  "source_commit": "bec9938b27bf4a2ee667ca5c1c0aad0426d65d44",
-  "release_scope": "Policy OCR training increment: add Shriram General, Oriental Insurance, National Insurance bilingual GCV, Universal Sompo bundled motor, and United India PCV detection/refinement with sanitized regressions and safe financial reconciliation.",
+  "source": "Direct main commit with Policy OCR date apply and premium guard fixes.",
+  "source_commit": "4eed29c3efcc393c8df750cc3579347cfb4d19f1",
+  "release_scope": "Policy OCR hotfix: apply extracted validity dates through native date controls, improve additional-insurer master-data matching, reject non-numeric policy-number labels, derive GST when OCR captures percentage/reference values, and block tiny reference tokens from CPA extraction.",
   "verification": "Run the protected verification gate on this exact deployment-trigger snapshot before invoking Vercel.",
   "instructions": "Update this file only after explicit deployment approval."
 }
