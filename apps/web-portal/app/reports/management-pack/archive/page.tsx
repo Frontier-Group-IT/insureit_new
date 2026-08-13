@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { AppShell } from "@/components/shell";
+import { ReportEmptyState, ReportPageShell } from "@/components/reports/report-page-shell";
 import { requireCapability } from "@/lib/master-data-server";
 import { listManagementPackSnapshots } from "@/lib/reports/management-pack-archive";
 
@@ -10,18 +11,23 @@ export const revalidate = 0;
 export default async function ManagementPackArchivePage() {
   const profile = await requireCapability("view_reports");
   if (!profile) return null;
-  const snapshots = await listManagementPackSnapshots(profile.id);
+  let snapshots: Awaited<ReturnType<typeof listManagementPackSnapshots>> = [];
+  let loadError = false;
+  try {
+    snapshots = await listManagementPackSnapshots(profile.id);
+  } catch (error) {
+    console.error("[reports] management pack archive failed", error instanceof Error ? error.message : "unknown error");
+    loadError = true;
+  }
 
   return (
     <AppShell title="Reports">
-      <div className="mx-auto max-w-[1200px] space-y-4 pb-8">
-        <header className="portal-card overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-5 sm:px-6">
-            <h1 className="text-[26px] font-semibold tracking-[-0.025em] text-[#13203b] sm:text-[30px]">Management Pack Archive</h1>
-            <Link href="/reports/management-pack" className="inline-flex h-9 items-center rounded-lg border border-[#dfe5ee] bg-white px-3 text-[10px] font-bold text-[#526174]">Management Pack</Link>
-          </div>
-        </header>
-
+      <ReportPageShell
+        title="Management Pack Archive"
+        loadError={loadError}
+        className="max-w-[1200px]"
+        actions={<Link href="/reports/management-pack" className="inline-flex h-9 items-center rounded-lg border border-[#dfe5ee] bg-white px-3 text-[10px] font-bold text-[#526174]">Management Pack</Link>}
+      >
         <section className="portal-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px]">
@@ -31,9 +37,9 @@ export default async function ManagementPackArchivePage() {
               </tbody>
             </table>
           </div>
-          {!snapshots.length ? <div className="px-5 py-12 text-center text-[10px] font-semibold text-[#7a8798]">No snapshots</div> : null}
+          {!snapshots.length && !loadError ? <ReportEmptyState message="No month-end snapshots yet." /> : null}
         </section>
-      </div>
+      </ReportPageShell>
     </AppShell>
   );
 }

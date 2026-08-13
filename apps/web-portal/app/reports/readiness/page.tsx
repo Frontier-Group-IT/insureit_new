@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { ArrowRight, Download, Filter, RotateCcw } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { AppShell } from "@/components/shell";
-import { hasEffectiveCapability } from "@/lib/effective-permissions";
+import { ReportApplyButton, ReportEmptyState, ReportExportLink, ReportFilterField, ReportPageShell, ReportResetLink, reportInputClass } from "@/components/reports/report-page-shell";
 import { requireCapability } from "@/lib/master-data-server";
-import { loadReportingReadiness, type ReportingReadinessQuery, type ReadinessDomain } from "@/lib/reports/readiness";
+import { emptyReadinessReport, loadReportingReadiness, resolveReportingReadinessFilters, type ReportingReadinessQuery, type ReadinessDomain } from "@/lib/reports/readiness";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -14,31 +14,41 @@ export default async function ReportingReadinessPage({ searchParams }: Props) {
   const profile = await requireCapability("view_reports");
   if (!profile) return null;
   const query = await searchParams;
-  const [{ report, filters }, canViewGovernance] = await Promise.all([
-    loadReportingReadiness(profile, query),
-    hasEffectiveCapability(profile, "manage_users"),
-  ]);
+  let payload: Awaited<ReturnType<typeof loadReportingReadiness>> | null = null;
+  let loadError = false;
+  try {
+    payload = await loadReportingReadiness(profile, query);
+  } catch (error) {
+    console.error("[reports] reporting readiness failed", error instanceof Error ? error.message : "unknown error");
+    loadError = true;
+  }
+  const filters = payload?.filters ?? resolveReportingReadinessFilters(query);
+  const report = payload?.report ?? emptyReadinessReport(filters.page, 25);
   const exportHref = `/reports/export/readiness?domain=${encodeURIComponent(filters.domain)}`;
   const totalPages = Math.max(1, Math.ceil(report.register.total_count / report.register.page_size));
 
   return (
     <AppShell title="Reports">
-      <div className="mx-auto max-w-[1560px] space-y-4 pb-8">
-        <header className="portal-card overflow-hidden">
-          <div className="flex flex-col gap-3 border-b border-[#e8ecf2] px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-            <div>
-              <h1 className="text-[26px] font-semibold tracking-[-0.025em] text-[#13203b] sm:text-[30px]">Reporting readiness</h1>
-              <ReportTabs canViewGovernance={canViewGovernance} />
-            </div>
-            <a href={exportHref} className="inline-flex h-9 items-center gap-2 self-start rounded-lg border border-[#cad4e4] bg-white px-3 text-[10px] font-bold text-[#263b69] sm:self-auto"><Download className="h-3.5 w-3.5" />Export CSV</a>
-          </div>
-          <form action="/reports/readiness" method="get" className="flex flex-wrap items-end gap-2 px-5 py-4 sm:px-6">
-            <label className="block min-w-[210px]"><span className="mb-1 block text-[8.5px] font-black uppercase tracking-[.08em] text-[#7b8799]">Domain</span><select name="domain" defaultValue={filters.domain} className={inputClass}><option value="all">All exceptions</option><option value="vehicle">Vehicles</option><option value="policy_finance">Policy & Finance</option><option value="claim">Claims</option><option value="customer">Customer documents</option></select></label>
-            <button className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#172a5c] px-4 text-[10.5px] font-bold text-white"><Filter className="h-3.5 w-3.5" />Apply</button>
-            <Link href="/reports/readiness" className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[#dfe5ee] bg-white px-4 text-[10.5px] font-bold text-[#526174]"><RotateCcw className="h-3.5 w-3.5" />Reset</Link>
+      <ReportPageShell
+        title="Reporting readiness"
+        loadError={loadError}
+        actions={<ReportExportLink href={exportHref} />}
+        controls={
+          <form action="/reports/readiness" method="get" className="flex flex-wrap items-end gap-2">
+            <ReportFilterField label="Domain">
+              <select name="domain" defaultValue={filters.domain} className={`${reportInputClass} min-w-[210px]`}>
+                <option value="all">All exceptions</option>
+                <option value="vehicle">Vehicles</option>
+                <option value="policy_finance">Policy & Finance</option>
+                <option value="claim">Claims</option>
+                <option value="customer">Customer documents</option>
+              </select>
+            </ReportFilterField>
+            <ReportApplyButton />
+            <ReportResetLink href="/reports/readiness" />
           </form>
-        </header>
-
+        }
+      >
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
           <Metric label="Exception records" value={integer(report.summary.exception_records)} />
           <Metric label="Critical" value={integer(report.summary.critical_records)} />
@@ -69,18 +79,15 @@ export default async function ReportingReadinessPage({ searchParams }: Props) {
             </table>
           </div>
           <div className="divide-y divide-[#edf0f4] lg:hidden">{report.register.rows.map((row) => <div key={`${row.domain}-${row.entity_id}`} className="space-y-3 p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-[9px] font-black uppercase tracking-[.06em] text-[#7b8799]">{domainLabel(row.domain)}</p><p className="mt-1 text-[12px] font-bold text-[#1e2d49]">{row.primary_label}</p><p className="mt-0.5 text-[10px] text-[#647086]">{row.secondary_label}</p></div><Severity value={row.severity} /></div><div className="flex flex-wrap gap-1.5">{row.issue_labels.map((label) => <span key={label} className="rounded-md border border-[#e2e7ee] bg-[#f8fafc] px-2 py-1 text-[9px] font-semibold text-[#536176]">{label}</span>)}</div><Link href={row.action_path} className="inline-flex items-center gap-1.5 text-[10px] font-bold text-[#264a91]">Open record <ArrowRight className="h-3.5 w-3.5" /></Link></div>)}</div>
-          {report.register.rows.length === 0 ? <div className="px-5 py-10 text-center text-[11px] font-semibold text-[#7f8a9b]">No exceptions in this view.</div> : null}
+          {report.register.rows.length === 0 ? <ReportEmptyState message="No exceptions in this view." /> : null}
           {totalPages > 1 ? <div className="flex items-center justify-between border-t border-[#edf0f4] px-5 py-4"><span className="text-[9.5px] font-semibold text-[#7a8798]">Page {report.register.page} of {totalPages}</span><div className="flex gap-2">{report.register.page > 1 ? <Link href={pageHref(filters.domain, report.register.page - 1)} className={pageButton}>Previous</Link> : null}{report.register.page < totalPages ? <Link href={pageHref(filters.domain, report.register.page + 1)} className={pageButton}>Next</Link> : null}</div></div> : null}
         </section>
-      </div>
+      </ReportPageShell>
     </AppShell>
   );
 }
 
-const inputClass = "h-10 w-full rounded-lg border border-[#dfe5ee] bg-white px-3 text-[10.5px] font-semibold text-[#26364f] outline-none focus:border-[#7788bd] focus:ring-2 focus:ring-[#dfe5ff]";
 const pageButton = "inline-flex h-9 items-center rounded-lg border border-[#dfe5ee] bg-white px-3 text-[9.5px] font-bold text-[#506077]";
-function ReportTabs({ canViewGovernance }: { canViewGovernance: boolean }) { return <nav className="mt-4 flex flex-wrap gap-2"><Tab href="/reports" label="Business" /><Tab href="/reports/distribution" label="Distribution" /><Tab href="/reports/renewals" label="Renewals" /><Tab href="/reports/claims" label="Claims" /><Tab href="/reports/finance" label="Finance" /><Tab href="/reports/operations" label="Operations" />{canViewGovernance ? <Tab href="/reports/governance" label="Governance" /> : null}<Tab href="/reports/management-pack" label="Management Pack" /><Tab href="/reports/readiness" label="Readiness" active /></nav>; }
-function Tab({ href, label, active = false }: { href: string; label: string; active?: boolean }) { return <Link href={href} className={`rounded-lg border px-3 py-2 text-[10px] font-bold ${active ? "border-[#223a78] bg-[#223a78] text-white" : "border-[#dfe5ee] bg-white text-[#506077]"}`}>{label}</Link>; }
 function Metric({ label, value }: { label: string; value: string }) { return <article className="portal-card px-4 py-4"><p className="text-[8.5px] font-black uppercase tracking-[.08em] text-[#7c899b]">{label}</p><p className="mt-2 text-[20px] font-semibold text-[#14213c]">{value}</p></article>; }
 function Mini({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border border-[#e2e7ee] bg-white px-4 py-3"><p className="text-[8px] font-black uppercase tracking-[.08em] text-[#8994a5]">{label}</p><p className="mt-1.5 text-[17px] font-semibold text-[#1e2d49]">{value}</p></div>; }
 function Header({ title }: { title: string }) { return <div className="border-b border-[#e9edf3] px-5 py-4"><h2 className="text-[14px] font-bold text-[#1b2943]">{title}</h2></div>; }

@@ -122,7 +122,7 @@ function normalizeReport(value: unknown, page: number, pageSize: number): Report
   };
 }
 
-function emptyReadinessReport(page: number, pageSize: number): ReportingReadinessReport {
+export function emptyReadinessReport(page: number, pageSize: number): ReportingReadinessReport {
   return {
     summary: { exception_records:0,critical_records:0,warning_records:0,attention_records:0,vehicle_records:0,vehicles_missing_compliance:0,missing_compliance_fields:0,expired_compliance_fields:0,due_30_compliance_fields:0,authbridge_unverified:0,registration_pending:0,policy_finance_records:0,policy_missing_insurer:0,policy_missing_premium:0,policy_unassigned_rm:0,finance_missing_payin:0,billing_incomplete:0,unbilled:0,pending_payout:0,negative_retention:0,claim_records:0,claim_pending_documents:0,claim_rejected_documents:0,customer_records:0,customer_pending_documents:0,customer_rejected_documents:0,workflow_backlog:0 },
     domains: [], register: { rows: [], total_count: 0, page, page_size: pageSize },
