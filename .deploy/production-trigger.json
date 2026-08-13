@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy compact Policy Portfolio header and table updates to production.",
-  "deploy_requested_at": "2026-08-13T18:21:00+05:30",
+  "purpose": "Deploy PR #323 to production.",
+  "deploy_requested_at": "2026-08-13T21:38:00+05:30",
   "requested_by": "explicit user request",
-  "source": "PR #322 is merged into main. Deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "bf9368601ad72e0d2c6812edaefd25a9dd72f43c",
-  "release_scope": "Deploy the approved Policy Portfolio cleanup: remove the four summary cards, move Add Policy into the compact header, remove the current-view count and High value tab, place All insurers beside search, keep All / Active / Renewal due / Expired / Claims tabs compact on the right, remove the desktop Claims column, and tighten the table/filter spacing while preserving remaining policy data, status badges, Open actions, mobile cards, filters, and pagination.",
-  "verification": "Verify web portal run 31701970391 passed for PR #322 head 49d6e12b236773bbcca25a1dc3677f5eca2d34dc. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "PR #323 merged into main.",
+  "source_commit": "4b2129ed6062f425edff98c21a1db4af864ff74b",
+  "release_scope": "Policy Lead Source workflow correction.",
+  "verification": "PR verification run 31719216724 passed. Re-run the protected verification gate before Vercel deployment.",
   "instructions": "Update this file only after explicit deployment approval."
 }
