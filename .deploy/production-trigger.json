@@ -1,9 +1,9 @@
 {
   "purpose": "Deploy PR #302 customer onboarding document-focus changes to production.",
-  "deploy_requested_at": "2026-08-13T13:32:00+05:30",
+  "deploy_requested_at": "2026-08-13T13:34:00+05:30",
   "requested_by": "explicit user request",
   "source": "Merge PR #302 and deploy the latest main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "260c0d4acbdc3e75475a3ff3c2ee81a3d0873c49",
+  "source_commit": "29458572a7f7f82e3620d6bf2869ab4ecba21547",
   "release_scope": "Release the Individual / Proprietor customer onboarding refinement: remove the Fleet Details / Fleet Size section and its backend requirement, highlight the Documents section with a subtle indigo treatment and white upload cards, preserve required document validation and upload behavior, and keep Cancel / Create Customer actions and all other onboarding functionality unchanged. The latest main snapshot also includes newer merged main changes.",
   "verification": "PR #302 verification run 31680032129 passed successfully before merge. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
