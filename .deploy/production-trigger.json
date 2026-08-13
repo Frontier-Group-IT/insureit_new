@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Reporting UX R1 navigation foundation to production.",
-  "deploy_requested_at": "2026-08-13T16:46:00+05:30",
+  "purpose": "Deploy reorganized INSUREIT portal navigation to production.",
+  "deploy_requested_at": "2026-08-13T17:15:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #312 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "eec6a6eefb83259996a6ddbe2d403555591b4839",
-  "release_scope": "Deploy Reporting UX R1 only: make /reports the Reports Overview; move Business reporting to /reports/business; add shared family-based Reports navigation with a grouped mobile selector; replace stale sidebar hash links with real grouped report routes; preserve filtered legacy /reports Business URLs by redirecting them to /reports/business with query parameters intact; and hide Governance navigation unless effective manage_users access is present. Preserve all report calculations, RPCs, hierarchy scope, exports, Finance semantics, Management Pack snapshot rules, and production data behavior.",
-  "verification": "Verify web portal run 31694448058 passed for PR #312 at feature head e761bf585c9c37733d6e4d816e159437b8b2328a. The production workflow must rerun the compulsory verification gate against the exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "2005f1357d7ed8770ad0440f330175e5b5c43a3a",
+  "release_scope": "Deploy the approved workspace navigation restructure: Dashboard -> Tasks -> Customers -> Fleet & Policies -> Claims -> Intermediaries -> Reports -> Administration; remove Claims Work Queues and Task status submenu links; split Customers, Fleet & Policies, and Administration into permission-aware sections; preserve intermediary-only launch behavior, IT-super-user Development access, Settings gating, shared mobile navigation, existing routes, business logic, database behavior, integrations, and reporting functionality.",
+  "verification": "Verify web portal run 31696227966 passed for source commit 2005f1357d7ed8770ad0440f330175e5b5c43a3a. The production workflow must rerun the compulsory verification gate against the exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
