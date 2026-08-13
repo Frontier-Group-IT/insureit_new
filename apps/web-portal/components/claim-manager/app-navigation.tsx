@@ -10,96 +10,74 @@ import { internalLaunchHome, isIntermediaryOnlyLaunch } from "@/lib/launch-scope
 import type { Capability } from "@/lib/roles";
 import type { PermissionAccess } from "@/lib/permission-management";
 
-type SectionKey="claims"|"distribution"|"master-data"|"tasks"|"reports"|"development";
+type SectionKey="claims"|"distribution"|"master-data"|"customers"|"fleet"|"tasks"|"reports"|"development";
 type ActiveNav="dashboard"|SectionKey|"none";
 export type NavigationItem={kind?:"item";href:string;label:string;icon:LucideIcon;capability:Capability;minimumAccess?:Exclude<PermissionAccess,"none">};
 export type NavigationGroup={kind:"group";key:string;label:string;icon:LucideIcon;capability:Capability;minimumAccess?:Exclude<PermissionAccess,"none">;items:NavigationItem[]};
 export type NavigationNode=NavigationItem|NavigationGroup;
-export type NavigationSection={key:SectionKey;label:string;icon:LucideIcon;tint:string;capability:Capability;minimumAccess?:Exclude<PermissionAccess,"none">;items:NavigationNode[]};
+export type NavigationSection={key:SectionKey;label:string;icon:LucideIcon;tint:string;capability:Capability;anyCapabilities?:Capability[];minimumAccess?:Exclude<PermissionAccess,"none">;items:NavigationNode[]};
 type PermissionAccessMap=Partial<Record<Capability,PermissionAccess>>;
 type Props={activeNav:ActiveNav;role:string|null|undefined;permissionAccess:PermissionAccessMap};
 
 export const navigationSections:NavigationSection[]=[
- {key:"claims",label:"Claims",icon:ShieldCheck,tint:"from-[#ff6f61] to-[#ff9f68]",capability:"view_claims",items:[
-  {href:"/claims",label:"All Claims",icon:ClipboardList,capability:"view_claims"},
-  {kind:"group",key:"claim-queues",label:"Work Queues",icon:Gauge,capability:"view_claims",items:[
-   {href:"/claims?queue=documents",label:"Documents",icon:FileCheck2,capability:"view_claims"},
-   {href:"/claims?journey=spot-intimation",label:"Verification",icon:CheckSquare2,capability:"manage_claims"},
-   {href:"/claims?journey=spot-surveyor-assigned",label:"Survey",icon:Gauge,capability:"manage_claims"},
-   {href:"/claims?journey=under-repair",label:"Under Repair",icon:Settings,capability:"manage_claims"},
-   {href:"/claims?journey=payment-advice-received",label:"Settlement",icon:BarChart3,capability:"manage_claims"}
+ {key:"tasks",label:"Tasks",icon:CheckSquare2,tint:"from-[#17c7c9] to-[#62ddd3]",capability:"view_tasks",items:[
+  {href:"/tasks",label:"All Tasks",icon:CheckSquare2,capability:"view_tasks"}
+ ]},
+ {key:"customers",label:"Customers",icon:UsersRound,tint:"from-[#6759ff] to-[#8f7cff]",capability:"view_customers",items:[
+  {href:"/customers",label:"Customer Register",icon:UsersRound,capability:"view_customers"},
+  {href:"/customers?choose_partner=1",label:"Add Customer",icon:Plus,capability:"manage_customers"},
+  {href:"/customers/applications",label:"Onboarding Applications",icon:FileCheck2,capability:"review_kyc"}
+ ]},
+ {key:"fleet",label:"Fleet & Policies",icon:Gauge,tint:"from-[#3156b8] to-[#6759ff]",capability:"view_vehicles",anyCapabilities:["view_vehicles","view_policies"],items:[
+  {kind:"group",key:"vehicles",label:"Vehicles",icon:Gauge,capability:"view_vehicles",items:[
+   {href:"/vehicles",label:"Vehicle Register",icon:Gauge,capability:"view_vehicles"},
+   {href:"/vehicles/new",label:"Add Vehicle",icon:Plus,capability:"view_vehicles",minimumAccess:"edit"}
+  ]},
+  {kind:"group",key:"policies",label:"Policies",icon:ShieldCheck,capability:"view_policies",items:[
+   {href:"/policies",label:"Policy Register",icon:ShieldCheck,capability:"view_policies"},
+   {href:"/policies/new",label:"Add Policy",icon:Plus,capability:"view_policies",minimumAccess:"edit"}
   ]}
  ]},
- {key:"distribution",label:"Intermediatory",icon:Sparkles,tint:"from-[#17c7c9] to-[#6759ff]",capability:"view_intermediaries",items:[
+ {key:"claims",label:"Claims",icon:ShieldCheck,tint:"from-[#ff6f61] to-[#ff9f68]",capability:"view_claims",items:[
+  {href:"/claims",label:"All Claims",icon:ClipboardList,capability:"view_claims"}
+ ]},
+ {key:"distribution",label:"Intermediaries",icon:Sparkles,tint:"from-[#17c7c9] to-[#6759ff]",capability:"view_intermediaries",items:[
+  {kind:"group",key:"intermediary-onboarding",label:"Onboarding",icon:FileCheck2,capability:"view_intermediaries",items:[
+   {href:"/customers/posp-misp",label:"Pending Applications",icon:FileCheck2,capability:"view_intermediaries"}
+  ]},
   {kind:"group",key:"partners",label:"Partners",icon:UsersRound,capability:"view_intermediaries",items:[
-   {href:"/intermediaries/partner",label:"All Partner",icon:UsersRound,capability:"view_intermediaries"},
+   {href:"/intermediaries/partner",label:"All Partners",icon:UsersRound,capability:"view_intermediaries"},
    {href:"/intermediaries/portal-users",label:"Portal Users",icon:UserCog,capability:"review_intermediary_application"}
   ]},
   {kind:"group",key:"posp",label:"POSP",icon:UsersRound,capability:"view_intermediaries",items:[
-      {href:"/intermediaries/posp",label:"All POSP",icon:UsersRound,capability:"view_intermediaries"},
-      {href:"/intermediaries/posp/new",label:"Add POSP",icon:UserPlus,capability:"create_intermediary_application"},
-      {href:"/customers/posp-misp/existing/new?partner_type=posp",label:"Add Existing POSP",icon:UserPlus,capability:"create_intermediary_application"}
-    ]},
+   {href:"/intermediaries/posp",label:"All POSP",icon:UsersRound,capability:"view_intermediaries"},
+   {href:"/intermediaries/posp/new",label:"Add POSP",icon:UserPlus,capability:"create_intermediary_application"},
+   {href:"/customers/posp-misp/existing/new?partner_type=posp",label:"Add Existing POSP",icon:UserPlus,capability:"create_intermediary_application"}
+  ]},
   {kind:"group",key:"misp",label:"MISP",icon:UsersRound,capability:"view_intermediaries",items:[
-      {href:"/intermediaries/misp",label:"All MISP",icon:UsersRound,capability:"view_intermediaries"},
-      {href:"/intermediaries/misp/new",label:"Add MISP",icon:UserPlus,capability:"create_intermediary_application"},
-      {href:"/customers/posp-misp/existing/new?partner_type=misp",label:"Add Existing MISP",icon:UserPlus,capability:"create_intermediary_application"}
-    ]},
-  {kind:"group",key:"intermediary-onboarding",label:"Onboarding",icon:FileCheck2,capability:"view_intermediaries",items:[
-   {href:"/customers/posp-misp",label:"Pending Applications",icon:FileCheck2,capability:"view_intermediaries"}
+   {href:"/intermediaries/misp",label:"All MISP",icon:UsersRound,capability:"view_intermediaries"},
+   {href:"/intermediaries/misp/new",label:"Add MISP",icon:UserPlus,capability:"create_intermediary_application"},
+   {href:"/customers/posp-misp/existing/new?partner_type=misp",label:"Add Existing MISP",icon:UserPlus,capability:"create_intermediary_application"}
   ]}
  ]},
- {key:"master-data",label:"Customers & Fleet",icon:LayoutGrid,tint:"from-[#6759ff] to-[#8f7cff]",capability:"view_customers",items:[
-  {kind:"group",key:"customers",label:"Customers",icon:UsersRound,capability:"view_customers",items:[
-   {href:"/customers",label:"Customer Register",icon:UsersRound,capability:"view_customers"},
-   {href:"/customers?choose_partner=1",label:"Add Customer",icon:Plus,capability:"manage_customers"},
-   {href:"/customers/applications",label:"Onboarding Applications",icon:FileCheck2,capability:"review_kyc"}
-  ]},
-  {kind:"group",key:"fleet",label:"Fleet Management",icon:Gauge,capability:"view_vehicles",items:[
-   {href:"/vehicles",label:"Vehicle Register",icon:Gauge,capability:"view_vehicles"},
-   {href:"/vehicles/new",label:"Add Vehicle",icon:Plus,capability:"view_vehicles",minimumAccess:"edit"},
-   {href:"/policies",label:"Policy Register",icon:ShieldCheck,capability:"view_policies"},
-   {href:"/policies/new",label:"Add Policy",icon:Plus,capability:"view_policies",minimumAccess:"edit"}
+ {key:"reports",label:"Reports",icon:BarChart3,tint:"from-[#3156b8] to-[#17bfc5]",capability:"view_reports",items:[
+  {href:"/reports",label:"Report Workspace",icon:BarChart3,capability:"view_reports"},
+  {href:"/reports/business",label:"Business Reports",icon:BarChart3,capability:"view_reports"},
+  {href:"/reports/renewals",label:"Renewal Reports",icon:Gauge,capability:"view_reports"},
+  {href:"/reports/claims",label:"Claims Reports",icon:ShieldCheck,capability:"view_reports"},
+  {href:"/reports/distribution",label:"Distribution Reports",icon:UsersRound,capability:"view_reports"},
+  {href:"/reports/operations",label:"Compliance Reports",icon:FileCheck2,capability:"view_reports"}
+ ]},
+ {key:"master-data",label:"Administration",icon:LayoutGrid,tint:"from-[#475569] to-[#6759ff]",capability:"view_employees",anyCapabilities:["view_employees","manage_master_data"],items:[
+  {kind:"group",key:"employees",label:"Employees",icon:UsersRound,capability:"view_employees",items:[
+   {href:"/employees",label:"Employee Directory",icon:UsersRound,capability:"view_employees"},
+   {href:"/employees/new",label:"Add Employee",icon:UserPlus,capability:"manage_employees",minimumAccess:"edit"}
   ]},
   {kind:"group",key:"reference-master",label:"Master Data",icon:Settings,capability:"manage_master_data",items:[
    {href:"/master-data/insurance-companies",label:"Insurance Companies",icon:ShieldCheck,capability:"manage_master_data"},
    {href:"/master-data/insurance-companies/new",label:"Add Insurance Company",icon:Plus,capability:"manage_master_data",minimumAccess:"edit"},
    {href:"/master-data/vehicle-manufacturers",label:"Vehicle Manufacturers",icon:Settings,capability:"manage_master_data"},
    {href:"/master-data/vehicle-manufacturers/new",label:"Add Manufacturer",icon:Plus,capability:"manage_master_data",minimumAccess:"edit"}
-  ]},
-  {kind:"group",key:"employees",label:"Employees",icon:UsersRound,capability:"view_employees",items:[
-   {href:"/employees",label:"Employee Directory",icon:UsersRound,capability:"view_employees"},
-   {href:"/employees/new",label:"Add Employee",icon:UserPlus,capability:"manage_employees",minimumAccess:"edit"}
-  ]}
- ]},
- {key:"tasks",label:"Tasks",icon:CheckSquare2,tint:"from-[#17c7c9] to-[#62ddd3]",capability:"view_tasks",items:[
-  {href:"/tasks",label:"All Tasks",icon:CheckSquare2,capability:"view_tasks"},
-  {href:"/tasks?status=open",label:"Open",icon:ClipboardList,capability:"view_tasks"},
-  {href:"/tasks?status=in_progress",label:"In Progress",icon:Gauge,capability:"view_tasks"},
-  {href:"/tasks?status=overdue",label:"Overdue",icon:Gauge,capability:"view_tasks"},
-  {href:"/tasks?status=completed",label:"Completed",icon:FileCheck2,capability:"view_tasks"}
- ]},
- {key:"reports",label:"Reports",icon:BarChart3,tint:"from-[#3156b8] to-[#17bfc5]",capability:"view_reports",items:[
-  {href:"/reports",label:"Overview",icon:BarChart3,capability:"view_reports"},
-  {kind:"group",key:"report-executive",label:"Executive",icon:Gauge,capability:"view_reports",items:[
-   {href:"/reports/management-pack",label:"Management Pack",icon:BarChart3,capability:"view_reports"},
-   {href:"/reports/management-pack/archive",label:"Month-End Archive",icon:ClipboardList,capability:"view_reports"}
-  ]},
-  {kind:"group",key:"report-business",label:"Business",icon:BarChart3,capability:"view_reports",items:[
-   {href:"/reports/business",label:"Business Performance",icon:BarChart3,capability:"view_reports"},
-   {href:"/reports/distribution",label:"Distribution",icon:UsersRound,capability:"view_reports"},
-   {href:"/reports/finance",label:"Finance",icon:BarChart3,capability:"view_reports"}
-  ]},
-  {kind:"group",key:"report-portfolio",label:"Portfolio & Service",icon:ShieldCheck,capability:"view_reports",items:[
-   {href:"/reports/renewals",label:"Renewals",icon:Gauge,capability:"view_reports"},
-   {href:"/reports/claims",label:"Claims",icon:ShieldCheck,capability:"view_reports"}
-  ]},
-  {kind:"group",key:"report-operations",label:"Operations",icon:FileCheck2,capability:"view_reports",items:[
-   {href:"/reports/operations",label:"Compliance & Operations",icon:FileCheck2,capability:"view_reports"}
-  ]},
-  {kind:"group",key:"report-controls",label:"Controls",icon:CheckSquare2,capability:"view_reports",items:[
-   {href:"/reports/readiness",label:"Readiness",icon:CheckSquare2,capability:"view_reports"},
-   {href:"/reports/governance",label:"Governance",icon:Settings,capability:"manage_users"}
   ]}
  ]}
 ];
@@ -113,7 +91,8 @@ const developmentSection:NavigationSection={key:"development",label:"Development
 const permissionRank:Record<PermissionAccess,number>={none:0,view:1,edit:2,approve:3};
 export function permits(permissionAccess:PermissionAccessMap,capability:Capability,minimumAccess:Exclude<PermissionAccess,"none">="view"){return permissionRank[permissionAccess[capability]??"none"]>=permissionRank[minimumAccess]}
 function dedupeNavigationItems(items:NavigationItem[]){const seen=new Set<string>();return items.filter(item=>{const key=`${item.href}::${item.label}`;if(seen.has(key))return false;seen.add(key);return true})}
-export function visibleNavigationSections(role:string|null|undefined,permissionAccess:PermissionAccessMap){const filterNode=(node:NavigationNode):NavigationNode|null=>{if(!permits(permissionAccess,node.capability,node.minimumAccess))return null;if(node.kind!=="group")return node;const items=dedupeNavigationItems(node.items.filter(item=>permits(permissionAccess,item.capability,item.minimumAccess)));return items.length?{...node,items}:null};const availableSections=isIntermediaryOnlyLaunch?navigationSections.filter(section=>section.key==="distribution"):navigationSections;const sections=availableSections.filter(section=>permits(permissionAccess,section.capability,section.minimumAccess)).map(section=>({...section,items:section.items.map(filterNode).filter((node):node is NavigationNode=>Boolean(node))})).filter(section=>section.items.length);return !isIntermediaryOnlyLaunch&&role==="it_super_user"&&permits(permissionAccess,"manage_system","approve")?[...sections,developmentSection]:sections}
+function permitsSection(permissionAccess:PermissionAccessMap,section:NavigationSection){if(section.anyCapabilities?.length)return section.anyCapabilities.some(capability=>permits(permissionAccess,capability,section.minimumAccess));return permits(permissionAccess,section.capability,section.minimumAccess)}
+export function visibleNavigationSections(role:string|null|undefined,permissionAccess:PermissionAccessMap){const filterNode=(node:NavigationNode):NavigationNode|null=>{if(!permits(permissionAccess,node.capability,node.minimumAccess))return null;if(node.kind!=="group")return node;const items=dedupeNavigationItems(node.items.filter(item=>permits(permissionAccess,item.capability,item.minimumAccess)));return items.length?{...node,items}:null};const availableSections=isIntermediaryOnlyLaunch?navigationSections.filter(section=>section.key==="distribution"):navigationSections;const sections=availableSections.filter(section=>permitsSection(permissionAccess,section)).map(section=>({...section,items:section.items.map(filterNode).filter((node):node is NavigationNode=>Boolean(node))})).filter(section=>section.items.length);return !isIntermediaryOnlyLaunch&&role==="it_super_user"&&permits(permissionAccess,"manage_system","approve")?[...sections,developmentSection]:sections}
 
 export function AppNavigation({activeNav,role,permissionAccess}:Props){
  const pathname=usePathname();const searchParams=useSearchParams();const sections=useMemo(()=>visibleNavigationSections(role,permissionAccess),[role,permissionAccess]);const routeSection=sectionForPath(pathname);const resolved=routeSection??(activeNav!=="dashboard"&&activeNav!=="none"?activeNav:null);const[openSection,setOpenSection]=useState<SectionKey|null>(resolved);const[openGroups,setOpenGroups]=useState<Record<string,boolean>>({});const currentQuery=searchParams.toString();
@@ -122,5 +101,5 @@ export function AppNavigation({activeNav,role,permissionAccess}:Props){
 }
 function NavigationGroupView({sectionKey,group,pathname,currentQuery,open,onToggle}:{sectionKey:SectionKey;group:NavigationGroup;pathname:string;currentQuery:string;open:boolean;onToggle:()=>void}){const Icon=group.icon;const active=group.items.some(item=>isCurrent(item.href,pathname,currentQuery));return <div className="rounded-xl"><button type="button" onClick={onToggle} className={`group flex min-h-9 w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-[10.5px] font-semibold transition-all duration-200 ease-out motion-reduce:transform-none hover:translate-x-0.5 hover:shadow-[0_8px_20px_rgba(4,10,28,.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 ${active?"bg-white/12 text-white hover:bg-white/[0.16]":"text-white/82 hover:bg-white/10 hover:text-white"}`}><Icon className="h-3.5 w-3.5 transition-transform duration-200 ease-out motion-reduce:transform-none group-hover:scale-105"/><span className="flex-1 truncate">{group.label}</span><ChevronRight className={`h-3.5 w-3.5 transition-transform duration-200 ease-out motion-reduce:transform-none group-hover:translate-x-0.5 ${open?"rotate-90":""}`}/></button>{open?<div className="ml-3 mt-1 space-y-1 border-l border-white/12 pl-2">{group.items.map(item=><NavigationLink key={`${sectionKey}:${item.href}`} item={item} pathname={pathname} currentQuery={currentQuery}/>)}</div>:null}</div>}
 function NavigationLink({item,pathname,currentQuery}:{item:NavigationItem;pathname:string;currentQuery:string}){const active=isCurrent(item.href,pathname,currentQuery);const Icon=item.icon;return <Link href={item.href} prefetch={false} title={item.label} className={`group flex min-h-9 items-center gap-2 rounded-xl px-2.5 py-2 text-[10.5px] font-semibold transition-all duration-200 ease-out motion-reduce:transform-none hover:translate-x-0.5 hover:shadow-[0_8px_20px_rgba(4,10,28,.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 ${active?"bg-white text-[#17213e] hover:bg-white":"text-white/82 hover:bg-white/10 hover:text-white"}`}><Icon className={`h-3.5 w-3.5 transition-transform duration-200 ease-out motion-reduce:transform-none group-hover:scale-105 ${active?"text-[#6759ff]":"text-white/60"}`}/><span className="truncate">{item.label}</span></Link>}
-export function sectionForPath(pathname:string):SectionKey|null{if(pathname==="/customers/posp-misp/icall-uat")return"development";if(pathname==="/claims"||pathname.startsWith("/claims/"))return"claims";if(pathname==="/intermediaries"||pathname.startsWith("/intermediaries/")||pathname==="/customers/posp-misp"||pathname.startsWith("/customers/posp-misp/"))return"distribution";if(pathname==="/tasks"||pathname.startsWith("/tasks/"))return"tasks";if(pathname==="/reports"||pathname.startsWith("/reports/"))return"reports";if(pathname==="/master-data"||pathname.startsWith("/master-data/")||pathname==="/insurance-companies"||pathname.startsWith("/insurance-companies/")||pathname==="/employees"||pathname.startsWith("/employees/")||pathname==="/customers"||pathname.startsWith("/customers/")||pathname==="/customer-kyc"||pathname.startsWith("/customer-kyc/")||pathname==="/vehicles"||pathname.startsWith("/vehicles/")||pathname==="/policies"||pathname.startsWith("/policies/"))return"master-data";return null}
+export function sectionForPath(pathname:string):SectionKey|null{if(pathname==="/customers/posp-misp/icall-uat"||pathname==="/customers/posp-misp/import"||pathname.startsWith("/customers/posp-misp/import/"))return"development";if(pathname==="/tasks"||pathname.startsWith("/tasks/"))return"tasks";if(pathname==="/claims"||pathname.startsWith("/claims/"))return"claims";if(pathname==="/intermediaries"||pathname.startsWith("/intermediaries/")||pathname==="/customers/posp-misp"||pathname.startsWith("/customers/posp-misp/"))return"distribution";if(pathname==="/reports"||pathname.startsWith("/reports/"))return"reports";if(pathname==="/master-data"||pathname.startsWith("/master-data/")||pathname==="/insurance-companies"||pathname.startsWith("/insurance-companies/")||pathname==="/employees"||pathname.startsWith("/employees/"))return"master-data";if(pathname==="/customers"||pathname.startsWith("/customers/")||pathname==="/customer-kyc"||pathname.startsWith("/customer-kyc/"))return"customers";if(pathname==="/vehicles"||pathname.startsWith("/vehicles/")||pathname==="/policies"||pathname.startsWith("/policies/"))return"fleet";return null}
 export function isCurrent(href:string,pathname:string,currentQuery:string){const[targetPath,targetQuery=""]=href.split("?");if(pathname!==targetPath)return false;if(!targetQuery)return currentQuery.length===0;const expected=new URLSearchParams(targetQuery);const current=new URLSearchParams(currentQuery);return Array.from(expected.entries()).every(([key,value])=>current.get(key)===value)}
