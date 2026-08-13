@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #304 policy billing details collapse and date-icon alignment to production.",
-  "deploy_requested_at": "2026-08-13T14:20:00+05:30",
+  "purpose": "Deploy the Month-End Management Pack and immutable Management Pack Archive to production.",
+  "deploy_requested_at": "2026-08-13T14:23:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Deploy the latest stable main snapshot containing PR #304 using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "87fa7b63440ceb22301a97bfca9a9950f7484578",
-  "release_scope": "Release the Policy Onboarding Section 04 refinement that hides PayIn Billed Amt Rs., PayIn Bill No., PayIn Bill Date and PayIn Status behind the Billing Details expansion control while preserving all calculations and persistence, and fixes vertical alignment of the calendar icon in formatted date inputs. Include newer main changes that landed after PR #304.",
-  "verification": "PR #304 verification run 31681914148 passed successfully before merge. The production workflow must rerun the compulsory verification gate against the latest stable main snapshot before invoking the Vercel deploy hook.",
+  "source": "Deploy the latest main snapshot containing the verified Management Pack and the new month-end snapshot/archive phase using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "a50ad28d082ef410a95bc431d130ac085f7692e2",
+  "release_scope": "Release /reports/management-pack with monthly consolidated Business, Distribution, Finance, Claims, Renewal, Operations and authorized Governance reporting, CSV/print output, plus the server-only per-viewer immutable month-end archive: Archive listing, exact month-end Close Month capture, Frozen Pack viewing, frozen CSV export and owner-scoped snapshot access. Include newer main changes already present in the same release snapshot.",
+  "verification": "Management Pack verification run 31681920542 passed fully. Archive feature run 31683846939 passed all regressions, OCR checks, TypeScript and lint before being cancelled during production build only because main moved. This production workflow must rerun the full compulsory verification gate against the exact combined release snapshot before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
