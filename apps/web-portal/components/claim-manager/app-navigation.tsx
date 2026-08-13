@@ -56,12 +56,6 @@ export const navigationSections:NavigationSection[]=[
    {href:"/customers/applications",label:"Onboarding Applications",icon:FileCheck2,capability:"review_kyc"},
    {href:"/customer-kyc",label:"Customer KYC",icon:FileCheck2,capability:"view_kyc"}
   ]},
-  {kind:"group",key:"customer-types",label:"Add by Customer Type",icon:UserPlus,capability:"manage_customers",items:[
-   {href:"/customers/new?partner_type=individual_proprietor",label:"Individual / Proprietor",icon:UserPlus,capability:"manage_customers"},
-   {href:"/customers/dealership-type",label:"Dealership",icon:UserPlus,capability:"manage_customers"},
-   {href:"/customers/new?partner_type=corporate",label:"Corporate",icon:UserPlus,capability:"manage_customers"},
-   {href:"/customers/new?partner_type=group",label:"Group",icon:UserPlus,capability:"manage_customers"}
-  ]},
   {kind:"group",key:"fleet",label:"Fleet Management",icon:Gauge,capability:"view_vehicles",items:[
    {href:"/vehicles",label:"Vehicle Register",icon:Gauge,capability:"view_vehicles"},
    {href:"/vehicles/new",label:"Add Vehicle",icon:Plus,capability:"view_vehicles",minimumAccess:"edit"},
