@@ -15,41 +15,101 @@ type Case = {
 
 const cases: Case[] = [
   {
-    name: "Shriram motor package schedule",
+    name: "Shriram GCCV package schedule",
     expectedParser: "shriram_motor_v1",
     pages: [
-      `SHRIRAM GENERAL INSURANCE COMPANY LIMITED
-MOTOR GOODS VEHICLE (PACKAGE POLICY)
+      `GCCV-PUBLIC CARRIERS OTHER THAN THREE WHEELERS
+Zone C
+MOTOR COMMERCIAL VEHICLE (PACKAGE POLICY)
+UIN No.IRDAN137RP0018V01200809 - SAC Code: 997134
+IRDAI REGN. NO. - 137
+SHRIRAM GENERAL INSURANCE COMPANY LIMITED
+E-8,EPIP,SITAPURA INDUSTRIAL AREA,JAIPUR,
+RAJASTHAN-302022
+CONTACT(TOLL FREE): 1800
 CERTIFICATE CUM POLICY SCHEDULE
-Policy No. SGI123456789
-Period of Insurance From 00:00 Hrs of 31/08/2025 To 30/08/2026
-Chassis IDV Body IDV TOTAL VALUE
-12,00,000 0 12,00,000
+Chassis IDV
+Body IDV
+IDV FOR THE VEHICLE
+IDV FOR TRAILER
+NON ELECTRICAL ACCESSORIES
+ELECTRICAL ACCESSORIES
+CNG/LPG kit SI
+TOTAL VALUE
+891918.00
+111823.00
+1003741.00
+0
+0
+0
+0
+1003741.00
+CIN NO.U66010RJ2006PLC029979
+Policy No.
+102015/31/26/009951
+Insured's Code/ Name
+IN-40400443 /
+MR. SHIVAM  JAISWAL
+Period of Insurance
+From 00:00 Hrs of 08/09/2025 To Midnight Of 07/09/2026
 SCHEDULE OF PREMIUM
 A. OWN DAMAGE
-OD TOTAL 15,000
-B. LIABILITY
-ADD :Legal Liability Coverages For Paid Driver 100
-TP TOTAL 7,367
-P.A. Cover under Section III for Owner - Driver (CSI) : Rs. 330
-TOTAL PREMIUM 22,697
-ADD : IGST 4,085.46
-PREMIUM AMOUNT 26,782.46`,
+OD TOTAL
+3883.00
+TOTAL PREMIUM
+47933.00
+ADD : IGST
+18.00 %
+717.00
+ADD : IGST
+12.00 %
+5274.00
+PREMIUM AMOUNT
+53924.00
+BASIC TP COVER
+43950.00
+ADD :Legal Liability Coverages For Paid Driver
+50.00
+ADD :Legal Liability Coverages For Cleaner
+50.00
+TP TOTAL
+44050.00
+CPA Policy number:
+, CPA Sum Insured:
+0.00
+, CPA Company Name:
+N.A.
+, CPA Valid From:
+N.A.
+, CPA Valid To:
+N.A.
+P.A. Cover under Section III for Owner - Driver (CSI) : Rs.
+0
+Gross Premium
+47933
+IGST
+5991
+CGST
+0
+SGST/UTGST
+0
+Total
+53924`,
     ],
     expected: {
       insurer_name: "Shriram General Insurance Company Limited",
       policy_product: "Package",
-      policy_number: "SGI123456789",
-      idv: "1200000",
-      od_premium: "15000",
-      tp_premium: "7367",
-      cpa_premium: "330",
-      cpa_opted: "Yes",
-      policy_start_date: "2025-08-31",
-      policy_end_date: "2026-08-30",
-      total_premium: "22697",
-      tax_amount: "4085.46",
-      gross_premium: "26782.46",
+      policy_number: "102015/31/26/009951",
+      idv: "1003741",
+      od_premium: "3883",
+      tp_premium: "44050",
+      cpa_premium: "0",
+      cpa_opted: "No",
+      policy_start_date: "2025-09-08",
+      policy_end_date: "2026-09-07",
+      total_premium: "47933",
+      tax_amount: "5991",
+      gross_premium: "53924",
     },
   },
   {
@@ -100,12 +160,13 @@ Policy Number: NIC123456789012
 customer.support@nic.co.in
 Policy Effective from 00:00 hours, on 14/08/2026 to midnight of 13/08/2027
 Premium Rs. 36,246.00
-IGST Rs. 1,934.00
+IGST @ 5%
 Total Amount Rs. 38,180.00
 Vehicle IDV Rs. 10,15,000.00
 Total Value Rs. 10,15,000.00
 Schedule of Premium
 Own Damage (Rs.) Legal Liability (Rs.)
+PA of Owner Driver IMT 28
 Legal Liability Cover 35,313.00
 Total ₹ 22,206.27
 Total 35,413.00`,
@@ -117,6 +178,8 @@ Total 35,413.00`,
       idv: "1015000",
       policy_start_date: "2026-08-14",
       policy_end_date: "2027-08-13",
+      cpa_premium: "0",
+      cpa_opted: "No",
       total_premium: "36246",
       tax_amount: "1934",
       gross_premium: "38180",
@@ -171,6 +234,8 @@ Policy No. UIIC123456789 Certificate Number CERT12345
 Effective date of commencement of Insurance for the purpose of Act from 12:15 12/08/2026 to midnight of 11/08/2027
 MOTOR INSURANCE - PCV 4 WHEELER EXCEEDING 6 or 3 WHEELER EXCEEDING 18 PACKAGE
 POLICY SCHEDULE
+Policy Number : CUSTOMER
+Customer Reference : CUST-001
 Policy Number :UIIC123456789 Previous Policy Number :
 INSURED DECLARED VALUE
 Vehicle Trailer Electrical/Electronic Accessories Non Electrical Accessories CNG Kit LPG Kit Total

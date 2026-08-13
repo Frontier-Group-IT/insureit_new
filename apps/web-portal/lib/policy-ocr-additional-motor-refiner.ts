@@ -59,12 +59,15 @@ export function refineAdditionalMotorPolicy(pages: string[], parsed: ParsedPolic
   const total = findTotalPremium(cleanPages, parsed.parserId);
   let tax = findTax(cleanPages);
   const gross = findGross(cleanPages);
-  if (!tax && total && gross && gross.value > total.value) {
-    tax = {
-      value: round2(gross.value - total.value),
-      page: gross.page,
-      evidence: `Derived printed GST from gross premium ${money(gross.value)} minus printed net premium ${money(total.value)}.`,
-    };
+  if (total && gross && gross.value > total.value) {
+    const derivedTax = round2(gross.value - total.value);
+    if (!tax || isSmallReferenceAmount(tax.value) || Math.abs(tax.value - derivedTax) > 1) {
+      tax = {
+        value: derivedTax,
+        page: gross.page,
+        evidence: `Derived printed GST from gross premium ${money(gross.value)} minus printed net premium ${money(total.value)}.`,
+      };
+    }
   }
   if (total) setField(fields, "total_premium", "Printed net premium", money(total.value), .98, total.page, total.evidence);
   if (tax) setField(fields, "tax_amount", "Printed GST", money(tax.value), .96, tax.page, tax.evidence);
@@ -134,7 +137,10 @@ function findPolicyNumber(pages: string[]): TextHit | null {
       const nearby = [lines[index - 1] ?? "", lines[index], lines[index + 1] ?? ""].join(" ");
       if (/Previous\s+Policy/i.test(nearby)) continue;
       const match = nearby.match(/Policy\s*(?:No\.?|Number|#)\s*:?\s*([A-Z0-9][A-Z0-9/-]{5,30})/i);
-      if (match?.[1]) return { value: compact(match[1]), page: pageIndex + 1, evidence: nearby };
+      if (match?.[1]) {
+        const value = compact(match[1]);
+        if (/\d/.test(value)) return { value, page: pageIndex + 1, evidence: nearby };
+      }
     }
   }
   return null;
@@ -166,7 +172,7 @@ function findIdv(pages: string[]): MoneyHit | null {
     const lines = pages[pageIndex].split("\n");
     for (let index = 0; index < lines.length; index += 1) {
       if (!labels.some((label) => label.test(lines[index]))) continue;
-      const evidence = lines.slice(index, index + 3).join(" ");
+      const evidence = lines.slice(index, index + 6).join(" ");
       const candidates = amounts(evidence).filter((value) => value >= 10000 && value <= 1000000000 && !isYear(value));
       if (candidates.length) return { value: Math.max(...candidates), page: pageIndex + 1, evidence };
     }
@@ -200,7 +206,7 @@ function findCpa(pages: string[]): MoneyHit | null {
     /Owner\s+Driver/i,
     /\bCPA\b/i,
   ];
-  const hit = findMoneyAfterLabels(pages, labels, { min: 0, max: 100000 }, (value) => value <= 100000 && !isCoverageLimit(value));
+  const hit = findMoneyAfterLabels(pages, labels, { min: 0, max: 5000 }, (value) => value === 0 || (value >= 100 && value <= 5000 && !isCoverageLimit(value)));
   if (hit) return hit;
   if (pages.join("\n").match(/P\.?A\.?\s+Cover\s+under\s+Section\s+III\s+for\s+Owner\s*-\s*Driver[^\n]{0,80}Rs\.\s*0/i)) {
     return { value: 0, page: 1, evidence: "PA Cover under Section III for Owner-Driver: Rs. 0" };
@@ -230,7 +236,7 @@ function findTax(pages: string[]): MoneyHit | null {
       const afterLabel = line
         .slice(labelIndex + labelLength)
         .split(/Total\s+Amount|TOTAL\s+POLICY\s+PREMIUM|TOTAL\s+PAYABLE\s+PREMIUM|Gross\s+Premium/i)[0];
-      const candidates = amounts(afterLabel).filter((value) => value >= 1 && value <= 10000000 && !isYear(value));
+      const candidates = amounts(afterLabel).filter((value) => value >= 100 && value <= 10000000 && !isYear(value));
       if (candidates.length) return { value: candidates[candidates.length - 1], page: pageIndex + 1, evidence: line };
     }
   }
@@ -310,6 +316,10 @@ function isYear(value: number) {
 
 function isCoverageLimit(value: number) {
   return value >= 100000;
+}
+
+function isSmallReferenceAmount(value: number) {
+  return value > 0 && value < 100;
 }
 
 function compact(value: string) {
