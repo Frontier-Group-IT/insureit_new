@@ -1,7 +1,24 @@
-import type { ReactNode } from "react";
+import { Children, cloneElement, isValidElement, type ReactElement, type ReactNode } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
 
 type MetricTone = "navy" | "green" | "amber" | "red" | "blue" | "slate";
+
+type BrokerRegisterToolbarProps = {
+  query: string;
+  onQueryChange: (value: string) => void;
+  searchPlaceholder: string;
+  children?: ReactNode;
+  action?: ReactNode;
+  activeViewLabel?: string;
+  leftControls?: ReactNode;
+  compact?: boolean;
+};
+
+type RegisterViewTabsProps = {
+  value: string;
+  options: Array<{ value: string; label: string; count?: number }>;
+  onChange: (value: string) => void;
+};
 
 const metricTones: Record<MetricTone, string> = {
   navy: "border-[#C9D6EA] bg-[#F8FAFD] text-[#17365D]",
@@ -28,11 +45,59 @@ export function BrokerRegisterShell({
   children: ReactNode;
 }) {
   const showSupportingCopy = title !== "Customer Portfolio" && title !== "Vehicle Portfolio" && title !== "Policy Portfolio";
+  const customerReferenceLayout = title === "Customer Portfolio";
+  const childItems = Children.toArray(children);
+  const firstChild = childItems[0];
+  const customerToolbar =
+    customerReferenceLayout &&
+    isValidElement<BrokerRegisterToolbarProps>(firstChild) &&
+    firstChild.type === BrokerRegisterToolbar
+      ? firstChild
+      : null;
+
+  let headerActions: ReactNode = null;
+  let renderedChildren: ReactNode = children;
+
+  if (customerToolbar) {
+    const toolbarChildren = Children.toArray(customerToolbar.props.children);
+    const tabs = toolbarChildren.find(
+      (child): child is ReactElement<RegisterViewTabsProps> =>
+        isValidElement<RegisterViewTabsProps>(child) && child.type === RegisterViewTabs
+    );
+    const partnerSelect = toolbarChildren.find(
+      (child) => isValidElement(child) && child.type === RegisterSelect
+    );
+    const secondaryHeaderActions = toolbarChildren.filter(
+      (child) => child !== tabs && child !== partnerSelect
+    );
+    const compactTabs = tabs
+      ? cloneElement(tabs, {
+          options: tabs.props.options
+            .filter((option) => option.value === "all" || option.value === "active" || option.value === "kyc")
+            .map((option) => option.value === "kyc" ? { ...option, label: "Pending" } : option)
+        })
+      : null;
+    const compactToolbar = cloneElement(customerToolbar, {
+      activeViewLabel: undefined,
+      action: undefined,
+      leftControls: partnerSelect,
+      compact: true,
+      children: compactTabs
+    });
+
+    headerActions = (
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {secondaryHeaderActions}
+        {customerToolbar.props.action}
+      </div>
+    );
+    renderedChildren = [compactToolbar, ...childItems.slice(1)];
+  }
 
   return (
     <section className="mx-auto max-w-[1480px] overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
-      <div className="border-b border-[#E5ECF5] bg-[#F8FAFC] px-4 py-4 sm:px-5">
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(620px,0.95fr)] xl:items-center">
+      <div className={`border-b border-[#E5ECF5] bg-[#F8FAFC] px-4 sm:px-5 ${customerReferenceLayout ? "py-3" : "py-4"}`}>
+        <div className={customerReferenceLayout ? "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" : "grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(620px,0.95fr)] xl:items-center"}>
           <div className="flex min-w-0 items-start gap-3">
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#17365D] text-white shadow-[0_10px_22px_rgba(23,54,93,0.18)]">{icon}</span>
             <div className="min-w-0">
@@ -41,18 +106,20 @@ export function BrokerRegisterShell({
               {showSupportingCopy ? <p className="mt-1 max-w-2xl text-[11.5px] leading-5 text-[#64748B]">{description}</p> : null}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-            {metrics.map((metric) => (
-              <div key={metric.label} className={`rounded-xl border px-3 py-2.5 ${metricTones[metric.tone ?? "slate"]}`}>
-                <p className="text-[8.5px] font-bold uppercase tracking-[0.08em] opacity-70">{metric.label}</p>
-                <p className="mt-1 text-[20px] font-semibold leading-none tabular-nums">{metric.value}</p>
-                <p className="mt-1 truncate text-[9.5px] font-medium opacity-75">{metric.hint}</p>
-              </div>
-            ))}
-          </div>
+          {customerReferenceLayout ? headerActions : (
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+              {metrics.map((metric) => (
+                <div key={metric.label} className={`rounded-xl border px-3 py-2.5 ${metricTones[metric.tone ?? "slate"]}`}>
+                  <p className="text-[8.5px] font-bold uppercase tracking-[0.08em] opacity-70">{metric.label}</p>
+                  <p className="mt-1 text-[20px] font-semibold leading-none tabular-nums">{metric.value}</p>
+                  <p className="mt-1 truncate text-[9.5px] font-medium opacity-75">{metric.hint}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
-      {children}
+      {renderedChildren}
     </section>
   );
 }
@@ -63,20 +130,15 @@ export function BrokerRegisterToolbar({
   searchPlaceholder,
   children,
   action,
-  activeViewLabel
-}: {
-  query: string;
-  onQueryChange: (value: string) => void;
-  searchPlaceholder: string;
-  children?: ReactNode;
-  action?: ReactNode;
-  activeViewLabel?: string;
-}) {
+  activeViewLabel,
+  leftControls,
+  compact = false
+}: BrokerRegisterToolbarProps) {
   return (
-    <div className="border-b border-[#E5ECF5] bg-white px-3 py-3 sm:px-4">
+    <div className={`border-b border-[#E5ECF5] bg-white px-3 sm:px-4 ${compact ? "py-2" : "py-3"}`}>
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
-          <label className="relative min-w-[230px] flex-1 lg:max-w-[520px]">
+          <label className={`relative min-w-[230px] flex-1 ${compact ? "lg:max-w-[360px]" : "lg:max-w-[520px]"}`}>
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B93AA]" />
             <input
               value={query}
@@ -86,6 +148,7 @@ export function BrokerRegisterToolbar({
               className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white pl-10 pr-3 text-[12px] text-[#0F172A] outline-none transition focus:border-[#17365D] focus:ring-2 focus:ring-[#17365D]/10"
             />
           </label>
+          {leftControls}
           {activeViewLabel ? <span className="inline-flex h-9 items-center rounded-full border border-[#D8E2EE] bg-[#F8FAFC] px-3 text-[10px] font-semibold text-[#475569]">{activeViewLabel}</span> : null}
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
@@ -127,11 +190,7 @@ export function RegisterViewTabs({
   value,
   options,
   onChange
-}: {
-  value: string;
-  options: Array<{ value: string; label: string; count?: number }>;
-  onChange: (value: string) => void;
-}) {
+}: RegisterViewTabsProps) {
   return (
     <div className="flex gap-1 overflow-x-auto rounded-xl border border-[#D8E2EE] bg-[#F8FAFC] p-1">
       {options.map((option) => {
