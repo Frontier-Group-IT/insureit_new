@@ -1,0 +1,64 @@
+name: Temporary mobile claim polish patch
+
+on:
+  push:
+    branches: [feature/self-managed-claims]
+    paths:
+      - .github/workflows/tmp-mobile-claim-polish-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/self-managed-claims
+          fetch-depth: 0
+      - name: Patch customer claim activity and notification routing
+        shell: python
+        run: |
+          from pathlib import Path
+
+          notifications = Path('apps/mobile-app/components/notifications-inbox.tsx')
+          text = notifications.read_text(encoding='utf-8-sig')
+          old = """    const route = audience === 'customer'\n      ? ({ pathname: '/customer/claim-detail', params: { id: notification.claim_id } } as const)\n      : ({ pathname: '/staff/claim-detail', params: { id: notification.claim_id } } as const);\n    router.push(route as Href);\n"""
+          new = """    let route: Href;\n    if (audience === 'customer') {\n      const { data: linkedClaim } = await supabase\n        .from('claims')\n        .select('claim_service_mode')\n        .eq('id', notification.claim_id)\n        .maybeSingle();\n      route = linkedClaim?.claim_service_mode === 'self_managed'\n        ? ({ pathname: '/customer/self-managed-claim-detail', params: { id: notification.claim_id } } as Href)\n        : ({ pathname: '/customer/claim-detail', params: { id: notification.claim_id } } as Href);\n    } else {\n      route = ({ pathname: '/staff/claim-detail', params: { id: notification.claim_id } } as Href);\n    }\n    router.push(route);\n"""
+          if old not in text:
+              raise SystemExit('notification route block not found')
+          notifications.write_text(text.replace(old, new), encoding='utf-8')
+
+          tracker = Path('apps/mobile-app/app/customer/self-managed-claim-detail.tsx')
+          text = tracker.read_text(encoding='utf-8-sig')
+          old = """  const progress = Math.round((completed / SELF_MANAGED_MILESTONES.length) * 100);\n\n  if (loading)"""
+          new = """  const progress = Math.round((completed / SELF_MANAGED_MILESTONES.length) * 100);\n  const journeyComplete = completed === SELF_MANAGED_MILESTONES.length;\n  const recentActivity = useMemo(\n    () => milestones\n      .filter((item) => ['completed', 'not_applicable'].includes(item.milestone_status))\n      .sort((a, b) => new Date(b.completed_at ?? 0).getTime() - new Date(a.completed_at ?? 0).getTime())\n      .slice(0, 4),\n    [milestones],\n  );\n\n  if (loading)"""
+          if old not in text:
+              raise SystemExit('tracker progress block not found')
+          text = text.replace(old, new)
+
+          old = """      <View style={styles.infoCard}>\n"""
+          new = """      {journeyComplete ? (\n        <View style={styles.completionCard}>\n          <View style={styles.completionIcon}><MaterialCommunityIcons name=\"check-decagram\" size={24} color=\"#FFFFFF\" /></View>\n          <View style={styles.flexOne}>\n            <Text style={styles.completionEyebrow}>CLAIM HISTORY COMPLETE</Text>\n            <Text style={styles.completionTitle}>All 9 milestones are recorded</Text>\n            <Text style={styles.completionText}>This claim now stays available as a completed record. You can still review stages and documents whenever needed.</Text>\n          </View>\n        </View>\n      ) : null}\n\n      <View style={styles.infoCard}>\n"""
+          if old not in text:
+              raise SystemExit('tracker info card anchor not found')
+          text = text.replace(old, new, 1)
+
+          old = """      <Pressable style={styles.quickActionCard} onPress={() => router.push({ pathname: '/customer/self-managed-documents', params: { id: claim.id } })}>\n"""
+          new = """      {recentActivity.length ? (\n        <View style={styles.activityCard}>\n          <View style={styles.activityHeader}>\n            <View>\n              <Text style={styles.sectionEyebrow}>RECENT ACTIVITY</Text>\n              <Text style={styles.sectionTitle}>Claim updates</Text>\n            </View>\n            <MaterialCommunityIcons name=\"history\" size={20} color=\"#0A43A3\" />\n          </View>\n          {recentActivity.map((item, index) => {\n            const definition = SELF_MANAGED_MILESTONES.find((entry) => entry.key === item.milestone_key);\n            return (\n              <View key={item.id} style={[styles.activityRow, index === recentActivity.length - 1 && styles.activityRowLast]}>\n                <View style={styles.activityDot}><MaterialCommunityIcons name=\"check\" size={12} color=\"#FFFFFF\" /></View>\n                <View style={styles.flexOne}>\n                  <Text style={styles.activityTitle}>{definition?.label ?? 'Claim milestone'} updated</Text>\n                  <Text style={styles.activityMeta}>{fmtDateTime(item.completed_at)}</Text>\n                </View>\n              </View>\n            );\n          })}\n        </View>\n      ) : null}\n\n      <Pressable style={styles.quickActionCard} onPress={() => router.push({ pathname: '/customer/self-managed-documents', params: { id: claim.id } })}>\n"""
+          if old not in text:
+              raise SystemExit('tracker quick action anchor not found')
+          text = text.replace(old, new, 1)
+
+          old = """  quickActionCard: { flexDirection: 'row', gap: 11, alignItems: 'center', padding: 13, borderRadius: 18, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#DCE7F4', marginBottom: 12 },\n"""
+          new = """  completionCard: { flexDirection: 'row', gap: 11, alignItems: 'center', padding: 14, borderRadius: 18, backgroundColor: '#EAF8F0', borderWidth: 1, borderColor: '#B7E2C9', marginBottom: 12 },\n  completionIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#14845C', alignItems: 'center', justifyContent: 'center' },\n  completionEyebrow: { color: '#147A57', fontSize: 8, fontWeight: '900', letterSpacing: 0.7 },\n  completionTitle: { color: '#105D45', fontSize: 13, fontWeight: '900', marginTop: 1 },\n  completionText: { color: '#4E6F61', fontSize: 9.5, lineHeight: 14, fontWeight: '600', marginTop: 2 },\n  activityCard: { borderRadius: 18, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E1E8F0', padding: 13, marginBottom: 12 },\n  activityHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 },\n  activityRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#EEF1F5' },\n  activityRowLast: { borderBottomWidth: 0, paddingBottom: 2 },\n  activityDot: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#14845C', alignItems: 'center', justifyContent: 'center' },\n  activityTitle: { color: palette.navy, fontSize: 10.5, fontWeight: '900' },\n  activityMeta: { color: '#7A8799', fontSize: 8.8, fontWeight: '600', marginTop: 2 },\n  quickActionCard: { flexDirection: 'row', gap: 11, alignItems: 'center', padding: 13, borderRadius: 18, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#DCE7F4', marginBottom: 12 },\n"""
+          if old not in text:
+              raise SystemExit('tracker styles anchor not found')
+          tracker.write_text(text.replace(old, new, 1), encoding='utf-8')
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/mobile-app/components/notifications-inbox.tsx apps/mobile-app/app/customer/self-managed-claim-detail.tsx
+          git commit -m "Finish mobile claim activity and completion UX"
+          git push origin HEAD:feature/self-managed-claims
