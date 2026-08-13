@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
   gap: { height: 10 },
   helpBox: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: '#EEF5FF', borderRadius: 15, padding: 12, marginBottom: 14 },
   helpText: { flex: 1, color: '#435C7B', fontSize: 10.5, lineHeight: 15, fontWeight: '700' },
-  submitButton: { minHeight: 52, borderRadius: 16, backgroundColor: '#082A66', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 },
+  submitButton: { minHeight: 52, borderRadius: 16, backgroundColor: palette.navy, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 },
   submitDisabled: { opacity: 0.55 },
   submitText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
 });

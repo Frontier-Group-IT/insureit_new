@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
   empty: { color: '#98A2B3', fontSize: 8.8, fontWeight: '600', marginTop: 2 },
   savedFile: { flexDirection: 'row', gap: 4, alignItems: 'center', marginTop: 4 },
   savedName: { maxWidth: 180, color: '#4F5F72', fontSize: 8.8, fontWeight: '700' },
-  upload: { minWidth: 68, height: 34, paddingHorizontal: 9, borderRadius: 10, flexDirection: 'row', gap: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0A43A3' },
+  upload: { minWidth: 68, height: 34, paddingHorizontal: 9, borderRadius: 10, flexDirection: 'row', gap: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.navy },
   uploadBusy: { opacity: 0.65 },
   uploadText: { color: '#FFF', fontSize: 8.8, fontWeight: '900' },
   noStandard: { flexDirection: 'row', gap: 7, alignItems: 'center', paddingTop: 10 },
