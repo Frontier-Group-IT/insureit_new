@@ -46,10 +46,12 @@ export function BrokerRegisterShell({
 }) {
   const showSupportingCopy = title !== "Customer Portfolio" && title !== "Vehicle Portfolio" && title !== "Policy Portfolio";
   const customerReferenceLayout = title === "Customer Portfolio";
+  const vehicleReferenceLayout = title === "Vehicle Portfolio";
+  const compactReferenceLayout = customerReferenceLayout || vehicleReferenceLayout;
   const childItems = Children.toArray(children);
   const firstChild = childItems[0];
-  const customerToolbar =
-    customerReferenceLayout &&
+  const compactToolbar =
+    compactReferenceLayout &&
     isValidElement<BrokerRegisterToolbarProps>(firstChild) &&
     firstChild.type === BrokerRegisterToolbar
       ? firstChild
@@ -58,29 +60,31 @@ export function BrokerRegisterShell({
   let headerActions: ReactNode = null;
   let renderedChildren: ReactNode = children;
 
-  if (customerToolbar) {
-    const toolbarChildren = Children.toArray(customerToolbar.props.children);
+  if (compactToolbar) {
+    const toolbarChildren = Children.toArray(compactToolbar.props.children);
     const tabs = toolbarChildren.find(
       (child): child is ReactElement<RegisterViewTabsProps> =>
         isValidElement<RegisterViewTabsProps>(child) && child.type === RegisterViewTabs
     );
-    const partnerSelect = toolbarChildren.find(
+    const primarySelect = toolbarChildren.find(
       (child) => isValidElement(child) && child.type === RegisterSelect
     );
     const secondaryHeaderActions = toolbarChildren.filter(
-      (child) => child !== tabs && child !== partnerSelect
+      (child) => child !== tabs && child !== primarySelect
     );
     const compactTabs = tabs
       ? cloneElement(tabs, {
-          options: tabs.props.options
-            .filter((option) => option.value === "all" || option.value === "active" || option.value === "kyc")
-            .map((option) => option.value === "kyc" ? { ...option, label: "Inactive" } : option)
+          options: customerReferenceLayout
+            ? tabs.props.options
+                .filter((option) => option.value === "all" || option.value === "active" || option.value === "kyc")
+                .map((option) => option.value === "kyc" ? { ...option, label: "Inactive" } : option)
+            : tabs.props.options
         })
       : null;
-    const compactToolbar = cloneElement(customerToolbar, {
+    const renderedToolbar = cloneElement(compactToolbar, {
       activeViewLabel: undefined,
       action: undefined,
-      leftControls: partnerSelect,
+      leftControls: primarySelect,
       compact: true,
       children: compactTabs
     });
@@ -88,16 +92,16 @@ export function BrokerRegisterShell({
     headerActions = (
       <div className="flex flex-wrap items-center justify-end gap-2">
         {secondaryHeaderActions}
-        {customerToolbar.props.action}
+        {compactToolbar.props.action}
       </div>
     );
-    renderedChildren = [compactToolbar, ...childItems.slice(1)];
+    renderedChildren = [renderedToolbar, ...childItems.slice(1)];
   }
 
   return (
     <section className="mx-auto max-w-[1480px] overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
-      <div className={`border-b border-[#E5ECF5] bg-[#F8FAFC] px-4 sm:px-5 ${customerReferenceLayout ? "py-3" : "py-4"}`}>
-        {customerReferenceLayout ? (
+      <div className={`border-b border-[#E5ECF5] bg-[#F8FAFC] px-4 sm:px-5 ${compactReferenceLayout ? "py-3" : "py-4"}`}>
+        {compactReferenceLayout ? (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-2.5">
               <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#17365D] text-white shadow-[0_10px_22px_rgba(23,54,93,0.18)]">{icon}</span>
