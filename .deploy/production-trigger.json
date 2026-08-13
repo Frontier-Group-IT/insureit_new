@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy policy date-format and automatic validity corrections to production.",
-  "deploy_requested_at": "2026-08-13T13:25:00+05:30",
+  "purpose": "Deploy PR #302 customer onboarding document-focus changes to production.",
+  "deploy_requested_at": "2026-08-13T13:30:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Deploy the latest verified main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "2ccfbeea98c29ef36ba7a541a9e92dc4a5831d29",
-  "release_scope": "Release the Policy Onboarding date corrections: display and accept DD/MM/YYYY for policy issuance, policy validity From/Upto, PayIn Bill Date, and payout settlement date; automatically set Policy Validity Upto to one year minus one day from the selected From date while keeping Upto editable. The latest main snapshot also includes newer merged main changes.",
-  "verification": "The latest main snapshot must pass the compulsory access-control, security, OCR, TypeScript, lint and production-build verification gate before invoking the Vercel deploy hook.",
+  "source": "Merge PR #302 and deploy the latest main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "fcb3c2d38c180f2d441ee500c270abd95f230fea",
+  "release_scope": "Release the Individual / Proprietor customer onboarding refinement: remove the Fleet Details / Fleet Size section and its backend requirement, highlight the Documents section with a subtle indigo treatment and white upload cards, preserve required document validation and upload behavior, and keep Cancel / Create Customer actions and all other onboarding functionality unchanged. The latest main snapshot also includes newer merged main changes.",
+  "verification": "PR #302 verification run 31680032129 passed successfully before merge. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
