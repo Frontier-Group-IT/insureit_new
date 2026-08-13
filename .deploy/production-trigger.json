@@ -1,9 +1,9 @@
 {
   "purpose": "Deploy CPA-inclusive Policy PayIn and payout calculations to production.",
-  "deploy_requested_at": "2026-08-13T11:58:00+05:30",
+  "deploy_requested_at": "2026-08-13T12:04:00+05:30",
   "requested_by": "explicit user request",
   "source": "Deploy the latest verified main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "a0fbb97e0d9ddf328e6b399ecc954e5b12b8e142",
+  "source_commit": "5faa57e3ccbf2884d8fd5e0f42ec10890e9ebfa3",
   "release_scope": "Release the Policy Onboarding and Edit Policy calculation correction where opted CPA is included in the TP-side base for insurer PayIn and intermediary payout. Existing stored PayIn/payout values have already been backfilled in Supabase, and calculation version cpa_in_tp_v2 has been applied. The latest main snapshot also includes previously committed main changes.",
   "verification": "The production workflow must run the compulsory access-control, security, OCR, TypeScript, lint and production-build verification gate before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
