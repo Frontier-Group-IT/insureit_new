@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BadgeCheck, CalendarDays, CarFront, Phone, UserRound, type LucideIcon } from "lucide-react";
+import { BadgeCheck, CalendarDays, CarFront, CircleAlert, CircleCheck, Phone, UserCheck, UserRound, type LucideIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import { FormSubmitButton } from "@/components/form-submit-button";
 
@@ -17,7 +17,7 @@ const allDocumentTypes = ["pan_copy", "aadhaar_front", "aadhaar_back", "gst_copy
 const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 type DocumentType = (typeof allDocumentTypes)[number];
 
-export function CustomerProfileEditor({ customer, documents, action, errorMessage, errorField }: Props) {
+export function CustomerProfileEditor({ customer, documents, vehicles, agents, action, errorMessage, errorField }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const [gstRegistered, setGstRegistered] = useState(customer.is_gst_registered);
   const [selectedFileNames, setSelectedFileNames] = useState<Partial<Record<DocumentType, string>>>({});
@@ -26,6 +26,9 @@ export function CustomerProfileEditor({ customer, documents, action, errorMessag
   );
   const requiredTypes = gstRegistered ? allDocumentTypes : allDocumentTypes.filter((type) => type !== "gst_copy");
   const documentMap = new Map(documents.map((document) => [document.document_type, document]));
+  const assignedTo = customer.assigned_agent_id
+    ? agents.find((agent) => agent.id === customer.assigned_agent_id)?.full_name ?? "Not assigned"
+    : "Not assigned";
 
   function handleDocumentSelection(type: DocumentType, file: File | null) {
     setSelectedFileNames((current) => {
@@ -78,7 +81,7 @@ export function CustomerProfileEditor({ customer, documents, action, errorMessag
     <>
       {validationPopup ? <ValidationPopup message={validationPopup.message} onClose={closeValidationPopup} /> : null}
       <form ref={formRef} action={action} encType="multipart/form-data" onSubmit={handleSubmit} className="space-y-2 pb-5">
-        <input type="hidden" name="partner_type" value={customer.partner_type ?? "individual_proprietor"} />
+        <input type="hidden" name="partner_type" value={customer.partner_type ?? ""} />
         <input type="hidden" name="fleet_size_band" value={customer.fleet_size_band ?? ""} />
         <input type="hidden" name="onboarding_status" value={customer.onboarding_status} />
         <input type="hidden" name="assigned_agent_id" value={customer.assigned_agent_id ?? ""} />
@@ -92,7 +95,7 @@ export function CustomerProfileEditor({ customer, documents, action, errorMessag
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="truncate text-[18px] font-semibold tracking-[-0.01em] text-white">{customer.contact_name}</h2>
-                  <StatusPill status={customer.onboarding_status} dark />
+                  <StatusIcon status={customer.onboarding_status} />
                 </div>
                 <p className="mt-0.5 text-[10.5px] font-medium text-blue-100">{customer.phone}{customer.company_name ? ` · ${customer.company_name}` : ""}</p>
               </div>
@@ -103,9 +106,10 @@ export function CustomerProfileEditor({ customer, documents, action, errorMessag
             </div>
           </div>
 
-          <div className="grid border-t border-white/15 sm:grid-cols-2 xl:grid-cols-5" aria-label="Customer summary">
+          <div className="grid border-t border-white/15 sm:grid-cols-2 xl:grid-cols-6" aria-label="Customer summary">
             <HeaderMetric icon={UserRound} label="Partner Type" value={partnerTypeLabel(customer.partner_type)} />
-            <HeaderMetric icon={CarFront} label="Fleet Size" value={fleetSizeLabel(customer.fleet_size_band)} />
+            <HeaderMetric icon={UserCheck} label="Assigned To" value={assignedTo} />
+            <HeaderMetric icon={CarFront} label="Fleet Size" value={String(vehicles.length)} />
             <HeaderMetric icon={Phone} label="Mobile" value={customer.phone || "Not set"} />
             <HeaderMetric icon={BadgeCheck} label="Customer Code" value={customer.customer_code || "Not set"} />
             <HeaderMetric icon={CalendarDays} label="Active Since" value={formatDate(customer.created_at)} />
@@ -121,7 +125,15 @@ export function CustomerProfileEditor({ customer, documents, action, errorMessag
             </div>
           </Panel>
 
-          <Panel title="Address"><div className="grid gap-2 md:grid-cols-2 xl:grid-cols-5"><Field label="Street" name="address_street" defaultValue={customer.address_street ?? ""} /><Field label="Locality" name="address_locality" defaultValue={customer.address_locality ?? ""} /><Field label="City" name="city" defaultValue={customer.city ?? ""} /><Field label="State" name="state" defaultValue={customer.state ?? ""} /><Field label="PIN code" name="postal_code" defaultValue={customer.postal_code ?? ""} /><div className="md:col-span-2 xl:col-span-5"><label className={labelClass} htmlFor="address">Full address</label><textarea id="address" name="address" rows={2} defaultValue={customer.address ?? ""} className="w-full rounded-md border border-[var(--border)] bg-white px-2.5 py-2 text-[11.5px] text-[var(--text)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[#E8E8FF]" /></div></div></Panel>
+          <Panel title="Address">
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+              <Field label="Street" name="address_street" defaultValue={customer.address_street ?? ""} />
+              <Field label="Locality" name="address_locality" defaultValue={customer.address_locality ?? ""} />
+              <Field label="City" name="city" defaultValue={customer.city ?? ""} />
+              <Field label="State" name="state" defaultValue={customer.state ?? ""} />
+              <Field label="PIN code" name="postal_code" defaultValue={customer.postal_code ?? ""} />
+            </div>
+          </Panel>
 
           <section className="rounded-[var(--radius-panel)] border border-[var(--border)] bg-white shadow-[var(--shadow-panel)]">
             <div className="flex flex-col gap-2 border-b border-[var(--border)] px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
@@ -185,13 +197,17 @@ function HeaderMetric({ icon: Icon, label, value }: { icon: LucideIcon; label: s
     </article>
   );
 }
+function StatusIcon({ status }: { status: string }) {
+  const active = status === "active";
+  const Icon = active ? CircleCheck : CircleAlert;
+  const label = active ? "Active" : "KYC incomplete";
+  return <span title={label} aria-label={label} className={`inline-grid h-5 w-5 place-items-center rounded-full border ${active ? "border-emerald-300/50 bg-emerald-300/15 text-emerald-200" : "border-amber-300/50 bg-amber-300/15 text-amber-200"}`}><Icon className="h-3.5 w-3.5" strokeWidth={2} /></span>;
+}
 function ValidationPopup({ message, onClose }: { message: string; onClose: () => void }) { return <div className="fixed inset-0 z-[160] grid place-items-center bg-[#0F172A]/35 px-4 backdrop-blur-[2px]" role="alertdialog" aria-modal="true" aria-labelledby="validation-title"><div className="w-full max-w-[420px] overflow-hidden rounded-2xl border border-white/70 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.28)]"><div className="flex items-start gap-3 border-b border-[#F1D7D7] bg-[#FFF7F7] px-5 py-4"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-red-100 text-[18px] text-red-700">!</span><div><h3 id="validation-title" className="text-[14px] font-semibold text-[#7F1D1D]">Complete GST details</h3><p className="mt-1 text-[11.5px] leading-5 text-[#9F3232]">{message}</p></div></div><div className="flex justify-end px-5 py-3"><button type="button" autoFocus onClick={onClose} className="inline-flex h-9 items-center justify-center rounded-md bg-[#4F46E5] px-4 text-[11px] font-semibold text-white shadow-sm hover:bg-[#4338CA]">Go to field</button></div></div></div>; }
 function Panel({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) { return <section id={id} className="scroll-mt-20 rounded-[var(--radius-panel)] border border-[var(--border)] bg-white shadow-[var(--shadow-panel)]"><div className="border-b border-[var(--border)] px-3 py-2"><h3 className="text-[11.5px] font-semibold text-[var(--text)]">{title}</h3></div><div className="p-3">{children}</div></section>; }
 function Field({ label, name, defaultValue = "", type = "text", required = false, maxLength, uppercase = false }: { label: string; name: string; defaultValue?: string; type?: string; required?: boolean; maxLength?: number; uppercase?: boolean }) { return <div><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} type={type} required={required} maxLength={maxLength} defaultValue={defaultValue} className={`${inputClass} ${uppercase ? "uppercase" : ""}`} onInput={uppercase ? (event) => { event.currentTarget.value = event.currentTarget.value.toUpperCase(); } : undefined} /></div>; }
 function ReadOnlyField({ label, value, hint }: { label: string; value: string; hint?: string }) { return <div><span className={labelClass}>{label}</span><div className="flex h-8 items-center justify-between rounded-md border border-[#E1E7EF] bg-[#F5F7FA] px-2.5 text-[11.5px] text-[#526176]"><span>{value}</span>{hint ? <span className="text-[8.5px] text-[#8A96A7]">{hint}</span> : null}</div></div>; }
-function StatusPill({ status, dark = false }: { status: string; dark?: boolean }) { const active = status === "active"; return <span className={`rounded-full border px-2 py-0.5 text-[9px] font-semibold ${dark ? active ? "border-emerald-300/50 bg-emerald-300/15 text-emerald-100" : "border-amber-300/50 bg-amber-300/15 text-amber-100" : active ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}>{active ? "active" : "KYC incomplete"}</span>; }
 function DocumentStatus({ status }: { status: string }) { const label = status === "verified" ? "Verified" : status === "rejected" ? "Rejected" : "Uploaded · Pending verification"; return <span className={`inline-flex max-w-[132px] items-center justify-center rounded-full border px-1.5 py-0.5 text-center text-[8px] font-semibold leading-tight ${status === "verified" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : status === "rejected" ? "border-red-200 bg-red-50 text-red-700" : "border-blue-200 bg-blue-50 text-blue-700"}`}>{label}</span>; }
 function documentLabel(type: string) { return ({ pan_copy: "PAN Copy", aadhaar_front: "Aadhaar Front", aadhaar_back: "Aadhaar Back", gst_copy: "GST Copy" } as Record<string,string>)[type] ?? type.replaceAll("_", " "); }
-function partnerTypeLabel(value: string | null) { return ({ individual_proprietor: "Individual / Proprietor", dealership: "Dealership", corporate: "Corporate", group: "Group" } as Record<string,string>)[value ?? ""] ?? (value ? value.replaceAll("_", " ") : "Not set"); }
-function fleetSizeLabel(value: string | null) { return ({ less_than_5: "1–4", "5_to_20": "5–20", "20_to_50": "20–50", more_than_50: "51–Unlimited" } as Record<string,string>)[value ?? ""] ?? (value?.trim() || "Not set"); }
+function partnerTypeLabel(value: string | null) { return ({ individual_proprietor: "Individual / Proprietor", dealership: "Dealership", corporate: "Corporate", group: "Group", posp: "POSP", misp: "MISP" } as Record<string,string>)[value ?? ""] ?? (value ? value.replaceAll("_", " ") : "Not set"); }
 function formatDate(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? "—" : new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(date); }

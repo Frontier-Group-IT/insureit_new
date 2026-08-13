@@ -47,7 +47,6 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
     email: textValue(formData, "email"),
     address_street: textValue(formData, "address_street"),
     address_locality: textValue(formData, "address_locality"),
-    address: textValue(formData, "address"),
     city: textValue(formData, "city"),
     state: textValue(formData, "state"),
     postal_code: textValue(formData, "postal_code"),
