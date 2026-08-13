@@ -1,5 +1,5 @@
-import { GroupRecordsScreen } from '@/components/group/group-records-screen';
+import { GroupPolicyPortfolioScreen } from '@/components/group/group-policy-portfolio-screen';
 
 export default function GroupPoliciesRoute() {
-  return <GroupRecordsScreen mode="policies" />;
+  return <GroupPolicyPortfolioScreen />;
 }
