@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy CPA-inclusive Policy PayIn and payout calculations to production.",
-  "deploy_requested_at": "2026-08-13T12:10:00+05:30",
+  "purpose": "Deploy PR #299 Customer Portfolio reference layout to production.",
+  "deploy_requested_at": "2026-08-13T12:26:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Deploy the latest verified main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "4679a389276830fd6aad0e8b01cad0ebdb4de3db",
-  "release_scope": "Release the Policy Onboarding and Edit Policy correction where opted CPA is included in the TP-side base for insurer PayIn and intermediary payout. Existing stored PayIn/payout values are already backfilled in Supabase and calculation version cpa_in_tp_v2 is applied. The latest main snapshot also includes the Finance report typecheck repair and other already committed main changes.",
-  "verification": "The production workflow must run the compulsory access-control, security, OCR, TypeScript, lint and production-build verification gate before invoking the Vercel deploy hook.",
+  "source": "Deploy the current verified main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "004f143a86228d9e037c66a45a0eca04963c6d9c",
+  "release_scope": "Release the compact Customer Portfolio layout on /customers: remove the four summary metric cards, move KYC Applications and Add Customer into the header top-right, place customer search followed by All partner types in the compact filter row, keep only All/Active/Pending tabs on the right, and preserve the customer table, data, actions, selection behavior, and pagination. Vehicle and Policy Portfolio layouts remain unchanged.",
+  "verification": "PR #299 verification run 31675580955 passed successfully before merge. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
