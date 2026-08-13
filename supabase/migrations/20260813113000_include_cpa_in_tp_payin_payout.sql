@@ -123,7 +123,7 @@ set billed_amount = c.new_auto_amount,
       when b.bill_number is null and b.bill_date is null and c.new_auto_amount > 0 then 'Billing details incomplete'
       else b.status
     end,
-    short_payout_amount = greatest(c.new_auto_amount - c.new_auto_amount, 0),
+    short_payout_amount = 0,
     updated_at = now()
 from bill_calc c
 where b.id = c.bill_id
