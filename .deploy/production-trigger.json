@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #295 customer register header cleanup to production.",
-  "deploy_requested_at": "2026-08-13T10:44:00+05:30",
+  "purpose": "Deploy PR #296 vehicle register header cleanup to production.",
+  "deploy_requested_at": "2026-08-13T11:00:00+05:30",
   "requested_by": "explicit user request",
   "source": "Deploy the current verified main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "4def855440da494a8534de3808175f0f9ca4546f",
-  "release_scope": "Release the Customer Portfolio header cleanup on /customers by removing the Master register eyebrow and the descriptive helper sentence, while preserving the title, metrics, toolbar, table, filters, pagination, and all customer workflows.",
-  "verification": "PR #295 verification run 31669559204 passed successfully before merge. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
+  "source_commit": "b48f31b7d2a4ed78e2582ff058c44097f341c43d",
+  "release_scope": "Release the Vehicle Portfolio header cleanup on /vehicles by removing the Fleet register eyebrow and the descriptive helper sentence, while preserving the title, metrics, toolbar, table, filters, pagination, and all vehicle workflows.",
+  "verification": "PR #296 verification run 31670468415 passed successfully before merge. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
