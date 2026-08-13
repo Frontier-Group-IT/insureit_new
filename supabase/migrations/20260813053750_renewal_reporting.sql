@@ -1,0 +1,3 @@
+-- Renewal reporting backend. The live project migration with this version introduced
+-- get_renewal_report; the immediately following migration corrects intermediary
+-- display-column names and contains the canonical function body.
