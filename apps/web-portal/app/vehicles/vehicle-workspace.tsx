@@ -107,35 +107,29 @@ export function VehicleWorkspace({ rows }: { rows: VehicleRow[] }) {
       </div>
 
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[1120px] table-fixed text-left text-[11px] text-[#252944]">
+        <table className="w-full min-w-[820px] table-fixed text-left text-[11px] text-[#252944]">
           <thead className="sticky top-0 z-10 border-b border-[#E2E8F0] bg-[#F8FAFC] text-[9px] font-bold uppercase tracking-[0.06em] text-[#64748B]">
             <tr>
-              <th className="w-[178px] px-4 py-3">Vehicle</th>
-              <th className="w-[210px] px-3 py-3">Customer</th>
-              <th className="w-[188px] px-3 py-3">Make / model</th>
-              <th className="w-[132px] px-3 py-3">Registration</th>
-              <th className="w-[130px] px-3 py-3">Permit</th>
-              <th className="w-[92px] px-3 py-3 text-center">Policies</th>
-              <th className="w-[86px] px-3 py-3 text-center">Claims</th>
-              <th className="w-[134px] px-3 py-3">Next action</th>
-              <th className="w-[72px] px-3 py-3 text-center">Action</th>
+              <th className="w-[180px] px-3 py-2">Vehicle</th>
+              <th className="w-[210px] px-2.5 py-2">Customer</th>
+              <th className="w-[190px] px-2.5 py-2">Make / model</th>
+              <th className="w-[140px] px-2.5 py-2">Registration</th>
+              <th className="w-[140px] px-2.5 py-2">Next action</th>
+              <th className="w-[76px] px-2.5 py-2 text-center">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#EEF2F6]">
             {pageRows.map((vehicle) => (
-              <tr key={vehicle.id} className="h-14 transition hover:bg-[#FAFCFF]">
-                <td className="px-4">
+              <tr key={vehicle.id} className="h-12 transition hover:bg-[#FAFCFF]">
+                <td className="px-3">
                   <Link href={`/vehicles/${vehicle.id}/edit`} className="block truncate font-mono text-[12px] font-bold text-[#0F172A] hover:text-[#17365D]">{displayVehicleNo(vehicle)}</Link>
-                  <p className="mt-0.5 truncate text-[9.5px] text-[#64748B]">{vehicle.vehicle_type || "Type not set"}</p>
+                  <p className="truncate text-[9px] leading-4 text-[#64748B]">{vehicle.vehicle_type || "Type not set"}</p>
                 </td>
-                <td className="px-3"><p className="truncate font-semibold text-[#334155]">{vehicle.customers?.contact_name ?? "-"}</p><p className="mt-0.5 truncate text-[9.5px] text-[#64748B]">{vehicle.customers?.company_name ?? "Individual account"}</p></td>
-                <td className="px-3"><p className="truncate font-semibold">{[vehicle.make, vehicle.model].filter(Boolean).join(" ") || "-"}</p></td>
-                <td className="px-3"><RegistrationPill vehicle={vehicle} /></td>
-                <td className="px-3"><span className="block truncate">{vehicle.permit_no ?? "-"}</span></td>
-                <td className="px-3 text-center"><Count value={policyCount(vehicle)} muted="policies" /></td>
-                <td className="px-3 text-center"><Count value={claimCount(vehicle)} muted="claims" warn={claimCount(vehicle) > 0} /></td>
-                <td className="px-3"><NextAction vehicle={vehicle} /></td>
-                <td className="px-3 text-center"><Link href={`/vehicles/${vehicle.id}/edit`} className="rounded-lg border border-[#BFD3F7] bg-[#F0F6FF] px-2.5 py-1.5 text-[9.5px] font-bold text-[#174EA6]">Open</Link></td>
+                <td className="px-2.5"><p className="truncate font-semibold text-[#334155]">{vehicle.customers?.contact_name ?? "-"}</p></td>
+                <td className="px-2.5"><p className="truncate font-semibold">{[vehicle.make, vehicle.model].filter(Boolean).join(" ") || "-"}</p></td>
+                <td className="px-2.5"><RegistrationPill vehicle={vehicle} /></td>
+                <td className="px-2.5"><NextAction vehicle={vehicle} /></td>
+                <td className="px-2.5 text-center"><Link href={`/vehicles/${vehicle.id}/edit`} className="rounded-lg border border-[#BFD3F7] bg-[#F0F6FF] px-2.5 py-1.5 text-[9.5px] font-bold text-[#174EA6]">Open</Link></td>
               </tr>
             ))}
           </tbody>
@@ -185,9 +179,6 @@ function NextAction({ vehicle }: { vehicle: VehicleRow }) {
   return <span className="inline-flex items-center gap-1 font-semibold text-emerald-700"><Wrench className="h-3.5 w-3.5" />Maintained</span>;
 }
 
-function Count({ value, muted, warn = false }: { value: number; muted: string; warn?: boolean }) {
-  return <div><p className={`text-[13px] font-bold tabular-nums ${warn ? "text-rose-700" : "text-[#0F172A]"}`}>{value}</p><p className="mt-0.5 text-[8.5px] text-[#94A3B8]">{muted}</p></div>;
-}
 function displayVehicleNo(vehicle: VehicleRow) { return isRegistrationPending(vehicle) ? "Registration pending" : vehicle.vehicle_no; }
 function isRegistrationPending(vehicle: VehicleRow) { return vehicle.registration_status === "registration_pending" || vehicle.vehicle_no.toUpperCase().startsWith("PENDING-"); }
 function policyCount(row: VehicleRow) { return row.policies?.[0]?.count ?? 0; }
