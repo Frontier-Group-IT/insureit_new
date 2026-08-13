@@ -38,7 +38,6 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
   const postalCode = textValue(formData, "postal_code");
   const panNumber = textValue(formData, "pan_number")?.replace(/\s/g, "").toUpperCase() ?? null;
   const aadhaarNumber = textValue(formData, "aadhaar_number")?.replace(/\D/g, "") ?? null;
-  const fleetSizeBand = textValue(formData, "fleet_size_band");
   const isGstRegistered = formData.get("is_gst_registered") === "true";
   const legalTradeName = textValue(formData, "legal_trade_name");
   const gstNumber = textValue(formData, "gst_number")?.replace(/\s/g, "").toUpperCase() ?? null;
@@ -49,7 +48,6 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
   if (!locationId || !city || !state || !postalCode) return failure("Select a city from the suggestions and confirm State and PIN Code.", "city_search");
   if (!panNumber || !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(panNumber)) return failure("Enter a valid PAN number.", "pan_number");
   if (!aadhaarNumber || !/^[0-9]{12}$/.test(aadhaarNumber)) return failure("Enter a valid 12-digit Aadhaar number.", "aadhaar_number");
-  if (!fleetSizeBand) return failure("Select the customer fleet size.", "fleet_size_band");
   if (isGstRegistered && !legalTradeName) return failure("Legal Trade Name is required for a GST-registered customer.", "legal_trade_name");
   if (isGstRegistered && !gstNumber) return failure("GST Number is required for a GST-registered customer.", "gst_number");
   if (isGstRegistered && gstNumber && !GSTIN_PATTERN.test(gstNumber)) return failure("Enter a valid 15-character GSTIN, for example 22AAAAA0000A1Z5.", "gst_number");
@@ -109,7 +107,7 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
       partnerType: "individual_proprietor",
       phone,
       email,
-      draftData: { contact_name: contactName, city, state, postal_code: postalCode, is_gst_registered: isGstRegistered, fleet_size_band: fleetSizeBand }
+      draftData: { contact_name: contactName, city, state, postal_code: postalCode, is_gst_registered: isGstRegistered }
     });
   } catch (error) {
     return failure(`Onboarding application could not be prepared: ${error instanceof Error ? error.message : "Unknown error"}`);
@@ -119,7 +117,7 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
     profile_id: profileId, partner_type: partnerType, contact_name: contactName, company_name: legalTradeName, phone, email, address,
     address_street: addressStreet, address_locality: addressLocality, india_location_id: locationId, city, state, postal_code: postalCode,
     pan_number: panNumber, aadhaar_last_four: aadhaarNumber.slice(-4), aadhaar_hash: aadhaarHash, legal_trade_name: legalTradeName,
-    is_gst_registered: isGstRegistered, gst_number: isGstRegistered ? gstNumber : null, fleet_size_band: fleetSizeBand,
+    is_gst_registered: isGstRegistered, gst_number: isGstRegistered ? gstNumber : null,
     onboarding_status: "active", onboarding_completed_at: new Date().toISOString(), updated_by: profile.id
   };
 
