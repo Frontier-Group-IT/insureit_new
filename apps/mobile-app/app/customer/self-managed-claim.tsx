@@ -46,7 +46,7 @@ export default function SelfManagedClaimScreen() {
     if (!accidentAt) return setMessage('Enter a valid accident date and time.');
     if (accidentAt.getTime() > Date.now()) return setMessage('Accident date and time cannot be in the future.');
     setSaving(true);
-    const { data, error } = await (supabase.rpc as any)('create_self_managed_customer_policy_claim', {
+    const { data, error } = await (supabase.rpc as any)('create_self_managed_policy_claim', {
       p_customer_id: policy.customer_id,
       p_vehicle_id: policy.vehicle_id,
       p_policy_id: policy.id,
