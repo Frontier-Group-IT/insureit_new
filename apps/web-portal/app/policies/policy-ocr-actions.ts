@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { parsePolicyDocument, type ParsedPolicyField } from "@/lib/policy-ocr-parsers";
+import { refineAdditionalMotorPolicy } from "@/lib/policy-ocr-additional-motor-refiner";
 import { refineDigitCommercialPolicyV2 } from "@/lib/policy-ocr-digit-refiner-v2";
 import { refineIffcoCommercialPolicyV2 } from "@/lib/policy-ocr-iffco-refiner-v2";
 import {
@@ -147,7 +148,7 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
         ? refineIffcoCommercialPolicyV2(pages, baseParsed)
         : baseParsed.parserId === "new_india_motor_v1"
           ? refineNewIndiaCommercialPolicy(pages, baseParsed)
-          : baseParsed;
+          : refineAdditionalMotorPolicy(pages, baseParsed);
 
     if (baseParsed.parserId === "iffco_tokio_commercial_motor_v1") {
       const tables = file.type === "application/pdf"

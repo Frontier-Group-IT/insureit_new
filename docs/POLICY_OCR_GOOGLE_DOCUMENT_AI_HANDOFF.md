@@ -167,7 +167,70 @@ Supported pure-motor families remain:
 - Go Digit commercial motor
 - The New India Assurance commercial motor
 
-United India remains deferred, including Miscellaneous/Special Type Vehicles and Contractors Plant & Machinery.
+### Multi-insurer training increment - 2026-08-14
+
+**IMPLEMENTED / NOT DEPLOYED:** the first non-IFFCO training increment adds detection, semantic refinement, sanitized regression fixtures, and CI coverage for five additional insurer families represented by the user's supplied policy copies:
+
+- Shriram General motor package schedule
+- The Oriental Insurance Company motor package schedule
+- National Insurance bilingual Goods Carrying Vehicle package schedule
+- Universal Sompo motor bundled/private-car schedule
+- United India PCV package schedule
+
+Files:
+
+```text
+apps/web-portal/lib/policy-ocr-additional-motor-refiner.ts
+apps/web-portal/scripts/policy-ocr-additional-regression.ts
+apps/web-portal/lib/policy-ocr-parsers.ts
+apps/web-portal/app/policies/policy-ocr-actions.ts
+apps/web-portal/package.json
+.github/workflows/verify-web-portal.yml
+docs/POLICY_OCR_TRAINING_PLAN_2026_08_13.md
+```
+
+Behavior:
+
+- New family IDs: `shriram_motor_v1`, `oriental_motor_v1`, `national_motor_v1`, `universal_sompo_motor_v1`, `united_india_motor_v1`.
+- The additional refiner owns insurer, product, policy number, dates, IDV, comparison totals, and financial fields when labeled evidence reconciles.
+- Financial values are accepted only when `OD + TP + CPA` reconciles to printed net premium within tolerance.
+- If labeled OD/TP/CPA evidence is incomplete or unreconciled, the refiner withholds OD/TP financial fields and returns a review warning instead of guessing.
+- National bilingual GCV fixtures intentionally cover an unsafe flattened premium-table shape; the parser keeps safe header/totals and withholds unreconciled OD/TP.
+- Sanitized regression fixtures use synthetic policy numbers and no customer/vehicle identity values.
+
+Verification:
+
+```text
+npm run policy-ocr:additional-regression
+Additional insurer OCR regression: 5/5 cases passed.
+
+npm run policy-ocr:all-regressions
+IFFCO structured regression: 5/5 cases passed.
+IFFCO regression: 11/11 cases passed.
+Digit regression: 5/5 cases passed.
+New India regression: 5/5 cases passed.
+Additional insurer OCR regression: 5/5 cases passed.
+
+npm run typecheck
+passed
+
+npm run lint
+passed with existing warnings only
+
+npm run build
+passed with existing warnings only
+```
+
+The GitHub `verify-web-portal.yml` gate now includes `npm run policy-ocr:additional-regression` before typecheck, lint, and build.
+
+Remaining work:
+
+- Run real Google Document AI upload checks for each supplied sample in a protected environment and compare against the sanitized expectations.
+- Add layout-table refiners for National/Oriental/Shriram if real Document AI table output remains ambiguous.
+- Confirm Universal Sompo bundled-product mapping with the business owner before treating private-car bundled policies as fully supported in production.
+- This increment is not deployed. Do not claim live production support until an explicit deployment and authenticated upload/review/apply verification are completed.
+
+United India Miscellaneous/Special Type Vehicles and Contractors Plant & Machinery remain deferred unless representative samples and approved Section 03 mapping are provided.
 
 ## 8. Release discipline / next steps
 

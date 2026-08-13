@@ -70,6 +70,9 @@ jobs:
       - name: New India regression
         run: npm run policy-ocr:new-india-regression
 
+      - name: Additional insurer OCR regression
+        run: npm run policy-ocr:additional-regression
+
       - name: Typecheck
         run: npm run typecheck
 
@@ -88,7 +91,7 @@ jobs:
             echo
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo "- Access control: V2 catalogue, scope, legacy compatibility, portal lifecycle, employee portal governance and release-blocker regressions"
-            echo "- OCR regressions: IFFCO structured, IFFCO, Digit, New India"
+            echo "- OCR regressions: IFFCO structured, IFFCO, Digit, New India, additional insurers"
             echo "- Static checks: typecheck and lint"
             echo "- Build: Next.js production build"
             echo "- Build-only public env: non-secret CI placeholders; no production credentials used"
