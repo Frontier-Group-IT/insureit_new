@@ -84,10 +84,20 @@ export function NotificationsInbox({ audience }: { audience: 'customer' | 'staff
       setMessage('This notification is not linked to a claim.');
       return;
     }
-    const route = audience === 'customer'
-      ? ({ pathname: '/customer/claim-detail', params: { id: notification.claim_id } } as const)
-      : ({ pathname: '/staff/claim-detail', params: { id: notification.claim_id } } as const);
-    router.push(route as Href);
+    let route: Href;
+    if (audience === 'customer') {
+      const { data: linkedClaim } = await supabase
+        .from('claims')
+        .select('claim_service_mode')
+        .eq('id', notification.claim_id)
+        .maybeSingle();
+      route = linkedClaim?.claim_service_mode === 'self_managed'
+        ? ({ pathname: '/customer/self-managed-claim-detail', params: { id: notification.claim_id } } as Href)
+        : ({ pathname: '/customer/claim-detail', params: { id: notification.claim_id } } as Href);
+    } else {
+      route = ({ pathname: '/staff/claim-detail', params: { id: notification.claim_id } } as Href);
+    }
+    router.push(route);
     if (notification.status === 'unread') {
       void markRead([notification.id]);
     }

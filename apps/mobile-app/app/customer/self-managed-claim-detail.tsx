@@ -109,6 +109,14 @@ export default function SelfManagedClaimDetailScreen() {
     [map],
   );
   const progress = Math.round((completed / SELF_MANAGED_MILESTONES.length) * 100);
+  const journeyComplete = completed === SELF_MANAGED_MILESTONES.length;
+  const recentActivity = useMemo(
+    () => milestones
+      .filter((item) => ['completed', 'not_applicable'].includes(item.milestone_status))
+      .sort((a, b) => new Date(b.completed_at ?? 0).getTime() - new Date(a.completed_at ?? 0).getTime())
+      .slice(0, 4),
+    [milestones],
+  );
 
   if (loading) return <Screen title="Claim Tracker" showTitleHeader={false}><LoadingState label="Opening claim tracker" /></Screen>;
   if (error || !claim) return <Screen title="Claim Tracker" showTitleHeader={false}><Message type="error">{error || 'Claim not found.'}</Message></Screen>;
@@ -182,6 +190,17 @@ export default function SelfManagedClaimDetailScreen() {
           ) : null}
         </View>
       </View>
+
+      {journeyComplete ? (
+        <View style={styles.completionCard}>
+          <View style={styles.completionIcon}><MaterialCommunityIcons name="check-decagram" size={24} color="#FFFFFF" /></View>
+          <View style={styles.flexOne}>
+            <Text style={styles.completionEyebrow}>CLAIM HISTORY COMPLETE</Text>
+            <Text style={styles.completionTitle}>All 9 milestones are recorded</Text>
+            <Text style={styles.completionText}>This claim now stays available as a completed record. You can still review stages and documents whenever needed.</Text>
+          </View>
+        </View>
+      ) : null}
 
       <View style={styles.infoCard}>
         <View style={styles.infoGrid}>
@@ -260,6 +279,30 @@ export default function SelfManagedClaimDetailScreen() {
           );
         })}
       </View>
+
+      {recentActivity.length ? (
+        <View style={styles.activityCard}>
+          <View style={styles.activityHeader}>
+            <View>
+              <Text style={styles.sectionEyebrow}>RECENT ACTIVITY</Text>
+              <Text style={styles.sectionTitle}>Claim updates</Text>
+            </View>
+            <MaterialCommunityIcons name="history" size={20} color="#0A43A3" />
+          </View>
+          {recentActivity.map((item, index) => {
+            const definition = SELF_MANAGED_MILESTONES.find((entry) => entry.key === item.milestone_key);
+            return (
+              <View key={item.id} style={[styles.activityRow, index === recentActivity.length - 1 && styles.activityRowLast]}>
+                <View style={styles.activityDot}><MaterialCommunityIcons name="check" size={12} color="#FFFFFF" /></View>
+                <View style={styles.flexOne}>
+                  <Text style={styles.activityTitle}>{definition?.label ?? 'Claim milestone'} updated</Text>
+                  <Text style={styles.activityMeta}>{fmtDateTime(item.completed_at)}</Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
 
       <Pressable style={styles.quickActionCard} onPress={() => router.push({ pathname: '/customer/self-managed-documents', params: { id: claim.id } })}>
         <View style={styles.quickActionIcon}><MaterialCommunityIcons name="folder-multiple-image" size={22} color="#0A43A3" /></View>
@@ -378,6 +421,18 @@ const styles = StyleSheet.create({
   statusTextActive: { color: '#0A43A3' },
   milestoneFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', borderTopWidth: 1, borderTopColor: '#E7ECF2', marginTop: 9, paddingTop: 8 },
   milestoneFooterText: { color: '#0A43A3', fontSize: 9, fontWeight: '900' },
+  completionCard: { flexDirection: 'row', gap: 11, alignItems: 'center', padding: 14, borderRadius: 18, backgroundColor: '#EAF8F0', borderWidth: 1, borderColor: '#B7E2C9', marginBottom: 12 },
+  completionIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#14845C', alignItems: 'center', justifyContent: 'center' },
+  completionEyebrow: { color: '#147A57', fontSize: 8, fontWeight: '900', letterSpacing: 0.7 },
+  completionTitle: { color: '#105D45', fontSize: 13, fontWeight: '900', marginTop: 1 },
+  completionText: { color: '#4E6F61', fontSize: 9.5, lineHeight: 14, fontWeight: '600', marginTop: 2 },
+  activityCard: { borderRadius: 18, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E1E8F0', padding: 13, marginBottom: 12 },
+  activityHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 },
+  activityRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#EEF1F5' },
+  activityRowLast: { borderBottomWidth: 0, paddingBottom: 2 },
+  activityDot: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#14845C', alignItems: 'center', justifyContent: 'center' },
+  activityTitle: { color: palette.navy, fontSize: 10.5, fontWeight: '900' },
+  activityMeta: { color: '#7A8799', fontSize: 8.8, fontWeight: '600', marginTop: 2 },
   quickActionCard: { flexDirection: 'row', gap: 11, alignItems: 'center', padding: 13, borderRadius: 18, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#DCE7F4', marginBottom: 12 },
   quickActionIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
   quickActionTitle: { color: palette.navy, fontSize: 12, fontWeight: '900' },
