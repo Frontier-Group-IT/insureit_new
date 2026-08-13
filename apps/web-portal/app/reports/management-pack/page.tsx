@@ -1,22 +1,31 @@
 import Link from "next/link";
-import { Download, Filter } from "lucide-react";
+import { Archive, Download, Filter, LockKeyhole } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { requireCapability } from "@/lib/master-data-server";
 import { loadManagementPack, type ManagementPackQuery } from "@/lib/reports/management-pack";
+import { findManagementPackSnapshotForMonth, isManagementPackCloseEligible, loadManagementPackSnapshot } from "@/lib/reports/management-pack-archive";
+import { captureManagementPackSnapshotAction } from "./actions";
 import { ManagementPackPrintButton } from "./print-button";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type Props = { searchParams: Promise<ManagementPackQuery> };
+type PageQuery = ManagementPackQuery & { snapshot?: string; archive_error?: string };
+type Props = { searchParams: Promise<PageQuery> };
 
 export default async function ManagementPackPage({ searchParams }: Props) {
   const profile = await requireCapability("view_reports");
   if (!profile) return null;
   const query = await searchParams;
-  const pack = await loadManagementPack(profile, query);
+  const archived = query.snapshot ? await loadManagementPackSnapshot(profile.id, query.snapshot) : null;
+  const pack = archived?.pack ?? await loadManagementPack(profile, query);
+  const existingSnapshot = archived ?? await findManagementPackSnapshotForMonth(profile.id, pack.filters.month);
+  const canCapture = !archived && !existingSnapshot && isManagementPackCloseEligible(pack.filters.month);
   const monthLabel = formatMonth(pack.filters.month);
-  const exportHref = `/reports/export/management-pack?month=${encodeURIComponent(pack.filters.month)}`;
+  const exportHref = archived
+    ? `/reports/export/management-pack?snapshot=${encodeURIComponent(archived.id)}`
+    : `/reports/export/management-pack?month=${encodeURIComponent(pack.filters.month)}`;
+  const archiveError = typeof query.archive_error === "string" ? query.archive_error.slice(0, 180) : null;
 
   return (
     <AppShell title="Reports">
@@ -24,26 +33,24 @@ export default async function ManagementPackPage({ searchParams }: Props) {
         <header className="portal-card overflow-hidden print:border-0 print:shadow-none">
           <div className="flex flex-col gap-3 border-b border-[#e8ecf2] px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div>
-              <h1 className="text-[26px] font-semibold tracking-[-0.025em] text-[#13203b] sm:text-[30px]">Month-End Management Pack</h1>
+              <div className="flex flex-wrap items-center gap-2"><h1 className="text-[26px] font-semibold tracking-[-0.025em] text-[#13203b] sm:text-[30px]">Month-End Management Pack</h1>{archived ? <span className="rounded-md border border-[#cad4e4] bg-[#f7f9fc] px-2 py-1 text-[8.5px] font-black uppercase tracking-[.08em] text-[#42516b]">Frozen</span> : null}</div>
               <ReportTabs canViewGovernance={pack.canViewGovernance} />
             </div>
             <div className="flex flex-wrap gap-2 print:hidden">
+              <Link href="/reports/management-pack/archive" className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#cad4e4] bg-white px-3 text-[10px] font-bold text-[#263b69]"><Archive className="h-3.5 w-3.5" />Archive</Link>
+              {canCapture ? <form action={captureManagementPackSnapshotAction}><input type="hidden" name="month" value={pack.filters.month} /><button className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#172a5c] px-3 text-[10px] font-bold text-white"><LockKeyhole className="h-3.5 w-3.5" />Close Month</button></form> : null}
+              {existingSnapshot && !archived ? <Link href={`/reports/management-pack?snapshot=${encodeURIComponent(existingSnapshot.id)}`} className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#cad4e4] bg-white px-3 text-[10px] font-bold text-[#263b69]"><LockKeyhole className="h-3.5 w-3.5" />Frozen Pack</Link> : null}
               <a href={exportHref} className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#cad4e4] bg-white px-3 text-[10px] font-bold text-[#263b69]"><Download className="h-3.5 w-3.5" />Export CSV</a>
               <ManagementPackPrintButton />
             </div>
           </div>
           <div className="px-5 py-4 sm:px-6 print:px-0 print:py-2">
-            <form action="/reports/management-pack" method="get" className="flex flex-wrap items-end gap-2 print:hidden">
-              <label className="block min-w-[190px]"><span className="mb-1 block text-[8.5px] font-black uppercase tracking-[.08em] text-[#7b8799]">Month</span><input name="month" type="month" max={pack.filters.currentMonth} defaultValue={pack.filters.month} className={inputClass} /></label>
-              <button className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#172a5c] px-4 text-[10.5px] font-bold text-white"><Filter className="h-3.5 w-3.5" />Apply</button>
-              <Link href="/reports/management-pack" className="inline-flex h-10 items-center justify-center rounded-lg border border-[#dfe5ee] bg-white px-4 text-[10.5px] font-bold text-[#526174]">Current month</Link>
-            </form>
-            <div className="mt-3 flex items-center justify-between gap-3 text-[10px] font-semibold text-[#66748a] print:mt-0">
-              <span>{monthLabel}</span>
-              <span>{formatDate(pack.filters.fromDate)} — {formatDate(pack.filters.toDate)}</span>
-            </div>
+            {archived ? <div className="flex flex-wrap items-end gap-2 print:hidden"><Link href={`/reports/management-pack?month=${encodeURIComponent(pack.filters.month)}`} className="inline-flex h-10 items-center justify-center rounded-lg border border-[#dfe5ee] bg-white px-4 text-[10.5px] font-bold text-[#526174]">Live View</Link><span className="pb-2 text-[9.5px] font-semibold text-[#68778c]">Captured {formatTimestamp(archived.capturedAt)}</span></div> : <form action="/reports/management-pack" method="get" className="flex flex-wrap items-end gap-2 print:hidden"><label className="block min-w-[190px]"><span className="mb-1 block text-[8.5px] font-black uppercase tracking-[.08em] text-[#7b8799]">Month</span><input name="month" type="month" max={pack.filters.currentMonth} defaultValue={pack.filters.month} className={inputClass} /></label><button className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#172a5c] px-4 text-[10.5px] font-bold text-white"><Filter className="h-3.5 w-3.5" />Apply</button><Link href="/reports/management-pack" className="inline-flex h-10 items-center justify-center rounded-lg border border-[#dfe5ee] bg-white px-4 text-[10.5px] font-bold text-[#526174]">Current month</Link></form>}
+            <div className={`${archived ? "mt-2" : "mt-3"} flex items-center justify-between gap-3 text-[10px] font-semibold text-[#66748a] print:mt-0`}><span>{monthLabel}</span><span>{formatDate(pack.filters.fromDate)} — {formatDate(pack.filters.toDate)}</span></div>
           </div>
         </header>
+
+        {archiveError ? <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-3 text-[10px] font-semibold text-red-700">{archiveError}</div> : null}
 
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6 print:grid-cols-6">
           <Metric label="Policies" value={integer(pack.business.summary.policy_count)} />
@@ -65,8 +72,8 @@ export default async function ManagementPackPage({ searchParams }: Props) {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-2 print:grid-cols-2">
-          <article className="portal-card overflow-hidden print:break-inside-avoid"><Header title="Current renewal exposure" /><div className="grid gap-3 p-5 sm:grid-cols-3"><Mini label="Due ≤ 30d" value={integer(pack.renewals.summary.due_30_count)} /><Mini label="Due ≤ 90d" value={integer(pack.renewals.summary.due_90_count)} /><Mini label="Premium at risk" value={currency(pack.renewals.summary.premium_at_risk)} /></div><RenewalTable rows={pack.renewals.buckets} /></article>
-          <article className="portal-card overflow-hidden print:break-inside-avoid"><Header title="Current operations exposure" /><div className="grid gap-3 p-5 sm:grid-cols-3"><Mini label="Vehicles" value={integer(pack.operations.summary.vehicle_count)} /><Mini label="AuthBridge unverified" value={integer(pack.operations.summary.authbridge_unverified_count)} /><Mini label="Missing fields" value={integer(pack.operations.summary.missing_compliance_fields)} /><Mini label="Expired documents" value={integer(pack.operations.summary.expired_document_count)} /><Mini label="Due ≤ 90d" value={integer(pack.operations.summary.due_document_count)} /><Mini label="Customer doc exceptions" value={integer(pack.operations.customer_documents.customers_with_exceptions)} /></div><OperationsTable rows={pack.operations.compliance} /></article>
+          <article className="portal-card overflow-hidden print:break-inside-avoid"><Header title={archived ? "Renewal exposure" : "Current renewal exposure"} /><div className="grid gap-3 p-5 sm:grid-cols-3"><Mini label="Due ≤ 30d" value={integer(pack.renewals.summary.due_30_count)} /><Mini label="Due ≤ 90d" value={integer(pack.renewals.summary.due_90_count)} /><Mini label="Premium at risk" value={currency(pack.renewals.summary.premium_at_risk)} /></div><RenewalTable rows={pack.renewals.buckets} /></article>
+          <article className="portal-card overflow-hidden print:break-inside-avoid"><Header title={archived ? "Operations exposure" : "Current operations exposure"} /><div className="grid gap-3 p-5 sm:grid-cols-3"><Mini label="Vehicles" value={integer(pack.operations.summary.vehicle_count)} /><Mini label="AuthBridge unverified" value={integer(pack.operations.summary.authbridge_unverified_count)} /><Mini label="Missing fields" value={integer(pack.operations.summary.missing_compliance_fields)} /><Mini label="Expired documents" value={integer(pack.operations.summary.expired_document_count)} /><Mini label="Due ≤ 90d" value={integer(pack.operations.summary.due_document_count)} /><Mini label="Customer doc exceptions" value={integer(pack.operations.customer_documents.customers_with_exceptions)} /></div><OperationsTable rows={pack.operations.compliance} /></article>
         </section>
 
         {pack.governance ? <section className="portal-card overflow-hidden print:break-inside-avoid"><Header title="Governance" /><div className="grid gap-3 p-5 sm:grid-cols-3 xl:grid-cols-6"><Mini label="Active profiles" value={integer(pack.governance.summary.active_profile_count)} /><Mini label="Inactive profiles" value={integer(pack.governance.summary.inactive_profile_count)} /><Mini label="Employee overrides" value={integer(pack.governance.summary.active_employee_override_count)} /><Mini label="Role overrides" value={integer(pack.governance.summary.role_override_count)} /><Mini label="Permission changes" value={integer(pack.governance.summary.permission_change_count)} /><Mini label="Audit events" value={integer(pack.governance.summary.audit_event_count)} /></div></section> : null}
@@ -92,3 +99,4 @@ function integer(value: number) { return new Intl.NumberFormat("en-IN", { maximu
 function currency(value: number) { return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0); }
 function formatDate(value: string) { return new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }).format(new Date(`${value}T00:00:00+05:30`)); }
 function formatMonth(value: string) { return new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric", timeZone: "Asia/Kolkata" }).format(new Date(`${value}-01T00:00:00+05:30`)); }
+function formatTimestamp(value: string) { return new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" }).format(new Date(value)); }
