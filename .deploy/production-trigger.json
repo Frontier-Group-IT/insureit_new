@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #300 Customer Portfolio title alignment and Inactive tab label to production.",
-  "deploy_requested_at": "2026-08-13T12:58:00+05:30",
+  "purpose": "Deploy PR #301 compact Customer Portfolio header and desktop table to production.",
+  "deploy_requested_at": "2026-08-13T13:13:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #300 and deploy the latest main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "438466866165dcdac4b06c4a601a3ac3ef810aa9",
-  "release_scope": "Release the Customer Portfolio header refinement on /customers: center-align the Customer Portfolio title while keeping the icon on the left and KYC Applications / Add Customer actions on the right, and rename the visible Pending tab to Inactive while preserving its existing filter behavior and counts. Customer table, data, actions, filters, status badges, and pagination remain unchanged.",
-  "verification": "PR #300 verification run 31677595196 passed successfully before merge. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
+  "source": "Merge PR #301 and deploy the verified main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "3dbc642ff686c3b5ee9e69536b4b3087e200676f",
+  "release_scope": "Release the compact Customer Portfolio refinement on /customers: position Customer Portfolio directly beside the existing icon, keep KYC Applications and Add Customer actions unchanged on the right, remove the visible Fleet, Policies, and Claims columns from the desktop customer table, remove the secondary customer ID/company line under the customer name, and tighten desktop table width, row height, header padding, and cell spacing while preserving filters, selection, data logic, actions, export, pagination, and mobile cards.",
+  "verification": "PR #301 verification run 31678872513 passed successfully before merge. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
