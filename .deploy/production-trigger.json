@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy grey selected filter states across intermediary registers to production.",
-  "deploy_requested_at": "2026-08-13T09:05:00+05:30",
+  "purpose": "Deploy Reports Phase 2 Distribution and the data-first Reports dashboard cleanup to production.",
+  "deploy_requested_at": "2026-08-13T10:11:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #293 and deploy the verified main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "57632d98603a60e40e67da195979954e34862092",
-  "release_scope": "Apply the light grey selected-state treatment to POSP Register All / Active / Onboarding, MISP Register All / Active / Onboarding, and Pending Intermediary Applications All / POSP / MISP, without changing filtering logic, counts, search, pagination, table content, badges, actions, or workflows.",
-  "verification": "Verify web portal run 31664241765 passed for PR #293. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
+  "source": "Deploy the current verified main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "c4151229b2f167137bfc60865d3caee522870069",
+  "release_scope": "Release the cleaned Business Reports dashboard with descriptive/helper text removed, plus the new Distribution reporting workspace with hierarchy-scoped RM performance, intermediary business and onboarding pipeline reporting. Preserve all later verified main-branch UI changes already included in the snapshot.",
+  "verification": "Reports Phase 2 canonical verification run 31636132810 passed, and the current main snapshot is a direct descendant of that verified Reports head. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
