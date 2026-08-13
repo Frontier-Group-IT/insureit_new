@@ -5,6 +5,12 @@ import { operationsQueueForKey } from "@/lib/claim-workflow";
 import { ClaimsWorkspace } from "./claims-workspace";
 
 type SearchParams = { queue?: string; journey?: string; status?: string; q?: string; page?: string; pageSize?: string };
+export type AssistanceQueueClaimRow = QueueClaimRow & {
+  claim_service_mode?: string | null;
+  assistance_status?: string | null;
+  assistance_requested_at?: string | null;
+  external_policies?: { policy_no: string } | null;
+};
 
 const customerJourneyTitles: Record<string, string> = {
   "loss-report": "Loss Report",
@@ -28,10 +34,10 @@ export default async function ClaimsPage({ searchParams }: { searchParams: Promi
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("claims")
-    .select("id, claim_no, insurer_claim_no, current_status, accident_at, created_at, customers(company_name, contact_name, phone), vehicles(vehicle_no, make, model), policies(policy_no), insurance_companies(name), assignee:profiles!claims_assigned_to_fkey(full_name)")
+    .select("id, claim_no, insurer_claim_no, current_status, accident_at, created_at, claim_service_mode, assistance_status, assistance_requested_at, customers(company_name, contact_name, phone), vehicles(vehicle_no, make, model), policies(policy_no), external_policies(policy_no), insurance_companies(name), assignee:profiles!claims_assigned_to_fkey(full_name)")
     .or("claim_service_mode.eq.broker_managed,assistance_status.eq.requested")
     .order("updated_at", { ascending: false })
-    .returns<QueueClaimRow[]>();
+    .returns<AssistanceQueueClaimRow[]>();
   const title = titleForParams(params);
 
   return (
@@ -42,6 +48,7 @@ export default async function ClaimsPage({ searchParams }: { searchParams: Promi
 }
 
 function titleForParams(params: SearchParams) {
+  if (params.queue === "assistance") return "External Claim Assistance Requests";
   if (params.journey && customerJourneyTitles[params.journey]) return customerJourneyTitles[params.journey];
   const operationalQueue = operationsQueueForKey(params.queue);
   if (operationalQueue) return operationalQueue.label;
