@@ -9,13 +9,11 @@ export type PolicyBusinessReport = {
  summary:{policy_count:number;active_policy_count:number;gross_premium:number;net_premium:number;od_premium:number;tp_premium:number;cpa_amount:number;average_premium:number;insurer_count:number;intermediary_count:number};
  trend:Array<{month:string;policy_count:number;gross_premium:number}>;
  insurers:Array<{id:string;name:string;policy_count:number;gross_premium:number;share_percent:number}>;
- rms:Array<{name:string;policy_count:number;intermediary_count:number;gross_premium:number;average_premium:number}>;
+ rms:Array<{employee_id?:string|null;name:string;policy_count:number;intermediary_count:number;gross_premium:number;average_premium:number}>;
  filters:{insurers:Array<{id:string;name:string}>;rms:Array<{id:string;name:string}>;intermediaries:Array<{code:string;type:string|null;name:string}>};
  register:{rows:PolicyBusinessRow[];total_count:number;page:number;page_size:number};
 };
 export type PolicyBusinessRow = {id:string;policy_no:string;business_date:string;policy_type:string;business_type:string|null;start_date:string;end_date:string;status:string;customer_name:string;customer_code:string;vehicle_no:string;insurer_name:string;rm_name:string|null;intermediary_code:string|null;intermediary_type:string|null;gross_premium:number;net_premium:number;od_premium:number;tp_premium:number;cpa_amount:number;insured_declared_value:number|null};
-
-type RmOptionRow = { id: string | null; name: string | null };
 
 export async function loadPolicyBusinessReport(profile:ViewerProfile,query:PolicyBusinessQuery){
  const filters=resolvePolicyBusinessFilters(query);
@@ -46,7 +44,7 @@ function normalizePolicyBusinessReport(value:unknown,page:number):PolicyBusiness
   summary:{policy_count:numberValue(summary.policy_count),active_policy_count:numberValue(summary.active_policy_count),gross_premium:numberValue(summary.gross_premium),net_premium:numberValue(summary.net_premium),od_premium:numberValue(summary.od_premium),tp_premium:numberValue(summary.tp_premium),cpa_amount:numberValue(summary.cpa_amount),average_premium:numberValue(summary.average_premium),insurer_count:numberValue(summary.insurer_count),intermediary_count:numberValue(summary.intermediary_count)},
   trend:arrayValue(raw.trend).map(row=>{const x=objectValue(row);return{month:stringValue(x.month),policy_count:numberValue(x.policy_count),gross_premium:numberValue(x.gross_premium)}}),
   insurers:arrayValue(raw.insurers).map(row=>{const x=objectValue(row);return{id:stringValue(x.id),name:stringValue(x.name),policy_count:numberValue(x.policy_count),gross_premium:numberValue(x.gross_premium),share_percent:numberValue(x.share_percent)}}),
-  rms:arrayValue(raw.rms).map(row=>{const x=objectValue(row);return{name:stringValue(x.name),policy_count:numberValue(x.policy_count),intermediary_count:numberValue(x.intermediary_count),gross_premium:numberValue(x.gross_premium),average_premium:numberValue(x.average_premium)}}),
+  rms:arrayValue(raw.rms).map(row=>{const x=objectValue(row);return{employee_id:nullableString(x.employee_id),name:stringValue(x.name),policy_count:numberValue(x.policy_count),intermediary_count:numberValue(x.intermediary_count),gross_premium:numberValue(x.gross_premium),average_premium:numberValue(x.average_premium)}}),
   filters:{insurers:arrayValue(filters.insurers).map(row=>{const x=objectValue(row);return{id:stringValue(x.id),name:stringValue(x.name)}}).filter(x=>x.id&&x.name),rms:[],intermediaries:arrayValue(filters.intermediaries).map(row=>{const x=objectValue(row);return{code:stringValue(x.code),type:nullableString(x.type),name:stringValue(x.name)}}).filter(x=>x.code)},
   register:{rows:arrayValue(register.rows).map(normalizeRow),total_count:numberValue(register.total_count),page:numberValue(register.page)||page,page_size:numberValue(register.page_size)||25}
  };
