@@ -6,6 +6,7 @@ import { requireCapability } from "@/lib/master-data-server";
 import { loadManagementPack, type ManagementPackQuery } from "@/lib/reports/management-pack";
 import { findManagementPackSnapshotForMonth, isManagementPackCloseEligible, loadManagementPackSnapshot } from "@/lib/reports/management-pack-archive";
 import { captureManagementPackSnapshotAction } from "./actions";
+import { CloseMonthConfirmation } from "./close-month-confirmation";
 import { ManagementPackPrintButton } from "./print-button";
 
 export const dynamic = "force-dynamic";
@@ -32,20 +33,37 @@ export default async function ManagementPackPage({ searchParams }: Props) {
     <AppShell title="Reports">
       <ReportPageShell
         title="Month-End Management Pack"
-        titleAccessory={archived ? <span className="rounded-md border border-[#cad4e4] bg-[#f7f9fc] px-2 py-1 text-[8.5px] font-black uppercase tracking-[.08em] text-[#42516b]">Frozen</span> : null}
+        titleAccessory={archived
+          ? <span className="rounded-md border border-[#c7d2e2] bg-[#f3f6fa] px-2 py-1 text-[8.5px] font-black uppercase tracking-[.08em] text-[#3d4f69]">Frozen Snapshot</span>
+          : <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-[8.5px] font-black uppercase tracking-[.08em] text-blue-700">Live Pack</span>}
         className="print:max-w-none print:space-y-3 print:pb-0"
         headerClassName="print:border-0 print:shadow-none"
         controlsClassName="print:px-0 print:py-2"
         actions={<div className="flex flex-wrap gap-2 print:hidden">
-          <Link href="/reports/management-pack/archive" className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#cad4e4] bg-white px-3 text-[10px] font-bold text-[#263b69]"><Archive className="h-3.5 w-3.5" />Archive</Link>
-          {canCapture ? <form action={captureManagementPackSnapshotAction}><input type="hidden" name="month" value={pack.filters.month} /><button className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#172a5c] px-3 text-[10px] font-bold text-white"><LockKeyhole className="h-3.5 w-3.5" />Close Month</button></form> : null}
-          {existingSnapshot && !archived ? <Link href={`/reports/management-pack?snapshot=${encodeURIComponent(existingSnapshot.id)}`} className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#cad4e4] bg-white px-3 text-[10px] font-bold text-[#263b69]"><LockKeyhole className="h-3.5 w-3.5" />Frozen Pack</Link> : null}
+          {canCapture ? <form action={captureManagementPackSnapshotAction}><input type="hidden" name="month" value={pack.filters.month} /><CloseMonthConfirmation monthLabel={monthLabel} /></form> : null}
+          <Link href="/reports/management-pack/archive" className="report-secondary-action inline-flex h-9 items-center gap-2 rounded-lg border border-[#cad4e4] bg-white px-3 text-[10px] font-bold text-[#263b69]"><Archive className="h-3.5 w-3.5" />Archive</Link>
           <ReportExportLink href={exportHref} />
           <ManagementPackPrintButton />
         </div>}
         controls={<>
-          {archived ? <div className="flex flex-wrap items-end gap-2 print:hidden"><ReportResetLink href={`/reports/management-pack?month=${encodeURIComponent(pack.filters.month)}`} label="Live View" /><span className="pb-2 text-[9.5px] font-semibold text-[#68778c]">Captured {formatTimestamp(archived.capturedAt)}</span></div> : <form action="/reports/management-pack" method="get" className="flex flex-wrap items-end gap-2 print:hidden"><ReportFilterField label="Month"><input name="month" type="month" max={pack.filters.currentMonth} defaultValue={pack.filters.month} className={`${reportInputClass} min-w-[190px]`} /></ReportFilterField><ReportApplyButton /><ReportResetLink href="/reports/management-pack" label="Current month" /></form>}
-          <div className={`${archived ? "mt-2" : "mt-3"} flex items-center justify-between gap-3 text-[10px] font-semibold text-[#66748a] print:mt-0`}><span>{monthLabel}</span><span>{formatDate(pack.filters.fromDate)} — {formatDate(pack.filters.toDate)}</span></div>
+          {archived ? (
+            <div className="mb-3 flex flex-col gap-3 rounded-xl border border-[#d8e0ea] bg-[#f7f9fc] px-4 py-3 sm:flex-row sm:items-center sm:justify-between print:border-0 print:bg-white print:px-0">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2"><LockKeyhole className="h-3.5 w-3.5 text-[#405677]" /><span className="text-[10px] font-black uppercase tracking-[.08em] text-[#40516a]">Frozen snapshot</span></div>
+                <p className="mt-1 text-[10px] font-semibold text-[#68778c]">Captured {formatTimestamp(archived.capturedAt)} · Version {archived.snapshotVersion}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 print:hidden"><ReportResetLink href={`/reports/management-pack?month=${encodeURIComponent(pack.filters.month)}`} label="View Live Pack" /><Link href="/reports/management-pack/archive" className="report-secondary-action inline-flex h-10 items-center justify-center rounded-lg border border-[#dfe5ee] bg-white px-4 text-[10.5px] font-bold text-[#526174]">Archive</Link></div>
+            </div>
+          ) : (
+            <div className="mb-3 flex flex-col gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between print:border-0 print:bg-white print:px-0">
+              <div className="min-w-0"><span className="text-[10px] font-black uppercase tracking-[.08em] text-blue-700">Live pack</span><p className="mt-1 text-[10px] font-semibold text-[#68778c]">{monthLabel} · Current report calculations</p></div>
+              <div className="flex flex-wrap items-center gap-2 print:hidden">
+                {existingSnapshot ? <Link href={`/reports/management-pack?snapshot=${encodeURIComponent(existingSnapshot.id)}`} className="report-secondary-action inline-flex h-10 items-center gap-2 rounded-lg border border-[#c8d3e2] bg-white px-4 text-[10.5px] font-bold text-[#425574]"><LockKeyhole className="h-3.5 w-3.5" />View Frozen Snapshot</Link> : <span className={`rounded-md border px-2.5 py-2 text-[9px] font-bold ${canCapture ? "border-amber-200 bg-amber-50 text-amber-700" : "border-[#d9e1eb] bg-white text-[#6f7c90]"}`}>{canCapture ? "Month-end close available" : "No frozen snapshot"}</span>}
+              </div>
+            </div>
+          )}
+          {!archived ? <form action="/reports/management-pack" method="get" className="flex flex-wrap items-end gap-2 print:hidden"><ReportFilterField label="Month"><input name="month" type="month" max={pack.filters.currentMonth} defaultValue={pack.filters.month} className={`${reportInputClass} min-w-[190px]`} /></ReportFilterField><ReportApplyButton /><ReportResetLink href="/reports/management-pack" label="Current month" /></form> : null}
+          <div className={`${archived ? "mt-0" : "mt-3"} flex items-center justify-between gap-3 text-[10px] font-semibold text-[#66748a] print:mt-0`}><span>{monthLabel}</span><span>{formatDate(pack.filters.fromDate)} — {formatDate(pack.filters.toDate)}</span></div>
         </>}
       >
         {archiveError ? <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-3 text-[10px] font-semibold text-red-700">{archiveError}</div> : null}
