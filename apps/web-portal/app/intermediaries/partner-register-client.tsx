@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
-import { compactPrimaryActionClassName } from "@/components/action-styles";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { FreshAccountReviewLink } from "./applications/account-review-back-link";
 import { createLinkedIntermediaryAccount } from "./applications/[id]/account-review-actions";
@@ -29,7 +28,10 @@ export type PartnerRegisterRow = {
 type PartnerFilter = "" | "all" | "active" | "onboarding";
 
 const PARTNER_PAGE_SIZE = 10;
-const partnerOpenActionClassName = "inline-flex h-9 items-center justify-center whitespace-nowrap rounded-lg border border-[#315FEA] bg-transparent px-3 text-[9px] font-semibold text-[#315FEA] transition-colors duration-150 hover:bg-[#E7E7E7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#818CF8] focus-visible:ring-offset-2 active:translate-y-px";
+const partnerActionBaseClassName = "inline-flex h-9 items-center justify-center whitespace-nowrap rounded-lg border bg-transparent px-3 text-[9px] font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:translate-y-px";
+const partnerCreateActionClassName = `${partnerActionBaseClassName} border-emerald-500 text-emerald-600 hover:bg-emerald-50 focus-visible:ring-emerald-300`;
+const partnerReviewActionClassName = `${partnerActionBaseClassName} border-orange-400 text-orange-600 hover:bg-orange-50 focus-visible:ring-orange-300`;
+const partnerViewActionClassName = `${partnerActionBaseClassName} border-[#315FEA] text-[#315FEA] hover:bg-[#EEF3FF] focus-visible:ring-[#818CF8]`;
 
 export function PartnerRegisterClient({
   rows,
@@ -159,20 +161,20 @@ function PartnerTable({ rows }: { rows: PartnerRegisterRow[] }) {
 function renderAction(row: PartnerRegisterRow) {
   if (row.linkedHref) {
     return (
-      <FreshAccountReviewLink href={row.linkedHref} className={partnerOpenActionClassName}>
+      <FreshAccountReviewLink href={row.linkedHref} className={partnerViewActionClassName}>
         View {row.createType.toUpperCase()}
       </FreshAccountReviewLink>
     );
   }
   if (!row.active) {
     return (
-      <FreshAccountReviewLink href={`/intermediaries/applications/${row.applicationId}`} className={partnerOpenActionClassName}>
+      <FreshAccountReviewLink href={`/intermediaries/applications/${row.applicationId}`} className={partnerReviewActionClassName}>
         Review
       </FreshAccountReviewLink>
     );
   }
   if (!row.canCreateLinked) return <span className="text-[#94A3B8]">-</span>;
-  return <form action={createLinkedIntermediaryAccount}><input type="hidden" name="application_id" value={row.applicationId} /><input type="hidden" name="registration_type" value={row.createType} /><FormSubmitButton label={`Create ${row.createType.toUpperCase()}`} pendingLabel={`Creating ${row.createType.toUpperCase()}...`} className={compactPrimaryActionClassName} /></form>;
+  return <form action={createLinkedIntermediaryAccount}><input type="hidden" name="application_id" value={row.applicationId} /><input type="hidden" name="registration_type" value={row.createType} /><FormSubmitButton label={`Create ${row.createType.toUpperCase()}`} pendingLabel={`Creating ${row.createType.toUpperCase()}...`} className={partnerCreateActionClassName} /></form>;
 }
 
 function Status({ value, tone = "default" }: { value: string; tone?: "default" | "linked" | "portal" | "account" }) {
