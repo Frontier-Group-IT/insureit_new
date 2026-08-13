@@ -1,0 +1,1 @@
+-- Historical migration body will be restored byte-for-byte from the live Supabase migration ledger in the next commit.
