@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #327 to production.",
-  "deploy_requested_at": "2026-08-13T22:35:00+05:30",
+  "purpose": "Deploy Reporting UX R6 to production.",
+  "deploy_requested_at": "2026-08-13T23:25:00+05:30",
   "requested_by": "explicit user request",
-  "source": "PR #327 merged into main.",
-  "source_commit": "4d1abdfb8cac6e27df50a169bd72937a9ad387de",
-  "release_scope": "Customer Portfolio table UI: show only Partner Type in the existing partner-type column and remove the displayed city/location line while preserving all existing data, filtering, selection, status, actions, pagination, and backend behavior.",
+  "source": "PR #330 merged into main with R6 handoff documented.",
+  "source_commit": "90f6e9173e61304ab91d9a45c67e9928302c5a91",
+  "release_scope": "Reporting UX R6: normalize Relationship Manager filtering across Business, Finance and Renewals onto canonical employee UUIDs while preserving existing report calculations, hierarchy/customer scope, exports, and Management Pack semantics.",
   "verification": "Run the protected verification gate on this exact deployment-trigger snapshot before invoking Vercel.",
   "instructions": "Update this file only after explicit deployment approval."
 }
