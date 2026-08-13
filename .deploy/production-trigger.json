@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Portal Users grey selected filter state to production.",
-  "deploy_requested_at": "2026-08-13T08:51:00+05:30",
+  "purpose": "Deploy grey selected filter states across intermediary registers to production.",
+  "deploy_requested_at": "2026-08-13T09:05:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #292 and deploy the verified main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "3b84e330dad9229321e76978b65ac23944c8416a",
-  "release_scope": "Change the selected All / Active / Needs attention filter state on Partner Portal Users from indigo to a light grey background with dark text, without changing filtering, counts, pagination, table data, or portal-user workflows.",
-  "verification": "Verify web portal run 31663579216 passed for PR #292. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
+  "source": "Merge PR #293 and deploy the verified main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "57632d98603a60e40e67da195979954e34862092",
+  "release_scope": "Apply the light grey selected-state treatment to POSP Register All / Active / Onboarding, MISP Register All / Active / Onboarding, and Pending Intermediary Applications All / POSP / MISP, without changing filtering logic, counts, search, pagination, table content, badges, actions, or workflows.",
+  "verification": "Verify web portal run 31664241765 passed for PR #293. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
