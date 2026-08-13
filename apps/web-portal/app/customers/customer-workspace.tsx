@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, Download, FileCheck2, MapPin, MoreVertical, Phone, Plus, ShieldCheck, Truck, X } from "lucide-react";
 import {
   BrokerRegisterShell,
@@ -49,6 +49,7 @@ const partnerOptions = [
 ];
 
 export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewKey>("all");
@@ -56,7 +57,7 @@ export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState(false);
-  const [partnerModalOpen, setPartnerModalOpen] = useState(searchParams.get("choose_partner") === "1");
+  const partnerModalOpen = searchParams.get("choose_partner") === "1";
 
   const stats = useMemo(() => {
     const active = rows.filter((row) => row.onboarding_status === "active").length;
@@ -91,6 +92,12 @@ export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
   function setViewAndReset(next: string) {
     setView(next as ViewKey);
     setPage(1);
+  }
+  function openPartnerModal() {
+    router.push("/customers?choose_partner=1");
+  }
+  function closePartnerModal() {
+    router.push("/customers");
   }
   function toggleRow(id: string) {
     setSelectedIds((current) => {
@@ -128,7 +135,7 @@ export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
 
   return (
     <>
-      {partnerModalOpen ? <PartnerTypeModal onClose={() => setPartnerModalOpen(false)} /> : null}
+      {partnerModalOpen ? <PartnerTypeModal onClose={closePartnerModal} /> : null}
       <BrokerRegisterShell
         eyebrow="Master register"
         title="Customer Portfolio"
@@ -146,7 +153,7 @@ export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
           onQueryChange={(value) => { setQuery(value); setPage(1); }}
           searchPlaceholder="Search customer, code, trade name, mobile or city"
           activeViewLabel={`${filteredRows.length} in current view`}
-          action={<button type="button" onClick={() => setPartnerModalOpen(true)} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-3 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.22)]"><Plus className="h-4 w-4" />Add Customer</button>}
+          action={<button type="button" onClick={openPartnerModal} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-3 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.22)]"><Plus className="h-4 w-4" />Add Customer</button>}
         >
           <RegisterViewTabs
             value={view}
