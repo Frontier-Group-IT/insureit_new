@@ -27,7 +27,7 @@ export function BrokerRegisterShell({
   metrics: Array<{ label: string; value: string | number; hint: string; tone?: MetricTone }>;
   children: ReactNode;
 }) {
-  const showSupportingCopy = title !== "Customer Portfolio";
+  const showSupportingCopy = title !== "Customer Portfolio" && title !== "Vehicle Portfolio";
 
   return (
     <section className="mx-auto max-w-[1480px] overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
