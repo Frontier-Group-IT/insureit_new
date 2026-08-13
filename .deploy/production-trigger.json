@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #294 application review heading hierarchy update to production.",
-  "deploy_requested_at": "2026-08-13T10:12:00+05:30",
+  "purpose": "Deploy PR #295 customer register header cleanup to production.",
+  "deploy_requested_at": "2026-08-13T10:44:00+05:30",
   "requested_by": "explicit user request",
   "source": "Deploy the current verified main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "4c57a4339d637902c5938f4f122c4f268223dc55",
-  "release_scope": "Release the application review header hierarchy update so Partner/POSP/MISP Application Review appears as the main heading above the applicant or partner name, while preserving all other existing UI and workflows.",
-  "verification": "PR #294 verification run 31667416792 passed successfully before merge. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
+  "source_commit": "4def855440da494a8534de3808175f0f9ca4546f",
+  "release_scope": "Release the Customer Portfolio header cleanup on /customers by removing the Master register eyebrow and the descriptive helper sentence, while preserving the title, metrics, toolbar, table, filters, pagination, and all customer workflows.",
+  "verification": "PR #295 verification run 31669559204 passed successfully before merge. The production workflow must rerun the compulsory verification gate before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
