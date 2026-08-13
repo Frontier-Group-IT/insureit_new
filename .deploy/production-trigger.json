@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #323 to production.",
-  "deploy_requested_at": "2026-08-13T21:38:00+05:30",
+  "purpose": "Deploy PR #324 to production.",
+  "deploy_requested_at": "2026-08-13T21:52:00+05:30",
   "requested_by": "explicit user request",
-  "source": "PR #323 merged into main.",
-  "source_commit": "4b2129ed6062f425edff98c21a1db4af864ff74b",
-  "release_scope": "Policy Lead Source workflow correction.",
-  "verification": "PR verification run 31719216724 passed. Re-run the protected verification gate before Vercel deployment.",
+  "source": "PR #324 merged into main.",
+  "source_commit": "18d51efb0fed19f219422b23f7324e1524ee6f79",
+  "release_scope": "Customer Profile unified-card UI redesign.",
+  "verification": "PR verification run 31720246156 passed. Re-run the protected verification gate before Vercel deployment.",
   "instructions": "Update this file only after explicit deployment approval."
 }
