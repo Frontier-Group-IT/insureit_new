@@ -213,7 +213,10 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
           <div className="flex flex-col gap-5 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-center gap-3">
               <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white text-[#315FEA] shadow-md"><Icon name="user" className="h-6 w-6" /></span>
-              <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h1 className="truncate text-2xl font-semibold">{name}</h1>{isPartner && partnerId ? <Id value={partnerId} active={activePartner} /> : null}{registrationId ? <Id value={registrationId} active={onboardingComplete} /> : null}</div></div>
+              <div className="min-w-0">
+                <h1 className="truncate text-xl font-semibold">{isPartner ? "Partner" : kind} Application Review</h1>
+                <div className="mt-1 flex flex-wrap items-center gap-2"><p className="truncate text-[13px] font-semibold text-white/90">{name}</p>{isPartner && partnerId ? <Id value={partnerId} active={activePartner} /> : null}{registrationId ? <Id value={registrationId} active={onboardingComplete} /> : null}</div>
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {isPartner ? (
