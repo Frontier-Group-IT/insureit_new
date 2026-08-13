@@ -80,12 +80,27 @@ export const navigationSections:NavigationSection[]=[
   {href:"/tasks?status=completed",label:"Completed",icon:FileCheck2,capability:"view_tasks"}
  ]},
  {key:"reports",label:"Reports",icon:BarChart3,tint:"from-[#3156b8] to-[#17bfc5]",capability:"view_reports",items:[
-  {href:"/reports",label:"Report Workspace",icon:BarChart3,capability:"view_reports"},
-  {href:"/reports#business",label:"Business Reports",icon:BarChart3,capability:"view_reports"},
-  {href:"/reports#distribution",label:"Distribution Reports",icon:UsersRound,capability:"view_reports"},
-  {href:"/reports#renewals",label:"Renewal Reports",icon:Gauge,capability:"view_reports"},
-  {href:"/reports#claims",label:"Claims Reports",icon:ShieldCheck,capability:"view_reports"},
-  {href:"/reports#compliance",label:"Compliance Reports",icon:FileCheck2,capability:"view_reports"}
+  {href:"/reports",label:"Overview",icon:BarChart3,capability:"view_reports"},
+  {kind:"group",key:"report-executive",label:"Executive",icon:Gauge,capability:"view_reports",items:[
+   {href:"/reports/management-pack",label:"Management Pack",icon:BarChart3,capability:"view_reports"},
+   {href:"/reports/management-pack/archive",label:"Month-End Archive",icon:ClipboardList,capability:"view_reports"}
+  ]},
+  {kind:"group",key:"report-business",label:"Business",icon:BarChart3,capability:"view_reports",items:[
+   {href:"/reports/business",label:"Business Performance",icon:BarChart3,capability:"view_reports"},
+   {href:"/reports/distribution",label:"Distribution",icon:UsersRound,capability:"view_reports"},
+   {href:"/reports/finance",label:"Finance",icon:BarChart3,capability:"view_reports"}
+  ]},
+  {kind:"group",key:"report-portfolio",label:"Portfolio & Service",icon:ShieldCheck,capability:"view_reports",items:[
+   {href:"/reports/renewals",label:"Renewals",icon:Gauge,capability:"view_reports"},
+   {href:"/reports/claims",label:"Claims",icon:ShieldCheck,capability:"view_reports"}
+  ]},
+  {kind:"group",key:"report-operations",label:"Operations",icon:FileCheck2,capability:"view_reports",items:[
+   {href:"/reports/operations",label:"Compliance & Operations",icon:FileCheck2,capability:"view_reports"}
+  ]},
+  {kind:"group",key:"report-controls",label:"Controls",icon:CheckSquare2,capability:"view_reports",items:[
+   {href:"/reports/readiness",label:"Readiness",icon:CheckSquare2,capability:"view_reports"},
+   {href:"/reports/governance",label:"Governance",icon:Settings,capability:"manage_users"}
+  ]}
  ]}
 ];
 
