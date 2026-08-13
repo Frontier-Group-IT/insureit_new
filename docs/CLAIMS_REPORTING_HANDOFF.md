@@ -6,9 +6,9 @@
 
 ## Release boundary
 
-Reports Phase 3 Renewals is deployed to production as part of the latest verified main production snapshot.
+Reports Phase 3 Renewals and Reports Phase 4 Claims Reporting are deployed to production.
 
-Production evidence:
+Renewals production evidence:
 
 - GitHub Actions deploy run: `31671745605` — SUCCESS.
 - Vercel deployment: `dpl_8QvNZ2PBkyFFGDSNxuAVDfjTQQ1X`.
@@ -16,7 +16,16 @@ Production evidence:
 - Production alias: `portal.insureit.in`.
 - Post-deploy runtime error check for `/reports/renewals` and `/reports/export/renewals`: none in the selected window.
 
-Claims reporting described below is **implemented, database-applied, and verified, but not intentionally deployed**. Do not update `.deploy/production-trigger.json` for Claims unless the user explicitly asks to deploy it.
+Claims production evidence:
+
+- Production trigger commit: `b4609647bd1dccfbcde84c2e5ad5599201f06e3c`.
+- GitHub Actions deploy run: `31672681979` — SUCCESS.
+- The compulsory verification gate passed access-control/security regressions, OCR regressions, TypeScript, lint, and production build before the deploy hook ran.
+- Vercel deployment: `dpl_8kfab2fy6wWp6EnjiRDWLyFGYs9o`.
+- Vercel state: READY.
+- Production alias: `portal.insureit.in`.
+- Alias error: none.
+- Post-deploy runtime error check for `/reports/claims` and `/reports/export/claims`: none in the selected window.
 
 ## Claims reporting route
 
@@ -149,4 +158,4 @@ Live RPC zero-state smoke test returned a valid report object with all counters 
 
 ## Next report phase
 
-After Claims review/deployment, proceed to Finance reporting. Finance must align with the current billed-only PayIn workflow and should report insurer projected pay-in, billed pay-in, intermediary payout, retention/margin, and exceptions from real stored values only. Do not infer receivables or payout liabilities that are not represented by the existing workflow/state.
+Proceed to Finance reporting. Finance must align with the current billed-only PayIn workflow and should report insurer projected pay-in, billed pay-in, intermediary payout, retention/margin, and exceptions from real stored values only. Do not infer receivables or payout liabilities that are not represented by the existing workflow/state.
