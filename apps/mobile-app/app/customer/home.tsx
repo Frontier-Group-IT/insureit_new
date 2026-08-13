@@ -18,7 +18,6 @@ import { palette } from '@/lib/theme';
 import type { Claim, ClaimTask, Customer, CustomerOnboardingApplication, Profile, Vehicle } from '@/lib/types';
 
 const fleetSketch = require('../../assets/brand/customer-fleet-sketch.png');
-const exchangeVehicleIcon = require('../../assets/brand/exchange-vehicle-icon.png');
 
 const activeStatuses = new Set<Claim['current_status']>(['Draft', 'Accident Reported', 'Initial Documents Pending', 'Initial Documents Verification Pending', 'Initial Documents Submitted', 'Initial Documents Verified', 'Documents Pending', 'Documents Submitted', 'Claim Intimated', 'Surveyor Appointed', 'Vehicle Inspected', 'Final Documents Awaited', 'Final Documents Verification Pending', 'Final Documents Submitted', 'Final Documents Verified', 'Estimate Submitted', 'Approval Pending', 'Repair Started', 'Repair Completed', 'DO Submitted', 'Final Bill Submitted', 'Settlement Under Process']);
 
@@ -142,7 +141,7 @@ export default function CustomerMockupHomeScreen() {
         <ActionTile icon="calendar-month-outline" title="Renewal Dues" body="Vehicle compliance" onPress={() => router.push('/customer/renewals' as Href)} tone="orange" />
         <ActionTile icon="file-document-outline" title="Get Quote" body="New insurance quote" onPress={() => router.push('/customer/insurance-quote')} tone="blue" />
         <ActionTile icon="ticket-confirmation-outline" title="E Challan" body="Check traffic fines" onPress={() => router.push('/customer/e-challan' as Href)} tone="teal" />
-        <ActionTile imageSource={exchangeVehicleIcon} title="Exchange Vehicle" body="Exchange old vehicle" onPress={() => router.push('/customer/support')} tone="green" />
+        <ActionTile icon="shield-plus-outline" title="Start Claim" body="Report insurance claim" onPress={() => router.push('/customer/start-claim')} tone="green" />
       </View>
       <Pressable onPress={() => router.push('/customer/claims')} style={styles.claimCard}><View style={styles.claimHeader}><View style={styles.claimIcon}><MaterialCommunityIcons name="shield-check-outline" size={22} color="#F5B700" /></View><Text style={styles.claimTitle}>Active Claim</Text></View><View style={styles.claimMetrics}><ClaimMetric label="Total Claims" value={claims.length} /><ClaimMetric label="Active Claims" value={active.length} detailLabel="Estimated Amount" detail={money(estimate)} lined /><ClaimMetric label="Settled Claims" value={settled.length} detailLabel="Invoice Amount" detail={money(invoices)} green lined /></View></Pressable>
       <Pressable onPress={() => router.push('/customer/support')} style={styles.supportCard}><MaterialCommunityIcons name="headset" size={33} color={palette.navy} /><View style={styles.supportCopy}><Text style={styles.supportTitle}>Need Help?</Text><Text style={styles.supportText}>Contact our support team</Text></View><MaterialCommunityIcons name="chevron-right" size={28} color={palette.navy} /></Pressable>
