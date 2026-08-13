@@ -4,64 +4,390 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { LoadingState, Message, Screen } from '@/components/ui';
-import { SELF_MANAGED_CLAIM_NOTICE, SELF_MANAGED_MILESTONES, type ClaimMilestone } from '@/lib/claim-service-mode';
+import { SELF_MANAGED_MILESTONES, type ClaimMilestone } from '@/lib/claim-service-mode';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 
-type ClaimSummary = { id:string; claim_no:string; claim_service_mode:string; assistance_status:string; assistance_requested_at:string|null; assistance_notes:string|null; customer_id:string; vehicle_id:string; policy_id:string|null; external_policy_id:string|null; insurance_company_id:string|null; accident_at:string|null };
-type VehicleSummary = { id:string; vehicle_no:string; make:string|null; model:string|null };
-type PolicySummary = { id:string; policy_no:string; end_date:string };
-type InsurerSummary = { id:string; name:string };
-type FinancialSummary = { estimate_amount:number|null; approved_amount:number|null; bill_amount:number|null; do_amount:number|null; customer_paid_amount:number|null; payment_received_amount:number|null; further_deduction_amount:number|null; cashless:boolean|null };
+type ClaimSummary = {
+  id: string;
+  claim_no: string;
+  claim_service_mode: string;
+  assistance_status: string;
+  assistance_requested_at: string | null;
+  assistance_notes: string | null;
+  customer_id: string;
+  vehicle_id: string;
+  policy_id: string | null;
+  external_policy_id: string | null;
+  insurance_company_id: string | null;
+  accident_at: string | null;
+};
+type VehicleSummary = { id: string; vehicle_no: string; make: string | null; model: string | null };
+type PolicySummary = { id: string; policy_no: string; end_date: string };
+type InsurerSummary = { id: string; name: string };
+type FinancialSummary = {
+  estimate_amount: number | null;
+  approved_amount: number | null;
+  bill_amount: number | null;
+  do_amount: number | null;
+  customer_paid_amount: number | null;
+  payment_received_amount: number | null;
+  further_deduction_amount: number | null;
+  cashless: boolean | null;
+};
 
 export default function SelfManagedClaimDetailScreen() {
   const router = useRouter();
   const { id, assistance } = useLocalSearchParams<{ id?: string; assistance?: string }>();
-  const [claim,setClaim]=useState<ClaimSummary|null>(null); const [vehicle,setVehicle]=useState<VehicleSummary|null>(null); const [policy,setPolicy]=useState<PolicySummary|null>(null); const [insurer,setInsurer]=useState<InsurerSummary|null>(null); const [milestones,setMilestones]=useState<ClaimMilestone[]>([]); const [financials,setFinancials]=useState<FinancialSummary|null>(null); const [loading,setLoading]=useState(true); const [error,setError]=useState('');
+  const [claim, setClaim] = useState<ClaimSummary | null>(null);
+  const [vehicle, setVehicle] = useState<VehicleSummary | null>(null);
+  const [policy, setPolicy] = useState<PolicySummary | null>(null);
+  const [insurer, setInsurer] = useState<InsurerSummary | null>(null);
+  const [milestones, setMilestones] = useState<ClaimMilestone[]>([]);
+  const [financials, setFinancials] = useState<FinancialSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  useEffect(()=>{ if(!id){setError('Claim reference is missing.');setLoading(false);return;} let active=true; void(async()=>{
-    const {data:c,error:e}=await supabase.from('claims').select('id,claim_no,claim_service_mode,assistance_status,assistance_requested_at,assistance_notes,customer_id,vehicle_id,policy_id,external_policy_id,insurance_company_id,accident_at').eq('id',id).maybeSingle();
-    if(!active)return; if(e||!c){setError('We could not load this claim.');setLoading(false);return;} if(c.claim_service_mode!=='self_managed'){router.replace({pathname:'/customer/claim-detail',params:{id:c.id}});return;} setClaim(c as ClaimSummary);
-    const policyQuery=c.external_policy_id?supabase.from('external_policies').select('id,policy_no,end_date').eq('id',c.external_policy_id).maybeSingle():c.policy_id?supabase.from('policies').select('id,policy_no,end_date').eq('id',c.policy_id).maybeSingle():Promise.resolve({data:null,error:null});
-    const [v,p,i,m,f]=await Promise.all([supabase.from('vehicles').select('id,vehicle_no,make,model').eq('id',c.vehicle_id).maybeSingle(),policyQuery,c.insurance_company_id?supabase.from('insurance_companies').select('id,name').eq('id',c.insurance_company_id).maybeSingle():Promise.resolve({data:null,error:null}),supabase.from('claim_milestones').select('*').eq('claim_id',c.id).order('created_at',{ascending:true}),supabase.from('claim_financials').select('*').eq('claim_id',c.id).maybeSingle()]);
-    if(!active)return; setVehicle((v.data as VehicleSummary|null)??null); setPolicy((p.data as PolicySummary|null)??null); setInsurer((i.data as InsurerSummary|null)??null); setMilestones((m.data??[]) as ClaimMilestone[]); setFinancials((f.data as FinancialSummary|null)??null); setLoading(false);
-  })(); return()=>{active=false}; },[id,router]);
+  useEffect(() => {
+    if (!id) {
+      setError('Claim reference is missing.');
+      setLoading(false);
+      return;
+    }
+    let active = true;
+    void (async () => {
+      const { data: c, error: e } = await supabase
+        .from('claims')
+        .select('id,claim_no,claim_service_mode,assistance_status,assistance_requested_at,assistance_notes,customer_id,vehicle_id,policy_id,external_policy_id,insurance_company_id,accident_at')
+        .eq('id', id)
+        .maybeSingle();
+      if (!active) return;
+      if (e || !c) {
+        setError('We could not load this claim.');
+        setLoading(false);
+        return;
+      }
+      if (c.claim_service_mode !== 'self_managed') {
+        router.replace({ pathname: '/customer/claim-detail', params: { id: c.id } });
+        return;
+      }
+      setClaim(c as ClaimSummary);
+      const policyQuery = c.external_policy_id
+        ? supabase.from('external_policies').select('id,policy_no,end_date').eq('id', c.external_policy_id).maybeSingle()
+        : c.policy_id
+          ? supabase.from('policies').select('id,policy_no,end_date').eq('id', c.policy_id).maybeSingle()
+          : Promise.resolve({ data: null, error: null });
+      const [v, p, i, m, f] = await Promise.all([
+        supabase.from('vehicles').select('id,vehicle_no,make,model').eq('id', c.vehicle_id).maybeSingle(),
+        policyQuery,
+        c.insurance_company_id
+          ? supabase.from('insurance_companies').select('id,name').eq('id', c.insurance_company_id).maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+        supabase.from('claim_milestones').select('*').eq('claim_id', c.id).order('created_at', { ascending: true }),
+        supabase.from('claim_financials').select('*').eq('claim_id', c.id).maybeSingle(),
+      ]);
+      if (!active) return;
+      setVehicle((v.data as VehicleSummary | null) ?? null);
+      setPolicy((p.data as PolicySummary | null) ?? null);
+      setInsurer((i.data as InsurerSummary | null) ?? null);
+      setMilestones((m.data ?? []) as ClaimMilestone[]);
+      setFinancials((f.data as FinancialSummary | null) ?? null);
+      setLoading(false);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [id, router]);
 
-  const map=useMemo(()=>new Map(milestones.map(x=>[x.milestone_key,x])),[milestones]);
-  const completed=useMemo(()=>SELF_MANAGED_MILESTONES.filter(x=>['completed','not_applicable'].includes(map.get(x.key)?.milestone_status??'')).length,[map]);
-  const next=useMemo(()=>SELF_MANAGED_MILESTONES.find(x=>!['completed','not_applicable'].includes(map.get(x.key)?.milestone_status??''))??null,[map]);
+  const map = useMemo(() => new Map(milestones.map((x) => [x.milestone_key, x])), [milestones]);
+  const completed = useMemo(
+    () => SELF_MANAGED_MILESTONES.filter((x) => ['completed', 'not_applicable'].includes(map.get(x.key)?.milestone_status ?? '')).length,
+    [map],
+  );
+  const next = useMemo(
+    () => SELF_MANAGED_MILESTONES.find((x) => !['completed', 'not_applicable'].includes(map.get(x.key)?.milestone_status ?? '')) ?? null,
+    [map],
+  );
+  const progress = Math.round((completed / SELF_MANAGED_MILESTONES.length) * 100);
 
-  if(loading)return <Screen title="Claim Tracker" showTitleHeader={false}><LoadingState label="Opening claim tracker"/></Screen>;
-  if(error||!claim)return <Screen title="Claim Tracker" showTitleHeader={false}><Message type="error">{error||'Claim not found.'}</Message></Screen>;
+  if (loading) return <Screen title="Claim Tracker" showTitleHeader={false}><LoadingState label="Opening claim tracker" /></Screen>;
+  if (error || !claim) return <Screen title="Claim Tracker" showTitleHeader={false}><Message type="error">{error || 'Claim not found.'}</Message></Screen>;
 
-  const assistanceRequested=claim.assistance_status==='requested';
-  const assistanceDeclined=claim.assistance_status==='declined';
+  const assistanceRequested = claim.assistance_status === 'requested';
+  const assistanceDeclined = claim.assistance_status === 'declined';
+  const serviceTitle = assistanceRequested ? 'Assistance requested' : assistanceDeclined ? 'Self tracked' : 'Self tracked';
+  const serviceSubtitle = assistanceRequested
+    ? 'Sankalp review is pending. You can continue updating the claim.'
+    : assistanceDeclined
+      ? 'This claim remains under your tracking.'
+      : 'You control the journey for this external policy.';
 
-  return <Screen title="Claim Tracker" showTitleHeader={false}>
-    <View style={styles.top}><Pressable onPress={()=>router.back()} style={styles.back}><MaterialCommunityIcons name="arrow-left" size={21} color={palette.navy}/></Pressable><View style={{flex:1}}><Text style={styles.eye}>SELF-TRACKED CLAIM</Text><Text style={styles.title}>{claim.claim_no}</Text><Text style={styles.sub}>{vehicle?.vehicle_no??'Vehicle'} • {insurer?.name??'External insurer'}</Text></View><View style={styles.badge}><Text style={styles.badgeText}>EXTERNAL</Text></View></View>
-    {assistance==='requested'?<Message type="success">Your assistance request has been sent to the Sankalp Claims Desk.</Message>:null}
-    <View style={styles.notice}><MaterialCommunityIcons name="account-edit-outline" size={20} color="#8A5B00"/><Text style={styles.noticeText}>{SELF_MANAGED_CLAIM_NOTICE}</Text></View>
-    <View style={styles.summary}><View style={styles.summaryHead}><View><Text style={styles.summaryLabel}>Journey progress</Text><Text style={styles.summaryValue}>{completed} of 9 milestones</Text></View><Text style={styles.percent}>{Math.round(completed/9*100)}%</Text></View><View style={styles.track}><View style={[styles.fill,{width:`${completed/9*100}%`}]} /></View><View style={styles.meta}><Meta label="Vehicle" value={vehicle?.vehicle_no??'-'}/><Meta label="Policy" value={policy?.policy_no??'-'}/><Meta label="Insurer" value={insurer?.name??'-'}/><Meta label="Accident" value={fmtDateTime(claim.accident_at)}/></View></View>
-    {financials?<View style={styles.financialCard}><Text style={styles.sectionTitle}>Claim Financials</Text><View style={styles.moneyGrid}><Money label="Estimate" value={financials.estimate_amount}/><Money label="Bill" value={financials.bill_amount}/><Money label="DO" value={financials.do_amount}/><Money label="Customer Paid" value={financials.customer_paid_amount}/><Money label="Received" value={financials.payment_received_amount}/><Money label="Further Deduction" value={financials.further_deduction_amount}/></View></View>:null}
-    <View style={styles.sectionHead}><Text style={styles.sectionTitle}>Claim Journey</Text><Text style={styles.hint}>Update each milestone as your insurer, surveyor and workshop progress the case.</Text></View>
-    <View style={styles.timeline}>{SELF_MANAGED_MILESTONES.map((d,index)=>{const m=map.get(d.key);const status=m?.milestone_status??'not_started';const done=status==='completed';const active=next?.key===d.key;return <View key={d.key} style={styles.row}><View style={styles.rail}><View style={[styles.dot,done&&styles.dotDone,active&&styles.dotActive]}>{done?<MaterialCommunityIcons name="check" size={14} color="#FFF"/>:<Text style={[styles.num,active&&styles.numActive]}>{index+1}</Text>}</View>{index<8?<View style={[styles.line,done&&styles.lineDone]}/>:null}</View><View style={[styles.mile,active&&styles.mileActive]}><View style={styles.mileTop}><Text style={[styles.mileTitle,active&&styles.mileTitleActive]}>{d.label}</Text><View style={[styles.status,done&&styles.statusDone]}><Text style={[styles.statusText,done&&styles.statusTextDone]}>{done?'Done':active?'Next':'Pending'}</Text></View></View>{done?<Text style={styles.mileHint}>Recorded {fmtDate(m?.completed_at)}</Text>:active?<Text style={styles.mileHint}>Ready for your update.</Text>:<Text style={styles.mileHint}>Complete the previous milestone first.</Text>}{active&&d.key==='spot_status'?<Action label="Update Spot Status" onPress={()=>router.push({pathname:'/customer/self-managed-spot-status',params:{id:claim.id}})}/>:active&&d.key!=='spot_intimation'?<Action label={`Update ${d.label}`} onPress={()=>router.push({pathname:'/customer/self-managed-milestone',params:{id:claim.id,key:d.key}})}/>:null}</View></View>})}</View>
-    <Pressable style={styles.vault} onPress={()=>router.push({pathname:'/customer/self-managed-documents',params:{id:claim.id}})}>
-      <MaterialCommunityIcons name="folder-multiple-image" size={23} color="#0A43A3"/>
-      <View style={{flex:1}}><Text style={styles.vaultTitle}>Claim Document Vault</Text><Text style={styles.vaultText}>Upload and review supporting files stage by stage. Self-tracked documents stay outside Sankalp verification unless assistance is accepted.</Text></View>
-      <View style={styles.vaultAction}><Text style={styles.vaultActionText}>OPEN</Text><MaterialCommunityIcons name="chevron-right" size={17} color="#0A43A3"/></View>
-    </Pressable>
-    <View style={[styles.assistanceCard,assistanceRequested&&styles.assistancePending,assistanceDeclined&&styles.assistanceDeclined]}>
-      <View style={styles.assistanceIcon}><MaterialCommunityIcons name={assistanceRequested?'clock-outline':assistanceDeclined?'information-outline':'account-tie-voice-outline'} size={22} color={assistanceRequested?'#8A5B00':assistanceDeclined?'#A33B32':'#0A43A3'}/></View>
-      <View style={{flex:1}}>
-        <Text style={styles.assistanceTitle}>{assistanceRequested?'Assistance Requested':assistanceDeclined?'Previous Request Declined':'Need help with this claim?'}</Text>
-        <Text style={styles.assistanceText}>{assistanceRequested?`Awaiting Sankalp Claims Desk review${claim.assistance_requested_at?` since ${fmtDate(claim.assistance_requested_at)}`:''}. Your claim remains self-tracked until accepted.`:assistanceDeclined?'Your claim remains self-tracked. You can continue the journey or send a new assistance request if circumstances have changed.':'Ask the Sankalp Claims Desk to review this external claim. Sending a request does not transfer responsibility until Sankalp accepts it.'}</Text>
-        {!assistanceRequested?<Pressable style={styles.assistanceButton} onPress={()=>router.push({pathname:'/customer/request-claim-assistance',params:{id:claim.id}})}><Text style={styles.assistanceButtonText}>{assistanceDeclined?'REQUEST AGAIN':'REQUEST SANKALP ASSISTANCE'}</Text><MaterialCommunityIcons name="arrow-right" size={15} color="#FFF"/></Pressable>:null}
+  const openMilestone = (key: string) => {
+    if (key === 'spot_intimation') return;
+    if (key === 'spot_status') {
+      router.push({ pathname: '/customer/self-managed-spot-status', params: { id: claim.id } });
+      return;
+    }
+    router.push({ pathname: '/customer/self-managed-milestone', params: { id: claim.id, key } });
+  };
+
+  return (
+    <Screen title="Claim Tracker" showTitleHeader={false}>
+      <View style={styles.headerRow}>
+        <Pressable onPress={() => router.back()} style={styles.backButton}>
+          <MaterialCommunityIcons name="arrow-left" size={21} color={palette.navy} />
+        </Pressable>
+        <View style={styles.headerCopy}>
+          <Text style={styles.overline}>EXTERNAL CLAIM</Text>
+          <Text style={styles.claimNo}>{claim.claim_no}</Text>
+          <Text style={styles.headerSub}>{vehicle?.vehicle_no ?? 'Vehicle'} · {insurer?.name ?? 'External insurer'}</Text>
+        </View>
+        <View style={styles.externalBadge}><Text style={styles.externalBadgeText}>SELF TRACKED</Text></View>
       </View>
-    </View>
-  </Screen>;
+
+      {assistance === 'requested' ? <Message type="success">Your assistance request has been sent to Sankalp.</Message> : null}
+
+      <View style={[styles.serviceCard, assistanceRequested && styles.serviceCardPending]}>
+        <View style={[styles.serviceIcon, assistanceRequested && styles.serviceIconPending]}>
+          <MaterialCommunityIcons name={assistanceRequested ? 'clock-outline' : 'account-edit-outline'} size={20} color={assistanceRequested ? '#8A5B00' : '#0A43A3'} />
+        </View>
+        <View style={styles.flexOne}>
+          <Text style={styles.serviceTitle}>{serviceTitle}</Text>
+          <Text style={styles.serviceSubtitle}>{serviceSubtitle}</Text>
+        </View>
+        {assistanceRequested ? <View style={styles.pendingPill}><Text style={styles.pendingPillText}>PENDING</Text></View> : null}
+      </View>
+
+      <View style={styles.heroCard}>
+        <View style={styles.heroTop}>
+          <View style={styles.flexOne}>
+            <Text style={styles.heroEyebrow}>CLAIM PROGRESS</Text>
+            <Text style={styles.heroValue}>{progress}% complete</Text>
+            <Text style={styles.heroMeta}>{completed} of {SELF_MANAGED_MILESTONES.length} milestones recorded</Text>
+          </View>
+          <View style={styles.progressRing}><Text style={styles.progressRingText}>{progress}%</Text></View>
+        </View>
+        <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progress}%` }]} /></View>
+        <View style={styles.currentStageCard}>
+          <View style={styles.currentStageIcon}><MaterialCommunityIcons name={next ? 'flag-outline' : 'check-decagram'} size={20} color="#FFFFFF" /></View>
+          <View style={styles.flexOne}>
+            <Text style={styles.currentStageLabel}>{next ? 'CURRENT STEP' : 'JOURNEY COMPLETE'}</Text>
+            <Text style={styles.currentStageTitle}>{next?.label ?? 'All milestones recorded'}</Text>
+            <Text style={styles.currentStageHint}>{next ? 'Update this when the insurer or workshop moves the claim forward.' : 'Your claim history is complete and ready for reference.'}</Text>
+          </View>
+          {next && next.key !== 'spot_intimation' ? (
+            <Pressable style={styles.currentStageAction} onPress={() => openMilestone(next.key)}>
+              <Text style={styles.currentStageActionText}>UPDATE</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+
+      <View style={styles.infoCard}>
+        <View style={styles.infoGrid}>
+          <Info label="Vehicle" value={vehicle?.vehicle_no ?? '-'} />
+          <Info label="Policy" value={policy?.policy_no ?? '-'} />
+          <Info label="Insurer" value={insurer?.name ?? '-'} />
+          <Info label="Accident" value={fmtDateTime(claim.accident_at)} />
+        </View>
+      </View>
+
+      {financials ? (
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeaderRow}>
+            <View>
+              <Text style={styles.sectionEyebrow}>FINANCIAL SNAPSHOT</Text>
+              <Text style={styles.sectionTitle}>Claim amounts</Text>
+            </View>
+            {financials.cashless != null ? <View style={styles.cashlessPill}><Text style={styles.cashlessPillText}>{financials.cashless ? 'CASHLESS' : 'REIMBURSEMENT'}</Text></View> : null}
+          </View>
+          <View style={styles.moneyGrid}>
+            <Money label="Estimate" value={financials.estimate_amount} />
+            <Money label="Approved" value={financials.approved_amount} />
+            <Money label="Final bill" value={financials.bill_amount} />
+            <Money label="DO amount" value={financials.do_amount} />
+            <Money label="Customer paid" value={financials.customer_paid_amount} />
+            <Money label="Payment received" value={financials.payment_received_amount} />
+          </View>
+          {financials.further_deduction_amount != null && financials.further_deduction_amount > 0 ? (
+            <View style={styles.deductionRow}>
+              <Text style={styles.deductionLabel}>Further deduction</Text>
+              <Text style={styles.deductionValue}>{money(financials.further_deduction_amount)}</Text>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+
+      <View style={styles.sectionHeaderStandalone}>
+        <Text style={styles.sectionEyebrow}>CLAIM JOURNEY</Text>
+        <Text style={styles.sectionTitle}>9-stage tracker</Text>
+        <Text style={styles.sectionHint}>Completed stages can be reopened to review or correct the information you entered.</Text>
+      </View>
+
+      <View style={styles.timelineCard}>
+        {SELF_MANAGED_MILESTONES.map((definition, index) => {
+          const milestone = map.get(definition.key);
+          const status = milestone?.milestone_status ?? 'not_started';
+          const done = status === 'completed' || status === 'not_applicable';
+          const active = next?.key === definition.key;
+          const canOpen = definition.key !== 'spot_intimation' && (done || active);
+          return (
+            <View key={definition.key} style={styles.timelineRow}>
+              <View style={styles.timelineRail}>
+                <View style={[styles.timelineDot, done && styles.timelineDotDone, active && styles.timelineDotActive]}>
+                  {done ? <MaterialCommunityIcons name="check" size={14} color="#FFF" /> : <Text style={[styles.timelineNumber, active && styles.timelineNumberActive]}>{index + 1}</Text>}
+                </View>
+                {index < SELF_MANAGED_MILESTONES.length - 1 ? <View style={[styles.timelineLine, done && styles.timelineLineDone]} /> : null}
+              </View>
+              <Pressable disabled={!canOpen} onPress={() => openMilestone(definition.key)} style={[styles.milestoneCard, active && styles.milestoneCardActive, done && styles.milestoneCardDone]}>
+                <View style={styles.milestoneTop}>
+                  <View style={styles.flexOne}>
+                    <Text style={[styles.milestoneTitle, active && styles.milestoneTitleActive]}>{definition.label}</Text>
+                    <Text style={styles.milestoneHint}>{done ? `Recorded ${fmtDate(milestone?.completed_at)}` : active ? 'Action required from you' : 'Upcoming'}</Text>
+                  </View>
+                  <View style={[styles.statusPill, done && styles.statusPillDone, active && styles.statusPillActive]}>
+                    <Text style={[styles.statusText, done && styles.statusTextDone, active && styles.statusTextActive]}>{done ? 'DONE' : active ? 'CURRENT' : 'UPCOMING'}</Text>
+                  </View>
+                </View>
+                {canOpen ? (
+                  <View style={styles.milestoneFooter}>
+                    <Text style={styles.milestoneFooterText}>{done ? 'Review / edit' : 'Update stage'}</Text>
+                    <MaterialCommunityIcons name="chevron-right" size={17} color="#0A43A3" />
+                  </View>
+                ) : null}
+              </Pressable>
+            </View>
+          );
+        })}
+      </View>
+
+      <Pressable style={styles.quickActionCard} onPress={() => router.push({ pathname: '/customer/self-managed-documents', params: { id: claim.id } })}>
+        <View style={styles.quickActionIcon}><MaterialCommunityIcons name="folder-multiple-image" size={22} color="#0A43A3" /></View>
+        <View style={styles.flexOne}>
+          <Text style={styles.quickActionTitle}>Claim Document Vault</Text>
+          <Text style={styles.quickActionText}>View and upload supporting files for each stage.</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={21} color="#0A43A3" />
+      </Pressable>
+
+      <View style={[styles.assistanceCard, assistanceRequested && styles.assistancePending, assistanceDeclined && styles.assistanceDeclined]}>
+        <View style={styles.assistanceIcon}>
+          <MaterialCommunityIcons name={assistanceRequested ? 'clock-outline' : assistanceDeclined ? 'information-outline' : 'account-tie-voice-outline'} size={22} color={assistanceRequested ? '#8A5B00' : assistanceDeclined ? '#A33B32' : '#0A43A3'} />
+        </View>
+        <View style={styles.flexOne}>
+          <Text style={styles.assistanceTitle}>{assistanceRequested ? 'Sankalp review pending' : assistanceDeclined ? 'Previous request declined' : 'Need help with this claim?'}</Text>
+          <Text style={styles.assistanceText}>{assistanceRequested ? `Requested ${claim.assistance_requested_at ? fmtDate(claim.assistance_requested_at) : 'recently'}. The claim remains self-tracked until Sankalp accepts it.` : assistanceDeclined ? 'Continue tracking the claim yourself, or request assistance again if circumstances have changed.' : 'Ask Sankalp to review this external claim. Responsibility transfers only after Sankalp accepts the request.'}</Text>
+          {!assistanceRequested ? (
+            <Pressable style={styles.assistanceButton} onPress={() => router.push({ pathname: '/customer/request-claim-assistance', params: { id: claim.id } })}>
+              <Text style={styles.assistanceButtonText}>{assistanceDeclined ? 'REQUEST AGAIN' : 'REQUEST ASSISTANCE'}</Text>
+              <MaterialCommunityIcons name="arrow-right" size={15} color="#FFF" />
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+    </Screen>
+  );
 }
-function Action({label,onPress}:{label:string;onPress:()=>void}){return <Pressable onPress={onPress} style={styles.action}><Text style={styles.actionText}>{label}</Text><MaterialCommunityIcons name="arrow-right" size={16} color="#FFF"/></Pressable>}
-function Meta({label,value}:{label:string;value:string}){return <View style={styles.metaItem}><Text style={styles.metaLabel}>{label}</Text><Text style={styles.metaValue} numberOfLines={2}>{value}</Text></View>}
-function Money({label,value}:{label:string;value:number|null}){return <View style={styles.money}><Text style={styles.moneyLabel}>{label}</Text><Text style={styles.moneyValue}>{value==null?'—':`₹${Number(value).toLocaleString('en-IN')}`}</Text></View>}
-function fmtDate(v?:string|null){return v?new Date(v).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'-'} function fmtDateTime(v?:string|null){return v?new Date(v).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'-'}
-const styles=StyleSheet.create({top:{flexDirection:'row',gap:10,alignItems:'flex-start',marginTop:-12,marginBottom:12},back:{width:42,height:42,borderRadius:14,borderWidth:1,borderColor:'#DCE8F4',backgroundColor:'#FFF',alignItems:'center',justifyContent:'center'},eye:{color:'#0A43A3',fontSize:9.5,fontWeight:'900',letterSpacing:.8},title:{color:palette.navy,fontSize:22,fontWeight:'900'},sub:{color:'#667085',fontSize:11,fontWeight:'700',marginTop:3},badge:{paddingHorizontal:8,paddingVertical:6,borderRadius:10,backgroundColor:'#EAF2FF',borderWidth:1,borderColor:'#C4D9F7'},badgeText:{color:'#0A43A3',fontSize:8.5,fontWeight:'900'},notice:{flexDirection:'row',gap:8,padding:12,borderRadius:15,backgroundColor:'#FFF8E8',borderWidth:1,borderColor:'#F2D99F',marginBottom:12},noticeText:{flex:1,color:'#77520B',fontSize:10.5,lineHeight:16,fontWeight:'700'},summary:{borderRadius:20,backgroundColor:'#082A66',padding:15,marginBottom:12},summaryHead:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},summaryLabel:{color:'#BFD3F2',fontSize:10,fontWeight:'800'},summaryValue:{color:'#FFF',fontSize:16,fontWeight:'900',marginTop:2},percent:{color:'#FFF',fontSize:12,fontWeight:'900',backgroundColor:'#174A93',padding:9,borderRadius:11},track:{height:6,borderRadius:99,backgroundColor:'#244A7D',overflow:'hidden',marginTop:12},fill:{height:'100%',backgroundColor:'#F3C83A'},meta:{flexDirection:'row',flexWrap:'wrap',borderTopWidth:1,borderTopColor:'#244A7D',marginTop:12,paddingTop:8},metaItem:{width:'50%',paddingVertical:4},metaLabel:{color:'#9DB6D8',fontSize:8.5,fontWeight:'800'},metaValue:{color:'#FFF',fontSize:10.5,fontWeight:'800',marginTop:2},financialCard:{borderRadius:18,backgroundColor:'#FFF',borderWidth:1,borderColor:'#DDE7F2',padding:13,marginBottom:13},moneyGrid:{flexDirection:'row',flexWrap:'wrap',marginTop:8},money:{width:'33.33%',paddingVertical:7,paddingRight:5},moneyLabel:{color:'#7A8799',fontSize:8.5,fontWeight:'800'},moneyValue:{color:palette.navy,fontSize:11,fontWeight:'900',marginTop:2},sectionHead:{marginBottom:8},sectionTitle:{color:palette.navy,fontSize:15,fontWeight:'900'},hint:{color:'#667085',fontSize:10.5,lineHeight:15,fontWeight:'600',marginTop:2},timeline:{borderRadius:20,backgroundColor:'#FFF',borderWidth:1,borderColor:'#DDE7F2',padding:13,marginBottom:12},row:{flexDirection:'row',alignItems:'stretch'},rail:{width:34,alignItems:'center'},dot:{width:27,height:27,borderRadius:14,borderWidth:2,borderColor:'#C8D1DC',backgroundColor:'#FFF',alignItems:'center',justifyContent:'center',zIndex:2},dotDone:{backgroundColor:'#14845C',borderColor:'#14845C'},dotActive:{borderColor:'#0A43A3',backgroundColor:'#EAF2FF'},num:{color:'#98A2B3',fontSize:9,fontWeight:'900'},numActive:{color:'#0A43A3'},line:{flex:1,width:2,minHeight:34,backgroundColor:'#E4E9F0'},lineDone:{backgroundColor:'#8FD5BA'},mile:{flex:1,marginBottom:9,padding:10,borderRadius:14,backgroundColor:'#F8FAFC',borderWidth:1,borderColor:'#EEF1F5'},mileActive:{backgroundColor:'#F4F8FF',borderColor:'#BFD5F4'},mileTop:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:8},mileTitle:{flex:1,color:'#344054',fontSize:12,fontWeight:'900'},mileTitleActive:{color:'#0A43A3'},mileHint:{color:'#7A8799',fontSize:9.8,fontWeight:'600',marginTop:4},status:{paddingHorizontal:7,paddingVertical:4,borderRadius:99,backgroundColor:'#EEF1F5'},statusDone:{backgroundColor:'#E8F8F0'},statusText:{color:'#667085',fontSize:8.5,fontWeight:'900'},statusTextDone:{color:'#14845C'},action:{marginTop:9,minHeight:36,borderRadius:11,backgroundColor:'#0A43A3',flexDirection:'row',gap:6,alignItems:'center',justifyContent:'center'},actionText:{color:'#FFF',fontSize:10.5,fontWeight:'900'},vault:{flexDirection:'row',gap:10,padding:13,borderRadius:17,backgroundColor:'#F4F8FF',borderWidth:1,borderColor:'#D7E6FA',alignItems:'center',marginBottom:12},vaultTitle:{color:palette.navy,fontSize:12,fontWeight:'900'},vaultText:{color:'#5E6E82',fontSize:10,lineHeight:15,fontWeight:'600',marginTop:2},vaultAction:{flexDirection:'row',alignItems:'center',paddingLeft:5},vaultActionText:{color:'#0A43A3',fontSize:8.5,fontWeight:'900'},assistanceCard:{flexDirection:'row',gap:10,padding:14,borderRadius:18,backgroundColor:'#F4F8FF',borderWidth:1,borderColor:'#CADDF7',marginBottom:8},assistancePending:{backgroundColor:'#FFF8E8',borderColor:'#F2D99F'},assistanceDeclined:{backgroundColor:'#FFF4F2',borderColor:'#F0C6C0'},assistanceIcon:{width:36,height:36,borderRadius:12,backgroundColor:'#FFF',alignItems:'center',justifyContent:'center'},assistanceTitle:{color:palette.navy,fontSize:12.5,fontWeight:'900'},assistanceText:{color:'#5E6E82',fontSize:10,lineHeight:15,fontWeight:'600',marginTop:3},assistanceButton:{minHeight:36,borderRadius:11,backgroundColor:'#0A43A3',flexDirection:'row',gap:6,alignItems:'center',justifyContent:'center',marginTop:10},assistanceButtonText:{color:'#FFF',fontSize:9.5,fontWeight:'900'}});
+
+function Info({ label, value }: { label: string; value: string }) {
+  return <View style={styles.infoItem}><Text style={styles.infoLabel}>{label}</Text><Text style={styles.infoValue} numberOfLines={2}>{value}</Text></View>;
+}
+function Money({ label, value }: { label: string; value: number | null }) {
+  return <View style={styles.moneyItem}><Text style={styles.moneyLabel}>{label}</Text><Text style={styles.moneyValue}>{value == null ? '—' : money(value)}</Text></View>;
+}
+function money(value: number) { return `₹${Number(value).toLocaleString('en-IN')}`; }
+function fmtDate(value?: string | null) { return value ? new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'; }
+function fmtDateTime(value?: string | null) { return value ? new Date(value).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'; }
+
+const styles = StyleSheet.create({
+  flexOne: { flex: 1 },
+  headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: -12, marginBottom: 12 },
+  backButton: { width: 42, height: 42, borderRadius: 14, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center' },
+  headerCopy: { flex: 1 },
+  overline: { color: '#0A43A3', fontSize: 9, fontWeight: '900', letterSpacing: 0.9 },
+  claimNo: { color: palette.navy, fontSize: 23, fontWeight: '900', marginTop: 1 },
+  headerSub: { color: '#667085', fontSize: 11, fontWeight: '700', marginTop: 3 },
+  externalBadge: { paddingHorizontal: 8, paddingVertical: 6, borderRadius: 10, backgroundColor: '#EEF4FF', borderWidth: 1, borderColor: '#CDDDF8' },
+  externalBadgeText: { color: '#0A43A3', fontSize: 8, fontWeight: '900' },
+  serviceCard: { flexDirection: 'row', gap: 10, alignItems: 'center', padding: 12, borderRadius: 16, backgroundColor: '#F5F8FD', borderWidth: 1, borderColor: '#DCE6F3', marginBottom: 12 },
+  serviceCardPending: { backgroundColor: '#FFF9EA', borderColor: '#F1DC9C' },
+  serviceIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E8F1FF' },
+  serviceIconPending: { backgroundColor: '#FFF0C5' },
+  serviceTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
+  serviceSubtitle: { color: '#667085', fontSize: 10, lineHeight: 14, fontWeight: '600', marginTop: 2 },
+  pendingPill: { paddingHorizontal: 8, paddingVertical: 5, borderRadius: 99, backgroundColor: '#FFE7A3' },
+  pendingPillText: { color: '#8A5B00', fontSize: 8, fontWeight: '900' },
+  heroCard: { borderRadius: 22, backgroundColor: '#082A66', padding: 16, marginBottom: 12 },
+  heroTop: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  heroEyebrow: { color: '#AFC6E9', fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
+  heroValue: { color: '#FFF', fontSize: 21, fontWeight: '900', marginTop: 2 },
+  heroMeta: { color: '#BFD0E8', fontSize: 10, fontWeight: '700', marginTop: 3 },
+  progressRing: { width: 54, height: 54, borderRadius: 27, backgroundColor: '#174A93', borderWidth: 4, borderColor: '#F3C83A', alignItems: 'center', justifyContent: 'center' },
+  progressRingText: { color: '#FFF', fontSize: 11, fontWeight: '900' },
+  progressTrack: { height: 6, borderRadius: 99, backgroundColor: '#244A7D', overflow: 'hidden', marginTop: 13 },
+  progressFill: { height: '100%', backgroundColor: '#F3C83A' },
+  currentStageCard: { flexDirection: 'row', gap: 10, alignItems: 'center', borderRadius: 16, backgroundColor: '#123D7E', marginTop: 13, padding: 12 },
+  currentStageIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#24569C' },
+  currentStageLabel: { color: '#AFC6E9', fontSize: 8, fontWeight: '900', letterSpacing: 0.7 },
+  currentStageTitle: { color: '#FFF', fontSize: 13, fontWeight: '900', marginTop: 1 },
+  currentStageHint: { color: '#C9D8EE', fontSize: 9.5, lineHeight: 13, fontWeight: '600', marginTop: 2 },
+  currentStageAction: { paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: '#FFF' },
+  currentStageActionText: { color: '#0A43A3', fontSize: 8.5, fontWeight: '900' },
+  infoCard: { borderRadius: 18, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E1E8F0', padding: 12, marginBottom: 12 },
+  infoGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  infoItem: { width: '50%', paddingVertical: 6, paddingRight: 8 },
+  infoLabel: { color: '#8A95A5', fontSize: 8.5, fontWeight: '800' },
+  infoValue: { color: palette.navy, fontSize: 10.5, fontWeight: '900', marginTop: 2 },
+  sectionCard: { borderRadius: 18, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E1E8F0', padding: 13, marginBottom: 14 },
+  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sectionHeaderStandalone: { marginBottom: 8 },
+  sectionEyebrow: { color: '#0A43A3', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.7 },
+  sectionTitle: { color: palette.navy, fontSize: 15.5, fontWeight: '900', marginTop: 1 },
+  sectionHint: { color: '#667085', fontSize: 10, lineHeight: 14, fontWeight: '600', marginTop: 3 },
+  cashlessPill: { paddingHorizontal: 8, paddingVertical: 5, borderRadius: 99, backgroundColor: '#EAF7F1' },
+  cashlessPillText: { color: '#147A57', fontSize: 7.5, fontWeight: '900' },
+  moneyGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 9 },
+  moneyItem: { width: '33.33%', paddingVertical: 7, paddingRight: 6 },
+  moneyLabel: { color: '#7A8799', fontSize: 8, fontWeight: '800' },
+  moneyValue: { color: palette.navy, fontSize: 11, fontWeight: '900', marginTop: 2 },
+  deductionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#EEF1F5', marginTop: 7, paddingTop: 10 },
+  deductionLabel: { color: '#9A3F36', fontSize: 10, fontWeight: '800' },
+  deductionValue: { color: '#9A3F36', fontSize: 12, fontWeight: '900' },
+  timelineCard: { borderRadius: 20, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E1E8F0', padding: 12, marginBottom: 12 },
+  timelineRow: { flexDirection: 'row', alignItems: 'stretch' },
+  timelineRail: { width: 34, alignItems: 'center' },
+  timelineDot: { width: 27, height: 27, borderRadius: 14, borderWidth: 2, borderColor: '#CDD5DF', backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center', zIndex: 2 },
+  timelineDotDone: { backgroundColor: '#14845C', borderColor: '#14845C' },
+  timelineDotActive: { backgroundColor: '#EAF2FF', borderColor: '#0A43A3' },
+  timelineNumber: { color: '#98A2B3', fontSize: 9, fontWeight: '900' },
+  timelineNumberActive: { color: '#0A43A3' },
+  timelineLine: { flex: 1, width: 2, minHeight: 38, backgroundColor: '#E7EBF0' },
+  timelineLineDone: { backgroundColor: '#9BD8BF' },
+  milestoneCard: { flex: 1, marginBottom: 9, padding: 11, borderRadius: 14, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#EEF1F5' },
+  milestoneCardActive: { backgroundColor: '#F2F7FF', borderColor: '#BBD2F3' },
+  milestoneCardDone: { backgroundColor: '#FBFDFC' },
+  milestoneTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  milestoneTitle: { color: '#344054', fontSize: 12, fontWeight: '900' },
+  milestoneTitleActive: { color: '#0A43A3' },
+  milestoneHint: { color: '#7A8799', fontSize: 9.5, fontWeight: '600', marginTop: 3 },
+  statusPill: { paddingHorizontal: 7, paddingVertical: 4, borderRadius: 99, backgroundColor: '#EEF1F5' },
+  statusPillDone: { backgroundColor: '#E5F5ED' },
+  statusPillActive: { backgroundColor: '#DCEAFF' },
+  statusText: { color: '#7B8794', fontSize: 7.5, fontWeight: '900' },
+  statusTextDone: { color: '#147A57' },
+  statusTextActive: { color: '#0A43A3' },
+  milestoneFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', borderTopWidth: 1, borderTopColor: '#E7ECF2', marginTop: 9, paddingTop: 8 },
+  milestoneFooterText: { color: '#0A43A3', fontSize: 9, fontWeight: '900' },
+  quickActionCard: { flexDirection: 'row', gap: 11, alignItems: 'center', padding: 13, borderRadius: 18, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#DCE7F4', marginBottom: 12 },
+  quickActionIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
+  quickActionTitle: { color: palette.navy, fontSize: 12, fontWeight: '900' },
+  quickActionText: { color: '#667085', fontSize: 9.5, fontWeight: '600', marginTop: 2 },
+  assistanceCard: { flexDirection: 'row', gap: 10, padding: 13, borderRadius: 18, backgroundColor: '#F4F8FF', borderWidth: 1, borderColor: '#C9DAF2', marginBottom: 24 },
+  assistancePending: { backgroundColor: '#FFF9EA', borderColor: '#F1DC9C' },
+  assistanceDeclined: { backgroundColor: '#FFF5F4', borderColor: '#EBC5C0' },
+  assistanceIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF' },
+  assistanceTitle: { color: palette.navy, fontSize: 12, fontWeight: '900' },
+  assistanceText: { color: '#667085', fontSize: 9.8, lineHeight: 14, fontWeight: '600', marginTop: 3 },
+  assistanceButton: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#0A43A3', paddingHorizontal: 11, paddingVertical: 8, borderRadius: 10, marginTop: 9 },
+  assistanceButtonText: { color: '#FFF', fontSize: 8.5, fontWeight: '900' },
+});
