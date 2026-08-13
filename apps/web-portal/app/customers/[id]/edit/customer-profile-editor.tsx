@@ -87,7 +87,7 @@ export function CustomerProfileEditor({ customer, documents, vehicles, agents, a
         <input type="hidden" name="assigned_agent_id" value={customer.assigned_agent_id ?? ""} />
 
         <section className="overflow-hidden rounded-2xl border border-[#173E7B] bg-gradient-to-br from-[#071D49] via-[#0A2B65] to-[#0C4A9A] text-white shadow-[0_18px_45px_rgba(7,29,73,.18)]">
-          <div className="flex flex-col gap-3 px-4 py-3.5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="px-4 py-3.5">
             <div className="flex min-w-0 items-center gap-3">
               <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-[#315FEA] shadow-md">
                 <UserRound className="h-5 w-5" strokeWidth={1.9} />
@@ -99,10 +99,6 @@ export function CustomerProfileEditor({ customer, documents, vehicles, agents, a
                 </div>
                 <p className="mt-0.5 text-[10.5px] font-medium text-blue-100">{customer.phone}{customer.company_name ? ` · ${customer.company_name}` : ""}</p>
               </div>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Link href="/customers" className="inline-flex h-8 items-center rounded-md border border-white/35 bg-white/10 px-3 text-[10.5px] font-semibold text-white transition hover:bg-white/15">Back</Link>
-              <FormSubmitButton label="Save changes" className="h-8 border border-white/20 bg-white px-3 text-[10.5px] font-semibold text-[#12386F] shadow-sm hover:bg-blue-50" />
             </div>
           </div>
 
@@ -116,44 +112,46 @@ export function CustomerProfileEditor({ customer, documents, vehicles, agents, a
           </div>
         </section>
 
-        <div className="space-y-2">
-          <Panel title="Customer profile">
-            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+        <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white shadow-[var(--shadow-panel)]">
+          <div className="border-b border-[var(--border)] px-4 py-3">
+            <h3 className="text-[12px] font-semibold text-[var(--text)]">Personal Information</h3>
+            <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               <Field label="Customer name" name="contact_name" defaultValue={customer.contact_name} required />
               <ReadOnlyField label="Login mobile" value={customer.phone} hint="Linked with OTP account" />
               <Field label="Email" name="email" type="email" defaultValue={customer.email ?? ""} />
             </div>
-          </Panel>
+          </div>
 
-          <Panel title="Address">
-            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+          <div className="border-b border-[var(--border)] px-4 py-3">
+            <h3 className="text-[12px] font-semibold text-[var(--text)]">Address Details</h3>
+            <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
               <Field label="Street" name="address_street" defaultValue={customer.address_street ?? ""} />
               <Field label="Locality" name="address_locality" defaultValue={customer.address_locality ?? ""} />
               <Field label="City" name="city" defaultValue={customer.city ?? ""} />
               <Field label="State" name="state" defaultValue={customer.state ?? ""} />
               <Field label="PIN code" name="postal_code" defaultValue={customer.postal_code ?? ""} />
             </div>
-          </Panel>
+          </div>
 
-          <section className="rounded-[var(--radius-panel)] border border-[var(--border)] bg-white shadow-[var(--shadow-panel)]">
-            <div className="flex flex-col gap-2 border-b border-[var(--border)] px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-              <h3 className="text-[11.5px] font-semibold text-[var(--text)]">KYC and GST Details</h3>
+          <div className="border-b border-[var(--border)] px-4 py-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="text-[12px] font-semibold text-[var(--text)]">KYC and GST Details</h3>
               <label className="inline-flex items-center gap-2 text-[10.5px] font-semibold text-[#475569]">
                 <input type="checkbox" name="is_gst_registered" value="true" checked={gstRegistered} onChange={(event) => setGstRegistered(event.target.checked)} className="h-3.5 w-3.5 rounded border-[#CBD5E1]" />
                 GST Registered
               </label>
             </div>
-            <div className="grid gap-2 p-3 md:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               <Field label="PAN number" name="pan_number" defaultValue={customer.pan_number ?? ""} maxLength={10} uppercase />
               <ReadOnlyField label="Aadhaar" value={customer.aadhaar_last_four ? `**** ${customer.aadhaar_last_four}` : "Not available"} />
               <Field label="Legal trade name" name="legal_trade_name" defaultValue={customer.legal_trade_name ?? customer.company_name ?? ""} />
               {gstRegistered ? <Field label="GST number" name="gst_number" defaultValue={customer.gst_number ?? ""} maxLength={15} uppercase /> : null}
             </div>
-          </section>
+          </div>
 
-          <section id="documents" className="scroll-mt-20 rounded-2xl border border-[#D9DDF8] bg-[#F5F5FF] p-3 shadow-[0_8px_24px_rgba(49,95,234,0.05)]">
-            <h3 className="mb-2.5 text-[11.5px] font-semibold text-[var(--text)]">Documents</h3>
-            <div className={`grid gap-2.5 ${requiredTypes.length === 4 ? "md:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-3"}`}>
+          <div id="documents" className="scroll-mt-20 border-b border-[var(--border)] bg-[#F7F8FF] px-4 py-3">
+            <h3 className="text-[12px] font-semibold text-[var(--text)]">Documents</h3>
+            <div className={`mt-3 grid gap-2.5 ${requiredTypes.length === 4 ? "md:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-3"}`}>
               {requiredTypes.map((type) => {
                 const document = documentMap.get(type);
                 const selectedFileName = selectedFileNames[type];
@@ -177,8 +175,13 @@ export function CustomerProfileEditor({ customer, documents, vehicles, agents, a
                 );
               })}
             </div>
-          </section>
-        </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 px-4 py-3">
+            <Link href="/customers" className="inline-flex h-9 items-center justify-center rounded-md border border-[#CBD5E1] bg-white px-4 text-[10.5px] font-semibold text-[#334155] transition hover:bg-[#F8FAFC]">Back</Link>
+            <FormSubmitButton label="Save changes" className="h-9 bg-[#315FEA] px-4 text-[10.5px] font-semibold text-white shadow-sm hover:bg-[#2851D9]" />
+          </div>
+        </section>
       </form>
     </>
   );
@@ -201,10 +204,9 @@ function StatusIcon({ status }: { status: string }) {
   const active = status === "active";
   const Icon = active ? CircleCheck : CircleAlert;
   const label = active ? "Active" : "KYC incomplete";
-  return <span title={label} aria-label={label} className={`inline-grid h-5 w-5 place-items-center rounded-full border ${active ? "border-emerald-300/50 bg-emerald-300/15 text-emerald-200" : "border-amber-300/50 bg-amber-300/15 text-amber-200"}`}><Icon className="h-3.5 w-3.5" strokeWidth={2} /></span>;
+  return <span title={label} aria-label={label} className={`inline-grid h-[18px] w-[18px] place-items-center rounded-full ${active ? "bg-emerald-500 text-white shadow-[0_0_0_2px_rgba(255,255,255,.18)]" : "border border-amber-300/60 bg-amber-300/15 text-amber-200"}`}><Icon className={active ? "h-3 w-3" : "h-3.5 w-3.5"} strokeWidth={active ? 2.5 : 2} /></span>;
 }
 function ValidationPopup({ message, onClose }: { message: string; onClose: () => void }) { return <div className="fixed inset-0 z-[160] grid place-items-center bg-[#0F172A]/35 px-4 backdrop-blur-[2px]" role="alertdialog" aria-modal="true" aria-labelledby="validation-title"><div className="w-full max-w-[420px] overflow-hidden rounded-2xl border border-white/70 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.28)]"><div className="flex items-start gap-3 border-b border-[#F1D7D7] bg-[#FFF7F7] px-5 py-4"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-red-100 text-[18px] text-red-700">!</span><div><h3 id="validation-title" className="text-[14px] font-semibold text-[#7F1D1D]">Complete GST details</h3><p className="mt-1 text-[11.5px] leading-5 text-[#9F3232]">{message}</p></div></div><div className="flex justify-end px-5 py-3"><button type="button" autoFocus onClick={onClose} className="inline-flex h-9 items-center justify-center rounded-md bg-[#4F46E5] px-4 text-[11px] font-semibold text-white shadow-sm hover:bg-[#4338CA]">Go to field</button></div></div></div>; }
-function Panel({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) { return <section id={id} className="scroll-mt-20 rounded-[var(--radius-panel)] border border-[var(--border)] bg-white shadow-[var(--shadow-panel)]"><div className="border-b border-[var(--border)] px-3 py-2"><h3 className="text-[11.5px] font-semibold text-[var(--text)]">{title}</h3></div><div className="p-3">{children}</div></section>; }
 function Field({ label, name, defaultValue = "", type = "text", required = false, maxLength, uppercase = false }: { label: string; name: string; defaultValue?: string; type?: string; required?: boolean; maxLength?: number; uppercase?: boolean }) { return <div><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} type={type} required={required} maxLength={maxLength} defaultValue={defaultValue} className={`${inputClass} ${uppercase ? "uppercase" : ""}`} onInput={uppercase ? (event) => { event.currentTarget.value = event.currentTarget.value.toUpperCase(); } : undefined} /></div>; }
 function ReadOnlyField({ label, value, hint }: { label: string; value: string; hint?: string }) { return <div><span className={labelClass}>{label}</span><div className="flex h-8 items-center justify-between rounded-md border border-[#E1E7EF] bg-[#F5F7FA] px-2.5 text-[11.5px] text-[#526176]"><span>{value}</span>{hint ? <span className="text-[8.5px] text-[#8A96A7]">{hint}</span> : null}</div></div>; }
 function DocumentStatus({ status }: { status: string }) { const label = status === "verified" ? "Verified" : status === "rejected" ? "Rejected" : "Uploaded · Pending verification"; return <span className={`inline-flex max-w-[132px] items-center justify-center rounded-full border px-1.5 py-0.5 text-center text-[8px] font-semibold leading-tight ${status === "verified" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : status === "rejected" ? "border-red-200 bg-red-50 text-red-700" : "border-blue-200 bg-blue-50 text-blue-700"}`}>{label}</span>; }
