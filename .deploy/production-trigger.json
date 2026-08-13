@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy compact Vehicle Portfolio table update to production.",
-  "deploy_requested_at": "2026-08-13T18:09:00+05:30",
+  "purpose": "Deploy Customer Profile intermediary assignment integration to production.",
+  "deploy_requested_at": "2026-08-13T18:14:00+05:30",
   "requested_by": "explicit user request",
-  "source": "PR #318 is merged into main. Deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "448689098c3bf4ee12fbe52997339700eacf36cb",
-  "release_scope": "Deploy the approved Vehicle Portfolio table cleanup: remove Permit, Policies, and Claims desktop columns; show only the customer name in the Customer column; tighten table width, header padding, row height, and horizontal spacing; preserve existing Vehicle, Customer, Make / model, Registration, Next action, Action, status badges, filters, mobile cards, pagination, policy/claim filtering logic, Next Action logic, and all other existing main functionality.",
-  "verification": "Verify web portal run 31700835500 passed for PR head 639a8c3e1462dc70b62d05d8bd4b993bfb4c12c5. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "PR #319 is merged into main. Deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "5e5e7806cf53dca2516c73a3db0a66420b697382",
+  "release_scope": "Deploy the approved Customer Profile assignment integration so Assigned To resolves from the latest policy intermediary (Partner/POSP/MISP) with the existing internal assigned-agent value retained as a fallback. Production customer-type/intermediary backfill and future policy-onboarding database synchronization were already applied and verified separately.",
+  "verification": "Verify web portal run 31701198798 passed for PR #319 head dde2e9beef2b434130163b1f45615e95256f81dd. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
