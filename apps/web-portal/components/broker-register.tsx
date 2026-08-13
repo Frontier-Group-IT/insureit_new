@@ -74,7 +74,7 @@ export function BrokerRegisterShell({
       ? cloneElement(tabs, {
           options: tabs.props.options
             .filter((option) => option.value === "all" || option.value === "active" || option.value === "kyc")
-            .map((option) => option.value === "kyc" ? { ...option, label: "Pending" } : option)
+            .map((option) => option.value === "kyc" ? { ...option, label: "Inactive" } : option)
         })
       : null;
     const compactToolbar = cloneElement(customerToolbar, {
@@ -97,16 +97,24 @@ export function BrokerRegisterShell({
   return (
     <section className="mx-auto max-w-[1480px] overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
       <div className={`border-b border-[#E5ECF5] bg-[#F8FAFC] px-4 sm:px-5 ${customerReferenceLayout ? "py-3" : "py-4"}`}>
-        <div className={customerReferenceLayout ? "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" : "grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(620px,0.95fr)] xl:items-center"}>
-          <div className="flex min-w-0 items-start gap-3">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#17365D] text-white shadow-[0_10px_22px_rgba(23,54,93,0.18)]">{icon}</span>
-            <div className="min-w-0">
-              {showSupportingCopy ? <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#64748B]">{eyebrow}</p> : null}
-              <h2 className={showSupportingCopy ? "mt-1 text-[18px] font-semibold leading-tight text-[#0F172A]" : "text-[18px] font-semibold leading-tight text-[#0F172A]"}>{title}</h2>
-              {showSupportingCopy ? <p className="mt-1 max-w-2xl text-[11.5px] leading-5 text-[#64748B]">{description}</p> : null}
+        {customerReferenceLayout ? (
+          <div className="flex flex-col gap-3 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+            <div className="flex items-center justify-start">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#17365D] text-white shadow-[0_10px_22px_rgba(23,54,93,0.18)]">{icon}</span>
             </div>
+            <h2 className="text-center text-[18px] font-semibold leading-tight text-[#0F172A]">{title}</h2>
+            {headerActions}
           </div>
-          {customerReferenceLayout ? headerActions : (
+        ) : (
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(620px,0.95fr)] xl:items-center">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#17365D] text-white shadow-[0_10px_22px_rgba(23,54,93,0.18)]">{icon}</span>
+              <div className="min-w-0">
+                {showSupportingCopy ? <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#64748B]">{eyebrow}</p> : null}
+                <h2 className="mt-1 text-[18px] font-semibold leading-tight text-[#0F172A]">{title}</h2>
+                {showSupportingCopy ? <p className="mt-1 max-w-2xl text-[11.5px] leading-5 text-[#64748B]">{description}</p> : null}
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
               {metrics.map((metric) => (
                 <div key={metric.label} className={`rounded-xl border px-3 py-2.5 ${metricTones[metric.tone ?? "slate"]}`}>
@@ -116,8 +124,8 @@ export function BrokerRegisterShell({
                 </div>
               ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
       {renderedChildren}
     </section>
