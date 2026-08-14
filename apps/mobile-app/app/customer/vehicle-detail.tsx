@@ -8,16 +8,25 @@ import { getCurrentSession } from '@/lib/auth';
 import { customerAccountTitle, getOperationalCustomerContexts, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
-import type { InsuranceCompany, Policy, Vehicle } from '@/lib/types';
+import type { InsuranceCompany, Vehicle } from '@/lib/types';
 
 const truckSketch = require('../../assets/vehicles/truck sketch.png');
 const carSketch = require('../../assets/vehicles/car sketch.png');
+
+type VehiclePolicyDisplay = {
+  vehicle_id: string;
+  insurance_company_id: string;
+  policy_no: string;
+  start_date: string;
+  end_date: string;
+  source: 'sibl' | 'external';
+};
 
 export default function VehicleDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
-  const [policies, setPolicies] = useState<Policy[]>([]);
+  const [policies, setPolicies] = useState<VehiclePolicyDisplay[]>([]);
   const [companies, setCompanies] = useState<InsuranceCompany[]>([]);
   const [contexts, setContexts] = useState<CustomerAccountContext[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,8 +48,14 @@ export default function VehicleDetailScreen() {
       const vehicleResult = await supabase.from('vehicles').select('*').eq('id', id).in('customer_id', ids).maybeSingle();
       setVehicle(vehicleResult.data);
       if (vehicleResult.data) {
-        const policyResult = await supabase.from('policies').select('*').eq('vehicle_id', vehicleResult.data.id).in('customer_id', ids).order('end_date', { ascending: true });
-        const nextPolicies = policyResult.data ?? [];
+        const [policyResult, externalPolicyResult] = await Promise.all([
+          supabase.from('policies').select('vehicle_id,insurance_company_id,policy_no,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', ids),
+          (supabase as any).from('external_policies').select('vehicle_id,insurance_company_id,policy_no,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', ids),
+        ]);
+        const nextPolicies: VehiclePolicyDisplay[] = [
+          ...((policyResult.data ?? []).map((policy) => ({ ...policy, source: 'sibl' as const }))),
+          ...(((externalPolicyResult.data ?? []) as Omit<VehiclePolicyDisplay, 'source'>[]).map((policy) => ({ ...policy, source: 'external' as const }))),
+        ];
         setPolicies(nextPolicies);
         const companyIds = Array.from(new Set(nextPolicies.map((policy) => policy.insurance_company_id).filter(Boolean)));
         if (companyIds.length) {
@@ -54,7 +69,7 @@ export default function VehicleDetailScreen() {
   }, [id, router]);
 
   const companyById = useMemo(() => new Map(companies.map((company) => [company.id, company])), [companies]);
-  const latestPolicy = useMemo(() => [...policies].sort((a, b) => new Date(b.end_date).getTime() - new Date(a.end_date).getTime())[0] ?? null, [policies]);
+  const latestPolicy = useMemo(() => selectVehiclePolicy(policies), [policies]);
   const latestPolicyCompany = latestPolicy ? companyById.get(latestPolicy.insurance_company_id) : null;
   const policyState = latestPolicy ? policyStatus(latestPolicy.end_date) : { label: 'No policy', tone: 'red' as const, helper: 'Add a policy to complete protection' };
   const complianceItems = useMemo(() => vehicleComplianceItems(vehicle, latestPolicy), [latestPolicy, vehicle]);
@@ -80,7 +95,7 @@ export default function VehicleDetailScreen() {
         </View>
         <View style={styles.heroStats}>
           <MiniStat label="Insurer" value={latestPolicyCompany?.name ?? 'Pending'} />
-          <MiniStat label="Policy" value={latestPolicy?.policy_no ?? 'Not added'} />
+          <MiniStat label="Policy" value={latestPolicy?.policy_no ?? 'Not added'} badge={latestPolicy?.source === 'external' ? 'External' : undefined} />
           <MiniStat label="Expiry" value={latestPolicy ? formatDate(latestPolicy.end_date) : '-'} />
         </View>
         <Text style={styles.heroHelper}>{policyState.helper}</Text>
@@ -145,13 +160,26 @@ function StatusPill({ tone, label, showDot = false }: { tone: 'green' | 'orange'
   return <View style={[styles.statusPill, { backgroundColor: config.bg }]}>{showDot ? <PulseDot tone={tone === 'red' ? 'red' : 'yellow'} /> : null}<Text style={[styles.statusText, { color: config.text }]}>{label}</Text></View>;
 }
 
-function MiniStat({ label, value }: { label: string; value: string }) {
-  return <View style={styles.miniStat}><Text style={styles.miniLabel}>{label}</Text><Text style={styles.miniValue} numberOfLines={1}>{value}</Text></View>;
+function MiniStat({ label, value, badge }: { label: string; value: string; badge?: string }) {
+  return <View style={styles.miniStat}><View style={styles.miniLabelRow}><Text style={styles.miniLabel}>{label}</Text>{badge ? <View style={styles.externalBadge}><Text style={styles.externalBadgeText}>{badge}</Text></View> : null}</View><Text style={styles.miniValue} numberOfLines={1}>{value}</Text></View>;
 }
 
 function DetailCell({ icon, label, value, status = 'ok' }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; value?: string | null; status?: 'expired' | 'due' | 'ok' }) {
   const showDateDot = status === 'expired' || status === 'due';
   return <View style={styles.detailCell}><MaterialCommunityIcons name={icon} size={15} color="#7A8799" /><View style={styles.detailCopy}><Text style={styles.detailLabel}>{label}</Text><View style={styles.detailValueRow}>{showDateDot ? <PulseDot tone={status === 'expired' ? 'red' : 'yellow'} /> : null}<Text style={styles.detailValue} numberOfLines={2}>{value || '-'}</Text></View></View></View>;
+}
+
+function selectVehiclePolicy(policies: VehiclePolicyDisplay[]) {
+  return [...policies].sort((a, b) => {
+    const activeDelta = Number(isPolicyActive(b)) - Number(isPolicyActive(a));
+    return activeDelta || new Date(b.end_date).getTime() - new Date(a.end_date).getTime();
+  })[0] ?? null;
+}
+
+function isPolicyActive(policy: Pick<VehiclePolicyDisplay, 'start_date' | 'end_date'>) {
+  const now = new Date();
+  const currentDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  return policy.start_date <= currentDate && policy.end_date >= currentDate;
 }
 
 function policyStatus(endDate: string) {
@@ -204,7 +232,7 @@ function PulseDot({ tone }: { tone: 'red' | 'yellow' }) {
   return <Animated.View style={[styles.animatedDot, tone === 'red' ? styles.redDot : styles.yellowDot, { opacity, transform: [{ scale }] }]} />;
 }
 
-function vehicleComplianceItems(vehicle: Vehicle | null, policy: Policy | null): ComplianceItem[] {
+function vehicleComplianceItems(vehicle: Vehicle | null, policy: VehiclePolicyDisplay | null): ComplianceItem[] {
   if (!vehicle) return [];
   return [
     { key: 'policy', label: 'Insurance policy', date: policy?.end_date ?? null },
@@ -255,6 +283,9 @@ const styles = StyleSheet.create({
   heroStats: { flexDirection: 'row', gap: 7, marginTop: 10 },
   heroHelper: { color: palette.slate, fontSize: 11, fontWeight: '600', marginTop: 7 },
   miniStat: { flex: 1, minHeight: 46, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.78)', borderWidth: 1, borderColor: '#D9E8FA', padding: 7, justifyContent: 'center' },
+  miniLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  externalBadge: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 999, backgroundColor: '#F3F5F8', borderWidth: 1, borderColor: '#DDE3EA' },
+  externalBadgeText: { color: '#667085', fontSize: 7.5, lineHeight: 9, fontWeight: '800' },
   miniLabel: { color: '#64748B', fontSize: 9.5, fontWeight: '700', textTransform: 'uppercase' },
   miniValue: { color: palette.navy, fontSize: 11.5, fontWeight: '800', marginTop: 3 },
   alertSection: { padding: 10, backgroundColor: '#FFF5E6', borderColor: '#D99012', borderWidth: 1.2 },
