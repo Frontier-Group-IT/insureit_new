@@ -1,0 +1,36 @@
+name: Temporary Expo Preview Recovery Current Main
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/tmp-expo-preview-recovery-current-main.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  publish-preview-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify Expo credential
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          test -n "$EXPO_TOKEN"
+          npx --yes eas-cli@18 whoami --non-interactive
+        working-directory: apps/mobile-app
+      - name: Publish preview recovery from current main
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npx --yes eas-cli@18 update --channel preview --environment preview --message "Preview recovery after broken Add Vehicle OTA 2026-08-14" --non-interactive
+        working-directory: apps/mobile-app
