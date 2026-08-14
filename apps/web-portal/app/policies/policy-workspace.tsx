@@ -32,7 +32,7 @@ type PolicyRow = {
 };
 
 type ViewKey = "all" | "active" | "expiring" | "expired" | "claims";
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 10;
 
 export function PolicyWorkspace({ rows }: { rows: PolicyRow[] }) {
   const [query, setQuery] = useState("");

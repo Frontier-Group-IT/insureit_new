@@ -30,7 +30,7 @@ type ExternalPolicyRow = {
 };
 
 type ViewKey = "all" | "active" | "expiring" | "expired" | "claims";
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 10;
 
 export function ExternalPolicyWorkspace({ rows, canEdit }: { rows: ExternalPolicyRow[]; canEdit: boolean }) {
   const [query, setQuery] = useState("");
