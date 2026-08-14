@@ -1,0 +1,60 @@
+name: Temporary functional mobile Add Vehicle patch v2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/tmp-mobile-add-vehicle-functional-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ci-placeholder.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'ci-placeholder-public-anon-key' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Apply corrected Add Vehicle patch
+        shell: python
+        run: |
+          from pathlib import Path
+          import textwrap
+
+          source = Path('.github/workflows/tmp-mobile-add-vehicle-functional.yml').read_text()
+          marker = "      - name: Patch Add Vehicle experience\n        shell: python\n        run: |\n"
+          block = source.split(marker, 1)[1].split("\n\n      - name: Install dependencies", 1)[0]
+          exec(textwrap.dedent(block), {})
+
+          p = Path('apps/mobile-app/app/customer/add-vehicle.tsx')
+          s = p.read_text()
+          start = s.find('function InsurerDropdown(')
+          end = s.find('function PremiumDateField(', start)
+          if start != -1 and end != -1:
+            s = s[:start] + s[end:]
+          p.write_text(s)
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify mobile
+        run: |
+          npm run typecheck:mobile
+          npm run lint:mobile
+          npm run build:mobile:web
+      - name: Commit mobile Add Vehicle workflow
+        run: |
+          git config user.name "antnish1"
+          git config user.email "shahdolho@gmail.com"
+          git add apps/mobile-app/app/customer/vehicles.tsx apps/mobile-app/app/customer/add-vehicle.tsx apps/mobile-app/app/_layout.tsx
+          git diff --cached --check
+          git commit -m "Make customer Add Vehicle workflow functional"
+          git push origin HEAD:main
