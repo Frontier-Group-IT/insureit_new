@@ -1,10 +1,10 @@
 {
-  "purpose": "Redeploy current main including PR #352 Policy Manufacturer dropdown change to production.",
-  "deploy_requested_at": "2026-08-14T15:17:00+05:30",
+  "purpose": "Deploy compact Vehicle Onboarding layout to production.",
+  "deploy_requested_at": "2026-08-14T15:24:00+05:30",
   "requested_by": "explicit user request",
-  "source": "PR #352 is already merged; deploy the current main snapshot containing that change using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "54918e00211ce09eed59f2fb916813ae44c942e4",
-  "release_scope": "Ensure the already-merged PR #352 Policy Onboarding Make dropdown change is included in production while preserving all newer verified changes currently present on main.",
-  "verification": "PR #352 was merged as f97148bed346e7071a62491180aeb56162b4712b after Verify web portal run 31782523728 passed. The prior PR #352 production run 31782751537 was cancelled, so this request redeploys the current main snapshot through the protected verification gate before the Vercel production deploy hook.",
+  "source": "Vehicle Onboarding compact layout changes are already on main; deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "d829edbfd190a830fad763cc0ded571130252533",
+  "release_scope": "Vehicle Onboarding UI only: compact header and progress strip spacing, reduce section/card height and internal padding, and compact vehicle field controls to visually match POSP Onboarding while preserving all existing fields, labels, dropdowns, buttons, validation, submit behavior, and backend functionality.",
+  "verification": "Verify web portal run 31789916934 passed for current main commit d829edbfd190a830fad763cc0ded571130252533. The production workflow must rerun the compulsory verification gate against the deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
