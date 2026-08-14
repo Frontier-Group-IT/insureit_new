@@ -3,7 +3,7 @@ import { AppShell } from "@/components/shell";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { ExternalPolicyForm, type ExternalPolicyInitialValues } from "../../../external-policy-form";
+import { ExternalPolicyForm, type ExternalPolicyInitialValues } from "../../external-policy-form";
 
 type ExternalPolicyRow = {
   id: string;
