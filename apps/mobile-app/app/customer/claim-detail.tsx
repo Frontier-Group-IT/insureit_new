@@ -86,7 +86,7 @@ export default function ClaimDetailScreen() {
   if (loading) return <Screen title="Claim Detail"><LoadingState /></Screen>;
   if (!claim) return <Screen title="Claim Detail"><EmptyState title="Claim not found" body="Please choose another claim from your list." /></Screen>;
 
-  const tone = claimTone(claim.current_status, selfManaged);
+  const tone = claimTone(claim.current_status);
   const currentStage = SELF_MANAGED_MILESTONES[currentStageIndex];
   const settled = ['Settled', 'Closed', 'Claim Complete'].includes(claim.current_status) || (selfManaged && completedKeys.size >= 9);
 
@@ -155,7 +155,7 @@ function InfoPair({ leftLabel, leftValue, rightLabel, rightValue }: { leftLabel:
 function QuickAction({ icon, label, onPress, primary }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; onPress: () => void; primary?: boolean }) { return <Pressable onPress={onPress} style={[styles.quickAction, primary && styles.quickActionPrimary]}><MaterialCommunityIcons name={icon} size={20} color={primary ? '#FFF' : palette.navy} /><Text style={[styles.quickActionText, primary && { color: '#FFF' }]}>{label}</Text></Pressable>; }
 function SectionHeader({ title, subtitle, expanded, onPress }: { title: string; subtitle: string; expanded: boolean; onPress: () => void }) { return <Pressable onPress={onPress} style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>{title}</Text><Text style={styles.sectionSub}>{subtitle}</Text></View><MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={22} color={palette.slate} /></Pressable>; }
 function managedStageFor(status?: string | null) { const value = (status ?? '').toLowerCase(); if (/settled|closed|payment/.test(value)) return 8; if (/delivery/.test(value)) return 7; if (/do submitted|delivery order/.test(value)) return 6; if (/bill/.test(value)) return 5; if (/repair/.test(value)) return 4; if (/approval|estimate/.test(value)) return 3; if (/intimat|surveyor|inspected/.test(value)) return 2; if (/document/.test(value)) return 1; return 0; }
-function claimTone(status: string, selfManaged: boolean) { if (['Settled','Closed','Claim Complete'].includes(status)) return { accent:'#12805C',soft:'#E8F8F0',background:'#F7FCF9',border:'#BFE6D5' }; if (selfManaged) return { accent:'#0A43A3',soft:'#EAF2FF',background:'#F8FBFF',border:'#CFE0FF' }; return { accent:'#B7791F',soft:'#FFF4E2',background:'#FFFBF3',border:'#F0D9AC' }; }
+function claimTone(status: string) { if (['Settled','Closed','Claim Complete'].includes(status)) return { accent:'#12805C',soft:'#E8F8F0',background:'#F7FCF9',border:'#BFE6D5' }; return { accent:'#B7791F',soft:'#FFF4E2',background:'#FFFBF3',border:'#F0D9AC' }; }
 function formatDate(value?: string | null) { return value ? new Date(value).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '-'; }
 function formatDateTime(value?: string | null) { return value ? new Date(value).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '-'; }
 
