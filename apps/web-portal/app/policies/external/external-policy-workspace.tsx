@@ -63,19 +63,13 @@ export function ExternalPolicyWorkspace({ rows, canEdit }: { rows: ExternalPolic
       title="External Policy Portfolio"
       description="Policies recorded outside Sankalp business. These records are linked to existing customers and vehicles but remain excluded from the SIBL policy register and business calculations."
       icon={<ExternalLink className="h-5 w-5" />}
-      metrics={[
-        { label: "External Policies", value: rows.length, hint: "Separate portfolio", tone: "navy" },
-        { label: "Active", value: stats.active, hint: "In force", tone: "green" },
-        { label: "Renewal due", value: stats.expiring, hint: "Next 30 days", tone: stats.expiring ? "amber" : "slate" },
-        { label: "Expired", value: stats.expired, hint: "Coverage gap", tone: stats.expired ? "red" : "slate" },
-      ]}
+      metrics={[]}
     >
       <BrokerRegisterToolbar
         query={query}
         onQueryChange={(value) => { setQuery(value); setPage(1); }}
         searchPlaceholder="Search policy, insurer, vehicle or customer"
-        activeViewLabel={`${filtered.length} in current view`}
-        action={canEdit ? <Link href="/policies/external/new" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-3 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.22)]"><Plus className="h-4 w-4" />Add External Policy</Link> : undefined}
+        action={canEdit ? <Link href="/policies/external/new" className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-[#17365D] px-3 text-[10.5px] font-bold text-white shadow-[0_8px_20px_rgba(23,54,93,.18)]"><Plus className="h-3.5 w-3.5" />Add External Policy</Link> : undefined}
       >
         <RegisterViewTabs value={view} onChange={(value) => { setView(value as ViewKey); setPage(1); }} options={[
           { value: "all", label: "All", count: rows.length },
