@@ -19,6 +19,7 @@ type VehicleValues = {
   permit_no: string | null;
   year: number | null;
   gvw_kg: number | null;
+  fuel_type: string | null;
   registration_date: string | null;
   fitness_expiry_date: string | null;
   puc_expiry_date: string | null;
@@ -36,7 +37,7 @@ export default async function EditVehiclePage({ params }: { params: Promise<{ id
   const admin = createSupabaseAdminClient();
 
   const [vehicleResult, customersResult, manufacturersResult, brandsResult] = await Promise.all([
-    admin.from("vehicles").select("customer_id, vehicle_no, vehicle_type, make, model, chassis_no, engine_no, permit_no, year, gvw_kg, registration_date, fitness_expiry_date, puc_expiry_date, road_tax_expiry_date, national_permit_expiry_date, local_permit_expiry_date").eq("id", id).maybeSingle<VehicleValues>(),
+    admin.from("vehicles").select("customer_id, vehicle_no, vehicle_type, make, model, chassis_no, engine_no, permit_no, year, gvw_kg, fuel_type, registration_date, fitness_expiry_date, puc_expiry_date, road_tax_expiry_date, national_permit_expiry_date, local_permit_expiry_date").eq("id", id).maybeSingle<VehicleValues>(),
     admin.from("customers").select("id, company_name, contact_name").order("created_at", { ascending: false }).returns<CustomerOption[]>(),
     admin.from("vehicle_manufacturers").select("id").eq("is_active", true).returns<ManufacturerId[]>(),
     admin.from("vehicle_manufacturer_brands").select("manufacturer_id, brand_name").eq("is_active", true).order("brand_name", { ascending: true }).returns<BrandOption[]>(),
