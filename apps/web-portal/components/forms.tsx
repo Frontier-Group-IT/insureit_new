@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { FormSubmitButton } from "./form-submit-button";
-import { VehicleSpecificationFields } from "./vehicle-class-capacity-fields";
+import { VehicleNumberYearFields, VehicleSpecificationFields } from "./vehicle-class-capacity-fields";
 
 type FormAction = (formData: FormData) => void | Promise<void>;
 type SelectOption = { label: string; value: string };
@@ -25,7 +25,7 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
     <form action={action} className="space-y-4">
       <VehicleSection number="01" title="Vehicle Ownership" columns="five">
         <SelectField variant="onboarding" label="Customer" name="customer_id" options={customers} required defaultValue={values?.customer_id ?? ""} emptyLabel="Select customer" />
-        <Field variant="onboarding" label="Vehicle number" name="vehicle_no" placeholder="MH12AB1234" required defaultValue={values?.vehicle_no ?? ""} uppercase />
+        <VehicleNumberYearFields defaultVehicleNumber={values?.vehicle_no ?? ""} defaultYear={values?.year?.toString() ?? ""} />
         <Field variant="onboarding" label="Registration date" name="registration_date" type="date" defaultValue={values?.registration_date ?? ""} />
         <SelectField variant="onboarding" label="Manufacturer" name="make" options={manufacturers} required defaultValue={values?.make ?? ""} emptyLabel="Select manufacturer" />
         <Field variant="onboarding" label="Model" name="model" placeholder="Model name" defaultValue={values?.model ?? ""} />
@@ -38,7 +38,6 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
           defaultEngine={values?.engine_no ?? ""}
           defaultFuel={values?.fuel_type ?? ""}
           defaultCapacity={values?.gvw_kg?.toString() ?? ""}
-          defaultYear={values?.year?.toString() ?? ""}
         />
       </VehicleSection>
 
