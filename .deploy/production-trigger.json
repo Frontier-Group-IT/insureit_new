@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Shriram OCR premium schedule fix to production.",
-  "deploy_requested_at": "2026-08-14T10:31:40+05:30",
+  "purpose": "Deploy Customer Portfolio Customer Type column label update to production.",
+  "deploy_requested_at": "2026-08-14T10:38:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Latest main includes Shriram OCR premium schedule extraction fix.",
-  "source_commit": "ebce64eefd326c0cf6ed2f6307b2f561b420b5e4",
-  "release_scope": "Policy OCR parser fix: Shriram schedule-block extraction for IDV, OD premium, TP premium, printed net premium, GST and gross premium while preserving reconciliation-before-apply behavior. Current main also includes subsequently merged Reports UX V2 commits.",
-  "verification": "Web portal verification run 31771556248 passed on main after the Shriram OCR fix and Reports UX V2 commits. Re-run and require the protected verification gate to pass on this exact deployment-trigger snapshot before invoking Vercel.",
+  "source": "Merge PR #338 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "0865f681e4882525f9eb92399f446843d3dc060b",
+  "release_scope": "Rename the Customer Portfolio table column header from Partner type to Customer Type only. Preserve the underlying partner_type database field, customer values, filters, exports, and all existing customer workflows.",
+  "verification": "Verify web portal run 31771833196 passed for PR #338 head 180a2cc31297befc51192edc947bb67a54ab02cd. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
