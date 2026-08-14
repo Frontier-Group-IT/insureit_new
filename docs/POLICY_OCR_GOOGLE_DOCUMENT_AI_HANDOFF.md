@@ -275,6 +275,35 @@ Production smoke: unauthenticated GET /policies/new returned 307 to /login?next=
 Runtime errors: no error/fatal logs found for deployment dpl_2oCyiTgMGWvV5SdUoUFifSyZWUSF in the checked post-deploy window.
 ```
 
+### Shriram schedule-block OCR fix - 2026-08-14
+
+**IMPLEMENTED / DEPLOYED:** user retesting of the Shriram sample showed IDV, OD premium and TP premium still missing from the review modal. The parser was relying on generic label-near-money extraction, while the observed Shriram schedule splits `OD TOTAL`, `TP TOTAL`, `TOTAL PREMIUM`, and `PREMIUM AMOUNT` labels and values across separate lines.
+
+Fix:
+
+- `lib/policy-ocr-additional-motor-refiner.ts` now uses a Shriram-specific schedule-block reader for `SCHEDULE OF PREMIUM`.
+- The Shriram block reader extracts OD, TP, printed net premium and gross premium from the bounded schedule block and derives GST from gross minus net.
+- The existing reconciliation rule remains mandatory: OD + TP + CPA must match printed net premium before OD/TP are proposed.
+- IDV evidence lookahead was widened so split IDV headers can still reach the numeric total value row.
+
+Verification:
+
+```text
+Fix commit: 9b4d2d4976439a3454b35f21c1460343fcff1f8c
+Production trigger commit: 8ec61c661118c44561d5fbcec7b052514776187b
+GitHub verification run before trigger: 31771556248, success
+GitHub production run: 31771718845, verification gate success and deploy hook success
+Local checks: policy-ocr:all-regressions, typecheck, lint, build passed
+Vercel deployment: dpl_2RvQNqDj1zNrKGSiawn56by49Vvv
+Vercel state: READY
+Vercel URL: insureit-20ktj8zes-antnish1s-projects.vercel.app
+Production alias: portal.insureit.in
+Production smoke: unauthenticated GET /policies/new returned 307 to /login?next=%2Fpolicies%2Fnew.
+Runtime errors: no error/fatal logs found for deployment dpl_2RvQNqDj1zNrKGSiawn56by49Vvv in the checked post-deploy window.
+```
+
+Expected Shriram retest behavior for the observed sample: IDV, OD premium, TP premium, printed net premium, GST and gross premium should be available in the review modal when Google OCR returns the same schedule labels. If any value is still withheld, inspect sanitized Google OCR output around `SCHEDULE OF PREMIUM` before broadening extraction.
+
 United India Miscellaneous/Special Type Vehicles and Contractors Plant & Machinery remain deferred unless representative samples and approved Section 03 mapping are provided.
 
 ## 8. Release discipline / next steps
