@@ -16,8 +16,8 @@ export default async function GovernancePage({searchParams}:Props){
  try{payload=await loadGovernanceReport(query)}catch(error){console.error("[reports] governance report failed",error instanceof Error?error.message:"unknown error");loadError=true}
  const report=payload?.report??emptyReport(); const filters=payload?.filters??{period:"30d" as const,fromDate:null,toDate:null,action:null,page:1};
  const pages=Math.max(1,Math.ceil(report.audit_register.total_count/Math.max(report.audit_register.page_size,1)));
- return <AppShell title="Reports"><ReportPageShell
-  title="Governance"
+ return <AppShell title="Governance"><ReportPageShell
+  title="Audit & Governance"
   loadError={loadError}
   controls={<>
    <ReportQueryShortcuts label="Period" param="period" activeValue={filters.period} options={PERIODS}/>
