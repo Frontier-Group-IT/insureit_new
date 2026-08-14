@@ -84,10 +84,20 @@ export function NotificationsInbox({ audience }: { audience: 'customer' | 'staff
       setMessage('This notification is not linked to a claim.');
       return;
     }
-    const route = audience === 'customer'
-      ? ({ pathname: '/customer/claim-detail', params: { id: notification.claim_id } } as const)
-      : ({ pathname: '/staff/claim-detail', params: { id: notification.claim_id } } as const);
-    router.push(route as Href);
+    let route: Href;
+    if (audience === 'customer') {
+      const { data: linkedClaim } = await supabase
+        .from('claims')
+        .select('claim_service_mode')
+        .eq('id', notification.claim_id)
+        .maybeSingle();
+      route = linkedClaim?.claim_service_mode === 'self_managed'
+        ? ({ pathname: '/customer/self-managed-claim-detail', params: { id: notification.claim_id } } as Href)
+        : ({ pathname: '/customer/claim-detail', params: { id: notification.claim_id } } as Href);
+    } else {
+      route = ({ pathname: '/staff/claim-detail', params: { id: notification.claim_id } } as Href);
+    }
+    router.push(route);
     if (notification.status === 'unread') {
       void markRead([notification.id]);
     }
@@ -115,15 +125,15 @@ export function NotificationsInbox({ audience }: { audience: 'customer' | 'staff
     <Screen title="Notifications" showTitleHeader={false}>
       {message ? <Message type="error">{message}</Message> : null}
       <View style={styles.pageHeader}>
-        <View style={styles.headerIconButton}>
-          <MaterialCommunityIcons name="menu" size={22} color={palette.ink} />
-        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.back()} style={styles.headerIconButton}>
+          <MaterialCommunityIcons name="arrow-left" size={22} color={palette.ink} />
+        </Pressable>
         <View style={styles.headerCopy}>
           <Text style={styles.pageTitle}>Notifications</Text>
           <Text style={styles.pageSubtitle}>Stay informed. Stay in control.</Text>
         </View>
-        <Pressable accessibilityRole="button" onPress={() => void markAllRead()} style={styles.headerIconButton}>
-          <MaterialCommunityIcons name="cog-outline" size={22} color={palette.ink} />
+        <Pressable accessibilityRole="button" accessibilityLabel="Mark all notifications read" onPress={() => void markAllRead()} style={styles.headerIconButton}>
+          <MaterialCommunityIcons name="email-check-outline" size={22} color={palette.ink} />
         </Pressable>
       </View>
 
