@@ -27,7 +27,7 @@ type VehicleRow = {
 };
 
 type ViewKey = "all" | "registered" | "pending" | "uninsured" | "claims";
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 10;
 
 export function VehicleWorkspace({ rows }: { rows: VehicleRow[] }) {
   const [query, setQuery] = useState("");
