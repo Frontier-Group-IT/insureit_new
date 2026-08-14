@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy Portfolio intermediary source-name resolution to production.",
-  "deploy_requested_at": "2026-08-14T10:58:00+05:30",
+  "purpose": "Deploy Add Vehicle class and permit field cleanup to production.",
+  "deploy_requested_at": "2026-08-14T11:19:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #341 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "82421a9a6f89d4821d4971d2af88a7f9131c768f",
-  "release_scope": "Policy Portfolio Source column: show canonical Partner, POSP and MISP display names when a valid intermediary type and code are linked, while preserving the existing secondary intermediary code, fallback behavior, layout, styling, access control and policy workflows.",
-  "verification": "Verify web portal run 31773069692 passed for PR #341 head 4ce9b306ec3349146feeeb5aee1315b9d7face3a. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #343 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "31223dd362ce43388b34aba483ea5dcd00783ec3",
+  "release_scope": "Add Vehicle form: rename the visible Vehicle type field to Class, remove the Permit number input, retain National permit expiry and Local permit expiry, preserve existing legacy permit_no values by no longer overwriting that field on vehicle create/update, and update vehicle validation copy to use class. No database schema changes and no unrelated vehicle workflow changes.",
+  "verification": "Verify web portal run 31774446643 passed for PR #343 head 30ff0d57ee196c0c70d63a2ffe7b27ee02d87880. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
