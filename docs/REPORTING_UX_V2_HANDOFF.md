@@ -1,7 +1,7 @@
 # INSUREIT Reports UX V2 Handoff
 
 Date: 2026-08-14
-Status: **IMPLEMENTED ON FEATURE BRANCH / VERIFICATION IN PROGRESS**
+Status: **IMPLEMENTED ON FEATURE BRANCH / FINAL CURRENT-MAIN VERIFICATION IN PROGRESS**
 Production deployment: **NOT REQUESTED**
 
 ## Product direction
@@ -151,6 +151,10 @@ No Supabase migration is required for UX V2.
 
 PR: `#335 — Reports UX V2: simplify and professionalize reporting workspace`
 
-Final verification and merge SHAs must be filled after the current-main verification run completes.
+The previous complete verification was green, and the final verification is being rerun against current `main` after unrelated Expo workflow cleanup. Current verification base at this handoff update:
+
+`a39514f79a62994c87ae78e801af050ef39e7dd7`
+
+Final verified feature head, workflow and merge SHA must be filled after this run completes.
 
 Do not create or modify `.deploy/production-trigger.json` for this work unless the user explicitly requests production deployment.
