@@ -19,6 +19,7 @@ type ExternalPolicy = {
   vehicle_id: string;
   insurance_company_id: string;
   policy_no: string;
+  start_date: string;
   end_date: string;
 };
 
@@ -26,6 +27,7 @@ type VehiclePolicyDisplay = {
   vehicle_id: string;
   insurance_company_id: string;
   policy_no: string;
+  start_date: string;
   end_date: string;
   source: 'sibl' | 'external';
 };
@@ -79,7 +81,7 @@ export default function VehiclesScreen() {
         const [vehicleResult, policyResult, externalPolicyResult, claimResult, insurerResult] = await Promise.all([
           supabase.from('vehicles').select('*').in('customer_id', ids).order('created_at', { ascending: false }),
           supabase.from('policies').select('*').in('customer_id', ids),
-          (supabase as any).from('external_policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,end_date').in('customer_id', ids),
+          (supabase as any).from('external_policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,start_date,end_date').in('customer_id', ids),
           supabase.from('claims').select('*').in('customer_id', ids),
           supabase.from('insurance_companies').select('*'),
         ]);
@@ -304,7 +306,7 @@ export default function VehiclesScreen() {
                   label="Policy Expiry Date"
                   value={policy ? formatDate(policy.end_date) : '-'}
                 />
-                {!policy ? (
+                {!active ? (
                   <Pressable
                     accessibilityRole="button"
                     onPress={(event) => {
@@ -952,20 +954,19 @@ function vehicleComplianceHealth(vehicle: Vehicle, policy?: Pick<VehiclePolicyDi
 }
 
 function policyForVehicle(vehicleId: string, policies: Policy[], externalPolicies: ExternalPolicy[]): VehiclePolicyDisplay | undefined {
-  const sibl = policies
-    .filter((policy) => policy.vehicle_id === vehicleId)
-    .sort((a, b) => new Date(b.end_date).getTime() - new Date(a.end_date).getTime())[0];
-  if (sibl) return { vehicle_id: sibl.vehicle_id, insurance_company_id: sibl.insurance_company_id, policy_no: sibl.policy_no, end_date: sibl.end_date, source: 'sibl' };
-
-  const external = externalPolicies
-    .filter((policy) => policy.vehicle_id === vehicleId)
-    .sort((a, b) => new Date(b.end_date).getTime() - new Date(a.end_date).getTime())[0];
-  if (!external) return undefined;
-  return { vehicle_id: external.vehicle_id, insurance_company_id: external.insurance_company_id, policy_no: external.policy_no, end_date: external.end_date, source: 'external' };
+  const candidates: VehiclePolicyDisplay[] = [
+    ...policies.filter((policy) => policy.vehicle_id === vehicleId).map((policy) => ({ vehicle_id: policy.vehicle_id, insurance_company_id: policy.insurance_company_id, policy_no: policy.policy_no, start_date: policy.start_date, end_date: policy.end_date, source: 'sibl' as const })),
+    ...externalPolicies.filter((policy) => policy.vehicle_id === vehicleId).map((policy) => ({ vehicle_id: policy.vehicle_id, insurance_company_id: policy.insurance_company_id, policy_no: policy.policy_no, start_date: policy.start_date, end_date: policy.end_date, source: 'external' as const })),
+  ];
+  return candidates.sort((a, b) => {
+    const activeDelta = Number(isPolicyActive(b)) - Number(isPolicyActive(a));
+    return activeDelta || new Date(b.end_date).getTime() - new Date(a.end_date).getTime();
+  })[0];
 }
 
-function isPolicyActive(policy: Pick<VehiclePolicyDisplay, 'end_date'>) {
-  return new Date(policy.end_date).getTime() >= Date.now();
+function isPolicyActive(policy: Pick<VehiclePolicyDisplay, 'start_date' | 'end_date'>) {
+  const now = Date.now();
+  return new Date(policy.start_date).getTime() <= now && new Date(policy.end_date).getTime() >= now;
 }
 
 function isPrivateVehicle(vehicle: Vehicle) {

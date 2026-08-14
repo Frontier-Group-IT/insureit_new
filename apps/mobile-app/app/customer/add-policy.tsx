@@ -17,6 +17,7 @@ export default function AddPolicyScreen() {
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [accountOpen, setAccountOpen] = useState(false);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [activePolicyVehicleIds, setActivePolicyVehicleIds] = useState<Set<string>>(new Set());
   const [companies, setCompanies] = useState<InsuranceCompany[]>([]);
   const [vehicleQuery, setVehicleQuery] = useState('');
   const [selectedVehicleId, setSelectedVehicleId] = useState('');
@@ -38,26 +39,37 @@ export default function AddPolicyScreen() {
       if (!session?.user) return router.replace('/login');
       const nextContexts = await getOperationalCustomerContexts();
       const ids = nextContexts.map((context) => context.customer_id);
-      const [vehicleResult, companyResult] = await Promise.all([
+      const [vehicleResult, companyResult, policyResult, externalPolicyResult] = await Promise.all([
         ids.length ? supabase.from('vehicles').select('*').in('customer_id', ids).order('vehicle_no') : Promise.resolve({ data: [] as Vehicle[] }),
         supabase.from('insurance_companies').select('*').order('name'),
+        ids.length ? supabase.from('policies').select('vehicle_id,start_date,end_date').in('customer_id', ids) : Promise.resolve({ data: [] as { vehicle_id: string; start_date: string; end_date: string }[] }),
+        ids.length ? (supabase as any).from('external_policies').select('vehicle_id,start_date,end_date').in('customer_id', ids) : Promise.resolve({ data: [] as { vehicle_id: string; start_date: string; end_date: string }[] }),
       ]);
       if (!active) return;
-      const routeVehicle = vehicleId ? ((vehicleResult.data ?? []) as Vehicle[]).find((vehicle) => vehicle.id === vehicleId) : null;
+      const vehicleRows = (vehicleResult.data ?? []) as Vehicle[];
+      const activeVehicleIds = new Set<string>([
+        ...((policyResult.data ?? []) as { vehicle_id: string; start_date: string; end_date: string }[]),
+        ...((externalPolicyResult.data ?? []) as { vehicle_id: string; start_date: string; end_date: string }[]),
+      ].filter((policy) => isPolicyCurrentlyActive(policy.start_date, policy.end_date)).map((policy) => policy.vehicle_id));
+      const requestedVehicle = vehicleId ? vehicleRows.find((vehicle) => vehicle.id === vehicleId) : null;
+      const routeVehicle = requestedVehicle && !activeVehicleIds.has(requestedVehicle.id) ? requestedVehicle : null;
       setContexts(nextContexts);
-      setSelectedCustomerId(routeVehicle?.customer_id ?? nextContexts[0]?.customer_id ?? '');
-      setVehicles((vehicleResult.data ?? []) as Vehicle[]);
+      setSelectedCustomerId((routeVehicle ?? requestedVehicle)?.customer_id ?? nextContexts[0]?.customer_id ?? '');
+      setVehicles(vehicleRows);
+      setActivePolicyVehicleIds(activeVehicleIds);
       setCompanies(companyResult.data ?? []);
       if (routeVehicle) {
         setSelectedVehicleId(routeVehicle.id);
         setVehicleQuery(routeVehicle.vehicle_no);
+      } else if (requestedVehicle && activeVehicleIds.has(requestedVehicle.id)) {
+        setMessage('This vehicle already has an active policy. A second policy cannot be added until the current policy expires.');
       }
     }
     void load();
     return () => { active = false; };
   }, [router, vehicleId]);
 
-  const accountVehicles = useMemo(() => vehicles.filter((vehicle) => vehicle.customer_id === selectedCustomerId), [selectedCustomerId, vehicles]);
+  const accountVehicles = useMemo(() => vehicles.filter((vehicle) => vehicle.customer_id === selectedCustomerId && !activePolicyVehicleIds.has(vehicle.id)), [activePolicyVehicleIds, selectedCustomerId, vehicles]);
   const filteredVehicles = useMemo(() => accountVehicles.filter((vehicle) => {
     const text = `${vehicle.vehicle_no} ${vehicle.make ?? ''} ${vehicle.model ?? ''}`.toLowerCase();
     return !vehicleQuery.trim() || text.includes(vehicleQuery.trim().toLowerCase());
@@ -127,7 +139,7 @@ function AccountDropdown({ contexts, selectedCustomerId, open, onToggle, onSelec
 }
 
 function VehiclePicker({ query, selectedVehicleId, vehicles, onChange, onSelect }: { query: string; selectedVehicleId: string; vehicles: Vehicle[]; onChange: (value: string) => void; onSelect: (vehicle: Vehicle) => void }) {
-  return <View style={styles.selectorBlock}><Text style={styles.accountLabel}>Vehicle number</Text><View style={styles.searchShell}><MaterialCommunityIcons name="truck-outline" size={18} color="#0A43A3" /><TextInput value={query} onFocus={() => onChange(query)} onChangeText={(value) => onChange(value.toUpperCase())} autoCapitalize="characters" placeholder="Type or select vehicle" placeholderTextColor="#8A94A6" style={styles.searchInput} /></View><View style={styles.suggestionList}>{vehicles.length ? vehicles.map((vehicle) => <Pressable key={vehicle.id} onPress={() => onSelect(vehicle)} style={[styles.suggestionItem, selectedVehicleId === vehicle.id && styles.suggestionActive]}><View style={styles.accountCopy}><Text style={styles.suggestionTitle}>{vehicle.vehicle_no}</Text><Text style={styles.suggestionMeta}>{[vehicle.make, vehicle.model].filter(Boolean).join(' - ') || vehicle.vehicle_type}</Text></View>{selectedVehicleId === vehicle.id ? <MaterialCommunityIcons name="check-circle" size={18} color={palette.navy} /> : null}</Pressable>) : <Text style={styles.emptyHint}>No vehicles found for this account.</Text>}</View></View>;
+  return <View style={styles.selectorBlock}><Text style={styles.accountLabel}>Vehicle number</Text><View style={styles.searchShell}><MaterialCommunityIcons name="truck-outline" size={18} color="#0A43A3" /><TextInput value={query} onFocus={() => onChange(query)} onChangeText={(value) => onChange(value.toUpperCase())} autoCapitalize="characters" placeholder="Type or select vehicle" placeholderTextColor="#8A94A6" style={styles.searchInput} /></View><View style={styles.suggestionList}>{vehicles.length ? vehicles.map((vehicle) => <Pressable key={vehicle.id} onPress={() => onSelect(vehicle)} style={[styles.suggestionItem, selectedVehicleId === vehicle.id && styles.suggestionActive]}><View style={styles.accountCopy}><Text style={styles.suggestionTitle}>{vehicle.vehicle_no}</Text><Text style={styles.suggestionMeta}>{[vehicle.make, vehicle.model].filter(Boolean).join(' - ') || vehicle.vehicle_type}</Text></View>{selectedVehicleId === vehicle.id ? <MaterialCommunityIcons name="check-circle" size={18} color={palette.navy} /> : null}</Pressable>) : <Text style={styles.emptyHint}>No eligible vehicles found. Vehicles with an active policy are hidden.</Text>}</View></View>;
 }
 
 function InsurerPicker({ query, selectedCompanyId, companies, onChange, onSelect }: { query: string; selectedCompanyId: string; companies: InsuranceCompany[]; onChange: (value: string) => void; onSelect: (company: InsuranceCompany) => void }) {
@@ -145,6 +157,7 @@ function DatePickerModal({ visible, initialDate, onClose, onSelect }: { visible:
   return <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}><View style={styles.modalBackdrop}><View style={styles.calendarCard}><View style={styles.calendarHeader}><Pressable onPress={() => setCursor(addMonths(cursor, -1))} style={styles.calendarNav}><MaterialCommunityIcons name="chevron-left" size={22} color={palette.navy} /></Pressable><Text style={styles.calendarTitle}>{cursor.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</Text><Pressable onPress={() => setCursor(addMonths(cursor, 1))} style={styles.calendarNav}><MaterialCommunityIcons name="chevron-right" size={22} color={palette.navy} /></Pressable></View><View style={styles.weekRow}>{['S','M','T','W','T','F','S'].map((item, index) => <Text key={`${item}-${index}`} style={styles.weekText}>{item}</Text>)}</View><View style={styles.dayGrid}>{days.map((day, index) => day ? <Pressable key={day} onPress={() => onSelect(toISO(new Date(cursor.getFullYear(), cursor.getMonth(), day)))} style={styles.dayCell}><Text style={styles.dayText}>{day}</Text></Pressable> : <View key={`empty-${index}`} style={styles.dayCell} />)}</View><Pressable onPress={onClose} style={styles.modalClose}><Text style={styles.modalCloseText}>Cancel</Text></Pressable></View></View></Modal>;
 }
 
+function isPolicyCurrentlyActive(startDate: string, endDate: string) { const now = Date.now(); return new Date(startDate).getTime() <= now && new Date(endDate).getTime() >= now; }
 function today() { return toISO(new Date()); }
 function toISO(date: Date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
 function addMonths(date: Date, amount: number) { return new Date(date.getFullYear(), date.getMonth() + amount, 1); }
