@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #333 to production.",
-  "deploy_requested_at": "2026-08-14T10:02:00+05:30",
+  "purpose": "Deploy PR #334 to production.",
+  "deploy_requested_at": "2026-08-14T10:14:00+05:30",
   "requested_by": "explicit user request",
-  "source": "PR #333 merged into main.",
-  "source_commit": "fa0cfa337564053331276638190cac3ac4da6603",
-  "release_scope": "Customer Edit UI-only label change: rename the summary metric label from Partner Type to Customer Type while preserving the existing value, icon, position, styling, spacing, form behavior, validation, and backend logic.",
-  "verification": "PR verification run 31770097615 passed successfully. Re-run and require the protected verification gate to pass on this exact deployment-trigger snapshot before invoking Vercel.",
+  "source": "PR #334 merged into main.",
+  "source_commit": "6c89a1c174ade5e2d6a65047de01a995fab27114",
+  "release_scope": "Customer Edit UI-only cleanup: remove the mobile number from the identity header beneath the customer name while preserving the customer name, active-status icon, optional company name, separate Mobile summary metric, form behavior, validation, saving logic, and backend functionality.",
+  "verification": "PR verification run 31770666424 passed successfully. Re-run and require the protected verification gate to pass on this exact deployment-trigger snapshot before invoking Vercel.",
   "instructions": "Update this file only after explicit deployment approval."
 }
