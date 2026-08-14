@@ -1,0 +1,188 @@
+name: One-time single active vehicle policy guard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/tmp-single-active-policy-guard.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Patch mobile policy eligibility
+        shell: python
+        run: |
+          from pathlib import Path
+
+          add_policy = Path('apps/mobile-app/app/customer/add-policy.tsx')
+          text = add_policy.read_text(encoding='utf-8')
+          text = text.replace(
+            "  const [vehicles, setVehicles] = useState<Vehicle[]>([]);\n  const [companies, setCompanies] = useState<InsuranceCompany[]>([]);",
+            "  const [vehicles, setVehicles] = useState<Vehicle[]>([]);\n  const [activePolicyVehicleIds, setActivePolicyVehicleIds] = useState<Set<string>>(new Set());\n  const [companies, setCompanies] = useState<InsuranceCompany[]>([]);",
+            1,
+          )
+          old_load = """      const [vehicleResult, companyResult] = await Promise.all([\n        ids.length ? supabase.from('vehicles').select('*').in('customer_id', ids).order('vehicle_no') : Promise.resolve({ data: [] as Vehicle[] }),\n        supabase.from('insurance_companies').select('*').order('name'),\n      ]);\n      if (!active) return;\n      const routeVehicle = vehicleId ? ((vehicleResult.data ?? []) as Vehicle[]).find((vehicle) => vehicle.id === vehicleId) : null;\n      setContexts(nextContexts);\n      setSelectedCustomerId(routeVehicle?.customer_id ?? nextContexts[0]?.customer_id ?? '');\n      setVehicles((vehicleResult.data ?? []) as Vehicle[]);\n      setCompanies(companyResult.data ?? []);\n      if (routeVehicle) {\n        setSelectedVehicleId(routeVehicle.id);\n        setVehicleQuery(routeVehicle.vehicle_no);\n      }"""
+          new_load = """      const [vehicleResult, companyResult, policyResult, externalPolicyResult] = await Promise.all([\n        ids.length ? supabase.from('vehicles').select('*').in('customer_id', ids).order('vehicle_no') : Promise.resolve({ data: [] as Vehicle[] }),\n        supabase.from('insurance_companies').select('*').order('name'),\n        ids.length ? supabase.from('policies').select('vehicle_id,start_date,end_date').in('customer_id', ids) : Promise.resolve({ data: [] as { vehicle_id: string; start_date: string; end_date: string }[] }),\n        ids.length ? (supabase as any).from('external_policies').select('vehicle_id,start_date,end_date').in('customer_id', ids) : Promise.resolve({ data: [] as { vehicle_id: string; start_date: string; end_date: string }[] }),\n      ]);\n      if (!active) return;\n      const vehicleRows = (vehicleResult.data ?? []) as Vehicle[];\n      const activeVehicleIds = new Set<string>([\n        ...((policyResult.data ?? []) as { vehicle_id: string; start_date: string; end_date: string }[]),\n        ...((externalPolicyResult.data ?? []) as { vehicle_id: string; start_date: string; end_date: string }[]),\n      ].filter((policy) => isPolicyCurrentlyActive(policy.start_date, policy.end_date)).map((policy) => policy.vehicle_id));\n      const requestedVehicle = vehicleId ? vehicleRows.find((vehicle) => vehicle.id === vehicleId) : null;\n      const routeVehicle = requestedVehicle && !activeVehicleIds.has(requestedVehicle.id) ? requestedVehicle : null;\n      setContexts(nextContexts);\n      setSelectedCustomerId((routeVehicle ?? requestedVehicle)?.customer_id ?? nextContexts[0]?.customer_id ?? '');\n      setVehicles(vehicleRows);\n      setActivePolicyVehicleIds(activeVehicleIds);\n      setCompanies(companyResult.data ?? []);\n      if (routeVehicle) {\n        setSelectedVehicleId(routeVehicle.id);\n        setVehicleQuery(routeVehicle.vehicle_no);\n      } else if (requestedVehicle && activeVehicleIds.has(requestedVehicle.id)) {\n        setMessage('This vehicle already has an active policy. A second policy cannot be added until the current policy expires.');\n      }"""
+          if old_load not in text:
+            raise SystemExit('add-policy load block not found')
+          text = text.replace(old_load, new_load, 1)
+          text = text.replace(
+            "  const accountVehicles = useMemo(() => vehicles.filter((vehicle) => vehicle.customer_id === selectedCustomerId), [selectedCustomerId, vehicles]);",
+            "  const accountVehicles = useMemo(() => vehicles.filter((vehicle) => vehicle.customer_id === selectedCustomerId && !activePolicyVehicleIds.has(vehicle.id)), [activePolicyVehicleIds, selectedCustomerId, vehicles]);",
+            1,
+          )
+          text = text.replace(
+            "<Text style={styles.emptyHint}>No vehicles found for this account.</Text>",
+            "<Text style={styles.emptyHint}>No eligible vehicles found. Vehicles with an active policy are hidden.</Text>",
+            1,
+          )
+          text = text.replace(
+            "function today() { return toISO(new Date()); }",
+            "function isPolicyCurrentlyActive(startDate: string, endDate: string) { const now = Date.now(); return new Date(startDate).getTime() <= now && new Date(endDate).getTime() >= now; }\nfunction today() { return toISO(new Date()); }",
+            1,
+          )
+          add_policy.write_text(text, encoding='utf-8')
+
+          vehicles = Path('apps/mobile-app/app/customer/vehicles.tsx')
+          text = vehicles.read_text(encoding='utf-8')
+          text = text.replace(
+            "  policy_no: string;\n  end_date: string;",
+            "  policy_no: string;\n  start_date: string;\n  end_date: string;",
+            1,
+          )
+          text = text.replace(
+            "  policy_no: string;\n  end_date: string;\n  source: 'sibl' | 'external';",
+            "  policy_no: string;\n  start_date: string;\n  end_date: string;\n  source: 'sibl' | 'external';",
+            1,
+          )
+          text = text.replace(
+            "select('id,customer_id,vehicle_id,insurance_company_id,policy_no,end_date')",
+            "select('id,customer_id,vehicle_id,insurance_company_id,policy_no,start_date,end_date')",
+            1,
+          )
+          text = text.replace("                {!policy ? (", "                {!active ? (", 1)
+          old_helper = """function policyForVehicle(vehicleId: string, policies: Policy[], externalPolicies: ExternalPolicy[]): VehiclePolicyDisplay | undefined {\n  const sibl = policies\n    .filter((policy) => policy.vehicle_id === vehicleId)\n    .sort((a, b) => new Date(b.end_date).getTime() - new Date(a.end_date).getTime())[0];\n  if (sibl) return { vehicle_id: sibl.vehicle_id, insurance_company_id: sibl.insurance_company_id, policy_no: sibl.policy_no, end_date: sibl.end_date, source: 'sibl' };\n\n  const external = externalPolicies\n    .filter((policy) => policy.vehicle_id === vehicleId)\n    .sort((a, b) => new Date(b.end_date).getTime() - new Date(a.end_date).getTime())[0];\n  if (!external) return undefined;\n  return { vehicle_id: external.vehicle_id, insurance_company_id: external.insurance_company_id, policy_no: external.policy_no, end_date: external.end_date, source: 'external' };\n}\n\nfunction isPolicyActive(policy: Pick<VehiclePolicyDisplay, 'end_date'>) {\n  return new Date(policy.end_date).getTime() >= Date.now();\n}"""
+          new_helper = """function policyForVehicle(vehicleId: string, policies: Policy[], externalPolicies: ExternalPolicy[]): VehiclePolicyDisplay | undefined {\n  const candidates: VehiclePolicyDisplay[] = [\n    ...policies.filter((policy) => policy.vehicle_id === vehicleId).map((policy) => ({ vehicle_id: policy.vehicle_id, insurance_company_id: policy.insurance_company_id, policy_no: policy.policy_no, start_date: policy.start_date, end_date: policy.end_date, source: 'sibl' as const })),\n    ...externalPolicies.filter((policy) => policy.vehicle_id === vehicleId).map((policy) => ({ vehicle_id: policy.vehicle_id, insurance_company_id: policy.insurance_company_id, policy_no: policy.policy_no, start_date: policy.start_date, end_date: policy.end_date, source: 'external' as const })),\n  ];\n  return candidates.sort((a, b) => {\n    const activeDelta = Number(isPolicyActive(b)) - Number(isPolicyActive(a));\n    return activeDelta || new Date(b.end_date).getTime() - new Date(a.end_date).getTime();\n  })[0];\n}\n\nfunction isPolicyActive(policy: Pick<VehiclePolicyDisplay, 'start_date' | 'end_date'>) {\n  const now = Date.now();\n  return new Date(policy.start_date).getTime() <= now && new Date(policy.end_date).getTime() >= now;\n}"""
+          if old_helper not in text:
+            raise SystemExit('vehicles policy helper block not found')
+          text = text.replace(old_helper, new_helper, 1)
+          vehicles.write_text(text, encoding='utf-8')
+
+      - name: Add database migration
+        shell: bash
+        run: |
+          cat > supabase/migrations/20260814114500_single_active_policy_per_vehicle.sql <<'SQL'
+          create or replace function public.enforce_single_active_policy_per_vehicle()
+          returns trigger
+          language plpgsql
+          security definer
+          set search_path = public
+          as $$
+          declare
+            has_current_active boolean;
+            has_date_overlap boolean;
+          begin
+            if new.vehicle_id is null or new.start_date is null or new.end_date is null then
+              return new;
+            end if;
+
+            select exists (
+              select 1
+              from public.policies p
+              where p.vehicle_id = new.vehicle_id
+                and lower(coalesce(p.status, 'active')) = 'active'
+                and p.start_date <= current_date
+                and p.end_date >= current_date
+                and (tg_table_name <> 'policies' or p.id <> new.id)
+              union all
+              select 1
+              from public.external_policies ep
+              where ep.vehicle_id = new.vehicle_id
+                and ep.start_date <= current_date
+                and ep.end_date >= current_date
+                and (tg_table_name <> 'external_policies' or ep.id <> new.id)
+            ) into has_current_active;
+
+            if has_current_active then
+              raise exception 'This vehicle already has an active policy. A second policy cannot be added until the current policy expires.' using errcode = '23505';
+            end if;
+
+            select exists (
+              select 1
+              from public.policies p
+              where p.vehicle_id = new.vehicle_id
+                and lower(coalesce(p.status, 'active')) = 'active'
+                and new.start_date <= p.end_date
+                and new.end_date >= p.start_date
+                and (tg_table_name <> 'policies' or p.id <> new.id)
+              union all
+              select 1
+              from public.external_policies ep
+              where ep.vehicle_id = new.vehicle_id
+                and new.start_date <= ep.end_date
+                and new.end_date >= ep.start_date
+                and (tg_table_name <> 'external_policies' or ep.id <> new.id)
+            ) into has_date_overlap;
+
+            if has_date_overlap then
+              raise exception 'This vehicle already has a policy covering part of the selected policy period.' using errcode = '23505';
+            end if;
+
+            return new;
+          end;
+          $$;
+
+          drop trigger if exists trg_single_active_policy_vehicle on public.policies;
+          create trigger trg_single_active_policy_vehicle
+          before insert or update of vehicle_id, start_date, end_date on public.policies
+          for each row execute function public.enforce_single_active_policy_per_vehicle();
+
+          drop trigger if exists trg_single_active_external_policy_vehicle on public.external_policies;
+          create trigger trg_single_active_external_policy_vehicle
+          before insert or update of vehicle_id, start_date, end_date on public.external_policies
+          for each row execute function public.enforce_single_active_policy_per_vehicle();
+          SQL
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Mobile typecheck
+        run: npm run typecheck:mobile
+
+      - name: Mobile lint
+        run: npm run lint:mobile
+
+      - name: Mobile web export
+        run: npm run build:mobile:web
+
+      - name: Confirm guard patch
+        run: |
+          grep -n "Vehicles with an active policy are hidden" apps/mobile-app/app/customer/add-policy.tsx
+          grep -n "{!active ? (" apps/mobile-app/app/customer/vehicles.tsx
+          grep -n "enforce_single_active_policy_per_vehicle" supabase/migrations/20260814114500_single_active_policy_per_vehicle.sql
+
+      - name: Commit verified patch on latest main
+        run: |
+          rm .github/workflows/tmp-single-active-policy-guard.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/mobile-app/app/customer/add-policy.tsx apps/mobile-app/app/customer/vehicles.tsx supabase/migrations/20260814114500_single_active_policy_per_vehicle.sql .github/workflows/tmp-single-active-policy-guard.yml
+          git commit -m "Enforce one active policy per vehicle"
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
