@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Vehicle Onboarding stacked Vehicle Number and Manufacturing Year layout to production.",
-  "deploy_requested_at": "2026-08-14T13:01:00+05:30",
+  "purpose": "Deploy Vehicle Onboarding side-by-side Vehicle Number and Manufacturing Year layout to production.",
+  "deploy_requested_at": "2026-08-14T13:16:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #349 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "d76e1feccc8e1b901b5d052a1f40ecad45886491",
-  "release_scope": "Vehicle Onboarding only: keep Vehicle Number and Manufacturing Year in the same existing Vehicle Ownership grid column with Vehicle Number above and Manufacturing Year directly below; preserve the existing Manufacturing Year dropdown behavior, Vehicle Number validation, Registration Date, Manufacturer, Model and all Vehicle Specification and Compliance field positions, plus all backend behavior and unrelated workflows.",
-  "verification": "Verify web portal run 31780112042 passed for PR #349 head 44d7186c0a55c73ee4774c7ba6556a0642392086. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #351 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "bb4703baf34bf8eae62b47625e202e524c655316",
+  "release_scope": "Vehicle Onboarding only: render Vehicle Number and Manufacturing Year side-by-side in the same Vehicle Ownership grid column with equal-width aligned controls; preserve the Manufacturing Year dropdown and legacy values, Vehicle Number validation, Registration Date, Manufacturer, Model and all Vehicle Specification and Compliance positions, plus all backend behavior and unrelated workflows.",
+  "verification": "Verify web portal run 31781494704 passed for PR #351 head e07fb96cac67d4c26e53eef162e2b67387bf66cc. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
