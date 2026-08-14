@@ -1,0 +1,38 @@
+name: Apply inline registration UI cleanup on main
+on:
+  push:
+    paths:
+      - '.github/workflows/tmp-apply-inline-error-main.yml'
+jobs:
+  apply-change:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Apply verified one-line UI removal on latest main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --ff-only origin main
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('apps/web-portal/components/policy-unified-form.tsx')
+          s = p.read_text()
+          old = '          {vehicleRegistrationMode==="unregistered"?<p className="mt-1 text-[8.5px] font-semibold text-[#315B9A]">RC lookup will be available after permanent registration is issued.</p>:registrationNoError?<p className="mt-1 text-[8.5px] font-semibold text-red-600">{registrationNoError}</p>:lookupError?<p className="mt-1 text-[8.5px] font-semibold text-red-600">{lookupError}</p>:null}'
+          new = '          {vehicleRegistrationMode==="unregistered"?<p className="mt-1 text-[8.5px] font-semibold text-[#315B9A]">RC lookup will be available after permanent registration is issued.</p>:lookupError?<p className="mt-1 text-[8.5px] font-semibold text-red-600">{lookupError}</p>:null}'
+          if old not in s:
+              raise SystemExit('Expected inline registration validation UI block not found on current main; refusing to modify unrelated code.')
+          p.write_text(s.replace(old, new, 1))
+          PY
+          rm -f .github/workflows/tmp-apply-inline-error-main.yml
+          git add -A
+          git commit -m "Hide inline registration validation message"
+          git push origin HEAD:main
