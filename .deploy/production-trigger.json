@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Vehicle Onboarding combined Vehicle Number and Manufacturing Year container to production.",
-  "deploy_requested_at": "2026-08-14T13:43:00+05:30",
+  "purpose": "Deploy Vehicle Onboarding Manufacturer and Year shared field layout to production.",
+  "deploy_requested_at": "2026-08-14T14:16:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #353 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "19bfe00d7ad119c57151476d2037af935777c1a3",
-  "release_scope": "Vehicle Onboarding only: render Vehicle Number and Manufacturing Year inside one shared horizontal rounded container with equal halves and a vertical divider, preserving existing Vehicle Number validation, Manufacturing Year dropdown behavior, and all unrelated fields, backend logic, and workflows.",
-  "verification": "Verify web portal run 31782952535 passed for PR #353 head 9ae573d80dff0d7f25e1e4c7321f2126f6318375. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #354 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "0cd6e40d4851d65ea1e9a3783d8297444836b59e",
+  "release_scope": "Vehicle Onboarding only: keep Vehicle Number as a standalone field; move Year into the Manufacturer column inside a shared 50/50 Manufacturer and Year control with a vertical divider; preserve manufacturer options, year options, validation, save/edit behavior, and all unrelated fields, backend logic, and workflows.",
+  "verification": "Verify web portal run 31784711006 passed for PR #354 head d7de9a4c8feadaa327cf6cf0c5be3b1cf2d90491. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
