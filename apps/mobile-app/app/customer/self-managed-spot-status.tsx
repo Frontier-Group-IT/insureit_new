@@ -113,19 +113,33 @@ export default function SelfManagedSpotStatusScreen() {
     <Screen title="Spot Status" showTitleHeader={false}>
       <View style={styles.topRow}>
         <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.backButton}><MaterialCommunityIcons name="arrow-left" size={21} color={palette.navy} /></Pressable>
-        <View style={styles.topCopy}><Text style={styles.eyebrow}>SELF-TRACKED • STEP 2 OF 9</Text><Text style={styles.title}>Spot Status</Text><Text style={styles.subtitle}>{claimNo || 'Claim'} • Record the completed spot survey.</Text></View>
+        <View style={styles.topCopy}>
+          <Text style={styles.eyebrow}>CLAIMS • STEP 2 OF 9</Text>
+          <Text style={styles.title}>Spot Status</Text>
+          <Text style={styles.subtitle}>{claimNo || 'Claim'} • Record the completed spot survey.</Text>
+        </View>
+      </View>
+
+      <View style={styles.contextCard}>
+        <View style={styles.contextIcon}><MaterialCommunityIcons name="shield-check-outline" size={22} color="#B7791F" /></View>
+        <View style={styles.contextCopy}>
+          <Text style={styles.contextLabel}>CLAIM UPDATE</Text>
+          <Text style={styles.contextTitle}>Spot Status</Text>
+          <Text style={styles.contextBody}>The claim journey and theme are the same as a Sankalp-managed claim. You are recording this stage yourself.</Text>
+        </View>
+        <View style={styles.ownershipBadge}><Text style={styles.ownershipText}>Self Tracked</Text></View>
       </View>
 
       <View style={styles.noticeBox}><MaterialCommunityIcons name="account-edit-outline" size={21} color="#8A5B00" /><Text style={styles.noticeText}>{SELF_MANAGED_CLAIM_NOTICE}</Text></View>
       {message ? <Message type="error">{message}</Message> : null}
 
       <View style={styles.card}>
-        <View style={styles.cardHeading}><View style={styles.iconBox}><MaterialCommunityIcons name="clipboard-check-outline" size={20} color="#0A43A3" /></View><View><Text style={styles.cardTitle}>Spot Survey</Text><Text style={styles.cardSub}>Survey completion date is mandatory</Text></View></View>
+        <View style={styles.cardHeading}><View style={styles.iconBox}><MaterialCommunityIcons name="clipboard-check-outline" size={20} color="#B7791F" /></View><View><Text style={styles.cardTitle}>Spot Survey</Text><Text style={styles.cardSub}>Survey completion date is mandatory</Text></View></View>
         <AppDatePicker label="Spot Survey Done Date *" value={surveyDate} onChange={setSurveyDate} maxDate={todayIsoDate()} formatDisplay={formatDisplayDate} />
       </View>
 
       <View style={styles.card}>
-        <View style={styles.cardHeading}><View style={styles.iconBox}><MaterialCommunityIcons name="account-tie-outline" size={20} color="#0A43A3" /></View><View><Text style={styles.cardTitle}>Surveyor Details</Text><Text style={styles.cardSub}>Optional for self-tracked claims</Text></View></View>
+        <View style={styles.cardHeading}><View style={styles.iconBox}><MaterialCommunityIcons name="account-tie-outline" size={20} color="#B7791F" /></View><View><Text style={styles.cardTitle}>Surveyor Details</Text><Text style={styles.cardSub}>Optional details for this claim stage</Text></View></View>
         <TextField label="Surveyor Name (Optional)" value={surveyorName} onChangeText={setSurveyorName} />
         <View style={styles.gap} />
         <TextField label="Surveyor Email (Optional)" value={surveyorEmail} onChangeText={setSurveyorEmail} keyboardType="email-address" autoCapitalize="none" />
@@ -133,7 +147,7 @@ export default function SelfManagedSpotStatusScreen() {
         <TextField label="Surveyor Number (Optional)" value={surveyorPhone} onChangeText={setSurveyorPhone} keyboardType="phone-pad" />
       </View>
 
-      <View style={styles.helpBox}><MaterialCommunityIcons name="information-outline" size={18} color="#0A43A3" /><Text style={styles.helpText}>For Sankalp-managed claims these details can be provided by the claim desk. Here, you record them yourself only if available.</Text></View>
+      <View style={styles.helpBox}><MaterialCommunityIcons name="information-outline" size={18} color="#B7791F" /><Text style={styles.helpText}>For Sankalp-managed claims these details can be provided by the claim desk. In a self-tracked claim, enter them yourself only when available.</Text></View>
 
       <Pressable accessibilityRole="button" disabled={submitting} onPress={() => void submit()} style={[styles.submitButton, submitting && styles.submitDisabled]}><Text style={styles.submitText}>{submitting ? 'Saving...' : 'Save Spot Status'}</Text><MaterialCommunityIcons name="check" size={20} color="#FFFFFF" /></Pressable>
     </Screen>
@@ -146,23 +160,31 @@ function todayIsoDate() { const value = new Date(); const y = value.getFullYear(
 function formatDisplayDate(value: string) { if (!value) return ''; const [y, m, d] = value.split('-'); return `${d}-${m}-${y}`; }
 
 const styles = StyleSheet.create({
-  topRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', marginTop: -12, marginBottom: 13 },
-  backButton: { width: 42, height: 42, borderRadius: 14, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  topRow: { flexDirection: 'row', gap: 11, alignItems: 'flex-start', marginTop: -12, marginBottom: 12 },
+  backButton: { width: 42, height: 42, borderRadius: 14, borderWidth: 1, borderColor: '#DCE6F0', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   topCopy: { flex: 1 },
-  eyebrow: { color: '#0A43A3', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.9 },
+  eyebrow: { color: '#0A43A3', fontSize: 9.5, fontWeight: '900', letterSpacing: 1 },
   title: { color: palette.navy, fontSize: 24, fontWeight: '900', marginTop: 2 },
-  subtitle: { color: '#667085', fontSize: 11, lineHeight: 16, marginTop: 4, fontWeight: '700' },
-  noticeBox: { flexDirection: 'row', gap: 9, alignItems: 'flex-start', borderRadius: 16, padding: 12, backgroundColor: '#FFF8E8', borderWidth: 1, borderColor: '#F2D99F', marginBottom: 12 },
-  noticeText: { flex: 1, color: '#77520B', fontSize: 10.5, lineHeight: 16, fontWeight: '700' },
-  card: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE7F2', borderRadius: 20, padding: 15, marginBottom: 12 },
-  cardHeading: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 13 },
-  iconBox: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' },
+  subtitle: { color: '#7A8799', fontSize: 10.3, lineHeight: 14, marginTop: 3, fontWeight: '600' },
+  contextCard: { borderWidth: 1, borderColor: '#F0D9AC', borderRadius: 17, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFFBF3', marginBottom: 10 },
+  contextIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#FFF4E2', alignItems: 'center', justifyContent: 'center' },
+  contextCopy: { flex: 1, minWidth: 0 },
+  contextLabel: { color: '#B7791F', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.4 },
+  contextTitle: { color: palette.navy, fontSize: 13, fontWeight: '900', marginTop: 2 },
+  contextBody: { color: '#667085', fontSize: 10.3, lineHeight: 14, fontWeight: '600', marginTop: 3 },
+  ownershipBadge: { maxWidth: 86, borderWidth: 1, borderColor: '#F0D9AC', borderRadius: 999, backgroundColor: '#FFF4E2', paddingHorizontal: 8, paddingVertical: 5 },
+  ownershipText: { color: '#B7791F', fontSize: 8.5, fontWeight: '900', textAlign: 'center' },
+  noticeBox: { flexDirection: 'row', gap: 9, alignItems: 'flex-start', borderRadius: 15, padding: 11, backgroundColor: '#FFF8E8', borderWidth: 1, borderColor: '#F2D99F', marginBottom: 10 },
+  noticeText: { flex: 1, color: '#77520B', fontSize: 10.3, lineHeight: 15, fontWeight: '700' },
+  card: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE6F0', borderRadius: 17, padding: 12, marginBottom: 10 },
+  cardHeading: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  iconBox: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#FFF4E2', alignItems: 'center', justifyContent: 'center' },
   cardTitle: { color: palette.navy, fontSize: 14, fontWeight: '900' },
-  cardSub: { color: '#667085', fontSize: 9.5, marginTop: 2, fontWeight: '600' },
+  cardSub: { color: '#7A8799', fontSize: 9.8, marginTop: 2, fontWeight: '600' },
   gap: { height: 10 },
-  helpBox: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: '#EEF5FF', borderRadius: 15, padding: 12, marginBottom: 14 },
-  helpText: { flex: 1, color: '#435C7B', fontSize: 10.5, lineHeight: 15, fontWeight: '700' },
-  submitButton: { minHeight: 52, borderRadius: 16, backgroundColor: palette.navy, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 },
+  helpBox: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: '#FFFBF3', borderWidth: 1, borderColor: '#F0D9AC', borderRadius: 13, padding: 11, marginBottom: 12 },
+  helpText: { flex: 1, color: '#77520B', fontSize: 10.3, lineHeight: 15, fontWeight: '700' },
+  submitButton: { minHeight: 48, borderRadius: 15, backgroundColor: palette.navy, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 },
   submitDisabled: { opacity: 0.55 },
   submitText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
 });
