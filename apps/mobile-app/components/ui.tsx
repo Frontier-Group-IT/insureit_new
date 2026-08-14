@@ -289,7 +289,7 @@ function tabsForRole(role: AppRole, customerContext?: CustomerAccountContext | n
   ];
   if (role === 'customer') return [
     { label: 'Home', href: '/customer/home', icon: 'home-variant', ...customerTone },
-    { label: 'Claims', href: '/customer/claims', icon: 'file-document-check-outline', ...customerTone },
+    { label: 'Policies', href: '/customer/policies', icon: 'file-document-outline', ...customerTone },
     { label: 'Vehicles', href: '/customer/vehicles', icon: 'truck-outline', ...customerTone },
     { label: 'Support', href: '/customer/support', icon: 'headset', ...customerTone },
     { label: 'Profile', href: '/customer/profile', icon: 'account-outline', ...customerTone },
