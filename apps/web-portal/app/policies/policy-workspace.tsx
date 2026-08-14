@@ -21,6 +21,7 @@ type PolicyRow = {
   end_date: string;
   insured_declared_value: number | null;
   premium_amount: number | null;
+  gross_premium: number | null;
   intermediary_type: string | null;
   intermediary_code: string | null;
   source_name: string | null;
@@ -138,7 +139,7 @@ export function PolicyWorkspace({ rows }: { rows: PolicyRow[] }) {
                 <td className="px-2.5"><p className="font-semibold">{formatDate(policy.start_date)} - {formatDate(policy.end_date)}</p><p className="text-[9px] leading-4 text-[#64748B]">{validityHint(policy)}</p></td>
                 <td className="px-2.5"><PolicyStatus policy={policy} /></td>
                 <td className="px-2.5 text-right font-semibold tabular-nums">{formatCurrency(policy.insured_declared_value)}</td>
-                <td className="px-2.5 text-right font-semibold tabular-nums">{formatCurrency(policy.premium_amount)}</td>
+                <td className="px-2.5 text-right font-semibold tabular-nums">{formatCurrency(policy.gross_premium)}</td>
                 <td className="px-2.5"><p className="truncate font-semibold capitalize">{policy.source_name ?? policy.intermediary_type?.replaceAll("_", " ") ?? "Direct"}</p><p className="truncate text-[9px] leading-4 text-[#64748B]">{policy.intermediary_code ?? "Sankalp"}</p></td>
                 <td className="px-2.5 text-center"><Link href={`/policies/${policy.id}/edit`} className="rounded-lg border border-[#BFD3F7] bg-[#F0F6FF] px-2.5 py-1.5 text-[9.5px] font-bold text-[#174EA6]">Open</Link></td>
               </tr>
@@ -171,7 +172,7 @@ function PolicyMobileCard({ policy }: { policy: PolicyRow & { status: string; da
         </div>
         <div className="grid grid-cols-3 gap-2">
           <span className="rounded-xl bg-[#F7F9FC] px-3 py-2 text-center font-semibold">{formatCurrency(policy.insured_declared_value)}</span>
-          <span className="rounded-xl bg-[#F7F9FC] px-3 py-2 text-center font-semibold">{formatCurrency(policy.premium_amount)}</span>
+          <span className="rounded-xl bg-[#F7F9FC] px-3 py-2 text-center font-semibold">{formatCurrency(policy.gross_premium)}</span>
           <span className="rounded-xl bg-[#F7F9FC] px-3 py-2 text-center font-semibold">{claimCount(policy)} claims</span>
         </div>
       </div>
