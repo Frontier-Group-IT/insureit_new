@@ -187,7 +187,7 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
     let rpcCustomer = { ...payload.customer, name, phone };
     if (effectiveCustomerId) {
       const existingCustomer = await findCustomerById(effectiveCustomerId);
-      if (!existingCustomer) return { ok: false, kind: "database", error: "The selected customer no longer exists." };
+      if (!existingCustomer) return { ok: false, kind: "database", error: "The selected customer is no longer available. Refresh and try again." };
       rpcCustomer = { ...rpcCustomer, name: existingCustomer.contact_name, phone: existingCustomer.phone };
     }
 
@@ -211,17 +211,17 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
     if (error) {
       if (error.message.includes("OWNERSHIP_CONFLICT")) return { ok: false, kind: "database", error: "Vehicle ownership changed while this form was open. Refresh and review the customer again." };
       if (error.message.toLowerCase().includes("invalid input syntax for type numeric") || error.message.toLowerCase().includes("invalid input syntax for type integer")) {
-        return { ok: false, kind: "database", error: "A numeric vehicle or financial value could not be interpreted. Please review the entered amounts and retry the booking." };
+        return { ok: false, kind: "database", error: "Check the vehicle and premium amounts, then try again." };
       }
-      return { ok: false, kind: "database", error: error.message };
+      return { ok: false, kind: "database", error: "We couldn't save the policy. Please try again." };
     }
 
     const result = data as { ok?: boolean; policyId?: string; policyCode?: string; customerId?: string; vehicleId?: string } | null;
-    if (!result?.ok || !result.policyId || !result.policyCode || !result.customerId || !result.vehicleId) return { ok: false, kind: "database", error: "Policy onboarding completed without a valid result." };
+    if (!result?.ok || !result.policyId || !result.policyCode || !result.customerId || !result.vehicleId) return { ok: false, kind: "database", error: "We couldn't complete the policy booking. Please try again." };
 
     revalidatePath("/policies"); revalidatePath("/customers"); revalidatePath("/vehicles");
     return { ok: true, policyId: result.policyId, policyCode: result.policyCode, customerId: result.customerId, vehicleId: result.vehicleId, status: "active" };
-  } catch (error) {
-    return { ok: false, kind: "database", error: error instanceof Error ? error.message : "Policy could not be onboarded." };
+  } catch {
+    return { ok: false, kind: "database", error: "We couldn't save the policy. Please try again." };
   }
 }
