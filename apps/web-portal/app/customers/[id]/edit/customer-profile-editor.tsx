@@ -97,7 +97,7 @@ export function CustomerProfileEditor({ customer, documents, vehicles, agents, a
                   <h2 className="truncate text-[18px] font-semibold tracking-[-0.01em] text-white">{customer.contact_name}</h2>
                   <StatusIcon status={customer.onboarding_status} />
                 </div>
-                <p className="mt-0.5 text-[10.5px] font-medium text-blue-100">{customer.phone}{customer.company_name ? ` · ${customer.company_name}` : ""}</p>
+                {customer.company_name ? <p className="mt-0.5 text-[10.5px] font-medium text-blue-100">{customer.company_name}</p> : null}
               </div>
             </div>
           </div>
