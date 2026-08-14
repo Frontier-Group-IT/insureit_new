@@ -63,7 +63,7 @@ export async function loadPolicyPayinBilling(policyId: string): Promise<{ ok: tr
     .limit(1)
     .maybeSingle<PayinBillRow>();
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: "Billing details are temporarily unavailable." };
   return {
     ok: true,
     billing: {
@@ -94,7 +94,7 @@ export async function savePolicyPayinBilling(
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle<{ id: string }>();
-  if (lookupError) return { ok: false, error: lookupError.message };
+  if (lookupError) return { ok: false, error: "Billing details could not be saved. Please try again." };
 
   const values = {
     bill_number: billing.billNumber.trim() || null,
@@ -108,7 +108,7 @@ export async function savePolicyPayinBilling(
   const result = existing?.id
     ? await admin.from("policy_payin_bills").update(values).eq("id", existing.id)
     : await admin.from("policy_payin_bills").insert({ policy_id: policyId, ...values });
-  if (result.error) return { ok: false, error: result.error.message };
+  if (result.error) return { ok: false, error: "Billing details could not be saved. Please try again." };
 
   revalidatePath("/policies");
   revalidatePath(`/policies/${policyId}/edit`);
