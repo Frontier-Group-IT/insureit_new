@@ -3,8 +3,8 @@
   "deploy_requested_at": "2026-08-14T16:35:00+05:30",
   "requested_by": "explicit user request",
   "source": "PR #364 carried the verified one-line UI change. Because main advanced repeatedly and caused merge conflicts, the exact verified diff was reapplied directly to the latest main snapshot without changing the underlying validation logic, then PR #364 was closed as superseded.",
-  "source_commit": "39d96402622759124cfe3cec7bfde5a05b2ffc4c",
+  "source_commit": "a947ebca6a5aee75ab25421719f61cb41bb6db2e",
   "release_scope": "Policy Onboarding Registration No. UI only: remove the inline red format-validation sentence beneath the field. Preserve the strict 10-character validation, normalization, RC lookup gating, submit blocking, server-side validation, AuthBridge lookup errors, and Unregistered-mode helper text.",
-  "verification": "Verify web portal run 31794924389 passed for the rebased PR #364 code. The identical one-line application diff was then applied to latest main at 39d96402622759124cfe3cec7bfde5a05b2ffc4c. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "verification": "Verify web portal run 31794924389 passed for the rebased PR #364 code. The identical one-line application diff is present in current main through commit a947ebca6a5aee75ab25421719f61cb41bb6db2e. The previous production run was cancelled when this newer main commit superseded it, so this trigger requests a fresh protected production workflow run against the current snapshot.",
   "instructions": "Update this file only after explicit deployment approval."
 }
