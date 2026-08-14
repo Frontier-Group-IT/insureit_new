@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 
-const inputClass = "h-11 w-full rounded-xl border border-[#CBD5E1] bg-white px-3.5 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF] disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]";
-const labelClass = "mb-1.5 block text-[10.5px] font-semibold text-[#344054]";
-const pairedLabelClass = "mb-1 block text-[9px] font-semibold uppercase tracking-[0.04em] text-[#667085]";
+const inputClass = "h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF] disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]";
+const labelClass = "mb-1 block text-[10.5px] font-semibold text-[#344054]";
+const pairedLabelClass = "mb-0.5 block text-[8.5px] font-semibold uppercase tracking-[0.04em] text-[#667085]";
 const pairedControlClass = "h-5 w-full border-0 bg-transparent p-0 text-[12px] text-[#17203A] outline-none focus:ring-0";
 const fuelOptions = ["Petrol", "Diesel", "CNG", "Electric", "Hybrid", "Bi-Fuel", "Other"];
 const yearOptions = Array.from({ length: 40 }, (_, index) => String(new Date().getFullYear() - index));
@@ -38,14 +38,14 @@ export function ManufacturerYearFields({ manufacturers, defaultMake = "", defaul
   return <div className="min-w-0">
     <label className={labelClass} htmlFor="make">Manufacturer *</label>
     <div className="grid min-w-0 grid-cols-2 overflow-hidden rounded-xl border border-[#CBD5E1] bg-white transition focus-within:border-[#4F46E5] focus-within:ring-2 focus-within:ring-[#E0E7FF]">
-      <div className="min-w-0 border-r border-[#E2E8F0] px-3.5 py-2">
+      <div className="min-w-0 border-r border-[#E2E8F0] px-3 py-1.5">
         <label className={pairedLabelClass} htmlFor="make">Manufacturer</label>
         <select id="make" name="make" className={pairedControlClass} required defaultValue={defaultMake ?? ""}>
           <option value="">Select manufacturer</option>
           {manufacturers.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
       </div>
-      <div className="min-w-0 px-3.5 py-2">
+      <div className="min-w-0 px-3 py-1.5">
         <label className={pairedLabelClass} htmlFor="year">Mfg Year</label>
         <select id="year" name="year" className={pairedControlClass} defaultValue={defaultYear ?? ""}>
           <option value="">Select year</option>
