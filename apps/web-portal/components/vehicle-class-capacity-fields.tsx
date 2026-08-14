@@ -46,7 +46,7 @@ export function ManufacturerYearFields({ manufacturers, defaultMake = "", defaul
         </select>
       </div>
       <div className="min-w-0 px-3.5 py-2">
-        <label className={pairedLabelClass} htmlFor="year">Year</label>
+        <label className={pairedLabelClass} htmlFor="year">Mfg Year</label>
         <select id="year" name="year" className={pairedControlClass} defaultValue={defaultYear ?? ""}>
           <option value="">Select year</option>
           {years.map((option) => <option key={option} value={option}>{option}</option>)}
