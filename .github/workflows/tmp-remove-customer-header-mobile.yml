@@ -1,0 +1,45 @@
+name: Temporary remove customer header mobile
+
+on:
+  push:
+    branches:
+      - feature/customer-header-remove-mobile
+    paths:
+      - .github/workflows/tmp-remove-customer-header-mobile.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/customer-header-remove-mobile
+          fetch-depth: 0
+
+      - name: Remove mobile from customer identity header
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('apps/web-portal/app/customers/[id]/edit/customer-profile-editor.tsx')
+          text = path.read_text()
+          old = '                <p className="mt-0.5 text-[10.5px] font-medium text-blue-100">{customer.phone}{customer.company_name ? ` · ${customer.company_name}` : ""}</p>'
+          new = '                {customer.company_name ? <p className="mt-0.5 text-[10.5px] font-medium text-blue-100">{customer.company_name}</p> : null}'
+          if old not in text:
+              raise SystemExit('Expected customer header subtitle was not found')
+          path.write_text(text.replace(old, new, 1))
+          PY
+
+      - name: Remove temporary workflow
+        run: rm .github/workflows/tmp-remove-customer-header-mobile.yml
+
+      - name: Commit final UI change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal/app/customers/'[id]'/edit/customer-profile-editor.tsx .github/workflows/tmp-remove-customer-header-mobile.yml
+          git commit -m "Remove mobile from customer profile header"
+          git push origin HEAD:feature/customer-header-remove-mobile
