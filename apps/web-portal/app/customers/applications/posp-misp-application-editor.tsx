@@ -172,7 +172,7 @@ export function PospMispApplicationEditor({ applicationId, profile, workflowStag
       <div className="space-y-4 p-4 sm:p-5">
         {showPrimary ? (isMisp ? (
           <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
-            <Header number="1" title="Primary information & PAN check" subtitle="POSP/MISP IDs are issued only after successful onboarding." />
+            <Header number="1" title="Primary information & PAN check" />
             <div className="space-y-0">
               <EditorSection title={isMisp ? "MISP details" : "POSP details"}>
                 <div className={`grid gap-4 md:grid-cols-2 xl:col-span-4 ${isMisp ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}>
