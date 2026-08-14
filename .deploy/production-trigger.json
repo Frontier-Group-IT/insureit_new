@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy three-section Add/Edit Vehicle form layout to production.",
-  "deploy_requested_at": "2026-08-14T12:29:00+05:30",
+  "purpose": "Deploy dynamic Vehicle Onboarding class/capacity, fuel and manufacturing year controls to production.",
+  "deploy_requested_at": "2026-08-14T12:45:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #347 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "7457259d0f55c55c499d7296ddbebaafa2d36e14",
-  "release_scope": "Vehicle form only: reorganize Add/Edit Vehicle into three onboarding sections; Section 01 Customer, Vehicle number, Registration date, Manufacturer and Model; Section 02 Class, Chassis number, Engine number, Fuel Type, Capacity, with Manufacturing year retained as an additional existing field; Section 03 Fitness expiry, PUC expiry, Road tax expiry, National permit expiry and Local permit expiry. Capacity remains backed by gvw_kg, and Fuel Type uses the existing vehicles.fuel_type column. Preserve existing validation, Class dropdown, date controls, manufacturer choices, create/update behavior, stored data and unrelated workflows.",
-  "verification": "Verify web portal run 31778122129 passed for PR #347 head 1d8f72ca397661fec63799ab870e7a8037b5e159. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #348 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "6957d46702075acc6b3256026f900671640b6dea",
+  "release_scope": "Vehicle Onboarding only: mirror Policy Onboarding Class to Capacity behavior so changing Class clears Capacity and updates its label/placeholder for CC, GVW, Seating Capacity, Category / CC or Equipment Capacity; convert Fuel Type to the standard Select fuel, Petrol, Diesel, CNG, Electric, Hybrid, Bi-Fuel and Other dropdown; convert Manufacturing year to a descending current-year plus previous-39-years dropdown; preserve legacy edit values, existing gvw_kg storage, validations, layout, server actions, data and unrelated workflows.",
+  "verification": "Verify web portal run 31779138245 passed for PR #348 head 94112a3099bba4b00d486603aa150c20c319ba03. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
