@@ -31,7 +31,7 @@ type CustomerRow = {
 
 type ViewKey = "all" | "active" | "kyc" | "fleet" | "claims";
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 10;
 const partnerLabels: Record<string, string> = {
   individual_proprietor: "Individual / Proprietor",
   dealership: "Dealership",
