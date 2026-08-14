@@ -42,7 +42,7 @@ export async function addVehicle(formData: FormData) {
   const customerId = requiredText(formData, "customer_id");
   const vehicleNo = requiredText(formData, "vehicle_no")?.replace(/\s/g, "").toUpperCase() ?? null;
   const vehicleType = requiredText(formData, "vehicle_type");
-  if (!customerId || !vehicleNo || !vehicleType) redirect(errorUrl("/vehicles/new", "Select a customer and enter the vehicle number and vehicle type."));
+  if (!customerId || !vehicleNo || !vehicleType) redirect(errorUrl("/vehicles/new", "Select a customer and enter the vehicle number and class."));
 
   const { data: customer, error: customerError } = await admin.from("customers").select("id").eq("id", customerId).maybeSingle<{ id: string }>();
   if (customerError || !customer) redirect(errorUrl("/vehicles/new", customerError?.message ?? "The selected customer does not exist."));
@@ -56,7 +56,6 @@ export async function addVehicle(formData: FormData) {
     year: numberValue(formData, "year"),
     chassis_no: requiredText(formData, "chassis_no")?.toUpperCase() ?? null,
     engine_no: requiredText(formData, "engine_no")?.toUpperCase() ?? null,
-    permit_no: requiredText(formData, "permit_no")?.toUpperCase() ?? null,
     gvw_kg: numberValue(formData, "gvw_kg"),
     registration_date: dateValue(formData, "registration_date"),
     fitness_expiry_date: dateValue(formData, "fitness_expiry_date"),
@@ -77,7 +76,7 @@ export async function saveVehicle(id: string, formData: FormData) {
   const customerId = requiredText(formData, "customer_id");
   const vehicleNo = requiredText(formData, "vehicle_no")?.replace(/\s/g, "").toUpperCase() ?? null;
   const vehicleType = requiredText(formData, "vehicle_type");
-  if (!customerId || !vehicleNo || !vehicleType) redirect(errorUrl(`/vehicles/${id}/edit`, "Select a customer and enter the vehicle number and vehicle type."));
+  if (!customerId || !vehicleNo || !vehicleType) redirect(errorUrl(`/vehicles/${id}/edit`, "Select a customer and enter the vehicle number and class."));
 
   const { error } = await admin.from("vehicles").update({
     customer_id: customerId,
@@ -88,7 +87,6 @@ export async function saveVehicle(id: string, formData: FormData) {
     year: numberValue(formData, "year"),
     chassis_no: requiredText(formData, "chassis_no")?.toUpperCase() ?? null,
     engine_no: requiredText(formData, "engine_no")?.toUpperCase() ?? null,
-    permit_no: requiredText(formData, "permit_no")?.toUpperCase() ?? null,
     gvw_kg: numberValue(formData, "gvw_kg"),
     registration_date: dateValue(formData, "registration_date"),
     fitness_expiry_date: dateValue(formData, "fitness_expiry_date"),
