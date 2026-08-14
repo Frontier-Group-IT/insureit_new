@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Customer Portfolio Customer Type column label update to production.",
-  "deploy_requested_at": "2026-08-14T10:38:00+05:30",
+  "purpose": "Deploy Policy Portfolio Partner name source display to production.",
+  "deploy_requested_at": "2026-08-14T10:41:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #338 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "0865f681e4882525f9eb92399f446843d3dc060b",
-  "release_scope": "Rename the Customer Portfolio table column header from Partner type to Customer Type only. Preserve the underlying partner_type database field, customer values, filters, exports, and all existing customer workflows.",
-  "verification": "Verify web portal run 31771833196 passed for PR #338 head 180a2cc31297befc51192edc947bb67a54ab02cd. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #339 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "81f7785f59f217b94c4d8fa8caf15120b87edb35",
+  "release_scope": "For Partner-linked policies, resolve the canonical intermediary display_name by intermediary_code and show that Partner name in the Policy Portfolio Source column instead of the generic SIBL / Partner label. Preserve the existing secondary source/code line, fallback behavior, access scope, policy linkage, layout, and all backend mutation logic.",
+  "verification": "Verify web portal run 31772210425 passed for PR #339 head 26fb3f76038819125b5f1d0d993efd0119661ce5. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
