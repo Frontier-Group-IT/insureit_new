@@ -167,7 +167,115 @@ Supported pure-motor families remain:
 - Go Digit commercial motor
 - The New India Assurance commercial motor
 
-United India remains deferred, including Miscellaneous/Special Type Vehicles and Contractors Plant & Machinery.
+### Multi-insurer training increment - 2026-08-14
+
+**IMPLEMENTED / DEPLOYED:** the first non-IFFCO training increment adds detection, semantic refinement, sanitized regression fixtures, and CI coverage for five additional insurer families represented by the user's supplied policy copies:
+
+- Shriram General motor package schedule
+- The Oriental Insurance Company motor package schedule
+- National Insurance bilingual Goods Carrying Vehicle package schedule
+- Universal Sompo motor bundled/private-car schedule
+- United India PCV package schedule
+
+Files:
+
+```text
+apps/web-portal/lib/policy-ocr-additional-motor-refiner.ts
+apps/web-portal/scripts/policy-ocr-additional-regression.ts
+apps/web-portal/lib/policy-ocr-parsers.ts
+apps/web-portal/app/policies/policy-ocr-actions.ts
+apps/web-portal/package.json
+.github/workflows/verify-web-portal.yml
+docs/POLICY_OCR_TRAINING_PLAN_2026_08_13.md
+```
+
+Behavior:
+
+- New family IDs: `shriram_motor_v1`, `oriental_motor_v1`, `national_motor_v1`, `universal_sompo_motor_v1`, `united_india_motor_v1`.
+- The additional refiner owns insurer, product, policy number, dates, IDV, comparison totals, and financial fields when labeled evidence reconciles.
+- Financial values are accepted only when `OD + TP + CPA` reconciles to printed net premium within tolerance.
+- If labeled OD/TP/CPA evidence is incomplete or unreconciled, the refiner withholds OD/TP financial fields and returns a review warning instead of guessing.
+- National bilingual GCV fixtures intentionally cover an unsafe flattened premium-table shape; the parser keeps safe header/totals and withholds unreconciled OD/TP.
+- Sanitized regression fixtures use synthetic policy numbers and no customer/vehicle identity values.
+
+Verification:
+
+```text
+npm run policy-ocr:additional-regression
+Additional insurer OCR regression: 5/5 cases passed.
+
+npm run policy-ocr:all-regressions
+IFFCO structured regression: 5/5 cases passed.
+IFFCO regression: 11/11 cases passed.
+Digit regression: 5/5 cases passed.
+New India regression: 5/5 cases passed.
+Additional insurer OCR regression: 5/5 cases passed.
+
+npm run typecheck
+passed
+
+npm run lint
+passed with existing warnings only
+
+npm run build
+passed with existing warnings only
+```
+
+The GitHub `verify-web-portal.yml` gate now includes `npm run policy-ocr:additional-regression` before typecheck, lint, and build.
+
+Remaining work:
+
+- Run real Google Document AI upload checks for each supplied sample in a protected environment and compare against the sanitized expectations.
+- Add layout-table refiners for National/Oriental/Shriram if real Document AI table output remains ambiguous.
+- Confirm Universal Sompo bundled-product mapping with the business owner before treating private-car bundled policies as fully supported in production.
+- Complete authenticated upload/review/apply tests with the supplied real policy PDFs before claiming full live OCR journey verification.
+
+Production deployment evidence:
+
+```text
+Feature commit: bec9938b27bf4a2ee667ca5c1c0aad0426d65d44
+Production trigger commit: 4f075cb8b0f2c7f034bcf8a0f475f4499e16cc95
+GitHub Actions production run: 31733565073
+Verification gate: success
+Deploy hook job: success, Vercel response HTTP 201, job tefhOzPVay0jNLNPV0Fr
+Vercel deployment: dpl_VdesEUrHCNQ2EATHjTQEUqQvqJE5
+Vercel state: READY
+Vercel URL: insureit-10jo5y5f9-antnish1s-projects.vercel.app
+Production alias: portal.insureit.in
+Production smoke: unauthenticated GET /policies/new returned 307 to /login?next=%2Fpolicies%2Fnew.
+Runtime errors: no error/fatal logs found for deployment dpl_VdesEUrHCNQ2EATHjTQEUqQvqJE5 in the checked post-deploy window.
+```
+
+### OCR date/premium hotfix - 2026-08-14
+
+**IMPLEMENTED / DEPLOYED:** live testing of the additional-insurer OCR flow showed two concrete issues after the first deployment:
+
+- extracted ISO validity dates such as `2025-08-14` were applied into the visible `DD/MM/YYYY` mask, producing malformed values such as `20/25/0814`;
+- flattened OCR values near CPA/GST labels could promote small table, percentage or reference tokens such as `1`, `2`, `5`, `15`, `18` or `28` into Section 03 fields or comparison totals.
+
+Fix:
+
+- `components/policy-ocr-import-panel.tsx` now applies OCR validity dates through the hidden native `type=date` control behind the formatted input, so React form state remains ISO and the visible UI displays `DD/MM/YYYY`.
+- `lib/policy-ocr-additional-motor-refiner.ts` now rejects non-numeric policy-number labels, blocks tiny/reference CPA candidates unless the value is explicit zero or a realistic premium, filters GST percentage/reference values, and derives printed GST from gross minus net when direct OCR tax evidence is unsafe.
+- `scripts/policy-ocr-additional-regression.ts` now includes the observed Shriram real-layout premium shape plus negative fixtures for National GST `5%`, National IMT `28`, and United India `Policy Number : CUSTOMER`.
+
+Verification:
+
+```text
+Fix commit: 4eed29c3efcc393c8df750cc3579347cfb4d19f1
+GitHub verification run: 31735620677, success
+Local checks: policy-ocr:all-regressions, typecheck, lint, build passed
+Production trigger commit: 86d2d3d9c7e61ecf3512e754c780fa57446e772e
+GitHub production run: 31735852329, verification gate success and deploy hook success
+Vercel deployment: dpl_2oCyiTgMGWvV5SdUoUFifSyZWUSF
+Vercel state: READY
+Vercel URL: insureit-qq5rirujv-antnish1s-projects.vercel.app
+Production alias: portal.insureit.in
+Production smoke: unauthenticated GET /policies/new returned 307 to /login?next=%2Fpolicies%2Fnew.
+Runtime errors: no error/fatal logs found for deployment dpl_2oCyiTgMGWvV5SdUoUFifSyZWUSF in the checked post-deploy window.
+```
+
+United India Miscellaneous/Special Type Vehicles and Contractors Plant & Machinery remain deferred unless representative samples and approved Section 03 mapping are provided.
 
 ## 8. Release discipline / next steps
 

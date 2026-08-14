@@ -38,7 +38,16 @@ const REQUIRED = new Set([
 const MONEY = "(?:₹|Rs\\.?|INR)?\\s*([0-9][0-9,]*(?:\\.[0-9]{1,2})?)";
 const DATE = "([0-9]{1,2}[-/](?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC|[0-9]{1,2})[-/][0-9]{2,4}|[0-9]{4}[-/][0-9]{1,2}[-/][0-9]{1,2})";
 
-type InsurerFamily = "digit" | "iffco" | "new_india" | "generic";
+type InsurerFamily =
+  | "digit"
+  | "iffco"
+  | "new_india"
+  | "shriram"
+  | "oriental"
+  | "national"
+  | "universal_sompo"
+  | "united_india"
+  | "generic";
 
 export function parsePolicyDocument(pages: string[]): ParsedPolicyResult {
   const cleanPages = pages.map(sanitizeText).filter(Boolean);
@@ -51,6 +60,8 @@ export function parsePolicyDocument(pages: string[]): ParsedPolicyResult {
     result = parseIffco(cleanPages);
   } else if (family === "new_india") {
     result = parseNewIndia(cleanPages);
+  } else if (family === "shriram" || family === "oriental" || family === "national" || family === "universal_sompo" || family === "united_india") {
+    result = parseKnownInsurer(cleanPages, family);
   } else {
     result = parseGeneric(cleanPages);
   }
@@ -69,11 +80,21 @@ function detectInsurerFamily(pages: string[]): InsurerFamily {
   let digit = 0;
   let iffco = 0;
   let newIndia = 0;
+  let shriram = 0;
+  let oriental = 0;
+  let national = 0;
+  let universalSompo = 0;
+  let unitedIndia = 0;
 
   // Insurer names near the beginning of page 1 are the strongest evidence.
   if (/GO\s+DIGIT\s+GENERAL\s+INSURANCE/.test(firstPage)) digit += 12;
   if (/IFFCO[-\s]*TOKIO\s+GENERAL\s+INSURANCE/.test(firstPage)) iffco += 12;
   if (/THE\s+NEW\s+INDIA\s+ASSURANCE|NEW\s+INDIA\s+ASSURANCE\s+COMPANY/.test(firstPage)) newIndia += 12;
+  if (/SHRIRAM\s+GENERAL\s+INSURANCE/.test(firstPage)) shriram += 12;
+  if (/THE\s+ORIENTAL\s+INSURANCE\s+COMPANY|ORIENTAL\s+INSURANCE/.test(firstPage)) oriental += 12;
+  if (/NATIONAL\s+INSURANCE(?:\s+COMPANY)?|customer\.support@nic\.co\.in/i.test(firstPage)) national += 12;
+  if (/UNIVERSAL\s+SOMPO\s+GENERAL\s+INSURANCE/.test(firstPage)) universalSompo += 12;
+  if (/UNITED\s+INDIA\s+INSURANCE/.test(firstPage)) unitedIndia += 12;
 
   // Family-specific schedule structure is more reliable than one stray insurer phrase.
   if (/DIGIT\s+COMMERCIAL\s+VEHICLE\s+(?:COMPREHENSIVE|PACKAGE)\s+POLICY/i.test(text)) digit += 8;
@@ -88,15 +109,31 @@ function detectInsurerFamily(pages: string[]): InsurerFamily {
   if (/Net\s+Own\s+Damage\s+Premium\s*\(A\)/i.test(text) && /Net\s+Liability\s+Premium\s*\(B\)/i.test(text)) newIndia += 5;
   if (/\b\d{18,25}\b/.test(text) && /Own\s+Damage\s+Period|Motor\s+Liability\s+Period/i.test(text)) newIndia += 3;
 
+  if (/MOTOR\s+GOODS\s+VEHICLE\s+\(PACKAGE\s+POLICY\)|SCHEDULE\s+OF\s+PREMIUM[\s\S]{0,500}?OD\s+TOTAL/i.test(text)) shriram += 7;
+  if (/GOODS\s+CARRIERS\s+OTHER\s+THAN\s+THREE\s+WHEELERS\s+PACKAGE\s+POLICY|MOTOR\s+INSURANCE\s+CERTIFICATE\s+CUM\s+POLICY\s+SCHEDULE/i.test(text)) oriental += 7;
+  if (/Policy\s+Schedule-Motor\s+-\s+Goods\s+Carrying\s+Vehicle\s+-\s+Package|customer\.support@nic\.co\.in|Vehicle\s+IDV\s*₹/i.test(text)) national += 8;
+  if (/Motor\s+Private\s+Car\s+-\s+Bundled|Certificate\s+of\s+Insurance\s+cum\s+Policy\s+Schedule|TOTAL\s+PACKAGE\s+PREMIUM/i.test(text)) universalSompo += 8;
+  if (/PCV\s+4\s+WHEELER[\s\S]{0,120}?PACKAGE|MOTOR\s+INSURANCE\s+-\s+PCV|Gross\s+OD\s*&\s*TP/i.test(text)) unitedIndia += 8;
+
   // Full-document legal-name evidence is useful, but intentionally weaker than page-1/header evidence.
   if (/GO\s+DIGIT\s+GENERAL\s+INSURANCE/.test(upper)) digit += 2;
   if (/IFFCO[-\s]*TOKIO\s+GENERAL\s+INSURANCE/.test(upper)) iffco += 2;
   if (/THE\s+NEW\s+INDIA\s+ASSURANCE|NEW\s+INDIA\s+ASSURANCE\s+COMPANY/.test(upper)) newIndia += 2;
+  if (/SHRIRAM\s+GENERAL\s+INSURANCE/.test(upper)) shriram += 2;
+  if (/THE\s+ORIENTAL\s+INSURANCE\s+COMPANY|ORIENTAL\s+INSURANCE/.test(upper)) oriental += 2;
+  if (/NATIONAL\s+INSURANCE(?:\s+COMPANY)?/.test(upper)) national += 2;
+  if (/UNIVERSAL\s+SOMPO\s+GENERAL\s+INSURANCE/.test(upper)) universalSompo += 2;
+  if (/UNITED\s+INDIA\s+INSURANCE/.test(upper)) unitedIndia += 2;
 
   const ranked = [
     { family: "digit" as const, score: digit },
     { family: "iffco" as const, score: iffco },
     { family: "new_india" as const, score: newIndia },
+    { family: "shriram" as const, score: shriram },
+    { family: "oriental" as const, score: oriental },
+    { family: "national" as const, score: national },
+    { family: "universal_sompo" as const, score: universalSompo },
+    { family: "united_india" as const, score: unitedIndia },
   ].sort((a, b) => b.score - a.score);
 
   if (ranked[0].score < 5) return "generic";
@@ -193,6 +230,55 @@ function parseIffco(pages: string[]): ParsedPolicyResult {
 
 function parseNewIndia(pages: string[]): ParsedPolicyResult {
   return parseGeneric(pages, true);
+}
+
+function parseKnownInsurer(pages: string[], family: Exclude<InsurerFamily, "digit" | "iffco" | "new_india" | "generic">): ParsedPolicyResult {
+  const base = parseGeneric(pages);
+  const config: Record<typeof family, { insurer: string; parserId: string; version: string }> = {
+    shriram: {
+      insurer: "Shriram General Insurance Company Limited",
+      parserId: "shriram_motor_v1",
+      version: "shriram_motor_v1.0.0",
+    },
+    oriental: {
+      insurer: "The Oriental Insurance Company Limited",
+      parserId: "oriental_motor_v1",
+      version: "oriental_motor_v1.0.0",
+    },
+    national: {
+      insurer: "National Insurance Company Limited",
+      parserId: "national_motor_v1",
+      version: "national_motor_v1.0.0",
+    },
+    universal_sompo: {
+      insurer: "Universal Sompo General Insurance Company Limited",
+      parserId: "universal_sompo_motor_v1",
+      version: "universal_sompo_motor_v1.0.0",
+    },
+    united_india: {
+      insurer: "United India Insurance Company Limited",
+      parserId: "united_india_motor_v1",
+      version: "united_india_motor_v1.0.0",
+    },
+  };
+  const selected = config[family];
+  const fields = [
+    {
+      key: "insurer_name",
+      label: LABELS.insurer_name,
+      value: selected.insurer,
+      confidence: .99,
+      page: 1,
+      evidence: selected.insurer,
+    },
+    ...base.fields.filter((field) => field.key !== "insurer_name"),
+  ];
+  return {
+    parserId: selected.parserId,
+    parserVersion: selected.version,
+    fields,
+    warnings: base.warnings.filter((warning) => !/not fully supported/i.test(warning)),
+  };
 }
 
 function parseGeneric(pages: string[], newIndia = false): ParsedPolicyResult {

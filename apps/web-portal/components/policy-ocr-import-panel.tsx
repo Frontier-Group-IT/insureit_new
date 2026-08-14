@@ -43,6 +43,11 @@ const INSURER_ALIASES: Record<string, string[]> = {
   digit: ["digit", "go digit"],
   iffco: ["iffco tokio", "iffco-tokio"],
   newindia: ["new india assurance", "the new india assurance"],
+  shriram: ["shriram general", "shriram"],
+  oriental: ["oriental insurance", "the oriental insurance"],
+  national: ["national insurance"],
+  universalSompo: ["universal sompo"],
+  unitedIndia: ["united india"],
 };
 
 export function PolicyOcrImportPanel({ variant = "header" }: { variant?: "header" | "icon" }) {
@@ -335,6 +340,10 @@ function findControl(aliases: string[]) {
   for (const control of ariaControls) {
     const aria = (control.getAttribute("aria-label") ?? "").toLowerCase().replace(/\s+/g, " ").trim();
     if (!normalizedAliases.some((alias) => aria === alias || aria.startsWith(alias))) continue;
+    if (control instanceof HTMLInputElement && control.type !== "date") {
+      const nativeDate = control.parentElement?.querySelector("input[type='date']");
+      if (nativeDate instanceof HTMLInputElement) return nativeDate;
+    }
     if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement) return control;
   }
 
