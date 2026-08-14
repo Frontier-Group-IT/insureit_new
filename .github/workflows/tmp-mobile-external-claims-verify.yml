@@ -27,3 +27,4 @@ jobs:
       - run: npm run typecheck:mobile
       - run: npm run lint:mobile
       - run: npm run build:mobile:web
+      # rerun after unified claim icon correction
