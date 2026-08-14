@@ -89,15 +89,15 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
       p_policy_id: policyId,
       p_payload: normalizedPayload,
     });
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: "We couldn't save the policy changes. Please try again." };
 
     const result = data as { ok?: boolean; policyId?: string; policyCode?: string } | null;
-    if (!result?.ok || !result.policyId) return { ok: false, error: "Policy update completed without a valid result." };
+    if (!result?.ok || !result.policyId) return { ok: false, error: "We couldn't complete the policy update. Please try again." };
 
     revalidatePath("/policies");
     revalidatePath(`/policies/${policyId}/edit`);
     return { ok: true, policyId: result.policyId, policyCode: result.policyCode ?? "" };
-  } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "Policy could not be updated." };
+  } catch {
+    return { ok: false, error: "We couldn't save the policy changes. Please try again." };
   }
 }
