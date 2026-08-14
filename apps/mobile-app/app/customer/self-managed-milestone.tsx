@@ -72,10 +72,35 @@ export default function SelfManagedMilestoneScreen() {
     <Screen title={definition.label} showTitleHeader={false}>
       <View style={styles.topRow}>
         <Pressable onPress={() => router.back()} style={styles.backButton}><MaterialCommunityIcons name="arrow-left" size={21} color={palette.navy} /></Pressable>
-        <View style={styles.topCopy}><Text style={styles.eyebrow}>SELF-TRACKED • STEP {step} OF 9</Text><Text style={styles.title}>{definition.label}</Text><Text style={styles.subtitle}>{subtitleFor(key)}</Text></View>
+        <View style={styles.topCopy}>
+          <Text style={styles.eyebrow}>CLAIMS • STEP {step} OF 9</Text>
+          <Text style={styles.title}>{definition.label}</Text>
+          <Text style={styles.subtitle}>{subtitleFor(key)}</Text>
+        </View>
       </View>
+
+      <View style={styles.contextCard}>
+        <View style={styles.contextIcon}><MaterialCommunityIcons name="shield-check-outline" size={22} color="#B7791F" /></View>
+        <View style={styles.contextCopy}>
+          <Text style={styles.contextLabel}>CLAIM UPDATE</Text>
+          <Text style={styles.contextTitle}>{definition.label}</Text>
+          <Text style={styles.contextBody}>This claim uses the same journey layout as Sankalp-managed claims. You are recording this stage yourself.</Text>
+        </View>
+        <View style={styles.ownershipBadge}><Text style={styles.ownershipText}>Self Tracked</Text></View>
+      </View>
+
       {message ? <Message type="error">{message}</Message> : null}
-      {loading ? <Text style={styles.loading}>Loading saved details...</Text> : <View style={styles.card}>{renderFields(key, values, set)}</View>}
+
+      {loading ? <Text style={styles.loading}>Loading saved details...</Text> : (
+        <View style={styles.card}>
+          <View style={styles.formHeading}>
+            <View style={styles.formIcon}><MaterialCommunityIcons name="clipboard-edit-outline" size={20} color="#B7791F" /></View>
+            <View style={styles.formHeadingCopy}><Text style={styles.formTitle}>Stage Details</Text><Text style={styles.formSub}>Update the available details for this claim stage</Text></View>
+          </View>
+          {renderFields(key, values, set)}
+        </View>
+      )}
+
       <Pressable disabled={saving || loading} onPress={() => void save()} style={[styles.saveButton, (saving || loading) && styles.disabled]}><Text style={styles.saveText}>{saving ? 'Saving...' : `Save ${definition.label}`}</Text><MaterialCommunityIcons name="check" size={19} color="#FFFFFF" /></Pressable>
     </Screen>
   );
@@ -165,17 +190,42 @@ function subtitleFor(key: ClaimMilestoneKey) {
 function Gap() { return <View style={{ height: 12 }} />; }
 function DateField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <AppDatePicker label={label} value={value} onChange={onChange} maxDate={todayIso()} formatDisplay={formatDisplayDate} />; }
 function Choice({ label, value, options, onChange }: { label: string; value?: string; options: [string,string][]; onChange: (value: string) => void }) { return <View><Text style={styles.choiceLabel}>{label}</Text><View style={styles.choiceRow}>{options.map(([id,text]) => <Pressable key={id} onPress={() => onChange(id)} style={[styles.choiceChip, value === id && styles.choiceChipActive]}><Text style={[styles.choiceText, value === id && styles.choiceTextActive]}>{text}</Text></Pressable>)}</View></View>; }
-function Info({ text }: { text: string }) { return <View style={styles.info}><MaterialCommunityIcons name="information-outline" size={17} color="#0A43A3" /><Text style={styles.infoText}>{text}</Text></View>; }
+function Info({ text }: { text: string }) { return <View style={styles.info}><MaterialCommunityIcons name="information-outline" size={17} color="#B7791F" /><Text style={styles.infoText}>{text}</Text></View>; }
 function cleanMoney(value: string) { return value.replace(/[^0-9.]/g, ''); }
 function todayIso() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function formatDisplayDate(value: string) { if (!value) return ''; const [y,m,d] = value.split('-'); return `${d}-${m}-${y}`; }
 
 const styles = StyleSheet.create({
-  topRow: { flexDirection: 'row', gap: 11, alignItems: 'flex-start', marginTop: -12, marginBottom: 14 },
-  backButton: { width: 42, height: 42, borderRadius: 14, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
-  topCopy: { flex: 1 }, eyebrow: { color: '#0A43A3', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.8 }, title: { color: palette.navy, fontSize: 23, fontWeight: '900', marginTop: 2 }, subtitle: { color: '#667085', fontSize: 11.5, lineHeight: 17, fontWeight: '600', marginTop: 4 },
-  card: { borderRadius: 20, padding: 15, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE7F2' }, loading: { color: '#667085', fontSize: 12, padding: 16 },
-  saveButton: { marginTop: 16, minHeight: 50, borderRadius: 15, backgroundColor: palette.navy, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }, saveText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' }, disabled: { opacity: 0.55 },
-  choiceLabel: { color: '#344054', fontSize: 11.5, fontWeight: '800', marginBottom: 8 }, choiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, choiceChip: { minHeight: 38, borderRadius: 12, borderWidth: 1, borderColor: '#CBD5E1', backgroundColor: '#FFFFFF', paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' }, choiceChipActive: { backgroundColor: '#EAF2FF', borderColor: '#0A43A3' }, choiceText: { color: '#667085', fontSize: 11, fontWeight: '800' }, choiceTextActive: { color: '#0A43A3' },
-  info: { marginTop: 12, padding: 11, borderRadius: 13, flexDirection: 'row', gap: 8, backgroundColor: '#F4F8FF', borderWidth: 1, borderColor: '#D7E6FA' }, infoText: { flex: 1, color: '#315C99', fontSize: 10.5, lineHeight: 15, fontWeight: '700' },
+  topRow: { flexDirection: 'row', gap: 11, alignItems: 'flex-start', marginTop: -12, marginBottom: 12 },
+  backButton: { width: 42, height: 42, borderRadius: 14, borderWidth: 1, borderColor: '#DCE6F0', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  topCopy: { flex: 1 },
+  eyebrow: { color: '#0A43A3', fontSize: 9.5, fontWeight: '900', letterSpacing: 1 },
+  title: { color: palette.navy, fontSize: 24, fontWeight: '900', marginTop: 2 },
+  subtitle: { color: '#7A8799', fontSize: 10.3, lineHeight: 14, fontWeight: '600', marginTop: 3 },
+  contextCard: { borderWidth: 1, borderColor: '#F0D9AC', borderRadius: 17, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFFBF3', marginBottom: 10 },
+  contextIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#FFF4E2', alignItems: 'center', justifyContent: 'center' },
+  contextCopy: { flex: 1, minWidth: 0 },
+  contextLabel: { color: '#B7791F', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.4 },
+  contextTitle: { color: palette.navy, fontSize: 13, fontWeight: '900', marginTop: 2 },
+  contextBody: { color: '#667085', fontSize: 10.3, lineHeight: 14, fontWeight: '600', marginTop: 3 },
+  ownershipBadge: { maxWidth: 86, borderWidth: 1, borderColor: '#F0D9AC', borderRadius: 999, backgroundColor: '#FFF4E2', paddingHorizontal: 8, paddingVertical: 5 },
+  ownershipText: { color: '#B7791F', fontSize: 8.5, fontWeight: '900', textAlign: 'center' },
+  card: { borderRadius: 17, padding: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE6F0' },
+  formHeading: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  formIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#FFF4E2', alignItems: 'center', justifyContent: 'center' },
+  formHeadingCopy: { flex: 1 },
+  formTitle: { color: palette.navy, fontSize: 14, fontWeight: '900' },
+  formSub: { color: '#7A8799', fontSize: 9.8, fontWeight: '600', marginTop: 2 },
+  loading: { color: '#7A8799', fontSize: 10.5, fontWeight: '600', padding: 16 },
+  saveButton: { marginTop: 12, minHeight: 48, borderRadius: 15, backgroundColor: palette.navy, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
+  saveText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
+  disabled: { opacity: 0.55 },
+  choiceLabel: { color: '#344054', fontSize: 11, fontWeight: '800', marginBottom: 8 },
+  choiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  choiceChip: { minHeight: 38, borderRadius: 12, borderWidth: 1, borderColor: '#DCE6F0', backgroundColor: '#FFFFFF', paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
+  choiceChipActive: { backgroundColor: '#FFF4E2', borderColor: '#B7791F' },
+  choiceText: { color: '#667085', fontSize: 11, fontWeight: '800' },
+  choiceTextActive: { color: '#8A5B00' },
+  info: { marginTop: 12, padding: 11, borderRadius: 13, flexDirection: 'row', gap: 8, backgroundColor: '#FFFBF3', borderWidth: 1, borderColor: '#F0D9AC' },
+  infoText: { flex: 1, color: '#77520B', fontSize: 10.5, lineHeight: 15, fontWeight: '700' },
 });
