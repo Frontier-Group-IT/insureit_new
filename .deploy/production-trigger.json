@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the six-column Vehicle Ownership layout to production.",
-  "deploy_requested_at": "2026-08-14T15:41:00+05:30",
+  "purpose": "Deploy External Policy header copy removal to production.",
+  "deploy_requested_at": "2026-08-14T15:57:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #360 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "0ced773888fd2453c4bd81588a61ed95060f5d4a",
-  "release_scope": "Vehicle Onboarding section 01 only: use six equal desktop columns in the order Customer, RC Number, Registration Date, Manufacturer, MFG Year, Model; preserve existing form field names, dropdown values, validation, actions, and all other onboarding behavior.",
-  "verification": "Verify web portal run 31791084936 passed for PR #360 head 640bdd8d37d34217436c89f732a67e441bd9f57c. The production workflow must rerun the compulsory verification gate against the exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #361 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "0f3b4bb9725bb1d4bd1a90f0a5e5f627a438641f",
+  "release_scope": "External Policy form header only: remove the 'External policy' eyebrow label and the explanatory sentence beneath Add/Edit External Policy while preserving the title, icon, back button, form fields, validation, actions, and save behavior.",
+  "verification": "Verify web portal run 31792248794 passed for PR #361 head b4e8601786d677f60debef5afe78c04655fcd15d. The production workflow must rerun the compulsory verification gate against the exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
