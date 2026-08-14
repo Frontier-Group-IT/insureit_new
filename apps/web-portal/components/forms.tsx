@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { FormSubmitButton } from "./form-submit-button";
+import { VehicleSpecificationFields } from "./vehicle-class-capacity-fields";
 
 type FormAction = (formData: FormData) => void | Promise<void>;
 type SelectOption = { label: string; value: string };
@@ -12,7 +13,6 @@ const inputClass = "h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 
 const onboardingInputClass = "h-11 w-full rounded-xl border border-[#CBD5E1] bg-white px-3.5 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
 const labelClass = "mb-1 block text-[10.5px] font-semibold text-[#344054]";
 const onboardingLabelClass = "mb-1.5 block text-[10.5px] font-semibold text-[#344054]";
-const vehicleClassOptions: SelectOption[] = ["PCP", "TWP", "GCV", "PCV", "MISD", "CPM"].map((value) => ({ label: value, value }));
 
 export function CustomerForm({ action, values, agents = [], submitLabel = "Save record" }: { action: FormAction; values?: CustomerValues; agents?: SelectOption[]; submitLabel?: string }) {
   return <EnterpriseForm action={action} cancelHref="/customers" submitLabel={submitLabel}>
@@ -32,12 +32,14 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
       </VehicleSection>
 
       <VehicleSection number="02" title="Vehicle Specification" columns="five">
-        <SelectField variant="onboarding" label="Class" name="vehicle_type" options={vehicleClassOptions} required defaultValue={values?.vehicle_type ?? ""} emptyLabel="Select class" />
-        <Field variant="onboarding" label="Chassis number" name="chassis_no" placeholder="Chassis number" defaultValue={values?.chassis_no ?? ""} uppercase />
-        <Field variant="onboarding" label="Engine number" name="engine_no" placeholder="Engine number" defaultValue={values?.engine_no ?? ""} uppercase />
-        <Field variant="onboarding" label="Fuel Type" name="fuel_type" placeholder="Fuel type" defaultValue={values?.fuel_type ?? ""} />
-        <Field variant="onboarding" label="Capacity" name="gvw_kg" placeholder="16200" type="number" min="0" step="0.01" defaultValue={values?.gvw_kg?.toString() ?? ""} />
-        <Field variant="onboarding" label="Manufacturing year" name="year" placeholder="2024" type="number" min="1950" max="2100" defaultValue={values?.year?.toString() ?? ""} />
+        <VehicleSpecificationFields
+          defaultClass={values?.vehicle_type ?? ""}
+          defaultChassis={values?.chassis_no ?? ""}
+          defaultEngine={values?.engine_no ?? ""}
+          defaultFuel={values?.fuel_type ?? ""}
+          defaultCapacity={values?.gvw_kg?.toString() ?? ""}
+          defaultYear={values?.year?.toString() ?? ""}
+        />
       </VehicleSection>
 
       <VehicleSection number="03" title="Compliance & Permit" columns="five">
