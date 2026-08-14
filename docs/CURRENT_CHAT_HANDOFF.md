@@ -394,3 +394,13 @@ For deletion administration, use the dependency order claim -> policy -> vehicle
 For OCR deployment, continue to follow the regression and explicit-deploy gate in `AGENTS.md`.
 
 United India remains deferred.
+
+## Mobile Expo Preview Recovery
+
+**APPLIED:** on 2026-08-14 the Android Expo `preview` channel was rolled back to the last known good external-policy preview commit `d4fe10f42c42180fc7365b42107a94d35cb7bb8c` with EAS update group `47e3613e-916e-4992-b9a6-54402ff76d66`.
+
+**APPLIED:** after rollback, a corrected Android Expo `preview` update was published from local repair branch `repair/corrected-mobile-preview-20260814`, commit `14386b6e1845cd69db01be4f273acd97f295e06f`, EAS update group `3df274ee-c06b-4688-ab2e-f2b8dd8b82be`, message `Safe mobile UI fixes after rollback 2026-08-14`.
+
+The corrected update intentionally keeps the last-good preview claim and external-policy logic intact: `external_policies` remains the customer-added policy source, Start Claim still routes external policies with `externalPolicyId`, and self-managed claim creation still uses `create_self_managed_external_claim`. It reapplies only the approved mobile UI/UX changes: Add Policy redesign with locked vehicle from vehicle-card entry, insurer search-first behavior, web-aligned policy type dropdown, auto end-date calculation, optional premium/IDV, active-policy duplicate guard, Policy Wallet redesign with external policies included, shared pressed/loading/search-clear states, Android keyboard/bottom-tab behavior fixes, KYC local keyboard behavior fixes, Metro/ESLint generated-output exclusions, and `android.softwareKeyboardLayoutMode: pan`.
+
+Verification before corrected publish: mobile typecheck passed, focused ESLint passed for the touched mobile files, and `npm --workspace apps/mobile-app run build:web` passed. The native Android keyboard mode still requires a fresh APK build to affect installed binaries; the JS/tab hiding portion is available through OTA.
