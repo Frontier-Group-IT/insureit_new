@@ -1,0 +1,53 @@
+name: Temporary claim UI mobile verification
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/mobile-app/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/tmp-claim-ui-mobile-verify.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tmp-claim-ui-mobile-verify-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ci-placeholder.supabase.co' }}
+  EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'ci-placeholder-public-anon-key' }}
+
+jobs:
+  verify:
+    name: typecheck, lint and Expo web review build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Require synchronized dependency lockfile
+        shell: bash
+        run: |
+          if ! git diff --quiet -- package-lock.json; then
+            echo "::error::package-lock.json is out of sync with package.json."
+            git diff -- package-lock.json
+            exit 1
+          fi
+      - name: Mobile typecheck
+        run: npm run typecheck:mobile
+      - name: Mobile lint
+        run: npm run lint:mobile
+      - name: Build Expo web review export
+        run: npm run build:mobile:web
