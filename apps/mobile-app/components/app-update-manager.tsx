@@ -4,11 +4,27 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 type UpdateStatus = 'idle' | 'checking' | 'downloading' | 'restarting';
 
-const statusCopy: Record<Exclude<UpdateStatus, 'idle'>, string> = {
-  checking: 'Checking for app update',
+const statusCopy: Record<Exclude<UpdateStatus, 'idle' | 'checking'>, string> = {
   downloading: 'Updating app',
   restarting: 'Restarting app',
 };
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out`)), timeoutMs);
+
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
 
 export function AppUpdateManager() {
   const [status, setStatus] = useState<UpdateStatus>('idle');
@@ -23,22 +39,21 @@ export function AppUpdateManager() {
 
     try {
       setStatus('checking');
-      const update = await Updates.checkForUpdateAsync();
+      const update = await withTimeout(Updates.checkForUpdateAsync(), 5000, 'Update check');
 
       if (!update.isAvailable) {
-        setStatus('idle');
         return;
       }
 
       setStatus('downloading');
-      await Updates.fetchUpdateAsync();
+      await withTimeout(Updates.fetchUpdateAsync(), 15000, 'Update download');
 
       setStatus('restarting');
       await Updates.reloadAsync();
     } catch (error) {
       console.warn('App update check failed', error);
-      setStatus('idle');
     } finally {
+      setStatus('idle');
       isChecking.current = false;
     }
   }, []);
@@ -47,7 +62,7 @@ export function AppUpdateManager() {
     void checkForUpdates();
   }, [checkForUpdates]);
 
-  if (__DEV__ || status === 'idle') {
+  if (__DEV__ || status === 'idle' || status === 'checking') {
     return null;
   }
 
