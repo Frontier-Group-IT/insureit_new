@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -74,6 +74,7 @@ export async function saveVehicleManufacturer(id: string | null, formData: FormD
   const savedId = typeof data === "string" ? data : null;
   if (error || !savedId) redirect(errorUrl(basePath, error?.message ?? "Unable to save vehicle manufacturer."));
 
+  revalidateTag("reference:vehicle-manufacturers");
   revalidatePath("/master-data/vehicle-manufacturers");
   revalidatePath(`/master-data/vehicle-manufacturers/${savedId}`);
   revalidatePath("/vehicles/new");
@@ -89,6 +90,7 @@ export async function setVehicleManufacturerActive(id: string, active: boolean, 
   const { error } = await admin.from("vehicle_manufacturers").update({ is_active: active, updated_by: profile.id }).eq("id", id);
   if (error) redirect(errorUrl(`/master-data/vehicle-manufacturers/${id}`, error.message));
 
+  revalidateTag("reference:vehicle-manufacturers");
   revalidatePath("/master-data/vehicle-manufacturers");
   revalidatePath(`/master-data/vehicle-manufacturers/${id}`);
   revalidatePath("/vehicles/new");
