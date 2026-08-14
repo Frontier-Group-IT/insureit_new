@@ -383,11 +383,11 @@ export function SupportCard({ onSupport }: { onSupport: () => void }) {
   );
 }
 
-export function BottomNavigation({ onClaims, onVehicles, onSupport, onProfile }: { onClaims: () => void; onVehicles: () => void; onSupport: () => void; onProfile: () => void }) {
+export function BottomNavigation({ onPolicies, onVehicles, onSupport, onProfile }: { onPolicies: () => void; onVehicles: () => void; onSupport: () => void; onProfile: () => void }) {
   return (
     <View style={styles.bottomNav}>
       <BottomItem label="Home" icon="home-variant" active tone={{ accent: palette.navy, soft: palette.amberSoft }} />
-      <BottomItem label="Claims" icon="file-document-check-outline" onPress={onClaims} tone={{ accent: palette.navy, soft: palette.blueSoft }} />
+      <BottomItem label="Policies" icon="file-certificate-outline" onPress={onPolicies} tone={{ accent: palette.navy, soft: palette.blueSoft }} />
       <BottomItem label="Vehicles" icon="truck-outline" onPress={onVehicles} tone={{ accent: palette.navy, soft: palette.blueSoft }} />
       <BottomItem label="Support" icon="headset" onPress={onSupport} tone={{ accent: palette.navy, soft: palette.amberSoft }} />
       <BottomItem label="Profile" icon="account-outline" onPress={onProfile} tone={{ accent: palette.navy, soft: palette.blueSoft }} />

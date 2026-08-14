@@ -146,7 +146,7 @@ export default function CustomerMockupHomeScreen() {
       <Pressable onPress={() => router.push('/customer/claims')} style={styles.claimCard}><View style={styles.claimHeader}><View style={styles.claimIcon}><MaterialCommunityIcons name="shield-check-outline" size={22} color="#F5B700" /></View><Text style={styles.claimTitle}>Active Claim</Text></View><View style={styles.claimMetrics}><ClaimMetric label="Total Claims" value={claims.length} /><ClaimMetric label="Active Claims" value={active.length} detailLabel="Estimated Amount" detail={money(estimate)} lined /><ClaimMetric label="Settled Claims" value={settled.length} detailLabel="Invoice Amount" detail={money(invoices)} green lined /></View></Pressable>
       <Pressable onPress={() => router.push('/customer/support')} style={styles.supportCard}><MaterialCommunityIcons name="headset" size={33} color={palette.navy} /><View style={styles.supportCopy}><Text style={styles.supportTitle}>Need Help?</Text><Text style={styles.supportText}>Contact our support team</Text></View><MaterialCommunityIcons name="chevron-right" size={28} color={palette.navy} /></Pressable>
     </ScrollView>
-    <View style={styles.nav}><BottomNavigation onClaims={() => router.push('/customer/claims')} onVehicles={() => router.push('/customer/vehicles')} onSupport={() => router.push('/customer/support')} onProfile={() => router.push('/customer/profile')} /></View>
+    <View style={styles.nav}><BottomNavigation onPolicies={() => router.push('/customer/policies')} onVehicles={() => router.push('/customer/vehicles')} onSupport={() => router.push('/customer/support')} onProfile={() => router.push('/customer/profile')} /></View>
     <KycRequiredModal
       visible={!customer && !kycPromptDismissed}
       application={onboarding}
