@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Reports UX V2 to production.",
-  "deploy_requested_at": "2026-08-14T10:43:00+05:30",
+  "purpose": "Deploy Customer Portfolio customer-type filter label update to production.",
+  "deploy_requested_at": "2026-08-14T10:48:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Reports UX V2 PR #335 is merged into main. Deploy the latest current main snapshot through the protected GitHub Actions production deployment workflow.",
-  "source_commit": "d628f1ab0fab24553fc9f154b7eae56cccaba9d5",
-  "release_scope": "Reports UX V2: consolidate reporting into Overview, Business, Portfolio, Claims, and Operations; replace the report-directory landing page with the broker management cockpit; simplify Reports sidebar and contextual navigation; move Governance to Administration -> Audit & Governance; apply the restrained enterprise MIS visual system. Preserve existing report calculations, hierarchy scope, exports, Finance semantics, claims/renewal/readiness behavior, source-record drill-through, Management Pack snapshot rules, and existing report URLs. This deployment uses the latest main snapshot and therefore also retains unrelated newer main changes already merged after UX V2.",
-  "verification": "PR #335 final current-main verification run 31771394848 passed for feature head 444d3c50cc08a8d3d3af80d4d02b117ae1841dcb. Reports UX V2 merge commit bc8b197fb6aba4301a54b3901bc3b87e9920dbc9 is in the ancestry of current main. The production workflow must rerun the compulsory verification gate on this exact deployment-trigger snapshot before invoking Vercel.",
+  "source": "Merge PR #340 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "a13b39fc057299681bf93ebad089cfd3b50edd9e",
+  "release_scope": "Customer Portfolio UI text update: rename the filter option from 'All partner types' to 'All customer types' while preserving the existing partner_type field, filter logic, values, and customer workflows. Deploy the latest current main snapshot.",
+  "verification": "Verify web portal run 31772574634 passed for PR #340 head f4af36b10d2b88d5c834015ee0cfe49f9ca1f375. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
