@@ -15,6 +15,8 @@ type IntermediaryOption = {
 };
 type ApplicationPartnerRow = { id: string; partner_record_id: string | null };
 type PartnerAssociateRow = { partner_record_id: string | null; associate_employee_id: string | null; created_at: string };
+type ManufacturerId = { id: string };
+type BrandOption = { manufacturer_id: string; brand_name: string };
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -30,7 +32,7 @@ export default async function NewPolicyPage() {
     return <SetupError />;
   }
 
-  const [insurersResult, intermediariesResult] = await Promise.all([
+  const [insurersResult, intermediariesResult, manufacturersResult, brandsResult] = await Promise.all([
     admin.from("insurance_companies").select("id, name").eq("is_active", true).order("name", { ascending: true }).returns<InsurerOption[]>(),
     admin
       .from("intermediaries")
@@ -38,10 +40,12 @@ export default async function NewPolicyPage() {
       .in("intermediary_type", ["posp", "misp", "partner"])
       .eq("account_status", "active")
       .order("display_name", { ascending: true })
-      .returns<IntermediaryOption[]>()
+      .returns<IntermediaryOption[]>(),
+    admin.from("vehicle_manufacturers").select("id").eq("is_active", true).returns<ManufacturerId[]>(),
+    admin.from("vehicle_manufacturer_brands").select("manufacturer_id, brand_name").eq("is_active", true).order("brand_name", { ascending: true }).returns<BrandOption[]>(),
   ]);
 
-  if (insurersResult.error || intermediariesResult.error) return <SetupError />;
+  if (insurersResult.error || intermediariesResult.error || manufacturersResult.error || brandsResult.error) return <SetupError />;
 
   const intermediaryRows = intermediariesResult.data ?? [];
   const partnerApplicationIds = intermediaryRows
@@ -85,6 +89,9 @@ export default async function NewPolicyPage() {
 
   const employeeById = new Map(salesEmployees.map((employee) => [employee.id, employee]));
   const insurerOptions = (insurersResult.data ?? []).map((insurer) => ({ value: insurer.id, label: insurer.name }));
+  const activeManufacturerIds = new Set((manufacturersResult.data ?? []).map((manufacturer) => manufacturer.id));
+  const makeNames = Array.from(new Set((brandsResult.data ?? []).filter((brand) => activeManufacturerIds.has(brand.manufacturer_id)).map((brand) => brand.brand_name))).sort((a, b) => a.localeCompare(b));
+  const manufacturerOptions = makeNames.map((name) => ({ value: name, label: name }));
   const rmOptions: PolicyRmOption[] = salesEmployees.map((employee) => {
     const name = employee.full_name?.trim() || "Unnamed Sales Employee";
     return { value: name, label: employee.employee_code ? `${name} - ${employee.employee_code}` : name };
@@ -107,7 +114,7 @@ export default async function NewPolicyPage() {
 
   return (
     <AppShell title="Add Policy">
-      <PolicyUnifiedForm mode="create" insurers={insurerOptions} rms={rmOptions} sources={sourceOptions} />
+      <PolicyUnifiedForm mode="create" insurers={insurerOptions} rms={rmOptions} sources={sourceOptions} manufacturers={manufacturerOptions} />
     </AppShell>
   );
 }

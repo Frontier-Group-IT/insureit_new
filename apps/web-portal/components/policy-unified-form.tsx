@@ -81,6 +81,7 @@ type Props = {
   insurers: SelectOption[];
   rms: PolicyRmOption[];
   sources: PolicySourceOption[];
+  manufacturers: SelectOption[];
   initialValues?: PolicyUnifiedInitialValues;
 };
 
@@ -130,7 +131,7 @@ function assessPayinStatus(amount:string,billNumber:string,billDate:string){
   return"Billing details incomplete";
 }
 
-export function PolicyUnifiedForm({ mode, insurers, rms, sources, initialValues }: Props) {
+export function PolicyUnifiedForm({ mode, insurers, rms, sources, manufacturers, initialValues }: Props) {
   const router = useRouter();
   const [form,setForm]=useState<FormState>(()=>stateFrom(initialValues));
   const [vehicleRegistrationMode,setVehicleRegistrationMode]=useState<VehicleRegistrationMode>("registered");
@@ -251,7 +252,9 @@ export function PolicyUnifiedForm({ mode, insurers, rms, sources, initialValues 
           <select className={inputClass} value={form.vehicleClass} onChange={e=>changeVehicleClass(e.target.value)} required disabled={isEdit}><option value="">Select class</option>{Object.keys(vehicleClassMap).map(option=><option key={option} value={option}>{option}</option>)}</select>
         </div>
 
-        <Field label="Make" value={form.make} onChange={e=>update("make",e.target.value)} placeholder="Manufacturer" disabled={isEdit}/>
+        {isEdit
+          ? <Field label="Make" value={form.make} onChange={e=>update("make",e.target.value)} placeholder="Manufacturer" disabled/>
+          : <Select label="Make" value={form.make} onChange={e=>update("make",e.target.value)} options={manufacturers} placeholder="Select manufacturer"/>}
         <Field label="Model" value={form.model} onChange={e=>update("model",e.target.value)} placeholder="Model / variant" disabled={isEdit}/>
         <Select label="Fuel type" value={form.fuelType} onChange={e=>update("fuelType",e.target.value)} options={["Petrol","Diesel","CNG","Electric","Hybrid","Bi-Fuel","Other"]} placeholder="Select fuel" disabled={isEdit}/>
         <Select label="Year of manufacturing" value={form.manufacturingYear} onChange={e=>update("manufacturingYear",e.target.value)} options={Array.from({length:40},(_,i)=>String(new Date().getFullYear()-i))} placeholder="Select year" disabled={isEdit}/>
