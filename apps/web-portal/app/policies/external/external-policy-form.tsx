@@ -87,9 +87,7 @@ export function ExternalPolicyForm({
           <div className="flex items-start gap-3">
             <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#17365D]"><ShieldCheck className="h-5 w-5" /></div>
             <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#65758B]">External policy</p>
-              <h1 className="mt-1 text-[20px] font-extrabold tracking-[-0.02em] text-[#12203B]">{mode === "edit" ? "Edit External Policy" : "Add External Policy"}</h1>
-              <p className="mt-1 max-w-2xl text-[11px] leading-5 text-[#66748A]">Link an outside insurance policy to an existing customer and one of that customer&apos;s existing vehicles. This record stays separate from the SIBL policy register and business calculations.</p>
+              <h1 className="text-[20px] font-extrabold tracking-[-0.02em] text-[#12203B]">{mode === "edit" ? "Edit External Policy" : "Add External Policy"}</h1>
             </div>
           </div>
           <Link href="/policies/external" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#D3DFEC] bg-[#F8FAFC] px-3 text-[10.5px] font-bold text-[#334155]"><ArrowLeft className="h-4 w-4" />External Policies</Link>
