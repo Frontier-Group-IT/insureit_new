@@ -12,6 +12,7 @@ const inputClass = "h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 
 const onboardingInputClass = "h-11 w-full rounded-xl border border-[#CBD5E1] bg-white px-3.5 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
 const labelClass = "mb-1 block text-[10.5px] font-semibold text-[#344054]";
 const onboardingLabelClass = "mb-1.5 block text-[10.5px] font-semibold text-[#344054]";
+const vehicleClassOptions: SelectOption[] = ["PCP", "TWP", "GCV", "PCV", "MISD", "CPM"].map((value) => ({ label: value, value }));
 
 export function CustomerForm({ action, values, agents = [], submitLabel = "Save record" }: { action: FormAction; values?: CustomerValues; agents?: SelectOption[]; submitLabel?: string }) {
   return <EnterpriseForm action={action} cancelHref="/customers" submitLabel={submitLabel}>
@@ -25,7 +26,7 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
       <VehicleSection number="01" title="Vehicle Ownership" columns="three">
         <SelectField variant="onboarding" label="Customer" name="customer_id" options={customers} required defaultValue={values?.customer_id ?? ""} emptyLabel="Select customer" />
         <Field variant="onboarding" label="Vehicle number" name="vehicle_no" placeholder="MH12AB1234" required defaultValue={values?.vehicle_no ?? ""} uppercase />
-        <Field variant="onboarding" label="Class" name="vehicle_type" placeholder="Truck / Bus / Goods carrier" required defaultValue={values?.vehicle_type ?? ""} />
+        <SelectField variant="onboarding" label="Class" name="vehicle_type" options={vehicleClassOptions} required defaultValue={values?.vehicle_type ?? ""} emptyLabel="Select class" />
       </VehicleSection>
 
       <VehicleSection number="02" title="Manufacturer and Identity" columns="three">
