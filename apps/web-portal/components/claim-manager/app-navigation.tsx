@@ -35,7 +35,9 @@ export const navigationSections:NavigationSection[]=[
   ]},
   {kind:"group",key:"policies",label:"Policies",icon:ShieldCheck,capability:"view_policies",items:[
    {href:"/policies",label:"Policy Register",icon:ShieldCheck,capability:"view_policies"},
-   {href:"/policies/new",label:"Add Policy",icon:Plus,capability:"view_policies",minimumAccess:"edit"}
+   {href:"/policies/new",label:"Add Policy",icon:Plus,capability:"view_policies",minimumAccess:"edit"},
+   {href:"/policies/external",label:"External Policies",icon:ShieldCheck,capability:"view_policies"},
+   {href:"/policies/external/new",label:"Add External Policy",icon:Plus,capability:"view_policies",minimumAccess:"edit"}
   ]}
  ]},
  {key:"claims",label:"Claims",icon:ShieldCheck,tint:"from-[#ff6f61] to-[#ff9f68]",capability:"view_claims",items:[
