@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { FormSubmitButton } from "./form-submit-button";
-import { ManufacturerYearFields, VehicleSpecificationFields } from "./vehicle-class-capacity-fields";
+import { VehicleSpecificationFields } from "./vehicle-class-capacity-fields";
 
 type FormAction = (formData: FormData) => void | Promise<void>;
 type SelectOption = { label: string; value: string };
@@ -13,6 +13,7 @@ const inputClass = "h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 
 const onboardingInputClass = "h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
 const labelClass = "mb-1 block text-[10.5px] font-semibold text-[#344054]";
 const onboardingLabelClass = "mb-1 block text-[10.5px] font-semibold text-[#344054]";
+const vehicleYearOptions = Array.from({ length: 40 }, (_, index) => String(new Date().getFullYear() - index));
 
 export function CustomerForm({ action, values, agents = [], submitLabel = "Save record" }: { action: FormAction; values?: CustomerValues; agents?: SelectOption[]; submitLabel?: string }) {
   return <EnterpriseForm action={action} cancelHref="/customers" submitLabel={submitLabel}>
@@ -21,15 +22,20 @@ export function CustomerForm({ action, values, agents = [], submitLabel = "Save 
 }
 
 export function VehicleForm({ action, customers, manufacturers = [], values, submitLabel = "Save record" }: { action: FormAction; customers: SelectOption[]; manufacturers?: SelectOption[]; values?: VehicleValues; submitLabel?: string }) {
+  const defaultYear = values?.year?.toString() ?? "";
+  const years = defaultYear && !vehicleYearOptions.includes(defaultYear) ? [defaultYear, ...vehicleYearOptions] : vehicleYearOptions;
+  const yearOptions = years.map((year) => ({ value: year, label: year }));
+
   return <div className="mx-auto max-w-[1480px]">
     <form action={action} className="space-y-3">
       <VehicleOnboardingHeader />
 
-      <VehicleSection number="01" title="Vehicle Ownership" columns="five">
+      <VehicleSection number="01" title="Vehicle Ownership" columns="six">
         <SelectField variant="onboarding" label="Customer" name="customer_id" options={customers} required defaultValue={values?.customer_id ?? ""} emptyLabel="Select customer" />
         <Field variant="onboarding" label="RC number" name="vehicle_no" placeholder="MH12AB1234" required defaultValue={values?.vehicle_no ?? ""} uppercase />
         <Field variant="onboarding" label="Registration date" name="registration_date" type="date" defaultValue={values?.registration_date ?? ""} />
-        <ManufacturerYearFields manufacturers={manufacturers} defaultMake={values?.make ?? ""} defaultYear={values?.year?.toString() ?? ""} />
+        <SelectField variant="onboarding" label="Manufacturer" name="make" options={manufacturers} required defaultValue={values?.make ?? ""} emptyLabel="Select manufacturer" />
+        <SelectField variant="onboarding" label="MFG Year" name="year" options={yearOptions} defaultValue={defaultYear} emptyLabel="Select year" />
         <Field variant="onboarding" label="Model" name="model" placeholder="Model name" defaultValue={values?.model ?? ""} />
       </VehicleSection>
 
@@ -92,8 +98,8 @@ function VehicleOnboardingHeader() {
   </section>;
 }
 
-function VehicleSection({ number, title, children, columns }: { number: string; title: string; children: ReactNode; columns: "two" | "three" | "four" | "five" }) {
-  const grid = columns === "two" ? "md:grid-cols-2" : columns === "three" ? "md:grid-cols-2 xl:grid-cols-3" : columns === "four" ? "md:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5";
+function VehicleSection({ number, title, children, columns }: { number: string; title: string; children: ReactNode; columns: "two" | "three" | "four" | "five" | "six" }) {
+  const grid = columns === "two" ? "md:grid-cols-2" : columns === "three" ? "md:grid-cols-2 xl:grid-cols-3" : columns === "four" ? "md:grid-cols-2 xl:grid-cols-4" : columns === "six" ? "md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6" : "md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5";
   return <section className="overflow-hidden rounded-xl border border-[#D9E2F0] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
     <div className="flex min-h-[50px] items-center border-b border-[#E4EAF1] bg-[#FBFCFE] px-4 py-2.5">
       <div className="flex items-center gap-2.5">
