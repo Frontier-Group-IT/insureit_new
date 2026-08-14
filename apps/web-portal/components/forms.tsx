@@ -5,7 +5,7 @@ import { FormSubmitButton } from "./form-submit-button";
 type FormAction = (formData: FormData) => void | Promise<void>;
 type SelectOption = { label: string; value: string };
 type CustomerValues = { contact_name?: string | null; company_name?: string | null; phone?: string | null; email?: string | null; city?: string | null; state?: string | null; address?: string | null; assigned_agent_id?: string | null };
-type VehicleValues = { customer_id?: string | null; vehicle_no?: string | null; vehicle_type?: string | null; make?: string | null; model?: string | null; chassis_no?: string | null; engine_no?: string | null; permit_no?: string | null; year?: number | null; gvw_kg?: number | null; registration_date?: string | null; fitness_expiry_date?: string | null; puc_expiry_date?: string | null; road_tax_expiry_date?: string | null; national_permit_expiry_date?: string | null; local_permit_expiry_date?: string | null };
+type VehicleValues = { customer_id?: string | null; vehicle_no?: string | null; vehicle_type?: string | null; make?: string | null; model?: string | null; chassis_no?: string | null; engine_no?: string | null; permit_no?: string | null; year?: number | null; gvw_kg?: number | null; fuel_type?: string | null; registration_date?: string | null; fitness_expiry_date?: string | null; puc_expiry_date?: string | null; road_tax_expiry_date?: string | null; national_permit_expiry_date?: string | null; local_permit_expiry_date?: string | null };
 type PolicyValues = { customer_id?: string | null; vehicle_id?: string | null; insurance_company_id?: string | null; policy_no?: string | null; policy_type?: string | null; insured_declared_value?: number | null; start_date?: string | null; end_date?: string | null };
 
 const inputClass = "h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
@@ -23,29 +23,27 @@ export function CustomerForm({ action, values, agents = [], submitLabel = "Save 
 export function VehicleForm({ action, customers, manufacturers = [], values, submitLabel = "Save record" }: { action: FormAction; customers: SelectOption[]; manufacturers?: SelectOption[]; values?: VehicleValues; submitLabel?: string }) {
   return <div className="mx-auto max-w-[1480px] rounded-2xl bg-[#F3F6FA] p-3 sm:p-4 lg:p-5">
     <form action={action} className="space-y-4">
-      <VehicleSection number="01" title="Vehicle Ownership" columns="three">
+      <VehicleSection number="01" title="Vehicle Ownership" columns="five">
         <SelectField variant="onboarding" label="Customer" name="customer_id" options={customers} required defaultValue={values?.customer_id ?? ""} emptyLabel="Select customer" />
         <Field variant="onboarding" label="Vehicle number" name="vehicle_no" placeholder="MH12AB1234" required defaultValue={values?.vehicle_no ?? ""} uppercase />
-        <SelectField variant="onboarding" label="Class" name="vehicle_type" options={vehicleClassOptions} required defaultValue={values?.vehicle_type ?? ""} emptyLabel="Select class" />
-      </VehicleSection>
-
-      <VehicleSection number="02" title="Manufacturer and Identity" columns="three">
+        <Field variant="onboarding" label="Registration date" name="registration_date" type="date" defaultValue={values?.registration_date ?? ""} />
         <SelectField variant="onboarding" label="Manufacturer" name="make" options={manufacturers} required defaultValue={values?.make ?? ""} emptyLabel="Select manufacturer" />
         <Field variant="onboarding" label="Model" name="model" placeholder="Model name" defaultValue={values?.model ?? ""} />
-        <Field variant="onboarding" label="Manufacturing year" name="year" placeholder="2024" type="number" min="1950" max="2100" defaultValue={values?.year?.toString() ?? ""} />
-        <Field variant="onboarding" label="Chassis number" name="chassis_no" placeholder="Chassis number" defaultValue={values?.chassis_no ?? ""} uppercase />
-        <Field variant="onboarding" label="Engine number" name="engine_no" placeholder="Engine number" defaultValue={values?.engine_no ?? ""} uppercase />
       </VehicleSection>
 
-      <VehicleSection number="03" title="Operational Compliance" columns="four">
-        <Field variant="onboarding" label="GVW (kg)" name="gvw_kg" placeholder="16200" type="number" min="0" step="0.01" defaultValue={values?.gvw_kg?.toString() ?? ""} />
-        <Field variant="onboarding" label="Registration date" name="registration_date" type="date" defaultValue={values?.registration_date ?? ""} />
+      <VehicleSection number="02" title="Vehicle Specification" columns="five">
+        <SelectField variant="onboarding" label="Class" name="vehicle_type" options={vehicleClassOptions} required defaultValue={values?.vehicle_type ?? ""} emptyLabel="Select class" />
+        <Field variant="onboarding" label="Chassis number" name="chassis_no" placeholder="Chassis number" defaultValue={values?.chassis_no ?? ""} uppercase />
+        <Field variant="onboarding" label="Engine number" name="engine_no" placeholder="Engine number" defaultValue={values?.engine_no ?? ""} uppercase />
+        <Field variant="onboarding" label="Fuel Type" name="fuel_type" placeholder="Fuel type" defaultValue={values?.fuel_type ?? ""} />
+        <Field variant="onboarding" label="Capacity" name="gvw_kg" placeholder="16200" type="number" min="0" step="0.01" defaultValue={values?.gvw_kg?.toString() ?? ""} />
+        <Field variant="onboarding" label="Manufacturing year" name="year" placeholder="2024" type="number" min="1950" max="2100" defaultValue={values?.year?.toString() ?? ""} />
+      </VehicleSection>
+
+      <VehicleSection number="03" title="Compliance & Permit" columns="five">
         <Field variant="onboarding" label="Fitness expiry" name="fitness_expiry_date" type="date" defaultValue={values?.fitness_expiry_date ?? ""} />
         <Field variant="onboarding" label="PUC expiry" name="puc_expiry_date" type="date" defaultValue={values?.puc_expiry_date ?? ""} />
         <Field variant="onboarding" label="Road tax expiry" name="road_tax_expiry_date" type="date" defaultValue={values?.road_tax_expiry_date ?? ""} />
-      </VehicleSection>
-
-      <VehicleSection number="04" title="Commercial Permit" columns="two">
         <Field variant="onboarding" label="National permit expiry" name="national_permit_expiry_date" type="date" defaultValue={values?.national_permit_expiry_date ?? ""} />
         <Field variant="onboarding" label="Local permit expiry" name="local_permit_expiry_date" type="date" defaultValue={values?.local_permit_expiry_date ?? ""} />
       </VehicleSection>
@@ -70,8 +68,8 @@ function EnterpriseForm({ action, cancelHref, submitLabel, children }: { action:
   return <div className="mx-auto max-w-[1240px] pb-20"><form action={action} className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">{children}<div className="sticky bottom-0 flex items-center justify-end gap-2 border-t border-[#E2E8F0] bg-white/95 px-5 py-3 backdrop-blur"><Link href={cancelHref} className="rounded-md border border-[#CBD5E1] px-4 py-2 text-[11px] font-semibold text-[#334155] hover:bg-[#F8FAFC]">Cancel</Link><FormSubmitButton label={submitLabel} /></div></form></div>;
 }
 
-function VehicleSection({ number, title, children, columns }: { number: string; title: string; children: ReactNode; columns: "two" | "three" | "four" }) {
-  const grid = columns === "two" ? "md:grid-cols-2" : columns === "four" ? "md:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-2 xl:grid-cols-3";
+function VehicleSection({ number, title, children, columns }: { number: string; title: string; children: ReactNode; columns: "two" | "three" | "four" | "five" }) {
+  const grid = columns === "two" ? "md:grid-cols-2" : columns === "three" ? "md:grid-cols-2 xl:grid-cols-3" : columns === "four" ? "md:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5";
   return <section className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.05)]">
     <div className="flex min-h-14 items-center border-b border-[#E4EAF1] bg-[#FBFCFE] px-4 py-3 sm:px-5">
       <div className="flex items-center gap-3">
