@@ -7,6 +7,10 @@ import { AppLoadingProvider } from '@/components/app-loading';
 import { SplashIntro } from '@/components/first-look';
 import { RealtimeNotificationProvider } from '@/components/realtime-notifications';
 
+export const unstable_settings = {
+  initialRouteName: 'index',
+};
+
 export default function RootLayout() {
   return <AppLoadingProvider><RootApplication /></AppLoadingProvider>;
 }
@@ -27,6 +31,7 @@ function RootApplication() {
       <StatusBar style={introVisible ? 'light' : 'dark'} />
       <RealtimeNotificationProvider>
         <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
+          <Stack.Screen name="index" />
           <Stack.Screen name="customer/add-vehicle" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         </Stack>
       </RealtimeNotificationProvider>
