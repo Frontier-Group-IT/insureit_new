@@ -22,7 +22,8 @@ type PolicyRow = {
   claims: { count: number }[];
 };
 
-type PartnerSourceRow = {
+type IntermediarySourceRow = {
+  intermediary_type: "partner" | "posp" | "misp";
   intermediary_code: string | null;
   display_name: string;
 };
@@ -30,9 +31,16 @@ type PartnerSourceRow = {
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-function isPartnerSource(value: string | null) {
+function policySourceDatabaseType(value: string | null): IntermediarySourceRow["intermediary_type"] | null {
   const normalized = value?.trim().toLowerCase();
-  return normalized === "sibl / partner" || normalized === "partner";
+  if (normalized === "sibl / partner" || normalized === "partner") return "partner";
+  if (normalized === "posp") return "posp";
+  if (normalized === "misp") return "misp";
+  return null;
+}
+
+function sourceLookupKey(type: IntermediarySourceRow["intermediary_type"], code: string) {
+  return `${type}:${code}`;
 }
 
 export default async function PoliciesPage() {
@@ -54,35 +62,39 @@ export default async function PoliciesPage() {
   const { data, error } = await query.returns<PolicyRow[]>();
   const rows = data ?? [];
 
-  const partnerCodes = Array.from(new Set(
+  const sourceCodes = Array.from(new Set(
     rows
-      .filter((policy) => isPartnerSource(policy.intermediary_type))
+      .filter((policy) => Boolean(policySourceDatabaseType(policy.intermediary_type)))
       .map((policy) => policy.intermediary_code?.trim())
       .filter((code): code is string => Boolean(code)),
   ));
 
-  const partnerNameByCode = new Map<string, string>();
-  if (partnerCodes.length) {
-    const { data: partnerSources } = await admin
+  const sourceNameByKey = new Map<string, string>();
+  if (sourceCodes.length) {
+    const { data: intermediarySources } = await admin
       .from("intermediaries")
-      .select("intermediary_code, display_name")
-      .eq("intermediary_type", "partner")
-      .in("intermediary_code", partnerCodes)
-      .returns<PartnerSourceRow[]>();
+      .select("intermediary_type, intermediary_code, display_name")
+      .in("intermediary_type", ["partner", "posp", "misp"])
+      .in("intermediary_code", sourceCodes)
+      .returns<IntermediarySourceRow[]>();
 
-    for (const partner of partnerSources ?? []) {
-      const code = partner.intermediary_code?.trim();
-      const name = partner.display_name?.trim();
-      if (code && name) partnerNameByCode.set(code, name);
+    for (const intermediary of intermediarySources ?? []) {
+      const code = intermediary.intermediary_code?.trim();
+      const name = intermediary.display_name?.trim();
+      if (code && name) sourceNameByKey.set(sourceLookupKey(intermediary.intermediary_type, code), name);
     }
   }
 
-  const workspaceRows = rows.map((policy) => ({
-    ...policy,
-    source_name: isPartnerSource(policy.intermediary_type)
-      ? partnerNameByCode.get(policy.intermediary_code?.trim() ?? "") ?? null
-      : null,
-  }));
+  const workspaceRows = rows.map((policy) => {
+    const sourceType = policySourceDatabaseType(policy.intermediary_type);
+    const sourceCode = policy.intermediary_code?.trim() ?? "";
+    return {
+      ...policy,
+      source_name: sourceType && sourceCode
+        ? sourceNameByKey.get(sourceLookupKey(sourceType, sourceCode)) ?? null
+        : null,
+    };
+  });
 
   return (
     <AppShell title="Policies">
