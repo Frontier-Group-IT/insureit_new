@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Customer Portfolio customer-type filter label update to production.",
-  "deploy_requested_at": "2026-08-14T10:48:00+05:30",
+  "purpose": "Deploy Policy Portfolio intermediary source-name resolution to production.",
+  "deploy_requested_at": "2026-08-14T10:58:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #340 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "a13b39fc057299681bf93ebad089cfd3b50edd9e",
-  "release_scope": "Customer Portfolio UI text update: rename the filter option from 'All partner types' to 'All customer types' while preserving the existing partner_type field, filter logic, values, and customer workflows. Deploy the latest current main snapshot.",
-  "verification": "Verify web portal run 31772574634 passed for PR #340 head f4af36b10d2b88d5c834015ee0cfe49f9ca1f375. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #341 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "82421a9a6f89d4821d4971d2af88a7f9131c768f",
+  "release_scope": "Policy Portfolio Source column: show canonical Partner, POSP and MISP display names when a valid intermediary type and code are linked, while preserving the existing secondary intermediary code, fallback behavior, layout, styling, access control and policy workflows.",
+  "verification": "Verify web portal run 31773069692 passed for PR #341 head 4ce9b306ec3349146feeeb5aee1315b9d7face3a. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
