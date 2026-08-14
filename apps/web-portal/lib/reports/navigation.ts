@@ -1,76 +1,66 @@
-export type ReportFamilyKey = "executive" | "business" | "portfolio" | "operations" | "controls";
+export type ReportWorkspaceKey = "overview" | "business" | "portfolio" | "claims" | "operations";
 
-export type ReportDestination = {
-  key: string;
+export type ReportWorkspace = {
+  key: ReportWorkspaceKey;
   label: string;
   href: string;
-  family: ReportFamilyKey;
-  governanceOnly?: boolean;
+  routes: string[];
+  sections?: Array<{ label: string; href: string }>;
 };
 
-export type ReportFamily = {
-  key: ReportFamilyKey;
-  label: string;
-  destinations: ReportDestination[];
-};
-
-export const reportFamilies: ReportFamily[] = [
+export const reportWorkspaces: ReportWorkspace[] = [
   {
-    key: "executive",
-    label: "Executive",
-    destinations: [
-      { key: "management-pack", label: "Management Pack", href: "/reports/management-pack", family: "executive" },
-      { key: "archive", label: "Month-End Archive", href: "/reports/management-pack/archive", family: "executive" },
-    ],
+    key: "overview",
+    label: "Overview",
+    href: "/reports",
+    routes: ["/reports", "/reports/management-pack", "/reports/management-pack/archive"],
   },
   {
     key: "business",
     label: "Business",
-    destinations: [
-      { key: "business-performance", label: "Business Performance", href: "/reports/business", family: "business" },
-      { key: "distribution", label: "Distribution", href: "/reports/distribution", family: "business" },
-      { key: "finance", label: "Finance", href: "/reports/finance", family: "business" },
+    href: "/reports/business",
+    routes: ["/reports/business", "/reports/distribution", "/reports/finance"],
+    sections: [
+      { label: "Performance", href: "/reports/business" },
+      { label: "Distribution", href: "/reports/distribution" },
+      { label: "Finance", href: "/reports/finance" },
     ],
   },
   {
     key: "portfolio",
-    label: "Portfolio & Service",
-    destinations: [
-      { key: "renewals", label: "Renewals", href: "/reports/renewals", family: "portfolio" },
-      { key: "claims", label: "Claims", href: "/reports/claims", family: "portfolio" },
-    ],
+    label: "Portfolio",
+    href: "/reports/renewals",
+    routes: ["/reports/renewals"],
+  },
+  {
+    key: "claims",
+    label: "Claims",
+    href: "/reports/claims",
+    routes: ["/reports/claims"],
   },
   {
     key: "operations",
     label: "Operations",
-    destinations: [
-      { key: "operations-compliance", label: "Compliance & Operations", href: "/reports/operations", family: "operations" },
-    ],
-  },
-  {
-    key: "controls",
-    label: "Controls",
-    destinations: [
-      { key: "readiness", label: "Readiness", href: "/reports/readiness", family: "controls" },
-      { key: "governance", label: "Governance", href: "/reports/governance", family: "controls", governanceOnly: true },
+    href: "/reports/operations",
+    routes: ["/reports/operations", "/reports/readiness"],
+    sections: [
+      { label: "Compliance", href: "/reports/operations" },
+      { label: "Data Quality", href: "/reports/readiness" },
     ],
   },
 ];
 
-export function visibleReportFamilies(canViewGovernance: boolean): ReportFamily[] {
-  return reportFamilies
-    .map((family) => ({
-      ...family,
-      destinations: family.destinations.filter((destination) => !destination.governanceOnly || canViewGovernance),
-    }))
-    .filter((family) => family.destinations.length > 0);
+export function reportWorkspaceForPath(pathname: string): ReportWorkspaceKey | null {
+  if (pathname === "/reports") return "overview";
+
+  const matches = reportWorkspaces
+    .flatMap((workspace) => workspace.routes.map((route) => ({ workspace, route })))
+    .filter(({ route }) => route !== "/reports" && (pathname === route || pathname.startsWith(`${route}/`)))
+    .sort((a, b) => b.route.length - a.route.length);
+
+  return matches[0]?.workspace.key ?? null;
 }
 
-export function reportFamilyForPath(pathname: string): ReportFamilyKey | null {
-  for (const family of reportFamilies) {
-    if (family.destinations.some((destination) => pathname === destination.href || pathname.startsWith(`${destination.href}/`))) {
-      return family.key;
-    }
-  }
-  return null;
+export function reportWorkspace(key: ReportWorkspaceKey | null) {
+  return reportWorkspaces.find((workspace) => workspace.key === key) ?? null;
 }
