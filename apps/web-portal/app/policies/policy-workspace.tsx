@@ -23,6 +23,7 @@ type PolicyRow = {
   premium_amount: number | null;
   intermediary_type: string | null;
   intermediary_code: string | null;
+  source_name: string | null;
   customers: { company_name: string | null; contact_name: string } | null;
   vehicles: { vehicle_no: string } | null;
   insurance_companies: { name: string } | null;
@@ -49,7 +50,7 @@ export function PolicyWorkspace({ rows }: { rows: PolicyRow[] }) {
   const insurers = useMemo(() => Array.from(new Set(rows.map((row) => row.insurance_companies?.name).filter(Boolean))).sort() as string[], [rows]);
 
   const filtered = useMemo(() => enriched.filter((row) => {
-    const haystack = [row.policy_no, row.policy_type, row.insurance_companies?.name, row.vehicles?.vehicle_no, row.customers?.company_name, row.customers?.contact_name, row.intermediary_type, row.intermediary_code].filter(Boolean).join(" ").toLowerCase();
+    const haystack = [row.policy_no, row.policy_type, row.insurance_companies?.name, row.vehicles?.vehicle_no, row.customers?.company_name, row.customers?.contact_name, row.intermediary_type, row.intermediary_code, row.source_name].filter(Boolean).join(" ").toLowerCase();
     const matchesInsurer = insurer === "all" || row.insurance_companies?.name === insurer;
     const matchesView =
       view === "all" ||
@@ -138,7 +139,7 @@ export function PolicyWorkspace({ rows }: { rows: PolicyRow[] }) {
                 <td className="px-2.5"><PolicyStatus policy={policy} /></td>
                 <td className="px-2.5 text-right font-semibold tabular-nums">{formatCurrency(policy.insured_declared_value)}</td>
                 <td className="px-2.5 text-right font-semibold tabular-nums">{formatCurrency(policy.premium_amount)}</td>
-                <td className="px-2.5"><p className="truncate font-semibold capitalize">{policy.intermediary_type?.replaceAll("_", " ") ?? "Direct"}</p><p className="truncate text-[9px] leading-4 text-[#64748B]">{policy.intermediary_code ?? "Sankalp"}</p></td>
+                <td className="px-2.5"><p className="truncate font-semibold capitalize">{policy.source_name ?? policy.intermediary_type?.replaceAll("_", " ") ?? "Direct"}</p><p className="truncate text-[9px] leading-4 text-[#64748B]">{policy.intermediary_code ?? "Sankalp"}</p></td>
                 <td className="px-2.5 text-center"><Link href={`/policies/${policy.id}/edit`} className="rounded-lg border border-[#BFD3F7] bg-[#F0F6FF] px-2.5 py-1.5 text-[9.5px] font-bold text-[#174EA6]">Open</Link></td>
               </tr>
             ))}

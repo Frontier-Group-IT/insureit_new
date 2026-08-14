@@ -22,8 +22,18 @@ type PolicyRow = {
   claims: { count: number }[];
 };
 
+type PartnerSourceRow = {
+  intermediary_code: string | null;
+  display_name: string;
+};
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+function isPartnerSource(value: string | null) {
+  const normalized = value?.trim().toLowerCase();
+  return normalized === "sibl / partner" || normalized === "partner";
+}
 
 export default async function PoliciesPage() {
   const profile = await requireCapability("view_policies");
@@ -44,6 +54,36 @@ export default async function PoliciesPage() {
   const { data, error } = await query.returns<PolicyRow[]>();
   const rows = data ?? [];
 
+  const partnerCodes = Array.from(new Set(
+    rows
+      .filter((policy) => isPartnerSource(policy.intermediary_type))
+      .map((policy) => policy.intermediary_code?.trim())
+      .filter((code): code is string => Boolean(code)),
+  ));
+
+  const partnerNameByCode = new Map<string, string>();
+  if (partnerCodes.length) {
+    const { data: partnerSources } = await admin
+      .from("intermediaries")
+      .select("intermediary_code, display_name")
+      .eq("intermediary_type", "partner")
+      .in("intermediary_code", partnerCodes)
+      .returns<PartnerSourceRow[]>();
+
+    for (const partner of partnerSources ?? []) {
+      const code = partner.intermediary_code?.trim();
+      const name = partner.display_name?.trim();
+      if (code && name) partnerNameByCode.set(code, name);
+    }
+  }
+
+  const workspaceRows = rows.map((policy) => ({
+    ...policy,
+    source_name: isPartnerSource(policy.intermediary_type)
+      ? partnerNameByCode.get(policy.intermediary_code?.trim() ?? "") ?? null
+      : null,
+  }));
+
   return (
     <AppShell title="Policies">
       {profile.role === "it_super_user" && !error ? (
@@ -57,7 +97,7 @@ export default async function PoliciesPage() {
           }))}
         />
       ) : null}
-      {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3"><p className="text-[11px] font-semibold text-red-700">The policy register is temporarily unavailable.</p><p className="mt-1 text-[9.5px] text-[#64748B]">Please refresh the page or try again shortly.</p></div> : <PolicyWorkspace rows={rows} />}
+      {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3"><p className="text-[11px] font-semibold text-red-700">The policy register is temporarily unavailable.</p><p className="mt-1 text-[9.5px] text-[#64748B]">Please refresh the page or try again shortly.</p></div> : <PolicyWorkspace rows={workspaceRows} />}
     </AppShell>
   );
 }
