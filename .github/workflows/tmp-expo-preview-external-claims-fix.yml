@@ -1,0 +1,36 @@
+name: Temporary Expo Preview External Claims Fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/tmp-expo-preview-external-claims-fix.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+        working-directory: .
+      - name: Verify Expo credential
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then exit 2; fi
+      - name: Publish corrected preview update
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          CI: '1'
+        run: npx --yes eas-cli@18 update --channel preview --environment preview --message "External policy separation and unified claim layout 2026-08-14" --non-interactive
