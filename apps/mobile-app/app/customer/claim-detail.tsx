@@ -110,7 +110,7 @@ export default function ClaimDetailScreen() {
     <View style={[styles.heroCard, { backgroundColor: tone.background, borderColor: tone.border }]}>
       <View style={[styles.accentBar, { backgroundColor: tone.accent }]} />
       <View style={styles.heroTop}>
-        <View style={[styles.statusIcon, { backgroundColor: tone.soft }]}><MaterialCommunityIcons name={settled ? 'check-decagram-outline' : 'shield-car-outline'} size={25} color={tone.accent} /></View>
+        <View style={[styles.statusIcon, { backgroundColor: tone.soft }]}><MaterialCommunityIcons name={settled ? 'check-decagram-outline' : 'shield-check-outline'} size={25} color={tone.accent} /></View>
         <View style={styles.heroCopy}><Text style={[styles.stageLabel, { color: tone.accent }]}>{settled ? 'CLAIM COMPLETE' : currentStage?.label ?? claim.current_status}</Text><Text style={styles.vehicleNo}>{vehicle?.vehicle_no ?? 'Vehicle linked'}</Text></View>
         <View style={[styles.focusStatusBadge, { backgroundColor: tone.soft, borderColor: tone.border }]}><Text style={[styles.focusStatusText, { color: tone.accent }]}>{selfManaged ? 'Self Tracked' : 'Sankalp Managed'}</Text></View>
       </View>
