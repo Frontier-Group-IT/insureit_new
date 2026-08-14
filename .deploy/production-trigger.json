@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy Onboarding Manufacturer dropdown to production.",
-  "deploy_requested_at": "2026-08-14T13:38:00+05:30",
+  "purpose": "Deploy Vehicle Onboarding combined Vehicle Number and Manufacturing Year container to production.",
+  "deploy_requested_at": "2026-08-14T13:43:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #352 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "f97148bed346e7071a62491180aeb56162b4712b",
-  "release_scope": "Policy Onboarding only: replace the create-mode Make free-text field with the same active Vehicle Manufacturer master-data dropdown used by Add Vehicle, preserving the existing make field, edit-mode behavior, validation, RC lookup, payloads, save logic, layout and unrelated workflows.",
-  "verification": "Verify web portal run 31782523728 passed for PR #352 head 2a3f38ae42ce07ed27a1bee4ca0f943c624a75f7. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #353 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "19bfe00d7ad119c57151476d2037af935777c1a3",
+  "release_scope": "Vehicle Onboarding only: render Vehicle Number and Manufacturing Year inside one shared horizontal rounded container with equal halves and a vertical divider, preserving existing Vehicle Number validation, Manufacturing Year dropdown behavior, and all unrelated fields, backend logic, and workflows.",
+  "verification": "Verify web portal run 31782952535 passed for PR #353 head 9ae573d80dff0d7f25e1e4c7321f2126f6318375. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
