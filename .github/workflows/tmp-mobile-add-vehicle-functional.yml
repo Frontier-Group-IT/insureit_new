@@ -1,0 +1,172 @@
+name: Temporary functional mobile Add Vehicle patch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/tmp-mobile-add-vehicle-functional.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ci-placeholder.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'ci-placeholder-public-anon-key' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Patch Add Vehicle experience
+        shell: python
+        run: |
+          from pathlib import Path
+
+          # Individual My Vehicles -> real Add Vehicle workflow.
+          p = Path('apps/mobile-app/app/customer/vehicles.tsx')
+          s = p.read_text()
+          old = """  function openAddVehicle() {\n    if (isPortfolioFleet) {\n      router.push('/customer/add-vehicle');\n      return;\n    }\n    setAddMethod('vehicle');\n    setAddValue('');\n    setAddVehicleOpen(true);\n  }\n"""
+          new = """  function openAddVehicle() {\n    router.push('/customer/add-vehicle');\n  }\n"""
+          if old not in s:
+            raise SystemExit('vehicles openAddVehicle target not found')
+          p.write_text(s.replace(old, new))
+
+          # Present Add Vehicle as an app modal.
+          p = Path('apps/mobile-app/app/_layout.tsx')
+          s = p.read_text()
+          old = """        <Stack\n          screenOptions={{ headerShown: false, animation: 'none' }}\n        />\n"""
+          new = """        <Stack screenOptions={{ headerShown: false, animation: 'none' }}>\n          <Stack.Screen name=\"customer/add-vehicle\" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />\n        </Stack>\n"""
+          if old not in s:
+            raise SystemExit('root stack target not found')
+          p.write_text(s.replace(old, new))
+
+          # Align Add Vehicle form with website vehicle onboarding.
+          p = Path('apps/mobile-app/app/customer/add-vehicle.tsx')
+          s = p.read_text()
+
+          s = s.replace("import type { InsuranceCompany } from '@/lib/types';\n", '')
+          s = s.replace("type VehicleKind = 'Commercial Vehicle' | 'Private Vehicle';\n\nconst vehicleTypes: VehicleKind[] = ['Commercial Vehicle', 'Private Vehicle'];\nconst policyTypes = ['Commercial comprehensive', 'Third party', 'Own damage', 'Package policy'];\n", "const vehicleClasses = [\n  { value: 'PCP', label: 'PCP - Private Car' },\n  { value: 'TWP', label: 'TWP - Two Wheeler' },\n  { value: 'GCV', label: 'GCV - Goods Carrying Vehicle' },\n  { value: 'PCV', label: 'PCV - Passenger Carrying Vehicle' },\n  { value: 'MISD', label: 'MISD - Miscellaneous Vehicle' },\n  { value: 'CPM', label: 'CPM - Contractor Plant & Machinery' },\n];\nconst fuelOptions = ['Petrol', 'Diesel', 'CNG', 'Electric', 'Hybrid', 'Bi-Fuel', 'Other'];\n")
+
+          s = s.replace("  const [insurers, setInsurers] = useState<InsuranceCompany[]>([]);\n", '')
+          s = s.replace("  const [insurerOpen, setInsurerOpen] = useState(false);\n  const [policyTypeOpen, setPolicyTypeOpen] = useState(false);\n", '')
+          s = s.replace("  const [vehicleType, setVehicleType] = useState<VehicleKind>('Commercial Vehicle');\n", "  const [vehicleType, setVehicleType] = useState('');\n")
+          s = s.replace("  const [permitNo, setPermitNo] = useState('');\n", "  const [fuelType, setFuelType] = useState('');\n")
+          for line in [
+            "  const [policyInsurerId, setPolicyInsurerId] = useState('');\n",
+            "  const [policyNo, setPolicyNo] = useState('');\n",
+            "  const [policyIdv, setPolicyIdv] = useState('');\n",
+            "  const [policyStartDate, setPolicyStartDate] = useState('');\n",
+            "  const [policyEndDate, setPolicyEndDate] = useState('');\n",
+            "  const [policyPremium, setPolicyPremium] = useState('');\n",
+            "  const [policyType, setPolicyType] = useState(policyTypes[0]);\n",
+          ]:
+            s = s.replace(line, '')
+
+          start = s.index("  const isCommercial =")
+          end = s.index("\n\n  useEffect(() => {", start)
+          s = s[:start] + "  const selectedContext = contexts.find((context) => context.customer_id === selectedCustomerId) ?? null;\n  const visibleDateFields = useMemo(() => [\n    { key: 'registration', label: 'Registration date', value: registrationDate, onChange: setRegistrationDate },\n    { key: 'fitness', label: 'Fitness expiry', value: fitnessExpiryDate, onChange: setFitnessExpiryDate },\n    { key: 'puc', label: 'PUC expiry', value: pucExpiryDate, onChange: setPucExpiryDate },\n    { key: 'road_tax', label: 'Road tax expiry', value: roadTaxExpiryDate, onChange: setRoadTaxExpiryDate },\n    { key: 'national_permit', label: 'National permit expiry', value: nationalPermitExpiryDate, onChange: setNationalPermitExpiryDate },\n    { key: 'local_permit', label: 'Local permit expiry', value: localPermitExpiryDate, onChange: setLocalPermitExpiryDate },\n  ], [fitnessExpiryDate, localPermitExpiryDate, nationalPermitExpiryDate, pucExpiryDate, registrationDate, roadTaxExpiryDate]);" + s[end:]
+
+          old_lookup = """    async function loadLookups() {\n      const [manufacturerResult, insurerResult] = await Promise.all([\n        supabase\n        .from('vehicle_manufacturers')\n        .select('name')\n        .eq('is_active', true)\n        .order('sort_order', { ascending: true })\n          .order('name', { ascending: true }),\n        supabase.from('insurance_companies').select('*').order('name'),\n      ]);\n      if (!active) return;\n      if (manufacturerResult.error) {\n        setManufacturers([]);\n      } else {\n        setManufacturers((manufacturerResult.data ?? []).map((item) => item.name).filter(Boolean));\n      }\n      setInsurers((insurerResult.data ?? []) as InsuranceCompany[]);\n    }\n"""
+          new_lookup = """    async function loadLookups() {\n      const manufacturerResult = await supabase\n        .from('vehicle_manufacturer_brands')\n        .select('brand_name')\n        .eq('is_active', true)\n        .order('brand_name', { ascending: true });\n      if (!active) return;\n      if (manufacturerResult.error) {\n        setManufacturers([]);\n      } else {\n        setManufacturers(Array.from(new Set((manufacturerResult.data ?? []).map((item) => item.brand_name).filter(Boolean))));\n      }\n    }\n"""
+          if old_lookup not in s:
+            raise SystemExit('lookup target not found')
+          s = s.replace(old_lookup, new_lookup)
+
+          # Remove old commercial/private clearing helper.
+          helper_start = s.find("  function chooseVehicleType(")
+          if helper_start != -1:
+            helper_end = s.index("\n\n  async function save()", helper_start)
+            s = s[:helper_start] + s[helper_end+2:]
+
+          old_validation = """    if (!vehicleNo.trim()) return setMessage('Enter the vehicle number.');\n    if (!vehicleType.trim()) return setMessage('Select the vehicle type.');\n    if (!make.trim()) return setMessage('Select the vehicle manufacturer.');\n    const parsedYear = year ? Number(year) : null;\n    if (parsedYear !== null && (!Number.isInteger(parsedYear) || parsedYear < 1950 || parsedYear > new Date().getFullYear() + 1)) return setMessage('Enter a valid manufacturing year.');\n    const parsedGvw = isCommercial && gvwKg ? Number(gvwKg) : null;\n    if (parsedGvw !== null && (!Number.isFinite(parsedGvw) || parsedGvw <= 0)) return setMessage('Enter a valid GVW.');\n    const policyIdvValue = policyIdv ? Number(policyIdv) : null;\n    if (policyIdvValue !== null && (!Number.isFinite(policyIdvValue) || policyIdvValue < 0)) return setMessage('Enter a valid policy IDV.');\n    const policyPremiumValue = policyPremium ? Number(policyPremium) : null;\n    if (policyPremiumValue !== null && (!Number.isFinite(policyPremiumValue) || policyPremiumValue < 0)) return setMessage('Enter a valid policy premium.');\n    if (hasPolicyDetails) {\n      if (!policyInsurerId) return setMessage('Select the policy insurer.');\n      if (!policyNo.trim()) return setMessage('Enter the policy number.');\n      if (!policyType.trim()) return setMessage('Select the policy type.');\n      if (!policyStartDate || !policyEndDate) return setMessage('Select the policy start and end dates.');\n      if (new Date(policyEndDate).getTime() < new Date(policyStartDate).getTime()) return setMessage('Policy end date must be after the start date.');\n    }\n"""
+          new_validation = """    if (!vehicleNo.trim()) return setMessage('Enter the RC number.');\n    if (!make.trim()) return setMessage('Select the vehicle manufacturer.');\n    if (!model.trim()) return setMessage('Enter the vehicle model.');\n    if (!year.trim()) return setMessage('Select the manufacturing year.');\n    const parsedYear = Number(year);\n    if (!Number.isInteger(parsedYear) || parsedYear < 1950 || parsedYear > new Date().getFullYear() + 1) return setMessage('Enter a valid manufacturing year.');\n    const parsedGvw = gvwKg ? Number(gvwKg) : null;\n    if (parsedGvw !== null && (!Number.isFinite(parsedGvw) || parsedGvw <= 0)) return setMessage('Enter a valid capacity.');\n"""
+          if old_validation not in s:
+            raise SystemExit('validation target not found')
+          s = s.replace(old_validation, new_validation)
+
+          s = s.replace("      p_vehicle_type: vehicleType,", "      p_vehicle_type: vehicleType || null,")
+          s = s.replace("      p_model: model.trim() || null,", "      p_model: model.trim(),")
+          s = s.replace("      p_permit_no: isCommercial ? cleanCode(permitNo) : null,", "      p_permit_no: null,")
+          s = s.replace("      p_gvw_kg: parsedGvw,", "      p_gvw_kg: parsedGvw,\n      p_fuel_type: fuelType || null,")
+          s = s.replace("      p_fitness_expiry_date: isCommercial ? cleanDate(fitnessExpiryDate) : null,", "      p_fitness_expiry_date: cleanDate(fitnessExpiryDate),")
+          s = s.replace("      p_road_tax_expiry_date: isCommercial ? cleanDate(roadTaxExpiryDate) : null,", "      p_road_tax_expiry_date: cleanDate(roadTaxExpiryDate),")
+          s = s.replace("      p_national_permit_expiry_date: isCommercial ? cleanDate(nationalPermitExpiryDate) : null,", "      p_national_permit_expiry_date: cleanDate(nationalPermitExpiryDate),")
+          s = s.replace("      p_local_permit_expiry_date: isCommercial ? cleanDate(localPermitExpiryDate) : null,", "      p_local_permit_expiry_date: cleanDate(localPermitExpiryDate),")
+
+          # Drop policy creation after vehicle save.
+          policy_block_start = s.find("    if (!error && hasPolicyDetails) {")
+          if policy_block_start != -1:
+            policy_block_end = s.index("    setSaving(false);", policy_block_start)
+            s = s[:policy_block_start] + s[policy_block_end:]
+
+          # Add p_fuel_type to legacy retry only when using new server is unavailable: keep fallback old payload unchanged.
+
+          # Refine header into modal-like onboarding header.
+          s = s.replace("      <Text style={styles.compactTitle}>Add Vehicle</Text>", "      <View style={styles.modalHeader}><View><Text style={styles.modalEyebrow}>VEHICLE ONBOARDING</Text><Text style={styles.compactTitle}>Add Vehicle</Text><Text style={styles.modalSub}>Add the vehicle now; optional details can be completed later.</Text></View><Pressable accessibilityRole=\"button\" onPress={() => router.back()} style={styles.modalClose}><MaterialCommunityIcons name=\"close\" size={20} color={palette.navy} /></Pressable></View>")
+
+          # Vehicle section aligned to website.
+          old_vehicle = """        <FormSection title=\"Vehicle details\" icon=\"truck-outline\" tone=\"vehicle\">\n          <View style={styles.twoColumnRow}>\n            <View style={styles.columnWide}><InputField icon=\"card-text-outline\" label=\"Vehicle number\" value={vehicleNo} onChangeText={(value) => setVehicleNo(value.replace(/\\s/g, '').toUpperCase())} autoCapitalize=\"characters\" /></View>\n            <View style={styles.column}><VehicleTypeDropdown value={vehicleType} onSelect={chooseVehicleType} /></View>\n          </View>\n          <MakeDropdown manufacturers={manufacturers} selectedMake={make} query={makeQuery} open={makeOpen} onToggle={() => setMakeOpen((value) => !value)} onQueryChange={setMakeQuery} onSelect={(value) => { setMake(value); setMakeQuery(value); setMakeOpen(false); }} />\n          <View style={styles.twoColumnRow}>\n            <View style={styles.column}><InputField icon=\"car-info\" label=\"Model\" value={model} onChangeText={setModel} /></View>\n            <View style={styles.column}><InputField icon=\"calendar-blank-outline\" label=\"Year\" keyboardType=\"number-pad\" value={year} onChangeText={(value) => setYear(value.replace(/\\D/g, '').slice(0, 4))} /></View>\n          </View>\n        </FormSection>\n"""
+          new_vehicle = """        <FormSection title=\"Vehicle ownership\" icon=\"truck-outline\" tone=\"vehicle\">\n          <InputField required icon=\"card-text-outline\" label=\"RC number\" value={vehicleNo} onChangeText={(value) => setVehicleNo(value.replace(/\\s/g, '').toUpperCase())} autoCapitalize=\"characters\" />\n          <PremiumDateField label=\"Registration date\" value={registrationDate} onPress={() => setDateTarget({ label: 'Registration date', value: registrationDate, onChange: setRegistrationDate })} />\n          <MakeDropdown required manufacturers={manufacturers} selectedMake={make} query={makeQuery} open={makeOpen} onToggle={() => setMakeOpen((value) => !value)} onQueryChange={setMakeQuery} onSelect={(value) => { setMake(value); setMakeQuery(value); setMakeOpen(false); }} />\n          <View style={styles.twoColumnRow}>\n            <View style={styles.column}><InputField required icon=\"car-info\" label=\"Model\" value={model} onChangeText={setModel} /></View>\n            <View style={styles.column}><InputField required icon=\"calendar-blank-outline\" label=\"Manufacturing year\" keyboardType=\"number-pad\" value={year} onChangeText={(value) => setYear(value.replace(/\\D/g, '').slice(0, 4))} /></View>\n          </View>\n        </FormSection>\n"""
+          if old_vehicle not in s:
+            raise SystemExit('vehicle section target not found')
+          s = s.replace(old_vehicle, new_vehicle)
+
+          old_identity = """        <FormSection title=\"Vehicle identity\" icon=\"identifier\" tone=\"identity\">\n          <View style={styles.twoColumnRow}>\n            <View style={styles.column}><InputField icon=\"barcode\" label=\"Chassis no.\" value={chassisNo} onChangeText={(value) => setChassisNo(value.replace(/\\s/g, '').toUpperCase())} autoCapitalize=\"characters\" /></View>\n            <View style={styles.column}><InputField icon=\"engine-outline\" label=\"Engine no.\" value={engineNo} onChangeText={(value) => setEngineNo(value.replace(/\\s/g, '').toUpperCase())} autoCapitalize=\"characters\" /></View>\n          </View>\n        </FormSection>\n\n        <FormSection title=\"Operational details\" icon=\"clipboard-pulse-outline\" tone=\"operational\">\n          {isCommercial ? <View style={styles.twoColumnRow}>\n            <View style={styles.column}><InputField icon=\"weight-kilogram\" label=\"GVW (kg)\" keyboardType=\"decimal-pad\" value={gvwKg} onChangeText={(value) => setGvwKg(value.replace(/[^0-9.]/g, ''))} /></View>\n            <View style={styles.column}><InputField icon=\"file-certificate-outline\" label=\"Permit no.\" value={permitNo} onChangeText={(value) => setPermitNo(value.replace(/\\s/g, '').toUpperCase())} autoCapitalize=\"characters\" /></View>\n          </View> : null}\n          <View style={styles.dateGrid}>\n            {visibleDateFields.map((field) => (\n              <View key={field.key} style={styles.dateCell}>\n                <PremiumDateField label={field.label} value={field.value} onPress={() => setDateTarget(field)} />\n              </View>\n            ))}\n          </View>\n        </FormSection>\n"""
+          new_identity = """        <FormSection title=\"Vehicle specification\" icon=\"identifier\" tone=\"identity\">\n          <VehicleTypeDropdown value={vehicleType} onSelect={setVehicleType} />\n          <View style={styles.twoColumnRow}>\n            <View style={styles.column}><InputField icon=\"barcode\" label=\"Chassis number\" value={chassisNo} onChangeText={(value) => setChassisNo(value.replace(/\\s/g, '').toUpperCase())} autoCapitalize=\"characters\" /></View>\n            <View style={styles.column}><InputField icon=\"engine-outline\" label=\"Engine number\" value={engineNo} onChangeText={(value) => setEngineNo(value.replace(/\\s/g, '').toUpperCase())} autoCapitalize=\"characters\" /></View>\n          </View>\n          <View style={styles.twoColumnRow}>\n            <View style={styles.column}><FuelDropdown value={fuelType} onSelect={setFuelType} /></View>\n            <View style={styles.column}><InputField icon=\"weight-kilogram\" label=\"Capacity / GVW\" keyboardType=\"decimal-pad\" value={gvwKg} onChangeText={(value) => setGvwKg(value.replace(/[^0-9.]/g, ''))} /></View>\n          </View>\n        </FormSection>\n\n        <FormSection title=\"Compliance & permit\" icon=\"clipboard-pulse-outline\" tone=\"operational\">\n          <View style={styles.dateGrid}>\n            {visibleDateFields.filter((field) => field.key !== 'registration').map((field) => (\n              <View key={field.key} style={styles.dateCell}>\n                <PremiumDateField label={field.label} value={field.value} onPress={() => setDateTarget(field)} />\n              </View>\n            ))}\n          </View>\n        </FormSection>\n"""
+          if old_identity not in s:
+            raise SystemExit('identity/operational target not found')
+          s = s.replace(old_identity, new_identity)
+
+          # Remove Optional policy section.
+          policy_ui_start = s.find("        <FormSection title=\"Optional policy details\"")
+          if policy_ui_start != -1:
+            policy_ui_end = s.index("\n\n        <Button label=", policy_ui_start)
+            s = s[:policy_ui_start] + s[policy_ui_end:]
+
+          # Replace vehicle class dropdown implementation.
+          comp_start = s.index("function VehicleTypeDropdown(")
+          comp_end = s.index("\n\nfunction AccountDropdown", comp_start)
+          replacement = """function VehicleTypeDropdown({ value, onSelect }: { value: string; onSelect: (value: string) => void }) {\n  const [open, setOpen] = useState(false);\n  const selected = vehicleClasses.find((item) => item.value === value);\n  return (\n    <View style={styles.field}>\n      <Text style={styles.fieldLabel}>Vehicle class</Text>\n      <Pressable accessibilityRole=\"button\" onPress={() => setOpen((current) => !current)} style={styles.selectButton}>\n        <View style={styles.selectIcon}><MaterialCommunityIcons name=\"truck-outline\" size={18} color=\"#0A43A3\" /></View>\n        <Text style={[styles.selectValue, !selected && styles.placeholder]}>{selected?.label ?? 'Select class (optional)'}</Text>\n        <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={21} color={palette.navy} />\n      </Pressable>\n      {open ? <View style={styles.selectMenu}>{vehicleClasses.map((item) => <Pressable key={item.value} onPress={() => { onSelect(item.value); setOpen(false); }} style={[styles.selectOption, value === item.value && styles.selectOptionActive]}><Text style={[styles.selectOptionText, value === item.value && styles.selectOptionTextActive]}>{item.label}</Text>{value === item.value ? <MaterialCommunityIcons name=\"check-circle\" size={17} color={palette.navy} /> : null}</Pressable>)}</View> : null}\n    </View>\n  );\n}\n\nfunction FuelDropdown({ value, onSelect }: { value: string; onSelect: (value: string) => void }) {\n  const [open, setOpen] = useState(false);\n  return (\n    <View style={styles.field}>\n      <Text style={styles.fieldLabel}>Fuel type</Text>\n      <Pressable accessibilityRole=\"button\" onPress={() => setOpen((current) => !current)} style={styles.selectButton}>\n        <View style={styles.selectIcon}><MaterialCommunityIcons name=\"gas-station-outline\" size={18} color=\"#0A43A3\" /></View>\n        <Text style={[styles.selectValue, !value && styles.placeholder]}>{value || 'Select fuel (optional)'}</Text>\n        <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={21} color={palette.navy} />\n      </Pressable>\n      {open ? <View style={styles.selectMenu}>{fuelOptions.map((item) => <Pressable key={item} onPress={() => { onSelect(item); setOpen(false); }} style={[styles.selectOption, value === item && styles.selectOptionActive]}><Text style={[styles.selectOptionText, value === item && styles.selectOptionTextActive]}>{item}</Text>{value === item ? <MaterialCommunityIcons name=\"check-circle\" size={17} color={palette.navy} /> : null}</Pressable>)}</View> : null}\n    </View>\n  );\n}\n"""
+          s = s[:comp_start] + replacement + s[comp_end:]
+
+          # Required-field visual markers.
+          s = s.replace("function InputField({ label, icon, style, ...props }: React.ComponentProps<typeof TextInput> & { label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }) {", "function InputField({ label, icon, style, required = false, ...props }: React.ComponentProps<typeof TextInput> & { label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; required?: boolean }) {")
+          s = s.replace("      <Text style={styles.fieldLabel}>{label}</Text>\n      <View style={styles.inputShell}>", "      <Text style={styles.fieldLabel}>{label}{required ? ' *' : ''}</Text>\n      <View style={styles.inputShell}>", 1)
+          s = s.replace("function MakeDropdown({ manufacturers, selectedMake, query, open, onToggle, onQueryChange, onSelect }: { manufacturers: string[]; selectedMake: string; query: string; open: boolean; onToggle: () => void; onQueryChange: (value: string) => void; onSelect: (make: string) => void }) {", "function MakeDropdown({ manufacturers, selectedMake, query, open, onToggle, onQueryChange, onSelect, required = false }: { manufacturers: string[]; selectedMake: string; query: string; open: boolean; onToggle: () => void; onQueryChange: (value: string) => void; onSelect: (make: string) => void; required?: boolean }) {")
+          make_pos = s.index("function MakeDropdown")
+          next_label = s.index("      <Text style={styles.fieldLabel}>Make</Text>", make_pos)
+          s = s[:next_label] + s[next_label:].replace("      <Text style={styles.fieldLabel}>Make</Text>", "      <Text style={styles.fieldLabel}>Manufacturer{required ? ' *' : ''}</Text>", 1)
+
+          # Modal header styles.
+          marker = "  compactTitle:"
+          idx = s.find(marker)
+          if idx == -1:
+            raise SystemExit('compactTitle style target not found')
+          line_start = s.rfind('\n', 0, idx) + 1
+          s = s[:line_start] + "  modalHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 12 },\n  modalEyebrow: { color: '#8A5B16', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.7, marginBottom: 2 },\n  modalSub: { color: palette.slate, fontSize: 11.2, lineHeight: 16, fontWeight: '700', marginTop: 2, maxWidth: 290 },\n  modalClose: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },\n" + s[line_start:]
+
+          p.write_text(s)
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify mobile
+        run: |
+          npm run typecheck:mobile
+          npm run lint:mobile
+          npm run build:mobile:web
+      - name: Commit mobile Add Vehicle workflow
+        run: |
+          git config user.name "antnish1"
+          git config user.email "shahdolho@gmail.com"
+          git add apps/mobile-app/app/customer/vehicles.tsx apps/mobile-app/app/customer/add-vehicle.tsx apps/mobile-app/app/_layout.tsx
+          git diff --cached --check
+          git commit -m "Make customer Add Vehicle workflow functional"
+          git push origin HEAD:main
