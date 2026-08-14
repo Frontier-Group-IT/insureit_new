@@ -7,6 +7,13 @@ const DATE_RE = "((?<![0-9])[0-9]{1,2}[-/](?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP
 type MoneyHit = { value: number; page: number; evidence: string };
 type DatePeriod = { from: string; upto: string; page: number; evidence: string };
 type TextHit = { value: string; page: number; evidence: string };
+type ShriramPremiumSchedule = {
+  od: MoneyHit | null;
+  tp: MoneyHit | null;
+  total: MoneyHit | null;
+  gross: MoneyHit | null;
+  tax: MoneyHit | null;
+};
 
 const INSURERS: Record<string, { name: string; version: string }> = {
   shriram_motor_v1: { name: "Shriram General Insurance Company Limited", version: "shriram_motor_v1.1.0" },
@@ -56,9 +63,10 @@ export function refineAdditionalMotorPolicy(pages: string[], parsed: ParsedPolic
   setField(fields, "cpa_opted", "CPA opted", cpaValue > 0 ? "Yes" : "No", cpa ? .97 : .84, cpa?.page ?? null, cpa?.evidence ?? "No payable owner-driver CPA premium identified");
   setField(fields, "cpa_premium", "CPA amount", money(cpaValue), cpa ? .97 : .84, cpa?.page ?? null, cpa?.evidence ?? "No payable owner-driver CPA premium identified");
 
-  const total = findTotalPremium(cleanPages, parsed.parserId);
-  let tax = findTax(cleanPages);
-  const gross = findGross(cleanPages);
+  const shriramSchedule = parsed.parserId === "shriram_motor_v1" ? findShriramPremiumSchedule(cleanPages) : null;
+  const total = shriramSchedule?.total ?? findTotalPremium(cleanPages, parsed.parserId);
+  let tax = shriramSchedule?.tax ?? findTax(cleanPages);
+  const gross = shriramSchedule?.gross ?? findGross(cleanPages);
   if (total && gross && gross.value > total.value) {
     const derivedTax = round2(gross.value - total.value);
     if (!tax || isSmallReferenceAmount(tax.value) || Math.abs(tax.value - derivedTax) > 1) {
@@ -73,8 +81,8 @@ export function refineAdditionalMotorPolicy(pages: string[], parsed: ParsedPolic
   if (tax) setField(fields, "tax_amount", "Printed GST", money(tax.value), .96, tax.page, tax.evidence);
   if (gross) setField(fields, "gross_premium", "Printed gross premium", money(gross.value), .96, gross.page, gross.evidence);
 
-  const od = findOwnDamagePremium(cleanPages, parsed.parserId);
-  const liability = findLiabilityPremium(cleanPages, parsed.parserId);
+  const od = shriramSchedule?.od ?? findOwnDamagePremium(cleanPages, parsed.parserId);
+  const liability = shriramSchedule?.tp ?? findLiabilityPremium(cleanPages, parsed.parserId);
   const printedNet = total?.value ?? null;
 
   if (od && liability && printedNet !== null) {
@@ -172,9 +180,62 @@ function findIdv(pages: string[]): MoneyHit | null {
     const lines = pages[pageIndex].split("\n");
     for (let index = 0; index < lines.length; index += 1) {
       if (!labels.some((label) => label.test(lines[index]))) continue;
-      const evidence = lines.slice(index, index + 6).join(" ");
+      const evidence = lines.slice(index, index + 12).join(" ");
       const candidates = amounts(evidence).filter((value) => value >= 10000 && value <= 1000000000 && !isYear(value));
       if (candidates.length) return { value: Math.max(...candidates), page: pageIndex + 1, evidence };
+    }
+  }
+  return null;
+}
+
+function findShriramPremiumSchedule(pages: string[]): ShriramPremiumSchedule | null {
+  for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
+    const lines = pages[pageIndex].split("\n");
+    const start = lines.findIndex((line) => /SCHEDULE\s+OF\s+PREMIUM/i.test(line));
+    if (start < 0) continue;
+    const endOffset = lines.slice(start + 1).findIndex((line) => /Hypothecation|Hire\s+Purchase|The\s+above\s+Total\s+OD\s+Premium|Deductibles\s+under/i.test(line));
+    const end = endOffset >= 0 ? start + 1 + endOffset : Math.min(lines.length, start + 80);
+    const block = lines.slice(start, end);
+    const page = pageIndex + 1;
+
+    const od = findMoneyAfterBlockLabel(block, /OD\s+TOTAL/i, page, { lookahead: 4 });
+    const tp = findMoneyAfterBlockLabel(block, /TP\s+TOTAL/i, page, { lookahead: 4 });
+    const total = findMoneyAfterBlockLabel(block, /TOTAL\s+PREMIUM/i, page, { lookahead: 4 });
+    const gross = findMoneyAfterBlockLabel(block, /PREMIUM\s+AMOUNT/i, page, { lookahead: 4 });
+    const tax = total && gross && gross.value > total.value
+      ? {
+          value: round2(gross.value - total.value),
+          page,
+          evidence: `Shriram premium schedule: Premium Amount ${money(gross.value)} minus Total Premium ${money(total.value)}`,
+        }
+      : null;
+
+    if (od || tp || total || gross) return { od, tp, total, gross, tax };
+  }
+  return null;
+}
+
+function findMoneyAfterBlockLabel(
+  lines: string[],
+  label: RegExp,
+  page: number,
+  options: { lookahead: number },
+): MoneyHit | null {
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = lines[index].match(label);
+    if (!match) continue;
+    const sameLine = match.index === undefined ? lines[index] : lines[index].slice(match.index + match[0].length);
+    const sameLineCandidates = amounts(sameLine).filter((value) => value >= 100 && value <= 10000000 && !isYear(value));
+    if (sameLineCandidates.length) {
+      return { value: sameLineCandidates[0], page, evidence: lines[index] };
+    }
+    for (let offset = 1; offset <= options.lookahead && index + offset < lines.length; offset += 1) {
+      const nextLine = lines[index + offset];
+      if (/^[%:]$/.test(nextLine)) continue;
+      const candidates = amounts(nextLine).filter((value) => value >= 100 && value <= 10000000 && !isYear(value));
+      if (candidates.length) {
+        return { value: candidates[0], page, evidence: `${lines[index]} ${nextLine}` };
+      }
     }
   }
   return null;
