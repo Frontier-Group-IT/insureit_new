@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy Portfolio Partner name source display to production.",
-  "deploy_requested_at": "2026-08-14T10:41:00+05:30",
+  "purpose": "Deploy Reports UX V2 to production.",
+  "deploy_requested_at": "2026-08-14T10:43:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #339 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "81f7785f59f217b94c4d8fa8caf15120b87edb35",
-  "release_scope": "For Partner-linked policies, resolve the canonical intermediary display_name by intermediary_code and show that Partner name in the Policy Portfolio Source column instead of the generic SIBL / Partner label. Preserve the existing secondary source/code line, fallback behavior, access scope, policy linkage, layout, and all backend mutation logic.",
-  "verification": "Verify web portal run 31772210425 passed for PR #339 head 26fb3f76038819125b5f1d0d993efd0119661ce5. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Reports UX V2 PR #335 is merged into main. Deploy the latest current main snapshot through the protected GitHub Actions production deployment workflow.",
+  "source_commit": "d628f1ab0fab24553fc9f154b7eae56cccaba9d5",
+  "release_scope": "Reports UX V2: consolidate reporting into Overview, Business, Portfolio, Claims, and Operations; replace the report-directory landing page with the broker management cockpit; simplify Reports sidebar and contextual navigation; move Governance to Administration -> Audit & Governance; apply the restrained enterprise MIS visual system. Preserve existing report calculations, hierarchy scope, exports, Finance semantics, claims/renewal/readiness behavior, source-record drill-through, Management Pack snapshot rules, and existing report URLs. This deployment uses the latest main snapshot and therefore also retains unrelated newer main changes already merged after UX V2.",
+  "verification": "PR #335 final current-main verification run 31771394848 passed for feature head 444d3c50cc08a8d3d3af80d4d02b117ae1841dcb. Reports UX V2 merge commit bc8b197fb6aba4301a54b3901bc3b87e9920dbc9 is in the ancestry of current main. The production workflow must rerun the compulsory verification gate on this exact deployment-trigger snapshot before invoking Vercel.",
   "instructions": "Update this file only after explicit deployment approval."
 }
