@@ -1,0 +1,47 @@
+name: Temporary Expo Preview Env Fix
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/tmp-expo-preview-env-fix.yml
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile-app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: .
+
+      - name: Verify Expo credential is configured
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "EXPO_TOKEN repository secret is not configured."
+            exit 2
+          fi
+
+      - name: Publish preview update with preview environment
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          CI: '1'
+        run: npx --yes eas-cli@18 update --channel preview --environment preview --message "Fix preview OTA environment configuration 2026-08-14" --non-interactive
