@@ -113,7 +113,7 @@ export default function GroupKycScreen() {
         <BrandLogo width={145} />
         <View style={styles.headerSpacer} />
       </View>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboard}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboard}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} automaticallyAdjustKeyboardInsets keyboardDismissMode="interactive">
         <Text style={styles.screenTitle}>Complete Your KYC</Text>
         <View style={styles.partnerSummary}><View style={styles.partnerIcon}><MaterialCommunityIcons name="account-group-outline" size={23} color="#0A43A3" /></View><View style={styles.partnerCopy}><Text style={styles.partnerEyebrow}>Partner type</Text><Text style={styles.partnerTitle}>Group</Text></View><MaterialCommunityIcons name="check-circle" size={21} color="#21A66B" /></View>

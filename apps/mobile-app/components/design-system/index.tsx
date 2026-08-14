@@ -99,6 +99,11 @@ export function AppSearchBar({ value, onChangeText, placeholder = 'Search' }: { 
     <View style={designStyles.searchBar}>
       <MaterialCommunityIcons name="magnify" size={21} color="#667085" />
       <TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="#8A94A6" style={designStyles.searchInput} />
+      {value ? (
+        <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => onChangeText('')} style={({ pressed }) => [designStyles.searchClear, pressed && designStyles.searchClearPressed]}>
+          <MaterialCommunityIcons name="close" size={16} color="#667085" />
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -339,6 +344,8 @@ const designStyles = StyleSheet.create({
   avatarText: { color: colors.white, fontSize: 16, fontWeight: '900' },
   searchBar: { minHeight: 54, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.92)', borderWidth: 1, borderColor: 'rgba(224,231,240,0.96)', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12, shadowColor: '#0B1220', shadowOpacity: 0.04, shadowRadius: 10, elevation: 1 },
   searchInput: { flex: 1, color: colors.navy, fontSize: 15, fontWeight: '600' },
+  searchClear: { width: 32, height: 32, borderRadius: 12, backgroundColor: '#F3F6FA', alignItems: 'center', justifyContent: 'center' },
+  searchClearPressed: { opacity: 0.74, transform: [{ scale: 0.94 }] },
   selectWrap: { marginBottom: 9 },
   selectButton: { minHeight: 50, borderRadius: 17, borderWidth: 1, borderColor: colors.border, backgroundColor: 'rgba(255,255,255,0.92)', paddingHorizontal: 12, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', gap: 10 },
   selectCopy: { flex: 1, minWidth: 0 },

@@ -219,7 +219,7 @@ export default function DealershipKycScreen() {
 
   return <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
     <View style={styles.header}><Pressable onPress={() => router.replace('/customer/kyc/partner-type')} style={styles.back}><MaterialCommunityIcons name="chevron-left" size={27} color={palette.navy} /></Pressable><BrandLogo width={145} /><View style={{ width: 42 }} /></View>
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboard}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboard}>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} automaticallyAdjustKeyboardInsets keyboardDismissMode="interactive">
       <Text style={styles.title}>Dealership KYC</Text>
       

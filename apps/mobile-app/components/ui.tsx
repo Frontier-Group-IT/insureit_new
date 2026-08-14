@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Link, LinkProps, useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import { PropsWithChildren, isValidElement, useEffect, useRef, useState } from 'react';
-import { Animated, Easing, KeyboardAvoidingView, Platform, Pressable, PressableProps, ScrollView, StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Keyboard, KeyboardAvoidingView, Platform, Pressable, PressableProps, ScrollView, StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { NotificationBell } from '@/components/realtime-notifications';
@@ -24,6 +24,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
   const [profileInitial, setProfileInitial] = useState('I');
   const [profileRole, setProfileRole] = useState<AppRole | null>(null);
   const [customerContext, setCustomerContext] = useState<CustomerAccountContext | null | undefined>(pathname.startsWith('/customer') ? undefined : null);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const showProfile = ['/customer', '/it', '/staff', '/agent', '/hierarchy', '/admin'].some((prefix) => pathname.startsWith(prefix));
   const compactTopSpacing = pathname === '/customer/upload-documents';
   const legalTopSpacing = pathname.startsWith('/customer/legal');
@@ -58,6 +59,15 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
       active = false;
     };
   }, [pathname]);
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   function openProfile() {
     if (pathname.startsWith('/customer')) return router.push(isPortfolioCustomerContext(customerContext) ? '/customer/group/profile' : '/customer/profile');
@@ -100,7 +110,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
           </Pressable>
         </View>
       ) : null}
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboard}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboard}>
         <ScrollView
           style={styles.screen}
           contentContainerStyle={[styles.screenContent, showProfile && [styles.screenContentWithTabs, { paddingTop: insets.top + 112 }], !showProfile && { paddingTop: insets.top + 18 }, compactTopSpacing && { paddingTop: insets.top + 106 }, legalTopSpacing && { paddingTop: insets.top + 88 }, loadingOnly && styles.screenContentLoading]}
@@ -137,21 +147,22 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
           ) : null}
           {children}
         </ScrollView>
-        {showProfile && tabRole && (!pathname.startsWith('/customer') || customerContext !== undefined) ? <BottomTabs role={tabRole} pathname={pathname} bottomInset={insets.bottom} customerContext={customerContext} /> : null}
+        {showProfile && !keyboardVisible && tabRole && (!pathname.startsWith('/customer') || customerContext !== undefined) ? <BottomTabs role={tabRole} pathname={pathname} bottomInset={insets.bottom} customerContext={customerContext} /> : null}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 export function Card({ children, style, ...props }: PropsWithChildren<PressableProps>) {
-  return <Pressable style={[styles.card, typeof style === 'function' ? undefined : style]} {...props}>{children}</Pressable>;
+  return <Pressable style={(state) => [styles.card, state.pressed && props.onPress && styles.cardPressed, typeof style === 'function' ? style(state) : style]} {...props}>{children}</Pressable>;
 }
 
-export function Button({ label, onPress, variant = 'primary', disabled = false }: { label: string; onPress: () => void; variant?: 'primary' | 'secondary' | 'danger'; disabled?: boolean }) {
+export function Button({ label, onPress, variant = 'primary', disabled = false, icon, loading = false }: { label: string; onPress: () => void; variant?: 'primary' | 'secondary' | 'danger'; disabled?: boolean; icon?: keyof typeof MaterialCommunityIcons.glyphMap; loading?: boolean }) {
   const buttonStyle = [styles.button, variant === 'secondary' && styles.secondaryButton, variant === 'danger' && styles.dangerButton, disabled && styles.disabledButton];
   const textStyle = [styles.buttonText, variant === 'secondary' && styles.secondaryButtonText];
   return (
-    <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={buttonStyle}>
+    <Pressable accessibilityRole="button" disabled={disabled || loading} onPress={onPress} style={({ pressed }) => [buttonStyle, pressed && !disabled && !loading && styles.buttonPressed]}>
+      {loading ? <ActivityIndicator size="small" color={variant === 'secondary' ? colors.navy : colors.white} /> : icon ? <MaterialCommunityIcons name={icon} size={18} color={variant === 'secondary' ? colors.navy : colors.white} /> : null}
       <Text style={textStyle}>{label}</Text>
     </Pressable>
   );
@@ -211,18 +222,35 @@ export function LoadingState({ label }: { label?: string }) {
       </View>
       <Text style={styles.loadingLabel}>Getting things ready</Text>
       <Text style={styles.loadingHint}>A seamless InsureIT experience is on its way.</Text>
+      <View style={styles.skeletonStack}>
+        <View style={styles.skeletonCard}>
+          <View style={styles.skeletonIcon} />
+          <View style={styles.skeletonCopy}>
+            <View style={styles.skeletonLineWide} />
+            <View style={styles.skeletonLineShort} />
+          </View>
+        </View>
+        <View style={[styles.skeletonCard, styles.skeletonCardMuted]}>
+          <View style={styles.skeletonIconSmall} />
+          <View style={styles.skeletonCopy}>
+            <View style={styles.skeletonLineMid} />
+            <View style={styles.skeletonLineTiny} />
+          </View>
+        </View>
+      </View>
     </View>
   );
 }
 
-export function EmptyState({ title, body }: { title: string; body: string }) {
+export function EmptyState({ title, body, actionLabel, onAction, icon = 'file-search-outline' }: { title: string; body: string; actionLabel?: string; onAction?: () => void; icon?: keyof typeof MaterialCommunityIcons.glyphMap }) {
   return (
     <Card>
       <View style={styles.emptyIcon}>
-        <MaterialCommunityIcons name="file-search-outline" size={22} color={colors.green} />
+        <MaterialCommunityIcons name={icon} size={22} color={colors.green} />
       </View>
       <Text style={styles.cardTitle}>{title}</Text>
       <Text style={styles.muted}>{body}</Text>
+      {actionLabel && onAction ? <Button label={actionLabel} onPress={onAction} variant="secondary" icon="arrow-right" /> : null}
     </Card>
   );
 }
@@ -289,7 +317,7 @@ function tabsForRole(role: AppRole, customerContext?: CustomerAccountContext | n
   ];
   if (role === 'customer') return [
     { label: 'Home', href: '/customer/home', icon: 'home-variant', ...customerTone },
-    { label: 'Policies', href: '/customer/policies', icon: 'file-document-outline', ...customerTone },
+    { label: 'Claims', href: '/customer/claims', icon: 'file-document-check-outline', ...customerTone },
     { label: 'Vehicles', href: '/customer/vehicles', icon: 'truck-outline', ...customerTone },
     { label: 'Support', href: '/customer/support', icon: 'headset', ...customerTone },
     { label: 'Profile', href: '/customer/profile', icon: 'account-outline', ...customerTone },
@@ -475,8 +503,10 @@ export const styles = StyleSheet.create({
   title: { color: palette.ink, fontSize: 24, fontWeight: '900', lineHeight: 30 },
   subtitle: { color: palette.slate, fontSize: 13, lineHeight: 18, marginTop: 5, fontWeight: '600' },
   card: { backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 20, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(224,231,240,0.9)', shadowColor: '#0B1220', shadowOpacity: 0.06, shadowRadius: 14, elevation: 2 },
+  cardPressed: { opacity: 0.9, transform: [{ scale: 0.99 }] },
   cardTitle: { color: colors.navy, fontSize: 17, fontWeight: '800', marginBottom: 8 },
-  button: { minHeight: 50, borderRadius: 16, backgroundColor: colors.blue, alignItems: 'center', justifyContent: 'center', marginVertical: 5, paddingHorizontal: 14, shadowColor: colors.blue, shadowOpacity: 0.16, shadowRadius: 12, elevation: 2 },
+  button: { minHeight: 50, borderRadius: 16, backgroundColor: colors.blue, alignItems: 'center', justifyContent: 'center', marginVertical: 5, paddingHorizontal: 14, shadowColor: colors.blue, shadowOpacity: 0.16, shadowRadius: 12, elevation: 2, flexDirection: 'row', gap: 8 },
+  buttonPressed: { opacity: 0.9, transform: [{ scale: 0.985 }] },
   secondaryButton: { backgroundColor: 'rgba(255,255,255,0.9)', borderWidth: 1, borderColor: '#CFE4FF', shadowOpacity: 0 },
   dangerButton: { backgroundColor: colors.danger },
   disabledButton: { opacity: 0.55 },
@@ -502,6 +532,16 @@ export const styles = StyleSheet.create({
   loaderCore: { width: 62, height: 62, borderRadius: 21, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center', shadowColor: palette.ink, shadowOpacity: 0.1, shadowRadius: 13, elevation: 3 },
   loadingLabel: { color: palette.ink, fontSize: 17, fontWeight: '900', lineHeight: 23, textAlign: 'center' },
   loadingHint: { color: palette.slate, fontSize: 11.5, lineHeight: 17, fontWeight: '700', textAlign: 'center', marginTop: 5, maxWidth: 250 },
+  skeletonStack: { width: '100%', maxWidth: 300, gap: 9, marginTop: 20 },
+  skeletonCard: { minHeight: 62, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.78)', borderWidth: 1, borderColor: '#DCE8F4', padding: 10, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  skeletonCardMuted: { opacity: 0.68 },
+  skeletonIcon: { width: 40, height: 40, borderRadius: 14, backgroundColor: '#DCEBFA' },
+  skeletonIconSmall: { width: 34, height: 34, borderRadius: 12, backgroundColor: '#E8F8F0' },
+  skeletonCopy: { flex: 1, gap: 7 },
+  skeletonLineWide: { width: '82%', height: 11, borderRadius: 99, backgroundColor: '#D7E4F2' },
+  skeletonLineMid: { width: '70%', height: 10, borderRadius: 99, backgroundColor: '#D7E4F2' },
+  skeletonLineShort: { width: '48%', height: 9, borderRadius: 99, backgroundColor: '#E4ECF5' },
+  skeletonLineTiny: { width: '36%', height: 8, borderRadius: 99, backgroundColor: '#E4ECF5' },
   muted: { color: colors.grey, fontSize: 15, lineHeight: 22 },
   emptyIcon: { width: 44, height: 44, borderRadius: radii.md, backgroundColor: palette.emeraldSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   row: { borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: 8 },

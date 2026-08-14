@@ -22,4 +22,14 @@ config.resolver.extraNodeModules = {
   "react-native-screens": resolvePackage("react-native-screens"),
 };
 
+config.resolver.blockList = [
+  new RegExp(`${escapePath(path.join(projectRoot, "dist"))}[/\\\\].*`),
+  new RegExp(`${escapePath(path.join(projectRoot, "dist-web"))}[/\\\\].*`),
+  new RegExp(`${escapePath(path.join(projectRoot, ".expo", "web"))}[/\\\\].*`),
+];
+
 module.exports = config;
+
+function escapePath(value) {
+  return value.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&");
+}

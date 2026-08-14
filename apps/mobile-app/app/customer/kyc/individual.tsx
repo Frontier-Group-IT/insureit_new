@@ -240,7 +240,7 @@ export default function IndividualKycScreen() {
         <BrandLogo width={145} />
         <View style={styles.headerSpacer} />
       </View>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboard}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboard}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} automaticallyAdjustKeyboardInsets keyboardDismissMode="interactive">
         <Text style={styles.screenTitle}>Complete Your KYC</Text>
         <KycStepper />
