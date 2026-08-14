@@ -1,0 +1,101 @@
+name: Temporary external policy vehicle card patch
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/tmp-external-policy-vehicle-card.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ci-placeholder.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'ci-placeholder-public-anon-key' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Patch vehicle cards
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('apps/mobile-app/app/customer/vehicles.tsx')
+          s = p.read_text()
+
+          s = s.replace(
+          "type PickedEndorsementFile = { name: string; mimeType?: string | null; size?: number | null; uri: string };\n",
+          "type PickedEndorsementFile = { name: string; mimeType?: string | null; size?: number | null; uri: string };\n\ntype ExternalPolicy = {\n  id: string;\n  customer_id: string;\n  vehicle_id: string;\n  insurance_company_id: string;\n  policy_no: string;\n  end_date: string;\n};\n\ntype VehiclePolicyDisplay = {\n  vehicle_id: string;\n  insurance_company_id: string;\n  policy_no: string;\n  end_date: string;\n  source: 'sibl' | 'external';\n};\n")
+
+          s = s.replace(
+          "  const [policies, setPolicies] = useState<Policy[]>([]);\n",
+          "  const [policies, setPolicies] = useState<Policy[]>([]);\n  const [externalPolicies, setExternalPolicies] = useState<ExternalPolicy[]>([]);\n")
+
+          s = s.replace(
+          "        const [vehicleResult, policyResult, claimResult, insurerResult] = await Promise.all([\n          supabase.from('vehicles').select('*').in('customer_id', ids).order('created_at', { ascending: false }),\n          supabase.from('policies').select('*').in('customer_id', ids),\n          supabase.from('claims').select('*').in('customer_id', ids),\n          supabase.from('insurance_companies').select('*'),\n        ]);\n\n        setVehicles(vehicleResult.data ?? []);\n        setPolicies(policyResult.data ?? []);\n        setClaims(claimResult.data ?? []);\n",
+          "        const [vehicleResult, policyResult, externalPolicyResult, claimResult, insurerResult] = await Promise.all([\n          supabase.from('vehicles').select('*').in('customer_id', ids).order('created_at', { ascending: false }),\n          supabase.from('policies').select('*').in('customer_id', ids),\n          (supabase as any).from('external_policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,end_date').in('customer_id', ids),\n          supabase.from('claims').select('*').in('customer_id', ids),\n          supabase.from('insurance_companies').select('*'),\n        ]);\n\n        setVehicles(vehicleResult.data ?? []);\n        setPolicies(policyResult.data ?? []);\n        setExternalPolicies((externalPolicyResult.data ?? []) as ExternalPolicy[]);\n        setClaims(claimResult.data ?? []);\n")
+
+          s = s.replace(
+          "    const policy = latestPolicyFor(vehicle.id, policies);\n    const insurer = policy ? insurers.find((item) => item.id === policy.insurance_company_id) : null;\n",
+          "    const policy = policyForVehicle(vehicle.id, policies, externalPolicies);\n    const insurer = policy ? insurers.find((item) => item.id === policy.insurance_company_id) : null;\n")
+          s = s.replace(
+          "  }), [companyFilterId, contexts, insurers, policies, searchQuery, vehicles]);\n",
+          "  }), [companyFilterId, contexts, externalPolicies, insurers, policies, searchQuery, vehicles]);\n")
+
+          s = s.replace(
+          "        const policy = latestPolicyFor(vehicle.id, policies);\n        const insurer = policy ? insurers.find((item) => item.id === policy.insurance_company_id) : null;\n        const active = Boolean(policy && isPolicyActive(policy));\n",
+          "        const policy = policyForVehicle(vehicle.id, policies, externalPolicies);\n        const insurer = policy ? insurers.find((item) => item.id === policy.insurance_company_id) : null;\n        const active = Boolean(policy && isPolicyActive(policy));\n        const externalPolicy = policy?.source === 'external';\n")
+
+          s = s.replace(
+          "                  value={insurer?.name ?? 'Insurance company pending'}\n                  logo={insurerLogo}\n",
+          "                  value={insurer?.name ?? 'Insurance company pending'}\n                  logo={insurerLogo}\n                  badge={externalPolicy ? 'External' : undefined}\n")
+          s = s.replace("value={policy?.policy_no ?? '-'}", "value={policy?.policy_no ?? '-'}")
+          s = s.replace("                  value={policy ? formatDate(policy.end_date) : '-'}\n", "                  value={policy ? formatDate(policy.end_date) : '-'}\n")
+          s = s.replace("                {!policy ? (\n", "                {!policy ? (\n")
+
+          old_info = "function InfoBlock({ icon, iconBg, iconColor, label, value, logo, statusActive }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; iconBg: string; iconColor: string; label: string; value: string; logo?: number | null; statusActive?: boolean }) {\n  return (\n    <View style={styles.infoBlock}>\n      <View style={[styles.infoIcon, { backgroundColor: iconBg }]}>\n        {logo ? <Image source={logo} style={styles.insurerLogo} resizeMode=\"contain\" /> : <MaterialCommunityIcons name={icon} size={18} color={iconColor} />}\n      </View>\n      <View style={styles.infoCopy}>\n        <Text style={styles.infoLabel}>{label}</Text>\n        <View style={styles.infoValueRow}>\n"
+          new_info = "function InfoBlock({ icon, iconBg, iconColor, label, value, logo, statusActive, badge }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; iconBg: string; iconColor: string; label: string; value: string; logo?: number | null; statusActive?: boolean; badge?: string }) {\n  return (\n    <View style={styles.infoBlock}>\n      <View style={[styles.infoIcon, { backgroundColor: iconBg }]}>\n        {logo ? <Image source={logo} style={styles.insurerLogo} resizeMode=\"contain\" /> : <MaterialCommunityIcons name={icon} size={18} color={iconColor} />}\n      </View>\n      <View style={styles.infoCopy}>\n        <View style={styles.infoLabelRow}>\n          <Text style={styles.infoLabel}>{label}</Text>\n          {badge ? <View style={styles.externalBadge}><Text style={styles.externalBadgeText}>{badge}</Text></View> : null}\n        </View>\n        <View style={styles.infoValueRow}>\n"
+          if old_info not in s:
+              raise SystemExit('InfoBlock target not found')
+          s = s.replace(old_info, new_info)
+
+          s = s.replace(
+          "function vehicleComplianceHealth(vehicle: Vehicle, policy?: Policy): ComplianceHealth {",
+          "function vehicleComplianceHealth(vehicle: Vehicle, policy?: Pick<VehiclePolicyDisplay, 'end_date'>): ComplianceHealth {")
+
+          old_helpers = "function latestPolicyFor(vehicleId: string, policies: Policy[]) {\n  return policies.filter((policy) => policy.vehicle_id === vehicleId).sort((a, b) => new Date(b.end_date).getTime() - new Date(a.end_date).getTime())[0];\n}\n\nfunction isPolicyActive(policy: Policy) {\n  return new Date(policy.end_date).getTime() >= Date.now();\n}\n"
+          new_helpers = "function policyForVehicle(vehicleId: string, policies: Policy[], externalPolicies: ExternalPolicy[]): VehiclePolicyDisplay | undefined {\n  const sibl = policies\n    .filter((policy) => policy.vehicle_id === vehicleId)\n    .sort((a, b) => new Date(b.end_date).getTime() - new Date(a.end_date).getTime())[0];\n  if (sibl) return { vehicle_id: sibl.vehicle_id, insurance_company_id: sibl.insurance_company_id, policy_no: sibl.policy_no, end_date: sibl.end_date, source: 'sibl' };\n\n  const external = externalPolicies\n    .filter((policy) => policy.vehicle_id === vehicleId)\n    .sort((a, b) => new Date(b.end_date).getTime() - new Date(a.end_date).getTime())[0];\n  if (!external) return undefined;\n  return { vehicle_id: external.vehicle_id, insurance_company_id: external.insurance_company_id, policy_no: external.policy_no, end_date: external.end_date, source: 'external' };\n}\n\nfunction isPolicyActive(policy: Pick<VehiclePolicyDisplay, 'end_date'>) {\n  return new Date(policy.end_date).getTime() >= Date.now();\n}\n"
+          if old_helpers not in s:
+              raise SystemExit('policy helper target not found')
+          s = s.replace(old_helpers, new_helpers)
+
+          s = s.replace(
+          "  infoLabel: { color: palette.slate, fontSize: 9.8, fontWeight: '800' },\n  infoValueRow:",
+          "  infoLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },\n  infoLabel: { color: palette.slate, fontSize: 9.8, fontWeight: '800' },\n  externalBadge: { borderRadius: 5, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 4, paddingVertical: 1 },\n  externalBadgeText: { color: '#64748B', fontSize: 7.2, lineHeight: 9, fontWeight: '800' },\n  infoValueRow:")
+
+          p.write_text(s)
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify mobile
+        run: |
+          npm run typecheck:mobile
+          npm run lint:mobile
+          npm run build:mobile:web
+      - name: Commit vehicle card update
+        run: |
+          git config user.name "antnish1"
+          git config user.email "shahdolho@gmail.com"
+          git add apps/mobile-app/app/customer/vehicles.tsx
+          git diff --cached --check
+          git commit -m "Show external policy details on vehicle cards"
+          git push origin HEAD:main
