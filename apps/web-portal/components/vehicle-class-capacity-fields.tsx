@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 const inputClass = "h-11 w-full rounded-xl border border-[#CBD5E1] bg-white px-3.5 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF] disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]";
 const labelClass = "mb-1.5 block text-[10.5px] font-semibold text-[#344054]";
@@ -27,9 +28,27 @@ type Props = {
 export function VehicleSpecificationFields({ defaultClass = "", defaultChassis = "", defaultEngine = "", defaultFuel = "", defaultCapacity = "", defaultYear = "" }: Props) {
   const [vehicleClass, setVehicleClass] = useState(defaultClass ?? "");
   const [capacity, setCapacity] = useState(defaultCapacity ?? "");
+  const [yearPortalHost, setYearPortalHost] = useState<HTMLDivElement | null>(null);
   const vehicleMeta = vehicleClassMap[vehicleClass];
   const fuels = defaultFuel && !fuelOptions.includes(defaultFuel) ? [defaultFuel, ...fuelOptions] : fuelOptions;
   const years = defaultYear && !yearOptions.includes(defaultYear) ? [defaultYear, ...yearOptions] : yearOptions;
+
+  useEffect(() => {
+    const vehicleNumberInput = document.getElementById("vehicle_no");
+    const vehicleNumberField = vehicleNumberInput?.parentElement;
+    if (!vehicleNumberField) return;
+
+    const host = document.createElement("div");
+    host.className = "mt-4 min-w-0";
+    host.dataset.vehicleYearSlot = "true";
+    vehicleNumberField.appendChild(host);
+    setYearPortalHost(host);
+
+    return () => {
+      setYearPortalHost(null);
+      host.remove();
+    };
+  }, []);
 
   function changeVehicleClass(value: string) {
     setVehicleClass(value);
@@ -63,12 +82,15 @@ export function VehicleSpecificationFields({ defaultClass = "", defaultChassis =
       <label className={labelClass} htmlFor="gvw_kg">{vehicleMeta ? `Capacity (${vehicleMeta.capacityLabel})` : "Capacity"}</label>
       <input id="gvw_kg" name="gvw_kg" type="number" min="0" step="0.01" className={inputClass} value={capacity} onChange={(event) => setCapacity(event.target.value)} placeholder={vehicleMeta ? `Enter ${vehicleMeta.capacityLabel.toLowerCase()}` : "Select class first"} disabled={!vehicleClass} />
     </div>
-    <div className="min-w-0">
-      <label className={labelClass} htmlFor="year">Manufacturing year</label>
-      <select id="year" name="year" className={inputClass} defaultValue={defaultYear ?? ""}>
-        <option value="">Select year</option>
-        {years.map((option) => <option key={option} value={option}>{option}</option>)}
-      </select>
-    </div>
+    {yearPortalHost ? createPortal(
+      <div className="min-w-0">
+        <label className={labelClass} htmlFor="year">Manufacturing year</label>
+        <select id="year" name="year" className={inputClass} defaultValue={defaultYear ?? ""}>
+          <option value="">Select year</option>
+          {years.map((option) => <option key={option} value={option}>{option}</option>)}
+        </select>
+      </div>,
+      yearPortalHost,
+    ) : null}
   </>;
 }
