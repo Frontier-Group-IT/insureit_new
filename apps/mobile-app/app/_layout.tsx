@@ -26,9 +26,9 @@ function RootApplication() {
     <>
       <StatusBar style={introVisible ? 'light' : 'dark'} />
       <RealtimeNotificationProvider>
-        <Stack
-          screenOptions={{ headerShown: false, animation: 'none' }}
-        />
+        <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
+          <Stack.Screen name="customer/add-vehicle" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+        </Stack>
       </RealtimeNotificationProvider>
       {introVisible ? <View style={styles.introOverlay}><SplashIntro /></View> : null}
     </>

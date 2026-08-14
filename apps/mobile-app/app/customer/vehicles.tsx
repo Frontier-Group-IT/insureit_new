@@ -146,13 +146,7 @@ export default function VehiclesScreen() {
   }
 
   function openAddVehicle() {
-    if (isPortfolioFleet) {
-      router.push('/customer/add-vehicle');
-      return;
-    }
-    setAddMethod('vehicle');
-    setAddValue('');
-    setAddVehicleOpen(true);
+    router.push('/customer/add-vehicle');
   }
 
   function submitAddVehicle() {

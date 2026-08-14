@@ -8,32 +8,33 @@ import { getCurrentSession } from '@/lib/auth';
 import { customerAccountTitle, getOperationalCustomerContexts, isPortfolioCustomerContext, partnerTypeLabel, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
-import type { InsuranceCompany } from '@/lib/types';
 
-type VehicleKind = 'Commercial Vehicle' | 'Private Vehicle';
-
-const vehicleTypes: VehicleKind[] = ['Commercial Vehicle', 'Private Vehicle'];
-const policyTypes = ['Commercial comprehensive', 'Third party', 'Own damage', 'Package policy'];
+const vehicleClasses = [
+  { value: 'PCP', label: 'PCP - Private Car' },
+  { value: 'TWP', label: 'TWP - Two Wheeler' },
+  { value: 'GCV', label: 'GCV - Goods Carrying Vehicle' },
+  { value: 'PCV', label: 'PCV - Passenger Carrying Vehicle' },
+  { value: 'MISD', label: 'MISD - Miscellaneous Vehicle' },
+  { value: 'CPM', label: 'CPM - Contractor Plant & Machinery' },
+];
+const fuelOptions = ['Petrol', 'Diesel', 'CNG', 'Electric', 'Hybrid', 'Bi-Fuel', 'Other'];
 
 export default function AddVehicleScreen() {
   const router = useRouter();
   const [contexts, setContexts] = useState<CustomerAccountContext[]>([]);
   const [manufacturers, setManufacturers] = useState<string[]>([]);
-  const [insurers, setInsurers] = useState<InsuranceCompany[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [accountOpen, setAccountOpen] = useState(false);
   const [makeOpen, setMakeOpen] = useState(false);
   const [makeQuery, setMakeQuery] = useState('');
-  const [insurerOpen, setInsurerOpen] = useState(false);
-  const [policyTypeOpen, setPolicyTypeOpen] = useState(false);
   const [vehicleNo, setVehicleNo] = useState('');
-  const [vehicleType, setVehicleType] = useState<VehicleKind>('Commercial Vehicle');
+  const [vehicleType, setVehicleType] = useState('');
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
   const [year, setYear] = useState('');
   const [chassisNo, setChassisNo] = useState('');
   const [engineNo, setEngineNo] = useState('');
-  const [permitNo, setPermitNo] = useState('');
+  const [fuelType, setFuelType] = useState('');
   const [gvwKg, setGvwKg] = useState('');
   const [registrationDate, setRegistrationDate] = useState('');
   const [fitnessExpiryDate, setFitnessExpiryDate] = useState('');
@@ -41,43 +42,19 @@ export default function AddVehicleScreen() {
   const [roadTaxExpiryDate, setRoadTaxExpiryDate] = useState('');
   const [nationalPermitExpiryDate, setNationalPermitExpiryDate] = useState('');
   const [localPermitExpiryDate, setLocalPermitExpiryDate] = useState('');
-  const [policyInsurerId, setPolicyInsurerId] = useState('');
-  const [policyNo, setPolicyNo] = useState('');
-  const [policyIdv, setPolicyIdv] = useState('');
-  const [policyStartDate, setPolicyStartDate] = useState('');
-  const [policyEndDate, setPolicyEndDate] = useState('');
-  const [policyPremium, setPolicyPremium] = useState('');
-  const [policyType, setPolicyType] = useState(policyTypes[0]);
   const [dateTarget, setDateTarget] = useState<{ label: string; value: string; onChange: (value: string) => void } | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
-  const isCommercial = vehicleType === 'Commercial Vehicle';
   const selectedContext = contexts.find((context) => context.customer_id === selectedCustomerId) ?? null;
-  const selectedInsurer = insurers.find((insurer) => insurer.id === policyInsurerId) ?? null;
-  const hasPolicyDetails = Boolean(
-    policyInsurerId ||
-    policyNo.trim() ||
-    policyIdv.trim() ||
-    policyStartDate ||
-    policyEndDate ||
-    policyPremium.trim() ||
-    (policyType && policyType !== policyTypes[0])
-  );
-  const visibleDateFields = useMemo(() => {
-    const common = [
-      { key: 'registration', label: 'Registration', value: registrationDate, onChange: setRegistrationDate },
-      { key: 'puc', label: 'PUC expiry', value: pucExpiryDate, onChange: setPucExpiryDate },
-    ];
-    if (!isCommercial) return common;
-    return [
-      ...common,
-      { key: 'fitness', label: 'Fitness expiry', value: fitnessExpiryDate, onChange: setFitnessExpiryDate },
-      { key: 'road_tax', label: 'Road tax expiry', value: roadTaxExpiryDate, onChange: setRoadTaxExpiryDate },
-      { key: 'national_permit', label: 'National permit', value: nationalPermitExpiryDate, onChange: setNationalPermitExpiryDate },
-      { key: 'local_permit', label: 'Local permit', value: localPermitExpiryDate, onChange: setLocalPermitExpiryDate },
-    ];
-  }, [fitnessExpiryDate, isCommercial, localPermitExpiryDate, nationalPermitExpiryDate, pucExpiryDate, registrationDate, roadTaxExpiryDate]);
+  const visibleDateFields = useMemo(() => [
+    { key: 'registration', label: 'Registration date', value: registrationDate, onChange: setRegistrationDate },
+    { key: 'fitness', label: 'Fitness expiry', value: fitnessExpiryDate, onChange: setFitnessExpiryDate },
+    { key: 'puc', label: 'PUC expiry', value: pucExpiryDate, onChange: setPucExpiryDate },
+    { key: 'road_tax', label: 'Road tax expiry', value: roadTaxExpiryDate, onChange: setRoadTaxExpiryDate },
+    { key: 'national_permit', label: 'National permit expiry', value: nationalPermitExpiryDate, onChange: setNationalPermitExpiryDate },
+    { key: 'local_permit', label: 'Local permit expiry', value: localPermitExpiryDate, onChange: setLocalPermitExpiryDate },
+  ], [fitnessExpiryDate, localPermitExpiryDate, nationalPermitExpiryDate, pucExpiryDate, registrationDate, roadTaxExpiryDate]);
 
   useEffect(() => {
     let active = true;
@@ -102,40 +79,23 @@ export default function AddVehicleScreen() {
   useEffect(() => {
     let active = true;
     async function loadLookups() {
-      const [manufacturerResult, insurerResult] = await Promise.all([
-        supabase
-        .from('vehicle_manufacturers')
-        .select('name')
+      const manufacturerResult = await supabase
+        .from('vehicle_manufacturer_brands')
+        .select('brand_name')
         .eq('is_active', true)
-        .order('sort_order', { ascending: true })
-          .order('name', { ascending: true }),
-        supabase.from('insurance_companies').select('*').order('name'),
-      ]);
+        .order('brand_name', { ascending: true });
       if (!active) return;
       if (manufacturerResult.error) {
         setManufacturers([]);
       } else {
-        setManufacturers((manufacturerResult.data ?? []).map((item) => item.name).filter(Boolean));
+        setManufacturers(Array.from(new Set((manufacturerResult.data ?? []).map((item) => item.brand_name).filter(Boolean))));
       }
-      setInsurers((insurerResult.data ?? []) as InsuranceCompany[]);
     }
     void loadLookups();
     return () => {
       active = false;
     };
   }, []);
-
-  function chooseVehicleType(nextType: VehicleKind) {
-    setVehicleType(nextType);
-    if (nextType === 'Private Vehicle') {
-      setGvwKg('');
-      setPermitNo('');
-      setFitnessExpiryDate('');
-      setRoadTaxExpiryDate('');
-      setNationalPermitExpiryDate('');
-      setLocalPermitExpiryDate('');
-    }
-  }
 
   async function save() {
     setMessage('');
@@ -144,42 +104,33 @@ export default function AddVehicleScreen() {
     if (!session?.user) return router.replace('/login');
     const target = contexts.find((context) => context.customer_id === selectedCustomerId);
     if (!target) return setMessage('Select the customer account for this vehicle.');
-    if (!vehicleNo.trim()) return setMessage('Enter the vehicle number.');
-    if (!vehicleType.trim()) return setMessage('Select the vehicle type.');
+    if (!vehicleNo.trim()) return setMessage('Enter the RC number.');
     if (!make.trim()) return setMessage('Select the vehicle manufacturer.');
-    const parsedYear = year ? Number(year) : null;
-    if (parsedYear !== null && (!Number.isInteger(parsedYear) || parsedYear < 1950 || parsedYear > new Date().getFullYear() + 1)) return setMessage('Enter a valid manufacturing year.');
-    const parsedGvw = isCommercial && gvwKg ? Number(gvwKg) : null;
-    if (parsedGvw !== null && (!Number.isFinite(parsedGvw) || parsedGvw <= 0)) return setMessage('Enter a valid GVW.');
-    const policyIdvValue = policyIdv ? Number(policyIdv) : null;
-    if (policyIdvValue !== null && (!Number.isFinite(policyIdvValue) || policyIdvValue < 0)) return setMessage('Enter a valid policy IDV.');
-    const policyPremiumValue = policyPremium ? Number(policyPremium) : null;
-    if (policyPremiumValue !== null && (!Number.isFinite(policyPremiumValue) || policyPremiumValue < 0)) return setMessage('Enter a valid policy premium.');
-    if (hasPolicyDetails) {
-      if (!policyInsurerId) return setMessage('Select the policy insurer.');
-      if (!policyNo.trim()) return setMessage('Enter the policy number.');
-      if (!policyType.trim()) return setMessage('Select the policy type.');
-      if (!policyStartDate || !policyEndDate) return setMessage('Select the policy start and end dates.');
-      if (new Date(policyEndDate).getTime() < new Date(policyStartDate).getTime()) return setMessage('Policy end date must be after the start date.');
-    }
+    if (!model.trim()) return setMessage('Enter the vehicle model.');
+    if (!year.trim()) return setMessage('Select the manufacturing year.');
+    const parsedYear = Number(year);
+    if (!Number.isInteger(parsedYear) || parsedYear < 1950 || parsedYear > new Date().getFullYear() + 1) return setMessage('Enter a valid manufacturing year.');
+    const parsedGvw = gvwKg ? Number(gvwKg) : null;
+    if (parsedGvw !== null && (!Number.isFinite(parsedGvw) || parsedGvw <= 0)) return setMessage('Enter a valid capacity.');
 
     const rpcPayload = {
       p_customer_id: target.customer_id,
       p_vehicle_no: vehicleNo.trim().toUpperCase(),
-      p_vehicle_type: vehicleType,
+      p_vehicle_type: vehicleType || null,
       p_make: make.trim(),
-      p_model: model.trim() || null,
+      p_model: model.trim(),
       p_year: parsedYear,
       p_chassis_no: cleanCode(chassisNo),
       p_engine_no: cleanCode(engineNo),
-      p_permit_no: isCommercial ? cleanCode(permitNo) : null,
+      p_permit_no: null,
       p_gvw_kg: parsedGvw,
+      p_fuel_type: fuelType || null,
       p_registration_date: cleanDate(registrationDate),
-      p_fitness_expiry_date: isCommercial ? cleanDate(fitnessExpiryDate) : null,
+      p_fitness_expiry_date: cleanDate(fitnessExpiryDate),
       p_puc_expiry_date: cleanDate(pucExpiryDate),
-      p_road_tax_expiry_date: isCommercial ? cleanDate(roadTaxExpiryDate) : null,
-      p_national_permit_expiry_date: isCommercial ? cleanDate(nationalPermitExpiryDate) : null,
-      p_local_permit_expiry_date: isCommercial ? cleanDate(localPermitExpiryDate) : null,
+      p_road_tax_expiry_date: cleanDate(roadTaxExpiryDate),
+      p_national_permit_expiry_date: cleanDate(nationalPermitExpiryDate),
+      p_local_permit_expiry_date: cleanDate(localPermitExpiryDate),
     };
 
     setSaving(true);
@@ -197,29 +148,6 @@ export default function AddVehicleScreen() {
       vehicleData = fallback.data;
       error = fallback.error;
     }
-    if (!error && hasPolicyDetails) {
-      const policyPayload = {
-        p_customer_id: target.customer_id,
-        p_vehicle_id: vehicleData?.id,
-        p_insurance_company_id: policyInsurerId,
-        p_policy_no: policyNo.trim().toUpperCase(),
-        p_policy_type: policyType.trim(),
-        p_start_date: policyStartDate,
-        p_end_date: policyEndDate,
-        p_premium_amount: policyPremiumValue,
-        p_insured_declared_value: policyIdvValue,
-      };
-      if (!policyPayload.p_vehicle_id) {
-        error = { message: 'Vehicle saved, but policy details could not be linked. Please add the policy from the policy page.' };
-      } else {
-        let policyResult = await (supabase.rpc as any)('create_customer_policy', policyPayload);
-        if (isMissingPolicyRpcSignature(policyResult.error)) {
-          const { p_insured_declared_value, ...legacyPolicyPayload } = policyPayload;
-          policyResult = await (supabase.rpc as any)('create_customer_policy', legacyPolicyPayload);
-        }
-        error = policyResult.error;
-      }
-    }
     setSaving(false);
     if (error) setMessage(error.message || 'We could not save this vehicle. Please try again.');
     else router.replace(contexts.some(isPortfolioCustomerContext) ? '/customer/group/fleet' : '/customer/vehicles');
@@ -227,7 +155,7 @@ export default function AddVehicleScreen() {
 
   return (
     <Screen title="Add Vehicle" showLogout showTitleHeader={false}>
-      <Text style={styles.compactTitle}>Add Vehicle</Text>
+      <View style={styles.modalHeader}><View><Text style={styles.modalEyebrow}>VEHICLE ONBOARDING</Text><Text style={styles.compactTitle}>Add Vehicle</Text><Text style={styles.modalSub}>Add the vehicle now; optional details can be completed later.</Text></View><Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.modalClose}><MaterialCommunityIcons name="close" size={20} color={palette.navy} /></Pressable></View>
       <Card style={styles.formCard}>
         <View pointerEvents="none" style={styles.formAccentOne} />
         <View pointerEvents="none" style={styles.formAccentTwo} />
@@ -235,32 +163,31 @@ export default function AddVehicleScreen() {
         {contexts.length > 1 ? <AccountDropdown contexts={contexts} selectedCustomerId={selectedCustomerId} open={accountOpen} onToggle={() => setAccountOpen((value) => !value)} onSelect={(customerId) => { setSelectedCustomerId(customerId); setAccountOpen(false); }} /> : null}
         {selectedContext && contexts.length <= 1 ? <View style={styles.accountPill}><MaterialCommunityIcons name="office-building-outline" size={17} color="#0A43A3" /><View style={styles.flex}><Text style={styles.accountPillLabel}>Add for</Text><Text style={styles.accountPillTitle}>{customerAccountTitle(selectedContext)}</Text></View></View> : null}
 
-        <FormSection title="Vehicle details" icon="truck-outline" tone="vehicle">
+        <FormSection title="Vehicle ownership" icon="truck-outline" tone="vehicle">
+          <InputField required icon="card-text-outline" label="RC number" value={vehicleNo} onChangeText={(value) => setVehicleNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" />
+          <PremiumDateField label="Registration date" value={registrationDate} onPress={() => setDateTarget({ label: 'Registration date', value: registrationDate, onChange: setRegistrationDate })} />
+          <MakeDropdown required manufacturers={manufacturers} selectedMake={make} query={makeQuery} open={makeOpen} onToggle={() => setMakeOpen((value) => !value)} onQueryChange={setMakeQuery} onSelect={(value) => { setMake(value); setMakeQuery(value); setMakeOpen(false); }} />
           <View style={styles.twoColumnRow}>
-            <View style={styles.columnWide}><InputField icon="card-text-outline" label="Vehicle number" value={vehicleNo} onChangeText={(value) => setVehicleNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" /></View>
-            <View style={styles.column}><VehicleTypeDropdown value={vehicleType} onSelect={chooseVehicleType} /></View>
-          </View>
-          <MakeDropdown manufacturers={manufacturers} selectedMake={make} query={makeQuery} open={makeOpen} onToggle={() => setMakeOpen((value) => !value)} onQueryChange={setMakeQuery} onSelect={(value) => { setMake(value); setMakeQuery(value); setMakeOpen(false); }} />
-          <View style={styles.twoColumnRow}>
-            <View style={styles.column}><InputField icon="car-info" label="Model" value={model} onChangeText={setModel} /></View>
-            <View style={styles.column}><InputField icon="calendar-blank-outline" label="Year" keyboardType="number-pad" value={year} onChangeText={(value) => setYear(value.replace(/\D/g, '').slice(0, 4))} /></View>
+            <View style={styles.column}><InputField required icon="car-info" label="Model" value={model} onChangeText={setModel} /></View>
+            <View style={styles.column}><InputField required icon="calendar-blank-outline" label="Manufacturing year" keyboardType="number-pad" value={year} onChangeText={(value) => setYear(value.replace(/\D/g, '').slice(0, 4))} /></View>
           </View>
         </FormSection>
 
-        <FormSection title="Vehicle identity" icon="identifier" tone="identity">
+        <FormSection title="Vehicle specification" icon="identifier" tone="identity">
+          <VehicleTypeDropdown value={vehicleType} onSelect={setVehicleType} />
           <View style={styles.twoColumnRow}>
-            <View style={styles.column}><InputField icon="barcode" label="Chassis no." value={chassisNo} onChangeText={(value) => setChassisNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" /></View>
-            <View style={styles.column}><InputField icon="engine-outline" label="Engine no." value={engineNo} onChangeText={(value) => setEngineNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" /></View>
+            <View style={styles.column}><InputField icon="barcode" label="Chassis number" value={chassisNo} onChangeText={(value) => setChassisNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" /></View>
+            <View style={styles.column}><InputField icon="engine-outline" label="Engine number" value={engineNo} onChangeText={(value) => setEngineNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" /></View>
+          </View>
+          <View style={styles.twoColumnRow}>
+            <View style={styles.column}><FuelDropdown value={fuelType} onSelect={setFuelType} /></View>
+            <View style={styles.column}><InputField icon="weight-kilogram" label="Capacity / GVW" keyboardType="decimal-pad" value={gvwKg} onChangeText={(value) => setGvwKg(value.replace(/[^0-9.]/g, ''))} /></View>
           </View>
         </FormSection>
 
-        <FormSection title="Operational details" icon="clipboard-pulse-outline" tone="operational">
-          {isCommercial ? <View style={styles.twoColumnRow}>
-            <View style={styles.column}><InputField icon="weight-kilogram" label="GVW (kg)" keyboardType="decimal-pad" value={gvwKg} onChangeText={(value) => setGvwKg(value.replace(/[^0-9.]/g, ''))} /></View>
-            <View style={styles.column}><InputField icon="file-certificate-outline" label="Permit no." value={permitNo} onChangeText={(value) => setPermitNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" /></View>
-          </View> : null}
+        <FormSection title="Compliance & permit" icon="clipboard-pulse-outline" tone="operational">
           <View style={styles.dateGrid}>
-            {visibleDateFields.map((field) => (
+            {visibleDateFields.filter((field) => field.key !== 'registration').map((field) => (
               <View key={field.key} style={styles.dateCell}>
                 <PremiumDateField label={field.label} value={field.value} onPress={() => setDateTarget(field)} />
               </View>
@@ -268,24 +195,7 @@ export default function AddVehicleScreen() {
           </View>
         </FormSection>
 
-        <FormSection title="Optional policy details" icon="shield-check-outline" tone="policy">
-          <View style={styles.twoColumnRow}>
-            <View style={styles.column}><InsurerDropdown insurers={insurers} selectedInsurer={selectedInsurer} open={insurerOpen} onToggle={() => setInsurerOpen((value) => !value)} onSelect={(insurer) => { setPolicyInsurerId(insurer.id); setInsurerOpen(false); }} /></View>
-            <View style={styles.column}><InputField icon="file-document-outline" label="Policy no." value={policyNo} onChangeText={(value) => setPolicyNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" /></View>
-          </View>
-          <View style={styles.twoColumnRow}>
-            <View style={styles.column}><InputField icon="cash-multiple" label="IDV" keyboardType="decimal-pad" value={policyIdv} onChangeText={(value) => setPolicyIdv(value.replace(/[^0-9.]/g, ''))} /></View>
-            <View style={styles.column}><InputField icon="currency-inr" label="Premium" keyboardType="decimal-pad" value={policyPremium} onChangeText={(value) => setPolicyPremium(value.replace(/[^0-9.]/g, ''))} /></View>
-          </View>
-          <View style={styles.twoColumnRow}>
-            <View style={styles.column}><PremiumDateField label="Start date" value={policyStartDate} onPress={() => setDateTarget({ label: 'Policy start date', value: policyStartDate, onChange: setPolicyStartDate })} /></View>
-            <View style={styles.column}><PremiumDateField label="End date" value={policyEndDate} onPress={() => setDateTarget({ label: 'Policy end date', value: policyEndDate, onChange: setPolicyEndDate })} /></View>
-          </View>
-          <View style={styles.twoColumnRow}>
-            <View style={styles.column}><PolicyTypeDropdown value={policyType} open={policyTypeOpen} onToggle={() => setPolicyTypeOpen((value) => !value)} onSelect={(value) => { setPolicyType(value); setPolicyTypeOpen(false); }} /></View>
-            <View style={styles.column}><View style={styles.policyHintBox}><MaterialCommunityIcons name="information-outline" size={16} color="#0A43A3" /><Text style={styles.policyHintText}>Skip this section if policy is not ready.</Text></View></View>
-          </View>
-        </FormSection>
+
 
         <Button label={saving ? 'Saving vehicle...' : 'Save vehicle'} onPress={save} disabled={saving} />
         {saving ? <ActivityIndicator color={palette.navy} /> : null}
@@ -314,10 +224,10 @@ function FormSection({ title, icon, tone = 'default', children }: { title: strin
   );
 }
 
-function InputField({ label, icon, style, ...props }: React.ComponentProps<typeof TextInput> & { label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }) {
+function InputField({ label, icon, style, required = false, ...props }: React.ComponentProps<typeof TextInput> & { label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; required?: boolean }) {
   return (
     <View style={styles.field}>
-      <Text style={styles.fieldLabel}>{label}</Text>
+      <Text style={styles.fieldLabel}>{label}{required ? ' *' : ''}</Text>
       <View style={styles.inputShell}>
         <MaterialCommunityIcons name={icon} size={17} color="#6A7A90" />
         <TextInput {...props} placeholderTextColor="#9AA7B8" style={[styles.input, style]} />
@@ -326,20 +236,37 @@ function InputField({ label, icon, style, ...props }: React.ComponentProps<typeo
   );
 }
 
-function VehicleTypeDropdown({ value, onSelect }: { value: VehicleKind; onSelect: (value: VehicleKind) => void }) {
+function VehicleTypeDropdown({ value, onSelect }: { value: string; onSelect: (value: string) => void }) {
   const [open, setOpen] = useState(false);
+  const selected = vehicleClasses.find((item) => item.value === value);
   return (
     <View style={styles.field}>
-      <Text style={styles.fieldLabel}>Vehicle type</Text>
+      <Text style={styles.fieldLabel}>Vehicle class</Text>
       <Pressable accessibilityRole="button" onPress={() => setOpen((current) => !current)} style={styles.selectButton}>
-        <View style={styles.selectIcon}><MaterialCommunityIcons name={value === 'Commercial Vehicle' ? 'truck-outline' : 'car-outline'} size={18} color="#0A43A3" /></View>
-        <Text style={styles.selectValue}>{value}</Text>
+        <View style={styles.selectIcon}><MaterialCommunityIcons name="truck-outline" size={18} color="#0A43A3" /></View>
+        <Text style={[styles.selectValue, !selected && styles.placeholder]}>{selected?.label ?? 'Select class (optional)'}</Text>
         <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={21} color={palette.navy} />
       </Pressable>
-      {open ? <View style={styles.selectMenu}>{vehicleTypes.map((type) => <Pressable key={type} onPress={() => { onSelect(type); setOpen(false); }} style={[styles.selectOption, value === type && styles.selectOptionActive]}><Text style={[styles.selectOptionText, value === type && styles.selectOptionTextActive]}>{type}</Text>{value === type ? <MaterialCommunityIcons name="check-circle" size={17} color={palette.navy} /> : null}</Pressable>)}</View> : null}
+      {open ? <View style={styles.selectMenu}>{vehicleClasses.map((item) => <Pressable key={item.value} onPress={() => { onSelect(item.value); setOpen(false); }} style={[styles.selectOption, value === item.value && styles.selectOptionActive]}><Text style={[styles.selectOptionText, value === item.value && styles.selectOptionTextActive]}>{item.label}</Text>{value === item.value ? <MaterialCommunityIcons name="check-circle" size={17} color={palette.navy} /> : null}</Pressable>)}</View> : null}
     </View>
   );
 }
+
+function FuelDropdown({ value, onSelect }: { value: string; onSelect: (value: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>Fuel type</Text>
+      <Pressable accessibilityRole="button" onPress={() => setOpen((current) => !current)} style={styles.selectButton}>
+        <View style={styles.selectIcon}><MaterialCommunityIcons name="gas-station-outline" size={18} color="#0A43A3" /></View>
+        <Text style={[styles.selectValue, !value && styles.placeholder]}>{value || 'Select fuel (optional)'}</Text>
+        <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={21} color={palette.navy} />
+      </Pressable>
+      {open ? <View style={styles.selectMenu}>{fuelOptions.map((item) => <Pressable key={item} onPress={() => { onSelect(item); setOpen(false); }} style={[styles.selectOption, value === item && styles.selectOptionActive]}><Text style={[styles.selectOptionText, value === item && styles.selectOptionTextActive]}>{item}</Text>{value === item ? <MaterialCommunityIcons name="check-circle" size={17} color={palette.navy} /> : null}</Pressable>)}</View> : null}
+    </View>
+  );
+}
+
 
 function AccountDropdown({ contexts, selectedCustomerId, open, onToggle, onSelect }: { contexts: CustomerAccountContext[]; selectedCustomerId: string; open: boolean; onToggle: () => void; onSelect: (customerId: string) => void }) {
   const selected = contexts.find((context) => context.customer_id === selectedCustomerId);
@@ -372,11 +299,11 @@ function accountSelectorRoleLabel(context: CustomerAccountContext) {
   return 'Parent account';
 }
 
-function MakeDropdown({ manufacturers, selectedMake, query, open, onToggle, onQueryChange, onSelect }: { manufacturers: string[]; selectedMake: string; query: string; open: boolean; onToggle: () => void; onQueryChange: (value: string) => void; onSelect: (make: string) => void }) {
+function MakeDropdown({ manufacturers, selectedMake, query, open, onToggle, onQueryChange, onSelect, required = false }: { manufacturers: string[]; selectedMake: string; query: string; open: boolean; onToggle: () => void; onQueryChange: (value: string) => void; onSelect: (make: string) => void; required?: boolean }) {
   const visibleManufacturers = manufacturers.filter((manufacturer) => !query.trim() || manufacturer.toLowerCase().includes(query.trim().toLowerCase())).slice(0, 10);
   return (
     <View style={styles.field}>
-      <Text style={styles.fieldLabel}>Make</Text>
+      <Text style={styles.fieldLabel}>Manufacturer{required ? ' *' : ''}</Text>
       <Pressable accessibilityRole="button" onPress={onToggle} style={styles.selectButton}>
         <View style={styles.selectIcon}><MaterialCommunityIcons name="factory" size={18} color="#0A43A3" /></View>
         <Text style={[styles.selectValue, !selectedMake && styles.placeholder]} numberOfLines={1}>{selectedMake || 'Select manufacturer'}</Text>
@@ -389,40 +316,6 @@ function MakeDropdown({ manufacturers, selectedMake, query, open, onToggle, onQu
           return <Pressable key={manufacturer} accessibilityRole="button" onPress={() => onSelect(manufacturer)} style={[styles.makeOption, active && styles.selectOptionActive]}><Text style={[styles.selectOptionText, active && styles.selectOptionTextActive]} numberOfLines={1}>{manufacturer}</Text>{active ? <MaterialCommunityIcons name="check-circle" size={17} color={palette.navy} /> : null}</Pressable>;
         }) : <InputField icon="factory" label="Make" value={selectedMake} onChangeText={onSelect} />}
       </View> : null}
-    </View>
-  );
-}
-
-function InsurerDropdown({ insurers, selectedInsurer, open, onToggle, onSelect }: { insurers: InsuranceCompany[]; selectedInsurer: InsuranceCompany | null; open: boolean; onToggle: () => void; onSelect: (insurer: InsuranceCompany) => void }) {
-  return (
-    <View style={styles.field}>
-      <Text style={styles.fieldLabel}>Insurer</Text>
-      <Pressable accessibilityRole="button" onPress={onToggle} style={styles.selectButton}>
-        <View style={styles.selectIcon}><MaterialCommunityIcons name="shield-check-outline" size={18} color="#0A43A3" /></View>
-        <Text style={[styles.selectValue, !selectedInsurer && styles.placeholder]} numberOfLines={1}>{selectedInsurer?.name ?? 'Select insurer'}</Text>
-        <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={21} color={palette.navy} />
-      </Pressable>
-      {open ? <View style={styles.selectMenu}>{insurers.length ? insurers.slice(0, 12).map((insurer) => {
-        const active = selectedInsurer?.id === insurer.id;
-        return <Pressable key={insurer.id} accessibilityRole="button" onPress={() => onSelect(insurer)} style={[styles.selectOption, active && styles.selectOptionActive]}><Text style={[styles.selectOptionText, active && styles.selectOptionTextActive]} numberOfLines={1}>{insurer.name}</Text>{active ? <MaterialCommunityIcons name="check-circle" size={17} color={palette.navy} /> : null}</Pressable>;
-      }) : <Text style={styles.emptyLookupText}>No insurers available.</Text>}</View> : null}
-    </View>
-  );
-}
-
-function PolicyTypeDropdown({ value, open, onToggle, onSelect }: { value: string; open: boolean; onToggle: () => void; onSelect: (value: string) => void }) {
-  return (
-    <View style={styles.field}>
-      <Text style={styles.fieldLabel}>Policy type</Text>
-      <Pressable accessibilityRole="button" onPress={onToggle} style={styles.selectButton}>
-        <View style={styles.selectIcon}><MaterialCommunityIcons name="shield-car" size={18} color="#0A43A3" /></View>
-        <Text style={styles.selectValue} numberOfLines={1}>{value}</Text>
-        <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={21} color={palette.navy} />
-      </Pressable>
-      {open ? <View style={styles.selectMenu}>{policyTypes.map((type) => {
-        const active = value === type;
-        return <Pressable key={type} accessibilityRole="button" onPress={() => onSelect(type)} style={[styles.selectOption, active && styles.selectOptionActive]}><Text style={[styles.selectOptionText, active && styles.selectOptionTextActive]} numberOfLines={1}>{type}</Text>{active ? <MaterialCommunityIcons name="check-circle" size={17} color={palette.navy} /> : null}</Pressable>;
-      })}</View> : null}
     </View>
   );
 }
@@ -590,6 +483,10 @@ function formatDisplayDate(value: string) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  modalHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 12 },
+  modalEyebrow: { color: '#8A5B16', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.7, marginBottom: 2 },
+  modalSub: { color: palette.slate, fontSize: 11.2, lineHeight: 16, fontWeight: '700', marginTop: 2, maxWidth: 290 },
+  modalClose: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   compactTitle: { color: palette.navy, fontSize: 16, fontWeight: '800', marginBottom: 6, marginTop: -30, letterSpacing: 0 },
   formCard: { borderRadius: 18, padding: 12, gap: 12, backgroundColor: '#F8FBFF', borderColor: '#CFE0F8', overflow: 'hidden' },
   formAccentOne: { position: 'absolute', right: -28, top: -18, width: 110, height: 58, borderRadius: 18, backgroundColor: 'rgba(10,67,163,0.08)', transform: [{ rotate: '-10deg' }] },
