@@ -289,7 +289,7 @@ Fix:
 Verification:
 
 ```text
-Fix commit: 9b4d2d4976439a3454b35f21c1460343fcff1f8c
+Fix commit: 9b4d2d49c56771e5ef765522acf138e3b0359bb7
 Production trigger commit: 8ec61c661118c44561d5fbcec7b052514776187b
 GitHub verification run before trigger: 31771556248, success
 GitHub production run: 31771718845, verification gate success and deploy hook success
@@ -300,6 +300,8 @@ Vercel URL: insureit-20ktj8zes-antnish1s-projects.vercel.app
 Production alias: portal.insureit.in
 Production smoke: unauthenticated GET /policies/new returned 307 to /login?next=%2Fpolicies%2Fnew.
 Runtime errors: no error/fatal logs found for deployment dpl_2RvQNqDj1zNrKGSiawn56by49Vvv in the checked post-deploy window.
+
+Latest production supersession: later production trigger `91f4b283e950408f54a10019225683d2eaa381e2` for PR #338 also contains the Shriram OCR fix in its history. GitHub production run `31772022480` passed, Vercel deployment `dpl_Fy2fj4vPmZfpepXzbSLrr1jh7cLK` reached READY, `portal.insureit.in` was aliased to it, unauthenticated `/policies/new` returned the expected 307 login redirect, and no error/fatal runtime logs were found in the checked post-deploy window.
 ```
 
 Expected Shriram retest behavior for the observed sample: IDV, OD premium, TP premium, printed net premium, GST and gross premium should be available in the review modal when Google OCR returns the same schedule labels. If any value is still withheld, inspect sanitized Google OCR output around `SCHEDULE OF PREMIUM` before broadening extraction.
