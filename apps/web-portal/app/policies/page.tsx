@@ -16,6 +16,7 @@ type PolicyRow = {
   premium_amount: number | null;
   intermediary_type: string | null;
   intermediary_code: string | null;
+  policy_premium_details: { gross_premium: number | null } | null;
   customers: { company_name: string | null; contact_name: string; created_by: string | null } | null;
   vehicles: { vehicle_no: string } | null;
   insurance_companies: { name: string } | null;
@@ -56,7 +57,7 @@ export default async function PoliciesPage() {
 
   let query = admin
     .from("policies")
-    .select("id, policy_no, policy_type, start_date, end_date, insured_declared_value, premium_amount, intermediary_type, intermediary_code, customers!inner(company_name, contact_name, created_by), vehicles(vehicle_no), insurance_companies(name), claims(count)")
+    .select("id, policy_no, policy_type, start_date, end_date, insured_declared_value, premium_amount, intermediary_type, intermediary_code, policy_premium_details(gross_premium), customers!inner(company_name, contact_name, created_by), vehicles(vehicle_no), insurance_companies(name), claims(count)")
     .order("created_at", { ascending: false });
   if (accessibleCustomerIds !== null) query = query.in("customer_id", accessibleCustomerIds);
   const { data, error } = await query.returns<PolicyRow[]>();
@@ -90,6 +91,7 @@ export default async function PoliciesPage() {
     const sourceCode = policy.intermediary_code?.trim() ?? "";
     return {
       ...policy,
+      gross_premium: policy.policy_premium_details?.gross_premium ?? null,
       source_name: sourceType && sourceCode
         ? sourceNameByKey.get(sourceLookupKey(sourceType, sourceCode)) ?? null
         : null,
