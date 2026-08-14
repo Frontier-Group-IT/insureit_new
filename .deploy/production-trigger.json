@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Vehicle Class dropdown to production.",
-  "deploy_requested_at": "2026-08-14T11:58:00+05:30",
+  "purpose": "Deploy three-section Add/Edit Vehicle form layout to production.",
+  "deploy_requested_at": "2026-08-14T12:29:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #346 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "4f27aa6b9b1bc7f47dffbb0e3cd15d86c8b3b8b9",
-  "release_scope": "Vehicle form Class field only: replace the free-text vehicle_type input with the required Select class dropdown offering PCP, TWP, GCV, PCV, MISD and CPM, while preserving the existing field name, required validation, server actions, database behavior, onboarding styling and all unrelated workflows.",
-  "verification": "Verify web portal run 31776353681 passed for PR #346 head 92615590236f99ba369b8ed0386214be2ab93c5a. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #347 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "7457259d0f55c55c499d7296ddbebaafa2d36e14",
+  "release_scope": "Vehicle form only: reorganize Add/Edit Vehicle into three onboarding sections; Section 01 Customer, Vehicle number, Registration date, Manufacturer and Model; Section 02 Class, Chassis number, Engine number, Fuel Type, Capacity, with Manufacturing year retained as an additional existing field; Section 03 Fitness expiry, PUC expiry, Road tax expiry, National permit expiry and Local permit expiry. Capacity remains backed by gvw_kg, and Fuel Type uses the existing vehicles.fuel_type column. Preserve existing validation, Class dropdown, date controls, manufacturer choices, create/update behavior, stored data and unrelated workflows.",
+  "verification": "Verify web portal run 31778122129 passed for PR #347 head 1d8f72ca397661fec63799ab870e7a8037b5e159. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
