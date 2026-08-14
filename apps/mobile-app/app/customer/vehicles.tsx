@@ -13,6 +13,23 @@ import type { Claim, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
 
 type PickedEndorsementFile = { name: string; mimeType?: string | null; size?: number | null; uri: string };
 
+type ExternalPolicy = {
+  id: string;
+  customer_id: string;
+  vehicle_id: string;
+  insurance_company_id: string;
+  policy_no: string;
+  end_date: string;
+};
+
+type VehiclePolicyDisplay = {
+  vehicle_id: string;
+  insurance_company_id: string;
+  policy_no: string;
+  end_date: string;
+  source: 'sibl' | 'external';
+};
+
 const truckSketch = require('../../assets/vehicles/truck sketch.png');
 const carSketch = require('../../assets/vehicles/car sketch.png');
 
@@ -26,6 +43,7 @@ export default function VehiclesScreen() {
   const router = useRouter();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [policies, setPolicies] = useState<Policy[]>([]);
+  const [externalPolicies, setExternalPolicies] = useState<ExternalPolicy[]>([]);
   const [insurers, setInsurers] = useState<InsuranceCompany[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [contexts, setContexts] = useState<CustomerAccountContext[]>([]);
@@ -58,15 +76,17 @@ export default function VehiclesScreen() {
       const ids = contexts.map((context) => context.customer_id);
       setContexts(contexts);
       if (ids.length) {
-        const [vehicleResult, policyResult, claimResult, insurerResult] = await Promise.all([
+        const [vehicleResult, policyResult, externalPolicyResult, claimResult, insurerResult] = await Promise.all([
           supabase.from('vehicles').select('*').in('customer_id', ids).order('created_at', { ascending: false }),
           supabase.from('policies').select('*').in('customer_id', ids),
+          (supabase as any).from('external_policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,end_date').in('customer_id', ids),
           supabase.from('claims').select('*').in('customer_id', ids),
           supabase.from('insurance_companies').select('*'),
         ]);
 
         setVehicles(vehicleResult.data ?? []);
         setPolicies(policyResult.data ?? []);
+        setExternalPolicies((externalPolicyResult.data ?? []) as ExternalPolicy[]);
         setClaims(claimResult.data ?? []);
         setInsurers(insurerResult.data ?? []);
       }
@@ -98,7 +118,7 @@ export default function VehiclesScreen() {
     : companyOptions.find((item) => item.id === companyFilterId)?.name ?? 'All companies';
   const filteredVehicles = useMemo(() => vehicles.filter((vehicle) => {
     if (companyFilterId !== 'all' && vehicle.customer_id !== companyFilterId) return false;
-    const policy = latestPolicyFor(vehicle.id, policies);
+    const policy = policyForVehicle(vehicle.id, policies, externalPolicies);
     const insurer = policy ? insurers.find((item) => item.id === policy.insurance_company_id) : null;
     const company = vehicleCompanyName(vehicle.customer_id, contexts);
     const haystack = [
@@ -111,7 +131,7 @@ export default function VehiclesScreen() {
       company,
     ].filter(Boolean).join(' ').toLowerCase();
     return !searchQuery.trim() || haystack.includes(searchQuery.trim().toLowerCase());
-  }), [companyFilterId, contexts, insurers, policies, searchQuery, vehicles]);
+  }), [companyFilterId, contexts, externalPolicies, insurers, policies, searchQuery, vehicles]);
 
   function openRenewal(vehicleId: string) {
     setRenewalVehicleId(vehicleId);
@@ -238,9 +258,10 @@ export default function VehiclesScreen() {
       {vehicles.length > 0 && filteredVehicles.length === 0 ? <EmptyState title="No matching vehicles" body="Try a different search or company filter." /> : null}
 
       {filteredVehicles.map((vehicle) => {
-        const policy = latestPolicyFor(vehicle.id, policies);
+        const policy = policyForVehicle(vehicle.id, policies, externalPolicies);
         const insurer = policy ? insurers.find((item) => item.id === policy.insurance_company_id) : null;
         const active = Boolean(policy && isPolicyActive(policy));
+        const externalPolicy = policy?.source === 'external';
         const insurerLogo = insurerImage(insurer?.name);
         const vehicleDescriptor = [vehicle.make, vehicle.model, vehicle.year ? String(vehicle.year) : null].filter(Boolean).join(' - ') || 'Vehicle details pending';
         const accountName = vehicleCompanyName(vehicle.customer_id, contexts);
@@ -272,6 +293,7 @@ export default function VehiclesScreen() {
                   label="Insurance Company"
                   value={insurer?.name ?? 'Insurance company pending'}
                   logo={insurerLogo}
+                  badge={externalPolicy ? 'External' : undefined}
                 />
                 <InfoBlock
                   icon="file-document-outline"
@@ -795,14 +817,17 @@ function RenewalSuccessModal({ visible, onClose }: { visible: boolean; onClose: 
   );
 }
 
-function InfoBlock({ icon, iconBg, iconColor, label, value, logo, statusActive }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; iconBg: string; iconColor: string; label: string; value: string; logo?: number | null; statusActive?: boolean }) {
+function InfoBlock({ icon, iconBg, iconColor, label, value, logo, statusActive, badge }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; iconBg: string; iconColor: string; label: string; value: string; logo?: number | null; statusActive?: boolean; badge?: string }) {
   return (
     <View style={styles.infoBlock}>
       <View style={[styles.infoIcon, { backgroundColor: iconBg }]}>
         {logo ? <Image source={logo} style={styles.insurerLogo} resizeMode="contain" /> : <MaterialCommunityIcons name={icon} size={18} color={iconColor} />}
       </View>
       <View style={styles.infoCopy}>
-        <Text style={styles.infoLabel}>{label}</Text>
+        <View style={styles.infoLabelRow}>
+          <Text style={styles.infoLabel}>{label}</Text>
+          {badge ? <View style={styles.externalBadge}><Text style={styles.externalBadgeText}>{badge}</Text></View> : null}
+        </View>
         <View style={styles.infoValueRow}>
           {typeof statusActive === 'boolean' ? <BlinkingPolicyDot active={statusActive} /> : null}
           <Text style={styles.infoValue} numberOfLines={2}>{value}</Text>
@@ -881,7 +906,7 @@ function PulsingHealthDot({ tone }: { tone: 'red' | 'yellow' }) {
   return <Animated.View style={[styles.healthDot, tone === 'red' ? styles.healthDotRed : styles.healthDotYellow, { opacity, transform: [{ scale }] }]} />;
 }
 
-function vehicleComplianceHealth(vehicle: Vehicle, policy?: Policy): ComplianceHealth {
+function vehicleComplianceHealth(vehicle: Vehicle, policy?: Pick<VehiclePolicyDisplay, 'end_date'>): ComplianceHealth {
   const documents = [
     { key: 'policy', date: policy?.end_date ?? null },
     { key: 'puc', date: vehicle.puc_expiry_date },
@@ -932,11 +957,20 @@ function vehicleComplianceHealth(vehicle: Vehicle, policy?: Policy): ComplianceH
   };
 }
 
-function latestPolicyFor(vehicleId: string, policies: Policy[]) {
-  return policies.filter((policy) => policy.vehicle_id === vehicleId).sort((a, b) => new Date(b.end_date).getTime() - new Date(a.end_date).getTime())[0];
+function policyForVehicle(vehicleId: string, policies: Policy[], externalPolicies: ExternalPolicy[]): VehiclePolicyDisplay | undefined {
+  const sibl = policies
+    .filter((policy) => policy.vehicle_id === vehicleId)
+    .sort((a, b) => new Date(b.end_date).getTime() - new Date(a.end_date).getTime())[0];
+  if (sibl) return { vehicle_id: sibl.vehicle_id, insurance_company_id: sibl.insurance_company_id, policy_no: sibl.policy_no, end_date: sibl.end_date, source: 'sibl' };
+
+  const external = externalPolicies
+    .filter((policy) => policy.vehicle_id === vehicleId)
+    .sort((a, b) => new Date(b.end_date).getTime() - new Date(a.end_date).getTime())[0];
+  if (!external) return undefined;
+  return { vehicle_id: external.vehicle_id, insurance_company_id: external.insurance_company_id, policy_no: external.policy_no, end_date: external.end_date, source: 'external' };
 }
 
-function isPolicyActive(policy: Policy) {
+function isPolicyActive(policy: Pick<VehiclePolicyDisplay, 'end_date'>) {
   return new Date(policy.end_date).getTime() >= Date.now();
 }
 
@@ -1090,7 +1124,10 @@ const styles = StyleSheet.create({
   infoIcon: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   insurerLogo: { width: 24, height: 24 },
   infoCopy: { flex: 1, minWidth: 0 },
+  infoLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   infoLabel: { color: palette.slate, fontSize: 9.8, fontWeight: '800' },
+  externalBadge: { borderRadius: 5, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 4, paddingVertical: 1 },
+  externalBadgeText: { color: '#64748B', fontSize: 7.2, lineHeight: 9, fontWeight: '800' },
   infoValueRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 1 },
   infoValue: { color: palette.navy, fontSize: 11.4, lineHeight: 14, fontWeight: '900', marginTop: 1 },
   policyStatusDot: { width: 8, height: 8, borderRadius: 4 },
