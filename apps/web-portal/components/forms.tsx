@@ -23,6 +23,8 @@ export function CustomerForm({ action, values, agents = [], submitLabel = "Save 
 export function VehicleForm({ action, customers, manufacturers = [], values, submitLabel = "Save record" }: { action: FormAction; customers: SelectOption[]; manufacturers?: SelectOption[]; values?: VehicleValues; submitLabel?: string }) {
   return <div className="mx-auto max-w-[1480px] rounded-2xl bg-[#F3F6FA] p-3 sm:p-4 lg:p-5">
     <form action={action} className="space-y-4">
+      <VehicleOnboardingHeader />
+
       <VehicleSection number="01" title="Vehicle Ownership" columns="five">
         <SelectField variant="onboarding" label="Customer" name="customer_id" options={customers} required defaultValue={values?.customer_id ?? ""} emptyLabel="Select customer" />
         <Field variant="onboarding" label="RC number" name="vehicle_no" placeholder="MH12AB1234" required defaultValue={values?.vehicle_no ?? ""} uppercase />
@@ -67,6 +69,27 @@ export function PolicyForm({ action, customers, vehicles, insurers, values, subm
 
 function EnterpriseForm({ action, cancelHref, submitLabel, children }: { action: FormAction; cancelHref: string; submitLabel: string; children: ReactNode }) {
   return <div className="mx-auto max-w-[1240px] pb-20"><form action={action} className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">{children}<div className="sticky bottom-0 flex items-center justify-end gap-2 border-t border-[#E2E8F0] bg-white/95 px-5 py-3 backdrop-blur"><Link href={cancelHref} className="rounded-md border border-[#CBD5E1] px-4 py-2 text-[11px] font-semibold text-[#334155] hover:bg-[#F8FAFC]">Cancel</Link><FormSubmitButton label={submitLabel} /></div></form></div>;
+}
+
+function VehicleOnboardingHeader() {
+  const steps = [
+    { number: "01", label: "Vehicle Ownership" },
+    { number: "02", label: "Vehicle Specification" },
+    { number: "03", label: "Compliance & Permit" },
+  ];
+
+  return <section className="overflow-hidden rounded-2xl border border-[#D7E1EE] bg-white shadow-[0_8px_28px_rgba(23,54,93,0.08)]">
+    <div className="flex min-h-[76px] items-center justify-between gap-4 bg-[#1D416C] px-5 py-4 sm:px-6">
+      <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-white sm:text-[20px]">Vehicle Onboarding</h1>
+      <Link href="/vehicles" className="shrink-0 rounded-xl border border-white/20 bg-white/[0.03] px-4 py-2.5 text-[10px] font-semibold text-white transition hover:border-white/35 hover:bg-white/[0.08]">Back</Link>
+    </div>
+    <div className="grid grid-cols-1 bg-white sm:grid-cols-3">
+      {steps.map((step, index) => <div key={step.number} className={`flex min-h-[54px] items-center justify-center gap-3 px-4 py-3 ${index < steps.length - 1 ? "border-b border-[#E1E7EF] sm:border-b-0 sm:border-r" : ""}`}>
+        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#F1F6FB] text-[9px] font-bold text-[#315B6B]">{step.number}</span>
+        <span className="text-[10.5px] font-medium text-[#53657D] sm:text-[11px]">{step.label}</span>
+      </div>)}
+    </div>
+  </section>;
 }
 
 function VehicleSection({ number, title, children, columns }: { number: string; title: string; children: ReactNode; columns: "two" | "three" | "four" | "five" }) {
