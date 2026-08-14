@@ -9,7 +9,9 @@ type VehicleValues = { customer_id?: string | null; vehicle_no?: string | null; 
 type PolicyValues = { customer_id?: string | null; vehicle_id?: string | null; insurance_company_id?: string | null; policy_no?: string | null; policy_type?: string | null; insured_declared_value?: number | null; start_date?: string | null; end_date?: string | null };
 
 const inputClass = "h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
+const onboardingInputClass = "h-11 w-full rounded-xl border border-[#CBD5E1] bg-white px-3.5 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
 const labelClass = "mb-1 block text-[10.5px] font-semibold text-[#344054]";
+const onboardingLabelClass = "mb-1.5 block text-[10.5px] font-semibold text-[#344054]";
 
 export function CustomerForm({ action, values, agents = [], submitLabel = "Save record" }: { action: FormAction; values?: CustomerValues; agents?: SelectOption[]; submitLabel?: string }) {
   return <EnterpriseForm action={action} cancelHref="/customers" submitLabel={submitLabel}>
@@ -18,12 +20,41 @@ export function CustomerForm({ action, values, agents = [], submitLabel = "Save 
 }
 
 export function VehicleForm({ action, customers, manufacturers = [], values, submitLabel = "Save record" }: { action: FormAction; customers: SelectOption[]; manufacturers?: SelectOption[]; values?: VehicleValues; submitLabel?: string }) {
-  return <EnterpriseForm action={action} cancelHref="/vehicles" submitLabel={submitLabel}>
-    <FormSection title="Vehicle ownership" columns="three"><SelectField label="Customer" name="customer_id" options={customers} required defaultValue={values?.customer_id ?? ""} emptyLabel="Select customer" /><Field label="Vehicle number" name="vehicle_no" placeholder="MH12AB1234" required defaultValue={values?.vehicle_no ?? ""} uppercase /><Field label="Class" name="vehicle_type" placeholder="Truck / Bus / Goods carrier" required defaultValue={values?.vehicle_type ?? ""} /></FormSection>
-    <FormSection title="Manufacturer and identity" columns="three"><SelectField label="Manufacturer" name="make" options={manufacturers} required defaultValue={values?.make ?? ""} emptyLabel="Select manufacturer" /><Field label="Model" name="model" placeholder="Model name" defaultValue={values?.model ?? ""} /><Field label="Manufacturing year" name="year" placeholder="2024" type="number" min="1950" max="2100" defaultValue={values?.year?.toString() ?? ""} /><Field label="Chassis number" name="chassis_no" placeholder="Chassis number" defaultValue={values?.chassis_no ?? ""} uppercase /><Field label="Engine number" name="engine_no" placeholder="Engine number" defaultValue={values?.engine_no ?? ""} uppercase /></FormSection>
-    <FormSection title="Operational compliance" columns="four"><Field label="GVW (kg)" name="gvw_kg" placeholder="16200" type="number" min="0" step="0.01" defaultValue={values?.gvw_kg?.toString() ?? ""} /><Field label="Registration date" name="registration_date" type="date" defaultValue={values?.registration_date ?? ""} /><Field label="Fitness expiry" name="fitness_expiry_date" type="date" defaultValue={values?.fitness_expiry_date ?? ""} /><Field label="PUC expiry" name="puc_expiry_date" type="date" defaultValue={values?.puc_expiry_date ?? ""} /><Field label="Road tax expiry" name="road_tax_expiry_date" type="date" defaultValue={values?.road_tax_expiry_date ?? ""} /></FormSection>
-    <FormSection title="Commercial permit" columns="two"><Field label="National permit expiry" name="national_permit_expiry_date" type="date" defaultValue={values?.national_permit_expiry_date ?? ""} /><Field label="Local permit expiry" name="local_permit_expiry_date" type="date" defaultValue={values?.local_permit_expiry_date ?? ""} /></FormSection>
-  </EnterpriseForm>;
+  return <div className="mx-auto max-w-[1480px] rounded-2xl bg-[#F3F6FA] p-3 sm:p-4 lg:p-5">
+    <form action={action} className="space-y-4">
+      <VehicleSection number="01" title="Vehicle Ownership" columns="three">
+        <SelectField variant="onboarding" label="Customer" name="customer_id" options={customers} required defaultValue={values?.customer_id ?? ""} emptyLabel="Select customer" />
+        <Field variant="onboarding" label="Vehicle number" name="vehicle_no" placeholder="MH12AB1234" required defaultValue={values?.vehicle_no ?? ""} uppercase />
+        <Field variant="onboarding" label="Class" name="vehicle_type" placeholder="Truck / Bus / Goods carrier" required defaultValue={values?.vehicle_type ?? ""} />
+      </VehicleSection>
+
+      <VehicleSection number="02" title="Manufacturer and Identity" columns="three">
+        <SelectField variant="onboarding" label="Manufacturer" name="make" options={manufacturers} required defaultValue={values?.make ?? ""} emptyLabel="Select manufacturer" />
+        <Field variant="onboarding" label="Model" name="model" placeholder="Model name" defaultValue={values?.model ?? ""} />
+        <Field variant="onboarding" label="Manufacturing year" name="year" placeholder="2024" type="number" min="1950" max="2100" defaultValue={values?.year?.toString() ?? ""} />
+        <Field variant="onboarding" label="Chassis number" name="chassis_no" placeholder="Chassis number" defaultValue={values?.chassis_no ?? ""} uppercase />
+        <Field variant="onboarding" label="Engine number" name="engine_no" placeholder="Engine number" defaultValue={values?.engine_no ?? ""} uppercase />
+      </VehicleSection>
+
+      <VehicleSection number="03" title="Operational Compliance" columns="four">
+        <Field variant="onboarding" label="GVW (kg)" name="gvw_kg" placeholder="16200" type="number" min="0" step="0.01" defaultValue={values?.gvw_kg?.toString() ?? ""} />
+        <Field variant="onboarding" label="Registration date" name="registration_date" type="date" defaultValue={values?.registration_date ?? ""} />
+        <Field variant="onboarding" label="Fitness expiry" name="fitness_expiry_date" type="date" defaultValue={values?.fitness_expiry_date ?? ""} />
+        <Field variant="onboarding" label="PUC expiry" name="puc_expiry_date" type="date" defaultValue={values?.puc_expiry_date ?? ""} />
+        <Field variant="onboarding" label="Road tax expiry" name="road_tax_expiry_date" type="date" defaultValue={values?.road_tax_expiry_date ?? ""} />
+      </VehicleSection>
+
+      <VehicleSection number="04" title="Commercial Permit" columns="two">
+        <Field variant="onboarding" label="National permit expiry" name="national_permit_expiry_date" type="date" defaultValue={values?.national_permit_expiry_date ?? ""} />
+        <Field variant="onboarding" label="Local permit expiry" name="local_permit_expiry_date" type="date" defaultValue={values?.local_permit_expiry_date ?? ""} />
+      </VehicleSection>
+
+      <div className="sticky bottom-0 z-20 flex items-center justify-end gap-2 rounded-2xl border border-[#D9E2F0] bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(15,23,42,0.06)] backdrop-blur sm:px-5">
+        <Link href="/vehicles" className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[11px] font-semibold text-[#334155] transition hover:border-[#94A3B8] hover:bg-[#F8FAFC]">Cancel</Link>
+        <FormSubmitButton label={submitLabel} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[11px] font-semibold text-white transition hover:bg-[#102A49]" />
+      </div>
+    </form>
+  </div>;
 }
 
 export function PolicyForm({ action, customers, vehicles, insurers, values, submitLabel = "Save record" }: { action: FormAction; customers: SelectOption[]; vehicles: SelectOption[]; insurers: SelectOption[]; values?: PolicyValues; submitLabel?: string }) {
@@ -38,15 +69,32 @@ function EnterpriseForm({ action, cancelHref, submitLabel, children }: { action:
   return <div className="mx-auto max-w-[1240px] pb-20"><form action={action} className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">{children}<div className="sticky bottom-0 flex items-center justify-end gap-2 border-t border-[#E2E8F0] bg-white/95 px-5 py-3 backdrop-blur"><Link href={cancelHref} className="rounded-md border border-[#CBD5E1] px-4 py-2 text-[11px] font-semibold text-[#334155] hover:bg-[#F8FAFC]">Cancel</Link><FormSubmitButton label={submitLabel} /></div></form></div>;
 }
 
+function VehicleSection({ number, title, children, columns }: { number: string; title: string; children: ReactNode; columns: "two" | "three" | "four" }) {
+  const grid = columns === "two" ? "md:grid-cols-2" : columns === "four" ? "md:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-2 xl:grid-cols-3";
+  return <section className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.05)]">
+    <div className="flex min-h-14 items-center border-b border-[#E4EAF1] bg-[#FBFCFE] px-4 py-3 sm:px-5">
+      <div className="flex items-center gap-3">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#17365D] text-[10px] font-bold text-white">{number}</span>
+        <h2 className="text-[13px] font-semibold text-[#17203A] sm:text-[14px]">{title}</h2>
+      </div>
+    </div>
+    <div className={`grid min-w-0 grid-cols-1 gap-x-4 gap-y-4 p-4 sm:p-5 ${grid}`}>{children}</div>
+  </section>;
+}
+
 function FormSection({ title, children, columns = "three" }: { title: string; children: ReactNode; columns?: "two" | "three" | "four" }) {
   const grid = columns === "two" ? "md:grid-cols-2" : columns === "four" ? "md:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-2 xl:grid-cols-3";
   return <section className="border-b border-[#E2E8F0] px-5 py-4 last:border-b-0"><div className="mb-3"><h3 className="text-[13px] font-semibold text-[#0F172A]">{title}</h3></div><div className={`grid gap-x-3 gap-y-3 ${grid}`}>{children}</div></section>;
 }
 
-function Field({ label, name, placeholder = "", type = "text", required = false, defaultValue, uppercase = false, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; name: string; uppercase?: boolean }) {
-  return <div><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} type={type} placeholder={placeholder} required={required} defaultValue={defaultValue ?? ""} className={`${inputClass} ${uppercase ? "uppercase" : ""}`} {...props} /></div>;
+function Field({ label, name, placeholder = "", type = "text", required = false, defaultValue, uppercase = false, variant = "default", ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; name: string; uppercase?: boolean; variant?: "default" | "onboarding" }) {
+  const fieldInputClass = variant === "onboarding" ? onboardingInputClass : inputClass;
+  const fieldLabelClass = variant === "onboarding" ? onboardingLabelClass : labelClass;
+  return <div className="min-w-0"><label className={fieldLabelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} type={type} placeholder={placeholder} required={required} defaultValue={defaultValue ?? ""} className={`${fieldInputClass} ${uppercase ? "uppercase" : ""}`} {...props} /></div>;
 }
 
-function SelectField({ label, name, options, emptyLabel, required = false, defaultValue }: { label: string; name: string; options: SelectOption[]; emptyLabel: string; required?: boolean; defaultValue?: string | null }) {
-  return <div><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><select id={name} name={name} className={inputClass} required={required} defaultValue={defaultValue ?? ""}><option value="">{emptyLabel}</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>;
+function SelectField({ label, name, options, emptyLabel, required = false, defaultValue, variant = "default" }: { label: string; name: string; options: SelectOption[]; emptyLabel: string; required?: boolean; defaultValue?: string | null; variant?: "default" | "onboarding" }) {
+  const fieldInputClass = variant === "onboarding" ? onboardingInputClass : inputClass;
+  const fieldLabelClass = variant === "onboarding" ? onboardingLabelClass : labelClass;
+  return <div className="min-w-0"><label className={fieldLabelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><select id={name} name={name} className={fieldInputClass} required={required} defaultValue={defaultValue ?? ""}><option value="">{emptyLabel}</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>;
 }
