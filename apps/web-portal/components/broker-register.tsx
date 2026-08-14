@@ -44,11 +44,12 @@ export function BrokerRegisterShell({
   metrics: Array<{ label: string; value: string | number; hint: string; tone?: MetricTone }>;
   children: ReactNode;
 }) {
-  const showSupportingCopy = title !== "Customer Portfolio" && title !== "Vehicle Portfolio" && title !== "Policy Portfolio";
+  const showSupportingCopy = title !== "Customer Portfolio" && title !== "Vehicle Portfolio" && title !== "Policy Portfolio" && title !== "External Policy Portfolio";
   const customerReferenceLayout = title === "Customer Portfolio";
   const vehicleReferenceLayout = title === "Vehicle Portfolio";
   const policyReferenceLayout = title === "Policy Portfolio";
-  const compactReferenceLayout = customerReferenceLayout || vehicleReferenceLayout || policyReferenceLayout;
+  const externalPolicyReferenceLayout = title === "External Policy Portfolio";
+  const compactReferenceLayout = customerReferenceLayout || vehicleReferenceLayout || policyReferenceLayout || externalPolicyReferenceLayout;
   const childItems = Children.toArray(children);
   const firstChild = childItems[0];
   const compactToolbar =
