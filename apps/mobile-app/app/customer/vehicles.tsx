@@ -965,8 +965,9 @@ function policyForVehicle(vehicleId: string, policies: Policy[], externalPolicie
 }
 
 function isPolicyActive(policy: Pick<VehiclePolicyDisplay, 'start_date' | 'end_date'>) {
-  const now = Date.now();
-  return new Date(policy.start_date).getTime() <= now && new Date(policy.end_date).getTime() >= now;
+  const now = new Date();
+  const currentDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  return policy.start_date <= currentDate && policy.end_date >= currentDate;
 }
 
 function isPrivateVehicle(vehicle: Vehicle) {
