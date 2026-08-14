@@ -10,9 +10,9 @@ type VehicleValues = { customer_id?: string | null; vehicle_no?: string | null; 
 type PolicyValues = { customer_id?: string | null; vehicle_id?: string | null; insurance_company_id?: string | null; policy_no?: string | null; policy_type?: string | null; insured_declared_value?: number | null; start_date?: string | null; end_date?: string | null };
 
 const inputClass = "h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
-const onboardingInputClass = "h-11 w-full rounded-xl border border-[#CBD5E1] bg-white px-3.5 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
+const onboardingInputClass = "h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
 const labelClass = "mb-1 block text-[10.5px] font-semibold text-[#344054]";
-const onboardingLabelClass = "mb-1.5 block text-[10.5px] font-semibold text-[#344054]";
+const onboardingLabelClass = "mb-1 block text-[10.5px] font-semibold text-[#344054]";
 
 export function CustomerForm({ action, values, agents = [], submitLabel = "Save record" }: { action: FormAction; values?: CustomerValues; agents?: SelectOption[]; submitLabel?: string }) {
   return <EnterpriseForm action={action} cancelHref="/customers" submitLabel={submitLabel}>
@@ -21,8 +21,8 @@ export function CustomerForm({ action, values, agents = [], submitLabel = "Save 
 }
 
 export function VehicleForm({ action, customers, manufacturers = [], values, submitLabel = "Save record" }: { action: FormAction; customers: SelectOption[]; manufacturers?: SelectOption[]; values?: VehicleValues; submitLabel?: string }) {
-  return <div className="mx-auto max-w-[1480px] rounded-2xl bg-[#F3F6FA] p-3 sm:p-4 lg:p-5">
-    <form action={action} className="space-y-4">
+  return <div className="mx-auto max-w-[1480px]">
+    <form action={action} className="space-y-3">
       <VehicleOnboardingHeader />
 
       <VehicleSection number="01" title="Vehicle Ownership" columns="five">
@@ -51,9 +51,9 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
         <Field variant="onboarding" label="Local permit expiry" name="local_permit_expiry_date" type="date" defaultValue={values?.local_permit_expiry_date ?? ""} />
       </VehicleSection>
 
-      <div className="sticky bottom-0 z-20 flex items-center justify-end gap-2 rounded-2xl border border-[#D9E2F0] bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(15,23,42,0.06)] backdrop-blur sm:px-5">
-        <Link href="/vehicles" className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[11px] font-semibold text-[#334155] transition hover:border-[#94A3B8] hover:bg-[#F8FAFC]">Cancel</Link>
-        <FormSubmitButton label={submitLabel} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[11px] font-semibold text-white transition hover:bg-[#102A49]" />
+      <div className="sticky bottom-0 z-20 flex items-center justify-end gap-2 rounded-xl border border-[#D9E2F0] bg-white/95 px-4 py-2.5 shadow-[0_-6px_24px_rgba(15,23,42,0.05)] backdrop-blur">
+        <Link href="/vehicles" className="rounded-lg border border-[#CBD5E1] px-4 py-2 text-[11px] font-semibold text-[#334155] transition hover:border-[#94A3B8] hover:bg-[#F8FAFC]">Cancel</Link>
+        <FormSubmitButton label={submitLabel} className="rounded-lg bg-[#17365D] px-5 py-2 text-[11px] font-semibold text-white transition hover:bg-[#102A49]" />
       </div>
     </form>
   </div>;
@@ -78,15 +78,15 @@ function VehicleOnboardingHeader() {
     { number: "03", label: "Compliance & Permit" },
   ];
 
-  return <section className="overflow-hidden rounded-2xl border border-[#D7E1EE] bg-white shadow-[0_8px_28px_rgba(23,54,93,0.08)]">
-    <div className="flex min-h-[76px] items-center justify-between gap-4 bg-[#1D416C] px-5 py-4 sm:px-6">
-      <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-white sm:text-[20px]">Vehicle Onboarding</h1>
-      <Link href="/vehicles" className="shrink-0 rounded-xl border border-white/20 bg-white/[0.03] px-4 py-2.5 text-[10px] font-semibold text-white transition hover:border-white/35 hover:bg-white/[0.08]">Back</Link>
+  return <section className="overflow-hidden rounded-xl border border-[#D7E1EE] bg-white shadow-[0_4px_18px_rgba(23,54,93,0.06)]">
+    <div className="flex min-h-[64px] items-center justify-between gap-4 bg-[#1D416C] px-5 py-3 sm:px-6">
+      <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-white">Vehicle Onboarding</h1>
+      <Link href="/vehicles" className="shrink-0 rounded-lg border border-white/20 bg-white/[0.03] px-4 py-2 text-[10px] font-semibold text-white transition hover:border-white/35 hover:bg-white/[0.08]">Back</Link>
     </div>
     <div className="grid grid-cols-1 bg-white sm:grid-cols-3">
-      {steps.map((step, index) => <div key={step.number} className={`flex min-h-[54px] items-center justify-center gap-3 px-4 py-3 ${index < steps.length - 1 ? "border-b border-[#E1E7EF] sm:border-b-0 sm:border-r" : ""}`}>
-        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#F1F6FB] text-[9px] font-bold text-[#315B6B]">{step.number}</span>
-        <span className="text-[10.5px] font-medium text-[#53657D] sm:text-[11px]">{step.label}</span>
+      {steps.map((step, index) => <div key={step.number} className={`flex min-h-[46px] items-center justify-center gap-2.5 px-4 py-2 ${index < steps.length - 1 ? "border-b border-[#E1E7EF] sm:border-b-0 sm:border-r" : ""}`}>
+        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#F1F6FB] text-[8.5px] font-bold text-[#315B6B]">{step.number}</span>
+        <span className="text-[10px] font-medium text-[#53657D] sm:text-[10.5px]">{step.label}</span>
       </div>)}
     </div>
   </section>;
@@ -94,14 +94,14 @@ function VehicleOnboardingHeader() {
 
 function VehicleSection({ number, title, children, columns }: { number: string; title: string; children: ReactNode; columns: "two" | "three" | "four" | "five" }) {
   const grid = columns === "two" ? "md:grid-cols-2" : columns === "three" ? "md:grid-cols-2 xl:grid-cols-3" : columns === "four" ? "md:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5";
-  return <section className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.05)]">
-    <div className="flex min-h-14 items-center border-b border-[#E4EAF1] bg-[#FBFCFE] px-4 py-3 sm:px-5">
-      <div className="flex items-center gap-3">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#17365D] text-[10px] font-bold text-white">{number}</span>
-        <h2 className="text-[13px] font-semibold text-[#17203A] sm:text-[14px]">{title}</h2>
+  return <section className="overflow-hidden rounded-xl border border-[#D9E2F0] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+    <div className="flex min-h-[50px] items-center border-b border-[#E4EAF1] bg-[#FBFCFE] px-4 py-2.5">
+      <div className="flex items-center gap-2.5">
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#17365D] text-[9.5px] font-bold text-white">{number}</span>
+        <h2 className="text-[13px] font-semibold text-[#17203A]">{title}</h2>
       </div>
     </div>
-    <div className={`grid min-w-0 grid-cols-1 gap-x-4 gap-y-4 p-4 sm:p-5 ${grid}`}>{children}</div>
+    <div className={`grid min-w-0 grid-cols-1 gap-x-3 gap-y-3 p-3.5 sm:p-4 ${grid}`}>{children}</div>
   </section>;
 }
 
