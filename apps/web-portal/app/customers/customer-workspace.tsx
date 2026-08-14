@@ -194,7 +194,7 @@ export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
               <tr>
                 <th className="w-9 px-2.5 py-2.5"><input aria-label="Select all customers on this page" type="checkbox" checked={allPageSelected} ref={(element) => { if (element) element.indeterminate = somePageSelected && !allPageSelected; }} onChange={toggleCurrentPage} className="h-4 w-4" /></th>
                 <th className="w-[240px] px-2.5 py-2.5">Customer</th>
-                <th className="w-[190px] px-2.5 py-2.5">Partner type</th>
+                <th className="w-[190px] px-2.5 py-2.5">Customer Type</th>
                 <th className="w-[145px] px-2.5 py-2.5">Mobile</th>
                 <th className="w-[126px] px-2.5 py-2.5">Status</th>
                 <th className="w-[160px] px-2.5 py-2.5">Next action</th>
