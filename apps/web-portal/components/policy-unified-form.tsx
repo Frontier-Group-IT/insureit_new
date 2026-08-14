@@ -81,7 +81,7 @@ type Props = {
   insurers: SelectOption[];
   rms: PolicyRmOption[];
   sources: PolicySourceOption[];
-  manufacturers: SelectOption[];
+  manufacturers?: string[];
   initialValues?: PolicyUnifiedInitialValues;
 };
 
@@ -131,7 +131,7 @@ function assessPayinStatus(amount:string,billNumber:string,billDate:string){
   return"Billing details incomplete";
 }
 
-export function PolicyUnifiedForm({ mode, insurers, rms, sources, manufacturers, initialValues }: Props) {
+export function PolicyUnifiedForm({ mode, insurers, rms, sources, manufacturers = [], initialValues }: Props) {
   const router = useRouter();
   const [form,setForm]=useState<FormState>(()=>stateFrom(initialValues));
   const [vehicleRegistrationMode,setVehicleRegistrationMode]=useState<VehicleRegistrationMode>("registered");
