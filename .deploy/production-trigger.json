@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Add Vehicle class and permit field cleanup to production.",
-  "deploy_requested_at": "2026-08-14T11:19:00+05:30",
+  "purpose": "Deploy Policy Portfolio Gross Premium display fix to production.",
+  "deploy_requested_at": "2026-08-14T11:36:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #343 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "31223dd362ce43388b34aba483ea5dcd00783ec3",
-  "release_scope": "Add Vehicle form: rename the visible Vehicle type field to Class, remove the Permit number input, retain National permit expiry and Local permit expiry, preserve existing legacy permit_no values by no longer overwriting that field on vehicle create/update, and update vehicle validation copy to use class. No database schema changes and no unrelated vehicle workflow changes.",
-  "verification": "Verify web portal run 31774446643 passed for PR #343 head 30ff0d57ee196c0c70d63a2ffe7b27ee02d87880. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #344 and deploy the verified current main snapshot using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "6bcc5fb0f4d2f6be179a65c9ca500f0866653bf4",
+  "release_scope": "Policy Portfolio: fetch policy_premium_details.gross_premium for each policy and display that canonical Gross Premium in the existing Premium column on desktop and the existing premium slot on mobile, preserving Indian currency formatting, layout, styling, filters, Source logic, IDV, actions, access control, policy writes, and all unrelated workflows.",
+  "verification": "Verify web portal run 31774976585 passed for PR #344 head 5ab7689292d8f9b50f25d0e5de33f65bdf58906b. The production workflow must rerun the compulsory verification gate against this exact deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
