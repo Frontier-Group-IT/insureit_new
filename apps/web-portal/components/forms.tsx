@@ -25,7 +25,7 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
     <form action={action} className="space-y-4">
       <VehicleSection number="01" title="Vehicle Ownership" columns="five">
         <SelectField variant="onboarding" label="Customer" name="customer_id" options={customers} required defaultValue={values?.customer_id ?? ""} emptyLabel="Select customer" />
-        <Field variant="onboarding" label="Vehicle number" name="vehicle_no" placeholder="MH12AB1234" required defaultValue={values?.vehicle_no ?? ""} uppercase />
+        <Field variant="onboarding" label="RC number" name="vehicle_no" placeholder="MH12AB1234" required defaultValue={values?.vehicle_no ?? ""} uppercase />
         <Field variant="onboarding" label="Registration date" name="registration_date" type="date" defaultValue={values?.registration_date ?? ""} />
         <ManufacturerYearFields manufacturers={manufacturers} defaultMake={values?.make ?? ""} defaultYear={values?.year?.toString() ?? ""} />
         <Field variant="onboarding" label="Model" name="model" placeholder="Model name" defaultValue={values?.model ?? ""} />
