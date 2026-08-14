@@ -1,0 +1,115 @@
+name: Temporary Fix Vehicle Detail External Policy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/tmp-fix-vehicle-detail-external-policy.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-verify-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ci-placeholder.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'ci-placeholder-public-anon-key' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Patch vehicle detail external policy support
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('apps/mobile-app/app/customer/vehicle-detail.tsx')
+          s = p.read_text()
+
+          s = s.replace(
+            "import type { InsuranceCompany, Policy, Vehicle } from '@/lib/types';",
+            "import type { InsuranceCompany, Vehicle } from '@/lib/types';"
+          )
+
+          marker = "const carSketch = require('../../assets/vehicles/car sketch.png');\n"
+          addition = """const carSketch = require('../../assets/vehicles/car sketch.png');\n\ntype VehiclePolicyDisplay = {\n  vehicle_id: string;\n  insurance_company_id: string;\n  policy_no: string;\n  start_date: string;\n  end_date: string;\n  source: 'sibl' | 'external';\n};\n"""
+          s = s.replace(marker, addition)
+
+          s = s.replace(
+            "const [policies, setPolicies] = useState<Policy[]>([]);",
+            "const [policies, setPolicies] = useState<VehiclePolicyDisplay[]>([]);"
+          )
+
+          old_load = """        const policyResult = await supabase.from('policies').select('*').eq('vehicle_id', vehicleResult.data.id).in('customer_id', ids).order('end_date', { ascending: true });\n        const nextPolicies = policyResult.data ?? [];\n        setPolicies(nextPolicies);\n        const companyIds = Array.from(new Set(nextPolicies.map((policy) => policy.insurance_company_id).filter(Boolean)));\n"""
+          new_load = """        const [policyResult, externalPolicyResult] = await Promise.all([\n          supabase.from('policies').select('vehicle_id,insurance_company_id,policy_no,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', ids),\n          (supabase as any).from('external_policies').select('vehicle_id,insurance_company_id,policy_no,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', ids),\n        ]);\n        const nextPolicies: VehiclePolicyDisplay[] = [\n          ...((policyResult.data ?? []).map((policy) => ({ ...policy, source: 'sibl' as const }))),\n          ...(((externalPolicyResult.data ?? []) as Omit<VehiclePolicyDisplay, 'source'>[]).map((policy) => ({ ...policy, source: 'external' as const }))),\n        ];\n        setPolicies(nextPolicies);\n        const companyIds = Array.from(new Set(nextPolicies.map((policy) => policy.insurance_company_id).filter(Boolean)));\n"""
+          if old_load not in s:
+              raise SystemExit('policy load block not found')
+          s = s.replace(old_load, new_load)
+
+          s = s.replace(
+            "const latestPolicy = useMemo(() => [...policies].sort((a, b) => new Date(b.end_date).getTime() - new Date(a.end_date).getTime())[0] ?? null, [policies]);",
+            "const latestPolicy = useMemo(() => selectVehiclePolicy(policies), [policies]);"
+          )
+
+          s = s.replace(
+            "<MiniStat label=\"Policy\" value={latestPolicy?.policy_no ?? 'Not added'} />",
+            "<MiniStat label=\"Policy\" value={latestPolicy?.policy_no ?? 'Not added'} badge={latestPolicy?.source === 'external' ? 'External' : undefined} />"
+          )
+
+          s = s.replace(
+            "function MiniStat({ label, value }: { label: string; value: string }) {\n  return <View style={styles.miniStat}><Text style={styles.miniLabel}>{label}</Text><Text style={styles.miniValue} numberOfLines={1}>{value}</Text></View>;\n}",
+            "function MiniStat({ label, value, badge }: { label: string; value: string; badge?: string }) {\n  return <View style={styles.miniStat}><View style={styles.miniLabelRow}><Text style={styles.miniLabel}>{label}</Text>{badge ? <View style={styles.externalBadge}><Text style={styles.externalBadgeText}>{badge}</Text></View> : null}</View><Text style={styles.miniValue} numberOfLines={1}>{value}</Text></View>;\n}"
+          )
+
+          s = s.replace(
+            "function vehicleComplianceItems(vehicle: Vehicle | null, policy: Policy | null): ComplianceItem[] {",
+            "function vehicleComplianceItems(vehicle: Vehicle | null, policy: VehiclePolicyDisplay | null): ComplianceItem[] {"
+          )
+
+          insert_before = "function policyStatus(endDate: string) {"
+          selector = """function selectVehiclePolicy(policies: VehiclePolicyDisplay[]) {\n  return [...policies].sort((a, b) => {\n    const activeDelta = Number(isPolicyActive(b)) - Number(isPolicyActive(a));\n    return activeDelta || new Date(b.end_date).getTime() - new Date(a.end_date).getTime();\n  })[0] ?? null;\n}\n\nfunction isPolicyActive(policy: Pick<VehiclePolicyDisplay, 'start_date' | 'end_date'>) {\n  const now = new Date();\n  const currentDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;\n  return policy.start_date <= currentDate && policy.end_date >= currentDate;\n}\n\n"""
+          s = s.replace(insert_before, selector + insert_before)
+
+          style_anchor = "  miniStat:"
+          idx = s.find(style_anchor)
+          if idx == -1:
+              raise SystemExit('miniStat style not found')
+          line_end = s.find('\n', idx)
+          extra_styles = "\n  miniLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },\n  externalBadge: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 999, backgroundColor: '#F3F5F8', borderWidth: 1, borderColor: '#DDE3EA' },\n  externalBadgeText: { color: '#667085', fontSize: 7.5, lineHeight: 9, fontWeight: '800' },"
+          s = s[:line_end] + extra_styles + s[line_end:]
+
+          p.write_text(s)
+          PY
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify mobile
+        run: |
+          npm run typecheck:mobile
+          npm run lint:mobile
+          npm run build:mobile:web
+      - name: Commit fix
+        run: |
+          git config user.name "antnish1"
+          git config user.email "shahdolho@gmail.com"
+          git add apps/mobile-app/app/customer/vehicle-detail.tsx
+          git commit -m "Show external policies in vehicle detail" || true
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: Verify Expo credential
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          test -n "$EXPO_TOKEN"
+          npx --yes eas-cli@18 whoami --non-interactive
+        working-directory: apps/mobile-app
+      - name: Publish preview update
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npx --yes eas-cli@18 update --channel preview --environment preview --message "Show external policy in vehicle details 2026-08-14" --non-interactive
+        working-directory: apps/mobile-app
