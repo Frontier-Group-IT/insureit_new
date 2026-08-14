@@ -1,8 +1,8 @@
 # INSUREIT Reports UX V2 Handoff
 
 Date: 2026-08-14
-Status: **IMPLEMENTED ON FEATURE BRANCH / FINAL CURRENT-MAIN VERIFICATION IN PROGRESS**
-Production deployment: **NOT REQUESTED**
+Status: **IMPLEMENTED / VERIFIED / MERGED**
+Production deployment: **NOT REQUESTED / NOT YET UX-V2 DEPLOYED**
 
 ## Product direction
 
@@ -151,10 +151,39 @@ No Supabase migration is required for UX V2.
 
 PR: `#335 — Reports UX V2: simplify and professionalize reporting workspace`
 
-The previous complete verification was green, and the final verification is being rerun against current `main` after unrelated Expo workflow cleanup. Current verification base at this handoff update:
+Final verified feature head:
+
+`444d3c50cc08a8d3d3af80d4d02b117ae1841dcb`
+
+Final verification was run against current-main merge base:
 
 `a39514f79a62994c87ae78e801af050ef39e7dd7`
 
-Final verified feature head, workflow and merge SHA must be filled after this run completes.
+GitHub verification workflow:
 
-Do not create or modify `.deploy/production-trigger.json` for this work unless the user explicitly requests production deployment.
+`31771394848`
+
+Passed:
+- Access control V2 catalogue regression
+- Access control V2 scope and compatibility regression
+- Access control V2 portal lifecycle regression
+- Employee portal governance regression
+- Release blocker security regression
+- IFFCO structured regression
+- IFFCO regression
+- Digit regression
+- New India regression
+- Additional insurer OCR regression
+- TypeScript typecheck
+- Lint
+- Next.js production build
+
+Merge commit:
+
+`bc8b197fb6aba4301a54b3901bc3b87e9920dbc9`
+
+## Deployment state
+
+Reports UX V2 is merged into `main` but no UX-V2-specific production deployment trigger has been created.
+
+Do not describe UX V2 as production-deployed until the user explicitly requests deployment and the exact Vercel production deployment reaches READY.
