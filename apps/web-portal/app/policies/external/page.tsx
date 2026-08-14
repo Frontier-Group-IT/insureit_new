@@ -3,6 +3,7 @@ import { AppShell } from "@/components/shell";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { getEffectivePermission } from "@/lib/permission-management";
 import { requireCapability } from "@/lib/master-data-server";
+import { isAppRole } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { ExternalPolicyWorkspace } from "./external-policy-workspace";
 
@@ -27,7 +28,7 @@ export const revalidate = 0;
 
 export default async function ExternalPoliciesPage() {
   const profile = await requireCapability("view_policies");
-  if (!profile) redirect("/access-denied");
+  if (!profile || !isAppRole(profile.role)) redirect("/access-denied");
 
   const permission = await getEffectivePermission(profile.id, profile.role, "view_policies");
   const canEdit = permission.access === "edit" || permission.access === "approve";
