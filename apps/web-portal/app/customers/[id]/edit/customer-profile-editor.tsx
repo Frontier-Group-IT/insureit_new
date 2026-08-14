@@ -103,7 +103,7 @@ export function CustomerProfileEditor({ customer, documents, vehicles, agents, a
           </div>
 
           <div className="grid border-t border-white/15 sm:grid-cols-2 xl:grid-cols-6" aria-label="Customer summary">
-            <HeaderMetric icon={UserRound} label="Partner Type" value={partnerTypeLabel(customer.partner_type)} />
+            <HeaderMetric icon={UserRound} label="Customer Type" value={partnerTypeLabel(customer.partner_type)} />
             <HeaderMetric icon={UserCheck} label="Assigned To" value={assignedTo} />
             <HeaderMetric icon={CarFront} label="Fleet Size" value={String(vehicles.length)} />
             <HeaderMetric icon={Phone} label="Mobile" value={customer.phone || "Not set"} />
