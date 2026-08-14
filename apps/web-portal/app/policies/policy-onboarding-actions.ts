@@ -94,7 +94,8 @@ function sanitizeFinancialNumbers(payload: PolicyOnboardingPayload) {
 
 function validatePayload(payload: PolicyOnboardingPayload) {
   const phone = normalizedPhone(payload.customer.phone ?? "");
-  const registration = normalizedRegistration(String(payload.vehicle.registrationNumber ?? ""));
+  const rawRegistration = String(payload.vehicle.registrationNumber ?? "").trim().toUpperCase();
+  const registration = normalizedRegistration(rawRegistration);
   const mode = registrationMode(payload);
   const chassis = normalizedVehicleIdentity(payload.vehicle.chassisNumber);
   const engine = normalizedVehicleIdentity(payload.vehicle.engineNumber);
@@ -103,7 +104,7 @@ function validatePayload(payload: PolicyOnboardingPayload) {
   const cpaAmount = Number(numericPayloadValue(payload.premium.cpa, false, "0"));
   if (!name) return "Enter the insured/customer name.";
   if (!/^[6-9][0-9]{9}$/.test(phone)) return "Enter a valid 10 digit Indian mobile number.";
-  if (mode === "registered" && !registration) return "Enter the vehicle registration number.";
+  if (mode === "registered" && !/^[A-Z]{2}[A-Z0-9]{6}[0-9]{2}$/.test(rawRegistration)) return "Enter a valid 10-character vehicle registration number with 2 letters at the start and 2 digits at the end.";
   if (mode === "unregistered" && (!chassis || !engine)) return "Enter chassis number and engine number for an unregistered vehicle.";
   if (!vehicleClass) return "Select the vehicle class.";
   if (vehicleClass === "GCV" && (!payload.premium.cpaOpted || !Number.isFinite(cpaAmount) || cpaAmount <= 0)) return "CPA amount is mandatory for GCV policies and must be greater than 0.";
