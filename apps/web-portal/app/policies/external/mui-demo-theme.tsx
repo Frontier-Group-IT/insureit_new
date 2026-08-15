@@ -1,6 +1,5 @@
 "use client";
 
-// Preview redeploy trigger after Vercel environment refresh (2026-08-15).
 import type { ReactNode } from "react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 
@@ -36,100 +35,71 @@ const externalPolicyMuiTheme = createTheme({
     fontFamily: "var(--font-manrope), Manrope, ui-sans-serif, system-ui, sans-serif",
     h4: {
       fontFamily: "var(--font-display), Space Grotesk, var(--font-manrope), sans-serif",
-      fontSize: "1.7rem",
-      lineHeight: 1.15,
+      fontSize: "1.4rem",
+      lineHeight: 1.2,
       fontWeight: 700,
-      letterSpacing: "-0.035em",
+      letterSpacing: "-0.025em",
     },
     h5: {
       fontFamily: "var(--font-display), Space Grotesk, var(--font-manrope), sans-serif",
-      fontSize: "1.2rem",
+      fontSize: "1.08rem",
       lineHeight: 1.25,
       fontWeight: 700,
-      letterSpacing: "-0.02em",
+      letterSpacing: "-0.015em",
     },
     h6: {
-      fontSize: "0.95rem",
+      fontSize: "0.88rem",
       fontWeight: 800,
     },
     body1: {
-      fontSize: "0.875rem",
-      lineHeight: 1.6,
+      fontSize: "0.82rem",
+      lineHeight: 1.5,
     },
     body2: {
-      fontSize: "0.78rem",
-      lineHeight: 1.55,
+      fontSize: "0.76rem",
+      lineHeight: 1.45,
     },
     caption: {
-      fontSize: "0.7rem",
-      lineHeight: 1.45,
+      fontSize: "0.68rem",
+      lineHeight: 1.4,
       fontWeight: 600,
     },
     button: {
       textTransform: "none",
-      fontSize: "0.75rem",
+      fontSize: "0.72rem",
       fontWeight: 800,
       letterSpacing: 0,
     },
   },
   shape: {
-    borderRadius: 12,
+    borderRadius: 10,
   },
-  shadows: [
-    "none",
-    "0 1px 2px rgba(15,23,42,.04)",
-    "0 4px 16px rgba(23,54,93,.06)",
-    "0 8px 24px rgba(23,54,93,.08)",
-    "0 12px 34px rgba(23,54,93,.10)",
-    "0 16px 42px rgba(23,54,93,.11)",
-    "0 20px 52px rgba(23,54,93,.12)",
-    "0 24px 64px rgba(23,54,93,.13)",
-    "0 28px 70px rgba(23,54,93,.14)",
-    "0 32px 80px rgba(23,54,93,.15)",
-    "0 36px 90px rgba(23,54,93,.16)",
-    "0 40px 100px rgba(23,54,93,.17)",
-    "0 44px 110px rgba(23,54,93,.18)",
-    "0 48px 120px rgba(23,54,93,.19)",
-    "0 52px 130px rgba(23,54,93,.20)",
-    "0 56px 140px rgba(23,54,93,.21)",
-    "0 60px 150px rgba(23,54,93,.22)",
-    "0 64px 160px rgba(23,54,93,.23)",
-    "0 68px 170px rgba(23,54,93,.24)",
-    "0 72px 180px rgba(23,54,93,.25)",
-    "0 76px 190px rgba(23,54,93,.26)",
-    "0 80px 200px rgba(23,54,93,.27)",
-    "0 84px 210px rgba(23,54,93,.28)",
-    "0 88px 220px rgba(23,54,93,.29)",
-    "0 92px 230px rgba(23,54,93,.30)",
-  ],
   components: {
     MuiButton: {
-      defaultProps: {
-        disableElevation: true,
-      },
+      defaultProps: { disableElevation: true, size: "small" },
       styleOverrides: {
         root: {
-          minHeight: 40,
-          borderRadius: 12,
-          paddingInline: 16,
+          minHeight: 36,
+          borderRadius: 9,
+          paddingInline: 14,
         },
         containedPrimary: {
-          boxShadow: "0 10px 24px rgba(23,54,93,.16)",
+          boxShadow: "0 4px 12px rgba(23,54,93,.13)",
         },
       },
     },
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
-          minHeight: 44,
-          borderRadius: 12,
+          minHeight: 38,
+          borderRadius: 9,
           backgroundColor: "#FFFFFF",
-          transition: "border-color .16s ease, box-shadow .16s ease, background-color .16s ease",
+          transition: "border-color .14s ease, box-shadow .14s ease",
           "&:hover .MuiOutlinedInput-notchedOutline": {
             borderColor: "#9EB4CF",
           },
           "&.Mui-focused": {
-            boxShadow: "0 0 0 3px rgba(99,91,255,.10)",
+            boxShadow: "0 0 0 2px rgba(99,91,255,.09)",
           },
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
             borderColor: "#635BFF",
@@ -137,7 +107,9 @@ const externalPolicyMuiTheme = createTheme({
           },
         },
         input: {
-          fontSize: 13,
+          paddingTop: 9,
+          paddingBottom: 9,
+          fontSize: 12.5,
           fontWeight: 600,
           color: "#17203A",
         },
@@ -146,10 +118,18 @@ const externalPolicyMuiTheme = createTheme({
         },
       },
     },
+    MuiAutocomplete: {
+      styleOverrides: {
+        inputRoot: {
+          paddingTop: "2px !important",
+          paddingBottom: "2px !important",
+        },
+      },
+    },
     MuiInputLabel: {
       styleOverrides: {
         root: {
-          fontSize: 12,
+          fontSize: 11.5,
           fontWeight: 700,
           color: "#526079",
         },
@@ -159,7 +139,8 @@ const externalPolicyMuiTheme = createTheme({
       styleOverrides: {
         root: {
           marginLeft: 2,
-          fontSize: 10.5,
+          marginTop: 3,
+          fontSize: 10,
           fontWeight: 600,
         },
       },
@@ -167,23 +148,25 @@ const externalPolicyMuiTheme = createTheme({
     MuiChip: {
       styleOverrides: {
         root: {
+          height: 24,
           borderRadius: 999,
           fontWeight: 800,
-          fontSize: 10.5,
+          fontSize: 10,
         },
       },
     },
     MuiPaper: {
       styleOverrides: {
         rounded: {
-          borderRadius: 18,
+          borderRadius: 12,
         },
       },
     },
     MuiTabs: {
       styleOverrides: {
+        root: { minHeight: 36 },
         indicator: {
-          height: 3,
+          height: 2,
           borderRadius: 999,
         },
       },
@@ -191,10 +174,12 @@ const externalPolicyMuiTheme = createTheme({
     MuiTab: {
       styleOverrides: {
         root: {
-          minHeight: 42,
-          minWidth: 76,
+          minHeight: 36,
+          minWidth: 68,
+          paddingTop: 7,
+          paddingBottom: 7,
           textTransform: "none",
-          fontSize: 11.5,
+          fontSize: 11,
           fontWeight: 800,
         },
       },
@@ -202,7 +187,7 @@ const externalPolicyMuiTheme = createTheme({
     MuiDialog: {
       styleOverrides: {
         paper: {
-          borderRadius: 20,
+          borderRadius: 14,
           border: "1px solid #E2E8F0",
         },
       },
