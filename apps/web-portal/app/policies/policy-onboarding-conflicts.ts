@@ -93,7 +93,15 @@ function coverageComponents(policyType: unknown) {
   const text = String(policyType ?? "").trim().toLowerCase();
   if (!text) return new Set(["OD", "TP"]);
   if (text === "saod" || text.includes("standalone own") || text.includes("own damage")) return new Set(["OD"]);
-  if (text === "third party" || text === "long term third party" || text.includes("third-party") || text.includes("third party") || text.includes("liability only")) return new Set(["TP"]);
+  if (
+    text === "third party" ||
+    text === "long term third party" ||
+    text.includes("third-party") ||
+    text.includes("third party") ||
+    text.includes("liability only")
+  ) {
+    return new Set(["TP"]);
+  }
   return new Set(["OD", "TP"]);
 }
 
@@ -137,6 +145,7 @@ async function manufacturerIsKnown(make: string) {
     admin.from("vehicle_manufacturer_aliases").select("alias").eq("is_active", true),
   ]);
   for (const result of [manufacturers, brands, aliases]) if (result.error) throw new Error(result.error.message);
+
   const values: string[] = [];
   for (const row of manufacturers.data ?? []) values.push(String(row.name ?? ""), String(row.display_name ?? ""));
   for (const row of brands.data ?? []) values.push(String(row.brand_name ?? ""));
@@ -152,6 +161,21 @@ function externalPath(id: string) {
   return `/policies/external/${id}`;
 }
 
+function vehicleConflict(existing: VehicleIdentityRow, input: { registration: string; chassis: string; engine: string }, message: string): PolicyBusinessConflict {
+  return {
+    type: "vehicle_identity_conflict",
+    message,
+    enteredRegistration: input.registration,
+    enteredChassis: input.chassis,
+    enteredEngine: input.engine,
+    existingVehicleId: existing.id,
+    existingVehicleNo: existing.vehicle_no,
+    existingMake: existing.make,
+    existingModel: existing.model,
+    existingPath: `/vehicles/${existing.id}`,
+  };
+}
+
 export async function findPolicyOnboardingBusinessConflict(input: {
   payload: PolicyOnboardingPayload;
   acceptCoverageGap?: boolean;
@@ -163,6 +187,7 @@ export async function findPolicyOnboardingBusinessConflict(input: {
   const engine = normalizeIdentity(payload.vehicle.engineNumber);
   const make = String(payload.vehicle.make ?? "").trim();
   const mode = payload.vehicle.registrationMode === "unregistered" ? "unregistered" : "registered";
+  const enteredIdentity = { registration, chassis, engine };
 
   if (make && !(await manufacturerIsKnown(make))) return { type: "manufacturer_unknown", enteredMake: make };
 
@@ -175,40 +200,33 @@ export async function findPolicyOnboardingBusinessConflict(input: {
   const identityRows = [registrationVehicle, chassisVehicle, engineVehicle].filter((row): row is VehicleIdentityRow => Boolean(row));
   const distinctVehicleIds = new Set(identityRows.map((row) => row.id));
   if (distinctVehicleIds.size > 1) {
-    const existing = identityRows[0];
-    return {
-      type: "vehicle_identity_conflict",
-      message: "The registration, chassis or engine details point to different vehicle records. Review the vehicle identity before booking this policy.",
-      enteredRegistration: registration,
-      enteredChassis: chassis,
-      enteredEngine: engine,
-      existingVehicleId: existing.id,
-      existingVehicleNo: existing.vehicle_no,
-      existingMake: existing.make,
-      existingModel: existing.model,
-      existingPath: `/vehicles/${existing.id}`,
-    };
+    return vehicleConflict(
+      identityRows[0],
+      enteredIdentity,
+      "The registration, chassis or engine details point to different vehicle records. Review the vehicle identity before booking this policy.",
+    );
   }
 
-  const identifiedVehicle = registrationVehicle ?? chassisVehicle ?? engineVehicle;
-  if (!identifiedVehicle && engineVehicle) {
-    return {
-      type: "vehicle_identity_conflict",
-      message: "This engine number is already linked to an existing vehicle. Review that vehicle before creating another vehicle record.",
-      enteredRegistration: registration,
-      enteredChassis: chassis,
-      enteredEngine: engine,
-      existingVehicleId: engineVehicle.id,
-      existingVehicleNo: engineVehicle.vehicle_no,
-      existingMake: engineVehicle.make,
-      existingModel: engineVehicle.model,
-      existingPath: `/vehicles/${engineVehicle.id}`,
-    };
+  if (mode === "registered" && !registrationVehicle && (chassisVehicle || engineVehicle)) {
+    return vehicleConflict(
+      chassisVehicle ?? engineVehicle!,
+      enteredIdentity,
+      "The entered chassis or engine number already belongs to a different registered vehicle. Review the vehicle identity before booking this policy.",
+    );
   }
+
+  if (mode === "unregistered" && !chassisVehicle && engineVehicle) {
+    return vehicleConflict(
+      engineVehicle,
+      enteredIdentity,
+      "This engine number is already linked to an existing vehicle, but the entered chassis number does not match it. Review the vehicle details before continuing.",
+    );
+  }
+
+  const identifiedVehicle = mode === "registered" ? registrationVehicle : (chassisVehicle ?? engineVehicle);
 
   const policyNumber = String(payload.policy.policyNumber ?? "").trim().toUpperCase();
   const policyNumberNormalized = normalizeIdentity(policyNumber);
-  const insurerId = String(payload.policy.insuranceCompanyId ?? "");
   const newStart = String(payload.policy.validFrom ?? "");
   const newEnd = String(payload.policy.validUpto ?? "");
   const newCoverage = coverageComponents(payload.policy.policyType);
@@ -321,6 +339,5 @@ export async function findPolicyOnboardingBusinessConflict(input: {
     }
   }
 
-  void insurerId;
   return null;
 }
