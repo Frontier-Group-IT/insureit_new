@@ -53,6 +53,8 @@ This is an Expo native dependency mismatch: `expo-font@57.0.1` was resolved in t
 
 **IMPLEMENTED restore before next APK:** After the safe-startup diagnostic confirmed the binary was crashing before JS, the mobile root was restored to the full app startup shell: `AppLoadingProvider`, animated `SplashIntro`, `RealtimeNotificationProvider`, route-session redirect, and the Add Vehicle modal route are back in `apps/mobile-app/app/_layout.tsx` and `apps/mobile-app/app/index.tsx`. Android adaptive launcher icon foreground now uses the padded transparent `assets/brand/insureit-adaptive-foreground.png` instead of the full square icon, so the shield should not be cropped by Android circular masks. This icon change requires the next APK build; OTA cannot change the installed launcher icon.
 
+**DEPLOYED preview APK rebuild:** EAS preview Android APK build `16a2b597-47f2-4d5d-805b-22bc235c596f` finished successfully from commit `01263bed261f2151afce31d0661914ecbbc91cf4`, runtime `0.2.0`, versionCode `4`, fingerprint `d2d351215ec052afec94b873767ad192a20055d9`. APK URL: `https://expo.dev/artifacts/eas/t-sie-tZlXQSJdjW7Jmwme8VP4kfWIQ1ybsQkOrMO44.apk`. Pre-build checks passed: mobile typecheck, `expo install --check`, Android export. ADB install verification was not completed because the device disconnected and `adb` reported no devices.
+
 **Expo preview:** The installed preview APK follows Expo branch/channel `preview`, runtime version `0.1.0`. The user does not need a new APK for these JS/layout changes unless the installed APK cannot consume OTA updates or a future change modifies native/runtime dependencies.
 
 Published preview updates from this work:
