@@ -27,6 +27,17 @@ Replacement APK URL: https://expo.dev/artifacts/eas/iDjBu-_QDD50SJjKzVde9h47HUiO
 
 Do not use the broken APK build `b7e2f7a2-e0f0-4622-af9e-95e579448f9e` from commit `54d30cdd`.
 
+**OTA-only crash mitigation:** The user reported the versionCode 4 standalone APK still opened for less than one second and closed, while the app opened inside Expo Go. Per user instruction, do not build another APK until explicitly told. Commit `194d14b1` removed the Gluestack/Uniwind startup path from `_layout.tsx` and replaced the Home screen Gluestack text/layout components with plain React Native primitives. This was published as Expo preview OTA runtime `0.2.0`.
+
+```text
+OTA fix commit: 194d14b1
+Latest OTA update group: 5397a572-6ebf-40ee-a29d-7cde018cf3ac
+Earlier duplicate OTA update group: c8027fb4-6743-4086-a70c-cc32e4d09a46
+Message: Remove Gluestack startup path OTA 2026-08-15
+```
+
+If the standalone APK still closes before applying this OTA, get Android `adb logcat` from package `com.insureit.mobile`. Do not queue or build a new APK unless the user explicitly approves it.
+
 **Expo preview:** The installed preview APK follows Expo branch/channel `preview`, runtime version `0.1.0`. The user does not need a new APK for these JS/layout changes unless the installed APK cannot consume OTA updates or a future change modifies native/runtime dependencies.
 
 Published preview updates from this work:
