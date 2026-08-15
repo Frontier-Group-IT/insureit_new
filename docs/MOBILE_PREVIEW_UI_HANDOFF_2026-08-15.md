@@ -57,6 +57,8 @@ This is an Expo native dependency mismatch: `expo-font@57.0.1` was resolved in t
 
 **IMPLEMENTED pending next APK:** The Android adaptive launcher foreground was regenerated from the clean InsureIT shield at smaller scale on a 1024x1024 transparent canvas, with a local circular preview confirming the shield sits within the Android circular mask. This launcher icon change requires a new APK. The in-app `SplashIntro` was redesigned to use the real auth brand assets (`wave-top-right`, `wave-bottom-left`, `shield-watermark`, `pay-challan-logo`, `get-quote-logo`) with subtle animated floating, pulse, and progress motion. The splash animation is JS and can ship by OTA; the launcher icon cannot.
 
+**DEPLOYED preview OTA:** The refined splash animation was published to Expo `preview` runtime `0.2.0` from commit `ccaee6ab78a78c3143671abb62767acd2795bcf0`. Update group `5f8ee107-f6ad-4434-9a52-4e177121a6cd`; Android update `01a00674-4274-72a9-b945-64de6e33147d`; iOS update `01a00674-4274-788d-8a3a-06d792902b55`. Pre-publish checks passed: mobile typecheck and Android export. Launcher icon padding remains pending next APK because launcher icons cannot change by OTA.
+
 **Expo preview:** The installed preview APK follows Expo branch/channel `preview`, runtime version `0.1.0`. The user does not need a new APK for these JS/layout changes unless the installed APK cannot consume OTA updates or a future change modifies native/runtime dependencies.
 
 Published preview updates from this work:
