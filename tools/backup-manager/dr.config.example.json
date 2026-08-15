@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "sourceProjectRef": "ilzhsfqqjyppzzvfscmh",
+  "targetProjectRef": "jzuqlcysyqtyydukveir",
+  "targetRegion": "ap-south-1",
+  "targetStorageEndpoint": "https://jzuqlcysyqtyydukveir.storage.supabase.co/storage/v1/s3",
+  "expectedRpoHours": 6,
+  "controlSchema": "insureit_dr_control"
+}
