@@ -37,6 +37,30 @@ npx eslint components/ui.tsx app/customer/home.tsx components/group/group-home-s
 npm --workspace apps/mobile-app run build:web
 ```
 
+**DEPLOYED:** A follow-up Expo preview OTA update published on 2026-08-15 redesigned My Policies to match the current Claims page visual pattern.
+
+```text
+Source commit: 8b423a7eb6c9be60589f6b67c8c594d1f0c03cd8
+Message: Redesign My Policies like Claims
+Update group ID: 44cd3fd2-0898-4776-ab20-ac69cb277915
+Android update ID: 01a00401-60c1-7ba2-b46a-842b384896b8
+iOS update ID: 01a00401-60c1-7507-81ee-46d80fe8f995
+EAS Dashboard: https://expo.dev/accounts/antnish/projects/insureit-mobile/updates/44cd3fd2-0898-4776-ab20-ac69cb277915
+```
+
+Included changes:
+
+- `apps/mobile-app/app/customer/policies.tsx` now uses the Claims-style search section, counted filter chips, tone-colored cards, accent bar, status icon, status badge, number boxes, info rows, warning strip, and footer CTA.
+- The policy data flow was preserved: SIBL policies and `external_policies` are still merged, sorted by `end_date`, and detail navigation still passes `{ id, source }`.
+
+Verification before publish:
+
+```text
+npm --workspace apps/mobile-app run typecheck
+npx eslint app/customer/policies.tsx --quiet
+npm --workspace apps/mobile-app run build:web
+```
+
 A separate master-data administration change was added on 2026-08-12: protected deletion controls for existing customers, vehicles, policies, and claims are available only to the `it_super_user` role in the Customers, Vehicles, Policies, and Claims registries. Customer/vehicle/policy deletion and the later claim-delete extension are both deployed to production.
 
 Insurance Company master-data navigation was added and deployed on 2026-08-12. The canonical insurer master route is now under Master Data at `/master-data/insurance-companies`, with the create route at `/master-data/insurance-companies/new`; legacy `/insurance-companies` routes still exist for compatibility.
