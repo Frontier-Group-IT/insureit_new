@@ -24,11 +24,19 @@ import { ArrowLeft, Save } from "lucide-react";
 import { createExternalPolicy, updateExternalPolicy, type ExternalPolicyPayload } from "./external-policy-actions";
 import { ExternalPolicyMuiTheme } from "./mui-demo-theme";
 
+type VehicleOption = {
+  id: string;
+  vehicle_no: string;
+  make: string | null;
+  model: string | null;
+  vehicle_type: string | null;
+};
+
 type CustomerOption = {
   id: string;
   label: string;
   phone: string | null;
-  vehicles: { id: string; vehicle_no: string; make: string | null; model: string | null }[];
+  vehicles: VehicleOption[];
 };
 type InsurerOption = { id: string; name: string };
 
@@ -39,21 +47,28 @@ const emptyValues: ExternalPolicyInitialValues = {
   vehicleId: "",
   insuranceCompanyId: "",
   policyNo: "",
-  policyType: "Commercial comprehensive",
+  policyType: "",
   startDate: "",
   endDate: "",
   premiumAmount: "",
   insuredDeclaredValue: "",
 };
 
-const policyTypeOptions = [
-  "Commercial comprehensive",
-  "Commercial package policy",
-  "Third-party liability",
-  "Standalone own damage",
-  "Goods carrying commercial vehicle",
-  "Passenger carrying commercial vehicle",
+const standardPolicyProducts = ["Package", "Third Party", "SAOD"];
+const privateVehiclePolicyProducts = [
+  "Package",
+  "Third Party",
+  "SAOD",
+  "Bundled",
+  "Long Term Package",
+  "Long Term Third Party",
 ];
+
+function policyProductsForVehicleType(vehicleType: string | null | undefined) {
+  const code = (vehicleType ?? "").trim().toUpperCase();
+  if (!code) return [];
+  return code === "PCP" || code === "TWP" ? privateVehiclePolicyProducts : standardPolicyProducts;
+}
 
 export function ExternalPolicyForm({
   mode,
@@ -96,6 +111,11 @@ function ExternalPolicyFormContent({
   const vehicles = selectedCustomer?.vehicles ?? [];
   const selectedVehicle = useMemo(() => vehicles.find((item) => item.id === values.vehicleId) ?? null, [vehicles, values.vehicleId]);
   const selectedInsurer = useMemo(() => insurers.find((item) => item.id === values.insuranceCompanyId) ?? null, [insurers, values.insuranceCompanyId]);
+  const policyProductOptions = useMemo(() => {
+    const options = policyProductsForVehicleType(selectedVehicle?.vehicle_type);
+    if (mode === "edit" && values.policyType && !options.includes(values.policyType)) return [values.policyType, ...options];
+    return options;
+  }, [mode, selectedVehicle?.vehicle_type, values.policyType]);
   const dateError = Boolean(values.startDate && values.endDate && values.endDate < values.startDate);
   const dirty = JSON.stringify(values) !== JSON.stringify(initial);
 
@@ -106,8 +126,26 @@ function ExternalPolicyFormContent({
 
   function changeCustomer(customerId: string) {
     const customer = customers.find((item) => item.id === customerId);
-    const nextVehicleId = customer?.vehicles.some((vehicle) => vehicle.id === values.vehicleId) ? values.vehicleId : "";
-    setValues((current) => ({ ...current, customerId, vehicleId: nextVehicleId }));
+    setValues((current) => {
+      const nextVehicle = customer?.vehicles.find((vehicle) => vehicle.id === current.vehicleId) ?? null;
+      const allowedProducts = policyProductsForVehicleType(nextVehicle?.vehicle_type);
+      return {
+        ...current,
+        customerId,
+        vehicleId: nextVehicle?.id ?? "",
+        policyType: nextVehicle && allowedProducts.includes(current.policyType) ? current.policyType : "",
+      };
+    });
+    if (message) setMessage("");
+  }
+
+  function changeVehicle(vehicle: VehicleOption | null) {
+    const allowedProducts = policyProductsForVehicleType(vehicle?.vehicle_type);
+    setValues((current) => ({
+      ...current,
+      vehicleId: vehicle?.id ?? "",
+      policyType: vehicle && allowedProducts.includes(current.policyType) ? current.policyType : "",
+    }));
     if (message) setMessage("");
   }
 
@@ -116,7 +154,7 @@ function ExternalPolicyFormContent({
     if (!values.vehicleId) return "Select a vehicle.";
     if (!values.insuranceCompanyId) return "Select an insurance company.";
     if (!values.policyNo.trim()) return "Enter the policy number.";
-    if (!values.policyType.trim()) return "Enter the policy type.";
+    if (!values.policyType.trim()) return "Select the policy product.";
     if (!values.startDate || !values.endDate) return "Enter both validity dates.";
     if (values.endDate < values.startDate) return "Policy end date cannot be before the start date.";
     return "";
@@ -211,7 +249,7 @@ function ExternalPolicyFormContent({
               options={vehicles}
               value={selectedVehicle}
               disabled={!selectedCustomer}
-              onChange={(_, vehicle) => set("vehicleId", vehicle?.id ?? "")}
+              onChange={(_, vehicle) => changeVehicle(vehicle)}
               getOptionLabel={(vehicle) => `${vehicle.vehicle_no}${[vehicle.make, vehicle.model].filter(Boolean).length ? ` • ${[vehicle.make, vehicle.model].filter(Boolean).join(" ")}` : ""}`}
               isOptionEqualToValue={(option, value) => option.id === value.id}
               renderInput={(params) => <TextField {...params} required label="Vehicle" placeholder={selectedCustomer ? "Search vehicle" : "Select customer first"} />}
@@ -244,12 +282,18 @@ function ExternalPolicyFormContent({
 
             <Autocomplete
               size="small"
-              freeSolo
-              options={policyTypeOptions}
-              value={values.policyType}
-              onChange={(_, value) => set("policyType", typeof value === "string" ? value : values.policyType)}
-              onInputChange={(_, value) => set("policyType", value)}
-              renderInput={(params) => <TextField {...params} required label="Policy Type" placeholder="Select or type policy type" />}
+              options={policyProductOptions}
+              value={values.policyType || null}
+              disabled={!selectedVehicle}
+              onChange={(_, value) => set("policyType", value ?? "")}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  required
+                  label="Policy Product"
+                  placeholder={selectedVehicle ? "Select product" : "Select vehicle first"}
+                />
+              )}
             />
           </Box>
         </CompactSection>
@@ -297,19 +341,6 @@ function ExternalPolicyFormContent({
           </Box>
         </CompactSection>
       </Paper>
-
-      <Stack direction="row" justifyContent="flex-end" spacing={.8} sx={{ mt: 1.1 }}>
-        <Button onClick={requestExit} variant="text" color="inherit">Cancel</Button>
-        <Button
-          onClick={submit}
-          disabled={isPending}
-          variant="contained"
-          startIcon={isPending ? <CircularProgress size={14} color="inherit" /> : <Save size={15} />}
-          sx={{ minWidth: 138 }}
-        >
-          {isPending ? "Saving…" : mode === "edit" ? "Save Changes" : "Save Policy"}
-        </Button>
-      </Stack>
 
       <Dialog open={leaveOpen} onClose={() => setLeaveOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>Discard changes?</DialogTitle>
