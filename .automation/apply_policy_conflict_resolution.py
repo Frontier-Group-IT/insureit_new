@@ -1,0 +1,132 @@
+from pathlib import Path
+import re
+
+ROOT = Path(__file__).resolve().parents[1]
+ACTIONS = ROOT / "apps/web-portal/app/policies/policy-onboarding-actions.ts"
+FORM = ROOT / "apps/web-portal/components/policy-unified-form.tsx"
+
+
+def replace_once(text: str, old: str, new: str, label: str) -> str:
+    if old not in text:
+        raise SystemExit(f"Missing expected block: {label}")
+    if text.count(old) != 1:
+        raise SystemExit(f"Expected one block for {label}, found {text.count(old)}")
+    return text.replace(old, new, 1)
+
+
+def patch_actions() -> None:
+    text = ACTIONS.read_text()
+    text = replace_once(
+        text,
+        'import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-source";\n',
+        'import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-source";\nimport { findPolicyOnboardingBusinessConflict, type PolicyBusinessConflict } from "./policy-onboarding-conflicts";\n',
+        "conflict import",
+    )
+    text = replace_once(
+        text,
+        'export type PolicyCustomerCandidate = { id: string; name: string; phone: string; city: string | null; state: string | null };',
+        'export type PolicyCustomerCandidate = { id: string; name: string; phone: string; city: string | null; state: string | null; phoneMatch: boolean; nameMatch: boolean };',
+        "customer candidate type",
+    )
+    text = replace_once(
+        text,
+        '  resolution?: { selectedCustomerId?: string | null; createNewCustomer?: boolean; ownershipDecision?: "keep_existing" | "transfer" | null; transferReason?: string };',
+        '  resolution?: { selectedCustomerId?: string | null; createNewCustomer?: boolean; ownershipDecision?: "keep_existing" | "transfer" | null; transferReason?: string; acceptCoverageGap?: boolean };',
+        "resolution type",
+    )
+    text = replace_once(
+        text,
+        '  | { ok: false; kind: "customer_match"; candidates: PolicyCustomerCandidate[] }\n  | { ok: false; kind: "ownership_conflict"; conflict: PolicyOwnershipConflict };',
+        '  | { ok: false; kind: "customer_match"; candidates: PolicyCustomerCandidate[] }\n  | { ok: false; kind: "ownership_conflict"; conflict: PolicyOwnershipConflict }\n  | { ok: false; kind: "business_conflict"; conflict: PolicyBusinessConflict };',
+        "result union",
+    )
+    text = replace_once(
+        text,
+        '  return [...merged.values()].map((row) => ({ id: row.id, name: row.contact_name, phone: row.phone, city: row.city, state: row.state }));',
+        '  const normalizedName = cleanName(name).toLowerCase();\n  return [...merged.values()].map((row) => ({ id: row.id, name: row.contact_name, phone: row.phone, city: row.city, state: row.state, phoneMatch: normalizedPhone(row.phone) === phone, nameMatch: cleanName(row.contact_name).toLowerCase() === normalizedName }));',
+        "candidate mapping",
+    )
+    text = replace_once(
+        text,
+        '''    if (!selectedCustomerId && !createNewCustomer) {\n      const candidates = await findCustomerCandidates(name, phone);\n      if (candidates.length) return { ok: false, kind: "customer_match", candidates };\n    }''',
+        '''    const customerCandidates = await findCustomerCandidates(name, phone);\n    const phoneMatches = customerCandidates.filter((candidate) => candidate.phoneMatch);\n    if (!selectedCustomerId && !createNewCustomer && customerCandidates.length) {\n      return { ok: false, kind: "customer_match", candidates: customerCandidates };\n    }\n    if (createNewCustomer && phoneMatches.length) {\n      return { ok: false, kind: "customer_match", candidates: phoneMatches };\n    }''',
+        "customer preflight",
+    )
+    text = replace_once(
+        text,
+        '''      rpcCustomer = { ...rpcCustomer, name: existingCustomer.contact_name, phone: existingCustomer.phone };\n    }\n\n    const financials = sanitizeFinancialNumbers(payload);''',
+        '''      rpcCustomer = { ...rpcCustomer, name: existingCustomer.contact_name, phone: existingCustomer.phone, email: "", address: "", city: "", district: "", state: "", pincode: "" };\n    }\n\n    const businessConflict = await findPolicyOnboardingBusinessConflict({ payload, acceptCoverageGap: payload.resolution?.acceptCoverageGap === true });\n    if (businessConflict) return { ok: false, kind: "business_conflict", conflict: businessConflict };\n\n    const financials = sanitizeFinancialNumbers(payload);''',
+        "business preflight",
+    )
+    old_error = '''    if (error) {\n      if (error.message.includes("OWNERSHIP_CONFLICT")) return { ok: false, kind: "database", error: "Vehicle ownership changed while this form was open. Refresh and review the customer again." };\n      if (error.message.toLowerCase().includes("invalid input syntax for type numeric") || error.message.toLowerCase().includes("invalid input syntax for type integer")) {\n        return { ok: false, kind: "database", error: "Check the vehicle and premium amounts, then try again." };\n      }\n      return { ok: false, kind: "database", error: "We couldn't save the policy. Please try again." };\n    }'''
+    new_error = '''    if (error) {\n      const message = error.message ?? "";\n      const lowerMessage = message.toLowerCase();\n      if (message.includes("OWNERSHIP_CONFLICT")) {\n        const latestVehicle = mode === "unregistered" ? await findVehicleOwnerByChassis(chassis) : await findVehicleOwner(registration);\n        if (latestVehicle) return { ok: false, kind: "ownership_conflict", conflict: { vehicleId: latestVehicle.id, registrationNumber: latestVehicle.vehicle_no?.startsWith("PENDING-") ? "Registration pending vehicle" : latestVehicle.vehicle_no, customerId: latestVehicle.customer_id, customerName: latestVehicle.customers?.contact_name ?? "Existing customer", customerPhone: latestVehicle.customers?.phone ?? "", canTransfer: canTransferVehicle(profile.role) } };\n        return { ok: false, kind: "database", error: "The vehicle record changed while this form was open. Keep your form open and review the customer and vehicle details." };\n      }\n      if (lowerMessage.includes("customers_phone_normalized_uidx") || lowerMessage.includes("customers_mobile_unique_idx")) {\n        const candidates = await findCustomerCandidates(name, phone);\n        if (candidates.length) return { ok: false, kind: "customer_match", candidates };\n        return { ok: false, kind: "database", error: "This mobile number is already registered to an existing customer. Review the customer details and try again." };\n      }\n      if (message.includes("Unknown vehicle manufacturer:")) {\n        return { ok: false, kind: "business_conflict", conflict: { type: "manufacturer_unknown", enteredMake: message.split("Unknown vehicle manufacturer:").slice(1).join(":").trim() || String(payload.vehicle.make ?? "") } };\n      }\n      if (message.includes("POLICY_COVERAGE_OVERLAP") || lowerMessage.includes("policies_policy_no_key") || lowerMessage.includes("policies_insurer_policy_no_uidx")) {\n        const conflict = await findPolicyOnboardingBusinessConflict({ payload, acceptCoverageGap: true });\n        if (conflict) return { ok: false, kind: "business_conflict", conflict };\n      }\n      if (lowerMessage.includes("invalid input syntax for type numeric") || lowerMessage.includes("invalid input syntax for type integer")) {\n        return { ok: false, kind: "database", error: "Check the vehicle and premium amounts, then try again. Your entered details are still saved on this form." };\n      }\n      return { ok: false, kind: "database", error: "We couldn't complete the policy booking. Your form is still intact. Review the highlighted details or try again." };\n    }'''
+    text = replace_once(text, old_error, new_error, "database error mapping")
+    ACTIONS.write_text(text)
+
+
+def patch_form() -> None:
+    text = FORM.read_text()
+    text = replace_once(
+        text,
+        'import { PolicyOcrImportPanel } from "@/components/policy-ocr-import-panel";\n',
+        'import { PolicyOcrImportPanel } from "@/components/policy-ocr-import-panel";\nimport type { PolicyBusinessConflict } from "@/app/policies/policy-onboarding-conflicts";\n',
+        "form conflict import",
+    )
+    text = replace_once(
+        text,
+        'const sections = ["Source", "Customer & Vehicle", "Policy & Premium", "Insurer Pay-in", "Partner Payout"];',
+        'const sections = ["Source", "Customer & Vehicle", "Policy & Premium", "Insurer Pay-in", "Partner Payout"];\nconst POLICY_DRAFT_KEY = "insureit:policy-onboarding:draft:v1";',
+        "draft key",
+    )
+    text = replace_once(
+        text,
+        '  const [ownershipConflict,setOwnershipConflict]=useState<PolicyOwnershipConflict|null>(null);\n  const [pendingPayload,setPendingPayload]=useState<PolicyOnboardingPayload|null>(null);',
+        '  const [ownershipConflict,setOwnershipConflict]=useState<PolicyOwnershipConflict|null>(null);\n  const [businessConflict,setBusinessConflict]=useState<PolicyBusinessConflict|null>(null);\n  const [pendingPayload,setPendingPayload]=useState<PolicyOnboardingPayload|null>(null);\n  const draftHydrated=useRef(false);',
+        "conflict state",
+    )
+    marker = '  function goToSection(index:number){setActiveSection(index);document.getElementById(`policy-section-${index+1}`)?.scrollIntoView({behavior:"smooth",block:"start"});}\n\n'
+    draft_effects = '''  function goToSection(index:number){setActiveSection(index);document.getElementById(`policy-section-${index+1}`)?.scrollIntoView({behavior:"smooth",block:"start"});}\n\n  useEffect(()=>{\n    if(isEdit||typeof window==="undefined"){draftHydrated.current=true;return;}\n    try{const raw=sessionStorage.getItem(POLICY_DRAFT_KEY);if(raw){const saved=JSON.parse(raw) as {savedAt?:number;form?:FormState;registrationMode?:VehicleRegistrationMode};if(saved.form&&saved.savedAt&&Date.now()-saved.savedAt<8*60*60*1000){setForm(saved.form);setVehicleRegistrationMode(saved.registrationMode==="unregistered"?"unregistered":"registered");}}}catch{}\n    draftHydrated.current=true;\n  },[isEdit]);\n  useEffect(()=>{\n    if(isEdit||!draftHydrated.current||typeof window==="undefined")return;\n    const timer=window.setTimeout(()=>{try{sessionStorage.setItem(POLICY_DRAFT_KEY,JSON.stringify({savedAt:Date.now(),form,registrationMode:vehicleRegistrationMode}));}catch{}},250);\n    return()=>window.clearTimeout(timer);\n  },[form,vehicleRegistrationMode,isEdit]);\n\n'''
+    text = replace_once(text, marker, draft_effects, "draft effects")
+    old_effect = '  useEffect(()=>{ if(!rcReview&&!customerCandidates&&!ownershipConflict)return; const previous=document.body.style.overflow; document.body.style.overflow="hidden"; const close=(event:KeyboardEvent)=>{if(event.key==="Escape"){setRcReview(null);setCustomerCandidates(null);setOwnershipConflict(null);}}; window.addEventListener("keydown",close); return()=>{document.body.style.overflow=previous;window.removeEventListener("keydown",close);}; },[rcReview,customerCandidates,ownershipConflict]);'
+    new_effect = '  useEffect(()=>{ if(!rcReview&&!customerCandidates&&!ownershipConflict&&!businessConflict)return; const previous=document.body.style.overflow; document.body.style.overflow="hidden"; const close=(event:KeyboardEvent)=>{if(event.key==="Escape"){setRcReview(null);setCustomerCandidates(null);setOwnershipConflict(null);setBusinessConflict(null);}}; window.addEventListener("keydown",close); return()=>{document.body.style.overflow=previous;window.removeEventListener("keydown",close);}; },[rcReview,customerCandidates,ownershipConflict,businessConflict]);'
+    text = replace_once(text, old_effect, new_effect, "modal escape effect")
+    old_run = '  function runCreate(payload:PolicyOnboardingPayload){setSubmitError(null);startSubmit(async()=>{const result=await onboardPolicy(payload);if(result.ok){router.push(`/policies?success=policy_created&policy=${encodeURIComponent(result.policyCode)}`);return;}if(result.kind==="customer_match"){setPendingPayload(payload);setCustomerCandidates(result.candidates);return;}if(result.kind==="ownership_conflict"){setPendingPayload(payload);setOwnershipConflict(result.conflict);return;}setSubmitError(result.error);});}'
+    new_run = '  function runCreate(payload:PolicyOnboardingPayload){setSubmitError(null);startSubmit(async()=>{const result=await onboardPolicy(payload);if(result.ok){try{sessionStorage.removeItem(POLICY_DRAFT_KEY);}catch{}router.push(`/policies?success=policy_created&policy=${encodeURIComponent(result.policyCode)}`);return;}if(result.kind==="customer_match"){setPendingPayload(payload);setCustomerCandidates(result.candidates);return;}if(result.kind==="ownership_conflict"){setPendingPayload(payload);setOwnershipConflict(result.conflict);return;}if(result.kind==="business_conflict"){setPendingPayload(payload);setBusinessConflict(result.conflict);return;}setSubmitError(result.error);});}'
+    text = replace_once(text, old_run, new_run, "runCreate")
+    old_resolve = '  function resolveOwnership(decision:"keep_existing"|"transfer"){if(!pendingPayload||!ownershipConflict)return;setOwnershipConflict(null);runCreate({...pendingPayload,resolution:{...pendingPayload.resolution,selectedCustomerId:decision==="keep_existing"?ownershipConflict.customerId:pendingPayload.resolution?.selectedCustomerId,createNewCustomer:decision==="transfer"?pendingPayload.resolution?.createNewCustomer:false,ownershipDecision:decision,transferReason:"Confirmed during policy onboarding"}});}\n\n'
+    new_resolve = '''  function resolveOwnership(decision:"keep_existing"|"transfer"){if(!pendingPayload||!ownershipConflict)return;setOwnershipConflict(null);runCreate({...pendingPayload,resolution:{...pendingPayload.resolution,selectedCustomerId:decision==="keep_existing"?ownershipConflict.customerId:pendingPayload.resolution?.selectedCustomerId,createNewCustomer:decision==="transfer"?pendingPayload.resolution?.createNewCustomer:false,ownershipDecision:decision,transferReason:"Confirmed during policy onboarding"}});}\n  function resolveBusinessConflict(action:"view_existing"|"edit_vehicle"|"edit_manufacturer"|"edit_policy_number"|"edit_dates"|"use_suggested_start"|"continue_gap"){\n    if(!businessConflict)return;\n    if(action==="view_existing"){if("existingPath" in businessConflict)window.open(businessConflict.existingPath,"_blank","noopener,noreferrer");return;}\n    if(action==="continue_gap"&&businessConflict.type==="coverage_gap"&&pendingPayload){setBusinessConflict(null);runCreate({...pendingPayload,resolution:{...pendingPayload.resolution,acceptCoverageGap:true}});return;}\n    if(action==="use_suggested_start"&&(businessConflict.type==="coverage_overlap"||businessConflict.type==="coverage_gap")){const start=businessConflict.suggestedStartDate;setForm(current=>({...current,validFrom:start,validUpto:policyExpiryFrom(start)}));setBusinessConflict(null);goToSection(2);return;}\n    setBusinessConflict(null);\n    if(action==="edit_vehicle"||action==="edit_manufacturer")goToSection(1);else goToSection(2);\n  }\n\n'''
+    text = replace_once(text, old_resolve, new_resolve, "business resolution handler")
+    old_render = '    {!isEdit&&ownershipConflict?<OwnershipModal conflict={ownershipConflict} onResolve={resolveOwnership} onCancel={()=>setOwnershipConflict(null)}/>:null}\n  </div>;'
+    new_render = '    {!isEdit&&ownershipConflict?<OwnershipModal conflict={ownershipConflict} onResolve={resolveOwnership} onCancel={()=>setOwnershipConflict(null)}/>:null}\n    {!isEdit&&businessConflict?<PolicyBusinessConflictModal conflict={businessConflict} onAction={resolveBusinessConflict} onCancel={()=>setBusinessConflict(null)}/>:null}\n  </div>;'
+    text = replace_once(text, old_render, new_render, "business conflict render")
+    text = text.replace('<Link href="/policies" className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Cancel</Link>', '<Link href="/policies" onClick={()=>{if(!isEdit)try{sessionStorage.removeItem(POLICY_DRAFT_KEY);}catch{}}} className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Cancel</Link>')
+
+    customer_pattern = re.compile(r'function CustomerMatchModal\([^\n]+\n')
+    customer_replacement = '''function CustomerMatchModal({candidates,onChoose,onCancel}:{candidates:PolicyCustomerCandidate[];onChoose:(id:string|null)=>void;onCancel:()=>void}){const hasPhoneMatch=candidates.some(candidate=>candidate.phoneMatch);const title=hasPhoneMatch?"Mobile Number Already Registered":candidates.length===1?"Existing Customer Found":"Possible Customers Found";const subtitle=hasPhoneMatch?"This mobile number belongs to an existing customer. Use that customer or edit the entered name/mobile.":"Select the matching customer, or create a new customer if this is a different person.";return <ModalShell title={title} subtitle={subtitle} onClose={onCancel} footer={<div className="flex items-center justify-end gap-2"><button type="button" onClick={onCancel} className="rounded-xl border border-[#D7DEE8] bg-white px-3.5 py-2 text-[9.5px] font-semibold text-[#475467]">Keep Editing</button>{!hasPhoneMatch?<button type="button" onClick={()=>onChoose(null)} className="rounded-xl border border-[#AFC0D6] bg-white px-3.5 py-2 text-[9.5px] font-bold text-[#17365D]">Create New Customer</button>:null}</div>}><div className="space-y-2">{candidates.map(candidate=>{const location=[candidate.city,candidate.state].filter(Boolean).join(", ");return <button type="button" key={candidate.id} onClick={()=>onChoose(candidate.id)} className="group flex w-full items-center gap-3 rounded-xl border border-[#DCE3EC] bg-white px-3.5 py-3 text-left transition hover:border-[#9FB4CF] hover:bg-[#F8FAFD] focus:outline-none focus:ring-2 focus:ring-[#DCE8FA]"><div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#EEF4FB] text-[11px] font-bold text-[#315B9A]">{candidate.name.trim().charAt(0).toUpperCase()||"C"}</div><div className="min-w-0 flex-1"><div className="flex min-w-0 items-center gap-2"><p className="truncate text-[11px] font-bold text-[#17203A]">{candidate.name}</p><span className={`shrink-0 rounded-full px-2 py-0.5 text-[7.5px] font-bold ${candidate.phoneMatch?"bg-[#FFF3CD] text-[#9A6700]":"bg-[#EEF7F2] text-[#18794E]"}`}>{candidate.phoneMatch?"Same mobile":candidate.nameMatch?"Same name":"Existing"}</span></div><div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[9px] text-[#667085]"><span>{candidate.phone}</span>{location?<><span className="text-[#C7CFDA]">•</span><span>{location}</span></>:null}</div></div><span className="shrink-0 rounded-lg bg-[#17365D] px-3 py-2 text-[8.5px] font-bold text-white transition group-hover:bg-[#214A7A]">Use Customer</span></button>;})}</div></ModalShell>;}\n'''
+    text, count = customer_pattern.subn(customer_replacement, text, count=1)
+    if count != 1:
+        raise SystemExit(f"Customer modal patch count {count}")
+
+    ownership_pattern = re.compile(r'function OwnershipModal\([^\n]+\n')
+    ownership_replacement = '''function OwnershipModal({conflict,onResolve,onCancel}:{conflict:PolicyOwnershipConflict;onResolve:(decision:"keep_existing"|"transfer")=>void;onCancel:()=>void}){return <ModalShell title="Vehicle Belongs to Another Customer" subtitle={`${conflict.registrationNumber} already exists in InsureIT. Choose how this renewal/new policy should be linked.`} onClose={onCancel} footer={<div className="flex flex-wrap justify-end gap-2"><button type="button" onClick={onCancel} className="rounded-xl border border-[#D7DEE8] bg-white px-3.5 py-2 text-[9.5px] font-semibold text-[#475467]">Keep Editing</button>{conflict.canTransfer?<button type="button" onClick={()=>onResolve("transfer")} className="rounded-xl border border-[#D6A85D] bg-[#FFF8E8] px-3.5 py-2 text-[9.5px] font-bold text-[#8A5A12]">Transfer Vehicle</button>:null}<button type="button" onClick={()=>onResolve("keep_existing")} className="rounded-xl bg-[#17365D] px-3.5 py-2 text-[9.5px] font-bold text-white">Use Existing Customer & Continue</button></div>}><div className="rounded-xl border border-[#E7D6AF] bg-[#FFFBF2] px-4 py-3.5"><p className="text-[8px] font-bold uppercase tracking-[.08em] text-[#8A6423]">Currently linked customer</p><p className="mt-1.5 text-[12px] font-bold text-[#17203A]">{conflict.customerName}</p>{conflict.customerPhone?<p className="mt-1 text-[9px] text-[#667085]">{conflict.customerPhone}</p>:null}</div></ModalShell>;}\n'''
+    text, count = ownership_pattern.subn(ownership_replacement, text, count=1)
+    if count != 1:
+        raise SystemExit(f"Ownership modal patch count {count}")
+
+    insert_after = ownership_replacement
+    business_modal = '''function PolicyBusinessConflictModal({conflict,onAction,onCancel}:{conflict:PolicyBusinessConflict;onAction:(action:"view_existing"|"edit_vehicle"|"edit_manufacturer"|"edit_policy_number"|"edit_dates"|"use_suggested_start"|"continue_gap")=>void;onCancel:()=>void}){if(conflict.type==="manufacturer_unknown")return <ModalShell title="Manufacturer Not Recognized" subtitle="The vehicle manufacturer is not mapped in the Vehicle Manufacturer Master." onClose={onCancel} footer={<div className="flex justify-end gap-2"><button type="button" onClick={onCancel} className="rounded-xl border px-3.5 py-2 text-[9.5px] font-semibold">Keep Editing</button><button type="button" onClick={()=>onAction("edit_manufacturer")} className="rounded-xl bg-[#17365D] px-4 py-2 text-[9.5px] font-bold text-white">Edit Manufacturer</button></div>}><ConflictInfo label="Entered manufacturer" value={conflict.enteredMake}/></ModalShell>;if(conflict.type==="vehicle_identity_conflict")return <ModalShell title="Vehicle Details Do Not Match" subtitle={conflict.message} onClose={onCancel} footer={<div className="flex flex-wrap justify-end gap-2"><button type="button" onClick={()=>onAction("view_existing")} className="rounded-xl border px-3.5 py-2 text-[9.5px] font-semibold">View Existing Vehicle</button><button type="button" onClick={()=>onAction("edit_vehicle")} className="rounded-xl bg-[#17365D] px-4 py-2 text-[9.5px] font-bold text-white">Review Vehicle Details</button></div>}><div className="grid gap-2 sm:grid-cols-2"><ConflictInfo label="Existing vehicle" value={conflict.existingVehicleNo}/><ConflictInfo label="Existing make / model" value={[conflict.existingMake,conflict.existingModel].filter(Boolean).join(" ")||"—"}/><ConflictInfo label="Entered registration" value={conflict.enteredRegistration||"—"}/><ConflictInfo label="Entered chassis / engine" value={[conflict.enteredChassis,conflict.enteredEngine].filter(Boolean).join(" / ")||"—"}/></div></ModalShell>;const sourceLabel=conflict.source==="external"?"External Policy":"Managed Policy";const details=<div className="grid gap-2 sm:grid-cols-2"><ConflictInfo label="Existing policy" value={conflict.existingPolicyNo}/><ConflictInfo label="Source" value={sourceLabel}/><ConflictInfo label="Policy product" value={conflict.existingPolicyType}/><ConflictInfo label="Validity" value={`${displayDate(conflict.validFrom)} – ${displayDate(conflict.validUpto)}`}/></div>;if(conflict.type==="policy_duplicate")return <ModalShell title="Policy Already Exists" subtitle="This policy number is already registered. Open the existing policy or change the policy number; the rest of your form will remain unchanged." onClose={onCancel} footer={<div className="flex flex-wrap justify-end gap-2"><button type="button" onClick={()=>onAction("view_existing")} className="rounded-xl border px-3.5 py-2 text-[9.5px] font-semibold">View Existing Policy</button><button type="button" onClick={()=>onAction("edit_policy_number")} className="rounded-xl bg-[#17365D] px-4 py-2 text-[9.5px] font-bold text-white">Change Policy Number</button></div>}>{details}</ModalShell>;if(conflict.type==="coverage_overlap")return <ModalShell title="Policy Period Overlaps Existing Coverage" subtitle="The same OD/TP coverage already exists for part of the selected period. A renewal can be booked once the existing coverage ends." onClose={onCancel} footer={<div className="flex flex-wrap justify-end gap-2"><button type="button" onClick={()=>onAction("view_existing")} className="rounded-xl border px-3.5 py-2 text-[9.5px] font-semibold">View Existing Policy</button><button type="button" onClick={()=>onAction("edit_dates")} className="rounded-xl border border-[#AFC0D6] px-3.5 py-2 text-[9.5px] font-semibold text-[#17365D]">Edit Dates</button><button type="button" onClick={()=>onAction("use_suggested_start")} className="rounded-xl bg-[#17365D] px-4 py-2 text-[9.5px] font-bold text-white">Start From {displayDate(conflict.suggestedStartDate)}</button></div>}>{details}</ModalShell>;return <ModalShell title="Coverage Gap Detected" subtitle={`The new policy starts ${conflict.gapDays} day${conflict.gapDays===1?"":"s"} after the previous matching coverage ends.`} onClose={onCancel} footer={<div className="flex flex-wrap justify-end gap-2"><button type="button" onClick={()=>onAction("view_existing")} className="rounded-xl border px-3.5 py-2 text-[9.5px] font-semibold">View Existing Policy</button><button type="button" onClick={()=>onAction("continue_gap")} className="rounded-xl border border-[#D6A85D] bg-[#FFF8E8] px-3.5 py-2 text-[9.5px] font-bold text-[#8A5A12]">Continue With Gap</button><button type="button" onClick={()=>onAction("use_suggested_start")} className="rounded-xl bg-[#17365D] px-4 py-2 text-[9.5px] font-bold text-white">Start From {displayDate(conflict.suggestedStartDate)}</button></div>}>{details}</ModalShell>;}\nfunction ConflictInfo({label,value}:{label:string;value:string}){return <div className="rounded-xl border border-[#E1E7EF] bg-[#F8FAFC] px-3.5 py-3"><p className="text-[7.5px] font-bold uppercase tracking-[.08em] text-[#667085]">{label}</p><p className="mt-1 text-[10.5px] font-semibold text-[#17203A]">{value||"—"}</p></div>;}\n'''
+    if business_modal not in text:
+        ownership_line_match = ownership_pattern.search(text)
+        if ownership_line_match:
+            raise SystemExit("Ownership pattern unexpectedly remained after replacement")
+        anchor = ownership_replacement
+        if anchor not in text:
+            raise SystemExit("Could not locate ownership modal for business modal insertion")
+        text = text.replace(anchor, anchor + business_modal, 1)
+
+    FORM.write_text(text)
+
+
+patch_actions()
+patch_form()
+print("Applied policy onboarding conflict resolution patch")
