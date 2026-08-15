@@ -111,72 +111,103 @@ function ExternalPolicyWorkspaceContent({ rows, canEdit }: { rows: ExternalPolic
     {
       field: "policy_no",
       headerName: "Policy No.",
-      minWidth: 170,
-      flex: 1.1,
+      minWidth: 175,
+      flex: 1.06,
       renderCell: ({ row }) => (
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="body2" noWrap sx={{ fontWeight: 800, color: "text.primary" }}>{row.policy_no}</Typography>
-          <Typography variant="caption" noWrap color="text.secondary">{row.policy_type}</Typography>
+        <Box sx={{ minWidth: 0, width: "100%", display: "flex", flexDirection: "column", justifyContent: "center", gap: .15 }}>
+          {canEdit ? (
+            <Typography
+              component={Link}
+              href={`/policies/external/${row.id}/edit`}
+              variant="body2"
+              noWrap
+              sx={{
+                alignSelf: "flex-start",
+                maxWidth: "100%",
+                fontWeight: 900,
+                color: "primary.main",
+                textDecoration: "none",
+                lineHeight: 1.25,
+                "&:hover": { textDecoration: "underline", textUnderlineOffset: "3px" },
+                "&:focus-visible": { outline: "2px solid", outlineColor: "primary.light", outlineOffset: "2px", borderRadius: .5 },
+              }}
+            >
+              {row.policy_no}
+            </Typography>
+          ) : (
+            <Typography variant="body2" noWrap sx={{ fontWeight: 900, color: "text.primary", lineHeight: 1.25 }}>{row.policy_no}</Typography>
+          )}
+          <Typography variant="caption" noWrap color="text.secondary" sx={{ display: "block", lineHeight: 1.2 }}>{row.policy_type}</Typography>
         </Box>
       ),
     },
     {
       field: "customer",
       headerName: "Customer",
-      minWidth: 180,
-      flex: 1.15,
+      minWidth: 175,
+      flex: 1.08,
       sortable: false,
       renderCell: ({ row }) => (
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="body2" noWrap sx={{ fontWeight: 700 }}>{row.customers?.contact_name ?? "-"}</Typography>
-          {row.customers?.company_name ? <Typography variant="caption" noWrap color="text.secondary">{row.customers.company_name}</Typography> : null}
+        <Box sx={{ minWidth: 0, width: "100%", display: "flex", flexDirection: "column", justifyContent: "center", gap: .15 }}>
+          <Typography variant="body2" noWrap sx={{ fontWeight: 700, lineHeight: 1.25 }}>{row.customers?.contact_name ?? "-"}</Typography>
+          {row.customers?.company_name ? <Typography variant="caption" noWrap color="text.secondary" sx={{ display: "block", lineHeight: 1.2 }}>{row.customers.company_name}</Typography> : null}
         </Box>
       ),
     },
     {
       field: "vehicle",
       headerName: "Vehicle",
-      minWidth: 120,
-      flex: .78,
+      minWidth: 118,
+      flex: .74,
       sortable: false,
-      renderCell: ({ row }) => <Typography variant="body2" sx={{ fontWeight: 800 }}>{row.vehicles?.vehicle_no ?? "-"}</Typography>,
+      renderCell: ({ row }) => <Typography variant="body2" noWrap sx={{ fontWeight: 800 }}>{row.vehicles?.vehicle_no ?? "-"}</Typography>,
     },
     {
       field: "insurer",
       headerName: "Insurer",
-      minWidth: 155,
-      flex: 1,
+      minWidth: 165,
+      flex: 1.03,
       sortable: false,
-      renderCell: ({ row }) => <Typography variant="body2" noWrap sx={{ fontWeight: 650 }}>{row.insurance_companies?.name ?? "-"}</Typography>,
+      renderCell: ({ row }) => (
+        <Tooltip title={row.insurance_companies?.name ?? "-"} arrow placement="top">
+          <Typography variant="body2" noWrap sx={{ width: "100%", fontWeight: 650 }}>{row.insurance_companies?.name ?? "-"}</Typography>
+        </Tooltip>
+      ),
     },
     {
       field: "validity",
       headerName: "Validity",
-      minWidth: 165,
-      flex: 1,
+      minWidth: 178,
+      flex: 1.06,
       sortable: false,
       renderCell: ({ row }) => (
-        <Box>
-          <Typography variant="body2" sx={{ fontWeight: 700 }}>{formatDate(row.start_date)} – {formatDate(row.end_date)}</Typography>
-          <Typography variant="caption" color={row.status === "Expired" ? "error.main" : row.status === "Expiring soon" ? "warning.main" : "text.secondary"}>{validityHint(row.end_date)}</Typography>
+        <Box sx={{ minWidth: 0, width: "100%", display: "flex", flexDirection: "column", justifyContent: "center", gap: .15 }}>
+          <Typography variant="body2" noWrap sx={{ fontWeight: 700, lineHeight: 1.25 }}>{formatDate(row.start_date)} – {formatDate(row.end_date)}</Typography>
+          <Typography
+            variant="caption"
+            sx={{ display: "block", lineHeight: 1.2, fontWeight: row.status === "Expiring soon" ? 750 : 500 }}
+            color={row.status === "Expired" ? "error.main" : row.status === "Expiring soon" ? "warning.main" : "text.secondary"}
+          >
+            {validityHint(row.end_date)}
+          </Typography>
         </Box>
       ),
     },
     {
       field: "status",
       headerName: "Status",
-      minWidth: 112,
-      flex: .7,
+      minWidth: 108,
+      flex: .66,
       renderCell: ({ row }) => <PolicyStatus status={row.status} />,
     },
     {
       field: "insured_declared_value",
       headerName: "IDV",
-      minWidth: 108,
+      minWidth: 106,
       flex: .68,
       align: "right",
       headerAlign: "right",
-      renderCell: ({ row }) => <Typography variant="body2" sx={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{formatCurrency(row.insured_declared_value)}</Typography>,
+      renderCell: ({ row }) => <Typography variant="body2" noWrap sx={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{formatCurrency(row.insured_declared_value)}</Typography>,
     },
     {
       field: "premium_amount",
@@ -185,28 +216,17 @@ function ExternalPolicyWorkspaceContent({ rows, canEdit }: { rows: ExternalPolic
       flex: .68,
       align: "right",
       headerAlign: "right",
-      renderCell: ({ row }) => <Typography variant="body2" sx={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{formatCurrency(row.premium_amount)}</Typography>,
+      renderCell: ({ row }) => <Typography variant="body2" noWrap sx={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{formatCurrency(row.premium_amount)}</Typography>,
     },
     {
       field: "claim_count",
       headerName: "Claims",
-      width: 76,
+      width: 72,
       align: "center",
       headerAlign: "center",
       renderCell: ({ row }) => row.claim_count
         ? <Chip size="small" label={row.claim_count} color="warning" variant="outlined" />
         : <Typography variant="body2" color="text.secondary">0</Typography>,
-    },
-    {
-      field: "actions",
-      headerName: "",
-      width: 82,
-      sortable: false,
-      filterable: false,
-      align: "center",
-      renderCell: ({ row }) => canEdit ? (
-        <Button component={Link} href={`/policies/external/${row.id}/edit`} size="small" variant="text" sx={{ minHeight: 30, minWidth: 56, px: 1 }}>Open</Button>
-      ) : null,
     },
   ], [canEdit]);
 
@@ -232,14 +252,14 @@ function ExternalPolicyWorkspaceContent({ rows, canEdit }: { rows: ExternalPolic
       </Stack>
 
       <Paper variant="outlined" sx={{ borderColor: "#DCE5EF", overflow: "hidden", boxShadow: "0 4px 16px rgba(15,23,42,.035)" }}>
-        <Box sx={{ px: { xs: 1.25, md: 1.5 }, py: 1.1, borderBottom: "1px solid", borderColor: "divider", bgcolor: "#FFFFFF" }}>
+        <Box sx={{ px: { xs: 1.25, md: 1.5 }, py: 1.05, borderBottom: "1px solid", borderColor: "divider", bgcolor: "#FFFFFF" }}>
           <Stack direction={{ xs: "column", md: "row" }} spacing={1} alignItems={{ xs: "stretch", md: "center" }}>
             <TextField
               value={query}
               onChange={(event) => { setQuery(event.target.value); setMobilePage(1); }}
               placeholder="Search policy, customer, vehicle or insurer"
               size="small"
-              sx={{ width: { xs: "100%", md: 360 } }}
+              sx={{ width: { xs: "100%", md: 370 } }}
               slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search size={16} color="#738097" /></InputAdornment> } }}
             />
             <TextField
@@ -247,7 +267,7 @@ function ExternalPolicyWorkspaceContent({ rows, canEdit }: { rows: ExternalPolic
               size="small"
               value={insurer}
               onChange={(event) => { setInsurer(event.target.value); setMobilePage(1); }}
-              sx={{ width: { xs: "100%", md: 210 } }}
+              sx={{ width: { xs: "100%", md: 205 } }}
             >
               <MenuItem value="all">All insurers</MenuItem>
               {insurers.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}
@@ -269,6 +289,7 @@ function ExternalPolicyWorkspaceContent({ rows, canEdit }: { rows: ExternalPolic
             variant="scrollable"
             scrollButtons="auto"
             aria-label="External policy views"
+            sx={{ minHeight: 40, "& .MuiTab-root": { minHeight: 40, px: 2, py: .75, fontSize: 12.5 } }}
           >
             <Tab value="all" label={`All (${rows.length})`} />
             <Tab value="active" label={`Active (${stats.active})`} />
@@ -282,7 +303,7 @@ function ExternalPolicyWorkspaceContent({ rows, canEdit }: { rows: ExternalPolic
           <DataGrid
             rows={filtered}
             columns={columns}
-            rowHeight={50}
+            rowHeight={62}
             columnHeaderHeight={42}
             disableRowSelectionOnClick
             pageSizeOptions={[10, 25, 50]}
@@ -331,7 +352,19 @@ function MobilePolicyCard({ policy, canEdit }: { policy: ExternalPolicyViewRow; 
     <Paper variant="outlined" sx={{ p: 1.25, borderColor: "#DCE5EF", boxShadow: "none" }}>
       <Stack direction="row" justifyContent="space-between" spacing={1} alignItems="flex-start">
         <Box minWidth={0}>
-          <Typography variant="body2" noWrap sx={{ fontWeight: 900 }}>{policy.policy_no}</Typography>
+          {canEdit ? (
+            <Typography
+              component={Link}
+              href={`/policies/external/${policy.id}/edit`}
+              variant="body2"
+              noWrap
+              sx={{ display: "block", fontWeight: 900, color: "primary.main", textDecoration: "none", "&:hover": { textDecoration: "underline", textUnderlineOffset: "3px" } }}
+            >
+              {policy.policy_no}
+            </Typography>
+          ) : (
+            <Typography variant="body2" noWrap sx={{ fontWeight: 900 }}>{policy.policy_no}</Typography>
+          )}
           <Typography variant="caption" noWrap color="text.secondary">{policy.insurance_companies?.name ?? "-"}</Typography>
         </Box>
         <PolicyStatus status={policy.status} />
@@ -342,7 +375,6 @@ function MobilePolicyCard({ policy, canEdit }: { policy: ExternalPolicyViewRow; 
         <MobileValue label="Validity" value={`${formatDate(policy.start_date)} – ${formatDate(policy.end_date)}`} />
         <MobileValue label="Premium" value={formatCurrency(policy.premium_amount)} />
       </Box>
-      {canEdit ? <Button component={Link} href={`/policies/external/${policy.id}/edit`} size="small" variant="text" sx={{ mt: .7, px: 0 }}>Open policy</Button> : null}
     </Paper>
   );
 }
