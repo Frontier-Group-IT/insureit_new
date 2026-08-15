@@ -61,6 +61,31 @@ npx eslint app/customer/policies.tsx --quiet
 npm --workspace apps/mobile-app run build:web
 ```
 
+**DEPLOYED:** A follow-up Expo preview OTA update published on 2026-08-15 normalized the global customer screen top spacing.
+
+```text
+Source commit: a448b38268a216fd2c780d894f0cd8caec268a37
+Message: Normalize mobile top spacing
+Update group ID: 54587825-98d0-44d4-bb78-a57238f6bfa0
+Android update ID: 01a0043d-6ae0-7c26-89a5-3224cf208123
+iOS update ID: 01a0043d-6ae0-79d2-8a11-189ac0c4e24d
+EAS Dashboard: https://expo.dev/accounts/antnish/projects/insureit-mobile/updates/54587825-98d0-44d4-bb78-a57238f6bfa0
+```
+
+Included changes:
+
+- Shared `Screen` now supports global `topSpacing` variants (`default`, `compact`, `tight`, `legacy`) and the default branded-header gap was reduced.
+- Manual first-section negative top margins were removed from major customer pages, including Policies, Claims, Vehicles, Vehicle Detail, Policy Detail, Support, Add Vehicle, Add Policy, Renewals, Profile, support-ticket pages, and self-managed claim pages.
+- Tiny internal negative offsets for suggestion/helper panels were intentionally left unchanged because they are not header-gap compensation.
+
+Verification before publish:
+
+```text
+npm --workspace apps/mobile-app run typecheck
+npx eslint components/ui.tsx app/customer/claims.tsx app/customer/policies.tsx app/customer/support.tsx app/customer/vehicle-detail.tsx app/customer/policy-detail.tsx app/customer/vehicles.tsx app/customer/help-faqs.tsx app/customer/raise-support-ticket.tsx app/customer/support-ticket-detail.tsx app/customer/add-policy.tsx app/customer/add-vehicle.tsx app/customer/renewals.tsx app/customer/profile.tsx app/customer/request-claim-assistance.tsx app/customer/report-accident.tsx app/customer/upload-documents.tsx app/customer/start-claim.tsx app/customer/self-managed-documents.tsx app/customer/self-managed-milestone.tsx app/customer/self-managed-spot-status.tsx --quiet
+npm --workspace apps/mobile-app run build:web
+```
+
 A separate master-data administration change was added on 2026-08-12: protected deletion controls for existing customers, vehicles, policies, and claims are available only to the `it_super_user` role in the Customers, Vehicles, Policies, and Claims registries. Customer/vehicle/policy deletion and the later claim-delete extension are both deployed to production.
 
 Insurance Company master-data navigation was added and deployed on 2026-08-12. The canonical insurer master route is now under Master Data at `/master-data/insurance-companies`, with the create route at `/master-data/insurance-companies/new`; legacy `/insurance-companies` routes still exist for compatibility.
