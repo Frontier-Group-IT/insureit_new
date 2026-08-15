@@ -38,6 +38,10 @@ Message: Remove Gluestack startup path OTA 2026-08-15
 
 If the standalone APK still closes before applying this OTA, get Android `adb logcat` from package `com.insureit.mobile`. Do not queue or build a new APK unless the user explicitly approves it.
 
+**Safe-startup OTA diagnostic:** After the first OTA mitigation still did not recover the standalone APK, commit `b94be884` replaced the mobile root with a minimal Expo Router stack and changed `app/index.tsx` to a plain React Native diagnostic screen (`InsureIT` / `Safe startup diagnostic loaded.`). No APK build was triggered. The OTA-only GitHub workflow succeeded and published runtime `0.2.0` update group `c7e0cf80-db9b-4530-9fa9-cd8f2ff10a4f` with message `Safe startup diagnostic OTA 2026-08-15`.
+
+If this safe-startup OTA also does not appear on the standalone APK after multiple opens, the installed binary is crashing before it can load/apply OTA JS. The next required evidence is Android `adb logcat`; do not keep shipping speculative OTA updates.
+
 **Expo preview:** The installed preview APK follows Expo branch/channel `preview`, runtime version `0.1.0`. The user does not need a new APK for these JS/layout changes unless the installed APK cannot consume OTA updates or a future change modifies native/runtime dependencies.
 
 Published preview updates from this work:
