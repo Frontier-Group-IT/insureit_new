@@ -5,7 +5,6 @@ on:
     branches:
       - feature/policy-onboarding-conflict-resolution
     paths:
-      - .automation/apply_policy_conflict_resolution.py
       - .github/workflows/apply-policy-conflict-resolution.yml
 
 permissions:
@@ -21,29 +20,58 @@ jobs:
           ref: feature/policy-onboarding-conflict-resolution
           fetch-depth: 0
 
-      - name: Correct one-shot script guard
+      - name: Fix registered vehicle identity conflict handling
         run: |
           python - <<'PY'
           from pathlib import Path
-          path = Path('.automation/apply_policy_conflict_resolution.py')
+          path = Path('apps/web-portal/app/policies/policy-onboarding-conflicts.ts')
           text = path.read_text()
-          bad = '''        ownership_line_match = ownership_pattern.search(text)\n        if ownership_line_match:\n            raise SystemExit("Ownership pattern unexpectedly remained after replacement")\n'''
-          if bad not in text:
-              raise SystemExit('Expected guard block not found')
-          path.write_text(text.replace(bad, '', 1))
+          old = '''  const identifiedVehicle = registrationVehicle ?? chassisVehicle ?? engineVehicle;
+  if (!identifiedVehicle && engineVehicle) {
+    return {
+      type: "vehicle_identity_conflict",
+      message: "This engine number is already linked to an existing vehicle. Review that vehicle before creating another vehicle record.",
+      enteredRegistration: registration,
+      enteredChassis: chassis,
+      enteredEngine: engine,
+      existingVehicleId: engineVehicle.id,
+      existingVehicleNo: engineVehicle.vehicle_no,
+      existingMake: engineVehicle.make,
+      existingModel: engineVehicle.model,
+      existingPath: `/vehicles/${engineVehicle.id}`,
+    };
+  }
+'''
+          new = '''  if (mode === "registered" && !registrationVehicle && (chassisVehicle || engineVehicle)) {
+    const existing = chassisVehicle ?? engineVehicle!;
+    return {
+      type: "vehicle_identity_conflict",
+      message: "The entered chassis or engine number already belongs to a different registered vehicle. Review the vehicle identity before booking this policy.",
+      enteredRegistration: registration,
+      enteredChassis: chassis,
+      enteredEngine: engine,
+      existingVehicleId: existing.id,
+      existingVehicleNo: existing.vehicle_no,
+      existingMake: existing.make,
+      existingModel: existing.model,
+      existingPath: `/vehicles/${existing.id}`,
+    };
+  }
+
+  const identifiedVehicle = mode === "registered" ? registrationVehicle : (chassisVehicle ?? engineVehicle);
+'''
+          if old not in text:
+              raise SystemExit('Expected vehicle identity block not found')
+          text = text.replace(old, new, 1)
+          text = text.replace('  const insurerId = String(payload.policy.insuranceCompanyId ?? "");\n', '', 1)
+          text = text.replace('\n  void insurerId;\n  return null;\n', '\n  return null;\n', 1)
+          path.write_text(text)
           PY
 
-      - name: Apply conflict resolution patch
-        run: python .automation/apply_policy_conflict_resolution.py
-
-      - name: Commit generated source changes
+      - name: Commit correction
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add apps/web-portal/app/policies/policy-onboarding-actions.ts apps/web-portal/components/policy-unified-form.tsx
-          if git diff --cached --quiet; then
-            echo "No generated changes to commit"
-          else
-            git commit -m "Implement policy onboarding conflict resolution"
-            git push origin HEAD:feature/policy-onboarding-conflict-resolution
-          fi
+          git add apps/web-portal/app/policies/policy-onboarding-conflicts.ts
+          git commit -m "Fix registered vehicle identity conflict detection"
+          git push origin HEAD:feature/policy-onboarding-conflict-resolution
