@@ -3,11 +3,6 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, Image, Pressable, StyleProp, StyleSheet, Text, TextInput, TextInputProps, View, ViewStyle } from 'react-native';
 
 const primaryLogo = require('../assets/brand/logo (2).png');
-const splashWaveTop = require('../assets/auth/wave-top-right.png');
-const splashWaveBottom = require('../assets/auth/wave-bottom-left.png');
-const splashShieldWatermark = require('../assets/auth/shield-watermark.png');
-const splashPayChallan = require('../assets/auth/pay-challan-logo.png');
-const splashGetQuote = require('../assets/auth/get-quote-logo.png');
 
 export function BrandMark({ size = 52, compact = false }: { size?: number; compact?: boolean }) {
   void compact;
@@ -36,62 +31,39 @@ export function BrandLogo({ width = 208, style }: { width?: number; style?: Styl
 
 export function SplashIntro() {
   const opacity = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0.9)).current;
+  const scale = useRef(new Animated.Value(0.965)).current;
   const pulse = useRef(new Animated.Value(0)).current;
-  const route = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 420, useNativeDriver: true }),
-      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 10, bounciness: 5 }),
+      Animated.timing(opacity, { toValue: 1, duration: 520, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(scale, { toValue: 1.025, duration: 1300, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
     ]).start();
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 850, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0, duration: 850, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 1050, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 1050, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
       ]),
     );
-    const routeLoop = Animated.loop(Animated.timing(route, { toValue: 1, duration: 1550, easing: Easing.inOut(Easing.quad), useNativeDriver: true }));
     loop.start();
-    routeLoop.start();
-    return () => { loop.stop(); routeLoop.stop(); };
-  }, [opacity, pulse, route, scale]);
+    return () => { loop.stop(); };
+  }, [opacity, pulse, scale]);
 
-  const pulseScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.1] });
-  const pulseOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.12, 0.34] });
-  const floatY = pulse.interpolate({ inputRange: [0, 1], outputRange: [6, -6] });
-  const reverseFloatY = pulse.interpolate({ inputRange: [0, 1], outputRange: [-5, 5] });
-  const routeX = route.interpolate({ inputRange: [0, 1], outputRange: [-104, 188] });
-  const routeRotate = route.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  const pulseScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.045] });
+  const markGlowOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.12, 0.3] });
+  const copyOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1] });
 
   return (
     <View style={styles.splashScreen}>
       <View style={styles.splashSky} />
-      <Image source={splashWaveTop} resizeMode="contain" style={styles.splashWaveTop} />
-      <Image source={splashWaveBottom} resizeMode="contain" style={styles.splashWaveBottom} />
-      <Animated.Image source={splashShieldWatermark} resizeMode="contain" style={[styles.splashWatermark, { opacity: pulseOpacity, transform: [{ scale: pulseScale }] }]} />
-      <Animated.View style={[styles.splashHalo, { opacity: pulseOpacity, transform: [{ scale: pulseScale }] }]} />
+      <Animated.View style={[styles.splashHalo, { opacity: markGlowOpacity, transform: [{ scale: pulseScale }] }]} />
       <Animated.View style={[styles.splashContent, { opacity, transform: [{ scale }] }]}>
-        <Animated.View style={[styles.splashLogoCard, { transform: [{ translateY: floatY }] }]}>
-          <BrandLogo width={238} style={styles.splashBrandLogo} />
+        <Animated.View style={[styles.splashMarkAura, { opacity: markGlowOpacity, transform: [{ scale: pulseScale }] }]} />
+        <Image source={primaryLogo} resizeMode="contain" style={styles.splashMark} />
+        <Animated.View style={[styles.splashCopy, { opacity: copyOpacity }]}>
+          <Text style={styles.splashName}>insureit</Text>
+          <Text style={styles.splashPromise}>YOUR SAFETY, OUR PROMISE</Text>
         </Animated.View>
-        <Text style={styles.splashTagline}>Your safety, organized beautifully.</Text>
-        <View style={styles.splashServiceRow}>
-          <Animated.View style={[styles.splashServiceTile, { transform: [{ translateY: reverseFloatY }] }]}>
-            <Image source={splashPayChallan} resizeMode="contain" style={styles.splashServiceImage} />
-            <Text style={styles.splashServiceLabel}>Challan</Text>
-          </Animated.View>
-          <Animated.View style={[styles.splashServiceTile, styles.splashServiceTileAccent, { transform: [{ translateY: floatY }] }]}>
-            <Image source={splashGetQuote} resizeMode="contain" style={styles.splashServiceImage} />
-            <Text style={styles.splashServiceLabel}>Quotes</Text>
-          </Animated.View>
-        </View>
-        <View style={styles.splashLoaderScene}>
-          <Animated.View style={[styles.splashLoaderRing, { transform: [{ rotate: routeRotate }] }]} />
-          <View style={styles.splashLoaderCore}><MaterialCommunityIcons name="shield-check-outline" size={32} color="#087F5B" /></View>
-        </View>
-        <View style={styles.splashRouteTrack}><Animated.View style={[styles.splashRoutePulse, { transform: [{ translateX: routeX }] }]} /></View>
-        <View style={styles.splashLoadingRow}><View style={styles.splashLoadingDot} /><Text style={styles.splashLoadingText}>Opening your InsureIT experience</Text></View>
       </Animated.View>
     </View>
   );
@@ -246,29 +218,15 @@ const styles = StyleSheet.create({
   logoShield: { backgroundColor: '#F4F8FC', borderWidth: 1, borderColor: '#C9DCF0', alignItems: 'center', justifyContent: 'center', position: 'relative' },
   logoAmberDot: { position: 'absolute', width: 5, height: 5, borderRadius: 3, right: 4, top: 5, backgroundColor: '#C98918' },
   logoWord: { color: '#071D49', fontFamily: 'serif', fontWeight: '700', includeFontPadding: false },
-  splashScreen: { flex: 1, backgroundColor: '#F4F9FF', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  splashSky: { ...StyleSheet.absoluteFillObject, backgroundColor: '#F4F9FF' },
-  splashWaveTop: { position: 'absolute', top: -18, right: -96, width: 360, height: 270, opacity: 0.62 },
-  splashWaveBottom: { position: 'absolute', bottom: -42, left: -128, width: 390, height: 292, opacity: 0.62 },
-  splashWatermark: { position: 'absolute', width: 312, height: 312, opacity: 0.12 },
-  splashHalo: { position: 'absolute', width: 260, height: 260, borderRadius: 130, backgroundColor: 'rgba(103, 214, 186, 0.34)' },
-  splashContent: { alignItems: 'center', width: '100%', paddingHorizontal: 28 },
-  splashLogoCard: { width: 294, height: 122, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.94)', borderWidth: 1, borderColor: '#D7E6F5', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18, shadowColor: '#0B3769', shadowOpacity: 0.11, shadowRadius: 22, elevation: 5 },
-  splashBrandLogo: { alignSelf: 'center' },
-  splashTagline: { color: '#52647B', fontSize: 13, fontWeight: '800', marginTop: 16, letterSpacing: 0, textAlign: 'center' },
-  splashServiceRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 26 },
-  splashServiceTile: { width: 106, height: 96, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.88)', borderWidth: 1, borderColor: '#CFE1F6', alignItems: 'center', justifyContent: 'center', shadowColor: '#0B3769', shadowOpacity: 0.08, shadowRadius: 16, elevation: 3 },
-  splashServiceTileAccent: { borderColor: '#BCE7D4' },
-  splashServiceImage: { width: 48, height: 52 },
-  splashServiceLabel: { color: '#071D49', fontSize: 11, fontWeight: '900', marginTop: 7, letterSpacing: 0 },
-  splashLoaderScene: { width: 92, height: 92, alignItems: 'center', justifyContent: 'center', marginTop: 30 },
-  splashLoaderRing: { position: 'absolute', width: 84, height: 84, borderRadius: 42, borderWidth: 4, borderColor: '#D2E6DD', borderTopColor: '#087F5B', borderRightColor: '#4DBB94' },
-  splashLoaderCore: { width: 56, height: 56, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center', shadowColor: '#0B3769', shadowOpacity: 0.13, shadowRadius: 12, elevation: 4 },
-  splashRouteTrack: { width: 184, height: 7, borderRadius: 99, overflow: 'hidden', backgroundColor: 'rgba(11,99,206,0.14)', marginTop: 16 },
-  splashRoutePulse: { width: 76, height: 7, borderRadius: 99, backgroundColor: '#0B63CE', shadowColor: '#0B63CE', shadowOpacity: 0.55, shadowRadius: 8 },
-  splashLoadingRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 13 },
-  splashLoadingDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#087F5B' },
-  splashLoadingText: { color: '#344B67', fontSize: 11.5, fontWeight: '800' },
+  splashScreen: { flex: 1, backgroundColor: '#F6FAFF', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  splashSky: { ...StyleSheet.absoluteFillObject, backgroundColor: '#F6FAFF' },
+  splashHalo: { position: 'absolute', width: 250, height: 250, borderRadius: 125, backgroundColor: '#DDEEFF' },
+  splashContent: { alignItems: 'center', justifyContent: 'center', width: '100%', paddingHorizontal: 32 },
+  splashMarkAura: { position: 'absolute', top: -26, width: 176, height: 176, borderRadius: 88, backgroundColor: '#CFE7FF', shadowColor: '#1F6FEB', shadowOpacity: 0.18, shadowRadius: 28, elevation: 4 },
+  splashMark: { width: 150, height: 180 },
+  splashCopy: { alignItems: 'center', marginTop: 18 },
+  splashName: { color: '#071D49', fontSize: 30, lineHeight: 34, fontWeight: '900', letterSpacing: 0, includeFontPadding: false },
+  splashPromise: { color: '#071D49', fontSize: 8.5, lineHeight: 11, fontWeight: '900', letterSpacing: 0.8, marginTop: 5, includeFontPadding: false },
   scene: { height: 312, marginHorizontal: -16, marginTop: -2, backgroundColor: '#EAF5FF', overflow: 'hidden' },
   sceneLogo: { position: 'absolute', top: 52, alignSelf: 'center', zIndex: 5 },
   scenePromo: { position: 'absolute', left: 18, right: 18, top: 22, zIndex: 8, alignItems: 'center' },

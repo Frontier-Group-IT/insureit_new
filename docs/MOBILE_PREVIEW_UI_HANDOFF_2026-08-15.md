@@ -59,6 +59,8 @@ This is an Expo native dependency mismatch: `expo-font@57.0.1` was resolved in t
 
 **DEPLOYED preview OTA:** The refined splash animation was published to Expo `preview` runtime `0.2.0` from commit `ccaee6ab78a78c3143671abb62767acd2795bcf0`. Update group `5f8ee107-f6ad-4434-9a52-4e177121a6cd`; Android update `01a00674-4274-72a9-b945-64de6e33147d`; iOS update `01a00674-4274-788d-8a3a-06d792902b55`. Pre-publish checks passed: mobile typecheck and Android export. Launcher icon padding remains pending next APK because launcher icons cannot change by OTA.
 
+**IMPLEMENTED simplified splash:** Per user direction, `SplashIntro` now shows only the InsureIT shield, brand name, and `YOUR SAFETY, OUR PROMISE` tagline on a light screen with subtle zoom/glow/pulse. Removed service tiles, wave decorations, progress track, loading copy, and all "getting ready" style text. This is JS-only and can ship by OTA.
+
 **Expo preview:** The installed preview APK follows Expo branch/channel `preview`, runtime version `0.1.0`. The user does not need a new APK for these JS/layout changes unless the installed APK cannot consume OTA updates or a future change modifies native/runtime dependencies.
 
 Published preview updates from this work:
