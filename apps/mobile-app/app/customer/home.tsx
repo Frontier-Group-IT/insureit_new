@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, Linking, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandLogo } from '@/components/first-look';
@@ -131,23 +131,14 @@ export default function CustomerMockupHomeScreen() {
   const activePolicyVehicleIds = useMemo(() => new Set(policies.filter((policy) => !isExpired(policy.end_date)).map((policy) => policy.vehicle_id)), [policies]);
   const protectedVehicles = vehicles.filter((vehicle) => activePolicyVehicleIds.has(vehicle.id)).length;
   const protectionScore = vehicles.length ? Math.round((protectedVehicles / vehicles.length) * 100) : 0;
-  const latestClaim = activeClaims[0] ?? claims[0] ?? null;
   const claimAttentionCount = documentTasks.length;
   const attentionCount = renewalAttentionCount + claimAttentionCount;
+  const openClaimAmount = activeClaims.reduce((total, claim) => total + (claim.estimated_loss ?? 0), 0);
+  const settledClaimAmount = settledClaims.reduce((total, claim) => total + (claim.settlement_amount ?? claim.approved_amount ?? 0), 0);
+  const totalClaimAmount = openClaimAmount + settledClaimAmount;
   const kycRoute = onboarding?.partner_type === 'individual_proprietor' ? '/customer/kyc/individual' : '/customer/kyc/partner-type';
   const kycAwaitingReview = onboarding?.status === 'submitted' || onboarding?.status === 'under_review';
-  const kycChangesRequested = onboarding?.status === 'changes_requested';
   const kycReviewNotes = onboardingReviewNotes(onboarding);
-  const hero = dashboardHero({
-    customer,
-    kycAwaitingReview,
-    kycChangesRequested,
-    renewalAttentionCount,
-    claimAttentionCount,
-    activeClaims,
-    protectedVehicles,
-    totalVehicles: vehicles.length,
-  });
 
   function openPrimaryAction() {
     if (!customer) {
@@ -183,16 +174,7 @@ export default function CustomerMockupHomeScreen() {
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void loadDashboard('refresh')} tintColor={palette.navy} colors={[palette.navy]} />}
     >
-      <DashboardIntro firstName={firstName} lastUpdated={lastUpdated} attentionCount={attentionCount} groupName={selectedContext?.group_name} />
-      <LiveHeroCard hero={hero} onPress={openPrimaryAction} />
-      <AttentionRail
-        renewals={renewalAttentionCount}
-        claimTasks={claimAttentionCount}
-        kycPending={!customer}
-        onRenewals={() => router.push('/customer/renewals' as Href)}
-        onClaims={() => pendingTask ? router.push({ pathname: '/customer/upload-documents', params: { claimId: pendingTask.claim_id } }) : router.push('/customer/claims')}
-        onKyc={() => router.push(kycRoute as Href)}
-      />
+      <DashboardIntro firstName={firstName} lastUpdated={lastUpdated} attentionCount={attentionCount} groupName={selectedContext?.group_name} onAttentionPress={openPrimaryAction} />
       <FleetSnapshot
         vehicles={vehicles}
         protectedVehicles={protectedVehicles}
@@ -209,13 +191,16 @@ export default function CustomerMockupHomeScreen() {
         onChallan={() => router.push('/customer/e-challan' as Href)}
         onClaim={() => router.push('/customer/start-claim')}
       />
-      <ClaimJourneyCard
-        claim={latestClaim}
-        activeCount={activeClaims.length}
+      <ClaimsSummaryCard
+        totalCount={claims.length}
+        openCount={activeClaims.length}
         settledCount={settledClaims.length}
-        taskCount={pendingActionCount}
-        onOpen={() => router.push(latestClaim ? { pathname: '/customer/claim-detail', params: { id: latestClaim.id } } : '/customer/claims')}
-        onStart={() => router.push('/customer/start-claim')}
+        totalAmount={totalClaimAmount}
+        openAmount={openClaimAmount}
+        settledAmount={settledClaimAmount}
+        pendingActionCount={pendingActionCount || claimAttentionCount}
+        onOpenAll={() => router.push('/customer/claims')}
+        onPendingAction={() => pendingTask ? router.push({ pathname: '/customer/upload-documents', params: { claimId: pendingTask.claim_id } }) : router.push('/customer/claims')}
       />
       <SupportActionCenter onSupport={() => router.push('/customer/support')} />
     </ScrollView>
@@ -231,92 +216,55 @@ export default function CustomerMockupHomeScreen() {
   </SafeAreaView>;
 }
 
-function DashboardIntro({ firstName, lastUpdated, attentionCount, groupName }: { firstName: string; lastUpdated: Date | null; attentionCount: number; groupName?: string | null }) {
-  const message = attentionCount > 0
-    ? `${attentionCount} item${attentionCount === 1 ? '' : 's'} need attention`
-    : 'Everything is up to date';
+function DashboardIntro({ firstName, lastUpdated, attentionCount, groupName, onAttentionPress }: { firstName: string; lastUpdated: Date | null; attentionCount: number; groupName?: string | null; onAttentionPress: () => void }) {
+  const hasAttention = attentionCount > 0;
   return (
     <View style={styles.greetingBlock}>
       <View>
         <Text style={styles.greeting}>{timeGreeting()}, {firstName}</Text>
-        <Text style={styles.syncText}>{message}{lastUpdated ? ` · Synced ${shortTime(lastUpdated)}` : ''}</Text>
+        <View style={styles.greetingMetaRow}>
+          <Pressable disabled={!hasAttention} onPress={onAttentionPress} style={({ pressed }) => [styles.attentionLink, hasAttention && styles.attentionLinkActive, pressed && styles.cardPressed]}>
+            {hasAttention ? (
+              <>
+                <MaterialCommunityIcons name="alert-circle-outline" size={13} color="#C98918" />
+                <Text style={styles.attentionLinkStrong}>{attentionCount} item{attentionCount === 1 ? '' : 's'}</Text>
+                <Text style={styles.attentionLinkText}>need attention</Text>
+                <MaterialCommunityIcons name="chevron-right" size={14} color="#174EA6" />
+              </>
+            ) : (
+              <>
+                <MaterialCommunityIcons name="check-circle-outline" size={13} color="#10A66F" />
+                <Text style={styles.attentionLinkText}>Everything is up to date</Text>
+              </>
+            )}
+          </Pressable>
+          {lastUpdated ? (
+            <View style={styles.syncPill}>
+              <MaterialCommunityIcons name="cloud-check-outline" size={12} color="#607089" />
+              <Text style={styles.syncTime}>{shortTime(lastUpdated)}</Text>
+            </View>
+          ) : null}
+        </View>
         {groupName ? <Text style={styles.parentCompany}>Associated with {groupName}</Text> : null}
       </View>
     </View>
   );
 }
 
-function LiveHeroCard({ hero, onPress }: { hero: ReturnType<typeof dashboardHero>; onPress: () => void }) {
-  const pulse = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const loop = Animated.loop(Animated.sequence([
-      Animated.timing(pulse, { toValue: 1, duration: 1500, useNativeDriver: true }),
-      Animated.timing(pulse, { toValue: 0, duration: 1500, useNativeDriver: true }),
-    ]));
-    loop.start();
-    return () => loop.stop();
-  }, [pulse]);
-  const pulseScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1.08] });
-  const pulseOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.16, hero.urgent ? 0.34 : 0.24] });
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.liveHero, hero.urgent && styles.liveHeroUrgent, pressed && styles.cardPressed]}>
-      <View style={styles.heroOrbLarge} />
-      <View style={styles.heroOrbSmall} />
-      <Animated.View style={[styles.heroPulse, { opacity: pulseOpacity, transform: [{ scale: pulseScale }] }]} />
-      <View style={styles.heroContent}>
-        <View style={styles.heroKickerRow}>
-          <View style={[styles.heroStatusDot, { backgroundColor: hero.dot }]} />
-          <Text style={styles.heroKicker}>{hero.kicker}</Text>
-        </View>
-        <Text style={styles.heroTitle}>{hero.title}</Text>
-        <Text style={styles.heroBody}>{hero.body}</Text>
-        <View style={styles.heroButton}>
-          <Text style={styles.heroButtonText}>{hero.cta}</Text>
-          <MaterialCommunityIcons name="arrow-right" size={18} color="#071D49" />
-        </View>
-      </View>
-      <View style={styles.heroGraphic}>
-        <View style={styles.heroShield}>
-          <MaterialCommunityIcons name={hero.icon} size={36} color="#FFFFFF" />
-        </View>
-        <View style={styles.heroPlate}>
-          <MaterialCommunityIcons name="truck-fast-outline" size={28} color={palette.navy} />
-        </View>
-      </View>
-    </Pressable>
-  );
-}
-
-function AttentionRail({ renewals, claimTasks, kycPending, onRenewals, onClaims, onKyc }: { renewals: number; claimTasks: number; kycPending: boolean; onRenewals: () => void; onClaims: () => void; onKyc: () => void }) {
-  return (
-    <View style={styles.attentionRail}>
-      <AttentionChip icon="calendar-alert" label="Renewals" value={renewals} tone="#C98918" soft="#FFF6E8" onPress={onRenewals} />
-      <AttentionChip icon="file-alert-outline" label="Claims" value={claimTasks} tone="#E5484D" soft="#FDEEEF" onPress={onClaims} />
-      <AttentionChip icon="shield-account-outline" label="KYC" value={kycPending ? 1 : 0} tone="#174EA6" soft="#EAF3FF" onPress={onKyc} />
-    </View>
-  );
-}
-
-function AttentionChip({ icon, label, value, tone, soft, onPress }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; value: number; tone: string; soft: string; onPress: () => void }) {
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.attentionChip, { backgroundColor: soft }, pressed && styles.cardPressed]}>
-      <MaterialCommunityIcons name={icon} size={18} color={tone} />
-      <Text style={[styles.attentionValue, { color: tone }]}>{value}</Text>
-      <Text style={styles.attentionLabel}>{label}</Text>
-    </Pressable>
-  );
-}
-
 function FleetSnapshot({ vehicles, protectedVehicles, protectionScore, renewalDue, expiredDue, onOpen }: { vehicles: Vehicle[]; protectedVehicles: number; protectionScore: number; renewalDue: number; expiredDue: number; onOpen: () => void }) {
-  const plates = vehicles.slice(0, 3).map((vehicle) => vehicle.vehicle_no);
   const unprotected = Math.max(vehicles.length - protectedVehicles, 0);
   return (
     <Pressable onPress={onOpen} style={({ pressed }) => [styles.fleetCard, pressed && styles.cardPressed]}>
       <View style={styles.fleetTop}>
+        <View style={styles.fleetCountTile}>
+          <MaterialCommunityIcons name="truck-outline" size={20} color="#174EA6" />
+          <Text style={styles.fleetCount}>{vehicles.length}</Text>
+          <Text style={styles.fleetCountLabel}>Vehicles</Text>
+        </View>
         <View style={styles.fleetCopy}>
-          <Text style={styles.sectionEyebrow}>Protection snapshot</Text>
-          <Text style={styles.fleetTitle}>{vehicles.length ? `${vehicles.length} vehicle${vehicles.length === 1 ? '' : 's'} in your garage` : 'Add your first vehicle'}</Text>
-          <Text style={styles.fleetSubtitle}>{vehicles.length ? `${protectedVehicles} protected · ${unprotected} need policy attention` : 'Start by adding your vehicle and policy details.'}</Text>
+          <Text style={styles.sectionEyebrow}>Your fleet summary</Text>
+          <Text style={styles.fleetTitle}>{vehicles.length ? `${protectedVehicles} protected` : 'Add first vehicle'}</Text>
+          <Text style={styles.fleetSubtitle}>{vehicles.length ? `${unprotected} without active policy` : 'Vehicle, policy and renewal status.'}</Text>
         </View>
         <View style={styles.scoreRing}>
           <Text style={styles.scoreValue}>{vehicles.length ? `${protectionScore}%` : '0%'}</Text>
@@ -324,15 +272,12 @@ function FleetSnapshot({ vehicles, protectedVehicles, protectionScore, renewalDu
         </View>
       </View>
       <View style={styles.fleetMiddle}>
-        <View style={styles.plateStack}>
-          {plates.length ? plates.map((plate, index) => <View key={`${plate}-${index}`} style={[styles.platePill, index > 0 && styles.platePillOverlap]}><Text style={styles.plateText} numberOfLines={1}>{plate}</Text></View>) : <View style={styles.platePill}><Text style={styles.plateText}>No vehicle</Text></View>}
+        <View style={styles.fleetStatStrip}>
+          <FleetSignal label="Renewal due" value={renewalDue} tone={renewalDue ? '#C98918' : '#10A66F'} />
+          <FleetSignal label="Expired" value={expiredDue} tone={expiredDue ? '#E5484D' : '#10A66F'} />
         </View>
-        <Image source={fleetSketch} style={styles.fleetImage} resizeMode="contain" />
-      </View>
-      <View style={styles.fleetFooter}>
-        <FleetSignal label="Renewal due" value={renewalDue} tone={renewalDue ? '#C98918' : '#10A66F'} />
-        <FleetSignal label="Expired" value={expiredDue} tone={expiredDue ? '#E5484D' : '#10A66F'} />
-        <View style={styles.openLink}><Text style={styles.openLinkText}>Open Vehicles</Text><MaterialCommunityIcons name="arrow-right" size={15} color="#174EA6" /></View>
+        <Image source={fleetSketch} style={styles.fleetImageCompact} resizeMode="contain" />
+        <View style={styles.openLink}><Text style={styles.openLinkText}>Open</Text><MaterialCommunityIcons name="arrow-right" size={15} color="#174EA6" /></View>
       </View>
     </Pressable>
   );
@@ -369,58 +314,38 @@ function QuickAction({ icon, label, badge, tone, color, onPress }: { icon: keyof
   );
 }
 
-function ClaimJourneyCard({ claim, activeCount, settledCount, taskCount, onOpen, onStart }: { claim: Claim | null; activeCount: number; settledCount: number; taskCount: number; onOpen: () => void; onStart: () => void }) {
-  if (!claim) {
-    return (
-      <View style={styles.claimCard}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.claimCardTitle}>Claim journey</Text>
-          <Text style={styles.claimCardHint}>Ready when needed</Text>
-        </View>
-        <View style={styles.noClaimState}>
-          <View style={styles.noClaimIcon}><MaterialCommunityIcons name="shield-search" size={28} color="#174EA6" /></View>
-          <View style={styles.noClaimCopy}>
-            <Text style={styles.noClaimTitle}>No active claim</Text>
-            <Text style={styles.noClaimText}>Your claim progress will appear here after reporting an accident.</Text>
-          </View>
-        </View>
-        <Pressable onPress={onStart} style={({ pressed }) => [styles.claimPrimaryButton, pressed && styles.cardPressed]}><Text style={styles.claimPrimaryText}>Start Claim</Text><MaterialCommunityIcons name="arrow-right" size={18} color="#FFFFFF" /></Pressable>
-      </View>
-    );
-  }
-  const progress = claimProgress(claim.current_status);
+function ClaimsSummaryCard({ totalCount, openCount, settledCount, totalAmount, openAmount, settledAmount, pendingActionCount, onOpenAll, onPendingAction }: { totalCount: number; openCount: number; settledCount: number; totalAmount: number; openAmount: number; settledAmount: number; pendingActionCount: number; onOpenAll: () => void; onPendingAction: () => void }) {
+  const hasPendingAction = pendingActionCount > 0;
   return (
-    <Pressable onPress={onOpen} style={({ pressed }) => [styles.claimCard, pressed && styles.cardPressed]}>
-      <View style={styles.sectionHeader}>
-        <View>
-          <Text style={styles.claimCardTitle}>Live claim journey</Text>
-          <Text style={styles.claimCardHint}>{activeCount} active · {settledCount} settled</Text>
+    <View style={styles.claimSummaryCard}>
+      <Pressable onPress={onOpenAll} style={({ pressed }) => [styles.claimSummaryTop, pressed && styles.cardPressed]}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.claimCardTitle}>Claims</Text>
+          <View style={styles.claimOpenLink}><Text style={styles.claimOpenLinkText}>View all</Text><MaterialCommunityIcons name="arrow-right" size={15} color="#BFD4F7" /></View>
         </View>
-        {taskCount ? <View style={styles.claimTaskBadge}><Text style={styles.claimTaskBadgeText}>{taskCount} action</Text></View> : null}
-      </View>
-      <View style={styles.claimTopRow}>
-        <View style={styles.claimIcon}><MaterialCommunityIcons name="truck-fast-outline" size={24} color="#FFFFFF" /></View>
-        <View style={styles.claimTopCopy}>
-          <Text style={styles.claimNo} numberOfLines={1}>{claim.claim_no}</Text>
-          <Text style={styles.claimStage} numberOfLines={2}>{claim.current_status}</Text>
+        <View style={styles.claimMetricRow}>
+          <ClaimMetric label="Total" value={totalCount} amount={moneyCompact(totalAmount)} color="#DDEBFF" />
+          <ClaimMetric label="Open" value={openCount} amount={moneyCompact(openAmount)} color="#FFF3D8" />
+          <ClaimMetric label="Settled" value={settledCount} amount={moneyCompact(settledAmount)} color="#DFF8EA" />
         </View>
-      </View>
-      <View style={styles.progressTrack}>
-        {progressSteps.map((step, index) => {
-          const active = index <= progress;
-          return (
-            <View key={step.label} style={styles.progressStep}>
-              <View style={[styles.progressDot, active && styles.progressDotActive]}>{active ? <MaterialCommunityIcons name="check" size={13} color="#FFFFFF" /> : <Text style={styles.progressNumber}>{index + 1}</Text>}</View>
-              <Text style={[styles.progressLabel, active && styles.progressLabelActive]}>{step.label}</Text>
-            </View>
-          );
-        })}
-      </View>
-      <View style={styles.claimFooter}>
-        <Text style={styles.claimFooterText}>{taskCount ? 'Documents requested. Upload to keep the claim moving.' : 'We will keep this stage updated as the claim progresses.'}</Text>
-        <MaterialCommunityIcons name="chevron-right" size={24} color="#FFFFFF" />
-      </View>
-    </Pressable>
+      </Pressable>
+      <Pressable onPress={hasPendingAction ? onPendingAction : onOpenAll} style={({ pressed }) => [styles.claimTicker, hasPendingAction && styles.claimTickerHot, pressed && styles.cardPressed]}>
+        <MaterialCommunityIcons name={hasPendingAction ? 'alert-decagram' : 'check-decagram'} size={17} color={hasPendingAction ? '#C98918' : '#10A66F'} />
+        <Text style={styles.claimTickerText} numberOfLines={1}>{hasPendingAction ? `${pendingActionCount} pending claim action${pendingActionCount === 1 ? '' : 's'}` : totalCount ? 'All claim actions are clear' : 'No claims yet'}</Text>
+        <MaterialCommunityIcons name="chevron-right" size={18} color="#174EA6" />
+      </Pressable>
+    </View>
+  );
+}
+
+function ClaimMetric({ label, value, amount, color }: { label: string; value: number; amount: string; color: string }) {
+  return (
+    <View style={styles.claimMetric}>
+      <View style={[styles.claimMetricGlow, { backgroundColor: color }]} />
+      <Text style={styles.claimMetricValue}>{value}</Text>
+      <Text style={styles.claimMetricLabel}>{label}</Text>
+      <Text style={styles.claimMetricAmount}>{amount}</Text>
+    </View>
   );
 }
 
@@ -428,23 +353,28 @@ function SupportActionCenter({ onSupport }: { onSupport: () => void }) {
   return (
     <View style={styles.supportCard}>
       <View style={styles.supportTop}>
-        <View style={styles.supportIcon}><MaterialCommunityIcons name="headset" size={26} color={palette.navy} /></View>
-        <View style={styles.supportCopy}>
-          <Text style={styles.supportTitle}>Claims desk</Text>
-          <Text style={styles.supportText}>Quick support and escalation</Text>
+        <View>
+          <Text style={styles.supportTitle}>Claims Desk</Text>
+          <Text style={styles.supportText}>Fast help</Text>
         </View>
+        <View style={styles.supportPulse}><MaterialCommunityIcons name="headset" size={21} color="#FFFFFF" /></View>
       </View>
       <View style={styles.supportActions}>
-        <SupportButton icon="phone-outline" label="Call" onPress={() => void callClaimsDesk()} />
-        <SupportButton icon="whatsapp" label="WhatsApp" onPress={() => void openClaimsDeskWhatsApp()} />
-        <SupportButton icon="message-text-outline" label="Ticket" onPress={onSupport} />
+        <SupportButton icon="phone-in-talk" label="Call" tone="#E8F8F0" color="#10A66F" onPress={() => void callClaimsDesk()} />
+        <SupportButton icon="whatsapp" label="WhatsApp" tone="#E5F8ED" color="#128C7E" onPress={() => void openClaimsDeskWhatsApp()} />
+        <SupportButton icon="ticket-confirmation" label="Ticket" tone="#EAF3FF" color="#174EA6" onPress={onSupport} />
       </View>
     </View>
   );
 }
 
-function SupportButton({ icon, label, onPress }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; onPress: () => void }) {
-  return <Pressable onPress={onPress} style={({ pressed }) => [styles.supportButton, pressed && styles.cardPressed]}><MaterialCommunityIcons name={icon} size={20} color={palette.navy} /><Text style={styles.supportButtonText}>{label}</Text></Pressable>;
+function SupportButton({ icon, label, tone, color, onPress }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; tone: string; color: string; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.supportButton, { backgroundColor: tone }, pressed && styles.cardPressed]}>
+      <View style={[styles.supportButtonIcon, { backgroundColor: color }]}><MaterialCommunityIcons name={icon} size={21} color="#FFFFFF" /></View>
+      <Text style={styles.supportButtonText}>{label}</Text>
+    </Pressable>
+  );
 }
 
 function KycRequiredModal({ visible, application, reviewNotes, onStart, onDismiss, onSignOut }: { visible: boolean; application: CustomerOnboardingApplication | null; reviewNotes: string | null; onStart: () => void; onDismiss: () => void; onSignOut: () => void }) {
@@ -472,25 +402,16 @@ function KycRequiredModal({ visible, application, reviewNotes, onStart, onDismis
   );
 }
 
-const progressSteps = [
-  { label: 'Report' },
-  { label: 'Docs' },
-  { label: 'Survey' },
-  { label: 'Approval' },
-  { label: 'Repair' },
-  { label: 'Settle' },
-] as const;
+function moneyCompact(value: number) {
+  const amount = Math.max(Math.round(value || 0), 0);
+  if (amount >= 10000000) return `INR ${trimDecimal(amount / 10000000)}Cr`;
+  if (amount >= 100000) return `INR ${trimDecimal(amount / 100000)}L`;
+  if (amount >= 1000) return `INR ${Math.round(amount / 1000)}k`;
+  return `INR ${amount.toLocaleString('en-IN')}`;
+}
 
-function dashboardHero(input: { customer: Customer | null; kycAwaitingReview: boolean; kycChangesRequested: boolean; renewalAttentionCount: number; claimAttentionCount: number; activeClaims: Claim[]; protectedVehicles: number; totalVehicles: number }) {
-  if (!input.customer) {
-    if (input.kycAwaitingReview) return { kicker: 'Verification', title: 'KYC is under review', body: 'Your profile is with our verification team. We will unlock full services after approval.', cta: 'View profile', icon: 'clipboard-clock-outline' as const, dot: '#C98918', urgent: false };
-    return { kicker: 'Account setup', title: input.kycChangesRequested ? 'KYC update needed' : 'Complete KYC to activate protection', body: 'Finish your customer profile to access policy, vehicle and claim services.', cta: 'Continue KYC', icon: 'shield-account-outline' as const, dot: '#E5484D', urgent: true };
-  }
-  if (input.claimAttentionCount > 0) return { kicker: 'Claim action', title: `${input.claimAttentionCount} document request${input.claimAttentionCount === 1 ? '' : 's'} pending`, body: 'Upload requested claim documents to keep your claim moving.', cta: 'Upload now', icon: 'file-alert-outline' as const, dot: '#E5484D', urgent: true };
-  if (input.renewalAttentionCount > 0) return { kicker: 'Renewal watch', title: `${input.renewalAttentionCount} renewal item${input.renewalAttentionCount === 1 ? '' : 's'} need attention`, body: 'Review expiring policies and compliance documents before they lapse.', cta: 'Review renewals', icon: 'calendar-alert' as const, dot: '#C98918', urgent: true };
-  if (input.activeClaims.length > 0) return { kicker: 'Claim tracking', title: 'Your claim is being tracked', body: `${input.activeClaims.length} active claim${input.activeClaims.length === 1 ? '' : 's'} visible with live stage progress.`, cta: 'View claim', icon: 'shield-check-outline' as const, dot: '#174EA6', urgent: false };
-  if (input.totalVehicles > 0) return { kicker: 'Protected fleet', title: `${input.protectedVehicles} of ${input.totalVehicles} vehicles protected`, body: 'Policies, renewals and claim support are ready from your dashboard.', cta: 'Open vehicles', icon: 'truck-check-outline' as const, dot: '#10A66F', urgent: false };
-  return { kicker: 'Start here', title: 'Add your vehicle to begin', body: 'Once your vehicle is added, policies, renewals and claims become trackable here.', cta: 'Add vehicle', icon: 'truck-plus-outline' as const, dot: '#174EA6', urgent: false };
+function trimDecimal(value: number) {
+  return value.toFixed(1).replace(/\.0$/, '');
 }
 
 function externalToPolicy(policy: ExternalPolicyRow): Policy {
@@ -508,15 +429,6 @@ function externalToPolicy(policy: ExternalPolicyRow): Policy {
     premium_amount: policy.premium_amount ?? null,
     insured_declared_value: policy.insured_declared_value ?? null,
   };
-}
-
-function claimProgress(status: Claim['current_status']) {
-  if (status === 'Initial Documents Pending' || status === 'Initial Documents Verification Pending' || status === 'Initial Documents Submitted' || status === 'Initial Documents Verified' || status === 'Documents Pending' || status === 'Documents Submitted') return 1;
-  if (status === 'Claim Intimated' || status === 'Surveyor Appointed' || status === 'Vehicle Inspected' || status === 'Final Surveyor Details' || status === 'Survey Status' || status === 'Survey Done') return 2;
-  if (status === 'Final Documents Awaited' || status === 'Final Documents Verification Pending' || status === 'Final Documents Submitted' || status === 'Final Documents Verified' || status === 'Estimate Submitted' || status === 'Approval Pending' || status === 'Work Approval Status' || status === 'Work Approval Received') return 3;
-  if (status === 'Repair Started' || status === 'Repair Completed' || status === 'Under Repair' || status === 'Repair Done' || status === 'DO Submitted' || status === 'DO Status' || status === 'Final Bill Submitted') return 4;
-  if (status === 'Settlement Under Process' || status === 'Payment Stage' || status === 'Settled' || status === 'Closed' || status === 'Claim Complete') return 5;
-  return 0;
 }
 
 function timeGreeting() { const hour = new Date().getHours(); if (hour < 12) return 'Good Morning'; if (hour < 17) return 'Good Afternoon'; return 'Good Evening'; }
@@ -584,6 +496,13 @@ const styles = StyleSheet.create({
   body: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 11, paddingBottom: 120, gap: 11 },
   greetingBlock: { paddingHorizontal: 2, paddingTop: 2, paddingBottom: 1 },
   greeting: { color: palette.navy, fontSize: 22, lineHeight: 28, fontWeight: '900' },
+  greetingMetaRow: { marginTop: 5, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 7 },
+  attentionLink: { minHeight: 25, borderRadius: 999, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8 },
+  attentionLinkActive: { backgroundColor: '#FFF6E8', borderWidth: 1, borderColor: '#F1D59D' },
+  attentionLinkStrong: { color: '#9A6700', fontSize: 12, lineHeight: 15, fontWeight: '900' },
+  attentionLinkText: { color: '#5C6878', fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
+  syncPill: { minHeight: 24, borderRadius: 999, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  syncTime: { color: '#607089', fontSize: 11, fontWeight: '800' },
   syncText: { color: '#5C6878', fontSize: 12.5, lineHeight: 18, fontWeight: '700', marginTop: 1 },
   parentCompany: { color: '#174EA6', fontSize: 11, lineHeight: 15, fontWeight: '800', marginTop: 3 },
   liveHero: { minHeight: 182, borderRadius: 22, backgroundColor: palette.navy, padding: 17, overflow: 'hidden', flexDirection: 'row', alignItems: 'stretch', shadowColor: '#071D49', shadowOpacity: 0.16, shadowRadius: 18, elevation: 5 },
@@ -606,23 +525,28 @@ const styles = StyleSheet.create({
   attentionChip: { flex: 1, minHeight: 54, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(7,29,73,0.06)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
   attentionValue: { fontSize: 17, lineHeight: 20, fontWeight: '900', marginTop: 1 },
   attentionLabel: { color: '#5C6878', fontSize: 10.5, fontWeight: '800', marginTop: 1 },
-  fleetCard: { minHeight: 210, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', padding: 13, overflow: 'hidden', shadowColor: '#122544', shadowOpacity: 0.07, shadowRadius: 12, elevation: 3 },
-  fleetTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  fleetCard: { minHeight: 145, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', padding: 12, overflow: 'hidden', shadowColor: '#122544', shadowOpacity: 0.07, shadowRadius: 12, elevation: 3 },
+  fleetTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  fleetCountTile: { width: 74, minHeight: 76, borderRadius: 17, backgroundColor: '#F1F7FF', borderWidth: 1, borderColor: '#D8E7F7', alignItems: 'center', justifyContent: 'center' },
+  fleetCount: { color: palette.navy, fontSize: 30, lineHeight: 34, fontWeight: '900', marginTop: 1 },
+  fleetCountLabel: { color: '#607089', fontSize: 9.5, fontWeight: '900', textTransform: 'uppercase' },
   fleetCopy: { flex: 1, minWidth: 0 },
   sectionEyebrow: { color: '#607089', fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
   fleetTitle: { color: palette.navy, fontSize: 19, lineHeight: 24, fontWeight: '900', marginTop: 4 },
   fleetSubtitle: { color: '#5C6878', fontSize: 12.5, lineHeight: 18, fontWeight: '700', marginTop: 3 },
-  scoreRing: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#EAF3FF', borderWidth: 5, borderColor: '#CDE1FF', alignItems: 'center', justifyContent: 'center' },
+  scoreRing: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#EAF3FF', borderWidth: 5, borderColor: '#CDE1FF', alignItems: 'center', justifyContent: 'center' },
   scoreValue: { color: palette.navy, fontSize: 17, lineHeight: 20, fontWeight: '900' },
   scoreLabel: { color: '#607089', fontSize: 9, fontWeight: '900', marginTop: 1 },
-  fleetMiddle: { minHeight: 86, flexDirection: 'row', alignItems: 'center', marginTop: 8 },
+  fleetMiddle: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
+  fleetStatStrip: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   plateStack: { width: 142, zIndex: 2 },
   platePill: { alignSelf: 'flex-start', minHeight: 31, maxWidth: 135, borderRadius: 10, backgroundColor: '#F7FAFE', borderWidth: 1, borderColor: '#D8E7F7', paddingHorizontal: 9, alignItems: 'center', justifyContent: 'center', marginBottom: 5 },
   platePillOverlap: { marginLeft: 12 },
   plateText: { color: palette.navy, fontSize: 11.2, fontWeight: '900' },
   fleetImage: { flex: 1, height: 96, marginLeft: -18, marginRight: -6 },
+  fleetImageCompact: { flex: 1, height: 54, marginLeft: -10, opacity: 0.92 },
   fleetFooter: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 6 },
-  fleetSignal: { minWidth: 70, minHeight: 42, borderRadius: 14, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', alignItems: 'center', justifyContent: 'center' },
+  fleetSignal: { minWidth: 64, minHeight: 39, borderRadius: 13, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
   fleetSignalValue: { fontSize: 16, fontWeight: '900' },
   fleetSignalLabel: { color: '#607089', fontSize: 9, fontWeight: '800', marginTop: 1 },
   openLink: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -637,6 +561,19 @@ const styles = StyleSheet.create({
   quickLabel: { color: palette.navy, fontSize: 10.5, lineHeight: 13, fontWeight: '900', textAlign: 'center', marginTop: 6 },
   actionBadge: { position: 'absolute', right: 7, top: 7, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#E5484D', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, zIndex: 3 },
   actionBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '900' },
+  claimSummaryCard: { borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', overflow: 'hidden', shadowColor: '#071D49', shadowOpacity: 0.1, shadowRadius: 13, elevation: 3 },
+  claimSummaryTop: { backgroundColor: palette.navy, padding: 13 },
+  claimOpenLink: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  claimOpenLinkText: { color: '#BFD4F7', fontSize: 11, fontWeight: '900' },
+  claimMetricRow: { flexDirection: 'row', gap: 8 },
+  claimMetric: { flex: 1, minHeight: 77, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', paddingHorizontal: 4 },
+  claimMetricGlow: { position: 'absolute', width: 54, height: 54, borderRadius: 27, top: -21, right: -16, opacity: 0.36 },
+  claimMetricValue: { color: '#FFFFFF', fontSize: 24, lineHeight: 28, fontWeight: '900' },
+  claimMetricLabel: { color: '#D8E4F5', fontSize: 10.5, fontWeight: '900', marginTop: 1 },
+  claimMetricAmount: { color: '#AFC0D8', fontSize: 9.5, fontWeight: '800', marginTop: 3 },
+  claimTicker: { minHeight: 39, margin: 10, marginTop: 9, borderRadius: 14, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  claimTickerHot: { backgroundColor: '#FFF8EA', borderColor: '#F1D59D' },
+  claimTickerText: { flex: 1, color: palette.navy, fontSize: 11.5, fontWeight: '900' },
   claimCard: { borderRadius: 20, backgroundColor: palette.navy, borderWidth: 1, borderColor: '#0D2B63', padding: 14, overflow: 'hidden', shadowColor: '#071D49', shadowOpacity: 0.12, shadowRadius: 14, elevation: 3 },
   claimCardTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '900' },
   claimCardHint: { color: '#C8D8EF', fontSize: 11, fontWeight: '700', marginTop: 2 },
@@ -663,14 +600,16 @@ const styles = StyleSheet.create({
   progressLabelActive: { color: '#FFFFFF' },
   claimFooter: { minHeight: 42, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 8 },
   claimFooterText: { flex: 1, color: '#E8F1FF', fontSize: 11.5, lineHeight: 16, fontWeight: '700' },
-  supportCard: { borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', padding: 13, shadowColor: '#122544', shadowOpacity: 0.04, shadowRadius: 9, elevation: 2 },
-  supportTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 11 },
+  supportCard: { borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', padding: 11, shadowColor: '#122544', shadowOpacity: 0.04, shadowRadius: 9, elevation: 2 },
+  supportTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 9 },
   supportIcon: { width: 44, height: 44, borderRadius: 16, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' },
+  supportPulse: { width: 38, height: 38, borderRadius: 19, backgroundColor: palette.navy, alignItems: 'center', justifyContent: 'center', shadowColor: '#071D49', shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
   supportCopy: { flex: 1 },
   supportTitle: { color: palette.navy, fontSize: 16, fontWeight: '900' },
-  supportText: { color: '#607089', fontSize: 12, fontWeight: '700', marginTop: 2 },
+  supportText: { color: '#607089', fontSize: 11, fontWeight: '800', marginTop: 1 },
   supportActions: { flexDirection: 'row', gap: 8 },
-  supportButton: { flex: 1, minHeight: 58, borderRadius: 15, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  supportButton: { flex: 1, minHeight: 62, borderRadius: 15, borderWidth: 1, borderColor: 'rgba(7,29,73,0.06)', alignItems: 'center', justifyContent: 'center', gap: 5, shadowColor: '#122544', shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
+  supportButtonIcon: { width: 33, height: 33, borderRadius: 13, alignItems: 'center', justifyContent: 'center', shadowColor: '#122544', shadowOpacity: 0.13, shadowRadius: 6, elevation: 3 },
   supportButtonText: { color: palette.navy, fontSize: 11, fontWeight: '900' },
   cardPressed: { transform: [{ scale: 0.985 }], opacity: 0.94 },
   kycBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, backgroundColor: 'rgba(10,18,31,0.66)' },
