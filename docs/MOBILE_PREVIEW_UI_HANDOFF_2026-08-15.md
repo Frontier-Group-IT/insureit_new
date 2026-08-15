@@ -63,6 +63,8 @@ This is an Expo native dependency mismatch: `expo-font@57.0.1` was resolved in t
 
 **DEPLOYED simplified splash OTA:** Published to Expo `preview` runtime `0.2.0` from commit `ca2d7695a017e0645d889ae2a43fac9ef4ade61d`. Update group `71db15f1-c620-4eea-8e0c-ea7642f27dbe`; Android update `01a00681-48b0-73fd-892a-86bede51b03b`; iOS update `01a00681-48b0-7126-b2f9-99c2f2657284`. Message: `Simplified brand splash OTA 2026-08-15`.
 
+**DEPLOYED startup loading-copy removal OTA:** After the simplified splash, the app still showed the shared `LoadingState` text `Getting things ready` and placeholder cards during auth routing. Commit `b84bcc3191d3340d7a9b6384a5021e81999a7eca` removed the intermediate index loading screen and stripped the shared loader copy/placeholders so startup transitions from the branded splash directly to the app/login screen. Published to Expo `preview` runtime `0.2.0`; update group `5af673f3-a709-4448-aac5-6a094c0d7ffd`; Android update `01a00691-dc75-7ce6-bf18-a6a747c6df66`; iOS update `01a00691-dc75-7392-acd7-3635b07ba2f0`. Message: `Remove startup loading copy OTA 2026-08-15`.
+
 **Expo preview:** The installed preview APK follows Expo branch/channel `preview`, runtime version `0.1.0`. The user does not need a new APK for these JS/layout changes unless the installed APK cannot consume OTA updates or a future change modifies native/runtime dependencies.
 
 Published preview updates from this work:
@@ -135,7 +137,7 @@ Additional focused ESLint checks were run before the final Expo publish for the 
 
 ## Actionable Follow-Ups
 
-1. Real-device smoke test the latest preview update group `54587825-98d0-44d4-bb78-a57238f6bfa0`.
+1. Real-device smoke test the latest preview update group `5af673f3-a709-4448-aac5-6a094c0d7ffd`.
 2. Check header spacing on Home, Vehicles, Vehicle Detail, Add Vehicle, Add Policy, Policies, Policy Detail, Claims, Support, Profile, and self-managed claim pages.
 3. Confirm the bottom bar hides while typing and returns correctly after dismissing the keyboard.
 4. Confirm vehicle cards still show external policy details where external policies exist.
