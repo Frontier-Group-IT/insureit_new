@@ -24,32 +24,10 @@ jobs:
           from pathlib import Path
           path = Path('apps/web-portal/lib/operations-dashboard.ts')
           text = path.read_text()
-          old = '''    if (profile?.id) {
-      const customerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_customers");
-      if (customerIds !== null) return getScopedOperationsDashboardData(customerIds);
-    }
-'''
-          new = '''    if (profile?.id) {
-      const customerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_customers");
-      if (customerIds !== null) return getScopedOperationsDashboardData(customerIds);
-
-      // `null` means the effective customer scope is organization-wide. Do not
-      // fall back to the caller's RLS session here: hierarchy roles can receive
-      // an organization override even when their base database role remains scoped.
-      const organizationRpcResult = await admin.rpc("get_operations_dashboard");
-      const organizationDashboard = normalizeRpcDashboard(organizationRpcResult.data);
-      if (!organizationRpcResult.error && organizationDashboard) return organizationDashboard;
-
-      const organizationWarning = organizationRpcResult.error && !isMissingDashboardRpc(organizationRpcResult.error)
-        ? "The optimized organization dashboard service is unavailable; live fallback data is shown."
-        : !organizationRpcResult.error
-          ? "The optimized organization dashboard service returned an invalid response; live fallback data is shown."
-          : null;
-      return getOperationsDashboardFallback(admin, organizationWarning);
-    }
-'''
-          if old in text:
-              path.write_text(text.replace(old, new, 1))
+          needle = '      if (customerIds !== null) return getScopedOperationsDashboardData(customerIds);\n    }\n'
+          replacement = '      if (customerIds !== null) return getScopedOperationsDashboardData(customerIds);\n\n      // `null` means the effective customer scope is organization-wide. Do not\n      // fall back to the caller\'s RLS session here: hierarchy roles can receive\n      // an organization override even when their base database role remains scoped.\n      const organizationRpcResult = await admin.rpc("get_operations_dashboard");\n      const organizationDashboard = normalizeRpcDashboard(organizationRpcResult.data);\n      if (!organizationRpcResult.error && organizationDashboard) return organizationDashboard;\n\n      const organizationWarning = organizationRpcResult.error && !isMissingDashboardRpc(organizationRpcResult.error)\n        ? "The optimized organization dashboard service is unavailable; live fallback data is shown."\n        : !organizationRpcResult.error\n          ? "The optimized organization dashboard service returned an invalid response; live fallback data is shown."\n          : null;\n      return getOperationsDashboardFallback(admin, organizationWarning);\n    }\n'
+          if needle in text and 'organizationRpcResult' not in text:
+              path.write_text(text.replace(needle, replacement, 1))
           PY
       - name: Install web dependencies
         working-directory: apps/web-portal
