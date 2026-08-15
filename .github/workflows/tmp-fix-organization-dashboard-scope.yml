@@ -48,5 +48,8 @@ jobs:
             exit 0
           fi
           git commit -m 'Fix organization-scoped dashboard totals'
-          git pull --rebase origin main
+          git reset --hard HEAD
+          git clean -fd
+          git fetch origin main
+          git rebase origin/main
           git push origin HEAD:main
