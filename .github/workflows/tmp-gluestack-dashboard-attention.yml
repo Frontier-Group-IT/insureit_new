@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  integrate-verify-publish:
+  integrate-verify-commit:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -36,6 +36,7 @@ jobs:
           npx --yes gluestack-ui@latest add heading -y
           npx --yes gluestack-ui@latest add text -y
           npx --yes gluestack-ui@latest add vstack -y
+          npm install --save-dev babel-preset-expo
 
       - name: Preserve InsureIT Expo shell and Metro resolver
         run: |
@@ -200,11 +201,10 @@ jobs:
           p.write_text(s)
           PY
 
-      - name: Inspect integration
+      - name: Inspect dependency and integration diff
         run: |
           test -f apps/mobile-app/components/gluestack-ui/gluestack-ui-provider/index.tsx
-          sed -n '1,80p' apps/mobile-app/app/_layout.tsx
-          sed -n '1,100p' apps/mobile-app/metro.config.js
+          git diff -- apps/mobile-app/package.json
           git status --short
           git diff --stat
 
@@ -223,17 +223,3 @@ jobs:
           git commit -m "Adopt gluestack for dynamic dashboard attention greeting"
           git pull --rebase origin main
           git push origin HEAD:main
-
-      - name: Verify Expo credential
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        working-directory: apps/mobile-app
-        run: |
-          test -n "$EXPO_TOKEN"
-          npx --yes eas-cli@18 whoami --non-interactive
-
-      - name: Publish preview update
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        working-directory: apps/mobile-app
-        run: npx --yes eas-cli@18 update --channel preview --environment preview --message "Gluestack dynamic dashboard attention greeting 2026-08-15" --non-interactive
