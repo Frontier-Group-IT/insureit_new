@@ -14,6 +14,19 @@ Pushed range: 5aad21b9..010359e2
 Branch used for repair work: repair/corrected-mobile-preview-20260814
 ```
 
+**Crash repair:** A later SDK 54 preview APK built from `54d30cdd` opened for less than one second and closed on Android. The verified repository issue was an Expo SDK native dependency mismatch: `apps/mobile-app/package.json` and `package-lock.json` allowed a nested `react-native-safe-area-context@5.9.0` while Expo SDK 54 expected `5.6.2`.
+
+```text
+Fix commit: 5b3e31a0254a657363af5c55735fa8613256a189
+Build trigger commit: 1754b679a8ac2345d03f1ce6c1b53de7073f3c17
+Fixed OTA update group: 4f483072-05e0-4490-9cfa-836cd012a3d9
+Replacement APK build ID: 18ee5654-d79b-4d87-b2da-58ce4315c1ee
+Replacement APK versionCode: 4
+Replacement APK URL: https://expo.dev/artifacts/eas/iDjBu-_QDD50SJjKzVde9h47HUiOZrHAoZ9elpw8hXU.apk
+```
+
+Do not use the broken APK build `b7e2f7a2-e0f0-4622-af9e-95e579448f9e` from commit `54d30cdd`.
+
 **Expo preview:** The installed preview APK follows Expo branch/channel `preview`, runtime version `0.1.0`. The user does not need a new APK for these JS/layout changes unless the installed APK cannot consume OTA updates or a future change modifies native/runtime dependencies.
 
 Published preview updates from this work:
@@ -93,6 +106,7 @@ Additional focused ESLint checks were run before the final Expo publish for the 
 5. Confirm Add Policy opened from a vehicle card keeps the vehicle number prefilled and non-editable.
 6. Before the first production APK, do a full UI/UX pass for empty/loading/error states, text overflow, date/premium/IDV form behavior, and low-end Android keyboard behavior.
 7. When the user asks for the final APK, run typecheck, focused lint, mobile web export, and a real-device preview smoke test first. Build a new APK only after those pass.
+8. If the versionCode 4 replacement APK still closes instantly, connect the Android device with USB debugging and capture `adb logcat` for package `com.insureit.mobile`; do not continue guessing from EAS build success alone.
 
 ## Files To Inspect First For Related Work
 
@@ -110,4 +124,3 @@ apps/mobile-app/app/customer/self-managed-documents.tsx
 apps/mobile-app/app/customer/self-managed-milestone.tsx
 apps/mobile-app/app/customer/self-managed-spot-status.tsx
 ```
-
