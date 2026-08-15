@@ -37,7 +37,14 @@ foreach ($relative in $requiredDatabaseFiles) {
     }
 }
 
-$checksums = @(Get-Content -LiteralPath $checksumsPath -Raw | ConvertFrom-Json)
+# Windows PowerShell 5.1 can return a top-level JSON array from ConvertFrom-Json
+# as a single pipeline object. Assign it first, then normalize to an ordinary
+# enumerable array so each checksum entry is verified independently.
+$parsedChecksums = Get-Content -LiteralPath $checksumsPath -Raw | ConvertFrom-Json
+$checksums = @($parsedChecksums)
+if ($checksums.Count -eq 1 -and $checksums[0] -is [System.Array]) {
+    $checksums = @($checksums[0])
+}
 if ($checksums.Count -eq 0) { throw "Checksum inventory is empty." }
 
 $checkedBytes = 0L
