@@ -224,6 +224,24 @@ export async function findPolicyOnboardingBusinessConflict(input: {
   }
 
   const identifiedVehicle = mode === "registered" ? registrationVehicle : (chassisVehicle ?? engineVehicle);
+  if (identifiedVehicle) {
+    const storedChassis = normalizeIdentity(identifiedVehicle.chassis_no);
+    const storedEngine = normalizeIdentity(identifiedVehicle.engine_no);
+    if (chassis && storedChassis && chassis !== storedChassis) {
+      return vehicleConflict(
+        identifiedVehicle,
+        enteredIdentity,
+        `The entered chassis number does not match the chassis already stored for ${identifiedVehicle.vehicle_no}. Review the vehicle details before continuing.`,
+      );
+    }
+    if (engine && storedEngine && engine !== storedEngine) {
+      return vehicleConflict(
+        identifiedVehicle,
+        enteredIdentity,
+        `The entered engine number does not match the engine already stored for ${identifiedVehicle.vehicle_no}. Review the vehicle details before continuing.`,
+      );
+    }
+  }
 
   const policyNumber = String(payload.policy.policyNumber ?? "").trim().toUpperCase();
   const policyNumberNormalized = normalizeIdentity(policyNumber);

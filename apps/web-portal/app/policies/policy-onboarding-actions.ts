@@ -196,7 +196,7 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
     if (effectiveCustomerId) {
       const existingCustomer = await findCustomerById(effectiveCustomerId);
       if (!existingCustomer) return { ok: false, kind: "database", error: "The selected customer is no longer available. Refresh and try again." };
-      rpcCustomer = { ...rpcCustomer, name: existingCustomer.contact_name, phone: existingCustomer.phone, email: "", address: "", city: "", district: "", state: "", pincode: "" };
+      rpcCustomer = { ...rpcCustomer, name: existingCustomer.contact_name, phone: existingCustomer.phone, email: "", address: "", city: "", district: "", state: "", pincode: "", source: "" };
     }
 
     const businessConflict = await findPolicyOnboardingBusinessConflict({ payload, acceptCoverageGap: payload.resolution?.acceptCoverageGap === true });
@@ -251,6 +251,6 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
     revalidatePath("/policies"); revalidatePath("/customers"); revalidatePath("/vehicles");
     return { ok: true, policyId: result.policyId, policyCode: result.policyCode, customerId: result.customerId, vehicleId: result.vehicleId, status: "active" };
   } catch {
-    return { ok: false, kind: "database", error: "We couldn't save the policy. Please try again." };
+    return { ok: false, kind: "database", error: "We couldn't complete the policy booking. Your entered form details are still intact. Review the details and try again." };
   }
 }
