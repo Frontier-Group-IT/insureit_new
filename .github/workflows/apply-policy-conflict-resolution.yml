@@ -21,6 +21,18 @@ jobs:
           ref: feature/policy-onboarding-conflict-resolution
           fetch-depth: 0
 
+      - name: Correct one-shot script guard
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('.automation/apply_policy_conflict_resolution.py')
+          text = path.read_text()
+          bad = '''        ownership_line_match = ownership_pattern.search(text)\n        if ownership_line_match:\n            raise SystemExit("Ownership pattern unexpectedly remained after replacement")\n'''
+          if bad not in text:
+              raise SystemExit('Expected guard block not found')
+          path.write_text(text.replace(bad, '', 1))
+          PY
+
       - name: Apply conflict resolution patch
         run: python .automation/apply_policy_conflict_resolution.py
 
