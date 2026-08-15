@@ -1,0 +1,65 @@
+name: Temporary Publish Fixed Mobile Preview
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/tmp-publish-fixed-mobile-preview.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify mobile before release
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-public-anon-key
+          NODE_ENV: production
+        working-directory: apps/mobile-app
+        run: |
+          npm run typecheck
+          npx expo export:embed \
+            --platform android \
+            --dev false \
+            --entry-file node_modules/expo-router/entry.js \
+            --bundle-output /tmp/index.android.bundle
+          ../../node_modules/react-native/sdks/hermesc/linux64-bin/hermesc \
+            -O \
+            -emit-binary \
+            -out /tmp/index.android.hbc \
+            /tmp/index.android.bundle
+          test -s /tmp/index.android.hbc
+
+      - name: Verify Expo credential
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        working-directory: apps/mobile-app
+        run: |
+          test -n "$EXPO_TOKEN"
+          npx --yes eas-cli@18 whoami --non-interactive
+
+      - name: Queue Android preview APK
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        working-directory: apps/mobile-app
+        run: npx --yes eas-cli@18 build --platform android --profile preview --non-interactive --no-wait
+
+      - name: Publish preview OTA
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        working-directory: apps/mobile-app
+        run: npx --yes eas-cli@18 update --channel preview --environment preview --message "SDK54 Hermes compatibility fix and gluestack mobile preview 2026-08-15" --non-interactive
