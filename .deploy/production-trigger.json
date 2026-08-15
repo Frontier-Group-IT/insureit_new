@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the External Policy form action and Policy Product fixes to production.",
-  "deploy_requested_at": "2026-08-15T14:52:00+05:30",
+  "purpose": "Deploy the current verified INSUREIT web state, including customer lead-source intermediary alignment and current hierarchy/dashboard fixes, to production.",
+  "deploy_requested_at": "2026-08-15T16:48:00+05:30",
   "requested_by": "explicit user request",
   "source": "Deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "265a1a8736c55be0301c6ca8169c93cb26023509",
-  "release_scope": "Add/Edit External Policy: remove duplicate lower Cancel/Save actions, load vehicle_type with customer vehicles, and use the same vehicle-class-specific Policy Product options as Policy Onboarding.",
+  "source_commit": "194d14b1cedad00847f26354d153e68b5948f609",
+  "release_scope": "Current main web state, including customer lead-source intermediary alignment, intermediary-derived read visibility, and previously verified hierarchy/dashboard refinements. Mobile-only files on main are not part of the web runtime.",
   "verification": "The protected production workflow must run its compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
