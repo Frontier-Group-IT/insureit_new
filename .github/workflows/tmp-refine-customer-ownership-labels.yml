@@ -1,0 +1,93 @@
+name: One-time customer ownership UI refinement
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/tmp-refine-customer-ownership-labels.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  refine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Separate internal owner from intermediary lead source
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          page = Path('apps/web-portal/app/customers/[id]/edit/page.tsx')
+          text = page.read_text()
+
+          replacements = [
+            (
+              'type Customer = { id:string; customer_code:string; contact_name:string; company_name:string|null; phone:string; email:string|null; partner_type:string|null; address_street:string|null; address_locality:string|null; address:string|null; india_location_id:string|null; city:string|null; state:string|null; postal_code:string|null; pan_number:string|null; aadhaar_last_four:string|null; legal_trade_name:string|null; is_gst_registered:boolean; gst_number:string|null; fleet_size_band:string|null; onboarding_status:string; assigned_agent_id:string|null; created_at:string; updated_at:string };',
+              'type Customer = { id:string; customer_code:string; contact_name:string; company_name:string|null; phone:string; email:string|null; partner_type:string|null; address_street:string|null; address_locality:string|null; address:string|null; india_location_id:string|null; city:string|null; state:string|null; postal_code:string|null; pan_number:string|null; aadhaar_last_four:string|null; legal_trade_name:string|null; is_gst_registered:boolean; gst_number:string|null; fleet_size_band:string|null; onboarding_status:string; assigned_agent_id:string|null; lead_source_intermediary_id:string|null; created_at:string; updated_at:string };'
+            ),
+            ('type PolicyAssignmentRow = { intermediary_code:string|null; created_at:string };\n', ''),
+            ('type IntermediaryRow = { display_name:string };', 'type IntermediaryRow = { display_name:string; intermediary_type:string };'),
+            ('const [{data:customer,error},{data:documents},{data:vehicles},{data:latestPolicyAssignment}] = await Promise.all([', 'const [{data:customer,error},{data:documents},{data:vehicles}] = await Promise.all(['),
+            ('admin.from("customers").select("id, customer_code, contact_name, company_name, phone, email, partner_type, address_street, address_locality, address, india_location_id, city, state, postal_code, pan_number, aadhaar_last_four, legal_trade_name, is_gst_registered, gst_number, fleet_size_band, onboarding_status, assigned_agent_id, created_at, updated_at").eq("id",id).maybeSingle<Customer>(),', 'admin.from("customers").select("id, customer_code, contact_name, company_name, phone, email, partner_type, address_street, address_locality, address, india_location_id, city, state, postal_code, pan_number, aadhaar_last_four, legal_trade_name, is_gst_registered, gst_number, fleet_size_band, onboarding_status, assigned_agent_id, lead_source_intermediary_id, created_at, updated_at").eq("id",id).maybeSingle<Customer>(),'),
+            ('admin.from("vehicles").select("id, vehicle_no, vehicle_type, make, model").eq("customer_id",id).order("created_at",{ascending:false}).returns<VehicleRow[]>(),\n    admin.from("policies").select("intermediary_code, created_at").eq("customer_id",id).not("intermediary_code","is",null).order("created_at",{ascending:false}).limit(1).maybeSingle<PolicyAssignmentRow>()', 'admin.from("vehicles").select("id, vehicle_no, vehicle_type, make, model").eq("customer_id",id).order("created_at",{ascending:false}).returns<VehicleRow[]>()'),
+            (
+              '''  let intermediaryAssignedTo: string | null = null;\n  if (latestPolicyAssignment?.intermediary_code) {\n    const { data: intermediary } = await admin\n      .from("intermediaries")\n      .select("display_name")\n      .eq("intermediary_code", latestPolicyAssignment.intermediary_code)\n      .maybeSingle<IntermediaryRow>();\n    intermediaryAssignedTo = intermediary?.display_name ?? null;\n  }\n  const assignedAgentName = customer.assigned_agent_id\n    ? agents?.find((agent) => agent.id === customer.assigned_agent_id)?.full_name ?? null\n    : null;\n  const assignedTo = intermediaryAssignedTo ?? assignedAgentName ?? "Not assigned";''',
+              '''  let leadSourceName = "Not recorded";\n  if (customer.lead_source_intermediary_id) {\n    const { data: intermediary } = await admin\n      .from("intermediaries")\n      .select("display_name, intermediary_type")\n      .eq("id", customer.lead_source_intermediary_id)\n      .maybeSingle<IntermediaryRow>();\n    if (intermediary?.display_name) {\n      const sourceType = intermediary.intermediary_type === "posp"\n        ? "POSP"\n        : intermediary.intermediary_type === "misp"\n          ? "MISP"\n          : intermediary.intermediary_type === "partner"\n            ? "Partner"\n            : "Intermediary";\n      leadSourceName = `${sourceType} · ${intermediary.display_name}`;\n    }\n  }\n  const internalOwnerName = customer.assigned_agent_id\n    ? agents?.find((agent) => agent.id === customer.assigned_agent_id)?.full_name ?? "Not assigned"\n    : "Not assigned";'''
+            ),
+            ('agents={agents??[]} assignedTo={assignedTo}', 'agents={agents??[]} internalOwnerName={internalOwnerName} leadSourceName={leadSourceName}')
+          ]
+
+          for old, new in replacements:
+            if old not in text:
+              raise SystemExit(f'Expected customer page fragment not found: {old[:120]}')
+            text = text.replace(old, new, 1)
+          page.write_text(text)
+
+          editor = Path('apps/web-portal/app/customers/[id]/edit/customer-profile-editor.tsx')
+          text = editor.read_text()
+          replacements = [
+            ('type Props = { customer: Customer; documents: DocumentRow[]; vehicles: VehicleRow[]; agents: AgentOption[]; assignedTo?: string; action:', 'type Props = { customer: Customer; documents: DocumentRow[]; vehicles: VehicleRow[]; agents: AgentOption[]; internalOwnerName?: string; leadSourceName?: string; action:'),
+            ('export function CustomerProfileEditor({ customer, documents, vehicles, agents, assignedTo: assignedToOverride, action, errorMessage, errorField }: Props) {', 'export function CustomerProfileEditor({ customer, documents, vehicles, agents, internalOwnerName: internalOwnerNameOverride, leadSourceName: leadSourceNameOverride, action, errorMessage, errorField }: Props) {'),
+            ('''  const assignedTo = assignedToOverride ?? (customer.assigned_agent_id\n    ? agents.find((agent) => agent.id === customer.assigned_agent_id)?.full_name ?? "Not assigned"\n    : "Not assigned");''', '''  const internalOwnerName = internalOwnerNameOverride ?? (customer.assigned_agent_id\n    ? agents.find((agent) => agent.id === customer.assigned_agent_id)?.full_name ?? "Not assigned"\n    : "Not assigned");\n  const leadSourceName = leadSourceNameOverride ?? "Not recorded";'''),
+            ('<div className="grid border-t border-white/15 sm:grid-cols-2 xl:grid-cols-6" aria-label="Customer summary">', '<div className="grid border-t border-white/15 sm:grid-cols-2 xl:grid-cols-7" aria-label="Customer summary">'),
+            ('<HeaderMetric icon={UserCheck} label="Assigned To" value={assignedTo} />', '<HeaderMetric icon={UserCheck} label="Internal Account Owner" value={internalOwnerName} />\n            <HeaderMetric icon={BadgeCheck} label="Lead Source" value={leadSourceName} />')
+          ]
+          for old, new in replacements:
+            if old not in text:
+              raise SystemExit(f'Expected customer editor fragment not found: {old[:120]}')
+            text = text.replace(old, new, 1)
+          editor.write_text(text)
+          PY
+      - name: Install web dependencies
+        working-directory: apps/web-portal
+        run: npm install --no-audit --no-fund
+      - name: Typecheck
+        working-directory: apps/web-portal
+        run: npm run typecheck
+      - name: Lint
+        working-directory: apps/web-portal
+        run: npm run lint
+      - name: Production build
+        working-directory: apps/web-portal
+        run: npm run build
+      - name: Commit verified refinement
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add 'apps/web-portal/app/customers/[id]/edit/page.tsx' 'apps/web-portal/app/customers/[id]/edit/customer-profile-editor.tsx'
+          if git diff --cached --quiet; then
+            echo 'Customer ownership UI refinement already present; nothing to commit.'
+            exit 0
+          fi
+          git commit -m 'Clarify customer account owner and lead source'
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
