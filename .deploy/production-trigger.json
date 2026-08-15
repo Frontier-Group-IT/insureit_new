@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the verified policy onboarding conflict-resolution and renewal-safe coverage release to production.",
-  "deploy_requested_at": "2026-08-15T16:51:22+05:30",
+  "purpose": "Deploy the verified customer ownership and lead-source refinement to production while preserving all newer verified main changes.",
+  "deploy_requested_at": "2026-08-15T17:09:56+05:30",
   "requested_by": "explicit user request",
   "source": "Deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "83c2033477c5ee504ad789fbe4e7ba966bf2c2a2",
-  "release_scope": "Policy onboarding conflict dialogs, customer and vehicle reuse/resolution, form draft preservation, renewal-safe coverage rules, external policy friendly errors, plus all verified main changes already present before this merge.",
-  "verification": "The protected production workflow must rerun its compulsory web verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source_commit": "06b4baea08938db30e3a6fc0a3fa9b3a37647cff",
+  "release_scope": "Customer Profile now separates the internal account owner from the canonical POSP/MISP/Partner lead source, using customers.assigned_agent_id only for the internal profile relationship and customers.lead_source_intermediary_id for the originating intermediary. Includes all verified main changes present in the source snapshot.",
+  "verification": "Canonical web verification run 31882497632 passed access-control and security regressions, OCR regressions, typecheck, lint and the Next.js production build on a descendant of refinement commit d614870414a9a5b1f84dec8a467be0e2493d0b46. The protected deployment workflow must rerun its compulsory verification gate before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
