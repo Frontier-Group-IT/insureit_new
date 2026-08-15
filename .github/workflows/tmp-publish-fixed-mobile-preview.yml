@@ -62,4 +62,4 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         working-directory: apps/mobile-app
-        run: npx --yes eas-cli@18 update --channel preview --environment preview --message "SDK54 Hermes compatibility fix and gluestack mobile preview 2026-08-15" --non-interactive
+        run: npx --yes eas-cli@18 update --channel preview --environment preview --message "SDK54 safe-area native fix preview 2026-08-15" --non-interactive
