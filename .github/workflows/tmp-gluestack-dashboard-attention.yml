@@ -25,10 +25,8 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: package-lock.json
-
       - name: Install current dependencies
         run: npm install --no-audit --no-fund
-
       - name: Initialize gluestack UI pilot
         working-directory: apps/mobile-app
         run: |
@@ -37,7 +35,6 @@ jobs:
           npx --yes gluestack-ui@latest add text -y
           npx --yes gluestack-ui@latest add vstack -y
           npm install --save-dev babel-preset-expo
-
       - name: Preserve InsureIT Expo shell and Metro resolver
         run: |
           cat > apps/mobile-app/app/_layout.tsx <<'EOF'
@@ -52,9 +49,7 @@ jobs:
           import { GluestackUIProvider } from '@/components/gluestack-ui/gluestack-ui-provider';
           import { RealtimeNotificationProvider } from '@/components/realtime-notifications';
 
-          export const unstable_settings = {
-            initialRouteName: 'index',
-          };
+          export const unstable_settings = { initialRouteName: 'index' };
 
           export default function RootLayout() {
             return (
@@ -67,14 +62,11 @@ jobs:
           function RootApplication() {
             const navigationState = useRootNavigationState();
             const [minimumIntroComplete, setMinimumIntroComplete] = useState(false);
-
             useEffect(() => {
               const timer = setTimeout(() => setMinimumIntroComplete(true), 1100);
               return () => clearTimeout(timer);
             }, []);
-
             const introVisible = !minimumIntroComplete || !navigationState?.key;
-
             return (
               <>
                 <StatusBar style={introVisible ? 'light' : 'dark'} />
@@ -89,33 +81,19 @@ jobs:
             );
           }
 
-          const styles = StyleSheet.create({
-            introOverlay: {
-              ...StyleSheet.absoluteFillObject,
-              zIndex: 20000,
-              elevation: 20000,
-            },
-          });
+          const styles = StyleSheet.create({ introOverlay: { ...StyleSheet.absoluteFillObject, zIndex: 20000, elevation: 20000 } });
           EOF
 
           cat > apps/mobile-app/metro.config.js <<'EOF'
           const path = require("path");
           const { getDefaultConfig } = require("expo/metro-config");
           const { withUniwindConfig } = require("uniwind/metro");
-
           const projectRoot = __dirname;
           const workspaceRoot = path.resolve(projectRoot, "../..");
           const config = getDefaultConfig(projectRoot);
-
-          const resolvePackage = (name) =>
-            path.dirname(require.resolve(`${name}/package.json`, { paths: [projectRoot] }));
-
+          const resolvePackage = (name) => path.dirname(require.resolve(`${name}/package.json`, { paths: [projectRoot] }));
           config.resolver.disableHierarchicalLookup = true;
-          config.resolver.nodeModulesPaths = [
-            path.join(projectRoot, "node_modules"),
-            path.join(workspaceRoot, "node_modules"),
-          ];
-
+          config.resolver.nodeModulesPaths = [path.join(projectRoot, "node_modules"), path.join(workspaceRoot, "node_modules")];
           config.resolver.extraNodeModules = {
             ...config.resolver.extraNodeModules,
             "expo-constants": resolvePackage("expo-constants"),
@@ -123,103 +101,52 @@ jobs:
             "react-native-safe-area-context": resolvePackage("react-native-safe-area-context"),
             "react-native-screens": resolvePackage("react-native-screens"),
           };
-
           config.resolver.blockList = [
             new RegExp(`${escapePath(path.join(projectRoot, "dist"))}[/\\\\].*`),
             new RegExp(`${escapePath(path.join(projectRoot, "dist-web"))}[/\\\\].*`),
             new RegExp(`${escapePath(path.join(projectRoot, ".expo", "web"))}[/\\\\].*`),
           ];
-
-          module.exports = withUniwindConfig(config, {
-            cssEntryFile: './global.css',
-            dtsFile: './uniwind-types.d.ts',
-          });
-
-          function escapePath(value) {
-            return value.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&");
-          }
+          module.exports = withUniwindConfig(config, { cssEntryFile: './global.css', dtsFile: './uniwind-types.d.ts' });
+          function escapePath(value) { return value.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&"); }
           EOF
-
       - name: Patch dashboard attention greeting
         run: |
           python - <<'PY'
           from pathlib import Path
           p = Path('apps/mobile-app/app/customer/home.tsx')
           s = p.read_text()
-
-          s = s.replace(
-            "import { LoadingState, UniversalBottomTabs } from '@/components/ui';",
-            "import { LoadingState, UniversalBottomTabs } from '@/components/ui';\nimport { Heading } from '@/components/gluestack-ui/heading';\nimport { Text as GluestackText } from '@/components/gluestack-ui/text';\nimport { VStack } from '@/components/gluestack-ui/vstack';"
-          )
-          s = s.replace(
-            "import { getCurrentSession, getCustomerForUser, getOnboardingApplicationForUser, getProfile, isValidProfile, resetLocalAuthState, signOut } from '@/lib/auth';",
-            "import { getCurrentSession, getCustomerForUser, getOnboardingApplicationForUser, getProfile, isValidProfile, resetLocalAuthState, signOut } from '@/lib/auth';\nimport { buildComplianceRenewals } from '@/lib/compliance-renewals';"
-          )
-          s = s.replace(
-            "import type { Claim, ClaimTask, Customer, CustomerOnboardingApplication, Profile, Vehicle } from '@/lib/types';",
-            "import type { Claim, ClaimTask, Customer, CustomerOnboardingApplication, Policy, Profile, Vehicle } from '@/lib/types';"
-          )
-          s = s.replace(
-            "  const [vehicles, setVehicles] = useState<Vehicle[]>([]);\n  const [claims, setClaims] = useState<Claim[]>([]);",
-            "  const [vehicles, setVehicles] = useState<Vehicle[]>([]);\n  const [policies, setPolicies] = useState<Policy[]>([]);\n  const [claims, setClaims] = useState<Claim[]>([]);"
-          )
-          s = s.replace(
-            "        setVehicles([]);\n        setClaims([]);",
-            "        setVehicles([]);\n        setPolicies([]);\n        setClaims([]);"
-          )
-          s = s.replace(
-            "          const [vehicleResult, claimResult, taskResult] = await Promise.all([\n            supabase.from('vehicles').select('*').eq('customer_id', nextCustomer.id),\n            supabase.from('claims').select('*').eq('customer_id', nextCustomer.id),\n            supabase.from('claim_tasks').select('*').eq('status', 'open').order('created_at', { ascending: false }),\n          ]);",
-            "          const [vehicleResult, policyResult, claimResult, taskResult] = await Promise.all([\n            supabase.from('vehicles').select('*').eq('customer_id', nextCustomer.id),\n            supabase.from('policies').select('*').eq('customer_id', nextCustomer.id),\n            supabase.from('claims').select('*').eq('customer_id', nextCustomer.id),\n            supabase.from('claim_tasks').select('*').eq('status', 'open').order('created_at', { ascending: false }),\n          ]);"
-          )
-          s = s.replace(
-            "          if (vehicleResult.error) console.warn('Customer vehicles load failed', vehicleResult.error.message);\n          if (claimResult.error)",
-            "          if (vehicleResult.error) console.warn('Customer vehicles load failed', vehicleResult.error.message);\n          if (policyResult.error) console.warn('Customer policies load failed', policyResult.error.message);\n          if (claimResult.error)"
-          )
-          s = s.replace(
-            "          setVehicles(vehicleResult.data ?? []); setClaims(nextClaims);",
-            "          setVehicles(vehicleResult.data ?? []); setPolicies(policyResult.data ?? []); setClaims(nextClaims);"
-          )
-
+          s = s.replace("import { LoadingState, UniversalBottomTabs } from '@/components/ui';", "import { LoadingState, UniversalBottomTabs } from '@/components/ui';\nimport { Heading } from '@/components/gluestack-ui/heading';\nimport { Text as GluestackText } from '@/components/gluestack-ui/text';\nimport { VStack } from '@/components/gluestack-ui/vstack';")
+          s = s.replace("import { getCurrentSession, getCustomerForUser, getOnboardingApplicationForUser, getProfile, isValidProfile, resetLocalAuthState, signOut } from '@/lib/auth';", "import { getCurrentSession, getCustomerForUser, getOnboardingApplicationForUser, getProfile, isValidProfile, resetLocalAuthState, signOut } from '@/lib/auth';\nimport { buildComplianceRenewals } from '@/lib/compliance-renewals';")
+          s = s.replace("import type { Claim, ClaimTask, Customer, CustomerOnboardingApplication, Profile, Vehicle } from '@/lib/types';", "import type { Claim, ClaimTask, Customer, CustomerOnboardingApplication, Policy, Profile, Vehicle } from '@/lib/types';")
+          s = s.replace("  const [vehicles, setVehicles] = useState<Vehicle[]>([]);\n  const [claims, setClaims] = useState<Claim[]>([]);", "  const [vehicles, setVehicles] = useState<Vehicle[]>([]);\n  const [policies, setPolicies] = useState<Policy[]>([]);\n  const [claims, setClaims] = useState<Claim[]>([]);")
+          s = s.replace("        setVehicles([]);\n        setClaims([]);", "        setVehicles([]);\n        setPolicies([]);\n        setClaims([]);")
+          s = s.replace("          const [vehicleResult, claimResult, taskResult] = await Promise.all([\n            supabase.from('vehicles').select('*').eq('customer_id', nextCustomer.id),\n            supabase.from('claims').select('*').eq('customer_id', nextCustomer.id),\n            supabase.from('claim_tasks').select('*').eq('status', 'open').order('created_at', { ascending: false }),\n          ]);", "          const [vehicleResult, policyResult, claimResult, taskResult] = await Promise.all([\n            supabase.from('vehicles').select('*').eq('customer_id', nextCustomer.id),\n            supabase.from('policies').select('*').eq('customer_id', nextCustomer.id),\n            supabase.from('claims').select('*').eq('customer_id', nextCustomer.id),\n            supabase.from('claim_tasks').select('*').eq('status', 'open').order('created_at', { ascending: false }),\n          ]);")
+          s = s.replace("          if (vehicleResult.error) console.warn('Customer vehicles load failed', vehicleResult.error.message);\n          if (claimResult.error)", "          if (vehicleResult.error) console.warn('Customer vehicles load failed', vehicleResult.error.message);\n          if (policyResult.error) console.warn('Customer policies load failed', policyResult.error.message);\n          if (claimResult.error)")
+          s = s.replace("          setVehicles(vehicleResult.data ?? []); setClaims(nextClaims);", "          setVehicles(vehicleResult.data ?? []); setPolicies(policyResult.data ?? []); setClaims(nextClaims);")
           anchor = "  const pendingActionCount = pendingTask ? documentTasks.filter((task) => task.claim_id === pendingTask.claim_id).length : 0;\n"
           addition = anchor + "  const renewalAttentionCount = useMemo(() => buildComplianceRenewals({ vehicles, policies }).totalPending, [policies, vehicles]);\n  const claimAttentionCount = documentTasks.length;\n  const attentionCount = renewalAttentionCount + claimAttentionCount;\n  const attentionMessage = attentionCount > 0\n    ? `${attentionCount} item${attentionCount === 1 ? '' : 's'} ${attentionCount === 1 ? 'needs' : 'need'} your attention today.`\n    : 'Everything looks up to date.';\n"
-          if anchor not in s:
-            raise SystemExit('pending action anchor not found')
+          if anchor not in s: raise SystemExit('pending action anchor not found')
           s = s.replace(anchor, addition)
-
           old = "      <View style={styles.greetingBlock}><Text style={styles.greeting}>{timeGreeting()}, {firstName}</Text><Text style={styles.subGreeting}>Manage your vehicles, renewals and claims</Text><Text style={styles.subGreeting}>all in one place.</Text>{selectedContext?.group_name ? <Text style={styles.parentCompany}>Associated with {selectedContext.group_name}</Text> : null}</View>"
           new = "      <VStack space=\"xs\" style={styles.greetingBlock}>\n        <Heading size=\"xl\" style={styles.greeting}>{timeGreeting()}, {firstName}</Heading>\n        <GluestackText size=\"sm\" style={[styles.subGreeting, attentionCount > 0 && styles.subGreetingAttention]}>{attentionMessage}</GluestackText>\n        {selectedContext?.group_name ? <Text style={styles.parentCompany}>Associated with {selectedContext.group_name}</Text> : null}\n      </VStack>"
-          if old not in s:
-            raise SystemExit('greeting block not found')
+          if old not in s: raise SystemExit('greeting block not found')
           s = s.replace(old, new)
-
           old_styles = "greetingBlock: { marginBottom: 0 }, greeting: { color: palette.navy, fontSize: 13, lineHeight: 16, fontWeight: '900' }, subGreeting: { color: palette.navy, fontSize: 13, lineHeight: 17, fontWeight: '500' }, parentCompany:"
           new_styles = "greetingBlock: { marginBottom: 4, paddingTop: 2, paddingBottom: 5 }, greeting: { color: palette.navy, fontSize: 22, lineHeight: 28, fontWeight: '700', letterSpacing: -0.35 }, subGreeting: { color: '#667085', fontSize: 13, lineHeight: 19, fontWeight: '500' }, subGreetingAttention: { color: '#8A5B00' }, parentCompany:"
-          if old_styles not in s:
-            raise SystemExit('greeting styles not found')
+          if old_styles not in s: raise SystemExit('greeting styles not found')
           s = s.replace(old_styles, new_styles)
-
           p.write_text(s)
           PY
-
-      - name: Inspect dependency and integration diff
-        run: |
-          test -f apps/mobile-app/components/gluestack-ui/gluestack-ui-provider/index.tsx
-          git diff -- apps/mobile-app/package.json
-          git status --short
-          git diff --stat
-
       - name: Verify mobile
         run: |
           npm run typecheck:mobile
           npm run lint:mobile
           npm run build:mobile:web
-
       - name: Commit verified pilot
         run: |
           git config user.name "antnish1"
           git config user.email "shahdolho@gmail.com"
-          git add apps/mobile-app package-lock.json package.json gluestack-ui.config.json 2>/dev/null || true
-          git add apps/mobile-app
+          git add -A
           git commit -m "Adopt gluestack for dynamic dashboard attention greeting"
-          git pull --rebase origin main
+          git pull --rebase --autostash origin main
           git push origin HEAD:main
