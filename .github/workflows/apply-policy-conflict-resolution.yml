@@ -1,0 +1,37 @@
+name: Apply policy conflict resolution patch
+
+on:
+  push:
+    branches:
+      - feature/policy-onboarding-conflict-resolution
+    paths:
+      - .automation/apply_policy_conflict_resolution.py
+      - .github/workflows/apply-policy-conflict-resolution.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/policy-onboarding-conflict-resolution
+          fetch-depth: 0
+
+      - name: Apply conflict resolution patch
+        run: python .automation/apply_policy_conflict_resolution.py
+
+      - name: Commit generated source changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal/app/policies/policy-onboarding-actions.ts apps/web-portal/components/policy-unified-form.tsx
+          if git diff --cached --quiet; then
+            echo "No generated changes to commit"
+          else
+            git commit -m "Implement policy onboarding conflict resolution"
+            git push origin HEAD:feature/policy-onboarding-conflict-resolution
+          fi
