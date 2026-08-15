@@ -16,7 +16,6 @@ jobs:
     env:
       EXPO_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-public-anon-key
-      NODE_ENV: production
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,6 +41,8 @@ jobs:
           npm run lint:mobile
 
       - name: Reproduce Android release bundle and compile with Hermes
+        env:
+          NODE_ENV: production
         working-directory: apps/mobile-app
         run: |
           rm -f /tmp/index.android.bundle /tmp/index.android.hbc /tmp/index.android.map
