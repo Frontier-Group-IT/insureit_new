@@ -1,17 +1,29 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { AppSearchBar } from '@/components/design-system';
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { getOperationalCustomerContexts } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
-import { palette, radii } from '@/lib/theme';
+import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
 
 type PolicyFilter = 'All' | 'Active' | 'Renewal Due' | 'Expired';
-type PolicyRow = { id: string; customer_id: string; vehicle_id: string; insurance_company_id: string; policy_no: string; policy_type: string; start_date: string; end_date: string; source: 'sibl' | 'external' };
+type PolicyTone = 'active' | 'due' | 'expired';
+type PolicyRow = {
+  id: string;
+  customer_id: string;
+  vehicle_id: string;
+  insurance_company_id: string;
+  policy_no: string;
+  policy_type: string;
+  start_date: string;
+  end_date: string;
+  source: 'sibl' | 'external';
+};
 
 export default function PoliciesScreen() {
   const router = useRouter();
@@ -52,7 +64,6 @@ export default function PoliciesScreen() {
 
   if (loading) return <Screen title="My Policies"><LoadingState /></Screen>;
 
-  const metrics = policyMetrics(policies);
   const filteredPolicies = policies.filter((policy) => {
     const vehicle = vehicles.find((item) => item.id === policy.vehicle_id);
     const company = companies.find((item) => item.id === policy.insurance_company_id);
@@ -65,93 +76,119 @@ export default function PoliciesScreen() {
 
   return (
     <Screen title="My Policies" showLogout showTitleHeader={false}>
-      <View style={styles.hero}>
-        <View style={styles.heroGlow} />
-        <View style={styles.heroTop}>
+      <View style={styles.searchSection}>
+        <View style={styles.searchHeadingRow}>
           <View>
-            <Text style={styles.eyebrow}>POLICY WALLET</Text>
-            <Text style={styles.pageTitle}>My Policies</Text>
+            <Text style={styles.searchHeading}>Find your policy</Text>
+            <Text style={styles.searchSubheading}>Search by vehicle, insurer or policy number</Text>
           </View>
           <Pressable accessibilityRole="button" onPress={() => router.push('/customer/add-policy')} style={({ pressed }) => [styles.addButton, pressed && styles.addButtonPressed]}>
-            <MaterialCommunityIcons name="plus" size={17} color="#FFFFFF" />
+            <MaterialCommunityIcons name="plus" size={16} color="#FFFFFF" />
             <Text style={styles.addButtonText}>Add</Text>
           </Pressable>
         </View>
-        <Text style={styles.heroText}>Track cover, expiry and renewal action for every vehicle.</Text>
-        <View style={styles.metricRow}>
-          <Metric label="Active" value={metrics.active} tone="active" />
-          <Metric label="Due" value={metrics.due} tone="due" />
-          <Metric label="Expired" value={metrics.expired} tone="expired" />
-        </View>
+        <AppSearchBar value={query} onChangeText={setQuery} placeholder="Search vehicle, insurer or policy no." />
       </View>
 
-      <View style={styles.searchBox}>
-        <MaterialCommunityIcons name="magnify" size={18} color="#0A43A3" />
-        <TextInput value={query} onChangeText={setQuery} placeholder="Search vehicle, insurer or policy no." placeholderTextColor="#7F8EA4" style={styles.searchInput} />
-        {query ? <Pressable accessibilityRole="button" accessibilityLabel="Clear policy search" onPress={() => setQuery('')} style={styles.clearButton}><MaterialCommunityIcons name="close" size={15} color="#667085" /></Pressable> : null}
-      </View>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterWrap}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroller} contentContainerStyle={styles.filterWrap}>
         {(['All', 'Active', 'Renewal Due', 'Expired'] as PolicyFilter[]).map((item) => (
           <Pressable key={item} accessibilityRole="button" onPress={() => setFilter(item)} style={[styles.filterChip, filter === item && styles.filterChipActive]}>
-            <Text style={[styles.filterText, filter === item && styles.filterTextActive]}>{item}</Text>
+            <Text style={[styles.filterText, filter === item && styles.filterTextActive]}>{item} ({countForFilter(item, policies)})</Text>
           </Pressable>
         ))}
       </ScrollView>
 
       {policies.length === 0 ? <EmptyState title="No policies yet" body="Add your current policy once and we will keep the vehicle cover visible here." actionLabel="Add Policy" onAction={() => router.push('/customer/add-policy')} icon="shield-plus-outline" /> : null}
-      {policies.length > 0 && filteredPolicies.length === 0 ? <EmptyState title="No matching policies" body="Clear search or switch the filter to see more policy records." actionLabel="Clear Filters" onAction={() => { setQuery(''); setFilter('All'); }} icon="filter-remove-outline" /> : null}
 
       {filteredPolicies.map((policy) => {
         const vehicle = vehicles.find((item) => item.id === policy.vehicle_id);
         const company = companies.find((item) => item.id === policy.insurance_company_id);
         const days = daysUntil(policy.end_date);
         const tone = policyTone(policy.end_date);
+        const colors = policyToneColors(tone);
+
         return (
-          <Pressable key={`${policy.source}-${policy.id}`} onPress={() => router.push({ pathname: '/customer/policy-detail', params: { id: policy.id, source: policy.source } } as any)} style={({ pressed }) => [styles.policyCard, pressed && styles.policyCardPressed]}>
-            <View style={[styles.cardAccent, tone === 'expired' && styles.cardAccentExpired, tone === 'due' && styles.cardAccentDue]} />
+          <Pressable
+            key={`${policy.source}-${policy.id}`}
+            accessibilityRole="button"
+            onPress={() => router.push({ pathname: '/customer/policy-detail', params: { id: policy.id, source: policy.source } } as any)}
+            style={({ pressed }) => [styles.policyCard, { backgroundColor: colors.background, borderColor: colors.border }, pressed && styles.policyCardPressed]}
+          >
+            <View style={[styles.accentBar, { backgroundColor: colors.accent }]} />
+
             <View style={styles.policyTop}>
-              <View style={[styles.policyIcon, policy.source === 'external' && styles.externalPolicyIcon, tone === 'expired' && styles.policyIconExpired, tone === 'due' && styles.policyIconDue]}>
-                <MaterialCommunityIcons name={policy.source === 'external' ? 'account-edit-outline' : tone === 'expired' ? 'shield-alert-outline' : tone === 'due' ? 'calendar-alert' : 'shield-check-outline'} size={22} color={policy.source === 'external' ? '#0A43A3' : toneColor(tone)} />
+              <View style={[styles.statusIcon, { backgroundColor: colors.soft }]}>
+                <MaterialCommunityIcons name={policyIcon(policy.source, tone)} size={23} color={colors.accent} />
               </View>
-              <View style={styles.policyCopy}>
-                <View style={styles.titleLine}>
-                  <Text style={styles.vehicleNo}>{vehicle?.vehicle_no ?? 'Vehicle unavailable'}</Text>
-                  {policy.source === 'external' ? <View style={styles.sourcePill}><Text style={styles.sourceText}>Customer Added</Text></View> : null}
+
+              <View style={styles.policyTitleCopy}>
+                <View style={styles.stageRow}>
+                  <Text style={[styles.stageLabel, { color: colors.accent }]}>{policyStageLabel(policy, tone)}</Text>
+                  {policy.source === 'external' ? <View style={styles.sourcePill}><Text style={styles.sourceText}>CUSTOMER ADDED</Text></View> : null}
                 </View>
-                <Text style={styles.insurerName} numberOfLines={1}>{company?.name ?? 'Insurer pending'}</Text>
+                <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle?.vehicle_no ?? 'Vehicle unavailable'}</Text>
               </View>
-              <View style={[styles.statusPill, tone === 'expired' && styles.statusExpired, tone === 'due' && styles.statusDue]}>
-                <Text style={[styles.statusText, tone === 'expired' && styles.statusExpiredText, tone === 'due' && styles.statusDueText]}>{tone === 'expired' ? 'Expired' : tone === 'due' ? 'Renewal' : 'Active'}</Text>
+
+              <View style={[styles.statusBadge, { backgroundColor: colors.accent }]}>
+                <Text style={styles.statusBadgeText}>{policyStatusLabel(tone)}</Text>
               </View>
             </View>
-            <View style={styles.policyInfo}>
-              <Info label="Policy No." value={policy.policy_no} />
-              <Info label="Type" value={policy.policy_type || 'Policy'} />
+
+            <View style={styles.numberRow}>
+              <View style={styles.numberBox}>
+                <Text style={styles.numberLabel}>Policy No.</Text>
+                <Text style={styles.numberValue} numberOfLines={2}>{policy.policy_no}</Text>
+              </View>
+              <View style={styles.numberBox}>
+                <Text style={styles.numberLabel}>Type</Text>
+                <Text style={styles.numberValue} numberOfLines={2}>{policy.policy_type || 'Policy'}</Text>
+              </View>
             </View>
-            <View style={styles.timelineRow}>
-              <View style={styles.timelineCopy}>
-                <Text style={styles.timelineLabel}>Valid till</Text>
-                <Text style={styles.timelineDate}>{formatDate(policy.end_date)}</Text>
+
+            <View style={styles.infoBox}>
+              <InfoPair leftLabel="Manufacturer" leftValue={vehicle?.make ?? '-'} rightLabel="Model" rightValue={vehicle?.model ?? '-'} />
+              <InfoPair leftLabel="Insurer" leftValue={company?.name ?? '-'} rightLabel="Source" rightValue={policy.source === 'external' ? 'Customer Added' : 'Sankalp'} />
+              <InfoPair leftLabel="Start" leftValue={formatDate(policy.start_date)} rightLabel="Expiry" rightValue={formatDate(policy.end_date)} />
+            </View>
+
+            {tone !== 'active' ? (
+              <View style={[styles.warningStrip, { backgroundColor: colors.soft, borderColor: colors.border }]}>
+                <MaterialCommunityIcons name={tone === 'expired' ? 'alert-octagon-outline' : 'calendar-alert'} size={16} color={colors.accent} />
+                <Text style={[styles.warningStripText, { color: colors.accent }]}>{tone === 'expired' ? `Expired ${Math.abs(days)}d ago` : `${days}d left for renewal`}</Text>
               </View>
-              <View style={styles.daysPill}>
-                <Text style={[styles.daysText, tone === 'expired' && styles.daysExpired]}>{days < 0 ? `${Math.abs(days)}d ago` : `${days}d left`}</Text>
-              </View>
-              <MaterialCommunityIcons name="chevron-right" size={22} color={toneColor(tone)} />
+            ) : null}
+
+            <View style={styles.cardFooter}>
+              <Text style={styles.footerHint}>{tone === 'active' ? `${days}d cover remaining` : 'Open renewal details'}</Text>
+              <MaterialCommunityIcons name="chevron-right" size={20} color={colors.accent} />
             </View>
           </Pressable>
         );
       })}
+
+      {policies.length > 0 && filteredPolicies.length === 0 ? <EmptyState title="No matching policy" body="Try another search or filter." actionLabel="Clear Filters" onAction={() => { setQuery(''); setFilter('All'); }} icon="filter-remove-outline" /> : null}
     </Screen>
   );
 }
 
-function Metric({ label, value, tone }: { label: string; value: number; tone: 'active' | 'due' | 'expired' }) {
-  return <View style={styles.metric}><Text style={[styles.metricValue, tone === 'due' && styles.metricDue, tone === 'expired' && styles.metricExpired]}>{value}</Text><Text style={styles.metricLabel}>{label}</Text></View>;
+function InfoPair({ leftLabel, leftValue, rightLabel, rightValue }: { leftLabel: string; leftValue: string; rightLabel: string; rightValue: string }) {
+  return (
+    <View style={styles.infoPairRow}>
+      <View style={styles.infoPairHalf}>
+        <Text style={styles.infoPairText} numberOfLines={1}><Text style={styles.infoPairLabel}>{leftLabel}: </Text>{leftValue}</Text>
+      </View>
+      <View style={styles.infoPairHalf}>
+        <Text style={styles.infoPairText} numberOfLines={1}><Text style={styles.infoPairLabel}>{rightLabel}: </Text>{rightValue}</Text>
+      </View>
+    </View>
+  );
 }
 
-function Info({ label, value }: { label: string; value?: string | null }) {
-  return <View style={styles.info}><Text style={styles.infoLabel}>{label}</Text><Text style={styles.infoValue} numberOfLines={1}>{value || '-'}</Text></View>;
+function countForFilter(filter: PolicyFilter, policies: PolicyRow[]) {
+  return policies.filter((policy) => {
+    const tone = policyTone(policy.end_date);
+    return filter === 'All' || (filter === 'Renewal Due' ? tone === 'due' : filter.toLowerCase() === tone);
+  }).length;
 }
 
 function formatDate(value?: string | null) {
@@ -163,79 +200,75 @@ function daysUntil(value: string) {
   return Math.ceil((new Date(value).getTime() - Date.now()) / 86400000);
 }
 
-function policyTone(endDate: string) {
+function policyTone(endDate: string): PolicyTone {
   const days = daysUntil(endDate);
   return days < 0 ? 'expired' : days <= 30 ? 'due' : 'active';
 }
 
-function toneColor(tone: 'active' | 'due' | 'expired') {
-  return tone === 'expired' ? '#C43838' : tone === 'due' ? '#B7791F' : palette.emerald;
+function policyToneColors(tone: PolicyTone) {
+  if (tone === 'expired') return { accent: '#C43838', soft: '#FDECEC', background: '#FFF7F7', border: '#F2C6C6' };
+  if (tone === 'due') return { accent: '#B7791F', soft: '#FFF4E2', background: '#FFFCF5', border: '#F7DCA2' };
+  return { accent: '#12805C', soft: '#E8F8F0', background: '#F7FFFB', border: '#BFEBD0' };
 }
 
-function policyMetrics(items: PolicyRow[]) {
-  return items.reduce((total, policy) => {
-    const tone = policyTone(policy.end_date);
-    total[tone] += 1;
-    return total;
-  }, { active: 0, due: 0, expired: 0 });
+function policyStatusLabel(tone: PolicyTone) {
+  if (tone === 'expired') return 'Expired';
+  if (tone === 'due') return 'Renewal Due';
+  return 'Active';
+}
+
+function policyStageLabel(policy: PolicyRow, tone: PolicyTone) {
+  if (policy.source === 'external') return 'EXTERNAL POLICY';
+  if (tone === 'expired') return 'EXPIRED COVER';
+  if (tone === 'due') return 'RENEWAL STAGE';
+  return 'ACTIVE COVER';
+}
+
+function policyIcon(source: PolicyRow['source'], tone: PolicyTone): keyof typeof MaterialCommunityIcons.glyphMap {
+  if (source === 'external') return 'account-edit-outline';
+  if (tone === 'expired') return 'shield-alert-outline';
+  if (tone === 'due') return 'calendar-alert';
+  return 'shield-check-outline';
 }
 
 const styles = StyleSheet.create({
-  hero: { minHeight: 178, borderRadius: 22, backgroundColor: palette.navy, padding: 15, marginTop: -22, marginBottom: 12, overflow: 'hidden' },
-  heroGlow: { position: 'absolute', right: -64, top: -50, width: 168, height: 168, borderRadius: 90, backgroundColor: 'rgba(11,99,206,0.44)' },
-  heroTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
-  eyebrow: { color: '#B9D5FF', fontSize: 10, fontWeight: '900', letterSpacing: 1 },
-  pageTitle: { color: '#FFFFFF', fontSize: 24, lineHeight: 30, fontWeight: '900', marginTop: 3 },
-  heroText: { color: '#D7E7FF', fontSize: 12, lineHeight: 17, fontWeight: '700', marginTop: 8, maxWidth: 260 },
-  addButton: { minHeight: 38, borderRadius: 13, backgroundColor: '#0B63CE', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  searchSection: { marginTop: -22, marginBottom: 10 },
+  searchHeadingRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 8 },
+  searchHeading: { color: palette.navy, fontSize: 13, fontWeight: '900' },
+  searchSubheading: { color: palette.slate, fontSize: 10.5, lineHeight: 14, fontWeight: '700', marginTop: 2 },
+  addButton: { minHeight: 34, borderRadius: 12, backgroundColor: palette.navy, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 4 },
   addButtonPressed: { opacity: 0.84, transform: [{ scale: 0.96 }] },
-  addButtonText: { color: '#FFFFFF', fontSize: 12, fontWeight: '900' },
-  metricRow: { flexDirection: 'row', gap: 8, marginTop: 16 },
-  metric: { flex: 1, minHeight: 58, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
-  metricValue: { color: '#7EE0B2', fontSize: 22, lineHeight: 26, fontWeight: '900' },
-  metricDue: { color: '#F6C665' },
-  metricExpired: { color: '#FF9A9A' },
-  metricLabel: { color: '#FFFFFF', fontSize: 10, fontWeight: '800', marginTop: 2 },
-  searchBox: { minHeight: 50, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 9 },
-  searchInput: { flex: 1, minHeight: 48, color: palette.navy, fontSize: 12.5, fontWeight: '700' },
-  clearButton: { width: 31, height: 31, borderRadius: 11, backgroundColor: '#F3F6FA', alignItems: 'center', justifyContent: 'center' },
-  filterScroll: { maxHeight: 42, marginBottom: 11 },
-  filterWrap: { flexDirection: 'row', gap: 8, paddingRight: 14 },
+  addButtonText: { color: '#FFFFFF', fontSize: 11.5, fontWeight: '900' },
+  filterScroller: { maxHeight: 42, marginBottom: 12 },
+  filterWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 14 },
   filterChip: { height: 34, borderRadius: 999, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center' },
   filterChipActive: { backgroundColor: palette.navy, borderColor: palette.navy },
-  filterText: { color: palette.slate, fontSize: 11, fontWeight: '900' },
+  filterText: { color: palette.slate, fontSize: 11.5, fontWeight: '900' },
   filterTextActive: { color: '#FFFFFF' },
-  policyCard: { position: 'relative', backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.line, borderRadius: 18, padding: 12, marginBottom: 10, overflow: 'hidden', shadowColor: '#10233F', shadowOpacity: 0.055, shadowRadius: 11, elevation: 2 },
+  policyCard: { borderWidth: 1, borderRadius: 18, padding: 12, paddingLeft: 17, marginBottom: 10, overflow: 'hidden', shadowColor: palette.ink, shadowOpacity: 0.055, shadowRadius: 10, elevation: 2 },
   policyCardPressed: { opacity: 0.9, transform: [{ scale: 0.985 }] },
-  cardAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5, backgroundColor: palette.emerald },
-  cardAccentExpired: { backgroundColor: '#C43838' },
-  cardAccentDue: { backgroundColor: '#B7791F' },
+  accentBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5 },
   policyTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  policyIcon: { width: 42, height: 42, borderRadius: radii.sm, backgroundColor: palette.emeraldSoft, alignItems: 'center', justifyContent: 'center' },
-  externalPolicyIcon: { backgroundColor: '#EAF2FF' },
-  policyIconExpired: { backgroundColor: '#FDECEC' },
-  policyIconDue: { backgroundColor: '#FFF4E2' },
-  policyCopy: { flex: 1, minWidth: 0 },
-  titleLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  vehicleNo: { color: palette.ink, fontSize: 16, fontWeight: '900' },
-  sourcePill: { backgroundColor: '#EAF2FF', borderRadius: 999, paddingHorizontal: 6, paddingVertical: 3 },
+  statusIcon: { width: 46, height: 46, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  policyTitleCopy: { flex: 1, minWidth: 0 },
+  stageRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  stageLabel: { fontSize: 9.8, fontWeight: '900', letterSpacing: 0.6 },
+  vehicleNo: { color: palette.ink, fontSize: 17, fontWeight: '900', marginTop: 1 },
+  sourcePill: { borderRadius: 999, backgroundColor: '#EAF2FF', paddingHorizontal: 6, paddingVertical: 3 },
   sourceText: { color: '#0A43A3', fontSize: 7.8, fontWeight: '900' },
-  insurerName: { color: palette.navy, fontSize: 12.5, fontWeight: '800', marginTop: 2 },
-  statusPill: { borderRadius: 999, backgroundColor: palette.emeraldSoft, paddingHorizontal: 9, paddingVertical: 5 },
-  statusExpired: { backgroundColor: '#FDECEC' },
-  statusDue: { backgroundColor: '#FFF4E2' },
-  statusText: { color: palette.emerald, fontSize: 9.5, fontWeight: '900' },
-  statusExpiredText: { color: '#C43838' },
-  statusDueText: { color: '#B7791F' },
-  policyInfo: { flexDirection: 'row', gap: 8, marginTop: 12 },
-  info: { flex: 1, minHeight: 48, borderRadius: 13, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E1EAF5', paddingHorizontal: 10, justifyContent: 'center' },
-  infoLabel: { color: palette.slate, fontSize: 9.5, fontWeight: '800' },
-  infoValue: { color: palette.navy, fontSize: 11.5, fontWeight: '900', marginTop: 3 },
-  timelineRow: { minHeight: 42, marginTop: 10, borderRadius: 14, backgroundColor: '#FBFDFF', borderWidth: 1, borderColor: '#E6EDF6', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 9 },
-  timelineCopy: { flex: 1 },
-  timelineLabel: { color: palette.slate, fontSize: 9.5, fontWeight: '800' },
-  timelineDate: { color: palette.ink, fontSize: 12, fontWeight: '900', marginTop: 1 },
-  daysPill: { borderRadius: 999, backgroundColor: '#F2F6FB', paddingHorizontal: 8, paddingVertical: 4 },
-  daysText: { color: palette.navy, fontSize: 10, fontWeight: '900' },
-  daysExpired: { color: '#C43838' },
+  statusBadge: { maxWidth: 126, minHeight: 34, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
+  statusBadgeText: { color: '#FFFFFF', fontSize: 10.2, lineHeight: 13, fontWeight: '900', textAlign: 'center' },
+  numberRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  numberBox: { flex: 1, backgroundColor: 'rgba(255,255,255,0.82)', borderWidth: 1, borderColor: '#DCE8F4', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 7 },
+  numberLabel: { color: palette.slate, fontSize: 9.3, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.4 },
+  numberValue: { color: palette.ink, fontSize: 11.7, lineHeight: 15, fontWeight: '900', marginTop: 2 },
+  infoBox: { marginTop: 10, paddingTop: 9, borderTopWidth: 1, borderTopColor: '#E5ECF5', gap: 5 },
+  infoPairRow: { flexDirection: 'row', gap: 8 },
+  infoPairHalf: { flex: 1, minWidth: 0 },
+  infoPairText: { color: palette.ink, fontSize: 11.1, lineHeight: 15, fontWeight: '800' },
+  infoPairLabel: { color: palette.slate, fontSize: 10.2, fontWeight: '900' },
+  warningStrip: { marginTop: 9, borderRadius: 12, borderWidth: 1, paddingHorizontal: 9, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  warningStripText: { flex: 1, fontSize: 10.8, fontWeight: '900' },
+  cardFooter: { marginTop: 10, paddingTop: 9, borderTopWidth: 1, borderTopColor: '#E5ECF5', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  footerHint: { color: palette.slate, fontSize: 11.5, fontWeight: '900' },
 });
