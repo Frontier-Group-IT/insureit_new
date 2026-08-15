@@ -1,4 +1,3 @@
-import '../global.css';
 import { Stack, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
@@ -6,16 +5,13 @@ import { StyleSheet, View } from 'react-native';
 
 import { AppLoadingProvider } from '@/components/app-loading';
 import { SplashIntro } from '@/components/first-look';
-import { GluestackUIProvider } from '@/components/gluestack-ui/gluestack-ui-provider';
 import { RealtimeNotificationProvider } from '@/components/realtime-notifications';
 
 export const unstable_settings = { initialRouteName: 'index' };
 
 export default function RootLayout() {
   return (
-    <GluestackUIProvider mode="light">
-      <AppLoadingProvider><RootApplication /></AppLoadingProvider>
-    </GluestackUIProvider>
+    <AppLoadingProvider><RootApplication /></AppLoadingProvider>
   );
 }
 

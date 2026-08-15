@@ -10,9 +10,6 @@ import { BrandLogo } from '@/components/first-look';
 import { GroupHomeScreen } from '@/components/group/group-home-screen';
 import { NotificationBell } from '@/components/realtime-notifications';
 import { LoadingState, UniversalBottomTabs } from '@/components/ui';
-import { Heading } from '@/components/gluestack-ui/heading';
-import { Text as GluestackText } from '@/components/gluestack-ui/text';
-import { VStack } from '@/components/gluestack-ui/vstack';
 import { getCurrentSession, getCustomerForUser, getOnboardingApplicationForUser, getProfile, isValidProfile, resetLocalAuthState, signOut } from '@/lib/auth';
 import { buildComplianceRenewals } from '@/lib/compliance-renewals';
 import { getSelectedCustomerContext, type CustomerAccountContext } from '@/lib/customer-context';
@@ -147,11 +144,11 @@ export default function CustomerMockupHomeScreen() {
       <Pressable onPress={() => router.push('/customer/profile')} style={styles.avatar}><Text style={styles.avatarText}>{initialFor(name)}</Text></Pressable>
     </View>
     <ScrollView style={styles.scroll} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-      <VStack space="xs" style={styles.greetingBlock}>
-        <Heading size="xl" style={styles.greeting}>{timeGreeting()}, {firstName}</Heading>
-        <GluestackText size="sm" style={[styles.subGreeting, attentionCount > 0 && styles.subGreetingAttention]}>{attentionMessage}</GluestackText>
+      <View style={styles.greetingBlock}>
+        <Text style={styles.greeting}>{timeGreeting()}, {firstName}</Text>
+        <Text style={[styles.subGreeting, attentionCount > 0 && styles.subGreetingAttention]}>{attentionMessage}</Text>
         {selectedContext?.group_name ? <Text style={styles.parentCompany}>Associated with {selectedContext.group_name}</Text> : null}
-      </VStack>
+      </View>
       <Pressable onPress={openPendingAction} style={[styles.pendingCard, !customer && styles.pendingCardKyc]}><View style={[styles.pendingIcon, !customer && styles.pendingIconKyc]}><MaterialCommunityIcons name={!customer ? kycAwaitingReview ? 'clipboard-clock-outline' : kycChangesRequested ? 'file-edit-outline' : 'shield-account-outline' : 'alert-circle'} size={28} color="#FFFFFF" /></View><View style={styles.pendingCopy}><Text style={[styles.pendingTitle, !customer && styles.pendingTitleKyc]}>{pendingTitle}</Text><Text style={styles.pendingText} numberOfLines={2}>{pendingText}</Text></View><MaterialCommunityIcons name="chevron-right" size={28} color={!customer ? '#0A43A3' : '#7A3A00'} /></Pressable>
       <Pressable onPress={() => router.push('/customer/vehicles')} style={styles.vehicleCard}><View style={styles.vehicleLeft}><View style={styles.vehicleIcon}><MaterialCommunityIcons name="car" size={25} color="#0A43A3" /></View><View style={styles.vehicleTextBlock}><Text style={styles.vehicleTitle}>My Vehicles</Text><Text style={styles.vehicleNumber}>{vehicles.length}</Text><Text style={styles.vehicleLabel}>Vehicles</Text></View></View><Image source={fleetSketch} style={styles.fleetImage} resizeMode="contain" /><MaterialCommunityIcons name="chevron-right" size={28} color="#7A3A00" /></Pressable>
       <View style={styles.actionCard}>
