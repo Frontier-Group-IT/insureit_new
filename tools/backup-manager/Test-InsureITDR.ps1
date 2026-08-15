@@ -83,8 +83,12 @@ select source_project_ref || '|' || target_project_ref || '|' || mode || '|' || 
 from $controlSchema.replica_state
 where singleton = true;
 "@
-$guard = (& psql $dbUrl -X -v ON_ERROR_STOP=1 -t -A -c $query | Select-Object -First 1).Trim()
-if ($LASTEXITCODE -ne 0) { throw "Could not read the DR control marker." }
+$guardOutput = @(& psql $dbUrl -X -v ON_ERROR_STOP=1 -t -A -c $query)
+$psqlExitCode = $LASTEXITCODE
+if ($psqlExitCode -ne 0) { throw "Could not read the DR control marker." }
+$guardLine = $guardOutput | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First 1
+if ([string]::IsNullOrWhiteSpace([string]$guardLine)) { throw "DR control marker query returned no data." }
+$guard = ([string]$guardLine).Trim()
 $parts = $guard.Split('|')
 if ($parts.Count -lt 3 -or $parts[0] -ne $sourceRef -or $parts[1] -ne $targetRef -or $parts[2] -ne "standby") {
     throw "STOPPED: DR control marker does not match the approved production->standby relationship."
