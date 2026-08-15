@@ -633,7 +633,7 @@ function policyExpiryEndOfDay(value?: string | null) {
 }
 
 const styles = StyleSheet.create({
-  pageIndicator: { marginTop: -18, marginBottom: 8 },
+  pageIndicator: { marginTop: 0, marginBottom: 8 },
   pageTitle: { color: palette.navy, fontSize: 18, fontWeight: '900' },
   pageSub: { color: palette.slate, fontSize: 11.5, fontWeight: '800', marginTop: 2 },
 

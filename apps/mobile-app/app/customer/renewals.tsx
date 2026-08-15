@@ -75,7 +75,7 @@ export default function ComplianceRenewalsScreen() {
   if (loading) return <Screen title="Renewals" showTitleHeader={false}><LoadingState /></Screen>;
 
   return (
-    <Screen title="Renewals" showLogout showTitleHeader={false}>
+    <Screen title="Renewals" showLogout showTitleHeader={false} topSpacing="tight">
       <View style={styles.focusPanel}>
         <View style={styles.focusTop}>
           <View style={styles.focusCopy}>
@@ -159,7 +159,7 @@ function formatDate(value: string) {
 }
 
 const styles = StyleSheet.create({
-  focusPanel: { borderRadius: 18, borderWidth: 1, borderColor: '#0A2D66', backgroundColor: palette.navy, padding: 12, marginTop: -40, marginBottom: 8, shadowColor: palette.ink, shadowOpacity: 0.1, shadowRadius: 12, elevation: 3 },
+  focusPanel: { borderRadius: 18, borderWidth: 1, borderColor: '#0A2D66', backgroundColor: palette.navy, padding: 12, marginTop: 0, marginBottom: 8, shadowColor: palette.ink, shadowOpacity: 0.1, shadowRadius: 12, elevation: 3 },
   focusTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   focusCopy: { flex: 1, minWidth: 0 },
   pageTitle: { color: '#FFFFFF', fontSize: 16, lineHeight: 20, fontWeight: '900' },

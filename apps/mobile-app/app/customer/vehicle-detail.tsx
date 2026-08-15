@@ -285,7 +285,7 @@ function formatDate(value?: string | null) {
 }
 
 const styles = StyleSheet.create({
-  heroCard: { marginTop: -22, padding: 15, overflow: 'hidden', backgroundColor: palette.navy, borderColor: palette.navy },
+  heroCard: { marginTop: 0, padding: 15, overflow: 'hidden', backgroundColor: palette.navy, borderColor: palette.navy },
   heroWash: { position: 'absolute', right: -64, top: -50, width: 168, height: 168, borderRadius: 90, backgroundColor: 'rgba(11,99,206,0.44)' },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   heroCopy: { flex: 1, minWidth: 0 },

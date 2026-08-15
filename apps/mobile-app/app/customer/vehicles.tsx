@@ -1083,7 +1083,7 @@ const styles = StyleSheet.create({
   successText: { color: palette.navy, fontSize: 16.5, lineHeight: 28, fontWeight: '700', textAlign: 'center', marginBottom: 32 },
   okButton: { width: '100%', height: 58, borderRadius: 6, backgroundColor: '#0B50D4', alignItems: 'center', justifyContent: 'center' },
   okText: { color: '#FFFFFF', fontSize: 18, fontWeight: '900' },
-  pageHeader: { marginTop: -20, marginBottom: 12, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
+  pageHeader: { marginTop: 0, marginBottom: 12, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   pageTitle: { color: palette.navy, fontSize: 22, lineHeight: 27, fontWeight: '900' },
   countBadge: { height: 24, borderRadius: 7, backgroundColor: '#EAF3FF', paddingHorizontal: 9, alignItems: 'center', justifyContent: 'center' },

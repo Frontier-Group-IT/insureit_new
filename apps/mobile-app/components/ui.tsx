@@ -16,7 +16,9 @@ import type { AppRole } from '@/lib/types';
 export { colors };
 
 
-export function Screen({ title, subtitle, children, showLogout = false, showTitleHeader = true }: PropsWithChildren<{ title: string; subtitle?: string; showLogout?: boolean; showTitleHeader?: boolean }>) {
+type ScreenTopSpacing = 'default' | 'compact' | 'tight' | 'legacy';
+
+export function Screen({ title, subtitle, children, showLogout = false, showTitleHeader = true, topSpacing = 'default' }: PropsWithChildren<{ title: string; subtitle?: string; showLogout?: boolean; showTitleHeader?: boolean; topSpacing?: ScreenTopSpacing }>) {
   const router = useRouter();
   const pathname = usePathname();
   const routeParams = useLocalSearchParams();
@@ -31,6 +33,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
   const showBackButton = showProfile && !isRootDashboard(pathname);
   const loadingOnly = isValidElement(children) && children.type === LoadingState;
   const tabRole = profileRole ?? (pathname.startsWith('/customer') ? 'customer' : null);
+  const profileTopPadding = insets.top + topPaddingFor(topSpacing);
   void showLogout;
 
   useEffect(() => {
@@ -113,7 +116,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboard}>
         <ScrollView
           style={styles.screen}
-          contentContainerStyle={[styles.screenContent, showProfile && [styles.screenContentWithTabs, { paddingTop: insets.top + 112 }], !showProfile && { paddingTop: insets.top + 18 }, compactTopSpacing && { paddingTop: insets.top + 106 }, legalTopSpacing && { paddingTop: insets.top + 88 }, loadingOnly && styles.screenContentLoading]}
+          contentContainerStyle={[styles.screenContent, showProfile && [styles.screenContentWithTabs, { paddingTop: profileTopPadding }], !showProfile && { paddingTop: insets.top + 18 }, compactTopSpacing && { paddingTop: insets.top + topPaddingFor('compact') }, legalTopSpacing && { paddingTop: insets.top + topPaddingFor('default') }, loadingOnly && styles.screenContentLoading]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           automaticallyAdjustKeyboardInsets
@@ -416,6 +419,19 @@ function tabTone(label: string, fallback: { accent: string; soft: string }) {
       return { accent: palette.blue, soft: palette.blueSoft };
     default:
       return fallback;
+  }
+}
+
+function topPaddingFor(spacing: ScreenTopSpacing) {
+  switch (spacing) {
+    case 'tight':
+      return 76;
+    case 'compact':
+      return 82;
+    case 'legacy':
+      return 112;
+    default:
+      return 90;
   }
 }
 

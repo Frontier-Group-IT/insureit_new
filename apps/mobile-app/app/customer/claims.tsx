@@ -251,7 +251,7 @@ function policyExpiryEndOfDay(value?: string | null) {
 }
 
 const styles = StyleSheet.create({
-  searchSection: { marginTop: -22, marginBottom: 10 },
+  searchSection: { marginTop: 0, marginBottom: 10 },
   searchHeading: { color: palette.navy, fontSize: 13, fontWeight: '900', marginBottom: 7 },
   filterScroller: { maxHeight: 42, marginBottom: 12 },
   filterWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 14 },

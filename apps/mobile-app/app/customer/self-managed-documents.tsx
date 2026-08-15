@@ -307,7 +307,7 @@ function stageLabel(key: ClaimMilestoneKey) {
 }
 
 const styles = StyleSheet.create({
-  top: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginTop: -12, marginBottom: 12 },
+  top: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginTop: 0, marginBottom: 12 },
   back: { width: 42, height: 42, borderRadius: 14, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center' },
   eye: { color: '#0A43A3', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.8 },
   title: { color: palette.navy, fontSize: 22, fontWeight: '900' },

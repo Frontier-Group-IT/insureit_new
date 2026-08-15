@@ -202,7 +202,7 @@ function formatCurrency(value?: number | null) {
 }
 
 const styles = StyleSheet.create({
-  heroCard: { minHeight: 178, borderRadius: 22, backgroundColor: palette.navy, padding: 15, marginTop: -22, marginBottom: 12, overflow: 'hidden' },
+  heroCard: { minHeight: 178, borderRadius: 22, backgroundColor: palette.navy, padding: 15, marginTop: 0, marginBottom: 12, overflow: 'hidden' },
   heroGlow: { position: 'absolute', right: -64, top: -50, width: 168, height: 168, borderRadius: 90, backgroundColor: 'rgba(11,99,206,0.44)' },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   heroIcon: { width: 46, height: 46, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' },

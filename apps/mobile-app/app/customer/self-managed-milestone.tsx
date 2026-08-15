@@ -196,7 +196,7 @@ function todayIso() { const d = new Date(); return `${d.getFullYear()}-${String(
 function formatDisplayDate(value: string) { if (!value) return ''; const [y,m,d] = value.split('-'); return `${d}-${m}-${y}`; }
 
 const styles = StyleSheet.create({
-  topRow: { flexDirection: 'row', gap: 11, alignItems: 'flex-start', marginTop: -12, marginBottom: 12 },
+  topRow: { flexDirection: 'row', gap: 11, alignItems: 'flex-start', marginTop: 0, marginBottom: 12 },
   backButton: { width: 42, height: 42, borderRadius: 14, borderWidth: 1, borderColor: '#DCE6F0', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   topCopy: { flex: 1 },
   eyebrow: { color: '#0A43A3', fontSize: 9.5, fontWeight: '900', letterSpacing: 1 },

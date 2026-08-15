@@ -154,7 +154,7 @@ export default function AddVehicleScreen() {
   }
 
   return (
-    <Screen title="Add Vehicle" showLogout showTitleHeader={false}>
+    <Screen title="Add Vehicle" showLogout showTitleHeader={false} topSpacing="compact">
       <View style={styles.modalHeader}><View><Text style={styles.modalEyebrow}>VEHICLE ONBOARDING</Text><Text style={styles.compactTitle}>Add Vehicle</Text><Text style={styles.modalSub}>Add the vehicle now; optional details can be completed later.</Text></View><Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.modalClose}><MaterialCommunityIcons name="close" size={20} color={palette.navy} /></Pressable></View>
       <Card style={styles.formCard}>
         <View pointerEvents="none" style={styles.formAccentOne} />
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
   modalEyebrow: { color: '#8A5B16', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.7, marginBottom: 2 },
   modalSub: { color: palette.slate, fontSize: 11.2, lineHeight: 16, fontWeight: '700', marginTop: 2, maxWidth: 290 },
   modalClose: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
-  compactTitle: { color: palette.navy, fontSize: 16, fontWeight: '800', marginBottom: 6, marginTop: -30, letterSpacing: 0 },
+  compactTitle: { color: palette.navy, fontSize: 16, fontWeight: '800', marginBottom: 6, marginTop: 0, letterSpacing: 0 },
   formCard: { borderRadius: 18, padding: 12, gap: 12, backgroundColor: '#F8FBFF', borderColor: '#CFE0F8', overflow: 'hidden' },
   formAccentOne: { position: 'absolute', right: -28, top: -18, width: 110, height: 58, borderRadius: 18, backgroundColor: 'rgba(10,67,163,0.08)', transform: [{ rotate: '-10deg' }] },
   formAccentTwo: { position: 'absolute', left: -20, bottom: 80, width: 86, height: 48, borderRadius: 16, backgroundColor: 'rgba(18,128,92,0.08)', transform: [{ rotate: '12deg' }] },

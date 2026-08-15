@@ -232,7 +232,7 @@ function policyIcon(source: PolicyRow['source'], tone: PolicyTone): keyof typeof
 }
 
 const styles = StyleSheet.create({
-  searchSection: { marginTop: -22, marginBottom: 10 },
+  searchSection: { marginTop: 0, marginBottom: 10 },
   searchHeadingRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 8 },
   searchHeading: { color: palette.navy, fontSize: 13, fontWeight: '900' },
   searchSubheading: { color: palette.slate, fontSize: 10.5, lineHeight: 14, fontWeight: '700', marginTop: 2 },

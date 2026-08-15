@@ -138,7 +138,7 @@ export default function AddPolicyScreen() {
   }
 
   return (
-    <Screen title="Add Policy" showLogout showTitleHeader={false}>
+    <Screen title="Add Policy" showLogout showTitleHeader={false} topSpacing="compact">
       <Text style={styles.compactTitle}>Add Policy</Text>
       <Card style={styles.formCard}>
         <View pointerEvents="none" style={styles.formAccentOne} />
@@ -369,7 +369,7 @@ function formatDisplayDate(value: string) { const parsed = parseDate(value); ret
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  compactTitle: { color: palette.navy, fontSize: 16, fontWeight: '800', marginBottom: 6, marginTop: -30, letterSpacing: 0 },
+  compactTitle: { color: palette.navy, fontSize: 16, fontWeight: '800', marginBottom: 6, marginTop: 0, letterSpacing: 0 },
   formCard: { borderRadius: 18, padding: 12, gap: 12, backgroundColor: '#F8FBFF', borderColor: '#CFE0F8', overflow: 'hidden' },
   formAccentOne: { position: 'absolute', right: -28, top: -18, width: 110, height: 58, borderRadius: 18, backgroundColor: 'rgba(10,67,163,0.08)', transform: [{ rotate: '-10deg' }] },
   formAccentTwo: { position: 'absolute', left: -20, bottom: 80, width: 86, height: 48, borderRadius: 16, backgroundColor: 'rgba(18,128,92,0.08)', transform: [{ rotate: '12deg' }] },
