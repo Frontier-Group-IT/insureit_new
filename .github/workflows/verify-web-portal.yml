@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: verify-web-portal-${{ github.event.pull_request.number || github.ref }}
+  group: verify-web-portal-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
