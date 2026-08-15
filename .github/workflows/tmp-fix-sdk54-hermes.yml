@@ -75,3 +75,5 @@ jobs:
           git commit -m "Refresh lockfile for Expo SDK 54 Babel alignment"
           git pull --rebase origin main
           git push origin HEAD:main
+
+      # Rerun marker: SDK 54 native package alignment complete.
