@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense, type ReactNode } from "react";
 import { Manrope, Space_Grotesk } from "next/font/google";
+import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 import { AadhaarMaskNormalizer } from "@/components/aadhaar-mask-normalizer";
 import { LegacyIntermediaryImportLink } from "@/components/legacy-intermediary-import-link";
 import { RouteProgressBar } from "@/components/loading/route-progress-bar";
@@ -32,14 +33,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${manrope.variable} ${spaceGrotesk.variable}`}>
       <body>
-        {children}
-        <Suspense fallback={null}>
-          <AadhaarMaskNormalizer />
-          <LegacyIntermediaryImportLink />
-          <ProfessionalFormValidation />
-          <SuccessPopup />
-          <RouteProgressBar />
-        </Suspense>
+        <AppRouterCacheProvider>
+          {children}
+          <Suspense fallback={null}>
+            <AadhaarMaskNormalizer />
+            <LegacyIntermediaryImportLink />
+            <ProfessionalFormValidation />
+            <SuccessPopup />
+            <RouteProgressBar />
+          </Suspense>
+        </AppRouterCacheProvider>
       </body>
     </html>
   );

@@ -20,6 +20,12 @@
     "policy-ocr:all-regressions": "npm run policy-ocr:iffco-structured-regression && npm run policy-ocr:iffco-regression && npm run policy-ocr:digit-regression && npm run policy-ocr:new-india-regression && npm run policy-ocr:additional-regression"
   },
   "dependencies": {
+    "@emotion/cache": "^11.14.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/material": "^7.0.0",
+    "@mui/material-nextjs": "^7.0.0",
+    "@mui/x-data-grid": "^8.0.0",
     "@supabase/supabase-js": "^2.49.8",
     "fflate": "^0.8.3",
     "lucide-react": "^1.26.0",
