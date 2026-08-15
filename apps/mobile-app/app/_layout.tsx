@@ -1,3 +1,4 @@
+import '../global.css';
 import { Stack, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
@@ -5,27 +6,27 @@ import { StyleSheet, View } from 'react-native';
 
 import { AppLoadingProvider } from '@/components/app-loading';
 import { SplashIntro } from '@/components/first-look';
+import { GluestackUIProvider } from '@/components/gluestack-ui/gluestack-ui-provider';
 import { RealtimeNotificationProvider } from '@/components/realtime-notifications';
 
-export const unstable_settings = {
-  initialRouteName: 'index',
-};
+export const unstable_settings = { initialRouteName: 'index' };
 
 export default function RootLayout() {
-  return <AppLoadingProvider><RootApplication /></AppLoadingProvider>;
+  return (
+    <GluestackUIProvider mode="light">
+      <AppLoadingProvider><RootApplication /></AppLoadingProvider>
+    </GluestackUIProvider>
+  );
 }
 
 function RootApplication() {
   const navigationState = useRootNavigationState();
   const [minimumIntroComplete, setMinimumIntroComplete] = useState(false);
-
   useEffect(() => {
     const timer = setTimeout(() => setMinimumIntroComplete(true), 1100);
     return () => clearTimeout(timer);
   }, []);
-
   const introVisible = !minimumIntroComplete || !navigationState?.key;
-
   return (
     <>
       <StatusBar style={introVisible ? 'light' : 'dark'} />
@@ -40,10 +41,4 @@ function RootApplication() {
   );
 }
 
-const styles = StyleSheet.create({
-  introOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 20000,
-    elevation: 20000,
-  },
-});
+const styles = StyleSheet.create({ introOverlay: { ...StyleSheet.absoluteFillObject, zIndex: 20000, elevation: 20000 } });

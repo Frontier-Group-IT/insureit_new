@@ -10,11 +10,15 @@ import { BrandLogo } from '@/components/first-look';
 import { GroupHomeScreen } from '@/components/group/group-home-screen';
 import { NotificationBell } from '@/components/realtime-notifications';
 import { LoadingState, UniversalBottomTabs } from '@/components/ui';
+import { Heading } from '@/components/gluestack-ui/heading';
+import { Text as GluestackText } from '@/components/gluestack-ui/text';
+import { VStack } from '@/components/gluestack-ui/vstack';
 import { getCurrentSession, getCustomerForUser, getOnboardingApplicationForUser, getProfile, isValidProfile, resetLocalAuthState, signOut } from '@/lib/auth';
+import { buildComplianceRenewals } from '@/lib/compliance-renewals';
 import { getSelectedCustomerContext, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
-import type { Claim, ClaimTask, Customer, CustomerOnboardingApplication, Profile, Vehicle } from '@/lib/types';
+import type { Claim, ClaimTask, Customer, CustomerOnboardingApplication, Policy, Profile, Vehicle } from '@/lib/types';
 
 const fleetSketch = require('../../assets/brand/customer-fleet-sketch.png');
 
@@ -27,6 +31,7 @@ export default function CustomerMockupHomeScreen() {
   const [selectedContext, setSelectedContext] = useState<CustomerAccountContext | null>(null);
   const [onboarding, setOnboarding] = useState<CustomerOnboardingApplication | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [policies, setPolicies] = useState<Policy[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [tasks, setTasks] = useState<ClaimTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,22 +59,25 @@ export default function CustomerMockupHomeScreen() {
         setOnboarding(nextOnboarding);
         setSelectedContext(selectedContext);
         setVehicles([]);
+        setPolicies([]);
         setClaims([]);
         setTasks([]);
         const promptDismissed = await getKycPromptDismissed(session.user.id);
         if (mounted) setKycPromptDismissed(Boolean(promptDismissed) || Boolean(nextCustomer) || nextOnboarding?.status === 'submitted' || nextOnboarding?.status === 'under_review');
         if (nextCustomer && !isPortfolioDashboardContext(selectedContext)) {
-          const [vehicleResult, claimResult, taskResult] = await Promise.all([
+          const [vehicleResult, policyResult, claimResult, taskResult] = await Promise.all([
             supabase.from('vehicles').select('*').eq('customer_id', nextCustomer.id),
+            supabase.from('policies').select('*').eq('customer_id', nextCustomer.id),
             supabase.from('claims').select('*').eq('customer_id', nextCustomer.id),
             supabase.from('claim_tasks').select('*').eq('status', 'open').order('created_at', { ascending: false }),
           ]);
           if (!mounted) return;
           if (vehicleResult.error) console.warn('Customer vehicles load failed', vehicleResult.error.message);
+          if (policyResult.error) console.warn('Customer policies load failed', policyResult.error.message);
           if (claimResult.error) console.warn('Customer claims load failed', claimResult.error.message);
           if (taskResult.error) console.warn('Customer claim tasks load failed', taskResult.error.message);
           const nextClaims = claimResult.data ?? [];
-          setVehicles(vehicleResult.data ?? []); setClaims(nextClaims);
+          setVehicles(vehicleResult.data ?? []); setPolicies(policyResult.data ?? []); setClaims(nextClaims);
           setTasks((taskResult.data ?? []).filter((task) => nextClaims.some((claim) => claim.id === task.claim_id)));
         }
       } catch (nextError) {
@@ -88,6 +96,12 @@ export default function CustomerMockupHomeScreen() {
   const documentTasks = useMemo(() => tasks.filter((task) => /^Final document: /i.test(task.title) || /reupload|upload.*document/i.test(task.title)), [tasks]);
   const pendingTask = documentTasks[0];
   const pendingActionCount = pendingTask ? documentTasks.filter((task) => task.claim_id === pendingTask.claim_id).length : 0;
+  const renewalAttentionCount = useMemo(() => buildComplianceRenewals({ vehicles, policies }).totalPending, [policies, vehicles]);
+  const claimAttentionCount = documentTasks.length;
+  const attentionCount = renewalAttentionCount + claimAttentionCount;
+  const attentionMessage = attentionCount > 0
+    ? `${attentionCount} item${attentionCount === 1 ? '' : 's'} ${attentionCount === 1 ? 'needs' : 'need'} your attention today.`
+    : 'Everything looks up to date.';
   const estimate = active.reduce((total, claim) => total + (claim.estimated_loss ?? 0), 0);
   const invoices = settled.reduce((total, claim) => total + (claim.settlement_amount ?? claim.approved_amount ?? 0), 0);
   const kycRoute = onboarding?.partner_type === 'individual_proprietor' ? '/customer/kyc/individual' : '/customer/kyc/partner-type';
@@ -133,7 +147,11 @@ export default function CustomerMockupHomeScreen() {
       <Pressable onPress={() => router.push('/customer/profile')} style={styles.avatar}><Text style={styles.avatarText}>{initialFor(name)}</Text></Pressable>
     </View>
     <ScrollView style={styles.scroll} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-      <View style={styles.greetingBlock}><Text style={styles.greeting}>{timeGreeting()}, {firstName}</Text><Text style={styles.subGreeting}>Manage your vehicles, renewals and claims</Text><Text style={styles.subGreeting}>all in one place.</Text>{selectedContext?.group_name ? <Text style={styles.parentCompany}>Associated with {selectedContext.group_name}</Text> : null}</View>
+      <VStack space="xs" style={styles.greetingBlock}>
+        <Heading size="xl" style={styles.greeting}>{timeGreeting()}, {firstName}</Heading>
+        <GluestackText size="sm" style={[styles.subGreeting, attentionCount > 0 && styles.subGreetingAttention]}>{attentionMessage}</GluestackText>
+        {selectedContext?.group_name ? <Text style={styles.parentCompany}>Associated with {selectedContext.group_name}</Text> : null}
+      </VStack>
       <Pressable onPress={openPendingAction} style={[styles.pendingCard, !customer && styles.pendingCardKyc]}><View style={[styles.pendingIcon, !customer && styles.pendingIconKyc]}><MaterialCommunityIcons name={!customer ? kycAwaitingReview ? 'clipboard-clock-outline' : kycChangesRequested ? 'file-edit-outline' : 'shield-account-outline' : 'alert-circle'} size={28} color="#FFFFFF" /></View><View style={styles.pendingCopy}><Text style={[styles.pendingTitle, !customer && styles.pendingTitleKyc]}>{pendingTitle}</Text><Text style={styles.pendingText} numberOfLines={2}>{pendingText}</Text></View><MaterialCommunityIcons name="chevron-right" size={28} color={!customer ? '#0A43A3' : '#7A3A00'} /></Pressable>
       <Pressable onPress={() => router.push('/customer/vehicles')} style={styles.vehicleCard}><View style={styles.vehicleLeft}><View style={styles.vehicleIcon}><MaterialCommunityIcons name="car" size={25} color="#0A43A3" /></View><View style={styles.vehicleTextBlock}><Text style={styles.vehicleTitle}>My Vehicles</Text><Text style={styles.vehicleNumber}>{vehicles.length}</Text><Text style={styles.vehicleLabel}>Vehicles</Text></View></View><Image source={fleetSketch} style={styles.fleetImage} resizeMode="contain" /><MaterialCommunityIcons name="chevron-right" size={28} color="#7A3A00" /></Pressable>
       <View style={styles.actionCard}>
@@ -235,7 +253,7 @@ function dashboardLoadErrorMessage(error: unknown) {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F7F9FD' }, loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F9FD', gap: 14 }, error: { color: palette.navy, fontWeight: '900' }, retry: { color: palette.navy, fontWeight: '900' },
   header: { height: 66, paddingHorizontal: 4, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.98)', borderBottomWidth: 1, borderBottomColor: '#E1E7F0' }, brand: { flex: 1, alignItems: 'flex-start', justifyContent: 'center' }, iconCircle: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' }, avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: palette.ink, borderWidth: 2, borderColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' }, avatarText: { color: '#FFFFFF', fontWeight: '900', fontSize: 17 },
-  scroll: { flex: 1 }, body: { flexGrow: 1, justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 13, paddingBottom: 112, gap: 10 }, greetingBlock: { marginBottom: 0 }, greeting: { color: palette.navy, fontSize: 13, lineHeight: 16, fontWeight: '900' }, subGreeting: { color: palette.navy, fontSize: 13, lineHeight: 17, fontWeight: '500' }, parentCompany: { color: '#0A43A3', fontSize: 11, lineHeight: 15, fontWeight: '800', marginTop: 4 },
+  scroll: { flex: 1 }, body: { flexGrow: 1, justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 13, paddingBottom: 112, gap: 10 }, greetingBlock: { marginBottom: 4, paddingTop: 2, paddingBottom: 5 }, greeting: { color: palette.navy, fontSize: 22, lineHeight: 28, fontWeight: '700', letterSpacing: -0.35 }, subGreeting: { color: '#667085', fontSize: 13, lineHeight: 19, fontWeight: '500' }, subGreetingAttention: { color: '#8A5B00' }, parentCompany: { color: '#0A43A3', fontSize: 11, lineHeight: 15, fontWeight: '800', marginTop: 4 },
   pendingCard: { minHeight: 58, borderRadius: 15, backgroundColor: '#FFF8EF', borderWidth: 1, borderColor: '#F3DDBD', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 10 }, pendingCardKyc: { backgroundColor: '#F1F7FF', borderColor: '#CFE1F7' }, pendingIcon: { width: 43, height: 43, borderRadius: 11, backgroundColor: '#DD7300', alignItems: 'center', justifyContent: 'center' }, pendingIconKyc: { backgroundColor: '#0A43A3' }, pendingCopy: { flex: 1, minWidth: 0 }, pendingTitle: { color: '#834100', fontSize: 15, fontWeight: '900' }, pendingTitleKyc: { color: '#0A3B8F' }, pendingText: { color: palette.navy, fontSize: 11.5, lineHeight: 15, fontWeight: '600', marginTop: 2 },
   vehicleCard: { minHeight: 126, borderRadius: 17, backgroundColor: '#FFFFFF', paddingLeft: 13, paddingRight: 6, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', shadowColor: '#122544', shadowOpacity: 0.07, shadowRadius: 10, elevation: 2 }, vehicleLeft: { width: 138, zIndex: 2, flexDirection: 'row', alignItems: 'flex-start', gap: 8 }, vehicleTextBlock: { flex: 1, paddingTop: 1 }, vehicleIcon: { width: 40, height: 40, borderRadius: 11, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center', marginTop: 0 }, vehicleTitle: { color: palette.navy, fontSize: 15, fontWeight: '900' }, vehicleNumber: { color: palette.navy, fontSize: 28, lineHeight: 32, fontWeight: '900', marginTop: 2 }, vehicleLabel: { color: palette.navy, fontSize: 12, fontWeight: '700' }, fleetImage: { flex: 1, height: 116, marginLeft: -14, marginRight: -12 },
   actionCard: { minHeight: 134, borderRadius: 17, backgroundColor: '#FFFFFF', flexDirection: 'row', flexWrap: 'wrap', padding: 8, gap: 6, borderWidth: 1, borderColor: '#D9E8F8', shadowColor: '#0B63CE', shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }, actionTile: { width: '49%', minHeight: 57, borderRadius: 13, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#DCEBFA', alignItems: 'center', paddingHorizontal: 6, paddingVertical: 6, shadowColor: '#0A43A3', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }, actionIcon: { width: 29, height: 29, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }, actionImageIcon: { width: 26, height: 26 }, actionTitleRow: { minHeight: 18, marginTop: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }, actionTitle: { flex: 1, color: palette.navy, fontSize: 10.8, fontWeight: '900', textAlign: 'center' }, actionBody: { color: palette.navy, fontSize: 8.8, lineHeight: 10.5, fontWeight: '600', textAlign: 'center' },
