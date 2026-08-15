@@ -21,3 +21,9 @@ apps/mobile-app/dist-web/
 apps/mobile-app/dist/
 
 *.tsbuildinfo
+
+# Local INSUREIT backup manager state (never commit credentials or backup payloads)
+tools/backup-manager/config.local.json
+tools/backup-manager/*.clixml
+tools/backup-manager/_work/
+tools/backup-manager/backups/

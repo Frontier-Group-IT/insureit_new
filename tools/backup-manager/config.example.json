@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "projectRef": "ilzhsfqqjyppzzvfscmh",
+  "region": "ap-northeast-2",
+  "storageEndpoint": "https://ilzhsfqqjyppzzvfscmh.storage.supabase.co/storage/v1/s3",
+  "backupRoot": "D:\\INSUREIT_BACKUPS",
+  "minimumFreeSpaceGB": 5,
+  "retention": {
+    "allBackupsDays": 7,
+    "dailyDays": 30,
+    "weeklyWeeks": 12,
+    "monthlyMonths": 12
+  }
+}
