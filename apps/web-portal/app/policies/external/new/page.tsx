@@ -6,7 +6,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { ExternalPolicyForm } from "../external-policy-form";
 
 type CustomerRow = { id: string; contact_name: string; company_name: string | null; phone: string | null };
-type VehicleRow = { id: string; customer_id: string; vehicle_no: string; make: string | null; model: string | null };
+type VehicleRow = { id: string; customer_id: string; vehicle_no: string; make: string | null; model: string | null; vehicle_type: string | null };
 type InsurerRow = { id: string; name: string };
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export default async function NewExternalPolicyPage() {
 
   const admin = createSupabaseAdminClient();
   let customerQuery = admin.from("customers").select("id,contact_name,company_name,phone").order("contact_name", { ascending: true });
-  let vehicleQuery = admin.from("vehicles").select("id,customer_id,vehicle_no,make,model").order("vehicle_no", { ascending: true });
+  let vehicleQuery = admin.from("vehicles").select("id,customer_id,vehicle_no,make,model,vehicle_type").order("vehicle_no", { ascending: true });
   if (accessibleCustomerIds !== null) {
     customerQuery = customerQuery.in("id", accessibleCustomerIds);
     vehicleQuery = vehicleQuery.in("customer_id", accessibleCustomerIds);
