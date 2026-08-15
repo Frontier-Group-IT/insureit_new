@@ -13,12 +13,11 @@ import { updateCorporateProfile } from "./corporate-actions";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type Customer = { id:string; customer_code:string; contact_name:string; company_name:string|null; phone:string; email:string|null; partner_type:string|null; address_street:string|null; address_locality:string|null; address:string|null; india_location_id:string|null; city:string|null; state:string|null; postal_code:string|null; pan_number:string|null; aadhaar_last_four:string|null; legal_trade_name:string|null; is_gst_registered:boolean; gst_number:string|null; fleet_size_band:string|null; onboarding_status:string; assigned_agent_id:string|null; created_at:string; updated_at:string };
+type Customer = { id:string; customer_code:string; contact_name:string; company_name:string|null; phone:string; email:string|null; partner_type:string|null; address_street:string|null; address_locality:string|null; address:string|null; india_location_id:string|null; city:string|null; state:string|null; postal_code:string|null; pan_number:string|null; aadhaar_last_four:string|null; legal_trade_name:string|null; is_gst_registered:boolean; gst_number:string|null; fleet_size_band:string|null; onboarding_status:string; assigned_agent_id:string|null; lead_source_intermediary_id:string|null; created_at:string; updated_at:string };
 type DocumentRow = { id:string; document_type:string; file_name:string; verification_status:string; created_at:string };
 type VehicleRow = { id:string; vehicle_no:string; vehicle_type:string; make:string|null; model:string|null };
 type AgentRow = { id:string; full_name:string };
-type PolicyAssignmentRow = { intermediary_code:string|null; created_at:string };
-type IntermediaryRow = { display_name:string };
+type IntermediaryRow = { display_name:string; intermediary_type:string };
 type DealershipProfile = { dealership_type:"posp"|"misp"; dealership_name:string; owner_name:string; oem_name:string|null; yearly_sales_band:string|null };
 type Representative = { representative_name:string; mobile:string; email:string|null; aadhaar_last_four:string|null; pan_number:string|null };
 type DealershipContact = { contact_role:string; contact_name:string|null; mobile:string|null; email:string|null };
@@ -35,11 +34,10 @@ export default async function EditCustomerPage({ params, searchParams }: { param
     getEmployeeAccessScope(manager.id, manager.role),
     getAccessibleCustomerIds(manager.id, manager.role),
   ]);
-  const [{data:customer,error},{data:documents},{data:vehicles},{data:latestPolicyAssignment}] = await Promise.all([
-    admin.from("customers").select("id, customer_code, contact_name, company_name, phone, email, partner_type, address_street, address_locality, address, india_location_id, city, state, postal_code, pan_number, aadhaar_last_four, legal_trade_name, is_gst_registered, gst_number, fleet_size_band, onboarding_status, assigned_agent_id, created_at, updated_at").eq("id",id).maybeSingle<Customer>(),
+  const [{data:customer,error},{data:documents},{data:vehicles}] = await Promise.all([
+    admin.from("customers").select("id, customer_code, contact_name, company_name, phone, email, partner_type, address_street, address_locality, address, india_location_id, city, state, postal_code, pan_number, aadhaar_last_four, legal_trade_name, is_gst_registered, gst_number, fleet_size_band, onboarding_status, assigned_agent_id, lead_source_intermediary_id, created_at, updated_at").eq("id",id).maybeSingle<Customer>(),
     admin.from("customer_documents").select("id, document_type, file_name, verification_status, created_at").eq("customer_id",id).order("created_at",{ascending:false}).returns<DocumentRow[]>(),
-    admin.from("vehicles").select("id, vehicle_no, vehicle_type, make, model").eq("customer_id",id).order("created_at",{ascending:false}).returns<VehicleRow[]>(),
-    admin.from("policies").select("intermediary_code, created_at").eq("customer_id",id).not("intermediary_code","is",null).order("created_at",{ascending:false}).limit(1).maybeSingle<PolicyAssignmentRow>()
+    admin.from("vehicles").select("id, vehicle_no, vehicle_type, make, model").eq("customer_id",id).order("created_at",{ascending:false}).returns<VehicleRow[]>()
   ]);
   if(error||!customer) notFound();
 
@@ -50,19 +48,27 @@ export default async function EditCustomerPage({ params, searchParams }: { param
   if (agentIds !== null) agentRequest = agentIds.length ? agentRequest.in("id", agentIds) : agentRequest.in("id", ["00000000-0000-0000-0000-000000000000"]);
   const { data: agents } = await agentRequest.returns<AgentRow[]>();
 
-  let intermediaryAssignedTo: string | null = null;
-  if (latestPolicyAssignment?.intermediary_code) {
+  let leadSourceName = "Not recorded";
+  if (customer.lead_source_intermediary_id) {
     const { data: intermediary } = await admin
       .from("intermediaries")
-      .select("display_name")
-      .eq("intermediary_code", latestPolicyAssignment.intermediary_code)
+      .select("display_name, intermediary_type")
+      .eq("id", customer.lead_source_intermediary_id)
       .maybeSingle<IntermediaryRow>();
-    intermediaryAssignedTo = intermediary?.display_name ?? null;
+    if (intermediary?.display_name) {
+      const sourceType = intermediary.intermediary_type === "posp"
+        ? "POSP"
+        : intermediary.intermediary_type === "misp"
+          ? "MISP"
+          : intermediary.intermediary_type === "partner"
+            ? "Partner"
+            : "Intermediary";
+      leadSourceName = `${sourceType} · ${intermediary.display_name}`;
+    }
   }
-  const assignedAgentName = customer.assigned_agent_id
-    ? agents?.find((agent) => agent.id === customer.assigned_agent_id)?.full_name ?? null
-    : null;
-  const assignedTo = intermediaryAssignedTo ?? assignedAgentName ?? "Not assigned";
+  const internalOwnerName = customer.assigned_agent_id
+    ? agents?.find((agent) => agent.id === customer.assigned_agent_id)?.full_name ?? "Not assigned"
+    : "Not assigned";
   const documentsWithUrls=(documents??[]).map((document)=>({...document,signedUrl:`/customers/documents/${document.id}/open`}));
 
   if(customer.partner_type==="corporate"){
@@ -88,5 +94,5 @@ export default async function EditCustomerPage({ params, searchParams }: { param
     return <AppShell title="Dealership Profile"><DealershipProfileEditor action={updateDealershipProfile.bind(null,id)} values={{dealership_type:dealership.dealership_type,dealership_name:dealership.dealership_name,owner_name:dealership.owner_name,phone:customer.phone,email:customer.email,address_street:customer.address_street,address_locality:customer.address_locality,city:customer.city,state:customer.state,postal_code:customer.postal_code,india_location_id:customer.india_location_id,oem_name:dealership.oem_name,yearly_sales_band:dealership.yearly_sales_band,is_gst_registered:customer.is_gst_registered,gst_number:customer.gst_number,representative_name:representative.representative_name,representative_mobile:representative.mobile,representative_email:representative.email,representative_pan:representative.pan_number,aadhaar_last_four:representative.aadhaar_last_four}} contacts={contacts??[]} documents={documentsWithUrls} oems={oems}/></AppShell>;
   }
 
-  return <AppShell title="Customer Profile"><CustomerProfileEditor customer={customer} documents={documentsWithUrls} vehicles={vehicles??[]} agents={agents??[]} assignedTo={assignedTo} action={updateCustomerProfile.bind(null,id)} errorMessage={query.error??null} errorField={query.field??null}/></AppShell>;
+  return <AppShell title="Customer Profile"><CustomerProfileEditor customer={customer} documents={documentsWithUrls} vehicles={vehicles??[]} agents={agents??[]} internalOwnerName={internalOwnerName} leadSourceName={leadSourceName} action={updateCustomerProfile.bind(null,id)} errorMessage={query.error??null} errorField={query.field??null}/></AppShell>;
 }

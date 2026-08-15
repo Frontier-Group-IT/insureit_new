@@ -9,7 +9,7 @@ type Customer = { id: string; customer_code: string; contact_name: string; compa
 type DocumentRow = { id: string; document_type: string; file_name: string; verification_status: string; created_at: string; signedUrl: string | null };
 type VehicleRow = { id: string; vehicle_no: string; vehicle_type: string; make: string | null; model: string | null };
 type AgentOption = { id: string; full_name: string };
-type Props = { customer: Customer; documents: DocumentRow[]; vehicles: VehicleRow[]; agents: AgentOption[]; assignedTo?: string; action: (formData: FormData) => void | Promise<void>; errorMessage?: string | null; errorField?: string | null };
+type Props = { customer: Customer; documents: DocumentRow[]; vehicles: VehicleRow[]; agents: AgentOption[]; internalOwnerName?: string; leadSourceName?: string; action: (formData: FormData) => void | Promise<void>; errorMessage?: string | null; errorField?: string | null };
 
 const inputClass = "h-8 w-full rounded-md border border-[var(--border)] bg-white px-2.5 text-[11.5px] text-[var(--text)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[#E8E8FF]";
 const labelClass = "mb-1 block text-[9.5px] font-semibold uppercase tracking-[0.04em] text-[#68758A]";
@@ -17,7 +17,7 @@ const allDocumentTypes = ["pan_copy", "aadhaar_front", "aadhaar_back", "gst_copy
 const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 type DocumentType = (typeof allDocumentTypes)[number];
 
-export function CustomerProfileEditor({ customer, documents, vehicles, agents, assignedTo: assignedToOverride, action, errorMessage, errorField }: Props) {
+export function CustomerProfileEditor({ customer, documents, vehicles, agents, internalOwnerName: internalOwnerNameOverride, leadSourceName: leadSourceNameOverride, action, errorMessage, errorField }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const [gstRegistered, setGstRegistered] = useState(customer.is_gst_registered);
   const [selectedFileNames, setSelectedFileNames] = useState<Partial<Record<DocumentType, string>>>({});
@@ -26,9 +26,10 @@ export function CustomerProfileEditor({ customer, documents, vehicles, agents, a
   );
   const requiredTypes = gstRegistered ? allDocumentTypes : allDocumentTypes.filter((type) => type !== "gst_copy");
   const documentMap = new Map(documents.map((document) => [document.document_type, document]));
-  const assignedTo = assignedToOverride ?? (customer.assigned_agent_id
+  const internalOwnerName = internalOwnerNameOverride ?? (customer.assigned_agent_id
     ? agents.find((agent) => agent.id === customer.assigned_agent_id)?.full_name ?? "Not assigned"
     : "Not assigned");
+  const leadSourceName = leadSourceNameOverride ?? "Not recorded";
 
   function handleDocumentSelection(type: DocumentType, file: File | null) {
     setSelectedFileNames((current) => {
@@ -102,9 +103,10 @@ export function CustomerProfileEditor({ customer, documents, vehicles, agents, a
             </div>
           </div>
 
-          <div className="grid border-t border-white/15 sm:grid-cols-2 xl:grid-cols-6" aria-label="Customer summary">
+          <div className="grid border-t border-white/15 sm:grid-cols-2 xl:grid-cols-7" aria-label="Customer summary">
             <HeaderMetric icon={UserRound} label="Customer Type" value={partnerTypeLabel(customer.partner_type)} />
-            <HeaderMetric icon={UserCheck} label="Assigned To" value={assignedTo} />
+            <HeaderMetric icon={UserCheck} label="Internal Account Owner" value={internalOwnerName} />
+            <HeaderMetric icon={BadgeCheck} label="Lead Source" value={leadSourceName} />
             <HeaderMetric icon={CarFront} label="Fleet Size" value={String(vehicles.length)} />
             <HeaderMetric icon={Phone} label="Mobile" value={customer.phone || "Not set"} />
             <HeaderMetric icon={BadgeCheck} label="Customer Code" value={customer.customer_code || "Not set"} />
