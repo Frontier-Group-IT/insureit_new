@@ -72,6 +72,20 @@ export async function getOperationsDashboardData(supabase: SupabaseClient): Prom
     if (profile?.id) {
       const customerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_customers");
       if (customerIds !== null) return getScopedOperationsDashboardData(customerIds);
+
+      // `null` means the effective customer scope is organization-wide. Do not
+      // fall back to the caller's RLS session here: hierarchy roles can receive
+      // an organization override even when their base database role remains scoped.
+      const organizationRpcResult = await admin.rpc("get_operations_dashboard");
+      const organizationDashboard = normalizeRpcDashboard(organizationRpcResult.data);
+      if (!organizationRpcResult.error && organizationDashboard) return organizationDashboard;
+
+      const organizationWarning = organizationRpcResult.error && !isMissingDashboardRpc(organizationRpcResult.error)
+        ? "The optimized organization dashboard service is unavailable; live fallback data is shown."
+        : !organizationRpcResult.error
+          ? "The optimized organization dashboard service returned an invalid response; live fallback data is shown."
+          : null;
+      return getOperationsDashboardFallback(admin, organizationWarning);
     }
   }
 
