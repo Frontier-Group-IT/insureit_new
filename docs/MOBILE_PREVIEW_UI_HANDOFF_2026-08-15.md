@@ -65,6 +65,8 @@ This is an Expo native dependency mismatch: `expo-font@57.0.1` was resolved in t
 
 **DEPLOYED startup loading-copy removal OTA:** After the simplified splash, the app still showed the shared `LoadingState` text `Getting things ready` and placeholder cards during auth routing. Commit `b84bcc3191d3340d7a9b6384a5021e81999a7eca` removed the intermediate index loading screen and stripped the shared loader copy/placeholders so startup transitions from the branded splash directly to the app/login screen. Published to Expo `preview` runtime `0.2.0`; update group `5af673f3-a709-4448-aac5-6a094c0d7ffd`; Android update `01a00691-dc75-7ce6-bf18-a6a747c6df66`; iOS update `01a00691-dc75-7392-acd7-3635b07ba2f0`. Message: `Remove startup loading copy OTA 2026-08-15`.
 
+**DEPLOYED individual dashboard redesign OTA:** Commit `196724b7847e93efaa7ac0160598d2aab1cc393a` redesigns the individual customer home dashboard only. It preserves the existing routes and adds a state-driven live hero, attention rail, fleet/protection snapshot, contextual quick actions, claim journey card, support action center, pull-to-refresh, synced time, and dashboard inclusion of customer-added `external_policies` in policy/renewal/protection counts. Published to Expo `preview` runtime `0.2.0`; update group `9f877078-dc12-43e4-a2ec-64a09739c83a`; Android update `01a006bc-f842-724c-b321-36e4493dbe63`; iOS update `01a006bc-f842-72c1-862a-9f41949b81f1`. Message: `Redesign individual customer dashboard 2026-08-16`.
+
 **Expo preview:** The installed preview APK follows Expo branch/channel `preview`, runtime version `0.1.0`. The user does not need a new APK for these JS/layout changes unless the installed APK cannot consume OTA updates or a future change modifies native/runtime dependencies.
 
 Published preview updates from this work:
@@ -137,7 +139,7 @@ Additional focused ESLint checks were run before the final Expo publish for the 
 
 ## Actionable Follow-Ups
 
-1. Real-device smoke test the latest preview update group `5af673f3-a709-4448-aac5-6a094c0d7ffd`.
+1. Real-device smoke test the latest preview update group `9f877078-dc12-43e4-a2ec-64a09739c83a`.
 2. Check header spacing on Home, Vehicles, Vehicle Detail, Add Vehicle, Add Policy, Policies, Policy Detail, Claims, Support, Profile, and self-managed claim pages.
 3. Confirm the bottom bar hides while typing and returns correctly after dismissing the keyboard.
 4. Confirm vehicle cards still show external policy details where external policies exist.
