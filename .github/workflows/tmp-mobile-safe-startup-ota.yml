@@ -1,0 +1,41 @@
+name: Temporary Mobile Safe Startup OTA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/tmp-mobile-safe-startup-ota.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  publish-ota:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify mobile safe startup bundle
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-public-anon-key
+          NODE_ENV: production
+        working-directory: apps/mobile-app
+        run: |
+          npm run typecheck
+          npx expo export --platform android --output-dir /tmp/mobile-safe-startup
+
+      - name: Publish preview OTA only
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        working-directory: apps/mobile-app
+        run: npx --yes eas-cli@18 update --channel preview --environment preview --message "Safe startup diagnostic OTA 2026-08-15" --non-interactive
