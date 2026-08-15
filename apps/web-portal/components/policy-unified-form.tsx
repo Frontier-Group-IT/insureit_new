@@ -123,6 +123,7 @@ function displayDate(value:string){if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return"
 function parseDisplayDate(value:string){const match=value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);if(!match)return"";const day=Number(match[1]),month=Number(match[2]),year=Number(match[3]);const date=new Date(Date.UTC(year,month-1,day));if(date.getUTCFullYear()!==year||date.getUTCMonth()!==month-1||date.getUTCDate()!==day)return"";return`${match[3]}-${match[2]}-${match[1]}`;}
 function dateTyping(value:string){const digits=value.replace(/\D/g,"").slice(0,8);if(digits.length<=2)return digits;if(digits.length<=4)return`${digits.slice(0,2)}/${digits.slice(2)}`;return`${digits.slice(0,2)}/${digits.slice(2,4)}/${digits.slice(4)}`;}
 function policyExpiryFrom(start:string){if(!/^\d{4}-\d{2}-\d{2}$/.test(start))return"";const[y,m,d]=start.split("-").map(Number);const expiry=new Date(Date.UTC(y+1,m-1,d));expiry.setUTCDate(expiry.getUTCDate()-1);return expiry.toISOString().slice(0,10);}
+function shiftedPolicyEnd(newStart:string,oldStart:string,oldEnd:string){if(!/^\d{4}-\d{2}-\d{2}$/.test(newStart)||!/^\d{4}-\d{2}-\d{2}$/.test(oldStart)||!/^\d{4}-\d{2}-\d{2}$/.test(oldEnd))return policyExpiryFrom(newStart);const oldStartMs=new Date(`${oldStart}T00:00:00Z`).getTime(),oldEndMs=new Date(`${oldEnd}T00:00:00Z`).getTime();if(oldEndMs<oldStartMs)return policyExpiryFrom(newStart);const durationDays=Math.round((oldEndMs-oldStartMs)/86400000);const next=new Date(`${newStart}T00:00:00Z`);next.setUTCDate(next.getUTCDate()+durationDays);return next.toISOString().slice(0,10);}
 function boolValue(value: string | null) { return value==="true"||value==="Yes"||value==="YES"; }
 function normalizeRegistrationInput(value:string){return value.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,10);}
 function isValidRegisteredVehicleNumber(value:string){return /^[A-Z]{2}[A-Z0-9]{6}[0-9]{2}$/.test(value);}
@@ -235,7 +236,7 @@ export function PolicyUnifiedForm({ mode, insurers, rms, sources, manufacturers 
     if(!businessConflict)return;
     if(action==="view_existing"){if("existingPath" in businessConflict)window.open(businessConflict.existingPath,"_blank","noopener,noreferrer");return;}
     if(action==="continue_gap"&&businessConflict.type==="coverage_gap"&&pendingPayload){setBusinessConflict(null);runCreate({...pendingPayload,resolution:{...pendingPayload.resolution,acceptCoverageGap:true}});return;}
-    if(action==="use_suggested_start"&&(businessConflict.type==="coverage_overlap"||businessConflict.type==="coverage_gap")){const start=businessConflict.suggestedStartDate;setForm(current=>({...current,validFrom:start,validUpto:policyExpiryFrom(start)}));setBusinessConflict(null);goToSection(2);return;}
+    if(action==="use_suggested_start"&&(businessConflict.type==="coverage_overlap"||businessConflict.type==="coverage_gap")){const start=businessConflict.suggestedStartDate;setForm(current=>({...current,validFrom:start,validUpto:shiftedPolicyEnd(start,current.validFrom,current.validUpto)}));setBusinessConflict(null);goToSection(2);return;}
     setBusinessConflict(null);
     if(action==="edit_vehicle"||action==="edit_manufacturer")goToSection(1);else goToSection(2);
   }
