@@ -51,6 +51,8 @@ at expo.modules.font.FontLoaderModule.definition(FontLoaderModule.kt:98)
 
 This is an Expo native dependency mismatch: `expo-font@57.0.1` was resolved in the install tree while the APK used Expo SDK 54 native modules (`expo-modules-core@3.0.30`). OTA cannot repair this binary because the app dies while native Expo modules are registered, before OTA JavaScript can run. The repository dependency fix pins `expo-font` to SDK 54's `14.0.12` explicitly in the mobile app and via root npm overrides. The next APK build must use the cleaned lockfile; do not treat another OTA publish as a fix for this specific crash.
 
+**IMPLEMENTED restore before next APK:** After the safe-startup diagnostic confirmed the binary was crashing before JS, the mobile root was restored to the full app startup shell: `AppLoadingProvider`, animated `SplashIntro`, `RealtimeNotificationProvider`, route-session redirect, and the Add Vehicle modal route are back in `apps/mobile-app/app/_layout.tsx` and `apps/mobile-app/app/index.tsx`. Android adaptive launcher icon foreground now uses the padded transparent `assets/brand/insureit-adaptive-foreground.png` instead of the full square icon, so the shield should not be cropped by Android circular masks. This icon change requires the next APK build; OTA cannot change the installed launcher icon.
+
 **Expo preview:** The installed preview APK follows Expo branch/channel `preview`, runtime version `0.1.0`. The user does not need a new APK for these JS/layout changes unless the installed APK cannot consume OTA updates or a future change modifies native/runtime dependencies.
 
 Published preview updates from this work:

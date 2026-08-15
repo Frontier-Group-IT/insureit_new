@@ -1,11 +1,40 @@
-import { Stack } from 'expo-router';
+import { Stack, useRootNavigationState } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+
+import { AppLoadingProvider } from '@/components/app-loading';
+import { SplashIntro } from '@/components/first-look';
+import { RealtimeNotificationProvider } from '@/components/realtime-notifications';
 
 export const unstable_settings = { initialRouteName: 'index' };
 
 export default function RootLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
-      <Stack.Screen name="index" />
-    </Stack>
+    <AppLoadingProvider><RootApplication /></AppLoadingProvider>
   );
 }
+
+function RootApplication() {
+  const navigationState = useRootNavigationState();
+  const [minimumIntroComplete, setMinimumIntroComplete] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setMinimumIntroComplete(true), 1100);
+    return () => clearTimeout(timer);
+  }, []);
+  const introVisible = !minimumIntroComplete || !navigationState?.key;
+  return (
+    <>
+      <StatusBar style={introVisible ? 'light' : 'dark'} />
+      <RealtimeNotificationProvider>
+        <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="customer/add-vehicle" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+        </Stack>
+      </RealtimeNotificationProvider>
+      {introVisible ? <View style={styles.introOverlay}><SplashIntro /></View> : null}
+    </>
+  );
+}
+
+const styles = StyleSheet.create({ introOverlay: { ...StyleSheet.absoluteFillObject, zIndex: 20000, elevation: 20000 } });

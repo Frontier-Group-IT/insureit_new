@@ -27,7 +27,7 @@
       "package": "com.insureit.mobile",
       "softwareKeyboardLayoutMode": "pan",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/brand/insureit-app-icon-ice.png",
+        "foregroundImage": "./assets/brand/insureit-adaptive-foreground.png",
         "backgroundColor": "#F4F8FC"
       },
       "permissions": [
