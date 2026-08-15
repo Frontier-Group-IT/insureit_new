@@ -9,6 +9,11 @@ on:
 permissions:
   contents: write
 
+env:
+  NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-public-anon-key
+  NEXT_PUBLIC_PORTAL_URL: https://portal.insureit.in
+
 jobs:
   refine:
     runs-on: ubuntu-latest
