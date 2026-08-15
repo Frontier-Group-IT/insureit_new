@@ -32,7 +32,7 @@ jobs:
       - name: Initialize gluestack UI pilot
         working-directory: apps/mobile-app
         run: |
-          npx --yes gluestack-ui@latest init --path components/gluestack-ui --nativewind -y
+          npx --yes gluestack-ui@latest init --path components/gluestack-ui --uniwind -y
           npx --yes gluestack-ui@latest add heading -y
           npx --yes gluestack-ui@latest add text -y
           npx --yes gluestack-ui@latest add vstack -y
