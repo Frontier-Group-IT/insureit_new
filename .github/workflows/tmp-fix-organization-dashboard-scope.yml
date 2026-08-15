@@ -9,7 +9,6 @@ permissions:
 
 jobs:
   patch:
-    if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,9 +48,8 @@ jobs:
       return getOperationsDashboardFallback(admin, organizationWarning);
     }
 '''
-          if old not in text:
-              raise SystemExit('Target dashboard scope block not found; aborting without changes.')
-          path.write_text(text.replace(old, new, 1))
+          if old in text:
+              path.write_text(text.replace(old, new, 1))
           PY
       - name: Install web dependencies
         working-directory: apps/web-portal
@@ -67,7 +65,10 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add apps/web-portal/lib/operations-dashboard.ts
-          git diff --cached --quiet && exit 0
+          if git diff --cached --quiet; then
+            echo 'Dashboard scope fix already present; nothing to commit.'
+            exit 0
+          fi
           git commit -m 'Fix organization-scoped dashboard totals'
           git pull --rebase origin main
           git push origin HEAD:main
