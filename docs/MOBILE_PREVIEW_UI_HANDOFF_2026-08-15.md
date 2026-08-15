@@ -42,6 +42,15 @@ If the standalone APK still closes before applying this OTA, get Android `adb lo
 
 If this safe-startup OTA also does not appear on the standalone APK after multiple opens, the installed binary is crashing before it can load/apply OTA JS. The next required evidence is Android `adb logcat`; do not keep shipping speculative OTA updates.
 
+**VERIFIED native crash root cause:** ADB on the connected Nothing Phone (2a), Android 16, reproduced the standalone APK crash for package `com.insureit.mobile` versionCode `4`. The Android crash buffer showed:
+
+```text
+java.lang.NoSuchMethodError: No static method getDirectConverter(...)
+at expo.modules.font.FontLoaderModule.definition(FontLoaderModule.kt:98)
+```
+
+This is an Expo native dependency mismatch: `expo-font@57.0.1` was resolved in the install tree while the APK used Expo SDK 54 native modules (`expo-modules-core@3.0.30`). OTA cannot repair this binary because the app dies while native Expo modules are registered, before OTA JavaScript can run. The repository dependency fix pins `expo-font` to SDK 54's `14.0.12` explicitly in the mobile app and via root npm overrides. The next APK build must use the cleaned lockfile; do not treat another OTA publish as a fix for this specific crash.
+
 **Expo preview:** The installed preview APK follows Expo branch/channel `preview`, runtime version `0.1.0`. The user does not need a new APK for these JS/layout changes unless the installed APK cannot consume OTA updates or a future change modifies native/runtime dependencies.
 
 Published preview updates from this work:
