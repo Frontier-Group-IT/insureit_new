@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the compact MUI External Policies release to production after fixing verification concurrency.",
-  "deploy_requested_at": "2026-08-15T13:43:00+05:30",
+  "purpose": "Deploy the External Policies table readability refinement to production.",
+  "deploy_requested_at": "2026-08-15T14:03:00+05:30",
   "requested_by": "explicit user request",
   "source": "Deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "0c3313405734da5d8a1743d172d334cbb7d88d66",
-  "release_scope": "Compact Material UI redesign for External Policies and Add/Edit External Policy, including the minimal MUI runtime integration and the verification-concurrency fix required for protected production deployment.",
+  "source_commit": "044eee33aad42f99ad2a26e21c61dd31358430c4",
+  "release_scope": "External Policies register refinement: taller rows for two-line cells, clickable policy number navigation, removal of the separate Open action column, improved validity readability, and small density/alignment refinements.",
   "verification": "The protected production workflow must run its compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
