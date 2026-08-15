@@ -1,9 +1,28 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
-import { ArrowLeft, Save, ShieldCheck } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  Alert,
+  Autocomplete,
+  Box,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  InputAdornment,
+  Paper,
+  Snackbar,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { ArrowLeft, Save } from "lucide-react";
 import { createExternalPolicy, updateExternalPolicy, type ExternalPolicyPayload } from "./external-policy-actions";
+import { ExternalPolicyMuiTheme } from "./mui-demo-theme";
 
 type CustomerOption = {
   id: string;
@@ -27,6 +46,15 @@ const emptyValues: ExternalPolicyInitialValues = {
   insuredDeclaredValue: "",
 };
 
+const policyTypeOptions = [
+  "Commercial comprehensive",
+  "Commercial package policy",
+  "Third-party liability",
+  "Standalone own damage",
+  "Goods carrying commercial vehicle",
+  "Passenger carrying commercial vehicle",
+];
+
 export function ExternalPolicyForm({
   mode,
   customers,
@@ -38,25 +66,71 @@ export function ExternalPolicyForm({
   insurers: InsurerOption[];
   initialValues?: ExternalPolicyInitialValues;
 }) {
-  const [values, setValues] = useState<ExternalPolicyInitialValues>(initialValues ?? emptyValues);
+  return (
+    <ExternalPolicyMuiTheme>
+      <ExternalPolicyFormContent mode={mode} customers={customers} insurers={insurers} initialValues={initialValues} />
+    </ExternalPolicyMuiTheme>
+  );
+}
+
+function ExternalPolicyFormContent({
+  mode,
+  customers,
+  insurers,
+  initialValues,
+}: {
+  mode: "create" | "edit";
+  customers: CustomerOption[];
+  insurers: InsurerOption[];
+  initialValues?: ExternalPolicyInitialValues;
+}) {
+  const router = useRouter();
+  const initial = initialValues ?? emptyValues;
+  const [values, setValues] = useState<ExternalPolicyInitialValues>(initial);
   const [message, setMessage] = useState("");
+  const [snackbar, setSnackbar] = useState("");
+  const [leaveOpen, setLeaveOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const selectedCustomer = useMemo(() => customers.find((item) => item.id === values.customerId) ?? null, [customers, values.customerId]);
   const vehicles = selectedCustomer?.vehicles ?? [];
+  const selectedVehicle = useMemo(() => vehicles.find((item) => item.id === values.vehicleId) ?? null, [vehicles, values.vehicleId]);
+  const selectedInsurer = useMemo(() => insurers.find((item) => item.id === values.insuranceCompanyId) ?? null, [insurers, values.insuranceCompanyId]);
+  const dateError = Boolean(values.startDate && values.endDate && values.endDate < values.startDate);
+  const dirty = JSON.stringify(values) !== JSON.stringify(initial);
 
   function set<K extends keyof ExternalPolicyPayload>(key: K, value: ExternalPolicyPayload[K]) {
     setValues((current) => ({ ...current, [key]: value }));
+    if (message) setMessage("");
   }
 
   function changeCustomer(customerId: string) {
     const customer = customers.find((item) => item.id === customerId);
     const nextVehicleId = customer?.vehicles.some((vehicle) => vehicle.id === values.vehicleId) ? values.vehicleId : "";
     setValues((current) => ({ ...current, customerId, vehicleId: nextVehicleId }));
+    if (message) setMessage("");
+  }
+
+  function validateClient() {
+    if (!values.customerId) return "Select a customer.";
+    if (!values.vehicleId) return "Select a vehicle.";
+    if (!values.insuranceCompanyId) return "Select an insurance company.";
+    if (!values.policyNo.trim()) return "Enter the policy number.";
+    if (!values.policyType.trim()) return "Enter the policy type.";
+    if (!values.startDate || !values.endDate) return "Enter both validity dates.";
+    if (values.endDate < values.startDate) return "Policy end date cannot be before the start date.";
+    return "";
   }
 
   function submit() {
     setMessage("");
+    const clientError = validateClient();
+    if (clientError) {
+      setMessage(clientError);
+      setSnackbar(clientError);
+      return;
+    }
+
     const payload: ExternalPolicyPayload = {
       customerId: values.customerId,
       vehicleId: values.vehicleId,
@@ -68,89 +142,206 @@ export function ExternalPolicyForm({
       premiumAmount: values.premiumAmount,
       insuredDeclaredValue: values.insuredDeclaredValue,
     };
+
     startTransition(async () => {
       const result = mode === "edit" && values.policyId
         ? await updateExternalPolicy(values.policyId, payload)
         : await createExternalPolicy(payload);
+
       if (!result.ok) {
         setMessage(result.error);
+        setSnackbar(result.error);
         return;
       }
       window.location.href = "/policies/external";
     });
   }
 
+  function requestExit() {
+    if (dirty) {
+      setLeaveOpen(true);
+      return;
+    }
+    router.push("/policies/external");
+  }
+
   return (
-    <div className="mx-auto max-w-[1040px] space-y-4">
-      <div className="rounded-[22px] border border-[#DCE5F0] bg-white px-5 py-4 shadow-[0_16px_40px_rgba(31,48,86,.08)]">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#17365D]"><ShieldCheck className="h-5 w-5" /></div>
-            <div>
-              <h1 className="text-[20px] font-extrabold tracking-[-0.02em] text-[#12203B]">{mode === "edit" ? "Edit External Policy" : "Add External Policy"}</h1>
-            </div>
-          </div>
-          <Link href="/policies/external" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#D3DFEC] bg-[#F8FAFC] px-3 text-[10.5px] font-bold text-[#334155]"><ArrowLeft className="h-4 w-4" />External Policies</Link>
-        </div>
-      </div>
+    <Box sx={{ mx: "auto", maxWidth: 1180, pb: 1 }}>
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "stretch", sm: "center" }} justifyContent="space-between" sx={{ mb: 1.25 }}>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Button onClick={requestExit} variant="text" color="inherit" startIcon={<ArrowLeft size={16} />} sx={{ px: .75, minWidth: 0 }}>
+            Back
+          </Button>
+          <Divider orientation="vertical" flexItem sx={{ my: .6 }} />
+          <Typography variant="h5">{mode === "edit" ? "Edit External Policy" : "Add External Policy"}</Typography>
+        </Stack>
+        <Stack direction="row" spacing={.8}>
+          <Button onClick={requestExit} variant="outlined" color="inherit" sx={{ flex: { xs: 1, sm: "0 0 auto" } }}>
+            Cancel
+          </Button>
+          <Button
+            onClick={submit}
+            disabled={isPending}
+            variant="contained"
+            startIcon={isPending ? <CircularProgress size={14} color="inherit" /> : <Save size={15} />}
+            sx={{ flex: { xs: 1.4, sm: "0 0 auto" }, minWidth: { sm: 138 } }}
+          >
+            {isPending ? "Saving…" : mode === "edit" ? "Save Changes" : "Save Policy"}
+          </Button>
+        </Stack>
+      </Stack>
 
-      {message ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10.5px] font-semibold text-red-700">{message}</div> : null}
+      {message ? <Alert severity="error" sx={{ mb: 1, py: .15 }}>{message}</Alert> : null}
 
-      <section className="rounded-[22px] border border-[#DCE5F0] bg-white p-5 shadow-[0_16px_40px_rgba(31,48,86,.07)]">
-        <div className="grid gap-5 lg:grid-cols-2">
-          <Field label="Customer" required>
-            <select value={values.customerId} onChange={(event) => changeCustomer(event.target.value)} className={inputClass}>
-              <option value="">Select customer</option>
-              {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.label}{customer.phone ? ` • ${customer.phone}` : ""}</option>)}
-            </select>
-          </Field>
+      <Paper variant="outlined" sx={{ borderColor: "#DCE5EF", overflow: "hidden", boxShadow: "0 4px 16px rgba(15,23,42,.035)" }}>
+        <CompactSection title="Policy Linkage">
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3,minmax(0,1fr))" }, gap: 1.25 }}>
+            <Autocomplete
+              size="small"
+              options={customers}
+              value={selectedCustomer}
+              onChange={(_, customer) => changeCustomer(customer?.id ?? "")}
+              getOptionLabel={(option) => `${option.label}${option.phone ? ` • ${option.phone}` : ""}`}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              renderInput={(params) => <TextField {...params} required label="Customer" placeholder="Search customer" />}
+            />
 
-          <Field label="Existing Vehicle" required hint={values.customerId ? `${vehicles.length} vehicle${vehicles.length === 1 ? "" : "s"} available for selected customer` : "Select a customer first"}>
-            <select value={values.vehicleId} onChange={(event) => set("vehicleId", event.target.value)} disabled={!values.customerId} className={`${inputClass} disabled:bg-[#F1F5F9] disabled:text-[#94A3B8]`}>
-              <option value="">Select vehicle</option>
-              {vehicles.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.vehicle_no}{[vehicle.make, vehicle.model].filter(Boolean).length ? ` • ${[vehicle.make, vehicle.model].filter(Boolean).join(" ")}` : ""}</option>)}
-            </select>
-          </Field>
+            <Autocomplete
+              size="small"
+              options={vehicles}
+              value={selectedVehicle}
+              disabled={!selectedCustomer}
+              onChange={(_, vehicle) => set("vehicleId", vehicle?.id ?? "")}
+              getOptionLabel={(vehicle) => `${vehicle.vehicle_no}${[vehicle.make, vehicle.model].filter(Boolean).length ? ` • ${[vehicle.make, vehicle.model].filter(Boolean).join(" ")}` : ""}`}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              renderInput={(params) => <TextField {...params} required label="Vehicle" placeholder={selectedCustomer ? "Search vehicle" : "Select customer first"} />}
+            />
 
-          <Field label="Insurance Company" required>
-            <select value={values.insuranceCompanyId} onChange={(event) => set("insuranceCompanyId", event.target.value)} className={inputClass}>
-              <option value="">Select insurer</option>
-              {insurers.map((insurer) => <option key={insurer.id} value={insurer.id}>{insurer.name}</option>)}
-            </select>
-          </Field>
+            <Autocomplete
+              size="small"
+              options={insurers}
+              value={selectedInsurer}
+              onChange={(_, insurerOption) => set("insuranceCompanyId", insurerOption?.id ?? "")}
+              getOptionLabel={(option) => option.name}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              renderInput={(params) => <TextField {...params} required label="Insurance Company" placeholder="Search insurer" />}
+            />
+          </Box>
+        </CompactSection>
 
-          <Field label="Policy Number" required>
-            <input value={values.policyNo} onChange={(event) => set("policyNo", event.target.value.toUpperCase())} placeholder="Enter policy number" className={inputClass} />
-          </Field>
+        <Divider />
 
-          <Field label="Policy Type" required>
-            <input value={values.policyType} onChange={(event) => set("policyType", event.target.value)} placeholder="Commercial comprehensive" className={inputClass} />
-          </Field>
+        <CompactSection title="Policy Details">
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "minmax(0,.9fr) minmax(0,1.4fr)" }, gap: 1.25 }}>
+            <TextField
+              size="small"
+              required
+              label="Policy Number"
+              value={values.policyNo}
+              onChange={(event) => set("policyNo", event.target.value.toUpperCase())}
+              placeholder="Policy number"
+            />
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Valid From" required><input type="date" value={values.startDate} onChange={(event) => set("startDate", event.target.value)} className={inputClass} /></Field>
-            <Field label="Valid Upto" required><input type="date" value={values.endDate} onChange={(event) => set("endDate", event.target.value)} className={inputClass} /></Field>
-          </div>
+            <Autocomplete
+              size="small"
+              freeSolo
+              options={policyTypeOptions}
+              value={values.policyType}
+              onChange={(_, value) => set("policyType", typeof value === "string" ? value : values.policyType)}
+              onInputChange={(_, value) => set("policyType", value)}
+              renderInput={(params) => <TextField {...params} required label="Policy Type" placeholder="Select or type policy type" />}
+            />
+          </Box>
+        </CompactSection>
 
-          <Field label="Premium Amount" hint="Optional"><MoneyInput value={values.premiumAmount} onChange={(value) => set("premiumAmount", value)} /></Field>
-          <Field label="Insured Declared Value (IDV)" hint="Optional"><MoneyInput value={values.insuredDeclaredValue} onChange={(value) => set("insuredDeclaredValue", value)} /></Field>
-        </div>
+        <Divider />
 
-        <div className="mt-6 flex flex-col-reverse gap-2 border-t border-[#E8EEF5] pt-4 sm:flex-row sm:justify-end">
-          <Link href="/policies/external" className="inline-flex h-11 items-center justify-center rounded-xl border border-[#D3DFEC] bg-white px-4 text-[11px] font-bold text-[#475569]">Cancel</Link>
-          <button type="button" onClick={submit} disabled={isPending} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-5 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.20)] disabled:opacity-60"><Save className="h-4 w-4" />{isPending ? "Saving..." : mode === "edit" ? "Save Changes" : "Add External Policy"}</button>
-        </div>
-      </section>
-    </div>
+        <CompactSection title="Coverage">
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2,minmax(0,1fr))", lg: "repeat(4,minmax(0,1fr))" }, gap: 1.25 }}>
+            <TextField
+              size="small"
+              required
+              type="date"
+              label="Valid From"
+              value={values.startDate}
+              onChange={(event) => set("startDate", event.target.value)}
+              slotProps={{ inputLabel: { shrink: true } }}
+            />
+            <TextField
+              size="small"
+              required
+              type="date"
+              label="Valid Upto"
+              value={values.endDate}
+              onChange={(event) => set("endDate", event.target.value)}
+              error={dateError}
+              helperText={dateError ? "End date must be after start date" : undefined}
+              slotProps={{ inputLabel: { shrink: true } }}
+            />
+            <TextField
+              size="small"
+              label="Premium"
+              value={values.premiumAmount}
+              onChange={(event) => set("premiumAmount", sanitizeMoney(event.target.value))}
+              placeholder="0"
+              slotProps={{ input: { startAdornment: <InputAdornment position="start">₹</InputAdornment> }, htmlInput: { inputMode: "decimal" } }}
+            />
+            <TextField
+              size="small"
+              label="IDV"
+              value={values.insuredDeclaredValue}
+              onChange={(event) => set("insuredDeclaredValue", sanitizeMoney(event.target.value))}
+              placeholder="0"
+              slotProps={{ input: { startAdornment: <InputAdornment position="start">₹</InputAdornment> }, htmlInput: { inputMode: "decimal" } }}
+            />
+          </Box>
+        </CompactSection>
+      </Paper>
+
+      <Stack direction="row" justifyContent="flex-end" spacing={.8} sx={{ mt: 1.1 }}>
+        <Button onClick={requestExit} variant="text" color="inherit">Cancel</Button>
+        <Button
+          onClick={submit}
+          disabled={isPending}
+          variant="contained"
+          startIcon={isPending ? <CircularProgress size={14} color="inherit" /> : <Save size={15} />}
+          sx={{ minWidth: 138 }}
+        >
+          {isPending ? "Saving…" : mode === "edit" ? "Save Changes" : "Save Policy"}
+        </Button>
+      </Stack>
+
+      <Dialog open={leaveOpen} onClose={() => setLeaveOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>Discard changes?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">Unsaved changes will be lost.</Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.25 }}>
+          <Button onClick={() => setLeaveOpen(false)} color="inherit" variant="outlined">Keep Editing</Button>
+          <Button onClick={() => router.push("/policies/external")} color="error" variant="contained">Discard</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar open={Boolean(snackbar)} autoHideDuration={4500} onClose={() => setSnackbar("")} anchorOrigin={{ vertical: "top", horizontal: "right" }}>
+        <Alert severity="error" variant="filled" onClose={() => setSnackbar("")} sx={{ width: "100%" }}>{snackbar}</Alert>
+      </Snackbar>
+    </Box>
   );
 }
 
-function Field({ label, hint, required, children }: { label: string; hint?: string; required?: boolean; children: React.ReactNode }) {
-  return <label className="block"><span className="mb-1.5 flex items-center justify-between gap-2 text-[10px] font-bold text-[#334155]"><span>{label}{required ? <span className="ml-0.5 text-red-500">*</span> : null}</span>{hint ? <span className="text-[9px] font-medium text-[#94A3B8]">{hint}</span> : null}</span>{children}</label>;
+function CompactSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <Box sx={{ px: { xs: 1.5, sm: 2 }, py: { xs: 1.5, sm: 1.75 } }}>
+      <Typography variant="caption" sx={{ display: "block", mb: 1, color: "#44546A", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".055em" }}>
+        {title}
+      </Typography>
+      {children}
+    </Box>
+  );
 }
 
-function MoneyInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  return <div className="flex h-11 overflow-hidden rounded-xl border border-[#CBD8E6] bg-white focus-within:border-[#7EA5DC] focus-within:ring-2 focus-within:ring-[#DCEBFF]"><span className="grid w-10 place-items-center border-r border-[#E2E8F0] bg-[#F8FAFC] text-[11px] font-bold text-[#64748B]">₹</span><input value={value} onChange={(event) => onChange(event.target.value.replace(/[^0-9.]/g, ""))} inputMode="decimal" placeholder="0.00" className="min-w-0 flex-1 bg-transparent px-3 text-[11px] font-semibold text-[#0F172A] outline-none" /></div>;
+function sanitizeMoney(value: string) {
+  const cleaned = value.replace(/[^0-9.]/g, "");
+  const [whole, ...rest] = cleaned.split(".");
+  return rest.length ? `${whole}.${rest.join("")}` : whole;
 }
-
-const inputClass = "h-11 w-full rounded-xl border border-[#CBD8E6] bg-white px-3 text-[11px] font-semibold text-[#0F172A] outline-none transition focus:border-[#7EA5DC] focus:ring-2 focus:ring-[#DCEBFF]";
