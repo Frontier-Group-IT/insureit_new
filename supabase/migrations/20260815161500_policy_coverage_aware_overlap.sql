@@ -35,6 +35,11 @@ begin
     return new;
   end if;
 
+  if tg_table_name = 'policies'
+     and lower(coalesce(new.status, 'active')) in ('cancelled', 'canceled', 'rejected', 'superseded', 'void') then
+    return new;
+  end if;
+
   v_new_coverage := public.policy_coverage_components(new.policy_type);
 
   select conflict_source, conflict_id, conflict_policy_no, conflict_policy_type, conflict_start_date, conflict_end_date
