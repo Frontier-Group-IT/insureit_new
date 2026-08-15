@@ -1,0 +1,73 @@
+name: One-time organization dashboard scope fix
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Patch organization dashboard scope handling
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('apps/web-portal/lib/operations-dashboard.ts')
+          text = path.read_text()
+          old = '''    if (profile?.id) {
+      const customerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_customers");
+      if (customerIds !== null) return getScopedOperationsDashboardData(customerIds);
+    }
+'''
+          new = '''    if (profile?.id) {
+      const customerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_customers");
+      if (customerIds !== null) return getScopedOperationsDashboardData(customerIds);
+
+      // `null` means the effective customer scope is organization-wide. Do not
+      // fall back to the caller's RLS session here: hierarchy roles can receive
+      // an organization override even when their base database role remains scoped.
+      const organizationRpcResult = await admin.rpc("get_operations_dashboard");
+      const organizationDashboard = normalizeRpcDashboard(organizationRpcResult.data);
+      if (!organizationRpcResult.error && organizationDashboard) return organizationDashboard;
+
+      const organizationWarning = organizationRpcResult.error && !isMissingDashboardRpc(organizationRpcResult.error)
+        ? "The optimized organization dashboard service is unavailable; live fallback data is shown."
+        : !organizationRpcResult.error
+          ? "The optimized organization dashboard service returned an invalid response; live fallback data is shown."
+          : null;
+      return getOperationsDashboardFallback(admin, organizationWarning);
+    }
+'''
+          if old not in text:
+              raise SystemExit('Target dashboard scope block not found; aborting without changes.')
+          path.write_text(text.replace(old, new, 1))
+          PY
+      - name: Install web dependencies
+        working-directory: apps/web-portal
+        run: npm install --no-audit --no-fund
+      - name: Typecheck
+        working-directory: apps/web-portal
+        run: npm run typecheck
+      - name: Lint
+        working-directory: apps/web-portal
+        run: npm run lint
+      - name: Commit verified fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/web-portal/lib/operations-dashboard.ts
+          git diff --cached --quiet && exit 0
+          git commit -m 'Fix organization-scoped dashboard totals'
+          git pull --rebase origin main
+          git push origin HEAD:main
