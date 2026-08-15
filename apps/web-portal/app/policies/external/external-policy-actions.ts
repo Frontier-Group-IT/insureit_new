@@ -35,13 +35,29 @@ function optionalMoney(value: string) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : Number.NaN;
 }
 
+function friendlyExternalPolicyError(message: string | null | undefined) {
+  const raw = message ?? "";
+  const lower = raw.toLowerCase();
+  if (
+    raw.includes("POLICY_COVERAGE_OVERLAP") ||
+    lower.includes("already has a policy covering") ||
+    lower.includes("already has an active policy")
+  ) {
+    return "This vehicle already has overlapping OD/TP coverage for the selected policy dates. Adjust the policy dates or choose the correct policy product.";
+  }
+  if (lower.includes("external_policies_customer_policy_no_uidx") || lower.includes("duplicate key value")) {
+    return "This policy number is already registered for the selected customer. Review the existing policy or enter the correct policy number.";
+  }
+  return "External policy could not be saved. Your entered details are still on this form. Review the details and try again.";
+}
+
 async function validatePayload(payload: ExternalPolicyPayload) {
   const profile = await requirePolicyEditor();
   if (!isUuid(payload.customerId)) return { ok: false as const, error: "Select a valid customer." };
   if (!isUuid(payload.vehicleId)) return { ok: false as const, error: "Select an existing vehicle for the customer." };
   if (!isUuid(payload.insuranceCompanyId)) return { ok: false as const, error: "Select an insurance company." };
   if (!payload.policyNo.trim()) return { ok: false as const, error: "Enter the policy number." };
-  if (!payload.policyType.trim()) return { ok: false as const, error: "Enter the policy type." };
+  if (!payload.policyType.trim()) return { ok: false as const, error: "Select the policy product." };
   if (!validDate(payload.startDate) || !validDate(payload.endDate)) return { ok: false as const, error: "Enter valid policy dates." };
   if (payload.endDate < payload.startDate) return { ok: false as const, error: "Policy end date cannot be before the start date." };
 
@@ -94,7 +110,7 @@ export async function createExternalPolicy(payload: ExternalPolicyPayload): Prom
     .select("id")
     .single<{ id: string }>();
 
-  if (error || !data) return { ok: false, error: error?.message ?? "External policy could not be created." };
+  if (error || !data) return { ok: false, error: friendlyExternalPolicyError(error?.message) };
   revalidatePath("/policies/external");
   return { ok: true, policyId: data.id };
 }
@@ -133,7 +149,7 @@ export async function updateExternalPolicy(policyId: string, payload: ExternalPo
     })
     .eq("id", policyId);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: friendlyExternalPolicyError(error.message) };
   revalidatePath("/policies/external");
   revalidatePath(`/policies/external/${policyId}/edit`);
   return { ok: true, policyId };
