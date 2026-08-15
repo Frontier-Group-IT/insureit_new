@@ -147,7 +147,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
           ) : null}
           {children}
         </ScrollView>
-        {showProfile && !keyboardVisible && tabRole && (!pathname.startsWith('/customer') || customerContext !== undefined) ? <BottomTabs role={tabRole} pathname={pathname} bottomInset={insets.bottom} customerContext={customerContext} /> : null}
+        {showProfile && !keyboardVisible && tabRole && (!pathname.startsWith('/customer') || customerContext !== undefined) ? <UniversalBottomTabs role={tabRole} pathname={pathname} bottomInset={insets.bottom} customerContext={customerContext} /> : null}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -273,14 +273,27 @@ export function NavLink({ href, label }: { href: LinkProps['href']; label: strin
   );
 }
 
-function BottomTabs({ role, pathname, bottomInset, customerContext }: { role: AppRole; pathname: string; bottomInset: number; customerContext?: CustomerAccountContext | null }) {
+export function UniversalBottomTabs({ role, pathname, bottomInset, customerContext }: { role: AppRole; pathname: string; bottomInset: number; customerContext?: CustomerAccountContext | null }) {
   const router = useRouter();
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const tabs = tabsForRole(role, customerContext);
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  if (keyboardVisible) return null;
+
   return (
     <View style={[styles.bottomTabsWrap, { paddingBottom: Math.max(bottomInset, 10) }]}>
       <View style={styles.bottomTabs}>
         {tabs.map((tab) => {
-          const active = pathname.startsWith(tab.href);
+          const active = isTabActive(tab.href, pathname, customerContext);
           return (
             <Pressable key={`${tab.href}-${tab.label}`} accessibilityRole="button" onPress={() => router.push(tab.href as LinkProps['href'])} style={styles.bottomTab}>
               <View style={[styles.bottomIconShell, { backgroundColor: tabTone(tab.label, tab).soft }, active && [styles.bottomIconShellActive, { borderColor: tabTone(tab.label, tab).accent }]]}>
@@ -317,7 +330,7 @@ function tabsForRole(role: AppRole, customerContext?: CustomerAccountContext | n
   ];
   if (role === 'customer') return [
     { label: 'Home', href: '/customer/home', icon: 'home-variant', ...customerTone },
-    { label: 'Claims', href: '/customer/claims', icon: 'file-document-check-outline', ...customerTone },
+    { label: 'Policies', href: '/customer/policies', icon: 'file-certificate-outline', ...customerTone },
     { label: 'Vehicles', href: '/customer/vehicles', icon: 'truck-outline', ...customerTone },
     { label: 'Support', href: '/customer/support', icon: 'headset', ...customerTone },
     { label: 'Profile', href: '/customer/profile', icon: 'account-outline', ...customerTone },
@@ -404,6 +417,21 @@ function tabTone(label: string, fallback: { accent: string; soft: string }) {
     default:
       return fallback;
   }
+}
+
+function isTabActive(tabHref: string, pathname: string, customerContext?: CustomerAccountContext | null) {
+  const portfolio = isPortfolioCustomerContext(customerContext);
+  if (tabHref === '/customer/home') return pathname === '/customer/home' || pathname === '/customer/report-accident' || pathname === '/customer/start-claim' || pathname === '/customer/insurance-quote' || pathname === '/customer/e-challan';
+  if (tabHref === '/customer/policies') return ['/customer/policies', '/customer/policy-detail', '/customer/add-policy', '/customer/renewals'].some((route) => pathname.startsWith(route));
+  if (tabHref === '/customer/vehicles') return ['/customer/vehicles', '/customer/vehicle-detail', '/customer/add-vehicle'].some((route) => pathname.startsWith(route));
+  if (tabHref === '/customer/support') return ['/customer/support', '/customer/help-faqs', '/customer/raise-support-ticket', '/customer/support-ticket-detail'].some((route) => pathname.startsWith(route));
+  if (tabHref === '/customer/profile') return pathname.startsWith('/customer/profile') || pathname.startsWith('/customer/kyc') || pathname.startsWith('/customer/legal');
+  if (portfolio && tabHref === '/customer/group/accounts') return pathname.startsWith('/customer/group/accounts') || pathname.startsWith('/customer/group/account-detail') || pathname.startsWith('/customer/group/add-account');
+  if (portfolio && tabHref === '/customer/group/fleet') return pathname.startsWith('/customer/group/fleet') || pathname.startsWith('/customer/vehicle-detail') || pathname.startsWith('/customer/add-vehicle');
+  if (portfolio && tabHref === '/customer/group/policies') return pathname.startsWith('/customer/group/policies') || pathname.startsWith('/customer/policy-detail') || pathname.startsWith('/customer/add-policy') || pathname.startsWith('/customer/renewals');
+  if (portfolio && tabHref === '/customer/group/claims') return pathname.startsWith('/customer/group/claims') || pathname.startsWith('/customer/claim-detail') || pathname.startsWith('/customer/self-managed') || pathname.startsWith('/customer/upload-documents');
+  if (portfolio && tabHref === '/customer/group/profile') return pathname.startsWith('/customer/group/profile') || pathname.startsWith('/customer/profile');
+  return pathname.startsWith(tabHref);
 }
 
 function accentForRole(role: AppRole | null) {

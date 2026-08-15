@@ -4,10 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BottomNavigation } from '@/components/customer-dashboard';
 import { BrandLogo } from '@/components/first-look';
 import { NotificationBell } from '@/components/realtime-notifications';
-import { LoadingState } from '@/components/ui';
+import { LoadingState, UniversalBottomTabs } from '@/components/ui';
 import { buildComplianceRenewals } from '@/lib/compliance-renewals';
 import { customerAccountTitle, getAccessibleCustomerContexts, getGroupChildAccountOverview, membershipRoleLabel, partnerTypeLabel, type CustomerAccountContext, type GroupChildAccountOverview } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
@@ -175,7 +174,7 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
       <Pressable onPress={() => router.push('/customer/support')} style={({ pressed }) => [styles.supportCard, pressed && styles.cardPressed]}><MaterialCommunityIcons name="headset" size={28} color={palette.navy} /><View style={styles.supportCopy}><Text style={styles.supportTitle}>Need Help?</Text><Text style={styles.supportText}>Contact our support team</Text></View><MaterialCommunityIcons name="chevron-right" size={25} color={palette.navy} /></Pressable>
     </ScrollView>
 
-    <View style={styles.nav}><BottomNavigation onPolicies={() => router.push('/customer/group/policies')} onVehicles={() => router.push('/customer/group/fleet')} onSupport={() => router.push('/customer/group/accounts')} onProfile={() => router.push(underReview ? '/customer/profile' : '/customer/group/profile')} /></View>
+    <UniversalBottomTabs role="customer" pathname="/customer/home" bottomInset={0} customerContext={groupContext} />
   </SafeAreaView>;
 }
 
@@ -228,7 +227,7 @@ function dashboardAccountRoleLabel(context: CustomerAccountContext) {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F7F9FD' }, loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F9FD' },
   header: { height: 66, paddingHorizontal: 4, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.98)', borderBottomWidth: 1, borderBottomColor: '#E1E7F0' }, brand: { flex: 1, alignItems: 'flex-start', justifyContent: 'center' }, iconCircle: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' }, avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: palette.ink, borderWidth: 2, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }, avatarText: { color: '#FFFFFF', fontWeight: '900', fontSize: 17 },
-  scroll: { flex: 1 }, body: { paddingHorizontal: 13, paddingTop: 9, paddingBottom: 10, gap: 11 },
+  scroll: { flex: 1 }, body: { paddingHorizontal: 13, paddingTop: 9, paddingBottom: 112, gap: 11 },
   greetingBlock: { minHeight: 66, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E7F0', paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 9 }, greetingCopy: { flex: 1, minWidth: 0 }, greeting: { color: '#607089', fontSize: 11, lineHeight: 14, fontWeight: '700' }, groupName: { color: palette.navy, fontSize: 16.5, lineHeight: 20, fontWeight: '900', marginTop: 1 }, roleRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }, roleDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#21A66B' }, roleText: { color: '#62728A', fontSize: 9.5, fontWeight: '800' }, parentCompany: { color: '#0A43A3', fontSize: 9.5, lineHeight: 12, fontWeight: '800', marginTop: 2 }, statusBadge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 6, backgroundColor: '#ECFDF3', flexDirection: 'row', alignItems: 'center', gap: 4 }, statusBadgeReview: { backgroundColor: '#FFF7E8' }, statusText: { color: '#087443', fontSize: 9, fontWeight: '900' }, statusTextReview: { color: '#9A6700' },
   reviewBanner: { borderRadius: 13, backgroundColor: '#FFF8EF', borderWidth: 1, borderColor: '#F3DDBD', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }, reviewIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#D99012', alignItems: 'center', justifyContent: 'center' }, reviewCopy: { flex: 1 }, reviewTitle: { color: '#834100', fontSize: 12.5, fontWeight: '900' }, reviewText: { color: '#5E4B35', fontSize: 9.5, lineHeight: 12, fontWeight: '600', marginTop: 1 }, errorCard: { borderRadius: 12, borderWidth: 1, borderColor: '#FECDCA', backgroundColor: '#FEF3F2', padding: 9, flexDirection: 'row', alignItems: 'center', gap: 7 }, errorText: { flex: 1, color: '#B42318', fontSize: 10.5, fontWeight: '700' },
   attentionStrip: { borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 10, shadowColor: '#122544', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 },

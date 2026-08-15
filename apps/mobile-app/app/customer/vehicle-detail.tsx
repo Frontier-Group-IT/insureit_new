@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Card, EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
@@ -85,11 +85,14 @@ export default function VehicleDetailScreen() {
       <Card style={styles.heroCard}>
         <View style={styles.heroWash} />
         <View style={styles.heroTop}>
-          <Image source={vehicleImage} style={styles.vehicleImage} resizeMode="contain" />
+          <View style={styles.vehicleImageShell}>
+            <Image source={vehicleImage} style={styles.vehicleImage} resizeMode="contain" />
+          </View>
           <View style={styles.heroCopy}>
+            <Text style={styles.eyebrow}>VEHICLE DETAIL</Text>
             {registeredCompany ? <Text style={styles.companyName} numberOfLines={1}>{registeredCompany}</Text> : null}
-            <Text style={styles.vehicleNo}>{vehicle.vehicle_no}</Text>
-            <Text style={styles.vehicleMeta}>{[vehicle.make, vehicle.model].filter(Boolean).join(' ') || vehicle.vehicle_type || 'Vehicle'}</Text>
+            <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle.vehicle_no}</Text>
+            <Text style={styles.vehicleMeta} numberOfLines={1}>{[vehicle.make, vehicle.model].filter(Boolean).join(' ') || vehicle.vehicle_type || 'Vehicle'}</Text>
           </View>
           <StatusPill tone={policyState.tone} label={policyState.label} showDot={policyState.tone !== 'green'} />
         </View>
@@ -99,6 +102,16 @@ export default function VehicleDetailScreen() {
           <MiniStat label="Expiry" value={latestPolicy ? formatDate(latestPolicy.end_date) : '-'} />
         </View>
         <Text style={styles.heroHelper}>{policyState.helper}</Text>
+        <View style={styles.heroActions}>
+          <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/add-policy', params: { vehicleId: vehicle.id } } as any)} style={({ pressed }) => [styles.primaryAction, pressed && styles.actionPressed]}>
+            <MaterialCommunityIcons name="shield-plus-outline" size={16} color="#FFFFFF" />
+            <Text style={styles.primaryActionText}>Add policy</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/customer/policies')} style={({ pressed }) => [styles.secondaryAction, pressed && styles.actionPressed]}>
+            <MaterialCommunityIcons name="wallet-outline" size={16} color="#D7E7FF" />
+            <Text style={styles.secondaryActionText}>Policy wallet</Text>
+          </Pressable>
+        </View>
       </Card>
 
       <Card accessibilityRole="button" onPress={() => setAlertsExpanded((value) => !value)} style={styles.alertSection}>
@@ -272,22 +285,30 @@ function formatDate(value?: string | null) {
 }
 
 const styles = StyleSheet.create({
-  heroCard: { marginTop: -20, padding: 12, overflow: 'hidden', backgroundColor: '#F2F7FF', borderColor: '#C9DDFF' },
-  heroWash: { position: 'absolute', right: -70, top: -80, width: 210, height: 210, borderRadius: 105, backgroundColor: 'rgba(7,94,234,0.12)' },
+  heroCard: { marginTop: -22, padding: 15, overflow: 'hidden', backgroundColor: palette.navy, borderColor: palette.navy },
+  heroWash: { position: 'absolute', right: -64, top: -50, width: 168, height: 168, borderRadius: 90, backgroundColor: 'rgba(11,99,206,0.44)' },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   heroCopy: { flex: 1, minWidth: 0 },
-  vehicleNo: { color: palette.ink, fontSize: 22, lineHeight: 26, fontWeight: '800' },
-  vehicleMeta: { color: palette.slate, fontSize: 12, fontWeight: '500', marginTop: 2 },
-  companyName: { color: '#0A43A3', fontSize: 10.5, lineHeight: 13, fontWeight: '700', marginBottom: 1 },
-  vehicleImage: { width: 54, height: 38 },
-  heroStats: { flexDirection: 'row', gap: 7, marginTop: 10 },
-  heroHelper: { color: palette.slate, fontSize: 11, fontWeight: '600', marginTop: 7 },
-  miniStat: { flex: 1, minHeight: 46, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.78)', borderWidth: 1, borderColor: '#D9E8FA', padding: 7, justifyContent: 'center' },
+  eyebrow: { color: '#B9D5FF', fontSize: 9.5, fontWeight: '900', letterSpacing: 1 },
+  vehicleNo: { color: '#FFFFFF', fontSize: 23, lineHeight: 28, fontWeight: '900', marginTop: 1 },
+  vehicleMeta: { color: '#D7E7FF', fontSize: 12, fontWeight: '800', marginTop: 2 },
+  companyName: { color: '#9EC5FF', fontSize: 10.5, lineHeight: 13, fontWeight: '800', marginTop: 2 },
+  vehicleImageShell: { width: 50, height: 50, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' },
+  vehicleImage: { width: 44, height: 32 },
+  heroStats: { flexDirection: 'row', gap: 7, marginTop: 14 },
+  heroHelper: { color: '#D7E7FF', fontSize: 11.5, lineHeight: 15, fontWeight: '800', marginTop: 8 },
+  heroActions: { flexDirection: 'row', gap: 8, marginTop: 11 },
+  primaryAction: { minHeight: 38, borderRadius: 13, backgroundColor: '#0B63CE', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  secondaryAction: { minHeight: 38, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  actionPressed: { opacity: 0.86, transform: [{ scale: 0.97 }] },
+  primaryActionText: { color: '#FFFFFF', fontSize: 12, fontWeight: '900' },
+  secondaryActionText: { color: '#D7E7FF', fontSize: 12, fontWeight: '900' },
+  miniStat: { flex: 1, minHeight: 53, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', padding: 8, justifyContent: 'center' },
   miniLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  externalBadge: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 999, backgroundColor: '#F3F5F8', borderWidth: 1, borderColor: '#DDE3EA' },
-  externalBadgeText: { color: '#667085', fontSize: 7.5, lineHeight: 9, fontWeight: '800' },
-  miniLabel: { color: '#64748B', fontSize: 9.5, fontWeight: '700', textTransform: 'uppercase' },
-  miniValue: { color: palette.navy, fontSize: 11.5, fontWeight: '800', marginTop: 3 },
+  externalBadge: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.16)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  externalBadgeText: { color: '#D7E7FF', fontSize: 7.5, lineHeight: 9, fontWeight: '800' },
+  miniLabel: { color: '#B9D5FF', fontSize: 9.5, fontWeight: '800', textTransform: 'uppercase' },
+  miniValue: { color: '#FFFFFF', fontSize: 11.5, fontWeight: '900', marginTop: 4 },
   alertSection: { padding: 10, backgroundColor: '#FFF5E6', borderColor: '#D99012', borderWidth: 1.2 },
   detailSection: { backgroundColor: '#F8FBFF', borderColor: '#D7E6FA' },
   sectionRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 6 },

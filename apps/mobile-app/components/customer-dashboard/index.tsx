@@ -383,18 +383,6 @@ export function SupportCard({ onSupport }: { onSupport: () => void }) {
   );
 }
 
-export function BottomNavigation({ onPolicies, onVehicles, onSupport, onProfile }: { onPolicies: () => void; onVehicles: () => void; onSupport: () => void; onProfile: () => void }) {
-  return (
-    <View style={styles.bottomNav}>
-      <BottomItem label="Home" icon="home-variant" active tone={{ accent: palette.navy, soft: palette.amberSoft }} />
-      <BottomItem label="Policies" icon="file-certificate-outline" onPress={onPolicies} tone={{ accent: palette.navy, soft: palette.blueSoft }} />
-      <BottomItem label="Vehicles" icon="truck-outline" onPress={onVehicles} tone={{ accent: palette.navy, soft: palette.blueSoft }} />
-      <BottomItem label="Support" icon="headset" onPress={onSupport} tone={{ accent: palette.navy, soft: palette.amberSoft }} />
-      <BottomItem label="Profile" icon="account-outline" onPress={onProfile} tone={{ accent: palette.navy, soft: palette.blueSoft }} />
-    </View>
-  );
-}
-
 function ProgressSteps({ status, accent = roleTheme.customer.accent }: { status: Claim['current_status']; accent?: string }) {
   const activeIndex = progressIndex(status);
   return (
@@ -450,17 +438,6 @@ async function requestClaimsDeskCallback(fallback: () => void) {
     return;
   }
   fallback();
-}
-
-function BottomItem({ label, icon, onPress, active = false, tone }: { label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; onPress?: () => void; active?: boolean; tone: { accent: string; soft: string } }) {
-  return (
-    <Pressable accessibilityRole="button" onPress={onPress} disabled={!onPress} style={styles.bottomItem}>
-      <View style={[styles.bottomIconShell, active && [styles.bottomIconShellActive, { borderColor: tone.accent }]]}>
-        <MaterialCommunityIcons name={icon} size={19} color={active ? tone.accent : palette.slate} />
-      </View>
-      <Text style={[styles.bottomText, active && { color: tone.accent }]}>{label}</Text>
-    </Pressable>
-  );
 }
 
 function AnimatedPressable({ children, style, wrapperStyle, disabled, ...props }: PressableProps & { children: ReactNode; wrapperStyle?: StyleProp<ViewStyle> }) {
@@ -665,12 +642,6 @@ const styles = StyleSheet.create({
   supportButtonDisabled: { backgroundColor: '#FFFFFF', opacity: 0.58 },
   supportButtonText: { color: palette.ink, fontSize: 12, fontWeight: '800', textAlign: 'center' },
   supportButtonTextDisabled: { color: '#667085' },
-  bottomNav: { minHeight: 66, backgroundColor: 'rgba(255,255,255,0.98)', borderRadius: 20, paddingVertical: 7, paddingHorizontal: 5, flexDirection: 'row', justifyContent: 'space-between', borderWidth: 1, borderColor: palette.line, shadowColor: palette.ink, shadowOpacity: 0.1, shadowRadius: 12, elevation: 4 },
-  bottomItem: { flex: 1, alignItems: 'center', gap: 3, minHeight: 52, justifyContent: 'center' },
-  bottomIconShell: { width: 42, height: 34, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'transparent', backgroundColor: 'transparent' },
-  bottomIconShellActive: { backgroundColor: '#FFFFFF', shadowColor: palette.ink, shadowOpacity: 0.1, shadowRadius: 6, elevation: 2 },
-  bottomText: { color: palette.slate, fontSize: 11, fontWeight: '900' },
-  bottomTextActive: { color: palette.ink },
   pressed: { opacity: 0.92 },
   disabled: { opacity: 0.72 },
 });
