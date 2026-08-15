@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 
 import { getCurrentSession, routeSignedInUser } from '@/lib/auth';
-import { LoadingState, Screen, Button, Message } from '@/components/ui';
+import { Screen, Button, Message } from '@/components/ui';
 
 export default function IndexScreen() {
   const router = useRouter();
@@ -27,7 +27,7 @@ export default function IndexScreen() {
     void load();
   }, [router]);
 
-  if (loading) return <Screen title="InsureIT"><LoadingState label="Opening your account" /></Screen>;
+  if (loading) return null;
 
   return (
     <Screen title="InsureIT" subtitle="Policy support and claim access.">

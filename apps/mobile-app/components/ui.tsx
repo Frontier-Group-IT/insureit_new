@@ -223,24 +223,6 @@ export function LoadingState({ label }: { label?: string }) {
           <MaterialCommunityIcons name="shield-check-outline" size={28} color={roleTheme.customer.accent} />
         </View>
       </View>
-      <Text style={styles.loadingLabel}>Getting things ready</Text>
-      <Text style={styles.loadingHint}>A seamless InsureIT experience is on its way.</Text>
-      <View style={styles.skeletonStack}>
-        <View style={styles.skeletonCard}>
-          <View style={styles.skeletonIcon} />
-          <View style={styles.skeletonCopy}>
-            <View style={styles.skeletonLineWide} />
-            <View style={styles.skeletonLineShort} />
-          </View>
-        </View>
-        <View style={[styles.skeletonCard, styles.skeletonCardMuted]}>
-          <View style={styles.skeletonIconSmall} />
-          <View style={styles.skeletonCopy}>
-            <View style={styles.skeletonLineMid} />
-            <View style={styles.skeletonLineTiny} />
-          </View>
-        </View>
-      </View>
     </View>
   );
 }
@@ -570,22 +552,10 @@ export const styles = StyleSheet.create({
   successMessageText: { color: '#067647' },
   center: { alignItems: 'center', justifyContent: 'center', padding: 26 },
   loaderStage: { flex: 1, minHeight: 340, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, paddingBottom: 42 },
-  loaderScene: { width: 114, height: 114, alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
+  loaderScene: { width: 114, height: 114, alignItems: 'center', justifyContent: 'center' },
   loaderHalo: { position: 'absolute', width: 102, height: 102, borderRadius: 51, backgroundColor: '#DDF6EC' },
   loaderRing: { position: 'absolute', width: 90, height: 90, borderRadius: 45, borderWidth: 4, borderColor: '#CFE8DE', borderTopColor: roleTheme.customer.accent, borderRightColor: '#7ED8B8' },
   loaderCore: { width: 62, height: 62, borderRadius: 21, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center', shadowColor: palette.ink, shadowOpacity: 0.1, shadowRadius: 13, elevation: 3 },
-  loadingLabel: { color: palette.ink, fontSize: 17, fontWeight: '900', lineHeight: 23, textAlign: 'center' },
-  loadingHint: { color: palette.slate, fontSize: 11.5, lineHeight: 17, fontWeight: '700', textAlign: 'center', marginTop: 5, maxWidth: 250 },
-  skeletonStack: { width: '100%', maxWidth: 300, gap: 9, marginTop: 20 },
-  skeletonCard: { minHeight: 62, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.78)', borderWidth: 1, borderColor: '#DCE8F4', padding: 10, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  skeletonCardMuted: { opacity: 0.68 },
-  skeletonIcon: { width: 40, height: 40, borderRadius: 14, backgroundColor: '#DCEBFA' },
-  skeletonIconSmall: { width: 34, height: 34, borderRadius: 12, backgroundColor: '#E8F8F0' },
-  skeletonCopy: { flex: 1, gap: 7 },
-  skeletonLineWide: { width: '82%', height: 11, borderRadius: 99, backgroundColor: '#D7E4F2' },
-  skeletonLineMid: { width: '70%', height: 10, borderRadius: 99, backgroundColor: '#D7E4F2' },
-  skeletonLineShort: { width: '48%', height: 9, borderRadius: 99, backgroundColor: '#E4ECF5' },
-  skeletonLineTiny: { width: '36%', height: 8, borderRadius: 99, backgroundColor: '#E4ECF5' },
   muted: { color: colors.grey, fontSize: 15, lineHeight: 22 },
   emptyIcon: { width: 44, height: 44, borderRadius: radii.md, backgroundColor: palette.emeraldSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   row: { borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: 8 },
