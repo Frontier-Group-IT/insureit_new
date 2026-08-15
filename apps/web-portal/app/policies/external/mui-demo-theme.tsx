@@ -1,5 +1,6 @@
 "use client";
 
+// Preview redeploy trigger after Vercel environment refresh (2026-08-15).
 import type { ReactNode } from "react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 
