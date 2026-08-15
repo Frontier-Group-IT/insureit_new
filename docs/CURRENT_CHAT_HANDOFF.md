@@ -8,6 +8,35 @@
 
 Policy Onboarding OCR hardening remains an active workstream. Production portal is `https://portal.insureit.in`. Ordinary commits do not intentionally deploy production; `.deploy/production-trigger.json` is changed only after the user explicitly says `deploy now` or `finish and deploy`.
 
+## Mobile Expo preview
+
+**DEPLOYED:** Expo preview OTA update published on 2026-08-15 for project `antnish/insureit-mobile`, branch `preview`, runtime version `0.1.0`.
+
+```text
+Source commit: ec286da421c3062d9faad8caf3c270c3b8aa5906
+Message: Unified bottom tabs and compact detail screens
+Update group ID: 0d4cdae8-3cc2-43f9-9d76-661bb0c2fb58
+Android update ID: 01a003f4-89f9-741a-a116-22c8ec1b1e52
+iOS update ID: 01a003f4-89f9-747b-a2a8-804a11bb6171
+EAS Dashboard: https://expo.dev/accounts/antnish/projects/insureit-mobile/updates/0d4cdae8-3cc2-43f9-9d76-661bb0c2fb58
+```
+
+Included changes:
+
+- Vehicle Detail and Policy Detail were redesigned into compact app-style pages.
+- Customer bottom navigation now uses one shared `UniversalBottomTabs` component across shared `Screen`, customer Home, group Home, and group page shell.
+- Individual customer bottom tabs are `Home / Policies / Vehicles / Support / Profile`.
+- The universal bottom bar hides while the keyboard is open to avoid the previous lifted/stuck bottom-menu behavior.
+- External policy flows remained intact: `external_policies`, `externalPolicyId`, and `create_self_managed_external_claim` references were verified after the change.
+
+Verification before publish:
+
+```text
+npm --workspace apps/mobile-app run typecheck
+npx eslint components/ui.tsx app/customer/home.tsx components/group/group-home-screen.tsx components/group/group-page-shell.tsx components/customer-dashboard/index.tsx app/customer/vehicle-detail.tsx app/customer/policy-detail.tsx --quiet
+npm --workspace apps/mobile-app run build:web
+```
+
 A separate master-data administration change was added on 2026-08-12: protected deletion controls for existing customers, vehicles, policies, and claims are available only to the `it_super_user` role in the Customers, Vehicles, Policies, and Claims registries. Customer/vehicle/policy deletion and the later claim-delete extension are both deployed to production.
 
 Insurance Company master-data navigation was added and deployed on 2026-08-12. The canonical insurer master route is now under Master Data at `/master-data/insurance-companies`, with the create route at `/master-data/insurance-companies/new`; legacy `/insurance-companies` routes still exist for compatibility.
