@@ -4,8 +4,9 @@ import { revalidatePath } from "next/cache";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-source";
+import { findPolicyOnboardingBusinessConflict, type PolicyBusinessConflict } from "./policy-onboarding-conflicts";
 
-export type PolicyCustomerCandidate = { id: string; name: string; phone: string; city: string | null; state: string | null };
+export type PolicyCustomerCandidate = { id: string; name: string; phone: string; city: string | null; state: string | null; phoneMatch: boolean; nameMatch: boolean };
 export type PolicyOwnershipConflict = { vehicleId: string; registrationNumber: string; customerId: string; customerName: string; customerPhone: string; canTransfer: boolean };
 export type PolicyOnboardingPayload = {
   customer: { name: string; phone: string; type?: string; email?: string; address?: string; city?: string; district?: string; state?: string; pincode?: string; country?: string; source?: string };
@@ -16,13 +17,14 @@ export type PolicyOnboardingPayload = {
   billing: Record<string, string | number | null | undefined>;
   payout: Record<string, string | number | null | undefined>;
   authbridge: Record<string, string | boolean | null | undefined>;
-  resolution?: { selectedCustomerId?: string | null; createNewCustomer?: boolean; ownershipDecision?: "keep_existing" | "transfer" | null; transferReason?: string };
+  resolution?: { selectedCustomerId?: string | null; createNewCustomer?: boolean; ownershipDecision?: "keep_existing" | "transfer" | null; transferReason?: string; acceptCoverageGap?: boolean };
 };
 export type PolicyOnboardingResult =
   | { ok: true; policyId: string; policyCode: string; customerId: string; vehicleId: string; status: "active" }
   | { ok: false; kind: "validation" | "database" | "permission"; error: string }
   | { ok: false; kind: "customer_match"; candidates: PolicyCustomerCandidate[] }
-  | { ok: false; kind: "ownership_conflict"; conflict: PolicyOwnershipConflict };
+  | { ok: false; kind: "ownership_conflict"; conflict: PolicyOwnershipConflict }
+  | { ok: false; kind: "business_conflict"; conflict: PolicyBusinessConflict };
 
 type CustomerRow = { id: string; contact_name: string; phone: string; city: string | null; state: string | null };
 type VehicleOwnerRow = { id: string; vehicle_no: string; vehicle_no_normalized: string | null; customer_id: string; customers: { contact_name: string; phone: string } | null };
@@ -125,7 +127,8 @@ async function findCustomerCandidates(name: string, phone: string) {
   if (nameResult.error) throw new Error(nameResult.error.message);
   const merged = new Map<string, CustomerRow>();
   for (const row of [...(phoneResult.data ?? []), ...(nameResult.data ?? [])]) merged.set(row.id, row);
-  return [...merged.values()].map((row) => ({ id: row.id, name: row.contact_name, phone: row.phone, city: row.city, state: row.state }));
+  const normalizedName = cleanName(name).toLowerCase();
+  return [...merged.values()].map((row) => ({ id: row.id, name: row.contact_name, phone: row.phone, city: row.city, state: row.state, phoneMatch: normalizedPhone(row.phone) === phone, nameMatch: cleanName(row.contact_name).toLowerCase() === normalizedName }));
 }
 async function findCustomerById(id: string) {
   const admin = createSupabaseAdminClient();
@@ -166,9 +169,13 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
   const createNewCustomer = payload.resolution?.createNewCustomer === true;
 
   try {
-    if (!selectedCustomerId && !createNewCustomer) {
-      const candidates = await findCustomerCandidates(name, phone);
-      if (candidates.length) return { ok: false, kind: "customer_match", candidates };
+    const customerCandidates = await findCustomerCandidates(name, phone);
+    const phoneMatches = customerCandidates.filter((candidate) => candidate.phoneMatch);
+    if (!selectedCustomerId && !createNewCustomer && customerCandidates.length) {
+      return { ok: false, kind: "customer_match", candidates: customerCandidates };
+    }
+    if (createNewCustomer && phoneMatches.length) {
+      return { ok: false, kind: "customer_match", candidates: phoneMatches };
     }
 
     const vehicle = mode === "unregistered" ? await findVehicleOwnerByChassis(chassis) : await findVehicleOwner(registration);
@@ -189,8 +196,11 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
     if (effectiveCustomerId) {
       const existingCustomer = await findCustomerById(effectiveCustomerId);
       if (!existingCustomer) return { ok: false, kind: "database", error: "The selected customer is no longer available. Refresh and try again." };
-      rpcCustomer = { ...rpcCustomer, name: existingCustomer.contact_name, phone: existingCustomer.phone };
+      rpcCustomer = { ...rpcCustomer, name: existingCustomer.contact_name, phone: existingCustomer.phone, email: "", address: "", city: "", district: "", state: "", pincode: "", source: "" };
     }
+
+    const businessConflict = await findPolicyOnboardingBusinessConflict({ payload, acceptCoverageGap: payload.resolution?.acceptCoverageGap === true });
+    if (businessConflict) return { ok: false, kind: "business_conflict", conflict: businessConflict };
 
     const financials = sanitizeFinancialNumbers(payload);
     const rpcPayload = {
@@ -210,11 +220,29 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
     const admin = createSupabaseAdminClient();
     const { data, error } = await admin.rpc("onboard_motor_policy", { p_payload: rpcPayload });
     if (error) {
-      if (error.message.includes("OWNERSHIP_CONFLICT")) return { ok: false, kind: "database", error: "Vehicle ownership changed while this form was open. Refresh and review the customer again." };
-      if (error.message.toLowerCase().includes("invalid input syntax for type numeric") || error.message.toLowerCase().includes("invalid input syntax for type integer")) {
-        return { ok: false, kind: "database", error: "Check the vehicle and premium amounts, then try again." };
+      const message = error.message ?? "";
+      const lowerMessage = message.toLowerCase();
+      if (message.includes("OWNERSHIP_CONFLICT")) {
+        const latestVehicle = mode === "unregistered" ? await findVehicleOwnerByChassis(chassis) : await findVehicleOwner(registration);
+        if (latestVehicle) return { ok: false, kind: "ownership_conflict", conflict: { vehicleId: latestVehicle.id, registrationNumber: latestVehicle.vehicle_no?.startsWith("PENDING-") ? "Registration pending vehicle" : latestVehicle.vehicle_no, customerId: latestVehicle.customer_id, customerName: latestVehicle.customers?.contact_name ?? "Existing customer", customerPhone: latestVehicle.customers?.phone ?? "", canTransfer: canTransferVehicle(profile.role) } };
+        return { ok: false, kind: "database", error: "The vehicle record changed while this form was open. Keep your form open and review the customer and vehicle details." };
       }
-      return { ok: false, kind: "database", error: "We couldn't save the policy. Please try again." };
+      if (lowerMessage.includes("customers_phone_normalized_uidx") || lowerMessage.includes("customers_mobile_unique_idx")) {
+        const candidates = await findCustomerCandidates(name, phone);
+        if (candidates.length) return { ok: false, kind: "customer_match", candidates };
+        return { ok: false, kind: "database", error: "This mobile number is already registered to an existing customer. Review the customer details and try again." };
+      }
+      if (message.includes("Unknown vehicle manufacturer:")) {
+        return { ok: false, kind: "business_conflict", conflict: { type: "manufacturer_unknown", enteredMake: message.split("Unknown vehicle manufacturer:").slice(1).join(":").trim() || String(payload.vehicle.make ?? "") } };
+      }
+      if (message.includes("POLICY_COVERAGE_OVERLAP") || lowerMessage.includes("policies_policy_no_key") || lowerMessage.includes("policies_insurer_policy_no_uidx")) {
+        const conflict = await findPolicyOnboardingBusinessConflict({ payload, acceptCoverageGap: true });
+        if (conflict) return { ok: false, kind: "business_conflict", conflict };
+      }
+      if (lowerMessage.includes("invalid input syntax for type numeric") || lowerMessage.includes("invalid input syntax for type integer")) {
+        return { ok: false, kind: "database", error: "Check the vehicle and premium amounts, then try again. Your entered details are still saved on this form." };
+      }
+      return { ok: false, kind: "database", error: "We couldn't complete the policy booking. Your form is still intact. Review the highlighted details or try again." };
     }
 
     const result = data as { ok?: boolean; policyId?: string; policyCode?: string; customerId?: string; vehicleId?: string } | null;
@@ -223,6 +251,6 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
     revalidatePath("/policies"); revalidatePath("/customers"); revalidatePath("/vehicles");
     return { ok: true, policyId: result.policyId, policyCode: result.policyCode, customerId: result.customerId, vehicleId: result.vehicleId, status: "active" };
   } catch {
-    return { ok: false, kind: "database", error: "We couldn't save the policy. Please try again." };
+    return { ok: false, kind: "database", error: "We couldn't complete the policy booking. Your entered form details are still intact. Review the details and try again." };
   }
 }
