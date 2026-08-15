@@ -1,0 +1,76 @@
+name: Temporary SDK54 Hermes Compatibility Fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/tmp-fix-sdk54-hermes.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-commit-lockfile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-public-anon-key
+      NODE_ENV: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install aligned dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Confirm Expo dependency alignment
+        working-directory: apps/mobile-app
+        run: |
+          node -e "const p=require('./package.json'); if(!String(p.devDependencies['babel-preset-expo']).startsWith('~54.')) process.exit(1); console.log('babel-preset-expo', require('babel-preset-expo/package.json').version)"
+          npx expo install --check
+
+      - name: Verify TypeScript and lint
+        run: |
+          npm run typecheck:mobile
+          npm run lint:mobile
+
+      - name: Reproduce Android release bundle and compile with Hermes
+        working-directory: apps/mobile-app
+        run: |
+          rm -f /tmp/index.android.bundle /tmp/index.android.hbc /tmp/index.android.map
+          npx expo export:embed \
+            --platform android \
+            --dev false \
+            --entry-file node_modules/expo-router/entry.js \
+            --bundle-output /tmp/index.android.bundle \
+            --sourcemap-output /tmp/index.android.map
+          ../../node_modules/react-native/sdks/hermesc/linux64-bin/hermesc \
+            -O \
+            -emit-binary \
+            -out /tmp/index.android.hbc \
+            /tmp/index.android.bundle
+          test -s /tmp/index.android.hbc
+          echo "Hermes release compilation passed."
+
+      - name: Verify Expo web export
+        run: npm run build:mobile:web
+
+      - name: Commit refreshed lockfile
+        run: |
+          git config user.name "antnish1"
+          git config user.email "shahdolho@gmail.com"
+          git add package-lock.json
+          if git diff --cached --quiet; then
+            echo "Lockfile already aligned."
+            exit 0
+          fi
+          git commit -m "Refresh lockfile for Expo SDK 54 Babel alignment"
+          git pull --rebase origin main
+          git push origin HEAD:main
