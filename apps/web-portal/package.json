@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit",
     "access-control:v2-regression": "node --experimental-strip-types scripts/access-control-catalogue-v2-regression.mjs",
     "access-control:v2-scope-regression": "node --experimental-strip-types scripts/access-control-scope-v2-regression.mjs",
-    "access-control:v2-lifecycle-regression": "node --experimental-strip-types scripts/access-control-lifecycle-v2-regression.mjs",
+    "access-control:v2-lifecycle-regression": "node --experimental-strip-types scripts/access-control-lifecycle-regression.mjs",
     "access-control:portal-governance-regression": "node --experimental-strip-types scripts/employee-portal-governance-regression.mjs",
     "access-control:release-blockers-regression": "node --experimental-strip-types scripts/release-blocker-security-regression.mjs",
     "policy-ocr:iffco-regression": "node --experimental-strip-types scripts/policy-ocr-iffco-regression.ts",
@@ -20,6 +20,10 @@
     "policy-ocr:all-regressions": "npm run policy-ocr:iffco-structured-regression && npm run policy-ocr:iffco-regression && npm run policy-ocr:digit-regression && npm run policy-ocr:new-india-regression && npm run policy-ocr:additional-regression"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/material": "^7.0.0",
+    "@mui/x-data-grid": "^8.0.0",
     "@supabase/supabase-js": "^2.49.8",
     "fflate": "^0.8.3",
     "lucide-react": "^1.26.0",
