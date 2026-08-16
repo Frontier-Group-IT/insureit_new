@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { palette } from '@/lib/theme';
 
 export default function InsuranceQuoteScreen() {
   const router = useRouter();
+  const { vehicleNo: prefilledVehicleNo } = useLocalSearchParams<{ vehicleNo?: string }>();
   const [vehicleNo, setVehicleNo] = useState('');
   const [message, setMessage] = useState('');
   const [isSignedIn, setIsSignedIn] = useState(false);
@@ -31,6 +32,12 @@ export default function InsuranceQuoteScreen() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof prefilledVehicleNo === 'string' && prefilledVehicleNo.trim()) {
+      setVehicleNo(formatVehicleNo(prefilledVehicleNo));
+    }
+  }, [prefilledVehicleNo]);
 
   function submit() {
     setMessage(vehicleNo.trim().length < 6 ? 'Please enter a valid vehicle number.' : 'Quote request workflow will be connected in the next step.');

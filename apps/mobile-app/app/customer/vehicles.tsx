@@ -283,25 +283,45 @@ export default function VehiclesScreen() {
                     />
                   </>
                 ) : (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Add policy for ${vehicle.vehicle_no}`}
-                    onPress={(event) => {
-                      event.stopPropagation();
-                      router.push({ pathname: '/customer/add-policy', params: { vehicleId: vehicle.id } });
-                    }}
-                    style={({ pressed }) => [styles.policyEmptyState, pressed && styles.policyEmptyStatePressed]}
-                  >
-                    <View style={styles.policyEmptyIcon}>
-                      <MaterialCommunityIcons name="shield-plus-outline" size={31} color="#0A43A3" />
+                  <View style={styles.policyEmptyState}>
+                    <View style={styles.policyEmptyTop}>
+                      <View style={styles.policyEmptyIcon}>
+                        <MaterialCommunityIcons name="shield-search" size={23} color="#0A43A3" />
+                      </View>
+                      <View style={styles.policyEmptyCopy}>
+                        <Text style={styles.policyEmptyTitle} numberOfLines={1}>Protection needed</Text>
+                        <Text style={styles.policyEmptyText} numberOfLines={2}>Get quote or attach existing cover</Text>
+                      </View>
                     </View>
-                    <Text style={styles.policyEmptyTitle}>Add policy</Text>
-                    <Text style={styles.policyEmptyText}>No policy information available</Text>
-                    <View style={styles.policyEmptyButton}>
-                      <MaterialCommunityIcons name="plus" size={14} color="#FFFFFF" />
-                      <Text style={styles.policyEmptyButtonText}>Add now</Text>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Get quote for ${vehicle.vehicle_no}`}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        router.push({ pathname: '/customer/insurance-quote', params: { vehicleId: vehicle.id, vehicleNo: vehicle.vehicle_no } });
+                      }}
+                      style={({ pressed }) => [styles.policyQuoteButton, pressed && styles.policyActionPressed]}
+                    >
+                      <MaterialCommunityIcons name="file-document-outline" size={14} color="#FFFFFF" />
+                      <Text style={styles.policyQuoteButtonText} numberOfLines={1}>Get quote</Text>
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Add existing policy for ${vehicle.vehicle_no}`}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        router.push({ pathname: '/customer/add-policy', params: { vehicleId: vehicle.id } });
+                      }}
+                      style={({ pressed }) => [styles.policyAttachButton, pressed && styles.policyActionPressed]}
+                    >
+                      <MaterialCommunityIcons name="plus-circle-outline" size={13} color="#0A43A3" />
+                      <Text style={styles.policyAttachButtonText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.86}>Add policy</Text>
+                    </Pressable>
+                    <View style={styles.policyEmptySignal}>
+                      <MaterialCommunityIcons name="star" size={10} color="#F06423" />
+                      <Text style={styles.policyEmptySignalText} numberOfLines={1}>Compare options</Text>
                     </View>
-                  </Pressable>
+                  </View>
                 )}
               </View>
             </View>
@@ -1140,13 +1160,19 @@ const styles = StyleSheet.create({
   policyStatusDot: { width: 8, height: 8, borderRadius: 4 },
   policyStatusDotActive: { backgroundColor: '#12B76A' },
   policyStatusDotInactive: { backgroundColor: '#D92D20' },
-  policyEmptyState: { flex: 1, minHeight: 144, borderRadius: 14, backgroundColor: '#F5F9FF', borderWidth: 1, borderColor: '#CFE0F5', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10, paddingVertical: 10 },
-  policyEmptyStatePressed: { backgroundColor: '#EAF3FF', transform: [{ scale: 0.985 }] },
-  policyEmptyIcon: { width: 50, height: 50, borderRadius: 18, backgroundColor: '#E4F0FF', alignItems: 'center', justifyContent: 'center', marginBottom: 5 },
-  policyEmptyTitle: { color: palette.navy, fontSize: 13.5, lineHeight: 17, fontWeight: '900' },
-  policyEmptyText: { color: '#718096', fontSize: 9.5, lineHeight: 12, fontWeight: '700', textAlign: 'center', marginTop: 2 },
-  policyEmptyButton: { minHeight: 29, borderRadius: 9, backgroundColor: '#0A43A3', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 7 },
-  policyEmptyButtonText: { color: '#FFFFFF', fontSize: 10, lineHeight: 13, fontWeight: '900' },
+  policyEmptyState: { flex: 1, minHeight: 144, borderRadius: 14, backgroundColor: '#F6FAFF', borderWidth: 1, borderColor: '#CFE0F5', paddingHorizontal: 9, paddingVertical: 9, justifyContent: 'center' },
+  policyEmptyTop: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 8 },
+  policyEmptyIcon: { width: 34, height: 34, borderRadius: 12, backgroundColor: '#E4F0FF', alignItems: 'center', justifyContent: 'center' },
+  policyEmptyCopy: { flex: 1, minWidth: 0 },
+  policyEmptyTitle: { color: palette.navy, fontSize: 12.8, lineHeight: 16, fontWeight: '900' },
+  policyEmptyText: { color: '#718096', fontSize: 9.4, lineHeight: 12, fontWeight: '700', marginTop: 1 },
+  policyQuoteButton: { minHeight: 30, borderRadius: 9, backgroundColor: '#0A43A3', paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  policyQuoteButtonText: { color: '#FFFFFF', fontSize: 10.4, lineHeight: 13, fontWeight: '900' },
+  policyAttachButton: { minHeight: 27, borderRadius: 8, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CFE0F5', paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 5 },
+  policyAttachButtonText: { color: '#0A43A3', fontSize: 9.8, lineHeight: 12, fontWeight: '900' },
+  policyActionPressed: { opacity: 0.88, transform: [{ scale: 0.985 }] },
+  policyEmptySignal: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, marginTop: 5 },
+  policyEmptySignalText: { color: '#F06423', fontSize: 8.8, lineHeight: 11, fontWeight: '900', textTransform: 'uppercase' },
   dropdownButton: { position: 'absolute', right: 0, top: 0, width: 34, height: 34, borderRadius: 8, borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
 
   complianceHealth: { minHeight: 28, marginTop: 8, paddingTop: 7, borderTopWidth: 1, borderTopColor: '#E5ECF5', flexDirection: 'row', alignItems: 'center', gap: 6 },
