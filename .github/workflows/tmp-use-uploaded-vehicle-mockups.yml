@@ -31,6 +31,7 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
 
           path = Path('apps/mobile-app/app/customer/vehicles.tsx')
           text = path.read_text()
@@ -41,30 +42,26 @@ jobs:
                   raise SystemExit(f'Expected fragment missing: {label}')
               text = text.replace(old, new, 1)
 
+          def sub_once(pattern: str, replacement: str, label: str, flags=0):
+              global text
+              text, count = re.subn(pattern, replacement, text, count=1, flags=flags)
+              if count != 1:
+                  raise SystemExit(f'Expected one structural match for {label}; found {count}')
+
           replace_once(
               "const truckSketch = require('../../assets/vehicles/truck sketch.png');\nconst carSketch = require('../../assets/vehicles/car sketch.png');\nconst busSketch = require('../../assets/vehicles/bus sketch.png');\nconst bikeSketch = require('../../assets/vehicles/bike sketch.png');\nconst jcbSketch = require('../../assets/vehicles/jcb sketch.png');",
               "const truckSketch = require('../../assets/vehicles/gcv-truck.webp');\nconst carSketch = require('../../assets/vehicles/pcp-car.webp');\nconst busSketch = require('../../assets/vehicles/pcv-bus.webp');\nconst bikeSketch = require('../../assets/vehicles/twp-bike.webp');\nconst jcbSketch = require('../../assets/vehicles/misd-cpm-jcb.webp');",
               'vehicle asset imports',
           )
-
           replace_once("  const [companyFilterId, setCompanyFilterId] = useState('all');\n", '', 'company filter id state')
           replace_once("  const [companyFilterOpen, setCompanyFilterOpen] = useState(false);\n", '', 'company filter open state')
 
-          replace_once(
-              """  const companyOptions = useMemo(() => {
-            const options = contexts
-              .filter((context) => vehicleCompanyName(context.customer_id, contexts))
-              .map((context) => ({ id: context.customer_id, name: vehicleCompanyName(context.customer_id, contexts) }));
-            return Array.from(new Map(options.map((item) => [item.id, item])).values());
-          }, [contexts]);
-          const selectedCompanyLabel = companyFilterId === 'all'
-            ? 'All companies'
-            : companyOptions.find((item) => item.id === companyFilterId)?.name ?? 'All companies';
-          """,
-              '',
-              'company filter options',
+          sub_once(
+              r"  const companyOptions = useMemo\(\(\) => \{.*?  const filteredVehicles = useMemo",
+              "  const filteredVehicles = useMemo",
+              'company filter data block',
+              re.S,
           )
-
           replace_once("    if (companyFilterId !== 'all' && vehicle.customer_id !== companyFilterId) return false;\n", '', 'company filtering predicate')
           replace_once(
               "  }), [companyFilterId, contexts, externalPolicies, insurers, policies, searchQuery, vehicles]);",
@@ -72,44 +69,6 @@ jobs:
               'filtered vehicle dependencies',
           )
 
-          old_filter = """      {vehicles.length ? (
-            <View style={styles.filterPanel}>
-              <View style={styles.filterRow}>
-                <View style={styles.globalSearch}>
-                  <MaterialCommunityIcons name=\"magnify\" size={17} color=\"#0A43A3\" />
-                  <TextInput
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    placeholder=\"Search\"
-                    placeholderTextColor=\"#7F8EA4\"
-                    style={styles.globalSearchInput}
-                  />
-                  {searchQuery ? (
-                    <Pressable accessibilityRole=\"button\" onPress={() => setSearchQuery('')} style={styles.clearSearch}>
-                      <MaterialCommunityIcons name=\"close\" size={14} color=\"#7A8799\" />
-                    </Pressable>
-                  ) : null}
-                </View>
-                <Pressable accessibilityRole=\"button\" onPress={() => setCompanyFilterOpen((value) => !value)} style={styles.companyDropdown}>
-                  <Text style={styles.companyDropdownText} numberOfLines={1}>{selectedCompanyLabel}</Text>
-                  <MaterialCommunityIcons name={companyFilterOpen ? 'chevron-up' : 'chevron-down'} size={18} color={palette.navy} />
-                </Pressable>
-              </View>
-              {companyFilterOpen ? (
-                <View style={styles.companyMenu}>
-                  <Pressable onPress={() => { setCompanyFilterId('all'); setCompanyFilterOpen(false); }} style={[styles.companyOption, companyFilterId === 'all' && styles.companyOptionActive]}>
-                    <Text style={[styles.companyOptionText, companyFilterId === 'all' && styles.companyOptionTextActive]}>All companies</Text>
-                  </Pressable>
-                  {companyOptions.map((company) => (
-                    <Pressable key={company.id} onPress={() => { setCompanyFilterId(company.id); setCompanyFilterOpen(false); }} style={[styles.companyOption, companyFilterId === company.id && styles.companyOptionActive]}>
-                      <Text style={[styles.companyOptionText, companyFilterId === company.id && styles.companyOptionTextActive]} numberOfLines={1}>{company.name}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              ) : null}
-            </View>
-          ) : null}
-          """
           new_filter = """      {vehicles.length ? (
             <View style={styles.filterPanel}>
               <View style={styles.globalSearch}>
@@ -129,32 +88,33 @@ jobs:
               </View>
             </View>
           ) : null}
-          """
-          replace_once(old_filter, new_filter, 'company dropdown UI')
+
+          {vehicles.length === 0"""
+          sub_once(
+              r"      \{vehicles\.length \? \(\n        <View style=\{styles\.filterPanel\}>.*?      \) : null\}\n\n      \{vehicles\.length === 0",
+              new_filter,
+              'company dropdown UI',
+              re.S,
+          )
 
           replace_once(
               '<EmptyState title="No matching vehicles" body="Try a different search or company filter." />',
               '<EmptyState title="No matching vehicles" body="Try a different search." />',
               'empty state helper',
           )
-
-          replace_once("  filterRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },\n", '', 'filter row style')
           replace_once(
-              "  globalSearch: { flex: 1.25, height: 42, borderRadius: 13, borderWidth: 1.4, borderColor: '#9FC4F5', backgroundColor: '#F3F8FF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, shadowColor: '#0A43A3', shadowOpacity: 0.08, shadowRadius: 8, elevation: 1 },",
-              "  globalSearch: { width: '100%', height: 42, borderRadius: 13, borderWidth: 1.4, borderColor: '#9FC4F5', backgroundColor: '#F3F8FF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, shadowColor: '#0A43A3', shadowOpacity: 0.08, shadowRadius: 8, elevation: 1 },",
-              'search style',
+              "  globalSearch: { flex: 1.25,",
+              "  globalSearch: { width: '100%',",
+              'full width search',
           )
 
-          for style_line, label in [
-              ("  companyDropdown: { flex: 0.9, height: 42, borderRadius: 13, borderWidth: 1.2, borderColor: '#B8D4F7', backgroundColor: '#FFFFFF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 },\n", 'company dropdown style'),
-              ("  companyDropdownText: { flex: 1, color: palette.navy, fontSize: 11.2, fontWeight: '800' },\n", 'company dropdown text style'),
-              ("  companyMenu: { borderRadius: 13, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', overflow: 'hidden', shadowColor: palette.ink, shadowOpacity: 0.07, shadowRadius: 8, elevation: 3 },\n", 'company menu style'),
-              ("  companyOption: { minHeight: 36, paddingHorizontal: 11, justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: '#EEF2F6' },\n", 'company option style'),
-              ("  companyOptionActive: { backgroundColor: '#EEF5FF' },\n", 'company active style'),
-              ("  companyOptionText: { color: '#65758B', fontSize: 11, fontWeight: '800' },\n", 'company option text style'),
-              ("  companyOptionTextActive: { color: palette.navy },\n", 'company active text style'),
+          for style_name in [
+              'filterRow', 'companyDropdown', 'companyDropdownText', 'companyMenu',
+              'companyOption', 'companyOptionActive', 'companyOptionText', 'companyOptionTextActive',
           ]:
-              replace_once(style_line, '', label)
+              text, count = re.subn(rf"^  {style_name}: \{{.*\}},\n", '', text, count=1, flags=re.M)
+              if count != 1:
+                  raise SystemExit(f'Expected one style entry for {style_name}; found {count}')
 
           forbidden = [
               'All companies', 'companyFilterId', 'companyFilterOpen', 'companyOptions',
