@@ -34,6 +34,9 @@ type VehiclePolicyDisplay = {
 
 const truckSketch = require('../../assets/vehicles/truck sketch.png');
 const carSketch = require('../../assets/vehicles/car sketch.png');
+const busSketch = require('../../assets/vehicles/bus sketch.png');
+const bikeSketch = require('../../assets/vehicles/bike sketch.png');
+const jcbSketch = require('../../assets/vehicles/jcb sketch.png');
 
 const insurerLogos = {
   hdfc: require('../../assets/vehicles/hdfc-ergo.png'),
@@ -261,7 +264,7 @@ export default function VehiclesScreen() {
         const insurerLogo = insurerImage(insurer?.name);
         const vehicleDescriptor = [vehicle.make, vehicle.model, vehicle.year ? String(vehicle.year) : null].filter(Boolean).join(' - ') || 'Vehicle details pending';
         const accountName = vehicleCompanyName(vehicle.customer_id, contexts);
-        const vehicleImage = isPrivateVehicle(vehicle) ? carSketch : truckSketch;
+        const vehicleImage = vehicleSketchFor(vehicle);
         const health = vehicleComplianceHealth(vehicle, policy);
 
         return (
@@ -282,43 +285,54 @@ export default function VehiclesScreen() {
               </View>
 
               <View style={styles.rightPane}>
-                <InfoBlock
-                  icon="shield-car"
-                  iconBg="#EAF3FF"
-                  iconColor={palette.navy}
-                  label="Insurance Company"
-                  value={insurer?.name ?? 'Insurance company pending'}
-                  logo={insurerLogo}
-                  badge={externalPolicy ? 'External' : undefined}
-                />
-                <InfoBlock
-                  icon="file-document-outline"
-                  iconBg="#EAF8F1"
-                  iconColor="#12805C"
-                  label="Policy Number"
-                  value={policy?.policy_no ?? '-'}
-                  statusActive={active}
-                />
-                <InfoBlock
-                  icon="calendar-alert"
-                  iconBg="#FFECEF"
-                  iconColor="#E84C88"
-                  label="Policy Expiry Date"
-                  value={policy ? formatDate(policy.end_date) : '-'}
-                />
-                {!active ? (
+                {policy ? (
+                  <>
+                    <InfoBlock
+                      icon="shield-car"
+                      iconBg="#EAF3FF"
+                      iconColor={palette.navy}
+                      label="Insurance Company"
+                      value={insurer?.name ?? 'Insurance company pending'}
+                      logo={insurerLogo}
+                      badge={externalPolicy ? 'External' : undefined}
+                    />
+                    <InfoBlock
+                      icon="file-document-outline"
+                      iconBg="#EAF8F1"
+                      iconColor="#12805C"
+                      label="Policy Number"
+                      value={policy.policy_no}
+                      statusActive={active}
+                    />
+                    <InfoBlock
+                      icon="calendar-alert"
+                      iconBg="#FFECEF"
+                      iconColor="#E84C88"
+                      label="Policy Expiry Date"
+                      value={formatDate(policy.end_date)}
+                    />
+                  </>
+                ) : (
                   <Pressable
                     accessibilityRole="button"
+                    accessibilityLabel={`Add policy for ${vehicle.vehicle_no}`}
                     onPress={(event) => {
                       event.stopPropagation();
                       router.push({ pathname: '/customer/add-policy', params: { vehicleId: vehicle.id } });
                     }}
-                    style={styles.inlineAddPolicy}
+                    style={({ pressed }) => [styles.policyEmptyState, pressed && styles.policyEmptyStatePressed]}
                   >
-                    <MaterialCommunityIcons name="shield-plus-outline" size={14} color="#0A43A3" />
-                    <Text style={styles.inlineAddPolicyText}>Add policy</Text>
+                    <View style={styles.policyEmptyIcon}>
+                      <MaterialCommunityIcons name="shield-plus-outline" size={31} color="#0A43A3" />
+                    </View>
+                    <Text style={styles.policyEmptyTitle}>Add policy</Text>
+                    <Text style={styles.policyEmptyText}>No policy information available</Text>
+                    <View style={styles.policyEmptyButton}>
+                      <MaterialCommunityIcons name="plus" size={14} color="#FFFFFF" />
+                      <Text style={styles.policyEmptyButtonText}>Add now</Text>
+                    </View>
                   </Pressable>
-                ) : null}
+                )}
               </View>
             </View>
 
@@ -970,8 +984,31 @@ function isPolicyActive(policy: Pick<VehiclePolicyDisplay, 'start_date' | 'end_d
   return policy.start_date <= currentDate && policy.end_date >= currentDate;
 }
 
+function vehicleClassCode(vehicle: Vehicle) {
+  const normalized = (vehicle.vehicle_type ?? '').trim().toUpperCase();
+  if (normalized === 'PCP' || normalized.startsWith('PCP ')) return 'PCP';
+  if (normalized === 'TWP' || normalized.startsWith('TWP ') || normalized.includes('TWO WHEEL') || normalized.includes('MOTORCYCLE') || normalized.includes('BIKE')) return 'TWP';
+  if (normalized === 'PCV' || normalized.startsWith('PCV ') || normalized.includes('PASSENGER') || normalized.includes('BUS')) return 'PCV';
+  if (normalized === 'MISD' || normalized.startsWith('MISD ') || normalized.includes('MISCELLANEOUS')) return 'MISD';
+  if (normalized === 'CPM' || normalized.startsWith('CPM ') || normalized.includes('PLANT') || normalized.includes('MACHINERY')) return 'CPM';
+  if (normalized === 'GCV' || normalized.startsWith('GCV ') || normalized.includes('GOODS')) return 'GCV';
+  if (normalized.includes('PRIVATE') || normalized.includes('CAR')) return 'PCP';
+  return normalized || 'GCV';
+}
+
+function vehicleSketchFor(vehicle: Vehicle) {
+  switch (vehicleClassCode(vehicle)) {
+    case 'PCP': return carSketch;
+    case 'PCV': return busSketch;
+    case 'TWP': return bikeSketch;
+    case 'MISD':
+    case 'CPM': return jcbSketch;
+    default: return truckSketch;
+  }
+}
+
 function isPrivateVehicle(vehicle: Vehicle) {
-  return (vehicle.vehicle_type ?? '').toLowerCase().includes('private');
+  return vehicleClassCode(vehicle) === 'PCP';
 }
 
 function daysUntil(date: string) {
@@ -1129,8 +1166,13 @@ const styles = StyleSheet.create({
   policyStatusDot: { width: 8, height: 8, borderRadius: 4 },
   policyStatusDotActive: { backgroundColor: '#12B76A' },
   policyStatusDotInactive: { backgroundColor: '#D92D20' },
-  inlineAddPolicy: { alignSelf: 'flex-end', minHeight: 24, borderRadius: 8, borderWidth: 1, borderColor: '#B8D4F7', backgroundColor: '#F2F7FF', paddingHorizontal: 7, flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
-  inlineAddPolicyText: { color: '#0A43A3', fontSize: 9.4, lineHeight: 12, fontWeight: '900' },
+  policyEmptyState: { flex: 1, minHeight: 144, borderRadius: 14, backgroundColor: '#F5F9FF', borderWidth: 1, borderColor: '#CFE0F5', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10, paddingVertical: 10 },
+  policyEmptyStatePressed: { backgroundColor: '#EAF3FF', transform: [{ scale: 0.985 }] },
+  policyEmptyIcon: { width: 50, height: 50, borderRadius: 18, backgroundColor: '#E4F0FF', alignItems: 'center', justifyContent: 'center', marginBottom: 5 },
+  policyEmptyTitle: { color: palette.navy, fontSize: 13.5, lineHeight: 17, fontWeight: '900' },
+  policyEmptyText: { color: '#718096', fontSize: 9.5, lineHeight: 12, fontWeight: '700', textAlign: 'center', marginTop: 2 },
+  policyEmptyButton: { minHeight: 29, borderRadius: 9, backgroundColor: '#0A43A3', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 7 },
+  policyEmptyButtonText: { color: '#FFFFFF', fontSize: 10, lineHeight: 13, fontWeight: '900' },
   dropdownButton: { position: 'absolute', right: 0, top: 0, width: 34, height: 34, borderRadius: 8, borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
 
   complianceHealth: { minHeight: 28, marginTop: 8, paddingTop: 7, borderTopWidth: 1, borderTopColor: '#E5ECF5', flexDirection: 'row', alignItems: 'center', gap: 6 },

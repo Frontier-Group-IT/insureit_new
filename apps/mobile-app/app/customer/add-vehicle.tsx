@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Button, Card, Message, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
@@ -46,7 +46,6 @@ export default function AddVehicleScreen() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
-  const selectedContext = contexts.find((context) => context.customer_id === selectedCustomerId) ?? null;
   const visibleDateFields = useMemo(() => [
     { key: 'registration', label: 'Registration date', value: registrationDate, onChange: setRegistrationDate },
     { key: 'fitness', label: 'Fitness expiry', value: fitnessExpiryDate, onChange: setFitnessExpiryDate },
@@ -105,6 +104,7 @@ export default function AddVehicleScreen() {
     const target = contexts.find((context) => context.customer_id === selectedCustomerId);
     if (!target) return setMessage('Select the customer account for this vehicle.');
     if (!vehicleNo.trim()) return setMessage('Enter the RC number.');
+    if (!vehicleType) return setMessage('Select the vehicle class.');
     if (!make.trim()) return setMessage('Select the vehicle manufacturer.');
     if (!model.trim()) return setMessage('Enter the vehicle model.');
     if (!year.trim()) return setMessage('Select the manufacturing year.');
@@ -155,13 +155,12 @@ export default function AddVehicleScreen() {
 
   return (
     <Screen title="Add Vehicle" showLogout showTitleHeader={false} topSpacing="compact">
-      <View style={styles.modalHeader}><View><Text style={styles.modalEyebrow}>VEHICLE ONBOARDING</Text><Text style={styles.compactTitle}>Add Vehicle</Text><Text style={styles.modalSub}>Add the vehicle now; optional details can be completed later.</Text></View><Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.modalClose}><MaterialCommunityIcons name="close" size={20} color={palette.navy} /></Pressable></View>
+      <View style={styles.modalHeader}><View><Text style={styles.modalEyebrow}>VEHICLE ONBOARDING</Text><Text style={styles.compactTitle}>Add Vehicle</Text></View><Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.modalClose}><MaterialCommunityIcons name="close" size={20} color={palette.navy} /></Pressable></View>
       <Card style={styles.formCard}>
         <View pointerEvents="none" style={styles.formAccentOne} />
         <View pointerEvents="none" style={styles.formAccentTwo} />
         {message ? <Message type="error">{message}</Message> : null}
         {contexts.length > 1 ? <AccountDropdown contexts={contexts} selectedCustomerId={selectedCustomerId} open={accountOpen} onToggle={() => setAccountOpen((value) => !value)} onSelect={(customerId) => { setSelectedCustomerId(customerId); setAccountOpen(false); }} /> : null}
-        {selectedContext && contexts.length <= 1 ? <View style={styles.accountPill}><MaterialCommunityIcons name="office-building-outline" size={17} color="#0A43A3" /><View style={styles.flex}><Text style={styles.accountPillLabel}>Add for</Text><Text style={styles.accountPillTitle}>{customerAccountTitle(selectedContext)}</Text></View></View> : null}
 
         <FormSection title="Vehicle ownership" icon="truck-outline" tone="vehicle">
           <InputField required icon="card-text-outline" label="RC number" value={vehicleNo} onChangeText={(value) => setVehicleNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" />
@@ -169,12 +168,12 @@ export default function AddVehicleScreen() {
           <MakeDropdown required manufacturers={manufacturers} selectedMake={make} query={makeQuery} open={makeOpen} onToggle={() => setMakeOpen((value) => !value)} onQueryChange={setMakeQuery} onSelect={(value) => { setMake(value); setMakeQuery(value); setMakeOpen(false); }} />
           <View style={styles.twoColumnRow}>
             <View style={styles.column}><InputField required icon="car-info" label="Model" value={model} onChangeText={setModel} /></View>
-            <View style={styles.column}><InputField required icon="calendar-blank-outline" label="Manufacturing year" keyboardType="number-pad" value={year} onChangeText={(value) => setYear(value.replace(/\D/g, '').slice(0, 4))} /></View>
+            <View style={styles.column}><YearDropdown value={year} onSelect={setYear} /></View>
           </View>
         </FormSection>
 
         <FormSection title="Vehicle specification" icon="identifier" tone="identity">
-          <VehicleTypeDropdown value={vehicleType} onSelect={setVehicleType} />
+          <VehicleTypeDropdown required value={vehicleType} onSelect={setVehicleType} />
           <View style={styles.twoColumnRow}>
             <View style={styles.column}><InputField icon="barcode" label="Chassis number" value={chassisNo} onChangeText={(value) => setChassisNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" /></View>
             <View style={styles.column}><InputField icon="engine-outline" label="Engine number" value={engineNo} onChangeText={(value) => setEngineNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" /></View>
@@ -236,18 +235,46 @@ function InputField({ label, icon, style, required = false, ...props }: React.Co
   );
 }
 
-function VehicleTypeDropdown({ value, onSelect }: { value: string; onSelect: (value: string) => void }) {
+function VehicleTypeDropdown({ value, onSelect, required = false }: { value: string; onSelect: (value: string) => void; required?: boolean }) {
   const [open, setOpen] = useState(false);
   const selected = vehicleClasses.find((item) => item.value === value);
   return (
     <View style={styles.field}>
-      <Text style={styles.fieldLabel}>Vehicle class</Text>
+      <Text style={styles.fieldLabel}>Vehicle class{required ? ' *' : ''}</Text>
       <Pressable accessibilityRole="button" onPress={() => setOpen((current) => !current)} style={styles.selectButton}>
         <View style={styles.selectIcon}><MaterialCommunityIcons name="truck-outline" size={18} color="#0A43A3" /></View>
-        <Text style={[styles.selectValue, !selected && styles.placeholder]}>{selected?.label ?? 'Select class (optional)'}</Text>
+        <Text style={[styles.selectValue, !selected && styles.placeholder]}>{selected?.label ?? 'Select class'}</Text>
         <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={21} color={palette.navy} />
       </Pressable>
       {open ? <View style={styles.selectMenu}>{vehicleClasses.map((item) => <Pressable key={item.value} onPress={() => { onSelect(item.value); setOpen(false); }} style={[styles.selectOption, value === item.value && styles.selectOptionActive]}><Text style={[styles.selectOptionText, value === item.value && styles.selectOptionTextActive]}>{item.label}</Text>{value === item.value ? <MaterialCommunityIcons name="check-circle" size={17} color={palette.navy} /> : null}</Pressable>)}</View> : null}
+    </View>
+  );
+}
+
+function YearDropdown({ value, onSelect }: { value: string; onSelect: (value: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const maxYear = new Date().getFullYear() + 1;
+  const years = useMemo(() => Array.from({ length: maxYear - 1949 }, (_, index) => String(maxYear - index)), [maxYear]);
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>Manufacturing year *</Text>
+      <Pressable accessibilityRole="button" onPress={() => setOpen((current) => !current)} style={styles.selectButton}>
+        <View style={styles.selectIcon}><MaterialCommunityIcons name="calendar-blank-outline" size={18} color="#0A43A3" /></View>
+        <Text style={[styles.selectValue, !value && styles.placeholder]}>{value || 'Select year'}</Text>
+        <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={21} color={palette.navy} />
+      </Pressable>
+      {open ? (
+        <View style={styles.yearMenu}>
+          <ScrollView nestedScrollEnabled showsVerticalScrollIndicator>
+            {years.map((item) => (
+              <Pressable key={item} onPress={() => { onSelect(item); setOpen(false); }} style={[styles.selectOption, value === item && styles.selectOptionActive]}>
+                <Text style={[styles.selectOptionText, value === item && styles.selectOptionTextActive]}>{item}</Text>
+                {value === item ? <MaterialCommunityIcons name="check-circle" size={17} color={palette.navy} /> : null}
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -526,6 +553,7 @@ const styles = StyleSheet.create({
   selectValue: { flex: 1, color: palette.navy, fontSize: 12.1, fontWeight: '700' },
   placeholder: { color: '#7A8798' },
   selectMenu: { borderRadius: 13, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', overflow: 'hidden' },
+  yearMenu: { maxHeight: 228, borderRadius: 13, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', overflow: 'hidden' },
   selectOption: { minHeight: 43, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#EEF2F6' },
   selectOptionActive: { backgroundColor: '#EEF5FF' },
   selectOptionText: { flex: 1, color: '#607089', fontSize: 11.5, fontWeight: '700' },
