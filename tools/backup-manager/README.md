@@ -8,10 +8,11 @@ This toolkit creates independent local backups of the INSUREIT Supabase database
 - A backup is written to a `.partial` folder first and promoted only after checksum verification.
 - Production backup secrets and DR-target secrets are stored separately with Windows DPAPI under `%ProgramData%\InsureIT Backup\`.
 - Retention is dry-run by default.
-- Restore tooling is plan-only by default unless an explicit execute switch and confirmation phrase are supplied.
+- Restore and DR-refresh tooling are plan-only by default unless an explicit execute switch and confirmation phrase are supplied.
 - Production restore is blocked unless it is explicitly allowed.
 - The DR Supabase project is a standby target, not an active-active writable database.
 - A failed or unverified local backup must never replace the last known-good DR copy.
+- A failed or incomplete DR refresh leaves the marker non-healthy and blocks a later unattended refresh until it is inspected.
 - The six-hour scheduled refresh must run under the same Windows user that created the DPAPI credential files.
 
 ## Current production source
@@ -121,6 +122,8 @@ V2 adds two critical recovery artifacts:
 
 The backup fails instead of being promoted if the managed-schema capture is missing, the migration snapshot is empty, the repository HEAD changes while the backup is running, or any payload checksum fails.
 
+The first independently verified v2 backup is `INSUREIT-20260816-165742`. It verified 650 payload files, 224 migration files, 22 Storage policies, 1 Auth trigger, and 420 Storage objects.
+
 ## Manual v2 backup
 
 Preflight:
@@ -167,6 +170,52 @@ After database metadata is restored, physical Storage bytes must be restored sep
 
 Run without `-Execute` first. The execution path targets only the approved DR S3 endpoint.
 
+## Non-destructive warm-standby refresh
+
+`Sync-InsureITDR.ps1` is the guarded refresh path for an already-proven DR baseline. It does **not** reset the Supabase project and it never writes to production.
+
+Plan only:
+
+```powershell
+.\Sync-InsureITDR.ps1 `
+  -BackupPath "F:\INSUREIT_BACKUPS\INSUREIT-YYYYMMDD-HHmmss"
+```
+
+Before any DR write, the script:
+
+- independently verifies the v2 backup again
+- validates production and DR credential/project separation
+- validates the protected `standby` marker
+- rejects an older backup by default
+- rejects a DR marker already in `refreshing` or `failed`
+- requires exact live production/DR semantic schema parity with `Compare-InsureITDRSchema.ps1 -FailOnDifference`
+
+Manual execution requires:
+
+```powershell
+.\Sync-InsureITDR.ps1 `
+  -BackupPath "F:\INSUREIT_BACKUPS\INSUREIT-YYYYMMDD-HHmmss" `
+  -Execute
+```
+
+and the exact interactive confirmation phrase printed by the tool.
+
+The execution path:
+
+1. changes only the DR marker to `refreshing`
+2. keeps the existing DR schema and project infrastructure intact
+3. starts one DR database transaction and sets `session_replication_role = replica`
+4. deletes only rows from tables represented in the verified `data.sql` and migration-history dump
+5. replays the exact COPY data from that backup in the same transaction
+6. verifies every restored COPY-table row count, Auth-user count, Storage metadata count, policy count and Auth trigger count
+7. force-uploads every Storage object, removes stale physical DR objects with exact sync, and performs `rclone check --download`
+8. reruns the exact production/DR schema comparator
+9. records the new backup ID and sets the DR marker to `healthy` only after all checks pass
+
+If anything fails after refresh starts, the marker is changed to `failed` while the last known-good backup ID remains recorded. A later unattended run is blocked until the failure is inspected.
+
+`-Unattended` exists for the future scheduled job but is deliberately blocked until the marker has first reached `healthy` through one successful manual non-destructive refresh.
+
 ## DR refresh design
 
 The approved six-hour warm-standby workflow is:
@@ -174,15 +223,17 @@ The approved six-hour warm-standby workflow is:
 1. Create a new v2 production backup locally.
 2. Independently verify its manifest, checksums, managed schema and migration snapshot.
 3. If verification fails, stop and keep the existing DR copy untouched.
-4. Confirm the DR schema is compatible with the new backup before changing DR data.
+4. Confirm exact production/DR schema parity before changing DR data.
 5. Refresh DR public/Auth/Storage database data transactionally from that exact backup without doing a destructive project reset.
-6. Reconcile the custom managed schema from that backup.
+6. Verify managed-schema and security-object counts remain intact.
 7. Force-mirror and byte-check Storage files against the same backup.
-8. Reconcile key table counts, Auth users, Storage metadata/bytes and schema/security objects.
-9. Only after all checks succeed, update the DR control marker with the new backup ID and healthy refresh state.
+8. Reconcile table counts, Auth users, Storage metadata/bytes and schema/security objects.
+9. Only after all checks succeed, update the DR control marker with the new backup ID and `healthy` refresh state.
 10. Apply local retention only after the backup and DR refresh workflow has completed successfully.
 
 A full Supabase project reset is a bootstrap/recovery operation only. It is not the normal six-hour refresh method.
+
+If production schema changes, the fail-closed comparator stops the refresh before DR is modified. Schema migration of the standby must then be handled deliberately before automatic refresh resumes.
 
 ## Backup Vercel site
 
@@ -224,10 +275,10 @@ Only folders with a healthy manifest are eligible for retention deletion.
 
 ## Next controlled milestone
 
-1. Pull the v2 tooling to the Windows backup PC.
-2. Run v2 preflight.
-3. Create one fresh v2 production backup.
-4. Run the independent v2 verifier.
-5. Use that fresh v2 backup for one non-destructive manual DR refresh proof.
-6. Only after that refresh proof passes, install the six-hour Windows Task Scheduler job.
+1. Pull the current backup-manager tooling to the Windows backup PC.
+2. Run `Sync-InsureITDR.ps1` in plan-only mode against the independently verified v2 backup `INSUREIT-20260816-165742`.
+3. Review the exact table/Auth/Storage counts and schema-parity gate.
+4. Run one manual `-Execute` non-destructive DR refresh.
+5. Reconfirm the DR marker is `healthy` and perform application smoke tests.
+6. Only after that proof passes, install the six-hour Windows Task Scheduler job.
 7. Then configure and smoke-test the protected standby Vercel project against the DR Supabase project.
