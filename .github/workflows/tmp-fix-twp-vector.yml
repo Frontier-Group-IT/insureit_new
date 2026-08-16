@@ -1,0 +1,118 @@
+name: Temporary TWP vector vehicle fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/tmp-fix-twp-vector.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix-verify-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Replace TWP raster with bundled vector
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('apps/mobile-app/app/customer/vehicles.tsx')
+          text = path.read_text()
+
+          replacements = [
+            (
+              "const bikeSketch = require('../../assets/vehicles/twp-bike.png');\n",
+              ""
+            ),
+            (
+              "        const vehicleImage = vehicleSketchFor(vehicle);",
+              "        const vehicleClass = vehicleClassCode(vehicle);\n        const vehicleImage = vehicleSketchFor(vehicle);"
+            ),
+            (
+              "                <Image source={vehicleImage} style={styles.truckImage} resizeMode=\"contain\" />",
+              "                {vehicleClass === 'TWP' ? (\n                  <View accessibilityLabel=\"Two wheeler vehicle\" style={styles.twpVehicleVisual}>\n                    <MaterialCommunityIcons name=\"motorbike\" size={72} color=\"#0A43A3\" />\n                    <View style={styles.twpRoadLine} />\n                  </View>\n                ) : (\n                  <Image source={vehicleImage} style={styles.truckImage} resizeMode=\"contain\" />\n                )}"
+            ),
+            (
+              "    case 'TWP': return bikeSketch;\n",
+              ""
+            ),
+            (
+              "  truckImage: { width: 148, height: 78, marginTop: 0, alignSelf: 'center', borderRadius: 10 },",
+              "  truckImage: { width: 148, height: 78, marginTop: 0, alignSelf: 'center', borderRadius: 10 },\n  twpVehicleVisual: { width: 148, height: 78, marginTop: 0, alignSelf: 'center', borderRadius: 10, backgroundColor: '#F7FAFF', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },\n  twpRoadLine: { position: 'absolute', bottom: 8, width: 112, height: 2, borderRadius: 2, backgroundColor: '#D6E5F7' },"
+            ),
+          ]
+
+          for old, new in replacements:
+              if old not in text:
+                  raise SystemExit(f'Expected source fragment missing:\n{old}')
+              text = text.replace(old, new, 1)
+
+          checks = [
+              "vehicleClass === 'TWP'",
+              'name="motorbike"',
+              'twpVehicleVisual',
+              'twpRoadLine',
+          ]
+          for expected in checks:
+              if expected not in text:
+                  raise SystemExit(f'Missing expected TWP vector marker: {expected}')
+          if 'twp-bike.png' in text or 'bikeSketch' in text:
+              raise SystemExit('TWP raster reference still remains in vehicles.tsx')
+
+          path.write_text(text)
+          PY
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Mobile typecheck
+        run: npm --workspace apps/mobile-app run typecheck
+
+      - name: Focused mobile lint
+        working-directory: apps/mobile-app
+        run: npx eslint app/customer/vehicles.tsx --quiet
+
+      - name: Android Expo export
+        working-directory: apps/mobile-app
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ci-placeholder.supabase.co' }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'ci-placeholder-public-anon-key' }}
+          NODE_ENV: production
+        run: |
+          rm -rf /tmp/twp-vector-fix
+          npx expo export --platform android --output-dir /tmp/twp-vector-fix
+
+      - name: Commit verified fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/mobile-app/app/customer/vehicles.tsx
+          git commit -m 'Render TWP vehicle with bundled vector'
+          git reset --hard HEAD
+          git clean -fd
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
+          echo "PUBLISHED_SOURCE_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Publish Expo preview OTA
+        working-directory: apps/mobile-app
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npx --yes eas-cli@18 update --channel preview --environment preview --message "Fix TWP vehicle representation 2026-08-16" --non-interactive
