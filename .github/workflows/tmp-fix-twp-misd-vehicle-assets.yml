@@ -27,34 +27,28 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Create PNG compatibility assets
-        run: |
-          python -m pip install --quiet Pillow
-          python - <<'PY'
-          from pathlib import Path
-          from PIL import Image
-
-          asset_dir = Path('apps/mobile-app/assets/vehicles')
-          for stem in ('twp-bike', 'misd-cpm-jcb'):
-              source = asset_dir / f'{stem}.webp'
-              target = asset_dir / f'{stem}.png'
-              image = Image.open(source).convert('RGBA')
-              if image.size != (240, 240):
-                  raise SystemExit(f'Unexpected {stem} source size: {image.size}')
-              alpha = image.getchannel('A')
-              if alpha.getbbox() is None:
-                  raise SystemExit(f'{stem} source is fully transparent')
-              image.save(target, format='PNG', optimize=True, compress_level=9)
-              check = Image.open(target).convert('RGBA')
-              if check.size != (240, 240) or check.getchannel('A').getbbox() is None:
-                  raise SystemExit(f'{stem} PNG validation failed')
-              print(f'{stem}: {target.stat().st_size} bytes, bbox={check.getchannel("A").getbbox()}')
-          PY
-
       - name: Switch TWP and MISD to PNG assets
         run: |
           python - <<'PY'
           from pathlib import Path
+          import struct
+
+          def validate_png(path: Path):
+              data = path.read_bytes()
+              if data[:8] != b'\x89PNG\r\n\x1a\n':
+                  raise SystemExit(f'{path} is not a PNG')
+              if len(data) < 33:
+                  raise SystemExit(f'{path} is unexpectedly small')
+              width, height = struct.unpack('>II', data[16:24])
+              if width < 148 or height < 78:
+                  raise SystemExit(f'{path} dimensions are too small: {width}x{height}')
+              print(f'{path}: {width}x{height}, {len(data)} bytes')
+
+          for asset in [
+              Path('apps/mobile-app/assets/vehicles/twp-bike.png'),
+              Path('apps/mobile-app/assets/vehicles/misd-cpm-jcb.png'),
+          ]:
+              validate_png(asset)
 
           path = Path('apps/mobile-app/app/customer/vehicles.tsx')
           text = path.read_text()
@@ -68,8 +62,6 @@ jobs:
               text = text.replace(old, new, 1)
           if 'twp-bike.webp' in text or 'misd-cpm-jcb.webp' in text:
               raise SystemExit('Problematic WebP references still remain in vehicles.tsx')
-          if 'twp-bike.png' not in text or 'misd-cpm-jcb.png' not in text:
-              raise SystemExit('PNG references were not applied')
           path.write_text(text)
           PY
 
@@ -89,15 +81,17 @@ jobs:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ci-placeholder.supabase.co' }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'ci-placeholder-public-anon-key' }}
           NODE_ENV: production
-        run: npx expo export --platform android --output-dir /tmp/twp-misd-asset-fix
+        run: |
+          rm -rf /tmp/twp-misd-asset-fix
+          npx expo export --platform android --output-dir /tmp/twp-misd-asset-fix 2>&1 | tee /tmp/expo-export.log
+          grep -q 'assets/vehicles/twp-bike.png' /tmp/expo-export.log
+          grep -q 'assets/vehicles/misd-cpm-jcb.png' /tmp/expo-export.log
 
       - name: Commit verified fix
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add apps/mobile-app/app/customer/vehicles.tsx \
-                  apps/mobile-app/assets/vehicles/twp-bike.png \
-                  apps/mobile-app/assets/vehicles/misd-cpm-jcb.png
+          git add apps/mobile-app/app/customer/vehicles.tsx
           git commit -m 'Fix TWP and MISD vehicle illustrations'
           git reset --hard HEAD
           git clean -fd
