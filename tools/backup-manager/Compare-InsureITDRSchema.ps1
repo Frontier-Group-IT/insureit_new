@@ -3,7 +3,8 @@ param(
     [string]$ProductionSecretsPath = (Join-Path $env:ProgramData "InsureIT Backup\secrets.clixml"),
     [string]$DRSecretsPath = (Join-Path $env:ProgramData "InsureIT Backup\dr-secrets.clixml"),
     [string]$ConfigPath = (Join-Path $PSScriptRoot "dr.config.local.json"),
-    [string]$OutputPath = (Join-Path $PSScriptRoot "_work\dr-schema-catalog-diff.txt")
+    [string]$OutputPath = (Join-Path $PSScriptRoot "_work\dr-schema-catalog-diff.txt"),
+    [switch]$FailOnDifference
 )
 
 Set-StrictMode -Version Latest
@@ -242,6 +243,10 @@ try {
     Write-Host ""
     Write-Host ("Report: {0}" -f ([IO.Path]::GetFullPath($OutputPath)))
     Write-Host "No database data or schema was changed." -ForegroundColor Green
+
+    if ($FailOnDifference -and $differences.Count -gt 0) {
+        throw "Schema parity check failed with $($differences.Count) difference(s). DR was not modified by the comparator."
+    }
 }
 finally {
     $prodUrl = $null
