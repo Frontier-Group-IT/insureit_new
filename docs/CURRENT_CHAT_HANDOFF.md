@@ -12,6 +12,35 @@ Policy Onboarding OCR hardening remains an active workstream. Production portal 
 
 **DEPLOYED / VERIFIED:** Expo preview OTA was restored on 2026-08-17 (IST) to the latest `main` mobile state for project `antnish/insureit-mobile`, branch `preview`, runtime version `0.2.0`. This supersedes the temporary hotfix group `eb212c22-3ab5-4c40-9703-49c3c33934e1`, which was valid for crash recovery but was behind later mobile UI work.
 
+**DEPLOYED / PARTLY DEVICE-VERIFIED:** The external claim step/header/time-picker refinement was committed and republished from a clean worktree on 2026-08-17 (IST), superseding dirty update group `6e438b8d-e179-4729-97a6-47005efa298a`.
+
+```text
+Source commit: 82780eb19151fc8acda6525489bd4bd18ea04687
+Message: Clean worktree: external claim steps and time picker
+Update group ID: e68ed658-b0a0-4b3a-a6a5-2b66e42f67a5
+Android update ID: 01a00c6d-e57a-7ce3-9d97-9ba72f1e69cb
+iOS update ID: 01a00c6d-e57a-7532-9394-aaa12c76b1aa
+Runtime version: 0.2.0
+EAS metadata: `isGitWorkingTreeDirty: false`
+```
+
+Included changes:
+
+- Removed the duplicate Start Claim `Vehicle` section label below `Select the vehicle`.
+- Removed `EXTERNAL CLAIM` from self-managed claim step headers.
+- Shortened Spot Intimation copy and changed the policy context label to `EXTERNAL POLICY`.
+- Replaced manual `HH:MM` accident-time entry with a modal hour/minute picker while preserving stored `HH:MM`.
+
+Verification before publish:
+
+```text
+npm --workspace apps/mobile-app run typecheck
+npx eslint app/customer/start-claim.tsx app/customer/self-managed-claim.tsx app/customer/self-managed-milestone.tsx app/customer/self-managed-spot-status.tsx --quiet
+git status --short
+```
+
+ADB verification before the clean re-publish confirmed the dirty OTA had applied the visible Start Claim label removal on the connected device. Final ADB verification after clean group `e68ed658-b0a0-4b3a-a6a5-2b66e42f67a5` was blocked because the Android device disconnected from ADB during the two-launch verification step. Reconnect USB debugging and run the required two cold launches before claiming on-device verification for the clean group.
+
 ```text
 Source commit: 7395d226db77790da26746e9b0d958379a2d7946
 Message: Restore preview to latest mobile main
