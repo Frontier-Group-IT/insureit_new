@@ -117,7 +117,7 @@ function Get-CopyTableStats {
         throw "COPY block for '$currentIdentifier' did not terminate correctly."
     }
 
-    return @($stats)
+    return $stats.ToArray()
 }
 
 function Get-TargetCounts {
@@ -391,7 +391,7 @@ try {
     if ($resetHelp -match '(?m)--no-seed\b') { $resetArgs.Add("--no-seed") }
     if ($resetHelp -match '(?m)--yes\b') { $resetArgs.Add("--yes") }
 
-    Invoke-Checked "supabase" @($resetArgs) "Remote DR reset" $worktreePath
+    Invoke-Checked "supabase" ($resetArgs.ToArray()) "Remote DR reset" $worktreePath
     $resetCompleted = $true
 
     Ensure-ControlMarker -DatabaseUrl $dbUrl -ControlSchema $controlSchema -SourceRef $sourceRef -TargetRef $targetRef -RpoHours $rpoHours -BackupId $backupId -BackupCompletedAt $backupCompletedAt -Status "refreshing" -ErrorMessage $null
