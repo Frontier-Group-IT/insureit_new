@@ -3,8 +3,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Linking, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, Linking, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Circle } from 'react-native-svg';
 
 import { BrandLogo } from '@/components/first-look';
 import { GroupHomeScreen } from '@/components/group/group-home-screen';
@@ -19,6 +20,7 @@ import type { Claim, ClaimTask, Customer, CustomerOnboardingApplication, Policy,
 
 const fleetSketch = require('../../assets/brand/customer-fleet-sketch.png');
 const claimsDeskPhone = '+916264911014';
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 type ExternalPolicyRow = {
   id: string;
@@ -127,7 +129,6 @@ export default function CustomerMockupHomeScreen() {
   const pendingActionCount = pendingTask ? documentTasks.filter((task) => task.claim_id === pendingTask.claim_id).length : 0;
   const renewals = useMemo(() => buildComplianceRenewals({ vehicles, policies }), [policies, vehicles]);
   const renewalAttentionCount = renewals.totalPending;
-  const expiredRenewalCount = renewals.items.filter((item) => item.status === 'expired').length;
   const activePolicyVehicleIds = useMemo(() => new Set(policies.filter((policy) => !isExpired(policy.end_date)).map((policy) => policy.vehicle_id)), [policies]);
   const protectedVehicles = vehicles.filter((vehicle) => activePolicyVehicleIds.has(vehicle.id)).length;
   const protectionScore = vehicles.length ? Math.round((protectedVehicles / vehicles.length) * 100) : 0;
@@ -179,8 +180,6 @@ export default function CustomerMockupHomeScreen() {
         vehicles={vehicles}
         protectedVehicles={protectedVehicles}
         protectionScore={protectionScore}
-        renewalDue={renewalAttentionCount}
-        expiredDue={expiredRenewalCount}
         onOpen={() => router.push('/customer/vehicles')}
       />
       <QuickActionDock
@@ -250,7 +249,7 @@ function DashboardIntro({ firstName, lastUpdated, attentionCount, groupName, onA
   );
 }
 
-function FleetSnapshot({ vehicles, protectedVehicles, protectionScore, renewalDue, expiredDue, onOpen }: { vehicles: Vehicle[]; protectedVehicles: number; protectionScore: number; renewalDue: number; expiredDue: number; onOpen: () => void }) {
+function FleetSnapshot({ vehicles, protectedVehicles, protectionScore, onOpen }: { vehicles: Vehicle[]; protectedVehicles: number; protectionScore: number; onOpen: () => void }) {
   const unprotected = Math.max(vehicles.length - protectedVehicles, 0);
   return (
     <Pressable onPress={onOpen} style={({ pressed }) => [styles.fleetCard, pressed && styles.cardPressed]}>
@@ -258,30 +257,44 @@ function FleetSnapshot({ vehicles, protectedVehicles, protectionScore, renewalDu
       <View style={styles.fleetMainRow}>
         <View style={styles.fleetCountBlock}>
           <Text style={styles.fleetCount}>{vehicles.length}</Text>
-          <Text style={styles.fleetSubtitle}>{vehicles.length ? `${protectedVehicles} protected, ${unprotected} without active policy` : 'Add first vehicle to begin.'}</Text>
         </View>
         <Image source={fleetSketch} style={styles.fleetImageHero} resizeMode="contain" />
         <FleetCoverageRing score={protectionScore} hasVehicles={vehicles.length > 0} />
       </View>
-      <FleetStatusTicker renewalDue={renewalDue} expiredDue={expiredDue} />
+      <FleetStatusTicker totalVehicles={vehicles.length} protectedVehicles={protectedVehicles} unprotectedVehicles={unprotected} />
     </Pressable>
   );
 }
 
 function FleetCoverageRing({ score, hasVehicles }: { score: number; hasVehicles: boolean }) {
   const safeScore = hasVehicles ? Math.max(0, Math.min(100, score)) : 0;
-  const activeSegments = Math.round((safeScore / 100) * 12);
+  const progress = useRef(new Animated.Value(0)).current;
+  const radius = 30;
+  const strokeWidth = 7;
+  const circumference = 2 * Math.PI * radius;
+  useEffect(() => {
+    Animated.timing(progress, { toValue: safeScore, duration: 850, useNativeDriver: false }).start();
+  }, [progress, safeScore]);
+  const strokeDashoffset = progress.interpolate({ inputRange: [0, 100], outputRange: [circumference, 0] });
   return (
     <View style={styles.scoreRing}>
-      {Array.from({ length: 12 }).map((_, index) => (
-        <View
-          key={index}
-          style={[
-            styles.scoreSegment,
-            { backgroundColor: index < activeSegments ? '#10A66F' : '#E5484D', transform: [{ rotate: `${index * 30}deg` }, { translateY: -28 }] },
-          ]}
+      <Svg width={72} height={72} viewBox="0 0 72 72">
+        <Circle cx="36" cy="36" r={radius} stroke="#E5484D" strokeWidth={strokeWidth} fill="none" />
+        <AnimatedCircle
+          cx="36"
+          cy="36"
+          r={radius}
+          stroke="#10A66F"
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={`${circumference} ${circumference}`}
+          strokeDashoffset={strokeDashoffset}
+          originX="36"
+          originY="36"
+          rotation="-90"
         />
-      ))}
+      </Svg>
       <View style={styles.scoreCore}>
         <Text style={styles.scoreValue}>{safeScore}%</Text>
         <Text style={styles.scoreLabel}>Covered</Text>
@@ -290,12 +303,19 @@ function FleetCoverageRing({ score, hasVehicles }: { score: number; hasVehicles:
   );
 }
 
-function FleetStatusTicker({ renewalDue, expiredDue }: { renewalDue: number; expiredDue: number }) {
+function FleetStatusTicker({ totalVehicles, protectedVehicles, unprotectedVehicles }: { totalVehicles: number; protectedVehicles: number; unprotectedVehicles: number }) {
+  const fullyCovered = totalVehicles > 0 && unprotectedVehicles === 0;
   return (
     <View style={styles.fleetTicker}>
-      <Text style={styles.fleetTickerText}><Text style={[styles.fleetTickerValue, { color: renewalDue ? '#C98918' : '#10A66F' }]}>{renewalDue}</Text> renewal due</Text>
-      <Text style={styles.fleetTickerDivider}>|</Text>
-      <Text style={styles.fleetTickerText}><Text style={[styles.fleetTickerValue, { color: expiredDue ? '#E5484D' : '#10A66F' }]}>{expiredDue}</Text> expired</Text>
+      {fullyCovered ? (
+        <Text style={styles.fleetTickerText} numberOfLines={1}>All vehicles are covered</Text>
+      ) : (
+        <Text style={styles.fleetTickerText} numberOfLines={1}>
+          <Text style={[styles.fleetTickerValue, { color: '#10A66F' }]}>{protectedVehicles}</Text> protected
+          <Text style={styles.fleetTickerDivider}> | </Text>
+          <Text style={[styles.fleetTickerValue, { color: unprotectedVehicles ? '#E5484D' : '#10A66F' }]}>{unprotectedVehicles}</Text> without active policy
+        </Text>
+      )}
       <MaterialCommunityIcons name="chevron-right" size={17} color="#174EA6" />
     </View>
   );
@@ -547,10 +567,8 @@ const styles = StyleSheet.create({
   fleetCopy: { flex: 1, minWidth: 0 },
   sectionEyebrow: { color: '#607089', fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
   fleetTitle: { color: palette.navy, fontSize: 19, lineHeight: 24, fontWeight: '900', marginTop: 4 },
-  fleetSubtitle: { color: '#5C6878', fontSize: 11.5, lineHeight: 15, fontWeight: '800', marginTop: 1 },
   scoreRing: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  scoreSegment: { position: 'absolute', left: 34, top: 30, width: 4, height: 13, borderRadius: 3 },
-  scoreCore: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E0EAF5', alignItems: 'center', justifyContent: 'center' },
+  scoreCore: { position: 'absolute', width: 52, height: 52, borderRadius: 26, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E0EAF5', alignItems: 'center', justifyContent: 'center' },
   scoreValue: { color: palette.navy, fontSize: 15, lineHeight: 18, fontWeight: '900' },
   scoreLabel: { color: '#607089', fontSize: 8, fontWeight: '900', marginTop: 0 },
   plateStack: { width: 142, zIndex: 2 },
@@ -561,7 +579,7 @@ const styles = StyleSheet.create({
   fleetImageHero: { flex: 1, height: 92, marginLeft: -12, marginRight: -7, opacity: 0.95 },
   fleetFooter: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 6 },
   fleetTicker: { minHeight: 37, marginTop: 8, borderRadius: 14, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  fleetTickerText: { color: palette.navy, fontSize: 11.5, fontWeight: '900' },
+  fleetTickerText: { flex: 1, color: palette.navy, fontSize: 11.5, fontWeight: '900' },
   fleetTickerValue: { fontSize: 12.5, fontWeight: '900' },
   fleetTickerDivider: { color: '#B6C4D8', fontSize: 12, fontWeight: '900' },
   quickDock: { borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', padding: 12, shadowColor: '#122544', shadowOpacity: 0.04, shadowRadius: 9, elevation: 2 },
