@@ -223,13 +223,12 @@ function DashboardIntro({ firstName, lastUpdated, attentionCount, groupName, onA
       <View>
         <Text style={styles.greeting}>{timeGreeting()}, {firstName}</Text>
         <View style={styles.greetingMetaRow}>
-          <Pressable disabled={!hasAttention} onPress={onAttentionPress} style={({ pressed }) => [styles.attentionLink, hasAttention && styles.attentionLinkActive, pressed && styles.cardPressed]}>
+          <Pressable disabled={!hasAttention} onPress={onAttentionPress} style={({ pressed }) => [styles.attentionLink, pressed && styles.textPressed]}>
             {hasAttention ? (
               <>
                 <MaterialCommunityIcons name="alert-circle-outline" size={13} color="#C98918" />
                 <Text style={styles.attentionLinkStrong}>{attentionCount} item{attentionCount === 1 ? '' : 's'}</Text>
                 <Text style={styles.attentionLinkText}>need attention</Text>
-                <MaterialCommunityIcons name="chevron-right" size={14} color="#174EA6" />
               </>
             ) : (
               <>
@@ -255,36 +254,51 @@ function FleetSnapshot({ vehicles, protectedVehicles, protectionScore, renewalDu
   const unprotected = Math.max(vehicles.length - protectedVehicles, 0);
   return (
     <Pressable onPress={onOpen} style={({ pressed }) => [styles.fleetCard, pressed && styles.cardPressed]}>
-      <View style={styles.fleetTop}>
-        <View style={styles.fleetCountTile}>
-          <MaterialCommunityIcons name="truck-outline" size={20} color="#174EA6" />
+      <Text style={styles.sectionEyebrow}>Your fleet summary</Text>
+      <View style={styles.fleetMainRow}>
+        <View style={styles.fleetCountBlock}>
           <Text style={styles.fleetCount}>{vehicles.length}</Text>
-          <Text style={styles.fleetCountLabel}>Vehicles</Text>
+          <Text style={styles.fleetSubtitle}>{vehicles.length ? `${protectedVehicles} protected, ${unprotected} without active policy` : 'Add first vehicle to begin.'}</Text>
         </View>
-        <View style={styles.fleetCopy}>
-          <Text style={styles.sectionEyebrow}>Your fleet summary</Text>
-          <Text style={styles.fleetTitle}>{vehicles.length ? `${protectedVehicles} protected` : 'Add first vehicle'}</Text>
-          <Text style={styles.fleetSubtitle}>{vehicles.length ? `${unprotected} without active policy` : 'Vehicle, policy and renewal status.'}</Text>
-        </View>
-        <View style={styles.scoreRing}>
-          <Text style={styles.scoreValue}>{vehicles.length ? `${protectionScore}%` : '0%'}</Text>
-          <Text style={styles.scoreLabel}>Covered</Text>
-        </View>
+        <Image source={fleetSketch} style={styles.fleetImageHero} resizeMode="contain" />
+        <FleetCoverageRing score={protectionScore} hasVehicles={vehicles.length > 0} />
       </View>
-      <View style={styles.fleetMiddle}>
-        <View style={styles.fleetStatStrip}>
-          <FleetSignal label="Renewal due" value={renewalDue} tone={renewalDue ? '#C98918' : '#10A66F'} />
-          <FleetSignal label="Expired" value={expiredDue} tone={expiredDue ? '#E5484D' : '#10A66F'} />
-        </View>
-        <Image source={fleetSketch} style={styles.fleetImageCompact} resizeMode="contain" />
-        <View style={styles.openLink}><Text style={styles.openLinkText}>Open</Text><MaterialCommunityIcons name="arrow-right" size={15} color="#174EA6" /></View>
-      </View>
+      <FleetStatusTicker renewalDue={renewalDue} expiredDue={expiredDue} />
     </Pressable>
   );
 }
 
-function FleetSignal({ label, value, tone }: { label: string; value: number; tone: string }) {
-  return <View style={styles.fleetSignal}><Text style={[styles.fleetSignalValue, { color: tone }]}>{value}</Text><Text style={styles.fleetSignalLabel}>{label}</Text></View>;
+function FleetCoverageRing({ score, hasVehicles }: { score: number; hasVehicles: boolean }) {
+  const safeScore = hasVehicles ? Math.max(0, Math.min(100, score)) : 0;
+  const activeSegments = Math.round((safeScore / 100) * 12);
+  return (
+    <View style={styles.scoreRing}>
+      {Array.from({ length: 12 }).map((_, index) => (
+        <View
+          key={index}
+          style={[
+            styles.scoreSegment,
+            { backgroundColor: index < activeSegments ? '#10A66F' : '#E5484D', transform: [{ rotate: `${index * 30}deg` }, { translateY: -28 }] },
+          ]}
+        />
+      ))}
+      <View style={styles.scoreCore}>
+        <Text style={styles.scoreValue}>{safeScore}%</Text>
+        <Text style={styles.scoreLabel}>Covered</Text>
+      </View>
+    </View>
+  );
+}
+
+function FleetStatusTicker({ renewalDue, expiredDue }: { renewalDue: number; expiredDue: number }) {
+  return (
+    <View style={styles.fleetTicker}>
+      <Text style={styles.fleetTickerText}><Text style={[styles.fleetTickerValue, { color: renewalDue ? '#C98918' : '#10A66F' }]}>{renewalDue}</Text> renewal due</Text>
+      <Text style={styles.fleetTickerDivider}>|</Text>
+      <Text style={styles.fleetTickerText}><Text style={[styles.fleetTickerValue, { color: expiredDue ? '#E5484D' : '#10A66F' }]}>{expiredDue}</Text> expired</Text>
+      <MaterialCommunityIcons name="chevron-right" size={17} color="#174EA6" />
+    </View>
+  );
 }
 
 function QuickActionDock({ renewalDue, claimTasks, onRenewals, onQuote, onChallan, onClaim }: { renewalDue: number; claimTasks: number; onRenewals: () => void; onQuote: () => void; onChallan: () => void; onClaim: () => void }) {
@@ -497,13 +511,11 @@ const styles = StyleSheet.create({
   greetingBlock: { paddingHorizontal: 2, paddingTop: 2, paddingBottom: 1 },
   greeting: { color: palette.navy, fontSize: 22, lineHeight: 28, fontWeight: '900' },
   greetingMetaRow: { marginTop: 5, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 7 },
-  attentionLink: { minHeight: 25, borderRadius: 999, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8 },
-  attentionLinkActive: { backgroundColor: '#FFF6E8', borderWidth: 1, borderColor: '#F1D59D' },
-  attentionLinkStrong: { color: '#9A6700', fontSize: 12, lineHeight: 15, fontWeight: '900' },
+  attentionLink: { minHeight: 22, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  attentionLinkStrong: { color: '#174EA6', fontSize: 12, lineHeight: 15, fontWeight: '900' },
   attentionLinkText: { color: '#5C6878', fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
-  syncPill: { minHeight: 24, borderRadius: 999, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  syncPill: { minHeight: 22, flexDirection: 'row', alignItems: 'center', gap: 4 },
   syncTime: { color: '#607089', fontSize: 11, fontWeight: '800' },
-  syncText: { color: '#5C6878', fontSize: 12.5, lineHeight: 18, fontWeight: '700', marginTop: 1 },
   parentCompany: { color: '#174EA6', fontSize: 11, lineHeight: 15, fontWeight: '800', marginTop: 3 },
   liveHero: { minHeight: 182, borderRadius: 22, backgroundColor: palette.navy, padding: 17, overflow: 'hidden', flexDirection: 'row', alignItems: 'stretch', shadowColor: '#071D49', shadowOpacity: 0.16, shadowRadius: 18, elevation: 5 },
   liveHeroUrgent: { backgroundColor: '#12305F' },
@@ -525,32 +537,33 @@ const styles = StyleSheet.create({
   attentionChip: { flex: 1, minHeight: 54, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(7,29,73,0.06)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
   attentionValue: { fontSize: 17, lineHeight: 20, fontWeight: '900', marginTop: 1 },
   attentionLabel: { color: '#5C6878', fontSize: 10.5, fontWeight: '800', marginTop: 1 },
-  fleetCard: { minHeight: 145, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', padding: 12, overflow: 'hidden', shadowColor: '#122544', shadowOpacity: 0.07, shadowRadius: 12, elevation: 3 },
+  textPressed: { opacity: 0.62 },
+  fleetCard: { minHeight: 158, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', padding: 12, overflow: 'hidden', shadowColor: '#122544', shadowOpacity: 0.07, shadowRadius: 12, elevation: 3 },
   fleetTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  fleetCountTile: { width: 74, minHeight: 76, borderRadius: 17, backgroundColor: '#F1F7FF', borderWidth: 1, borderColor: '#D8E7F7', alignItems: 'center', justifyContent: 'center' },
-  fleetCount: { color: palette.navy, fontSize: 30, lineHeight: 34, fontWeight: '900', marginTop: 1 },
+  fleetMainRow: { minHeight: 86, flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 5 },
+  fleetCountBlock: { width: 96, minWidth: 96, justifyContent: 'center' },
+  fleetCount: { color: palette.navy, fontSize: 40, lineHeight: 44, fontWeight: '900' },
   fleetCountLabel: { color: '#607089', fontSize: 9.5, fontWeight: '900', textTransform: 'uppercase' },
   fleetCopy: { flex: 1, minWidth: 0 },
   sectionEyebrow: { color: '#607089', fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
   fleetTitle: { color: palette.navy, fontSize: 19, lineHeight: 24, fontWeight: '900', marginTop: 4 },
-  fleetSubtitle: { color: '#5C6878', fontSize: 12.5, lineHeight: 18, fontWeight: '700', marginTop: 3 },
-  scoreRing: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#EAF3FF', borderWidth: 5, borderColor: '#CDE1FF', alignItems: 'center', justifyContent: 'center' },
-  scoreValue: { color: palette.navy, fontSize: 17, lineHeight: 20, fontWeight: '900' },
-  scoreLabel: { color: '#607089', fontSize: 9, fontWeight: '900', marginTop: 1 },
-  fleetMiddle: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
-  fleetStatStrip: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  fleetSubtitle: { color: '#5C6878', fontSize: 11.5, lineHeight: 15, fontWeight: '800', marginTop: 1 },
+  scoreRing: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  scoreSegment: { position: 'absolute', left: 34, top: 30, width: 4, height: 13, borderRadius: 3 },
+  scoreCore: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E0EAF5', alignItems: 'center', justifyContent: 'center' },
+  scoreValue: { color: palette.navy, fontSize: 15, lineHeight: 18, fontWeight: '900' },
+  scoreLabel: { color: '#607089', fontSize: 8, fontWeight: '900', marginTop: 0 },
   plateStack: { width: 142, zIndex: 2 },
   platePill: { alignSelf: 'flex-start', minHeight: 31, maxWidth: 135, borderRadius: 10, backgroundColor: '#F7FAFE', borderWidth: 1, borderColor: '#D8E7F7', paddingHorizontal: 9, alignItems: 'center', justifyContent: 'center', marginBottom: 5 },
   platePillOverlap: { marginLeft: 12 },
   plateText: { color: palette.navy, fontSize: 11.2, fontWeight: '900' },
   fleetImage: { flex: 1, height: 96, marginLeft: -18, marginRight: -6 },
-  fleetImageCompact: { flex: 1, height: 54, marginLeft: -10, opacity: 0.92 },
+  fleetImageHero: { flex: 1, height: 92, marginLeft: -12, marginRight: -7, opacity: 0.95 },
   fleetFooter: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 6 },
-  fleetSignal: { minWidth: 64, minHeight: 39, borderRadius: 13, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
-  fleetSignalValue: { fontSize: 16, fontWeight: '900' },
-  fleetSignalLabel: { color: '#607089', fontSize: 9, fontWeight: '800', marginTop: 1 },
-  openLink: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 4 },
-  openLinkText: { color: palette.blue, fontSize: 12, fontWeight: '900' },
+  fleetTicker: { minHeight: 37, marginTop: 8, borderRadius: 14, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  fleetTickerText: { color: palette.navy, fontSize: 11.5, fontWeight: '900' },
+  fleetTickerValue: { fontSize: 12.5, fontWeight: '900' },
+  fleetTickerDivider: { color: '#B6C4D8', fontSize: 12, fontWeight: '900' },
   quickDock: { borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', padding: 12, shadowColor: '#122544', shadowOpacity: 0.04, shadowRadius: 9, elevation: 2 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 },
   sectionTitle: { color: palette.navy, fontSize: 16, fontWeight: '900' },
