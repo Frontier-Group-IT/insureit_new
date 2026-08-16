@@ -395,9 +395,9 @@ function ClaimsSummaryCard({ totalCount, openCount, settledCount, totalAmount, o
           <View style={styles.claimOpenLink}><Text style={styles.claimOpenLinkText}>View all</Text><MaterialCommunityIcons name="arrow-right" size={15} color="#BFD4F7" /></View>
         </View>
         <View style={styles.claimMetricRow}>
-          <ClaimMetric label="Total" value={totalCount} amount={moneyCompact(totalAmount)} color="#DDEBFF" background="#153C75" />
-          <ClaimMetric label="Open" value={openCount} amount={moneyCompact(openAmount)} color="#FFF3D8" background="#5A4013" />
-          <ClaimMetric label="Settled" value={settledCount} amount={moneyCompact(settledAmount)} color="#DFF8EA" background="#14513F" />
+          <ClaimMetric label="Total" value={totalCount} amount={moneyCompact(totalAmount)} accent="#174EA6" background="#F2F7FF" border="#DCE8F7" />
+          <ClaimMetric label="Open" value={openCount} amount={moneyCompact(openAmount)} accent="#A86F12" background="#FFF8EA" border="#F1D9A9" />
+          <ClaimMetric label="Settled" value={settledCount} amount={moneyCompact(settledAmount)} accent="#0D8A60" background="#ECF8F2" border="#D4EDDF" />
         </View>
       </Pressable>
       <Pressable onPress={hasPendingAction ? onPendingAction : onOpenAll} style={({ pressed }) => [styles.claimTicker, hasPendingAction && styles.claimTickerHot, pressed && styles.cardPressed]}>
@@ -409,11 +409,10 @@ function ClaimsSummaryCard({ totalCount, openCount, settledCount, totalAmount, o
   );
 }
 
-function ClaimMetric({ label, value, amount, color, background }: { label: string; value: number; amount: string; color: string; background: string }) {
+function ClaimMetric({ label, value, amount, accent, background, border }: { label: string; value: number; amount: string; accent: string; background: string; border: string }) {
   return (
-    <View style={[styles.claimMetric, { backgroundColor: background }]}>
-      <View style={[styles.claimMetricGlow, { backgroundColor: color }]} />
-      <Text style={styles.claimMetricValue}>{value}</Text>
+    <View style={[styles.claimMetric, { backgroundColor: background, borderColor: border }]}>
+      <Text style={[styles.claimMetricValue, { color: accent }]}>{value}</Text>
       <Text style={styles.claimMetricLabel}>{label}</Text>
       <Text style={styles.claimMetricAmount}>{amount}</Text>
     </View>
@@ -424,11 +423,8 @@ function SupportActionCenter({ onSupport }: { onSupport: () => void }) {
   return (
     <View style={styles.supportCard}>
       <View style={styles.supportTop}>
-        <View>
-          <Text style={styles.supportTitle}>Claims Desk</Text>
-          <Text style={styles.supportText}>We are here when it matters</Text>
-        </View>
-        <View style={styles.supportPulse}><MaterialCommunityIcons name="headset" size={21} color="#FFFFFF" /></View>
+        <Text style={styles.supportTitle}>Claims Desk</Text>
+        <Text style={styles.supportTagline} numberOfLines={1}>we are here when it matters</Text>
       </View>
       <View style={styles.supportActions}>
         <SupportButton icon="phone-in-talk" label="Call" color="#10A66F" onPress={() => void callClaimsDesk()} />
@@ -635,11 +631,10 @@ const styles = StyleSheet.create({
   claimOpenLink: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   claimOpenLinkText: { color: '#BFD4F7', fontSize: 11, fontWeight: '900' },
   claimMetricRow: { flexDirection: 'row', gap: 8 },
-  claimMetric: { flex: 1, minHeight: 77, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', paddingHorizontal: 4 },
-  claimMetricGlow: { position: 'absolute', width: 54, height: 54, borderRadius: 27, top: -21, right: -16, opacity: 0.36 },
-  claimMetricValue: { color: '#FFFFFF', fontSize: 24, lineHeight: 28, fontWeight: '900' },
-  claimMetricLabel: { color: '#D8E4F5', fontSize: 10.5, fontWeight: '900', marginTop: 1 },
-  claimMetricAmount: { color: '#AFC0D8', fontSize: 9.5, fontWeight: '800', marginTop: 3 },
+  claimMetric: { flex: 1, minHeight: 77, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  claimMetricValue: { fontSize: 24, lineHeight: 28, fontWeight: '900' },
+  claimMetricLabel: { color: '#52647A', fontSize: 10.5, fontWeight: '900', marginTop: 1 },
+  claimMetricAmount: { color: '#7A899D', fontSize: 9.5, fontWeight: '800', marginTop: 3 },
   claimTicker: { minHeight: 39, margin: 10, marginTop: 9, borderRadius: 14, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7 },
   claimTickerHot: { backgroundColor: '#FFF8EA', borderColor: '#F1D59D' },
   claimTickerText: { flex: 1, color: palette.navy, fontSize: 11.5, fontWeight: '900' },
@@ -670,12 +665,11 @@ const styles = StyleSheet.create({
   claimFooter: { minHeight: 42, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 8 },
   claimFooterText: { flex: 1, color: '#E8F1FF', fontSize: 11.5, lineHeight: 16, fontWeight: '700' },
   supportCard: { borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', padding: 11, shadowColor: '#122544', shadowOpacity: 0.04, shadowRadius: 9, elevation: 2 },
-  supportTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 9 },
+  supportTop: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 9 },
   supportIcon: { width: 44, height: 44, borderRadius: 16, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' },
-  supportPulse: { width: 38, height: 38, borderRadius: 19, backgroundColor: palette.navy, alignItems: 'center', justifyContent: 'center', shadowColor: '#071D49', shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
   supportCopy: { flex: 1 },
   supportTitle: { color: palette.navy, fontSize: 16, fontWeight: '900' },
-  supportText: { color: '#607089', fontSize: 11, fontWeight: '800', marginTop: 1 },
+  supportTagline: { flex: 1, color: '#607089', fontSize: 10.5, fontWeight: '800', textAlign: 'right' },
   supportActions: { flexDirection: 'row', gap: 8 },
   supportButton: { flex: 1, minHeight: 58, alignItems: 'center', justifyContent: 'center', gap: 5 },
   supportButtonIcon: { width: 33, height: 33, borderRadius: 13, alignItems: 'center', justifyContent: 'center', shadowColor: '#122544', shadowOpacity: 0.13, shadowRadius: 6, elevation: 3 },
