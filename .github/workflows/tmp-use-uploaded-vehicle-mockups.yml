@@ -1,0 +1,213 @@
+name: Temporary uploaded vehicle mockup refinement
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/tmp-use-uploaded-vehicle-mockups.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  refine-verify-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Apply My Vehicles asset and filter refinement
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('apps/mobile-app/app/customer/vehicles.tsx')
+          text = path.read_text()
+
+          def replace_once(old: str, new: str, label: str):
+              global text
+              if old not in text:
+                  raise SystemExit(f'Expected fragment missing: {label}')
+              text = text.replace(old, new, 1)
+
+          replace_once(
+              "const truckSketch = require('../../assets/vehicles/truck sketch.png');\nconst carSketch = require('../../assets/vehicles/car sketch.png');\nconst busSketch = require('../../assets/vehicles/bus sketch.png');\nconst bikeSketch = require('../../assets/vehicles/bike sketch.png');\nconst jcbSketch = require('../../assets/vehicles/jcb sketch.png');",
+              "const truckSketch = require('../../assets/vehicles/gcv-truck.webp');\nconst carSketch = require('../../assets/vehicles/pcp-car.webp');\nconst busSketch = require('../../assets/vehicles/pcv-bus.webp');\nconst bikeSketch = require('../../assets/vehicles/twp-bike.webp');\nconst jcbSketch = require('../../assets/vehicles/misd-cpm-jcb.webp');",
+              'vehicle asset imports',
+          )
+
+          replace_once("  const [companyFilterId, setCompanyFilterId] = useState('all');\n", '', 'company filter id state')
+          replace_once("  const [companyFilterOpen, setCompanyFilterOpen] = useState(false);\n", '', 'company filter open state')
+
+          replace_once(
+              """  const companyOptions = useMemo(() => {
+            const options = contexts
+              .filter((context) => vehicleCompanyName(context.customer_id, contexts))
+              .map((context) => ({ id: context.customer_id, name: vehicleCompanyName(context.customer_id, contexts) }));
+            return Array.from(new Map(options.map((item) => [item.id, item])).values());
+          }, [contexts]);
+          const selectedCompanyLabel = companyFilterId === 'all'
+            ? 'All companies'
+            : companyOptions.find((item) => item.id === companyFilterId)?.name ?? 'All companies';
+          """,
+              '',
+              'company filter options',
+          )
+
+          replace_once("    if (companyFilterId !== 'all' && vehicle.customer_id !== companyFilterId) return false;\n", '', 'company filtering predicate')
+          replace_once(
+              "  }), [companyFilterId, contexts, externalPolicies, insurers, policies, searchQuery, vehicles]);",
+              "  }), [contexts, externalPolicies, insurers, policies, searchQuery, vehicles]);",
+              'filtered vehicle dependencies',
+          )
+
+          old_filter = """      {vehicles.length ? (
+            <View style={styles.filterPanel}>
+              <View style={styles.filterRow}>
+                <View style={styles.globalSearch}>
+                  <MaterialCommunityIcons name=\"magnify\" size={17} color=\"#0A43A3\" />
+                  <TextInput
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholder=\"Search\"
+                    placeholderTextColor=\"#7F8EA4\"
+                    style={styles.globalSearchInput}
+                  />
+                  {searchQuery ? (
+                    <Pressable accessibilityRole=\"button\" onPress={() => setSearchQuery('')} style={styles.clearSearch}>
+                      <MaterialCommunityIcons name=\"close\" size={14} color=\"#7A8799\" />
+                    </Pressable>
+                  ) : null}
+                </View>
+                <Pressable accessibilityRole=\"button\" onPress={() => setCompanyFilterOpen((value) => !value)} style={styles.companyDropdown}>
+                  <Text style={styles.companyDropdownText} numberOfLines={1}>{selectedCompanyLabel}</Text>
+                  <MaterialCommunityIcons name={companyFilterOpen ? 'chevron-up' : 'chevron-down'} size={18} color={palette.navy} />
+                </Pressable>
+              </View>
+              {companyFilterOpen ? (
+                <View style={styles.companyMenu}>
+                  <Pressable onPress={() => { setCompanyFilterId('all'); setCompanyFilterOpen(false); }} style={[styles.companyOption, companyFilterId === 'all' && styles.companyOptionActive]}>
+                    <Text style={[styles.companyOptionText, companyFilterId === 'all' && styles.companyOptionTextActive]}>All companies</Text>
+                  </Pressable>
+                  {companyOptions.map((company) => (
+                    <Pressable key={company.id} onPress={() => { setCompanyFilterId(company.id); setCompanyFilterOpen(false); }} style={[styles.companyOption, companyFilterId === company.id && styles.companyOptionActive]}>
+                      <Text style={[styles.companyOptionText, companyFilterId === company.id && styles.companyOptionTextActive]} numberOfLines={1}>{company.name}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+          """
+          new_filter = """      {vehicles.length ? (
+            <View style={styles.filterPanel}>
+              <View style={styles.globalSearch}>
+                <MaterialCommunityIcons name=\"magnify\" size={17} color=\"#0A43A3\" />
+                <TextInput
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholder=\"Search vehicles or policies\"
+                  placeholderTextColor=\"#7F8EA4\"
+                  style={styles.globalSearchInput}
+                />
+                {searchQuery ? (
+                  <Pressable accessibilityRole=\"button\" onPress={() => setSearchQuery('')} style={styles.clearSearch}>
+                    <MaterialCommunityIcons name=\"close\" size={14} color=\"#7A8799\" />
+                  </Pressable>
+                ) : null}
+              </View>
+            </View>
+          ) : null}
+          """
+          replace_once(old_filter, new_filter, 'company dropdown UI')
+
+          replace_once(
+              '<EmptyState title="No matching vehicles" body="Try a different search or company filter." />',
+              '<EmptyState title="No matching vehicles" body="Try a different search." />',
+              'empty state helper',
+          )
+
+          replace_once("  filterRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },\n", '', 'filter row style')
+          replace_once(
+              "  globalSearch: { flex: 1.25, height: 42, borderRadius: 13, borderWidth: 1.4, borderColor: '#9FC4F5', backgroundColor: '#F3F8FF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, shadowColor: '#0A43A3', shadowOpacity: 0.08, shadowRadius: 8, elevation: 1 },",
+              "  globalSearch: { width: '100%', height: 42, borderRadius: 13, borderWidth: 1.4, borderColor: '#9FC4F5', backgroundColor: '#F3F8FF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, shadowColor: '#0A43A3', shadowOpacity: 0.08, shadowRadius: 8, elevation: 1 },",
+              'search style',
+          )
+
+          for style_line, label in [
+              ("  companyDropdown: { flex: 0.9, height: 42, borderRadius: 13, borderWidth: 1.2, borderColor: '#B8D4F7', backgroundColor: '#FFFFFF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 },\n", 'company dropdown style'),
+              ("  companyDropdownText: { flex: 1, color: palette.navy, fontSize: 11.2, fontWeight: '800' },\n", 'company dropdown text style'),
+              ("  companyMenu: { borderRadius: 13, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', overflow: 'hidden', shadowColor: palette.ink, shadowOpacity: 0.07, shadowRadius: 8, elevation: 3 },\n", 'company menu style'),
+              ("  companyOption: { minHeight: 36, paddingHorizontal: 11, justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: '#EEF2F6' },\n", 'company option style'),
+              ("  companyOptionActive: { backgroundColor: '#EEF5FF' },\n", 'company active style'),
+              ("  companyOptionText: { color: '#65758B', fontSize: 11, fontWeight: '800' },\n", 'company option text style'),
+              ("  companyOptionTextActive: { color: palette.navy },\n", 'company active text style'),
+          ]:
+              replace_once(style_line, '', label)
+
+          forbidden = [
+              'All companies', 'companyFilterId', 'companyFilterOpen', 'companyOptions',
+              'companyDropdown', 'companyMenu', "truck sketch.png", "car sketch.png",
+              "bus sketch.png", "bike sketch.png", "jcb sketch.png",
+          ]
+          leftovers = [item for item in forbidden if item in text]
+          if leftovers:
+              raise SystemExit(f'Unexpected old fragments remain: {leftovers}')
+
+          for required in [
+              'gcv-truck.webp', 'pcp-car.webp', 'pcv-bus.webp', 'twp-bike.webp', 'misd-cpm-jcb.webp',
+              'Search vehicles or policies',
+          ]:
+              if required not in text:
+                  raise SystemExit(f'Required new fragment missing: {required}')
+
+          path.write_text(text)
+          PY
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Mobile typecheck
+        run: npm --workspace apps/mobile-app run typecheck
+
+      - name: Focused mobile lint
+        working-directory: apps/mobile-app
+        run: npx eslint app/customer/vehicles.tsx --quiet
+
+      - name: Android Expo export
+        working-directory: apps/mobile-app
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ci-placeholder.supabase.co' }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'ci-placeholder-public-anon-key' }}
+          NODE_ENV: production
+        run: npx expo export --platform android --output-dir /tmp/uploaded-vehicle-mockups
+
+      - name: Commit verified refinement
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/mobile-app/app/customer/vehicles.tsx
+          git commit -m 'Use uploaded vehicle class mockups'
+          git reset --hard HEAD
+          git clean -fd
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
+          echo "PUBLISHED_SOURCE_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Publish Expo preview OTA
+        working-directory: apps/mobile-app
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npx --yes eas-cli@18 update --channel preview --environment preview --message "Use uploaded vehicle class mockups 2026-08-16" --non-interactive
