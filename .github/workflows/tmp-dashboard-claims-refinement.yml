@@ -1,0 +1,130 @@
+name: Temporary dashboard claims refinement
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/tmp-dashboard-claims-refinement.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  refine-verify-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Apply requested dashboard refinements
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('apps/mobile-app/app/customer/home.tsx')
+          text = path.read_text()
+
+          replacements = [
+            (
+              '''          <ClaimMetric label="Total" value={totalCount} amount={moneyCompact(totalAmount)} color="#DDEBFF" background="#153C75" />\n          <ClaimMetric label="Open" value={openCount} amount={moneyCompact(openAmount)} color="#FFF3D8" background="#5A4013" />\n          <ClaimMetric label="Settled" value={settledCount} amount={moneyCompact(settledAmount)} color="#DFF8EA" background="#14513F" />''',
+              '''          <ClaimMetric label="Total" value={totalCount} amount={moneyCompact(totalAmount)} accent="#174EA6" background="#F2F7FF" border="#DCE8F7" />\n          <ClaimMetric label="Open" value={openCount} amount={moneyCompact(openAmount)} accent="#A86F12" background="#FFF8EA" border="#F1D9A9" />\n          <ClaimMetric label="Settled" value={settledCount} amount={moneyCompact(settledAmount)} accent="#0D8A60" background="#ECF8F2" border="#D4EDDF" />'''
+            ),
+            (
+              '''function ClaimMetric({ label, value, amount, color, background }: { label: string; value: number; amount: string; color: string; background: string }) {\n  return (\n    <View style={[styles.claimMetric, { backgroundColor: background }]}>\n      <View style={[styles.claimMetricGlow, { backgroundColor: color }]} />\n      <Text style={styles.claimMetricValue}>{value}</Text>\n      <Text style={styles.claimMetricLabel}>{label}</Text>\n      <Text style={styles.claimMetricAmount}>{amount}</Text>\n    </View>\n  );\n}''',
+              '''function ClaimMetric({ label, value, amount, accent, background, border }: { label: string; value: number; amount: string; accent: string; background: string; border: string }) {\n  return (\n    <View style={[styles.claimMetric, { backgroundColor: background, borderColor: border }]}>\n      <Text style={[styles.claimMetricValue, { color: accent }]}>{value}</Text>\n      <Text style={styles.claimMetricLabel}>{label}</Text>\n      <Text style={styles.claimMetricAmount}>{amount}</Text>\n    </View>\n  );\n}'''
+            ),
+            (
+              '''      <View style={styles.supportTop}>\n        <View>\n          <Text style={styles.supportTitle}>Claims Desk</Text>\n          <Text style={styles.supportText}>We are here when it matters</Text>\n        </View>\n        <View style={styles.supportPulse}><MaterialCommunityIcons name="headset" size={21} color="#FFFFFF" /></View>\n      </View>''',
+              '''      <View style={styles.supportTop}>\n        <Text style={styles.supportTitle}>Claims Desk</Text>\n        <Text style={styles.supportTagline} numberOfLines={1}>we are here when it matters</Text>\n      </View>'''
+            ),
+            (
+              "  claimMetric: { flex: 1, minHeight: 77, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', paddingHorizontal: 4 },",
+              "  claimMetric: { flex: 1, minHeight: 77, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },"
+            ),
+            ("  claimMetricGlow: { position: 'absolute', width: 54, height: 54, borderRadius: 27, top: -21, right: -16, opacity: 0.36 },\n", ""),
+            (
+              "  claimMetricValue: { color: '#FFFFFF', fontSize: 24, lineHeight: 28, fontWeight: '900' },",
+              "  claimMetricValue: { fontSize: 24, lineHeight: 28, fontWeight: '900' },"
+            ),
+            (
+              "  claimMetricLabel: { color: '#D8E4F5', fontSize: 10.5, fontWeight: '900', marginTop: 1 },",
+              "  claimMetricLabel: { color: '#52647A', fontSize: 10.5, fontWeight: '900', marginTop: 1 },"
+            ),
+            (
+              "  claimMetricAmount: { color: '#AFC0D8', fontSize: 9.5, fontWeight: '800', marginTop: 3 },",
+              "  claimMetricAmount: { color: '#7A899D', fontSize: 9.5, fontWeight: '800', marginTop: 3 },"
+            ),
+            (
+              "  supportTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 9 },",
+              "  supportTop: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 9 },"
+            ),
+            ("  supportPulse: { width: 38, height: 38, borderRadius: 19, backgroundColor: palette.navy, alignItems: 'center', justifyContent: 'center', shadowColor: '#071D49', shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },\n", ""),
+            ("  supportText: { color: '#607089', fontSize: 11, fontWeight: '800', marginTop: 1 },", "  supportTagline: { flex: 1, color: '#607089', fontSize: 10.5, fontWeight: '800', textAlign: 'right' },")
+          ]
+
+          for old, new in replacements:
+            if old not in text:
+              raise SystemExit(f'Expected dashboard fragment not found: {old[:140]}')
+            text = text.replace(old, new, 1)
+
+          if 'claimMetricGlow' in text:
+            raise SystemExit('Decorative claim KPI glow still present')
+          if 'name="headset"' in text[text.index('function SupportActionCenter'):text.index('function SupportButton')]:
+            raise SystemExit('Claims Desk headset icon still present')
+          if 'we are here when it matters' not in text:
+            raise SystemExit('Claims Desk tagline missing')
+
+          path.write_text(text)
+          PY
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Mobile typecheck
+        run: npm --workspace apps/mobile-app run typecheck
+
+      - name: Focused dashboard lint
+        working-directory: apps/mobile-app
+        run: npx eslint app/customer/home.tsx --quiet
+
+      - name: Android Expo export
+        working-directory: apps/mobile-app
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ci-placeholder.supabase.co' }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'ci-placeholder-public-anon-key' }}
+          NODE_ENV: production
+        run: npx expo export --platform android --output-dir /tmp/dashboard-claims-refinement
+
+      - name: Commit verified dashboard refinement
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/mobile-app/app/customer/home.tsx
+          if git diff --cached --quiet; then
+            echo 'Requested dashboard refinement already present.'
+          else
+            git commit -m 'Refine dashboard claims and Claims Desk'
+          fi
+          git reset --hard HEAD
+          git clean -fd
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
+          echo "PUBLISHED_SOURCE_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Publish Expo preview OTA
+        working-directory: apps/mobile-app
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npx --yes eas-cli@18 update --channel preview --environment preview --message "Refine dashboard claims and Claims Desk 2026-08-16" --non-interactive
