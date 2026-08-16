@@ -35,8 +35,8 @@ type VehiclePolicyDisplay = {
 const truckSketch = require('../../assets/vehicles/gcv-truck.webp');
 const carSketch = require('../../assets/vehicles/pcp-car.webp');
 const busSketch = require('../../assets/vehicles/pcv-bus.webp');
-const bikeSketch = require('../../assets/vehicles/twp-bike.webp');
-const jcbSketch = require('../../assets/vehicles/misd-cpm-jcb.webp');
+const bikeSketch = require('../../assets/vehicles/twp-bike.png');
+const jcbSketch = require('../../assets/vehicles/misd-cpm-jcb.png');
 
 const insurerLogos = {
   hdfc: require('../../assets/vehicles/hdfc-ergo.png'),
