@@ -46,6 +46,34 @@ function Assert-ExpressionSafe {
     }
 }
 
+function Invoke-PsqlSingleValue {
+    param(
+        [Parameter(Mandatory = $true)][string]$DatabaseUrl,
+        [Parameter(Mandatory = $true)][string]$Sql,
+        [Parameter(Mandatory = $true)][string]$Label
+    )
+
+    # Do not pipe native psql directly into Select-Object -First. On Windows
+    # PowerShell 5.1 that can close the native pipe early and make psql return
+    # a false non-zero/broken-pipe exit code even when the query succeeded.
+    $rawOutput = @(& psql "$DatabaseUrl" -X -v ON_ERROR_STOP=1 -t -A -c $Sql)
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
+        throw "$Label failed (psql exit code $exitCode)."
+    }
+
+    $lines = @(
+        $rawOutput |
+        ForEach-Object { ([string]$_).Trim() } |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    )
+    if ($lines.Count -lt 1) {
+        throw "$Label returned no value."
+    }
+
+    return [string]$lines[0]
+}
+
 Require-Command "psql"
 
 if (-not (Test-Path -LiteralPath $DRSecretsPath)) {
@@ -147,8 +175,7 @@ select concat_ws('|',
 );
 "@
 
-$guardResult = (& psql "$dbUrl" -X -v ON_ERROR_STOP=1 -t -A -c $guardSql | Select-Object -First 1).Trim()
-if ($LASTEXITCODE -ne 0) { throw "DR guard query failed." }
+$guardResult = Invoke-PsqlSingleValue -DatabaseUrl $dbUrl -Sql $guardSql -Label "DR guard query"
 if ($guardResult -ne "t|t|t|t") {
     throw "STOPPED: DR prerequisite objects are not in the expected restored state. Guard result: $guardResult"
 }
@@ -238,8 +265,7 @@ select concat_ws('|',
 );
 "@
 
-$verifyResult = (& psql "$dbUrl" -X -v ON_ERROR_STOP=1 -t -A -c $verifySql | Select-Object -First 1).Trim()
-if ($LASTEXITCODE -ne 0) { throw "Post-repair verification query failed." }
+$verifyResult = Invoke-PsqlSingleValue -DatabaseUrl $dbUrl -Sql $verifySql -Label "Post-repair verification query"
 if ($verifyResult -ne "22|1") {
     throw "Post-repair verification failed. Expected 22 policies and 1 trigger, got $verifyResult."
 }
