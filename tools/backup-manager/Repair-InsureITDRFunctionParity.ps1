@@ -201,7 +201,11 @@ if ($drHashNow -ne $drHash) {
 }
 
 $sqlPath = Join-Path $workDir "repair-dr-function-parity.sql"
-$sqlText = "BEGIN;" + [Environment]::NewLine + $prodDefinitionNow + [Environment]::NewLine + "COMMIT;" + [Environment]::NewLine
+$functionSql = $prodDefinitionNow.TrimEnd()
+if (-not $functionSql.EndsWith(";")) {
+    $functionSql += ";"
+}
+$sqlText = "BEGIN;" + [Environment]::NewLine + $functionSql + [Environment]::NewLine + "COMMIT;" + [Environment]::NewLine
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 [IO.File]::WriteAllText($sqlPath, $sqlText, $utf8NoBom)
 
