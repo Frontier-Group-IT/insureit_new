@@ -10,22 +10,22 @@ Policy Onboarding OCR hardening remains an active workstream. Production portal 
 
 ## Mobile Expo preview
 
-**DEPLOYED / VERIFIED:** Expo preview OTA hotfix published on 2026-08-17 (IST) for project `antnish/insureit-mobile`, branch `preview`, runtime version `0.2.0`.
+**DEPLOYED / VERIFIED:** Expo preview OTA was restored on 2026-08-17 (IST) to the latest `main` mobile state for project `antnish/insureit-mobile`, branch `preview`, runtime version `0.2.0`. This supersedes the temporary hotfix group `eb212c22-3ab5-4c40-9703-49c3c33934e1`, which was valid for crash recovery but was behind later mobile UI work.
 
 ```text
-Source commit: 7f9bfeb8dc12afd60baf0c99291b271f79ddb93d
-Message: Hotfix preview: restore mobile environment config
-Update group ID: eb212c22-3ab5-4c40-9703-49c3c33934e1
-Android update ID: 01a00c33-6e82-7493-9a68-1a2db24c8fd0
-iOS update ID: 01a00c33-6e82-7033-a836-ec084514d5fe
-EAS Dashboard: https://expo.dev/accounts/antnish/projects/insureit-mobile/updates/eb212c22-3ab5-4c40-9703-49c3c33934e1
+Source commit: 7395d226db77790da26746e9b0d958379a2d7946
+Message: Restore preview to latest mobile main
+Update group ID: ac47a84f-fd32-4c6e-9010-aebcac01e21e
+Android update ID: 01a00c3d-db88-7936-83d4-41543d8a72f8
+iOS update ID: 01a00c3d-db88-721f-9d6c-5069b6a90c07
+EAS Dashboard: https://expo.dev/accounts/antnish/projects/insureit-mobile/updates/ac47a84f-fd32-4c6e-9010-aebcac01e21e
 ```
 
 Included changes:
 
+- Latest committed mobile dashboard, vehicle art, My Vehicles, empty-policy CTA, and claims/policy flow refinements from `main`.
 - Policy Detail mobile hero layout no longer expands into a tall blank card below its filled content.
-- External Start Claim vehicle/policy selection refinement is present in the installed preview app.
-- Related mobile claim, policy, vehicle and add-policy/add-vehicle screen refinements were committed together in `Refine mobile claim and policy flows`.
+- External Start Claim vehicle/policy selection refinement is present in the installed preview app, including the newer dropdown vehicle selector, Add Policy action, no-policy state, and disabled continue action.
 
 Verification:
 
@@ -37,9 +37,9 @@ npx eas-cli update:list --branch preview --limit 1 --json
 adb shell monkey -p com.insureit.mobile -c android.intent.category.LAUNCHER 1
 ```
 
-ADB verification on connected Android device `00078344S000834` confirmed the installed app opens, a fresh launch logs `Running "main"` without `Missing mobile app environment configuration` or `AndroidRuntime` fatal exceptions, and the refined Start Claim screen renders with vehicle chips, selected vehicle card, policy requirement state and disabled continue action.
+ADB verification on connected Android device `00078344S000834` confirmed the installed app opens after the restored OTA, two fresh launches log `Running "main"` without `Missing mobile app environment configuration` or `AndroidRuntime` fatal exceptions, the later dashboard renders with fleet summary/coverage ring/quick actions/claims card, and the refined Start Claim screen renders with dropdown vehicle selector, Add Policy action, no-policy state, and disabled continue action.
 
-**LEARNING:** publishing a clean Expo OTA from an isolated worktree without injecting the mobile `EXPO_PUBLIC_*` environment produced bad update group `a72bd2f4-83ee-4a50-840e-55196b419296`, which crashed on first launch with `Missing mobile app environment configuration`. When publishing from a clean/temporary worktree, load the same mobile public environment used by the normal `apps/mobile-app` workspace before running `eas update`. Do not commit or record the actual values.
+**LEARNING:** publishing a clean Expo OTA from an isolated worktree without injecting the mobile `EXPO_PUBLIC_*` environment produced bad update group `a72bd2f4-83ee-4a50-840e-55196b419296`, which crashed on first launch with `Missing mobile app environment configuration`. The follow-up crash hotfix group `eb212c22-3ab5-4c40-9703-49c3c33934e1` restored environment config but was behind later mobile UI work. When publishing from a clean/temporary worktree, load the same mobile public environment used by the normal `apps/mobile-app` workspace and publish from the intended latest source state. Do not commit or record the actual values.
 
 **DEPLOYED:** Expo preview OTA update published on 2026-08-15 for project `antnish/insureit-mobile`, branch `preview`, runtime version `0.1.0`.
 
