@@ -257,11 +257,12 @@ function FleetSnapshot({ vehicles, protectedVehicles, protectionScore, onOpen }:
       <View style={styles.fleetMainRow}>
         <View style={styles.fleetCountBlock}>
           <Text style={styles.fleetCount}>{vehicles.length}</Text>
+          <Text style={styles.fleetCountLabel}>Vehicles</Text>
         </View>
         <Image source={fleetSketch} style={styles.fleetImageHero} resizeMode="contain" />
         <FleetCoverageRing score={protectionScore} hasVehicles={vehicles.length > 0} />
       </View>
-      <FleetStatusTicker totalVehicles={vehicles.length} protectedVehicles={protectedVehicles} unprotectedVehicles={unprotected} />
+      <FleetStatusTicker totalVehicles={vehicles.length} unprotectedVehicles={unprotected} />
     </Pressable>
   );
 }
@@ -284,7 +285,7 @@ function FleetCoverageRing({ score, hasVehicles }: { score: number; hasVehicles:
           cx="36"
           cy="36"
           r={radius}
-          stroke="#10A66F"
+          stroke="#174EA6"
           strokeWidth={strokeWidth}
           fill="none"
           strokeLinecap="round"
@@ -303,21 +304,42 @@ function FleetCoverageRing({ score, hasVehicles }: { score: number; hasVehicles:
   );
 }
 
-function FleetStatusTicker({ totalVehicles, protectedVehicles, unprotectedVehicles }: { totalVehicles: number; protectedVehicles: number; unprotectedVehicles: number }) {
+function FleetStatusTicker({ totalVehicles, unprotectedVehicles }: { totalVehicles: number; unprotectedVehicles: number }) {
   const fullyCovered = totalVehicles > 0 && unprotectedVehicles === 0;
   return (
     <View style={styles.fleetTicker}>
       {fullyCovered ? (
-        <Text style={styles.fleetTickerText} numberOfLines={1}>All vehicles are covered</Text>
+        <>
+          <MaterialCommunityIcons name="check-decagram" size={17} color="#10A66F" />
+          <Text style={styles.fleetTickerText} numberOfLines={1}>All vehicles are protected</Text>
+        </>
       ) : (
-        <Text style={styles.fleetTickerText} numberOfLines={1}>
-          <Text style={[styles.fleetTickerValue, { color: '#10A66F' }]}>{protectedVehicles}</Text> protected
-          <Text style={styles.fleetTickerDivider}> | </Text>
-          <Text style={[styles.fleetTickerValue, { color: unprotectedVehicles ? '#E5484D' : '#10A66F' }]}>{unprotectedVehicles}</Text> without active policy
-        </Text>
+        <>
+          <AttentionPulseIcon />
+          <Text style={styles.fleetTickerText} numberOfLines={1}><Text style={[styles.fleetTickerValue, { color: '#E5484D' }]}>{unprotectedVehicles}</Text> vehicle{unprotectedVehicles === 1 ? '' : 's'} without active policy</Text>
+        </>
       )}
       <MaterialCommunityIcons name="chevron-right" size={17} color="#174EA6" />
     </View>
+  );
+}
+
+function AttentionPulseIcon() {
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 760, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0, duration: 760, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] });
+  const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1] });
+  return (
+    <Animated.View style={[styles.attentionPulseIcon, { opacity, transform: [{ scale }] }]}>
+      <MaterialCommunityIcons name="alert-circle" size={15} color="#FFFFFF" />
+    </Animated.View>
   );
 }
 
@@ -325,11 +347,11 @@ function QuickActionDock({ renewalDue, claimTasks, onRenewals, onQuote, onChalla
   return (
     <View style={styles.quickDock}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Quick actions</Text>
+        <Text style={styles.sectionEyebrow}>Quick actions</Text>
         <Text style={styles.sectionHint}>One tap services</Text>
       </View>
       <View style={styles.quickGrid}>
-        <QuickAction icon="calendar-month-outline" label="Renewal" badge={renewalDue} tone="#FFF6E8" color="#C98918" onPress={onRenewals} />
+        <QuickAction icon="calendar-month-outline" label="Renewal" badge={renewalDue} animateBadge tone="#FFF6E8" color="#C98918" onPress={onRenewals} />
         <QuickAction icon="shield-plus-outline" label="Start claim" badge={claimTasks} tone="#E8F8F0" color="#10A66F" onPress={onClaim} />
         <QuickAction icon="file-document-outline" label="Get quote" tone="#EAF3FF" color="#174EA6" onPress={onQuote} />
         <QuickAction icon="ticket-confirmation-outline" label="E-Challan" tone="#E6FAFD" color="#0EAFC8" onPress={onChallan} />
@@ -338,14 +360,29 @@ function QuickActionDock({ renewalDue, claimTasks, onRenewals, onQuote, onChalla
   );
 }
 
-function QuickAction({ icon, label, badge, tone, color, onPress }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; badge?: number; tone: string; color: string; onPress: () => void }) {
+function QuickAction({ icon, label, badge, animateBadge, tone, color, onPress }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; badge?: number; animateBadge?: boolean; tone: string; color: string; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.quickAction, pressed && styles.cardPressed]}>
-      {badge ? <View style={styles.actionBadge}><Text style={styles.actionBadgeText}>{badge}</Text></View> : null}
+      {badge ? <ActionBadge value={badge} animated={Boolean(animateBadge)} /> : null}
       <View style={[styles.quickIcon, { backgroundColor: tone }]}><MaterialCommunityIcons name={icon} size={22} color={color} /></View>
       <Text style={styles.quickLabel} numberOfLines={2}>{label}</Text>
     </Pressable>
   );
+}
+
+function ActionBadge({ value, animated }: { value: number; animated: boolean }) {
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!animated) return;
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0, duration: 900, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [animated, pulse]);
+  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.11] });
+  return <Animated.View style={[styles.actionBadge, { transform: [{ scale }] }]}><Text style={styles.actionBadgeText}>{value}</Text></Animated.View>;
 }
 
 function ClaimsSummaryCard({ totalCount, openCount, settledCount, totalAmount, openAmount, settledAmount, pendingActionCount, onOpenAll, onPendingAction }: { totalCount: number; openCount: number; settledCount: number; totalAmount: number; openAmount: number; settledAmount: number; pendingActionCount: number; onOpenAll: () => void; onPendingAction: () => void }) {
@@ -358,9 +395,9 @@ function ClaimsSummaryCard({ totalCount, openCount, settledCount, totalAmount, o
           <View style={styles.claimOpenLink}><Text style={styles.claimOpenLinkText}>View all</Text><MaterialCommunityIcons name="arrow-right" size={15} color="#BFD4F7" /></View>
         </View>
         <View style={styles.claimMetricRow}>
-          <ClaimMetric label="Total" value={totalCount} amount={moneyCompact(totalAmount)} color="#DDEBFF" />
-          <ClaimMetric label="Open" value={openCount} amount={moneyCompact(openAmount)} color="#FFF3D8" />
-          <ClaimMetric label="Settled" value={settledCount} amount={moneyCompact(settledAmount)} color="#DFF8EA" />
+          <ClaimMetric label="Total" value={totalCount} amount={moneyCompact(totalAmount)} color="#DDEBFF" background="#153C75" />
+          <ClaimMetric label="Open" value={openCount} amount={moneyCompact(openAmount)} color="#FFF3D8" background="#5A4013" />
+          <ClaimMetric label="Settled" value={settledCount} amount={moneyCompact(settledAmount)} color="#DFF8EA" background="#14513F" />
         </View>
       </Pressable>
       <Pressable onPress={hasPendingAction ? onPendingAction : onOpenAll} style={({ pressed }) => [styles.claimTicker, hasPendingAction && styles.claimTickerHot, pressed && styles.cardPressed]}>
@@ -372,9 +409,9 @@ function ClaimsSummaryCard({ totalCount, openCount, settledCount, totalAmount, o
   );
 }
 
-function ClaimMetric({ label, value, amount, color }: { label: string; value: number; amount: string; color: string }) {
+function ClaimMetric({ label, value, amount, color, background }: { label: string; value: number; amount: string; color: string; background: string }) {
   return (
-    <View style={styles.claimMetric}>
+    <View style={[styles.claimMetric, { backgroundColor: background }]}>
       <View style={[styles.claimMetricGlow, { backgroundColor: color }]} />
       <Text style={styles.claimMetricValue}>{value}</Text>
       <Text style={styles.claimMetricLabel}>{label}</Text>
@@ -389,22 +426,22 @@ function SupportActionCenter({ onSupport }: { onSupport: () => void }) {
       <View style={styles.supportTop}>
         <View>
           <Text style={styles.supportTitle}>Claims Desk</Text>
-          <Text style={styles.supportText}>Fast help</Text>
+          <Text style={styles.supportText}>We are here when it matters</Text>
         </View>
         <View style={styles.supportPulse}><MaterialCommunityIcons name="headset" size={21} color="#FFFFFF" /></View>
       </View>
       <View style={styles.supportActions}>
-        <SupportButton icon="phone-in-talk" label="Call" tone="#E8F8F0" color="#10A66F" onPress={() => void callClaimsDesk()} />
-        <SupportButton icon="whatsapp" label="WhatsApp" tone="#E5F8ED" color="#128C7E" onPress={() => void openClaimsDeskWhatsApp()} />
-        <SupportButton icon="ticket-confirmation" label="Ticket" tone="#EAF3FF" color="#174EA6" onPress={onSupport} />
+        <SupportButton icon="phone-in-talk" label="Call" color="#10A66F" onPress={() => void callClaimsDesk()} />
+        <SupportButton icon="whatsapp" label="WhatsApp" color="#128C7E" onPress={() => void openClaimsDeskWhatsApp()} />
+        <SupportButton icon="ticket-confirmation" label="Ticket" color="#174EA6" onPress={onSupport} />
       </View>
     </View>
   );
 }
 
-function SupportButton({ icon, label, tone, color, onPress }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; tone: string; color: string; onPress: () => void }) {
+function SupportButton({ icon, label, color, onPress }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; color: string; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.supportButton, { backgroundColor: tone }, pressed && styles.cardPressed]}>
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.supportButton, pressed && styles.cardPressed]}>
       <View style={[styles.supportButtonIcon, { backgroundColor: color }]}><MaterialCommunityIcons name={icon} size={21} color="#FFFFFF" /></View>
       <Text style={styles.supportButtonText}>{label}</Text>
     </Pressable>
@@ -561,9 +598,9 @@ const styles = StyleSheet.create({
   fleetCard: { minHeight: 158, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', padding: 12, overflow: 'hidden', shadowColor: '#122544', shadowOpacity: 0.07, shadowRadius: 12, elevation: 3 },
   fleetTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   fleetMainRow: { minHeight: 86, flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 5 },
-  fleetCountBlock: { width: 96, minWidth: 96, justifyContent: 'center' },
+  fleetCountBlock: { width: 92, minWidth: 92, alignItems: 'center', justifyContent: 'center', paddingLeft: 4 },
   fleetCount: { color: palette.navy, fontSize: 40, lineHeight: 44, fontWeight: '900' },
-  fleetCountLabel: { color: '#607089', fontSize: 9.5, fontWeight: '900', textTransform: 'uppercase' },
+  fleetCountLabel: { color: '#607089', fontSize: 9.5, fontWeight: '900', textTransform: 'uppercase', marginTop: 1 },
   fleetCopy: { flex: 1, minWidth: 0 },
   sectionEyebrow: { color: '#607089', fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
   fleetTitle: { color: palette.navy, fontSize: 19, lineHeight: 24, fontWeight: '900', marginTop: 4 },
@@ -578,6 +615,7 @@ const styles = StyleSheet.create({
   fleetImage: { flex: 1, height: 96, marginLeft: -18, marginRight: -6 },
   fleetImageHero: { flex: 1, height: 92, marginLeft: -12, marginRight: -7, opacity: 0.95 },
   fleetFooter: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 6 },
+  attentionPulseIcon: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#E5484D', alignItems: 'center', justifyContent: 'center' },
   fleetTicker: { minHeight: 37, marginTop: 8, borderRadius: 14, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
   fleetTickerText: { flex: 1, color: palette.navy, fontSize: 11.5, fontWeight: '900' },
   fleetTickerValue: { fontSize: 12.5, fontWeight: '900' },
@@ -597,7 +635,7 @@ const styles = StyleSheet.create({
   claimOpenLink: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   claimOpenLinkText: { color: '#BFD4F7', fontSize: 11, fontWeight: '900' },
   claimMetricRow: { flexDirection: 'row', gap: 8 },
-  claimMetric: { flex: 1, minHeight: 77, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', paddingHorizontal: 4 },
+  claimMetric: { flex: 1, minHeight: 77, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', paddingHorizontal: 4 },
   claimMetricGlow: { position: 'absolute', width: 54, height: 54, borderRadius: 27, top: -21, right: -16, opacity: 0.36 },
   claimMetricValue: { color: '#FFFFFF', fontSize: 24, lineHeight: 28, fontWeight: '900' },
   claimMetricLabel: { color: '#D8E4F5', fontSize: 10.5, fontWeight: '900', marginTop: 1 },
@@ -639,7 +677,7 @@ const styles = StyleSheet.create({
   supportTitle: { color: palette.navy, fontSize: 16, fontWeight: '900' },
   supportText: { color: '#607089', fontSize: 11, fontWeight: '800', marginTop: 1 },
   supportActions: { flexDirection: 'row', gap: 8 },
-  supportButton: { flex: 1, minHeight: 62, borderRadius: 15, borderWidth: 1, borderColor: 'rgba(7,29,73,0.06)', alignItems: 'center', justifyContent: 'center', gap: 5, shadowColor: '#122544', shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
+  supportButton: { flex: 1, minHeight: 58, alignItems: 'center', justifyContent: 'center', gap: 5 },
   supportButtonIcon: { width: 33, height: 33, borderRadius: 13, alignItems: 'center', justifyContent: 'center', shadowColor: '#122544', shadowOpacity: 0.13, shadowRadius: 6, elevation: 3 },
   supportButtonText: { color: palette.navy, fontSize: 11, fontWeight: '900' },
   cardPressed: { transform: [{ scale: 0.985 }], opacity: 0.94 },
