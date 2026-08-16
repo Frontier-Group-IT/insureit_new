@@ -35,6 +35,7 @@ type VehiclePolicyDisplay = {
 const truckSketch = require('../../assets/vehicles/gcv-truck.webp');
 const carSketch = require('../../assets/vehicles/pcp-car.webp');
 const busSketch = require('../../assets/vehicles/pcv-bus.webp');
+const bikeSketch = require('../../assets/vehicles/twp-bike.png');
 const jcbSketch = require('../../assets/vehicles/misd-cpm-jcb.png');
 
 const insurerLogos = {
@@ -233,7 +234,6 @@ export default function VehiclesScreen() {
         const insurerLogo = insurerImage(insurer?.name);
         const vehicleDescriptor = [vehicle.make, vehicle.model, vehicle.year ? String(vehicle.year) : null].filter(Boolean).join(' - ') || 'Vehicle details pending';
         const accountName = vehicleCompanyName(vehicle.customer_id, contexts);
-        const vehicleClass = vehicleClassCode(vehicle);
         const vehicleImage = vehicleSketchFor(vehicle);
         const health = vehicleComplianceHealth(vehicle, policy);
 
@@ -249,14 +249,7 @@ export default function VehiclesScreen() {
                   </View>
                 </View>
 
-                {vehicleClass === 'TWP' ? (
-                  <View accessibilityLabel="Two wheeler vehicle" style={styles.twpVehicleVisual}>
-                    <MaterialCommunityIcons name="motorbike" size={72} color="#0A43A3" />
-                    <View style={styles.twpRoadLine} />
-                  </View>
-                ) : (
-                  <Image source={vehicleImage} style={styles.truckImage} resizeMode="contain" />
-                )}
+                <Image source={vehicleImage} style={styles.truckImage} resizeMode="contain" />
 
                 <Text style={styles.vehicleMake} numberOfLines={1}>{vehicleDescriptor}</Text>
               </View>
@@ -964,7 +957,17 @@ function isPolicyActive(policy: Pick<VehiclePolicyDisplay, 'start_date' | 'end_d
 function vehicleClassCode(vehicle: Vehicle) {
   const normalized = (vehicle.vehicle_type ?? '').trim().toUpperCase();
   if (normalized === 'PCP' || normalized.startsWith('PCP ')) return 'PCP';
-  if (normalized === 'TWP' || normalized.startsWith('TWP ') || normalized.includes('TWO WHEEL') || normalized.includes('MOTORCYCLE') || normalized.includes('BIKE')) return 'TWP';
+  if (
+    normalized === 'TWP'
+    || normalized.startsWith('TWP ')
+    || normalized.includes('TWO WHEEL')
+    || normalized.includes('TWO-WHEEL')
+    || normalized.includes('2 WHEEL')
+    || normalized.includes('MOTORCYCLE')
+    || normalized.includes('MOTOR CYCLE')
+    || normalized.includes('BIKE')
+    || normalized.includes('SCOOTER')
+  ) return 'TWP';
   if (normalized === 'PCV' || normalized.startsWith('PCV ') || normalized.includes('PASSENGER') || normalized.includes('BUS')) return 'PCV';
   if (normalized === 'MISD' || normalized.startsWith('MISD ') || normalized.includes('MISCELLANEOUS')) return 'MISD';
   if (normalized === 'CPM' || normalized.startsWith('CPM ') || normalized.includes('PLANT') || normalized.includes('MACHINERY')) return 'CPM';
@@ -977,6 +980,7 @@ function vehicleSketchFor(vehicle: Vehicle) {
   switch (vehicleClassCode(vehicle)) {
     case 'PCP': return carSketch;
     case 'PCV': return busSketch;
+    case 'TWP': return bikeSketch;
     case 'MISD':
     case 'CPM': return jcbSketch;
     default: return truckSketch;

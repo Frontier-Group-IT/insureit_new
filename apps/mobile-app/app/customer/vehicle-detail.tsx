@@ -10,8 +10,11 @@ import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
 
-const truckSketch = require('../../assets/vehicles/truck sketch.png');
-const carSketch = require('../../assets/vehicles/car sketch.png');
+const truckSketch = require('../../assets/vehicles/gcv-truck.webp');
+const carSketch = require('../../assets/vehicles/pcp-car.webp');
+const busSketch = require('../../assets/vehicles/pcv-bus.webp');
+const bikeSketch = require('../../assets/vehicles/twp-bike.png');
+const jcbSketch = require('../../assets/vehicles/misd-cpm-jcb.png');
 
 type VehiclePolicyDisplay = {
   vehicle_id: string;
@@ -74,7 +77,7 @@ export default function VehicleDetailScreen() {
   const policyState = latestPolicy ? policyStatus(latestPolicy.end_date) : { label: 'No policy', tone: 'red' as const, helper: 'Add a policy to complete protection' };
   const complianceItems = useMemo(() => vehicleComplianceItems(vehicle, latestPolicy), [latestPolicy, vehicle]);
   const alertItems = complianceItems.filter((item) => item.status !== 'ok');
-  const vehicleImage = vehicle && isPrivateVehicle(vehicle) ? carSketch : truckSketch;
+  const vehicleImage = vehicle ? vehicleSketchFor(vehicle) : truckSketch;
   const registeredCompany = vehicle ? registeredCompanyName(vehicle.customer_id, contexts) : '';
 
   if (loading) return <Screen title="Vehicle Detail"><LoadingState /></Screen>;
@@ -265,8 +268,41 @@ function complianceStatus(date: string | null) {
   return { status: 'ok' as const, helper: `${days}d left` };
 }
 
+function vehicleClassCode(vehicle: Vehicle) {
+  const normalized = (vehicle.vehicle_type ?? '').trim().toUpperCase();
+  if (normalized === 'PCP' || normalized.startsWith('PCP ')) return 'PCP';
+  if (
+    normalized === 'TWP'
+    || normalized.startsWith('TWP ')
+    || normalized.includes('TWO WHEEL')
+    || normalized.includes('TWO-WHEEL')
+    || normalized.includes('2 WHEEL')
+    || normalized.includes('MOTORCYCLE')
+    || normalized.includes('MOTOR CYCLE')
+    || normalized.includes('BIKE')
+    || normalized.includes('SCOOTER')
+  ) return 'TWP';
+  if (normalized === 'PCV' || normalized.startsWith('PCV ') || normalized.includes('PASSENGER') || normalized.includes('BUS')) return 'PCV';
+  if (normalized === 'MISD' || normalized.startsWith('MISD ') || normalized.includes('MISCELLANEOUS')) return 'MISD';
+  if (normalized === 'CPM' || normalized.startsWith('CPM ') || normalized.includes('PLANT') || normalized.includes('MACHINERY')) return 'CPM';
+  if (normalized === 'GCV' || normalized.startsWith('GCV ') || normalized.includes('GOODS')) return 'GCV';
+  if (normalized.includes('PRIVATE') || normalized.includes('CAR')) return 'PCP';
+  return normalized || 'GCV';
+}
+
+function vehicleSketchFor(vehicle: Vehicle) {
+  switch (vehicleClassCode(vehicle)) {
+    case 'PCP': return carSketch;
+    case 'PCV': return busSketch;
+    case 'TWP': return bikeSketch;
+    case 'MISD':
+    case 'CPM': return jcbSketch;
+    default: return truckSketch;
+  }
+}
+
 function isPrivateVehicle(vehicle: Vehicle) {
-  return (vehicle.vehicle_type ?? '').toLowerCase().includes('private');
+  return vehicleClassCode(vehicle) === 'PCP';
 }
 
 function privateNotApplicable(vehicle: Vehicle, value?: string | null) {
