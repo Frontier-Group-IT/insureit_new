@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AppDatePicker } from '@/components/design-system';
+import { AppBadge, AppDatePicker } from '@/components/design-system';
 import { LoadingState, Message, Screen, TextField } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { SELF_MANAGED_CLAIM_NOTICE } from '@/lib/claim-service-mode';
@@ -114,10 +114,11 @@ export default function SelfManagedSpotStatusScreen() {
       <View style={styles.topRow}>
         <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.backButton}><MaterialCommunityIcons name="arrow-left" size={21} color={palette.navy} /></Pressable>
         <View style={styles.topCopy}>
-          <Text style={styles.eyebrow}>CLAIMS • STEP 2 OF 9</Text>
+          <Text style={styles.eyebrow}>EXTERNAL CLAIM • STEP 2 OF 9</Text>
           <Text style={styles.title}>Spot Status</Text>
           <Text style={styles.subtitle}>{claimNo || 'Claim'} • Record the completed spot survey.</Text>
         </View>
+        <AppBadge label="Self Tracked" tone="info" />
       </View>
 
       <View style={styles.contextCard}>
@@ -125,9 +126,8 @@ export default function SelfManagedSpotStatusScreen() {
         <View style={styles.contextCopy}>
           <Text style={styles.contextLabel}>CLAIM UPDATE</Text>
           <Text style={styles.contextTitle}>Spot Status</Text>
-          <Text style={styles.contextBody}>The claim journey and theme are the same as a Sankalp-managed claim. You are recording this stage yourself.</Text>
+          <Text style={styles.contextBody}>Record the survey completion details you received for this external claim.</Text>
         </View>
-        <View style={styles.ownershipBadge}><Text style={styles.ownershipText}>Self Tracked</Text></View>
       </View>
 
       <View style={styles.noticeBox}><MaterialCommunityIcons name="account-edit-outline" size={21} color="#8A5B00" /><Text style={styles.noticeText}>{SELF_MANAGED_CLAIM_NOTICE}</Text></View>
@@ -147,7 +147,7 @@ export default function SelfManagedSpotStatusScreen() {
         <TextField label="Surveyor Number (Optional)" value={surveyorPhone} onChangeText={setSurveyorPhone} keyboardType="phone-pad" />
       </View>
 
-      <View style={styles.helpBox}><MaterialCommunityIcons name="information-outline" size={18} color="#B7791F" /><Text style={styles.helpText}>For Sankalp-managed claims these details can be provided by the claim desk. In a self-tracked claim, enter them yourself only when available.</Text></View>
+      <View style={styles.helpBox}><MaterialCommunityIcons name="information-outline" size={18} color="#0A43A3" /><Text style={styles.helpText}>Enter surveyor details only when they are available. The survey completion date is required to finish this milestone.</Text></View>
 
       <Pressable accessibilityRole="button" disabled={submitting} onPress={() => void submit()} style={[styles.submitButton, submitting && styles.submitDisabled]}><Text style={styles.submitText}>{submitting ? 'Saving...' : 'Save Spot Status'}</Text><MaterialCommunityIcons name="check" size={20} color="#FFFFFF" /></Pressable>
     </Screen>
@@ -166,14 +166,12 @@ const styles = StyleSheet.create({
   eyebrow: { color: '#0A43A3', fontSize: 9.5, fontWeight: '900', letterSpacing: 1 },
   title: { color: palette.navy, fontSize: 24, fontWeight: '900', marginTop: 2 },
   subtitle: { color: '#7A8799', fontSize: 10.3, lineHeight: 14, marginTop: 3, fontWeight: '600' },
-  contextCard: { borderWidth: 1, borderColor: '#F0D9AC', borderRadius: 17, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFFBF3', marginBottom: 10 },
-  contextIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#FFF4E2', alignItems: 'center', justifyContent: 'center' },
+  contextCard: { borderWidth: 1, borderColor: '#C9DAF2', borderRadius: 17, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F7FAFF', marginBottom: 10 },
+  contextIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
   contextCopy: { flex: 1, minWidth: 0 },
-  contextLabel: { color: '#B7791F', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.4 },
+  contextLabel: { color: '#0A43A3', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.4 },
   contextTitle: { color: palette.navy, fontSize: 13, fontWeight: '900', marginTop: 2 },
   contextBody: { color: '#667085', fontSize: 10.3, lineHeight: 14, fontWeight: '600', marginTop: 3 },
-  ownershipBadge: { maxWidth: 86, borderWidth: 1, borderColor: '#F0D9AC', borderRadius: 999, backgroundColor: '#FFF4E2', paddingHorizontal: 8, paddingVertical: 5 },
-  ownershipText: { color: '#B7791F', fontSize: 8.5, fontWeight: '900', textAlign: 'center' },
   noticeBox: { flexDirection: 'row', gap: 9, alignItems: 'flex-start', borderRadius: 15, padding: 11, backgroundColor: '#FFF8E8', borderWidth: 1, borderColor: '#F2D99F', marginBottom: 10 },
   noticeText: { flex: 1, color: '#77520B', fontSize: 10.3, lineHeight: 15, fontWeight: '700' },
   card: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE6F0', borderRadius: 17, padding: 12, marginBottom: 10 },
@@ -182,8 +180,8 @@ const styles = StyleSheet.create({
   cardTitle: { color: palette.navy, fontSize: 14, fontWeight: '900' },
   cardSub: { color: '#7A8799', fontSize: 9.8, marginTop: 2, fontWeight: '600' },
   gap: { height: 10 },
-  helpBox: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: '#FFFBF3', borderWidth: 1, borderColor: '#F0D9AC', borderRadius: 13, padding: 11, marginBottom: 12 },
-  helpText: { flex: 1, color: '#77520B', fontSize: 10.3, lineHeight: 15, fontWeight: '700' },
+  helpBox: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: '#F7FAFF', borderWidth: 1, borderColor: '#C9DAF2', borderRadius: 13, padding: 11, marginBottom: 12 },
+  helpText: { flex: 1, color: '#4F6380', fontSize: 10.3, lineHeight: 15, fontWeight: '700' },
   submitButton: { minHeight: 48, borderRadius: 15, backgroundColor: palette.navy, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 },
   submitDisabled: { opacity: 0.55 },
   submitText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },

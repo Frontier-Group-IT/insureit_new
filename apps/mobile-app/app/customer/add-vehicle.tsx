@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -8,6 +9,7 @@ import { getCurrentSession } from '@/lib/auth';
 import { customerAccountTitle, getOperationalCustomerContexts, isPortfolioCustomerContext, partnerTypeLabel, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
+import type { InsuranceCompany } from '@/lib/types';
 
 const vehicleClasses = [
   { value: 'PCP', label: 'PCP - Private Car' },
@@ -18,11 +20,15 @@ const vehicleClasses = [
   { value: 'CPM', label: 'CPM - Contractor Plant & Machinery' },
 ];
 const fuelOptions = ['Petrol', 'Diesel', 'CNG', 'Electric', 'Hybrid', 'Bi-Fuel', 'Other'];
+const policyTypeOptions = ['Motor', 'Health', 'Life', 'Travel', 'Personal Accident', 'Fire', 'Marine', 'Engineering', 'Liability', 'Cyber', 'Property', 'Agriculture / Crop', 'Other / Miscellaneous'];
+const MAX_POLICY_COPY_SIZE_BYTES = 5 * 1024 * 1024;
+type PickedPolicyCopy = { uri: string; name: string; mimeType: string | null; size: number | null };
 
 export default function AddVehicleScreen() {
   const router = useRouter();
   const [contexts, setContexts] = useState<CustomerAccountContext[]>([]);
   const [manufacturers, setManufacturers] = useState<string[]>([]);
+  const [companies, setCompanies] = useState<InsuranceCompany[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [accountOpen, setAccountOpen] = useState(false);
   const [makeOpen, setMakeOpen] = useState(false);
@@ -36,13 +42,23 @@ export default function AddVehicleScreen() {
   const [engineNo, setEngineNo] = useState('');
   const [fuelType, setFuelType] = useState('');
   const [gvwKg, setGvwKg] = useState('');
+  const [insurerQuery, setInsurerQuery] = useState('');
+  const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  const [policyNo, setPolicyNo] = useState('');
+  const [policyType, setPolicyType] = useState('Motor');
+  const [policyTypeOpen, setPolicyTypeOpen] = useState(false);
+  const [policyStartDate, setPolicyStartDate] = useState('');
+  const [policyEndDate, setPolicyEndDate] = useState('');
+  const [premium, setPremium] = useState('');
+  const [idv, setIdv] = useState('');
+  const [policyCopy, setPolicyCopy] = useState<PickedPolicyCopy | null>(null);
   const [registrationDate, setRegistrationDate] = useState('');
   const [fitnessExpiryDate, setFitnessExpiryDate] = useState('');
   const [pucExpiryDate, setPucExpiryDate] = useState('');
   const [roadTaxExpiryDate, setRoadTaxExpiryDate] = useState('');
   const [nationalPermitExpiryDate, setNationalPermitExpiryDate] = useState('');
   const [localPermitExpiryDate, setLocalPermitExpiryDate] = useState('');
-  const [dateTarget, setDateTarget] = useState<{ label: string; value: string; onChange: (value: string) => void } | null>(null);
+  const [dateTarget, setDateTarget] = useState<{ label: string; value: string; onChange: (value: string) => void; autoEnd?: boolean } | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -78,12 +94,12 @@ export default function AddVehicleScreen() {
   useEffect(() => {
     let active = true;
     async function loadLookups() {
-      const manufacturerResult = await supabase
-        .from('vehicle_manufacturer_brands')
-        .select('brand_name')
-        .eq('is_active', true)
-        .order('brand_name', { ascending: true });
+      const [manufacturerResult, companyResult] = await Promise.all([
+        supabase.from('vehicle_manufacturer_brands').select('brand_name').eq('is_active', true).order('brand_name', { ascending: true }),
+        supabase.from('insurance_companies').select('*').order('name'),
+      ]);
       if (!active) return;
+      setCompanies((companyResult.data ?? []) as InsuranceCompany[]);
       if (manufacturerResult.error) {
         setManufacturers([]);
       } else {
@@ -112,6 +128,16 @@ export default function AddVehicleScreen() {
     if (!Number.isInteger(parsedYear) || parsedYear < 1950 || parsedYear > new Date().getFullYear() + 1) return setMessage('Enter a valid manufacturing year.');
     const parsedGvw = gvwKg ? Number(gvwKg) : null;
     if (parsedGvw !== null && (!Number.isFinite(parsedGvw) || parsedGvw <= 0)) return setMessage('Enter a valid capacity.');
+    if (!selectedCompanyId) return setMessage('Search and select the insurer.');
+    if (!policyNo.trim()) return setMessage('Enter policy number.');
+    if (!policyType.trim()) return setMessage('Select policy type.');
+    if (!policyStartDate) return setMessage('Select policy start date.');
+    if (!policyEndDate) return setMessage('Select policy end date.');
+    if (new Date(policyEndDate).getTime() < new Date(policyStartDate).getTime()) return setMessage('End date must be after start date.');
+    const premiumValue = premium ? Number(premium) : null;
+    if (premiumValue !== null && (!Number.isFinite(premiumValue) || premiumValue < 0)) return setMessage('Enter a valid premium amount.');
+    const idvValue = idv ? Number(idv) : null;
+    if (idvValue !== null && (!Number.isFinite(idvValue) || idvValue < 0)) return setMessage('Enter a valid IDV.');
 
     const rpcPayload = {
       p_customer_id: target.customer_id,
@@ -148,9 +174,51 @@ export default function AddVehicleScreen() {
       vehicleData = fallback.data;
       error = fallback.error;
     }
+    if (error) {
+      setSaving(false);
+      return setMessage(error.message || 'We could not save this vehicle. Please try again.');
+    }
+
+    const createdVehicle = Array.isArray(vehicleData) ? vehicleData[0] : vehicleData;
+    if (!createdVehicle?.id) {
+      setSaving(false);
+      return setMessage('Vehicle was saved, but we could not attach the policy details.');
+    }
+
+    const policyPayload = {
+      p_customer_id: target.customer_id,
+      p_vehicle_id: createdVehicle.id,
+      p_insurance_company_id: selectedCompanyId,
+      p_policy_no: policyNo.trim().toUpperCase(),
+      p_policy_type: policyType.trim(),
+      p_start_date: policyStartDate,
+      p_end_date: policyEndDate,
+      p_premium_amount: premiumValue,
+      p_insured_declared_value: idvValue,
+    };
+    const policyResult = await (supabase.rpc as any)('create_customer_external_policy', policyPayload);
+    if (policyResult.error) {
+      setSaving(false);
+      return setMessage(`Vehicle saved, but policy details could not be saved: ${policyResult.error.message || 'Please try again.'}`);
+    }
+    if (policyCopy) {
+      const uploadError = await uploadPolicyCopy(target.customer_id, policyCopy, session.user.id);
+      if (uploadError) {
+        setSaving(false);
+        return setMessage(`Vehicle and policy saved, but the policy copy could not be uploaded: ${uploadError}`);
+      }
+    }
     setSaving(false);
-    if (error) setMessage(error.message || 'We could not save this vehicle. Please try again.');
-    else router.replace(contexts.some(isPortfolioCustomerContext) ? '/customer/group/fleet' : '/customer/vehicles');
+    router.replace(contexts.some(isPortfolioCustomerContext) ? '/customer/group/fleet' : '/customer/vehicles');
+  }
+
+  async function pickPolicyCopy() {
+    setMessage('');
+    const result = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'], copyToCacheDirectory: true });
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    if (asset.size && asset.size > MAX_POLICY_COPY_SIZE_BYTES) return setMessage('Policy copy must be 5 MB or smaller.');
+    setPolicyCopy({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? null, size: asset.size ?? null });
   }
 
   return (
@@ -180,7 +248,7 @@ export default function AddVehicleScreen() {
           </View>
           <View style={styles.twoColumnRow}>
             <View style={styles.column}><FuelDropdown value={fuelType} onSelect={setFuelType} /></View>
-            <View style={styles.column}><InputField icon="weight-kilogram" label="Capacity / GVW" keyboardType="decimal-pad" value={gvwKg} onChangeText={(value) => setGvwKg(value.replace(/[^0-9.]/g, ''))} /></View>
+            <View style={styles.column}><InputField icon="weight-kilogram" label="Capacity (GVW/CC/SC)" keyboardType="decimal-pad" value={gvwKg} onChangeText={(value) => setGvwKg(value.replace(/[^0-9.]/g, ''))} /></View>
           </View>
         </FormSection>
 
@@ -192,6 +260,27 @@ export default function AddVehicleScreen() {
               </View>
             ))}
           </View>
+        </FormSection>
+
+        <FormSection title="Policy details" icon="file-document-outline" tone="policy">
+          <SearchInsurer query={insurerQuery} selectedInsurer={companies.find((company) => company.id === selectedCompanyId) ?? null} companies={companies.filter((company) => !insurerQuery.trim() || company.name.toLowerCase().includes(insurerQuery.trim().toLowerCase())).slice(0, 10)} onChange={(value) => { setSelectedCompanyId(''); setInsurerQuery(value); }} onSelect={(company) => { setSelectedCompanyId(company.id); setInsurerQuery(company.name); }} />
+          <View style={styles.twoColumnRow}>
+            <View style={styles.column}><InputField icon="identifier" label="Policy no. *" value={policyNo} onChangeText={(value) => setPolicyNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" /></View>
+            <View style={styles.column}><PolicyTypeDropdown value={policyType} open={policyTypeOpen} onToggle={() => setPolicyTypeOpen((value) => !value)} onSelect={(value) => { setPolicyType(value); setPolicyTypeOpen(false); }} /></View>
+          </View>
+          <View style={styles.twoColumnRow}>
+            <View style={styles.column}><PremiumDateField label="Start date" value={policyStartDate} onPress={() => setDateTarget({ label: 'Policy start date', value: policyStartDate, onChange: (value) => { setPolicyStartDate(value); setPolicyEndDate(defaultPolicyEndDate(value)); }, autoEnd: true })} /></View>
+            <View style={styles.column}><ReadonlyDateField label="End date *" value={policyEndDate} /></View>
+          </View>
+          <View style={styles.twoColumnRow}>
+            <View style={styles.column}><MoneyField label="IDV" icon="car-info" value={idv} onChangeText={setIdv} /></View>
+            <View style={styles.column}><MoneyField label="Premium" icon="currency-inr" value={premium} onChangeText={setPremium} /></View>
+          </View>
+          <Pressable accessibilityRole="button" onPress={() => void pickPolicyCopy()} style={styles.policyCopyButton}>
+            <MaterialCommunityIcons name="file-upload-outline" size={18} color="#0A43A3" />
+            <View style={styles.flex}><Text style={styles.policyCopyTitle}>{policyCopy ? 'Policy copy selected' : 'Upload policy copy'}</Text><Text style={styles.policyCopyText} numberOfLines={1}>{policyCopy?.name ?? 'PDF or image, up to 5 MB'}</Text></View>
+            <MaterialCommunityIcons name="upload-outline" size={18} color="#0A43A3" />
+          </Pressable>
         </FormSection>
 
 
@@ -292,6 +381,47 @@ function FuelDropdown({ value, onSelect }: { value: string; onSelect: (value: st
       {open ? <View style={styles.selectMenu}>{fuelOptions.map((item) => <Pressable key={item} onPress={() => { onSelect(item); setOpen(false); }} style={[styles.selectOption, value === item && styles.selectOptionActive]}><Text style={[styles.selectOptionText, value === item && styles.selectOptionTextActive]}>{item}</Text>{value === item ? <MaterialCommunityIcons name="check-circle" size={17} color={palette.navy} /> : null}</Pressable>)}</View> : null}
     </View>
   );
+}
+
+function SearchInsurer({ query, selectedInsurer, companies, onChange, onSelect }: { query: string; selectedInsurer: InsuranceCompany | null; companies: InsuranceCompany[]; onChange: (value: string) => void; onSelect: (company: InsuranceCompany) => void }) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>Insurer *</Text>
+      <View style={styles.inputShell}>
+        <MaterialCommunityIcons name="magnify" size={17} color="#6A7A90" />
+        <TextInput value={query} onChangeText={onChange} placeholder="Search insurer by name" placeholderTextColor="#9AA7B8" style={styles.input} />
+        {selectedInsurer ? <MaterialCommunityIcons name="check-circle" size={18} color="#12805C" /> : null}
+      </View>
+      <View style={styles.selectMenu}>
+        {!query.trim() ? <Text style={styles.emptyLookupText}>Type matching letters to search insurer.</Text> : selectedInsurer ? <Text style={styles.emptyLookupText}>Selected: {selectedInsurer.name}</Text> : companies.length ? companies.map((company) => <Pressable key={company.id} accessibilityRole="button" onPress={() => onSelect(company)} style={styles.selectOption}><Text style={styles.selectOptionText} numberOfLines={1}>{company.name}</Text></Pressable>) : <Text style={styles.emptyLookupText}>No matching insurer found.</Text>}
+      </View>
+    </View>
+  );
+}
+
+function PolicyTypeDropdown({ value, open, onToggle, onSelect }: { value: string; open: boolean; onToggle: () => void; onSelect: (value: string) => void }) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>Policy type *</Text>
+      <Pressable accessibilityRole="button" onPress={onToggle} style={styles.selectButton}>
+        <View style={styles.selectIcon}><MaterialCommunityIcons name="shield-car" size={18} color="#0A43A3" /></View>
+        <Text style={styles.selectValue} numberOfLines={1}>{value}</Text>
+        <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={21} color={palette.navy} />
+      </Pressable>
+      {open ? <View style={styles.selectMenu}>{policyTypeOptions.map((type) => {
+        const active = value === type;
+        return <Pressable key={type} accessibilityRole="button" onPress={() => onSelect(type)} style={[styles.selectOption, active && styles.selectOptionActive]}><Text style={[styles.selectOptionText, active && styles.selectOptionTextActive]} numberOfLines={1}>{type}</Text>{active ? <MaterialCommunityIcons name="check-circle" size={17} color={palette.navy} /> : null}</Pressable>;
+      })}</View> : null}
+    </View>
+  );
+}
+
+function ReadonlyDateField({ label, value }: { label: string; value: string }) {
+  return <View style={styles.field}><Text style={styles.fieldLabel}>{label}</Text><View style={[styles.dateButton, styles.readonlyDate]}><View style={styles.dateIcon}><MaterialCommunityIcons name="calendar-sync-outline" size={17} color="#0A43A3" /></View><Text style={[styles.dateValue, !value && styles.datePlaceholder]} numberOfLines={1}>{value ? formatDisplayDate(value) : 'Auto after start'}</Text></View></View>;
+}
+
+function MoneyField({ label, icon, value, onChangeText }: { label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; value: string; onChangeText: (value: string) => void }) {
+  return <View style={styles.field}><Text style={styles.fieldLabel}>{label} optional</Text><View style={styles.inputShell}><MaterialCommunityIcons name={icon} size={17} color="#12805C" /><Text style={styles.moneyPrefix}>Rs.</Text><TextInput value={value} onChangeText={(next) => onChangeText(next.replace(/[^0-9.]/g, ''))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#9AA7B8" style={styles.input} /></View></View>;
 }
 
 
@@ -459,14 +589,35 @@ function cleanCode(value: string) {
   return next ? next : null;
 }
 
+async function uploadPolicyCopy(customerId: string, file: PickedPolicyCopy, userId: string) {
+  const extension = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
+  const storagePath = `${customerId}/policy-copy/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+  try {
+    const body = await (await fetch(file.uri)).arrayBuffer();
+    const uploadResult = await supabase.storage.from('customer-documents').upload(storagePath, body, { contentType: file.mimeType ?? 'application/octet-stream', upsert: false });
+    if (uploadResult.error) return uploadResult.error.message;
+    const recordResult = await supabase.from('customer_documents').insert({ customer_id: customerId, document_type: 'policy_copy', file_name: file.name, storage_bucket: 'customer-documents', storage_path: storagePath, mime_type: file.mimeType, file_size: file.size, uploaded_by: userId });
+    if (recordResult.error) {
+      await supabase.storage.from('customer-documents').remove([storagePath]);
+      return recordResult.error.message;
+    }
+    return null;
+  } catch (error) {
+    return error instanceof Error ? error.message : 'Upload failed.';
+  }
+}
+
+function defaultPolicyEndDate(startIso: string) {
+  const start = parseDate(startIso);
+  if (!start) return '';
+  const end = new Date(start.getFullYear() + 1, start.getMonth(), start.getDate());
+  end.setDate(end.getDate() - 1);
+  return formatIsoDate(end);
+}
+
 function isMissingVehicleRpcSignature(error: { code?: string; message?: string } | null | undefined) {
   const message = error?.message?.toLowerCase() ?? '';
   return error?.code === 'PGRST202' || (message.includes('create_customer_vehicle') && (message.includes('schema cache') || message.includes('could not find the function')));
-}
-
-function isMissingPolicyRpcSignature(error: { code?: string; message?: string } | null | undefined) {
-  const message = error?.message?.toLowerCase() ?? '';
-  return error?.code === 'PGRST202' || (message.includes('create_customer_policy') && (message.includes('schema cache') || message.includes('could not find the function')));
 }
 
 function parseDate(value: string) {
@@ -573,9 +724,14 @@ const styles = StyleSheet.create({
   makeSearchInput: { flex: 1, minHeight: 40, color: palette.navy, fontSize: 12.5, fontWeight: '600' },
   makeOption: { minHeight: 42, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#EEF2F6' },
   dateButton: { minHeight: 45, borderRadius: 12, borderWidth: 1, borderColor: '#CFE0F8', backgroundColor: '#F7FBFF', paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  readonlyDate: { backgroundColor: '#F3F8FC' },
   dateIcon: { width: 28, height: 28, borderRadius: 10, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' },
   dateValue: { flex: 1, color: palette.navy, fontSize: 11.5, fontWeight: '700' },
   datePlaceholder: { color: '#7F8EA4', fontWeight: '600' },
+  moneyPrefix: { color: '#12805C', fontSize: 11, fontWeight: '900' },
+  policyCopyButton: { minHeight: 56, borderRadius: 14, borderWidth: 1, borderColor: '#B8D4F7', backgroundColor: '#F8FBFF', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  policyCopyTitle: { color: palette.navy, fontSize: 11.5, fontWeight: '900' },
+  policyCopyText: { color: '#607089', fontSize: 10, fontWeight: '700', marginTop: 2 },
   policyHintBox: { minHeight: 45, borderRadius: 12, borderWidth: 1, borderColor: '#CFE0F8', backgroundColor: '#F8FBFF', paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', gap: 7 },
   policyHintText: { flex: 1, color: '#607089', fontSize: 10.3, lineHeight: 14, fontWeight: '700' },
   calendarScreen: { flex: 1, backgroundColor: '#EEF7FF', paddingHorizontal: 18, paddingTop: 18, paddingBottom: 18 },

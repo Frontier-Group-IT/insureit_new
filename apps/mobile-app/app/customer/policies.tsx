@@ -84,7 +84,7 @@ export default function PoliciesScreen() {
           </View>
           <Pressable accessibilityRole="button" onPress={() => router.push('/customer/add-policy')} style={({ pressed }) => [styles.addButton, pressed && styles.addButtonPressed]}>
             <MaterialCommunityIcons name="plus" size={16} color="#FFFFFF" />
-            <Text style={styles.addButtonText}>Add</Text>
+            <Text style={styles.addButtonText}>Add policy</Text>
           </Pressable>
         </View>
         <AppSearchBar value={query} onChangeText={setQuery} placeholder="Search vehicle, insurer or policy no." />
@@ -124,7 +124,7 @@ export default function PoliciesScreen() {
               <View style={styles.policyTitleCopy}>
                 <View style={styles.stageRow}>
                   <Text style={[styles.stageLabel, { color: colors.accent }]}>{policyStageLabel(policy, tone)}</Text>
-                  {policy.source === 'external' ? <View style={styles.sourcePill}><Text style={styles.sourceText}>CUSTOMER ADDED</Text></View> : null}
+                  {policy.source === 'external' ? <View style={styles.sourcePill}><Text style={styles.sourceText}>EXTERNAL</Text></View> : null}
                 </View>
                 <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle?.vehicle_no ?? 'Vehicle unavailable'}</Text>
               </View>
@@ -147,7 +147,7 @@ export default function PoliciesScreen() {
 
             <View style={styles.infoBox}>
               <InfoPair leftLabel="Manufacturer" leftValue={vehicle?.make ?? '-'} rightLabel="Model" rightValue={vehicle?.model ?? '-'} />
-              <InfoPair leftLabel="Insurer" leftValue={company?.name ?? '-'} rightLabel="Source" rightValue={policy.source === 'external' ? 'Customer Added' : 'Sankalp'} />
+              <InfoPair leftLabel="Insurer" leftValue={company?.name ?? '-'} rightLabel="Source" rightValue={policy.source === 'external' ? 'External' : 'Sankalp'} />
               <InfoPair leftLabel="Start" leftValue={formatDate(policy.start_date)} rightLabel="Expiry" rightValue={formatDate(policy.end_date)} />
             </View>
 
@@ -158,10 +158,6 @@ export default function PoliciesScreen() {
               </View>
             ) : null}
 
-            <View style={styles.cardFooter}>
-              <Text style={styles.footerHint}>{tone === 'active' ? `${days}d cover remaining` : 'Open renewal details'}</Text>
-              <MaterialCommunityIcons name="chevron-right" size={20} color={colors.accent} />
-            </View>
           </Pressable>
         );
       })}

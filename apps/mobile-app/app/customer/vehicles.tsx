@@ -47,6 +47,7 @@ const insurerLogos = {
 export default function VehiclesScreen() {
   const router = useRouter();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+    const vehiclePolicyActionLabel = 'Add Policy';
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [externalPolicies, setExternalPolicies] = useState<ExternalPolicy[]>([]);
   const [insurers, setInsurers] = useState<InsuranceCompany[]>([]);
@@ -290,8 +291,11 @@ export default function VehiclesScreen() {
                       </View>
                       <View style={styles.policyEmptyCopy}>
                         <Text style={styles.policyEmptyTitle} numberOfLines={1}>Protection needed</Text>
-                        <Text style={styles.policyEmptyText} numberOfLines={2}>Get quote or attach existing cover</Text>
                       </View>
+                    </View>
+                    <View style={styles.policyEmptySignal}>
+                      <MaterialCommunityIcons name="star" size={10} color="#F06423" />
+                      <Text style={styles.policyEmptySignalText} numberOfLines={1}>Compare options</Text>
                     </View>
                     <Pressable
                       accessibilityRole="button"
@@ -307,7 +311,7 @@ export default function VehiclesScreen() {
                     </Pressable>
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel={`Add existing policy for ${vehicle.vehicle_no}`}
+                      accessibilityLabel={`${vehiclePolicyActionLabel} for ${vehicle.vehicle_no}`}
                       onPress={(event) => {
                         event.stopPropagation();
                         router.push({ pathname: '/customer/add-policy', params: { vehicleId: vehicle.id } });
@@ -315,12 +319,8 @@ export default function VehiclesScreen() {
                       style={({ pressed }) => [styles.policyAttachButton, pressed && styles.policyActionPressed]}
                     >
                       <MaterialCommunityIcons name="plus-circle-outline" size={13} color="#0A43A3" />
-                      <Text style={styles.policyAttachButtonText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.86}>Add policy</Text>
+                      <Text style={styles.policyAttachButtonText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.86}>{vehiclePolicyActionLabel}</Text>
                     </Pressable>
-                    <View style={styles.policyEmptySignal}>
-                      <MaterialCommunityIcons name="star" size={10} color="#F06423" />
-                      <Text style={styles.policyEmptySignalText} numberOfLines={1}>Compare options</Text>
-                    </View>
                   </View>
                 )}
               </View>
@@ -1161,17 +1161,16 @@ const styles = StyleSheet.create({
   policyStatusDotActive: { backgroundColor: '#12B76A' },
   policyStatusDotInactive: { backgroundColor: '#D92D20' },
   policyEmptyState: { flex: 1, minHeight: 144, borderRadius: 14, backgroundColor: '#F6FAFF', borderWidth: 1, borderColor: '#CFE0F5', paddingHorizontal: 9, paddingVertical: 9, justifyContent: 'center' },
-  policyEmptyTop: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 8 },
+  policyEmptyTop: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 5 },
   policyEmptyIcon: { width: 34, height: 34, borderRadius: 12, backgroundColor: '#E4F0FF', alignItems: 'center', justifyContent: 'center' },
   policyEmptyCopy: { flex: 1, minWidth: 0 },
   policyEmptyTitle: { color: palette.navy, fontSize: 12.8, lineHeight: 16, fontWeight: '900' },
-  policyEmptyText: { color: '#718096', fontSize: 9.4, lineHeight: 12, fontWeight: '700', marginTop: 1 },
-  policyQuoteButton: { minHeight: 30, borderRadius: 9, backgroundColor: '#0A43A3', paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  policyQuoteButton: { minHeight: 30, borderRadius: 9, backgroundColor: '#0A43A3', paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 8 },
   policyQuoteButtonText: { color: '#FFFFFF', fontSize: 10.4, lineHeight: 13, fontWeight: '900' },
   policyAttachButton: { minHeight: 27, borderRadius: 8, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CFE0F5', paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 5 },
-  policyAttachButtonText: { color: '#0A43A3', fontSize: 9.8, lineHeight: 12, fontWeight: '900' },
+  policyAttachButtonText: { flex: 1, minWidth: 0, color: '#0A43A3', fontSize: 9.8, lineHeight: 12, fontWeight: '900', textAlign: 'center' },
   policyActionPressed: { opacity: 0.88, transform: [{ scale: 0.985 }] },
-  policyEmptySignal: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, marginTop: 5 },
+  policyEmptySignal: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, marginTop: 4, marginBottom: 1 },
   policyEmptySignalText: { color: '#F06423', fontSize: 8.8, lineHeight: 11, fontWeight: '900', textTransform: 'uppercase' },
   dropdownButton: { position: 'absolute', right: 0, top: 0, width: 34, height: 34, borderRadius: 8, borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
 

@@ -91,40 +91,41 @@ export default function PolicyDetailScreen() {
 
   return (
     <Screen title="Policy Detail" subtitle={vehicle?.vehicle_no ?? policy.policy_no} showLogout showTitleHeader={false}>
-      <View style={styles.heroCard}>
-        <View style={styles.heroGlow} />
+      <View style={styles.heroLayout}>
+        <View style={styles.heroAccent} />
         <View style={styles.heroTop}>
-          <View style={styles.heroIcon}>
-            <MaterialCommunityIcons name={policy.source === 'external' ? 'account-edit-outline' : 'shield-check-outline'} size={25} color="#FFF" />
+          <View style={[styles.heroIcon, { backgroundColor: renewalTone(renewalState.tone).soft }]}>
+            <MaterialCommunityIcons name={policy.source === 'external' ? 'account-edit-outline' : 'shield-check-outline'} size={25} color={renewalTone(renewalState.tone).accent} />
           </View>
           <View style={styles.heroCopy}>
-            <Text style={styles.eyebrow}>POLICY DETAIL</Text>
-            <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle?.vehicle_no ?? 'Vehicle unavailable'}</Text>
-            <Text style={styles.insurerName} numberOfLines={1}>{company?.name ?? 'Insurer pending'}</Text>
+            <Text style={[styles.eyebrow, { color: renewalTone(renewalState.tone).accent }]}>POLICY DETAIL</Text>
+            <Text style={styles.policyNo} numberOfLines={2}>{policy.policy_no}</Text>
+            <Text style={styles.policyType} numberOfLines={1}>{policy.policy_type || 'Policy'}</Text>
           </View>
           <StatusBadge state={renewalState.tone} label={renewalState.label} />
         </View>
         <View style={styles.heroMetaRow}>
-          <HeroMetric label="Valid till" value={formatDate(policy.end_date)} />
+          <HeroMetric label="Insurer" value={company?.name ?? 'Insurer pending'} />
           <HeroMetric label="Cover left" value={renewalState.helper || '-'} />
         </View>
-        {policy.source === 'external' ? (
-          <View style={styles.externalNotice}>
-            <MaterialCommunityIcons name="account-edit-outline" size={15} color="#9EC5FF" />
-            <Text style={styles.externalText}>Customer-added policy kept outside Sankalp business register</Text>
-          </View>
-        ) : null}
+        <View style={styles.heroMetaRow}>
+          <HeroMetric label="Start date" value={formatDate(policy.start_date)} />
+          <HeroMetric label="End date" value={formatDate(policy.end_date)} />
+        </View>
+        {renewalState.action ? <View style={styles.heroActionRow}>
+          <Text style={styles.heroActionLead}>{renewalState.helper}</Text>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/customer/insurance-quote')} style={({ pressed }) => [styles.heroAction, { backgroundColor: renewalTone(renewalState.tone).accent }, pressed && styles.heroActionPressed]}>
+            <MaterialCommunityIcons name={renewalState.tone === 'danger' ? 'refresh' : 'file-document-outline'} size={15} color="#FFFFFF" />
+            <Text style={styles.heroActionText}>{renewalState.tone === 'danger' ? 'Renew policy' : 'Get quote'}</Text>
+          </Pressable>
+        </View> : null}
       </View>
 
-      <Card style={styles.snapshotCard}>
-        <SectionTitle icon="shield-check-outline" title="Policy snapshot" hint="Core cover information" />
-        <View style={styles.detailGrid}>
-          <DetailCell icon="file-document-outline" label="Policy number" value={policy.policy_no} />
-          <DetailCell icon="car-outline" label="Policy type" value={policy.policy_type} />
-          <DetailCell icon="calendar-start-outline" label="Start date" value={formatDate(policy.start_date)} />
-          <DetailCell icon="calendar-check-outline" label="End date" value={formatDate(policy.end_date)} />
-          <DetailCell icon="cash-multiple" label="Premium" value={formatCurrency(policy.premium_amount)} />
-          <DetailCell icon="car-key" label="IDV" value={formatCurrency(policy.insured_declared_value)} />
+      <Card style={styles.financialCard}>
+        <SectionTitle icon="cash-multiple" title="Financial summary" />
+        <View style={styles.financialGrid}>
+          <FinancialValue label="Premium" value={formatCurrency(policy.premium_amount)} primary />
+          <FinancialValue label="IDV" value={formatCurrency(policy.insured_declared_value)} />
         </View>
       </Card>
 
@@ -133,20 +134,12 @@ export default function PolicyDetailScreen() {
         <View style={styles.vehicleFacts}>
           <CompactFact label="Vehicle number" value={vehicle?.vehicle_no} />
           <CompactFact label="Vehicle type" value={vehicle?.vehicle_type} />
-          <CompactFact label="Chassis no." value={vehicle?.chassis_no} />
         </View>
+        {vehicle ? <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/vehicle-detail', params: { id: vehicle.id } } as any)} style={({ pressed }) => [styles.vehicleLink, pressed && styles.vehicleLinkPressed]}>
+          <Text style={styles.vehicleLinkText}>View vehicle details</Text>
+          <MaterialCommunityIcons name="arrow-right" size={17} color={palette.navy} />
+        </Pressable> : null}
       </Card>
-
-      {renewalState.action ? (
-        <Pressable onPress={() => router.push({ pathname: '/customer/add-policy', params: { vehicleId: policy.vehicle_id } } as any)} style={({ pressed }) => [styles.renewButton, pressed && styles.renewButtonPressed]}>
-          <View style={styles.renewIcon}><MaterialCommunityIcons name="refresh" size={21} color="#FFF" /></View>
-          <View style={styles.renewCopy}>
-            <Text style={styles.renewTitle}>Renew this policy</Text>
-            <Text style={styles.renewText}>Add renewed details for this vehicle.</Text>
-          </View>
-          <MaterialCommunityIcons name="arrow-right" size={21} color="#FFF" />
-        </Pressable>
-      ) : null}
     </Screen>
   );
 }
@@ -165,25 +158,17 @@ function HeroMetric({ label, value }: { label: string; value: string }) {
   return <View style={styles.heroMetric}><Text style={styles.heroMetricLabel}>{label}</Text><Text style={styles.heroMetricValue} numberOfLines={1}>{value}</Text></View>;
 }
 
-function SectionTitle({ icon, title, hint }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; title: string; hint: string }) {
+function FinancialValue({ label, value, primary = false }: { label: string; value: string; primary?: boolean }) {
+  return <View style={[styles.financialValue, primary && styles.financialValuePrimary]}><Text style={styles.financialLabel}>{label}</Text><Text style={styles.financialAmount} numberOfLines={1}>{value}</Text></View>;
+}
+
+function SectionTitle({ icon, title, hint }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; title: string; hint?: string }) {
   return (
     <View style={styles.sectionTitleRow}>
       <View style={styles.sectionIcon}><MaterialCommunityIcons name={icon} size={18} color={palette.navy} /></View>
       <View style={styles.sectionCopy}>
         <Text style={styles.sectionTitle}>{title}</Text>
-        <Text style={styles.sectionHint} numberOfLines={1}>{hint}</Text>
-      </View>
-    </View>
-  );
-}
-
-function DetailCell({ icon, label, value }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; value?: string | null }) {
-  return (
-    <View style={styles.detailCell}>
-      <MaterialCommunityIcons name={icon} size={15} color="#718096" />
-      <View style={styles.detailCopy}>
-        <Text style={styles.detailLabel}>{label}</Text>
-        <Text style={styles.detailValue} numberOfLines={2}>{value || '-'}</Text>
+        {hint ? <Text style={styles.sectionHint} numberOfLines={1}>{hint}</Text> : null}
       </View>
     </View>
   );
@@ -201,43 +186,50 @@ function formatCurrency(value?: number | null) {
   return value === null || value === undefined ? '-' : `INR ${Number(value).toLocaleString('en-IN')}`;
 }
 
+function renewalTone(tone: 'success' | 'warning' | 'danger' | 'neutral') {
+  if (tone === 'success') return { accent: '#12805C', soft: '#E8F8F0', background: '#F7FCF9', border: '#BFE6D5' };
+  if (tone === 'warning') return { accent: '#B7791F', soft: '#FFF4E2', background: '#FFFBF3', border: '#F0D9AC' };
+  if (tone === 'danger') return { accent: '#C43838', soft: '#FDECEC', background: '#FFF8F8', border: '#F2C6C6' };
+  return { accent: '#64748B', soft: '#EEF2F6', background: '#F8FAFC', border: '#DCE6F0' };
+}
+
 const styles = StyleSheet.create({
-  heroCard: { minHeight: 178, borderRadius: 22, backgroundColor: palette.navy, padding: 15, marginTop: 0, marginBottom: 12, overflow: 'hidden' },
-  heroGlow: { position: 'absolute', right: -64, top: -50, width: 168, height: 168, borderRadius: 90, backgroundColor: 'rgba(11,99,206,0.44)' },
+  heroLayout: { alignSelf: 'stretch', flexGrow: 0, flexShrink: 0, marginBottom: 12, borderRadius: 22, backgroundColor: '#F4F0FF', borderWidth: 1, borderColor: '#D9CCF8', padding: 15, overflow: 'hidden' },
+  heroAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5, backgroundColor: '#7C5CC4' },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  heroIcon: { width: 46, height: 46, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' },
+  heroIcon: { width: 46, height: 46, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   heroCopy: { flex: 1, minWidth: 0 },
-  eyebrow: { color: '#B9D5FF', fontSize: 9.5, fontWeight: '900', letterSpacing: 1 },
-  vehicleNo: { color: '#FFFFFF', fontSize: 23, lineHeight: 28, fontWeight: '900', marginTop: 2 },
-  insurerName: { color: '#D7E7FF', fontSize: 12.5, lineHeight: 16, fontWeight: '800', marginTop: 2 },
-  heroMetaRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
-  heroMetric: { flex: 1, minHeight: 55, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 10, justifyContent: 'center' },
-  heroMetricLabel: { color: '#B9D5FF', fontSize: 9.5, fontWeight: '900', textTransform: 'uppercase' },
-  heroMetricValue: { color: '#FFFFFF', fontSize: 12.5, fontWeight: '900', marginTop: 4 },
-  externalNotice: { minHeight: 34, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)', paddingHorizontal: 9, marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 7 },
-  externalText: { flex: 1, color: '#D7E7FF', fontSize: 10.5, lineHeight: 14, fontWeight: '800' },
+  eyebrow: { color: '#6A4BAA', fontSize: 9.5, fontWeight: '900', letterSpacing: 1 },
+  policyNo: { color: palette.navy, fontSize: 22, lineHeight: 27, fontWeight: '900', marginTop: 2 },
+  policyType: { color: '#334155', fontSize: 12.5, lineHeight: 16, fontWeight: '800', marginTop: 2 },
+  heroMetaRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  heroMetric: { flex: 1, minHeight: 55, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.72)', borderWidth: 1, borderColor: 'rgba(106,75,170,.16)', paddingHorizontal: 9, justifyContent: 'center' },
+  heroMetricLabel: { color: '#6A4BAA', fontSize: 9, fontWeight: '900', textTransform: 'uppercase' },
+  heroMetricValue: { color: palette.navy, fontSize: 11.5, fontWeight: '900', marginTop: 4 },
+  heroActionRow: { minHeight: 34, marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  heroActionLead: { flex: 1, color: '#475467', fontSize: 10.5, lineHeight: 14, fontWeight: '800' },
+  heroAction: { alignSelf: 'flex-start', minHeight: 34, borderRadius: 11, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  heroActionPressed: { opacity: 0.86, transform: [{ scale: 0.985 }] },
+  heroActionText: { flex: 1, color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
   statusBadge: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5 },
   statusText: { fontSize: 9.5, fontWeight: '900' },
-  snapshotCard: { backgroundColor: '#F8FBFF', borderColor: '#D7E6FA' },
+  financialCard: { backgroundColor: '#EFFAF5', borderColor: '#B9E6D0' },
   vehicleCard: { backgroundColor: '#FFFFFF', borderColor: '#DCE8F4' },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 8 },
   sectionIcon: { width: 36, height: 36, borderRadius: radii.sm, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' },
   sectionCopy: { flex: 1, minWidth: 0 },
   sectionTitle: { color: palette.navy, fontSize: 14.5, lineHeight: 18, fontWeight: '900' },
   sectionHint: { color: palette.slate, fontSize: 11, lineHeight: 14, fontWeight: '700', marginTop: 1 },
-  detailGrid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 10, rowGap: 0 },
-  detailCell: { width: '48%', minHeight: 52, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#E5ECF5', flexDirection: 'row', gap: 7 },
-  detailCopy: { flex: 1, minWidth: 0 },
-  detailLabel: { color: '#64748B', fontSize: 9.5, fontWeight: '800', textTransform: 'uppercase' },
-  detailValue: { color: palette.ink, fontSize: 12, lineHeight: 15, fontWeight: '800', marginTop: 4 },
+  financialGrid: { flexDirection: 'row', gap: 9 },
+  financialValue: { flex: 1, minHeight: 66, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D3EBDD', padding: 11, justifyContent: 'center' },
+  financialValuePrimary: { borderColor: '#9ED8BA', backgroundColor: '#F8FFFB' },
+  financialLabel: { color: '#587267', fontSize: 9.5, fontWeight: '900', textTransform: 'uppercase' },
+  financialAmount: { color: palette.navy, fontSize: 16, fontWeight: '900', marginTop: 5 },
   vehicleFacts: { borderRadius: 15, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E3ECF6', overflow: 'hidden' },
   factRow: { minHeight: 43, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: '#E7EEF7' },
   factLabel: { width: 104, color: palette.slate, fontSize: 11, fontWeight: '800' },
   factValue: { flex: 1, color: palette.navy, fontSize: 12.5, fontWeight: '900', textAlign: 'right' },
-  renewButton: { minHeight: 62, borderRadius: 18, backgroundColor: palette.navy, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
-  renewButtonPressed: { opacity: 0.88, transform: [{ scale: 0.985 }] },
-  renewIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,.14)' },
-  renewCopy: { flex: 1, minWidth: 0 },
-  renewTitle: { color: '#FFF', fontSize: 14.5, fontWeight: '900' },
-  renewText: { color: '#C9D7EF', fontSize: 11.5, fontWeight: '700', marginTop: 2 },
+  vehicleLink: { minHeight: 38, marginTop: 10, borderRadius: 11, backgroundColor: '#EEF5FF', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  vehicleLinkPressed: { opacity: 0.8 },
+  vehicleLinkText: { color: palette.navy, fontSize: 11, fontWeight: '900' },
 });

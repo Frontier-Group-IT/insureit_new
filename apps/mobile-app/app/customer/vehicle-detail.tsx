@@ -5,7 +5,7 @@ import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native
 
 import { Card, EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
-import { customerAccountTitle, getOperationalCustomerContexts, type CustomerAccountContext } from '@/lib/customer-context';
+import { getOperationalCustomerContexts } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
@@ -31,7 +31,6 @@ export default function VehicleDetailScreen() {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [policies, setPolicies] = useState<VehiclePolicyDisplay[]>([]);
   const [companies, setCompanies] = useState<InsuranceCompany[]>([]);
-  const [contexts, setContexts] = useState<CustomerAccountContext[]>([]);
   const [loading, setLoading] = useState(true);
   const [alertsExpanded, setAlertsExpanded] = useState(false);
 
@@ -42,7 +41,6 @@ export default function VehicleDetailScreen() {
       if (!session?.user) return router.replace('/login');
       const contexts = await getOperationalCustomerContexts();
       const ids = contexts.map((context) => context.customer_id);
-      setContexts(contexts);
       if (!ids.length) {
         setLoading(false);
         return;
@@ -75,47 +73,52 @@ export default function VehicleDetailScreen() {
   const latestPolicy = useMemo(() => selectVehiclePolicy(policies), [policies]);
   const latestPolicyCompany = latestPolicy ? companyById.get(latestPolicy.insurance_company_id) : null;
   const policyState = latestPolicy ? policyStatus(latestPolicy.end_date) : { label: 'No policy', tone: 'red' as const, helper: 'Add a policy to complete protection' };
+  const policyAction = policyState.tone === 'red' ? { label: 'Add policy', icon: 'shield-plus-outline' as const } : policyState.tone === 'orange' ? { label: 'Get quote', icon: 'file-document-outline' as const } : null;
+  const statusTone = policyTone(policyState.tone);
   const complianceItems = useMemo(() => vehicleComplianceItems(vehicle, latestPolicy), [latestPolicy, vehicle]);
   const alertItems = complianceItems.filter((item) => item.status !== 'ok');
   const vehicleImage = vehicle ? vehicleSketchFor(vehicle) : truckSketch;
-  const registeredCompany = vehicle ? registeredCompanyName(vehicle.customer_id, contexts) : '';
 
   if (loading) return <Screen title="Vehicle Detail"><LoadingState /></Screen>;
   if (!vehicle) return <Screen title="Vehicle Detail"><EmptyState title="Vehicle not found" body="Please choose another vehicle from your list." /></Screen>;
 
   return (
     <Screen title="Vehicle Detail" subtitle={vehicle.vehicle_no} showLogout showTitleHeader={false}>
-      <Card style={styles.heroCard}>
-        <View style={styles.heroWash} />
+      <View style={[styles.heroCard, { backgroundColor: statusTone.background, borderColor: statusTone.border }]}>
+        <View style={[styles.heroAccent, { backgroundColor: statusTone.accent }]} />
         <View style={styles.heroTop}>
-          <View style={styles.vehicleImageShell}>
+          <View style={[styles.vehicleImageShell, { backgroundColor: statusTone.soft }]}>
             <Image source={vehicleImage} style={styles.vehicleImage} resizeMode="contain" />
           </View>
           <View style={styles.heroCopy}>
-            <Text style={styles.eyebrow}>VEHICLE DETAIL</Text>
-            {registeredCompany ? <Text style={styles.companyName} numberOfLines={1}>{registeredCompany}</Text> : null}
+            <Text style={[styles.eyebrow, { color: statusTone.accent }]}>VEHICLE DETAIL</Text>
             <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle.vehicle_no}</Text>
-            <Text style={styles.vehicleMeta} numberOfLines={1}>{[vehicle.make, vehicle.model].filter(Boolean).join(' ') || vehicle.vehicle_type || 'Vehicle'}</Text>
+            <Text style={styles.vehicleMeta} numberOfLines={2}>{[vehicle.make, vehicle.model].filter(Boolean).join(' ') || vehicle.vehicle_type || 'Vehicle'}</Text>
           </View>
           <StatusPill tone={policyState.tone} label={policyState.label} showDot={policyState.tone !== 'green'} />
         </View>
-        <View style={styles.heroStats}>
+        <View style={styles.policySummary}>
           <MiniStat label="Insurer" value={latestPolicyCompany?.name ?? 'Pending'} />
           <MiniStat label="Policy" value={latestPolicy?.policy_no ?? 'Not added'} badge={latestPolicy?.source === 'external' ? 'External' : undefined} />
           <MiniStat label="Expiry" value={latestPolicy ? formatDate(latestPolicy.end_date) : '-'} />
         </View>
-        <Text style={styles.heroHelper}>{policyState.helper}</Text>
-        <View style={styles.heroActions}>
-          <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/add-policy', params: { vehicleId: vehicle.id } } as any)} style={({ pressed }) => [styles.primaryAction, pressed && styles.actionPressed]}>
-            <MaterialCommunityIcons name="shield-plus-outline" size={16} color="#FFFFFF" />
-            <Text style={styles.primaryActionText}>Add policy</Text>
-          </Pressable>
-          <Pressable accessibilityRole="button" onPress={() => router.push('/customer/policies')} style={({ pressed }) => [styles.secondaryAction, pressed && styles.actionPressed]}>
-            <MaterialCommunityIcons name="wallet-outline" size={16} color="#D7E7FF" />
-            <Text style={styles.secondaryActionText}>Policy wallet</Text>
-          </Pressable>
+        <View style={[styles.protectionRow, { borderTopColor: statusTone.border }]}>
+          <View style={[styles.protectionIcon, { backgroundColor: statusTone.soft }]}>
+            <MaterialCommunityIcons name={latestPolicy ? 'shield-check-outline' : 'shield-plus-outline'} size={20} color={statusTone.accent} />
+          </View>
+          <View style={styles.protectionCopy}>
+            <Text style={[styles.nextLabel, { color: statusTone.accent }]}>PROTECTION STATUS</Text>
+            <Text style={styles.nextTitle}>{policyState.label}</Text>
+          </View>
+          {policyAction ? <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/add-policy', params: { vehicleId: vehicle.id } } as any)} style={({ pressed }) => [styles.compactPolicyAction, { backgroundColor: statusTone.accent }, pressed && styles.actionPressed]}>
+            <MaterialCommunityIcons name={policyAction.icon} size={14} color="#FFFFFF" />
+            <Text style={styles.compactPolicyActionText}>{policyAction.label}</Text>
+          </Pressable> : null}
         </View>
-      </Card>
+        <View style={styles.protectionHelperRow}>
+          <Text style={styles.nextBody}>{policyState.helper}</Text>
+        </View>
+      </View>
 
       <Card accessibilityRole="button" onPress={() => setAlertsExpanded((value) => !value)} style={styles.alertSection}>
           <View style={styles.compactSectionRow}>
@@ -150,6 +153,7 @@ export default function VehicleDetailScreen() {
             <Text style={styles.sectionHint}>Details stored for this vehicle</Text>
           </View>
         </View>
+        <Text style={styles.detailGroupLabel}>Identity and registration</Text>
         <View style={styles.detailGrid}>
           <DetailCell icon="truck-outline" label="Vehicle type" value={vehicle.vehicle_type} />
           <DetailCell icon="factory" label="Make" value={vehicle.make} />
@@ -159,6 +163,9 @@ export default function VehicleDetailScreen() {
           <DetailCell icon="calendar-check-outline" label="Registration date" value={formatDate(vehicle.registration_date)} />
           <DetailCell icon="barcode" label="Chassis no." value={vehicle.chassis_no} />
           <DetailCell icon="engine-outline" label="Engine no." value={vehicle.engine_no} />
+        </View>
+        <Text style={styles.detailGroupLabel}>Compliance and permits</Text>
+        <View style={styles.detailGrid}>
           <DetailCell icon="file-certificate-outline" label="Permit no." value={privateNotApplicable(vehicle, vehicle.permit_no)} />
           <DetailCell icon="calendar-alert" label="Fitness expiry" value={privateNotApplicable(vehicle, formatDate(vehicle.fitness_expiry_date))} status={isPrivateVehicle(vehicle) ? 'ok' : complianceStatus(vehicle.fitness_expiry_date).status} />
           <DetailCell icon="smog" label="PUC expiry" value={formatDate(vehicle.puc_expiry_date)} status={complianceStatus(vehicle.puc_expiry_date).status} />
@@ -182,7 +189,7 @@ function MiniStat({ label, value, badge }: { label: string; value: string; badge
 
 function DetailCell({ icon, label, value, status = 'ok' }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; value?: string | null; status?: 'expired' | 'due' | 'ok' }) {
   const showDateDot = status === 'expired' || status === 'due';
-  return <View style={styles.detailCell}><MaterialCommunityIcons name={icon} size={15} color="#7A8799" /><View style={styles.detailCopy}><Text style={styles.detailLabel}>{label}</Text><View style={styles.detailValueRow}>{showDateDot ? <PulseDot tone={status === 'expired' ? 'red' : 'yellow'} /> : null}<Text style={styles.detailValue} numberOfLines={2}>{value || '-'}</Text></View></View></View>;
+  return <View style={styles.detailCell}><MaterialCommunityIcons name={icon} size={15} color={showDateDot ? status === 'expired' ? '#C43D2D' : '#B7791F' : '#7A8799'} /><View style={styles.detailCopy}><Text style={styles.detailLabel}>{label}</Text><View style={styles.detailValueRow}>{showDateDot ? <PulseDot tone={status === 'expired' ? 'red' : 'yellow'} /> : null}<Text style={[styles.detailValue, status === 'expired' && styles.detailValueExpired, status === 'due' && styles.detailValueDue]} numberOfLines={2}>{value || '-'}</Text></View></View></View>;
 }
 
 function selectVehiclePolicy(policies: VehiclePolicyDisplay[]) {
@@ -203,6 +210,12 @@ function policyStatus(endDate: string) {
   if (days < 0) return { label: 'Expired', tone: 'red' as const, helper: `Expired ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} ago` };
   if (days <= 30) return { label: 'Renewal due', tone: 'orange' as const, helper: `${days} day${days === 1 ? '' : 's'} left for renewal` };
   return { label: 'Protected', tone: 'green' as const, helper: `${days} day${days === 1 ? '' : 's'} of cover remaining` };
+}
+
+function policyTone(tone: 'green' | 'orange' | 'red') {
+  if (tone === 'green') return { accent: '#12805C', soft: '#E8F8F0', background: '#F7FCF9', border: '#BFE6D5' };
+  if (tone === 'orange') return { accent: '#B7791F', soft: '#FFF4E2', background: '#FFFBF3', border: '#F0D9AC' };
+  return { accent: '#C43838', soft: '#FDECEC', background: '#FFF8F8', border: '#F2C6C6' };
 }
 
 type ComplianceItem = { key: string; label: string; date: string | null; status: 'expired' | 'due' | 'ok'; helper: string };
@@ -310,56 +323,54 @@ function privateNotApplicable(vehicle: Vehicle, value?: string | null) {
   return value;
 }
 
-function registeredCompanyName(customerId: string, contexts: CustomerAccountContext[]) {
-  const context = contexts.find((item) => item.customer_id === customerId);
-  return context ? customerAccountTitle(context) : '';
-}
-
 function formatDate(value?: string | null) {
   if (!value) return '-';
   return new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 const styles = StyleSheet.create({
-  heroCard: { marginTop: 0, padding: 15, overflow: 'hidden', backgroundColor: palette.navy, borderColor: palette.navy },
-  heroWash: { position: 'absolute', right: -64, top: -50, width: 168, height: 168, borderRadius: 90, backgroundColor: 'rgba(11,99,206,0.44)' },
+  heroCard: { marginTop: 0, padding: 15, overflow: 'hidden', borderWidth: 1, borderRadius: 21, marginBottom: 10 },
+  heroAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5 },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   heroCopy: { flex: 1, minWidth: 0 },
-  eyebrow: { color: '#B9D5FF', fontSize: 9.5, fontWeight: '900', letterSpacing: 1 },
-  vehicleNo: { color: '#FFFFFF', fontSize: 23, lineHeight: 28, fontWeight: '900', marginTop: 1 },
-  vehicleMeta: { color: '#D7E7FF', fontSize: 12, fontWeight: '800', marginTop: 2 },
-  companyName: { color: '#9EC5FF', fontSize: 10.5, lineHeight: 13, fontWeight: '800', marginTop: 2 },
-  vehicleImageShell: { width: 50, height: 50, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' },
+  eyebrow: { color: palette.navy, fontSize: 9.5, fontWeight: '900', letterSpacing: 1 },
+  vehicleNo: { color: palette.navy, fontSize: 23, lineHeight: 28, fontWeight: '900', marginTop: 1 },
+  vehicleMeta: { color: '#334155', fontSize: 12, fontWeight: '800', marginTop: 2 },
+  companyName: { color: '#334155', fontSize: 10.5, lineHeight: 13, fontWeight: '800', marginTop: 2 },
+  vehicleImageShell: { width: 50, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   vehicleImage: { width: 44, height: 32 },
-  heroStats: { flexDirection: 'row', gap: 7, marginTop: 14 },
-  heroHelper: { color: '#D7E7FF', fontSize: 11.5, lineHeight: 15, fontWeight: '800', marginTop: 8 },
-  heroActions: { flexDirection: 'row', gap: 8, marginTop: 11 },
-  primaryAction: { minHeight: 38, borderRadius: 13, backgroundColor: '#0B63CE', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  secondaryAction: { minHeight: 38, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  policySummary: { flexDirection: 'row', gap: 7, marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(100,120,150,.16)' },
+  protectionRow: { marginTop: 12, paddingTop: 11, borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  protectionIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  protectionCopy: { flex: 1, minWidth: 0 },
+  protectionHelperRow: { marginLeft: 45, marginTop: 3 },
+  nextLabel: { fontSize: 8.5, fontWeight: '900', letterSpacing: .4 },
+  nextTitle: { color: palette.navy, fontSize: 13, fontWeight: '900', marginTop: 2 },
+  nextBody: { color: '#667085', fontSize: 10.3, lineHeight: 14, fontWeight: '600', marginTop: 3 },
+  compactPolicyAction: { minHeight: 30, borderRadius: 10, paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  compactPolicyActionText: { color: '#FFFFFF', fontSize: 9.5, fontWeight: '900' },
   actionPressed: { opacity: 0.86, transform: [{ scale: 0.97 }] },
-  primaryActionText: { color: '#FFFFFF', fontSize: 12, fontWeight: '900' },
-  secondaryActionText: { color: '#D7E7FF', fontSize: 12, fontWeight: '900' },
-  miniStat: { flex: 1, minHeight: 53, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', padding: 8, justifyContent: 'center' },
+  miniStat: { flex: 1, minHeight: 53, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.68)', borderWidth: 1, borderColor: 'rgba(100,120,150,.16)', padding: 8, justifyContent: 'center' },
   miniLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  externalBadge: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.16)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
-  externalBadgeText: { color: '#D7E7FF', fontSize: 7.5, lineHeight: 9, fontWeight: '800' },
-  miniLabel: { color: '#B9D5FF', fontSize: 9.5, fontWeight: '800', textTransform: 'uppercase' },
-  miniValue: { color: '#FFFFFF', fontSize: 11.5, fontWeight: '900', marginTop: 4 },
-  alertSection: { padding: 10, backgroundColor: '#FFF5E6', borderColor: '#D99012', borderWidth: 1.2 },
+  externalBadge: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 999, backgroundColor: '#EEF5FF', borderWidth: 1, borderColor: '#CFE0F8' },
+  externalBadgeText: { color: '#315C99', fontSize: 7.5, lineHeight: 9, fontWeight: '800' },
+  miniLabel: { color: '#64748B', fontSize: 9.5, fontWeight: '800', textTransform: 'uppercase' },
+  miniValue: { color: palette.navy, fontSize: 11.5, fontWeight: '900', marginTop: 4 },
+  alertSection: { padding: 10, backgroundColor: '#FFFBF3', borderColor: '#E8D7B5', borderWidth: 1 },
   detailSection: { backgroundColor: '#F8FBFF', borderColor: '#D7E6FA' },
   sectionRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 6 },
   compactSectionRow: { minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: 9 },
   alertIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: '#FFF1D8', alignItems: 'center', justifyContent: 'center' },
-  alertCountBox: { minWidth: 44, height: 30, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#F0E1C8', paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 },
-  alertCountBoxWarning: { backgroundColor: '#FFF0D2', borderColor: '#D99012' },
-  alertCount: { color: '#B7791F', fontSize: 14, fontWeight: '900' },
+  alertCountBox: { minWidth: 44, height: 30, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E8D7B5', paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 },
+  alertCountBoxWarning: { backgroundColor: '#FFF4E2', borderColor: '#D8B978' },
+  alertCount: { color: '#8A641E', fontSize: 14, fontWeight: '900' },
   detailIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' },
   sectionCopy: { flex: 1, minWidth: 0 },
   sectionTitle: { color: palette.navy, fontSize: 14.5, lineHeight: 18, fontWeight: '700' },
   sectionHint: { color: palette.slate, fontSize: 11, fontWeight: '500', lineHeight: 15, marginTop: 1, marginBottom: 2 },
   alertLegend: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, marginBottom: 8 },
   legendText: { color: '#5F6B7A', fontSize: 10.5, fontWeight: '600', marginRight: 8 },
-  complianceRow: { minHeight: 48, borderRadius: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#F0E1C8', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 7 },
+  complianceRow: { minHeight: 48, borderRadius: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E8D7B5', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 7 },
   complianceCopy: { flex: 1, minWidth: 0 },
   complianceTitle: { color: palette.navy, fontSize: 12.5, lineHeight: 16, fontWeight: '700' },
   complianceDateRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 1 },
@@ -371,12 +382,15 @@ const styles = StyleSheet.create({
   animatedDot: { width: 8, height: 8, borderRadius: 4 },
   redDot: { backgroundColor: '#C43D2D' },
   yellowDot: { backgroundColor: '#F6C33B' },
+  detailGroupLabel: { color: '#0A43A3', fontSize: 9.5, fontWeight: '900', letterSpacing: .55, textTransform: 'uppercase', marginTop: 8, marginBottom: 2 },
   detailGrid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 10, rowGap: 0, marginTop: 4 },
   detailCell: { width: '48%', minHeight: 50, paddingVertical: 8, flexDirection: 'row', gap: 7, borderBottomWidth: 1, borderBottomColor: '#E5ECF5' },
   detailCopy: { flex: 1, minWidth: 0 },
   detailLabel: { color: '#64748B', fontSize: 9.5, fontWeight: '500', textTransform: 'uppercase' },
   detailValueRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
   detailValue: { flex: 1, color: palette.ink, fontSize: 12, lineHeight: 15, fontWeight: '500' },
+  detailValueExpired: { color: '#B42318', fontWeight: '800' },
+  detailValueDue: { color: '#946200', fontWeight: '800' },
   emptyText: { color: palette.slate, fontSize: 12.5, lineHeight: 18, fontWeight: '500', marginTop: 6 },
   statusPill: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 5 },
   statusText: { fontSize: 9, fontWeight: '800' },

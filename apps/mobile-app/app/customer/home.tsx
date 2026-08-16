@@ -202,6 +202,7 @@ export default function CustomerMockupHomeScreen() {
         onPendingAction={() => pendingTask ? router.push({ pathname: '/customer/upload-documents', params: { claimId: pendingTask.claim_id } }) : router.push('/customer/claims')}
       />
       <SupportActionCenter onSupport={() => router.push('/customer/support')} />
+      <Text style={styles.appVersion}>Version 1.8.3</Text>
     </ScrollView>
     <UniversalBottomTabs role="customer" pathname="/customer/home" bottomInset={0} customerContext={selectedContext} />
     <KycRequiredModal
@@ -280,7 +281,7 @@ function FleetCoverageRing({ score, hasVehicles }: { score: number; hasVehicles:
   return (
     <View style={styles.scoreRing}>
       <Svg width={72} height={72} viewBox="0 0 72 72">
-        <Circle cx="36" cy="36" r={radius} stroke="#E5484D" strokeWidth={strokeWidth} fill="none" />
+        <Circle cx="36" cy="36" r={radius} stroke={palette.navy} strokeWidth={1.5} fill="#FFFFFF" />
         <AnimatedCircle
           cx="36"
           cy="36"
@@ -395,9 +396,11 @@ function ClaimsSummaryCard({ totalCount, openCount, settledCount, totalAmount, o
           <View style={styles.claimOpenLink}><Text style={styles.claimOpenLinkText}>View all</Text><MaterialCommunityIcons name="arrow-right" size={15} color="#BFD4F7" /></View>
         </View>
         <View style={styles.claimMetricRow}>
-          <ClaimMetric label="Total" value={totalCount} amount={moneyCompact(totalAmount)} accent="#174EA6" background="#F2F7FF" border="#DCE8F7" />
-          <ClaimMetric label="Open" value={openCount} amount={moneyCompact(openAmount)} accent="#A86F12" background="#FFF8EA" border="#F1D9A9" />
-          <ClaimMetric label="Settled" value={settledCount} amount={moneyCompact(settledAmount)} accent="#0D8A60" background="#ECF8F2" border="#D4EDDF" />
+          <ClaimMetric label="Total" value={totalCount} amount={moneyCompact(totalAmount)} accent="#6FA8FF" />
+          <View style={styles.claimMetricDivider} />
+          <ClaimMetric label="Open" value={openCount} amount={moneyCompact(openAmount)} accent="#F5B94C" />
+          <View style={styles.claimMetricDivider} />
+          <ClaimMetric label="Settled" value={settledCount} amount={moneyCompact(settledAmount)} accent="#4FD79B" />
         </View>
       </Pressable>
       <Pressable onPress={hasPendingAction ? onPendingAction : onOpenAll} style={({ pressed }) => [styles.claimTicker, hasPendingAction && styles.claimTickerHot, pressed && styles.cardPressed]}>
@@ -409,9 +412,9 @@ function ClaimsSummaryCard({ totalCount, openCount, settledCount, totalAmount, o
   );
 }
 
-function ClaimMetric({ label, value, amount, accent, background, border }: { label: string; value: number; amount: string; accent: string; background: string; border: string }) {
+function ClaimMetric({ label, value, amount, accent }: { label: string; value: number; amount: string; accent: string }) {
   return (
-    <View style={[styles.claimMetric, { backgroundColor: background, borderColor: border }]}>
+    <View style={styles.claimMetric}>
       <Text style={[styles.claimMetricValue, { color: accent }]}>{value}</Text>
       <Text style={styles.claimMetricLabel}>{label}</Text>
       <Text style={styles.claimMetricAmount}>{amount}</Text>
@@ -423,8 +426,11 @@ function SupportActionCenter({ onSupport }: { onSupport: () => void }) {
   return (
     <View style={styles.supportCard}>
       <View style={styles.supportTop}>
-        <Text style={styles.supportTitle}>Claims Desk</Text>
-        <Text style={styles.supportTagline} numberOfLines={1}>we are here when it matters</Text>
+        <Text style={styles.supportHeaderLine} numberOfLines={1}>
+          <Text style={styles.supportTitle}>Insureit Support</Text>
+          <Text style={styles.supportDivider}> | </Text>
+          <Text style={styles.supportTagline}>we are here when it matters</Text>
+        </Text>
       </View>
       <View style={styles.supportActions}>
         <SupportButton icon="phone-in-talk" label="Call" color="#10A66F" onPress={() => void callClaimsDesk()} />
@@ -630,11 +636,12 @@ const styles = StyleSheet.create({
   claimSummaryTop: { backgroundColor: palette.navy, padding: 13 },
   claimOpenLink: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   claimOpenLinkText: { color: '#BFD4F7', fontSize: 11, fontWeight: '900' },
-  claimMetricRow: { flexDirection: 'row', gap: 8 },
-  claimMetric: { flex: 1, minHeight: 77, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  claimMetricRow: { flexDirection: 'row', alignItems: 'stretch' },
+  claimMetric: { flex: 1, minHeight: 77, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
+  claimMetricDivider: { width: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.18)', marginVertical: 8 },
   claimMetricValue: { fontSize: 24, lineHeight: 28, fontWeight: '900' },
-  claimMetricLabel: { color: '#52647A', fontSize: 10.5, fontWeight: '900', marginTop: 1 },
-  claimMetricAmount: { color: '#7A899D', fontSize: 9.5, fontWeight: '800', marginTop: 3 },
+  claimMetricLabel: { color: '#AAB9D6', fontSize: 10.5, fontWeight: '900', marginTop: 1 },
+  claimMetricAmount: { color: '#7C8FB0', fontSize: 9.5, fontWeight: '800', marginTop: 3 },
   claimTicker: { minHeight: 39, margin: 10, marginTop: 9, borderRadius: 14, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7 },
   claimTickerHot: { backgroundColor: '#FFF8EA', borderColor: '#F1D59D' },
   claimTickerText: { flex: 1, color: palette.navy, fontSize: 11.5, fontWeight: '900' },
@@ -665,15 +672,18 @@ const styles = StyleSheet.create({
   claimFooter: { minHeight: 42, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 8 },
   claimFooterText: { flex: 1, color: '#E8F1FF', fontSize: 11.5, lineHeight: 16, fontWeight: '700' },
   supportCard: { borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', padding: 11, shadowColor: '#122544', shadowOpacity: 0.04, shadowRadius: 9, elevation: 2 },
-  supportTop: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 9 },
+  supportTop: { marginBottom: 9 },
+  supportHeaderLine: { flexShrink: 1 },
   supportIcon: { width: 44, height: 44, borderRadius: 16, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' },
   supportCopy: { flex: 1 },
   supportTitle: { color: palette.navy, fontSize: 16, fontWeight: '900' },
-  supportTagline: { flex: 1, color: '#607089', fontSize: 10.5, fontWeight: '800', textAlign: 'right' },
+  supportDivider: { color: '#B6C4D8', fontSize: 14, fontWeight: '900' },
+  supportTagline: { color: '#607089', fontSize: 11.5, fontWeight: '800' },
   supportActions: { flexDirection: 'row', gap: 8 },
   supportButton: { flex: 1, minHeight: 58, alignItems: 'center', justifyContent: 'center', gap: 5 },
   supportButtonIcon: { width: 33, height: 33, borderRadius: 13, alignItems: 'center', justifyContent: 'center', shadowColor: '#122544', shadowOpacity: 0.13, shadowRadius: 6, elevation: 3 },
   supportButtonText: { color: palette.navy, fontSize: 11, fontWeight: '900' },
+  appVersion: { color: '#A6B3C6', fontSize: 10.5, fontWeight: '700', textAlign: 'center', marginTop: 4 },
   cardPressed: { transform: [{ scale: 0.985 }], opacity: 0.94 },
   kycBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, backgroundColor: 'rgba(10,18,31,0.66)' },
   kycModal: { width: '100%', maxWidth: 410, borderRadius: 20, backgroundColor: '#FFFFFF', paddingHorizontal: 24, paddingTop: 25, paddingBottom: 16, alignItems: 'center', shadowColor: '#071D49', shadowOpacity: 0.24, shadowRadius: 24, elevation: 12 },

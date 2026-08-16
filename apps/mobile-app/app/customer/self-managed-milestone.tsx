@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AppDatePicker } from '@/components/design-system';
+import { AppBadge, AppDatePicker } from '@/components/design-system';
 import { Message, Screen, TextField } from '@/components/ui';
 import { SELF_MANAGED_MILESTONES, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
 import { supabase } from '@/lib/supabase';
@@ -73,10 +73,11 @@ export default function SelfManagedMilestoneScreen() {
       <View style={styles.topRow}>
         <Pressable onPress={() => router.back()} style={styles.backButton}><MaterialCommunityIcons name="arrow-left" size={21} color={palette.navy} /></Pressable>
         <View style={styles.topCopy}>
-          <Text style={styles.eyebrow}>CLAIMS • STEP {step} OF 9</Text>
+          <Text style={styles.eyebrow}>EXTERNAL CLAIM • STEP {step} OF 9</Text>
           <Text style={styles.title}>{definition.label}</Text>
           <Text style={styles.subtitle}>{subtitleFor(key)}</Text>
         </View>
+        <AppBadge label="Self Tracked" tone="info" />
       </View>
 
       <View style={styles.contextCard}>
@@ -84,9 +85,8 @@ export default function SelfManagedMilestoneScreen() {
         <View style={styles.contextCopy}>
           <Text style={styles.contextLabel}>CLAIM UPDATE</Text>
           <Text style={styles.contextTitle}>{definition.label}</Text>
-          <Text style={styles.contextBody}>This claim uses the same journey layout as Sankalp-managed claims. You are recording this stage yourself.</Text>
+          <Text style={styles.contextBody}>Record this milestone using updates received from the insurer, surveyor, or workshop.</Text>
         </View>
-        <View style={styles.ownershipBadge}><Text style={styles.ownershipText}>Self Tracked</Text></View>
       </View>
 
       {message ? <Message type="error">{message}</Message> : null}
@@ -202,14 +202,12 @@ const styles = StyleSheet.create({
   eyebrow: { color: '#0A43A3', fontSize: 9.5, fontWeight: '900', letterSpacing: 1 },
   title: { color: palette.navy, fontSize: 24, fontWeight: '900', marginTop: 2 },
   subtitle: { color: '#7A8799', fontSize: 10.3, lineHeight: 14, fontWeight: '600', marginTop: 3 },
-  contextCard: { borderWidth: 1, borderColor: '#F0D9AC', borderRadius: 17, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFFBF3', marginBottom: 10 },
-  contextIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#FFF4E2', alignItems: 'center', justifyContent: 'center' },
+  contextCard: { borderWidth: 1, borderColor: '#C9DAF2', borderRadius: 17, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F7FAFF', marginBottom: 10 },
+  contextIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
   contextCopy: { flex: 1, minWidth: 0 },
-  contextLabel: { color: '#B7791F', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.4 },
+  contextLabel: { color: '#0A43A3', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.4 },
   contextTitle: { color: palette.navy, fontSize: 13, fontWeight: '900', marginTop: 2 },
   contextBody: { color: '#667085', fontSize: 10.3, lineHeight: 14, fontWeight: '600', marginTop: 3 },
-  ownershipBadge: { maxWidth: 86, borderWidth: 1, borderColor: '#F0D9AC', borderRadius: 999, backgroundColor: '#FFF4E2', paddingHorizontal: 8, paddingVertical: 5 },
-  ownershipText: { color: '#B7791F', fontSize: 8.5, fontWeight: '900', textAlign: 'center' },
   card: { borderRadius: 17, padding: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE6F0' },
   formHeading: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   formIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#FFF4E2', alignItems: 'center', justifyContent: 'center' },

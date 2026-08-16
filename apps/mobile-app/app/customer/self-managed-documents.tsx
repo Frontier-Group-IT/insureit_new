@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { AppBadge } from '@/components/design-system';
 import { LoadingState, Message, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { SELF_MANAGED_MILESTONES, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
@@ -132,6 +133,8 @@ export default function SelfManagedDocumentsScreen() {
     });
     return result;
   }, [documents]);
+  const documentStages = useMemo(() => SELF_MANAGED_MILESTONES.filter((stage) => DOCS[stage.key].length || (grouped.get(stage.key)?.length ?? 0) > 0), [grouped]);
+  const uploadsLocked = claim?.assistance_status === 'accepted';
 
   async function pickAndUpload(milestoneKey: ClaimMilestoneKey, definition: DocDefinition) {
     setError('');
@@ -237,10 +240,11 @@ export default function SelfManagedDocumentsScreen() {
           <MaterialCommunityIcons name="arrow-left" size={21} color={palette.navy} />
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={styles.eye}>SELF-TRACKED CLAIM</Text>
+          <Text style={styles.eye}>EXTERNAL CLAIM</Text>
           <Text style={styles.title}>Document Vault</Text>
-          <Text style={styles.sub}>{claim?.claim_no ?? 'Claim'} • Files are saved to the stage where they belong.</Text>
+          <Text style={styles.sub}>{claim?.claim_no ?? 'Claim'} • Documents are grouped by milestone.</Text>
         </View>
+        <AppBadge label="Self Tracked" tone="info" />
       </View>
 
       {error ? <Message type="error">{error}</Message> : null}
@@ -250,11 +254,14 @@ export default function SelfManagedDocumentsScreen() {
         <MaterialCommunityIcons name="shield-check-outline" size={21} color="#0A6B4B" />
         <View style={{ flex: 1 }}>
           <Text style={styles.infoTitle}>Your claim record</Text>
-          <Text style={styles.infoText}>These files support your self-tracked claim. They are saved in InsureIt but do not enter the Sankalp document-verification queue unless Sankalp later accepts assistance for this claim.</Text>
+          <Text style={styles.infoText}>These files support your external claim record. Upload only the documents relevant to each milestone.</Text>
         </View>
       </View>
 
-      {SELF_MANAGED_MILESTONES.map((stage, index) => {
+      {uploadsLocked ? <Message type="info">Claim assistance has been accepted. Document changes are now managed by the Claims Desk.</Message> : null}
+
+      {documentStages.map((stage) => {
+        const index = SELF_MANAGED_MILESTONES.findIndex((item) => item.key === stage.key);
         const definitions = DOCS[stage.key];
         const stageDocuments = grouped.get(stage.key) ?? [];
         return (
@@ -283,7 +290,7 @@ export default function SelfManagedDocumentsScreen() {
                       </Pressable>
                     )) : <Text style={styles.empty}>Optional • not uploaded</Text>}
                   </View>
-                  <Pressable disabled={!!uploading} onPress={() => void pickAndUpload(stage.key, definition)} style={[styles.upload, uploading === uploadKey && styles.uploadBusy]}>
+                  <Pressable disabled={!!uploading || uploadsLocked} onPress={() => void pickAndUpload(stage.key, definition)} style={[styles.upload, (uploading === uploadKey || uploadsLocked) && styles.uploadBusy]}>
                     <MaterialCommunityIcons name={uploading === uploadKey ? 'progress-clock' : 'upload'} size={15} color="#FFF" />
                     <Text style={styles.uploadText}>{uploading === uploadKey ? 'Saving' : matches.length ? 'Add' : 'Upload'}</Text>
                   </Pressable>

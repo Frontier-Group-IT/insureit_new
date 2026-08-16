@@ -1,8 +1,9 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { AppDatePicker } from '@/components/design-system';
+import { AppBadge, AppDatePicker } from '@/components/design-system';
 import { Button, Card, LoadingState, Message, Screen, TextField } from '@/components/ui';
 import { SELF_MANAGED_CLAIM_NOTICE } from '@/lib/claim-service-mode';
 import { supabase } from '@/lib/supabase';
@@ -75,20 +76,45 @@ export default function SelfManagedClaimScreen() {
   }
 
   if (loading) return <Screen title="Spot Intimation"><LoadingState label="Opening policy" /></Screen>;
-  return <Screen title="Spot Intimation" subtitle="Claim initiation" showLogout>
+  return <Screen title="Spot Intimation" showTitleHeader={false}>
+    <View style={styles.pageHeader}>
+      <View style={styles.stepIcon}>
+        <MaterialCommunityIcons name="car-emergency" size={22} color="#0A43A3" />
+      </View>
+      <View style={styles.headerCopy}>
+        <Text style={styles.eyebrow}>EXTERNAL CLAIM · STEP 1 OF 9</Text>
+        <Text style={styles.pageTitle}>Spot Intimation</Text>
+        <Text style={styles.pageSubtitle}>Start tracking an incident under your customer-added policy.</Text>
+      </View>
+      <AppBadge label="Self Tracked" tone="info" />
+    </View>
     {message ? <Message type="error">{message}</Message> : null}
-    {policy ? <Card><Text style={{ color: palette.navy, fontSize: 15, fontWeight: '900' }}>{policy.policy_no}</Text><Text style={{ color: palette.slate, fontSize: 11, fontWeight: '700', marginTop: 3 }}>{vehicle?.vehicle_no ?? 'Vehicle'} • Customer-added policy</Text><View style={{ height: 10 }} /><Message type="info">{SELF_MANAGED_CLAIM_NOTICE}</Message></Card> : null}
-    <Card>
-      <Text style={{ color: palette.navy, fontSize: 14, fontWeight: '900', marginBottom: 3 }}>Accident details</Text>
-      <Text style={{ color: palette.slate, fontSize: 10.5, fontWeight: '600', marginBottom: 12 }}>Date and time are required</Text>
+    {policy ? <Card style={styles.policyCard}>
+      <View style={styles.policyTop}>
+        <View style={styles.policyIcon}><MaterialCommunityIcons name="file-document-outline" size={20} color="#0A43A3" /></View>
+        <View style={styles.policyCopy}>
+          <Text style={styles.policyLabel}>CUSTOMER-ADDED POLICY</Text>
+          <Text style={styles.policyNumber}>{policy.policy_no}</Text>
+          <Text style={styles.policyVehicle}>{vehicle?.vehicle_no ?? 'Vehicle'}</Text>
+        </View>
+      </View>
+      <View style={styles.noticeRow}>
+        <MaterialCommunityIcons name="information-outline" size={18} color="#0A43A3" />
+        <Text style={styles.noticeText}>{SELF_MANAGED_CLAIM_NOTICE}</Text>
+      </View>
+    </Card> : null}
+    <Card style={styles.formCard}>
+      <View style={styles.sectionHeading}>
+        <View style={styles.sectionIcon}><MaterialCommunityIcons name="clipboard-text-outline" size={20} color="#0A43A3" /></View>
+        <View>
+          <Text style={styles.sectionTitle}>Incident details</Text>
+          <Text style={styles.sectionSubtitle}>Accident date and time are required</Text>
+        </View>
+      </View>
       <AppDatePicker label="Accident Date *" value={date} onChange={setDate} maxDate={new Date().toISOString().slice(0, 10)} />
-      <View style={{ height: 10 }} />
       <TextField label="Accident Time *" placeholder="HH:MM" value={time} onChangeText={setTime} keyboardType="numbers-and-punctuation" />
-      <View style={{ height: 10 }} />
       <TextField label="Driver Name (Optional)" value={driver} onChangeText={setDriver} />
-      <View style={{ height: 10 }} />
       <TextField label="Driver Number (Optional)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-      <View style={{ height: 10 }} />
       <TextField label="Location (Optional)" value={location} onChangeText={setLocation} />
     </Card>
     <Button label={saving ? 'Starting claim...' : 'Start Claim'} onPress={submit} disabled={saving || !policy} />
@@ -102,3 +128,26 @@ function parseIncident(date: string, time: string) {
   const value = new Date(year, month - 1, day, hour, minute);
   return Number.isNaN(value.getTime()) ? null : value;
 }
+
+const styles = StyleSheet.create({
+  pageHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 14 },
+  stepIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
+  headerCopy: { flex: 1, minWidth: 0 },
+  eyebrow: { color: '#0A43A3', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.8 },
+  pageTitle: { color: palette.navy, fontSize: 22, fontWeight: '900', marginTop: 2 },
+  pageSubtitle: { color: palette.slate, fontSize: 10.5, lineHeight: 15, fontWeight: '600', marginTop: 3 },
+  policyCard: { padding: 14, marginBottom: 10 },
+  policyTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  policyIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
+  policyCopy: { flex: 1, minWidth: 0 },
+  policyLabel: { color: '#0A43A3', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.5 },
+  policyNumber: { color: palette.navy, fontSize: 15, fontWeight: '900', marginTop: 2 },
+  policyVehicle: { color: palette.slate, fontSize: 10.5, fontWeight: '700', marginTop: 2 },
+  noticeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, borderTopWidth: 1, borderTopColor: '#E7EEF7', marginTop: 12, paddingTop: 11 },
+  noticeText: { flex: 1, color: '#4F6380', fontSize: 10.3, lineHeight: 15, fontWeight: '600' },
+  formCard: { padding: 14, marginBottom: 10 },
+  sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
+  sectionIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
+  sectionTitle: { color: palette.navy, fontSize: 14, fontWeight: '900' },
+  sectionSubtitle: { color: palette.slate, fontSize: 10, fontWeight: '600', marginTop: 2 },
+});
