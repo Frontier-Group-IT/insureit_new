@@ -41,6 +41,8 @@ ADB verification on connected Android device `00078344S000834` confirmed the ins
 
 **LEARNING:** publishing a clean Expo OTA from an isolated worktree without injecting the mobile `EXPO_PUBLIC_*` environment produced bad update group `a72bd2f4-83ee-4a50-840e-55196b419296`, which crashed on first launch with `Missing mobile app environment configuration`. The follow-up crash hotfix group `eb212c22-3ab5-4c40-9703-49c3c33934e1` restored environment config but was behind later mobile UI work. When publishing from a clean/temporary worktree, load the same mobile public environment used by the normal `apps/mobile-app` workspace and publish from the intended latest source state. Do not commit or record the actual values.
 
+**LEARNING / REQUIRED MOBILE OTA VERIFICATION:** An Expo dashboard update with Android `Downloads > 0` and `Known launches: None` means the installed app has fetched the update but has not launched that bundle yet. Do not tell the user a preview OTA is reflected on-device based only on the dashboard, `eas update:list`, or a download count. After publishing to `preview`, verify the latest group, then force-stop and relaunch the installed package twice over ADB (`com.insureit.mobile`) and inspect the affected screen or logs. Expo Updates commonly downloads a bundle on one cold start and applies it on the next cold start. Prefer publishing from a committed mobile source state so EAS shows `isGitWorkingTreeDirty: false`; if a dirty publish is unavoidable, record exactly which local files were dirty and verify the device UI directly.
+
 **DEPLOYED:** Expo preview OTA update published on 2026-08-15 for project `antnish/insureit-mobile`, branch `preview`, runtime version `0.1.0`.
 
 ```text
