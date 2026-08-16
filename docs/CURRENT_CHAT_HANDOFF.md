@@ -10,6 +10,37 @@ Policy Onboarding OCR hardening remains an active workstream. Production portal 
 
 ## Mobile Expo preview
 
+**DEPLOYED / VERIFIED:** Expo preview OTA hotfix published on 2026-08-17 (IST) for project `antnish/insureit-mobile`, branch `preview`, runtime version `0.2.0`.
+
+```text
+Source commit: 7f9bfeb8dc12afd60baf0c99291b271f79ddb93d
+Message: Hotfix preview: restore mobile environment config
+Update group ID: eb212c22-3ab5-4c40-9703-49c3c33934e1
+Android update ID: 01a00c33-6e82-7493-9a68-1a2db24c8fd0
+iOS update ID: 01a00c33-6e82-7033-a836-ec084514d5fe
+EAS Dashboard: https://expo.dev/accounts/antnish/projects/insureit-mobile/updates/eb212c22-3ab5-4c40-9703-49c3c33934e1
+```
+
+Included changes:
+
+- Policy Detail mobile hero layout no longer expands into a tall blank card below its filled content.
+- External Start Claim vehicle/policy selection refinement is present in the installed preview app.
+- Related mobile claim, policy, vehicle and add-policy/add-vehicle screen refinements were committed together in `Refine mobile claim and policy flows`.
+
+Verification:
+
+```text
+npm --workspace apps/mobile-app run typecheck
+npx eslint app/customer/add-policy.tsx app/customer/add-vehicle.tsx app/customer/claim-detail.tsx app/customer/home.tsx app/customer/policies.tsx app/customer/policy-detail.tsx app/customer/request-claim-assistance.tsx app/customer/self-managed-claim.tsx app/customer/self-managed-documents.tsx app/customer/self-managed-milestone.tsx app/customer/self-managed-spot-status.tsx app/customer/start-claim.tsx app/customer/vehicle-detail.tsx app/customer/vehicles.tsx --quiet
+npm --workspace apps/mobile-app run build:web
+npx eas-cli update:list --branch preview --limit 1 --json
+adb shell monkey -p com.insureit.mobile -c android.intent.category.LAUNCHER 1
+```
+
+ADB verification on connected Android device `00078344S000834` confirmed the installed app opens, a fresh launch logs `Running "main"` without `Missing mobile app environment configuration` or `AndroidRuntime` fatal exceptions, and the refined Start Claim screen renders with vehicle chips, selected vehicle card, policy requirement state and disabled continue action.
+
+**LEARNING:** publishing a clean Expo OTA from an isolated worktree without injecting the mobile `EXPO_PUBLIC_*` environment produced bad update group `a72bd2f4-83ee-4a50-840e-55196b419296`, which crashed on first launch with `Missing mobile app environment configuration`. When publishing from a clean/temporary worktree, load the same mobile public environment used by the normal `apps/mobile-app` workspace before running `eas update`. Do not commit or record the actual values.
+
 **DEPLOYED:** Expo preview OTA update published on 2026-08-15 for project `antnish/insureit-mobile`, branch `preview`, runtime version `0.1.0`.
 
 ```text
@@ -84,6 +115,37 @@ Verification before publish:
 npm --workspace apps/mobile-app run typecheck
 npx eslint components/ui.tsx app/customer/claims.tsx app/customer/policies.tsx app/customer/support.tsx app/customer/vehicle-detail.tsx app/customer/policy-detail.tsx app/customer/vehicles.tsx app/customer/help-faqs.tsx app/customer/raise-support-ticket.tsx app/customer/support-ticket-detail.tsx app/customer/add-policy.tsx app/customer/add-vehicle.tsx app/customer/renewals.tsx app/customer/profile.tsx app/customer/request-claim-assistance.tsx app/customer/report-accident.tsx app/customer/upload-documents.tsx app/customer/start-claim.tsx app/customer/self-managed-documents.tsx app/customer/self-managed-milestone.tsx app/customer/self-managed-spot-status.tsx --quiet
 npm --workspace apps/mobile-app run build:web
+```
+
+**DEPLOYED:** An Expo preview OTA update published on 2026-08-16 refined the mobile app's external/self-managed claims UI only. Sankalp-managed claim rendering and all claim workflow logic, statuses, and RPCs were left unchanged.
+
+```text
+Source commit: 00c1069cd0a4936e94c7efe94778e0e3ac7d0285
+Message: External claims UI: consistent self-tracked identity, reduced Sankalp comparisons, simplified document vault
+Update group ID: d11876b5-c137-452e-97c5-dce068619f51
+Android update ID: 01a00be1-921f-7c59-aff7-9223943999af
+iOS update ID: 01a00be1-921f-7048-bac5-0b01ce056f4a
+Runtime version: 0.2.0
+EAS Dashboard: https://expo.dev/accounts/antnish/projects/insureit-mobile/updates/d11876b5-c137-452e-97c5-dce068619f51
+```
+
+Included changes (external/self-managed claims screens only):
+
+- `apps/mobile-app/app/customer/self-managed-claim.tsx` — restructured Spot Intimation header (`External Claim · Step 1 of 9`), policy-context card, and form section styled through `AppBadge`/`Card` instead of inline hex styles.
+- `apps/mobile-app/app/customer/claim-detail.tsx` — added an external-claim-only visual branch (`selfManaged` flag) with its own tone/badge/copy; Sankalp-managed rendering path is unchanged.
+- `apps/mobile-app/app/customer/self-managed-milestone.tsx`, `self-managed-spot-status.tsx` — replaced repeated "Sankalp Managed" comparison copy with milestone-focused guidance; standardized the Self Tracked badge via `AppBadge`.
+- `apps/mobile-app/app/customer/request-claim-assistance.tsx` — header now reads "External Claim" with an `AppBadge`.
+- `apps/mobile-app/app/customer/self-managed-documents.tsx` — Document Vault now renders only milestones that accept documents (removed empty stage cards) and visibly locks uploads once claim assistance is accepted.
+
+Because the working tree also contained unrelated in-progress policy/vehicle edits, this release was built from an isolated detached `git worktree` (`../InsureIT-claims-release`, based on commit `00c1069c`) containing only the six files above, with its own clean `npm ci` install, so the OTA published exactly the reviewed external-claims scope and nothing else. That temporary worktree has been removed after publishing; the main workspace's other in-progress changes were not touched, committed, or reverted.
+
+Verification before publish (isolated release worktree):
+
+```text
+npm --workspace apps/mobile-app run typecheck
+npx eslint app/customer/self-managed-claim.tsx app/customer/claim-detail.tsx app/customer/self-managed-milestone.tsx app/customer/self-managed-spot-status.tsx app/customer/request-claim-assistance.tsx app/customer/self-managed-documents.tsx --quiet
+npm --workspace apps/mobile-app run build:web
+npx eas-cli update:list --branch preview --limit 1 --json
 ```
 
 A separate master-data administration change was added on 2026-08-12: protected deletion controls for existing customers, vehicles, policies, and claims are available only to the `it_super_user` role in the Customers, Vehicles, Policies, and Claims registries. Customer/vehicle/policy deletion and the later claim-delete extension are both deployed to production.
