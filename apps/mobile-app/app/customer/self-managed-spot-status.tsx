@@ -114,7 +114,7 @@ export default function SelfManagedSpotStatusScreen() {
       <View style={styles.topRow}>
         <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.backButton}><MaterialCommunityIcons name="arrow-left" size={21} color={palette.navy} /></Pressable>
         <View style={styles.topCopy}>
-          <Text style={styles.eyebrow}>EXTERNAL CLAIM • STEP 2 OF 9</Text>
+          <Text style={styles.eyebrow}>STEP 2 OF 9</Text>
           <Text style={styles.title}>Spot Status</Text>
           <Text style={styles.subtitle}>{claimNo || 'Claim'} • Record the completed spot survey.</Text>
         </View>

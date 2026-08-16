@@ -73,7 +73,7 @@ export default function SelfManagedMilestoneScreen() {
       <View style={styles.topRow}>
         <Pressable onPress={() => router.back()} style={styles.backButton}><MaterialCommunityIcons name="arrow-left" size={21} color={palette.navy} /></Pressable>
         <View style={styles.topCopy}>
-          <Text style={styles.eyebrow}>EXTERNAL CLAIM • STEP {step} OF 9</Text>
+          <Text style={styles.eyebrow}>STEP {step} OF 9</Text>
           <Text style={styles.title}>{definition.label}</Text>
           <Text style={styles.subtitle}>{subtitleFor(key)}</Text>
         </View>
