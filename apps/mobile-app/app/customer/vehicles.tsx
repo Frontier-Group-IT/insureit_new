@@ -32,11 +32,11 @@ type VehiclePolicyDisplay = {
   source: 'sibl' | 'external';
 };
 
-const truckSketch = require('../../assets/vehicles/truck sketch.png');
-const carSketch = require('../../assets/vehicles/car sketch.png');
-const busSketch = require('../../assets/vehicles/bus sketch.png');
-const bikeSketch = require('../../assets/vehicles/bike sketch.png');
-const jcbSketch = require('../../assets/vehicles/jcb sketch.png');
+const truckSketch = require('../../assets/vehicles/gcv-truck.webp');
+const carSketch = require('../../assets/vehicles/pcp-car.webp');
+const busSketch = require('../../assets/vehicles/pcv-bus.webp');
+const bikeSketch = require('../../assets/vehicles/twp-bike.webp');
+const jcbSketch = require('../../assets/vehicles/misd-cpm-jcb.webp');
 
 const insurerLogos = {
   hdfc: require('../../assets/vehicles/hdfc-ergo.png'),
@@ -53,8 +53,6 @@ export default function VehiclesScreen() {
   const [claims, setClaims] = useState<Claim[]>([]);
   const [contexts, setContexts] = useState<CustomerAccountContext[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [companyFilterId, setCompanyFilterId] = useState('all');
-  const [companyFilterOpen, setCompanyFilterOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [renewalVehicleId, setRenewalVehicleId] = useState<string | null>(null);
   const [ownerChange, setOwnerChange] = useState<'yes' | 'no' | ''>('');
@@ -112,17 +110,7 @@ export default function VehiclesScreen() {
     return 'Renew your policy on time and keep your vehicles protected';
   }, [expiringSoon]);
   const isPortfolioFleet = contexts.some(isPortfolioCustomerContext);
-  const companyOptions = useMemo(() => {
-    const options = contexts
-      .filter((context) => vehicleCompanyName(context.customer_id, contexts))
-      .map((context) => ({ id: context.customer_id, name: vehicleCompanyName(context.customer_id, contexts) }));
-    return Array.from(new Map(options.map((item) => [item.id, item])).values());
-  }, [contexts]);
-  const selectedCompanyLabel = companyFilterId === 'all'
-    ? 'All companies'
-    : companyOptions.find((item) => item.id === companyFilterId)?.name ?? 'All companies';
   const filteredVehicles = useMemo(() => vehicles.filter((vehicle) => {
-    if (companyFilterId !== 'all' && vehicle.customer_id !== companyFilterId) return false;
     const policy = policyForVehicle(vehicle.id, policies, externalPolicies);
     const insurer = policy ? insurers.find((item) => item.id === policy.insurance_company_id) : null;
     const company = vehicleCompanyName(vehicle.customer_id, contexts);
@@ -136,7 +124,7 @@ export default function VehiclesScreen() {
       company,
     ].filter(Boolean).join(' ').toLowerCase();
     return !searchQuery.trim() || haystack.includes(searchQuery.trim().toLowerCase());
-  }), [companyFilterId, contexts, externalPolicies, insurers, policies, searchQuery, vehicles]);
+  }), [contexts, externalPolicies, insurers, policies, searchQuery, vehicles]);
 
   function openRenewal(vehicleId: string) {
     setRenewalVehicleId(vehicleId);
@@ -216,45 +204,27 @@ export default function VehiclesScreen() {
       </View>
 
       {vehicles.length ? (
-        <View style={styles.filterPanel}>
-          <View style={styles.filterRow}>
-            <View style={styles.globalSearch}>
-              <MaterialCommunityIcons name="magnify" size={17} color="#0A43A3" />
-              <TextInput
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder="Search"
-                placeholderTextColor="#7F8EA4"
-                style={styles.globalSearchInput}
-              />
-              {searchQuery ? (
-                <Pressable accessibilityRole="button" onPress={() => setSearchQuery('')} style={styles.clearSearch}>
-                  <MaterialCommunityIcons name="close" size={14} color="#7A8799" />
-                </Pressable>
-              ) : null}
-            </View>
-            <Pressable accessibilityRole="button" onPress={() => setCompanyFilterOpen((value) => !value)} style={styles.companyDropdown}>
-              <Text style={styles.companyDropdownText} numberOfLines={1}>{selectedCompanyLabel}</Text>
-              <MaterialCommunityIcons name={companyFilterOpen ? 'chevron-up' : 'chevron-down'} size={18} color={palette.navy} />
-            </Pressable>
-          </View>
-          {companyFilterOpen ? (
-            <View style={styles.companyMenu}>
-              <Pressable onPress={() => { setCompanyFilterId('all'); setCompanyFilterOpen(false); }} style={[styles.companyOption, companyFilterId === 'all' && styles.companyOptionActive]}>
-                <Text style={[styles.companyOptionText, companyFilterId === 'all' && styles.companyOptionTextActive]}>All companies</Text>
-              </Pressable>
-              {companyOptions.map((company) => (
-                <Pressable key={company.id} onPress={() => { setCompanyFilterId(company.id); setCompanyFilterOpen(false); }} style={[styles.companyOption, companyFilterId === company.id && styles.companyOptionActive]}>
-                  <Text style={[styles.companyOptionText, companyFilterId === company.id && styles.companyOptionTextActive]} numberOfLines={1}>{company.name}</Text>
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
-        </View>
+  <View style={styles.filterPanel}>
+    <View style={styles.globalSearch}>
+      <MaterialCommunityIcons name="magnify" size={17} color="#0A43A3" />
+      <TextInput
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder="Search vehicles or policies"
+        placeholderTextColor="#7F8EA4"
+        style={styles.globalSearchInput}
+      />
+      {searchQuery ? (
+        <Pressable accessibilityRole="button" onPress={() => setSearchQuery('')} style={styles.clearSearch}>
+          <MaterialCommunityIcons name="close" size={14} color="#7A8799" />
+        </Pressable>
       ) : null}
+    </View>
+  </View>
+) : null}
 
-      {vehicles.length === 0 ? <EmptyState title="No vehicles yet" body="Vehicle records will appear here." /> : null}
-      {vehicles.length > 0 && filteredVehicles.length === 0 ? <EmptyState title="No matching vehicles" body="Try a different search or company filter." /> : null}
+{vehicles.length === 0 ? <EmptyState title="No vehicles yet" body="Vehicle records will appear here." /> : null}
+      {vehicles.length > 0 && filteredVehicles.length === 0 ? <EmptyState title="No matching vehicles" body="Try a different search." /> : null}
 
       {filteredVehicles.map((vehicle) => {
         const policy = policyForVehicle(vehicle.id, policies, externalPolicies);
@@ -1129,17 +1099,9 @@ const styles = StyleSheet.create({
   addButton: { height: 40, borderRadius: 8, backgroundColor: palette.navy, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   addButtonText: { color: '#FFFFFF', fontSize: 12, fontWeight: '900' },
   filterPanel: { marginTop: -2, marginBottom: 10, gap: 7, zIndex: 20 },
-  filterRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  globalSearch: { flex: 1.25, height: 42, borderRadius: 13, borderWidth: 1.4, borderColor: '#9FC4F5', backgroundColor: '#F3F8FF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, shadowColor: '#0A43A3', shadowOpacity: 0.08, shadowRadius: 8, elevation: 1 },
+  globalSearch: { width: '100%', height: 42, borderRadius: 13, borderWidth: 1.4, borderColor: '#9FC4F5', backgroundColor: '#F3F8FF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, shadowColor: '#0A43A3', shadowOpacity: 0.08, shadowRadius: 8, elevation: 1 },
   globalSearchInput: { flex: 1, height: 38, color: palette.navy, fontSize: 12, fontWeight: '700' },
   clearSearch: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
-  companyDropdown: { flex: 0.9, height: 42, borderRadius: 13, borderWidth: 1.2, borderColor: '#B8D4F7', backgroundColor: '#FFFFFF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
-  companyDropdownText: { flex: 1, color: palette.navy, fontSize: 11.2, fontWeight: '800' },
-  companyMenu: { borderRadius: 13, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', overflow: 'hidden', shadowColor: palette.ink, shadowOpacity: 0.07, shadowRadius: 8, elevation: 3 },
-  companyOption: { minHeight: 36, paddingHorizontal: 11, justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: '#EEF2F6' },
-  companyOptionActive: { backgroundColor: '#EEF5FF' },
-  companyOptionText: { color: '#65758B', fontSize: 11, fontWeight: '800' },
-  companyOptionTextActive: { color: palette.navy },
 
   vehicleCard: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', borderRadius: 16, marginBottom: 10, padding: 10, shadowColor: palette.ink, shadowOpacity: 0.055, shadowRadius: 10, elevation: 2 },
   vehicleCardPressed: { opacity: 0.88, transform: [{ scale: 0.99 }] },
