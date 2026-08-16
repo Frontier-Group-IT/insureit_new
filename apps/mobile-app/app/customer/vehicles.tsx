@@ -35,7 +35,6 @@ type VehiclePolicyDisplay = {
 const truckSketch = require('../../assets/vehicles/gcv-truck.webp');
 const carSketch = require('../../assets/vehicles/pcp-car.webp');
 const busSketch = require('../../assets/vehicles/pcv-bus.webp');
-const bikeSketch = require('../../assets/vehicles/twp-bike.png');
 const jcbSketch = require('../../assets/vehicles/misd-cpm-jcb.png');
 
 const insurerLogos = {
@@ -234,6 +233,7 @@ export default function VehiclesScreen() {
         const insurerLogo = insurerImage(insurer?.name);
         const vehicleDescriptor = [vehicle.make, vehicle.model, vehicle.year ? String(vehicle.year) : null].filter(Boolean).join(' - ') || 'Vehicle details pending';
         const accountName = vehicleCompanyName(vehicle.customer_id, contexts);
+        const vehicleClass = vehicleClassCode(vehicle);
         const vehicleImage = vehicleSketchFor(vehicle);
         const health = vehicleComplianceHealth(vehicle, policy);
 
@@ -249,7 +249,14 @@ export default function VehiclesScreen() {
                   </View>
                 </View>
 
-                <Image source={vehicleImage} style={styles.truckImage} resizeMode="contain" />
+                {vehicleClass === 'TWP' ? (
+                  <View accessibilityLabel="Two wheeler vehicle" style={styles.twpVehicleVisual}>
+                    <MaterialCommunityIcons name="motorbike" size={72} color="#0A43A3" />
+                    <View style={styles.twpRoadLine} />
+                  </View>
+                ) : (
+                  <Image source={vehicleImage} style={styles.truckImage} resizeMode="contain" />
+                )}
 
                 <Text style={styles.vehicleMake} numberOfLines={1}>{vehicleDescriptor}</Text>
               </View>
@@ -970,7 +977,6 @@ function vehicleSketchFor(vehicle: Vehicle) {
   switch (vehicleClassCode(vehicle)) {
     case 'PCP': return carSketch;
     case 'PCV': return busSketch;
-    case 'TWP': return bikeSketch;
     case 'MISD':
     case 'CPM': return jcbSketch;
     default: return truckSketch;
@@ -1112,6 +1118,8 @@ const styles = StyleSheet.create({
   vehicleNoChip: { minHeight: 31, borderRadius: 8, backgroundColor: '#EAF3FF', paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
   vehicleNoText: { color: palette.navy, fontSize: 15.2, lineHeight: 18, fontWeight: '900' },
   truckImage: { width: 148, height: 78, marginTop: 0, alignSelf: 'center', borderRadius: 10 },
+  twpVehicleVisual: { width: 148, height: 78, marginTop: 0, alignSelf: 'center', borderRadius: 10, backgroundColor: '#F7FAFF', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  twpRoadLine: { position: 'absolute', bottom: 8, width: 112, height: 2, borderRadius: 2, backgroundColor: '#D6E5F7' },
   vehicleMake: { color: palette.navy, fontSize: 12.4, lineHeight: 15, fontWeight: '900', marginTop: 5 },
 
   rightPane: { flex: 1, minWidth: 0, borderLeftWidth: 1, borderLeftColor: '#E5ECF5', paddingLeft: 10, position: 'relative' },
