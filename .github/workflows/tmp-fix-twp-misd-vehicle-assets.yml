@@ -1,0 +1,113 @@
+name: Temporary TWP MISD vehicle asset compatibility fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/tmp-fix-twp-misd-vehicle-assets.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix-verify-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Create PNG compatibility assets
+        run: |
+          python -m pip install --quiet Pillow
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+
+          asset_dir = Path('apps/mobile-app/assets/vehicles')
+          for stem in ('twp-bike', 'misd-cpm-jcb'):
+              source = asset_dir / f'{stem}.webp'
+              target = asset_dir / f'{stem}.png'
+              image = Image.open(source).convert('RGBA')
+              if image.size != (240, 240):
+                  raise SystemExit(f'Unexpected {stem} source size: {image.size}')
+              alpha = image.getchannel('A')
+              if alpha.getbbox() is None:
+                  raise SystemExit(f'{stem} source is fully transparent')
+              image.save(target, format='PNG', optimize=True, compress_level=9)
+              check = Image.open(target).convert('RGBA')
+              if check.size != (240, 240) or check.getchannel('A').getbbox() is None:
+                  raise SystemExit(f'{stem} PNG validation failed')
+              print(f'{stem}: {target.stat().st_size} bytes, bbox={check.getchannel("A").getbbox()}')
+          PY
+
+      - name: Switch TWP and MISD to PNG assets
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('apps/mobile-app/app/customer/vehicles.tsx')
+          text = path.read_text()
+          changes = {
+              "const bikeSketch = require('../../assets/vehicles/twp-bike.webp');": "const bikeSketch = require('../../assets/vehicles/twp-bike.png');",
+              "const jcbSketch = require('../../assets/vehicles/misd-cpm-jcb.webp');": "const jcbSketch = require('../../assets/vehicles/misd-cpm-jcb.png');",
+          }
+          for old, new in changes.items():
+              if old not in text:
+                  raise SystemExit(f'Expected source line missing: {old}')
+              text = text.replace(old, new, 1)
+          if 'twp-bike.webp' in text or 'misd-cpm-jcb.webp' in text:
+              raise SystemExit('Problematic WebP references still remain in vehicles.tsx')
+          if 'twp-bike.png' not in text or 'misd-cpm-jcb.png' not in text:
+              raise SystemExit('PNG references were not applied')
+          path.write_text(text)
+          PY
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Mobile typecheck
+        run: npm --workspace apps/mobile-app run typecheck
+
+      - name: Focused mobile lint
+        working-directory: apps/mobile-app
+        run: npx eslint app/customer/vehicles.tsx --quiet
+
+      - name: Android Expo export
+        working-directory: apps/mobile-app
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ci-placeholder.supabase.co' }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'ci-placeholder-public-anon-key' }}
+          NODE_ENV: production
+        run: npx expo export --platform android --output-dir /tmp/twp-misd-asset-fix
+
+      - name: Commit verified fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/mobile-app/app/customer/vehicles.tsx \
+                  apps/mobile-app/assets/vehicles/twp-bike.png \
+                  apps/mobile-app/assets/vehicles/misd-cpm-jcb.png
+          git commit -m 'Fix TWP and MISD vehicle illustrations'
+          git reset --hard HEAD
+          git clean -fd
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
+          echo "PUBLISHED_SOURCE_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Publish Expo preview OTA
+        working-directory: apps/mobile-app
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npx --yes eas-cli@18 update --channel preview --environment preview --message "Fix TWP and MISD vehicle illustrations 2026-08-16" --non-interactive
