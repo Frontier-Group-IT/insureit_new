@@ -9,11 +9,25 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+$BackupFormatVersion = 2
+$ManagedSchemaArtifactVersion = 1
+
 function Write-BackupLog {
     param([string]$Message, [string]$Path)
     $line = "{0} {1}" -f ([DateTime]::UtcNow.ToString("o")), $Message
     Write-Host $line
     if ($Path) { Add-Content -LiteralPath $Path -Value $line -Encoding UTF8 }
+}
+
+function Write-JsonNoBom {
+    param(
+        [Parameter(Mandatory = $true)]$Value,
+        [Parameter(Mandatory = $true)][string]$Path,
+        [int]$Depth = 12
+    )
+    $json = $Value | ConvertTo-Json -Depth $Depth
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [IO.File]::WriteAllText($Path, $json + [Environment]::NewLine, $utf8NoBom)
 }
 
 function Require-Command {
@@ -78,7 +92,7 @@ function Test-FreeSpace {
 function Get-ChecksumInventory {
     param([string]$BackupPath)
     $roots = @()
-    foreach ($name in @("database", "storage")) {
+    foreach ($name in @("database", "metadata", "migrations", "storage")) {
         $candidate = Join-Path $BackupPath $name
         if (Test-Path -LiteralPath $candidate) { $roots += $candidate }
     }
@@ -94,6 +108,133 @@ function Get-ChecksumInventory {
     return @($items)
 }
 
+function Get-ManagedSchemaSnapshot {
+    param(
+        [Parameter(Mandatory = $true)][string]$DatabaseUrl,
+        [Parameter(Mandatory = $true)][string]$ProjectRef
+    )
+
+    $sql = @'
+BEGIN READ ONLY;
+SELECT jsonb_build_object(
+    'policies',
+    COALESCE(
+        (
+            SELECT jsonb_agg(
+                jsonb_build_object(
+                    'schema', schemaname,
+                    'table', tablename,
+                    'name', policyname,
+                    'permissive', permissive,
+                    'roles', roles,
+                    'cmd', cmd,
+                    'qual', qual,
+                    'with_check', with_check
+                )
+                ORDER BY policyname
+            )
+            FROM pg_policies
+            WHERE schemaname = 'storage'
+              AND tablename = 'objects'
+        ),
+        '[]'::jsonb
+    ),
+    'triggers',
+    COALESCE(
+        (
+            SELECT jsonb_agg(
+                jsonb_build_object(
+                    'schema', n.nspname,
+                    'table', c.relname,
+                    'name', t.tgname,
+                    'definition', pg_get_triggerdef(t.oid, true)
+                )
+                ORDER BY t.tgname
+            )
+            FROM pg_trigger t
+            JOIN pg_class c ON c.oid = t.tgrelid
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE NOT t.tgisinternal
+              AND n.nspname = 'auth'
+              AND c.relname = 'users'
+              AND t.tgname = 'on_auth_user_created'
+        ),
+        '[]'::jsonb
+    )
+);
+COMMIT;
+'@
+
+    $raw = @(& psql "$DatabaseUrl" -X -q -v ON_ERROR_STOP=1 -t -A -P pager=off -c $sql)
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
+        throw "Managed auth/storage schema extraction failed with psql exit code $exitCode."
+    }
+
+    $json = [string]::Join([Environment]::NewLine, $raw).Trim()
+    if ([string]::IsNullOrWhiteSpace($json)) {
+        throw "Managed auth/storage schema extraction returned no data."
+    }
+
+    $parsed = $json | ConvertFrom-Json
+    $policies = @($parsed.policies)
+    $triggers = @($parsed.triggers)
+    if ($policies.Count -lt 1) {
+        throw "Managed-schema capture found no storage.objects policies. Tooling must be reviewed before accepting this backup."
+    }
+    if ($triggers.Count -ne 1 -or [string]$triggers[0].name -ne "on_auth_user_created") {
+        throw "Managed-schema capture did not find exactly auth.users.on_auth_user_created. Tooling must be reviewed before accepting this backup."
+    }
+
+    return [ordered]@{
+        version = $ManagedSchemaArtifactVersion
+        sourceProjectRef = $ProjectRef
+        capturedAtUtc = [DateTime]::UtcNow.ToString("o")
+        scope = [ordered]@{
+            policies = "storage.objects"
+            trigger = "auth.users.on_auth_user_created"
+        }
+        policies = $policies
+        triggers = $triggers
+    }
+}
+
+function Copy-GitMigrationSnapshot {
+    param(
+        [Parameter(Mandatory = $true)][string]$RepoRoot,
+        [Parameter(Mandatory = $true)][string]$Destination,
+        [Parameter(Mandatory = $true)][string]$ExpectedCommit,
+        [Parameter(Mandatory = $true)][string]$WorkPath
+    )
+
+    $zipPath = Join-Path $WorkPath "migration-snapshot.zip"
+    $extractPath = Join-Path $WorkPath "migration-snapshot-extracted"
+    if (Test-Path -LiteralPath $zipPath) { Remove-Item -LiteralPath $zipPath -Force }
+    if (Test-Path -LiteralPath $extractPath) { Remove-Item -LiteralPath $extractPath -Recurse -Force }
+
+    Invoke-Checked "git" @("-C",$RepoRoot,"archive","--format=zip","--output",$zipPath,$ExpectedCommit,"supabase/migrations") "Migration snapshot archive"
+    Expand-Archive -LiteralPath $zipPath -DestinationPath $extractPath -Force
+
+    $source = Join-Path $extractPath "supabase\migrations"
+    if (-not (Test-Path -LiteralPath $source -PathType Container)) {
+        throw "Git migration snapshot did not contain supabase/migrations."
+    }
+
+    New-Item -ItemType Directory -Force -Path $Destination | Out-Null
+    Get-ChildItem -LiteralPath $source -Force | ForEach-Object {
+        Copy-Item -LiteralPath $_.FullName -Destination $Destination -Recurse -Force
+    }
+
+    Remove-Item -LiteralPath $zipPath -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $extractPath -Recurse -Force -ErrorAction SilentlyContinue
+
+    $files = @(Get-ChildItem -LiteralPath $Destination -File -Recurse)
+    if ($files.Count -lt 1) {
+        throw "Migration snapshot is empty."
+    }
+    return $files.Count
+}
+
 if (-not (Test-Path -LiteralPath $ConfigPath)) {
     throw "Config file not found: $ConfigPath. Copy config.example.json to config.local.json first."
 }
@@ -107,6 +248,7 @@ $secrets = Import-Clixml -LiteralPath $SecretsPath
 Require-Command "supabase"
 Require-Command "docker"
 Require-Command "git"
+Require-Command "psql"
 if (-not $SkipStorage) { Require-Command "rclone" }
 
 $dockerInfo = & docker info --format "{{.ServerVersion}}" 2>$null
@@ -119,13 +261,25 @@ Test-FreeSpace -BackupRoot $config.backupRoot -MinimumFreeSpaceGB ([double]$conf
 $dbUrl = Convert-SecureStringToPlainText $secrets.DatabaseUrl
 $s3Secret = Convert-SecureStringToPlainText $secrets.S3SecretAccessKey
 $s3AccessKeyId = [string]$secrets.S3AccessKeyId
+$projectRef = [string]$config.projectRef
 
 if ([string]::IsNullOrWhiteSpace($dbUrl)) { throw "Stored database connection string is empty." }
+if ([string]::IsNullOrWhiteSpace($projectRef) -or -not $dbUrl.Contains($projectRef)) {
+    throw "STOPPED: stored database connection does not match config projectRef '$projectRef'."
+}
 if (-not $SkipStorage -and ([string]::IsNullOrWhiteSpace($s3AccessKeyId) -or [string]::IsNullOrWhiteSpace($s3Secret))) {
     throw "Stored S3 credentials are incomplete."
 }
 
-Write-Host "Preflight passed for project $($config.projectRef)." -ForegroundColor Green
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+$gitCommit = ((@(& git -C $repoRoot rev-parse HEAD 2>$null) | Select-Object -First 1) -as [string]).Trim()
+if ($LASTEXITCODE -ne 0 -or $gitCommit -notmatch '^[0-9a-fA-F]{40}$') {
+    throw "Could not resolve the repository HEAD commit."
+}
+
+Write-Host "Preflight passed for project $projectRef." -ForegroundColor Green
+Write-Host "Backup format: v$BackupFormatVersion"
+Write-Host "Git snapshot:   $gitCommit"
 if ($PreflightOnly) {
     Write-Host "No backup was created."
     return
@@ -146,26 +300,43 @@ if (Test-Path -LiteralPath $finalPath) { throw "Backup already exists: $finalPat
 
 New-Item -ItemType Directory -Path $partialPath | Out-Null
 $dbPath = Join-Path $partialPath "database"
+$metadataPath = Join-Path $partialPath "metadata"
+$migrationsPath = Join-Path $partialPath "migrations"
 $storagePath = Join-Path $partialPath "storage"
 New-Item -ItemType Directory -Path $dbPath | Out-Null
+New-Item -ItemType Directory -Path $metadataPath | Out-Null
+New-Item -ItemType Directory -Path $migrationsPath | Out-Null
 if (-not $SkipStorage) { New-Item -ItemType Directory -Path $storagePath | Out-Null }
 $logPath = Join-Path $partialPath "backup.log"
 
 $manifest = [ordered]@{
-    version = 1
+    version = $BackupFormatVersion
+    format = "insureit-supabase-logical-v2"
     backupId = $backupId
     status = "in_progress"
     startedAtUtc = $startedUtc.ToString("o")
     completedAtUtc = $null
-    projectRef = [string]$config.projectRef
+    projectRef = $projectRef
     region = [string]$config.region
-    gitCommit = ""
+    gitCommit = $gitCommit
     database = [ordered]@{
         roles = "database/roles.sql"
         schema = "database/schema.sql"
         data = "database/data.sql"
         migrationHistorySchema = "database/history_schema.sql"
         migrationHistoryData = "database/history_data.sql"
+    }
+    managedSchema = [ordered]@{
+        file = "metadata/managed-schema.json"
+        artifactVersion = $ManagedSchemaArtifactVersion
+        storageObjectPolicyCount = 0
+        authUserTriggerCount = 0
+    }
+    migrationSnapshot = [ordered]@{
+        root = "migrations"
+        source = "supabase/migrations"
+        gitCommit = $gitCommit
+        fileCount = 0
     }
     storage = [ordered]@{
         skipped = [bool]$SkipStorage
@@ -177,11 +348,12 @@ $manifest = [ordered]@{
 }
 
 try {
-    $gitCommit = (& git -C (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path rev-parse HEAD 2>$null | Select-Object -First 1)
-    if ($LASTEXITCODE -eq 0) { $manifest.gitCommit = [string]$gitCommit }
+    Write-JsonNoBom -Value $manifest -Path (Join-Path $partialPath "manifest.json")
+    Write-BackupLog "Backup started: $backupId (format v$BackupFormatVersion)" $logPath
 
-    $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $partialPath "manifest.json") -Encoding UTF8
-    Write-BackupLog "Backup started: $backupId" $logPath
+    $migrationCount = Copy-GitMigrationSnapshot -RepoRoot $repoRoot -Destination $migrationsPath -ExpectedCommit $gitCommit -WorkPath $partialPath
+    $manifest.migrationSnapshot.fileCount = $migrationCount
+    Write-BackupLog "Git migration snapshot captured: $migrationCount files at $gitCommit." $logPath
 
     Invoke-Checked "supabase" @("db","dump","--db-url",$dbUrl,"-f",(Join-Path $dbPath "roles.sql"),"--role-only") "Roles dump"
     Invoke-Checked "supabase" @("db","dump","--db-url",$dbUrl,"-f",(Join-Path $dbPath "schema.sql")) "Schema dump"
@@ -189,6 +361,13 @@ try {
     Invoke-Checked "supabase" @("db","dump","--db-url",$dbUrl,"-f",(Join-Path $dbPath "history_schema.sql"),"--schema","supabase_migrations") "Migration history schema dump"
     Invoke-Checked "supabase" @("db","dump","--db-url",$dbUrl,"-f",(Join-Path $dbPath "history_data.sql"),"--use-copy","--data-only","--schema","supabase_migrations") "Migration history data dump"
     Write-BackupLog "Database dump completed." $logPath
+
+    $managed = Get-ManagedSchemaSnapshot -DatabaseUrl $dbUrl -ProjectRef $projectRef
+    $managedPath = Join-Path $metadataPath "managed-schema.json"
+    Write-JsonNoBom -Value $managed -Path $managedPath -Depth 20
+    $manifest.managedSchema.storageObjectPolicyCount = @($managed.policies).Count
+    $manifest.managedSchema.authUserTriggerCount = @($managed.triggers).Count
+    Write-BackupLog ("Managed schema captured: {0} storage policies / {1} auth trigger." -f $manifest.managedSchema.storageObjectPolicyCount,$manifest.managedSchema.authUserTriggerCount) $logPath
 
     if (-not $SkipStorage) {
         Set-RcloneSourceEnvironment -Endpoint ([string]$config.storageEndpoint) -Region ([string]$config.region) -AccessKeyId $s3AccessKeyId -SecretAccessKey $s3Secret
@@ -206,8 +385,9 @@ try {
 
                 Invoke-Checked "rclone" @("copy","insureit:$bucket",$target,"--fast-list","--create-empty-src-dirs","--quiet") "Storage copy for bucket '$bucket'"
 
-                $sizeJson = (& rclone size "insureit:$bucket" --json --quiet | Out-String)
+                $sizeRaw = @(& rclone size "insureit:$bucket" --json --quiet)
                 if ($LASTEXITCODE -ne 0) { throw "Could not measure Storage bucket '$bucket'." }
+                $sizeJson = [string]::Join([Environment]::NewLine, $sizeRaw)
                 $size = $sizeJson | ConvertFrom-Json
                 $count = [int64]$size.count
                 $bytes = [int64]$size.bytes
@@ -226,9 +406,14 @@ try {
         }
     }
 
+    $endingGitCommit = ((@(& git -C $repoRoot rev-parse HEAD 2>$null) | Select-Object -First 1) -as [string]).Trim()
+    if ($LASTEXITCODE -ne 0 -or $endingGitCommit -ne $gitCommit) {
+        throw "Repository HEAD changed while the backup was running. Backup rejected so database artifacts and migration snapshot cannot be mismatched."
+    }
+
     $checksums = Get-ChecksumInventory -BackupPath $partialPath
     if ($checksums.Count -eq 0) { throw "No backup payload files were produced." }
-    $checksums | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $partialPath "checksums.json") -Encoding UTF8
+    Write-JsonNoBom -Value $checksums -Path (Join-Path $partialPath "checksums.json") -Depth 4
 
     foreach ($entry in $checksums) {
         $fullPath = Join-Path $partialPath ($entry.Path.Replace("/", "\"))
@@ -239,24 +424,29 @@ try {
 
     $manifest.status = "healthy"
     $manifest.completedAtUtc = [DateTime]::UtcNow.ToString("o")
-    $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $partialPath "manifest.json") -Encoding UTF8
-    Write-BackupLog "Checksum verification passed." $logPath
+    Write-JsonNoBom -Value $manifest -Path (Join-Path $partialPath "manifest.json")
+    Write-BackupLog "Checksum verification passed for format v$BackupFormatVersion." $logPath
 
     Move-Item -LiteralPath $partialPath -Destination $finalPath
     Write-Host ""
     Write-Host "Backup completed successfully." -ForegroundColor Green
+    Write-Host ("Format: v{0}" -f $BackupFormatVersion)
+    Write-Host ("Managed schema: {0} storage policies / {1} auth trigger" -f $manifest.managedSchema.storageObjectPolicyCount,$manifest.managedSchema.authUserTriggerCount)
+    Write-Host ("Migration snapshot: {0} files" -f $manifest.migrationSnapshot.fileCount)
     Write-Host $finalPath
 }
 catch {
     $manifest.status = "failed"
     $manifest.completedAtUtc = [DateTime]::UtcNow.ToString("o")
     try {
-        $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $partialPath "manifest.json") -Encoding UTF8
+        Write-JsonNoBom -Value $manifest -Path (Join-Path $partialPath "manifest.json")
         Write-BackupLog ("Backup failed: " + $_.Exception.Message) $logPath
     } catch {}
     throw
 }
 finally {
+    Clear-RcloneSourceEnvironment
     $dbUrl = $null
     $s3Secret = $null
+    $secrets = $null
 }
