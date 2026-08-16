@@ -78,6 +78,47 @@ function Get-RcloneSize {
     return ($json | ConvertFrom-Json)
 }
 
+function Invoke-ForcedStorageUpload {
+    param(
+        [Parameter(Mandatory = $true)][string]$LocalPath,
+        [Parameter(Mandatory = $true)][string]$RemotePath,
+        [Parameter(Mandatory = $true)][string]$BucketName
+    )
+
+    # The database snapshot restores storage.objects metadata before the physical
+    # object bytes exist. A normal sync can therefore mistake metadata-only rows
+    # for real destination files and attempt SetModTime/CopyObject against a
+    # non-existent object key. Force a real PUT for every local object instead.
+    & rclone copy "$LocalPath" "$RemotePath" `
+        --no-check-dest `
+        --no-update-modtime `
+        --retries 1 `
+        --fast-list `
+        --quiet
+
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
+        throw "Forced Storage upload '$BucketName' failed with exit code $exitCode. STOP and inspect before retrying."
+    }
+}
+
+function Invoke-DownloadedStorageCheck {
+    param(
+        [Parameter(Mandatory = $true)][string]$LocalPath,
+        [Parameter(Mandatory = $true)][string]$RemotePath,
+        [Parameter(Mandatory = $true)][string]$BucketName
+    )
+
+    # --download forces rclone to read the destination object bytes rather than
+    # trusting Storage metadata or a remote checksum. This proves that the files
+    # physically exist and match the verified local backup.
+    & rclone check "$LocalPath" "$RemotePath" --download --quiet
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
+        throw "Downloaded byte verification failed for '$BucketName' with exit code $exitCode."
+    }
+}
+
 Require-Command "psql"
 Require-Command "rclone"
 
@@ -192,8 +233,9 @@ try {
     Write-Host ("Storage objects:  {0}" -f $expectedObjectCount)
     Write-Host ("Storage bytes:    {0:N2} MB" -f ($expectedBytes / 1MB))
     Write-Host ""
-    Write-Host "Method: exact-mirror each verified local backup bucket to the approved DR Supabase Storage project." -ForegroundColor Yellow
-    Write-Host "Extra files in those DR buckets will be removed by rclone sync." -ForegroundColor Yellow
+    Write-Host "Method: force-upload every verified local object byte to the approved DR Supabase Storage project." -ForegroundColor Yellow
+    Write-Host "The destination metadata is already restored, so ordinary timestamp-based sync is intentionally bypassed." -ForegroundColor Yellow
+    Write-Host "After upload, every destination object is downloaded and compared against the local backup." -ForegroundColor Yellow
     Write-Host "Production Storage is never modified by this script." -ForegroundColor Green
 
     if (-not $Execute) {
@@ -209,7 +251,7 @@ try {
     if ($confirmation -cne $confirmationPhrase) { throw "DR Storage restore cancelled." }
 
     Write-Host ""
-    Write-Host "Mirroring Storage bytes to DR..." -ForegroundColor Cyan
+    Write-Host "Restoring physical Storage bytes to DR..." -ForegroundColor Cyan
 
     [int64]$actualTotalCount = 0
     [int64]$actualTotalBytes = 0
@@ -217,14 +259,12 @@ try {
     foreach ($bucket in $expectedBuckets) {
         $name = [string]$bucket.name
         $localBucket = Join-Path (Join-Path $backup "storage") $name
+        $remoteBucket = "drrestore:$name"
 
-        & rclone sync "$localBucket" "drrestore:$name" --fast-list --quiet
-        $syncExitCode = $LASTEXITCODE
-        if ($syncExitCode -ne 0) {
-            throw "Storage mirror '$name' failed with exit code $syncExitCode. STOP and inspect before retrying."
-        }
+        Invoke-ForcedStorageUpload -LocalPath $localBucket -RemotePath $remoteBucket -BucketName $name
+        Invoke-DownloadedStorageCheck -LocalPath $localBucket -RemotePath $remoteBucket -BucketName $name
 
-        $size = Get-RcloneSize -RemotePath "drrestore:$name"
+        $size = Get-RcloneSize -RemotePath $remoteBucket
         $actualCount = [int64]$size.count
         $actualBytes = [int64]$size.bytes
         $expectedCount = [int64]$bucket.objects
@@ -236,7 +276,7 @@ try {
 
         $actualTotalCount += $actualCount
         $actualTotalBytes += $actualBytes
-        Write-Host ("  {0}: {1} objects / {2:N2} MB" -f $name, $actualCount, ($actualBytes / 1MB))
+        Write-Host ("  {0}: {1} objects / {2:N2} MB / byte-check passed" -f $name, $actualCount, ($actualBytes / 1MB))
     }
 
     if ($actualTotalCount -ne $expectedObjectCount -or $actualTotalBytes -ne $expectedBytes) {
@@ -244,7 +284,7 @@ try {
     }
 
     Write-Host ""
-    Write-Host "DR STORAGE RESTORE COMPLETED AND VERIFIED." -ForegroundColor Green
+    Write-Host "DR STORAGE RESTORE COMPLETED AND BYTE-VERIFIED." -ForegroundColor Green
     Write-Host ("Buckets: {0}" -f $expectedBucketCount)
     Write-Host ("Objects: {0}" -f $actualTotalCount)
     Write-Host ("Bytes:   {0}" -f $actualTotalBytes)
