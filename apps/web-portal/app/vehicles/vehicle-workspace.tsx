@@ -115,7 +115,6 @@ export function VehicleWorkspace({ rows }: { rows: VehicleRow[] }) {
               <th className="w-[190px] px-2.5 py-2">Make / model</th>
               <th className="w-[140px] px-2.5 py-2">Registration</th>
               <th className="w-[140px] px-2.5 py-2">Next action</th>
-              <th className="w-[76px] px-2.5 py-2 text-center">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#EEF2F6]">
@@ -129,7 +128,6 @@ export function VehicleWorkspace({ rows }: { rows: VehicleRow[] }) {
                 <td className="px-2.5"><p className="truncate font-semibold">{[vehicle.make, vehicle.model].filter(Boolean).join(" ") || "-"}</p></td>
                 <td className="px-2.5"><RegistrationPill vehicle={vehicle} /></td>
                 <td className="px-2.5"><NextAction vehicle={vehicle} /></td>
-                <td className="px-2.5 text-center"><Link href={`/vehicles/${vehicle.id}/edit`} className="rounded-lg border border-[#BFD3F7] bg-[#F0F6FF] px-2.5 py-1.5 text-[9.5px] font-bold text-[#174EA6]">Open</Link></td>
               </tr>
             ))}
           </tbody>
