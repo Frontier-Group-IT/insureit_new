@@ -32,14 +32,12 @@ function Redact-DumpPlanText {
         $safe = $safe.Replace($DatabaseUrl, "<REDACTED_DB_URL>")
     }
 
-    # Catch connection strings even if the CLI rewrites/normalizes the URL.
     $safe = [regex]::Replace(
         $safe,
         '(?i)postgres(?:ql)?://[^\s''"`]+',
         '<REDACTED_DB_URL>'
     )
 
-    # Catch common password environment/argument forms without exposing values.
     $safe = [regex]::Replace($safe, '(?im)(PGPASSWORD\s*=\s*)[^\s]+', '$1<REDACTED>')
     $safe = [regex]::Replace($safe, '(?im)(--password(?:=|\s+))[^\s]+', '$1<REDACTED>')
 
@@ -50,15 +48,11 @@ function Invoke-SanitizedDryRun {
     param(
         [Parameter(Mandatory = $true)][string]$Label,
         [Parameter(Mandatory = $true)][string]$DatabaseUrl,
-        [Parameter(Mandatory = $true)][string[]]$Arguments
+        [string[]]$Arguments = @()
     )
 
     $fullArgs = @('db','dump','--db-url',$DatabaseUrl) + $Arguments + @('--dry-run')
 
-    # Supabase CLI intentionally writes its DRY RUN banner/script to stderr.
-    # Windows PowerShell 5.1 can promote redirected native stderr to a terminating
-    # NativeCommandError when the script-level ErrorActionPreference is Stop.
-    # Temporarily allow native stderr so we can capture it, then trust LASTEXITCODE.
     $previousErrorActionPreference = $ErrorActionPreference
     try {
         $ErrorActionPreference = 'Continue'
