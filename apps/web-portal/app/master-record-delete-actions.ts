@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-export type DeletableMasterEntity = "customer" | "vehicle" | "policy" | "external_policy" | "claim";
+export type DeletableMasterEntity = "customer" | "customer_onboarding_application" | "vehicle" | "policy" | "external_policy" | "claim";
 export type MasterRecordDeleteResult = { ok: true } | { ok: false; error: string };
 
 type Dependency = {
@@ -14,7 +14,7 @@ type Dependency = {
 };
 
 const entityConfig: Record<DeletableMasterEntity, {
-  table: "customers" | "vehicles" | "policies" | "external_policies" | "claims";
+  table: "customers" | "customer_onboarding_applications" | "vehicles" | "policies" | "external_policies" | "claims";
   label: string;
   revalidate: string[];
   dependencies: Dependency[];
@@ -28,6 +28,12 @@ const entityConfig: Record<DeletableMasterEntity, {
       { table: "policies", column: "customer_id", label: "policy" },
       { table: "claims", column: "customer_id", label: "claim" }
     ]
+  },
+  customer_onboarding_application: {
+    table: "customer_onboarding_applications",
+    label: "onboarding application",
+    revalidate: ["/customers/applications", "/customers"],
+    dependencies: []
   },
   vehicle: {
     table: "vehicles",
@@ -70,12 +76,27 @@ function pluralize(label: string, count: number) {
   return count === 1 ? label : `${label}s`;
 }
 
+type StorageFile = { storage_bucket: string; storage_path: string };
+
+async function removeStorageFiles(admin: ReturnType<typeof createSupabaseAdminClient>, files: StorageFile[]) {
+  if (!files.length) return;
+  const filesByBucket = new Map<string, string[]>();
+  for (const file of files) {
+    const paths = filesByBucket.get(file.storage_bucket) ?? [];
+    paths.push(file.storage_path);
+    filesByBucket.set(file.storage_bucket, paths);
+  }
+  await Promise.allSettled(
+    Array.from(filesByBucket.entries()).map(([bucket, paths]) => admin.storage.from(bucket).remove(paths))
+  );
+}
+
 export async function deleteMasterRecord(entity: DeletableMasterEntity, id: string): Promise<MasterRecordDeleteResult> {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
 
   if (!profile?.id || profile.role !== "it_super_user") {
-    return { ok: false, error: "Only the IT Super User can permanently delete customer, vehicle, policy, external policy or claim records." };
+    return { ok: false, error: "Only the IT Super User can permanently delete customer, onboarding application, vehicle, policy, external policy or claim records." };
   }
 
   if (!(entity in entityConfig) || !isUuid(id)) {
@@ -85,14 +106,27 @@ export async function deleteMasterRecord(entity: DeletableMasterEntity, id: stri
   const config = entityConfig[entity];
   const admin = createSupabaseAdminClient();
 
-  const { data: existing, error: existingError } = await admin
-    .from(config.table)
-    .select("id")
-    .eq("id", id)
-    .maybeSingle<{ id: string }>();
+  let linkedCustomerId: string | null = null;
+  if (entity === "customer_onboarding_application") {
+    const { data: existing, error: existingError } = await admin
+      .from("customer_onboarding_applications")
+      .select("id, customer_id")
+      .eq("id", id)
+      .maybeSingle<{ id: string; customer_id: string | null }>();
 
-  if (existingError) return { ok: false, error: `Unable to verify the ${config.label}: ${existingError.message}` };
-  if (!existing) return { ok: false, error: `This ${config.label} no longer exists.` };
+    if (existingError) return { ok: false, error: `Unable to verify the ${config.label}: ${existingError.message}` };
+    if (!existing) return { ok: false, error: `This ${config.label} no longer exists.` };
+    linkedCustomerId = existing.customer_id;
+  } else {
+    const { data: existing, error: existingError } = await admin
+      .from(config.table)
+      .select("id")
+      .eq("id", id)
+      .maybeSingle<{ id: string }>();
+
+    if (existingError) return { ok: false, error: `Unable to verify the ${config.label}: ${existingError.message}` };
+    if (!existing) return { ok: false, error: `This ${config.label} no longer exists.` };
+  }
 
   for (const dependency of config.dependencies) {
     const { count, error } = await admin
@@ -109,18 +143,31 @@ export async function deleteMasterRecord(entity: DeletableMasterEntity, id: stri
     }
   }
 
-  const claimFiles: Array<{ storage_bucket: string; storage_path: string }> = [];
+  const storageFiles: StorageFile[] = [];
   if (entity === "claim") {
     const { data: documents, error: documentsError } = await admin
       .from("claim_documents")
       .select("storage_bucket, storage_path")
       .eq("claim_id", id)
-      .returns<Array<{ storage_bucket: string; storage_path: string }>>();
+      .returns<StorageFile[]>();
 
     if (documentsError) {
       return { ok: false, error: `Unable to verify linked claim documents: ${documentsError.message}` };
     }
-    claimFiles.push(...(documents ?? []).filter((document) => document.storage_bucket && document.storage_path));
+    storageFiles.push(...(documents ?? []).filter((document) => document.storage_bucket && document.storage_path));
+  }
+
+  if (entity === "customer_onboarding_application") {
+    const { data: documents, error: documentsError } = await admin
+      .from("customer_onboarding_documents")
+      .select("storage_bucket, storage_path")
+      .eq("application_id", id)
+      .returns<StorageFile[]>();
+
+    if (documentsError) {
+      return { ok: false, error: `Unable to verify linked onboarding documents: ${documentsError.message}` };
+    }
+    storageFiles.push(...(documents ?? []).filter((document) => document.storage_bucket && document.storage_path));
   }
 
   const { error: deleteError } = await admin.from(config.table).delete().eq("id", id);
@@ -134,17 +181,7 @@ export async function deleteMasterRecord(entity: DeletableMasterEntity, id: stri
     };
   }
 
-  if (entity === "claim" && claimFiles.length) {
-    const filesByBucket = new Map<string, string[]>();
-    for (const file of claimFiles) {
-      const paths = filesByBucket.get(file.storage_bucket) ?? [];
-      paths.push(file.storage_path);
-      filesByBucket.set(file.storage_bucket, paths);
-    }
-    await Promise.allSettled(
-      Array.from(filesByBucket.entries()).map(([bucket, paths]) => admin.storage.from(bucket).remove(paths))
-    );
-  }
+  await removeStorageFiles(admin, storageFiles);
 
   await admin.from("audit_logs").insert({
     actor_id: profile.id,
@@ -154,7 +191,13 @@ export async function deleteMasterRecord(entity: DeletableMasterEntity, id: stri
     old_data: {
       id,
       deletion_source: "it_super_user_master_data_control",
-      ...(entity === "claim" ? { cascaded_claim_records: true, storage_files_cleanup_attempted: claimFiles.length } : {})
+      ...(entity === "claim" ? { cascaded_claim_records: true, storage_files_cleanup_attempted: storageFiles.length } : {}),
+      ...(entity === "customer_onboarding_application" ? {
+        cascaded_application_contacts_and_documents: true,
+        storage_files_cleanup_attempted: storageFiles.length,
+        linked_customer_preserved: Boolean(linkedCustomerId),
+        linked_customer_id: linkedCustomerId
+      } : {})
     }
   });
 
