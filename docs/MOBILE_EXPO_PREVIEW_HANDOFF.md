@@ -171,6 +171,27 @@ Use visual inspection for the changed UI. If the relevant screen is blocked by d
 
 ## 7. Current Recent Preview Evidence
 
+Latest preview OTA continuing from the accident-time-picker baseline:
+
+```text
+Source branch: mobile/timepicker-spot-actions
+Source commit: 2a442b90a7ed9c14d496ff432e698ccef9b64edc
+Base commit: 82780eb19151fc8acda6525489bd4bd18ea04687
+Message: Refine external claim spot status actions
+Update group ID: 7e49b25d-f0f6-4993-b630-6d072d29b192
+Android update ID: 01a00e9b-4074-7469-b4f3-1b94da589f4f
+iOS update ID: 01a00e9b-4074-7335-838a-c3b8be8e28a0
+Runtime version: 0.2.0
+EAS metadata: isRollBackToEmbedded false
+Verification before publish: `npm --workspace apps/mobile-app run typecheck` passed; focused ESLint for `claim-detail.tsx`, `self-managed-spot-status.tsx`, and `request-claim-assistance.tsx` passed.
+Publish environment: Expo CLI logged `env: load .env` and exported the expected `EXPO_PUBLIC_*` names.
+Device verification: blocked because `adb devices` showed no connected device immediately after publish.
+```
+
+Included change:
+
+- External/self-tracked claim detail now removes the `Get Help` quick action and lays out `Update Current Stage` plus `Request Assistance` as two equal side-by-side columns. Sankalp-managed claim actions are unchanged.
+
 Latest approved preview OTA rollback to the user-requested accident-time-picker state:
 
 ```text

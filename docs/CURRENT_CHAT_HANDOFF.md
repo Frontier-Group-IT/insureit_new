@@ -10,6 +10,31 @@ Policy Onboarding OCR hardening remains an active workstream. Production portal 
 
 ## Mobile Expo preview
 
+**DEPLOYED / ADB VERIFICATION BLOCKED:** The external-claim Spot Status/Claim Tracker action row was refined as the next OTA after the accident-time-picker baseline.
+
+```text
+Source branch: mobile/timepicker-spot-actions
+Source commit: 2a442b90a7ed9c14d496ff432e698ccef9b64edc
+Base commit: 82780eb19151fc8acda6525489bd4bd18ea04687
+Message: Refine external claim spot status actions
+Update group ID: 7e49b25d-f0f6-4993-b630-6d072d29b192
+Android update ID: 01a00e9b-4074-7469-b4f3-1b94da589f4f
+iOS update ID: 01a00e9b-4074-7335-838a-c3b8be8e28a0
+Runtime version: 0.2.0
+```
+
+Included change: for external/self-tracked claim detail, the `Get Help` quick action was removed and `Update Current Stage` plus `Request Assistance` now render as two equal side-by-side columns. Sankalp-managed claim actions are unchanged.
+
+Verification:
+
+```text
+npm --workspace apps/mobile-app run typecheck
+npx eslint app/customer/claim-detail.tsx app/customer/self-managed-spot-status.tsx app/customer/request-claim-assistance.tsx --quiet
+npx eas-cli update:list --branch preview --limit 2 --json --non-interactive
+```
+
+Expo publish succeeded and loaded mobile `.env`. ADB device verification is still pending because `adb devices` showed no connected device immediately after publish.
+
 **DEPLOYED / VERIFIED:** At the user's explicit request, Expo preview was rolled back to the exact accident-time-picker OTA state. Later hero-fix groups are superseded for now.
 
 ```text
