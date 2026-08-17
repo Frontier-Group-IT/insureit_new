@@ -142,8 +142,13 @@ try {
         }
         $localFiles = @(Get-ChildItem -LiteralPath $localBucketPath -File -Recurse)
         $localObjects = [int64]$localFiles.Count
-        $localBytes = [int64](($localFiles | Measure-Object -Property Length -Sum).Sum)
-        if ($localObjects -eq 0) { $localBytes = 0L }
+        if ($localObjects -eq 0) {
+            $localBytes = 0L
+        }
+        else {
+            $localMeasure = $localFiles | Measure-Object -Property Length -Sum
+            $localBytes = [int64]$localMeasure.Sum
+        }
 
         $objectMatch = ($dbObjects -eq $liveObjects -and $liveObjects -eq $backupObjects -and $backupObjects -eq $localObjects)
         $byteMatch = ($liveBytes -eq $backupBytes -and $backupBytes -eq $localBytes)
