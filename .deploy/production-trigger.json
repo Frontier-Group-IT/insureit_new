@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy icon-only Policy Edit policy-copy actions.",
-  "deploy_requested_at": "2026-08-17T22:33:00+05:30",
+  "purpose": "Deploy shortened registration validation popup message.",
+  "deploy_requested_at": "2026-08-17T22:43:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #395 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "332653d2bb004eda36d3b3babba8628033e502a7",
-  "release_scope": "UI-only refinement to the Policy Edit footer when a policy copy already exists: View Policy uses a bare eye icon and Replace uses a bare refresh icon, with no fill, border, or icon background. Keep the Add Policy Copy UI exactly unchanged. Preserve tooltips, accessibility labels, loading states, document viewing/replacement behavior, Cancel, Save Policy Changes, and all backend/storage logic.",
-  "verification": "PR #395 Verify web portal run 32048445486 passed all regressions, typecheck, lint, and production build on head a0a8327ae4b05e4949a8d69c180cfe9abb88cc77 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #396 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "920e5821767f0f08527e46b7a26a8c7bfd8350a8",
+  "release_scope": "Text-only UI change in the Add Policy registration validation popup: replace the detailed registration format sentence with 'Enter a valid Registration number.' Keep the popup design, Check details title, icon, typography, spacing, colors, OK button, validation logic, and all other functionality unchanged. No backend, Supabase, database, schema, storage, or migration changes.",
+  "verification": "PR #396 Verify web portal run 32049329797 passed all regressions, typecheck, lint, and production build on head 5a01f31c1007ea9a8852dfc828efd5eaf0cf9cff before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
