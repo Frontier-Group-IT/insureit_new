@@ -114,10 +114,10 @@ export function PolicyWorkspace({ rows }: { rows: PolicyRow[] }) {
       </div>
 
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[1170px] table-fixed text-left text-[11px] text-[#252944]">
+        <table className="w-full min-w-[1098px] table-fixed text-left text-[11px] text-[#252944]">
           <thead className="sticky top-0 z-10 border-b border-[#E2E8F0] bg-[#F8FAFC] text-[9px] font-bold uppercase tracking-[0.06em] text-[#64748B]">
             <tr>
-              <th className="w-[190px] px-3 py-2">Policy</th>
+              <th className="w-[190px] px-3 py-2">Policy Type</th>
               <th className="w-[188px] px-2.5 py-2">Customer</th>
               <th className="w-[142px] px-2.5 py-2">Vehicle</th>
               <th className="w-[178px] px-2.5 py-2">Insurer</th>
@@ -126,7 +126,6 @@ export function PolicyWorkspace({ rows }: { rows: PolicyRow[] }) {
               <th className="w-[108px] px-2.5 py-2 text-right">IDV</th>
               <th className="w-[108px] px-2.5 py-2 text-right">Premium</th>
               <th className="w-[132px] px-2.5 py-2">Source</th>
-              <th className="w-[72px] px-2.5 py-2 text-center">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#EEF2F6]">
@@ -141,7 +140,6 @@ export function PolicyWorkspace({ rows }: { rows: PolicyRow[] }) {
                 <td className="px-2.5 text-right font-semibold tabular-nums">{formatCurrency(policy.insured_declared_value)}</td>
                 <td className="px-2.5 text-right font-semibold tabular-nums">{formatCurrency(policy.gross_premium)}</td>
                 <td className="px-2.5"><p className="truncate font-semibold capitalize">{policy.source_name ?? policy.intermediary_type?.replaceAll("_", " ") ?? "Direct"}</p><p className="truncate text-[9px] leading-4 text-[#64748B]">{policy.intermediary_code ?? "Sankalp"}</p></td>
-                <td className="px-2.5 text-center"><Link href={`/policies/${policy.id}/edit`} className="rounded-lg border border-[#BFD3F7] bg-[#F0F6FF] px-2.5 py-1.5 text-[9.5px] font-bold text-[#174EA6]">Open</Link></td>
               </tr>
             ))}
           </tbody>
