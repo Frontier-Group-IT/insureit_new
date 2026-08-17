@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy 5-second auto-hide for policy upload success toast.",
-  "deploy_requested_at": "2026-08-17T18:19:00+05:30",
+  "purpose": "Deploy Policy Portfolio policy-copy Files icon and secure document viewing.",
+  "deploy_requested_at": "2026-08-17T21:51:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #391 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "b1b4336339b8d00e7b2cac37ed476696095fd8ae",
-  "release_scope": "UI-only refinement to the policy upload status toast: success notifications automatically dismiss after 5 seconds while retaining the manual close button; uploading and error states remain visible. No backend, Supabase, database, schema, storage, migration, or policy workflow changes.",
-  "verification": "PR #391 Verify web portal run 32031736743 passed all regressions, typecheck, lint, and production build on head 9a97d679b51bf09251658102dff9340b63693bf0 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #392 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "a573e6b8921f2e0c13a163e8c8ab67aa0fe900fa",
+  "release_scope": "Show a subtle Lucide Files icon beside Policy Type only when a policy copy exists; clicking it requests a short-lived signed URL after view_policies and customer-scope checks and opens the private policy copy in a new tab/browser PDF viewer. Existing Policy Type text, edit link, table layout, spacing, filtering, and other functionality remain unchanged. No schema, migration, or Supabase data changes.",
+  "verification": "PR #392 Verify web portal run 32045153048 passed all regressions, typecheck, lint, and production build on head a83176f43eab3c226c2db0e95279b9dd0710c6ad before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
