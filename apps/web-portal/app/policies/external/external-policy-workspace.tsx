@@ -236,12 +236,6 @@ function ExternalPolicyWorkspaceContent({ rows, canEdit }: { rows: ExternalPolic
         <Stack direction="row" spacing={1.5} alignItems="center" minWidth={0}>
           <Box minWidth={0}>
             <Typography variant="h5">External Policies</Typography>
-            <Stack direction="row" spacing={1.5} sx={{ mt: .25 }} flexWrap="wrap" useFlexGap>
-              <CompactStat label="Total" value={rows.length} />
-              <CompactStat label="Active" value={stats.active} tone="success" />
-              <CompactStat label="Renewal due" value={stats.expiring} tone="warning" />
-              <CompactStat label="Expired" value={stats.expired} tone="error" />
-            </Stack>
           </Box>
         </Stack>
         {canEdit ? (
@@ -335,15 +329,6 @@ function ExternalPolicyWorkspaceContent({ rows, canEdit }: { rows: ExternalPolic
         </Box>
       </Paper>
     </Box>
-  );
-}
-
-function CompactStat({ label, value, tone = "default" }: { label: string; value: number; tone?: "default" | "success" | "warning" | "error" }) {
-  const color = tone === "success" ? "success.main" : tone === "warning" ? "warning.main" : tone === "error" ? "error.main" : "text.secondary";
-  return (
-    <Typography variant="caption" color="text.secondary">
-      {label} <Box component="span" sx={{ ml: .35, fontWeight: 900, color }}>{value}</Box>
-    </Typography>
   );
 }
 
