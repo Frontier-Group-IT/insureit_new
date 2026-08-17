@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the Registration No. input constraint fix to production.",
-  "deploy_requested_at": "2026-08-17T10:32:00+05:30",
+  "purpose": "Deploy the Portal Users subtitle removal to production.",
+  "deploy_requested_at": "2026-08-17T10:46:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #375 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "07c6daa4f0f93f4d3b13eea2ec68174bc809c1a9",
-  "release_scope": "Policy Onboarding Registered vehicle Registration No. input only: remove the stale browser-level maxLength=10 and fixed 10-character HTML pattern so variable-length registrations can be entered; preserve the flexible frontend/server validator requiring 2 starting letters and 2 ending digits, RC lookup gating, Registered/Unregistered behavior, and all other current main functionality.",
-  "verification": "PR #375 Verify web portal run 31996481607 passed all regressions, typecheck, lint, and the production build on head dcb4938e40b3fed1847bf0d1810dba715b764f48 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #376 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "b4eb64f14cd4473d98fb737c81190dab05e17679",
+  "release_scope": "Intermediaries > Portal Users UI only: remove the subtitle line 'Review partner login invitations and current portal access.' while preserving the Partner Portal Users title, search, status tabs, table, pagination, portal-account functionality, and all other current main behavior.",
+  "verification": "PR #376 Verify web portal run 31997274725 passed all regressions, typecheck, lint, and the production build on head 781b18ad78e135a5ec781c8d9b0b1440ac5601e5 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
