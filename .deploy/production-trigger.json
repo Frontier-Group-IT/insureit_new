@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy UI-only fix for the Save Active Policy confirmation popup interception.",
-  "deploy_requested_at": "2026-08-17T16:34:00+05:30",
+  "purpose": "Deploy UI-only validation-before-confirmation sequencing fix for active policy onboarding.",
+  "deploy_requested_at": "2026-08-17T16:54:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #387 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "c909d6f1e5119d917c6339a6953ba2ddd47d6bf2",
-  "release_scope": "UI-only fix on /policies/new: bind the existing Save Active Policy confirmation flow directly to the Book Active Policy button so the popup opens before the existing React submit handler can save. Preserve existing backend policy creation actions, existing Upload Policy Copy non-persistent UI behavior, and all Supabase/database/schema/storage state unchanged.",
-  "verification": "PR #387 Verify web portal run 32023125501 passed all regressions, typecheck, lint, and production build on head 7ec4930d7e56da29bf448da97abf859f55525de6 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #388 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "18d0aa40fcf85f942fe1bb87f7b7e2dbfbf71809",
+  "release_scope": "UI-only fix on /policies/new so Book Active Policy runs the existing form validation first; only when the visible UI passes validation does the Save Active Policy confirmation modal open. Preserve the existing Save Without Policy Copy replay into the existing policy creation flow. No Supabase, database, schema, storage, migration, or backend/server-action changes.",
+  "verification": "PR #388 Verify web portal run 32024684781 passed all regressions, typecheck, lint, and production build on head f1013d444a566a2df9c4547c25b2fba090c5f4fd before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
