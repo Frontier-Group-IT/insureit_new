@@ -54,8 +54,21 @@ function Invoke-SanitizedDryRun {
     )
 
     $fullArgs = @('db','dump','--db-url',$DatabaseUrl) + $Arguments + @('--dry-run')
-    $raw = @(& supabase @fullArgs 2>&1)
-    $exitCode = $LASTEXITCODE
+
+    # Supabase CLI intentionally writes its DRY RUN banner/script to stderr.
+    # Windows PowerShell 5.1 can promote redirected native stderr to a terminating
+    # NativeCommandError when the script-level ErrorActionPreference is Stop.
+    # Temporarily allow native stderr so we can capture it, then trust LASTEXITCODE.
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $raw = @(& supabase @fullArgs 2>&1)
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+
     $text = [string]::Join([Environment]::NewLine, @($raw | ForEach-Object { [string]$_ }))
     $safe = Redact-DumpPlanText -Text $text -DatabaseUrl $DatabaseUrl
 
