@@ -242,19 +242,19 @@ if (-not (Test-Path -LiteralPath $SecretsPath)) {
     throw "Encrypted credential file not found: $SecretsPath. Run Set-InsureITBackupSecrets.ps1 first."
 }
 
+$localDumpHelper = Join-Path $PSScriptRoot "Invoke-InsureITLocalDatabaseDump.ps1"
+if (-not (Test-Path -LiteralPath $localDumpHelper -PathType Leaf)) {
+    throw "Local database dump helper not found: $localDumpHelper"
+}
+
 $config = Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
 $secrets = Import-Clixml -LiteralPath $SecretsPath
 
-Require-Command "supabase"
-Require-Command "docker"
 Require-Command "git"
 Require-Command "psql"
+Require-Command "pg_dump"
+Require-Command "pg_dumpall"
 if (-not $SkipStorage) { Require-Command "rclone" }
-
-$dockerInfo = & docker info --format "{{.ServerVersion}}" 2>$null
-if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace(($dockerInfo | Out-String))) {
-    throw "Docker Desktop is installed but the Docker engine is not running."
-}
 
 Test-FreeSpace -BackupRoot $config.backupRoot -MinimumFreeSpaceGB ([double]$config.minimumFreeSpaceGB)
 
@@ -280,6 +280,7 @@ if ($LASTEXITCODE -ne 0 -or $gitCommit -notmatch '^[0-9a-fA-F]{40}$') {
 Write-Host "Preflight passed for project $projectRef." -ForegroundColor Green
 Write-Host "Backup format: v$BackupFormatVersion"
 Write-Host "Git snapshot:   $gitCommit"
+Write-Host "DB transport:   local PostgreSQL 17 + Supabase-compatible filtering"
 if ($PreflightOnly) {
     Write-Host "No backup was created."
     return
@@ -320,6 +321,7 @@ $manifest = [ordered]@{
     region = [string]$config.region
     gitCommit = $gitCommit
     database = [ordered]@{
+        transport = "local-postgresql-17-supabase-compatible-v1"
         roles = "database/roles.sql"
         schema = "database/schema.sql"
         data = "database/data.sql"
@@ -355,12 +357,8 @@ try {
     $manifest.migrationSnapshot.fileCount = $migrationCount
     Write-BackupLog "Git migration snapshot captured: $migrationCount files at $gitCommit." $logPath
 
-    Invoke-Checked "supabase" @("db","dump","--db-url",$dbUrl,"-f",(Join-Path $dbPath "roles.sql"),"--role-only") "Roles dump"
-    Invoke-Checked "supabase" @("db","dump","--db-url",$dbUrl,"-f",(Join-Path $dbPath "schema.sql")) "Schema dump"
-    Invoke-Checked "supabase" @("db","dump","--db-url",$dbUrl,"-f",(Join-Path $dbPath "data.sql"),"--use-copy","--data-only","-x","storage.buckets_vectors","-x","storage.vector_indexes") "Data dump"
-    Invoke-Checked "supabase" @("db","dump","--db-url",$dbUrl,"-f",(Join-Path $dbPath "history_schema.sql"),"--schema","supabase_migrations") "Migration history schema dump"
-    Invoke-Checked "supabase" @("db","dump","--db-url",$dbUrl,"-f",(Join-Path $dbPath "history_data.sql"),"--use-copy","--data-only","--schema","supabase_migrations") "Migration history data dump"
-    Write-BackupLog "Database dump completed." $logPath
+    & $localDumpHelper -DatabaseUrl $dbUrl -OutputDirectory $dbPath
+    Write-BackupLog "Database dump completed using local PostgreSQL 17 transport." $logPath
 
     $managed = Get-ManagedSchemaSnapshot -DatabaseUrl $dbUrl -ProjectRef $projectRef
     $managedPath = Join-Path $metadataPath "managed-schema.json"
