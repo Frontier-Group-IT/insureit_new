@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 type SaveChoice = "upload" | "without" | null;
 
 const allowedTypes = ".pdf,.jpg,.jpeg,.png,.webp";
+const saveButtonLabel = "Book Active Policy";
 
 export function PolicySaveConfirmation() {
   const pathname = usePathname();
@@ -18,11 +19,9 @@ export function PolicySaveConfirmation() {
   useEffect(() => {
     if (pathname !== "/policies/new") return;
 
-    function intercept(event: MouseEvent) {
-      const target = event.target instanceof Element ? event.target.closest("button") : null;
-      if (!(target instanceof HTMLButtonElement)) return;
-      if (!target.textContent?.trim().includes("Book Active Policy")) return;
+    let boundButton: HTMLButtonElement | null = null;
 
+    function intercept(event: MouseEvent) {
       if (bypassNextClick.current) {
         bypassNextClick.current = false;
         return;
@@ -30,14 +29,36 @@ export function PolicySaveConfirmation() {
 
       event.preventDefault();
       event.stopPropagation();
-      pendingButton.current = target;
+      event.stopImmediatePropagation();
+      pendingButton.current = boundButton;
       setChoice(null);
       setFile(null);
       setOpen(true);
     }
 
-    document.addEventListener("click", intercept, true);
-    return () => document.removeEventListener("click", intercept, true);
+    function findSaveButton() {
+      return Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
+        (button) => button.textContent?.trim() === saveButtonLabel,
+      ) ?? null;
+    }
+
+    function bindSaveButton() {
+      const nextButton = findSaveButton();
+      if (nextButton === boundButton) return;
+
+      if (boundButton) boundButton.removeEventListener("click", intercept, true);
+      boundButton = nextButton;
+      if (boundButton) boundButton.addEventListener("click", intercept, true);
+    }
+
+    bindSaveButton();
+    const observer = new MutationObserver(bindSaveButton);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      observer.disconnect();
+      if (boundButton) boundButton.removeEventListener("click", intercept, true);
+    };
   }, [pathname]);
 
   function close() {
@@ -87,7 +108,7 @@ export function PolicySaveConfirmation() {
                 <input type="file" accept={allowedTypes} className="sr-only" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
               </label>
               <p className="mt-2 text-[9px] leading-4 text-[#7A879A]">PDF, JPG, PNG or WEBP.</p>
-              <p className="mt-1 text-[9px] leading-4 text-[#B45309]">Policy-copy storage is intentionally not connected in this branch because no Supabase or database changes are allowed. Choose “Save Without Policy Copy” to complete policy creation.</p>
+              <p className="mt-1 text-[9px] leading-4 text-[#B45309]">Policy-copy storage is intentionally not connected because no Supabase or database changes are included. Choose “Save Without Policy Copy” to complete policy creation.</p>
             </div>
           ) : null}
 
