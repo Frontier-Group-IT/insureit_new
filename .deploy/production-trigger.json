@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy Register table cleanup to production.",
-  "deploy_requested_at": "2026-08-17T13:43:00+05:30",
+  "purpose": "Deploy Policy Register Policy Type display update to production.",
+  "deploy_requested_at": "2026-08-17T13:58:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #380 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "476f6fd90f13e4ac98aefe3ef893e2fd51fc6fa0",
-  "release_scope": "Policy Register desktop table cleanup: remove the Action column and per-row Open buttons, rename the first table header from Policy to Policy Type, keep policy-number navigation, mobile card actions, filters, tabs, pagination, Add Policy, and all underlying policy functionality unchanged.",
-  "verification": "PR #380 Verify web portal run 32009127312 passed successfully on head b33d679faf15bc71dbe3ae850f773e1d046c1281 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #381 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "fd05189799d1e8ac3b260f4e8d5dbddc684b789d",
+  "release_scope": "Policy Register desktop table presentation: fetch business_line and display the Policy Type column as business line plus policy product, such as Motor - Package or Motor - SAOD; keep policy number available for search, deletion and backend workflows; preserve existing policy navigation, filters, tabs, pagination, mobile cards and all other functionality.",
+  "verification": "PR #381 Verify web portal run 32010430645 passed all regressions, typecheck, lint, and production build on head b081404cf8132c2612bbe929f72d5678fe014ca2 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
