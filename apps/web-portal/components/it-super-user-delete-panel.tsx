@@ -19,6 +19,7 @@ type Props = {
 
 const entityLabels: Record<DeletableMasterEntity, string> = {
   customer: "customer",
+  customer_onboarding_application: "onboarding application",
   vehicle: "vehicle",
   policy: "policy",
   external_policy: "external policy",
@@ -45,6 +46,7 @@ export function ItSuperUserDeletePanel({ entity, title, records }: Props) {
   const selected = records.find((record) => record.id === selectedId) ?? null;
   const entityLabel = entityLabels[entity];
   const isClaim = entity === "claim";
+  const isCustomerApplication = entity === "customer_onboarding_application";
 
   function closeConfirmation() {
     if (isPending) return;
@@ -88,7 +90,9 @@ export function ItSuperUserDeletePanel({ entity, title, records }: Props) {
             <p className="mt-2 text-[10px] leading-4 text-[#64748B]">
               {isClaim
                 ? "Permanent claim deletion also removes claim-linked workflow rows through the database cascade. Linked claim document files are cleaned from storage after deletion."
-                : `Permanent deletion is blocked when this ${entityLabel} still has dependent master or claim records.`}
+                : isCustomerApplication
+                  ? "Permanent deletion removes this onboarding application, its application contacts and document metadata, and attempts to clean its uploaded files. Any customer already created from the application remains intact."
+                  : `Permanent deletion is blocked when this ${entityLabel} still has dependent master or claim records.`}
             </p>
           </div>
 
@@ -130,6 +134,7 @@ export function ItSuperUserDeletePanel({ entity, title, records }: Props) {
               <p className="mt-1 break-words text-[12px] font-semibold text-[#7F1D1D]">{selected.label}</p>
               {selected.detail ? <p className="mt-0.5 break-words text-[10px] text-[#9F1239]">{selected.detail}</p> : null}
               {isClaim ? <p className="mt-2 text-[10px] leading-4 text-[#9F1239]">Deleting this claim removes its linked claim documents metadata, status history, tasks and notifications. The policy, vehicle and customer remain intact.</p> : null}
+              {isCustomerApplication ? <p className="mt-2 text-[10px] leading-4 text-[#9F1239]">If this application has already created a customer record, that customer and its vehicles, policies and claims will remain unchanged.</p> : null}
             </div>
 
             <label className="mt-4 block">
