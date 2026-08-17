@@ -165,14 +165,18 @@ export function PolicyEditCopyFooterActions() {
               Policy Copy
             </span>
           ) : policyCopy ? (
-            <>
+            <div
+              role="group"
+              aria-label="Policy copy actions"
+              className="inline-flex h-9 items-stretch overflow-hidden rounded-xl border border-[#BFD3F7] bg-[#F7FAFF] text-[#174EA6]"
+            >
               <button
                 type="button"
                 onClick={() => void viewPolicy()}
                 disabled={isOpening || isUploading}
                 aria-label="View policy copy"
                 title={policyCopy.fileName ? `View policy: ${policyCopy.fileName}` : "View policy copy"}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#BFD3F7] bg-[#F7FAFF] px-3 text-[10px] font-semibold text-[#174EA6] transition hover:bg-[#EEF5FF] disabled:cursor-wait disabled:opacity-60"
+                className="inline-flex items-center px-3 text-[10px] font-semibold transition hover:bg-[#EEF5FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#9CB9E6] disabled:cursor-wait disabled:opacity-60"
               >
                 {isOpening ? "Opening…" : "View Policy"}
               </button>
@@ -182,11 +186,11 @@ export function PolicyEditCopyFooterActions() {
                 disabled={isUploading || isOpening}
                 aria-label="Replace policy copy"
                 title="Replace policy copy"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#BFD3F7] bg-[#F7FAFF] text-[#174EA6] transition hover:bg-[#EEF5FF] disabled:cursor-wait disabled:opacity-60"
+                className="inline-flex w-9 items-center justify-center transition hover:bg-[#EEF5FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#9CB9E6] disabled:cursor-wait disabled:opacity-60"
               >
                 <RefreshCw className={`h-3.5 w-3.5 ${isUploading ? "animate-spin" : ""}`} />
               </button>
-            </>
+            </div>
           ) : (
             <button
               type="button"
