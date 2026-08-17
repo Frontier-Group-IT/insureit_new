@@ -196,7 +196,7 @@ function PolicyTypeLink({ policy }: { policy: PolicyRow }) {
   return (
     <Link href={`/policies/${policy.id}/edit`} title={policy.policy_no} className="block truncate text-[12px] text-[#0F172A] hover:text-[#17365D]">
       {businessLine ? <span className="font-bold">{businessLine}</span> : null}
-      {businessLine && product ? <span className="font-normal"> . </span> : null}
+      {businessLine && product ? <span aria-hidden="true" className="mx-1 inline-block text-[11px] font-normal leading-none">•</span> : null}
       {product ? <span className="font-normal">{product}</span> : null}
       {!businessLine && !product ? <span className="font-normal">-</span> : null}
     </Link>
