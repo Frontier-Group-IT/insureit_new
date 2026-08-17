@@ -171,7 +171,22 @@ Use visual inspection for the changed UI. If the relevant screen is blocked by d
 
 ## 7. Current Recent Preview Evidence
 
-Latest approved preview OTA with policy-detail hero fix reapplied on top of the time-picker/mobile UI state:
+Latest approved preview OTA republished from current `main` after the policy-detail hero fix:
+
+```text
+Source commit: 5ee08148681f649a14e1844e74a9b9a2e6a4d1a2
+Message: Republish current main with policy hero fix
+Update group ID: 4e75c429-aa00-4477-bf78-7099897d13ce
+Android update ID: 01a00e58-10b9-7cf2-bb4c-a3fca32464fe
+iOS update ID: 01a00e58-10b9-7824-99d6-f2a69bca8022
+Runtime version: 0.2.0
+EAS metadata: isGitWorkingTreeDirty false
+Device verification: ADB two cold launches on Android device 00078344S000834 completed without a React Native startup crash; current dashboard rendered from the installed app. Source-state verification confirmed this publish includes the Policy Detail hero cap and the external-claim Spot Intimation accident time picker.
+```
+
+**LEARNING:** update group `720ee831-f0ee-4a64-a266-bdd267cffad3` was published from commit `00ab7309`, which fixed the hero but missed later `origin/main` work that arrived while publishing. It was superseded by `4e75c429-aa00-4477-bf78-7099897d13ce`, published from current commit `5ee08148`. Do not use `720ee831` as the current recovery target.
+
+Superseded preview OTA with policy-detail hero fix reapplied on top of the time-picker/mobile UI state:
 
 ```text
 Source commit: 00ab7309e26cead1d46b4c7d2967e31c98c5e247
