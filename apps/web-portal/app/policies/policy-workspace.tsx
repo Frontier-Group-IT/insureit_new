@@ -132,7 +132,7 @@ export function PolicyWorkspace({ rows }: { rows: PolicyRow[] }) {
           <tbody className="divide-y divide-[#EEF2F6]">
             {pageRows.map((policy) => (
               <tr key={policy.id} className="h-12 transition hover:bg-[#FAFCFF]">
-                <td className="px-3"><Link href={`/policies/${policy.id}/edit`} title={policy.policy_no} className="block truncate text-[12px] font-bold text-[#0F172A] hover:text-[#17365D]">{formatPolicyType(policy)}</Link></td>
+                <td className="px-3"><PolicyTypeLink policy={policy} /></td>
                 <td className="px-2.5"><p className="truncate font-semibold text-[#334155]">{policy.customers?.contact_name ?? "-"}</p><p className="truncate text-[9px] leading-4 text-[#64748B]">{policy.customers?.company_name ?? "Individual account"}</p></td>
                 <td className="px-2.5 font-mono">{policy.vehicles?.vehicle_no ?? "-"}</td>
                 <td className="px-2.5"><span className="block truncate">{policy.insurance_companies?.name ?? "-"}</span></td>
@@ -190,11 +190,17 @@ function PolicyStatus({ policy }: { policy: PolicyRow & { status?: string; daysL
   return <RegisterStatusPill tone="green">Active</RegisterStatusPill>;
 }
 
-function formatPolicyType(policy: PolicyRow) {
+function PolicyTypeLink({ policy }: { policy: PolicyRow }) {
   const businessLine = policy.business_line?.trim();
   const product = policy.policy_type?.trim();
-  if (businessLine && product) return `${businessLine} - ${product}`;
-  return businessLine || product || "-";
+  return (
+    <Link href={`/policies/${policy.id}/edit`} title={policy.policy_no} className="block truncate text-[12px] text-[#0F172A] hover:text-[#17365D]">
+      {businessLine ? <span className="font-bold">{businessLine}</span> : null}
+      {businessLine && product ? <span className="font-normal"> . </span> : null}
+      {product ? <span className="font-normal">{product}</span> : null}
+      {!businessLine && !product ? <span className="font-normal">-</span> : null}
+    </Link>
+  );
 }
 function validityHint(policy: PolicyRow & { daysLeft?: number }) {
   const days = policy.daysLeft ?? daysUntil(policy.end_date);
