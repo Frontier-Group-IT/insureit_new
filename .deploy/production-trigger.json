@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy Register bullet separator refinement to production.",
-  "deploy_requested_at": "2026-08-17T14:31:00+05:30",
+  "purpose": "Deploy Policy Register hover underline refinement to production.",
+  "deploy_requested_at": "2026-08-17T14:41:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #383 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "488bbab2b375979963e1a2e66d8f6bc5cdf7f4d4",
-  "release_scope": "Policy Register Policy Type presentation: replace the period separator with a proper bullet so values display as Motor • SAOD or Motor • Package; keep business_line bold, keep policy_type regular weight, size the separator between the former period and the Active status green dot, and preserve existing navigation, search, filters, pagination, mobile cards and backend policy workflows.",
-  "verification": "PR #383 Verify web portal run 32013099747 passed all regressions, typecheck, lint, and production build on head b9dc240d941abc078f93edd8525d722d59044733 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #384 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "1f9bf7550f86f2b9ecc9baaba0f9c65171b9230f",
+  "release_scope": "Policy Register link presentation: keep the current Motor • SAOD / Motor • Package values, colors, layout and navigation unchanged; add an underline only when hovering the existing clickable Policy Type value, with no underline in the default state.",
+  "verification": "PR #384 Verify web portal run 32013934091 passed all regressions, typecheck, lint, and production build on head 00d47d9396dfde6af1b5fe2f1284a80d059e9f9a before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
