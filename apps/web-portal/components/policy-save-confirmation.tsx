@@ -6,7 +6,8 @@ import { useEffect, useRef, useState } from "react";
 type SaveChoice = "upload" | "without" | null;
 
 const allowedTypes = ".pdf,.jpg,.jpeg,.png,.webp";
-const saveButtonLabel = "Book Active Policy";
+const legacySaveButtonLabel = "Book Active Policy";
+const saveButtonLabel = "Upload Policy";
 const registrationPattern = /^[A-Z]{2}[A-Z0-9]*[0-9]{2}$/;
 
 function hasUiValidationFailure() {
@@ -68,13 +69,19 @@ export function PolicySaveConfirmation() {
     }
 
     function findSaveButton() {
-      return Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
-        (button) => button.textContent?.trim() === saveButtonLabel,
-      ) ?? null;
+      return Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find((button) => {
+        const label = button.textContent?.trim();
+        return label === saveButtonLabel || label === legacySaveButtonLabel;
+      }) ?? null;
     }
 
     function bindSaveButton() {
       const nextButton = findSaveButton();
+
+      if (nextButton && nextButton.textContent?.trim() !== saveButtonLabel) {
+        nextButton.textContent = saveButtonLabel;
+      }
+
       if (nextButton === boundButton) return;
 
       if (boundButton) boundButton.removeEventListener("click", intercept, true);
