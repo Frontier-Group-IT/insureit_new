@@ -265,7 +265,7 @@ function PolicyTypeLink({
           disabled={openingDocumentId === policyCopy.id}
           aria-label={`Open policy copy for ${policy.policy_no}`}
           title={policyCopy.file_name ? `Open policy copy: ${policyCopy.file_name}` : "Open policy copy"}
-          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-[#7890AC] transition hover:bg-[#EEF4FB] hover:text-[#315B9A] disabled:cursor-wait disabled:opacity-50"
+          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#F3E8FF] text-[#7c3aed] transition hover:bg-[#E9D5FF] hover:text-[#6D28D9] disabled:cursor-wait disabled:opacity-50"
         >
           <Files className="h-3.5 w-3.5" />
         </button>
