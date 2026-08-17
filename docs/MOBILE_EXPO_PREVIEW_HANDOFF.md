@@ -171,7 +171,23 @@ Use visual inspection for the changed UI. If the relevant screen is blocked by d
 
 ## 7. Current Recent Preview Evidence
 
-Latest approved preview OTA republished from current `main` after the policy-detail hero fix:
+Latest approved preview OTA rollback to the user-requested accident-time-picker state:
+
+```text
+Source commit shown by EAS: 82780eb19151fc8acda6525489bd4bd18ea04687
+Original source group republished: 662027d5-685b-4032-a1ab-7adca9b43ec1
+Message: Rollback preview to accident time picker state
+Update group ID: 41f252be-a386-4107-99a1-3078d283003a
+Android update ID: 01a00e5c-f990-7740-82a6-e4eb0042ba9f
+iOS update ID: 01a00e5c-f990-7a0b-9cef-dd9ac1a44579
+Runtime version: 0.2.0
+EAS metadata: isGitWorkingTreeDirty true because this is an exact republish of the prior dirty OTA bundle.
+Device verification: ADB two cold launches on Android device 00078344S000834 completed without a React Native startup crash; the installed app rendered the recovered time-picker-era dashboard.
+```
+
+**LEARNING:** after the user explicitly requested rollback to the accident-time-picker state, update groups `4e75c429-aa00-4477-bf78-7099897d13ce` and `720ee831-f0ee-4a64-a266-bdd267cffad3` are superseded. Do not republish them unless the user explicitly asks to move forward again.
+
+Superseded preview OTA republished from current `main` after the policy-detail hero fix:
 
 ```text
 Source commit: 5ee08148681f649a14e1844e74a9b9a2e6a4d1a2

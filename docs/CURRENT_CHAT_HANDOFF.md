@@ -10,16 +10,17 @@ Policy Onboarding OCR hardening remains an active workstream. Production portal 
 
 ## Mobile Expo preview
 
-**DEPLOYED / VERIFIED:** Expo preview was republished from current `main` after the Policy Detail hero blank-space fix, correcting the intermediate publish that had used commit `00ab7309` while `origin/main` moved forward.
+**DEPLOYED / VERIFIED:** At the user's explicit request, Expo preview was rolled back to the exact accident-time-picker OTA state. Later hero-fix groups are superseded for now.
 
 ```text
-Source commit: 5ee08148681f649a14e1844e74a9b9a2e6a4d1a2
-Message: Republish current main with policy hero fix
-Update group ID: 4e75c429-aa00-4477-bf78-7099897d13ce
-Android update ID: 01a00e58-10b9-7cf2-bb4c-a3fca32464fe
-iOS update ID: 01a00e58-10b9-7824-99d6-f2a69bca8022
+Source commit shown by EAS: 82780eb19151fc8acda6525489bd4bd18ea04687
+Original source group republished: 662027d5-685b-4032-a1ab-7adca9b43ec1
+Message: Rollback preview to accident time picker state
+Update group ID: 41f252be-a386-4107-99a1-3078d283003a
+Android update ID: 01a00e5c-f990-7740-82a6-e4eb0042ba9f
+iOS update ID: 01a00e5c-f990-7a0b-9cef-dd9ac1a44579
 Runtime version: 0.2.0
-EAS metadata: `isGitWorkingTreeDirty: false`
+EAS metadata: `isGitWorkingTreeDirty: true` because this is an exact republish of the prior dirty OTA bundle.
 ```
 
 Verification:
@@ -31,7 +32,7 @@ npx eas-cli update:list --branch preview --limit 2 --non-interactive
 ADB two cold launches on Android device 00078344S000834
 ```
 
-ADB verification confirmed the installed app starts cleanly and renders the current dashboard. Source verification confirmed this publish includes the Policy Detail hero cap and the external-claim Spot Intimation accident time picker in `apps/mobile-app/app/customer/self-managed-claim.tsx`. Superseded group `720ee831-f0ee-4a64-a266-bdd267cffad3` fixed the hero but missed later `origin/main` work; do not treat it as current.
+ADB verification confirmed the installed app starts cleanly and renders the recovered time-picker-era dashboard. Superseded groups `4e75c429-aa00-4477-bf78-7099897d13ce` and `720ee831-f0ee-4a64-a266-bdd267cffad3` were later hero-fix attempts; do not treat them as current unless the user explicitly asks to move forward again.
 
 **DEPLOYED / VERIFIED:** After failed rebuild-style rollbacks, the `preview` channel was recovered to the user-identified intended mobile state: external claim Spot Intimation/Incident Report refinement with accident time picker. This was restored by republishing the exact prior dirty OTA bundle, preserving dirty-only mobile changes that are not reconstructible from the displayed Git commit alone.
 
