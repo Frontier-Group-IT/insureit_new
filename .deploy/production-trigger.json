@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy policy copy upload integration for active policy onboarding.",
-  "deploy_requested_at": "2026-08-17T18:05:00+05:30",
+  "purpose": "Deploy 5-second auto-hide for policy upload success toast.",
+  "deploy_requested_at": "2026-08-17T18:19:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #390 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "b8a6bde1c293ffe03e676cd4312788390c400e03",
-  "release_scope": "Connect Upload Policy Copy on /policies/new to the live private policy-documents bucket and policy_documents table: validate PDF/JPG/PNG/WEBP up to 50 MB, upload after successful policy creation, insert policy document metadata, clean up storage if metadata insert fails, preserve Save Without Policy Copy, and allow retry after an upload-only failure without creating a duplicate policy. No new schema or migration changes in this release.",
-  "verification": "PR #390 Verify web portal run 32030566096 passed all regressions, typecheck, lint, and production build on head 12b6bf4ddb381636e61da390e1f7e44067c565fb before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #391 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "b1b4336339b8d00e7b2cac37ed476696095fd8ae",
+  "release_scope": "UI-only refinement to the policy upload status toast: success notifications automatically dismiss after 5 seconds while retaining the manual close button; uploading and error states remain visible. No backend, Supabase, database, schema, storage, migration, or policy workflow changes.",
+  "verification": "PR #391 Verify web portal run 32031736743 passed all regressions, typecheck, lint, and production build on head 9a97d679b51bf09251658102dff9340b63693bf0 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
