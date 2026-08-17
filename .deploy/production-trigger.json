@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy Edit footer Policy Copy actions.",
-  "deploy_requested_at": "2026-08-17T22:08:00+05:30",
+  "purpose": "Deploy purple Policy Portfolio policy-copy icon styling.",
+  "deploy_requested_at": "2026-08-17T22:12:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #393 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "38a1b0747009a10361377670da4fe3243702cdda",
-  "release_scope": "Add compact Policy Copy actions to the far-left side of the Policy Edit bottom action bar: View Policy and Replace when a copy exists, or Add Policy Copy when none exists. Keep Cancel and Save Policy Changes unchanged on the right. Reuse the existing private policy-documents storage and policy_documents metadata with authenticated signed URLs and safe replacement flow. No policy fields, calculations, pay-in/payout logic, schema, migration, or live Supabase data changes.",
-  "verification": "PR #393 Verify web portal run 32046404355 passed all regressions, typecheck, lint, and production build on head e2457cb55f5a9330822f5442e7d372c411f5e79f before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #394 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "715d94b92d49577a8b44cf465c6b6895d5c2b479",
+  "release_scope": "UI-only refinement to the Policy Portfolio policy-copy Files icon: use icon color #7c3aed with circular background #F3E8FF and a slightly stronger purple hover state. Keep Policy Type text, table layout, spacing, signed-URL document opening, and all other functionality unchanged. No backend, Supabase, database, schema, storage, or migration changes.",
+  "verification": "PR #394 Verify web portal run 32046778188 passed all regressions, typecheck, lint, and production build on head 51c712f4c907c9a38231aa4481c72ed3e0ccd0fa before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
