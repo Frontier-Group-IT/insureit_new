@@ -17,6 +17,7 @@ type PolicyRow = {
   id: string;
   policy_no: string;
   policy_type: string;
+  business_line: string | null;
   start_date: string;
   end_date: string;
   insured_declared_value: number | null;
@@ -51,7 +52,7 @@ export function PolicyWorkspace({ rows }: { rows: PolicyRow[] }) {
   const insurers = useMemo(() => Array.from(new Set(rows.map((row) => row.insurance_companies?.name).filter(Boolean))).sort() as string[], [rows]);
 
   const filtered = useMemo(() => enriched.filter((row) => {
-    const haystack = [row.policy_no, row.policy_type, row.insurance_companies?.name, row.vehicles?.vehicle_no, row.customers?.company_name, row.customers?.contact_name, row.intermediary_type, row.intermediary_code, row.source_name].filter(Boolean).join(" ").toLowerCase();
+    const haystack = [row.policy_no, row.business_line, row.policy_type, row.insurance_companies?.name, row.vehicles?.vehicle_no, row.customers?.company_name, row.customers?.contact_name, row.intermediary_type, row.intermediary_code, row.source_name].filter(Boolean).join(" ").toLowerCase();
     const matchesInsurer = insurer === "all" || row.insurance_companies?.name === insurer;
     const matchesView =
       view === "all" ||
@@ -131,7 +132,7 @@ export function PolicyWorkspace({ rows }: { rows: PolicyRow[] }) {
           <tbody className="divide-y divide-[#EEF2F6]">
             {pageRows.map((policy) => (
               <tr key={policy.id} className="h-12 transition hover:bg-[#FAFCFF]">
-                <td className="px-3"><Link href={`/policies/${policy.id}/edit`} className="block truncate text-[12px] font-bold text-[#0F172A] hover:text-[#17365D]">{policy.policy_no}</Link><p className="truncate text-[9px] leading-4 text-[#64748B]">{policy.policy_type}</p></td>
+                <td className="px-3"><Link href={`/policies/${policy.id}/edit`} title={policy.policy_no} className="block truncate text-[12px] font-bold text-[#0F172A] hover:text-[#17365D]">{formatPolicyType(policy)}</Link></td>
                 <td className="px-2.5"><p className="truncate font-semibold text-[#334155]">{policy.customers?.contact_name ?? "-"}</p><p className="truncate text-[9px] leading-4 text-[#64748B]">{policy.customers?.company_name ?? "Individual account"}</p></td>
                 <td className="px-2.5 font-mono">{policy.vehicles?.vehicle_no ?? "-"}</td>
                 <td className="px-2.5"><span className="block truncate">{policy.insurance_companies?.name ?? "-"}</span></td>
@@ -189,6 +190,12 @@ function PolicyStatus({ policy }: { policy: PolicyRow & { status?: string; daysL
   return <RegisterStatusPill tone="green">Active</RegisterStatusPill>;
 }
 
+function formatPolicyType(policy: PolicyRow) {
+  const businessLine = policy.business_line?.trim();
+  const product = policy.policy_type?.trim();
+  if (businessLine && product) return `${businessLine} - ${product}`;
+  return businessLine || product || "-";
+}
 function validityHint(policy: PolicyRow & { daysLeft?: number }) {
   const days = policy.daysLeft ?? daysUntil(policy.end_date);
   if (days < 0) return `${Math.abs(days)} days overdue`;
