@@ -10,6 +10,38 @@ Policy Onboarding OCR hardening remains an active workstream. Production portal 
 
 ## Mobile Expo preview
 
+**DEPLOYED / VERIFIED:** Policy Detail hero-height fix was committed and published to Expo preview on 2026-08-17 (IST), branch/channel `preview`, runtime `0.2.0`.
+
+```text
+Source commit: 15d87986e1264a1ab8b7e5a58b9d9723823c53c4
+Message: Hotfix policy detail hero env publish
+Update group ID: 8739257d-7689-48f3-aae7-bf0537a438fb
+Android update ID: 01a00e0e-c852-72df-a9d1-3dd5cf893bae
+iOS update ID: 01a00e0e-c852-739b-99fc-b92ee521668a
+Runtime version: 0.2.0
+EAS metadata: `isGitWorkingTreeDirty: false`
+```
+
+Included changes:
+
+- Policy Detail content is wrapped in a non-flex content stack so the hero card no longer inherits spare ScrollView height.
+- The hero action row is content-sized and full-width without stretching the card.
+- The latest external-claim refinement from commit `82780eb19151fc8acda6525489bd4bd18ea04687` remains in history before this fix.
+
+Verification:
+
+```text
+npm --workspace apps/mobile-app run typecheck
+npx eslint app/customer/policy-detail.tsx --quiet
+npm --workspace apps/mobile-app run build:web
+npx eas-cli channel:view preview --json
+ADB two cold launches on Android device 00078344S000834
+```
+
+ADB screenshots confirmed the current dashboard, policies list, and Policy Detail screen render on the installed preview app. The Policy Detail hero now renders compactly without the prior large blank expanded area.
+
+**LEARNING:** bad update group `252d828a-aa21-43af-ad3d-25a209e84955` was published from the same source commit before the ignored mobile `.env` was present in the clean worktree. It crashed with `Missing mobile app environment configuration` and caused the device to recover through cached/older bundles until a second cold-launch cycle applied the superseding group `8739257d-7689-48f3-aae7-bf0537a438fb`. Future clean worktree publishes must ensure Expo CLI logs `env: load .env` / `env: export EXPO_PUBLIC_*` before bundling.
+
 **DEPLOYED / VERIFIED:** Expo preview OTA was restored on 2026-08-17 (IST) to the latest `main` mobile state for project `antnish/insureit-mobile`, branch `preview`, runtime version `0.2.0`. This supersedes the temporary hotfix group `eb212c22-3ab5-4c40-9703-49c3c33934e1`, which was valid for crash recovery but was behind later mobile UI work.
 
 **DEPLOYED / PARTLY DEVICE-VERIFIED:** The external claim step/header/time-picker refinement was committed and republished from a clean worktree on 2026-08-17 (IST), superseding dirty update group `6e438b8d-e179-4729-97a6-47005efa298a`.

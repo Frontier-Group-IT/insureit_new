@@ -59,7 +59,7 @@ Expo public mobile environment values must be present when publishing. Missing `
 Missing mobile app environment configuration.
 ```
 
-When publishing from a temporary or clean worktree, load the existing mobile `.env` from the normal workspace into the process before `eas update`. Do not print, paste, commit, or document the values.
+When publishing from a temporary or clean worktree, ensure the existing mobile `.env` from the normal workspace is available to the publish command before `eas update`. Prefer copying the ignored `.env` file into the temporary worktree's `apps/mobile-app/.env` so Expo CLI logs `env: load .env` and exports the expected `EXPO_PUBLIC_*` names. Do not print, paste, commit, or document the values.
 
 Safe pattern:
 
@@ -77,7 +77,7 @@ Get-Content -LiteralPath $envFile | ForEach-Object {
 }
 ```
 
-Then run `eas update` from `apps/mobile-app`.
+Then run `eas update` from `apps/mobile-app`. If Expo CLI does not show `env: load .env` / `env: export EXPO_PUBLIC_*` before bundling, stop and fix the publish environment before creating an update.
 
 ## 4. Publish Command
 
@@ -162,7 +162,7 @@ Use visual inspection for the changed UI. If the relevant screen is blocked by d
 **Missing environment**
 
 - Symptom: startup crash with `Missing mobile app environment configuration`.
-- Fix: republish from the intended source with mobile `.env` loaded into process; verify two cold launches.
+- Fix: republish from the intended source with mobile `.env` available to Expo CLI; verify Expo logs `env: load .env`, then verify two cold launches.
 
 **Native/runtime mismatch**
 
@@ -171,7 +171,22 @@ Use visual inspection for the changed UI. If the relevant screen is blocked by d
 
 ## 7. Current Recent Preview Evidence
 
-Latest clean external-claim refinement publish:
+Latest policy-detail hero-height recovery publish:
+
+```text
+Source commit: 15d87986e1264a1ab8b7e5a58b9d9723823c53c4
+Message: Hotfix policy detail hero env publish
+Update group ID: 8739257d-7689-48f3-aae7-bf0537a438fb
+Android update ID: 01a00e0e-c852-72df-a9d1-3dd5cf893bae
+iOS update ID: 01a00e0e-c852-739b-99fc-b92ee521668a
+Runtime version: 0.2.0
+EAS metadata: isGitWorkingTreeDirty false
+Device verification: ADB two cold launches on Android device 00078344S000834, app remained alive, current dashboard/policies UI rendered, and Policy Detail hero card rendered compact without the prior blank expanded area.
+```
+
+**LEARNING:** update group `252d828a-aa21-43af-ad3d-25a209e84955` was published from the same source commit but without the clean worktree `.env` file being loaded by Expo CLI. It crashed with `Missing mobile app environment configuration` and was superseded by `8739257d-7689-48f3-aae7-bf0537a438fb`. If a device launches the bad cached update once, force-stop and relaunch twice so Expo Updates can recover and apply the superseding group.
+
+Previous clean external-claim refinement publish:
 
 ```text
 Source commit: 82780eb19151fc8acda6525489bd4bd18ea04687
