@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, FileText, RefreshCw, Upload } from "lucide-react";
+import { FileText, RefreshCw, Upload } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -172,9 +172,9 @@ export function PolicyEditCopyFooterActions() {
                 disabled={isOpening || isUploading}
                 aria-label="View policy copy"
                 title={policyCopy.fileName ? `View policy: ${policyCopy.fileName}` : "View policy copy"}
-                className="inline-flex h-8 w-8 items-center justify-center text-[#526277] transition hover:text-[#17365D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9CB9E6] disabled:cursor-wait disabled:opacity-50"
+                className="inline-flex h-8 items-center px-1 text-[10px] font-semibold text-[#526277] transition hover:text-[#17365D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9CB9E6] disabled:cursor-wait disabled:opacity-50"
               >
-                <Eye className={`h-4 w-4 ${isOpening ? "animate-pulse" : ""}`} />
+                {isOpening ? "Opening…" : "View Policy"}
               </button>
               <button
                 type="button"
