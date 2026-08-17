@@ -244,6 +244,11 @@ summary:active {
   100% { transform: translateX(160%); }
 }
 
+@keyframes policy-document-error-toast-hide {
+  0%, 99% { opacity: 1; visibility: visible; }
+  100% { opacity: 0; visibility: hidden; }
+}
+
 .animate-portal-enter {
   animation: insureit-fade-up .48s cubic-bezier(.2,.8,.2,1) both;
 }
@@ -254,6 +259,10 @@ summary:active {
 
 .animate-portal-float {
   animation: insureit-float 7s ease-in-out infinite;
+}
+
+[role="alert"].fixed.right-4.top-20.z-\[140\] {
+  animation: policy-document-error-toast-hide 5s linear forwards;
 }
 
 /* Full-viewport bulk POSP/MISP import row editor. */
@@ -291,5 +300,9 @@ summary:active {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  [role="alert"].fixed.right-4.top-20.z-\[140\] {
+    animation-duration: 5s !important;
   }
 }
