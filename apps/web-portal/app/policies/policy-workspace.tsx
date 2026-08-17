@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, Plus } from "lucide-react";
+import { Files, FileText, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
+import { openPolicyCopy } from "./policy-document-actions";
 import {
   BrokerRegisterShell,
   BrokerRegisterToolbar,
@@ -12,6 +13,13 @@ import {
   RegisterStatusPill,
   RegisterViewTabs
 } from "@/components/broker-register";
+
+type PolicyDocument = {
+  id: string;
+  document_type: string;
+  file_name: string;
+  mime_type: string | null;
+};
 
 type PolicyRow = {
   id: string;
@@ -26,6 +34,7 @@ type PolicyRow = {
   intermediary_type: string | null;
   intermediary_code: string | null;
   source_name: string | null;
+  policy_documents: PolicyDocument[];
   customers: { company_name: string | null; contact_name: string } | null;
   vehicles: { vehicle_no: string } | null;
   insurance_companies: { name: string } | null;
@@ -40,6 +49,8 @@ export function PolicyWorkspace({ rows }: { rows: PolicyRow[] }) {
   const [view, setView] = useState<ViewKey>("all");
   const [insurer, setInsurer] = useState("all");
   const [page, setPage] = useState(1);
+  const [openingDocumentId, setOpeningDocumentId] = useState<string | null>(null);
+  const [documentError, setDocumentError] = useState<string | null>(null);
 
   const enriched = useMemo(() => rows.map((row) => ({ ...row, status: policyStatus(row.end_date), daysLeft: daysUntil(row.end_date) })), [rows]);
   const stats = useMemo(() => {
@@ -72,6 +83,34 @@ export function PolicyWorkspace({ rows }: { rows: PolicyRow[] }) {
     setPage(1);
   }
 
+  async function openDocument(document: PolicyDocument) {
+    if (openingDocumentId) return;
+
+    const previewWindow = window.open("", "_blank", "noopener,noreferrer");
+    setOpeningDocumentId(document.id);
+    setDocumentError(null);
+
+    try {
+      const result = await openPolicyCopy(document.id);
+      if (!result.ok) {
+        previewWindow?.close();
+        setDocumentError(result.error);
+        return;
+      }
+
+      if (previewWindow) {
+        previewWindow.location.href = result.url;
+      } else {
+        window.open(result.url, "_blank", "noopener,noreferrer");
+      }
+    } catch {
+      previewWindow?.close();
+      setDocumentError("Could not open the policy copy. Please try again.");
+    } finally {
+      setOpeningDocumentId(null);
+    }
+  }
+
   return (
     <BrokerRegisterShell
       eyebrow="Coverage register"
@@ -85,6 +124,14 @@ export function PolicyWorkspace({ rows }: { rows: PolicyRow[] }) {
         { label: "Expired", value: stats.expired, hint: "Coverage gap", tone: stats.expired ? "red" : "slate" }
       ]}
     >
+      {documentError ? (
+        <div className="fixed right-4 top-20 z-[140] flex w-[min(360px,calc(100vw-2rem))] items-start gap-3 rounded-xl border border-amber-200 bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,.18)]" role="alert">
+          <span className="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full bg-amber-500" />
+          <p className="min-w-0 flex-1 text-[10px] font-semibold leading-4 text-[#334155]">{documentError}</p>
+          <button type="button" onClick={() => setDocumentError(null)} aria-label="Dismiss document error" className="text-[16px] leading-none text-[#64748B]">×</button>
+        </div>
+      ) : null}
+
       <BrokerRegisterToolbar
         query={query}
         onQueryChange={(value) => { setQuery(value); setPage(1); }}
@@ -132,7 +179,7 @@ export function PolicyWorkspace({ rows }: { rows: PolicyRow[] }) {
           <tbody className="divide-y divide-[#EEF2F6]">
             {pageRows.map((policy) => (
               <tr key={policy.id} className="h-12 transition hover:bg-[#FAFCFF]">
-                <td className="px-3"><PolicyTypeLink policy={policy} /></td>
+                <td className="px-3"><PolicyTypeLink policy={policy} openingDocumentId={openingDocumentId} onOpenDocument={openDocument} /></td>
                 <td className="px-2.5"><p className="truncate font-semibold text-[#334155]">{policy.customers?.contact_name ?? "-"}</p><p className="truncate text-[9px] leading-4 text-[#64748B]">{policy.customers?.company_name ?? "Individual account"}</p></td>
                 <td className="px-2.5 font-mono">{policy.vehicles?.vehicle_no ?? "-"}</td>
                 <td className="px-2.5"><span className="block truncate">{policy.insurance_companies?.name ?? "-"}</span></td>
@@ -190,16 +237,40 @@ function PolicyStatus({ policy }: { policy: PolicyRow & { status?: string; daysL
   return <RegisterStatusPill tone="green">Active</RegisterStatusPill>;
 }
 
-function PolicyTypeLink({ policy }: { policy: PolicyRow }) {
+function PolicyTypeLink({
+  policy,
+  openingDocumentId,
+  onOpenDocument,
+}: {
+  policy: PolicyRow;
+  openingDocumentId: string | null;
+  onOpenDocument: (document: PolicyDocument) => void;
+}) {
   const businessLine = policy.business_line?.trim();
   const product = policy.policy_type?.trim();
+  const policyCopy = policy.policy_documents?.find((document) => document.document_type === "policy_copy") ?? null;
+
   return (
-    <Link href={`/policies/${policy.id}/edit`} title={policy.policy_no} className="block truncate text-[12px] text-[#0F172A] hover:text-[#17365D] hover:underline">
-      {businessLine ? <span className="font-bold">{businessLine}</span> : null}
-      {businessLine && product ? <span aria-hidden="true" className="mx-1 inline-block text-[11px] font-normal leading-none">•</span> : null}
-      {product ? <span className="font-normal">{product}</span> : null}
-      {!businessLine && !product ? <span className="font-normal">-</span> : null}
-    </Link>
+    <div className="flex min-w-0 items-center gap-1.5">
+      <Link href={`/policies/${policy.id}/edit`} title={policy.policy_no} className="min-w-0 truncate text-[12px] text-[#0F172A] hover:text-[#17365D] hover:underline">
+        {businessLine ? <span className="font-bold">{businessLine}</span> : null}
+        {businessLine && product ? <span aria-hidden="true" className="mx-1 inline-block text-[11px] font-normal leading-none">•</span> : null}
+        {product ? <span className="font-normal">{product}</span> : null}
+        {!businessLine && !product ? <span className="font-normal">-</span> : null}
+      </Link>
+      {policyCopy ? (
+        <button
+          type="button"
+          onClick={() => onOpenDocument(policyCopy)}
+          disabled={openingDocumentId === policyCopy.id}
+          aria-label={`Open policy copy for ${policy.policy_no}`}
+          title={policyCopy.file_name ? `Open policy copy: ${policyCopy.file_name}` : "Open policy copy"}
+          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-[#7890AC] transition hover:bg-[#EEF4FB] hover:text-[#315B9A] disabled:cursor-wait disabled:opacity-50"
+        >
+          <Files className="h-3.5 w-3.5" />
+        </button>
+      ) : null}
+    </div>
   );
 }
 function validityHint(policy: PolicyRow & { daysLeft?: number }) {
