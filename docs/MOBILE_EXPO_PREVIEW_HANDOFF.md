@@ -187,6 +187,24 @@ Device verification: ADB two cold launches on Android device 00078344S000834 com
 
 **LEARNING:** after the user explicitly requested rollback to the accident-time-picker state, update groups `4e75c429-aa00-4477-bf78-7099897d13ce` and `720ee831-f0ee-4a64-a266-bdd267cffad3` are superseded. Do not republish them unless the user explicitly asks to move forward again.
 
+Latest APK baseline build for this rollback point:
+
+```text
+Build type/profile: Android internal APK, EAS profile `preview`
+Build ID: 2a32890c-3ffe-464c-8efa-5452937cd675
+Source commit: 82780eb19151fc8acda6525489bd4bd18ea04687
+Git message: Refine external claim steps and time picker
+Channel: preview
+Runtime version: 0.2.0
+App version: 0.2.0
+Android build versionCode: 6
+Artifact URL: https://expo.dev/artifacts/eas/R20RhbUSXx3qWoUpWlc6IdSqMtX5hZqH1WSt98lMik8.apk
+Local artifact: apps/mobile-app/insureit-timepicker-preview-v6.apk
+Build completed: 2026-08-17T06:43:04Z
+```
+
+This APK follows the `preview` channel, whose current latest OTA group is `41f252be-a386-4107-99a1-3078d283003a`. Build submission loaded EAS preview environment variables and used remote Android credentials. Device install verification was not completed in the same session because ADB disconnected after the artifact download.
+
 Superseded preview OTA republished from current `main` after the policy-detail hero fix:
 
 ```text

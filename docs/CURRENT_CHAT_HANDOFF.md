@@ -34,6 +34,23 @@ ADB two cold launches on Android device 00078344S000834
 
 ADB verification confirmed the installed app starts cleanly and renders the recovered time-picker-era dashboard. Superseded groups `4e75c429-aa00-4477-bf78-7099897d13ce` and `720ee831-f0ee-4a64-a266-bdd267cffad3` were later hero-fix attempts; do not treat them as current unless the user explicitly asks to move forward again.
 
+**BUILT / DOWNLOAD VERIFIED:** An Android internal APK baseline was built from the time-picker source point so future preview OTA updates can continue from this runtime/channel baseline.
+
+```text
+EAS build ID: 2a32890c-3ffe-464c-8efa-5452937cd675
+Build profile: preview
+Distribution: internal
+Artifact type: APK
+Source commit: 82780eb19151fc8acda6525489bd4bd18ea04687
+Channel: preview
+Runtime version: 0.2.0
+Android build versionCode: 6
+Artifact URL: https://expo.dev/artifacts/eas/R20RhbUSXx3qWoUpWlc6IdSqMtX5hZqH1WSt98lMik8.apk
+Local artifact: apps/mobile-app/insureit-timepicker-preview-v6.apk
+```
+
+The APK artifact was downloaded locally. ADB install verification was blocked because the connected Android device disconnected after the download; reconnect USB debugging before installing/verifying this APK on-device.
+
 **DEPLOYED / VERIFIED:** After failed rebuild-style rollbacks, the `preview` channel was recovered to the user-identified intended mobile state: external claim Spot Intimation/Incident Report refinement with accident time picker. This was restored by republishing the exact prior dirty OTA bundle, preserving dirty-only mobile changes that are not reconstructible from the displayed Git commit alone.
 
 ```text
