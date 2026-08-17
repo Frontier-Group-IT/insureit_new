@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppShell } from "@/components/shell";
+import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel";
 import { DataError } from "@/components/record-list";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { requireCapability } from "@/lib/master-data-server";
@@ -57,7 +58,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function CustomerApplicationsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  await requireCapability("review_kyc", "edit");
+  const profile = await requireCapability("review_kyc", "edit");
   const query = await searchParams;
   const q = clean(query.q);
   const partner = allowed(query.partner, new Set(partnerOptions.map(([value]) => value)));
@@ -85,6 +86,24 @@ export default async function CustomerApplicationsPage({ searchParams }: { searc
   return (
     <AppShell title="KYC Applications">
       <div className="mx-auto max-w-[1440px] space-y-3 pb-4">
+        {profile?.role === "it_super_user" && !error ? (
+          <ItSuperUserDeletePanel
+            entity="customer_onboarding_application"
+            title="Delete onboarding application"
+            records={rows.map((application) => ({
+              id: application.id,
+              label: application.applicant_name ?? application.external_onboarding_id ?? application.applicant_phone ?? application.id,
+              detail: [
+                application.applicant_phone,
+                application.partner_type ? partnerLabels[application.partner_type] ?? application.partner_type : "Customer type not selected",
+                statusLabels[application.status] ?? application.status,
+                application.customer_id ? "Customer record exists" : null,
+                application.external_onboarding_id
+              ].filter(Boolean).join(" • ")
+            }))}
+          />
+        ) : null}
+
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="mt-1 text-[10px] font-medium text-[#475569]">{total ? `Showing ${firstResult}-${lastResult} of ${total} applications` : "No matching applications"}</p>
