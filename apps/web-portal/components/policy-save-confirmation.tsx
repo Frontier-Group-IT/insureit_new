@@ -141,6 +141,13 @@ export function PolicySaveConfirmation() {
     });
   }, [pathname]);
 
+  useEffect(() => {
+    if (uploadNotice?.tone !== "success") return;
+
+    const timer = window.setTimeout(() => setUploadNotice(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [uploadNotice]);
+
   function close() {
     setOpen(false);
     setChoice(null);
