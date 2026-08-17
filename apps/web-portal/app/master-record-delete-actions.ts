@@ -4,17 +4,17 @@ import { revalidatePath } from "next/cache";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-export type DeletableMasterEntity = "customer" | "vehicle" | "policy" | "claim";
+export type DeletableMasterEntity = "customer" | "vehicle" | "policy" | "external_policy" | "claim";
 export type MasterRecordDeleteResult = { ok: true } | { ok: false; error: string };
 
 type Dependency = {
   table: "vehicles" | "policies" | "claims";
-  column: "customer_id" | "vehicle_id" | "policy_id";
+  column: "customer_id" | "vehicle_id" | "policy_id" | "external_policy_id";
   label: string;
 };
 
 const entityConfig: Record<DeletableMasterEntity, {
-  table: "customers" | "vehicles" | "policies" | "claims";
+  table: "customers" | "vehicles" | "policies" | "external_policies" | "claims";
   label: string;
   revalidate: string[];
   dependencies: Dependency[];
@@ -46,6 +46,14 @@ const entityConfig: Record<DeletableMasterEntity, {
       { table: "claims", column: "policy_id", label: "claim" }
     ]
   },
+  external_policy: {
+    table: "external_policies",
+    label: "external policy",
+    revalidate: ["/policies/external", "/claims"],
+    dependencies: [
+      { table: "claims", column: "external_policy_id", label: "claim" }
+    ]
+  },
   claim: {
     table: "claims",
     label: "claim",
@@ -67,7 +75,7 @@ export async function deleteMasterRecord(entity: DeletableMasterEntity, id: stri
   const { profile } = await getAuthenticatedProfile(accessToken);
 
   if (!profile?.id || profile.role !== "it_super_user") {
-    return { ok: false, error: "Only the IT Super User can permanently delete customer, vehicle, policy or claim records." };
+    return { ok: false, error: "Only the IT Super User can permanently delete customer, vehicle, policy, external policy or claim records." };
   }
 
   if (!(entity in entityConfig) || !isUuid(id)) {
