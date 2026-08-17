@@ -101,13 +101,18 @@ Write-Host "Secrets are redacted before anything is written or printed."
 Write-Host ""
 
 try {
-    $plans = @(
-        Invoke-SanitizedDryRun -Label 'roles' -DatabaseUrl $dbUrl -Arguments @('--role-only'),
-        Invoke-SanitizedDryRun -Label 'schema' -DatabaseUrl $dbUrl -Arguments @(),
-        Invoke-SanitizedDryRun -Label 'data' -DatabaseUrl $dbUrl -Arguments @('--use-copy','--data-only','-x','storage.buckets_vectors','-x','storage.vector_indexes'),
-        Invoke-SanitizedDryRun -Label 'history_schema' -DatabaseUrl $dbUrl -Arguments @('--schema','supabase_migrations'),
-        Invoke-SanitizedDryRun -Label 'history_data' -DatabaseUrl $dbUrl -Arguments @('--use-copy','--data-only','--schema','supabase_migrations')
+    $planSpecs = @(
+        [pscustomobject]@{ Label = 'roles'; Arguments = @('--role-only') }
+        [pscustomobject]@{ Label = 'schema'; Arguments = @() }
+        [pscustomobject]@{ Label = 'data'; Arguments = @('--use-copy','--data-only','-x','storage.buckets_vectors','-x','storage.vector_indexes') }
+        [pscustomobject]@{ Label = 'history_schema'; Arguments = @('--schema','supabase_migrations') }
+        [pscustomobject]@{ Label = 'history_data'; Arguments = @('--use-copy','--data-only','--schema','supabase_migrations') }
     )
+
+    $plans = @()
+    foreach ($spec in $planSpecs) {
+        $plans += Invoke-SanitizedDryRun -Label ([string]$spec.Label) -DatabaseUrl $dbUrl -Arguments @($spec.Arguments)
+    }
 
     $sections = New-Object System.Collections.Generic.List[string]
     foreach ($plan in $plans) {
