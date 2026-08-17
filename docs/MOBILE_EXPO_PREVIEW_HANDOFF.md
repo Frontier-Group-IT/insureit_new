@@ -171,7 +171,22 @@ Use visual inspection for the changed UI. If the relevant screen is blocked by d
 
 ## 7. Current Recent Preview Evidence
 
-Latest policy-detail hero-height recovery publish:
+Latest user-requested rollback to external-claim refinement publish:
+
+```text
+Source commit: 82780eb19151fc8acda6525489bd4bd18ea04687
+Message: Rollback to external claim steps and time picker
+Update group ID: 6dd3e7da-86e4-4bf0-8287-a372f6233ec4
+Android update ID: 01a00e18-a8f5-7470-a763-70efa215d60c
+iOS update ID: 01a00e18-a8f5-771e-bdf7-746152cf2c63
+Runtime version: 0.2.0
+EAS metadata: isGitWorkingTreeDirty false
+Device verification: ADB cold launches on Android device 00078344S000834; app remained alive after recovery from the previously bad cached bundle, dashboard rendered, and Start Claim rendered the external-claim refinement flow from commit 82780eb1.
+```
+
+This rollback was explicitly requested by the user on 2026-08-17 (IST) to restore the update shown in Expo as group `e68ed658-b0a0-4b3a-a6a5-2b66e42f67a5` / commit `82780eb`. The new group `6dd3e7da-86e4-4bf0-8287-a372f6233ec4` republishes that same source commit with `.env` present.
+
+Previous policy-detail hero-height recovery publish, superseded by the rollback above:
 
 ```text
 Source commit: 15d87986e1264a1ab8b7e5a58b9d9723823c53c4
