@@ -21,6 +21,7 @@ const entityLabels: Record<DeletableMasterEntity, string> = {
   customer: "customer",
   vehicle: "vehicle",
   policy: "policy",
+  external_policy: "external policy",
   claim: "claim"
 };
 

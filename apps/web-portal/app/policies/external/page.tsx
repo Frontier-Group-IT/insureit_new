@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
+import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { getEffectivePermission } from "@/lib/permission-management";
 import { requireCapability } from "@/lib/master-data-server";
@@ -59,6 +60,17 @@ export default async function ExternalPoliciesPage() {
 
   return (
     <AppShell title="External Policies">
+      {profile.role === "it_super_user" && !error ? (
+        <ItSuperUserDeletePanel
+          entity="external_policy"
+          title="Delete external policy record"
+          records={rows.map((policy) => ({
+            id: policy.id,
+            label: policy.policy_no,
+            detail: [policy.vehicles?.vehicle_no, policy.customers?.contact_name, policy.insurance_companies?.name].filter(Boolean).join(" • ")
+          }))}
+        />
+      ) : null}
       {error ? (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3"><p className="text-[11px] font-semibold text-red-700">The external policy register is temporarily unavailable.</p><p className="mt-1 text-[9.5px] text-[#64748B]">Please refresh the page or try again shortly.</p></div>
       ) : (
