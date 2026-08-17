@@ -171,21 +171,21 @@ Use visual inspection for the changed UI. If the relevant screen is blocked by d
 
 ## 7. Current Recent Preview Evidence
 
-Latest recovery publish after preserving dirty OTA bundle:
+Latest user-intended external claim time-picker recovery publish:
 
 ```text
-Source commit shown by EAS: 8885c5715ba3be6d360feec7efd06eb988b0a7f4
-Original source group republished: 6e438b8d-e179-4729-97a6-47005efa298a
-Message: Republish exact external claim refinement
-Update group ID: f88a9bef-e9e3-40a1-b907-9e34994c5449
-Android update ID: 01a00e1f-2c85-78b2-a814-d342c827e7e9
-iOS update ID: 01a00e1f-2c85-7ed4-88ca-5f60290d8ccf
+Source commit shown by EAS: 82780eb19151fc8acda6525489bd4bd18ea04687
+Original source group republished: 662027d5-685b-4032-a1ab-7adca9b43ec1
+Message: Restore working external claim time picker state
+Update group ID: 5a9329d3-536f-4cba-b8b4-90fb9f41446f
+Android update ID: 01a00e24-411a-7e2b-916f-661d370bef09
+iOS update ID: 01a00e24-411a-72e3-bc14-ce4fd40a95ee
 Runtime version: 0.2.0
 EAS metadata: isGitWorkingTreeDirty true because this is an exact republish of the prior dirty OTA bundle.
-Device verification: ADB cold launches on Android device 00078344S000834; app remained alive after recovery from the previously bad cached bundle and dashboard rendered.
+Device verification: ADB two cold launches on Android device 00078344S000834 completed without `Missing mobile app environment configuration`; dashboard rendered; external claim tracker opened and showed the current Spot Status stage.
 ```
 
-**LEARNING:** when the user says the mobile app had later UI updates that were erased, do not rebuild only from the commit shown beside a dirty Expo update. Use `eas update:republish --group <original-group>` to preserve the exact OTA bundle. Group `e68ed658-b0a0-4b3a-a6a5-2b66e42f67a5` and rebuilt group `6dd3e7da-86e4-4bf0-8287-a372f6233ec4` both led to `Missing mobile app environment configuration` on the connected Android device. The later recovery point is exact republish group `f88a9bef-e9e3-40a1-b907-9e34994c5449` from original dirty group `6e438b8d-e179-4729-97a6-47005efa298a`.
+**LEARNING:** when the user says the mobile app had later UI updates that were erased, do not rebuild only from the commit shown beside a dirty Expo update. Use `eas update:republish --group <original-group>` to preserve the exact OTA bundle. Group `e68ed658-b0a0-4b3a-a6a5-2b66e42f67a5` and rebuilt group `6dd3e7da-86e4-4bf0-8287-a372f6233ec4` led to `Missing mobile app environment configuration` on the connected Android device. Exact republish group `f88a9bef-e9e3-40a1-b907-9e34994c5449` restored an earlier external-claim refinement, but the user identified the intended final working state as the later time-picker update. The current recovery point is `5a9329d3-536f-4cba-b8b4-90fb9f41446f`, exact republish of original group `662027d5-685b-4032-a1ab-7adca9b43ec1`.
 
 Previous policy-detail hero-height recovery publish, superseded by the rollback above:
 

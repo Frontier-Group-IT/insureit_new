@@ -10,15 +10,15 @@ Policy Onboarding OCR hardening remains an active workstream. Production portal 
 
 ## Mobile Expo preview
 
-**DEPLOYED / VERIFIED:** After a failed rebuild-style rollback, the `preview` channel was recovered by republishing the exact prior dirty OTA bundle for the external-claim refinement. This preserves dirty-only mobile changes that are not reconstructible from the displayed Git commit alone.
+**DEPLOYED / VERIFIED:** After failed rebuild-style rollbacks, the `preview` channel was recovered to the user-identified intended mobile state: external claim Spot Intimation/Incident Report refinement with accident time picker. This was restored by republishing the exact prior dirty OTA bundle, preserving dirty-only mobile changes that are not reconstructible from the displayed Git commit alone.
 
 ```text
-Source commit shown by EAS: 8885c5715ba3be6d360feec7efd06eb988b0a7f4
-Original source group republished: 6e438b8d-e179-4729-97a6-47005efa298a
-Message: Republish exact external claim refinement
-Update group ID: f88a9bef-e9e3-40a1-b907-9e34994c5449
-Android update ID: 01a00e1f-2c85-78b2-a814-d342c827e7e9
-iOS update ID: 01a00e1f-2c85-7ed4-88ca-5f60290d8ccf
+Source commit shown by EAS: 82780eb19151fc8acda6525489bd4bd18ea04687
+Original source group republished: 662027d5-685b-4032-a1ab-7adca9b43ec1
+Message: Restore working external claim time picker state
+Update group ID: 5a9329d3-536f-4cba-b8b4-90fb9f41446f
+Android update ID: 01a00e24-411a-7e2b-916f-661d370bef09
+iOS update ID: 01a00e24-411a-72e3-bc14-ce4fd40a95ee
 Runtime version: 0.2.0
 EAS metadata: `isGitWorkingTreeDirty: true` because this is an exact republish of a prior dirty OTA bundle.
 ```
@@ -30,7 +30,7 @@ npx eas-cli channel:view preview --json
 ADB cold launches on Android device 00078344S000834
 ```
 
-ADB screenshots confirmed the dashboard rendered after the phone recovered from the previously bad cached bundle. Rebuilt/exact groups tied to `e68ed658-b0a0-4b3a-a6a5-2b66e42f67a5` showed `Missing mobile app environment configuration`; do not use that group as the stable recovery point even though it appears later in Expo history than `6e438b8d`.
+ADB two-launch verification completed without `Missing mobile app environment configuration`; dashboard rendered; external claim tracker opened and showed the current Spot Status stage. Rebuilt/exact groups tied to `e68ed658-b0a0-4b3a-a6a5-2b66e42f67a5` showed `Missing mobile app environment configuration`; do not use that group as the stable recovery point even though it appears later in Expo history than `662027d5`.
 
 **SUPERSEDED BY ROLLBACK ABOVE:** Policy Detail hero-height fix was committed and published to Expo preview on 2026-08-17 (IST), branch/channel `preview`, runtime `0.2.0`.
 
