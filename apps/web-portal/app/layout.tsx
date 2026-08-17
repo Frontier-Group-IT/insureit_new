@@ -5,6 +5,7 @@ import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 import { AadhaarMaskNormalizer } from "@/components/aadhaar-mask-normalizer";
 import { LegacyIntermediaryImportLink } from "@/components/legacy-intermediary-import-link";
 import { RouteProgressBar } from "@/components/loading/route-progress-bar";
+import { PolicyEditCopyFooterActions } from "@/components/policy-edit-copy-footer-actions";
 import { PolicySaveConfirmation } from "@/components/policy-save-confirmation";
 import { SuccessPopup } from "@/components/success-popup";
 import { ProfessionalFormValidation } from "@/components/professional-form-validation";
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <AadhaarMaskNormalizer />
             <LegacyIntermediaryImportLink />
             <ProfessionalFormValidation />
+            <PolicyEditCopyFooterActions />
             <PolicySaveConfirmation />
             <SuccessPopup />
             <RouteProgressBar />
