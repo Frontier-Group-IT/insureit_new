@@ -125,9 +125,9 @@ function dateTyping(value:string){const digits=value.replace(/\D/g,"").slice(0,8
 function policyExpiryFrom(start:string){if(!/^\d{4}-\d{2}-\d{2}$/.test(start))return"";const[y,m,d]=start.split("-").map(Number);const expiry=new Date(Date.UTC(y+1,m-1,d));expiry.setUTCDate(expiry.getUTCDate()-1);return expiry.toISOString().slice(0,10);}
 function shiftedPolicyEnd(newStart:string,oldStart:string,oldEnd:string){if(!/^\d{4}-\d{2}-\d{2}$/.test(newStart)||!/^\d{4}-\d{2}-\d{2}$/.test(oldStart)||!/^\d{4}-\d{2}-\d{2}$/.test(oldEnd))return policyExpiryFrom(newStart);const oldStartMs=new Date(`${oldStart}T00:00:00Z`).getTime(),oldEndMs=new Date(`${oldEnd}T00:00:00Z`).getTime();if(oldEndMs<oldStartMs)return policyExpiryFrom(newStart);const durationDays=Math.round((oldEndMs-oldStartMs)/86400000);const next=new Date(`${newStart}T00:00:00Z`);next.setUTCDate(next.getUTCDate()+durationDays);return next.toISOString().slice(0,10);}
 function boolValue(value: string | null) { return value==="true"||value==="Yes"||value==="YES"; }
-function normalizeRegistrationInput(value:string){return value.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,10);}
-function isValidRegisteredVehicleNumber(value:string){return /^[A-Z]{2}[A-Z0-9]{6}[0-9]{2}$/.test(value);}
-const registrationValidationMessage="Enter a valid 10-character registration number: first 2 letters and last 2 digits.";
+function normalizeRegistrationInput(value:string){return value.toUpperCase().replace(/[^A-Z0-9]/g,"");}
+function isValidRegisteredVehicleNumber(value:string){return /^[A-Z]{2}[A-Z0-9]*[0-9]{2}$/.test(value);}
+const registrationValidationMessage="Enter a valid registration number starting with 2 letters and ending with 2 digits.";
 function assessPayinStatus(amount:string,billNumber:string,billDate:string){
   const hasAmount=Number(amount||0)>0;
   const hasBillNumber=Boolean(billNumber.trim());
