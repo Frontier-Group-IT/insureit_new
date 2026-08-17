@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, RefreshCw, Upload } from "lucide-react";
+import { Eye, FileText, RefreshCw, Upload } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -170,11 +170,11 @@ export function PolicyEditCopyFooterActions() {
                 type="button"
                 onClick={() => void viewPolicy()}
                 disabled={isOpening || isUploading}
-                title={policyCopy.fileName}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#BFD3F7] bg-[#F7FAFF] px-3 text-[10px] font-semibold text-[#174EA6] transition hover:bg-[#EEF5FF] disabled:cursor-wait disabled:opacity-60"
+                aria-label="View policy copy"
+                title={policyCopy.fileName ? `View policy: ${policyCopy.fileName}` : "View policy copy"}
+                className="inline-flex h-8 w-8 items-center justify-center text-[#526277] transition hover:text-[#17365D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9CB9E6] disabled:cursor-wait disabled:opacity-50"
               >
-                <FileText className="h-3.5 w-3.5" />
-                {isOpening ? "Opening…" : "View Policy"}
+                <Eye className={`h-4 w-4 ${isOpening ? "animate-pulse" : ""}`} />
               </button>
               <button
                 type="button"
@@ -182,10 +182,9 @@ export function PolicyEditCopyFooterActions() {
                 disabled={isUploading || isOpening}
                 aria-label="Replace policy copy"
                 title="Replace policy copy"
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#D9E2F0] bg-white px-2.5 text-[9.5px] font-semibold text-[#526277] transition hover:border-[#B8C7DA] hover:bg-[#F8FAFC] hover:text-[#17365D] disabled:cursor-wait disabled:opacity-60"
+                className="inline-flex h-8 w-8 items-center justify-center text-[#526277] transition hover:text-[#17365D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9CB9E6] disabled:cursor-wait disabled:opacity-50"
               >
-                <RefreshCw className={`h-3.5 w-3.5 ${isUploading ? "animate-spin" : ""}`} />
-                {isUploading ? "Replacing…" : "Replace"}
+                <RefreshCw className={`h-4 w-4 ${isUploading ? "animate-spin" : ""}`} />
               </button>
             </>
           ) : (
