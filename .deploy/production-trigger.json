@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy 5-second auto-hide for policy document error toast.",
-  "deploy_requested_at": "2026-08-17T23:18:00+05:30",
+  "purpose": "Deploy combined Policy Copy view and replace control.",
+  "deploy_requested_at": "2026-08-17T23:27:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #399 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "a705edf01e0fb0bfe0787f07751b520d35e4bd86",
-  "release_scope": "UI-only change to automatically hide the existing Policy Portfolio policy-copy open error toast after 5 seconds while preserving the current close button, message, styling, layout, and all document-opening behavior. No backend, Supabase, database, schema, storage, migration, or policy-document access logic changes.",
-  "verification": "PR #399 Verify web portal run 32051918230 passed all regressions, typecheck, lint, and production build on head c6e3c903a99bef1eb89a2260f1ba387a183a8b40 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #400 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "42b8216f7cc73a81216938716a3fcf3bbf9f3e2e",
+  "release_scope": "UI-only refinement to the Policy Edit footer for an existing uploaded policy copy: combine View Policy and the refresh/replace icon into one rounded visual control while keeping them as separate click targets. Preserve the same Add Policy Copy styling and keep Add Policy Copy, Cancel, Save Policy Changes, document opening/replacement behavior, backend, Supabase, storage, schema, migrations, calculations, and all other functionality unchanged.",
+  "verification": "PR #400 Verify web portal run 32052550837 was still running when merge was requested. The protected production workflow must run the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
