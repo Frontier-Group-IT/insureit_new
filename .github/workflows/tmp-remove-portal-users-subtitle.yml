@@ -1,0 +1,48 @@
+name: Remove portal users subtitle
+
+on:
+  push:
+    branches:
+      - feature/remove-portal-users-subtitle
+    paths:
+      - .github/workflows/tmp-remove-portal-users-subtitle.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/remove-portal-users-subtitle
+          fetch-depth: 0
+      - name: Remove subtitle only
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('apps/web-portal/app/intermediaries/portal-users-workspace.tsx')
+          text = path.read_text()
+          old = '<div className="shrink-0"><h2 className="text-[12px] font-semibold text-[#0F172A]">Partner Portal Users</h2><p className="mt-0.5 text-[9px] text-[#64748B]">Review partner login invitations and current portal access.</p></div>'
+          new = '<div className="shrink-0"><h2 className="text-[12px] font-semibold text-[#0F172A]">Partner Portal Users</h2></div>'
+          if old not in text:
+              raise SystemExit('Expected subtitle block not found; refusing unrelated edit')
+          text = text.replace(old, new, 1)
+          path.write_text(text)
+          PY
+      - name: Verify scope
+        shell: bash
+        run: |
+          grep -q 'Partner Portal Users' apps/web-portal/app/intermediaries/portal-users-workspace.tsx
+          ! grep -q 'Review partner login invitations and current portal access.' apps/web-portal/app/intermediaries/portal-users-workspace.tsx
+      - name: Commit change and remove temporary workflow
+        shell: bash
+        run: |
+          rm .github/workflows/tmp-remove-portal-users-subtitle.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/web-portal/app/intermediaries/portal-users-workspace.tsx .github/workflows/tmp-remove-portal-users-subtitle.yml
+          git commit -m 'Remove portal users subtitle'
+          git push origin HEAD:feature/remove-portal-users-subtitle
