@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy Edit View Policy text with replace icon.",
-  "deploy_requested_at": "2026-08-17T22:48:00+05:30",
+  "purpose": "Deploy Policy Edit policy-copy button style consistency.",
+  "deploy_requested_at": "2026-08-17T23:12:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #397 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "9d66aa1d5bd578f994373434e98bb442da850bc0",
-  "release_scope": "UI-only refinement to the Policy Edit footer for an existing uploaded policy copy: show View Policy as compact clickable text and keep Replace as the refresh icon-only action with no fill, border, or icon background. Keep Add Policy Copy exactly unchanged. Preserve Cancel, Save Policy Changes, document opening/replacement behavior, loading states, backend, Supabase, storage, schema, calculations, and all other functionality unchanged.",
-  "verification": "PR #397 Verify web portal run 32049683569 passed all regressions, typecheck, lint, and production build on head 9df80316aba9e40e73ef9f6aeb2a15dfa319f953 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #398 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "86ae6bb89531f1da12353ff38ee427b2f1e6caec",
+  "release_scope": "UI-only refinement to the Policy Edit footer for an existing uploaded policy copy: make View Policy and the Replace refresh icon use the same rounded outlined button style as Add Policy Copy, including matching light background, blue border, rounded corners, blue text/icon color, height, spacing, and hover treatment. Keep Add Policy Copy itself unchanged. Preserve Cancel, Save Policy Changes, document opening/replacement behavior, uploads, backend, Supabase, storage, schema, calculations, and all other functionality unchanged.",
+  "verification": "PR #398 Verify web portal run 32051354764 passed all regressions, typecheck, lint, and production build on head 5a8078e10d6dd55768974084b48c1acd808c242c before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
