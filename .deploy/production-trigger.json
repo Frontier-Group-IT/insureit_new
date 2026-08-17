@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy Register dot separator and product-weight update to production.",
-  "deploy_requested_at": "2026-08-17T14:13:00+05:30",
+  "purpose": "Deploy Policy Register bullet separator refinement to production.",
+  "deploy_requested_at": "2026-08-17T14:31:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #382 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "fc73a4c20ae957c20a1061531132efdb10ee9c35",
-  "release_scope": "Policy Register Policy Type presentation: display business_line + ' . ' + policy_type, such as Motor . Package; keep the business line bold while policy product and dot separator remain regular weight; preserve existing navigation, search, filters, tabs, pagination, mobile cards and backend policy-number workflows.",
-  "verification": "PR #382 Verify web portal run 32011638801 passed all regressions, typecheck, lint, and production build on head 82ccaf95f6019aa0de4674718d287d59c4f63a23 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #383 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "488bbab2b375979963e1a2e66d8f6bc5cdf7f4d4",
+  "release_scope": "Policy Register Policy Type presentation: replace the period separator with a proper bullet so values display as Motor • SAOD or Motor • Package; keep business_line bold, keep policy_type regular weight, size the separator between the former period and the Active status green dot, and preserve existing navigation, search, filters, pagination, mobile cards and backend policy workflows.",
+  "verification": "PR #383 Verify web portal run 32013099747 passed all regressions, typecheck, lint, and production build on head b9dc240d941abc078f93edd8525d722d59044733 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
