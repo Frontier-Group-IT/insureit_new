@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy removal of the Vehicle Portfolio Action column to production.",
-  "deploy_requested_at": "2026-08-17T15:01:00+05:30",
+  "purpose": "Deploy Policy Save Active Policy confirmation modal and repository-only policy document migration to production.",
+  "deploy_requested_at": "2026-08-17T16:14:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #385 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "2be2879ef0e016bb9429574c65d42228157c72b3",
-  "release_scope": "Vehicle Portfolio desktop table only: remove the Action column header and per-row Open action cell. Preserve vehicle number links, Next Action, mobile card actions, filters, tabs, pagination, table data, registration status, and backend behavior.",
-  "verification": "PR #385 Verify web portal run 32015551762 passed all regressions, typecheck, lint, and production build on head be0b09b2423b724371104a019fa83f8fe46ab6b9 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #386 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "d64baefcc9fabc108b850adc115f37b27ab288c8",
+  "release_scope": "Add the Save Active Policy confirmation modal on /policies/new with Upload Policy Copy and Save Without Policy Copy choices, while preserving the existing active-policy creation flow. Include the policy_documents Supabase migration file in the repository only; do not apply any Supabase/database/storage migration as part of this deployment.",
+  "verification": "PR #386 Verify web portal run 32019841125 passed on head 7d81799335f3467032bdf6452f881c081d28b74e before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
