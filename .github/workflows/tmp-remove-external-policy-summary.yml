@@ -1,0 +1,47 @@
+name: Remove external policy summary subheading
+
+on:
+  push:
+    branches:
+      - feature/remove-external-policy-summary-subheading
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/remove-external-policy-summary-subheading
+          fetch-depth: 0
+      - name: Remove redundant summary row
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('apps/web-portal/app/policies/external/external-policy-workspace.tsx')
+          s = p.read_text()
+          old = '''            <Stack direction="row" spacing={1.5} sx={{ mt: .25 }} flexWrap="wrap" useFlexGap>\n              <CompactStat label="Total" value={rows.length} />\n              <CompactStat label="Active" value={stats.active} tone="success" />\n              <CompactStat label="Renewal due" value={stats.expiring} tone="warning" />\n              <CompactStat label="Expired" value={stats.expired} tone="error" />\n            </Stack>\n'''
+          helper = '''function CompactStat({ label, value, tone = "default" }: { label: string; value: number; tone?: "default" | "success" | "warning" | "error" }) {\n  const color = tone === "success" ? "success.main" : tone === "warning" ? "warning.main" : tone === "error" ? "error.main" : "text.secondary";\n  return (\n    <Typography variant="caption" color="text.secondary">\n      {label} <Box component="span" sx={{ ml: .35, fontWeight: 900, color }}>{value}</Box>\n    </Typography>\n  );\n}\n\n'''
+          if old not in s:
+              raise SystemExit('summary block not found')
+          if helper not in s:
+              raise SystemExit('CompactStat helper not found')
+          s = s.replace(old, '', 1).replace(helper, '', 1)
+          p.write_text(s)
+          PY
+      - name: Verify scope
+        run: |
+          git diff -- apps/web-portal/app/policies/external/external-policy-workspace.tsx
+          test "$(git diff --name-only | wc -l)" -eq 1
+          ! grep -q 'CompactStat label="Total"' apps/web-portal/app/policies/external/external-policy-workspace.tsx
+          ! grep -q '^function CompactStat' apps/web-portal/app/policies/external/external-policy-workspace.tsx
+      - name: Commit change and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/tmp-remove-external-policy-summary.yml
+          git add apps/web-portal/app/policies/external/external-policy-workspace.tsx
+          git commit -m "Remove external policy summary subheading"
+          git push origin HEAD:feature/remove-external-policy-summary-subheading
