@@ -91,55 +91,56 @@ export default function PolicyDetailScreen() {
 
   return (
     <Screen title="Policy Detail" subtitle={vehicle?.vehicle_no ?? policy.policy_no} showLogout showTitleHeader={false}>
-      <View style={styles.heroLayout}>
-        <View style={styles.heroAccent} />
-        <View style={styles.heroTop}>
-          <View style={[styles.heroIcon, { backgroundColor: renewalTone(renewalState.tone).soft }]}>
-            <MaterialCommunityIcons name={policy.source === 'external' ? 'account-edit-outline' : 'shield-check-outline'} size={25} color={renewalTone(renewalState.tone).accent} />
+      <View style={styles.contentStack}>
+        <View style={styles.heroLayout}>
+          <View style={styles.heroAccent} />
+          <View style={styles.heroTop}>
+            <View style={[styles.heroIcon, { backgroundColor: renewalTone(renewalState.tone).soft }]}>
+              <MaterialCommunityIcons name={policy.source === 'external' ? 'account-edit-outline' : 'shield-check-outline'} size={25} color={renewalTone(renewalState.tone).accent} />
+            </View>
+            <View style={styles.heroCopy}>
+              <Text style={[styles.eyebrow, { color: renewalTone(renewalState.tone).accent }]}>POLICY DETAIL</Text>
+              <Text style={styles.policyNo} numberOfLines={2}>{policy.policy_no}</Text>
+              <Text style={styles.policyType} numberOfLines={1}>{policy.policy_type || 'Policy'}</Text>
+            </View>
+            <StatusBadge state={renewalState.tone} label={renewalState.label} />
           </View>
-          <View style={styles.heroCopy}>
-            <Text style={[styles.eyebrow, { color: renewalTone(renewalState.tone).accent }]}>POLICY DETAIL</Text>
-            <Text style={styles.policyNo} numberOfLines={2}>{policy.policy_no}</Text>
-            <Text style={styles.policyType} numberOfLines={1}>{policy.policy_type || 'Policy'}</Text>
+          <View style={styles.heroMetaRow}>
+            <HeroMetric label="Insurer" value={company?.name ?? 'Insurer pending'} />
+            <HeroMetric label="Cover left" value={renewalState.helper || '-'} />
           </View>
-          <StatusBadge state={renewalState.tone} label={renewalState.label} />
+          <View style={styles.heroMetaRow}>
+            <HeroMetric label="Start date" value={formatDate(policy.start_date)} />
+            <HeroMetric label="End date" value={formatDate(policy.end_date)} />
+          </View>
+          {renewalState.action ? <View style={styles.heroActionRow}>
+            <Pressable accessibilityRole="button" onPress={() => router.push('/customer/insurance-quote')} style={({ pressed }) => [styles.heroAction, { backgroundColor: renewalTone(renewalState.tone).accent }, pressed && styles.heroActionPressed]}>
+              <MaterialCommunityIcons name={renewalState.tone === 'danger' ? 'refresh' : 'file-document-outline'} size={15} color="#FFFFFF" />
+              <Text style={styles.heroActionText}>{renewalState.tone === 'danger' ? 'Renew policy' : 'Get quote'}</Text>
+            </Pressable>
+          </View> : null}
         </View>
-        <View style={styles.heroMetaRow}>
-          <HeroMetric label="Insurer" value={company?.name ?? 'Insurer pending'} />
-          <HeroMetric label="Cover left" value={renewalState.helper || '-'} />
-        </View>
-        <View style={styles.heroMetaRow}>
-          <HeroMetric label="Start date" value={formatDate(policy.start_date)} />
-          <HeroMetric label="End date" value={formatDate(policy.end_date)} />
-        </View>
-        {renewalState.action ? <View style={styles.heroActionRow}>
-          <Text style={styles.heroActionLead}>{renewalState.helper}</Text>
-          <Pressable accessibilityRole="button" onPress={() => router.push('/customer/insurance-quote')} style={({ pressed }) => [styles.heroAction, { backgroundColor: renewalTone(renewalState.tone).accent }, pressed && styles.heroActionPressed]}>
-            <MaterialCommunityIcons name={renewalState.tone === 'danger' ? 'refresh' : 'file-document-outline'} size={15} color="#FFFFFF" />
-            <Text style={styles.heroActionText}>{renewalState.tone === 'danger' ? 'Renew policy' : 'Get quote'}</Text>
-          </Pressable>
-        </View> : null}
+
+        <Card style={styles.financialCard}>
+          <SectionTitle icon="cash-multiple" title="Financial summary" />
+          <View style={styles.financialGrid}>
+            <FinancialValue label="Premium" value={formatCurrency(policy.premium_amount)} primary />
+            <FinancialValue label="IDV" value={formatCurrency(policy.insured_declared_value)} />
+          </View>
+        </Card>
+
+        <Card style={styles.vehicleCard}>
+          <SectionTitle icon="truck-outline" title="Linked vehicle" hint={[vehicle?.make, vehicle?.model].filter(Boolean).join(' ') || vehicle?.vehicle_type || 'Vehicle record'} />
+          <View style={styles.vehicleFacts}>
+            <CompactFact label="Vehicle number" value={vehicle?.vehicle_no} />
+            <CompactFact label="Vehicle type" value={vehicle?.vehicle_type} />
+          </View>
+          {vehicle ? <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/vehicle-detail', params: { id: vehicle.id } } as any)} style={({ pressed }) => [styles.vehicleLink, pressed && styles.vehicleLinkPressed]}>
+            <Text style={styles.vehicleLinkText}>View vehicle details</Text>
+            <MaterialCommunityIcons name="arrow-right" size={17} color={palette.navy} />
+          </Pressable> : null}
+        </Card>
       </View>
-
-      <Card style={styles.financialCard}>
-        <SectionTitle icon="cash-multiple" title="Financial summary" />
-        <View style={styles.financialGrid}>
-          <FinancialValue label="Premium" value={formatCurrency(policy.premium_amount)} primary />
-          <FinancialValue label="IDV" value={formatCurrency(policy.insured_declared_value)} />
-        </View>
-      </Card>
-
-      <Card style={styles.vehicleCard}>
-        <SectionTitle icon="truck-outline" title="Linked vehicle" hint={[vehicle?.make, vehicle?.model].filter(Boolean).join(' ') || vehicle?.vehicle_type || 'Vehicle record'} />
-        <View style={styles.vehicleFacts}>
-          <CompactFact label="Vehicle number" value={vehicle?.vehicle_no} />
-          <CompactFact label="Vehicle type" value={vehicle?.vehicle_type} />
-        </View>
-        {vehicle ? <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/vehicle-detail', params: { id: vehicle.id } } as any)} style={({ pressed }) => [styles.vehicleLink, pressed && styles.vehicleLinkPressed]}>
-          <Text style={styles.vehicleLinkText}>View vehicle details</Text>
-          <MaterialCommunityIcons name="arrow-right" size={17} color={palette.navy} />
-        </Pressable> : null}
-      </Card>
     </Screen>
   );
 }
@@ -194,7 +195,8 @@ function renewalTone(tone: 'success' | 'warning' | 'danger' | 'neutral') {
 }
 
 const styles = StyleSheet.create({
-  heroLayout: { alignSelf: 'stretch', flexGrow: 0, flexShrink: 0, marginBottom: 12, borderRadius: 22, backgroundColor: '#F4F0FF', borderWidth: 1, borderColor: '#D9CCF8', padding: 15, overflow: 'hidden' },
+  contentStack: { alignSelf: 'stretch', flex: 0 },
+  heroLayout: { alignSelf: 'stretch', flex: 0, flexGrow: 0, flexShrink: 0, marginBottom: 12, borderRadius: 22, backgroundColor: '#F4F0FF', borderWidth: 1, borderColor: '#D9CCF8', padding: 15, overflow: 'hidden' },
   heroAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5, backgroundColor: '#7C5CC4' },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   heroIcon: { width: 46, height: 46, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
@@ -206,11 +208,10 @@ const styles = StyleSheet.create({
   heroMetric: { flex: 1, minHeight: 55, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.72)', borderWidth: 1, borderColor: 'rgba(106,75,170,.16)', paddingHorizontal: 9, justifyContent: 'center' },
   heroMetricLabel: { color: '#6A4BAA', fontSize: 9, fontWeight: '900', textTransform: 'uppercase' },
   heroMetricValue: { color: palette.navy, fontSize: 11.5, fontWeight: '900', marginTop: 4 },
-  heroActionRow: { minHeight: 34, marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  heroActionLead: { flex: 1, color: '#475467', fontSize: 10.5, lineHeight: 14, fontWeight: '800' },
-  heroAction: { alignSelf: 'flex-start', minHeight: 34, borderRadius: 11, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  heroActionRow: { marginTop: 10 },
+  heroAction: { alignSelf: 'stretch', minHeight: 34, borderRadius: 11, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   heroActionPressed: { opacity: 0.86, transform: [{ scale: 0.985 }] },
-  heroActionText: { flex: 1, color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
+  heroActionText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
   statusBadge: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5 },
   statusText: { fontSize: 9.5, fontWeight: '900' },
   financialCard: { backgroundColor: '#EFFAF5', borderColor: '#B9E6D0' },
