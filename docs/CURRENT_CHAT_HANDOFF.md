@@ -10,6 +10,29 @@ Policy Onboarding OCR hardening remains an active workstream. Production portal 
 
 ## Mobile Expo preview
 
+**DEPLOYED / VERIFIED:** The Policy Detail hero blank-space fix has been reapplied on top of the approved mobile/time-picker state, without rolling back to an older mobile bundle.
+
+```text
+Source commit: 00ab7309e26cead1d46b4c7d2967e31c98c5e247
+Message: Fix policy detail hero on approved time picker state
+Update group ID: 720ee831-f0ee-4a64-a266-bdd267cffad3
+Android update ID: 01a00e4a-58de-7f51-b7bf-f33598088760
+iOS update ID: 01a00e4a-58de-7aac-a1c7-984463678fc5
+Runtime version: 0.2.0
+EAS metadata: `isGitWorkingTreeDirty: false`
+```
+
+Verification:
+
+```text
+npm --workspace apps/mobile-app run typecheck
+npx eslint app/customer/policy-detail.tsx app/customer/self-managed-claim.tsx --quiet
+npx eas-cli update:list --branch preview --limit 2 --non-interactive
+ADB two cold launches on Android device 00078344S000834
+```
+
+ADB screenshots confirmed the newer external-policy list UI and Policy Detail for policy `4578`; the hero now ends after its filled content with no large blank area. Source verification confirmed the external-claim Spot Intimation accident time picker remains present in `apps/mobile-app/app/customer/self-managed-claim.tsx`.
+
 **DEPLOYED / VERIFIED:** After failed rebuild-style rollbacks, the `preview` channel was recovered to the user-identified intended mobile state: external claim Spot Intimation/Incident Report refinement with accident time picker. This was restored by republishing the exact prior dirty OTA bundle, preserving dirty-only mobile changes that are not reconstructible from the displayed Git commit alone.
 
 ```text

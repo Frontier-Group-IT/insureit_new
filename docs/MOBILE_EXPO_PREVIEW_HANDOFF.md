@@ -171,6 +171,22 @@ Use visual inspection for the changed UI. If the relevant screen is blocked by d
 
 ## 7. Current Recent Preview Evidence
 
+Latest approved preview OTA with policy-detail hero fix reapplied on top of the time-picker/mobile UI state:
+
+```text
+Source commit: 00ab7309e26cead1d46b4c7d2967e31c98c5e247
+Message: Fix policy detail hero on approved time picker state
+Update group ID: 720ee831-f0ee-4a64-a266-bdd267cffad3
+Android update ID: 01a00e4a-58de-7f51-b7bf-f33598088760
+iOS update ID: 01a00e4a-58de-7aac-a1c7-984463678fc5
+Runtime version: 0.2.0
+EAS metadata: isGitWorkingTreeDirty false
+Device verification: ADB two cold launches on Android device 00078344S000834 completed without a React Native startup crash; the newer external-policy list UI rendered; Policy Detail for policy `4578` rendered with the hero content capped to the filled area and without the prior large blank expanded section.
+Source-state verification: `apps/mobile-app/app/customer/self-managed-claim.tsx` still contains the external-claim Spot Intimation accident time picker (`TimePickerField`, `TimePickerModal`, `timePickerOpen`).
+```
+
+**LEARNING:** the earlier `Apply policy detail hero fix on time picker state` update group `2db69525-5f5d-4bc5-a08f-b9c2ae1b3c5b` did not fix the real blank-space issue on device. The actual working fix caps the Policy Detail hero layout height in `apps/mobile-app/app/customer/policy-detail.tsx` while preserving the restored time-picker state. Do not republish `2db69525` as a fixed point.
+
 Latest user-intended external claim time-picker recovery publish:
 
 ```text
