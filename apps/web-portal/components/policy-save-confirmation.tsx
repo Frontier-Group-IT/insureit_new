@@ -7,6 +7,31 @@ type SaveChoice = "upload" | "without" | null;
 
 const allowedTypes = ".pdf,.jpg,.jpeg,.png,.webp";
 const saveButtonLabel = "Book Active Policy";
+const registrationPattern = /^[A-Z]{2}[A-Z0-9]*[0-9]{2}$/;
+
+function hasUiValidationFailure() {
+  const requiredControls = Array.from(
+    document.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+      "input[required], select[required], textarea[required]",
+    ),
+  );
+
+  if (requiredControls.some((control) => !control.disabled && !control.checkValidity())) return true;
+
+  const registrationInput = document.querySelector<HTMLInputElement>('input[placeholder="MP20AB1234"]');
+  if (
+    registrationInput &&
+    !registrationInput.disabled &&
+    !registrationPattern.test(registrationInput.value.trim().toUpperCase())
+  ) {
+    return true;
+  }
+
+  const phoneInput = document.querySelector<HTMLInputElement>('input[placeholder="Mandatory 10 digit mobile"]');
+  if (phoneInput && !phoneInput.disabled && phoneInput.value.replace(/\D/g, "").length !== 10) return true;
+
+  return false;
+}
 
 export function PolicySaveConfirmation() {
   const pathname = usePathname();
@@ -26,6 +51,12 @@ export function PolicySaveConfirmation() {
         bypassNextClick.current = false;
         return;
       }
+
+      // Let the existing PolicyUnifiedForm submission handler run first whenever
+      // the current UI values are invalid. That preserves the existing validation
+      // popup/section focus and prevents the confirmation modal from appearing
+      // until the user has corrected the form.
+      if (hasUiValidationFailure()) return;
 
       event.preventDefault();
       event.stopPropagation();
