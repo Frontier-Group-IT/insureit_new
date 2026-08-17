@@ -54,7 +54,7 @@ export function IntermediaryPortalUsersWorkspace({ rows, initialQuery, initialSt
   return <div className="mx-auto max-w-[1480px] pb-8">
     <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
       <div className="flex flex-col gap-3 border-b bg-[#F8FAFC] px-4 py-3 lg:flex-row lg:items-center">
-        <div className="shrink-0"><h2 className="text-[12px] font-semibold text-[#0F172A]">Partner Portal Users</h2><p className="mt-0.5 text-[9px] text-[#64748B]">Review partner login invitations and current portal access.</p></div>
+        <div className="shrink-0"><h2 className="text-[12px] font-semibold text-[#0F172A]">Partner Portal Users</h2></div>
         <form onSubmit={(event) => event.preventDefault()} className="w-full lg:max-w-[460px]">
           <input value={query} onChange={(event) => { setQuery(event.target.value); setCurrentPage(1); }} aria-label="Search intermediary user accounts" placeholder="Search partner name, email or ID" className="h-10 w-full rounded-lg border border-[#CBD5E1] bg-white px-3 text-[11.5px] outline-none transition focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#DBEAFE]" />
         </form>
