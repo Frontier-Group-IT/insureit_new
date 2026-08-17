@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the Portal Users subtitle removal to production.",
-  "deploy_requested_at": "2026-08-17T10:46:00+05:30",
+  "purpose": "Deploy the External Policies summary subheading removal to production.",
+  "deploy_requested_at": "2026-08-17T11:08:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #376 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "b4eb64f14cd4473d98fb737c81190dab05e17679",
-  "release_scope": "Intermediaries > Portal Users UI only: remove the subtitle line 'Review partner login invitations and current portal access.' while preserving the Partner Portal Users title, search, status tabs, table, pagination, portal-account functionality, and all other current main behavior.",
-  "verification": "PR #376 Verify web portal run 31997274725 passed all regressions, typecheck, lint, and the production build on head 781b18ad78e135a5ec781c8d9b0b1440ac5601e5 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #377 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "d2c1281111ce9976e8950fa4c0ebd61feb4a9c69",
+  "release_scope": "External Policies UI only: remove the redundant Total / Active / Renewal due / Expired summary row beneath the External Policies heading while preserving the title, Add External Policy button, All / Active / Renewal due / Expired / Claims tabs and counts, search, insurer filter, reset filters, table, status badges, claims, pagination, mobile layout, and all other current main functionality.",
+  "verification": "PR #377 Verify web portal run 31998577917 passed all regressions, typecheck, lint, and the production build on head a09405476d851216a79fee398c3991b2fd63906c before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
