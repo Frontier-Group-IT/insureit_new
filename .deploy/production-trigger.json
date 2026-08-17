@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy IT Super User external policy deletion to production.",
-  "deploy_requested_at": "2026-08-17T11:22:00+05:30",
+  "purpose": "Deploy IT Super User customer onboarding application deletion to production.",
+  "deploy_requested_at": "2026-08-17T12:28:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #378 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "15c7449ca17a676e7545967194a4f9c59035d0ec",
-  "release_scope": "External Policies administration: add the existing IT Super User-only permanent deletion panel to /policies/external, extend the shared master-record deletion service with external_policy support, block deletion while claims reference the external policy through claims.external_policy_id, preserve DELETE confirmation, audit logging, and all existing External Policies and Claims behavior.",
-  "verification": "PR #378 Verify web portal run 31999393893 passed all regressions, typecheck, lint, and the production build on head 6df059cc23839e6c435a7d21bfc7bdb4dd20edd0 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #379 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "8313042324149074ef66205cfbcc3ba096ef27a2",
+  "release_scope": "Customer Onboarding Applications administration: add the existing IT Super User-only permanent deletion panel to /customers/applications, extend the shared deletion service with customer_onboarding_application support, preserve any already-created customer and its vehicles/policies/claims, clean linked onboarding document files from Supabase Storage after deletion, preserve DELETE confirmation and audit logging, and revalidate /customers/applications and /customers.",
+  "verification": "PR #379 Verify web portal run 32003796434 passed all regressions, typecheck, lint, and the production build on head e1d4c85ac16c2148885fa9aacc9209304e691d03 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
