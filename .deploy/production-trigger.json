@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy UI-only validation-before-confirmation sequencing fix for active policy onboarding.",
-  "deploy_requested_at": "2026-08-17T16:54:00+05:30",
+  "purpose": "Deploy UI-only rename of the active policy action to Upload Policy.",
+  "deploy_requested_at": "2026-08-17T17:13:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #388 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "18d0aa40fcf85f942fe1bb87f7b7e2dbfbf71809",
-  "release_scope": "UI-only fix on /policies/new so Book Active Policy runs the existing form validation first; only when the visible UI passes validation does the Save Active Policy confirmation modal open. Preserve the existing Save Without Policy Copy replay into the existing policy creation flow. No Supabase, database, schema, storage, migration, or backend/server-action changes.",
-  "verification": "PR #388 Verify web portal run 32024684781 passed all regressions, typecheck, lint, and production build on head f1013d444a566a2df9c4547c25b2fba090c5f4fd before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #389 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "4a5d8504fa693311576002e6031b456276cbee37",
+  "release_scope": "UI-only change on /policies/new: rename the visible Book Active Policy action to Upload Policy while preserving the existing validation → confirmation modal → Save → policy creation flow. No Supabase, database, schema, storage, migration, backend/server-action, or other layout changes.",
+  "verification": "PR #389 Verify web portal run 32026212136 passed all regressions, typecheck, lint, and production build on head b6c8c12231bbf8e441a0c960e171e91d4146da1d before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
