@@ -127,7 +127,7 @@ function shiftedPolicyEnd(newStart:string,oldStart:string,oldEnd:string){if(!/^\
 function boolValue(value: string | null) { return value==="true"||value==="Yes"||value==="YES"; }
 function normalizeRegistrationInput(value:string){return value.toUpperCase().replace(/[^A-Z0-9]/g,"");}
 function isValidRegisteredVehicleNumber(value:string){return /^[A-Z]{2}[A-Z0-9]*[0-9]{2}$/.test(value);}
-const registrationValidationMessage="Enter a valid registration number starting with 2 letters and ending with 2 digits.";
+const registrationValidationMessage="Enter a valid Registration number.";
 function assessPayinStatus(amount:string,billNumber:string,billDate:string){
   const hasAmount=Number(amount||0)>0;
   const hasBillNumber=Boolean(billNumber.trim());
