@@ -248,7 +248,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
       </div>
       <div className="mx-auto mt-4 max-w-[1480px]">
         <PolicyActivityStatus
-          status={policy.status}
+          policyId={policy.id}
           createdBy={creatorResult.data?.full_name ?? null}
           createdAt={policy.created_at}
           updatedAt={policy.updated_at}
