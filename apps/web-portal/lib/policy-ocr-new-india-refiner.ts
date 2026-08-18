@@ -1,6 +1,6 @@
 import type { ParsedPolicyField, ParsedPolicyResult } from "@/lib/policy-ocr-parsers";
 
-const VERSION = "new_india_commercial_motor_v1.3.1";
+const VERSION = "new_india_commercial_motor_v1.3.2";
 const MONEY_RE = /[0-9][0-9,]*(?:\.[0-9]{1,2})?/g;
 
 type MoneyHit = { value: number; page: number; evidence: string };
@@ -56,12 +56,13 @@ export function refineNewIndiaCommercialPolicy(pages: string[], parsed: ParsedPo
   const total =
     findExactRowAmount(cleanPages, /Total\s+Premium\s*\(A\s*\+\s*B\)/i, { min: 100, max: 10000000 })
     ?? findFirstRowAmount(cleanPages, /Net\s+Premium\s*\(Rs\.?\)?/i, { min: 100, max: 10000000 });
-  const tax =
+  const directTax =
     findFirstRowAmount(cleanPages, /\bGST\s*\(Rs\.?\)?/i, { min: 0, max: 10000000 })
     ?? findExactRowAmount(cleanPages, /\bIGST\b/i, { min: 0, max: 10000000 });
   const gross =
     findExactRowAmount(cleanPages, /Gross\s+Premium\s+Paid/i, { min: 100, max: 10000000 })
     ?? findFirstRowAmount(cleanPages, /Total\s+Payable\s*\(Rs\.?\)?/i, { min: 100, max: 10000000 });
+  const tax = directTax ?? deriveTaxFromTotals(total, gross);
 
   const cpaValue = cpa?.value ?? 0;
   if (cpa) {
@@ -88,7 +89,7 @@ export function refineNewIndiaCommercialPolicy(pages: string[], parsed: ParsedPo
   }
 
   if (total) setField(fields, "total_premium", "Printed net premium", money(total.value), .99, total.page, total.evidence);
-  if (tax) setField(fields, "tax_amount", "Printed GST", money(tax.value), .99, tax.page, tax.evidence);
+  if (tax) setField(fields, "tax_amount", "Printed GST", money(tax.value), directTax ? .99 : .97, tax.page, tax.evidence);
   if (gross) setField(fields, "gross_premium", "Printed gross premium", money(gross.value), .99, gross.page, gross.evidence);
 
   const odValue = numeric(fields.get("od_premium"));
@@ -236,6 +237,17 @@ function findOwnerDriverCpa(pages: string[]): MoneyHit | null {
     }
   }
   return null;
+}
+
+function deriveTaxFromTotals(total: MoneyHit | null, gross: MoneyHit | null): MoneyHit | null {
+  if (!total || !gross || gross.value < total.value) return null;
+  const value = round2(gross.value - total.value);
+  if (value < 0 || value > 10000000) return null;
+  return {
+    value,
+    page: gross.page,
+    evidence: `Derived GST from printed gross/total payable ${money(gross.value)} minus printed net premium ${money(total.value)}.`,
+  };
 }
 
 function findFirstRowAmount(
