@@ -1,6 +1,7 @@
 type PolicyActivityStatusProps = {
   status: string | null;
   createdBy: string | null;
+  createdAt: string | null;
   updatedAt: string | null;
 };
 
@@ -37,24 +38,41 @@ function statusTone(value: string | null) {
   return "border-[#D5E0EF] bg-[#EEF3FA] text-[#17365D]";
 }
 
-export function PolicyActivityStatus({ status, createdBy, updatedAt }: PolicyActivityStatusProps) {
+function ActivityMeta({ label, value }: { label: string; value: string }) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-sm" aria-labelledby="policy-activity-status-heading">
-      <div className="flex min-h-11 items-center border-b border-[#E7ECF2] bg-[#FBFCFE] px-4 py-2">
-        <h2 id="policy-activity-status-heading" className="text-[12px] font-semibold text-[#17365D]">Activity Status</h2>
-      </div>
-      <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2.5">
-          <span className="text-[8px] font-bold uppercase tracking-[0.07em] text-[#98A2B3]">Status</span>
-          <span className={`inline-flex min-h-7 items-center rounded-lg border px-3 text-[10px] font-bold ${statusTone(status)}`}>
-            {displayStatus(status)}
-          </span>
+    <div className="min-w-0 rounded-lg bg-[#F8FAFC] px-3 py-2">
+      <p className="text-[7.5px] font-bold uppercase tracking-[0.06em] text-[#98A2B3]">{label}</p>
+      <p className="mt-1 truncate text-[9px] font-medium text-[#475467]" title={value}>{value}</p>
+    </div>
+  );
+}
+
+export function PolicyActivityStatus({ status, createdBy, createdAt, updatedAt }: PolicyActivityStatusProps) {
+  const creator = createdBy?.trim() || "Not recorded";
+
+  return (
+    <details className="group overflow-hidden rounded-xl border border-[#D9E2F0] bg-white shadow-sm">
+      <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 bg-[#FBFCFE] px-4 py-2 text-[#17365D] transition hover:bg-[#F7F9FC] [&::-webkit-details-marker]:hidden">
+        <span className="text-[10px] font-semibold">Activity Status</span>
+        <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-[#D5E0EF] bg-white text-[#667085] transition group-open:rotate-180" aria-hidden="true">
+          <svg viewBox="0 0 20 20" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m6 8 4 4 4-4" />
+          </svg>
+        </span>
+      </summary>
+      <div className="border-t border-[#E7ECF2] px-4 py-3">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="flex min-h-[50px] items-center gap-2.5 rounded-lg bg-[#F8FAFC] px-3 py-2">
+            <span className="text-[7.5px] font-bold uppercase tracking-[0.06em] text-[#98A2B3]">Status</span>
+            <span className={`inline-flex min-h-7 items-center rounded-lg border px-3 text-[10px] font-bold ${statusTone(status)}`}>
+              {displayStatus(status)}
+            </span>
+          </div>
+          <ActivityMeta label="Created By" value={creator} />
+          <ActivityMeta label="Created At" value={formatTimestamp(createdAt)} />
+          <ActivityMeta label="Updated At" value={formatTimestamp(updatedAt)} />
         </div>
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[9px] text-[#667085]">
-          <span><span className="font-semibold text-[#475467]">Created By:</span> {createdBy?.trim() || "Not recorded"}</span>
-          <span><span className="font-semibold text-[#475467]">Updated At:</span> {formatTimestamp(updatedAt)}</span>
-        </div>
       </div>
-    </section>
+    </details>
   );
 }
