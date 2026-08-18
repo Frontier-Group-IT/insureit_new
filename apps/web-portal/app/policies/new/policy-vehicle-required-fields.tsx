@@ -42,8 +42,13 @@ function findRequiredFields(section: HTMLElement) {
     const requiredLabel = requiredFieldLabels.find((candidate) => text === candidate || text.startsWith(`${candidate} (`));
     if (!requiredLabel) continue;
 
-    const hasVisibleRequiredMarker = (label.textContent ?? "").includes("*");
-    if (!hasVisibleRequiredMarker && !label.querySelector("[data-policy-required-marker]")) {
+    const helperMarker = label.querySelector<HTMLElement>("[data-policy-required-marker]");
+    const hasNativeVisibleRequiredMarker = Array.from(label.childNodes).some(
+      (node) => node !== helperMarker && (node.textContent ?? "").includes("*"),
+    );
+    if (hasNativeVisibleRequiredMarker) {
+      helperMarker?.remove();
+    } else if (!helperMarker) {
       const marker = document.createElement("span");
       marker.dataset.policyRequiredMarker = "true";
       marker.className = "text-red-500";
