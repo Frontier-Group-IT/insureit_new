@@ -1,6 +1,6 @@
 import type { ParsedPolicyField, ParsedPolicyResult } from "@/lib/policy-ocr-parsers";
 
-const VERSION = "new_india_commercial_motor_v1.3.0";
+const VERSION = "new_india_commercial_motor_v1.3.1";
 const MONEY_RE = /[0-9][0-9,]*(?:\.[0-9]{1,2})?/g;
 
 type MoneyHit = { value: number; page: number; evidence: string };
@@ -48,20 +48,20 @@ export function refineNewIndiaCommercialPolicy(pages: string[], parsed: ParsedPo
 
   const od =
     findExactRowAmount(cleanPages, /Net\s+Own\s+Damage\s+Premium\s*\(A\)/i, { min: 100, max: 10000000 })
-    ?? findExactRowAmount(cleanPages, /Total\s+OD\s+Premium\s*\(Rs\.?\)?/i, { min: 100, max: 10000000 });
+    ?? findFirstRowAmount(cleanPages, /Total\s+OD\s+Premium\s*\(Rs\.?\)?/i, { min: 100, max: 10000000 });
   const liability =
     findExactRowAmount(cleanPages, /Net\s+Liability\s+Premium\s*\(B\)/i, { min: 100, max: 10000000 })
-    ?? findExactRowAmount(cleanPages, /Total\s+TP\s+Premium\s*\(Rs\.?\)?/i, { min: 100, max: 10000000 });
+    ?? findFirstRowAmount(cleanPages, /Total\s+TP\s+Premium\s*\(Rs\.?\)?/i, { min: 100, max: 10000000 });
   const cpa = findOwnerDriverCpa(cleanPages);
   const total =
     findExactRowAmount(cleanPages, /Total\s+Premium\s*\(A\s*\+\s*B\)/i, { min: 100, max: 10000000 })
-    ?? findExactRowAmount(cleanPages, /Net\s+Premium\s*\(Rs\.?\)?/i, { min: 100, max: 10000000 });
+    ?? findFirstRowAmount(cleanPages, /Net\s+Premium\s*\(Rs\.?\)?/i, { min: 100, max: 10000000 });
   const tax =
-    findExactRowAmount(cleanPages, /\bGST\s*\(Rs\.?\)?/i, { min: 0, max: 10000000 })
+    findFirstRowAmount(cleanPages, /\bGST\s*\(Rs\.?\)?/i, { min: 0, max: 10000000 })
     ?? findExactRowAmount(cleanPages, /\bIGST\b/i, { min: 0, max: 10000000 });
   const gross =
     findExactRowAmount(cleanPages, /Gross\s+Premium\s+Paid/i, { min: 100, max: 10000000 })
-    ?? findExactRowAmount(cleanPages, /Total\s+Payable\s*\(Rs\.?\)?/i, { min: 100, max: 10000000 });
+    ?? findFirstRowAmount(cleanPages, /Total\s+Payable\s*\(Rs\.?\)?/i, { min: 100, max: 10000000 });
 
   const cpaValue = cpa?.value ?? 0;
   if (cpa) {
@@ -233,6 +233,25 @@ function findOwnerDriverCpa(pages: string[]): MoneyHit | null {
       if (standalone.length) {
         return { value: standalone[0].value, page: pageIndex + 1, evidence: `${line} | ${standalone[0].evidence}` };
       }
+    }
+  }
+  return null;
+}
+
+function findFirstRowAmount(
+  pages: string[],
+  label: RegExp,
+  limits: { min: number; max: number },
+): MoneyHit | null {
+  for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
+    const lines = pages[pageIndex].split("\n");
+    for (const line of lines) {
+      const match = line.match(label);
+      if (!match || match.index === undefined) continue;
+      const after = line.slice(match.index + match[0].length);
+      const candidates = amounts(after).filter((value) => value >= limits.min && value <= limits.max && !isYear(value));
+      if (!candidates.length) continue;
+      return { value: candidates[0], page: pageIndex + 1, evidence: line };
     }
   }
   return null;
