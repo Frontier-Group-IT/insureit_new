@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, RefreshCw, Upload } from "lucide-react";
+import { Files, FileText, RefreshCw, Upload } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -168,7 +168,7 @@ export function PolicyEditCopyFooterActions() {
             <div
               role="group"
               aria-label="Policy copy actions"
-              className="inline-flex h-9 items-stretch overflow-hidden rounded-xl border border-[#BFD3F7] bg-[#F7FAFF] text-[#174EA6]"
+              className="inline-flex h-11 items-stretch overflow-hidden rounded-xl border border-[#BFD3F7] bg-[#F7FAFF] text-[#174EA6]"
             >
               <button
                 type="button"
@@ -176,9 +176,13 @@ export function PolicyEditCopyFooterActions() {
                 disabled={isOpening || isUploading}
                 aria-label="View policy copy"
                 title={policyCopy.fileName ? `View policy: ${policyCopy.fileName}` : "View policy copy"}
-                className="inline-flex items-center px-3 text-[10px] font-semibold transition hover:bg-[#EEF5FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#9CB9E6] disabled:cursor-wait disabled:opacity-60"
+                className="inline-flex min-w-0 items-center gap-2 px-3 transition hover:bg-[#EEF5FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#9CB9E6] disabled:cursor-wait disabled:opacity-60"
               >
-                {isOpening ? "Opening…" : "View Policy"}
+                <Files className="h-3.5 w-3.5 shrink-0" />
+                <span className="flex min-w-0 flex-col items-start leading-tight">
+                  <span className="text-[10px] font-semibold">{isOpening ? "Opening…" : "View Policy"}</span>
+                  <span className="max-w-[150px] truncate text-[8px] font-medium text-[#6B7A90]">{policyCopy.fileName}</span>
+                </span>
               </button>
               <button
                 type="button"
