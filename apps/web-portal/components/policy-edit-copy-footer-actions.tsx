@@ -202,7 +202,7 @@ export function PolicyEditCopyFooterActions() {
                   disabled={isUploading || isOpening}
                   aria-label="Replace policy copy"
                   title="Replace policy copy"
-                  className="inline-flex w-9 items-center justify-center bg-[#EEF5FF] transition hover:bg-[#E2ECFA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#9CB9E6] disabled:cursor-wait disabled:opacity-60"
+                  className="inline-flex w-9 items-center justify-center bg-[#FFF7ED] text-[#EA580C] transition hover:bg-[#FFEDD5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#FDBA74] disabled:cursor-wait disabled:opacity-60"
                 >
                   <RefreshCw className={`h-3.5 w-3.5 ${isUploading ? "animate-spin" : ""}`} />
                 </button>
