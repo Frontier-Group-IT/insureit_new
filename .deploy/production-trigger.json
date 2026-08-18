@@ -1,10 +1,10 @@
 {
-  "purpose": "Retry complete chronological Policy Activity Status history deployment.",
-  "deploy_requested_at": "2026-08-18T17:17:00+05:30",
-  "requested_by": "explicit user retry request",
-  "source": "Retry deployment of merged PR #424 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "b4597011642689a44152589893071c83c7ec72b1",
-  "release_scope": "Retry deployment of the append-only chronological Activity Status history: preserve Policy Created and every later tracked policy action, keep newest actions at the top and older actions below, and retain repeated Policy Edited, policy-document, and pay-in billing events as separate history entries. Preserve existing activity inserts, policy save behavior, document handling, billing, calculations, permissions, Supabase storage, database schema, and all unrelated workflows unchanged.",
-  "verification": "PR #424 Verify web portal run 32132950699 passed successfully on head 84c26e4eafdf96d312fa249e5e4a52192246d2b9 before merge. This retry must again pass the protected production verification gate before the Vercel production deploy hook is invoked.",
+  "purpose": "Deploy New India OCR enhanced commercial schedule training update.",
+  "deploy_requested_at": "2026-08-18T18:11:00+05:30",
+  "requested_by": "explicit user deployment request",
+  "source": "Deploy merged PR #425 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "e0eae8e0fceaf9f147a9554ac17b77612602b841",
+  "release_scope": "Deploy the New India Assurance OCR parser update for enhanced commercial vehicle package schedules, including Period of cover validity parsing, INSURED DECLARED VALUE Total Value parsing, Total OD/TP Premium summary rows, owner-driver CPA normalization, Net Premium, GST/derived tax fallback, and Total Payable extraction. Preserve all unrelated policy onboarding, billing, permissions, storage, database schema, and workflows unchanged.",
+  "verification": "PR #425 Verify web portal run 32137760059 passed successfully on head 7f4d908c1413a3bd5e2c1ccd9460cd0a5c47c706 before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
