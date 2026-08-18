@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy Activity Status layout update.",
-  "deploy_requested_at": "2026-08-18T15:52:00+05:30",
+  "purpose": "Deploy latest meaningful policy activity tracking.",
+  "deploy_requested_at": "2026-08-18T16:16:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Deploy current main after the approved Policy View/Edit Activity Status layout update.",
-  "source_commit": "8d0dffeb336c803ebdce381bce0314e059659cfc",
-  "release_scope": "Move the Policy Edit Activity Status directly after policy content, keep it collapsed by default with click-to-toggle behavior, display Status, Created By, Created At, and Updated At when expanded, and place the existing Cancel / Save Policy Changes actions at the very end of the page. Preserve the existing save handler and all other policy fields, calculations, OCR, onboarding, document, database, and schema behavior. Current main also includes previously approved commits already present before this deployment trigger.",
+  "source": "Deploy current main after merging PR #420 for latest meaningful policy activity tracking.",
+  "source_commit": "de0ec70c27037001ac28de7708d2f2ac45474afe",
+  "release_scope": "Replace Policy Activity Status lifecycle-status display with the latest meaningful user action. Track and display Policy Created, Policy Edited, Policy Doc. Uploaded, Policy Doc. Replaced, Pay-in Billing Added, and Pay-in Billing Updated with dynamic actor and timestamp using existing audit data. Preserve existing policy lifecycle status behavior and all other policy fields, calculations, OCR, RC lookup, document security, onboarding, payout, and billing behavior.",
   "verification": "The protected production workflow must run the compulsory verify-web-portal gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
