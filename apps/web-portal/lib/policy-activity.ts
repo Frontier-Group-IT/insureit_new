@@ -24,11 +24,12 @@ const TRACKED_ACTIONS = Object.values(POLICY_ACTIVITY_ACTIONS);
 const ACTIVITY_TABLE_NAME = "policies";
 
 type AdminClient = ReturnType<typeof createSupabaseAdminClient>;
-type AuditRow = { actor_id: string | null; action: string; created_at: string };
+type AuditRow = { id: string; actor_id: string | null; action: string; created_at: string };
 type DocumentRow = { uploaded_by: string | null; created_at: string; updated_at: string };
-type ProfileRow = { full_name: string | null };
+type ProfileRow = { id: string; full_name: string | null };
 
 type ActivityCandidate = {
+  id: string;
   action: PolicyActivityAction;
   actorId: string | null;
   actorName?: string | null;
@@ -36,6 +37,7 @@ type ActivityCandidate = {
 };
 
 export type PolicyActivityDisplay = {
+  id: string;
   action: string;
   actorName: string;
   at: string;
@@ -70,18 +72,7 @@ export async function recordPolicyActivity(
   return !error;
 }
 
-async function actorName(admin: AdminClient, actorId: string | null) {
-  if (!actorId) return null;
-  const { data, error } = await admin
-    .from("profiles")
-    .select("full_name")
-    .eq("id", actorId)
-    .maybeSingle<ProfileRow>();
-  if (error) return null;
-  return data?.full_name?.trim() || null;
-}
-
-export async function loadLatestPolicyActivity({
+export async function loadPolicyActivityHistory({
   policyId,
   createdBy,
   createdAt,
@@ -91,27 +82,18 @@ export async function loadLatestPolicyActivity({
   createdBy: string | null;
   createdAt: string | null;
   updatedAt: string | null;
-}): Promise<PolicyActivityDisplay> {
+}): Promise<PolicyActivityDisplay[]> {
   const admin = createSupabaseAdminClient();
-  const candidates: ActivityCandidate[] = [];
-
-  if (createdAt) {
-    candidates.push({ action: POLICY_ACTIVITY_ACTIONS.POLICY_CREATED, actorId: null, actorName: createdBy, at: createdAt });
-  }
-  if (updatedAt && materiallyLater(updatedAt, createdAt)) {
-    candidates.push({ action: POLICY_ACTIVITY_ACTIONS.POLICY_EDITED, actorId: null, at: updatedAt });
-  }
 
   const [auditResult, documentResult] = await Promise.all([
     admin
       .from("audit_logs")
-      .select("actor_id,action,created_at")
+      .select("id,actor_id,action,created_at")
       .eq("table_name", ACTIVITY_TABLE_NAME)
       .eq("record_id", policyId)
       .in("action", TRACKED_ACTIONS)
       .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle<AuditRow>(),
+      .returns<AuditRow[]>(),
     admin
       .from("policy_documents")
       .select("uploaded_by,created_at,updated_at")
@@ -122,37 +104,81 @@ export async function loadLatestPolicyActivity({
       .maybeSingle<DocumentRow>(),
   ]);
 
-  const auditAction = auditResult.data ? asTrackedAction(auditResult.data.action) : null;
-  if (auditResult.data && auditAction) {
+  const auditRows = auditResult.data ?? [];
+  const candidates: ActivityCandidate[] = [];
+  const auditActions = new Set<PolicyActivityAction>();
+
+  for (const row of auditRows) {
+    const action = asTrackedAction(row.action);
+    if (!action) continue;
+    auditActions.add(action);
     candidates.push({
-      action: auditAction,
-      actorId: auditResult.data.actor_id,
-      at: auditResult.data.created_at,
+      id: `audit:${row.id}`,
+      action,
+      actorId: row.actor_id,
+      at: row.created_at,
     });
   }
 
+  if (createdAt && !auditActions.has(POLICY_ACTIVITY_ACTIONS.POLICY_CREATED)) {
+    candidates.push({
+      id: "derived:policy-created",
+      action: POLICY_ACTIVITY_ACTIONS.POLICY_CREATED,
+      actorId: null,
+      actorName: createdBy,
+      at: createdAt,
+    });
+  }
+
+  if (
+    updatedAt
+    && materiallyLater(updatedAt, createdAt)
+    && !auditActions.has(POLICY_ACTIVITY_ACTIONS.POLICY_EDITED)
+  ) {
+    candidates.push({
+      id: "derived:legacy-policy-edited",
+      action: POLICY_ACTIVITY_ACTIONS.POLICY_EDITED,
+      actorId: null,
+      at: updatedAt,
+    });
+  }
+
+  const hasDocumentAudit = auditActions.has(POLICY_ACTIVITY_ACTIONS.POLICY_DOC_UPLOADED)
+    || auditActions.has(POLICY_ACTIVITY_ACTIONS.POLICY_DOC_REPLACED);
   const document = documentResult.data;
-  if (document?.updated_at || document?.created_at) {
+  if (!hasDocumentAudit && (document?.updated_at || document?.created_at)) {
     const replaced = materiallyLater(document.updated_at, document.created_at);
     candidates.push({
+      id: "derived:legacy-policy-document",
       action: replaced ? POLICY_ACTIVITY_ACTIONS.POLICY_DOC_REPLACED : POLICY_ACTIVITY_ACTIONS.POLICY_DOC_UPLOADED,
       actorId: document.uploaded_by,
       at: replaced ? document.updated_at : document.created_at,
     });
   }
 
-  const latest = candidates
-    .filter((candidate) => timestamp(candidate.at) > 0)
-    .sort((a, b) => timestamp(b.at) - timestamp(a.at))[0];
+  const actorIds = Array.from(new Set(candidates.map((candidate) => candidate.actorId).filter((id): id is string => Boolean(id))));
+  const actorNames = new Map<string, string>();
 
-  if (!latest) {
-    return { action: "Activity not recorded", actorName: "Not recorded", at: createdAt || updatedAt || "" };
+  if (actorIds.length) {
+    const { data: profiles } = await admin
+      .from("profiles")
+      .select("id,full_name")
+      .in("id", actorIds)
+      .returns<ProfileRow[]>();
+
+    for (const profile of profiles ?? []) {
+      const name = profile.full_name?.trim();
+      if (name) actorNames.set(profile.id, name);
+    }
   }
 
-  const resolvedActor = latest.actorName?.trim() || await actorName(admin, latest.actorId);
-  return {
-    action: ACTION_LABELS[latest.action],
-    actorName: resolvedActor || "Not recorded",
-    at: latest.at,
-  };
+  return candidates
+    .filter((candidate) => timestamp(candidate.at) > 0)
+    .sort((a, b) => timestamp(b.at) - timestamp(a.at))
+    .map((candidate) => ({
+      id: candidate.id,
+      action: ACTION_LABELS[candidate.action],
+      actorName: candidate.actorName?.trim() || (candidate.actorId ? actorNames.get(candidate.actorId) : null) || "Not recorded",
+      at: candidate.at,
+    }));
 }
