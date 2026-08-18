@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy New India OCR live Layout Parser training update.",
-  "deploy_requested_at": "2026-08-18T23:19:00+05:30",
+  "purpose": "Deploy New India OCR validity training update.",
+  "deploy_requested_at": "2026-08-18T23:47:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #426 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "77836e520802b00120ab011adbbf21143242c90c",
-  "release_scope": "Deploy the New India Assurance live OCR follow-up: invoke Google Layout Parser for New India PDFs, recover policy validity, IDV and structured premium values from layout tables, reconcile OD plus portal TP plus CPA against printed net before applying financial fields, and retain flattened Enterprise OCR as fallback. Preserve unrelated policy onboarding, billing, permissions, storage, database schema, and workflows unchanged.",
-  "verification": "PR #426 Verify web portal run 32167025402 passed successfully on head 509766d6cea21f2191c8a17f0fb42d7089b7939e before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #427 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "a5281db3bd63a5cf5108e2266d00d6880ab0688c",
+  "release_scope": "Deploy the focused New India Assurance OCR validity fix: tolerate fragmented Google Layout Parser date separators and timestamps in Period of cover rows, expand nearby-row recovery for split validity output, and normalize dates before ISO conversion. Preserve the already-verified New India insurer, product, policy number, IDV, OD, TP, CPA, printed net and printed gross extraction logic, and preserve unrelated policy onboarding, billing, permissions, storage, database schema, and workflows unchanged.",
+  "verification": "PR #427 Verify web portal run 32169517221 passed successfully on head 87c78ab3e168d326e5c8bb3cb92385917f1674dd before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
