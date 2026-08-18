@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { Files, FileText, Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
-import { openPolicyCopy } from "./policy-document-actions";
 import {
   RegisterEmpty,
   RegisterPagination,
@@ -64,7 +63,6 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
   const [insurer, setInsurer] = useState("all");
   const [page, setPage] = useState(1);
   const [openingDocumentId, setOpeningDocumentId] = useState<string | null>(null);
-  const [documentError, setDocumentError] = useState<string | null>(null);
 
   const enriched = useMemo(() => rows.map((row) => ({ ...row, status: policyStatus(row.end_date), daysLeft: daysUntil(row.end_date) })), [rows]);
   const stats = useMemo(() => {
@@ -98,26 +96,11 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
     setPage(1);
   }
 
-  async function openDocument(document: PolicyDocument) {
+  function openDocument(document: PolicyDocument) {
     if (openingDocumentId) return;
-    const previewWindow = window.open("", "_blank", "noopener,noreferrer");
     setOpeningDocumentId(document.id);
-    setDocumentError(null);
-    try {
-      const result = await openPolicyCopy(document.id);
-      if (!result.ok) {
-        previewWindow?.close();
-        setDocumentError(result.error);
-        return;
-      }
-      if (previewWindow) previewWindow.location.href = result.url;
-      else window.open(result.url, "_blank", "noopener,noreferrer");
-    } catch {
-      previewWindow?.close();
-      setDocumentError("Could not open the policy copy. Please try again.");
-    } finally {
-      setOpeningDocumentId(null);
-    }
+    window.open(`/policies/documents/${encodeURIComponent(document.id)}/open`, "_blank", "noopener,noreferrer");
+    window.setTimeout(() => setOpeningDocumentId(null), 750);
   }
 
   return (
@@ -141,14 +124,6 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
           <Link href="/policies/new" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-3 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.22)]"><Plus className="h-4 w-4" />Add Policy</Link>
         </div>
       </div>
-
-      {documentError ? (
-        <div className="fixed right-4 top-20 z-[140] flex w-[min(360px,calc(100vw-2rem))] items-start gap-3 rounded-xl border border-amber-200 bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,.18)]" role="alert">
-          <span className="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full bg-amber-500" />
-          <p className="min-w-0 flex-1 text-[10px] font-semibold leading-4 text-[#334155]">{documentError}</p>
-          <button type="button" onClick={() => setDocumentError(null)} aria-label="Dismiss document error" className="text-[16px] leading-none text-[#64748B]">×</button>
-        </div>
-      ) : null}
 
       <div className="border-b border-[#E5ECF5] bg-white px-3 py-2 sm:px-4">
         <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
