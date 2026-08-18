@@ -1,6 +1,8 @@
 // @ts-expect-error -- This regression runner executes TypeScript directly with Node --experimental-strip-types.
 import { refineNewIndiaCommercialPolicy } from "../lib/policy-ocr-new-india-refiner.ts";
 // @ts-expect-error -- Runtime import uses the explicit .ts suffix for Node's strip-types runner.
+import { refineNewIndiaStructuredPolicy } from "../lib/policy-ocr-new-india-structured-refiner.ts";
+// @ts-expect-error -- Runtime import uses the explicit .ts suffix for Node's strip-types runner.
 import { parsePolicyDocument } from "../lib/policy-ocr-parsers.ts";
 
 type Expected = Record<string, string>;
@@ -110,8 +112,43 @@ for (const testCase of cases) {
   }
 }
 
+const flattenedLiveLike = `THE NEW INDIA ASSURANCE CO. LTD.\nCommercial Vehicle Package Policy - Enhanced Covers\nPolicy Number :31280031260300009999\nCompulsory PA Premium for Owner Driver\n275`;
+const liveBase = parsePolicyDocument([flattenedLiveLike]);
+const liveTextResult = refineNewIndiaCommercialPolicy([flattenedLiveLike], liveBase);
+const liveTables = [
+  { page: 1, rows: [["POLICY DETAILS"], ["Period of cover", "09/08/2026 12:00:01 AM to 08/08/2027 11:59:59 PM"]] },
+  { page: 1, rows: [["INSURED DECLARED VALUE (Rs)"], ["Vehicle", "Trailer", "Non-Elec Acc", "Electrical Acc", "Bi-fuel/CNG/LPG kit", "Total Value"], ["906000", "0", "0", "0", "0", "906000"]] },
+  { page: 2, rows: [
+    ["Compulsory PA Premium for Owner Driver", "275"],
+    ["Total OD Premium (Rs)", "6121", "Total TP Premium (Rs)", "16644"],
+    ["Net Premium (Rs)", "22,765"],
+    ["GST (Rs)", "2,011"],
+    ["Total Payable (Rs)", "24,776"],
+  ] },
+];
+const liveStructured = refineNewIndiaStructuredPolicy(liveTables, liveTextResult);
+const liveActual = Object.fromEntries(liveStructured.fields.map((field) => [field.key, field.value]));
+const liveExpected: Expected = {
+  idv: "906000",
+  od_premium: "6121",
+  tp_premium: "16369",
+  cpa_premium: "275",
+  policy_start_date: "2026-08-09",
+  policy_end_date: "2027-08-08",
+};
+const liveProblems = Object.entries(liveExpected)
+  .filter(([key, value]) => liveActual[key] !== value)
+  .map(([key, value]) => `${key}: expected ${value}, got ${liveActual[key] ?? "<missing>"}`);
+if (liveProblems.length) {
+  failures += 1;
+  console.error("FAIL: live-like fragmented Enterprise OCR is recovered from Layout Parser tables");
+  for (const problem of liveProblems) console.error(`  - ${problem}`);
+} else {
+  console.log("PASS: live-like fragmented Enterprise OCR is recovered from Layout Parser tables");
+}
+
 if (failures) {
-  console.error(`\nNew India regression: ${failures}/${cases.length} case(s) failed.`);
+  console.error(`\nNew India regression: ${failures} case(s) failed.`);
   process.exit(1);
 }
-console.log(`\nNew India regression: ${cases.length}/${cases.length} cases passed.`);
+console.log(`\nNew India regression: ${cases.length + 1}/${cases.length + 1} cases passed.`);
