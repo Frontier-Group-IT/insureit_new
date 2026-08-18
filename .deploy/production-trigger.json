@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy distinct replace-policy action styling.",
-  "deploy_requested_at": "2026-08-18T11:00:00+05:30",
+  "purpose": "Deploy InsureIt shield favicon.",
+  "deploy_requested_at": "2026-08-18T11:09:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #404 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "a61c87ce5208842f2a6e1a4b77c74adc2ca22265",
-  "release_scope": "UI-only refinement to the Policy Edit footer: keep View Policy styling unchanged and change only the replace/refresh segment to a clearly differentiated amber/orange treatment using background #FFF7ED, icon/text #EA580C, and hover #FFEDD5. Preserve existing replace/upload behavior, filename display, footer alignment, backend, Supabase, storage, schema, migrations, calculations, and all other functionality unchanged.",
-  "verification": "PR #404 Verify web portal run 32102976978 passed all regressions, typecheck, lint, and production build on head 7c21030d7a26dff3444c9b71f6ac8fbf141858ce before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #405 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "24204466a5a97c86588264bc75c4d190615390b1",
+  "release_scope": "Static metadata asset only: add the InsureIt shield favicon using the Next.js App Router app/icon.svg convention. Preserve the supplied shield artwork, existing site title, layout, navigation, branding colors, workflows, backend, Supabase, storage, schema, migrations, permissions, and production-domain configuration unchanged.",
+  "verification": "PR #405 Verify web portal run 32103550075 passed all regressions, typecheck, lint, and production build on head 0ba74354bd1c6d23533b343e3a3409a4ec99907a before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
