@@ -166,7 +166,7 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
   const chassis = normalizedVehicleIdentity(payload.vehicle.chassisNumber);
   const engine = normalizedVehicleIdentity(payload.vehicle.engineNumber);
   const selectedCustomerId = payload.resolution?.selectedCustomerId?.trim() || null;
-  let createNewCustomer = payload.resolution?.createNewCustomer === true;
+  const createNewCustomer = payload.resolution?.createNewCustomer === true;
 
   try {
     const customerCandidates = await findCustomerCandidates(name, phone);
@@ -176,13 +176,16 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
 
     if (!selectedCustomerId && !createNewCustomer && customerCandidates.length) {
       if (phoneMatches.length > 0 && exactNameMatches.length === 0) {
-        // A shared lead-source/contact mobile may legitimately belong to multiple insured names.
-        // Treat a different normalized name as an explicit new customer identity while keeping
-        // same-name matches protected by the existing customer-resolution flow.
-        createNewCustomer = true;
-      } else {
-        return { ok: false, kind: "customer_match", candidates: customerCandidates };
+        // Reuse the existing customer-review modal but permit its explicit "Create New Customer"
+        // action for a shared contact number. The actual phone match is revalidated server-side
+        // on the follow-up request before a new customer is inserted.
+        return {
+          ok: false,
+          kind: "customer_match",
+          candidates: customerCandidates.map((candidate) => candidate.phoneMatch ? { ...candidate, phoneMatch: false } : candidate),
+        };
       }
+      return { ok: false, kind: "customer_match", candidates: customerCandidates };
     }
     if (createNewCustomer && exactCustomerMatches.length) {
       return { ok: false, kind: "customer_match", candidates: exactCustomerMatches };
