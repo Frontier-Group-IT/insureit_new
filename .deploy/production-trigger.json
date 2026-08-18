@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy Onboarding Section 2 validation popup update.",
-  "deploy_requested_at": "2026-08-18T13:22:00+05:30",
+  "purpose": "Deploy unregistered Policy Onboarding required-star sync fix.",
+  "deploy_requested_at": "2026-08-18T13:43:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #414 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "9adee3b6ac74be953e79f8d9a7fb96a89d213bf0",
-  "release_scope": "When required Policy Onboarding Section 2 vehicle details are missing, show one InsureIt-style Check details popup listing all missing required fields instead of scrolling to and focusing the first empty control or showing browser-native validation. Preserve required markers, duplicate-marker protection, server-side validation, policy creation, customer matching, ownership conflicts, premium and payout calculations, policy-copy workflow, database, schema, storage, and Supabase behavior unchanged.",
-  "verification": "PR #414 Verify web portal run 32113457172 passed successfully on head 8ac9db9086b4d2079f3e8229a0466c5f28951e8a before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #415 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "3a7ce36a5c78f481d3c7d723f57b65e0507bf001",
+  "release_scope": "Fix Policy Onboarding Section 2 required-marker synchronization so Chassis Number and Engine Number show exactly one required star in both Registered and Unregistered modes, including Registered to Unregistered to Registered mode switches. Preserve mandatory validation, policy creation, customer matching, ownership conflicts, AuthBridge, premium and payout calculations, database, schema, storage, and Supabase behavior unchanged.",
+  "verification": "PR #415 Verify web portal run 32115091946 passed successfully on head 3d979f794e4f4de92a3b40c1818344ed4a0f4429 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
