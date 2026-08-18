@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy latest meaningful policy activity tracking.",
-  "deploy_requested_at": "2026-08-18T16:16:00+05:30",
+  "purpose": "Deploy Policy Activity Status inline metadata refinement.",
+  "deploy_requested_at": "2026-08-18T16:29:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Deploy current main after merging PR #420 for latest meaningful policy activity tracking.",
-  "source_commit": "de0ec70c27037001ac28de7708d2f2ac45474afe",
-  "release_scope": "Replace Policy Activity Status lifecycle-status display with the latest meaningful user action. Track and display Policy Created, Policy Edited, Policy Doc. Uploaded, Policy Doc. Replaced, Pay-in Billing Added, and Pay-in Billing Updated with dynamic actor and timestamp using existing audit data. Preserve existing policy lifecycle status behavior and all other policy fields, calculations, OCR, RC lookup, document security, onboarding, payout, and billing behavior.",
+  "source": "Deploy current main after merging PR #421 for the Policy Activity Status metadata layout refinement.",
+  "source_commit": "3e85bfea641db887c3785d635f0d8ad51e1382a4",
+  "release_scope": "Refine the expanded Policy Activity Status section to remove separate metadata cards and show the existing actor and timestamp as compact inline Created By and Created At text aligned at the bottom-right. Preserve latest-action tracking, expand/collapse behavior, policy fields, save behavior, document handling, billing logic, database schema, and all other functionality.",
   "verification": "The protected production workflow must run the compulsory verify-web-portal gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
