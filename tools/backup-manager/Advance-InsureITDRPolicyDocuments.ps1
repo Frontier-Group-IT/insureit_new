@@ -94,10 +94,10 @@ $ExpectedPreAdvanceDifferences = @(
     "MissingInDR`tindex`tpublic.policy_documents_storage_path_unique",
     "MissingInDR`tindex`tpublic.policy_documents_uploaded_by_idx",
     "MissingInDR`ttrigger`tpublic.policy_documents.policy_documents_updated_at",
-    "MissingInDR`tpolicy`tpublic.policy_documents.policy documents ops manage",
-    "MissingInDR`tpolicy`tpublic.policy_documents.policy documents customer read",
-    "MissingInDR`tpolicy`tstorage.objects.policy document objects ops access",
-    "MissingInDR`tpolicy`tstorage.objects.policy document objects customer read",
+    "MissingInDR`tpolicy`tpublic.policy_documents.`"policy documents ops manage`"",
+    "MissingInDR`tpolicy`tpublic.policy_documents.`"policy documents customer read`"",
+    "MissingInDR`tpolicy`tstorage.objects.`"policy document objects ops access`"",
+    "MissingInDR`tpolicy`tstorage.objects.`"policy document objects customer read`"",
     $RemainingFunctionDiff
 )
 
