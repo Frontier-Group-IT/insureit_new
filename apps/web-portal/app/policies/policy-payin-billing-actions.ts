@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { POLICY_ACTIVITY_ACTIONS, recordPolicyActivity } from "@/lib/policy-activity";
 
 export type PolicyPayinStatus = "Unbilled" | "Billing details incomplete" | "Billed";
 
@@ -79,7 +80,7 @@ export async function savePolicyPayinBilling(
   policyId: string,
   billing: Pick<PolicyPayinBilling, "billNumber" | "billedAmount" | "billDate" | "status">,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  await requirePolicyEditor();
+  const profile = await requirePolicyEditor();
   if (!validPolicyId(policyId)) return { ok: false, error: "Invalid policy reference." };
   const billedAmount = amount(billing.billedAmount);
   if (billedAmount === null) return { ok: false, error: "PayIn Billed Amt Rs. must be zero or a positive amount." };
@@ -89,27 +90,45 @@ export async function savePolicyPayinBilling(
   const admin = createSupabaseAdminClient();
   const { data: existing, error: lookupError } = await admin
     .from("policy_payin_bills")
-    .select("id")
+    .select("id,bill_number,billed_amount,bill_date,status")
     .eq("policy_id", policyId)
     .order("created_at", { ascending: false })
     .limit(1)
-    .maybeSingle<{ id: string }>();
+    .maybeSingle<PayinBillRow>();
   if (lookupError) return { ok: false, error: "Billing details could not be saved. Please try again." };
 
+  const billNumber = billing.billNumber.trim() || null;
+  const billDate = billing.billDate || null;
   const values = {
-    bill_number: billing.billNumber.trim() || null,
+    bill_number: billNumber,
     billed_amount: billedAmount,
-    bill_date: billing.billDate || null,
+    bill_date: billDate,
     status: billing.status,
     short_payout_amount: 0,
     updated_at: new Date().toISOString(),
   };
+
+  if (existing?.id) {
+    const currentStatus = normalizedStatus(existing.status, existing.billed_amount, existing.bill_number, existing.bill_date);
+    const unchanged =
+      (existing.bill_number ?? null) === billNumber &&
+      Number(existing.billed_amount ?? 0) === billedAmount &&
+      (existing.bill_date ?? null) === billDate &&
+      currentStatus === billing.status;
+    if (unchanged) return { ok: true };
+  }
 
   const result = existing?.id
     ? await admin.from("policy_payin_bills").update(values).eq("id", existing.id)
     : await admin.from("policy_payin_bills").insert({ policy_id: policyId, ...values });
   if (result.error) return { ok: false, error: "Billing details could not be saved. Please try again." };
 
+  await recordPolicyActivity(
+    admin,
+    policyId,
+    profile.id,
+    existing?.id ? POLICY_ACTIVITY_ACTIONS.PAYIN_BILLING_UPDATED : POLICY_ACTIVITY_ACTIONS.PAYIN_BILLING_ADDED,
+  );
   revalidatePath("/policies");
   revalidatePath(`/policies/${policyId}/edit`);
   return { ok: true };
