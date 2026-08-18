@@ -52,6 +52,11 @@ const liabilityWordings = `Limits of Liability Clause\nUnder Section II-1 (ii) o
 
 const enhancedSchedule = `THE NEW INDIA ASSURANCE CO. LTD.\nPOLICY SCHEDULE CUM CERTIFICATE OF INSURANCE\nCommercial Vehicle Package Policy - Enhanced Covers\nPolicy Number :31280031260300009999\nPOLICY DETAILS\nPeriod of cover 09/08/2026 12:00:01 AM to 08/08/2027 11:59:59 PM\nINSURED DECLARED VALUE (Rs)\nVehicle Trailer Non-Elec Acc Electrical Acc Bi-fuel/CNG/LPG kit Total Value\n906000 0 0 0 0 906000\nENHANCED COVER\nSCHEDULE OF PREMIUM\nOwn Damage Liability\nBasic OD Premium\n2053\nBasic TP Premium\n(+)Compulsory PA Premium for Owner Driver(Sum\nInsured Rs 1500000)\n(+)LL to paid driver conductor cleaner employed for oprn\n(+)PA Cover for Paid Drivers Cleaner Conductor No of Paid Drivers\n(+)LL to paid driver and/or conductor and/or cleaner employed for operation\n16049\n275\n100\n100\n120\nCalculated OD Premium 6121 Calculated TP Premium 16644\nTotal OD Premium (Rs) 6121 Total TP Premium (Rs) 16644\nNet Premium (Rs) 22,765\nGST (Rs) 2,011\nTotal Payable (Rs) 24,776`;
 
+const fragmentedPeriodSchedule = enhancedSchedule.replace(
+  "Period of cover 09/08/2026 12:00:01 AM to 08/08/2027 11:59:59 PM",
+  "Period of cover\n09 /\n08 /\n2026 12 : 00 : 01 AM\n08 /\n08 /\n2027 11 : 59 : 59 PM",
+);
+
 const cases: Case[] = [
   {
     name: "real New India schedule layout",
@@ -81,6 +86,11 @@ const cases: Case[] = [
   {
     name: "enhanced commercial vehicle schedule uses period-of-cover and total premium rows",
     pages: [enhancedSchedule],
+    expected: enhancedExpected,
+  },
+  {
+    name: "fragmented period-of-cover text still produces policy validity",
+    pages: [fragmentedPeriodSchedule],
     expected: enhancedExpected,
   },
 ];
