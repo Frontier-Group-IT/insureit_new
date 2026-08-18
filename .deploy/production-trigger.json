@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy Edit uploaded policy filename refinement.",
-  "deploy_requested_at": "2026-08-18T10:14:00+05:30",
+  "purpose": "Deploy Policy Edit filename placement refinement.",
+  "deploy_requested_at": "2026-08-18T10:29:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #401 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "4523807430cf9fa98c25adbf27e26d252916a02c",
-  "release_scope": "UI-only refinement to the Policy Edit footer for an existing uploaded policy copy: add a Lucide Files icon immediately to the left of View Policy and display the uploaded policy copy filename below it in a smaller truncated font. Preserve the existing refresh/replace action, View Policy behavior, upload logic, tooltips, accessibility behavior, backend, Supabase, storage, schema, migrations, calculations, and all other functionality unchanged.",
-  "verification": "PR #401 Verify web portal run 32100156993 passed all regressions, typecheck, lint, and production build on head c4aec1a458fa5d0687b2ee34bbc4aa5af8f6e33f before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #402 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "fd475d460da7143c964524c57b0eca19e45aa8ee",
+  "release_scope": "UI-only refinement to the Policy Edit footer for an existing uploaded policy copy: keep the Files icon + View Policy + refresh/replace control as the button row, move the uploaded policy copy filename completely outside the control, and show it as a separate small truncated line directly below. Preserve existing document view, replace, upload, tooltip, accessibility, backend, Supabase, storage, schema, migrations, calculations, and all other functionality unchanged.",
+  "verification": "PR #402 Verify web portal run 32101108430 passed all regressions, typecheck, lint, and production build on head dcf7fd532629894650c97d7373845e2569c83376 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
