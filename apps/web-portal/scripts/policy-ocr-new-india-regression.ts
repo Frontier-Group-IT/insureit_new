@@ -22,6 +22,22 @@ const expected: Expected = {
   gross_premium: "86893",
 };
 
+const enhancedExpected: Expected = {
+  insurer_name: "The New India Assurance Company Limited",
+  policy_product: "Package",
+  policy_number: "31280031260300009999",
+  idv: "906000",
+  od_premium: "6121",
+  tp_premium: "16369",
+  cpa_premium: "275",
+  cpa_opted: "Yes",
+  policy_start_date: "2026-08-09",
+  policy_end_date: "2027-08-08",
+  total_premium: "22765",
+  tax_amount: "2011",
+  gross_premium: "24776",
+};
+
 const header = `The New India Assurance Co. Ltd.\nGOODS CARRYING VEHICLE PACKAGE POLICY-CERTIFICATE CUM POLICY SCHEDULE CUM RECEIPT\nPolicy No. 80000031250350127994\nPolicy Issued On 04-DEC-2025 (16:12)\nMotor Liability Period 05-DEC-2025(00:00) To 04-DEC-2026(Midnight)\nOwn Damage Period 05-DEC-2025(00:00) To 04-DEC-2026(Midnight)`;
 
 const idv = `Vehicle Type Vehicle Sub Class Built Type IDV of Chassis IDVof Body Elec. Accessories\nA1- Public Carrier-GCV TIPPER Fully Built 4,800,000 0 0\nNon-Elec. Accessories CNG/LPG Kit IDV of Trailer Total IDV\n0 0 0 4,800,000`;
@@ -31,6 +47,8 @@ const premium = `Schedule of Premium (Amount in Rs.)\nOwn Damage Premium (A)\nVe
 const previous = `Previous Insurer : NIA\nPrevious Policy No. : 80000031240350141855 05-DEC-2024 To 04-DEC-2025`;
 
 const liabilityWordings = `Limits of Liability Clause\nUnder Section II-1 (ii) of the policy-Damage to third party property is Rs.7.5lakhs PA Cover Under Section III for Owner-Driver is Rs. 1500000.`;
+
+const enhancedSchedule = `THE NEW INDIA ASSURANCE CO. LTD.\nPOLICY SCHEDULE CUM CERTIFICATE OF INSURANCE\nCommercial Vehicle Package Policy - Enhanced Covers\nPolicy Number :31280031260300009999\nPOLICY DETAILS\nPeriod of cover 09/08/2026 12:00:01 AM to 08/08/2027 11:59:59 PM\nINSURED DECLARED VALUE (Rs)\nVehicle Trailer Non-Elec Acc Electrical Acc Bi-fuel/CNG/LPG kit Total Value\n906000 0 0 0 0 906000\nENHANCED COVER\nSCHEDULE OF PREMIUM\nOwn Damage Liability\nBasic OD Premium\n2053\nBasic TP Premium\n(+)Compulsory PA Premium for Owner Driver(Sum\nInsured Rs 1500000)\n(+)LL to paid driver conductor cleaner employed for oprn\n(+)PA Cover for Paid Drivers Cleaner Conductor No of Paid Drivers\n(+)LL to paid driver and/or conductor and/or cleaner employed for operation\n16049\n275\n100\n100\n120\nCalculated OD Premium 6121 Calculated TP Premium 16644\nTotal OD Premium (Rs) 6121 Total TP Premium (Rs) 16644\nNet Premium (Rs) 22,765\nGST (Rs) 2,011\nTotal Payable (Rs) 24,776`;
 
 const cases: Case[] = [
   {
@@ -58,6 +76,11 @@ const cases: Case[] = [
     pages: [`${previous}\n${header}\n${idv}`, `${premium}\n${previous}\n${header}`],
     expected,
   },
+  {
+    name: "enhanced commercial vehicle schedule uses period-of-cover and total premium rows",
+    pages: [enhancedSchedule],
+    expected: enhancedExpected,
+  },
 ];
 
 let failures = 0;
@@ -74,7 +97,7 @@ for (const testCase of cases) {
   for (const [key, value] of Object.entries(testCase.expected)) {
     if (actual[key] !== value) problems.push(`${key}: expected ${value}, got ${actual[key] ?? "<missing>"}`);
   }
-  if (result.warnings.some((warning) => /premium cross-check failed|does not match Gross Premium Paid/i.test(warning))) {
+  if (result.warnings.some((warning) => /premium cross-check failed|does not match printed gross|does not match Gross Premium Paid/i.test(warning))) {
     problems.push("premium reconciliation unexpectedly failed");
   }
 
