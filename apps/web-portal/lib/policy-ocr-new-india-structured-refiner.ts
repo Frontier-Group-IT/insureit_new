@@ -5,7 +5,7 @@ type Hit = { value: number; page: number; evidence: string };
 type DateHit = { from: string; upto: string; page: number; evidence: string };
 
 const MONEY_RE = /[0-9][0-9,]*(?:\.[0-9]{1,2})?/g;
-const DATE_RE = /\b([0-9]{1,2}[\/-](?:[0-9]{1,2}|JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[\/-][0-9]{2,4})\b/gi;
+const DATE_RE = /(?:^|[^0-9])([0-9]{1,2}\s*[\/-]\s*(?:[0-9]{1,2}|JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s*[\/-]\s*[0-9]{2,4})(?=$|[^0-9])/gi;
 
 export function refineNewIndiaStructuredPolicy(tables: StructuredPolicyTable[], parsed: ParsedPolicyResult): ParsedPolicyResult {
   if (!tables.length) return parsed;
@@ -56,7 +56,7 @@ export function refineNewIndiaStructuredPolicy(tables: StructuredPolicyTable[], 
 
   return {
     ...parsed,
-    parserVersion: `${parsed.parserVersion}+new-india-layout-v1`,
+    parserVersion: `${parsed.parserVersion}+new-india-layout-v1.1`,
     fields: [...fields.values()],
     warnings,
   };
@@ -67,12 +67,19 @@ function findPeriod(tables: StructuredPolicyTable[]): DateHit | null {
     for (let i = 0; i < table.rows.length; i += 1) {
       const row = normalize(table.rows[i].join(" | "));
       if (!/Period\s+of\s+cover|Own\s+Damage\s+Period|Motor\s+Liability\s+Period/i.test(row)) continue;
-      const neighborhood = [row, ...table.rows.slice(i + 1, i + 4).map((next) => normalize(next.join(" | ")))].join(" | ");
-      const dates = [...neighborhood.matchAll(DATE_RE)].map((match) => isoDate(match[1])).filter((value): value is string => Boolean(value));
+      const neighborhood = [row, ...table.rows.slice(i + 1, i + 5).map((next) => normalize(next.join(" | ")))].join(" | ");
+      const dates = extractDates(neighborhood);
       if (dates.length >= 2) return { from: dates[0], upto: dates[1], page: table.page, evidence: safe(neighborhood) };
     }
   }
   return null;
+}
+
+function extractDates(text: string) {
+  DATE_RE.lastIndex = 0;
+  return [...text.matchAll(DATE_RE)]
+    .map((match) => isoDate(match[1]))
+    .filter((value): value is string => Boolean(value));
 }
 
 function findIdv(tables: StructuredPolicyTable[]): Hit | null {
@@ -179,7 +186,8 @@ function money(value: number) { const rounded = round2(value); return Number.isI
 function isYear(value: number) { return Number.isInteger(value) && value >= 1900 && value <= 2100; }
 
 function isoDate(value: string): string | null {
-  const match = value.trim().toUpperCase().match(/^(\d{1,2})[\/-](\d{1,2}|JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[\/-](\d{2,4})$/);
+  const compact = value.replace(/\s+/g, "").trim().toUpperCase();
+  const match = compact.match(/^(\d{1,2})[\/-](\d{1,2}|JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[\/-](\d{2,4})$/);
   if (!match) return null;
   const months: Record<string, number> = { JAN: 1, FEB: 2, MAR: 3, APR: 4, MAY: 5, JUN: 6, JUL: 7, AUG: 8, SEP: 9, OCT: 10, NOV: 11, DEC: 12 };
   const day = Number(match[1]);
