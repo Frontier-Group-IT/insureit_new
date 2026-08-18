@@ -11,6 +11,7 @@ import {
   type StructuredPolicyTable,
 } from "@/lib/policy-ocr-iffco-structured-refiner";
 import { refineNewIndiaCommercialPolicy } from "@/lib/policy-ocr-new-india-refiner";
+import { refineNewIndiaStructuredPolicy } from "@/lib/policy-ocr-new-india-structured-refiner";
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const OCR_TIMEOUT_MS = 120 * 1000;
@@ -150,11 +151,13 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
           ? refineNewIndiaCommercialPolicy(pages, baseParsed)
           : refineAdditionalMotorPolicy(pages, baseParsed);
 
-    if (baseParsed.parserId === "iffco_tokio_commercial_motor_v1") {
+    if (baseParsed.parserId === "iffco_tokio_commercial_motor_v1" || baseParsed.parserId === "new_india_motor_v1") {
       const tables = file.type === "application/pdf"
         ? await processLayoutTables({ config, content, mimeType: file.type, accessToken: googleAccessToken, signal: controller.signal })
         : [];
-      parsed = refineIffcoStructuredFinancials(tables, parsed);
+      parsed = baseParsed.parserId === "iffco_tokio_commercial_motor_v1"
+        ? refineIffcoStructuredFinancials(tables, parsed)
+        : refineNewIndiaStructuredPolicy(tables, parsed);
     }
 
     if (!parsed.fields.length) return { ok: false, error: "No supported policy details could be read from this document. Please review the file and enter the details manually if needed." };
