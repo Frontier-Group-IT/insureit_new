@@ -1,6 +1,7 @@
 export function PolicyRemarksActionStyle() {
   return (
     <style>{`
+      #policy-section-4 button[aria-expanded],
       #policy-section-5 button[aria-expanded] {
         min-height: 32px;
         border: 1px solid #D6E2F0;
@@ -14,6 +15,7 @@ export function PolicyRemarksActionStyle() {
         transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
       }
 
+      #policy-section-4 button[aria-expanded]:hover,
       #policy-section-5 button[aria-expanded]:hover {
         border-color: #9EBCE2;
         background: #EEF5FF;
@@ -22,12 +24,14 @@ export function PolicyRemarksActionStyle() {
         transform: translateY(-1px);
       }
 
+      #policy-section-4 button[aria-expanded]:focus-visible,
       #policy-section-5 button[aria-expanded]:focus-visible {
         outline: none;
         border-color: #315B9A;
         box-shadow: 0 0 0 3px #DCE8FA;
       }
 
+      #policy-section-4 button[aria-expanded] > span:first-child,
       #policy-section-5 button[aria-expanded] > span:first-child {
         display: inline-grid;
         height: 18px;
@@ -39,12 +43,15 @@ export function PolicyRemarksActionStyle() {
         transition: background-color 160ms ease, color 160ms ease;
       }
 
+      #policy-section-4 button[aria-expanded]:hover > span:first-child,
+      #policy-section-4 button[aria-expanded="true"] > span:first-child,
       #policy-section-5 button[aria-expanded]:hover > span:first-child,
       #policy-section-5 button[aria-expanded="true"] > span:first-child {
         background: #DBEAFE;
         color: #17365D;
       }
 
+      #policy-section-4 button[aria-expanded="true"],
       #policy-section-5 button[aria-expanded="true"] {
         border-color: #B7CAE3;
         background: #F8FBFF;

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { PolicyUnifiedForm, type PolicyRmOption, type PolicySourceOption, type PolicyUnifiedInitialValues } from "@/components/policy-unified-form";
+import { PolicyRemarksActionStyle } from "@/components/policy-remarks-action-style";
 import { AppShell } from "@/components/shell";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
@@ -232,6 +233,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
 
   return (
     <AppShell title="Edit Policy">
+      <PolicyRemarksActionStyle />
       <PolicyUnifiedForm mode="edit" insurers={insurerOptions} rms={rmOptions} sources={sourceOptions} initialValues={initialValues} />
     </AppShell>
   );
