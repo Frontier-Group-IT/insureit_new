@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy single-row Policy Activity Status layout.",
-  "deploy_requested_at": "2026-08-18T17:03:00+05:30",
+  "purpose": "Deploy complete chronological Policy Activity Status history.",
+  "deploy_requested_at": "2026-08-18T17:12:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #423 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "a1ffbc59af7a1745f50a994b92895ec903b84bcd",
-  "release_scope": "Keep the latest policy activity action prominent on the left and place Created By plus Updated At inside the same compact Activity Status content section, with Updated At aligned at the far-right. Remove Created At from the Activity Status display. Preserve activity tracking, audit logging, expand/collapse behavior, policy fields, save flow, document handling, billing, database schema, and all other functionality unchanged.",
-  "verification": "PR #423 Verify web portal run 32132168955 passed successfully on head 9579ca786abd46c3b3ebc6ec9fe3ad0c0a6f1048 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #424 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "b4597011642689a44152589893071c83c7ec72b1",
+  "release_scope": "Make Activity Status append-only and chronological: preserve Policy Created and every later tracked policy action, keep newest actions at the top and older actions below, and retain repeated Policy Edited, policy-document, and pay-in billing events as separate history entries. Preserve existing activity inserts, policy save behavior, document handling, billing, calculations, permissions, Supabase storage, database schema, and all unrelated workflows unchanged.",
+  "verification": "PR #424 Verify web portal run 32132950699 passed successfully on head 84c26e4eafdf96d312fa249e5e4a52192246d2b9 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
