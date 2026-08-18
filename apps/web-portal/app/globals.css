@@ -261,6 +261,15 @@ summary:active {
   animation: insureit-float 7s ease-in-out infinite;
 }
 
+[aria-label$="% complete"][title$="% complete"] > svg > circle:first-of-type {
+  stroke: #E3EAF2;
+}
+
+[aria-label$="% complete"][title$="% complete"] > svg > circle:nth-of-type(2) {
+  stroke: #17365D !important;
+  transition: stroke-dashoffset 320ms cubic-bezier(.2, .8, .2, 1);
+}
+
 [role="alert"].fixed.right-4.top-20.z-\[140\] {
   animation: policy-document-error-toast-hide 5s linear forwards;
 }
