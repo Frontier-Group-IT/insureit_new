@@ -38,13 +38,15 @@ export async function PolicyActivityStatus({ policyId, createdBy, createdAt, upd
         </span>
       </summary>
       <div className="border-t border-[#E7ECF2] px-4 py-3">
-        <div className="min-w-0 rounded-lg bg-[#F8FAFC] px-3 py-2">
-          <p className="text-[7.5px] font-bold uppercase tracking-[0.06em] text-[#98A2B3]">Latest Action</p>
-          <p className="mt-1 text-[11px] font-bold text-[#17365D]">{activity.action}</p>
-        </div>
-        <div className="mt-2 flex flex-wrap items-center justify-end gap-x-5 gap-y-1 text-[8.5px] font-medium text-[#667085]">
-          <span><span className="text-[#98A2B3]">Created By:</span> {activity.actorName}</span>
-          <span><span className="text-[#98A2B3]">Created At:</span> {formatTimestamp(activity.at)}</span>
+        <div className="flex min-w-0 flex-wrap items-end gap-x-6 gap-y-2 rounded-lg bg-[#F8FAFC] px-3 py-2 sm:flex-nowrap">
+          <div className="min-w-0 flex-1">
+            <p className="text-[7.5px] font-bold uppercase tracking-[0.06em] text-[#98A2B3]">Latest Action</p>
+            <p className="mt-1 text-[11px] font-bold text-[#17365D]">{activity.action}</p>
+          </div>
+          <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-1 text-[8.5px] font-medium text-[#667085] sm:ml-auto sm:flex-nowrap sm:justify-end">
+            <span className="whitespace-nowrap"><span className="text-[#98A2B3]">Created By:</span> {activity.actorName}</span>
+            <span className="whitespace-nowrap"><span className="text-[#98A2B3]">Updated At:</span> {formatTimestamp(updatedAt)}</span>
+          </div>
         </div>
       </div>
     </details>
