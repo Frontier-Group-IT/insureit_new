@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy Activity Status inline metadata refinement.",
-  "deploy_requested_at": "2026-08-18T16:29:00+05:30",
+  "purpose": "Deploy restored Policy Copy actions in Policy Edit footer.",
+  "deploy_requested_at": "2026-08-18T16:46:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Deploy current main after merging PR #421 for the Policy Activity Status metadata layout refinement.",
-  "source_commit": "3e85bfea641db887c3785d635f0d8ad51e1382a4",
-  "release_scope": "Refine the expanded Policy Activity Status section to remove separate metadata cards and show the existing actor and timestamp as compact inline Created By and Created At text aligned at the bottom-right. Preserve latest-action tracking, expand/collapse behavior, policy fields, save behavior, document handling, billing logic, database schema, and all other functionality.",
-  "verification": "The protected production workflow must run the compulsory verify-web-portal gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #422 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "cb65ebff1e8286995a8df1a9641d443866f18e90",
+  "release_scope": "Restore View Policy / Replace or Add Policy Copy controls in the visible Policy Edit footer, keep Cancel and Save Policy Changes on the right, and route Edit Policy document opening through the branded opener flow instead of about:blank. Preserve policy-copy storage, permissions, accepted file types, signed URLs, policy edit save flow, Activity Status, calculations, billing, payout, database schema, and other workflows unchanged.",
+  "verification": "PR #422 Verify web portal run 32130831937 passed successfully on head 9da0118980056a200b5d0cab36d634a7b011a4ac before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
