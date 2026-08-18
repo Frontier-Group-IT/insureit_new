@@ -24,15 +24,6 @@ function formatTimestamp(value: string | null) {
   return timestampFormatter.format(date);
 }
 
-function ActivityMeta({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0 rounded-lg bg-[#F8FAFC] px-3 py-2">
-      <p className="text-[7.5px] font-bold uppercase tracking-[0.06em] text-[#98A2B3]">{label}</p>
-      <p className="mt-1 truncate text-[9px] font-medium text-[#475467]" title={value}>{value}</p>
-    </div>
-  );
-}
-
 export async function PolicyActivityStatus({ policyId, createdBy, createdAt, updatedAt }: PolicyActivityStatusProps) {
   const activity = await loadLatestPolicyActivity({ policyId, createdBy, createdAt, updatedAt });
 
@@ -47,13 +38,13 @@ export async function PolicyActivityStatus({ policyId, createdBy, createdAt, upd
         </span>
       </summary>
       <div className="border-t border-[#E7ECF2] px-4 py-3">
-        <div className="grid gap-2 sm:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1fr)]">
-          <div className="min-w-0 rounded-lg bg-[#F8FAFC] px-3 py-2">
-            <p className="text-[7.5px] font-bold uppercase tracking-[0.06em] text-[#98A2B3]">Latest Action</p>
-            <p className="mt-1 text-[11px] font-bold text-[#17365D]">{activity.action}</p>
-          </div>
-          <ActivityMeta label="By" value={activity.actorName} />
-          <ActivityMeta label="At" value={formatTimestamp(activity.at)} />
+        <div className="min-w-0 rounded-lg bg-[#F8FAFC] px-3 py-2">
+          <p className="text-[7.5px] font-bold uppercase tracking-[0.06em] text-[#98A2B3]">Latest Action</p>
+          <p className="mt-1 text-[11px] font-bold text-[#17365D]">{activity.action}</p>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center justify-end gap-x-5 gap-y-1 text-[8.5px] font-medium text-[#667085]">
+          <span><span className="text-[#98A2B3]">Created By:</span> {activity.actorName}</span>
+          <span><span className="text-[#98A2B3]">Created At:</span> {formatTimestamp(activity.at)}</span>
         </div>
       </div>
     </details>
