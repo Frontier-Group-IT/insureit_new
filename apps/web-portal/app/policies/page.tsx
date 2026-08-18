@@ -53,8 +53,29 @@ export default async function PoliciesPage() {
   const accessibleCustomerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_policies");
   const admin = createSupabaseAdminClient();
 
+  const { data: activeSources, error: sourceError } = await admin
+    .from("intermediaries")
+    .select("intermediary_type, intermediary_code, display_name")
+    .in("intermediary_type", ["partner", "posp", "misp"])
+    .eq("account_status", "active")
+    .order("display_name", { ascending: true })
+    .returns<IntermediarySourceRow[]>();
+
+  const sourceRows = sourceError ? [] : (activeSources ?? []);
+  const sourceNameByKey = new Map<string, string>();
+  const sourceOptions = sourceRows
+    .map((source) => {
+      const code = source.intermediary_code?.trim();
+      const name = source.display_name?.trim();
+      if (!code || !name) return null;
+      const value = sourceLookupKey(source.intermediary_type, code);
+      sourceNameByKey.set(value, name);
+      return { value, label: `${name} · ${code}` };
+    })
+    .filter((option): option is { value: string; label: string } => Boolean(option));
+
   if (accessibleCustomerIds !== null && !accessibleCustomerIds.length) {
-    return <AppShell title="Policies"><PolicyWorkspace rows={[]} /></AppShell>;
+    return <AppShell title="Policies"><PolicyWorkspace rows={[]} sourceOptions={sourceOptions} /></AppShell>;
   }
 
   let query = admin
@@ -64,29 +85,6 @@ export default async function PoliciesPage() {
   if (accessibleCustomerIds !== null) query = query.in("customer_id", accessibleCustomerIds);
   const { data, error } = await query.returns<PolicyRow[]>();
   const rows = data ?? [];
-
-  const sourceCodes = Array.from(new Set(
-    rows
-      .filter((policy) => Boolean(policySourceDatabaseType(policy.intermediary_type)))
-      .map((policy) => policy.intermediary_code?.trim())
-      .filter((code): code is string => Boolean(code)),
-  ));
-
-  const sourceNameByKey = new Map<string, string>();
-  if (sourceCodes.length) {
-    const { data: intermediarySources } = await admin
-      .from("intermediaries")
-      .select("intermediary_type, intermediary_code, display_name")
-      .in("intermediary_type", ["partner", "posp", "misp"])
-      .in("intermediary_code", sourceCodes)
-      .returns<IntermediarySourceRow[]>();
-
-    for (const intermediary of intermediarySources ?? []) {
-      const code = intermediary.intermediary_code?.trim();
-      const name = intermediary.display_name?.trim();
-      if (code && name) sourceNameByKey.set(sourceLookupKey(intermediary.intermediary_type, code), name);
-    }
-  }
 
   const workspaceRows = rows.map((policy) => {
     const sourceType = policySourceDatabaseType(policy.intermediary_type);
@@ -114,7 +112,7 @@ export default async function PoliciesPage() {
           }))}
         />
       ) : null}
-      {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3"><p className="text-[11px] font-semibold text-red-700">The policy register is temporarily unavailable.</p><p className="mt-1 text-[9.5px] text-[#64748B]">Please refresh the page or try again shortly.</p></div> : <PolicyWorkspace rows={workspaceRows} />}
+      {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3"><p className="text-[11px] font-semibold text-red-700">The policy register is temporarily unavailable.</p><p className="mt-1 text-[9.5px] text-[#64748B]">Please refresh the page or try again shortly.</p></div> : <PolicyWorkspace rows={workspaceRows} sourceOptions={sourceOptions} />}
     </AppShell>
   );
 }
