@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy Portfolio search and Source filter layout.",
-  "deploy_requested_at": "2026-08-18T11:51:00+05:30",
+  "purpose": "Deploy darker blue replace policy copy action styling on current main.",
+  "deploy_requested_at": "2026-08-18T11:52:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #409 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "27e60f6c55bf6f868e44bb305a5fe59556c5f2e4",
-  "release_scope": "Policy Portfolio UI/filter enhancement: move Search beside the Policy Portfolio heading, keep Add Policy at the far right, add Source before Insurer in the filter row, keep Status tabs after Insurer, load Source options from the same active intermediary master used by Policy Onboarding Lead Source, preserve Display Name · Intermediary Code naming, and filter by intermediary type plus code. Preserve policy table columns, document actions, onboarding/edit workflows, database schema, Supabase schema, calculations, claims, and other portfolio pages unchanged.",
-  "verification": "PR #409 Verify web portal run 32106480991 passed regressions, typecheck, lint, and production build on head 87f7138d901ff9f47b0b1b62d858e32a1b27779c before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #408 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "2f141f40e02d07f0d85ac77e805401821ef3d850",
+  "release_scope": "Deploy current main, including PR #408's UI-only Policy Edit footer refinement: keep View Policy styling unchanged, darken only the replace/refresh segment background to #DBEAFE, keep the replace icon #2563EB, and use #BFDBFE on hover. Preserve existing replace/upload behavior, filename display, footer alignment, backend, Supabase, storage, schema, migrations, calculations, and all other functionality unchanged.",
+  "verification": "PR #408 Verify web portal run 32106135614 passed all regressions, typecheck, lint, and production build on head 8d4258674dd9dc0a42e21958af197c98821c0469 before merge. Current main has advanced after the merge and includes PR #408; the protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
