@@ -116,7 +116,7 @@ const flattenedLiveLike = `THE NEW INDIA ASSURANCE CO. LTD.\nCommercial Vehicle 
 const liveBase = parsePolicyDocument([flattenedLiveLike]);
 const liveTextResult = refineNewIndiaCommercialPolicy([flattenedLiveLike], liveBase);
 const liveTables = [
-  { page: 1, rows: [["POLICY DETAILS"], ["Period of cover", "09/08/2026 12:00:01 AM to 08/08/2027 11:59:59 PM"]] },
+  { page: 1, rows: [["POLICY DETAILS"], ["Period of cover", "09 / 08 / 2026 12 : 00 : 01 AM", "to", "08 / 08 / 2027 11 : 59 : 59 PM"]] },
   { page: 1, rows: [["INSURED DECLARED VALUE (Rs)"], ["Vehicle", "Trailer", "Non-Elec Acc", "Electrical Acc", "Bi-fuel/CNG/LPG kit", "Total Value"], ["906000", "0", "0", "0", "0", "906000"]] },
   { page: 2, rows: [
     ["Compulsory PA Premium for Owner Driver", "275"],
