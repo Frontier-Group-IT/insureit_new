@@ -1,6 +1,6 @@
 import type { ParsedPolicyField, ParsedPolicyResult } from "@/lib/policy-ocr-parsers";
 
-const VERSION = "new_india_commercial_motor_v1.2.1";
+const VERSION = "new_india_commercial_motor_v1.3.0";
 const MONEY_RE = /[0-9][0-9,]*(?:\.[0-9]{1,2})?/g;
 
 type MoneyHit = { value: number; page: number; evidence: string };
@@ -16,10 +16,6 @@ export function refineNewIndiaCommercialPolicy(pages: string[], parsed: ParsedPo
   const fields = new Map(parsed.fields.map((field) => [field.key, field]));
   const warnings = parsed.warnings.filter((warning) => !/New India|Missing or uncertain fields/i.test(warning));
 
-  // The dedicated refiner owns all Section 03 values it can interpret. A weak
-  // generic/base-parser guess must never survive when the exact New India anchor
-  // is missing, because historical policy numbers, NCB amounts and coverage
-  // limits appear close to the real values in this format.
   for (const key of [
     "policy_product", "idv", "od_premium", "tp_premium", "cpa_opted", "cpa_premium",
     "policy_number", "insurer_name", "policy_start_date", "policy_end_date",
@@ -50,12 +46,22 @@ export function refineNewIndiaCommercialPolicy(pages: string[], parsed: ParsedPo
   const idv = findTotalIdv(cleanPages);
   if (idv) setField(fields, "idv", "IDV / Sum insured", money(idv.value), .99, idv.page, idv.evidence);
 
-  const od = findExactRowAmount(cleanPages, /Net\s+Own\s+Damage\s+Premium\s*\(A\)/i, { min: 100, max: 10000000 });
-  const liability = findExactRowAmount(cleanPages, /Net\s+Liability\s+Premium\s*\(B\)/i, { min: 100, max: 10000000 });
+  const od =
+    findExactRowAmount(cleanPages, /Net\s+Own\s+Damage\s+Premium\s*\(A\)/i, { min: 100, max: 10000000 })
+    ?? findExactRowAmount(cleanPages, /Total\s+OD\s+Premium\s*\(Rs\.?\)?/i, { min: 100, max: 10000000 });
+  const liability =
+    findExactRowAmount(cleanPages, /Net\s+Liability\s+Premium\s*\(B\)/i, { min: 100, max: 10000000 })
+    ?? findExactRowAmount(cleanPages, /Total\s+TP\s+Premium\s*\(Rs\.?\)?/i, { min: 100, max: 10000000 });
   const cpa = findOwnerDriverCpa(cleanPages);
-  const total = findExactRowAmount(cleanPages, /Total\s+Premium\s*\(A\s*\+\s*B\)/i, { min: 100, max: 10000000 });
-  const tax = findExactRowAmount(cleanPages, /\bIGST\b/i, { min: 0, max: 10000000 });
-  const gross = findExactRowAmount(cleanPages, /Gross\s+Premium\s+Paid/i, { min: 100, max: 10000000 });
+  const total =
+    findExactRowAmount(cleanPages, /Total\s+Premium\s*\(A\s*\+\s*B\)/i, { min: 100, max: 10000000 })
+    ?? findExactRowAmount(cleanPages, /Net\s+Premium\s*\(Rs\.?\)?/i, { min: 100, max: 10000000 });
+  const tax =
+    findExactRowAmount(cleanPages, /\bGST\s*\(Rs\.?\)?/i, { min: 0, max: 10000000 })
+    ?? findExactRowAmount(cleanPages, /\bIGST\b/i, { min: 0, max: 10000000 });
+  const gross =
+    findExactRowAmount(cleanPages, /Gross\s+Premium\s+Paid/i, { min: 100, max: 10000000 })
+    ?? findExactRowAmount(cleanPages, /Total\s+Payable\s*\(Rs\.?\)?/i, { min: 100, max: 10000000 });
 
   const cpaValue = cpa?.value ?? 0;
   if (cpa) {
@@ -77,7 +83,7 @@ export function refineNewIndiaCommercialPolicy(pages: string[], parsed: ParsedPo
       money(portalTp),
       .99,
       liability.page,
-      `${liability.evidence} | Portal TP = Net Liability Premium (B) ${money(liability.value)} minus Owner-Driver CPA ${money(cpaValue)}.`,
+      `${liability.evidence} | Portal TP = printed liability/TP premium ${money(liability.value)} minus Owner-Driver CPA ${money(cpaValue)}.`,
     );
   }
 
@@ -91,14 +97,14 @@ export function refineNewIndiaCommercialPolicy(pages: string[], parsed: ParsedPo
   if (odValue !== null && tpValue !== null && printedNet !== null) {
     const calculated = round2(odValue + tpValue + cpaValue);
     if (Math.abs(calculated - printedNet) > 1) {
-      warnings.push(`New India premium cross-check failed: OD + TP + CPA = ${money(calculated)}, while printed Total Premium (A+B) = ${money(printedNet)}.`);
+      warnings.push(`New India premium cross-check failed: OD + TP + CPA = ${money(calculated)}, while printed net premium = ${money(printedNet)}.`);
     }
   }
 
   const printedTax = tax?.value ?? numeric(fields.get("tax_amount"));
   const printedGross = gross?.value ?? numeric(fields.get("gross_premium"));
   if (printedNet !== null && printedTax !== null && printedGross !== null && Math.abs(round2(printedNet + printedTax) - printedGross) > 1) {
-    warnings.push("New India printed Total Premium (A+B) + tax does not match Gross Premium Paid. Review the policy schedule.");
+    warnings.push("New India printed net premium + tax does not match printed gross/total payable. Review the policy schedule.");
   }
 
   const required = ["policy_product", "idv", "od_premium", "tp_premium", "policy_number", "insurer_name", "policy_start_date", "policy_end_date"];
@@ -152,6 +158,7 @@ function findPolicyPeriod(pages: string[]): DatePeriod | null {
   const patterns = [
     new RegExp(`Own\\s+Damage\\s+Period\\s*:?\\s*${date}[\\s\\S]{0,80}?To\\s*${date}`, "i"),
     new RegExp(`Motor\\s+Liability\\s+Period\\s*:?\\s*${date}[\\s\\S]{0,80}?To\\s*${date}`, "i"),
+    new RegExp(`Period\\s+of\\s+cover\\s*:?\\s*${date}[\\s\\S]{0,100}?to\\s*${date}`, "i"),
   ];
   for (let index = 0; index < pages.length; index += 1) {
     for (const pattern of patterns) {
@@ -178,33 +185,54 @@ function findTotalIdv(pages: string[]): MoneyHit | null {
       return { value, page: pageIndex + 1, evidence: combined };
     }
   }
+
+  for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
+    const page = pages[pageIndex];
+    const anchor = page.search(/INSURED\s+DECLARED\s+VALUE/i);
+    if (anchor < 0) continue;
+    const tail = page.slice(anchor);
+    const stop = tail.search(/\n(?:ENHANCED\s+COVER|SCHEDULE\s+OF\s+PREMIUM|BATTERY\s+PROTECT\s+COVER)/i);
+    const block = stop > 0 ? tail.slice(0, stop) : tail.slice(0, 1400);
+    if (!/Total\s+Value/i.test(block)) continue;
+    const values = amounts(block).filter((value) => value >= 10000 && value <= 1000000000 && !isYear(value));
+    if (!values.length) continue;
+    const value = Math.max(...values);
+    return { value, page: pageIndex + 1, evidence: block };
+  }
   return null;
 }
 
 function findOwnerDriverCpa(pages: string[]): MoneyHit | null {
+  const ownerDriver = /(?:PA\s+Cover\s+For|Compulsory\s+PA\s+Premium\s+for)\s+Owner\s*Driver/i;
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
     const lines = pages[pageIndex].split("\n");
     for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
       const line = lines[lineIndex];
-      if (!/PA\s+Cover\s+For\s+Owner\s+Driver/i.test(line)) continue;
+      if (!ownerDriver.test(line)) continue;
 
       const rowParts = [line];
       for (let offset = 1; offset <= 2; offset += 1) {
         const continuation = lines[lineIndex + offset] ?? "";
-        if (/PA\s+Cover\s+For/i.test(continuation)) break;
+        if (offset > 1 && ownerDriver.test(continuation)) break;
         rowParts.push(continuation);
       }
 
       const combined = rowParts.join(" ");
-      const values = amounts(combined).filter((value) => value >= 0 && value <= 100000 && !isYear(value));
-      if (!values.length) continue;
+      const direct = amounts(combined).filter((value) => value > 20 && value <= 5000 && !isYear(value));
+      if (direct.length) return { value: direct[0], page: pageIndex + 1, evidence: combined };
 
-      // The Owner-Driver row may include the Rs. 15,00,000 coverage limit and
-      // IMT-15 before the premium. Never read into the next PA row. Prefer the
-      // first plausible premium-sized value after those non-premium tokens.
-      const premiumCandidates = values.filter((value) => value > 20);
-      const premium = premiumCandidates[0] ?? values[0];
-      return { value: premium, page: pageIndex + 1, evidence: combined };
+      const standalone: { value: number; evidence: string }[] = [];
+      for (let offset = 1; offset <= 20; offset += 1) {
+        const continuation = lines[lineIndex + offset] ?? "";
+        if (/Calculated\s+(?:OD|TP)\s+Premium|Total\s+(?:OD|TP)\s+Premium/i.test(continuation)) break;
+        const match = continuation.match(/^\s*(?:Rs\.?\s*)?([0-9][0-9,]*(?:\.[0-9]{1,2})?)\s*$/i);
+        if (!match) continue;
+        const value = parseMoney(match[1]);
+        if (value !== null && value > 20 && value <= 5000) standalone.push({ value, evidence: continuation });
+      }
+      if (standalone.length) {
+        return { value: standalone[0].value, page: pageIndex + 1, evidence: `${line} | ${standalone[0].evidence}` };
+      }
     }
   }
   return null;
