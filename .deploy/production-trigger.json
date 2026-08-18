@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy shared customer mobile onboarding support.",
-  "deploy_requested_at": "2026-08-18T12:43:00+05:30",
+  "purpose": "Deploy Policy Onboarding Section 2 required-field restoration.",
+  "deploy_requested_at": "2026-08-18T12:58:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #411 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "cc4a263531ea11dd09c9d304a4c1af3f50083944",
-  "release_scope": "Policy Onboarding may create a separate customer record when the same mobile number is already used by a different insured/customer name, while preserving existing-customer review, same-name duplicate protection, vehicle ownership conflict checks, customer UUID identity, and the explicit Create New Customer decision. The matching reversible Supabase migration has been applied to production to remove the two legacy global mobile uniqueness indexes while retaining normal phone lookup behavior.",
-  "verification": "PR #411 Verify web portal run 32110276150 passed all regressions, typecheck, lint, production build, and verification summary on head 5339abffeaea7dea9cf8990de71e3f96b3340535 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #412 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "817d68a22443c3912b3339f99dc44f11b738503f",
+  "release_scope": "Restore mandatory Policy Onboarding Section 2 vehicle details for new Motor policies, including Make, Model, Fuel Type, Year of Manufacturing, Capacity, Chassis Number, Engine Number, RTO State, and RTO Name/Code. Preserve registered/unregistered behavior, existing customer-mobile onboarding support from PR #411, AuthBridge RC flow, policy creation/conflict handling, calculations, policy edit behavior, and all database/schema/storage behavior unchanged.",
+  "verification": "PR #412 Verify web portal run 32111143852 passed successfully on head 0e4a9e5356a90f14a55469a0820489fdf98b8801 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
