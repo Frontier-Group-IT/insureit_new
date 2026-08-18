@@ -1,12 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Files, FileText, Plus } from "lucide-react";
+import { Files, FileText, Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { openPolicyCopy } from "./policy-document-actions";
 import {
-  BrokerRegisterShell,
-  BrokerRegisterToolbar,
   RegisterEmpty,
   RegisterPagination,
   RegisterSelect,
@@ -41,12 +39,28 @@ type PolicyRow = {
   claims: { count: number }[];
 };
 
+type SourceOption = { value: string; label: string };
 type ViewKey = "all" | "active" | "expiring" | "expired" | "claims";
 const PAGE_SIZE = 10;
 
-export function PolicyWorkspace({ rows }: { rows: PolicyRow[] }) {
+function policySourceDatabaseType(value: string | null) {
+  const normalized = value?.trim().toLowerCase();
+  if (normalized === "sibl / partner" || normalized === "partner") return "partner";
+  if (normalized === "posp") return "posp";
+  if (normalized === "misp") return "misp";
+  return null;
+}
+
+function policySourceKey(row: Pick<PolicyRow, "intermediary_type" | "intermediary_code">) {
+  const type = policySourceDatabaseType(row.intermediary_type);
+  const code = row.intermediary_code?.trim();
+  return type && code ? `${type}:${code}` : "";
+}
+
+export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[]; sourceOptions?: SourceOption[] }) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewKey>("all");
+  const [source, setSource] = useState("all");
   const [insurer, setInsurer] = useState("all");
   const [page, setPage] = useState(1);
   const [openingDocumentId, setOpeningDocumentId] = useState<string | null>(null);
@@ -64,6 +78,7 @@ export function PolicyWorkspace({ rows }: { rows: PolicyRow[] }) {
 
   const filtered = useMemo(() => enriched.filter((row) => {
     const haystack = [row.policy_no, row.business_line, row.policy_type, row.insurance_companies?.name, row.vehicles?.vehicle_no, row.customers?.company_name, row.customers?.contact_name, row.intermediary_type, row.intermediary_code, row.source_name].filter(Boolean).join(" ").toLowerCase();
+    const matchesSource = source === "all" || policySourceKey(row) === source;
     const matchesInsurer = insurer === "all" || row.insurance_companies?.name === insurer;
     const matchesView =
       view === "all" ||
@@ -71,8 +86,8 @@ export function PolicyWorkspace({ rows }: { rows: PolicyRow[] }) {
       (view === "expiring" && row.status === "Expiring soon") ||
       (view === "expired" && row.status === "Expired") ||
       (view === "claims" && claimCount(row) > 0);
-    return matchesInsurer && matchesView && (!query.trim() || haystack.includes(query.trim().toLowerCase()));
-  }), [enriched, insurer, query, view]);
+    return matchesSource && matchesInsurer && matchesView && (!query.trim() || haystack.includes(query.trim().toLowerCase()));
+  }), [enriched, insurer, query, source, view]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -85,11 +100,9 @@ export function PolicyWorkspace({ rows }: { rows: PolicyRow[] }) {
 
   async function openDocument(document: PolicyDocument) {
     if (openingDocumentId) return;
-
     const previewWindow = window.open("", "_blank", "noopener,noreferrer");
     setOpeningDocumentId(document.id);
     setDocumentError(null);
-
     try {
       const result = await openPolicyCopy(document.id);
       if (!result.ok) {
@@ -97,12 +110,8 @@ export function PolicyWorkspace({ rows }: { rows: PolicyRow[] }) {
         setDocumentError(result.error);
         return;
       }
-
-      if (previewWindow) {
-        previewWindow.location.href = result.url;
-      } else {
-        window.open(result.url, "_blank", "noopener,noreferrer");
-      }
+      if (previewWindow) previewWindow.location.href = result.url;
+      else window.open(result.url, "_blank", "noopener,noreferrer");
     } catch {
       previewWindow?.close();
       setDocumentError("Could not open the policy copy. Please try again.");
@@ -112,18 +121,27 @@ export function PolicyWorkspace({ rows }: { rows: PolicyRow[] }) {
   }
 
   return (
-    <BrokerRegisterShell
-      eyebrow="Coverage register"
-      title="Policy Portfolio"
-      description="Prioritize renewals, expired cover, insurer spread, premium value and claim-linked policies."
-      icon={<FileText className="h-5 w-5" />}
-      metrics={[
-        { label: "Policies", value: rows.length, hint: "Accessible cover", tone: "navy" },
-        { label: "Active", value: stats.active, hint: "In force", tone: "green" },
-        { label: "Renewal due", value: stats.expiring, hint: "Next 30 days", tone: stats.expiring ? "amber" : "slate" },
-        { label: "Expired", value: stats.expired, hint: "Coverage gap", tone: stats.expired ? "red" : "slate" }
-      ]}
-    >
+    <section className="mx-auto max-w-[1480px] overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
+      <div className="border-b border-[#E5ECF5] bg-[#F8FAFC] px-4 py-3 sm:px-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#17365D] text-white shadow-[0_10px_22px_rgba(23,54,93,0.18)]"><FileText className="h-5 w-5" /></span>
+            <h2 className="shrink-0 text-[18px] font-semibold leading-tight text-[#0F172A]">Policy Portfolio</h2>
+            <label className="relative ml-1 min-w-0 flex-1 lg:max-w-[430px]">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B93AA]" />
+              <input
+                value={query}
+                onChange={(event) => { setQuery(event.target.value); setPage(1); }}
+                placeholder="Search policy, insurer, vehicle, source or customer"
+                aria-label="Search policy, insurer, vehicle, source or customer"
+                className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white pl-10 pr-3 text-[12px] text-[#0F172A] outline-none transition focus:border-[#17365D] focus:ring-2 focus:ring-[#17365D]/10"
+              />
+            </label>
+          </div>
+          <Link href="/policies/new" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-3 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.22)]"><Plus className="h-4 w-4" />Add Policy</Link>
+        </div>
+      </div>
+
       {documentError ? (
         <div className="fixed right-4 top-20 z-[140] flex w-[min(360px,calc(100vw-2rem))] items-start gap-3 rounded-xl border border-amber-200 bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,.18)]" role="alert">
           <span className="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full bg-amber-500" />
@@ -132,33 +150,35 @@ export function PolicyWorkspace({ rows }: { rows: PolicyRow[] }) {
         </div>
       ) : null}
 
-      <BrokerRegisterToolbar
-        query={query}
-        onQueryChange={(value) => { setQuery(value); setPage(1); }}
-        searchPlaceholder="Search policy, insurer, vehicle, source or customer"
-        activeViewLabel={`${filtered.length} in current view`}
-        action={<Link href="/policies/new" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-3 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.22)]"><Plus className="h-4 w-4" />Add Policy</Link>}
-      >
-        <RegisterViewTabs
-          value={view}
-          onChange={changeView}
-          options={[
-            { value: "all", label: "All", count: rows.length },
-            { value: "active", label: "Active", count: stats.active },
-            { value: "expiring", label: "Renewal due", count: stats.expiring },
-            { value: "expired", label: "Expired", count: stats.expired },
-            { value: "claims", label: "Claims", count: rows.filter((row) => claimCount(row) > 0).length }
-          ]}
-        />
-        <RegisterSelect value={insurer} onChange={(value) => { setInsurer(value); setPage(1); }} label="Insurance company">
-          <option value="all">All insurers</option>
-          {insurers.map((item) => <option key={item} value={item}>{item}</option>)}
-        </RegisterSelect>
-      </BrokerRegisterToolbar>
+      <div className="border-b border-[#E5ECF5] bg-white px-3 py-2 sm:px-4">
+        <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+            <RegisterSelect value={source} onChange={(value) => { setSource(value); setPage(1); }} label="Lead source">
+              <option value="all">All Sources</option>
+              {sourceOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </RegisterSelect>
+            <RegisterSelect value={insurer} onChange={(value) => { setInsurer(value); setPage(1); }} label="Insurance company">
+              <option value="all">All insurers</option>
+              {insurers.map((item) => <option key={item} value={item}>{item}</option>)}
+            </RegisterSelect>
+          </div>
+          <RegisterViewTabs
+            value={view}
+            onChange={changeView}
+            options={[
+              { value: "all", label: "All", count: rows.length },
+              { value: "active", label: "Active", count: stats.active },
+              { value: "expiring", label: "Renewal due", count: stats.expiring },
+              { value: "expired", label: "Expired", count: stats.expired },
+              { value: "claims", label: "Claims", count: rows.filter((row) => claimCount(row) > 0).length }
+            ]}
+          />
+        </div>
+      </div>
 
       <div className="mobile-card-list p-3 md:hidden">
         {pageRows.map((policy) => <PolicyMobileCard key={policy.id} policy={policy} />)}
-        {!pageRows.length ? <RegisterEmpty title="No matching policies" description="Adjust the search, insurer or saved view." /> : null}
+        {!pageRows.length ? <RegisterEmpty title="No matching policies" description="Adjust the search, source, insurer or status view." /> : null}
       </div>
 
       <div className="hidden overflow-x-auto md:block">
@@ -192,11 +212,11 @@ export function PolicyWorkspace({ rows }: { rows: PolicyRow[] }) {
             ))}
           </tbody>
         </table>
-        {!pageRows.length ? <RegisterEmpty title="No matching policies" description="Adjust the search, insurer or saved view." /> : null}
+        {!pageRows.length ? <RegisterEmpty title="No matching policies" description="Adjust the search, source, insurer or status view." /> : null}
       </div>
 
       <RegisterPagination pageRows={pageRows.length} filteredRows={filtered.length} safePage={safePage} totalPages={totalPages} pageSize={PAGE_SIZE} onPrevious={() => setPage((p) => Math.max(1, p - 1))} onNext={() => setPage((p) => Math.min(totalPages, p + 1))} />
-    </BrokerRegisterShell>
+    </section>
   );
 }
 
@@ -237,19 +257,10 @@ function PolicyStatus({ policy }: { policy: PolicyRow & { status?: string; daysL
   return <RegisterStatusPill tone="green">Active</RegisterStatusPill>;
 }
 
-function PolicyTypeLink({
-  policy,
-  openingDocumentId,
-  onOpenDocument,
-}: {
-  policy: PolicyRow;
-  openingDocumentId: string | null;
-  onOpenDocument: (document: PolicyDocument) => void;
-}) {
+function PolicyTypeLink({ policy, openingDocumentId, onOpenDocument }: { policy: PolicyRow; openingDocumentId: string | null; onOpenDocument: (document: PolicyDocument) => void; }) {
   const businessLine = policy.business_line?.trim();
   const product = policy.policy_type?.trim();
   const policyCopy = policy.policy_documents?.find((document) => document.document_type === "policy_copy") ?? null;
-
   return (
     <div className="flex min-w-0 items-center gap-1.5">
       <Link href={`/policies/${policy.id}/edit`} title={policy.policy_no} className="min-w-0 truncate text-[12px] text-[#0F172A] hover:text-[#17365D] hover:underline">
@@ -259,20 +270,14 @@ function PolicyTypeLink({
         {!businessLine && !product ? <span className="font-normal">-</span> : null}
       </Link>
       {policyCopy ? (
-        <button
-          type="button"
-          onClick={() => onOpenDocument(policyCopy)}
-          disabled={openingDocumentId === policyCopy.id}
-          aria-label={`Open policy copy for ${policy.policy_no}`}
-          title={policyCopy.file_name ? `Open policy copy: ${policyCopy.file_name}` : "Open policy copy"}
-          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#F3E8FF] text-[#7c3aed] transition hover:bg-[#E9D5FF] hover:text-[#6D28D9] disabled:cursor-wait disabled:opacity-50"
-        >
+        <button type="button" onClick={() => onOpenDocument(policyCopy)} disabled={openingDocumentId === policyCopy.id} aria-label={`Open policy copy for ${policy.policy_no}`} title={policyCopy.file_name ? `Open policy copy: ${policyCopy.file_name}` : "Open policy copy"} className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#F3E8FF] text-[#7c3aed] transition hover:bg-[#E9D5FF] hover:text-[#6D28D9] disabled:cursor-wait disabled:opacity-50">
           <Files className="h-3.5 w-3.5" />
         </button>
       ) : null}
     </div>
   );
 }
+
 function validityHint(policy: PolicyRow & { daysLeft?: number }) {
   const days = policy.daysLeft ?? daysUntil(policy.end_date);
   if (days < 0) return `${Math.abs(days)} days overdue`;
