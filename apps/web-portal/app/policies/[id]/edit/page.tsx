@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { PolicyActivityStatus } from "@/components/policy-activity-status";
 import { PolicyUnifiedForm, type PolicyRmOption, type PolicySourceOption, type PolicyUnifiedInitialValues } from "@/components/policy-unified-form";
 import { PolicyRemarksActionStyle } from "@/components/policy-remarks-action-style";
 import { AppShell } from "@/components/shell";
@@ -13,6 +14,7 @@ type PolicyRow = {
   start_date: string; end_date: string; policy_code: string | null;
   intermediary_type: string | null; intermediary_code: string | null; lead_source: string | null;
   rm_name: string | null; business_line: string | null; issuance_date: string | null; remarks: string | null;
+  status: string | null; created_by: string | null; updated_at: string | null;
 };
 type CustomerRow = { id: string; contact_name: string; phone: string | null };
 type VehicleRow = {
@@ -26,6 +28,7 @@ type PremiumRow = { od_premium: number | null; tp_premium: number | null; cpa_op
 type PayinRow = { payout_basis: string | null; projected_od_percent: number | null; projected_tp_percent: number | null; insurer_scheme_amount: number | null };
 type PayoutRow = { retention_amount: number | null; od_payout_percent: number | null; tp_payout_percent: number | null; status: string | null; payout_date: string | null; voucher_number: string | null };
 type InsurerOption = { id: string; name: string; is_active: boolean };
+type CreatorProfileRow = { full_name: string };
 type IntermediaryOption = {
   id: string;
   intermediary_type: "posp" | "misp" | "partner";
@@ -57,11 +60,16 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
   const admin = createSupabaseAdminClient();
 
   const policyResult = await admin.from("policies")
-    .select("id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,insured_declared_value,start_date,end_date,policy_code,intermediary_type,intermediary_code,lead_source,rm_name,business_line,issuance_date,remarks")
+    .select("id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,insured_declared_value,start_date,end_date,policy_code,intermediary_type,intermediary_code,lead_source,rm_name,business_line,issuance_date,remarks,status,created_by,updated_at")
     .eq("id", id).maybeSingle<PolicyRow>();
   if (policyResult.error) throw new Error(`Unable to load policy details: ${policyResult.error.message}`);
   if (!policyResult.data) notFound();
   const policy = policyResult.data;
+
+  const creatorResult = policy.created_by
+    ? await admin.from("profiles").select("full_name").eq("id", policy.created_by).maybeSingle<CreatorProfileRow>()
+    : { data: null as CreatorProfileRow | null, error: null };
+  if (creatorResult.error) throw new Error(`Unable to load policy creator: ${creatorResult.error.message}`);
 
   const [customerResult, vehicleResult, premiumResult, payinResult, payoutResult, activeInsurersResult, currentInsurerResult, salesEmployees, intermediariesResult] = await Promise.all([
     admin.from("customers").select("id,contact_name,phone").eq("id", policy.customer_id).maybeSingle<CustomerRow>(),
@@ -235,6 +243,9 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     <AppShell title="Edit Policy">
       <PolicyRemarksActionStyle />
       <PolicyUnifiedForm mode="edit" insurers={insurerOptions} rms={rmOptions} sources={sourceOptions} initialValues={initialValues} />
+      <div className="mx-auto -mt-20 max-w-[1480px] pb-24">
+        <PolicyActivityStatus status={policy.status} createdBy={creatorResult.data?.full_name ?? null} updatedAt={policy.updated_at} />
+      </div>
     </AppShell>
   );
 }
