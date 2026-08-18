@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy Edit filename placement refinement.",
-  "deploy_requested_at": "2026-08-18T10:29:00+05:30",
+  "purpose": "Deploy Policy Edit footer alignment refinement.",
+  "deploy_requested_at": "2026-08-18T10:44:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #402 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "fd475d460da7143c964524c57b0eca19e45aa8ee",
-  "release_scope": "UI-only refinement to the Policy Edit footer for an existing uploaded policy copy: keep the Files icon + View Policy + refresh/replace control as the button row, move the uploaded policy copy filename completely outside the control, and show it as a separate small truncated line directly below. Preserve existing document view, replace, upload, tooltip, accessibility, backend, Supabase, storage, schema, migrations, calculations, and all other functionality unchanged.",
-  "verification": "PR #402 Verify web portal run 32101108430 passed all regressions, typecheck, lint, and production build on head dcf7fd532629894650c97d7373845e2569c83376 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #403 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "1e86392e76ad068139b9629b8829012f8b1cc211",
+  "release_scope": "UI-only refinement to the Policy Edit footer: give the replace/refresh icon area a light-blue #EEF5FF background with a slightly darker hover state, and correct footer cross-axis alignment so Cancel stays vertically aligned with Save Policy Changes even when the uploaded policy copy filename is displayed below the document control. Preserve existing View Policy, replace/upload, filename display, backend, Supabase, storage, schema, migrations, calculations, and all other functionality unchanged.",
+  "verification": "PR #403 Verify web portal run 32102081287 passed all regressions, typecheck, lint, and production build on head 8c4359e7f3e7fea87320428ed7f5200a39303bb1 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
