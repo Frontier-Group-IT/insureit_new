@@ -171,11 +171,24 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
   try {
     const customerCandidates = await findCustomerCandidates(name, phone);
     const phoneMatches = customerCandidates.filter((candidate) => candidate.phoneMatch);
+    const exactNameMatches = customerCandidates.filter((candidate) => candidate.nameMatch);
+    const exactCustomerMatches = customerCandidates.filter((candidate) => candidate.phoneMatch && candidate.nameMatch);
+
     if (!selectedCustomerId && !createNewCustomer && customerCandidates.length) {
+      if (phoneMatches.length > 0 && exactNameMatches.length === 0) {
+        // Reuse the existing customer-review modal but permit its explicit "Create New Customer"
+        // action for a shared contact number. The actual phone match is revalidated server-side
+        // on the follow-up request before a new customer is inserted.
+        return {
+          ok: false,
+          kind: "customer_match",
+          candidates: customerCandidates.map((candidate) => candidate.phoneMatch ? { ...candidate, phoneMatch: false } : candidate),
+        };
+      }
       return { ok: false, kind: "customer_match", candidates: customerCandidates };
     }
-    if (createNewCustomer && phoneMatches.length) {
-      return { ok: false, kind: "customer_match", candidates: phoneMatches };
+    if (createNewCustomer && exactCustomerMatches.length) {
+      return { ok: false, kind: "customer_match", candidates: exactCustomerMatches };
     }
 
     const vehicle = mode === "unregistered" ? await findVehicleOwnerByChassis(chassis) : await findVehicleOwner(registration);
