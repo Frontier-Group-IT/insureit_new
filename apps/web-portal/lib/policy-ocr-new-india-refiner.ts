@@ -1,6 +1,6 @@
 import type { ParsedPolicyField, ParsedPolicyResult } from "@/lib/policy-ocr-parsers";
 
-const VERSION = "new_india_commercial_motor_v1.3.2";
+const VERSION = "new_india_commercial_motor_v1.3.3";
 const MONEY_RE = /[0-9][0-9,]*(?:\.[0-9]{1,2})?/g;
 
 type MoneyHit = { value: number; page: number; evidence: string };
@@ -155,19 +155,30 @@ function findCurrentPolicyNumber(pages: string[]): TextHit | null {
 }
 
 function findPolicyPeriod(pages: string[]): DatePeriod | null {
-  const date = "([0-9]{1,2}[-/](?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC|[0-9]{1,2})[-/][0-9]{2,4})";
+  const date = "([0-9]{1,2}\\s*[-/]\\s*(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC|[0-9]{1,2})\\s*[-/]\\s*[0-9]{2,4})";
   const patterns = [
-    new RegExp(`Own\\s+Damage\\s+Period\\s*:?\\s*${date}[\\s\\S]{0,80}?To\\s*${date}`, "i"),
-    new RegExp(`Motor\\s+Liability\\s+Period\\s*:?\\s*${date}[\\s\\S]{0,80}?To\\s*${date}`, "i"),
-    new RegExp(`Period\\s+of\\s+cover\\s*:?\\s*${date}[\\s\\S]{0,100}?to\\s*${date}`, "i"),
+    new RegExp(`Own\\s+Damage\\s+Period\\s*:?\\s*${date}[\\s\\S]{0,160}?To\\s*${date}`, "i"),
+    new RegExp(`Motor\\s+Liability\\s+Period\\s*:?\\s*${date}[\\s\\S]{0,160}?To\\s*${date}`, "i"),
+    new RegExp(`Period\\s+of\\s+cover\\s*:?\\s*${date}[\\s\\S]{0,220}?(?:to|upto|until)\\s*${date}`, "i"),
   ];
   for (let index = 0; index < pages.length; index += 1) {
+    const page = pages[index];
     for (const pattern of patterns) {
-      const match = pages[index].match(pattern);
+      const match = page.match(pattern);
       if (!match) continue;
       const from = isoDate(match[1]);
       const upto = isoDate(match[2]);
       if (from && upto) return { from, upto, page: index + 1, evidence: match[0] };
+    }
+
+    const anchor = page.search(/Period\s+of\s+cover|Own\s+Damage\s+Period|Motor\s+Liability\s+Period/i);
+    if (anchor < 0) continue;
+    const block = page.slice(anchor, anchor + 500);
+    const dates = [...block.matchAll(new RegExp(date, "gi"))]
+      .map((match) => ({ raw: match[1], iso: isoDate(match[1]) }))
+      .filter((hit): hit is { raw: string; iso: string } => Boolean(hit.iso));
+    if (dates.length >= 2) {
+      return { from: dates[0].iso, upto: dates[1].iso, page: index + 1, evidence: block };
     }
   }
   return null;
@@ -323,7 +334,8 @@ function isYear(value: number) {
 }
 
 function isoDate(value: string): string | null {
-  const match = value.trim().toUpperCase().match(/^(\d{1,2})[-/](\d{1,2}|JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[-/](\d{2,4})$/);
+  const compact = value.replace(/\s+/g, "").trim().toUpperCase();
+  const match = compact.match(/^(\d{1,2})[-/](\d{1,2}|JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[-/](\d{2,4})$/);
   if (!match) return null;
   const months: Record<string, number> = { JAN: 1, FEB: 2, MAR: 3, APR: 4, MAY: 5, JUN: 6, JUL: 7, AUG: 8, SEP: 9, OCT: 10, NOV: 11, DEC: 12 };
   const day = Number(match[1]);
