@@ -1,4 +1,4 @@
-import { loadLatestPolicyActivity } from "@/lib/policy-activity";
+import { loadPolicyActivityHistory } from "@/lib/policy-activity";
 
 type PolicyActivityStatusProps = {
   policyId: string;
@@ -25,7 +25,7 @@ function formatTimestamp(value: string | null) {
 }
 
 export async function PolicyActivityStatus({ policyId, createdBy, createdAt, updatedAt }: PolicyActivityStatusProps) {
-  const activity = await loadLatestPolicyActivity({ policyId, createdBy, createdAt, updatedAt });
+  const activities = await loadPolicyActivityHistory({ policyId, createdBy, createdAt, updatedAt });
 
   return (
     <details className="group overflow-hidden rounded-xl border border-[#D9E2F0] bg-white shadow-sm">
@@ -38,16 +38,29 @@ export async function PolicyActivityStatus({ policyId, createdBy, createdAt, upd
         </span>
       </summary>
       <div className="border-t border-[#E7ECF2] px-4 py-3">
-        <div className="flex min-w-0 flex-wrap items-end gap-x-6 gap-y-2 rounded-lg bg-[#F8FAFC] px-3 py-2 sm:flex-nowrap">
-          <div className="min-w-0 flex-1">
-            <p className="text-[7.5px] font-bold uppercase tracking-[0.06em] text-[#98A2B3]">Latest Action</p>
-            <p className="mt-1 text-[11px] font-bold text-[#17365D]">{activity.action}</p>
+        {activities.length ? (
+          <div className="overflow-hidden rounded-lg border border-[#E7ECF2] bg-[#F8FAFC]">
+            {activities.map((activity, index) => (
+              <div
+                key={activity.id}
+                className={`flex min-w-0 flex-col gap-1.5 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-5 ${index ? "border-t border-[#E7ECF2]" : ""}`}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-[7.5px] font-bold uppercase tracking-[0.06em] text-[#98A2B3]">
+                    {index === 0 ? "Latest Action" : "Previous Action"}
+                  </p>
+                  <p className="mt-1 text-[11px] font-bold text-[#17365D]">{activity.action}</p>
+                </div>
+                <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-1 text-[8.5px] font-medium text-[#667085] sm:ml-auto sm:flex-nowrap sm:justify-end">
+                  <span className="whitespace-nowrap"><span className="text-[#98A2B3]">Created By:</span> {activity.actorName}</span>
+                  <span className="whitespace-nowrap"><span className="text-[#98A2B3]">At:</span> {formatTimestamp(activity.at)}</span>
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-1 text-[8.5px] font-medium text-[#667085] sm:ml-auto sm:flex-nowrap sm:justify-end">
-            <span className="whitespace-nowrap"><span className="text-[#98A2B3]">Created By:</span> {activity.actorName}</span>
-            <span className="whitespace-nowrap"><span className="text-[#98A2B3]">Updated At:</span> {formatTimestamp(updatedAt)}</span>
-          </div>
-        </div>
+        ) : (
+          <div className="rounded-lg bg-[#F8FAFC] px-3 py-2.5 text-[9px] font-medium text-[#667085]">Activity not recorded</div>
+        )}
       </div>
     </details>
   );
