@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { PolicyActivityStatus } from "@/components/policy-activity-status";
+import { PolicyEditActionFooter } from "@/components/policy-edit-action-footer";
 import { PolicyUnifiedForm, type PolicyRmOption, type PolicySourceOption, type PolicyUnifiedInitialValues } from "@/components/policy-unified-form";
 import { PolicyRemarksActionStyle } from "@/components/policy-remarks-action-style";
 import { AppShell } from "@/components/shell";
@@ -14,7 +15,7 @@ type PolicyRow = {
   start_date: string; end_date: string; policy_code: string | null;
   intermediary_type: string | null; intermediary_code: string | null; lead_source: string | null;
   rm_name: string | null; business_line: string | null; issuance_date: string | null; remarks: string | null;
-  status: string | null; created_by: string | null; updated_at: string | null;
+  status: string | null; created_by: string | null; created_at: string | null; updated_at: string | null;
 };
 type CustomerRow = { id: string; contact_name: string; phone: string | null };
 type VehicleRow = {
@@ -60,7 +61,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
   const admin = createSupabaseAdminClient();
 
   const policyResult = await admin.from("policies")
-    .select("id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,insured_declared_value,start_date,end_date,policy_code,intermediary_type,intermediary_code,lead_source,rm_name,business_line,issuance_date,remarks,status,created_by,updated_at")
+    .select("id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,insured_declared_value,start_date,end_date,policy_code,intermediary_type,intermediary_code,lead_source,rm_name,business_line,issuance_date,remarks,status,created_by,created_at,updated_at")
     .eq("id", id).maybeSingle<PolicyRow>();
   if (policyResult.error) throw new Error(`Unable to load policy details: ${policyResult.error.message}`);
   if (!policyResult.data) notFound();
@@ -242,9 +243,17 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
   return (
     <AppShell title="Edit Policy">
       <PolicyRemarksActionStyle />
-      <PolicyUnifiedForm mode="edit" insurers={insurerOptions} rms={rmOptions} sources={sourceOptions} initialValues={initialValues} />
-      <div className="mx-auto -mt-20 max-w-[1480px] pb-24">
-        <PolicyActivityStatus status={policy.status} createdBy={creatorResult.data?.full_name ?? null} updatedAt={policy.updated_at} />
+      <div data-policy-edit-form>
+        <PolicyUnifiedForm mode="edit" insurers={insurerOptions} rms={rmOptions} sources={sourceOptions} initialValues={initialValues} />
+      </div>
+      <div className="mx-auto mt-4 max-w-[1480px]">
+        <PolicyActivityStatus
+          status={policy.status}
+          createdBy={creatorResult.data?.full_name ?? null}
+          createdAt={policy.created_at}
+          updatedAt={policy.updated_at}
+        />
+        <PolicyEditActionFooter />
       </div>
     </AppShell>
   );
