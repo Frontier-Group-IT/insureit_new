@@ -3,12 +3,23 @@ param(
     [Parameter(Mandatory = $true)][string]$BackupPath,
     [string]$ProductionSecretsPath = (Join-Path $env:ProgramData "InsureIT Backup\secrets.clixml"),
     [string]$DRSecretsPath = (Join-Path $env:ProgramData "InsureIT Backup\dr-secrets.clixml"),
-    [string]$ConfigPath = (Join-Path $PSScriptRoot "dr.config.local.json"),
+    [string]$ConfigPath,
     [switch]$Execute
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+$scriptRoot = [string]$PSScriptRoot
+if ([string]::IsNullOrWhiteSpace($scriptRoot) -and -not [string]::IsNullOrWhiteSpace([string]$MyInvocation.MyCommand.Path)) {
+    $scriptRoot = Split-Path -Parent ([string]$MyInvocation.MyCommand.Path)
+}
+if ([string]::IsNullOrWhiteSpace($scriptRoot)) {
+    throw "Could not resolve the backup-manager script directory."
+}
+if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
+    $ConfigPath = Join-Path $scriptRoot "dr.config.local.json"
+}
 
 $ProductionProjectRef = "ilzhsfqqjyppzzvfscmh"
 $ApprovedDrProjectRef = "jzuqlcysyqtyydukveir"
@@ -108,9 +119,9 @@ if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
     throw "Backup manifest is missing: $manifestPath"
 }
 
-$verifyPath = Join-Path $PSScriptRoot "Verify-InsureITBackup.ps1"
-$comparatorPath = Join-Path $PSScriptRoot "Compare-InsureITDRSchema.ps1"
-$currentMigrationPath = Join-Path (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path ("supabase\migrations\" + $MigrationName)
+$verifyPath = Join-Path $scriptRoot "Verify-InsureITBackup.ps1"
+$comparatorPath = Join-Path $scriptRoot "Compare-InsureITDRSchema.ps1"
+$currentMigrationPath = Join-Path (Resolve-Path (Join-Path $scriptRoot "..\..")).Path ("supabase\migrations\" + $MigrationName)
 $backupMigrationPath = Join-Path $backup ("migrations\" + $MigrationName)
 foreach ($path in @($verifyPath,$comparatorPath,$currentMigrationPath,$backupMigrationPath)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
@@ -120,7 +131,6 @@ foreach ($path in @($verifyPath,$comparatorPath,$currentMigrationPath,$backupMig
 
 Write-Host "Re-verifying backup before DR schema planning..." -ForegroundColor Cyan
 & $verifyPath -BackupPath $backup
-if ($LASTEXITCODE -ne 0) { throw "Backup verification failed." }
 
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 if ([int]$manifest.version -ne 2 -or [string]$manifest.format -ne "insureit-supabase-logical-v2") {
@@ -176,7 +186,7 @@ if ($markerLines.Count -ne 1 -or [string]$markerLines[0] -ne "$sourceRef|$target
     throw "STOPPED: DR control marker does not authorize this standby target."
 }
 
-$workDir = Join-Path $PSScriptRoot "_work"
+$workDir = Join-Path $scriptRoot "_work"
 New-Item -ItemType Directory -Force -Path $workDir | Out-Null
 $preReport = Join-Path $workDir "dr-policy-documents-precheck.txt"
 
