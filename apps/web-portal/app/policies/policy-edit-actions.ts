@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-source";
+import { POLICY_ACTIVITY_ACTIONS, recordPolicyActivity } from "@/lib/policy-activity";
 
 export type PolicyEditPayload = {
   vehicleClass: string;
@@ -48,7 +49,7 @@ function validPercent(value: string) {
 }
 
 export async function updatePolicyOnboarding(policyId: string, payload: PolicyEditPayload): Promise<PolicyEditResult> {
-  await requirePolicyEditor();
+  const profile = await requirePolicyEditor();
 
   if (!/^[0-9a-f-]{36}$/i.test(policyId)) return { ok: false, error: "Invalid policy reference." };
   if (!payload.policy.policyNumber.trim()) return { ok: false, error: "Enter the policy number." };
@@ -94,6 +95,7 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
     const result = data as { ok?: boolean; policyId?: string; policyCode?: string } | null;
     if (!result?.ok || !result.policyId) return { ok: false, error: "We couldn't complete the policy update. Please try again." };
 
+    await recordPolicyActivity(admin, result.policyId, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_EDITED);
     revalidatePath("/policies");
     revalidatePath(`/policies/${policyId}/edit`);
     return { ok: true, policyId: result.policyId, policyCode: result.policyCode ?? "" };
