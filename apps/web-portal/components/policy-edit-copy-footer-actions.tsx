@@ -45,11 +45,25 @@ export function PolicyEditCopyFooterActions() {
       return;
     }
 
-    const bind = () => setFooter(findEditFooter());
+    let boundFooter: HTMLElement | null = null;
+    let previousAlignItems = "";
+    const bind = () => {
+      const nextFooter = findEditFooter();
+      if (nextFooter !== boundFooter) {
+        if (boundFooter) boundFooter.style.alignItems = previousAlignItems;
+        boundFooter = nextFooter;
+        previousAlignItems = nextFooter?.style.alignItems ?? "";
+        if (nextFooter) nextFooter.style.alignItems = "center";
+      }
+      setFooter(nextFooter);
+    };
     bind();
     const observer = new MutationObserver(bind);
     observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (boundFooter) boundFooter.style.alignItems = previousAlignItems;
+    };
   }, [policyId]);
 
   useEffect(() => {
@@ -188,7 +202,7 @@ export function PolicyEditCopyFooterActions() {
                   disabled={isUploading || isOpening}
                   aria-label="Replace policy copy"
                   title="Replace policy copy"
-                  className="inline-flex w-9 items-center justify-center transition hover:bg-[#EEF5FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#9CB9E6] disabled:cursor-wait disabled:opacity-60"
+                  className="inline-flex w-9 items-center justify-center bg-[#EEF5FF] transition hover:bg-[#E2ECFA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#9CB9E6] disabled:cursor-wait disabled:opacity-60"
                 >
                   <RefreshCw className={`h-3.5 w-3.5 ${isUploading ? "animate-spin" : ""}`} />
                 </button>
