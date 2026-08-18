@@ -1,5 +1,7 @@
+import { loadLatestPolicyActivity } from "@/lib/policy-activity";
+
 type PolicyActivityStatusProps = {
-  status: string | null;
+  policyId: string;
   createdBy: string | null;
   createdAt: string | null;
   updatedAt: string | null;
@@ -15,27 +17,11 @@ const timestampFormatter = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
 });
 
-function displayStatus(value: string | null) {
-  const normalized = value?.trim();
-  if (!normalized) return "Not recorded";
-  return normalized
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
 function formatTimestamp(value: string | null) {
   if (!value) return "Not recorded";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Not recorded";
   return timestampFormatter.format(date);
-}
-
-function statusTone(value: string | null) {
-  const normalized = value?.trim().toLowerCase();
-  if (normalized === "active") return "border-[#BFE8D5] bg-[#F0FBF6] text-[#14845B]";
-  if (normalized === "expired" || normalized === "cancelled" || normalized === "inactive") return "border-[#F1C5C7] bg-[#FFF4F4] text-[#B4232C]";
-  if (normalized === "expiring" || normalized === "pending" || normalized === "on hold") return "border-[#F1D59A] bg-[#FFF9EB] text-[#A96A00]";
-  return "border-[#D5E0EF] bg-[#EEF3FA] text-[#17365D]";
 }
 
 function ActivityMeta({ label, value }: { label: string; value: string }) {
@@ -47,8 +33,8 @@ function ActivityMeta({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function PolicyActivityStatus({ status, createdBy, createdAt, updatedAt }: PolicyActivityStatusProps) {
-  const creator = createdBy?.trim() || "Not recorded";
+export async function PolicyActivityStatus({ policyId, createdBy, createdAt, updatedAt }: PolicyActivityStatusProps) {
+  const activity = await loadLatestPolicyActivity({ policyId, createdBy, createdAt, updatedAt });
 
   return (
     <details className="group overflow-hidden rounded-xl border border-[#D9E2F0] bg-white shadow-sm">
@@ -61,16 +47,13 @@ export function PolicyActivityStatus({ status, createdBy, createdAt, updatedAt }
         </span>
       </summary>
       <div className="border-t border-[#E7ECF2] px-4 py-3">
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="flex min-h-[50px] items-center gap-2.5 rounded-lg bg-[#F8FAFC] px-3 py-2">
-            <span className="text-[7.5px] font-bold uppercase tracking-[0.06em] text-[#98A2B3]">Status</span>
-            <span className={`inline-flex min-h-7 items-center rounded-lg border px-3 text-[10px] font-bold ${statusTone(status)}`}>
-              {displayStatus(status)}
-            </span>
+        <div className="grid gap-2 sm:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="min-w-0 rounded-lg bg-[#F8FAFC] px-3 py-2">
+            <p className="text-[7.5px] font-bold uppercase tracking-[0.06em] text-[#98A2B3]">Latest Action</p>
+            <p className="mt-1 text-[11px] font-bold text-[#17365D]">{activity.action}</p>
           </div>
-          <ActivityMeta label="Created By" value={creator} />
-          <ActivityMeta label="Created At" value={formatTimestamp(createdAt)} />
-          <ActivityMeta label="Updated At" value={formatTimestamp(updatedAt)} />
+          <ActivityMeta label="By" value={activity.actorName} />
+          <ActivityMeta label="At" value={formatTimestamp(activity.at)} />
         </div>
       </div>
     </details>
