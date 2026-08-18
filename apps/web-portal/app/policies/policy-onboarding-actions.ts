@@ -166,16 +166,26 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
   const chassis = normalizedVehicleIdentity(payload.vehicle.chassisNumber);
   const engine = normalizedVehicleIdentity(payload.vehicle.engineNumber);
   const selectedCustomerId = payload.resolution?.selectedCustomerId?.trim() || null;
-  const createNewCustomer = payload.resolution?.createNewCustomer === true;
+  let createNewCustomer = payload.resolution?.createNewCustomer === true;
 
   try {
     const customerCandidates = await findCustomerCandidates(name, phone);
     const phoneMatches = customerCandidates.filter((candidate) => candidate.phoneMatch);
+    const exactNameMatches = customerCandidates.filter((candidate) => candidate.nameMatch);
+    const exactCustomerMatches = customerCandidates.filter((candidate) => candidate.phoneMatch && candidate.nameMatch);
+
     if (!selectedCustomerId && !createNewCustomer && customerCandidates.length) {
-      return { ok: false, kind: "customer_match", candidates: customerCandidates };
+      if (phoneMatches.length > 0 && exactNameMatches.length === 0) {
+        // A shared lead-source/contact mobile may legitimately belong to multiple insured names.
+        // Treat a different normalized name as an explicit new customer identity while keeping
+        // same-name matches protected by the existing customer-resolution flow.
+        createNewCustomer = true;
+      } else {
+        return { ok: false, kind: "customer_match", candidates: customerCandidates };
+      }
     }
-    if (createNewCustomer && phoneMatches.length) {
-      return { ok: false, kind: "customer_match", candidates: phoneMatches };
+    if (createNewCustomer && exactCustomerMatches.length) {
+      return { ok: false, kind: "customer_match", candidates: exactCustomerMatches };
     }
 
     const vehicle = mode === "unregistered" ? await findVehicleOwnerByChassis(chassis) : await findVehicleOwner(registration);
