@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy restored Policy Copy actions in Policy Edit footer.",
-  "deploy_requested_at": "2026-08-18T16:46:00+05:30",
+  "purpose": "Deploy single-row Policy Activity Status layout.",
+  "deploy_requested_at": "2026-08-18T17:03:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #422 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "cb65ebff1e8286995a8df1a9641d443866f18e90",
-  "release_scope": "Restore View Policy / Replace or Add Policy Copy controls in the visible Policy Edit footer, keep Cancel and Save Policy Changes on the right, and route Edit Policy document opening through the branded opener flow instead of about:blank. Preserve policy-copy storage, permissions, accepted file types, signed URLs, policy edit save flow, Activity Status, calculations, billing, payout, database schema, and other workflows unchanged.",
-  "verification": "PR #422 Verify web portal run 32130831937 passed successfully on head 9da0118980056a200b5d0cab36d634a7b011a4ac before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #423 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "a1ffbc59af7a1745f50a994b92895ec903b84bcd",
+  "release_scope": "Keep the latest policy activity action prominent on the left and place Created By plus Updated At inside the same compact Activity Status content section, with Updated At aligned at the far-right. Remove Created At from the Activity Status display. Preserve activity tracking, audit logging, expand/collapse behavior, policy fields, save flow, document handling, billing, database schema, and all other functionality unchanged.",
+  "verification": "PR #423 Verify web portal run 32132168955 passed successfully on head 9579ca786abd46c3b3ebc6ec9fe3ad0c0a6f1048 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
