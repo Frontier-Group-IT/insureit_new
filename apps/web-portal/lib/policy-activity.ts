@@ -26,7 +26,6 @@ const ACTIVITY_TABLE_NAME = "policies";
 type AdminClient = ReturnType<typeof createSupabaseAdminClient>;
 type AuditRow = { actor_id: string | null; action: string; created_at: string };
 type DocumentRow = { uploaded_by: string | null; created_at: string; updated_at: string };
-type PayinBillRow = { created_at: string; updated_at: string };
 type ProfileRow = { full_name: string | null };
 
 type ActivityCandidate = {
@@ -103,7 +102,7 @@ export async function loadLatestPolicyActivity({
     candidates.push({ action: POLICY_ACTIVITY_ACTIONS.POLICY_EDITED, actorId: null, at: updatedAt });
   }
 
-  const [auditResult, documentResult, payinResult] = await Promise.all([
+  const [auditResult, documentResult] = await Promise.all([
     admin
       .from("audit_logs")
       .select("actor_id,action,created_at")
@@ -121,13 +120,6 @@ export async function loadLatestPolicyActivity({
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle<DocumentRow>(),
-    admin
-      .from("policy_payin_bills")
-      .select("created_at,updated_at")
-      .eq("policy_id", policyId)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle<PayinBillRow>(),
   ]);
 
   const auditAction = auditResult.data ? asTrackedAction(auditResult.data.action) : null;
@@ -146,16 +138,6 @@ export async function loadLatestPolicyActivity({
       action: replaced ? POLICY_ACTIVITY_ACTIONS.POLICY_DOC_REPLACED : POLICY_ACTIVITY_ACTIONS.POLICY_DOC_UPLOADED,
       actorId: document.uploaded_by,
       at: replaced ? document.updated_at : document.created_at,
-    });
-  }
-
-  const payin = payinResult.data;
-  if (payin?.updated_at || payin?.created_at) {
-    const updated = materiallyLater(payin.updated_at, payin.created_at);
-    candidates.push({
-      action: updated ? POLICY_ACTIVITY_ACTIONS.PAYIN_BILLING_UPDATED : POLICY_ACTIVITY_ACTIONS.PAYIN_BILLING_ADDED,
-      actorId: null,
-      at: updated ? payin.updated_at : payin.created_at,
     });
   }
 
