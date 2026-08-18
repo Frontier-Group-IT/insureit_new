@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy unregistered Policy Onboarding required-star sync fix.",
-  "deploy_requested_at": "2026-08-18T13:43:00+05:30",
+  "purpose": "Deploy Policy Onboarding Add remarks button redesign.",
+  "deploy_requested_at": "2026-08-18T13:59:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #415 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "3a7ce36a5c78f481d3c7d723f57b65e0507bf001",
-  "release_scope": "Fix Policy Onboarding Section 2 required-marker synchronization so Chassis Number and Engine Number show exactly one required star in both Registered and Unregistered modes, including Registered to Unregistered to Registered mode switches. Preserve mandatory validation, policy creation, customer matching, ownership conflicts, AuthBridge, premium and payout calculations, database, schema, storage, and Supabase behavior unchanged.",
-  "verification": "PR #415 Verify web portal run 32115091946 passed successfully on head 3d979f794e4f4de92a3b40c1818344ed4a0f4429 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #416 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "45ba5569515b8271d941bf0ea2740855c557045c",
+  "release_scope": "Restyle the Policy Onboarding Section 5 Add remarks / Hide remarks control as a compact bordered secondary button with a clear light-blue hover state, stronger border, subtle lift/shadow, focus-visible styling, and soft-blue plus/minus indicator treatment. Preserve remarks expand/collapse behavior, textarea, payout outcome line, remarks persistence, validation, policy creation, calculations, settlement logic, database, schema, storage, and Supabase behavior unchanged.",
+  "verification": "PR #416 Verify web portal run 32116490661 passed successfully on head 88b9650cdda7f006d549f981ac8d73a2d389e335 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
