@@ -29,7 +29,8 @@ function findRequiredControls(section: HTMLElement) {
     const requiredLabel = requiredFieldLabels.find((candidate) => text === candidate || text.startsWith(`${candidate} (`));
     if (!requiredLabel) continue;
 
-    if (!label.querySelector("[data-policy-required-marker]")) {
+    const hasVisibleRequiredMarker = (label.textContent ?? "").includes("*");
+    if (!hasVisibleRequiredMarker && !label.querySelector("[data-policy-required-marker]")) {
       const marker = document.createElement("span");
       marker.dataset.policyRequiredMarker = "true";
       marker.className = "text-red-500";
