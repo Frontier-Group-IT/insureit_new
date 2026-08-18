@@ -5,6 +5,7 @@ import { canAccessCustomer } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { POLICY_ACTIVITY_ACTIONS, recordPolicyActivity } from "@/lib/policy-activity";
 
 const POLICY_DOCUMENT_BUCKET = "policy-documents";
 const MAX_POLICY_COPY_BYTES = 50 * 1024 * 1024;
@@ -124,6 +125,7 @@ export async function uploadPolicyCopy(
     return { ok: false, error: "Policy was saved, but its policy-copy record could not be created. Please try the upload again." };
   }
 
+  await recordPolicyActivity(admin, policy.id, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_DOC_UPLOADED);
   revalidatePath("/policies");
   revalidatePath(`/policies/${policy.id}`);
   return { ok: true, documentId: documentRow.id };
