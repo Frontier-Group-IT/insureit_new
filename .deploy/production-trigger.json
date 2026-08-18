@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy disclosure action styling consistency update.",
-  "deploy_requested_at": "2026-08-18T15:19:00+05:30",
+  "purpose": "Deploy Policy Activity Status update.",
+  "deploy_requested_at": "2026-08-18T15:32:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #417 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "c2ff541148ac3b6ec0ed4d079ab223aecbf3fe5b",
-  "release_scope": "Apply the approved rounded secondary disclosure-action styling consistently to Billing Details and Add remarks on both New Policy and Edit Policy. Preserve existing expand/collapse behavior, billing fields, remarks persistence, calculations, footer actions, Policy Copy workflow, database, schema, Supabase, and backend behavior unchanged.",
-  "verification": "PR #417 Verify web portal run 32123429555 passed successfully on head e038804e8c1ffe737de961eb438e99574b9ca2bd before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #418 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "552339af599f8e4579fbb069cbeb3f2169e5f9dd",
+  "release_scope": "Add the approved compact read-only Activity Status section to Policy Edit, showing the live policy status, creator profile name, and latest updated timestamp in IST. Preserve policy save logic, onboarding/OCR behavior, database schema, Supabase, and other existing workflows unchanged.",
+  "verification": "PR #418 Verify web portal run 32124535727 passed successfully on head 262537633029aa063f6d0cdfc91c1250332974e4 before merge. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
