@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy darker blue replace policy copy action styling on current main.",
-  "deploy_requested_at": "2026-08-18T11:52:00+05:30",
+  "purpose": "Deploy Policy Onboarding progress ring refinement.",
+  "deploy_requested_at": "2026-08-18T12:14:00+05:30",
   "requested_by": "explicit user request",
-  "source": "Merge PR #408 and deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "2f141f40e02d07f0d85ac77e805401821ef3d850",
-  "release_scope": "Deploy current main, including PR #408's UI-only Policy Edit footer refinement: keep View Policy styling unchanged, darken only the replace/refresh segment background to #DBEAFE, keep the replace icon #2563EB, and use #BFDBFE on hover. Preserve existing replace/upload behavior, filename display, footer alignment, backend, Supabase, storage, schema, migrations, calculations, and all other functionality unchanged.",
-  "verification": "PR #408 Verify web portal run 32106135614 passed all regressions, typecheck, lint, and production build on head 8d4258674dd9dc0a42e21958af197c98821c0469 before merge. Current main has advanced after the merge and includes PR #408; the protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
+  "source": "Merge PR #410 and deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "bacf726ac3f99e3dae24a439c89545e92564706c",
+  "release_scope": "UI-only Policy Onboarding summary progress indicator refinement: render the completed arc in dark navy #17365D, keep the remaining arc light gray #E3EAF2, preserve the existing proportional percentage calculation and centered label, add smooth progress transitions, and render a fully navy ring at 100%. Preserve onboarding calculations, validation, form workflow, backend, Supabase, database, schema, storage, and other page layout unchanged.",
+  "verification": "PR #410 Verify web portal run 32108133031 passed before merge on head 4d12b58afc11430c5971c2ad548ea8f0ffe31561. The protected production workflow must rerun the compulsory verification gate against this deployment-trigger snapshot before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
