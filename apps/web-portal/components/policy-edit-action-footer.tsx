@@ -44,7 +44,7 @@ export function PolicyEditActionFooter() {
         [data-policy-edit-form] .fixed.bottom-0.left-0.right-0.z-40 { display: none !important; }
       `}</style>
       <div className="mt-3 border-t border-[#D9E2F0] bg-white px-4 py-3 shadow-[0_-4px_18px_rgba(15,23,42,.04)]">
-        <div className="mx-auto flex max-w-[1480px] justify-end gap-2">
+        <div data-policy-edit-action-footer className="mx-auto flex max-w-[1480px] items-center justify-end gap-2">
           <Link href="/policies" className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold text-[#334155] transition hover:bg-[#F8FAFC]">
             Cancel
           </Link>
