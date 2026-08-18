@@ -4,7 +4,6 @@ import { Files, FileText, RefreshCw, Upload } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { openPolicyCopy } from "@/app/policies/policy-document-actions";
 import {
   getPolicyCopyForEdit,
   savePolicyCopyForEdit,
@@ -21,11 +20,7 @@ function policyIdFromPath(pathname: string) {
 }
 
 function findEditFooter() {
-  const saveButton = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find((button) => {
-    const label = button.textContent?.trim() ?? "";
-    return label === "Save Policy Changes" || label.toLowerCase().includes("saving policy");
-  });
-  return saveButton?.parentElement ?? null;
+  return document.querySelector<HTMLElement>("[data-policy-edit-action-footer]");
 }
 
 export function PolicyEditCopyFooterActions() {
@@ -45,25 +40,11 @@ export function PolicyEditCopyFooterActions() {
       return;
     }
 
-    let boundFooter: HTMLElement | null = null;
-    let previousAlignItems = "";
-    const bind = () => {
-      const nextFooter = findEditFooter();
-      if (nextFooter !== boundFooter) {
-        if (boundFooter) boundFooter.style.alignItems = previousAlignItems;
-        boundFooter = nextFooter;
-        previousAlignItems = nextFooter?.style.alignItems ?? "";
-        if (nextFooter) nextFooter.style.alignItems = "center";
-      }
-      setFooter(nextFooter);
-    };
+    const bind = () => setFooter(findEditFooter());
     bind();
     const observer = new MutationObserver(bind);
     observer.observe(document.body, { childList: true, subtree: true });
-    return () => {
-      observer.disconnect();
-      if (boundFooter) boundFooter.style.alignItems = previousAlignItems;
-    };
+    return () => observer.disconnect();
   }, [policyId]);
 
   useEffect(() => {
@@ -103,30 +84,17 @@ export function PolicyEditCopyFooterActions() {
     return () => window.clearTimeout(timer);
   }, [notice]);
 
-  async function viewPolicy() {
+  function viewPolicy() {
     if (!policyCopy || isOpening) return;
     setIsOpening(true);
     setNotice(null);
 
-    const previewWindow = window.open("about:blank", "_blank");
-    if (previewWindow) previewWindow.opener = null;
-
-    try {
-      const result = await openPolicyCopy(policyCopy.id);
-      if (!result.ok) {
-        previewWindow?.close();
-        setNotice({ tone: "error", message: result.error });
-        return;
-      }
-
-      if (previewWindow) previewWindow.location.href = result.url;
-      else window.open(result.url, "_blank", "noopener,noreferrer");
-    } catch {
-      previewWindow?.close();
-      setNotice({ tone: "error", message: "Could not open the policy copy. Please try again." });
-    } finally {
-      setIsOpening(false);
+    const openerUrl = `/policies/documents/${encodeURIComponent(policyCopy.id)}/open`;
+    const previewWindow = window.open(openerUrl, "_blank", "noopener,noreferrer");
+    if (!previewWindow) {
+      setNotice({ tone: "error", message: "Could not open the policy copy. Allow pop-ups and try again." });
     }
+    setIsOpening(false);
   }
 
   async function uploadPolicyCopy(file: File) {
@@ -187,7 +155,7 @@ export function PolicyEditCopyFooterActions() {
               >
                 <button
                   type="button"
-                  onClick={() => void viewPolicy()}
+                  onClick={viewPolicy}
                   disabled={isOpening || isUploading}
                   aria-label="View policy copy"
                   title={policyCopy.fileName ? `View policy: ${policyCopy.fileName}` : "View policy copy"}
