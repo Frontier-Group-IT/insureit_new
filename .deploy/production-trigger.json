@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy New India OCR enhanced commercial schedule training update.",
-  "deploy_requested_at": "2026-08-18T18:11:00+05:30",
+  "purpose": "Deploy New India OCR live Layout Parser training update.",
+  "deploy_requested_at": "2026-08-18T23:19:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #425 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "e0eae8e0fceaf9f147a9554ac17b77612602b841",
-  "release_scope": "Deploy the New India Assurance OCR parser update for enhanced commercial vehicle package schedules, including Period of cover validity parsing, INSURED DECLARED VALUE Total Value parsing, Total OD/TP Premium summary rows, owner-driver CPA normalization, Net Premium, GST/derived tax fallback, and Total Payable extraction. Preserve all unrelated policy onboarding, billing, permissions, storage, database schema, and workflows unchanged.",
-  "verification": "PR #425 Verify web portal run 32137760059 passed successfully on head 7f4d908c1413a3bd5e2c1ccd9460cd0a5c47c706 before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #426 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "77836e520802b00120ab011adbbf21143242c90c",
+  "release_scope": "Deploy the New India Assurance live OCR follow-up: invoke Google Layout Parser for New India PDFs, recover policy validity, IDV and structured premium values from layout tables, reconcile OD plus portal TP plus CPA against printed net before applying financial fields, and retain flattened Enterprise OCR as fallback. Preserve unrelated policy onboarding, billing, permissions, storage, database schema, and workflows unchanged.",
+  "verification": "PR #426 Verify web portal run 32167025402 passed successfully on head 509766d6cea21f2191c8a17f0fb42d7089b7939e before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
