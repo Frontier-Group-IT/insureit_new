@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { POLICY_ACTIVITY_ACTIONS, recordPolicyActivity } from "@/lib/policy-activity";
 
 const POLICY_DOCUMENT_BUCKET = "policy-documents";
 const MAX_POLICY_COPY_BYTES = 50 * 1024 * 1024;
@@ -147,6 +148,12 @@ export async function savePolicyCopyForEdit(policyId: string, formData: FormData
     await admin.storage.from(existing.storage_bucket || POLICY_DOCUMENT_BUCKET).remove([existing.storage_path]);
   }
 
+  await recordPolicyActivity(
+    admin,
+    normalizedPolicyId,
+    profile.id,
+    existing ? POLICY_ACTIVITY_ACTIONS.POLICY_DOC_REPLACED : POLICY_ACTIVITY_ACTIONS.POLICY_DOC_UPLOADED,
+  );
   revalidatePath("/policies");
   revalidatePath(`/policies/${normalizedPolicyId}/edit`);
   return { ok: true, document: metadata(saved) };
