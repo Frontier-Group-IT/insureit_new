@@ -2,12 +2,23 @@
 param(
     [string]$ProductionSecretsPath = (Join-Path $env:ProgramData "InsureIT Backup\secrets.clixml"),
     [string]$DRSecretsPath = (Join-Path $env:ProgramData "InsureIT Backup\dr-secrets.clixml"),
-    [string]$ConfigPath = (Join-Path $PSScriptRoot "dr.config.local.json"),
+    [string]$ConfigPath,
     [switch]$Execute
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+$scriptRoot = [string]$PSScriptRoot
+if ([string]::IsNullOrWhiteSpace($scriptRoot) -and -not [string]::IsNullOrWhiteSpace([string]$MyInvocation.MyCommand.Path)) {
+    $scriptRoot = Split-Path -Parent ([string]$MyInvocation.MyCommand.Path)
+}
+if ([string]::IsNullOrWhiteSpace($scriptRoot)) {
+    throw "Could not resolve the backup-manager script directory."
+}
+if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
+    $ConfigPath = Join-Path $scriptRoot "dr.config.local.json"
+}
 
 $ProductionProjectRef = "ilzhsfqqjyppzzvfscmh"
 $ApprovedDrProjectRef = "jzuqlcysyqtyydukveir"
@@ -141,10 +152,10 @@ if ($markerLines.Count -ne 1 -or [string]$markerLines[0] -ne "$sourceRef|$target
     throw "STOPPED: DR control marker does not authorize this standby target."
 }
 
-$workDir = Join-Path $PSScriptRoot "_work"
+$workDir = Join-Path $scriptRoot "_work"
 New-Item -ItemType Directory -Force -Path $workDir | Out-Null
 $reportPath = Join-Path $workDir "dr-function-parity-precheck.txt"
-$comparatorPath = Join-Path $PSScriptRoot "Compare-InsureITDRSchema.ps1"
+$comparatorPath = Join-Path $scriptRoot "Compare-InsureITDRSchema.ps1"
 if (-not (Test-Path -LiteralPath $comparatorPath -PathType Leaf)) {
     throw "Schema comparator not found: $comparatorPath"
 }
@@ -187,8 +198,14 @@ if ($confirmation -cne $confirmationPhrase) {
     throw "DR function repair cancelled."
 }
 
-# Re-read both sides after operator confirmation so a concurrent production
-# deployment cannot silently change what we are about to apply.
+# Re-run the full live schema comparator after operator confirmation. Any new
+# production or DR schema drift must block the write before DR is touched.
+$confirmReport = Join-Path $workDir "dr-function-parity-confirm-precheck.txt"
+Write-Host "Rechecking that this is still the only live production/DR schema difference..." -ForegroundColor Cyan
+Assert-OnlyExpectedSchemaDifference -ReportPath $confirmReport -ComparatorPath $comparatorPath
+
+# Re-read both function definitions after the full-schema confirmation so a
+# concurrent function change cannot silently change what we are about to apply.
 $prodDefinitionNow = Get-FunctionDefinition -DatabaseUrl $prodUrl -Label "Production recheck"
 $drDefinitionNow = Get-FunctionDefinition -DatabaseUrl $drUrl -Label "DR recheck"
 $prodHashNow = Get-Sha256Text -Text $prodDefinitionNow
@@ -230,13 +247,14 @@ $finalReport = Join-Path $workDir "dr-function-parity-postcheck.txt"
     -ProductionSecretsPath $ProductionSecretsPath `
     -DRSecretsPath $DRSecretsPath `
     -ConfigPath $ConfigPath `
-    -OutputPath $finalReport
+    -OutputPath $finalReport `
+    -FailOnDifference
 
 Write-Host ""
 Write-Host "DR FUNCTION PARITY REPAIR COMPLETED." -ForegroundColor Green
 Write-Host ("Function: {0}" -f $FunctionIdentity)
 Write-Host ("SHA256:   {0}" -f $prodHashNow)
-Write-Host "Full production/DR schema comparator passed."
+Write-Host "Full production/DR schema comparator passed with exact parity."
 
 $prodUrl = $null
 $drUrl = $null
