@@ -125,6 +125,7 @@ export function FleetSummaryClient({ customer, vehicles, policies }: Props) {
             const isExpanded = expandedVehicleId === vehicle.id;
             const vehiclePolicies = policiesByVehicle.get(vehicle.id) ?? [];
             const policiesExpanded = isExpanded && policyVehicleId === vehicle.id;
+            const policyStatus = getVehiclePolicyStatus(vehiclePolicies);
             return (
               <article key={vehicle.id} className="overflow-hidden rounded-2xl border border-[#DCE3EE] bg-white shadow-[0_6px_20px_rgba(15,23,42,0.045)]">
                 <button type="button" onClick={() => toggleVehicle(vehicle.id)} className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[#F8FAFC]" aria-expanded={isExpanded}>
@@ -139,7 +140,7 @@ export function FleetSummaryClient({ customer, vehicles, policies }: Props) {
                     <p className="mt-0.5 truncate text-[9.5px] text-[#7B8798]">{[vehicle.make, vehicle.model, vehicle.year ? String(vehicle.year) : null].filter(Boolean).join(" · ") || "Vehicle details available"}</p>
                   </div>
                   <div className="hidden items-center gap-5 text-right sm:flex">
-                    <CompactMetric label="Policies" value={String(vehiclePolicies.length)} />
+                    <CompactMetric label="Policy Status" value={policyStatus} />
                     <CompactMetric label="Status" value={vehicle.registration_status || "—"} />
                   </div>
                   {isExpanded ? <ChevronDown className="h-4 w-4 shrink-0 text-[#64748B]" /> : <ChevronRight className="h-4 w-4 shrink-0 text-[#64748B]" />}
@@ -234,6 +235,35 @@ function VehicleClassIcon({ vehicle }: { vehicle: Vehicle }) {
   if (/jcb|construction|excavator|crane|earth ?mover|cpm|misc/.test(classText)) return <Construction {...iconProps} />;
   if (/goods|gcv|truck|lorry|cargo|pickup|pick-up|commercial/.test(classText)) return <Truck {...iconProps} />;
   return <CarFront {...iconProps} />;
+}
+
+function getVehiclePolicyStatus(policies: Policy[]) {
+  if (policies.length === 0) return "NO POLICY";
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const expiringSoonCutoff = new Date(today);
+  expiringSoonCutoff.setDate(expiringSoonCutoff.getDate() + 30);
+
+  const validRanges = policies
+    .map((policy) => ({ start: parsePolicyDate(policy.start_date), end: parsePolicyDate(policy.end_date) }))
+    .filter((range): range is { start: Date; end: Date } => Boolean(range.start && range.end));
+
+  const activeRanges = validRanges.filter(({ start, end }) => start <= today && end >= today);
+  if (activeRanges.length > 0) {
+    const latestExpiry = activeRanges.reduce((latest, current) => current.end > latest ? current.end : latest, activeRanges[0].end);
+    return latestExpiry <= expiringSoonCutoff ? "EXPIRING SOON" : "ACTIVE";
+  }
+
+  if (validRanges.some(({ start }) => start > today)) return "UPCOMING";
+  return "EXPIRED";
+}
+
+function parsePolicyDate(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const date = new Date(year, month - 1, day);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function Detail({ label, value }: { label: string; value: string | null | undefined }) {
