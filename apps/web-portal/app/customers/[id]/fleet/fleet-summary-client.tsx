@@ -85,26 +85,31 @@ export function FleetSummaryClient({ customer, vehicles, policies }: Props) {
 
   return (
     <div className="space-y-3 pb-6">
-      <section className="overflow-hidden rounded-2xl border border-[#DCE3EE] bg-white shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
-        <div className="flex flex-col gap-2.5 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[#173E7B]">Fleet Summary</p>
-            <h1 className="mt-0.5 truncate text-[17px] font-semibold text-[#173E7B]">{customer.company_name?.trim() || customer.contact_name}</h1>
-            <p className="mt-0.5 text-[9.5px] text-[#7B8798]">{customer.customer_code}</p>
+      <section className="overflow-hidden rounded-2xl bg-[#0D2F63] shadow-[0_10px_28px_rgba(13,47,99,0.18)]">
+        <div className="flex items-center gap-3 px-4 py-3 sm:px-5">
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white text-[#315FEA] shadow-sm">
+            <CarFront className="h-5 w-5" strokeWidth={1.9} />
           </div>
-          <div className="flex items-center justify-between gap-2 sm:justify-end">
-            <div className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#E0E5EE] bg-[#F8FAFC] px-3">
-              <span className="text-[8.5px] font-semibold uppercase tracking-[0.05em] text-[#7B8798]">No. of Fleet</span>
-              <span className="text-[16px] font-bold leading-none text-[#173E7B]">{vehicles.length}</span>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-[17px] font-bold leading-tight text-white">Fleet Summary</h1>
+            <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1.5 sm:flex-nowrap">
+              <span className="min-w-0 truncate text-[11.5px] font-semibold text-white">
+                {customer.company_name?.trim() || customer.contact_name}
+              </span>
+              <span className="shrink-0 text-[9px] font-medium text-white/65">{customer.customer_code}</span>
+              <span className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-white/25 bg-white/10 px-2.5 text-[8.5px] font-semibold uppercase tracking-[0.04em] text-white/80">
+                <span>No. of Fleet</span>
+                <span className="text-[12px] font-bold leading-none text-white">{vehicles.length}</span>
+              </span>
+              <Link
+                href={`/customers/${customer.id}/edit`}
+                aria-label="Back to Customer"
+                title="Back to Customer"
+                className="ml-auto inline-grid h-7 w-7 shrink-0 place-items-center rounded-md border border-white/25 bg-white/10 text-white transition hover:bg-white/20"
+              >
+                <ChevronRight className="h-3.5 w-3.5 rotate-180" strokeWidth={2} />
+              </Link>
             </div>
-            <Link
-              href={`/customers/${customer.id}/edit`}
-              aria-label="Back to Customer"
-              title="Back to Customer"
-              className="inline-grid h-9 w-9 shrink-0 place-items-center rounded-md border border-[#CBD5E1] bg-white text-[#334155] transition hover:bg-[#F8FAFC]"
-            >
-              <ChevronRight className="h-4 w-4 rotate-180" strokeWidth={1.9} />
-            </Link>
           </div>
         </div>
       </section>
