@@ -10,6 +10,20 @@ Policy Onboarding OCR hardening remains an active workstream. Production portal 
 
 ## Mobile Expo preview
 
+**DEPLOYED / DEVICE-VERIFIED:** The current `main` mobile source was republished to Expo `preview` to ensure the refined Start Claim, Spot Intimation, Spot Status, Claim Intimation/Claim Detail, and supplied artwork are in the active update bundle.
+
+```text
+Source commit: 5335457b155f66e0a9176616628daa20a469a8de
+Message: Republish current main claim workflow refinements
+Update group ID: e3bb930a-e969-436e-9558-f74fa57f8f25
+Android update ID: 01a019c5-5f37-79d8-a5ce-7553b6f6b54a
+iOS update ID: 01a019c5-5f37-7899-93a9-e1c99c80a7f4
+Runtime version: 0.2.0
+GitHub Actions run: 32247346118
+```
+
+The external workspace comparison found no separate page or artwork hashes missing from committed `main`; the republish ensured the current source is the active preview bundle. Android device `00078344S000834` completed two cold launches without matched fatal/runtime or missing-environment errors and rendered the restored dashboard with custom artwork. Claim-screen navigation was not re-run after this cold launch.
+
 **DEPLOYED / DEVICE-VERIFIED:** The committed mobile preview state was restored and published to Expo `preview` from runtime-compatible source commit `8816aad97cde2e839980dd943e7757c0ce86c636`.
 
 ```text

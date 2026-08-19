@@ -171,6 +171,20 @@ Use visual inspection for the changed UI. If the relevant screen is blocked by d
 
 ## 7. Current Recent Preview Evidence
 
+Latest republished preview OTA for the current `main` claim workflow source:
+
+```text
+Source commit: 5335457b155f66e0a9176616628daa20a469a8de
+Message: Republish current main claim workflow refinements
+Update group ID: e3bb930a-e969-436e-9558-f74fa57f8f25
+Android update ID: 01a019c5-5f37-79d8-a5ce-7553b6f6b54a
+iOS update ID: 01a019c5-5f37-7899-93a9-e1c99c80a7f4
+Runtime version: 0.2.0
+GitHub Actions run: 32247346118
+```
+
+The external workspace supplied for comparison contained the same hashes as the committed `main` files for Start Claim, Spot Intimation, Spot Status, Claim Intimation/Claim Detail, and the supplied `spot-intimation` / `start-claim` artwork. The current OTA was republished from `main` to ensure those screens and assets are included in a fresh bundle. Android device `00078344S000834` completed two cold launches, logged `Running "main"` both times, remained alive, and showed no matched fatal/runtime or missing-environment errors. The fresh device screenshot rendered the restored fleet dashboard with the custom fleet and quick-action artwork; downstream claim-screen navigation was not re-run after the cold launch.
+
 Latest verified preview OTA restoring the committed mobile preview source:
 
 ```text
