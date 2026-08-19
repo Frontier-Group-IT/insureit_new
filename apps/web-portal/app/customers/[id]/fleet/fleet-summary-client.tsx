@@ -101,14 +101,6 @@ export function FleetSummaryClient({ customer, vehicles, policies }: Props) {
                 <span>No. of Fleet</span>
                 <span className="text-[12px] font-bold leading-none text-white">{vehicles.length}</span>
               </span>
-              <Link
-                href={`/customers/${customer.id}/edit`}
-                aria-label="Back to Customer"
-                title="Back to Customer"
-                className="relative -top-1 ml-auto inline-grid h-7 w-7 shrink-0 place-items-center rounded-md border border-white/25 bg-white/10 text-white transition hover:bg-white/20"
-              >
-                <ChevronRight className="h-3.5 w-3.5 rotate-180" strokeWidth={2} />
-              </Link>
             </div>
           </div>
         </div>
