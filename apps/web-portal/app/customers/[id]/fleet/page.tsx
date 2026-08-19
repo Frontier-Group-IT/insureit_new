@@ -20,6 +20,8 @@ type VehicleRow = {
   vehicle_type: string;
   make: string | null;
   model: string | null;
+  chassis_no: string | null;
+  engine_no: string | null;
   year: number | null;
   registration_date: string | null;
   vehicle_class_description: string | null;
@@ -65,7 +67,7 @@ export default async function CustomerFleetSummaryPage({ params }: { params: Pro
       .maybeSingle<CustomerRow>(),
     admin
       .from("vehicles")
-      .select("id, vehicle_no, vehicle_type, make, model, year, registration_date, vehicle_class_description, vehicle_category, body_type, fuel_type, gvw_kg, seating_capacity, registration_status, fitness_expiry_date, puc_expiry_date, permit_type, national_permit_expiry_date, local_permit_expiry_date, financed, financer_name")
+      .select("id, vehicle_no, vehicle_type, make, model, chassis_no, engine_no, year, registration_date, vehicle_class_description, vehicle_category, body_type, fuel_type, gvw_kg, seating_capacity, registration_status, fitness_expiry_date, puc_expiry_date, permit_type, national_permit_expiry_date, local_permit_expiry_date, financed, financer_name")
       .eq("customer_id", id)
       .order("created_at", { ascending: false })
       .returns<VehicleRow[]>(),
