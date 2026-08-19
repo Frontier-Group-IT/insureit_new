@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy OCR training for New India, Oriental, and IFFCO layouts.",
-  "deploy_requested_at": "2026-08-19T12:21:22+05:30",
+  "purpose": "Deploy Customer Activity creation-bootstrap false-edit fix.",
+  "deploy_requested_at": "2026-08-19T12:49:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #430 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "ca88d047",
-  "release_scope": "Deploy Policy Onboarding OCR training for New India enhanced-cover, Oriental bundled two-wheeler, and IFFCO standalone-OD layouts. Preserve review-before-apply, Section 03-only OCR scope, comparison-only totals, safe IFFCO external-TP withholding, and all unrelated customer, vehicle, billing, payout, document, AuthBridge, storage, permissions, and workflow behavior unchanged.",
-  "verification": "PR #430 Verify web portal run 32219489100 passed successfully on head 09a2a73b01fd278ee2bad5cb9b22f6d948f07357 before merge. Local focused and full OCR regressions, typecheck, lint, and build passed. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #438 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "6562daf88ebb920fa8d7cd3b4be70b9f53dcd199",
+  "release_scope": "Deploy the Customer Activity bootstrap-edit fix so actorless creation-time initialization of partner_type and lead_source_intermediary_id from Policy Onboarding is not shown as Customer Edited. Historical false bootstrap audit rows remain preserved but are filtered from Activity Status; future matching bootstrap updates are suppressed by the applied customer_activity_creation_bootstrap Supabase migration. Preserve genuine later customer edits and all unrelated customer, vehicle, policy, billing, payout, document, AuthBridge, OCR, storage, permissions, and workflow behavior unchanged.",
+  "verification": "PR #438 Verify web portal run 32227121474 (#1290) passed successfully on head 633db0413af72de4ea4b2cfd72ea8189c9e57e47 before merge. Production Supabase migration customer_activity_creation_bootstrap was applied successfully and the live trigger definition was verified. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
