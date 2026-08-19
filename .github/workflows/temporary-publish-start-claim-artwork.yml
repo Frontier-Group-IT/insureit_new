@@ -1,0 +1,47 @@
+name: Temporary publish Start Claim artwork OTA
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out artwork source
+        uses: actions/checkout@v4
+        with:
+          ref: 4aedc96e4c9dee6f6beb270ae993e25d06c25a66
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Publish preview OTA
+        working-directory: apps/mobile-app
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          CI: "1"
+          EAS_SKIP_AUTO_FINGERPRINT: "1"
+        run: >-
+          npx --yes eas-cli@18 update
+          --branch preview
+          --environment preview
+          --message "Render Start Claim artwork"
+          --non-interactive
+          --json
+
+      - name: Verify latest preview update
+        working-directory: apps/mobile-app
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          CI: "1"
+        run: npx --yes eas-cli@18 update:list --branch preview --limit 1 --json --non-interactive
