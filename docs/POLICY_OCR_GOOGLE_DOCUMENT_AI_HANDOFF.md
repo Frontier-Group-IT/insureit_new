@@ -333,6 +333,19 @@ The sanitized New India regression now covers this layout and passes 6/6 cases. 
 
 Parser changes include Oriental final OD/TP schedule-row selection and bundled mapping, IFFCO split-line P400 number extraction, SAOD detection, safe CPA handling from the explicit no-owner-driver declaration, premium-bifurcation totals, and server-side bypass of package-only Layout Parser financial replacement for SAOD. Sanitized regression results: Oriental/additional insurers `6/6`; IFFCO `12/12`. Full OCR regressions, typecheck, lint, and build passed locally with existing warnings. Production upload/review/apply remains **UNVERIFIED**.
 
+Release evidence:
+
+```text
+MERGED: PR #430, merge commit ca88d047
+DEPLOYMENT TRIGGERED: commit 5707cf93
+GitHub production workflow: 32225200436, success
+Verification gate: passed before deploy hook
+Vercel deploy hook: HTTP 201, job PTcdBtBm5dDI9ttcGJKz, state accepted/pending
+Production smoke: https://portal.insureit.in/login returned HTTP 200 and the INSUREIT sign-in page
+Vercel dashboard READY state: UNVERIFIED from available evidence
+Authenticated OCR upload/review/apply: UNVERIFIED
+```
+
 ## 8. Release discipline / next steps
 
 Ordinary commits do not intentionally deploy production. Do not modify `.deploy/production-trigger.json` unless the user explicitly says `deploy now` or `finish and deploy` after the current code change.
