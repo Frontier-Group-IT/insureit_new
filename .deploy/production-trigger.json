@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Fleet Summary Policy Details navigation.",
-  "deploy_requested_at": "2026-08-19T14:57:00+05:30",
+  "purpose": "Deploy self-managed claim tracker UX improvements.",
+  "deploy_requested_at": "2026-08-19T15:02:38+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #444 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "7ccadb16fcaa65f753f8793a11724436a82ae9fc",
-  "release_scope": "Deploy the additive Fleet Summary Policy Details action that links each expanded policy row to its existing /policies/{policy.id}/edit page. Preserve the existing View Policy expansion behavior, customer and vehicle data, policy creation/edit logic, calculations, permissions, database schema, onboarding, activity history, and unrelated functionality unchanged.",
-  "verification": "PR #444 Verify web portal run 32237661217 (#1310) passed successfully on head a109d7132f4129c049596285b64aa38efa03778b before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged claim tracker UX PR from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "103f9391ae19301b6aea31aeb3c3c4b4a32da68e",
+  "release_scope": "Deploy the external self-managed claim tracker UX improvements: Claims primary navigation, Support in Profile, visual nine-stage progress, responsibility/update metadata, editable Spot Intimation, and first-stage blue/navy theme alignment. Preserve Sankalp-managed claim behavior, claim transaction contracts, permissions, database schema, OCR, AuthBridge, and unrelated functionality unchanged.",
+  "verification": "The merged PR verification gate passed before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook. No Supabase migration is included.",
   "instructions": "Update this file only after explicit deployment approval."
 }
