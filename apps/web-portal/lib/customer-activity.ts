@@ -64,9 +64,17 @@ const TRACKED_ACTIONS = Object.values(CUSTOMER_ACTIVITY_ACTIONS);
 const CUSTOMER_CREATED_ACTOR_CORRECTION_ACTION = "customer_created_actor_corrected";
 const ACTIVITY_QUERY_ACTIONS = [...TRACKED_ACTIONS, CUSTOMER_CREATED_ACTOR_CORRECTION_ACTION];
 const ACTIVITY_TABLE_NAME = "customers";
+const SYSTEM_ONLY_EDIT_FIELDS = new Set(["onboarding_status", "onboarding_completed_at"]);
 
 type AdminClient = ReturnType<typeof createSupabaseAdminClient>;
-type AuditRow = { id: string; actor_id: string | null; action: string; new_data: Record<string, unknown> | null; created_at: string };
+type AuditRow = {
+  id: string;
+  actor_id: string | null;
+  action: string;
+  old_data: Record<string, unknown> | null;
+  new_data: Record<string, unknown> | null;
+  created_at: string;
+};
 type ProfileRow = { id: string; full_name: string | null };
 type CustomerNameRow = { id: string; contact_name: string; company_name: string | null };
 
@@ -127,6 +135,18 @@ function metadataValue(data: Record<string, unknown> | null, key: string) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+function changedFields(oldData: Record<string, unknown> | null, newData: Record<string, unknown> | null) {
+  if (!oldData || !newData) return [];
+  const keys = new Set([...Object.keys(oldData), ...Object.keys(newData)]);
+  return Array.from(keys).filter((key) => JSON.stringify(oldData[key]) !== JSON.stringify(newData[key]));
+}
+
+function isSystemOnlyCustomerEdit(row: AuditRow) {
+  if (row.action !== CUSTOMER_ACTIVITY_ACTIONS.CUSTOMER_EDITED) return false;
+  const fields = changedFields(row.old_data, row.new_data);
+  return fields.length > 0 && fields.every((field) => SYSTEM_ONLY_EDIT_FIELDS.has(field));
+}
+
 export async function recordCustomerActivity(
   admin: AdminClient,
   customerId: string,
@@ -173,7 +193,7 @@ export async function loadCustomerActivityHistory({
   const admin = createSupabaseAdminClient();
   const { data: auditRows } = await admin
     .from("audit_logs")
-    .select("id,actor_id,action,new_data,created_at")
+    .select("id,actor_id,action,old_data,new_data,created_at")
     .eq("table_name", ACTIVITY_TABLE_NAME)
     .eq("record_id", customerId)
     .in("action", ACTIVITY_QUERY_ACTIONS)
@@ -192,7 +212,7 @@ export async function loadCustomerActivityHistory({
 
   for (const row of auditRows ?? []) {
     const action = asTrackedAction(row.action);
-    if (!action) continue;
+    if (!action || isSystemOnlyCustomerEdit(row)) continue;
     if (action === CUSTOMER_ACTIVITY_ACTIONS.CUSTOMER_CREATED) hasCreatedAudit = true;
     const useOriginalCreator = action === CUSTOMER_ACTIVITY_ACTIONS.CUSTOMER_CREATED && correctedCreatedAuditIds.has(row.id);
 
@@ -219,7 +239,7 @@ export async function loadCustomerActivityHistory({
       action,
       actorId: useOriginalCreator ? createdById : row.actor_id,
       actorName: useOriginalCreator ? createdByName : undefined,
-      at: row.created_at,
+      at: action === CUSTOMER_ACTIVITY_ACTIONS.CUSTOMER_CREATED && timestamp(createdAt) > 0 ? createdAt as string : row.created_at,
       viaLabel,
       originCustomerId: metadataValue(row.new_data, "origin_customer_id")
         ?? (action === CUSTOMER_ACTIVITY_ACTIONS.CUSTOMER_CREATED ? originCustomerId : null),
