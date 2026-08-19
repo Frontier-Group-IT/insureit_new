@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Customer Profile footer action polish.",
-  "deploy_requested_at": "2026-08-19T16:17:00+05:30",
+  "purpose": "Deploy Fleet Summary chassis and engine identifiers.",
+  "deploy_requested_at": "2026-08-19T16:25:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #451 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "d6188455e8efbb1e90990e25ccfc19547fffd4f2",
-  "release_scope": "Deploy the Customer Profile footer action update: order actions as Back, View Fleet, Save changes; keep Save changes as the primary blue action; align all three controls to the same height, rounded-md corner radius, border treatment, horizontal padding, spacing, and alignment. Preserve the existing conditional View Fleet behavior, save and validation behavior, customer/vehicle/policy data, permissions, onboarding, routing, calculations, database schema, and unrelated functionality unchanged.",
-  "verification": "PR #451 Verify web portal run 32244155032 (#1336) passed successfully on head 20fbdfb61d75f6511c67ae6389c58ee1ae356656 before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #452 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "f65395811d76455da7c48145e72c362ed31ee244",
+  "release_scope": "Deploy the Fleet Summary vehicle-card update: load existing chassis_no and engine_no fields and show Chassis No. and Engine No. compactly within the existing collapsed vehicle card. Preserve Policy Status, vehicle Status, vehicle-class icon, Fleet Summary header, vehicle expansion, policy expansion, Policy Details navigation, customer/vehicle/policy data relationships, permissions, onboarding, calculations, save actions, database schema, and unrelated functionality unchanged.",
+  "verification": "PR #452 Verify web portal run 32244859971 (#1339) passed successfully on head a1d91eb378c5384d133f0c99733ddc8e504b6a48 before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
