@@ -23,6 +23,16 @@ export const CUSTOMER_CREATION_CHANNELS = {
 
 export type CustomerCreationChannel = (typeof CUSTOMER_CREATION_CHANNELS)[keyof typeof CUSTOMER_CREATION_CHANNELS];
 
+export const CUSTOMER_ACTIVITY_CHANNELS = {
+  CUSTOMER_PROFILE: "customer_profile",
+  CORPORATE_PROFILE: "corporate_profile",
+  DEALERSHIP_PROFILE: "dealership_profile",
+  GROUP_PROFILE: "group_profile",
+  CUSTOMER_RELATIONSHIPS: "customer_relationships",
+} as const;
+
+export type CustomerActivityChannel = (typeof CUSTOMER_ACTIVITY_CHANNELS)[keyof typeof CUSTOMER_ACTIVITY_CHANNELS];
+
 const ACTION_LABELS: Record<CustomerActivityAction, string> = {
   customer_created: "Customer Created",
   customer_edited: "Customer Edited",
@@ -42,6 +52,14 @@ const CHANNEL_LABELS: Record<CustomerCreationChannel, string> = {
   dealership_customer_onboarding: "Dealership Customer Onboarding",
 };
 
+const ACTIVITY_CHANNEL_LABELS: Record<CustomerActivityChannel, string> = {
+  customer_profile: "Customer Profile",
+  corporate_profile: "Corporate Profile",
+  dealership_profile: "Dealership Profile",
+  group_profile: "Group Profile",
+  customer_relationships: "Customer Relationships",
+};
+
 const TRACKED_ACTIONS = Object.values(CUSTOMER_ACTIVITY_ACTIONS);
 const CUSTOMER_CREATED_ACTOR_CORRECTION_ACTION = "customer_created_actor_corrected";
 const ACTIVITY_QUERY_ACTIONS = [...TRACKED_ACTIONS, CUSTOMER_CREATED_ACTOR_CORRECTION_ACTION];
@@ -58,9 +76,8 @@ type ActivityCandidate = {
   actorId: string | null;
   actorName?: string | null;
   at: string;
-  via?: CustomerCreationChannel | null;
+  viaLabel?: string | null;
   originCustomerId?: string | null;
-  originName?: string | null;
 };
 
 export type CustomerActivityDisplay = {
@@ -86,6 +103,19 @@ export function customerCreationChannelLabel(value: unknown) {
   return CHANNEL_LABELS[asCreationChannel(value)];
 }
 
+function asActivityChannel(value: unknown): CustomerActivityChannel | null {
+  return Object.values(CUSTOMER_ACTIVITY_CHANNELS).includes(value as CustomerActivityChannel)
+    ? value as CustomerActivityChannel
+    : null;
+}
+
+function activityChannelForPartnerType(value: string | null | undefined): CustomerActivityChannel {
+  if (value === "corporate") return CUSTOMER_ACTIVITY_CHANNELS.CORPORATE_PROFILE;
+  if (value === "dealership") return CUSTOMER_ACTIVITY_CHANNELS.DEALERSHIP_PROFILE;
+  if (value === "group") return CUSTOMER_ACTIVITY_CHANNELS.GROUP_PROFILE;
+  return CUSTOMER_ACTIVITY_CHANNELS.CUSTOMER_PROFILE;
+}
+
 function timestamp(value: string | null | undefined) {
   if (!value) return 0;
   const parsed = new Date(value).getTime();
@@ -102,11 +132,16 @@ export async function recordCustomerActivity(
   customerId: string,
   actorId: string | null,
   action: CustomerActivityAction,
-  metadata?: { creationChannel?: CustomerCreationChannel | null; originCustomerId?: string | null },
+  metadata?: {
+    creationChannel?: CustomerCreationChannel | null;
+    originCustomerId?: string | null;
+    activityChannel?: CustomerActivityChannel | null;
+  },
 ) {
   const newData: Record<string, string> = {};
   if (metadata?.creationChannel) newData.creation_channel = metadata.creationChannel;
   if (metadata?.originCustomerId) newData.origin_customer_id = metadata.originCustomerId;
+  if (metadata?.activityChannel) newData.activity_channel = metadata.activityChannel;
 
   const { error } = await admin.from("audit_logs").insert({
     actor_id: actorId,
@@ -125,6 +160,7 @@ export async function loadCustomerActivityHistory({
   createdAt,
   creationChannel,
   originCustomerId,
+  partnerType,
 }: {
   customerId: string;
   createdById: string | null;
@@ -132,6 +168,7 @@ export async function loadCustomerActivityHistory({
   createdAt: string | null;
   creationChannel: string | null;
   originCustomerId: string | null;
+  partnerType?: string | null;
 }): Promise<CustomerActivityDisplay[]> {
   const admin = createSupabaseAdminClient();
   const { data: auditRows } = await admin
@@ -158,15 +195,32 @@ export async function loadCustomerActivityHistory({
     if (!action) continue;
     if (action === CUSTOMER_ACTIVITY_ACTIONS.CUSTOMER_CREATED) hasCreatedAudit = true;
     const useOriginalCreator = action === CUSTOMER_ACTIVITY_ACTIONS.CUSTOMER_CREATED && correctedCreatedAuditIds.has(row.id);
+
+    let viaLabel: string | null = null;
+    if (action === CUSTOMER_ACTIVITY_ACTIONS.CUSTOMER_CREATED) {
+      viaLabel = CHANNEL_LABELS[asCreationChannel(metadataValue(row.new_data, "creation_channel") ?? creationChannel)];
+    } else {
+      const explicitChannel = asActivityChannel(metadataValue(row.new_data, "activity_channel"));
+      if (explicitChannel) {
+        viaLabel = ACTIVITY_CHANNEL_LABELS[explicitChannel];
+      } else if (action === CUSTOMER_ACTIVITY_ACTIONS.CUSTOMER_EDITED) {
+        const inferredChannel = activityChannelForPartnerType(metadataValue(row.new_data, "partner_type") ?? partnerType);
+        viaLabel = ACTIVITY_CHANNEL_LABELS[inferredChannel];
+      } else if (
+        action === CUSTOMER_ACTIVITY_ACTIONS.CUSTOMER_ADDED_TO_PARENT
+        || action === CUSTOMER_ACTIVITY_ACTIONS.CUSTOMER_REMOVED_FROM_PARENT
+      ) {
+        viaLabel = ACTIVITY_CHANNEL_LABELS[CUSTOMER_ACTIVITY_CHANNELS.CUSTOMER_RELATIONSHIPS];
+      }
+    }
+
     candidates.push({
       id: `audit:${row.id}`,
       action,
       actorId: useOriginalCreator ? createdById : row.actor_id,
       actorName: useOriginalCreator ? createdByName : undefined,
       at: row.created_at,
-      via: action === CUSTOMER_ACTIVITY_ACTIONS.CUSTOMER_CREATED
-        ? asCreationChannel(metadataValue(row.new_data, "creation_channel") ?? creationChannel)
-        : null,
+      viaLabel,
       originCustomerId: metadataValue(row.new_data, "origin_customer_id")
         ?? (action === CUSTOMER_ACTIVITY_ACTIONS.CUSTOMER_CREATED ? originCustomerId : null),
     });
@@ -179,7 +233,7 @@ export async function loadCustomerActivityHistory({
       actorId: createdById,
       actorName: createdByName,
       at: createdAt,
-      via: asCreationChannel(creationChannel),
+      viaLabel: CHANNEL_LABELS[asCreationChannel(creationChannel)],
       originCustomerId,
     });
   }
@@ -213,7 +267,7 @@ export async function loadCustomerActivityHistory({
       id: candidate.id,
       action: ACTION_LABELS[candidate.action],
       actorName: candidate.actorName?.trim() || (candidate.actorId ? actorNames.get(candidate.actorId) : null) || "Not recorded",
-      via: candidate.via ? CHANNEL_LABELS[candidate.via] : null,
+      via: candidate.viaLabel ?? null,
       under: candidate.originCustomerId ? originNames.get(candidate.originCustomerId) ?? "Parent customer" : null,
       at: candidate.at,
     }));
