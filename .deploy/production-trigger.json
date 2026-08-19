@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy self-managed claim tracker UX improvements.",
-  "deploy_requested_at": "2026-08-19T15:02:38+05:30",
+  "purpose": "Deploy Fleet Summary navy header UI.",
+  "deploy_requested_at": "2026-08-19T15:04:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged claim tracker UX PR from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "103f9391ae19301b6aea31aeb3c3c4b4a32da68e",
-  "release_scope": "Deploy the external self-managed claim tracker UX improvements: Claims primary navigation, Support in Profile, visual nine-stage progress, responsibility/update metadata, editable Spot Intimation, and first-stage blue/navy theme alignment. Preserve Sankalp-managed claim behavior, claim transaction contracts, permissions, database schema, OCR, AuthBridge, and unrelated functionality unchanged.",
-  "verification": "The merged PR verification gate passed before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook. No Supabase migration is included.",
+  "source": "Deploy merged PR #446 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "87a05cf97df2001394252f9930449236b2a18602",
+  "release_scope": "Deploy the Fleet Summary navy identity header: white circular fleet icon, bold Fleet Summary title, compact customer name and customer code row, inline NO. OF FLEET badge, and icon-only Back to Customer control. Preserve vehicle and policy expansion, Policy Details link, customer/vehicle/policy data loading, activity, onboarding, permissions, database schema, OCR, AuthBridge, save actions, and unrelated functionality unchanged.",
+  "verification": "PR #446 Verify web portal run 32238248087 (#1314) passed successfully on head d9e92ababd033ba707a543387ee6ef6ac5b21819 before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
