@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Customer Activity chronology and false-edit fix.",
-  "deploy_requested_at": "2026-08-19T12:07:00+05:30",
+  "purpose": "Deploy Policy OCR training for New India, Oriental, and IFFCO layouts.",
+  "deploy_requested_at": "2026-08-19T12:21:22+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #437 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "14b26d129662ebcadaa54d19333cd3064c739333",
-  "release_scope": "Deploy the Customer Activity chronology fix so Customer Created uses the canonical customer creation timestamp for ordering and historical onboarding-status-only audit rows are not shown as Customer Edited. The production Supabase migration customer_activity_chronology was applied successfully so future onboarding_status/onboarding_completed_at-only transitions do not generate customer_edited audit entries. Preserve existing audit history and all unrelated customer provenance, vehicle, policy, billing, payout, document, AuthBridge, OCR, storage, permissions, and workflows unchanged.",
-  "verification": "PR #437 Verify web portal run 32224125275 (#1284) passed successfully on head 583001a9fa2858439eda5a56cb0e0e6db6bce0ff before merge. The production Supabase trigger definition was verified after migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #430 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "ca88d047",
+  "release_scope": "Deploy Policy Onboarding OCR training for New India enhanced-cover, Oriental bundled two-wheeler, and IFFCO standalone-OD layouts. Preserve review-before-apply, Section 03-only OCR scope, comparison-only totals, safe IFFCO external-TP withholding, and all unrelated customer, vehicle, billing, payout, document, AuthBridge, storage, permissions, and workflow behavior unchanged.",
+  "verification": "PR #430 Verify web portal run 32219489100 passed successfully on head 09a2a73b01fd278ee2bad5cb9b22f6d948f07357 before merge. Local focused and full OCR regressions, typecheck, lint, and build passed. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
