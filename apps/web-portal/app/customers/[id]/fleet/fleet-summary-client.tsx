@@ -86,13 +86,13 @@ export function FleetSummaryClient({ customer, vehicles, policies }: Props) {
   return (
     <div className="space-y-3 pb-6">
       <section className="overflow-hidden rounded-2xl bg-[#0D2F63] shadow-[0_10px_28px_rgba(13,47,99,0.18)]">
-        <div className="flex items-center gap-3 px-4 py-3 sm:px-5">
-          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white text-[#315FEA] shadow-sm">
+        <div className="flex items-center gap-2.5 px-3 py-2.5 sm:px-4">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-[#315FEA] shadow-sm">
             <CarFront className="h-5 w-5" strokeWidth={1.9} />
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="text-[20px] font-bold leading-tight text-white">Fleet Summary</h1>
-            <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1.5 sm:flex-nowrap">
+            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 sm:flex-nowrap">
               <span className="min-w-0 truncate text-[11.5px] font-semibold text-white">
                 {customer.company_name?.trim() || customer.contact_name}
               </span>
