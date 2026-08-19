@@ -25,12 +25,49 @@ const displayNames: Record<(typeof requiredFieldLabels)[number], string> = {
   "ENGINE NUMBER": "Engine Number",
 };
 
-const policyActionLabels = new Set(["Book Active Policy", "Upload Policy"]);
-type RequiredControl = HTMLInputElement | HTMLSelectElement;
+const policyActionLabels = new Set(["Book Active Policy", "Upload Policy", "Save Policy Changes", "Continue"]);
+type RequiredControl = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 type RequiredField = { control: RequiredControl; displayName: string };
+type MissingRequiredField = { control: RequiredControl; section: HTMLElement; displayName: string };
 
 function normalizedLabel(value: string | null) {
   return (value ?? "").replace(/\*/g, "").replace(/\s+/g, " ").trim().toUpperCase();
+}
+
+function humanizeLabel(value: string | null) {
+  const cleaned = (value ?? "").replace(/\*/g, "").replace(/\s+/g, " ").trim();
+  if (!cleaned) return "This field";
+  if (/^CLASS\b/i.test(cleaned)) return "Class";
+  return cleaned;
+}
+
+function displayNameForControl(control: RequiredControl) {
+  const helperDisplayName = control.dataset.policyRequiredDisplayName;
+  if (helperDisplayName) return helperDisplayName;
+
+  const ariaLabel = control.getAttribute("aria-label");
+  if (ariaLabel) return humanizeLabel(ariaLabel);
+
+  if (control.id) {
+    const explicitLabel = document.querySelector<HTMLLabelElement>(`label[for="${CSS.escape(control.id)}"]`);
+    if (explicitLabel) return humanizeLabel(explicitLabel.textContent);
+  }
+
+  let current: HTMLElement | null = control.parentElement;
+  while (current) {
+    const label = current.querySelector<HTMLLabelElement>("label");
+    if (label) return humanizeLabel(label.textContent);
+    if (current.id?.startsWith("policy-section-")) break;
+    current = current.parentElement;
+  }
+
+  if (control instanceof HTMLSelectElement) {
+    const placeholder = control.options[0]?.textContent ?? "";
+    const normalized = placeholder.replace(/^Select\s+/i, "").replace(/\s+first$/i, "").trim();
+    if (normalized) return humanizeLabel(normalized);
+  }
+
+  return "This field";
 }
 
 function findRequiredFields(section: HTMLElement) {
@@ -64,12 +101,14 @@ function findRequiredFields(section: HTMLElement) {
 
     for (const [index, control] of matched.entries()) {
       if (control.disabled) continue;
+      if (!control.required) control.dataset.policyHelperRequired = "true";
       control.required = true;
       control.setAttribute("aria-required", "true");
       if (fields.some((field) => field.control === control)) continue;
       const displayName = requiredLabel === "RTO"
         ? (index === 0 ? "RTO State" : "RTO Name / Code")
         : displayNames[requiredLabel];
+      control.dataset.policyRequiredDisplayName = displayName;
       fields.push({ control, displayName });
     }
   }
@@ -77,14 +116,40 @@ function findRequiredFields(section: HTMLElement) {
   return fields;
 }
 
+function findFirstMissingRequiredField() {
+  for (let sectionNumber = 1; sectionNumber <= 5; sectionNumber += 1) {
+    const section = document.getElementById(`policy-section-${sectionNumber}`);
+    if (!section) continue;
+
+    const controls = Array.from(
+      section.querySelectorAll<RequiredControl>("input[required], select[required], textarea[required]"),
+    );
+
+    for (const control of controls) {
+      if (control.disabled) continue;
+      if (control instanceof HTMLInputElement && (control.type === "hidden" || control.readOnly)) continue;
+      if (control instanceof HTMLTextAreaElement && control.readOnly) continue;
+      if (String(control.value ?? "").trim()) continue;
+
+      return {
+        control,
+        section,
+        displayName: displayNameForControl(control),
+      } satisfies MissingRequiredField;
+    }
+  }
+
+  return null;
+}
+
 function RequiredFieldsDialog({
   message,
   onClose,
-  restoreFocusTo,
+  focusAfterClose,
 }: {
   message: string;
   onClose: () => void;
-  restoreFocusTo: HTMLButtonElement | null;
+  focusAfterClose: RequiredControl | null;
 }) {
   const okRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
@@ -97,11 +162,13 @@ function RequiredFieldsDialog({
 
     return () => {
       document.body.style.overflow = previous;
-      if (restoreFocusTo?.isConnected && !restoreFocusTo.disabled) {
-        restoreFocusTo.focus();
-      }
+      if (!focusAfterClose?.isConnected || focusAfterClose.disabled) return;
+      requestAnimationFrame(() => {
+        focusAfterClose.focus({ preventScroll: true });
+        focusAfterClose.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
     };
-  }, [restoreFocusTo]);
+  }, [focusAfterClose]);
 
   if (typeof document === "undefined") return null;
 
@@ -135,7 +202,8 @@ function RequiredFieldsDialog({
 
 export function PolicyVehicleRequiredFields() {
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const missingControlRef = useRef<RequiredControl | null>(null);
+  const dialogOpenRef = useRef(false);
 
   useEffect(() => {
     let section: HTMLElement | null = null;
@@ -151,45 +219,55 @@ export function PolicyVehicleRequiredFields() {
     const observer = new MutationObserver(syncRequiredFields);
     observer.observe(document.body, { childList: true, subtree: true });
 
-    const validateRequiredVehicleFields = (event: MouseEvent) => {
+    const validateRequiredFieldsSequentially = (event: MouseEvent) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
       const button = target.closest("button");
       if (!(button instanceof HTMLButtonElement) || !policyActionLabels.has(button.textContent?.trim() ?? "")) return;
+      if (dialogOpenRef.current) return;
 
       syncRequiredFields();
-      const missingNames = fields
-        .filter(({ control }) => !String(control.value ?? "").trim())
-        .map(({ displayName }) => displayName)
-        .filter((name, index, names) => names.indexOf(name) === index);
-      if (!missingNames.length) return;
+      const missing = findFirstMissingRequiredField();
+      if (!missing) return;
 
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
-      triggerRef.current = button;
-      setValidationMessage(`Please complete the following required fields: ${missingNames.join(", ")}.`);
+
+      missing.section.scrollIntoView({ behavior: "smooth", block: "start" });
+      missingControlRef.current = missing.control;
+      dialogOpenRef.current = true;
+      setValidationMessage(`${missing.displayName} is required.`);
     };
 
-    document.addEventListener("click", validateRequiredVehicleFields, true);
+    document.addEventListener("click", validateRequiredFieldsSequentially, true);
 
     return () => {
       observer.disconnect();
-      document.removeEventListener("click", validateRequiredVehicleFields, true);
+      document.removeEventListener("click", validateRequiredFieldsSequentially, true);
       for (const { control } of fields) {
-        control.required = false;
-        control.removeAttribute("aria-required");
+        if (control.dataset.policyHelperRequired === "true") {
+          control.required = false;
+          control.removeAttribute("aria-required");
+          delete control.dataset.policyHelperRequired;
+        }
+        delete control.dataset.policyRequiredDisplayName;
         control.setCustomValidity("");
       }
       section?.querySelectorAll("[data-policy-required-marker]").forEach((marker) => marker.remove());
     };
   }, []);
 
-  return validationMessage ? (
+  if (!validationMessage) return null;
+
+  return (
     <RequiredFieldsDialog
       message={validationMessage}
-      restoreFocusTo={triggerRef.current}
-      onClose={() => setValidationMessage(null)}
+      focusAfterClose={missingControlRef.current}
+      onClose={() => {
+        dialogOpenRef.current = false;
+        setValidationMessage(null);
+      }}
     />
-  ) : null;
+  );
 }
