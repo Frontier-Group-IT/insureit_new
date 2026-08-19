@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy Onboarding sequential mandatory-field validation.",
-  "deploy_requested_at": "2026-08-19T18:08:00+05:30",
+  "purpose": "Deploy Fleet Summary registration status labels.",
+  "deploy_requested_at": "2026-08-19T18:21:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #456 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "028cbd90d8f5f0e7cf5fd19f175639af3a4ab171",
-  "release_scope": "Deploy the Policy Onboarding mandatory-field validation update so validation runs Section 1 through Section 5 in order, stops at the first missing mandatory field, shows only one validation dialog, scrolls to the owning section, and focuses the exact missing field after dismissal. Preserve existing server-side validation, business rules, Section 2 mandatory markers, OCR, policy creation, customer/vehicle relationships, permissions, database schema, and unrelated functionality unchanged.",
-  "verification": "PR #456 Verify web portal run 32253560683 (#1374) passed successfully on head e77a3b2a584648c938c3caa78c46be1e5d179454 before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #457 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "83a21722b350b61de2e4a68221dc799638e342f0",
+  "release_scope": "Deploy the Fleet Summary presentation update so pending vehicle registrations display REGISTRATION PENDING instead of the raw registration_pending value, while vehicles with an issued registration number display REGISTERED. Preserve stored RC/provider data, Policy Status logic, onboarding workflows, database schema, permissions, and unrelated functionality unchanged.",
+  "verification": "PR #457 Verify web portal run 32254138105 (#1377) passed successfully on head 78aba97f1af2790695da66d644c52b4f37bb5aef before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
