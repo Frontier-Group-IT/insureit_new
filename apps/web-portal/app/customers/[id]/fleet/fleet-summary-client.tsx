@@ -132,13 +132,13 @@ export function FleetSummaryClient({ customer, vehicles, policies }: Props) {
                       <p className="text-[12px] font-semibold text-[#173E7B]">{vehicle.vehicle_no || "Unregistered vehicle"}</p>
                       <span className="rounded-full border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-0.5 text-[8.5px] font-semibold text-[#64748B]">{vehicle.vehicle_type || "Vehicle"}</span>
                     </div>
-                    <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[9px] text-[#7B8798]">
+                    <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[9px] text-[#7B8798] sm:grid sm:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,0.9fr)] sm:gap-x-3">
                       <span className="min-w-0 truncate">{[vehicle.make, vehicle.model, vehicle.year ? String(vehicle.year) : null].filter(Boolean).join(" · ") || "Vehicle details available"}</span>
-                      <span className="inline-flex min-w-0 max-w-[190px] items-center gap-1">
+                      <span className="inline-flex min-w-0 items-center gap-1">
                         <span className="shrink-0 text-[#94A3B8]">Chassis:</span>
                         <span className="truncate font-medium text-[#64748B]" title={vehicle.chassis_no || "—"}>{vehicle.chassis_no || "—"}</span>
                       </span>
-                      <span className="inline-flex min-w-0 max-w-[170px] items-center gap-1">
+                      <span className="inline-flex min-w-0 items-center gap-1">
                         <span className="shrink-0 text-[#94A3B8]">Engine:</span>
                         <span className="truncate font-medium text-[#64748B]" title={vehicle.engine_no || "—"}>{vehicle.engine_no || "—"}</span>
                       </span>
