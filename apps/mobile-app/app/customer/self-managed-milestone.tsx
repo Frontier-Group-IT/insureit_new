@@ -3,11 +3,11 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AppBadge, AppDatePicker } from '@/components/design-system';
+import { CLAIM_STAGE_ICON, ClaimProgressRail, ClaimStageHeader, ClaimUpdateContext, StageDetailsCard, StageSaveButton } from '@/components/claim-stage';
+import { AppDatePicker } from '@/components/design-system';
 import { Message, Screen, TextField } from '@/components/ui';
 import { SELF_MANAGED_MILESTONES, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
 import { supabase } from '@/lib/supabase';
-import { palette } from '@/lib/theme';
 
 type FieldKey =
   | 'dealership_name' | 'dealership_location' | 'gate_in_date' | 'estimate_amount'
@@ -70,38 +70,20 @@ export default function SelfManagedMilestoneScreen() {
 
   return (
     <Screen title={definition.label} showTitleHeader={false}>
-      <View style={styles.topRow}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}><MaterialCommunityIcons name="arrow-left" size={21} color={palette.navy} /></Pressable>
-        <View style={styles.topCopy}>
-          <Text style={styles.eyebrow}>STEP {step} OF 9</Text>
-          <Text style={styles.title}>{definition.label}</Text>
-          <Text style={styles.subtitle}>{subtitleFor(key)}</Text>
-        </View>
-        <AppBadge label="Self Tracked" tone="info" />
-      </View>
+      <ClaimStageHeader step={step} icon={CLAIM_STAGE_ICON[key]} title={definition.label} subtitle={subtitleFor(key)} />
+      <ClaimProgressRail step={step} />
 
-      <View style={styles.contextCard}>
-        <View style={styles.contextIcon}><MaterialCommunityIcons name="shield-check-outline" size={22} color="#B7791F" /></View>
-        <View style={styles.contextCopy}>
-          <Text style={styles.contextLabel}>CLAIM UPDATE</Text>
-          <Text style={styles.contextTitle}>{definition.label}</Text>
-          <Text style={styles.contextBody}>Record this milestone using updates received from the insurer, surveyor, or workshop.</Text>
-        </View>
-      </View>
+      <ClaimUpdateContext title={definition.label} body="Record this milestone using updates received from the insurer, surveyor, or workshop." />
 
       {message ? <Message type="error">{message}</Message> : null}
 
       {loading ? <Text style={styles.loading}>Loading saved details...</Text> : (
-        <View style={styles.card}>
-          <View style={styles.formHeading}>
-            <View style={styles.formIcon}><MaterialCommunityIcons name="clipboard-edit-outline" size={20} color="#B7791F" /></View>
-            <View style={styles.formHeadingCopy}><Text style={styles.formTitle}>Stage Details</Text><Text style={styles.formSub}>Update the available details for this claim stage</Text></View>
-          </View>
+        <StageDetailsCard title="Stage Details" subtitle="Update the available details for this claim stage">
           {renderFields(key, values, set)}
-        </View>
+        </StageDetailsCard>
       )}
 
-      <Pressable disabled={saving || loading} onPress={() => void save()} style={[styles.saveButton, (saving || loading) && styles.disabled]}><Text style={styles.saveText}>{saving ? 'Saving...' : `Save ${definition.label}`}</Text><MaterialCommunityIcons name="check" size={19} color="#FFFFFF" /></Pressable>
+      <StageSaveButton label={`Save ${definition.label}`} saving={saving} disabled={loading} onPress={() => void save()} />
     </Screen>
   );
 }
@@ -196,28 +178,7 @@ function todayIso() { const d = new Date(); return `${d.getFullYear()}-${String(
 function formatDisplayDate(value: string) { if (!value) return ''; const [y,m,d] = value.split('-'); return `${d}-${m}-${y}`; }
 
 const styles = StyleSheet.create({
-  topRow: { flexDirection: 'row', gap: 11, alignItems: 'flex-start', marginTop: 0, marginBottom: 12 },
-  backButton: { width: 42, height: 42, borderRadius: 14, borderWidth: 1, borderColor: '#DCE6F0', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
-  topCopy: { flex: 1 },
-  eyebrow: { color: '#0A43A3', fontSize: 9.5, fontWeight: '900', letterSpacing: 1 },
-  title: { color: palette.navy, fontSize: 24, fontWeight: '900', marginTop: 2 },
-  subtitle: { color: '#7A8799', fontSize: 10.3, lineHeight: 14, fontWeight: '600', marginTop: 3 },
-  contextCard: { borderWidth: 1, borderColor: '#C9DAF2', borderRadius: 17, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F7FAFF', marginBottom: 10 },
-  contextIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
-  contextCopy: { flex: 1, minWidth: 0 },
-  contextLabel: { color: '#0A43A3', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.4 },
-  contextTitle: { color: palette.navy, fontSize: 13, fontWeight: '900', marginTop: 2 },
-  contextBody: { color: '#667085', fontSize: 10.3, lineHeight: 14, fontWeight: '600', marginTop: 3 },
-  card: { borderRadius: 17, padding: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE6F0' },
-  formHeading: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  formIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#FFF4E2', alignItems: 'center', justifyContent: 'center' },
-  formHeadingCopy: { flex: 1 },
-  formTitle: { color: palette.navy, fontSize: 14, fontWeight: '900' },
-  formSub: { color: '#7A8799', fontSize: 9.8, fontWeight: '600', marginTop: 2 },
   loading: { color: '#7A8799', fontSize: 10.5, fontWeight: '600', padding: 16 },
-  saveButton: { marginTop: 12, minHeight: 48, borderRadius: 15, backgroundColor: palette.navy, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
-  saveText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
-  disabled: { opacity: 0.55 },
   choiceLabel: { color: '#344054', fontSize: 11, fontWeight: '800', marginBottom: 8 },
   choiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   choiceChip: { minHeight: 38, borderRadius: 12, borderWidth: 1, borderColor: '#DCE6F0', backgroundColor: '#FFFFFF', paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },

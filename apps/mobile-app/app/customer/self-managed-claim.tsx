@@ -4,8 +4,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AppBadge, AppDatePicker } from '@/components/design-system';
-import { Button, LoadingState, Message, Screen, TextField } from '@/components/ui';
+import { CLAIM_STAGE_ICON, ClaimProgressRail, ClaimStageHeader, StageDetailsCard, StageSaveButton } from '@/components/claim-stage';
+import { AppDatePicker } from '@/components/design-system';
+import { LoadingState, Message, Screen, TextField } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
@@ -128,19 +129,8 @@ export default function SelfManagedClaimScreen() {
 
   if (loading) return <Screen title="Spot Intimation"><LoadingState label="Opening policy" /></Screen>;
   return <Screen title="Spot Intimation" showTitleHeader={false}>
-    <View style={styles.pageHeader}>
-      <View style={styles.stepIcon}>
-        <MaterialCommunityIcons name="car-emergency" size={22} color="#0A43A3" />
-      </View>
-      <View style={styles.headerCopy}>
-        <Text style={styles.eyebrow}>STEP 1 OF 9</Text>
-        <Text style={styles.pageTitle}>Spot Intimation</Text>
-      </View>
-      <AppBadge label="Self Tracked" tone="info" />
-    </View>
-    <View style={styles.progressRail} accessibilityLabel="Claim progress step 1 of 9">
-      {Array.from({ length: 9 }, (_, index) => <View key={index} style={[styles.progressSegment, index < 1 && styles.progressSegmentActive]} />)}
-    </View>
+    <ClaimStageHeader step={1} icon={CLAIM_STAGE_ICON.spot_intimation} title="Spot Intimation" />
+    <ClaimProgressRail step={1} />
 
     {message ? <Message type="error">{message}</Message> : null}
 
@@ -156,12 +146,7 @@ export default function SelfManagedClaimScreen() {
       <View style={styles.policyNotice}><MaterialCommunityIcons name="information-outline" size={17} color="#FFFFFF" /><Text style={styles.policyNoticeText}>This claim is being tracked by you. Sankalp is not processing this claim unless you request assistance.</Text></View>
     </View>
 
-    <View style={styles.sectionShell}>
-      <View style={styles.sectionHeaderRow}>
-        <View style={styles.sectionHeaderIcon}><MaterialCommunityIcons name="clipboard-text-outline" size={18} color="#FFFFFF" /></View>
-        <View><Text style={styles.sectionTitleText}>INCIDENT DETAILS</Text><Text style={styles.sectionSubtitleText}>Accident date and time are required</Text></View>
-      </View>
-
+    <StageDetailsCard icon="clipboard-text-outline" title="Incident Details" subtitle="Accident date and time are required">
       <View style={styles.stepList}>
         <View style={styles.formRow}>
           <View style={styles.stepBadge}><Text style={styles.stepBadgeText}>1</Text></View>
@@ -194,7 +179,7 @@ export default function SelfManagedClaimScreen() {
           </View>
         </View>
       </View>
-    </View>
+    </StageDetailsCard>
 
     <View style={styles.documentsShell}>
       <View style={styles.documentsHeader}><View><Text style={styles.documentsTitle}>UPLOAD DOCUMENTS (OPTIONAL)</Text><Text style={styles.documentsSubtitle}>Upload any documents you have. All are optional.</Text></View><View style={styles.optionalPill}><Text style={styles.optionalPillText}>All optional</Text></View></View>
@@ -206,6 +191,9 @@ export default function SelfManagedClaimScreen() {
           { label: 'GR Copy', subtitle: 'Upload File', text: 'JPG, PNG, PDF (Max 5MB)' },
         ].map((doc) => (
           <View key={doc.label} style={[styles.uploadTile, documentMap[doc.label]?.[0] && styles.uploadTileUploaded]}>
+            {documentMap[doc.label]?.[0] ? (
+              <View style={styles.uploadedBadge}><MaterialCommunityIcons name="check" size={11} color="#FFFFFF" /></View>
+            ) : null}
             <Image source={documentArtwork[doc.label as keyof typeof documentArtwork]} resizeMode="contain" style={styles.documentArtwork} />
             <Text style={styles.uploadLabel} numberOfLines={2}>{doc.label}</Text>
             <View style={styles.uploadStack}>
@@ -228,7 +216,7 @@ export default function SelfManagedClaimScreen() {
       </Pressable>
     </View>
 
-    <Button label={saving ? 'Starting claim...' : 'SUBMIT'} onPress={submit} disabled={saving || !policy} />
+    <StageSaveButton label="SUBMIT" savingLabel="Starting claim..." saving={saving} disabled={!policy} onPress={submit} />
     <TimePickerModal value={time} visible={timePickerOpen} onClose={() => setTimePickerOpen(false)} onSelect={(value) => { setTime(value); setTimePickerOpen(false); }} />
   </Screen>;
 }
@@ -293,15 +281,6 @@ function parseIncident(date: string, time: string) {
 }
 
 const styles = StyleSheet.create({
-  pageHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
-  stepIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
-  headerCopy: { flex: 1, minWidth: 0 },
-  eyebrow: { color: '#0A43A3', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.8 },
-  pageTitle: { color: palette.navy, fontSize: 22, fontWeight: '900', marginTop: 2 },
-  pageSubtitle: { color: palette.slate, fontSize: 10.5, lineHeight: 15, fontWeight: '600', marginTop: 3 },
-  progressRail: { flexDirection: 'row', gap: 6, marginBottom: 12, paddingHorizontal: 2 },
-  progressSegment: { flex: 1, height: 6, borderRadius: 4, backgroundColor: '#E4E9F1' },
-  progressSegmentActive: { backgroundColor: '#0A43A3' },
   summaryCard: { backgroundColor: '#FFFFFF', borderRadius: 18, borderWidth: 1, borderColor: '#DCE8F6', marginBottom: 14, padding: 12 },
   summaryEyebrow: { color: '#0A43A3', fontSize: 10, fontWeight: '900', letterSpacing: 0.8, marginBottom: 10 },
   summaryLine: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -319,11 +298,6 @@ const styles = StyleSheet.create({
   policyBannerRule: { width: '100%', height: 1, backgroundColor: 'rgba(255,255,255,0.25)', marginTop: 12, marginBottom: 10 },
   policyNotice: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, width: '100%' },
   policyNoticeText: { flex: 1, color: '#FFFFFF', fontSize: 10.5, lineHeight: 15, fontWeight: '600' },
-  sectionShell: { backgroundColor: '#FFFFFF', borderRadius: 18, borderWidth: 1, borderColor: '#DCE8F6', marginBottom: 14, overflow: 'hidden' },
-  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, backgroundColor: '#EAF2FF', borderBottomWidth: 1, borderBottomColor: '#D4E3F8' },
-  sectionHeaderIcon: { width: 28, height: 28, borderRadius: 8, backgroundColor: '#0A43A3', alignItems: 'center', justifyContent: 'center' },
-  sectionTitleText: { color: '#0A43A3', fontSize: 11.5, fontWeight: '900', letterSpacing: 0.6 },
-  sectionSubtitleText: { color: '#6C7D91', fontSize: 9.5, fontWeight: '600', marginTop: 2 },
   stepList: { padding: 12, gap: 14 },
   formRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   stepBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center', marginTop: 2 },
@@ -352,8 +326,9 @@ const styles = StyleSheet.create({
   optionalPill: { borderRadius: 999, backgroundColor: '#EAF3FF', paddingHorizontal: 9, paddingVertical: 6 },
   optionalPillText: { color: '#0A43A3', fontSize: 9, fontWeight: '800' },
   uploadGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  uploadTile: { width: '48%', minHeight: 132, borderRadius: 13, borderWidth: 1, borderColor: '#DCE8F6', backgroundColor: '#FFFFFF', alignItems: 'center', padding: 8 },
+  uploadTile: { width: '48%', minHeight: 132, borderRadius: 13, borderWidth: 1, borderColor: '#DCE8F6', backgroundColor: '#FFFFFF', alignItems: 'center', padding: 8, position: 'relative' },
   uploadTileUploaded: { borderColor: '#9AD9B5', backgroundColor: '#EFFAF3' },
+  uploadedBadge: { position: 'absolute', top: 8, right: 8, width: 20, height: 20, borderRadius: 10, backgroundColor: '#16B86A', alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   documentArtwork: { width: 48, height: 48, marginBottom: 4 },
   uploadSub: { color: '#6C7D91', fontSize: 9, fontWeight: '600' },
   uploadRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
