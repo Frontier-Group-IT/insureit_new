@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy compact Fleet Summary header spacing.",
-  "deploy_requested_at": "2026-08-19T16:07:00+05:30",
+  "purpose": "Deploy Customer Profile footer action polish.",
+  "deploy_requested_at": "2026-08-19T16:17:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy current main commit 09b431c3a1299b381114af95c9031dbc45ac87e8 using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "09b431c3a1299b381114af95c9031dbc45ac87e8",
-  "release_scope": "Deploy the Fleet Summary header compacting change: reduce horizontal and vertical padding, slightly reduce the fleet icon container size, reduce the spacing below Fleet Summary, and bring customer name and customer ID closer together. Preserve the dark navy design, Fleet Summary typography, No. of Fleet badge, vehicle class icons, policy-status and vehicle-status metrics, vehicle and policy expansion, Policy Details navigation, data loading, permissions, onboarding, calculations, database schema, save actions, and unrelated functionality unchanged.",
-  "verification": "This compact-header change was committed directly to current main. No Supabase migration is required. The protected production workflow must run the canonical web-portal verification on current main before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #451 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "d6188455e8efbb1e90990e25ccfc19547fffd4f2",
+  "release_scope": "Deploy the Customer Profile footer action update: order actions as Back, View Fleet, Save changes; keep Save changes as the primary blue action; align all three controls to the same height, rounded-md corner radius, border treatment, horizontal padding, spacing, and alignment. Preserve the existing conditional View Fleet behavior, save and validation behavior, customer/vehicle/policy data, permissions, onboarding, routing, calculations, database schema, and unrelated functionality unchanged.",
+  "verification": "PR #451 Verify web portal run 32244155032 (#1336) passed successfully on head 20fbdfb61d75f6511c67ae6389c58ee1ae356656 before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
