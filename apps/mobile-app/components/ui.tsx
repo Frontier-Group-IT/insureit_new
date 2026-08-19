@@ -18,7 +18,7 @@ export { colors };
 
 type ScreenTopSpacing = 'default' | 'compact' | 'tight' | 'legacy';
 
-export function Screen({ title, subtitle, children, showLogout = false, showTitleHeader = true, topSpacing = 'default', bottomTabsVariant = 'default' }: PropsWithChildren<{ title: string; subtitle?: string; showLogout?: boolean; showTitleHeader?: boolean; topSpacing?: ScreenTopSpacing; bottomTabsVariant?: 'default' | 'navy' }>) {
+export function Screen({ title, subtitle, children, showLogout = false, showTitleHeader = true, topSpacing = 'default', bottomTabsVariant = 'default', brandHeaderVariant = 'default' }: PropsWithChildren<{ title: string; subtitle?: string; showLogout?: boolean; showTitleHeader?: boolean; topSpacing?: ScreenTopSpacing; bottomTabsVariant?: 'default' | 'navy'; brandHeaderVariant?: 'default' | 'navy' }>) {
   const router = useRouter();
   const pathname = usePathname();
   const routeParams = useLocalSearchParams();
@@ -30,6 +30,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
   const showProfile = ['/customer', '/it', '/staff', '/agent', '/hierarchy', '/admin'].some((prefix) => pathname.startsWith(prefix));
   const compactTopSpacing = pathname === '/customer/upload-documents';
   const legalTopSpacing = pathname.startsWith('/customer/legal');
+  const navyBrandHeader = brandHeaderVariant === 'navy' && showProfile;
   const showBackButton = showProfile && !isRootDashboard(pathname);
   const loadingOnly = isValidElement(children) && children.type === LoadingState;
   const tabRole = profileRole ?? (pathname.startsWith('/customer') ? 'customer' : null);
@@ -95,20 +96,20 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
   const accent = accentForRole(profileRole);
   return (
     <SafeAreaView style={styles.safeArea} edges={[]}>
-      <View pointerEvents="none" style={styles.backdropTop} />
+      <View pointerEvents="none" style={[styles.backdropTop, navyBrandHeader && styles.backdropTopNavy]} />
       <View pointerEvents="none" style={styles.backdropBand} />
       {showProfile ? (
-        <View style={[styles.fixedBrandRow, { top: insets.top }]}>
+        <View style={[styles.fixedBrandRow, navyBrandHeader && styles.fixedBrandRowNavy, { top: insets.top }]}>
           {showBackButton ? (
-            <Pressable accessibilityRole="button" onPress={openBack} style={styles.backButton}>
-              <MaterialCommunityIcons name="chevron-left" size={25} color={palette.ink} />
+            <Pressable accessibilityRole="button" onPress={openBack} style={[styles.backButton, navyBrandHeader && styles.backButtonNavy]}>
+              <MaterialCommunityIcons name="chevron-left" size={25} color={navyBrandHeader ? '#FFFFFF' : palette.ink} />
             </Pressable>
           ) : null}
           <Pressable accessibilityRole="button" onPress={openDashboard} style={styles.brandPressable}>
-            <BrandLogo width={158} />
+            <BrandLogo width={158} tone={navyBrandHeader ? 'light' : 'dark'} />
           </Pressable>
-          <NotificationBell />
-          <Pressable accessibilityRole="button" onPress={openProfile} style={styles.avatar}>
+          <NotificationBell color={navyBrandHeader ? '#FFFFFF' : palette.ink} />
+          <Pressable accessibilityRole="button" onPress={openProfile} style={[styles.avatar, navyBrandHeader && styles.avatarNavy]}>
             <Text style={styles.avatarText}>{profileInitial}</Text>
           </Pressable>
         </View>
@@ -491,18 +492,22 @@ export const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: 'transparent' },
   safeArea: { flex: 1, backgroundColor: '#EEF7FF' },
   backdropTop: { position: 'absolute', left: 0, right: 0, top: 0, height: 270, backgroundColor: '#EAF5FF' },
+  backdropTopNavy: { backgroundColor: palette.navy, height: 180 },
   backdropBand: { position: 'absolute', left: -60, right: -70, top: 170, height: 108, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.72)', transform: [{ rotateZ: '-7deg' }] },
   screenContent: { flexGrow: 1, paddingHorizontal: 14, paddingBottom: 142, backgroundColor: 'transparent' },
   screenContentWithTabs: { paddingTop: 92, paddingBottom: 156 },
   screenContentCompactTop: { paddingTop: 86 },
   screenContentLoading: { justifyContent: 'center', paddingBottom: 108 },
   fixedBrandRow: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, height: 66, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4, paddingVertical: 6, backgroundColor: 'rgba(255,255,255,0.98)', borderBottomWidth: 1, borderBottomColor: 'rgba(207,224,244,0.9)' },
+  fixedBrandRowNavy: { height: 76, backgroundColor: palette.navy, borderBottomColor: 'rgba(255,255,255,0.16)' },
   brandRow: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginHorizontal: -14, paddingHorizontal: 14, paddingTop: 24, paddingBottom: 10, marginBottom: 10, backgroundColor: 'transparent', zIndex: 10 },
   backButton: { width: 40, height: 40, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.86)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(191,216,255,0.78)' },
+  backButtonNavy: { backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.28)' },
   brandPressable: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 },
   brand: { color: palette.ink, fontSize: 21, fontWeight: '800' },
   brandLogo: { width: 150, height: 34 },
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: palette.ink, alignItems: 'center', justifyContent: 'center', marginLeft: 'auto', borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)' },
+  avatarNavy: { backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,0.48)' },
   avatarText: { color: colors.white, fontSize: 16, fontWeight: '900' },
   header: { minHeight: 98, borderRadius: 22, padding: 16, marginBottom: 14, backgroundColor: 'rgba(255,255,255,0.88)', borderWidth: 1, borderColor: 'rgba(191,216,255,0.72)', shadowColor: '#0C4A88', shadowOpacity: 0.1, shadowRadius: 16, elevation: 3, overflow: 'hidden' },
   headerTop: { alignSelf: 'flex-start', minHeight: 27, borderRadius: 999, backgroundColor: '#F7FBFF', borderWidth: 1, borderColor: '#D6E7FA', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 8 },
@@ -588,6 +593,5 @@ export const styles = StyleSheet.create({
   bottomTabTextNavy: { color: '#D5E4FA' },
   bottomTabTextActive: { color: colors.navy },
 });
-
 
 

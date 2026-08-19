@@ -107,10 +107,10 @@ export default function SelfManagedSpotStatusScreen() {
     }
   }
 
-  if (loading) return <Screen title="Spot Status" showTitleHeader={false}><LoadingState label="Opening Spot Status" /></Screen>;
+  if (loading) return <Screen title="Spot Status" showTitleHeader={false} brandHeaderVariant="navy"><LoadingState label="Opening Spot Status" /></Screen>;
 
   return (
-    <Screen title="Spot Status" showTitleHeader={false}>
+    <Screen title="Spot Status" showTitleHeader={false} brandHeaderVariant="navy">
       <ClaimStageHeader step={2} icon={CLAIM_STAGE_ICON.spot_status} title="Spot Status" subtitle={`${claimNo || 'Claim'} • Record the completed spot survey.`} />
       <ClaimProgressRail step={2} />
 

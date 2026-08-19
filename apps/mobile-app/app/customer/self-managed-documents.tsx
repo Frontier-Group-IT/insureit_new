@@ -227,14 +227,14 @@ export default function SelfManagedDocumentsScreen() {
   }
 
   if (loading) {
-    return <Screen title="Claim Documents" showTitleHeader={false}><LoadingState label="Opening document vault" /></Screen>;
+    return <Screen title="Claim Documents" showTitleHeader={false} brandHeaderVariant="navy"><LoadingState label="Opening document vault" /></Screen>;
   }
   if (error && !claim) {
-    return <Screen title="Claim Documents" showTitleHeader={false}><Message type="error">{error}</Message></Screen>;
+    return <Screen title="Claim Documents" showTitleHeader={false} brandHeaderVariant="navy"><Message type="error">{error}</Message></Screen>;
   }
 
   return (
-    <Screen title="Claim Documents" showTitleHeader={false}>
+    <Screen title="Claim Documents" showTitleHeader={false} brandHeaderVariant="navy">
       <View style={styles.top}>
         <View style={styles.heroIcon}>
           <MaterialCommunityIcons name="folder-account-outline" size={22} color="#0A43A3" />

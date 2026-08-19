@@ -66,10 +66,10 @@ export default function SelfManagedMilestoneScreen() {
     router.replace({ pathname: '/customer/self-managed-claim-detail', params: { id: claimId } });
   }
 
-  if (!definition) return <Screen title="Claim Milestone" showTitleHeader={false}><Message type="error">This milestone is unavailable.</Message></Screen>;
+  if (!definition) return <Screen title="Claim Milestone" showTitleHeader={false} brandHeaderVariant="navy"><Message type="error">This milestone is unavailable.</Message></Screen>;
 
   return (
-    <Screen title={definition.label} showTitleHeader={false}>
+    <Screen title={definition.label} showTitleHeader={false} brandHeaderVariant="navy">
       <ClaimStageHeader step={step} icon={CLAIM_STAGE_ICON[key]} title={definition.label} subtitle={subtitleFor(key)} />
       <ClaimProgressRail step={step} />
 

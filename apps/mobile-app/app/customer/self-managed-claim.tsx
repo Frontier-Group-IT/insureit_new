@@ -127,8 +127,8 @@ export default function SelfManagedClaimScreen() {
     else setMessage('The claim was not created. Please try again.');
   }
 
-  if (loading) return <Screen title="Spot Intimation"><LoadingState label="Opening policy" /></Screen>;
-  return <Screen title="Spot Intimation" showTitleHeader={false}>
+  if (loading) return <Screen title="Spot Intimation" brandHeaderVariant="navy"><LoadingState label="Opening policy" /></Screen>;
+  return <Screen title="Spot Intimation" showTitleHeader={false} brandHeaderVariant="navy">
     <ClaimStageHeader step={1} icon={CLAIM_STAGE_ICON.spot_intimation} title="Spot Intimation" />
     <ClaimProgressRail step={1} />
 

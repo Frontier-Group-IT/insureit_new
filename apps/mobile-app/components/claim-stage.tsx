@@ -88,7 +88,7 @@ export function ClaimUpdateContext({
 }) {
   return (
     <View style={styles.contextCard}>
-      <View style={styles.contextIcon}><MaterialCommunityIcons name={icon} size={22} color="#B7791F" /></View>
+      <View style={styles.contextIcon}><MaterialCommunityIcons name={icon} size={22} color="#FFFFFF" /></View>
       <View style={styles.contextCopy}>
         <Text style={styles.contextLabel}>{label}</Text>
         <Text style={styles.contextTitle}>{title}</Text>
@@ -160,12 +160,12 @@ const styles = StyleSheet.create({
   progressSegment: { flex: 1, height: 6, borderRadius: 4, backgroundColor: '#E4E9F1' },
   progressSegmentActive: { backgroundColor: '#0A43A3' },
 
-  contextCard: { borderWidth: 1, borderColor: '#C9DAF2', borderRadius: 17, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F7FAFF', marginBottom: 12 },
-  contextIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
+  contextCard: { borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', borderRadius: 17, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: palette.navy, marginBottom: 12 },
+  contextIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
   contextCopy: { flex: 1, minWidth: 0 },
-  contextLabel: { color: '#0A43A3', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.4 },
-  contextTitle: { color: palette.navy, fontSize: 13, fontWeight: '900', marginTop: 2 },
-  contextBody: { color: '#667085', fontSize: 10.3, lineHeight: 14, fontWeight: '600', marginTop: 3 },
+  contextLabel: { color: '#A9C9FF', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.4 },
+  contextTitle: { color: '#FFFFFF', fontSize: 13, fontWeight: '900', marginTop: 2 },
+  contextBody: { color: '#D4E2F8', fontSize: 10.3, lineHeight: 14, fontWeight: '600', marginTop: 3 },
 
   card: { borderRadius: 17, padding: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE6F0', marginBottom: 12 },
   cardHeading: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
