@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Customer Activity creation-bootstrap false-edit fix.",
-  "deploy_requested_at": "2026-08-19T12:49:00+05:30",
+  "purpose": "Deploy removal of Internal Account Owner from Customer Profile.",
+  "deploy_requested_at": "2026-08-19T12:57:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #438 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "6562daf88ebb920fa8d7cd3b4be70b9f53dcd199",
-  "release_scope": "Deploy the Customer Activity bootstrap-edit fix so actorless creation-time initialization of partner_type and lead_source_intermediary_id from Policy Onboarding is not shown as Customer Edited. Historical false bootstrap audit rows remain preserved but are filtered from Activity Status; future matching bootstrap updates are suppressed by the applied customer_activity_creation_bootstrap Supabase migration. Preserve genuine later customer edits and all unrelated customer, vehicle, policy, billing, payout, document, AuthBridge, OCR, storage, permissions, and workflow behavior unchanged.",
-  "verification": "PR #438 Verify web portal run 32227121474 (#1290) passed successfully on head 633db0413af72de4ea4b2cfd72ea8189c9e57e47 before merge. Production Supabase migration customer_activity_creation_bootstrap was applied successfully and the live trigger definition was verified. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #439 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "1616d1c7fa821799bfc09de71b4a3d4da8756679",
+  "release_scope": "Deploy the Customer Profile summary UI change that removes the Internal Account Owner metric and keeps Lead Source plus the remaining summary metrics in a balanced six-column desktop layout. Preserve customer assignment data and logic, lead-source behavior, customer activity history, database schema, permissions, vehicle, policy, onboarding, billing, payout, document, AuthBridge, OCR, storage, and unrelated functionality unchanged.",
+  "verification": "PR #439 Verify web portal run 32227826322 (#1295) passed successfully on head 89b744e6b0f6d0086080085706b81178c33ed3c7 before merge. This is a UI-only release with no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
