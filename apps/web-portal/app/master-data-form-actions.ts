@@ -6,6 +6,7 @@ import { createCustomer, updateCustomer } from "@/app/actions";
 import { requireCapability, requireMasterDataManager } from "@/lib/master-data-server";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { recordVehicleActivity, VEHICLE_ACTIVITY_ACTIONS } from "@/lib/vehicle-activity";
 
 function requiredText(formData: FormData, name: string) {
   const value = formData.get(name);
@@ -37,7 +38,7 @@ export async function saveCustomer(id: string, formData: FormData) {
 }
 
 export async function addVehicle(formData: FormData) {
-  await requireCapability("view_vehicles", "edit");
+  const profile = await requireCapability("view_vehicles", "edit");
   const admin = createSupabaseAdminClient();
   const customerId = requiredText(formData, "customer_id");
   const vehicleNo = requiredText(formData, "vehicle_no")?.replace(/\s/g, "").toUpperCase() ?? null;
@@ -47,7 +48,7 @@ export async function addVehicle(formData: FormData) {
   const { data: customer, error: customerError } = await admin.from("customers").select("id").eq("id", customerId).maybeSingle<{ id: string }>();
   if (customerError || !customer) redirect(errorUrl("/vehicles/new", customerError?.message ?? "The selected customer does not exist."));
 
-  const { error } = await admin.from("vehicles").insert({
+  const { data: vehicle, error } = await admin.from("vehicles").insert({
     customer_id: customerId,
     vehicle_no: vehicleNo,
     vehicle_type: vehicleType,
@@ -64,15 +65,17 @@ export async function addVehicle(formData: FormData) {
     road_tax_expiry_date: dateValue(formData, "road_tax_expiry_date"),
     national_permit_expiry_date: dateValue(formData, "national_permit_expiry_date"),
     local_permit_expiry_date: dateValue(formData, "local_permit_expiry_date")
-  });
-  if (error) redirect(errorUrl("/vehicles/new", `Vehicle could not be saved: ${error.message}`));
+  }).select("id").single<{ id: string }>();
+  if (error || !vehicle) redirect(errorUrl("/vehicles/new", `Vehicle could not be saved: ${error?.message ?? "Unknown error"}`));
+
+  await recordVehicleActivity(admin, vehicle.id, profile.id, VEHICLE_ACTIVITY_ACTIONS.VEHICLE_CREATED);
 
   revalidatePath("/vehicles");
   redirect("/vehicles?success=vehicle_created");
 }
 
 export async function saveVehicle(id: string, formData: FormData) {
-  await requireCapability("view_vehicles", "edit");
+  const profile = await requireCapability("view_vehicles", "edit");
   const admin = createSupabaseAdminClient();
   const customerId = requiredText(formData, "customer_id");
   const vehicleNo = requiredText(formData, "vehicle_no")?.replace(/\s/g, "").toUpperCase() ?? null;
@@ -99,6 +102,8 @@ export async function saveVehicle(id: string, formData: FormData) {
   }).eq("id", id);
   if (error) redirect(errorUrl(`/vehicles/${id}/edit`, `Vehicle could not be updated: ${error.message}`));
 
+  await recordVehicleActivity(admin, id, profile.id, VEHICLE_ACTIVITY_ACTIONS.VEHICLE_EDITED);
+
   revalidatePath("/vehicles");
   revalidatePath(`/vehicles/${id}/edit`);
   redirect("/vehicles?success=vehicle_updated");
@@ -120,7 +125,7 @@ export async function createInsuranceCompany(formData: FormData): Promise<{ ok: 
   if (!portalInput) return { ok: false, error: "Enter the claims portal URL." };
 
   const claimsPortalUrl = /^https?:\/\//i.test(portalInput) ? portalInput : `https://${portalInput}`;
-  try { new URL(claimsPortalUrl); } catch { return { ok: false, error: "Enter a valid claims portal URL." }; }
+  try { new URL(claimsPortalUrl); } catch { return { ok: false, error: "Enter a valid claims portal URL." };
 
   const admin = createSupabaseAdminClient();
   const { data: existing, error: lookupError } = await admin
@@ -152,7 +157,7 @@ export async function createInsuranceCompany(formData: FormData): Promise<{ ok: 
   const { data, error } = await admin.from("insurance_companies").insert(profile).select("id, name").single<{ id: string; name: string }>();
   if (error || !data) return { ok: false, error: error?.message ?? "Unable to create insurance company." };
   revalidatePath("/policies/new");
-  return { ok: true, insurer: { value: data.id, label: `${data.name} — ${branchName}` } };
+  return { ok: true, insurer: { value: data.id, label: data.name } };
 }
 
 async function resolveInsurerId(formData: FormData) {
