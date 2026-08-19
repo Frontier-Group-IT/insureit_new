@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { saveVehicle } from "@/app/master-data-form-actions";
+import { VehicleActivityStatus } from "@/components/vehicle-activity-status";
 import { VehicleForm } from "@/components/forms";
 import { AppShell } from "@/components/shell";
 import { requireCapability } from "@/lib/master-data-server";
@@ -27,6 +28,11 @@ type VehicleValues = {
   national_permit_expiry_date: string | null;
   local_permit_expiry_date: string | null;
 };
+type VehicleRow = VehicleValues & {
+  id: string;
+  created_at: string | null;
+  updated_at: string | null;
+};
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -37,7 +43,7 @@ export default async function EditVehiclePage({ params }: { params: Promise<{ id
   const admin = createSupabaseAdminClient();
 
   const [vehicleResult, customersResult, manufacturersResult, brandsResult] = await Promise.all([
-    admin.from("vehicles").select("customer_id, vehicle_no, vehicle_type, make, model, chassis_no, engine_no, permit_no, year, gvw_kg, fuel_type, registration_date, fitness_expiry_date, puc_expiry_date, road_tax_expiry_date, national_permit_expiry_date, local_permit_expiry_date").eq("id", id).maybeSingle<VehicleValues>(),
+    admin.from("vehicles").select("id, customer_id, vehicle_no, vehicle_type, make, model, chassis_no, engine_no, permit_no, year, gvw_kg, fuel_type, registration_date, fitness_expiry_date, puc_expiry_date, road_tax_expiry_date, national_permit_expiry_date, local_permit_expiry_date, created_at, updated_at").eq("id", id).maybeSingle<VehicleRow>(),
     admin.from("customers").select("id, company_name, contact_name").order("created_at", { ascending: false }).returns<CustomerOption[]>(),
     admin.from("vehicle_manufacturers").select("id").eq("is_active", true).returns<ManufacturerId[]>(),
     admin.from("vehicle_manufacturer_brands").select("manufacturer_id, brand_name").eq("is_active", true).order("brand_name", { ascending: true }).returns<BrandOption[]>(),
@@ -54,10 +60,14 @@ export default async function EditVehiclePage({ params }: { params: Promise<{ id
   if (vehicleResult.data.make && !makeNames.some((name) => name.toLowerCase() === vehicleResult.data!.make!.toLowerCase())) makeNames.push(vehicleResult.data.make);
   makeNames.sort((a, b) => a.localeCompare(b));
   const manufacturerOptions = makeNames.map((name) => ({ value: name, label: name }));
+  const vehicle = vehicleResult.data;
 
   return (
     <AppShell title="Edit Vehicle">
-      <VehicleForm action={saveVehicle.bind(null, id)} customers={customerOptions} manufacturers={manufacturerOptions} values={vehicleResult.data} submitLabel="Save changes" />
+      <div className="space-y-4">
+        <VehicleForm action={saveVehicle.bind(null, id)} customers={customerOptions} manufacturers={manufacturerOptions} values={vehicle} submitLabel="Save changes" />
+        <VehicleActivityStatus vehicleId={vehicle.id} createdAt={vehicle.created_at} updatedAt={vehicle.updated_at} />
+      </div>
     </AppShell>
   );
 }
