@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 const requiredFieldLabels = [
@@ -77,27 +77,52 @@ function findRequiredFields(section: HTMLElement) {
   return fields;
 }
 
-function RequiredFieldsDialog({ message, onClose }: { message: string; onClose: () => void }) {
+function RequiredFieldsDialog({
+  message,
+  onClose,
+  restoreFocusTo,
+}: {
+  message: string;
+  onClose: () => void;
+  restoreFocusTo: HTMLButtonElement | null;
+}) {
   const okRef = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
+  const descriptionId = useId();
 
   useEffect(() => {
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     okRef.current?.focus();
+
     return () => {
       document.body.style.overflow = previous;
+      if (restoreFocusTo?.isConnected && !restoreFocusTo.disabled) {
+        restoreFocusTo.focus();
+      }
     };
-  }, []);
+  }, [restoreFocusTo]);
 
   if (typeof document === "undefined") return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[10000] grid min-h-[100dvh] w-screen place-items-center bg-[#071D49]/60 p-4 backdrop-blur-[2px]" role="alertdialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-[10000] grid min-h-[100dvh] w-screen place-items-center bg-[#071D49]/60 p-4 backdrop-blur-[2px]"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      aria-describedby={descriptionId}
+      onKeyDown={(event) => {
+        if (event.key !== "Tab") return;
+        event.preventDefault();
+        okRef.current?.focus();
+      }}
+    >
       <div className="w-full max-w-[420px] overflow-hidden rounded-2xl border border-white/70 bg-white shadow-[0_24px_70px_rgba(7,29,73,.38)]">
         <div className="px-6 pb-5 pt-6 text-center">
           <div className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-[#FFF3E8] text-[19px] font-bold text-[#D45B16] ring-6 ring-[#FFF8F2]">!</div>
-          <h2 className="mt-4 text-[15px] font-bold text-[#102A4C]">Check details</h2>
-          <p className="mx-auto mt-2 max-w-sm text-[11px] leading-5 text-[#667085]">{message}</p>
+          <h2 id={titleId} className="mt-4 text-[15px] font-bold text-[#102A4C]">Check details</h2>
+          <p id={descriptionId} className="mx-auto mt-2 max-w-sm text-[11px] leading-5 text-[#667085]">{message}</p>
         </div>
         <div className="border-t border-[#E6EBF2] bg-[#F8FAFC] px-5 py-3.5">
           <button ref={okRef} type="button" onClick={onClose} className="h-10 w-full rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white">OK</button>
@@ -110,6 +135,7 @@ function RequiredFieldsDialog({ message, onClose }: { message: string; onClose: 
 
 export function PolicyVehicleRequiredFields() {
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     let section: HTMLElement | null = null;
@@ -129,7 +155,7 @@ export function PolicyVehicleRequiredFields() {
       const target = event.target;
       if (!(target instanceof Element)) return;
       const button = target.closest("button");
-      if (!button || !policyActionLabels.has(button.textContent?.trim() ?? "")) return;
+      if (!(button instanceof HTMLButtonElement) || !policyActionLabels.has(button.textContent?.trim() ?? "")) return;
 
       syncRequiredFields();
       const missingNames = fields
@@ -141,6 +167,7 @@ export function PolicyVehicleRequiredFields() {
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
+      triggerRef.current = button;
       setValidationMessage(`Please complete the following required fields: ${missingNames.join(", ")}.`);
     };
 
@@ -158,5 +185,11 @@ export function PolicyVehicleRequiredFields() {
     };
   }, []);
 
-  return validationMessage ? <RequiredFieldsDialog message={validationMessage} onClose={() => setValidationMessage(null)} /> : null;
+  return validationMessage ? (
+    <RequiredFieldsDialog
+      message={validationMessage}
+      restoreFocusTo={triggerRef.current}
+      onClose={() => setValidationMessage(null)}
+    />
+  ) : null;
 }
