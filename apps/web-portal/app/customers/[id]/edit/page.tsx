@@ -18,7 +18,7 @@ type Customer = { id:string; customer_code:string; contact_name:string; company_
 type DocumentRow = { id:string; document_type:string; file_name:string; verification_status:string; created_at:string };
 type VehicleRow = { id:string; vehicle_no:string; vehicle_type:string; make:string|null; model:string|null };
 type AgentRow = { id:string; full_name:string };
-type IntermediaryRow = { display_name:string; intermediary_type:string };
+type IntermediaryRow = { display_name:string };
 type DealershipProfile = { dealership_type:"posp"|"misp"; dealership_name:string; owner_name:string; oem_name:string|null; yearly_sales_band:string|null };
 type Representative = { representative_name:string; mobile:string; email:string|null; aadhaar_last_four:string|null; pan_number:string|null };
 type DealershipContact = { contact_role:string; contact_name:string|null; mobile:string|null; email:string|null };
@@ -65,18 +65,11 @@ export default async function EditCustomerPage({ params, searchParams }: { param
   if (customer.lead_source_intermediary_id) {
     const { data: intermediary } = await admin
       .from("intermediaries")
-      .select("display_name, intermediary_type")
+      .select("display_name")
       .eq("id", customer.lead_source_intermediary_id)
       .maybeSingle<IntermediaryRow>();
     if (intermediary?.display_name) {
-      const sourceType = intermediary.intermediary_type === "posp"
-        ? "POSP"
-        : intermediary.intermediary_type === "misp"
-          ? "MISP"
-          : intermediary.intermediary_type === "partner"
-            ? "Partner"
-            : "Intermediary";
-      leadSourceName = `${sourceType} · ${intermediary.display_name}`;
+      leadSourceName = intermediary.display_name;
     }
   }
   const internalOwnerName = customer.assigned_agent_id
