@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Fleet Summary registration status labels.",
-  "deploy_requested_at": "2026-08-19T18:21:00+05:30",
+  "purpose": "Deploy Fleet Summary vehicle detail spacing update.",
+  "deploy_requested_at": "2026-08-19T18:26:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #457 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "83a21722b350b61de2e4a68221dc799638e342f0",
-  "release_scope": "Deploy the Fleet Summary presentation update so pending vehicle registrations display REGISTRATION PENDING instead of the raw registration_pending value, while vehicles with an issued registration number display REGISTERED. Preserve stored RC/provider data, Policy Status logic, onboarding workflows, database schema, permissions, and unrelated functionality unchanged.",
-  "verification": "PR #457 Verify web portal run 32254138105 (#1377) passed successfully on head 78aba97f1af2790695da66d644c52b4f37bb5aef before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy current main containing the Fleet Summary vehicle detail spacing update using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "ede76f5034122b50d2a08f012ed7e3f1981361c3",
+  "release_scope": "Deploy the Fleet Summary layout-only update that lets manufacturer/model/year, chassis number, and engine number use the available left-side vehicle-card width more naturally with compact consistent spacing. Preserve the right-side Policy Status and vehicle Status section, card styling, expansion behavior, backend logic, database schema, permissions, and unrelated functionality unchanged.",
+  "verification": "The Fleet Summary spacing change is commit 0709c0f41d306bcc0687fee165ae683bdf659c2b and is already contained in current main ede76f5034122b50d2a08f012ed7e3f1981361c3. This release has no Supabase migration. The protected production workflow must run the compulsory verification gate on current main before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
