@@ -1,14 +1,14 @@
+import * as DocumentPicker from 'expo-document-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppBadge, AppDatePicker } from '@/components/design-system';
-import { Button, Card, LoadingState, Message, Screen, TextField } from '@/components/ui';
-import { SELF_MANAGED_CLAIM_NOTICE } from '@/lib/claim-service-mode';
+import { Button, LoadingState, Message, Screen, TextField } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
-import type { Vehicle } from '@/lib/types';
+import type { InsuranceCompany, Vehicle } from '@/lib/types';
 
 type ExternalPolicy = {
   id: string;
@@ -23,9 +23,10 @@ type ExternalPolicy = {
 
 export default function SelfManagedClaimScreen() {
   const router = useRouter();
-  const { externalPolicyId, id } = useLocalSearchParams<{ externalPolicyId?: string; id?: string }>();
+  const { externalPolicyId } = useLocalSearchParams<{ externalPolicyId?: string }>();
   const [policy, setPolicy] = useState<ExternalPolicy | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [insurer, setInsurer] = useState<InsuranceCompany | null>(null);
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [driver, setDriver] = useState('');
@@ -35,38 +36,72 @@ export default function SelfManagedClaimScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [timePickerOpen, setTimePickerOpen] = useState(false);
+  const [documentMap, setDocumentMap] = useState<Record<string, { name: string; uri: string; mimeType?: string | null; size?: number | null }[]>>({});
+  const insurerName = insurer?.name ?? 'United India';
+  const documentArtwork = {
+    'RC Copy': require('../../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png'),
+    'Insurance Copy': require('../../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png'),
+    'Driving License': require('../../assets/brand/spot-intimation/glossy_purple_id_card_icon.png'),
+    'GR Copy': require('../../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png'),
+  };
 
   useEffect(() => {
     let active = true;
     void (async () => {
-      const claimResult = id ? await supabase.from('claims').select('id,external_policy_id,accident_at,accident_location').eq('id', id).maybeSingle() : null;
-      const policyId = id ? (claimResult?.data as { external_policy_id?: string | null } | null)?.external_policy_id : externalPolicyId;
-      if (!policyId) { setMessage('Select a policy before starting a claim.'); setLoading(false); return; }
-      const { data } = await (supabase as any).from('external_policies').select('*').eq('id', policyId).maybeSingle();
+      if (!externalPolicyId) { setMessage('Select a policy before starting a claim.'); setLoading(false); return; }
+      const { data } = await (supabase as any).from('external_policies').select('*').eq('id', externalPolicyId).maybeSingle();
       if (!active) return;
       const next = data as ExternalPolicy | null;
       if (!next) { setMessage('This customer-added policy is not available.'); setLoading(false); return; }
-      const result = await supabase.from('vehicles').select('*').eq('id', next.vehicle_id).maybeSingle();
+      const [result, insurerResult] = await Promise.all([
+        supabase.from('vehicles').select('*').eq('id', next.vehicle_id).maybeSingle(),
+        supabase.from('insurance_companies').select('*').eq('id', next.insurance_company_id).maybeSingle(),
+      ]);
       if (!active) return;
-      if (claimResult?.error) { setMessage('We could not load this claim for editing.'); setLoading(false); return; }
       setPolicy(next);
       setVehicle(result.data ?? null);
-      if (claimResult?.data) {
-        const accident = claimResult.data.accident_at ? new Date(claimResult.data.accident_at) : null;
-        if (accident && !Number.isNaN(accident.getTime())) {
-          setDate(formatIsoDate(accident));
-          setTime(`${String(accident.getHours()).padStart(2, '0')}:${String(accident.getMinutes()).padStart(2, '0')}`);
-        }
-        setLocation(claimResult.data.accident_location ?? '');
-        const milestoneResult = await (supabase as any).from('claim_milestones').select('details').eq('claim_id', id).eq('milestone_key', 'spot_intimation').maybeSingle();
-        const details = milestoneResult.data?.details as { driver_name?: string; driver_phone?: string } | null;
-        setDriver(details?.driver_name ?? '');
-        setPhone(details?.driver_phone ?? '');
-      }
+      setInsurer(insurerResult.data ?? null);
       setLoading(false);
     })();
     return () => { active = false; };
-  }, [externalPolicyId, id]);
+  }, [externalPolicyId]);
+
+  async function pickDocument(documentType: string) {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
+      copyToCacheDirectory: true,
+      multiple: false,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    if (asset.size && asset.size > 5 * 1024 * 1024) {
+      return setMessage('Please upload a document smaller than 5 MB.');
+    }
+    setDocumentMap((current) => ({
+      ...current,
+      [documentType]: [{ name: asset.name || 'Document', uri: asset.uri, mimeType: asset.mimeType ?? null, size: asset.size ?? null }],
+    }));
+    setMessage('');
+  }
+
+  async function pickBulkDocuments() {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
+      copyToCacheDirectory: true,
+      multiple: true,
+    });
+    if (result.canceled) return;
+    const assets = result.assets ?? [];
+    if (!assets.length) return;
+    const mapped = assets.map((asset) => ({
+      name: asset.name || 'Document',
+      uri: asset.uri,
+      mimeType: asset.mimeType ?? null,
+      size: asset.size ?? null,
+    }));
+    setDocumentMap((current) => ({ ...current, bulk: [...(current.bulk ?? []), ...mapped] }));
+    setMessage('');
+  }
 
   async function submit() {
     if (!policy || !vehicle || saving) return;
@@ -75,28 +110,17 @@ export default function SelfManagedClaimScreen() {
     if (!accidentAt) return setMessage('Enter a valid accident date and time.');
     if (accidentAt.getTime() > Date.now()) return setMessage('Accident date and time cannot be in the future.');
     setSaving(true);
-    const result = id
-      ? await Promise.all([
-        supabase.from('claims').update({ accident_at: accidentAt.toISOString(), accident_location: location.trim() || null }).eq('id', id),
-        (supabase as any).from('claim_milestones').update({
-          details: { accident_at: accidentAt.toISOString(), driver_name: driver.trim() || null, driver_phone: phone.trim() || null, location: location.trim() || null, external_policy_id: policy.id, policy_no: policy.policy_no, insurance_company_id: policy.insurance_company_id },
-          completed_at: new Date().toISOString(),
-        }).eq('claim_id', id).eq('milestone_key', 'spot_intimation'),
-      ])
-      : [await (supabase.rpc as any)('create_self_managed_external_claim', {
-        p_customer_id: policy.customer_id,
-        p_vehicle_id: policy.vehicle_id,
-        p_external_policy_id: policy.id,
-        p_accident_at: accidentAt.toISOString(),
-        p_driver_name: driver.trim() || null,
-        p_driver_phone: phone.trim() || null,
-        p_location: location.trim() || null,
-      })];
+    const { data, error } = await (supabase.rpc as any)('create_self_managed_external_claim', {
+      p_customer_id: policy.customer_id,
+      p_vehicle_id: policy.vehicle_id,
+      p_external_policy_id: policy.id,
+      p_accident_at: accidentAt.toISOString(),
+      p_driver_name: driver.trim() || null,
+      p_driver_phone: phone.trim() || null,
+      p_location: location.trim() || null,
+    });
     setSaving(false);
-    const error = result.find((item) => item.error)?.error;
-    if (error) return setMessage(error.message || 'We could not save claim details.');
-    if (id) { router.replace({ pathname: '/customer/claim-detail', params: { id } }); return; }
-    const data = result[0].data;
+    if (error) return setMessage(error.message || 'We could not start claim tracking.');
     const created = Array.isArray(data) ? data[0] : data;
     if (created?.claim_id) router.replace({ pathname: '/customer/claim-detail', params: { id: created.claim_id } });
     else setMessage('The claim was not created. Please try again.');
@@ -109,56 +133,119 @@ export default function SelfManagedClaimScreen() {
         <MaterialCommunityIcons name="car-emergency" size={22} color="#0A43A3" />
       </View>
       <View style={styles.headerCopy}>
-        <Text style={styles.eyebrow}>{id ? 'EDIT STEP 1 OF 9' : 'STEP 1 OF 9'}</Text>
+        <Text style={styles.eyebrow}>STEP 1 OF 9</Text>
         <Text style={styles.pageTitle}>Spot Intimation</Text>
-        <Text style={styles.pageSubtitle}>{id ? 'Review and update incident details' : 'Start tracking an incident'}</Text>
       </View>
       <AppBadge label="Self Tracked" tone="info" />
     </View>
+    <View style={styles.progressRail} accessibilityLabel="Claim progress step 1 of 9">
+      {Array.from({ length: 9 }, (_, index) => <View key={index} style={[styles.progressSegment, index < 1 && styles.progressSegmentActive]} />)}
+    </View>
+
     {message ? <Message type="error">{message}</Message> : null}
-    {policy ? <Card style={styles.policyCard}>
-      <View style={styles.policyTop}>
-        <View style={styles.policyIcon}><MaterialCommunityIcons name="file-document-outline" size={20} color="#0A43A3" /></View>
-        <View style={styles.policyCopy}>
-          <Text style={styles.policyLabel}>EXTERNAL POLICY</Text>
-          <Text style={styles.policyNumber}>{policy.policy_no}</Text>
-          <Text style={styles.policyVehicle}>{vehicle?.vehicle_no ?? 'Vehicle'}</Text>
+
+    <View style={styles.policyBanner}>
+      <View style={styles.policyBannerIcon}><MaterialCommunityIcons name="file-document-outline" size={27} color="#0A43A3" /></View>
+      <View style={styles.policyBannerCopy}>
+        <Text style={styles.policyBannerLabel}>EXTERNAL POLICY</Text>
+        <Text style={styles.policyBannerNumber}>{policy?.policy_no ?? '—'}</Text>
+        <Text style={styles.policyBannerVehicle}>{vehicle?.vehicle_no ?? '—'}</Text>
+      </View>
+      <MaterialCommunityIcons name="shield-check" size={25} color="#16B86A" />
+      <View style={styles.policyBannerRule} />
+      <View style={styles.policyNotice}><MaterialCommunityIcons name="information-outline" size={17} color="#FFFFFF" /><Text style={styles.policyNoticeText}>This claim is being tracked by you. Sankalp is not processing this claim unless you request assistance.</Text></View>
+    </View>
+
+    <View style={styles.sectionShell}>
+      <View style={styles.sectionHeaderRow}>
+        <View style={styles.sectionHeaderIcon}><MaterialCommunityIcons name="clipboard-text-outline" size={18} color="#FFFFFF" /></View>
+        <View><Text style={styles.sectionTitleText}>INCIDENT DETAILS</Text><Text style={styles.sectionSubtitleText}>Accident date and time are required</Text></View>
+      </View>
+
+      <View style={styles.stepList}>
+        <View style={styles.formRow}>
+          <View style={styles.stepBadge}><Text style={styles.stepBadgeText}>1</Text></View>
+          <View style={styles.stepFieldWrap}>
+            <View style={styles.dateTimeRow}>
+              <View style={styles.inlineInput}><AppDatePicker label="Accident Date" required fullScreen value={date} onChange={setDate} maxDate={new Date().toISOString().slice(0, 10)} /></View>
+              <View style={styles.inlineInputRight}><TimePickerField value={time} onPress={() => setTimePickerOpen(true)} compact /></View>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.formRow}>
+          <View style={styles.stepBadge}><Text style={styles.stepBadgeText}>2</Text></View>
+          <View style={styles.stepFieldWrap}>
+            <TextField label="Driver Name (Optional)" rightIcon="account-outline" value={driver} onChangeText={setDriver} placeholder="Enter Driver Name" />
+          </View>
+        </View>
+
+        <View style={styles.formRow}>
+          <View style={styles.stepBadge}><Text style={styles.stepBadgeText}>3</Text></View>
+          <View style={styles.stepFieldWrap}>
+            <TextField label="Driver Number (Optional)" rightIcon="phone-outline" value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="Enter Driver Mobile Number" />
+          </View>
+        </View>
+
+        <View style={styles.formRow}>
+          <View style={styles.stepBadge}><Text style={styles.stepBadgeText}>4</Text></View>
+          <View style={styles.stepFieldWrap}>
+            <TextField label="Location (Optional)" rightIcon="map-marker-outline" value={location} onChangeText={setLocation} placeholder="Enter Accident Location" />
+          </View>
         </View>
       </View>
-      <View style={styles.noticeRow}>
-        <MaterialCommunityIcons name="information-outline" size={18} color="#0A43A3" />
-        <Text style={styles.noticeText}>{SELF_MANAGED_CLAIM_NOTICE}</Text>
+    </View>
+
+    <View style={styles.documentsShell}>
+      <View style={styles.documentsHeader}><View><Text style={styles.documentsTitle}>UPLOAD DOCUMENTS (OPTIONAL)</Text><Text style={styles.documentsSubtitle}>Upload any documents you have. All are optional.</Text></View><View style={styles.optionalPill}><Text style={styles.optionalPillText}>All optional</Text></View></View>
+      <View style={styles.uploadGrid}>
+        {[
+          { label: 'RC Copy', subtitle: 'Upload File', text: 'JPG, PNG, PDF (Max 5MB)' },
+          { label: 'Insurance Copy', subtitle: 'Upload File', text: 'JPG, PNG, PDF (Max 5MB)' },
+          { label: 'Driving License', subtitle: 'Upload File', text: 'JPG, PNG, PDF (Max 5MB)' },
+          { label: 'GR Copy', subtitle: 'Upload File', text: 'JPG, PNG, PDF (Max 5MB)' },
+        ].map((doc) => (
+          <View key={doc.label} style={[styles.uploadTile, documentMap[doc.label]?.[0] && styles.uploadTileUploaded]}>
+            <Image source={documentArtwork[doc.label as keyof typeof documentArtwork]} resizeMode="contain" style={styles.documentArtwork} />
+            <Text style={styles.uploadLabel} numberOfLines={2}>{doc.label}</Text>
+            <View style={styles.uploadStack}>
+              <Pressable style={styles.uploadButton} accessibilityRole="button" onPress={() => void pickDocument(doc.label)}>
+                <Text style={styles.uploadButtonText}>{documentMap[doc.label]?.[0] ? 'Uploaded' : 'Upload'}</Text>
+              </Pressable>
+              {documentMap[doc.label]?.[0] ? (
+                <Text style={styles.selectedFileText} numberOfLines={1}>{documentMap[doc.label]?.[0]?.name}</Text>
+              ) : null}
+            </View>
+          </View>
+        ))}
       </View>
-    </Card> : null}
-    <Card style={styles.formCard}>
-      <View style={styles.sectionHeading}>
-        <View style={styles.sectionIcon}><MaterialCommunityIcons name="clipboard-text-outline" size={20} color="#0A43A3" /></View>
-        <View>
-          <Text style={styles.sectionTitle}>Incident details</Text>
-          <Text style={styles.sectionSubtitle}>Accident date and time are required</Text>
-        </View>
-      </View>
-      <AppDatePicker label="Accident Date *" value={date} onChange={setDate} maxDate={new Date().toISOString().slice(0, 10)} />
-      <TimePickerField value={time} onPress={() => setTimePickerOpen(true)} />
-      <TextField label="Driver Name (Optional)" value={driver} onChangeText={setDriver} />
-      <TextField label="Driver Number (Optional)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-      <TextField label="Location (Optional)" value={location} onChangeText={setLocation} />
-    </Card>
-    <Button label={saving ? id ? 'Saving changes...' : 'Starting claim...' : id ? 'Save Spot Intimation' : 'Start Claim'} onPress={submit} disabled={saving || !policy} />
+
+      <Pressable style={styles.bulkUploadButton} accessibilityRole="button" onPress={() => void pickBulkDocuments()}>
+        <MaterialCommunityIcons name="tray-arrow-up" size={20} color={palette.navy} />
+        <View style={styles.bulkUploadCopy}><Text style={styles.bulkUploadText}>{documentMap.bulk?.length ? `Bulk Documents Upload (${documentMap.bulk.length})` : 'Bulk Documents Upload'}</Text><Text style={styles.bulkUploadSub}>Upload multiple documents at once</Text></View>
+        <Text style={styles.bulkUploadTag}>New</Text>
+        <MaterialCommunityIcons name="chevron-right" size={19} color={palette.navy} />
+      </Pressable>
+    </View>
+
+    <Button label={saving ? 'Starting claim...' : 'SUBMIT'} onPress={submit} disabled={saving || !policy} />
     <TimePickerModal value={time} visible={timePickerOpen} onClose={() => setTimePickerOpen(false)} onSelect={(value) => { setTime(value); setTimePickerOpen(false); }} />
   </Screen>;
 }
 
-function formatIsoDate(value: Date) {
-  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+function SummaryFact({ icon, label, value }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; value: string }) {
+  return <View style={styles.summaryFact}>
+    <View style={styles.summaryFactIcon}><MaterialCommunityIcons name={icon} size={16} color="#0A43A3" /></View>
+    <View style={styles.summaryFactCopy}><Text style={styles.summaryFactLabel}>{label}</Text><Text style={styles.summaryFactValue} numberOfLines={1}>{value}</Text></View>
+  </View>;
 }
 
-function TimePickerField({ value, onPress }: { value: string; onPress: () => void }) {
-  return <View style={styles.timeField}>
-    <Text style={styles.timeLabel}>Accident Time *</Text>
+function TimePickerField({ value, onPress, compact = false }: { value: string; onPress: () => void; compact?: boolean }) {
+  return <View style={[styles.timeField, compact && styles.timeFieldCompact]}>
+    <Text style={styles.timeLabel}>Accident Time <Text style={styles.requiredStar}>*</Text></Text>
     <Pressable accessibilityRole="button" onPress={onPress} style={styles.timeButton}>
       <MaterialCommunityIcons name="clock-outline" size={19} color="#0A43A3" />
-      <Text style={[styles.timeValue, !value && styles.timePlaceholder]}>{value || 'Select time'}</Text>
+      <Text style={[styles.timeValue, compact && styles.timeValueCompact, !value && styles.timePlaceholder, !value && styles.timeHint]}>{value || 'HH:MM'}</Text>
       <MaterialCommunityIcons name="chevron-down" size={21} color={palette.navy} />
     </Pressable>
   </View>;
@@ -174,8 +261,8 @@ function TimePickerModal({ value, visible, onClose, onSelect }: { value: string;
     setMinute(parsed.minute);
   }, [value, visible]);
   return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-    <View style={styles.timeModalBackdrop}>
-      <View style={styles.timeModalCard}>
+    <Pressable style={styles.timeModalBackdrop} onPress={onClose}>
+      <Pressable style={styles.timeModalCard} onPress={(event) => event.stopPropagation()}>
         <View style={styles.timeModalHeader}><View><Text style={styles.timeModalEyebrow}>INCIDENT DETAILS</Text><Text style={styles.timeModalTitle}>Select accident time</Text></View><Pressable accessibilityRole="button" onPress={onClose} style={styles.timeClose}><MaterialCommunityIcons name="close" size={21} color={palette.navy} /></Pressable></View>
         <View style={styles.timeColumns}>
           <TimeColumn label="Hour" value={hour} options={Array.from({ length: 24 }, (_, index) => index)} onSelect={setHour} />
@@ -183,8 +270,8 @@ function TimePickerModal({ value, visible, onClose, onSelect }: { value: string;
           <TimeColumn label="Minute" value={minute} options={[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]} onSelect={setMinute} />
         </View>
         <Pressable accessibilityRole="button" onPress={() => onSelect(`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`)} style={styles.timeDone}><Text style={styles.timeDoneText}>Use this time</Text><MaterialCommunityIcons name="check" size={19} color="#FFFFFF" /></Pressable>
-      </View>
-    </View>
+      </Pressable>
+    </Pressable>
   </Modal>;
 }
 
@@ -206,17 +293,82 @@ function parseIncident(date: string, time: string) {
 }
 
 const styles = StyleSheet.create({
-  pageHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 14 },
+  pageHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
   stepIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
   headerCopy: { flex: 1, minWidth: 0 },
   eyebrow: { color: '#0A43A3', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.8 },
   pageTitle: { color: palette.navy, fontSize: 22, fontWeight: '900', marginTop: 2 },
   pageSubtitle: { color: palette.slate, fontSize: 10.5, lineHeight: 15, fontWeight: '600', marginTop: 3 },
-  timeField: { gap: 5, marginBottom: 10 },
+  progressRail: { flexDirection: 'row', gap: 6, marginBottom: 12, paddingHorizontal: 2 },
+  progressSegment: { flex: 1, height: 6, borderRadius: 4, backgroundColor: '#E4E9F1' },
+  progressSegmentActive: { backgroundColor: '#0A43A3' },
+  summaryCard: { backgroundColor: '#FFFFFF', borderRadius: 18, borderWidth: 1, borderColor: '#DCE8F6', marginBottom: 14, padding: 12 },
+  summaryEyebrow: { color: '#0A43A3', fontSize: 10, fontWeight: '900', letterSpacing: 0.8, marginBottom: 10 },
+  summaryLine: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  summaryFact: { width: '48%', minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 5 },
+  summaryFactIcon: { width: 28, height: 28, borderRadius: 9, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
+  summaryFactCopy: { flex: 1, minWidth: 0 },
+  summaryFactLabel: { color: '#68778A', fontSize: 8.5, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.4 },
+  summaryFactValue: { color: palette.navy, fontSize: 11.5, fontWeight: '800', marginTop: 2 },
+  policyBanner: { minHeight: 150, marginBottom: 14, borderRadius: 20, backgroundColor: '#0A43A3', padding: 14, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', position: 'relative', overflow: 'hidden' },
+  policyBannerIcon: { width: 54, height: 54, borderRadius: 16, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  policyBannerCopy: { flex: 1, minWidth: 0, paddingHorizontal: 10 },
+  policyBannerLabel: { color: '#C7DBF7', fontSize: 9, fontWeight: '900', letterSpacing: 0.7 },
+  policyBannerNumber: { color: '#FFFFFF', fontSize: 18, fontWeight: '900', marginTop: 4 },
+  policyBannerVehicle: { color: '#D8E8FB', fontSize: 11, fontWeight: '700', marginTop: 2 },
+  policyBannerRule: { width: '100%', height: 1, backgroundColor: 'rgba(255,255,255,0.25)', marginTop: 12, marginBottom: 10 },
+  policyNotice: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, width: '100%' },
+  policyNoticeText: { flex: 1, color: '#FFFFFF', fontSize: 10.5, lineHeight: 15, fontWeight: '600' },
+  sectionShell: { backgroundColor: '#FFFFFF', borderRadius: 18, borderWidth: 1, borderColor: '#DCE8F6', marginBottom: 14, overflow: 'hidden' },
+  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, backgroundColor: '#EAF2FF', borderBottomWidth: 1, borderBottomColor: '#D4E3F8' },
+  sectionHeaderIcon: { width: 28, height: 28, borderRadius: 8, backgroundColor: '#0A43A3', alignItems: 'center', justifyContent: 'center' },
+  sectionTitleText: { color: '#0A43A3', fontSize: 11.5, fontWeight: '900', letterSpacing: 0.6 },
+  sectionSubtitleText: { color: '#6C7D91', fontSize: 9.5, fontWeight: '600', marginTop: 2 },
+  stepList: { padding: 12, gap: 14 },
+  formRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  stepBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  stepBadgeText: { color: '#0A43A3', fontSize: 10.5, fontWeight: '900' },
+  stepFieldWrap: { flex: 1, minWidth: 0 },
+  stepLabel: { color: '#3F4D63', fontSize: 10.5, fontWeight: '700', marginBottom: 6 },
+  dateTimeRow: { flexDirection: 'row', gap: 8 },
+  inlineInput: { flex: 1.2, minWidth: 0 },
+  inlineInputRight: { flex: 0.8, minWidth: 0 },
+  timeField: { gap: 7, marginBottom: 12 },
+  timeFieldCompact: { marginBottom: 12 },
   timeLabel: { color: '#3F4D63', fontSize: 10.5, fontWeight: '700' },
-  timeButton: { minHeight: 45, borderRadius: 12, borderWidth: 1, borderColor: '#D7E0EA', backgroundColor: '#FBFDFF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  requiredStar: { color: '#D14343', fontWeight: '800' },
+  timeButton: { minHeight: 50, borderRadius: 17, borderWidth: 1, borderColor: '#D7E0EA', backgroundColor: '#FBFDFF', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  timeButtonCompact: { minHeight: 50 },
   timeValue: { flex: 1, color: palette.navy, fontSize: 12.5, fontWeight: '700' },
+  timeHint: { fontSize: 10, fontWeight: '600' },
+  selectedFileText: { color: '#0A43A3', fontSize: 10, fontWeight: '700', marginTop: 6, marginLeft: 8 },
+  timeValueCompact: { fontSize: 15 },
   timePlaceholder: { color: '#8A94A6' },
+  uploadList: { padding: 12, gap: 12 },
+  documentsShell: { backgroundColor: '#FFFFFF', borderRadius: 18, borderWidth: 1, borderColor: '#DCE8F6', marginBottom: 14, padding: 12 },
+  documentsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 },
+  documentsTitle: { color: palette.navy, fontSize: 12, fontWeight: '900' },
+  documentsSubtitle: { color: '#6C7D91', fontSize: 9.5, fontWeight: '600', marginTop: 2 },
+  optionalPill: { borderRadius: 999, backgroundColor: '#EAF3FF', paddingHorizontal: 9, paddingVertical: 6 },
+  optionalPillText: { color: '#0A43A3', fontSize: 9, fontWeight: '800' },
+  uploadGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  uploadTile: { width: '48%', minHeight: 132, borderRadius: 13, borderWidth: 1, borderColor: '#DCE8F6', backgroundColor: '#FFFFFF', alignItems: 'center', padding: 8 },
+  uploadTileUploaded: { borderColor: '#9AD9B5', backgroundColor: '#EFFAF3' },
+  documentArtwork: { width: 48, height: 48, marginBottom: 4 },
+  uploadSub: { color: '#6C7D91', fontSize: 9, fontWeight: '600' },
+  uploadRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  uploadStack: { flex: 1, minWidth: 0 },
+  uploadAction: { flex: 1, minWidth: 0 },
+  uploadActionUploaded: {},
+  uploadMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  uploadLabel: { color: palette.navy, fontSize: 11.5, fontWeight: '800' },
+  uploadButton: { width: '82%', minHeight: 44, marginTop: 5, alignSelf: 'center', borderRadius: 11, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
+  uploadButtonText: { width: '100%', color: '#0A43A3', fontSize: 10.5, lineHeight: 14, fontWeight: '800', textAlign: 'center', includeFontPadding: false },
+  bulkUploadButton: { marginTop: 16, marginHorizontal: 0, marginBottom: 2, borderWidth: 1, borderColor: '#D6E5F8', backgroundColor: '#F7FAFF', height: 58, borderRadius: 14, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  bulkUploadCopy: { flex: 1, minWidth: 0, justifyContent: 'center', gap: 0, paddingVertical: 1 },
+  bulkUploadText: { color: palette.navy, fontSize: 12, lineHeight: 13, fontWeight: '800', includeFontPadding: false },
+  bulkUploadSub: { color: '#6C7D91', fontSize: 9, lineHeight: 10, fontWeight: '600', marginTop: 0, includeFontPadding: false },
+  bulkUploadTag: { color: '#FFFFFF', backgroundColor: '#0A43A3', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, fontSize: 9, fontWeight: '900', overflow: 'hidden' },
   timeModalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(7, 28, 62, 0.38)' },
   timeModalCard: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 18, paddingBottom: 28 },
   timeModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },

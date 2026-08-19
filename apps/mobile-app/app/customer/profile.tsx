@@ -246,8 +246,6 @@ export default function ProfileScreen() {
         </> : null}
       </View> : null}
 
-      <Section title="Support" icon="headset"><ActionRow icon="headset" label="Support centre" value="Claims, policies and help" onPress={() => router.push('/customer/support')} /></Section>
-
       <Section title="Preferences" icon="cog-outline"><ActionRow icon="bell-outline" label="Notifications" value="All notifications" onPress={() => router.push('/customer/notifications')} /><ActionRow icon="translate" label="Language" value="English" onPress={() => setMessage('English is currently selected.')} /><View style={styles.preferenceToggle}><View style={styles.preferenceLeft}><View style={styles.rowIcon}><MaterialCommunityIcons name="weather-night" size={19} color={roleTheme.customer.accent} /></View><Text style={styles.rowLabel}>Dark Mode</Text></View><Switch value={darkMode} onValueChange={setDarkMode} trackColor={{ false: '#DCE4ED', true: '#8ACDB7' }} thumbColor={darkMode ? roleTheme.customer.accent : '#FFFFFF'} /></View></Section>
 
       <Pressable accessibilityRole="button" onPress={() => void signOut(router)} style={styles.signOut}><MaterialCommunityIcons name="logout" size={18} color="#C43838" /><Text style={styles.signOutText}>Sign out securely</Text></Pressable>
