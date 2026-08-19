@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Fleet Summary header refinement.",
-  "deploy_requested_at": "2026-08-19T14:46:00+05:30",
+  "purpose": "Deploy Fleet Summary Policy Details navigation.",
+  "deploy_requested_at": "2026-08-19T14:57:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #443 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "73d6f64e1c7499d23ef895267df9fa12e48d34dd",
-  "release_scope": "Deploy the Fleet Summary header UI refinement: make Fleet Summary bolder, show NO. OF FLEET and the vehicle count inline, and replace Back to Customer text with an icon-only accessible back control. Preserve customer, vehicle, policy, activity, onboarding, permissions, data-loading, database schema, save behavior, and unrelated functionality unchanged.",
-  "verification": "PR #443 Verify web portal run 32236589618 (#1307) passed successfully on head 6dec39a573851a2ee2435c41485133dd4dbc5809 before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #444 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "7ccadb16fcaa65f753f8793a11724436a82ae9fc",
+  "release_scope": "Deploy the additive Fleet Summary Policy Details action that links each expanded policy row to its existing /policies/{policy.id}/edit page. Preserve the existing View Policy expansion behavior, customer and vehicle data, policy creation/edit logic, calculations, permissions, database schema, onboarding, activity history, and unrelated functionality unchanged.",
+  "verification": "PR #444 Verify web portal run 32237661217 (#1310) passed successfully on head a109d7132f4129c049596285b64aa38efa03778b before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
