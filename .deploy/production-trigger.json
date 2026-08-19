@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Fleet Summary policy status metric.",
-  "deploy_requested_at": "2026-08-19T15:54:00+05:30",
+  "purpose": "Deploy Fleet Summary header back icon removal.",
+  "deploy_requested_at": "2026-08-19T15:55:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #449 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "33f384c34f0e56f3ce188b30735e949b57def973",
-  "release_scope": "Deploy the Fleet Summary row policy-status enhancement: replace the POLICIES count metric with a derived POLICY STATUS using ACTIVE, EXPIRING SOON, EXPIRED, NO POLICY, and UPCOMING while preserving the existing vehicle STATUS / registration_pending metric exactly unchanged. Preserve Fleet Summary header, vehicle class icons, vehicle and policy expansion, Policy Details navigation, customer/vehicle/policy data loading, permissions, onboarding, calculations, database schema, save actions, and unrelated functionality unchanged.",
-  "verification": "PR #449 Verify web portal run 32242412850 (#1328) passed successfully on head fe0e36c5c42c6cd94e965822e1ae4f3307acf7bb before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #450 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "15a955e2984460282e2c291ba5b6ed5b14adc6ca",
+  "release_scope": "Deploy the Fleet Summary header cleanup: remove only the icon-only Back to Customer control from the far-right side of the navy Fleet Summary header. Preserve the Fleet Summary title, customer name/code, fleet count, vehicle-class icons, vehicle and policy expansion, policy-status and vehicle-status metrics, Policy Details navigation, customer/vehicle/policy data loading, permissions, onboarding, calculations, database schema, save actions, and unrelated functionality unchanged.",
+  "verification": "PR #450 Verify web portal run 32242567314 (#1329) passed successfully on head 8c17b1e35e7f69f61c93bd971ed17fcd59554ca2 before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
