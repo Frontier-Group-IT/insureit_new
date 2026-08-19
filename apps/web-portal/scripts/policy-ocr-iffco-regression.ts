@@ -4,7 +4,7 @@ import { refineIffcoCommercialPolicyV2 } from "../lib/policy-ocr-iffco-refiner-v
 import { parsePolicyDocument } from "../lib/policy-ocr-parsers.ts";
 
 type Expected = Record<string, string>;
-type Case = { name: string; pages: string[]; expected: Expected; expectConflict?: boolean };
+type Case = { name: string; pages: string[]; expected: Expected; absent?: string[]; expectConflict?: boolean };
 
 const cases: Case[] = [
   {
@@ -85,6 +85,41 @@ const cases: Case[] = [
     ],
     expected: expected("N9100006", "1600000", "15042", "7367", "330", "Yes", "2026-07-24", "2027-07-23", "22739", "4093.02", "26832.02"),
   },
+  {
+    name: "standalone OD policy with external TP and split P400 number",
+    pages: [`IFFCO-TOKIO GENERAL INSURANCE CO.LTD
+PRIVATE CAR CERTIFICATE OF INSURANCE CUM SCHEDULE & TAX INVOICE
+SYNTHETIC INSURED Policy #: 1-8TESTREF P400 Policy #
+N8100001
+Period of Insurance From: 29/07/2026 00:00:00
+To: Midnight On 28/07/2027 23:59:59
+Insured Motor Vehicle Details & Premium Calculation
+CC Coverage IDV in Rs.
+1462 Stand Alone OD 900000.00
+A. Own Damage Premium(Rs.) B. Third Party Policy Details
+Basic Premium(Incl. Disc) 4308.00
+TP Insurer Name: HDFC ERGO General Ins.
+Net (A) 3618.00
+Since you, as insured, have declared that you do not have a valid driving license, the PA coverage for Owner-Driver will not be applicable.
+Premium Bifurcation (Rs.)
+Section 1 (Rs.) Section 2 (Rs.) Section 3 (Rs.) Gross Premium Taxable Value (Rs.) Total GST Net Premium Total Invoice
+3618.00 0.00 8245.00 11863.00 2135.34 13998.34`],
+    expected: {
+      insurer_name: "IFFCO-TOKIO General Insurance Company Limited",
+      policy_product: "SAOD",
+      policy_number: "N8100001",
+      idv: "900000",
+      od_premium: "3618",
+      cpa_premium: "0",
+      cpa_opted: "No",
+      policy_start_date: "2026-07-29",
+      policy_end_date: "2027-07-28",
+      total_premium: "11863",
+      tax_amount: "2135.34",
+      gross_premium: "13998.34",
+    },
+    absent: ["tp_premium"],
+  },
 ];
 
 let failures = 0;
@@ -100,6 +135,9 @@ for (const testCase of cases) {
   const actual = Object.fromEntries(result.fields.map((field) => [field.key, field.value]));
   for (const [key, value] of Object.entries(testCase.expected)) {
     if (actual[key] !== value) problems.push(`${key}: expected ${value}, got ${actual[key] ?? "<missing>"}`);
+  }
+  for (const key of testCase.absent ?? []) {
+    if (actual[key] !== undefined) problems.push(`${key}: expected to be withheld, got ${actual[key]}`);
   }
   const hasConflict = result.warnings.some((warning) => /Owner-Driver premium.*not applicable\/deleted/i.test(warning));
   if (Boolean(testCase.expectConflict) !== hasConflict) problems.push(`CPA conflict warning: expected ${Boolean(testCase.expectConflict)}, got ${hasConflict}`);

@@ -24,7 +24,8 @@ export function refineIffcoCommercialPolicyV2(pages: string[], parsed: ParsedPol
   const warnings: string[] = [];
 
   setField(fields, "insurer_name", "Insurance company", "IFFCO-TOKIO General Insurance Company Limited", .99, 1, "IFFCO-TOKIO GENERAL INSURANCE CO.LTD");
-  setField(fields, "policy_product", "Policy product", "Package", .99, 1, "Commercial Vehicle / Coverage: Package");
+  const isStandaloneOd = /Stand\s*Alone\s+OD/i.test(cleanPages.join("\n"));
+  setField(fields, "policy_product", "Policy product", isStandaloneOd ? "SAOD" : "Package", .99, 1, isStandaloneOd ? "Stand Alone OD" : "Commercial Vehicle / Coverage: Package");
 
   const policy = findPolicyNumber(cleanPages);
   if (policy) setField(fields, "policy_number", "Policy number", policy.value, .99, policy.page, policy.evidence);
@@ -45,7 +46,7 @@ export function refineIffcoCommercialPolicyV2(pages: string[], parsed: ParsedPol
   netA ??= paired?.a ?? null;
   netB ??= paired?.b ?? null;
 
-  const cpa = findOwnerDriverPremium(cleanPages);
+  const cpa = isStandaloneOd ? null : findOwnerDriverPremium(cleanPages);
   const section2 = findSection2Premium(cleanPages);
   const fallbackTp = netB ? null : findFallbackTpExcludingCpa(cleanPages, totals.net?.value ?? null);
 
@@ -104,7 +105,9 @@ export function refineIffcoCommercialPolicyV2(pages: string[], parsed: ParsedPol
   } else {
     setField(fields, "cpa_premium", "CPA amount", "0", .55, null, "No payable PA Owner Driver premium identified reliably in the scanned premium table; do not auto-apply");
     setField(fields, "cpa_opted", "CPA opted", "No", .55, null, "Derived from missing payable Owner-Driver premium; do not auto-apply");
-    warnings.push("Review required. IFFCO Owner-Driver CPA row was not read reliably from the scanned premium table. Verify CPA before applying.");
+    if (!isStandaloneOd) {
+      warnings.push("Review required. IFFCO Owner-Driver CPA row was not read reliably from the scanned premium table. Verify CPA before applying.");
+    }
   }
 
   if (totals.net) setField(fields, "total_premium", "Printed net premium", money(totals.net.value), .99, totals.net.page, totals.net.evidence);
@@ -143,7 +146,7 @@ export function refineIffcoCommercialPolicyV2(pages: string[], parsed: ParsedPol
 function findPolicyNumber(pages: string[]): TextHit | null {
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
     const page = pages[pageIndex];
-    const match = page.match(/P400\s+Policy\s*#\s*(N\d{6,15})/i) ?? page.match(/\bPolicy\s*#\s*(N\d{6,15})\b/i);
+    const match = page.match(/P400\s+Policy\s*#\s*:?\s*(?:\n\s*)?(N\d{6,15})/i) ?? page.match(/\bPolicy\s*#\s*(N\d{6,15})\b/i);
     if (match) return { value: match[1].toUpperCase(), page: pageIndex + 1, evidence: match[0] };
   }
   return null;
@@ -181,6 +184,7 @@ function findIdv(pages: string[]): Hit | null {
     const patterns = [
       /\bPackage\s+([0-9][0-9,]*(?:\.[0-9]{1,2})?)(?=\s+Non\s+Electrical|\s+Non\s+Elect|\s+Chassis|\s+its\s+value|\s*$)/i,
       /Total\s+Value\s+Net\s+Premium\s+Rs\.?\s*\n?\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i,
+      /Stand\s+Alone\s+OD\s+([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i,
     ];
     for (const pattern of patterns) {
       const match = page.match(pattern);
@@ -338,6 +342,20 @@ function findPrintedTotals(pages: string[]): { net: Hit | null; tax: Hit | null;
           net: { value: net, page: pageIndex + 1, evidence: netMatch[0] },
           tax: { value: tax, page: pageIndex + 1, evidence: `${netMatch[0]} | ${grossMatch[0]}` },
           gross: { value: gross, page: pageIndex + 1, evidence: grossMatch[0] },
+        };
+      }
+    }
+
+    const bifurcation = page.match(/Premium\s+Bifurcation[\s\S]{0,500}?Section\s*1\s*\(Rs\.?\)[\s\S]{0,260}?\n?\s*([0-9][0-9,.]*)\s+([0-9][0-9,.]*)\s+([0-9][0-9,.]*)\s+([0-9][0-9,.]*)\s+([0-9][0-9,.]*)\s+([0-9][0-9,.]*)/i);
+    if (bifurcation) {
+      const net = number(bifurcation[4]);
+      const tax = number(bifurcation[5]);
+      const gross = number(bifurcation[6]);
+      if (isPlausiblePrintedTotals(net, tax, gross)) {
+        return {
+          net: hit(bifurcation[4], pageIndex, bifurcation[0]),
+          tax: hit(bifurcation[5], pageIndex, bifurcation[0]),
+          gross: hit(bifurcation[6], pageIndex, bifurcation[0]),
         };
       }
     }

@@ -264,6 +264,44 @@ TOTAL PAYABLE PREMIUM 40,402.00`,
       gross_premium: "40402",
     },
   },
+  {
+    name: "Oriental two-wheeler bundled schedule",
+    expectedParser: "oriental_motor_v1",
+    pages: [`The Oriental Insurance Company Limited
+MOTOR INSURANCE CERTIFICATE CUM POLICY SCHEDULE
+TWO WHEELER - BUNDLED COVER POLICY - ZONE B
+Policy No : 345100/31/2027/PRTL/00000001 Prev. Policy No :
+Policy Period (OWN DAMAGE): FROM 13-08-2026 12:01 TO 12-08-2027 23:59
+Policy Period (LIABILITY): FROM 13-08-2026 12:01 TO 12-08-2031 23:59
+Gross Premium : 4901 GST : 748.0 Stamp Duty : 0.5 Net Premium : 4153
+Insured's Declared Value
+For the Vehicle Total Value
+75233`,
+`P.A. Cover under Section III for Registered Owner Cum Driver (CSI) : Rs. 0
+SCHEDULE OF PREMIUM
+A. OWN DAMAGE B. LIABILITY
+BASIC OD TOTAL 189 BASIC TP COVER 3851
+ADD : Nil Depreciation 113.0
+MOTOR TOTAL OD 302 TP TOTAL 3851
+TOTAL PREMIUM 4153
+ADD :IGST 748.0
+TOTAL AMOUNT 4901`],
+    expected: {
+      insurer_name: "The Oriental Insurance Company Limited",
+      policy_product: "Bundled",
+      policy_number: "345100/31/2027/PRTL/00000001",
+      idv: "75233",
+      od_premium: "302",
+      tp_premium: "3851",
+      cpa_premium: "0",
+      cpa_opted: "No",
+      policy_start_date: "2026-08-13",
+      policy_end_date: "2027-08-12",
+      total_premium: "4153",
+      tax_amount: "748",
+      gross_premium: "4901",
+    },
+  },
 ];
 
 let failures = 0;

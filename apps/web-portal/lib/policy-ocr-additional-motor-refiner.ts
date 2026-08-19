@@ -66,7 +66,7 @@ export function refineAdditionalMotorPolicy(pages: string[], parsed: ParsedPolic
   const shriramSchedule = parsed.parserId === "shriram_motor_v1" ? findShriramPremiumSchedule(cleanPages) : null;
   const total = shriramSchedule?.total ?? findTotalPremium(cleanPages, parsed.parserId);
   let tax = shriramSchedule?.tax ?? findTax(cleanPages);
-  const gross = shriramSchedule?.gross ?? findGross(cleanPages);
+  const gross = shriramSchedule?.gross ?? findGross(cleanPages, parsed.parserId);
   if (total && gross && gross.value > total.value) {
     const derivedTax = round2(gross.value - total.value);
     if (!tax || isSmallReferenceAmount(tax.value) || Math.abs(tax.value - derivedTax) > 1) {
@@ -129,6 +129,9 @@ export function refineAdditionalMotorPolicy(pages: string[], parsed: ParsedPolic
 function findProduct(upper: string, parserId: string): TextHit | null {
   if (parserId === "universal_sompo_motor_v1" && /MOTOR\s+PRIVATE\s+CAR\s+-\s+BUNDLED|BUNDLED\s+POLICY/.test(upper)) {
     return { value: "Bundled", page: 1, evidence: "Motor Private Car - Bundled policy" };
+  }
+  if (parserId === "oriental_motor_v1" && /BUNDLED\s+COVER\s+POLICY|BUNDLED\s+POLICY/.test(upper)) {
+    return { value: "Bundled", page: 1, evidence: "Two Wheeler - Bundled Cover Policy" };
   }
   if (/PACKAGE\s+(?:POLICY|PRODUCT)|GOODS\s+CARRYING\s+VEHICLE\s+-\s+PACKAGE|PCV[\s\S]{0,80}?PACKAGE/.test(upper)) {
     return { value: "Package", page: 1, evidence: "Package policy" };
@@ -242,21 +245,41 @@ function findMoneyAfterBlockLabel(
 }
 
 function findOwnDamagePremium(pages: string[], parserId: string): MoneyHit | null {
+  if (parserId === "oriental_motor_v1") return findOrientalScheduleAmount(pages, /MOTOR\s+TOTAL\s+OD|OD\s+TOTAL/i);
   const labels = parserId === "universal_sompo_motor_v1"
     ? [/NET\s+OWN\s+DAMAGE\s+PREMIUM/i, /OWN\s+DAMAGE\s+PREMIUM\s*\([AB]\)/i]
+    : parserId === "oriental_motor_v1"
+      ? [/MOTOR\s+TOTAL\s+OD/i, /OD\s+TOTAL/i]
     : parserId === "united_india_motor_v1"
       ? [/Gross\s+OD\s*\(A\)/i, /A-OWN\s+DAMAGE[\s\S]{0,80}?Total/i]
       : [/OD\s+TOTAL/i, /MOTOR\s+TOTAL\s+OD/i, /Net\s+Own\s+Damage\s+Premium/i, /Own\s+Damage\s+Premium\s*\(A\)/i];
-  return findMoneyAfterLabels(pages, labels, { min: 100, max: 10000000 });
+  return findMoneyAfterLabels(pages, labels, { min: 100, max: 10000000 }, undefined, parserId === "oriental_motor_v1");
 }
 
 function findLiabilityPremium(pages: string[], parserId: string): MoneyHit | null {
+  if (parserId === "oriental_motor_v1") return findOrientalScheduleAmount(pages, /TP\s+TOTAL/i);
   const labels = parserId === "universal_sompo_motor_v1"
     ? [/NET\s+LIABILITY\s+PREMIUM/i, /TOTAL\s+LIABILITY\s+PREMIUM/i, /Basic\s+TP\s+Premium/i]
+    : parserId === "oriental_motor_v1"
+      ? [/TP\s+TOTAL/i, /BASIC\s+TP\s+COVER/i]
     : parserId === "united_india_motor_v1"
       ? [/Gross\s+TP\s*\(B\)/i]
       : [/^TP\s+TOTAL/i, /Net\s+Liability\s+Premium/i, /TOTAL\s+LIABILITY\s+PREMIUM/i];
   return findMoneyAfterLabels(pages, labels, { min: 100, max: 10000000 });
+}
+
+function findOrientalScheduleAmount(pages: string[], label: RegExp): MoneyHit | null {
+  for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
+    for (const line of pages[pageIndex].split("\n")) {
+      const match = line.match(label);
+      if (!match || match.index === undefined) continue;
+      if (/BASIC\s+OD\s+TOTAL/i.test(line)) continue;
+      if (/BASIC\s+TP\s+TOTAL/i.test(line)) continue;
+      const value = amounts(line.slice(match.index + match[0].length)).find((candidate) => candidate >= 0 && candidate <= 10000000 && !isYear(candidate));
+      if (value !== undefined) return { value, page: pageIndex + 1, evidence: line };
+    }
+  }
+  return null;
 }
 
 function findCpa(pages: string[]): MoneyHit | null {
@@ -298,13 +321,22 @@ function findTax(pages: string[]): MoneyHit | null {
         .slice(labelIndex + labelLength)
         .split(/Total\s+Amount|TOTAL\s+POLICY\s+PREMIUM|TOTAL\s+PAYABLE\s+PREMIUM|Gross\s+Premium/i)[0];
       const candidates = amounts(afterLabel).filter((value) => value >= 100 && value <= 10000000 && !isYear(value));
-      if (candidates.length) return { value: candidates[candidates.length - 1], page: pageIndex + 1, evidence: line };
+      if (candidates.length) {
+        const value = /GST[\s:]+[0-9,.]+[\s\S]*Net\s+Premium/i.test(line) ? candidates[0] : candidates[candidates.length - 1];
+        return { value, page: pageIndex + 1, evidence: line };
+      }
     }
   }
   return null;
 }
 
-function findGross(pages: string[]): MoneyHit | null {
+function findGross(pages: string[], parserId: string): MoneyHit | null {
+  if (parserId === "oriental_motor_v1") {
+    for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
+      const match = pages[pageIndex].match(/Gross\s+Premium\s*:\s*(?:₹|Rs\.?\s*)?([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i);
+      if (match) return { value: parseMoney(match[1])!, page: pageIndex + 1, evidence: match[0] };
+    }
+  }
   return findMoneyAfterLabels(pages, [/TOTAL\s+PAYABLE\s+PREMIUM/i, /Total\s+Amount/i, /TOTAL\s+POLICY\s+PREMIUM/i, /Gross\s+Premium/i, /Premium\s+Amount/i], { min: 100, max: 10000000 });
 }
 
@@ -313,6 +345,7 @@ function findMoneyAfterLabels(
   labels: RegExp[],
   limits: { min: number; max: number },
   predicate: (value: number) => boolean = () => true,
+  takeFirst = false,
 ): MoneyHit | null {
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
     const lines = pages[pageIndex].split("\n");
@@ -327,7 +360,7 @@ function findMoneyAfterLabels(
         evidence = `${lines[index]} ${lines[index + 1]}`;
         candidates = amounts(lines[index + 1]).filter((value) => value >= limits.min && value <= limits.max && !isYear(value) && predicate(value));
       }
-      if (candidates.length) return { value: candidates[candidates.length - 1], page: pageIndex + 1, evidence };
+      if (candidates.length) return { value: candidates[takeFirst ? 0 : candidates.length - 1], page: pageIndex + 1, evidence };
     }
   }
   return null;

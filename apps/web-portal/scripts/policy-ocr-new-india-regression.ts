@@ -57,6 +57,24 @@ const fragmentedPeriodSchedule = enhancedSchedule.replace(
   "Period of cover\n09 /\n08 /\n2026 12 : 00 : 01 AM\n08 /\n08 /\n2027 11 : 59 : 59 PM",
 );
 
+const enhancedCoverSecondSample = `The New India Assurance Company Limited
+Commercial Vehicle Package Policy - Enhanced Covers
+Policy No. : 31280031260300000001
+Period of cover 03/08/2026 04:41:49 PM to 02/08/2027 11:59:59 PM
+INSURED DECLARED VALUE (Rs)
+Vehicle Trailer Non-Elec Acc Electrical Acc Bi-fuel/CNG/LPG kit Total Value
+2915550 0 0 0 2915550
+SCHEDULE OF PREMIUM
+Total OD Premium (Rs) 10272 Total TP Premium (Rs) 48921
+Compulsory PA Premium for Owner Driver (Sum Insured Rs 1500000)
+14343
+34203
+275
+100
+Net Premium (Rs) 59193
+GST (Rs) 10655
+Total Payable (Rs) 69848`;
+
 const cases: Case[] = [
   {
     name: "real New India schedule layout",
@@ -92,6 +110,25 @@ const cases: Case[] = [
     name: "fragmented period-of-cover text still produces policy validity",
     pages: [fragmentedPeriodSchedule],
     expected: enhancedExpected,
+  },
+  {
+    name: "second enhanced cover schedule with same-line totals",
+    pages: [enhancedCoverSecondSample],
+    expected: {
+      insurer_name: "The New India Assurance Company Limited",
+      policy_product: "Package",
+      policy_number: "31280031260300000001",
+      idv: "2915550",
+      od_premium: "10272",
+      tp_premium: "48646",
+      cpa_premium: "275",
+      cpa_opted: "Yes",
+      policy_start_date: "2026-08-03",
+      policy_end_date: "2027-08-02",
+      total_premium: "59193",
+      tax_amount: "10655",
+      gross_premium: "69848",
+    },
   },
 ];
 
