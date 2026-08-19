@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-source";
+import { recordVehicleActivity, VEHICLE_ACTIVITY_ACTIONS } from "@/lib/vehicle-activity";
 import { findPolicyOnboardingBusinessConflict, type PolicyBusinessConflict } from "./policy-onboarding-conflicts";
 
 export type PolicyCustomerCandidate = { id: string; name: string; phone: string; city: string | null; state: string | null; phoneMatch: boolean; nameMatch: boolean };
@@ -275,7 +276,14 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
     const result = data as { ok?: boolean; policyId?: string; policyCode?: string; customerId?: string; vehicleId?: string } | null;
     if (!result?.ok || !result.policyId || !result.policyCode || !result.customerId || !result.vehicleId) return { ok: false, kind: "database", error: "We couldn't complete the policy booking. Please try again." };
 
-    revalidatePath("/policies"); revalidatePath("/customers"); revalidatePath("/vehicles");
+    await recordVehicleActivity(
+      admin,
+      result.vehicleId,
+      profile.id,
+      vehicle ? VEHICLE_ACTIVITY_ACTIONS.VEHICLE_LINKED_TO_POLICY : VEHICLE_ACTIVITY_ACTIONS.VEHICLE_CREATED,
+    );
+
+    revalidatePath("/policies"); revalidatePath("/customers"); revalidatePath("/vehicles"); revalidatePath(`/vehicles/${result.vehicleId}/edit`);
     return { ok: true, policyId: result.policyId, policyCode: result.policyCode, customerId: result.customerId, vehicleId: result.vehicleId, status: "active" };
   } catch {
     return { ok: false, kind: "database", error: "We couldn't complete the policy booking. Your entered form details are still intact. Review the details and try again." };
