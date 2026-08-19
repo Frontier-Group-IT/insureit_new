@@ -23,6 +23,19 @@ GitHub Actions run: 32253021080
 
 Android device `00078344S000834` completed two cold launches with no matched fatal/runtime errors. Captures were saved as session artifacts `insureit-external-claim-current.png`, `insureit-external-claim-contrast.png`, and `insureit-external-claim-stage-contrast.png`; the last reached the stage route but showed an unavailable milestone because the test deep-link claim ID was not valid.
 
+**DEPLOYED / DEVICE-VERIFIED:** The Claim Tracker overview was refined without changing the nine-stage model, Supabase persistence, ownership, assistance, document, or milestone navigation behavior. The overview now exposes claim progress and completion count, a segmented progress rail, last update, owner/assistance context, clearer journey-complete/next-action guidance, an actionable empty-document state, and extra bottom spacing so the fixed tabs do not permanently obscure the journey list.
+
+```text
+Source commit: 8ed6788110d23fb3f8fa64315099c83d175a8f51
+Update group ID: 019f19e5-f4f7-78b4-b9b0-bcc8f6cc2e46
+Android update ID: 01a01a17-504e-7a13-9bf0-1ee01a1e31f8
+iOS update ID: 01a01a17-504e-74f6-9c5a-19b1e6cf64ff
+Runtime version: 0.2.0
+GitHub Actions run: 32255047672
+```
+
+Android device `00078344S000834` completed two cold launches after publication with no matched fatal/runtime errors. The fresh capture `insureit-claim-tracker-refined.png` showed the updated Claim Tracker overview for `EXT/1007`, including 9 of 9 milestones and the journey-complete state. The temporary publisher workflow was removed after publication.
+
 **DEPLOYED / DEVICE VERIFICATION BLOCKED:** The external claim stage UI refinement was published to Expo `preview` runtime `0.2.0`. The shared stage header now supports the navy reference treatment, claim-update context is a navy banner, and the same visual hierarchy is applied across the nine stages and document vault without changing claim persistence or navigation.
 
 ```text

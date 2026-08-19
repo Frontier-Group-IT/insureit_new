@@ -393,4 +393,18 @@ GitHub Actions run: 32253021080
 Device verification: two cold launches completed on Android device 00078344S000834; app remained alive and emitted only normal `Running "main"` startup entries. A fresh stage-route capture verified the white shield logo and navy header treatment. The requested real milestone form was unavailable for the supplied deep link ID, so field-level stage content was not claimed verified.
 ```
 
+Latest Claim Tracker overview refinement OTA:
+
+```text
+Source commit: 8ed6788110d23fb3f8fa64315099c83d175a8f51
+Message: Refine mobile claim tracker overview
+Update group ID: 019f19e5-f4f7-78b4-b9b0-bcc8f6cc2e46
+Android update ID: 01a01a17-504e-7a13-9bf0-1ee01a1e31f8
+iOS update ID: 01a01a17-504e-74f6-9c5a-19b1e6cf64ff
+Runtime version: 0.2.0
+GitHub Actions run: 32255047672
+EAS metadata: workflow checked out the exact committed source; update verification succeeded.
+Device verification: Android device 00078344S000834 completed two cold launches without matched fatal/runtime errors. A fresh Claim Tracker overview capture showed milestone progress, completion state, last-update/ownership metadata, and the expanded overview layout.
+```
+
 Use `docs/CURRENT_CHAT_HANDOFF.md` only for short active continuation status. Keep the durable mobile publishing rules here.
