@@ -304,6 +304,20 @@ The first Start Claim screen was verified to show the duplicate `Vehicle` sectio
 
 ## 8. Handoff Updates
 
+Latest verified self-managed claim tracker UX OTA:
+
+```text
+Source commit: b594c3ba479af19ecf155031fa83a6d269ab1dc8
+Message: Publish self-managed claim tracker UX
+Update group ID: 7fa30f15-623e-49a7-a25a-b1ffa9b36d28
+Android update ID: 01a0196d-f2c4-7e2d-a097-86328d71382f
+iOS update ID: 01a0196d-f2c4-7bbb-894f-f6ee2d29d1ab
+Runtime version: 0.2.0
+EAS metadata: gitCommitHash matched the clean current-main source commit
+Publish note: EAS reported ECONNRESET while uploading asset metadata and the runtime fingerprint; both platform bundles uploaded and the update was published.
+Device verification: ADB device 00078344S000834 completed two cold launches; package com.insureit.mobile remained alive and emitted no ReactNativeJS, AndroidRuntime, ExpoUpdates or Expo errors.
+```
+
 Update this file after material changes to:
 
 - Expo runtime/channel/branch/build profile
