@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Fleet Summary header polish.",
-  "deploy_requested_at": "2026-08-19T15:29:00+05:30",
+  "purpose": "Deploy Fleet Summary vehicle class icons.",
+  "deploy_requested_at": "2026-08-19T15:37:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #447 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "d211b72b7169b6839aa847af950a8e954711583e",
-  "release_scope": "Deploy the Fleet Summary header polish: increase the Fleet Summary title from 17px to 20px and shift the icon-only Back to Customer control upward by 4px. Preserve the navy header treatment, fleet icon, customer name/code, NO. OF FLEET badge, vehicle and policy expansion, Policy Details link, customer/vehicle/policy data loading, activity, onboarding, permissions, database schema, OCR, AuthBridge, save actions, and unrelated functionality unchanged.",
-  "verification": "PR #447 Verify web portal run 32240239408 (#1321) passed successfully on head addbfc9d4c0cc0e676467380dc299825204fe155 before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #448 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "6ddbd428175182958296bd918b10744a0103144d",
+  "release_scope": "Deploy the Fleet Summary vehicle-class icon enhancement: replace the fixed car icon on vehicle rows with class-aware bike, bus, truck, tractor, or construction-equipment icons while retaining the generic car icon as a fallback. Preserve Fleet Summary header polish, vehicle and policy expansion, Policy Details navigation, customer/vehicle/policy data loading, permissions, onboarding, calculations, database schema, save actions, and unrelated functionality unchanged.",
+  "verification": "PR #448 Verify web portal run 32240724781 (#1325) passed successfully on head c499d75b561f3ae71c316f9551ac09dfc39f976e before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
