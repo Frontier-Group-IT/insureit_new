@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Customer Created actor attribution fix.",
-  "deploy_requested_at": "2026-08-19T11:37:00+05:30",
+  "purpose": "Deploy Customer Activity Status ordering update.",
+  "deploy_requested_at": "2026-08-19T11:48:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #434 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "c9e966b001bdb1434aa6920f71f5400a5da936cc",
-  "release_scope": "Deploy the Customer Activity attribution fix so Customer Created always displays the original customer creator rather than a later editor. Production Supabase migration fix_customer_created_actor was applied successfully and added exactly one append-only correction marker for the one historical mismatched backfill event. Preserve all existing audit rows, customer origin classification, vehicle and policy activity, relationships, premium, billing, payout, document, AuthBridge, OCR, storage, permissions, and unrelated workflows unchanged.",
-  "verification": "PR #434 Verify web portal run 32221754572 (#1275) passed successfully on head d8e68fb695198579f124d694cbc57f64100a07e9 before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #435 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "988bf7d5c1bf5d18e9d0b12f8e2e54f1310ede9a",
+  "release_scope": "Deploy the UI-only Customer Edit layout change so Activity Status renders after customer fields/documents and immediately before the Back / Save changes action row for the standard Customer Profile edit flow. Preserve all customer activity logging, validation, persistence, document behavior, permissions, Corporate Profile, Dealership Profile, vehicle and policy workflows, database schema, and unrelated functionality unchanged.",
+  "verification": "PR #435 Verify web portal run 32222628640 (#1278) passed successfully on head 9fed8e69e89c49c1541be8fda1887958b1f98da9 before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
