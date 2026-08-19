@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Fleet Summary policy status badges.",
-  "deploy_requested_at": "2026-08-19T16:43:00+05:30",
+  "purpose": "Deploy Fleet Summary fleet-count alignment.",
+  "deploy_requested_at": "2026-08-19T16:37:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #454 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "c03a0b71c272007a9f68b75cc8544a7bc801b4d9",
-  "release_scope": "Deploy the Fleet Summary Policy Status presentation update: replace the plain Policy Status value with compact color-coded badges for ACTIVE, EXPIRING SOON, EXPIRED, NO POLICY, and UPCOMING; show ACTIVE with a green checkmark; keep the existing vehicle Status / registration_pending metric, policy-status calculation, chassis/engine identifiers, Fleet Summary header, vehicle expansion, policy expansion, Policy Details navigation, customer/vehicle/policy data relationships, permissions, onboarding, calculations, save actions, database schema, and unrelated functionality unchanged.",
-  "verification": "PR #454 Verify web portal run 32246341479 (#1347) passed successfully on head f511b81a572cd1363d8aa937cba747eb3d7c03cb before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #453 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "40704119089f1999ff3ad6293001f04a0b634d7e",
+  "release_scope": "Deploy the Fleet Summary header layout update: move the NO. OF FLEET badge to the far-right side of the navy header and vertically center it while keeping the Fleet Summary icon/title/customer details grouped on the left. Preserve the existing badge styling and vehicle count value, policy-status badges, chassis/engine identifiers, vehicle-class icons, vehicle expansion, policy expansion, Policy Details navigation, customer/vehicle/policy data relationships, permissions, onboarding, calculations, save actions, database schema, and unrelated functionality unchanged.",
+  "verification": "PR #453 Verify web portal run 32246573200 (#1349) passed successfully on rebased head f76c35f24a3188419e74b1e15513c7f9dd7d43c2 before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
