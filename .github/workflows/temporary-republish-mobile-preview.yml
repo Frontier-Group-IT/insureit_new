@@ -1,0 +1,47 @@
+name: Temporary republish mobile preview OTA
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out current main source
+        uses: actions/checkout@v4
+        with:
+          ref: 5335457b155f66e0a9176616628daa20a469a8de
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Republish mobile preview OTA
+        working-directory: apps/mobile-app
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          CI: "1"
+          EAS_SKIP_AUTO_FINGERPRINT: "1"
+        run: >-
+          npx --yes eas-cli@18 update
+          --branch preview
+          --environment preview
+          --message "Republish current main claim workflow refinements"
+          --non-interactive
+          --json
+
+      - name: Verify latest preview update
+        working-directory: apps/mobile-app
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          CI: "1"
+        run: npx --yes eas-cli@18 update:list --branch preview --limit 1 --json --non-interactive
