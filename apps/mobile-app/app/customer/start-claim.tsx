@@ -1,13 +1,16 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { EmptyState, LoadingState, Message, Screen } from '@/components/ui';
 import { customerAccountTitle, getOperationalCustomerContexts, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
+
+const startClaimHero = require('../../assets/brand/start-claim/start-claim-hero.png');
+const startClaimFooterScene = require('../../assets/brand/start-claim/start-claim-footer-scene.png');
 
 type PolicyChoice = {
   id: string;
@@ -119,6 +122,7 @@ export default function StartClaimScreen() {
       <Pressable onPress={() => router.back()} style={styles.backButton}><MaterialCommunityIcons name="arrow-left" size={21} color={palette.navy} /></Pressable>
       <View style={styles.headerCopy}><Text style={styles.eyebrow}>START A CLAIM</Text><Text style={styles.title}>Select the vehicle</Text></View>
     </View>
+    <Image accessibilityLabel="InsureIT claim protection illustration" source={startClaimHero} resizeMode="contain" style={styles.heroArtwork} />
     {message ? <Message type="error">{message}</Message> : null}
 
     {contexts.length > 1 ? <View style={styles.section}><Text style={styles.sectionLabel}>Account</Text><View style={styles.chips}>{contexts.map((context) => <ChoiceChip key={context.customer_id} label={customerAccountTitle(context)} active={selectedCustomerId === context.customer_id} onPress={() => selectAccount(context.customer_id)} />)}</View></View> : null}
@@ -138,6 +142,7 @@ export default function StartClaimScreen() {
       })}</View> : <View style={styles.noPolicy}><MaterialCommunityIcons name="shield-alert-outline" size={28} color="#B7791F" /><Text style={styles.noPolicyTitle}>No policy recorded for this vehicle</Text><Text style={styles.noPolicyText}>Add the policy details to continue.</Text></View>}
     </View>
 
+    <Image accessibilityLabel="InsureIT protected journey illustration" source={startClaimFooterScene} resizeMode="contain" style={styles.footerArtwork} />
     <Pressable disabled={!selectedPolicy} onPress={continueClaim} style={[styles.continueButton, !selectedPolicy && { opacity: 0.45 }]}><Text style={styles.continueText}>{selectedPolicy?.source === 'external' ? 'Start Claim' : 'Continue to Incident Report'}</Text><MaterialCommunityIcons name="arrow-right" size={20} color="#FFFFFF" /></Pressable>
   </Screen>;
 }
@@ -163,7 +168,7 @@ function formatDate(value: string) { return new Date(value).toLocaleDateString('
 function formatIsoDate(date: Date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
 
 const styles = StyleSheet.create({
-  headerBlock:{flexDirection:'row',gap:12,alignItems:'flex-start',marginTop:0,marginBottom:18},backButton:{width:42,height:42,borderRadius:14,borderWidth:1,borderColor:'#DCE8F4',backgroundColor:'#FFF',alignItems:'center',justifyContent:'center'},headerCopy:{flex:1},eyebrow:{color:'#0A43A3',fontSize:10,fontWeight:'900',letterSpacing:1.1},title:{color:palette.navy,fontSize:23,lineHeight:28,fontWeight:'900',marginTop:3},
+  headerBlock:{flexDirection:'row',gap:12,alignItems:'flex-start',marginTop:0,marginBottom:18},backButton:{width:42,height:42,borderRadius:14,borderWidth:1,borderColor:'#DCE8F4',backgroundColor:'#FFF',alignItems:'center',justifyContent:'center'},headerCopy:{flex:1},eyebrow:{color:'#0A43A3',fontSize:10,fontWeight:'900',letterSpacing:1.1},title:{color:palette.navy,fontSize:23,lineHeight:28,fontWeight:'900',marginTop:3},heroArtwork:{width:'100%',aspectRatio:1.5,marginTop:-4,marginBottom:12},footerArtwork:{width:'100%',aspectRatio:1.78,marginTop:2,marginBottom:12},
   section:{marginBottom:16},sectionLabel:{color:palette.navy,fontSize:13,fontWeight:'900',marginBottom:8},chips:{flexDirection:'row',flexWrap:'wrap',gap:8},chip:{minHeight:36,maxWidth:180,justifyContent:'center',borderRadius:999,borderWidth:1,borderColor:'#D6E2F0',backgroundColor:'#FFF',paddingHorizontal:13},chipActive:{backgroundColor:palette.navy,borderColor:palette.navy},chipText:{color:'#56657A',fontSize:11,fontWeight:'800'},chipTextActive:{color:'#FFF'},policyHeading:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:10,marginBottom:9},vehicleField:{gap:5},fieldLabel:{color:'#3F4D63',fontSize:10.5,fontWeight:'700'},selectButton:{minHeight:45,borderRadius:12,borderWidth:1,borderColor:'#D7E0EA',backgroundColor:'#FBFDFF',paddingHorizontal:9,flexDirection:'row',alignItems:'center',gap:7},selectIcon:{width:28,height:28,borderRadius:10,backgroundColor:'#EEF5FF',alignItems:'center',justifyContent:'center'},selectValue:{flex:1,color:palette.navy,fontSize:12.1,fontWeight:'700'},placeholder:{color:'#7A8798'},helperText:{color:'#8A94A6',fontSize:10,lineHeight:13,fontWeight:'500',marginTop:4},makeMenu:{borderRadius:13,borderWidth:1,borderColor:'#DCE8F4',backgroundColor:'#FFFFFF',overflow:'hidden',marginTop:7},makeSearch:{minHeight:42,backgroundColor:'#F8FBFF',borderBottomWidth:1,borderBottomColor:'#E8EFF7',paddingHorizontal:10,flexDirection:'row',alignItems:'center',gap:7},makeSearchInput:{flex:1,minHeight:40,color:palette.navy,fontSize:12.5,fontWeight:'600'},makeOption:{minHeight:46,paddingHorizontal:11,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderBottomWidth:1,borderBottomColor:'#EEF2F6'},selectOptionActive:{backgroundColor:'#EEF5FF'},selectOptionText:{flex:1,color:'#607089',fontSize:11.5,fontWeight:'700'},selectOptionTextActive:{color:palette.navy,fontWeight:'800'},vehicleOptionCopy:{flex:1,minWidth:0},optionMeta:{color:'#8A94A6',fontSize:10,fontWeight:'600'},emptyLookupText:{color:'#7A8799',fontSize:11,fontWeight:'700',paddingHorizontal:11,paddingVertical:12},addPolicyButton:{flexDirection:'row',alignItems:'center',gap:3,backgroundColor:'#0A43A3',borderRadius:12,paddingHorizontal:12,height:36,shadowColor:'#0A43A3',shadowOpacity:0.28,shadowRadius:7,elevation:4},addPolicyText:{color:'#FFFFFF',fontSize:9.5,fontWeight:'900'},policyStack:{gap:9},policyCard:{flexDirection:'row',alignItems:'center',gap:10,borderRadius:17,padding:12,borderWidth:1,borderColor:'#DDE6F0',backgroundColor:'#FFF'},policyIcon:{width:45,height:45,borderRadius:14,alignItems:'center',justifyContent:'center'},managedIcon:{backgroundColor:'#E8F8F0'},selfIcon:{backgroundColor:'#EAF2FF'},policyCopy:{flex:1,minWidth:0},modeLabel:{fontSize:8.3,fontWeight:'900',letterSpacing:.4,marginBottom:3},policyNo:{color:palette.navy,fontSize:13.5,fontWeight:'900'},policyMeta:{color:'#56657A',fontSize:10.3,fontWeight:'700',marginTop:2},policyDates:{color:'#7A8799',fontSize:9.5,fontWeight:'600',marginTop:3},
   noPolicy:{borderWidth:1,borderColor:'#F0D9AC',backgroundColor:'#FFF9EE',borderRadius:16,padding:15,alignItems:'center'},noPolicyTitle:{color:palette.navy,fontSize:12,fontWeight:'900',marginTop:6},noPolicyText:{color:'#7A8799',fontSize:10.5,fontWeight:'600',marginTop:3},continueButton:{minHeight:52,borderRadius:16,backgroundColor:palette.navy,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,marginBottom:14},continueText:{color:'#FFF',fontSize:13,fontWeight:'900'}
 });
