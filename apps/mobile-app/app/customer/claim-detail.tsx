@@ -88,13 +88,19 @@ export default function ClaimDetailScreen() {
   if (!claim) return <Screen title="Claim Detail"><EmptyState title="Claim not found" body="Please choose another claim from your list." /></Screen>;
 
   const tone = selfManaged ? externalClaimTone : claimTone(claim.current_status);
+  const claimId = claim.id;
   const currentStage = SELF_MANAGED_MILESTONES[currentStageIndex];
   const settled = ['Settled', 'Closed', 'Claim Complete'].includes(claim.current_status) || (selfManaged && completedKeys.size >= 9);
 
   function openCurrentSelfStage() {
     if (!selfManaged || settled || !currentStage) return;
-    if (currentStage.key === 'spot_status') router.push({ pathname: '/customer/self-managed-spot-status', params: { id: claim.id } });
-    else router.push({ pathname: '/customer/self-managed-milestone', params: { id: claim.id, key: currentStage.key } });
+    openSelfManagedStage(currentStage.key);
+  }
+
+  function openSelfManagedStage(key: ClaimMilestone['milestone_key']) {
+    if (key === 'spot_intimation') router.push({ pathname: '/customer/self-managed-claim', params: { id: claimId } });
+    else if (key === 'spot_status') router.push({ pathname: '/customer/self-managed-spot-status', params: { id: claimId } });
+    else router.push({ pathname: '/customer/self-managed-milestone', params: { id: claimId, key } });
   }
 
   async function openDocument(document: ClaimDocument) {
@@ -103,6 +109,9 @@ export default function ClaimDetailScreen() {
     if (error || !data?.signedUrl) return setMessage('We could not open this document. Please try again.');
     await Linking.openURL(data.signedUrl);
   }
+
+  const latestUpdate = latestClaimUpdate(claim.updated_at, history[0]?.created_at, milestones);
+  const responsibility = selfManaged ? responsibilityFor(currentStage?.key) : null;
 
   return <Screen title="Claim Detail" showLogout showTitleHeader={false}>
     <View style={styles.pageHeading}>
@@ -126,6 +135,11 @@ export default function ClaimDetailScreen() {
     </View>
 
     <View style={[styles.nextActionCard, { borderColor: tone.border }]}><View style={[styles.nextActionIcon, { backgroundColor: tone.soft }]}><MaterialCommunityIcons name="arrow-right-circle-outline" size={22} color={tone.accent} /></View><View style={{ flex: 1 }}><Text style={[styles.nextLabel, { color: tone.accent }]}>{selfManaged ? 'CURRENT MILESTONE' : 'NEXT ACTION'}</Text><Text style={styles.nextTitle}>{settled ? 'Claim journey complete' : currentStage?.label ?? claim.current_status}</Text><Text style={styles.nextBody}>{selfManaged ? settled ? 'All nine external claim milestones are recorded.' : 'Record this milestone when you receive the related update from the insurer, surveyor, or workshop.' : customerStageCopy(claim.current_status)}</Text></View></View>
+    {selfManaged && responsibility ? <View style={styles.responsibilityCard}>
+      <View style={styles.responsibilityHeader}><MaterialCommunityIcons name="account-clock-outline" size={20} color={tone.accent} /><Text style={[styles.responsibilityTitle, { color: tone.accent }]}>RESPONSIBILITY & UPDATE</Text></View>
+      <InfoPair leftLabel="Current owner" leftValue={responsibility.owner} rightLabel="Waiting for" rightValue={responsibility.waitingFor} />
+      <InfoPair leftLabel="Last update" leftValue={formatDateTime(latestUpdate)} rightLabel="Next expected update" rightValue={responsibility.nextUpdate} />
+    </View> : null}
 
     <View style={styles.quickActions}>
       {selfManaged && !settled ? <QuickAction icon="pencil-circle-outline" label="Update Current Stage" primary onPress={openCurrentSelfStage} /> : null}
@@ -141,14 +155,14 @@ export default function ClaimDetailScreen() {
     <SectionHeader title="Status History" subtitle={`${history.length} movement record${history.length === 1 ? '' : 's'}`} expanded={historyExpanded} onPress={() => setHistoryExpanded((value) => !value)} />
     {historyExpanded ? <View style={styles.sectionBody}>{history.length ? history.map((item) => <View key={item.id} style={styles.historyRow}><View style={styles.historyDot} /><View style={{ flex: 1 }}><Text style={styles.historyStatus}>{item.to_status}</Text><Text style={styles.documentMeta}>{formatDateTime(item.created_at)}</Text>{item.notes ? <Text style={styles.emptyText}>{item.notes}</Text> : null}</View></View>) : <Text style={styles.emptyText}>No timeline updates yet.</Text>}</View> : null}
 
-    <SectionHeader title={selfManaged ? 'External Claim Journey' : 'Claim Journey'} subtitle={`${progress}% complete • ${currentStage?.label ?? claim.current_status}`} expanded={journeyExpanded} onPress={() => setJourneyExpanded((value) => !value)} />
+    <SectionHeader title={selfManaged ? 'External Claim Journey' : 'Claim Journey'} subtitle={selfManaged ? `${completedKeys.size} of 9 stages completed` : `${progress}% complete • ${currentStage?.label ?? claim.current_status}`} expanded={journeyExpanded} onPress={() => setJourneyExpanded((value) => !value)} />
+    {selfManaged ? <View style={styles.progressCard}><View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${Math.min(100, progress)}%`, backgroundColor: tone.accent }]} /></View><Text style={styles.progressText}>{completedKeys.size} of 9 stages completed</Text></View> : null}
     {journeyExpanded ? <View style={styles.sectionBody}>{SELF_MANAGED_MILESTONES.map((stage, index) => {
       const done = selfManaged ? completedKeys.has(stage.key) : index < currentStageIndex;
       const current = !settled && index === currentStageIndex;
-      const editable = selfManaged && (done || current) && stage.key !== 'spot_intimation';
+      const editable = selfManaged && (done || current);
       return <Pressable key={stage.key} disabled={!editable} onPress={() => {
-        if (stage.key === 'spot_status') router.push({ pathname: '/customer/self-managed-spot-status', params: { id: claim.id } });
-        else router.push({ pathname: '/customer/self-managed-milestone', params: { id: claim.id, key: stage.key } });
+        openSelfManagedStage(stage.key);
       }} style={[styles.stageRow, current && { borderColor: tone.accent, backgroundColor: tone.soft }]}>
         <View style={[styles.stageNode, done && styles.stageDone, current && { backgroundColor: tone.accent }]}><MaterialCommunityIcons name={done ? 'check' : current ? 'map-marker' : 'lock-outline'} size={14} color={done || current ? '#FFF' : '#7A8799'} /></View>
         <View style={{ flex: 1 }}><Text style={styles.stageTitle}>{stage.label}</Text><Text style={styles.stageMeta}>{done ? selfManaged ? 'Completed • tap to review' : 'Completed' : current ? selfManaged ? 'Current stage • tap to update' : 'Current stage' : 'Upcoming'}</Text></View>
@@ -166,9 +180,27 @@ const externalClaimTone = { accent:'#0A43A3',soft:'#EAF2FF',background:'#F7FAFF'
 function claimTone(status: string) { if (['Settled','Closed','Claim Complete'].includes(status)) return { accent:'#12805C',soft:'#E8F8F0',background:'#F7FCF9',border:'#BFE6D5' }; return { accent:'#B7791F',soft:'#FFF4E2',background:'#FFFBF3',border:'#F0D9AC' }; }
 function formatDate(value?: string | null) { return value ? new Date(value).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '-'; }
 function formatDateTime(value?: string | null) { return value ? new Date(value).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '-'; }
+function latestClaimUpdate(...values: (string | null | undefined | ClaimMilestone[])[]) {
+  const dates = values.flatMap((value) => Array.isArray(value) ? value.map((item) => item.updated_at || item.created_at) : value ? [value] : []);
+  return dates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
+}
+function responsibilityFor(key?: ClaimMilestone['milestone_key']) {
+  const map: Record<ClaimMilestone['milestone_key'], { owner: string; waitingFor: string; nextUpdate: string }> = {
+    spot_intimation: { owner: 'Customer', waitingFor: 'Insurer / surveyor', nextUpdate: 'Surveyor assignment' },
+    spot_status: { owner: 'Surveyor', waitingFor: 'Surveyor update', nextUpdate: 'Survey completion' },
+    claim_intimation: { owner: 'Customer', waitingFor: 'Workshop / insurer', nextUpdate: 'Gate-in and estimate' },
+    work_approval: { owner: 'Insurer', waitingFor: 'Insurer approval', nextUpdate: 'Approval decision' },
+    repair_ri: { owner: 'Workshop', waitingFor: 'Workshop update', nextUpdate: 'Repair completion' },
+    billing: { owner: 'Workshop', waitingFor: 'Final bill', nextUpdate: 'Bill submission' },
+    delivery_order: { owner: 'Insurer', waitingFor: 'Insurer approval', nextUpdate: 'Delivery order' },
+    vehicle_delivery: { owner: 'Customer', waitingFor: 'Workshop', nextUpdate: 'Vehicle handover' },
+    payment_encashment: { owner: 'Insurer', waitingFor: 'Insurer payment', nextUpdate: 'Settlement payment' },
+  };
+  return key ? map[key] : null;
+}
 
 const styles = StyleSheet.create({
   pageHeading:{marginBottom:12,flexDirection:'row',alignItems:'flex-start',justifyContent:'space-between',gap:10},pageHeadingCopy:{flex:1,minWidth:0},pageEyebrow:{color:'#0A43A3',fontSize:9.5,fontWeight:'900',letterSpacing:1},pageTitle:{color:palette.navy,fontSize:24,fontWeight:'900',marginTop:2},heroCard:{borderWidth:1,borderRadius:21,padding:15,overflow:'hidden',marginBottom:12},accentBar:{position:'absolute',left:0,top:0,bottom:0,width:5},heroTop:{flexDirection:'row',alignItems:'center',gap:11},statusIcon:{width:48,height:48,borderRadius:15,alignItems:'center',justifyContent:'center'},heroCopy:{flex:1,minWidth:0},stageLabel:{fontSize:9,fontWeight:'900',letterSpacing:.5},vehicleNo:{color:palette.navy,fontSize:20,fontWeight:'900',marginTop:2},focusStatusBadge:{maxWidth:100,borderWidth:1,borderRadius:999,paddingHorizontal:8,paddingVertical:5},focusStatusText:{fontSize:8.5,fontWeight:'900',textAlign:'center'},numberRow:{flexDirection:'row',gap:14,marginTop:15,paddingTop:12,borderTopWidth:1,borderTopColor:'rgba(100,120,150,.16)'},numberLabel:{color:'#7A8799',fontSize:9,fontWeight:'800'},numberValue:{color:palette.navy,fontSize:12,fontWeight:'900',marginTop:2},infoBox:{marginTop:12,borderRadius:14,backgroundColor:'rgba(255,255,255,.72)',padding:11,gap:9},infoPair:{flexDirection:'row',gap:14},infoLabel:{color:'#7A8799',fontSize:8.5,fontWeight:'800'},infoValue:{color:'#334155',fontSize:10.5,fontWeight:'800',marginTop:2},
-  nextActionCard:{borderWidth:1,borderRadius:17,padding:12,flexDirection:'row',gap:10,backgroundColor:'#FFF',marginBottom:10},nextActionIcon:{width:42,height:42,borderRadius:13,alignItems:'center',justifyContent:'center'},nextLabel:{fontSize:8.5,fontWeight:'900',letterSpacing:.4},nextTitle:{color:palette.navy,fontSize:13,fontWeight:'900',marginTop:2},nextBody:{color:'#667085',fontSize:10.3,lineHeight:14,fontWeight:'600',marginTop:3},quickActions:{flexDirection:'row',flexWrap:'wrap',gap:8,marginBottom:10},quickAction:{minHeight:44,borderRadius:14,borderWidth:1,borderColor:'#DCE6F0',backgroundColor:'#FFF',paddingHorizontal:12,flexDirection:'row',alignItems:'center',gap:7},quickActionPrimary:{backgroundColor:palette.navy,borderColor:palette.navy},quickActionText:{color:palette.navy,fontSize:10,fontWeight:'900'},
-  sectionHeader:{minHeight:64,borderRadius:17,borderWidth:1,borderColor:'#DCE6F0',backgroundColor:'#FFF',padding:12,marginTop:10,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},sectionTitle:{color:palette.navy,fontSize:14,fontWeight:'900'},sectionSub:{color:'#7A8799',fontSize:9.8,fontWeight:'600',marginTop:2},sectionBody:{borderWidth:1,borderTopWidth:0,borderColor:'#DCE6F0',backgroundColor:'#FFF',borderBottomLeftRadius:17,borderBottomRightRadius:17,padding:10,gap:8},documentRow:{minHeight:50,borderRadius:12,backgroundColor:'#F8FBFF',padding:10,flexDirection:'row',alignItems:'center',gap:9},documentTitle:{color:palette.navy,fontSize:10.5,fontWeight:'900'},documentMeta:{color:'#7A8799',fontSize:9,fontWeight:'600',marginTop:2},emptyText:{color:'#7A8799',fontSize:10,fontWeight:'600',lineHeight:14},historyRow:{flexDirection:'row',gap:9,paddingVertical:7},historyDot:{width:9,height:9,borderRadius:5,backgroundColor:'#0A43A3',marginTop:4},historyStatus:{color:palette.navy,fontSize:10.5,fontWeight:'900'},stageRow:{minHeight:58,borderRadius:13,borderWidth:1,borderColor:'#E1E8F0',backgroundColor:'#FFF',padding:10,flexDirection:'row',alignItems:'center',gap:10},stageNode:{width:28,height:28,borderRadius:14,backgroundColor:'#EEF2F6',alignItems:'center',justifyContent:'center'},stageDone:{backgroundColor:'#12805C'},stageTitle:{color:palette.navy,fontSize:11,fontWeight:'900'},stageMeta:{color:'#7A8799',fontSize:9,fontWeight:'600',marginTop:2}
+  nextActionCard:{borderWidth:1,borderRadius:17,padding:12,flexDirection:'row',gap:10,backgroundColor:'#FFF',marginBottom:10},nextActionIcon:{width:42,height:42,borderRadius:13,alignItems:'center',justifyContent:'center'},nextLabel:{fontSize:8.5,fontWeight:'900',letterSpacing:.4},nextTitle:{color:palette.navy,fontSize:13,fontWeight:'900',marginTop:2},nextBody:{color:'#667085',fontSize:10.3,lineHeight:14,fontWeight:'600',marginTop:3},responsibilityCard:{borderWidth:1,borderColor:'#C9DAF2',borderRadius:17,padding:12,backgroundColor:'#F7FAFF',marginBottom:10,gap:10},responsibilityHeader:{flexDirection:'row',alignItems:'center',gap:7},responsibilityTitle:{fontSize:8.5,fontWeight:'900',letterSpacing:.5},quickActions:{flexDirection:'row',flexWrap:'wrap',gap:8,marginBottom:10},quickAction:{minHeight:44,borderRadius:14,borderWidth:1,borderColor:'#DCE6F0',backgroundColor:'#FFF',paddingHorizontal:12,flexDirection:'row',alignItems:'center',gap:7},quickActionPrimary:{backgroundColor:palette.navy,borderColor:palette.navy},quickActionText:{color:palette.navy,fontSize:10,fontWeight:'900'},
+  sectionHeader:{minHeight:64,borderRadius:17,borderWidth:1,borderColor:'#DCE6F0',backgroundColor:'#FFF',padding:12,marginTop:10,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},sectionTitle:{color:palette.navy,fontSize:14,fontWeight:'900'},sectionSub:{color:'#7A8799',fontSize:9.8,fontWeight:'600',marginTop:2},progressCard:{paddingHorizontal:12,paddingTop:10},progressTrack:{height:8,borderRadius:999,backgroundColor:'#E8EEF5',overflow:'hidden'},progressFill:{height:'100%',borderRadius:999},progressText:{color:'#667085',fontSize:9.8,fontWeight:'800',marginTop:5},sectionBody:{borderWidth:1,borderTopWidth:0,borderColor:'#DCE6F0',backgroundColor:'#FFF',borderBottomLeftRadius:17,borderBottomRightRadius:17,padding:10,gap:8},documentRow:{minHeight:50,borderRadius:12,backgroundColor:'#F8FBFF',padding:10,flexDirection:'row',alignItems:'center',gap:9},documentTitle:{color:palette.navy,fontSize:10.5,fontWeight:'900'},documentMeta:{color:'#7A8799',fontSize:9,fontWeight:'600',marginTop:2},emptyText:{color:'#7A8799',fontSize:10,fontWeight:'600',lineHeight:14},historyRow:{flexDirection:'row',gap:9,paddingVertical:7},historyDot:{width:9,height:9,borderRadius:5,backgroundColor:'#0A43A3',marginTop:4},historyStatus:{color:palette.navy,fontSize:10.5,fontWeight:'900'},stageRow:{minHeight:58,borderRadius:13,borderWidth:1,borderColor:'#E1E8F0',backgroundColor:'#FFF',padding:10,flexDirection:'row',alignItems:'center',gap:10},stageNode:{width:28,height:28,borderRadius:14,backgroundColor:'#EEF2F6',alignItems:'center',justifyContent:'center'},stageDone:{backgroundColor:'#12805C'},stageTitle:{color:palette.navy,fontSize:11,fontWeight:'900'},stageMeta:{color:'#7A8799',fontSize:9,fontWeight:'600',marginTop:2}
 });
