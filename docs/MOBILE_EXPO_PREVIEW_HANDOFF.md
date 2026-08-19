@@ -171,6 +171,20 @@ Use visual inspection for the changed UI. If the relevant screen is blocked by d
 
 ## 7. Current Recent Preview Evidence
 
+Latest verified preview OTA restoring the committed mobile preview source:
+
+```text
+Source commit: 8816aad97cde2e839980dd943e7757c0ce86c636
+Message: Restore mobile preview app state
+Update group ID: 22f4d8ae-3416-44e1-a406-aec9d412d00a
+Android update ID: 01a019b8-b75b-79b4-a874-25b5b9a438f2
+iOS update ID: 01a019b8-b75b-7b78-b08a-c8de53f3b653
+Runtime version: 0.2.0
+GitHub Actions run: 32246220731
+```
+
+The update was published from the exact clean source commit through the protected GitHub Actions Expo credential and EAS `preview` environment. Android device `00078344S000834` completed two cold launches, logged `Running "main"` both times, remained alive, and showed no matched fatal/runtime or missing-environment errors. A fresh screenshot verified the restored external Claim Journey at Claim Intimation with the shared navy customer bottom navigation.
+
 Latest preview OTA continuing from the accident-time-picker baseline:
 
 ```text

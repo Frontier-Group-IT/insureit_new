@@ -10,6 +10,19 @@ Policy Onboarding OCR hardening remains an active workstream. Production portal 
 
 ## Mobile Expo preview
 
+**DEPLOYED / DEVICE-VERIFIED:** The committed mobile preview state was restored and published to Expo `preview` from runtime-compatible source commit `8816aad97cde2e839980dd943e7757c0ce86c636`.
+
+```text
+Message: Restore mobile preview app state
+Update group ID: 22f4d8ae-3416-44e1-a406-aec9d412d00a
+Android update ID: 01a019b8-b75b-79b4-a874-25b5b9a438f2
+iOS update ID: 01a019b8-b75b-7b78-b08a-c8de53f3b653
+Runtime version: 0.2.0
+GitHub Actions run: 32246220731
+```
+
+The protected GitHub Actions publish used the EAS `preview` environment. Connected Android device `00078344S000834` completed two cold launches without matched fatal/runtime or missing-environment errors, and a fresh screenshot verified the restored external Claim Journey at Claim Intimation with the shared navy customer bottom navigation.
+
 **DEPLOYED / ADB VERIFICATION BLOCKED:** The external-claim Spot Status/Claim Tracker action row was refined as the next OTA after the accident-time-picker baseline.
 
 ```text
