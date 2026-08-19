@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy Onboarding required-fields dialog accessibility fix.",
-  "deploy_requested_at": "2026-08-19T17:28:00+05:30",
+  "purpose": "Deploy Policy Onboarding sequential mandatory-field validation.",
+  "deploy_requested_at": "2026-08-19T18:08:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #455 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "198b70126c38d3026cc038d861c8c6e02aeb58e0",
-  "release_scope": "Deploy the accessibility-only update for the Policy Onboarding required-fields alert dialog: add accessible title/description wiring, keep initial focus on OK, trap Tab/Shift+Tab inside the modal, capture the exact Upload Policy / Book Active Policy trigger, and restore focus to that trigger when the dialog closes. Preserve existing required-field validation rules, visual design, Escape/backdrop behavior, policy creation, server validation, OCR, database schema, and unrelated functionality unchanged.",
-  "verification": "PR #455 Verify web portal run 32250268460 (#1361) passed successfully on head c3dc855a2b13f2362d12c256a0070f32784458b2 before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #456 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "028cbd90d8f5f0e7cf5fd19f175639af3a4ab171",
+  "release_scope": "Deploy the Policy Onboarding mandatory-field validation update so validation runs Section 1 through Section 5 in order, stops at the first missing mandatory field, shows only one validation dialog, scrolls to the owning section, and focuses the exact missing field after dismissal. Preserve existing server-side validation, business rules, Section 2 mandatory markers, OCR, policy creation, customer/vehicle relationships, permissions, database schema, and unrelated functionality unchanged.",
+  "verification": "PR #456 Verify web portal run 32253560683 (#1374) passed successfully on head e77a3b2a584648c938c3caa78c46be1e5d179454 before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
