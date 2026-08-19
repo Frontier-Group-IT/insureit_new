@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Fleet Summary chassis and engine identifiers.",
-  "deploy_requested_at": "2026-08-19T16:25:00+05:30",
+  "purpose": "Deploy Fleet Summary policy status badges.",
+  "deploy_requested_at": "2026-08-19T16:43:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #452 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "f65395811d76455da7c48145e72c362ed31ee244",
-  "release_scope": "Deploy the Fleet Summary vehicle-card update: load existing chassis_no and engine_no fields and show Chassis No. and Engine No. compactly within the existing collapsed vehicle card. Preserve Policy Status, vehicle Status, vehicle-class icon, Fleet Summary header, vehicle expansion, policy expansion, Policy Details navigation, customer/vehicle/policy data relationships, permissions, onboarding, calculations, save actions, database schema, and unrelated functionality unchanged.",
-  "verification": "PR #452 Verify web portal run 32244859971 (#1339) passed successfully on head a1d91eb378c5384d133f0c99733ddc8e504b6a48 before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #454 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "c03a0b71c272007a9f68b75cc8544a7bc801b4d9",
+  "release_scope": "Deploy the Fleet Summary Policy Status presentation update: replace the plain Policy Status value with compact color-coded badges for ACTIVE, EXPIRING SOON, EXPIRED, NO POLICY, and UPCOMING; show ACTIVE with a green checkmark; keep the existing vehicle Status / registration_pending metric, policy-status calculation, chassis/engine identifiers, Fleet Summary header, vehicle expansion, policy expansion, Policy Details navigation, customer/vehicle/policy data relationships, permissions, onboarding, calculations, save actions, database schema, and unrelated functionality unchanged.",
+  "verification": "PR #454 Verify web portal run 32246341479 (#1347) passed successfully on head f511b81a572cd1363d8aa937cba747eb3d7c03cb before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
