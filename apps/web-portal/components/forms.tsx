@@ -21,7 +21,7 @@ export function CustomerForm({ action, values, agents = [], submitLabel = "Save 
   </EnterpriseForm>;
 }
 
-export function VehicleForm({ action, customers, manufacturers = [], values, submitLabel = "Save record" }: { action: FormAction; customers: SelectOption[]; manufacturers?: SelectOption[]; values?: VehicleValues; submitLabel?: string }) {
+export function VehicleForm({ action, customers, manufacturers = [], values, submitLabel = "Save record", beforeActions }: { action: FormAction; customers: SelectOption[]; manufacturers?: SelectOption[]; values?: VehicleValues; submitLabel?: string; beforeActions?: ReactNode }) {
   const defaultYear = values?.year?.toString() ?? "";
   const years = defaultYear && !vehicleYearOptions.includes(defaultYear) ? [defaultYear, ...vehicleYearOptions] : vehicleYearOptions;
   const yearOptions = years.map((year) => ({ value: year, label: year }));
@@ -56,6 +56,8 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
         <Field variant="onboarding" label="National permit expiry" name="national_permit_expiry_date" type="date" defaultValue={values?.national_permit_expiry_date ?? ""} />
         <Field variant="onboarding" label="Local permit expiry" name="local_permit_expiry_date" type="date" defaultValue={values?.local_permit_expiry_date ?? ""} />
       </VehicleSection>
+
+      {beforeActions}
 
       <div className="sticky bottom-0 z-20 flex items-center justify-end gap-2 rounded-xl border border-[#D9E2F0] bg-white/95 px-4 py-2.5 shadow-[0_-6px_24px_rgba(15,23,42,0.05)] backdrop-blur">
         <Link href="/vehicles" className="rounded-lg border border-[#CBD5E1] px-4 py-2 text-[11px] font-semibold text-[#334155] transition hover:border-[#94A3B8] hover:bg-[#F8FAFC]">Cancel</Link>
