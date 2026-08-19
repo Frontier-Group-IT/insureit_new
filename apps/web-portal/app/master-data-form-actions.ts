@@ -125,7 +125,7 @@ export async function createInsuranceCompany(formData: FormData): Promise<{ ok: 
   if (!portalInput) return { ok: false, error: "Enter the claims portal URL." };
 
   const claimsPortalUrl = /^https?:\/\//i.test(portalInput) ? portalInput : `https://${portalInput}`;
-  try { new URL(claimsPortalUrl); } catch { return { ok: false, error: "Enter a valid claims portal URL." };
+  try { new URL(claimsPortalUrl); } catch { return { ok: false, error: "Enter a valid claims portal URL." }; }
 
   const admin = createSupabaseAdminClient();
   const { data: existing, error: lookupError } = await admin
@@ -157,7 +157,7 @@ export async function createInsuranceCompany(formData: FormData): Promise<{ ok: 
   const { data, error } = await admin.from("insurance_companies").insert(profile).select("id, name").single<{ id: string; name: string }>();
   if (error || !data) return { ok: false, error: error?.message ?? "Unable to create insurance company." };
   revalidatePath("/policies/new");
-  return { ok: true, insurer: { value: data.id, label: data.name } };
+  return { ok: true, insurer: { value: data.id, label: `${data.name} — ${branchName}` } };
 }
 
 async function resolveInsurerId(formData: FormData) {
