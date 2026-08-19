@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy customer creation origin and activity history.",
-  "deploy_requested_at": "2026-08-19T10:48:00+05:30",
+  "purpose": "Deploy vehicle activity status tracking.",
+  "deploy_requested_at": "2026-08-19T11:05:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #429 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "52ba1933cac8e1327559ef1c7f9fe569377f33c1",
-  "release_scope": "Deploy customer creation provenance and append-only customer activity history: creation channel, immutable origin customer, customer created/edited events, parent relationship add/remove events, and the Customer Activity Status UI showing Action, Created By, Via, Under, and timestamp. The production Supabase migration customer_creation_origin was applied successfully before triggering the web deployment. Preserve unrelated policy, vehicle, billing, payout, document, AuthBridge, OCR, storage, permission, and workflow behavior unchanged.",
-  "verification": "PR #429 Verify web portal run 32218850273 passed successfully on head 8508b4840836232d2a27bb15ef49fcf6e0007f96 before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #431 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "0a33cec8de8b44c533624cfb675b67ca83a2ff3e",
+  "release_scope": "Deploy Vehicle Activity Status tracking for Vehicle Created, Vehicle Edited, and Vehicle Linked to Policy across direct/customer vehicle creation, vehicle editing, and policy onboarding. Reuse the existing audit_logs table with table_name=vehicles and preserve all unrelated policy, customer, billing, payout, document, AuthBridge, OCR, storage, permission, and workflow behavior unchanged.",
+  "verification": "PR #431 Verify web portal run 32220037468 (#1266) passed successfully on head 2b8a78c3c8d747efc0529623ec606c4efb92bf3d before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
