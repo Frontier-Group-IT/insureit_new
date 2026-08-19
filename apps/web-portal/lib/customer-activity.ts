@@ -65,6 +65,15 @@ const CUSTOMER_CREATED_ACTOR_CORRECTION_ACTION = "customer_created_actor_correct
 const ACTIVITY_QUERY_ACTIONS = [...TRACKED_ACTIONS, CUSTOMER_CREATED_ACTOR_CORRECTION_ACTION];
 const ACTIVITY_TABLE_NAME = "customers";
 const SYSTEM_ONLY_EDIT_FIELDS = new Set(["onboarding_status", "onboarding_completed_at"]);
+const CREATION_BOOTSTRAP_EDIT_FIELDS = new Set([
+  "partner_type",
+  "lead_source_intermediary_id",
+  "onboarding_status",
+  "onboarding_completed_at",
+  "creation_channel",
+  "origin_customer_id",
+]);
+const CREATION_BOOTSTRAP_WINDOW_MS = 60_000;
 
 type AdminClient = ReturnType<typeof createSupabaseAdminClient>;
 type AuditRow = {
@@ -147,6 +156,17 @@ function isSystemOnlyCustomerEdit(row: AuditRow) {
   return fields.length > 0 && fields.every((field) => SYSTEM_ONLY_EDIT_FIELDS.has(field));
 }
 
+function isCreationBootstrapCustomerEdit(row: AuditRow, customerCreatedAt: string | null) {
+  if (row.action !== CUSTOMER_ACTIVITY_ACTIONS.CUSTOMER_EDITED || row.actor_id) return false;
+  const customerCreatedTimestamp = timestamp(customerCreatedAt);
+  const auditTimestamp = timestamp(row.created_at);
+  if (!customerCreatedTimestamp || !auditTimestamp || Math.abs(auditTimestamp - customerCreatedTimestamp) > CREATION_BOOTSTRAP_WINDOW_MS) {
+    return false;
+  }
+  const fields = changedFields(row.old_data, row.new_data);
+  return fields.length > 0 && fields.every((field) => CREATION_BOOTSTRAP_EDIT_FIELDS.has(field));
+}
+
 export async function recordCustomerActivity(
   admin: AdminClient,
   customerId: string,
@@ -212,7 +232,7 @@ export async function loadCustomerActivityHistory({
 
   for (const row of auditRows ?? []) {
     const action = asTrackedAction(row.action);
-    if (!action || isSystemOnlyCustomerEdit(row)) continue;
+    if (!action || isSystemOnlyCustomerEdit(row) || isCreationBootstrapCustomerEdit(row, createdAt)) continue;
     if (action === CUSTOMER_ACTIVITY_ACTIONS.CUSTOMER_CREATED) hasCreatedAudit = true;
     const useOriginalCreator = action === CUSTOMER_ACTIVITY_ACTIONS.CUSTOMER_CREATED && correctedCreatedAuditIds.has(row.id);
 
