@@ -144,7 +144,7 @@ export function FleetSummaryClient({ customer, vehicles, policies }: Props) {
                     </div>
                   </div>
                   <div className="hidden items-center gap-5 text-right sm:flex">
-                    <CompactMetric label="Policy Status" value={policyStatus} />
+                    <PolicyStatusMetric value={policyStatus} />
                     <CompactMetric label="Status" value={vehicle.registration_status || "—"} />
                   </div>
                   {isExpanded ? <ChevronDown className="h-4 w-4 shrink-0 text-[#64748B]" /> : <ChevronRight className="h-4 w-4 shrink-0 text-[#64748B]" />}
@@ -272,6 +272,27 @@ function parsePolicyDate(value: string) {
 
 function Detail({ label, value }: { label: string; value: string | null | undefined }) {
   return <div className="min-w-0"><p className="text-[8px] font-semibold uppercase tracking-[0.05em] text-[#96A1B1]">{label}</p><p className="mt-0.5 truncate text-[10px] font-semibold text-[#334155]" title={value || "—"}>{value || "—"}</p></div>;
+}
+
+function PolicyStatusMetric({ value }: { value: string }) {
+  const styles = {
+    ACTIVE: { badge: "border-emerald-200 bg-emerald-50 text-emerald-700", marker: "✓" },
+    "EXPIRING SOON": { badge: "border-amber-200 bg-amber-50 text-amber-700", marker: "●" },
+    EXPIRED: { badge: "border-red-200 bg-red-50 text-red-700", marker: "●" },
+    "NO POLICY": { badge: "border-slate-200 bg-slate-50 text-slate-500", marker: "●" },
+    UPCOMING: { badge: "border-blue-200 bg-blue-50 text-blue-700", marker: "●" },
+  } as const;
+  const style = styles[value as keyof typeof styles] ?? styles["NO POLICY"];
+
+  return (
+    <div>
+      <p className="text-[7.5px] font-semibold uppercase tracking-[0.05em] text-[#A0AABA]">Policy Status</p>
+      <span className={`mt-0.5 inline-flex h-5 items-center gap-1 rounded-full border px-1.5 text-[8.5px] font-semibold leading-none ${style.badge}`}>
+        <span className="text-[9px] leading-none" aria-hidden="true">{style.marker}</span>
+        <span>{value}</span>
+      </span>
+    </div>
+  );
 }
 
 function CompactMetric({ label, value }: { label: string; value: string }) {
