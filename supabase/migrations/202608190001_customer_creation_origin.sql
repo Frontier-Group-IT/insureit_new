@@ -44,6 +44,20 @@ returns trigger
 language plpgsql
 as $$
 begin
+  if tg_op = 'INSERT' then
+    -- These three customer types have dedicated onboarding workflows, so their
+    -- source is unambiguous even when older application code omits the column.
+    if new.creation_channel = 'legacy' then
+      new.creation_channel := case new.partner_type
+        when 'group' then 'group_onboarding'
+        when 'corporate' then 'corporate_onboarding'
+        when 'dealership' then 'dealership_onboarding'
+        else 'legacy'
+      end;
+    end if;
+    return new;
+  end if;
+
   if old.creation_channel <> 'legacy' then
     new.creation_channel := old.creation_channel;
     new.origin_customer_id := old.origin_customer_id;
@@ -63,7 +77,7 @@ $$;
 
 drop trigger if exists protect_customer_creation_provenance on public.customers;
 create trigger protect_customer_creation_provenance
-before update of creation_channel, origin_customer_id on public.customers
+before insert or update of creation_channel, origin_customer_id on public.customers
 for each row execute function public.protect_customer_creation_provenance();
 
 comment on column public.customers.creation_channel is
