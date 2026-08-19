@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy vehicle activity status tracking.",
-  "deploy_requested_at": "2026-08-19T11:05:00+05:30",
+  "purpose": "Deploy historical Policy Onboarding customer-origin backfill.",
+  "deploy_requested_at": "2026-08-19T11:08:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #431 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "0a33cec8de8b44c533624cfb675b67ca83a2ff3e",
-  "release_scope": "Deploy Vehicle Activity Status tracking for Vehicle Created, Vehicle Edited, and Vehicle Linked to Policy across direct/customer vehicle creation, vehicle editing, and policy onboarding. Reuse the existing audit_logs table with table_name=vehicles and preserve all unrelated policy, customer, billing, payout, document, AuthBridge, OCR, storage, permission, and workflow behavior unchanged.",
-  "verification": "PR #431 Verify web portal run 32220037468 (#1266) passed successfully on head 2b8a78c3c8d747efc0529623ec606c4efb92bf3d before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #432 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "7e03a07298a27bb90d56b99bef25557b0ed83c92",
+  "release_scope": "Deploy the conservative historical customer-origin backfill: update only legacy Individual/Proprietor customers whose earliest linked policy was created within one second of the customer record, excluding approved direct customer-onboarding applications and Group/Corporate/Dealership parent relationships established at creation time. The production Supabase migration backfill_policy_onboarded_customer_origin was applied successfully and classified 343 records. Preserve ambiguous legacy records and all unrelated vehicle, policy, billing, payout, document, AuthBridge, OCR, storage, permission, and workflow behavior unchanged.",
+  "verification": "PR #432 Verify web portal run 32220107143 (#1267) passed successfully on head 0960dc92abc397717cfd8c8c8d553ebc6813964c before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
