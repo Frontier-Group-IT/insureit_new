@@ -190,6 +190,12 @@ export function FleetSummaryClient({ customer, vehicles, policies }: Props) {
                                     <PolicyMetric label="Premium" value={formatCurrency(policy.premium_amount)} />
                                     <PolicyMetric label="IDV" value={formatCurrency(policy.insured_declared_value)} />
                                   </div>
+                                  <Link
+                                    href={`/policies/${policy.id}/edit`}
+                                    className="inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-[#CBD5E1] bg-white px-3 text-[9px] font-semibold text-[#173E7B] transition hover:border-[#173E7B] hover:bg-[#F8FAFC]"
+                                  >
+                                    Policy Details
+                                  </Link>
                                 </div>
                               </div>
                             ))}
