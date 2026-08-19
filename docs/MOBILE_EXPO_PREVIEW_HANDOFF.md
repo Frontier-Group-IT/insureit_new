@@ -380,4 +380,17 @@ EAS metadata: gitCommitHash matched the committed source; workflow checkout was 
 Device verification: BLOCKED; `adb devices -l` returned no connected device after publication. Perform two cold launches and visual verification when the Android device reconnects.
 ```
 
+Latest external claim contrast correction OTA:
+
+```text
+Source commit: 671aa9b1a7d4a8e075375913ede95f210206d1f6
+Message: Improve contrast for external claim stages
+Update group ID: 2bd4c38e-651d-4950-89a9-a60dbda9bf6f
+Android update ID: 01a01a03-06b5-7406-94fb-74802dbb5455
+iOS update ID: 01a01a03-06b5-7ca9-803c-29d6a7404d3f
+Runtime version: 0.2.0
+GitHub Actions run: 32253021080
+Device verification: two cold launches completed on Android device 00078344S000834; app remained alive and emitted only normal `Running "main"` startup entries. A fresh stage-route capture verified the white shield logo and navy header treatment. The requested real milestone form was unavailable for the supplied deep link ID, so field-level stage content was not claimed verified.
+```
+
 Use `docs/CURRENT_CHAT_HANDOFF.md` only for short active continuation status. Keep the durable mobile publishing rules here.

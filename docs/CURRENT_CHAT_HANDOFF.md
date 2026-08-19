@@ -10,6 +10,19 @@ Policy Onboarding OCR hardening remains an active workstream. Production portal 
 
 ## Mobile Expo preview
 
+**DEPLOYED / DEVICE-VERIFIED:** External claim contrast was corrected and published. Dark external-claim headers now use a generated white variant of the existing INSUREIT shield asset, `STEP X OF 9`/stage title/subtitle use light colors, and the decorative diagonal backdrop is disabled only for these stages so the header text is not obscured.
+
+```text
+Source commit: 671aa9b1a7d4a8e075375913ede95f210206d1f6
+Update group ID: 2bd4c38e-651d-4950-89a9-a60dbda9bf6f
+Android update ID: 01a01a03-06b5-7406-94fb-74802dbb5455
+iOS update ID: 01a01a03-06b5-7ca9-803c-29d6a7404d3f
+Runtime version: 0.2.0
+GitHub Actions run: 32253021080
+```
+
+Android device `00078344S000834` completed two cold launches with no matched fatal/runtime errors. Captures were saved as session artifacts `insureit-external-claim-current.png`, `insureit-external-claim-contrast.png`, and `insureit-external-claim-stage-contrast.png`; the last reached the stage route but showed an unavailable milestone because the test deep-link claim ID was not valid.
+
 **DEPLOYED / DEVICE VERIFICATION BLOCKED:** The external claim stage UI refinement was published to Expo `preview` runtime `0.2.0`. The shared stage header now supports the navy reference treatment, claim-update context is a navy banner, and the same visual hierarchy is applied across the nine stages and document vault without changing claim persistence or navigation.
 
 ```text
