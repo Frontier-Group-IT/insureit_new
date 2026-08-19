@@ -32,15 +32,17 @@ begin
   ]::text[];
 
   if old_business is distinct from new_business then
-    select array_agg(key order by key)
+    select array_agg(changed_key order by changed_key)
       into changed_keys
     from (
-      select key from jsonb_object_keys(old_business) as key
+      select old_key as changed_key
+      from jsonb_object_keys(old_business) as old_keys(old_key)
       union
-      select key from jsonb_object_keys(new_business) as key
+      select new_key as changed_key
+      from jsonb_object_keys(new_business) as new_keys(new_key)
     ) keys
-    where coalesce(old_business -> key, 'null'::jsonb)
-      is distinct from coalesce(new_business -> key, 'null'::jsonb);
+    where coalesce(old_business -> changed_key, 'null'::jsonb)
+      is distinct from coalesce(new_business -> changed_key, 'null'::jsonb);
 
     if new.updated_by is null
       and new.created_at is not null
