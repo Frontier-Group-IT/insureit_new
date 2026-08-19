@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CarFront, ChevronDown, ChevronRight, FileText, ShieldCheck } from "lucide-react";
+import { Bike, BusFront, CarFront, ChevronDown, ChevronRight, Construction, FileText, ShieldCheck, Tractor, Truck } from "lucide-react";
 import { useMemo, useState } from "react";
 
 type Customer = {
@@ -128,7 +128,9 @@ export function FleetSummaryClient({ customer, vehicles, policies }: Props) {
             return (
               <article key={vehicle.id} className="overflow-hidden rounded-2xl border border-[#DCE3EE] bg-white shadow-[0_6px_20px_rgba(15,23,42,0.045)]">
                 <button type="button" onClick={() => toggleVehicle(vehicle.id)} className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[#F8FAFC]" aria-expanded={isExpanded}>
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEF3FF] text-[#315FEA]"><CarFront className="h-4.5 w-4.5" strokeWidth={1.8} /></span>
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEF3FF] text-[#315FEA]">
+                    <VehicleClassIcon vehicle={vehicle} />
+                  </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                       <p className="text-[12px] font-semibold text-[#173E7B]">{vehicle.vehicle_no || "Unregistered vehicle"}</p>
@@ -217,6 +219,21 @@ export function FleetSummaryClient({ customer, vehicles, policies }: Props) {
       )}
     </div>
   );
+}
+
+function VehicleClassIcon({ vehicle }: { vehicle: Vehicle }) {
+  const classText = [vehicle.vehicle_type, vehicle.vehicle_class_description, vehicle.vehicle_category, vehicle.body_type]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  const iconProps = { className: "h-4.5 w-4.5", strokeWidth: 1.8 };
+
+  if (/two[ -]?wheeler|motorcycle|motor cycle|scooter|bike/.test(classText)) return <Bike {...iconProps} />;
+  if (/bus|coach|passenger|pcv/.test(classText)) return <BusFront {...iconProps} />;
+  if (/tractor|agricultur/.test(classText)) return <Tractor {...iconProps} />;
+  if (/jcb|construction|excavator|crane|earth ?mover|cpm|misc/.test(classText)) return <Construction {...iconProps} />;
+  if (/goods|gcv|truck|lorry|cargo|pickup|pick-up|commercial/.test(classText)) return <Truck {...iconProps} />;
+  return <CarFront {...iconProps} />;
 }
 
 function Detail({ label, value }: { label: string; value: string | null | undefined }) {
