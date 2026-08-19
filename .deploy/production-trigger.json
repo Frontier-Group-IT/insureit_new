@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Customer Fleet Summary UI.",
-  "deploy_requested_at": "2026-08-19T13:39:00+05:30",
+  "purpose": "Deploy Fleet Summary header refinement.",
+  "deploy_requested_at": "2026-08-19T14:46:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #441 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "204dc76b3fcab8dc2870e223bf95ad850b9a34c3",
-  "release_scope": "Deploy the Customer Fleet Summary UI: conditionally show View Fleet only for customers with vehicles; add the read-only /customers/[id]/fleet summary page; keep vehicle and policy sections collapsed by default with single-vehicle expansion. Preserve customer, vehicle, policy, audit, onboarding, billing, payout, document, AuthBridge, OCR, storage, permissions, database schema, and save-action behavior unchanged.",
-  "verification": "PR #441 Verify web portal run 32230683269 (#1302) passed successfully on head efe0a659648a6a5e7c6d4aa96a11e379993e2cc5 before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #443 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "73d6f64e1c7499d23ef895267df9fa12e48d34dd",
+  "release_scope": "Deploy the Fleet Summary header UI refinement: make Fleet Summary bolder, show NO. OF FLEET and the vehicle count inline, and replace Back to Customer text with an icon-only accessible back control. Preserve customer, vehicle, policy, activity, onboarding, permissions, data-loading, database schema, save behavior, and unrelated functionality unchanged.",
+  "verification": "PR #443 Verify web portal run 32236589618 (#1307) passed successfully on head 6dec39a573851a2ee2435c41485133dd4dbc5809 before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
