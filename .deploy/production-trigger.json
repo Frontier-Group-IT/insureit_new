@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Fleet Summary header back icon removal.",
-  "deploy_requested_at": "2026-08-19T15:55:00+05:30",
+  "purpose": "Deploy compact Fleet Summary header spacing.",
+  "deploy_requested_at": "2026-08-19T16:07:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #450 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "15a955e2984460282e2c291ba5b6ed5b14adc6ca",
-  "release_scope": "Deploy the Fleet Summary header cleanup: remove only the icon-only Back to Customer control from the far-right side of the navy Fleet Summary header. Preserve the Fleet Summary title, customer name/code, fleet count, vehicle-class icons, vehicle and policy expansion, policy-status and vehicle-status metrics, Policy Details navigation, customer/vehicle/policy data loading, permissions, onboarding, calculations, database schema, save actions, and unrelated functionality unchanged.",
-  "verification": "PR #450 Verify web portal run 32242567314 (#1329) passed successfully on head 8c17b1e35e7f69f61c93bd971ed17fcd59554ca2 before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy current main commit 09b431c3a1299b381114af95c9031dbc45ac87e8 using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "09b431c3a1299b381114af95c9031dbc45ac87e8",
+  "release_scope": "Deploy the Fleet Summary header compacting change: reduce horizontal and vertical padding, slightly reduce the fleet icon container size, reduce the spacing below Fleet Summary, and bring customer name and customer ID closer together. Preserve the dark navy design, Fleet Summary typography, No. of Fleet badge, vehicle class icons, policy-status and vehicle-status metrics, vehicle and policy expansion, Policy Details navigation, data loading, permissions, onboarding, calculations, database schema, save actions, and unrelated functionality unchanged.",
+  "verification": "This compact-header change was committed directly to current main. No Supabase migration is required. The protected production workflow must run the canonical web-portal verification on current main before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
