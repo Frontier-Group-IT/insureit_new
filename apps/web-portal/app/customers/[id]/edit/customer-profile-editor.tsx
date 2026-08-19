@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { BadgeCheck, CalendarDays, CarFront, CircleAlert, CircleCheck, Phone, UserCheck, UserRound, type LucideIcon } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { FormSubmitButton } from "@/components/form-submit-button";
 
 type Customer = { id: string; customer_code: string; contact_name: string; company_name: string | null; phone: string; email: string | null; partner_type: string | null; address_street: string | null; address_locality: string | null; address: string | null; city: string | null; state: string | null; postal_code: string | null; pan_number: string | null; aadhaar_last_four: string | null; legal_trade_name: string | null; is_gst_registered: boolean; gst_number: string | null; fleet_size_band: string | null; onboarding_status: string; assigned_agent_id: string | null; created_at: string; updated_at: string };
 type DocumentRow = { id: string; document_type: string; file_name: string; verification_status: string; created_at: string; signedUrl: string | null };
 type VehicleRow = { id: string; vehicle_no: string; vehicle_type: string; make: string | null; model: string | null };
 type AgentOption = { id: string; full_name: string };
-type Props = { customer: Customer; documents: DocumentRow[]; vehicles: VehicleRow[]; agents: AgentOption[]; internalOwnerName?: string; leadSourceName?: string; action: (formData: FormData) => void | Promise<void>; errorMessage?: string | null; errorField?: string | null };
+type Props = { customer: Customer; documents: DocumentRow[]; vehicles: VehicleRow[]; agents: AgentOption[]; internalOwnerName?: string; leadSourceName?: string; action: (formData: FormData) => void | Promise<void>; errorMessage?: string | null; errorField?: string | null; beforeActions?: ReactNode };
 
 const inputClass = "h-8 w-full rounded-md border border-[var(--border)] bg-white px-2.5 text-[11.5px] text-[var(--text)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[#E8E8FF]";
 const labelClass = "mb-1 block text-[9.5px] font-semibold uppercase tracking-[0.04em] text-[#68758A]";
@@ -17,7 +17,7 @@ const allDocumentTypes = ["pan_copy", "aadhaar_front", "aadhaar_back", "gst_copy
 const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 type DocumentType = (typeof allDocumentTypes)[number];
 
-export function CustomerProfileEditor({ customer, documents, vehicles, agents, internalOwnerName: internalOwnerNameOverride, leadSourceName: leadSourceNameOverride, action, errorMessage, errorField }: Props) {
+export function CustomerProfileEditor({ customer, documents, vehicles, agents, internalOwnerName: internalOwnerNameOverride, leadSourceName: leadSourceNameOverride, action, errorMessage, errorField, beforeActions }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const [gstRegistered, setGstRegistered] = useState(customer.is_gst_registered);
   const [selectedFileNames, setSelectedFileNames] = useState<Partial<Record<DocumentType, string>>>({});
@@ -178,7 +178,11 @@ export function CustomerProfileEditor({ customer, documents, vehicles, agents, i
               })}
             </div>
           </div>
+        </section>
 
+        {beforeActions}
+
+        <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white shadow-[var(--shadow-panel)]">
           <div className="flex items-center justify-end gap-2 px-4 py-3">
             <Link href="/customers" className="inline-flex h-9 items-center justify-center rounded-md border border-[#CBD5E1] bg-white px-4 text-[10.5px] font-semibold text-[#334155] transition hover:bg-[#F8FAFC]">Back</Link>
             <FormSubmitButton label="Save changes" className="h-9 bg-[#315FEA] px-4 text-[10.5px] font-semibold text-white shadow-sm hover:bg-[#2851D9]" />
