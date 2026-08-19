@@ -151,7 +151,7 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
           ? refineNewIndiaCommercialPolicy(pages, baseParsed)
           : refineAdditionalMotorPolicy(pages, baseParsed);
 
-    if (baseParsed.parserId === "iffco_tokio_commercial_motor_v1" || baseParsed.parserId === "new_india_motor_v1") {
+    if ((baseParsed.parserId === "iffco_tokio_commercial_motor_v1" && parsed.fields.find((field) => field.key === "policy_product")?.value !== "SAOD") || baseParsed.parserId === "new_india_motor_v1") {
       const tables = file.type === "application/pdf"
         ? await processLayoutTables({ config, content, mimeType: file.type, accessToken: googleAccessToken, signal: controller.signal })
         : [];

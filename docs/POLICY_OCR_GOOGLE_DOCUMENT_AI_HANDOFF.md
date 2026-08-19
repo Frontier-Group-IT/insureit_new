@@ -308,6 +308,31 @@ Expected Shriram retest behavior for the observed sample: IDV, OD premium, TP pr
 
 United India Miscellaneous/Special Type Vehicles and Contractors Plant & Machinery remain deferred unless representative samples and approved Section 03 mapping are provided.
 
+### New India enhanced-cover schedule training - 2026-08-19
+
+**IMPLEMENTED / LOCALLY VERIFIED:** a supplied New India commercial vehicle package policy exposed a second schedule shape. Its extracted text uses `Period of cover`, `Total Value`, same-line `Total OD Premium`/`Total TP Premium`, `Net Premium`, `GST`, `Total Payable`, and a split owner-driver CPA label whose amount appears several lines later.
+
+The New India refiner now supports these bounded labels and preserves accounting normalization:
+
+```text
+OD = 10272
+Printed TP/liability = 48921
+CPA = 275
+Portal TP = 48921 - 275 = 48646
+OD + Portal TP + CPA = 59193
+```
+
+The sanitized New India regression now covers this layout and passes 6/6 cases. Full OCR regressions pass: IFFCO structured 5/5, IFFCO 11/11, Digit 5/5, New India 6/6, and additional insurers 5/5. Typecheck, lint, and build passed with existing warnings. The actual uploaded PDF was checked locally using extracted text; Google production upload/review/apply remains **UNVERIFIED** until the same policy is re-uploaded through the authenticated production portal after an approved deployment.
+
+### Oriental bundled and IFFCO standalone-OD training - 2026-08-19
+
+**IMPLEMENTED / LOCALLY VERIFIED:** two additional supplied policies were trained with sanitized regressions:
+
+- Oriental two-wheeler bundled cover: product `Bundled`, dates `2026-08-13` to `2027-08-12`, IDV `75233`, OD `302`, TP `3851`, CPA `0`, printed net `4153`, GST `748`, gross `4901`.
+- IFFCO-Tokio private-car standalone OD: product `SAOD`, synthetic regression policy number `N8100001`, dates `2026-07-29` to `2027-07-28`, IDV `900000`, OD `3618`, CPA `0`. Third-party premium is intentionally withheld because the policy identifies HDFC ERGO as the external TP insurer; printed net `11863`, GST `2135.34`, and gross `13998.34` remain comparison-only.
+
+Parser changes include Oriental final OD/TP schedule-row selection and bundled mapping, IFFCO split-line P400 number extraction, SAOD detection, safe CPA handling from the explicit no-owner-driver declaration, premium-bifurcation totals, and server-side bypass of package-only Layout Parser financial replacement for SAOD. Sanitized regression results: Oriental/additional insurers `6/6`; IFFCO `12/12`. Full OCR regressions, typecheck, lint, and build passed locally with existing warnings. Production upload/review/apply remains **UNVERIFIED**.
+
 ## 8. Release discipline / next steps
 
 Ordinary commits do not intentionally deploy production. Do not modify `.deploy/production-trigger.json` unless the user explicitly says `deploy now` or `finish and deploy` after the current code change.
