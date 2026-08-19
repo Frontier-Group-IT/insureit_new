@@ -91,7 +91,7 @@ export function FleetSummaryClient({ customer, vehicles, policies }: Props) {
             <CarFront className="h-5 w-5" strokeWidth={1.9} />
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="text-[17px] font-bold leading-tight text-white">Fleet Summary</h1>
+            <h1 className="text-[20px] font-bold leading-tight text-white">Fleet Summary</h1>
             <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1.5 sm:flex-nowrap">
               <span className="min-w-0 truncate text-[11.5px] font-semibold text-white">
                 {customer.company_name?.trim() || customer.contact_name}
@@ -105,7 +105,7 @@ export function FleetSummaryClient({ customer, vehicles, policies }: Props) {
                 href={`/customers/${customer.id}/edit`}
                 aria-label="Back to Customer"
                 title="Back to Customer"
-                className="ml-auto inline-grid h-7 w-7 shrink-0 place-items-center rounded-md border border-white/25 bg-white/10 text-white transition hover:bg-white/20"
+                className="relative -top-1 ml-auto inline-grid h-7 w-7 shrink-0 place-items-center rounded-md border border-white/25 bg-white/10 text-white transition hover:bg-white/20"
               >
                 <ChevronRight className="h-3.5 w-3.5 rotate-180" strokeWidth={2} />
               </Link>
