@@ -120,6 +120,7 @@ export function FleetSummaryClient({ customer, vehicles, policies }: Props) {
             const vehiclePolicies = policiesByVehicle.get(vehicle.id) ?? [];
             const policiesExpanded = isExpanded && policyVehicleId === vehicle.id;
             const policyStatus = getVehiclePolicyStatus(vehiclePolicies);
+            const registrationDisplayStatus = getVehicleRegistrationDisplayStatus(vehicle);
             return (
               <article key={vehicle.id} className="overflow-hidden rounded-2xl border border-[#DCE3EE] bg-white shadow-[0_6px_20px_rgba(15,23,42,0.045)]">
                 <button type="button" onClick={() => toggleVehicle(vehicle.id)} className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[#F8FAFC]" aria-expanded={isExpanded}>
@@ -145,7 +146,7 @@ export function FleetSummaryClient({ customer, vehicles, policies }: Props) {
                   </div>
                   <div className="hidden items-center gap-5 text-right sm:flex">
                     <PolicyStatusMetric value={policyStatus} />
-                    <CompactMetric label="Status" value={vehicle.registration_status || "—"} />
+                    <CompactMetric label="Status" value={registrationDisplayStatus} />
                   </div>
                   {isExpanded ? <ChevronDown className="h-4 w-4 shrink-0 text-[#64748B]" /> : <ChevronRight className="h-4 w-4 shrink-0 text-[#64748B]" />}
                 </button>
@@ -239,6 +240,12 @@ function VehicleClassIcon({ vehicle }: { vehicle: Vehicle }) {
   if (/jcb|construction|excavator|crane|earth ?mover|cpm|misc/.test(classText)) return <Construction {...iconProps} />;
   if (/goods|gcv|truck|lorry|cargo|pickup|pick-up|commercial/.test(classText)) return <Truck {...iconProps} />;
   return <CarFront {...iconProps} />;
+}
+
+function getVehicleRegistrationDisplayStatus(vehicle: Vehicle) {
+  const rawStatus = vehicle.registration_status?.trim().toLowerCase().replace(/[\s-]+/g, "_") ?? "";
+  const pendingRegistration = rawStatus === "registration_pending" || vehicle.vehicle_no.toUpperCase().startsWith("PENDING-");
+  return pendingRegistration ? "REGISTRATION PENDING" : "REGISTERED";
 }
 
 function getVehiclePolicyStatus(policies: Policy[]) {
