@@ -14,7 +14,7 @@ jobs:
       - name: Check out committed mobile source
         uses: actions/checkout@v4
         with:
-          ref: 671aa9b1
+          ref: 671aa9b1a7d4a8e075375913ede95f210206d1f6
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
