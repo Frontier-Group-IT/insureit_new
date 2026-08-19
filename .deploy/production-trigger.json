@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Customer Activity Status ordering update.",
-  "deploy_requested_at": "2026-08-19T11:48:00+05:30",
+  "purpose": "Deploy Customer Activity Via channel tracking.",
+  "deploy_requested_at": "2026-08-19T11:58:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #435 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "988bf7d5c1bf5d18e9d0b12f8e2e54f1310ede9a",
-  "release_scope": "Deploy the UI-only Customer Edit layout change so Activity Status renders after customer fields/documents and immediately before the Back / Save changes action row for the standard Customer Profile edit flow. Preserve all customer activity logging, validation, persistence, document behavior, permissions, Corporate Profile, Dealership Profile, vehicle and policy workflows, database schema, and unrelated functionality unchanged.",
-  "verification": "PR #435 Verify web portal run 32222628640 (#1278) passed successfully on head 9fed8e69e89c49c1541be8fda1887958b1f98da9 before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #436 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "87240f7e39279ce2f697a509f9f165c4b06e9df1",
+  "release_scope": "Deploy Customer Activity Via channel tracking so each customer action records or resolves the workflow that produced it: Customer Created keeps its immutable creation channel, Customer Edited shows Customer/Corporate/Dealership/Group Profile as applicable, and parent membership changes show Customer Relationships. The production Supabase migration customer_activity_action_channel was applied successfully. Preserve append-only audit history and all unrelated customer provenance, vehicle, policy, billing, payout, document, AuthBridge, OCR, storage, permission, and workflow behavior unchanged.",
+  "verification": "PR #436 Verify web portal run 32223502587 (#1281) passed successfully on head 945b7155e2aaf3cd1a492c7ce4f8ac37d2736589 before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
