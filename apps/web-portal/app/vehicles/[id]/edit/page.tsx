@@ -64,10 +64,14 @@ export default async function EditVehiclePage({ params }: { params: Promise<{ id
 
   return (
     <AppShell title="Edit Vehicle">
-      <div className="space-y-4">
-        <VehicleForm action={saveVehicle.bind(null, id)} customers={customerOptions} manufacturers={manufacturerOptions} values={vehicle} submitLabel="Save changes" />
-        <VehicleActivityStatus vehicleId={vehicle.id} createdAt={vehicle.created_at} updatedAt={vehicle.updated_at} />
-      </div>
+      <VehicleForm
+        action={saveVehicle.bind(null, id)}
+        customers={customerOptions}
+        manufacturers={manufacturerOptions}
+        values={vehicle}
+        submitLabel="Save changes"
+        beforeActions={<VehicleActivityStatus vehicleId={vehicle.id} createdAt={vehicle.created_at} updatedAt={vehicle.updated_at} />}
+      />
     </AppShell>
   );
 }
