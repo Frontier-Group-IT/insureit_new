@@ -171,6 +171,18 @@ Use visual inspection for the changed UI. If the relevant screen is blocked by d
 
 ## 7. Current Recent Preview Evidence
 
+Latest verified preview OTA wiring the previously unused Start Claim artwork into the live route:
+
+```text
+Source commit: 4aedc96e4c9dee6f6beb270ae993e25d06c25a66
+Message: Render Start Claim artwork
+Update group ID: e1cad678-a328-44cd-ba9f-b147fb1657d8
+Runtime version: 0.2.0
+GitHub Actions run: 32247962686
+```
+
+The route now imports and renders `assets/brand/start-claim/start-claim-hero.png` and `assets/brand/start-claim/start-claim-footer-scene.png`. Typecheck, focused ESLint, web export, and `git diff --check` passed. Android device `00078344S000834` completed a cold launch and displayed the Start Claim screen with the supplied hero artwork; the downstream claim-intimation flow also opened without matched fatal/runtime errors. The temporary authenticated publisher workflow was removed after publication.
+
 Latest republished preview OTA for the current `main` claim workflow source:
 
 ```text

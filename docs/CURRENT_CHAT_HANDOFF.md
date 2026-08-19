@@ -10,6 +10,17 @@ Policy Onboarding OCR hardening remains an active workstream. Production portal 
 
 ## Mobile Expo preview
 
+**DEPLOYED / DEVICE-VERIFIED:** Start Claim artwork was wired into the live route and published to Expo `preview` runtime `0.2.0`.
+
+```text
+Source commit: 4aedc96e4c9dee6f6beb270ae993e25d06c25a66
+Message: Render Start Claim artwork
+Update group ID: e1cad678-a328-44cd-ba9f-b147fb1657d8
+GitHub Actions run: 32247962686
+```
+
+The previously present `start-claim-hero.png` and `start-claim-footer-scene.png` assets were not referenced by `app/customer/start-claim.tsx`; the route now renders both. Typecheck, focused ESLint, web export, and diff checks passed. Android device `00078344S000834` displayed the Start Claim hero artwork after the OTA and reached Claim Intimation without matched fatal/runtime errors. The temporary publish workflow was removed after use.
+
 **DEPLOYED / DEVICE-VERIFIED:** The current `main` mobile source was republished to Expo `preview` to ensure the refined Start Claim, Spot Intimation, Spot Status, Claim Intimation/Claim Detail, and supplied artwork are in the active update bundle.
 
 ```text
