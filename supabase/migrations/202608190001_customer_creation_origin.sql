@@ -39,6 +39,33 @@ create index if not exists customers_origin_customer_id_idx
   on public.customers (origin_customer_id)
   where origin_customer_id is not null;
 
+create or replace function public.protect_customer_creation_provenance()
+returns trigger
+language plpgsql
+as $$
+begin
+  if old.creation_channel <> 'legacy' then
+    new.creation_channel := old.creation_channel;
+    new.origin_customer_id := old.origin_customer_id;
+    return new;
+  end if;
+
+  -- Existing rows are deliberately introduced as legacy. Allow exactly one
+  -- later classification from legacy to a known source, which is required for
+  -- policy onboarding because the customer is created inside an existing RPC
+  -- before the application receives the new customer id.
+  if new.creation_channel = 'legacy' then
+    new.origin_customer_id := old.origin_customer_id;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists protect_customer_creation_provenance on public.customers;
+create trigger protect_customer_creation_provenance
+before update of creation_channel, origin_customer_id on public.customers
+for each row execute function public.protect_customer_creation_provenance();
+
 comment on column public.customers.creation_channel is
   'Immutable creation workflow for the customer. Existing rows remain legacy unless a reliable origin is known.';
 
