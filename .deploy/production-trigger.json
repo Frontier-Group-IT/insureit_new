@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy New India OCR fragmented period-text validity training update.",
-  "deploy_requested_at": "2026-08-19T00:14:00+05:30",
+  "purpose": "Deploy customer creation origin and activity history.",
+  "deploy_requested_at": "2026-08-19T10:48:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #428 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "c0e79e9d77aabb05836d6af4ff0cb9787d301735",
-  "release_scope": "Deploy the focused New India Assurance OCR validity follow-up: tolerate fragmented whitespace and line breaks inside dates, recover the first two valid dates after Period of cover / Own Damage Period / Motor Liability Period even when Google fragments or omits the separator token, and preserve the already-verified New India insurer, product, policy number, IDV, OD, TP, CPA and premium-total extraction logic. Preserve unrelated policy onboarding, billing, permissions, storage, database schema, and workflows unchanged.",
-  "verification": "PR #428 Verify web portal run 32171995933 passed successfully on head b12de999335b9acf42d0268057ca32df1da231ec before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #429 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "52ba1933cac8e1327559ef1c7f9fe569377f33c1",
+  "release_scope": "Deploy customer creation provenance and append-only customer activity history: creation channel, immutable origin customer, customer created/edited events, parent relationship add/remove events, and the Customer Activity Status UI showing Action, Created By, Via, Under, and timestamp. The production Supabase migration customer_creation_origin was applied successfully before triggering the web deployment. Preserve unrelated policy, vehicle, billing, payout, document, AuthBridge, OCR, storage, permission, and workflow behavior unchanged.",
+  "verification": "PR #429 Verify web portal run 32218850273 passed successfully on head 8508b4840836232d2a27bb15ef49fcf6e0007f96 before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
