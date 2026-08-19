@@ -366,4 +366,18 @@ Update this file after material changes to:
 - durable OTA failure lessons
 - current clean preview update evidence
 
+Latest external claim stage visual hierarchy OTA:
+
+```text
+Source commit: 5a29351fef7ec68bb9c6b25797fe88f8aadd2ac7
+Message: Refine external claim stage visual hierarchy
+Update group ID: 1de9d0d4-e1c9-44c1-b9d3-f3c4afd2e086
+Android update ID: 01a019f6-141d-7dd3-8bd2-b423a1292389
+iOS update ID: 01a019f6-141d-74d5-9fa0-273aee6901e3
+Runtime version: 0.2.0
+GitHub Actions run: 32251824563
+EAS metadata: gitCommitHash matched the committed source; workflow checkout was clean.
+Device verification: BLOCKED; `adb devices -l` returned no connected device after publication. Perform two cold launches and visual verification when the Android device reconnects.
+```
+
 Use `docs/CURRENT_CHAT_HANDOFF.md` only for short active continuation status. Keep the durable mobile publishing rules here.

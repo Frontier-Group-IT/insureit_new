@@ -10,6 +10,20 @@ Policy Onboarding OCR hardening remains an active workstream. Production portal 
 
 ## Mobile Expo preview
 
+**DEPLOYED / DEVICE VERIFICATION BLOCKED:** The external claim stage UI refinement was published to Expo `preview` runtime `0.2.0`. The shared stage header now supports the navy reference treatment, claim-update context is a navy banner, and the same visual hierarchy is applied across the nine stages and document vault without changing claim persistence or navigation.
+
+```text
+Source commit: 5a29351fef7ec68bb9c6b25797fe88f8aadd2ac7
+Message: Refine external claim stage visual hierarchy
+Update group ID: 1de9d0d4-e1c9-44c1-b9d3-f3c4afd2e086
+Android update ID: 01a019f6-141d-7dd3-8bd2-b423a1292389
+iOS update ID: 01a019f6-141d-74d5-9fa0-273aee6901e3
+Runtime version: 0.2.0
+GitHub Actions run: 32251824563
+```
+
+Typecheck, focused ESLint, web export, and `git diff --check` passed. Device verification is pending because `adb devices -l` currently reports no connected Android device.
+
 **DEPLOYED / DEVICE-VERIFIED:** Start Claim artwork was wired into the live route and published to Expo `preview` runtime `0.2.0`.
 
 ```text
