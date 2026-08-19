@@ -99,12 +99,12 @@ export function FleetSummaryClient({ customer, vehicles, policies }: Props) {
                 {customer.company_name?.trim() || customer.contact_name}
               </span>
               <span className="shrink-0 text-[9px] font-medium text-white/65">{customer.customer_code}</span>
-              <span className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-white/25 bg-white/10 px-2.5 text-[8.5px] font-semibold uppercase tracking-[0.04em] text-white/80">
-                <span>No. of Fleet</span>
-                <span className="text-[12px] font-bold leading-none text-white">{vehicles.length}</span>
-              </span>
             </div>
           </div>
+          <span className="ml-auto inline-flex h-7 shrink-0 items-center gap-1.5 self-center rounded-md border border-white/25 bg-white/10 px-2.5 text-[8.5px] font-semibold uppercase tracking-[0.04em] text-white/80">
+            <span>No. of Fleet</span>
+            <span className="text-[12px] font-bold leading-none text-white">{vehicles.length}</span>
+          </span>
         </div>
       </section>
 
