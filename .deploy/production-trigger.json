@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Fleet Summary navy header UI.",
-  "deploy_requested_at": "2026-08-19T15:04:00+05:30",
+  "purpose": "Deploy Fleet Summary header polish.",
+  "deploy_requested_at": "2026-08-19T15:29:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #446 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "87a05cf97df2001394252f9930449236b2a18602",
-  "release_scope": "Deploy the Fleet Summary navy identity header: white circular fleet icon, bold Fleet Summary title, compact customer name and customer code row, inline NO. OF FLEET badge, and icon-only Back to Customer control. Preserve vehicle and policy expansion, Policy Details link, customer/vehicle/policy data loading, activity, onboarding, permissions, database schema, OCR, AuthBridge, save actions, and unrelated functionality unchanged.",
-  "verification": "PR #446 Verify web portal run 32238248087 (#1314) passed successfully on head d9e92ababd033ba707a543387ee6ef6ac5b21819 before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #447 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "d211b72b7169b6839aa847af950a8e954711583e",
+  "release_scope": "Deploy the Fleet Summary header polish: increase the Fleet Summary title from 17px to 20px and shift the icon-only Back to Customer control upward by 4px. Preserve the navy header treatment, fleet icon, customer name/code, NO. OF FLEET badge, vehicle and policy expansion, Policy Details link, customer/vehicle/policy data loading, activity, onboarding, permissions, database schema, OCR, AuthBridge, save actions, and unrelated functionality unchanged.",
+  "verification": "PR #447 Verify web portal run 32240239408 (#1321) passed successfully on head addbfc9d4c0cc0e676467380dc299825204fe155 before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
