@@ -43,6 +43,8 @@ const CHANNEL_LABELS: Record<CustomerCreationChannel, string> = {
 };
 
 const TRACKED_ACTIONS = Object.values(CUSTOMER_ACTIVITY_ACTIONS);
+const CUSTOMER_CREATED_ACTOR_CORRECTION_ACTION = "customer_created_actor_corrected";
+const ACTIVITY_QUERY_ACTIONS = [...TRACKED_ACTIONS, CUSTOMER_CREATED_ACTOR_CORRECTION_ACTION];
 const ACTIVITY_TABLE_NAME = "customers";
 
 type AdminClient = ReturnType<typeof createSupabaseAdminClient>;
@@ -137,9 +139,16 @@ export async function loadCustomerActivityHistory({
     .select("id,actor_id,action,new_data,created_at")
     .eq("table_name", ACTIVITY_TABLE_NAME)
     .eq("record_id", customerId)
-    .in("action", TRACKED_ACTIONS)
+    .in("action", ACTIVITY_QUERY_ACTIONS)
     .order("created_at", { ascending: false })
     .returns<AuditRow[]>();
+
+  const correctedCreatedAuditIds = new Set<string>();
+  for (const row of auditRows ?? []) {
+    if (row.action !== CUSTOMER_CREATED_ACTOR_CORRECTION_ACTION) continue;
+    const correctedAuditId = metadataValue(row.new_data, "customer_created_audit_id");
+    if (correctedAuditId) correctedCreatedAuditIds.add(correctedAuditId);
+  }
 
   const candidates: ActivityCandidate[] = [];
   let hasCreatedAudit = false;
@@ -148,10 +157,12 @@ export async function loadCustomerActivityHistory({
     const action = asTrackedAction(row.action);
     if (!action) continue;
     if (action === CUSTOMER_ACTIVITY_ACTIONS.CUSTOMER_CREATED) hasCreatedAudit = true;
+    const useOriginalCreator = action === CUSTOMER_ACTIVITY_ACTIONS.CUSTOMER_CREATED && correctedCreatedAuditIds.has(row.id);
     candidates.push({
       id: `audit:${row.id}`,
       action,
-      actorId: row.actor_id,
+      actorId: useOriginalCreator ? createdById : row.actor_id,
+      actorName: useOriginalCreator ? createdByName : undefined,
       at: row.created_at,
       via: action === CUSTOMER_ACTIVITY_ACTIONS.CUSTOMER_CREATED
         ? asCreationChannel(metadataValue(row.new_data, "creation_channel") ?? creationChannel)
