@@ -97,7 +97,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
   return (
     <SafeAreaView style={styles.safeArea} edges={[]}>
       <View pointerEvents="none" style={[styles.backdropTop, navyBrandHeader && styles.backdropTopNavy]} />
-      <View pointerEvents="none" style={styles.backdropBand} />
+      <View pointerEvents="none" style={[styles.backdropBand, navyBrandHeader && styles.backdropBandNavy]} />
       {showProfile ? (
         <View style={[styles.fixedBrandRow, navyBrandHeader && styles.fixedBrandRowNavy, { top: insets.top }]}>
           {showBackButton ? (
@@ -492,7 +492,8 @@ export const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: 'transparent' },
   safeArea: { flex: 1, backgroundColor: '#EEF7FF' },
   backdropTop: { position: 'absolute', left: 0, right: 0, top: 0, height: 270, backgroundColor: '#EAF5FF' },
-  backdropTopNavy: { backgroundColor: palette.navy, height: 180 },
+  backdropTopNavy: { backgroundColor: palette.navy, height: 270 },
+  backdropBandNavy: { display: 'none' },
   backdropBand: { position: 'absolute', left: -60, right: -70, top: 170, height: 108, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.72)', transform: [{ rotateZ: '-7deg' }] },
   screenContent: { flexGrow: 1, paddingHorizontal: 14, paddingBottom: 142, backgroundColor: 'transparent' },
   screenContentWithTabs: { paddingTop: 92, paddingBottom: 156 },
@@ -593,5 +594,3 @@ export const styles = StyleSheet.create({
   bottomTabTextNavy: { color: '#D5E4FA' },
   bottomTabTextActive: { color: colors.navy },
 });
-
-

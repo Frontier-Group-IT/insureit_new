@@ -152,9 +152,9 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   heroIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
   headerCopy: { flex: 1, minWidth: 0 },
-  eyebrow: { color: '#0A43A3', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.8 },
-  title: { color: palette.navy, fontSize: 21, fontWeight: '900', marginTop: 2 },
-  subtitle: { color: '#7A8799', fontSize: 10.3, lineHeight: 14, fontWeight: '600', marginTop: 3 },
+  eyebrow: { color: '#A9C9FF', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.8 },
+  title: { color: '#FFFFFF', fontSize: 21, fontWeight: '900', marginTop: 2 },
+  subtitle: { color: '#D4E2F8', fontSize: 10.3, lineHeight: 14, fontWeight: '600', marginTop: 3 },
 
   progressRail: { flexDirection: 'row', gap: 6, marginBottom: 14, paddingHorizontal: 2 },
   progressSegment: { flex: 1, height: 6, borderRadius: 4, backgroundColor: '#E4E9F1' },
