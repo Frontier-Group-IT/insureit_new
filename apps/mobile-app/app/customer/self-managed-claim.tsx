@@ -23,7 +23,7 @@ type ExternalPolicy = {
 
 export default function SelfManagedClaimScreen() {
   const router = useRouter();
-  const { externalPolicyId } = useLocalSearchParams<{ externalPolicyId?: string }>();
+  const { externalPolicyId, id } = useLocalSearchParams<{ externalPolicyId?: string; id?: string }>();
   const [policy, setPolicy] = useState<ExternalPolicy | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [date, setDate] = useState('');
@@ -39,19 +39,34 @@ export default function SelfManagedClaimScreen() {
   useEffect(() => {
     let active = true;
     void (async () => {
-      if (!externalPolicyId) { setMessage('Select a policy before starting a claim.'); setLoading(false); return; }
-      const { data } = await (supabase as any).from('external_policies').select('*').eq('id', externalPolicyId).maybeSingle();
+      const claimResult = id ? await supabase.from('claims').select('id,external_policy_id,accident_at,accident_location').eq('id', id).maybeSingle() : null;
+      const policyId = id ? (claimResult?.data as { external_policy_id?: string | null } | null)?.external_policy_id : externalPolicyId;
+      if (!policyId) { setMessage('Select a policy before starting a claim.'); setLoading(false); return; }
+      const { data } = await (supabase as any).from('external_policies').select('*').eq('id', policyId).maybeSingle();
       if (!active) return;
       const next = data as ExternalPolicy | null;
       if (!next) { setMessage('This customer-added policy is not available.'); setLoading(false); return; }
       const result = await supabase.from('vehicles').select('*').eq('id', next.vehicle_id).maybeSingle();
       if (!active) return;
+      if (claimResult?.error) { setMessage('We could not load this claim for editing.'); setLoading(false); return; }
       setPolicy(next);
       setVehicle(result.data ?? null);
+      if (claimResult?.data) {
+        const accident = claimResult.data.accident_at ? new Date(claimResult.data.accident_at) : null;
+        if (accident && !Number.isNaN(accident.getTime())) {
+          setDate(formatIsoDate(accident));
+          setTime(`${String(accident.getHours()).padStart(2, '0')}:${String(accident.getMinutes()).padStart(2, '0')}`);
+        }
+        setLocation(claimResult.data.accident_location ?? '');
+        const milestoneResult = await (supabase as any).from('claim_milestones').select('details').eq('claim_id', id).eq('milestone_key', 'spot_intimation').maybeSingle();
+        const details = milestoneResult.data?.details as { driver_name?: string; driver_phone?: string } | null;
+        setDriver(details?.driver_name ?? '');
+        setPhone(details?.driver_phone ?? '');
+      }
       setLoading(false);
     })();
     return () => { active = false; };
-  }, [externalPolicyId]);
+  }, [externalPolicyId, id]);
 
   async function submit() {
     if (!policy || !vehicle || saving) return;
@@ -60,17 +75,28 @@ export default function SelfManagedClaimScreen() {
     if (!accidentAt) return setMessage('Enter a valid accident date and time.');
     if (accidentAt.getTime() > Date.now()) return setMessage('Accident date and time cannot be in the future.');
     setSaving(true);
-    const { data, error } = await (supabase.rpc as any)('create_self_managed_external_claim', {
-      p_customer_id: policy.customer_id,
-      p_vehicle_id: policy.vehicle_id,
-      p_external_policy_id: policy.id,
-      p_accident_at: accidentAt.toISOString(),
-      p_driver_name: driver.trim() || null,
-      p_driver_phone: phone.trim() || null,
-      p_location: location.trim() || null,
-    });
+    const result = id
+      ? await Promise.all([
+        supabase.from('claims').update({ accident_at: accidentAt.toISOString(), accident_location: location.trim() || null }).eq('id', id),
+        (supabase as any).from('claim_milestones').update({
+          details: { accident_at: accidentAt.toISOString(), driver_name: driver.trim() || null, driver_phone: phone.trim() || null, location: location.trim() || null, external_policy_id: policy.id, policy_no: policy.policy_no, insurance_company_id: policy.insurance_company_id },
+          completed_at: new Date().toISOString(),
+        }).eq('claim_id', id).eq('milestone_key', 'spot_intimation'),
+      ])
+      : [await (supabase.rpc as any)('create_self_managed_external_claim', {
+        p_customer_id: policy.customer_id,
+        p_vehicle_id: policy.vehicle_id,
+        p_external_policy_id: policy.id,
+        p_accident_at: accidentAt.toISOString(),
+        p_driver_name: driver.trim() || null,
+        p_driver_phone: phone.trim() || null,
+        p_location: location.trim() || null,
+      })];
     setSaving(false);
-    if (error) return setMessage(error.message || 'We could not start claim tracking.');
+    const error = result.find((item) => item.error)?.error;
+    if (error) return setMessage(error.message || 'We could not save claim details.');
+    if (id) { router.replace({ pathname: '/customer/claim-detail', params: { id } }); return; }
+    const data = result[0].data;
     const created = Array.isArray(data) ? data[0] : data;
     if (created?.claim_id) router.replace({ pathname: '/customer/claim-detail', params: { id: created.claim_id } });
     else setMessage('The claim was not created. Please try again.');
@@ -83,9 +109,9 @@ export default function SelfManagedClaimScreen() {
         <MaterialCommunityIcons name="car-emergency" size={22} color="#0A43A3" />
       </View>
       <View style={styles.headerCopy}>
-        <Text style={styles.eyebrow}>STEP 1 OF 9</Text>
+        <Text style={styles.eyebrow}>{id ? 'EDIT STEP 1 OF 9' : 'STEP 1 OF 9'}</Text>
         <Text style={styles.pageTitle}>Spot Intimation</Text>
-        <Text style={styles.pageSubtitle}>Start tracking an incident</Text>
+        <Text style={styles.pageSubtitle}>{id ? 'Review and update incident details' : 'Start tracking an incident'}</Text>
       </View>
       <AppBadge label="Self Tracked" tone="info" />
     </View>
@@ -118,9 +144,13 @@ export default function SelfManagedClaimScreen() {
       <TextField label="Driver Number (Optional)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
       <TextField label="Location (Optional)" value={location} onChangeText={setLocation} />
     </Card>
-    <Button label={saving ? 'Starting claim...' : 'Start Claim'} onPress={submit} disabled={saving || !policy} />
+    <Button label={saving ? id ? 'Saving changes...' : 'Starting claim...' : id ? 'Save Spot Intimation' : 'Start Claim'} onPress={submit} disabled={saving || !policy} />
     <TimePickerModal value={time} visible={timePickerOpen} onClose={() => setTimePickerOpen(false)} onSelect={(value) => { setTime(value); setTimePickerOpen(false); }} />
   </Screen>;
+}
+
+function formatIsoDate(value: Date) {
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
 }
 
 function TimePickerField({ value, onPress }: { value: string; onPress: () => void }) {

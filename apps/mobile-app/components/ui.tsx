@@ -317,7 +317,7 @@ function tabsForRole(role: AppRole, customerContext?: CustomerAccountContext | n
     { label: 'Home', href: '/customer/home', icon: 'home-variant', ...customerTone },
     { label: 'Policies', href: '/customer/policies', icon: 'file-certificate-outline', ...customerTone },
     { label: 'Vehicles', href: '/customer/vehicles', icon: 'truck-outline', ...customerTone },
-    { label: 'Support', href: '/customer/support', icon: 'headset', ...customerTone },
+    { label: 'Claims', href: '/customer/claims', icon: 'shield-check-outline', ...customerTone },
     { label: 'Profile', href: '/customer/profile', icon: 'account-outline', ...customerTone },
   ];
   if (role === 'agent') return [
@@ -572,6 +572,5 @@ export const styles = StyleSheet.create({
   bottomTabText: { color: colors.grey, fontSize: 9.5, fontWeight: '900' },
   bottomTabTextActive: { color: colors.navy },
 });
-
 
 
