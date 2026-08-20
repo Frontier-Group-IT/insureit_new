@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppDatePicker } from '@/components/design-system';
-import { ClaimFormSection, ClaimInlineNote, ClaimPrimaryAction, ExternalClaimStageHeader } from '@/components/external-claim-ui';
+import { ClaimFormSection, ClaimPrimaryAction, ExternalClaimStageHeader } from '@/components/external-claim-ui';
 import { LoadingState, Message, Screen, TextField } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { type ClaimMilestone } from '@/lib/claim-service-mode';
@@ -206,7 +206,6 @@ export default function SelfManagedClaimScreen() {
       <ClaimFormSection title="Spot Intimation" subtitle="When the insurer was first informed" icon="shield-outline">
         <AppDatePicker label="Spot Intimation Date *" value={intimationDate} onChange={setIntimationDate} maxDate={todayIsoDate()} />
         <TimePickerField label="Spot Intimation Time *" value={intimationTime} onPress={() => setTimeTarget('intimation')} />
-        <ClaimInlineNote>Spot Intimation must be after the incident and before any later recorded claim stage.</ClaimInlineNote>
       </ClaimFormSection>
 
       <ClaimFormSection title="Incident details" subtitle="Add only what is useful for this claim" optional icon="account-details-outline">
@@ -265,8 +264,8 @@ function formatTime(value: string) { const parsed = parseTime(value); const date
 
 const styles = StyleSheet.create({
   gap: { height: 10 },
-  eventConnector: { minHeight: 42, marginTop: -2, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 16 }, connectorLine: { position: 'absolute', left: 33, top: 0, bottom: 0, width: 2, backgroundColor: '#D8E5F4' }, connectorBadge: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center', zIndex: 2 }, connectorText: { color: '#667085', fontSize: 10.5, fontWeight: '700', flex: 1 },
-  policyContext: { minHeight: 40, borderRadius: 12, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#DCE6F0', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 10 }, policyContextText: { color: '#4F6380', fontSize: 10.5, fontWeight: '800' },
-  timeField: { gap: 5, marginTop: 10 }, timeLabel: { color: '#3F4D63', fontSize: 11, fontWeight: '800' }, timeButton: { minHeight: 48, borderRadius: 12, borderWidth: 1, borderColor: '#D7E0EA', backgroundColor: '#FBFDFF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }, timeValue: { flex: 1, color: palette.navy, fontSize: 12.5, fontWeight: '800' }, timePlaceholder: { color: '#8A94A6' },
+  eventConnector: { minHeight: 42, marginTop: -2, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 16 }, connectorLine: { position: 'absolute', left: 33, top: 0, bottom: 0, width: 2, backgroundColor: '#D8E5F4' }, connectorBadge: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#E7F0FC', borderWidth: 1, borderColor: '#C7DAF0', alignItems: 'center', justifyContent: 'center', zIndex: 2 }, connectorText: { color: '#667085', fontSize: 10.5, fontWeight: '700', flex: 1 },
+  policyContext: { minHeight: 44, borderRadius: 13, backgroundColor: '#F4F8FE', borderWidth: 1, borderColor: '#D5E2F1', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }, policyContextText: { color: '#385779', fontSize: 10.5, fontWeight: '800' },
+  timeField: { gap: 5, marginTop: 10 }, timeLabel: { color: '#3F4D63', fontSize: 11, fontWeight: '800' }, timeButton: { minHeight: 48, borderRadius: 13, borderWidth: 1, borderColor: '#D2DFEC', backgroundColor: '#FBFDFF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }, timeValue: { flex: 1, color: palette.navy, fontSize: 12.5, fontWeight: '800' }, timePlaceholder: { color: '#8A94A6' },
   timeModalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(7, 28, 62, 0.38)' }, timeModalCard: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 18, paddingBottom: 28 }, timeModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }, timeModalEyebrow: { color: '#0A43A3', fontSize: 9, fontWeight: '900', letterSpacing: 0.8 }, timeModalTitle: { color: palette.navy, fontSize: 19, fontWeight: '900', marginTop: 3 }, timeClose: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' }, timeColumns: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', gap: 10 }, timeColumn: { flex: 1, minWidth: 0 }, timeColumnLabel: { color: '#667085', fontSize: 10, fontWeight: '800', textAlign: 'center', marginBottom: 6 }, timeOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }, timeOption: { width: 48, height: 40, borderRadius: 10, backgroundColor: '#F5F8FC', alignItems: 'center', justifyContent: 'center' }, timeOptionSelected: { backgroundColor: '#0A43A3' }, timeOptionText: { color: '#56657A', fontSize: 12, fontWeight: '800' }, timeOptionTextSelected: { color: '#FFFFFF' }, timeColon: { color: palette.navy, fontSize: 23, fontWeight: '900', marginTop: 23 }, timeDone: { minHeight: 50, marginTop: 18, borderRadius: 14, backgroundColor: palette.navy, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }, timeDoneText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
 });
