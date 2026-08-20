@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Files, FileText, Plus, Search } from "lucide-react";
+import { Files, FileText, Plus, RotateCcw, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   RegisterEmpty,
@@ -67,29 +67,33 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
   const [openingDocumentId, setOpeningDocumentId] = useState<string | null>(null);
 
   const enriched = useMemo(() => rows.map((row) => ({ ...row, status: policyStatus(row.end_date), daysLeft: daysUntil(row.end_date) })), [rows]);
-  const stats = useMemo(() => {
-    const active = enriched.filter((row) => row.status === "Active").length;
-    const expiring = enriched.filter((row) => row.status === "Expiring soon").length;
-    const expired = enriched.filter((row) => row.status === "Expired").length;
-    const claims = enriched.reduce((total, row) => total + claimCount(row), 0);
-    return { active, expiring, expired, claims };
-  }, [enriched]);
   const insurers = useMemo(() => Array.from(new Set(rows.map((row) => row.insurance_companies?.name).filter(Boolean))).sort() as string[], [rows]);
 
-  const filtered = useMemo(() => enriched.filter((row) => {
+  const baseFiltered = useMemo(() => enriched.filter((row) => {
     const haystack = [row.policy_no, row.business_line, row.policy_type, row.insurance_companies?.name, row.vehicles?.vehicle_no, row.customers?.company_name, row.customers?.contact_name, row.intermediary_type, row.intermediary_code, row.source_name].filter(Boolean).join(" ").toLowerCase();
     const matchesSource = source === "all" || policySourceKey(row) === source;
     const matchesInsurer = insurer === "all" || row.insurance_companies?.name === insurer;
     const matchesFromDate = !fromDate || row.start_date >= fromDate;
     const matchesToDate = !toDate || row.start_date <= toDate;
-    const matchesView =
-      view === "all" ||
-      (view === "active" && row.status === "Active") ||
-      (view === "expiring" && row.status === "Expiring soon") ||
-      (view === "expired" && row.status === "Expired") ||
-      (view === "claims" && claimCount(row) > 0);
-    return matchesSource && matchesInsurer && matchesFromDate && matchesToDate && matchesView && (!query.trim() || haystack.includes(query.trim().toLowerCase()));
-  }), [enriched, fromDate, insurer, query, source, toDate, view]);
+    const matchesQuery = !query.trim() || haystack.includes(query.trim().toLowerCase());
+    return matchesSource && matchesInsurer && matchesFromDate && matchesToDate && matchesQuery;
+  }), [enriched, fromDate, insurer, query, source, toDate]);
+
+  const stats = useMemo(() => {
+    const active = baseFiltered.filter((row) => row.status === "Active").length;
+    const expiring = baseFiltered.filter((row) => row.status === "Expiring soon").length;
+    const expired = baseFiltered.filter((row) => row.status === "Expired").length;
+    const claims = baseFiltered.filter((row) => claimCount(row) > 0).length;
+    return { all: baseFiltered.length, active, expiring, expired, claims };
+  }, [baseFiltered]);
+
+  const filtered = useMemo(() => baseFiltered.filter((row) =>
+    view === "all" ||
+    (view === "active" && row.status === "Active") ||
+    (view === "expiring" && row.status === "Expiring soon") ||
+    (view === "expired" && row.status === "Expired") ||
+    (view === "claims" && claimCount(row) > 0)
+  ), [baseFiltered, view]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -97,6 +101,16 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
 
   function changeView(next: string) {
     setView(next as ViewKey);
+    setPage(1);
+  }
+
+  function resetFilters() {
+    setQuery("");
+    setSource("all");
+    setInsurer("all");
+    setFromDate("");
+    setToDate("");
+    setView("all");
     setPage(1);
   }
 
@@ -124,6 +138,14 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
                 className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white pl-10 pr-3 text-[12px] text-[#0F172A] outline-none transition focus:border-[#17365D] focus:ring-2 focus:ring-[#17365D]/10"
               />
             </label>
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10.5px] font-semibold text-[#475569] transition hover:border-[#9FB2C8] hover:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#17365D]/10"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Reset
+            </button>
           </div>
           <Link href="/policies/new" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-3 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.22)]"><Plus className="h-4 w-4" />Add Policy</Link>
         </div>
@@ -132,19 +154,19 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
       <div className="border-b border-[#E5ECF5] bg-white px-3 py-2 sm:px-4">
         <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:flex-nowrap">
-            <div className="[&_select]:min-w-[142px] [&_select]:w-[142px]">
+            <div className="[&_select]:min-w-[190px] [&_select]:w-[190px]">
               <RegisterSelect value={source} onChange={(value) => { setSource(value); setPage(1); }} label="Lead source">
                 <option value="all">All Sources</option>
                 {sourceOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
               </RegisterSelect>
             </div>
-            <div className="[&_select]:min-w-[158px] [&_select]:w-[158px]">
+            <div className="[&_select]:min-w-[210px] [&_select]:w-[210px]">
               <RegisterSelect value={insurer} onChange={(value) => { setInsurer(value); setPage(1); }} label="Insurance company">
                 <option value="all">All insurers</option>
                 {insurers.map((item) => <option key={item} value={item}>{item}</option>)}
               </RegisterSelect>
             </div>
-            <label className="inline-flex h-10 min-w-[174px] items-center gap-2 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10px] font-semibold text-[#64748B] transition focus-within:border-[#17365D] focus-within:ring-2 focus-within:ring-[#17365D]/10">
+            <label className="inline-flex h-10 items-center gap-1.5 text-[10px] font-semibold text-[#64748B]">
               <span className="shrink-0">From Date</span>
               <input
                 type="date"
@@ -152,10 +174,10 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
                 max={toDate || undefined}
                 onChange={(event) => { setFromDate(event.target.value); setPage(1); }}
                 aria-label="From Date"
-                className="min-w-0 flex-1 bg-transparent text-[10.5px] font-semibold text-[#334155] outline-none"
+                className="h-10 w-[132px] rounded-xl border border-[#CBD5E1] bg-white px-2.5 text-[10.5px] font-semibold text-[#334155] outline-none transition focus:border-[#17365D] focus:ring-2 focus:ring-[#17365D]/10"
               />
             </label>
-            <label className="inline-flex h-10 min-w-[164px] items-center gap-2 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10px] font-semibold text-[#64748B] transition focus-within:border-[#17365D] focus-within:ring-2 focus-within:ring-[#17365D]/10">
+            <label className="inline-flex h-10 items-center gap-1.5 text-[10px] font-semibold text-[#64748B]">
               <span className="shrink-0">To Date</span>
               <input
                 type="date"
@@ -163,7 +185,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
                 min={fromDate || undefined}
                 onChange={(event) => { setToDate(event.target.value); setPage(1); }}
                 aria-label="To Date"
-                className="min-w-0 flex-1 bg-transparent text-[10.5px] font-semibold text-[#334155] outline-none"
+                className="h-10 w-[132px] rounded-xl border border-[#CBD5E1] bg-white px-2.5 text-[10.5px] font-semibold text-[#334155] outline-none transition focus:border-[#17365D] focus:ring-2 focus:ring-[#17365D]/10"
               />
             </label>
           </div>
@@ -171,11 +193,11 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
             value={view}
             onChange={changeView}
             options={[
-              { value: "all", label: "All", count: rows.length },
+              { value: "all", label: "All", count: stats.all },
               { value: "active", label: "Active", count: stats.active },
               { value: "expiring", label: "Renewal due", count: stats.expiring },
               { value: "expired", label: "Expired", count: stats.expired },
-              { value: "claims", label: "Claims", count: rows.filter((row) => claimCount(row) > 0).length }
+              { value: "claims", label: "Claims", count: stats.claims }
             ]}
           />
         </div>
