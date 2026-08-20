@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 type PartnerType="individual_proprietor"|"dealership"|"corporate"|"group"|"posp"|"misp";
 type BeginApplicationInput={profileId?:string|null;initiatedBy:string;partnerType:PartnerType;phone:string;email?:string|null;draftData:Record<string,unknown>};
+type PortalCustomerMembershipInput={profileId:string;phone:string;email?:string|null};
 
 export async function beginPortalOnboardingApplication(admin:SupabaseClient,input:BeginApplicationInput){
  const now=new Date().toISOString();
@@ -21,7 +22,23 @@ export async function beginPortalOnboardingApplication(admin:SupabaseClient,inpu
  const {data,error}=await admin.from("customer_onboarding_applications").insert(payload).select("id").single<{id:string}>();if(error||!data)throw error??new Error("Unable to create onboarding application.");return data;
 }
 
-export async function approvePortalOnboardingApplication(admin:SupabaseClient,applicationId:string,customerId:string,reviewerId:string){const now=new Date().toISOString();const {error}=await admin.from("customer_onboarding_applications").update({status:"approved",customer_id:customerId,reviewed_by:reviewerId,reviewed_at:now,completed_at:now}).eq("id",applicationId);if(error)throw error}
+export async function approvePortalOnboardingApplication(admin:SupabaseClient,applicationId:string,customerId:string,reviewerId:string,membership?:PortalCustomerMembershipInput){
+ if(membership){
+  const {error}=await admin.rpc("finalize_portal_customer_onboarding",{
+   p_application_id:applicationId,
+   p_customer_id:customerId,
+   p_profile_id:membership.profileId,
+   p_reviewer_id:reviewerId,
+   p_phone:membership.phone,
+   p_email:membership.email??null,
+  });
+  if(error)throw error;
+  return;
+ }
+ const now=new Date().toISOString();
+ const {error}=await admin.from("customer_onboarding_applications").update({status:"approved",customer_id:customerId,reviewed_by:reviewerId,reviewed_at:now,completed_at:now}).eq("id",applicationId);
+ if(error)throw error;
+}
 
 export async function markPortalOnboardingForCorrection(admin:SupabaseClient,applicationId:string,message:string){
  const {data:intermediary}=await admin.from("intermediary_onboarding_applications").select("draft_data").eq("id",applicationId).maybeSingle<{draft_data:Record<string,unknown>|null}>();
