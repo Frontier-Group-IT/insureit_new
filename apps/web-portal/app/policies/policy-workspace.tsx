@@ -61,6 +61,8 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
   const [view, setView] = useState<ViewKey>("all");
   const [source, setSource] = useState("all");
   const [insurer, setInsurer] = useState("all");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [page, setPage] = useState(1);
   const [openingDocumentId, setOpeningDocumentId] = useState<string | null>(null);
 
@@ -78,14 +80,16 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
     const haystack = [row.policy_no, row.business_line, row.policy_type, row.insurance_companies?.name, row.vehicles?.vehicle_no, row.customers?.company_name, row.customers?.contact_name, row.intermediary_type, row.intermediary_code, row.source_name].filter(Boolean).join(" ").toLowerCase();
     const matchesSource = source === "all" || policySourceKey(row) === source;
     const matchesInsurer = insurer === "all" || row.insurance_companies?.name === insurer;
+    const matchesFromDate = !fromDate || row.start_date >= fromDate;
+    const matchesToDate = !toDate || row.start_date <= toDate;
     const matchesView =
       view === "all" ||
       (view === "active" && row.status === "Active") ||
       (view === "expiring" && row.status === "Expiring soon") ||
       (view === "expired" && row.status === "Expired") ||
       (view === "claims" && claimCount(row) > 0);
-    return matchesSource && matchesInsurer && matchesView && (!query.trim() || haystack.includes(query.trim().toLowerCase()));
-  }), [enriched, insurer, query, source, view]);
+    return matchesSource && matchesInsurer && matchesFromDate && matchesToDate && matchesView && (!query.trim() || haystack.includes(query.trim().toLowerCase()));
+  }), [enriched, fromDate, insurer, query, source, toDate, view]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -127,15 +131,41 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
 
       <div className="border-b border-[#E5ECF5] bg-white px-3 py-2 sm:px-4">
         <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-            <RegisterSelect value={source} onChange={(value) => { setSource(value); setPage(1); }} label="Lead source">
-              <option value="all">All Sources</option>
-              {sourceOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-            </RegisterSelect>
-            <RegisterSelect value={insurer} onChange={(value) => { setInsurer(value); setPage(1); }} label="Insurance company">
-              <option value="all">All insurers</option>
-              {insurers.map((item) => <option key={item} value={item}>{item}</option>)}
-            </RegisterSelect>
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:flex-nowrap">
+            <div className="[&_select]:min-w-[142px] [&_select]:w-[142px]">
+              <RegisterSelect value={source} onChange={(value) => { setSource(value); setPage(1); }} label="Lead source">
+                <option value="all">All Sources</option>
+                {sourceOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </RegisterSelect>
+            </div>
+            <div className="[&_select]:min-w-[158px] [&_select]:w-[158px]">
+              <RegisterSelect value={insurer} onChange={(value) => { setInsurer(value); setPage(1); }} label="Insurance company">
+                <option value="all">All insurers</option>
+                {insurers.map((item) => <option key={item} value={item}>{item}</option>)}
+              </RegisterSelect>
+            </div>
+            <label className="inline-flex h-10 min-w-[174px] items-center gap-2 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10px] font-semibold text-[#64748B] transition focus-within:border-[#17365D] focus-within:ring-2 focus-within:ring-[#17365D]/10">
+              <span className="shrink-0">From Date</span>
+              <input
+                type="date"
+                value={fromDate}
+                max={toDate || undefined}
+                onChange={(event) => { setFromDate(event.target.value); setPage(1); }}
+                aria-label="From Date"
+                className="min-w-0 flex-1 bg-transparent text-[10.5px] font-semibold text-[#334155] outline-none"
+              />
+            </label>
+            <label className="inline-flex h-10 min-w-[164px] items-center gap-2 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10px] font-semibold text-[#64748B] transition focus-within:border-[#17365D] focus-within:ring-2 focus-within:ring-[#17365D]/10">
+              <span className="shrink-0">To Date</span>
+              <input
+                type="date"
+                value={toDate}
+                min={fromDate || undefined}
+                onChange={(event) => { setToDate(event.target.value); setPage(1); }}
+                aria-label="To Date"
+                className="min-w-0 flex-1 bg-transparent text-[10.5px] font-semibold text-[#334155] outline-none"
+              />
+            </label>
           </div>
           <RegisterViewTabs
             value={view}
@@ -153,7 +183,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
 
       <div className="mobile-card-list p-3 md:hidden">
         {pageRows.map((policy) => <PolicyMobileCard key={policy.id} policy={policy} />)}
-        {!pageRows.length ? <RegisterEmpty title="No matching policies" description="Adjust the search, source, insurer or status view." /> : null}
+        {!pageRows.length ? <RegisterEmpty title="No matching policies" description="Adjust the search, source, insurer, date range or status view." /> : null}
       </div>
 
       <div className="hidden overflow-x-auto md:block">
@@ -187,7 +217,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
             ))}
           </tbody>
         </table>
-        {!pageRows.length ? <RegisterEmpty title="No matching policies" description="Adjust the search, source, insurer or status view." /> : null}
+        {!pageRows.length ? <RegisterEmpty title="No matching policies" description="Adjust the search, source, insurer, date range or status view." /> : null}
       </div>
 
       <RegisterPagination pageRows={pageRows.length} filteredRows={filtered.length} safePage={safePage} totalPages={totalPages} pageSize={PAGE_SIZE} onPrevious={() => setPage((p) => Math.max(1, p - 1))} onNext={() => setPage((p) => Math.min(totalPages, p + 1))} />
