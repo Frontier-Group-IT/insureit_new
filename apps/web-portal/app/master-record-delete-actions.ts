@@ -170,36 +170,55 @@ export async function deleteMasterRecord(entity: DeletableMasterEntity, id: stri
     storageFiles.push(...(documents ?? []).filter((document) => document.storage_bucket && document.storage_path));
   }
 
-  const { error: deleteError } = await admin.from(config.table).delete().eq("id", id);
-  if (deleteError) {
-    const referenced = deleteError.code === "23503" || /foreign key|violates/i.test(deleteError.message);
-    return {
-      ok: false,
-      error: referenced
-        ? `Cannot delete this ${config.label} because another record still references it.`
-        : `Unable to delete the ${config.label}: ${deleteError.message}`
-    };
+  if (entity === "customer") {
+    const { error: deleteError } = await admin.rpc("delete_customer_and_revoke_mobile_access", {
+      p_customer_id: id,
+      p_actor_id: profile.id
+    });
+
+    if (deleteError) {
+      const referenced = deleteError.code === "23503" || /foreign key|violates/i.test(deleteError.message);
+      return {
+        ok: false,
+        error: referenced
+          ? "Cannot delete this customer because another record still references it."
+          : `Unable to delete the customer: ${deleteError.message}`
+      };
+    }
+  } else {
+    const { error: deleteError } = await admin.from(config.table).delete().eq("id", id);
+    if (deleteError) {
+      const referenced = deleteError.code === "23503" || /foreign key|violates/i.test(deleteError.message);
+      return {
+        ok: false,
+        error: referenced
+          ? `Cannot delete this ${config.label} because another record still references it.`
+          : `Unable to delete the ${config.label}: ${deleteError.message}`
+      };
+    }
   }
 
   await removeStorageFiles(admin, storageFiles);
 
-  await admin.from("audit_logs").insert({
-    actor_id: profile.id,
-    action: `delete_${entity}`,
-    table_name: config.table,
-    record_id: id,
-    old_data: {
-      id,
-      deletion_source: "it_super_user_master_data_control",
-      ...(entity === "claim" ? { cascaded_claim_records: true, storage_files_cleanup_attempted: storageFiles.length } : {}),
-      ...(entity === "customer_onboarding_application" ? {
-        cascaded_application_contacts_and_documents: true,
-        storage_files_cleanup_attempted: storageFiles.length,
-        linked_customer_preserved: Boolean(linkedCustomerId),
-        linked_customer_id: linkedCustomerId
-      } : {})
-    }
-  });
+  if (entity !== "customer") {
+    await admin.from("audit_logs").insert({
+      actor_id: profile.id,
+      action: `delete_${entity}`,
+      table_name: config.table,
+      record_id: id,
+      old_data: {
+        id,
+        deletion_source: "it_super_user_master_data_control",
+        ...(entity === "claim" ? { cascaded_claim_records: true, storage_files_cleanup_attempted: storageFiles.length } : {}),
+        ...(entity === "customer_onboarding_application" ? {
+          cascaded_application_contacts_and_documents: true,
+          storage_files_cleanup_attempted: storageFiles.length,
+          linked_customer_preserved: Boolean(linkedCustomerId),
+          linked_customer_id: linkedCustomerId
+        } : {})
+      }
+    });
+  }
 
   config.revalidate.forEach((path) => revalidatePath(path));
   return { ok: true };
