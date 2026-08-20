@@ -121,7 +121,7 @@ export default function StartClaimScreen() {
         <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.back()} style={styles.backButton}>
           <MaterialCommunityIcons name="arrow-left" size={21} color={palette.navy} />
         </Pressable>
-        <View style={styles.headerIcon}><MaterialCommunityIcons name="shield-car-outline" size={24} color="#FFFFFF" /></View>
+        <View style={styles.headerIcon}><MaterialCommunityIcons name="shield-check-outline" size={24} color="#FFFFFF" /></View>
         <View style={styles.headerCopy}>
           <Text style={styles.eyebrow}>START A CLAIM</Text>
           <Text style={styles.title}>Choose the vehicle involved</Text>
