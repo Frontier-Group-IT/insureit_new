@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppDatePicker } from '@/components/design-system';
-import { ClaimFormSection, ClaimPrimaryAction, ExternalClaimStageHeader } from '@/components/external-claim-ui';
+import { ClaimActionBar, ClaimFormSection, ClaimStageSummaryCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
 import { LoadingState, Message, Screen, TextField } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { type ClaimMilestone } from '@/lib/claim-service-mode';
@@ -144,7 +144,8 @@ export default function SelfManagedClaimScreen() {
       ]);
       setSaving(false);
       if (claimUpdate.error || milestoneUpdate.error) return setMessage(claimUpdate.error?.message || milestoneUpdate.error?.message || 'We could not update Spot Intimation.');
-      return router.replace({ pathname: '/customer/claim-detail', params: { id: claimId } });
+      router.replace({ pathname: '/customer/self-managed-spot-status', params: { id: claimId } });
+      return;
     }
 
     const { data, error } = await (supabase.rpc as any)('create_self_managed_external_claim', {
@@ -174,7 +175,7 @@ export default function SelfManagedClaimScreen() {
     }, { onConflict: 'claim_id,milestone_key' });
     setSaving(false);
     if (milestoneResult.error) return setMessage('The claim was created, but the Spot Intimation event time could not be saved. Open the claim and update Spot Intimation before continuing.');
-    router.replace({ pathname: '/customer/claim-detail', params: { id: created.claim_id } });
+    router.replace({ pathname: '/customer/self-managed-spot-status', params: { id: created.claim_id } });
   }
 
   if (loading) return <Screen title="Spot Intimation"><LoadingState label={editing ? 'Opening Spot Intimation' : 'Opening policy'} /></Screen>;
@@ -184,31 +185,28 @@ export default function SelfManagedClaimScreen() {
       <ExternalClaimStageHeader
         step={1}
         title="Spot Intimation"
-        subtitle={editing ? 'Review the incident and first insurer intimation.' : 'Record the loss and when the insurer was first informed.'}
+        subtitle="Start tracking an incident."
         vehicleNo={vehicle?.vehicle_no}
         claimNo={editing ? 'Existing claim' : undefined}
         onBack={() => router.back()}
       />
 
+      {policy ? <ClaimStageSummaryCard
+        label="EXTERNAL POLICY"
+        title={policy.policy_no}
+        body={vehicle?.vehicle_no ?? 'Vehicle linked to this external policy'}
+        icon="file-document-outline"
+      /> : null}
+
       {message ? <Message type="error">{message}</Message> : null}
 
-      <ClaimFormSection title="Incident" subtitle="When the loss actually happened" icon="car-clock">
-        <AppDatePicker label="Incident Date *" value={incidentDate} onChange={setIncidentDate} maxDate={todayIsoDate()} />
-        <TimePickerField label="Incident Time *" value={incidentTime} onPress={() => setTimeTarget('incident')} />
-      </ClaimFormSection>
-
-      <View style={styles.eventConnector}>
-        <View style={styles.connectorLine} />
-        <View style={styles.connectorBadge}><MaterialCommunityIcons name="arrow-down" size={15} color="#0A43A3" /></View>
-        <Text style={styles.connectorText}>Then record when the insurer was informed</Text>
-      </View>
-
-      <ClaimFormSection title="Spot Intimation" subtitle="When the insurer was first informed" icon="shield-outline">
+      <ClaimFormSection title="Incident Details" subtitle="Accident date, time and first insurer intimation" icon="clipboard-text-outline">
+        <AppDatePicker label="Accident Date *" value={incidentDate} onChange={setIncidentDate} maxDate={todayIsoDate()} />
+        <TimePickerField label="Accident Time *" value={incidentTime} onPress={() => setTimeTarget('incident')} />
+        <View style={styles.subsection}><Text style={styles.subsectionTitle}>Spot Intimation</Text></View>
         <AppDatePicker label="Spot Intimation Date *" value={intimationDate} onChange={setIntimationDate} maxDate={todayIsoDate()} />
         <TimePickerField label="Spot Intimation Time *" value={intimationTime} onPress={() => setTimeTarget('intimation')} />
-      </ClaimFormSection>
-
-      <ClaimFormSection title="Incident details" subtitle="Add only what is useful for this claim" optional icon="account-details-outline">
+        <View style={styles.gap} />
         <TextField label="Driver Name (Optional)" value={driver} onChangeText={setDriver} />
         <View style={styles.gap} />
         <TextField label="Driver Number (Optional)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
@@ -216,13 +214,17 @@ export default function SelfManagedClaimScreen() {
         <TextField label="Location (Optional)" value={location} onChangeText={setLocation} />
       </ClaimFormSection>
 
-      {policy ? <View style={styles.policyContext}><MaterialCommunityIcons name="file-document-outline" size={17} color="#0A43A3" /><Text style={styles.policyContextText}>External policy {policy.policy_no}</Text></View> : null}
+      <View style={styles.voicePlaceholder}>
+        <View style={styles.voiceIcon}><MaterialCommunityIcons name="microphone-outline" size={24} color="#0A43A3" /></View>
+        <View style={{ flex: 1 }}><Text style={styles.voiceTitle}>Incident Voice Note</Text><Text style={styles.voiceText}>Voice recording UI will be enabled once the audio recording module is approved for the preview build.</Text></View>
+      </View>
 
-      <ClaimPrimaryAction
-        disabled={saving || !policy}
-        icon="check"
-        label={saving ? 'Saving...' : editing ? 'Save Changes' : 'Create Claim & Continue'}
-        onPress={() => void submit()}
+      <ClaimActionBar
+        primaryDisabled={saving || !policy}
+        primaryIcon="arrow-right"
+        primaryLabel={saving ? 'Saving...' : editing ? 'Save & Continue' : 'Start Claim & Continue'}
+        onPrimary={() => void submit()}
+        onAssistance={() => editing ? router.push({ pathname: '/customer/request-claim-assistance', params: { id: claimId } }) : router.push('/customer/support')}
       />
 
       <TimePickerModal
@@ -264,8 +266,8 @@ function formatTime(value: string) { const parsed = parseTime(value); const date
 
 const styles = StyleSheet.create({
   gap: { height: 10 },
-  eventConnector: { minHeight: 42, marginTop: -2, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 16 }, connectorLine: { position: 'absolute', left: 33, top: 0, bottom: 0, width: 2, backgroundColor: '#D8E5F4' }, connectorBadge: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#E7F0FC', borderWidth: 1, borderColor: '#C7DAF0', alignItems: 'center', justifyContent: 'center', zIndex: 2 }, connectorText: { color: '#667085', fontSize: 10.5, fontWeight: '700', flex: 1 },
-  policyContext: { minHeight: 44, borderRadius: 13, backgroundColor: '#F4F8FE', borderWidth: 1, borderColor: '#D5E2F1', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }, policyContextText: { color: '#385779', fontSize: 10.5, fontWeight: '800' },
+  subsection: { marginTop: 16, marginBottom: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E7EBF0' }, subsectionTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
+  voicePlaceholder: { borderRadius: 17, borderWidth: 1, borderColor: '#CADAF0', backgroundColor: '#F5F9FF', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }, voiceIcon: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#E6F0FF', alignItems: 'center', justifyContent: 'center' }, voiceTitle: { color: palette.navy, fontSize: 12, fontWeight: '900' }, voiceText: { color: '#68778D', fontSize: 9.5, lineHeight: 14, fontWeight: '600', marginTop: 2 },
   timeField: { gap: 5, marginTop: 10 }, timeLabel: { color: '#3F4D63', fontSize: 11, fontWeight: '800' }, timeButton: { minHeight: 48, borderRadius: 13, borderWidth: 1, borderColor: '#D2DFEC', backgroundColor: '#FBFDFF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }, timeValue: { flex: 1, color: palette.navy, fontSize: 12.5, fontWeight: '800' }, timePlaceholder: { color: '#8A94A6' },
   timeModalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(7, 28, 62, 0.38)' }, timeModalCard: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 18, paddingBottom: 28 }, timeModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }, timeModalEyebrow: { color: '#0A43A3', fontSize: 9, fontWeight: '900', letterSpacing: 0.8 }, timeModalTitle: { color: palette.navy, fontSize: 19, fontWeight: '900', marginTop: 3 }, timeClose: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' }, timeColumns: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', gap: 10 }, timeColumn: { flex: 1, minWidth: 0 }, timeColumnLabel: { color: '#667085', fontSize: 10, fontWeight: '800', textAlign: 'center', marginBottom: 6 }, timeOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }, timeOption: { width: 48, height: 40, borderRadius: 10, backgroundColor: '#F5F8FC', alignItems: 'center', justifyContent: 'center' }, timeOptionSelected: { backgroundColor: '#0A43A3' }, timeOptionText: { color: '#56657A', fontSize: 12, fontWeight: '800' }, timeOptionTextSelected: { color: '#FFFFFF' }, timeColon: { color: palette.navy, fontSize: 23, fontWeight: '900', marginTop: 23 }, timeDone: { minHeight: 50, marginTop: 18, borderRadius: 14, backgroundColor: palette.navy, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }, timeDoneText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
 });
