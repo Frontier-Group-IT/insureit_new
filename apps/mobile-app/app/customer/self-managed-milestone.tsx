@@ -170,13 +170,11 @@ function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldK
   if (key === 'repair_ri') return <>
     <ClaimFormSection title="Repair" subtitle="Record when workshop repair work was completed" icon="wrench-outline">
       <DateField label="Repair Complete Date *" value={values.repair_complete_date ?? ''} onChange={(v) => set('repair_complete_date', v)} />
-      <Gap /><ClaimChoice label="Was Re-inspection Required? *" value={values.ri_required} options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'not_sure', label: 'Not sure' }]} onChange={(v) => set('ri_required', v)} />
     </ClaimFormSection>
-    {values.ri_required === 'yes' ? <ClaimFormSection title="Re-inspection" subtitle="Only shown when RI is required" icon="clipboard-search-outline">
+    <ClaimFormSection title="Re-inspection" subtitle="Record the RI request and completion dates" icon="clipboard-search-outline">
       <DateField label="RI Requested Date (Optional)" value={values.ri_requested_date ?? ''} onChange={(v) => set('ri_requested_date', v)} />
       <Gap /><DateField label="RI Done Date *" value={values.ri_done_date ?? ''} onChange={(v) => set('ri_done_date', v)} />
-      <ClaimInlineNote>RI Done Date must be after repair completion and after the RI request date when one is recorded.</ClaimInlineNote>
-    </ClaimFormSection> : null}
+    </ClaimFormSection>
   </>;
 
   if (key === 'billing') return <ClaimFormSection title="Final workshop bill" subtitle="Record the final repair bill issued by the workshop" icon="receipt-text-outline">
@@ -238,14 +236,13 @@ function validate(key: ClaimMilestoneKey, v: Values, milestones: ClaimMilestone[
   const required: Partial<Record<ClaimMilestoneKey, FieldKey[]>> = {
     claim_intimation: ['claim_intimation_date','dealership_name','dealership_location','gate_in_date','estimate_amount'],
     work_approval: ['approval_received_date','cashless'],
-    repair_ri: ['repair_complete_date','ri_required'],
+    repair_ri: ['repair_complete_date','ri_done_date'],
     billing: ['bill_date','bill_amount'],
     delivery_order: ['do_date','do_amount'],
     vehicle_delivery: ['vehicle_received'],
     payment_encashment: ['depreciation_submitted','satisfaction_submitted','payment_received_date','payment_received_amount'],
   };
   for (const field of required[key] ?? []) if (!v[field]?.trim()) return 'Complete all mandatory fields.';
-  if (key === 'repair_ri' && v.ri_required === 'yes' && !v.ri_done_date) return 'Enter the RI done date.';
   if (key === 'repair_ri' && v.ri_requested_date && v.repair_complete_date && v.ri_requested_date < v.repair_complete_date) return 'RI Requested Date cannot be earlier than Repair Complete Date.';
   if (key === 'repair_ri' && v.ri_done_date && v.repair_complete_date && v.ri_done_date < v.repair_complete_date) return 'RI Done Date cannot be earlier than Repair Complete Date.';
   if (key === 'repair_ri' && v.ri_requested_date && v.ri_done_date && v.ri_done_date < v.ri_requested_date) return 'RI Done Date cannot be earlier than RI Requested Date.';
@@ -269,7 +266,7 @@ function validate(key: ClaimMilestoneKey, v: Values, milestones: ClaimMilestone[
 function effectiveDateFor(key: ClaimMilestoneKey, v: Values): string | null {
   if (key === 'claim_intimation') return v.claim_intimation_date ?? null;
   if (key === 'work_approval') return v.approval_received_date ?? null;
-  if (key === 'repair_ri') return v.ri_required === 'yes' ? (v.ri_done_date ?? null) : (v.repair_complete_date ?? null);
+  if (key === 'repair_ri') return v.ri_done_date ?? v.repair_complete_date ?? null;
   if (key === 'billing') return v.bill_date ?? null;
   if (key === 'delivery_order') return v.do_date ?? null;
   if (key === 'vehicle_delivery') return v.vehicle_received === 'yes' ? (v.vehicle_received_date ?? null) : null;
@@ -282,6 +279,7 @@ function normalizeDetails(key: ClaimMilestoneKey, v: Values) {
   Object.entries(v).forEach(([field, value]) => { if (value === undefined || value === '') return; result[field] = value; });
   for (const field of ['estimate_amount','bill_amount','do_amount','payment_received_amount']) if (result[field] !== undefined) result[field] = Number(result[field]);
   if (key === 'work_approval' && result.cashless !== undefined) result.cashless = result.cashless === 'true';
+  if (key === 'repair_ri') result.ri_required = 'yes';
   return result;
 }
 
@@ -299,7 +297,7 @@ function toFormValues(details: Record<string, unknown> | null | undefined): Valu
 function subtitleFor(key: ClaimMilestoneKey) {
   if (key === 'claim_intimation') return 'Record insurer intimation, workshop details and estimate.';
   if (key === 'work_approval') return 'Record approval and how the claim will be settled.';
-  if (key === 'repair_ri') return 'Track repair completion and re-inspection when required.';
+  if (key === 'repair_ri') return 'Track repair completion and re-inspection.';
   if (key === 'billing') return 'Record the final workshop bill.';
   if (key === 'delivery_order') return 'Record assessment and delivery order details.';
   if (key === 'vehicle_delivery') return 'Confirm when the repaired vehicle is actually received.';
