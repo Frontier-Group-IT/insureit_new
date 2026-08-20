@@ -1,4 +1,4 @@
-name: Publish mobile preview OTA
+name: Verify mobile preview OTA
 
 on:
   push:
@@ -7,14 +7,18 @@ on:
 
 permissions:
   contents: read
+  issues: write
+  pull-requests: read
 
 jobs:
-  publish:
+  verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      TARGET_MESSAGE: External claim mockup redesign preview
       RELEASE_SHA: 13cfcaaa2660fc8ba9f416d3e5eb4b1d37a9eb25
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Check out approved release candidate
         uses: actions/checkout@v4
@@ -31,99 +35,72 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Publish Expo preview OTA
-        id: publish
+      - name: Wait for published preview update
         working-directory: apps/mobile-app
         shell: bash
         run: |
-          set +e
-          npx eas-cli update \
-            --branch preview \
-            --environment preview \
-            --message "External claim mockup redesign preview" \
-            --non-interactive \
-            --json \
-            > expo-update.json \
-            2> expo-update.stderr.log
-          exit_code=$?
-          set -e
-
-          echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
-          if [ "$exit_code" -eq 0 ]; then
-            echo "result=success" >> "$GITHUB_OUTPUT"
-          else
-            echo "result=failed" >> "$GITHUB_OUTPUT"
+          found=0
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            npx eas-cli update:list --branch preview --limit 5 --json --non-interactive > expo-updates.json
+            if grep -Fq "$TARGET_MESSAGE" expo-updates.json; then
+              found=1
+              break
+            fi
+            echo "Target update not visible yet (attempt $attempt/10)."
+            sleep 30
+          done
+          if [ "$found" -ne 1 ]; then
+            echo "Target Expo update was not found." >&2
+            exit 1
           fi
+          cat expo-updates.json
 
-          if [ -s expo-update.json ]; then
-            echo "Expo publish JSON:"
-            cat expo-update.json
-          fi
-
-          if [ -s expo-update.stderr.log ]; then
-            echo "Expo CLI messages:" >&2
-            cat expo-update.stderr.log >&2
-          fi
-
-      - name: Verify latest preview update
-        if: steps.publish.outputs.result == 'success'
+      - name: Build verification comment
         working-directory: apps/mobile-app
-        shell: bash
-        run: |
-          npx eas-cli update:list \
-            --branch preview \
-            --limit 1 \
-            --json \
-            --non-interactive \
-            > expo-update-latest.json
-          echo "Latest preview update JSON:"
-          cat expo-update-latest.json
-
-      - name: Write OTA publication summary
-        if: always()
-        working-directory: apps/mobile-app
-        env:
-          PUBLISH_RESULT: ${{ steps.publish.outputs.result }}
-          PUBLISH_EXIT_CODE: ${{ steps.publish.outputs.exit_code }}
         shell: bash
         run: |
           node <<'NODE'
           const fs = require('fs');
-          const readJson = (path) => { try { return JSON.parse(fs.readFileSync(path, 'utf8')); } catch { return null; } };
+          const data = JSON.parse(fs.readFileSync('expo-updates.json', 'utf8'));
+          const target = process.env.TARGET_MESSAGE;
           const collect = (value, out = []) => {
             if (!value || typeof value !== 'object') return out;
             if (Array.isArray(value)) { for (const item of value) collect(item, out); return out; }
             out.push(value); for (const item of Object.values(value)) collect(item, out); return out;
           };
-          const first = (objects, keys) => {
-            for (const object of objects) for (const key of keys) {
+          const objects = collect(data);
+          const matching = objects.filter((o) => String(o?.message ?? '').includes(target));
+          const pool = matching.length ? matching.flatMap((o) => collect(o)) : objects;
+          const first = (keys) => {
+            for (const object of pool) for (const key of keys) {
               const value = object?.[key];
               if (value !== undefined && value !== null && value !== '') return String(value);
             }
             return null;
           };
-          const unique = (objects, keys) => [...new Set(objects.flatMap((object) => keys.map((key) => object?.[key]).filter((value) => value !== undefined && value !== null && value !== '').map(String)))];
-          const publish = readJson('expo-update.json');
-          const latest = readJson('expo-update-latest.json');
-          const objects = [...collect(latest), ...collect(publish)];
-          const groupId = first(objects, ['group', 'groupId', 'updateGroupId']);
-          const runtimeVersion = first(objects, ['runtimeVersion']);
-          const updateIds = unique(objects, ['id', 'updateId']).filter((value) => value !== groupId).slice(0, 4);
-          const branch = first(objects, ['branchName', 'branch']) || 'preview';
+          const unique = (keys) => [...new Set(pool.flatMap((o) => keys.map((key) => o?.[key]).filter((v) => v !== undefined && v !== null && v !== '').map(String)))];
+          const groupId = first(['group', 'groupId', 'updateGroupId']);
+          const runtimeVersion = first(['runtimeVersion']);
+          const branch = first(['branchName', 'branch']) || 'preview';
+          const createdAt = first(['createdAt']);
+          const gitCommitHash = first(['gitCommitHash', 'gitCommitSha', 'commitHash']);
+          const updateIds = unique(['id', 'updateId']).filter((value) => value !== groupId).slice(0, 6);
           const lines = [
-            '## Expo preview OTA publication', '',
+            '## Expo preview OTA verification', '',
             '| Field | Value |', '| --- | --- |',
-            `| Publish result | ${process.env.PUBLISH_RESULT === 'success' ? '✅ success' : '❌ failed'} |`,
+            '| Verification | ✅ target update found |',
+            `| Message | \`${target}\` |`,
             `| Expo branch | \`${branch}\` |`,
-            `| Runtime version | ${runtimeVersion ? `\`${runtimeVersion}\`` : 'Not returned by Expo'} |`,
-            `| Update group ID | ${groupId ? `\`${groupId}\`` : 'Not returned by Expo'} |`,
-            `| Update ID(s) | ${updateIds.length ? updateIds.map((id) => `\`${id}\``).join('<br>') : 'Not returned by Expo'} |`,
-            `| CLI exit code | \`${process.env.PUBLISH_EXIT_CODE || 'unknown'}\` |`,
+            `| Runtime version | ${runtimeVersion ? `\`${runtimeVersion}\`` : 'Not returned'} |`,
+            `| Update group ID | ${groupId ? `\`${groupId}\`` : 'Not returned'} |`,
+            `| Update ID(s) | ${updateIds.length ? updateIds.map((id) => `\`${id}\``).join('<br>') : 'Not returned'} |`,
+            `| Expo git commit | ${gitCommitHash ? `\`${gitCommitHash}\`` : 'Not returned'} |`,
+            `| Created at | ${createdAt ? `\`${createdAt}\`` : 'Not returned'} |`,
             `| Approved source SHA | \`${process.env.RELEASE_SHA}\` |`, '',
           ];
-          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
+          fs.writeFileSync('verification.md', lines.join('\n'));
           NODE
 
-      - name: Fail workflow when Expo publication fails
-        if: always() && steps.publish.outputs.result != 'success'
-        run: exit 1
+      - name: Post verification to PR 480
+        working-directory: apps/mobile-app
+        run: gh api repos/Frontier-Group-IT/insureit_new/issues/480/comments -f body="$(cat verification.md)"
