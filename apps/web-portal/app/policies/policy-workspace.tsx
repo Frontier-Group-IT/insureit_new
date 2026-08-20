@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Files, FileText, Plus, RotateCcw, Search } from "lucide-react";
+import { CalendarDays, Files, FileText, Plus, RotateCcw, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   RegisterEmpty,
@@ -54,6 +54,30 @@ function policySourceKey(row: Pick<PolicyRow, "intermediary_type" | "intermediar
   const type = policySourceDatabaseType(row.intermediary_type);
   const code = row.intermediary_code?.trim();
   return type && code ? `${type}:${code}` : "";
+}
+
+function PolicyDateFilter({ label, value, min, max, onChange }: { label: string; value: string; min?: string; max?: string; onChange: (value: string) => void }) {
+  return (
+    <label className="relative block h-10 w-[176px] shrink-0">
+      <span className={`pointer-events-none absolute inset-y-0 left-3 right-9 z-10 flex items-center text-[10.5px] font-semibold ${value ? "text-[#334155]" : "text-[#64748B]"}`}>
+        {value ? formatDateFilterValue(value) : label}
+      </span>
+      <CalendarDays className="pointer-events-none absolute right-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-[#334155]" />
+      <input
+        type="date"
+        value={value}
+        min={min}
+        max={max}
+        onChange={(event) => onChange(event.target.value)}
+        onClick={(event) => {
+          const input = event.currentTarget as HTMLInputElement & { showPicker?: () => void };
+          input.showPicker?.();
+        }}
+        aria-label={label}
+        className="absolute inset-0 h-10 w-full cursor-pointer rounded-xl border border-[#CBD5E1] bg-white px-3 text-transparent caret-transparent outline-none transition focus:border-[#17365D] focus:ring-2 focus:ring-[#17365D]/10 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-datetime-edit]:opacity-0"
+      />
+    </label>
+  );
 }
 
 export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[]; sourceOptions?: SourceOption[] }) {
@@ -167,28 +191,8 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
                 {insurers.map((item) => <option key={item} value={item}>{item}</option>)}
               </RegisterSelect>
             </div>
-            <label className="inline-flex h-10 items-center gap-1.5 text-[10px] font-semibold text-[#64748B]">
-              <span className="shrink-0">From Date</span>
-              <input
-                type="date"
-                value={fromDate}
-                max={toDate || undefined}
-                onChange={(event) => { setFromDate(event.target.value); setPage(1); }}
-                aria-label="From Date"
-                className="h-10 w-[132px] rounded-xl border border-[#CBD5E1] bg-white px-2.5 text-[10.5px] font-semibold text-[#334155] outline-none transition focus:border-[#17365D] focus:ring-2 focus:ring-[#17365D]/10"
-              />
-            </label>
-            <label className="inline-flex h-10 items-center gap-1.5 text-[10px] font-semibold text-[#64748B]">
-              <span className="shrink-0">To Date</span>
-              <input
-                type="date"
-                value={toDate}
-                min={fromDate || undefined}
-                onChange={(event) => { setToDate(event.target.value); setPage(1); }}
-                aria-label="To Date"
-                className="h-10 w-[132px] rounded-xl border border-[#CBD5E1] bg-white px-2.5 text-[10.5px] font-semibold text-[#334155] outline-none transition focus:border-[#17365D] focus:ring-2 focus:ring-[#17365D]/10"
-              />
-            </label>
+            <PolicyDateFilter label="From Date" value={fromDate} max={toDate || undefined} onChange={(value) => { setFromDate(value); setPage(1); }} />
+            <PolicyDateFilter label="To Date" value={toDate} min={fromDate || undefined} onChange={(value) => { setToDate(value); setPage(1); }} />
           </div>
           <RegisterViewTabs
             value={view}
@@ -321,6 +325,10 @@ function daysUntil(endDate: string) {
   const now = new Date();
   if (Number.isNaN(end.getTime())) return 0;
   return Math.ceil((end.getTime() - now.getTime()) / 86400000);
+}
+function formatDateFilterValue(value: string) {
+  const [year, month, day] = value.split("-");
+  return year && month && day ? `${day}-${month}-${year}` : value;
 }
 function formatDate(value: string) {
   const date = new Date(`${value}T00:00:00`);
