@@ -111,7 +111,7 @@ export function IcallTrainingLauncher({ applicationId, loginId }: Props) {
             Cancel
           </button>
           <button type="button" onClick={continueLaunch} className="h-10 rounded-xl bg-[#071D49] px-4 text-[10px] font-semibold text-white transition hover:bg-[#0B2B66]">
-            I've allowed cookies — Continue
+            I&apos;ve allowed cookies — Continue
           </button>
         </div>
       </div>
