@@ -1,10 +1,10 @@
 {
-  "purpose": "Redeploy secure assistant policy document endpoint after production key configuration.",
-  "deploy_requested_at": "2026-08-20T08:51:00+05:30",
-  "requested_by": "explicit user deployment continuation after saving INSUREIT_ASSISTANT_API_KEY in Vercel",
-  "source": "Redeploy current main through the protected GitHub Actions production deployment workflow so Vercel picks up the new server-only assistant API key.",
-  "source_commit": "d4d6acad320cd937b3be10996808fb8b2ba4aada",
-  "release_scope": "Redeploy the already-merged read-only assistant policy-document endpoint with the newly configured production INSUREIT_ASSISTANT_API_KEY. No application code, database schema, RLS, storage visibility, or unrelated functionality is changed by this trigger.",
-  "verification": "PR #461 verification passed before merge, and the previous protected production deployment for d4d6acad320cd937b3be10996808fb8b2ba4aada reached Vercel READY. This redeploy is required only to load the newly saved server-side environment variable; the protected workflow must verify current main again before invoking the Vercel deploy hook.",
+  "purpose": "Deploy InsureIt assistant MCP connector.",
+  "deploy_requested_at": "2026-08-20T09:05:00+05:30",
+  "requested_by": "explicit user deployment request",
+  "source": "Deploy merged PR #462 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "ae516a0f9961135974d5a0d66fd6b587bf2b2e94",
+  "release_scope": "Deploy the dependency-free read-only remote MCP endpoint at /api/mcp/insureit-assistant. It authenticates with the existing server-only INSUREIT_ASSISTANT_API_KEY, exposes get_policy_document, and returns only policy-copy metadata plus short-lived five-minute Supabase signed URLs. The policy-documents bucket remains private. No database migration, RLS change, package dependency, or unrelated functionality is included.",
+  "verification": "PR #462 Verify web portal run 32328573757 passed successfully on head 7957de50214c563b5c52ca161dc836f037eabd03 before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
