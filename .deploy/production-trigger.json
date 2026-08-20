@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy expanded InsureIt assistant read-only MCP tools.",
-  "deploy_requested_at": "2026-08-20T11:27:00+05:30",
+  "purpose": "Deploy reversible deleted-customer access lifecycle.",
+  "deploy_requested_at": "2026-08-20T12:59:00+05:30",
   "requested_by": "explicit user merge and deploy request",
-  "source": "Deploy merged PR #468 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "5f1f630e2243bc0d46a1af7b05fa3414f4c0b0b2",
-  "release_scope": "Deploy the expanded read-only InsureIt assistant MCP toolset at /api/mcp/insureit-assistant. Existing get_policy_document remains intact and new read-only tools cover policy search/details, customer lookup/fleet, vehicle lookup, monthly business, and claim search/details. Existing bearer authentication remains unchanged. No database migration, RLS change, storage visibility change, or unrelated application change is included.",
-  "verification": "PR #468 final Verify web portal run 32336093466 passed successfully on head ae18768a25da5fccaa9cbfcd8f7c5a63e0b6483b before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #471 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "c06051493506eaaafed7b9ece4225e6343592088",
+  "release_scope": "Deploy the reversible deleted-customer account lifecycle. Customer deletion now preserves the Supabase Auth identity, deactivates the customer profile only when no valid customer relationship remains, and deliberate mobile Sign Up may safely reactivate only profiles revoked by this deletion flow. Production Supabase migration reversible_customer_access_revocation was applied successfully before this web deployment trigger.",
+  "verification": "PR #471 Verify web portal run 32343879134 passed successfully on head 3ff9479824b9270419905cee81aba063ef136be1 before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
