@@ -141,10 +141,11 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
             <button
               type="button"
               onClick={resetFilters}
-              className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10.5px] font-semibold text-[#475569] transition hover:border-[#9FB2C8] hover:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#17365D]/10"
+              aria-label="Reset filters"
+              title="Reset filters"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#CBD5E1] bg-white text-[#475569] transition hover:border-[#9FB2C8] hover:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#17365D]/10"
             >
-              <RotateCcw className="h-3.5 w-3.5" />
-              Reset
+              <RotateCcw className="h-4 w-4" />
             </button>
           </div>
           <Link href="/policies/new" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-3 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.22)]"><Plus className="h-4 w-4" />Add Policy</Link>
