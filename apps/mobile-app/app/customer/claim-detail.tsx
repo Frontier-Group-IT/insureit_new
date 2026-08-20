@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppBadge } from '@/components/design-system';
+import { ClaimFinancialSummary, ClaimPrimaryAction, ClaimSecondaryAction } from '@/components/external-claim-ui';
 import { EmptyState, LoadingState, Message, Screen } from '@/components/ui';
 import { SELF_MANAGED_MILESTONES, type ClaimMilestone, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
 import { customerStageCopy } from '@/lib/claim-workflow';
@@ -32,6 +33,7 @@ export default function ClaimDetailScreen() {
   const [milestones, setMilestones] = useState<ClaimMilestone[]>([]);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
   const [documentsExpanded, setDocumentsExpanded] = useState(false);
   const [journeyExpanded, setJourneyExpanded] = useState(true);
   const [historyExpanded, setHistoryExpanded] = useState(false);
@@ -92,6 +94,7 @@ export default function ClaimDetailScreen() {
   const tone = selfManaged ? externalClaimTone : claimTone(claim.current_status);
   const currentStage = SELF_MANAGED_MILESTONES[currentStageIndex];
   const settled = ['Settled', 'Closed', 'Claim Complete'].includes(claim.current_status) || (selfManaged && completedKeys.size >= 9);
+  const financialRows = selfManaged ? buildFinancialRows(milestones) : [];
 
   function openSelfStage(key: ClaimMilestoneKey) {
     if (key === 'spot_intimation') return router.push({ pathname: '/customer/self-managed-claim', params: { id: claimId } });
@@ -111,76 +114,138 @@ export default function ClaimDetailScreen() {
     await Linking.openURL(data.signedUrl);
   }
 
-  return <Screen title="Claim Detail" showLogout showTitleHeader={false}>
-    <View style={styles.pageHeading}>
-      <View style={styles.pageHeadingCopy}>
-        <Text style={styles.pageEyebrow}>{selfManaged ? 'EXTERNAL CLAIM' : 'CLAIMS'}</Text>
-        <Text style={styles.pageTitle}>{selfManaged ? 'Claim Tracker' : 'Claim Detail'}</Text>
-      </View>
-      {selfManaged ? <AppBadge label="Self Tracked" tone="info" /> : null}
-    </View>
-    {message ? <Message type="error">{message}</Message> : null}
-
-    <View style={[styles.heroCard, { backgroundColor: tone.background, borderColor: tone.border }]}>
-      <View style={[styles.accentBar, { backgroundColor: tone.accent }]} />
-      <View style={styles.heroTop}>
-        <View style={[styles.statusIcon, { backgroundColor: tone.soft }]}><MaterialCommunityIcons name={settled ? 'check-decagram-outline' : 'shield-check-outline'} size={23} color={tone.accent} /></View>
-        <View style={styles.heroCopy}><Text style={[styles.stageLabel, { color: tone.accent }]}>{settled ? 'CLAIM COMPLETE' : currentStage?.label ?? claim.current_status}</Text><Text style={styles.vehicleNo}>{vehicle?.vehicle_no ?? 'Vehicle linked'}</Text></View>
-        {!selfManaged ? <View style={[styles.focusStatusBadge, { backgroundColor: tone.soft, borderColor: tone.border }]}><Text style={[styles.focusStatusText, { color: tone.accent }]}>Sankalp Managed</Text></View> : null}
-      </View>
-      <View style={styles.numberRow}><InfoNumber label="Control No." value={claim.claim_no} /><InfoNumber label="Claim No." value={claim.insurer_claim_no || 'Awaiting insurer'} /></View>
-      <View style={styles.infoBox}><InfoPair leftLabel="Manufacturer" leftValue={vehicle?.make ?? '-'} rightLabel="Model" rightValue={vehicle?.model ?? '-'} /><InfoPair leftLabel="Policy" leftValue={policy?.policy_no ?? '-'} rightLabel="Insurer" rightValue={insurer?.name ?? '-'} /><InfoPair leftLabel="Incident" leftValue={selfManaged ? formatDateTime(claim.accident_at) : formatDate(claim.accident_at)} rightLabel="Policy Source" rightValue={policy?.source === 'external' ? 'External' : 'Sankalp'} /></View>
-    </View>
-
-    <View style={[styles.nextActionCard, { borderColor: tone.border }]}><View style={[styles.nextActionIcon, { backgroundColor: tone.soft }]}><MaterialCommunityIcons name="arrow-right-circle-outline" size={22} color={tone.accent} /></View><View style={{ flex: 1 }}><Text style={[styles.nextLabel, { color: tone.accent }]}>{selfManaged ? 'CURRENT MILESTONE' : 'NEXT ACTION'}</Text><Text style={styles.nextTitle}>{settled ? 'Claim journey complete' : currentStage?.label ?? claim.current_status}</Text><Text style={styles.nextBody}>{selfManaged ? settled ? 'All nine external claim milestones are recorded.' : 'Record the real event date when you receive this update from the insurer, surveyor, or workshop.' : customerStageCopy(claim.current_status)}</Text></View></View>
-
-    <View style={styles.quickActions}>
-      {selfManaged && !settled ? <QuickAction icon="pencil-circle-outline" label="Update Current Stage" primary onPress={openCurrentSelfStage} /> : null}
-      {!selfManaged ? <QuickAction icon="cloud-upload-outline" label="Upload Documents" primary onPress={() => router.push({ pathname: '/customer/upload-documents', params: { claimId: claim.id } })} /> : null}
-      {selfManaged && !settled && claim.assistance_status !== 'requested' ? <QuickAction icon="account-tie-voice-outline" label="Request Assistance" onPress={() => router.push({ pathname: '/customer/request-claim-assistance', params: { id: claim.id } })} /> : null}
-      <QuickAction icon="headset" label={selfManaged ? 'Get Help' : 'Claims Desk'} onPress={() => router.push('/customer/support')} />
-    </View>
-    {selfManaged && claim.assistance_status === 'requested' && !settled ? <Message type="info">Sankalp assistance has been requested. Until accepted, you remain in control of this claim.</Message> : null}
-
-    <SectionHeader title="Documents" subtitle={`${documents.length} document${documents.length === 1 ? '' : 's'}`} expanded={documentsExpanded} onPress={() => setDocumentsExpanded((value) => !value)} />
-    {documentsExpanded ? <View style={styles.sectionBody}>{documents.length ? documents.map((document) => <Pressable key={document.id} onPress={() => void openDocument(document)} style={styles.documentRow}><MaterialCommunityIcons name="file-document-outline" size={20} color={roleTheme.customer.accent} /><View style={{ flex: 1 }}><Text style={styles.documentTitle}>{document.document_type}</Text><Text style={styles.documentMeta}>{document.verification_status ?? 'uploaded'}</Text></View><MaterialCommunityIcons name="open-in-new" size={18} color={palette.slate} /></Pressable>) : <Text style={styles.emptyText}>No claim documents uploaded yet.</Text>}</View> : null}
-
-    <SectionHeader title="Status History" subtitle={`${history.length} movement record${history.length === 1 ? '' : 's'}`} expanded={historyExpanded} onPress={() => setHistoryExpanded((value) => !value)} />
-    {historyExpanded ? <View style={styles.sectionBody}>{history.length ? history.map((item) => <View key={item.id} style={styles.historyRow}><View style={styles.historyDot} /><View style={{ flex: 1 }}><Text style={styles.historyStatus}>{item.to_status}</Text><Text style={styles.documentMeta}>{formatDateTime(item.created_at)}</Text>{item.notes ? <Text style={styles.emptyText}>{item.notes}</Text> : null}</View></View>) : <Text style={styles.emptyText}>No timeline updates yet.</Text>}</View> : null}
-
-    <SectionHeader title={selfManaged ? 'External Claim Journey' : 'Claim Journey'} subtitle={`${progress}% complete • ${currentStage?.label ?? claim.current_status}`} expanded={journeyExpanded} onPress={() => setJourneyExpanded((value) => !value)} />
-    {journeyExpanded ? <View style={[styles.sectionBody, selfManaged && styles.journeyBody]}>{SELF_MANAGED_MILESTONES.map((stage, index) => {
-      const done = selfManaged ? completedKeys.has(stage.key) : index < currentStageIndex;
-      const current = !settled && index === currentStageIndex;
-      const milestone = selfManaged ? milestones.find((item) => item.milestone_key === stage.key) : null;
-      const editable = selfManaged && (done || current);
-      const amount = selfManaged ? formatJourneyAmount(stageMainAmount(milestone)) : null;
-      const dateText = selfManaged ? formatJourneyDate(milestone) : null;
-      const statusText = done ? 'Completed' : current ? (milestone?.milestone_status === 'in_progress' ? 'In progress' : 'Current stage') : 'Upcoming';
-      return <Pressable key={stage.key} disabled={!editable} onPress={() => openSelfStage(stage.key)} style={[styles.stageRow, current && { borderColor: tone.accent, backgroundColor: tone.soft }]}>
-        <View style={styles.stageRail}>
-          <View style={[styles.stageNode, done && styles.stageDone, current && { backgroundColor: tone.accent }]}><MaterialCommunityIcons name={done ? 'check' : current ? 'map-marker' : 'lock-outline'} size={14} color={done || current ? '#FFF' : '#7A8799'} /></View>
-          {index < SELF_MANAGED_MILESTONES.length - 1 ? <View style={[styles.stageLine, done && styles.stageLineDone]} /> : null}
+  return (
+    <Screen title="Claim Detail" showLogout showTitleHeader={false}>
+      <View style={styles.pageHeading}>
+        <View style={styles.pageHeadingCopy}>
+          <Text style={styles.pageEyebrow}>{selfManaged ? 'EXTERNAL CLAIM' : 'CLAIMS'}</Text>
+          <Text style={styles.pageTitle}>{selfManaged ? 'Claim Tracker' : 'Claim Detail'}</Text>
         </View>
-        <View style={styles.stageCopy}>
-          <Text style={styles.stageTitle}>{stage.label}</Text>
-          <Text style={[styles.stageMeta, current && { color: tone.accent }]}>{statusText}</Text>
-          {selfManaged && (done || current) ? <Text style={styles.stageEventLabel}>{STAGE_DATE_LABELS[stage.key]}</Text> : null}
+        {selfManaged ? <AppBadge label="Self Tracked" tone="info" /> : null}
+      </View>
+      {message ? <Message type="error">{message}</Message> : null}
+
+      <View style={[styles.heroCard, { borderColor: tone.border }]}>
+        <View style={[styles.heroAccent, { backgroundColor: tone.accent }]} />
+        <View style={styles.heroTop}>
+          <View style={[styles.statusIcon, { backgroundColor: tone.soft }]}><MaterialCommunityIcons name={settled ? 'check-decagram-outline' : 'shield-check-outline'} size={23} color={tone.accent} /></View>
+          <View style={styles.heroCopy}>
+            <Text style={[styles.stageLabel, { color: tone.accent }]}>{settled ? 'CLAIM COMPLETE' : currentStage?.label ?? claim.current_status}</Text>
+            <Text style={styles.vehicleNo}>{vehicle?.vehicle_no ?? 'Vehicle linked'}</Text>
+            <Text style={styles.heroIdentity}>{claim.claim_no}{claim.insurer_claim_no ? ` · ${claim.insurer_claim_no}` : ''}</Text>
+          </View>
+          {!selfManaged ? <View style={[styles.focusStatusBadge, { backgroundColor: tone.soft, borderColor: tone.border }]}><Text style={[styles.focusStatusText, { color: tone.accent }]}>Sankalp Managed</Text></View> : null}
         </View>
-        {selfManaged ? <View style={styles.stageRight}>
-          <Text numberOfLines={2} style={[styles.stageDate, !milestone && styles.stageDateMuted]}>{done || current ? dateText : 'Pending'}</Text>
-          {amount ? <Text style={styles.stageAmount}>{amount}</Text> : null}
-          {editable ? <MaterialCommunityIcons name="chevron-right" size={18} color="#8A98AA" /> : null}
+        <View style={styles.incidentRow}>
+          <View><Text style={styles.metaLabel}>INCIDENT</Text><Text style={styles.incidentValue}>{selfManaged ? formatDateTime(claim.accident_at) : formatDate(claim.accident_at)}</Text></View>
+          <Pressable accessibilityRole="button" accessibilityState={{ expanded: detailsExpanded }} onPress={() => setDetailsExpanded((value) => !value)} style={styles.detailsToggle}><Text style={styles.detailsToggleText}>Claim details</Text><MaterialCommunityIcons name={detailsExpanded ? 'chevron-up' : 'chevron-down'} size={18} color="#0A43A3" /></Pressable>
+        </View>
+        {detailsExpanded ? <View style={styles.infoBox}>
+          <InfoPair leftLabel="Control No." leftValue={claim.claim_no} rightLabel="Claim No." rightValue={claim.insurer_claim_no || 'Awaiting insurer'} />
+          <InfoPair leftLabel="Manufacturer" leftValue={vehicle?.make ?? '-'} rightLabel="Model" rightValue={vehicle?.model ?? '-'} />
+          <InfoPair leftLabel="Policy" leftValue={policy?.policy_no ?? '-'} rightLabel="Insurer" rightValue={insurer?.name ?? '-'} />
+          <InfoPair leftLabel="Policy Source" leftValue={policy?.source === 'external' ? 'External' : 'Sankalp'} rightLabel="Policy Type" rightValue={policy?.policy_type ?? '-'} />
         </View> : null}
-      </Pressable>;
-    })}</View> : null}
-  </Screen>;
+      </View>
+
+      <View style={[styles.currentCard, { borderColor: tone.border, backgroundColor: tone.background }]}>
+        <View style={[styles.currentIcon, { backgroundColor: tone.soft }]}><MaterialCommunityIcons name={settled ? 'check-circle-outline' : 'arrow-right-circle-outline'} size={22} color={tone.accent} /></View>
+        <View style={styles.currentCopy}>
+          <Text style={[styles.currentEyebrow, { color: tone.accent }]}>{selfManaged ? 'CURRENT MILESTONE' : 'NEXT ACTION'}</Text>
+          <Text style={styles.currentTitle}>{settled ? 'Claim journey complete' : currentStage?.label ?? claim.current_status}</Text>
+          <Text style={styles.currentBody}>{selfManaged ? settled ? 'All nine external claim milestones are recorded.' : currentStageHint(currentStage?.key) : customerStageCopy(claim.current_status)}</Text>
+        </View>
+      </View>
+
+      {selfManaged && !settled ? <ClaimPrimaryAction label={`Update ${currentStage?.label ?? 'Current Stage'}`} onPress={openCurrentSelfStage} /> : null}
+      {!selfManaged ? <ClaimPrimaryAction label="Upload Documents" icon="cloud-upload-outline" onPress={() => router.push({ pathname: '/customer/upload-documents', params: { claimId: claim.id } })} /> : null}
+
+      {selfManaged && !settled ? <View style={styles.secondaryActions}>
+        {claim.assistance_status !== 'requested' ? <ClaimSecondaryAction icon="account-tie-voice-outline" label="Request Assistance" onPress={() => router.push({ pathname: '/customer/request-claim-assistance', params: { id: claim.id } })} /> : null}
+        <ClaimSecondaryAction icon="headset" label="Help" onPress={() => router.push('/customer/support')} />
+      </View> : <View style={styles.secondaryActions}><ClaimSecondaryAction icon="headset" label="Claims Desk" onPress={() => router.push('/customer/support')} /></View>}
+
+      {selfManaged && claim.assistance_status === 'requested' && !settled ? <Message type="info">Sankalp assistance has been requested. Until accepted, you remain in control of this claim.</Message> : null}
+
+      <SectionHeader title={selfManaged ? 'Claim Journey' : 'Claim Journey'} subtitle={`${progress}% complete • ${currentStage?.label ?? claim.current_status}`} expanded={journeyExpanded} onPress={() => setJourneyExpanded((value) => !value)} />
+      {journeyExpanded ? <View style={[styles.sectionBody, styles.journeyBody]}>{SELF_MANAGED_MILESTONES.map((stage, index) => {
+        const done = selfManaged ? completedKeys.has(stage.key) : index < currentStageIndex;
+        const current = !settled && index === currentStageIndex;
+        const milestone = selfManaged ? milestones.find((item) => item.milestone_key === stage.key) : null;
+        const editable = selfManaged && (done || current);
+        const amount = selfManaged ? formatJourneyAmount(stageMainAmount(milestone)) : null;
+        const dateText = selfManaged ? formatJourneyDate(milestone) : null;
+        const statusText = done ? stageCompletedCopy(stage.key) : current ? (milestone?.milestone_status === 'in_progress' ? 'In progress' : 'Current milestone') : 'Upcoming';
+        return <Pressable key={stage.key} accessibilityRole={editable ? 'button' : undefined} disabled={!editable} onPress={() => openSelfStage(stage.key)} style={[styles.stageRow, current && styles.stageRowCurrent]}>
+          <View style={styles.stageRail}>
+            <View style={[styles.stageNode, done && styles.stageDone, current && styles.stageCurrent]}><MaterialCommunityIcons name={done ? 'check' : current ? 'circle-slice-8' : 'lock-outline'} size={13} color={done || current ? '#FFFFFF' : '#98A2B3'} /></View>
+            {index < SELF_MANAGED_MILESTONES.length - 1 ? <View style={[styles.stageLine, done && styles.stageLineDone]} /> : null}
+          </View>
+          <View style={styles.stageCopy}>
+            <Text style={styles.stageTitle}>{stage.label}</Text>
+            <Text style={[styles.stageMeta, current && styles.stageMetaCurrent]}>{statusText}</Text>
+            {selfManaged && (done || current) ? <Text style={styles.stageEventLabel}>{STAGE_DATE_LABELS[stage.key]}</Text> : null}
+          </View>
+          {selfManaged ? <View style={styles.stageRight}>
+            <Text numberOfLines={2} style={[styles.stageDate, !milestone && styles.stageDateMuted]}>{done || current ? dateText : 'Pending'}</Text>
+            {amount ? <Text style={styles.stageAmount}>{amount}</Text> : null}
+            {editable ? <MaterialCommunityIcons name="chevron-right" size={18} color="#8A98AA" /> : null}
+          </View> : null}
+        </Pressable>;
+      })}</View> : null}
+
+      {selfManaged && financialRows.length ? <ClaimFinancialSummary rows={financialRows} /> : null}
+
+      <SectionHeader title="Documents" subtitle={`${documents.length} document${documents.length === 1 ? '' : 's'}`} expanded={documentsExpanded} onPress={() => setDocumentsExpanded((value) => !value)} />
+      {documentsExpanded ? <View style={styles.sectionBody}>{documents.length ? documents.map((document) => <Pressable key={document.id} onPress={() => void openDocument(document)} style={styles.documentRow}><MaterialCommunityIcons name="file-document-outline" size={20} color={roleTheme.customer.accent} /><View style={{ flex: 1 }}><Text style={styles.documentTitle}>{document.document_type}</Text><Text style={styles.documentMeta}>{document.verification_status ?? 'uploaded'}</Text></View><MaterialCommunityIcons name="open-in-new" size={18} color={palette.slate} /></Pressable>) : <Text style={styles.emptyText}>No claim documents uploaded yet.</Text>}</View> : null}
+
+      <SectionHeader title="Activity History" subtitle={`${history.length} movement record${history.length === 1 ? '' : 's'}`} expanded={historyExpanded} onPress={() => setHistoryExpanded((value) => !value)} />
+      {historyExpanded ? <View style={styles.sectionBody}>{history.length ? history.map((item) => <View key={item.id} style={styles.historyRow}><View style={styles.historyDot} /><View style={{ flex: 1 }}><Text style={styles.historyStatus}>{item.to_status}</Text><Text style={styles.documentMeta}>{formatDateTime(item.created_at)}</Text>{item.notes ? <Text style={styles.emptyText}>{item.notes}</Text> : null}</View></View>) : <Text style={styles.emptyText}>No timeline updates yet.</Text>}</View> : null}
+    </Screen>
+  );
 }
 
-function InfoNumber({ label, value }: { label: string; value: string }) { return <View style={{ flex: 1 }}><Text style={styles.numberLabel}>{label}</Text><Text style={styles.numberValue}>{value}</Text></View>; }
+function buildFinancialRows(milestones: ClaimMilestone[]) {
+  const mapping: Array<{ key: ClaimMilestoneKey; label: string }> = [
+    { key: 'claim_intimation', label: 'Estimate' },
+    { key: 'billing', label: 'Bill' },
+    { key: 'delivery_order', label: 'DO' },
+    { key: 'payment_encashment', label: 'Received' },
+  ];
+  return mapping.flatMap(({ key, label }) => {
+    const milestone = milestones.find((item) => item.milestone_key === key);
+    const amount = formatJourneyAmount(stageMainAmount(milestone));
+    return amount ? [{ label, value: amount, emphasis: key === 'payment_encashment' }] : [];
+  });
+}
+
+function currentStageHint(key?: ClaimMilestoneKey) {
+  if (key === 'spot_intimation') return 'Record the incident and when the insurer was first informed.';
+  if (key === 'spot_status') return 'Record when the spot survey is completed.';
+  if (key === 'claim_intimation') return 'Record insurer intimation, workshop and estimate details.';
+  if (key === 'work_approval') return 'Record insurer approval and settlement method.';
+  if (key === 'repair_ri') return 'Record repair completion and re-inspection when required.';
+  if (key === 'billing') return 'Record the final workshop bill.';
+  if (key === 'delivery_order') return 'Record assessment and delivery order details.';
+  if (key === 'vehicle_delivery') return 'Confirm when the repaired vehicle is actually received.';
+  if (key === 'payment_encashment') return 'Record settlement documents and final payment.';
+  return 'Record the real event date when you receive this update.';
+}
+
+function stageCompletedCopy(key: ClaimMilestoneKey) {
+  if (key === 'spot_intimation') return 'Insurer informed';
+  if (key === 'spot_status') return 'Survey completed';
+  if (key === 'claim_intimation') return 'Claim registered';
+  if (key === 'work_approval') return 'Approval received';
+  if (key === 'repair_ri') return 'Repair / RI completed';
+  if (key === 'billing') return 'Bill recorded';
+  if (key === 'delivery_order') return 'DO issued';
+  if (key === 'vehicle_delivery') return 'Vehicle received';
+  return 'Payment received';
+}
+
 function InfoPair({ leftLabel, leftValue, rightLabel, rightValue }: { leftLabel: string; leftValue: string; rightLabel: string; rightValue: string }) { return <View style={styles.infoPair}><View style={{ flex: 1 }}><Text style={styles.infoLabel}>{leftLabel}</Text><Text style={styles.infoValue}>{leftValue}</Text></View><View style={{ flex: 1 }}><Text style={styles.infoLabel}>{rightLabel}</Text><Text style={styles.infoValue}>{rightValue}</Text></View></View>; }
-function QuickAction({ icon, label, onPress, primary }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; onPress: () => void; primary?: boolean }) { return <Pressable onPress={onPress} style={[styles.quickAction, primary && styles.quickActionPrimary]}><MaterialCommunityIcons name={icon} size={20} color={primary ? '#FFF' : palette.navy} /><Text style={[styles.quickActionText, primary && { color: '#FFF' }]}>{label}</Text></Pressable>; }
-function SectionHeader({ title, subtitle, expanded, onPress }: { title: string; subtitle: string; expanded: boolean; onPress: () => void }) { return <Pressable onPress={onPress} style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>{title}</Text><Text style={styles.sectionSub}>{subtitle}</Text></View><MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={22} color={palette.slate} /></Pressable>; }
+function SectionHeader({ title, subtitle, expanded, onPress }: { title: string; subtitle: string; expanded: boolean; onPress: () => void }) { return <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={onPress} style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>{title}</Text><Text style={styles.sectionSub}>{subtitle}</Text></View><MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={22} color={palette.slate} /></Pressable>; }
 function managedStageFor(status?: string | null) { const value = (status ?? '').toLowerCase(); if (/settled|closed|payment/.test(value)) return 8; if (/delivery/.test(value)) return 7; if (/do submitted|delivery order/.test(value)) return 6; if (/bill/.test(value)) return 5; if (/repair/.test(value)) return 4; if (/approval|estimate/.test(value)) return 3; if (/intimat|surveyor|inspected/.test(value)) return 2; if (/document/.test(value)) return 1; return 0; }
 const externalClaimTone = { accent:'#0A43A3',soft:'#EAF2FF',background:'#F7FAFF',border:'#C9DAF2' };
 function claimTone(status: string) { if (['Settled','Closed','Claim Complete'].includes(status)) return { accent:'#12805C',soft:'#E8F8F0',background:'#F7FCF9',border:'#BFE6D5' }; return { accent:'#B7791F',soft:'#FFF4E2',background:'#FFFBF3',border:'#F0D9AC' }; }
@@ -188,8 +253,10 @@ function formatDate(value?: string | null) { return value ? new Date(value).toLo
 function formatDateTime(value?: string | null) { return value ? new Date(value).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}) : '-'; }
 
 const styles = StyleSheet.create({
-  pageHeading:{marginBottom:10,flexDirection:'row',alignItems:'flex-start',justifyContent:'space-between',gap:10},pageHeadingCopy:{flex:1,minWidth:0},pageEyebrow:{color:'#0A43A3',fontSize:9.5,fontWeight:'900',letterSpacing:1},pageTitle:{color:palette.navy,fontSize:24,fontWeight:'900',marginTop:2},heroCard:{borderWidth:1,borderRadius:19,padding:13,overflow:'hidden',marginBottom:10},accentBar:{position:'absolute',left:0,top:0,bottom:0,width:4},heroTop:{flexDirection:'row',alignItems:'center',gap:10},statusIcon:{width:44,height:44,borderRadius:14,alignItems:'center',justifyContent:'center'},heroCopy:{flex:1,minWidth:0},stageLabel:{fontSize:8.8,fontWeight:'900',letterSpacing:.5},vehicleNo:{color:palette.navy,fontSize:19,fontWeight:'900',marginTop:2},focusStatusBadge:{maxWidth:100,borderWidth:1,borderRadius:999,paddingHorizontal:8,paddingVertical:5},focusStatusText:{fontSize:8.5,fontWeight:'900',textAlign:'center'},numberRow:{flexDirection:'row',gap:14,marginTop:12,paddingTop:10,borderTopWidth:1,borderTopColor:'rgba(100,120,150,.16)'},numberLabel:{color:'#7A8799',fontSize:9,fontWeight:'800'},numberValue:{color:palette.navy,fontSize:12,fontWeight:'900',marginTop:2},infoBox:{marginTop:10,borderRadius:13,backgroundColor:'rgba(255,255,255,.72)',padding:10,gap:8},infoPair:{flexDirection:'row',gap:14},infoLabel:{color:'#7A8799',fontSize:8.5,fontWeight:'800'},infoValue:{color:'#334155',fontSize:10.2,fontWeight:'800',marginTop:2},
-  nextActionCard:{borderWidth:1,borderRadius:16,padding:11,flexDirection:'row',gap:10,backgroundColor:'#FFF',marginBottom:9},nextActionIcon:{width:40,height:40,borderRadius:12,alignItems:'center',justifyContent:'center'},nextLabel:{fontSize:8.5,fontWeight:'900',letterSpacing:.4},nextTitle:{color:palette.navy,fontSize:13,fontWeight:'900',marginTop:2},nextBody:{color:'#667085',fontSize:10.2,lineHeight:14,fontWeight:'600',marginTop:3},quickActions:{flexDirection:'row',flexWrap:'wrap',gap:8,marginBottom:10},quickAction:{minHeight:44,borderRadius:14,borderWidth:1,borderColor:'#DCE6F0',backgroundColor:'#FFF',paddingHorizontal:12,flexDirection:'row',alignItems:'center',gap:7},quickActionPrimary:{backgroundColor:palette.navy,borderColor:palette.navy},quickActionText:{color:palette.navy,fontSize:10,fontWeight:'900'},
-  sectionHeader:{minHeight:60,borderRadius:16,borderWidth:1,borderColor:'#DCE6F0',backgroundColor:'#FFF',padding:12,marginTop:9,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},sectionTitle:{color:palette.navy,fontSize:14,fontWeight:'900'},sectionSub:{color:'#7A8799',fontSize:9.8,fontWeight:'600',marginTop:2},sectionBody:{borderWidth:1,borderTopWidth:0,borderColor:'#DCE6F0',backgroundColor:'#FFF',borderBottomLeftRadius:16,borderBottomRightRadius:16,padding:10,gap:8},journeyBody:{padding:8,gap:0},documentRow:{minHeight:50,borderRadius:12,backgroundColor:'#F8FBFF',padding:10,flexDirection:'row',alignItems:'center',gap:9},documentTitle:{color:palette.navy,fontSize:10.5,fontWeight:'900'},documentMeta:{color:'#7A8799',fontSize:9,fontWeight:'600',marginTop:2},emptyText:{color:'#7A8799',fontSize:10,fontWeight:'600',lineHeight:14},historyRow:{flexDirection:'row',gap:9,paddingVertical:7},historyDot:{width:9,height:9,borderRadius:5,backgroundColor:'#0A43A3',marginTop:4},historyStatus:{color:palette.navy,fontSize:10.5,fontWeight:'900'},
-  stageRow:{minHeight:72,borderRadius:13,borderWidth:1,borderColor:'#E1E8F0',backgroundColor:'#FFF',paddingHorizontal:10,paddingVertical:9,flexDirection:'row',alignItems:'stretch',gap:9,marginBottom:7},stageRail:{width:28,alignItems:'center'},stageNode:{width:28,height:28,borderRadius:14,backgroundColor:'#EEF2F6',alignItems:'center',justifyContent:'center'},stageDone:{backgroundColor:'#12805C'},stageLine:{width:2,flex:1,minHeight:21,marginTop:4,backgroundColor:'#E6EBF1'},stageLineDone:{backgroundColor:'#BFE6D5'},stageCopy:{flex:1,minWidth:0,justifyContent:'center'},stageTitle:{color:palette.navy,fontSize:11,fontWeight:'900'},stageMeta:{color:'#7A8799',fontSize:9,fontWeight:'700',marginTop:2},stageEventLabel:{color:'#98A2B3',fontSize:8.5,fontWeight:'600',marginTop:4},stageRight:{width:116,alignItems:'flex-end',justifyContent:'center',gap:3},stageDate:{color:'#344054',fontSize:9.5,lineHeight:13,fontWeight:'800',textAlign:'right'},stageDateMuted:{color:'#98A2B3'},stageAmount:{color:palette.navy,fontSize:10.5,fontWeight:'900',textAlign:'right'}
+  pageHeading:{marginBottom:10,flexDirection:'row',alignItems:'flex-start',justifyContent:'space-between',gap:10},pageHeadingCopy:{flex:1,minWidth:0},pageEyebrow:{color:'#0A43A3',fontSize:10,fontWeight:'900',letterSpacing:1},pageTitle:{color:palette.navy,fontSize:24,fontWeight:'900',marginTop:2},
+  heroCard:{borderWidth:1,borderRadius:18,padding:13,paddingLeft:17,backgroundColor:'#FFFFFF',overflow:'hidden',marginBottom:10},heroAccent:{position:'absolute',left:0,top:0,bottom:0,width:4},heroTop:{flexDirection:'row',alignItems:'center',gap:10},statusIcon:{width:44,height:44,borderRadius:14,alignItems:'center',justifyContent:'center'},heroCopy:{flex:1,minWidth:0},stageLabel:{fontSize:9,fontWeight:'900',letterSpacing:.5},vehicleNo:{color:palette.navy,fontSize:19,fontWeight:'900',marginTop:2},heroIdentity:{color:'#667085',fontSize:10.5,fontWeight:'700',marginTop:2},focusStatusBadge:{maxWidth:100,borderWidth:1,borderRadius:999,paddingHorizontal:8,paddingVertical:5},focusStatusText:{fontSize:8.5,fontWeight:'900',textAlign:'center'},incidentRow:{marginTop:11,paddingTop:10,borderTopWidth:1,borderTopColor:'#EEF2F6',flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10},metaLabel:{color:'#98A2B3',fontSize:8.5,fontWeight:'900',letterSpacing:.5},incidentValue:{color:'#344054',fontSize:11,fontWeight:'800',marginTop:2},detailsToggle:{minHeight:38,borderRadius:10,paddingHorizontal:9,flexDirection:'row',alignItems:'center',gap:3,backgroundColor:'#F7FAFF'},detailsToggleText:{color:'#0A43A3',fontSize:9.5,fontWeight:'900'},infoBox:{marginTop:10,borderRadius:13,backgroundColor:'#F8FAFC',padding:10,gap:8},infoPair:{flexDirection:'row',gap:14},infoLabel:{color:'#7A8799',fontSize:8.5,fontWeight:'800'},infoValue:{color:'#334155',fontSize:10.2,fontWeight:'800',marginTop:2},
+  currentCard:{borderWidth:1,borderRadius:16,padding:11,flexDirection:'row',gap:10,marginBottom:9},currentIcon:{width:40,height:40,borderRadius:12,alignItems:'center',justifyContent:'center'},currentCopy:{flex:1,minWidth:0},currentEyebrow:{fontSize:8.5,fontWeight:'900',letterSpacing:.4},currentTitle:{color:palette.navy,fontSize:14,fontWeight:'900',marginTop:2},currentBody:{color:'#667085',fontSize:10.8,lineHeight:15,fontWeight:'600',marginTop:3},secondaryActions:{flexDirection:'row',gap:8,marginBottom:10,flexWrap:'wrap'},
+  sectionHeader:{minHeight:58,borderRadius:15,borderWidth:1,borderColor:'#DCE6F0',backgroundColor:'#FFFFFF',padding:11,marginTop:9,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},sectionTitle:{color:palette.navy,fontSize:14,fontWeight:'900'},sectionSub:{color:'#7A8799',fontSize:10,fontWeight:'600',marginTop:2},sectionBody:{borderWidth:1,borderTopWidth:0,borderColor:'#DCE6F0',backgroundColor:'#FFFFFF',borderBottomLeftRadius:15,borderBottomRightRadius:15,padding:10,gap:8},journeyBody:{padding:8,gap:0},
+  stageRow:{minHeight:70,paddingHorizontal:7,paddingVertical:8,flexDirection:'row',alignItems:'stretch',gap:8,borderBottomWidth:1,borderBottomColor:'#EEF2F6'},stageRowCurrent:{backgroundColor:'#F7FAFF',borderRadius:12,borderBottomWidth:0,marginVertical:3,paddingHorizontal:9},stageRail:{width:28,alignItems:'center'},stageNode:{width:28,height:28,borderRadius:14,backgroundColor:'#EEF2F6',alignItems:'center',justifyContent:'center'},stageDone:{backgroundColor:'#12805C'},stageCurrent:{backgroundColor:'#0A43A3'},stageLine:{width:2,flex:1,minHeight:20,marginTop:4,backgroundColor:'#E6EBF1'},stageLineDone:{backgroundColor:'#BFE6D5'},stageCopy:{flex:1,minWidth:0,justifyContent:'center'},stageTitle:{color:palette.navy,fontSize:11.5,fontWeight:'900'},stageMeta:{color:'#7A8799',fontSize:9.5,fontWeight:'700',marginTop:2},stageMetaCurrent:{color:'#0A43A3'},stageEventLabel:{color:'#98A2B3',fontSize:8.5,fontWeight:'600',marginTop:3},stageRight:{width:112,alignItems:'flex-end',justifyContent:'center',gap:3},stageDate:{color:'#344054',fontSize:9.5,lineHeight:13,fontWeight:'800',textAlign:'right'},stageDateMuted:{color:'#98A2B3'},stageAmount:{color:palette.navy,fontSize:10.5,fontWeight:'900'},
+  documentRow:{minHeight:50,borderRadius:12,backgroundColor:'#F8FBFF',padding:10,flexDirection:'row',alignItems:'center',gap:9},documentTitle:{color:palette.navy,fontSize:10.5,fontWeight:'900'},documentMeta:{color:'#7A8799',fontSize:9,fontWeight:'600',marginTop:2},emptyText:{color:'#7A8799',fontSize:10,fontWeight:'600',lineHeight:14},historyRow:{flexDirection:'row',gap:9,paddingVertical:7},historyDot:{width:9,height:9,borderRadius:5,backgroundColor:'#0A43A3',marginTop:4},historyStatus:{color:palette.navy,fontSize:10.5,fontWeight:'900'},
 });
