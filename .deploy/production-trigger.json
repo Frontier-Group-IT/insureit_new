@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Fleet Summary fuel type inline update.",
-  "deploy_requested_at": "2026-08-20T06:21:00+05:30",
+  "purpose": "Deploy secure assistant policy document endpoint.",
+  "deploy_requested_at": "2026-08-20T06:42:00+05:30",
   "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #460 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "5f85f0bc18bebeffd8674468a78a896f53283306",
-  "release_scope": "Deploy the Fleet Summary UI-only update that adds Fuel Type to the compact vehicle information row in the order Make/Model/Year → Fuel → Chassis → Engine. Preserve Policy Status, registration Status, card styling, expansion behavior, backend logic, database schema, permissions, and unrelated functionality unchanged.",
-  "verification": "PR #460 Verify web portal run 32318734855 (#1388) passed successfully on head 8060b0aa55c0bc6efc0c616c1a6505104a6977cd before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #461 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "86d9e6e693154ccac3a9426fe2a6bcd32e499c4b",
+  "release_scope": "Deploy the read-only internal assistant policy-document endpoint that keeps policy-documents private, authenticates with a dedicated server-side bearer key, accepts one exact policy/document reference, and returns only short-lived five-minute signed URLs. No database migration or RLS change is included.",
+  "verification": "PR #461 Verify web portal run 32319956040 passed successfully on head 78b65bb13008952c95f3405c32719d0c4af1b5ec before merge. Production requires INSUREIT_ASSISTANT_API_KEY to be configured server-side before the endpoint can be used successfully. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
