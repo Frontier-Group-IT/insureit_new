@@ -1,0 +1,111 @@
+name: Temporary publish custom claim assets preview
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/tmp-publish-custom-claim-assets-preview.yml'
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      RELEASE_SHA: 3213c422a6b5746587949d09454ee58605be7d0e
+      TARGET_MESSAGE: Custom claim artwork integration preview
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out merged main release
+        uses: actions/checkout@v4
+        with:
+          ref: 3213c422a6b5746587949d09454ee58605be7d0e
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Publish Expo preview OTA
+        working-directory: apps/mobile-app
+        shell: bash
+        run: |
+          npx eas-cli update \
+            --branch preview \
+            --environment preview \
+            --message "$TARGET_MESSAGE" \
+            --non-interactive \
+            --json > expo-update.json
+          cat expo-update.json
+
+      - name: Verify published preview update
+        working-directory: apps/mobile-app
+        shell: bash
+        run: |
+          found=0
+          for attempt in 1 2 3 4 5 6; do
+            npx eas-cli update:list --branch preview --limit 5 --json --non-interactive > expo-updates.json
+            if grep -Fq "$TARGET_MESSAGE" expo-updates.json; then
+              found=1
+              break
+            fi
+            sleep 20
+          done
+          if [ "$found" -ne 1 ]; then
+            echo "Target preview update not found" >&2
+            exit 1
+          fi
+          cat expo-updates.json
+
+      - name: Post verification to merged PR 485
+        working-directory: apps/mobile-app
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const data = JSON.parse(fs.readFileSync('expo-updates.json', 'utf8'));
+          const target = process.env.TARGET_MESSAGE;
+          const collect = (value, out = []) => {
+            if (!value || typeof value !== 'object') return out;
+            if (Array.isArray(value)) { for (const item of value) collect(item, out); return out; }
+            out.push(value); for (const item of Object.values(value)) collect(item, out); return out;
+          };
+          const objects = collect(data);
+          const matching = objects.filter((o) => String(o?.message ?? '').includes(target));
+          const pool = matching.length ? matching.flatMap((o) => collect(o)) : objects;
+          const first = (keys) => {
+            for (const object of pool) for (const key of keys) {
+              const value = object?.[key];
+              if (value !== undefined && value !== null && value !== '') return String(value);
+            }
+            return null;
+          };
+          const unique = (keys) => [...new Set(pool.flatMap((o) => keys.map((key) => o?.[key]).filter((v) => v !== undefined && v !== null && v !== '').map(String)))];
+          const groupId = first(['group', 'groupId', 'updateGroupId']);
+          const runtimeVersion = first(['runtimeVersion']);
+          const branch = first(['branchName', 'branch']) || 'preview';
+          const updateIds = unique(['id', 'updateId']).filter((value) => value !== groupId).slice(0, 6);
+          const body = [
+            '## Expo preview OTA — custom claim artwork', '',
+            '- Publish result: **success**',
+            `- Expo branch: \`${branch}\``,
+            `- Runtime version: ${runtimeVersion ? `\`${runtimeVersion}\`` : 'Not returned'}`,
+            `- Update group ID: ${groupId ? `\`${groupId}\`` : 'Not returned'}`,
+            `- Update ID(s): ${updateIds.length ? updateIds.map((id) => `\`${id}\``).join(', ') : 'Not returned'}`,
+            `- Message: \`${target}\``,
+            `- Source commit: \`${process.env.RELEASE_SHA}\``,
+          ].join('\n');
+          fs.writeFileSync('verification.md', body);
+          NODE
+          gh api repos/Frontier-Group-IT/insureit_new/issues/485/comments -f body="$(cat verification.md)"
