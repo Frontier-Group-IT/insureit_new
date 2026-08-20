@@ -211,7 +211,7 @@ export default function SelfManagedClaimScreen() {
 
     <Card style={styles.formCard}>
       <View style={styles.sectionHeading}>
-        <View style={styles.sectionIcon}><MaterialCommunityIcons name="shield-phone-outline" size={20} color="#0A43A3" /></View>
+        <View style={styles.sectionIcon}><MaterialCommunityIcons name="shield-outline" size={20} color="#0A43A3" /></View>
         <View style={styles.sectionHeadingCopy}><Text style={styles.sectionTitle}>Spot Intimation</Text><Text style={styles.sectionSubtitle}>When the insurer was first informed</Text></View>
       </View>
       <AppDatePicker label="Spot Intimation Date *" value={intimationDate} onChange={setIntimationDate} maxDate={todayIsoDate()} />
