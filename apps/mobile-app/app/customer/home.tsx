@@ -271,8 +271,8 @@ function FleetSnapshot({ vehicles, protectedVehicles, protectionScore, onOpen }:
 function FleetCoverageRing({ score, hasVehicles }: { score: number; hasVehicles: boolean }) {
   const safeScore = hasVehicles ? Math.max(0, Math.min(100, score)) : 0;
   const progress = useRef(new Animated.Value(0)).current;
-  const radius = 30;
-  const strokeWidth = 7;
+  const radius = 26;
+  const strokeWidth = 6;
   const circumference = 2 * Math.PI * radius;
   useEffect(() => {
     Animated.timing(progress, { toValue: safeScore, duration: 850, useNativeDriver: false }).start();
@@ -280,11 +280,11 @@ function FleetCoverageRing({ score, hasVehicles }: { score: number; hasVehicles:
   const strokeDashoffset = progress.interpolate({ inputRange: [0, 100], outputRange: [circumference, 0] });
   return (
     <View style={styles.scoreRing}>
-      <Svg width={72} height={72} viewBox="0 0 72 72">
-        <Circle cx="36" cy="36" r={radius} stroke={palette.navy} strokeWidth={1.5} fill="#FFFFFF" />
+      <Svg width={64} height={64} viewBox="0 0 64 64">
+        <Circle cx="32" cy="32" r={radius} stroke={palette.navy} strokeWidth={1.5} fill="#FFFFFF" />
         <AnimatedCircle
-          cx="36"
-          cy="36"
+          cx="32"
+          cy="32"
           r={radius}
           stroke="#174EA6"
           strokeWidth={strokeWidth}
@@ -292,8 +292,8 @@ function FleetCoverageRing({ score, hasVehicles }: { score: number; hasVehicles:
           strokeLinecap="round"
           strokeDasharray={`${circumference} ${circumference}`}
           strokeDashoffset={strokeDashoffset}
-          originX="36"
-          originY="36"
+          originX="32"
+          originY="32"
           rotation="-90"
         />
       </Svg>
@@ -562,16 +562,16 @@ const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF7FF', gap: 14, paddingHorizontal: 24 },
   error: { color: palette.navy, fontWeight: '900', textAlign: 'center' },
   retry: { color: palette.blue, fontWeight: '900', paddingVertical: 6 },
-  header: { height: 66, paddingHorizontal: 4, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.98)', borderBottomWidth: 1, borderBottomColor: '#E1E7F0' },
+  header: { height: 60, paddingHorizontal: 4, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.98)', borderBottomWidth: 1, borderBottomColor: '#E1E7F0' },
   brand: { flex: 1, alignItems: 'flex-start', justifyContent: 'center' },
   iconCircle: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
   avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: palette.ink, borderWidth: 2, borderColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#FFFFFF', fontWeight: '900', fontSize: 17 },
   scroll: { flex: 1 },
-  body: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 11, paddingBottom: 120, gap: 11 },
+  body: { flexGrow: 1, paddingHorizontal: 12, paddingTop: 7, paddingBottom: 92, gap: 7 },
   greetingBlock: { paddingHorizontal: 2, paddingTop: 2, paddingBottom: 1 },
-  greeting: { color: palette.navy, fontSize: 22, lineHeight: 28, fontWeight: '900' },
-  greetingMetaRow: { marginTop: 5, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 7 },
+  greeting: { color: palette.navy, fontSize: 21, lineHeight: 26, fontWeight: '900' },
+  greetingMetaRow: { marginTop: 3, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 7 },
   attentionLink: { minHeight: 22, flexDirection: 'row', alignItems: 'center', gap: 4 },
   attentionLinkStrong: { color: '#174EA6', fontSize: 12, lineHeight: 15, fontWeight: '900' },
   attentionLinkText: { color: '#5C6878', fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
@@ -599,54 +599,54 @@ const styles = StyleSheet.create({
   attentionValue: { fontSize: 17, lineHeight: 20, fontWeight: '900', marginTop: 1 },
   attentionLabel: { color: '#5C6878', fontSize: 10.5, fontWeight: '800', marginTop: 1 },
   textPressed: { opacity: 0.62 },
-  fleetCard: { minHeight: 158, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', padding: 12, overflow: 'hidden', shadowColor: '#122544', shadowOpacity: 0.07, shadowRadius: 12, elevation: 3 },
+  fleetCard: { minHeight: 132, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', padding: 9, overflow: 'hidden', shadowColor: '#122544', shadowOpacity: 0.06, shadowRadius: 10, elevation: 2 },
   fleetTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  fleetMainRow: { minHeight: 86, flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 5 },
-  fleetCountBlock: { width: 92, minWidth: 92, alignItems: 'center', justifyContent: 'center', paddingLeft: 4 },
-  fleetCount: { color: palette.navy, fontSize: 40, lineHeight: 44, fontWeight: '900' },
+  fleetMainRow: { minHeight: 70, flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 2 },
+  fleetCountBlock: { width: 78, minWidth: 78, alignItems: 'center', justifyContent: 'center', paddingLeft: 2 },
+  fleetCount: { color: palette.navy, fontSize: 34, lineHeight: 38, fontWeight: '900' },
   fleetCountLabel: { color: '#607089', fontSize: 9.5, fontWeight: '900', textTransform: 'uppercase', marginTop: 1 },
   fleetCopy: { flex: 1, minWidth: 0 },
   sectionEyebrow: { color: '#607089', fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
   fleetTitle: { color: palette.navy, fontSize: 19, lineHeight: 24, fontWeight: '900', marginTop: 4 },
-  scoreRing: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  scoreCore: { position: 'absolute', width: 52, height: 52, borderRadius: 26, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E0EAF5', alignItems: 'center', justifyContent: 'center' },
-  scoreValue: { color: palette.navy, fontSize: 15, lineHeight: 18, fontWeight: '900' },
+  scoreRing: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  scoreCore: { position: 'absolute', width: 46, height: 46, borderRadius: 23, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E0EAF5', alignItems: 'center', justifyContent: 'center' },
+  scoreValue: { color: palette.navy, fontSize: 13.5, lineHeight: 16, fontWeight: '900' },
   scoreLabel: { color: '#607089', fontSize: 8, fontWeight: '900', marginTop: 0 },
   plateStack: { width: 142, zIndex: 2 },
   platePill: { alignSelf: 'flex-start', minHeight: 31, maxWidth: 135, borderRadius: 10, backgroundColor: '#F7FAFE', borderWidth: 1, borderColor: '#D8E7F7', paddingHorizontal: 9, alignItems: 'center', justifyContent: 'center', marginBottom: 5 },
   platePillOverlap: { marginLeft: 12 },
   plateText: { color: palette.navy, fontSize: 11.2, fontWeight: '900' },
   fleetImage: { flex: 1, height: 96, marginLeft: -18, marginRight: -6 },
-  fleetImageHero: { flex: 1, height: 92, marginLeft: -12, marginRight: -7, opacity: 0.95 },
+  fleetImageHero: { flex: 1, height: 74, marginLeft: -10, marginRight: -6, opacity: 0.95 },
   fleetFooter: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 6 },
   attentionPulseIcon: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#E5484D', alignItems: 'center', justifyContent: 'center' },
-  fleetTicker: { minHeight: 37, marginTop: 8, borderRadius: 14, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  fleetTicker: { minHeight: 24, marginTop: 3, paddingHorizontal: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
   fleetTickerText: { flex: 1, color: palette.navy, fontSize: 11.5, fontWeight: '900' },
   fleetTickerValue: { fontSize: 12.5, fontWeight: '900' },
   fleetTickerDivider: { color: '#B6C4D8', fontSize: 12, fontWeight: '900' },
-  quickDock: { borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', padding: 12, shadowColor: '#122544', shadowOpacity: 0.04, shadowRadius: 9, elevation: 2 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 },
+  quickDock: { borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', padding: 9, shadowColor: '#122544', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 6 },
   sectionTitle: { color: palette.navy, fontSize: 16, fontWeight: '900' },
   sectionHint: { color: '#607089', fontSize: 11, fontWeight: '800' },
   quickGrid: { flexDirection: 'row', gap: 8 },
-  quickAction: { flex: 1, minHeight: 78, borderRadius: 16, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, position: 'relative' },
-  quickIcon: { width: 36, height: 36, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  quickIconArtwork: { width: 32, height: 32 },
-  quickLabel: { color: palette.navy, fontSize: 10.5, lineHeight: 13, fontWeight: '900', textAlign: 'center', marginTop: 6 },
+  quickAction: { flex: 1, minHeight: 66, borderRadius: 15, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, position: 'relative' },
+  quickIcon: { width: 34, height: 34, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  quickIconArtwork: { width: 30, height: 30 },
+  quickLabel: { color: palette.navy, fontSize: 10.5, lineHeight: 13, fontWeight: '900', textAlign: 'center', marginTop: 4 },
   actionBadge: { position: 'absolute', right: 7, top: 7, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#E5484D', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, zIndex: 3 },
   actionBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '900' },
-  claimSummaryCard: { borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', overflow: 'hidden', shadowColor: '#071D49', shadowOpacity: 0.1, shadowRadius: 13, elevation: 3 },
-  claimSummaryTop: { backgroundColor: palette.navy, padding: 13 },
+  claimSummaryCard: { borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', overflow: 'hidden', shadowColor: '#071D49', shadowOpacity: 0.08, shadowRadius: 10, elevation: 2 },
+  claimSummaryTop: { backgroundColor: palette.navy, paddingHorizontal: 11, paddingVertical: 9 },
   claimOpenLink: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   claimOpenLinkText: { color: '#BFD4F7', fontSize: 11, fontWeight: '900' },
   claimMetricRow: { flexDirection: 'row', alignItems: 'stretch' },
-  claimMetric: { flex: 1, minHeight: 77, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
+  claimMetric: { flex: 1, minHeight: 58, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
   claimMetricDivider: { width: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.18)', marginVertical: 8 },
-  claimMetricValue: { fontSize: 24, lineHeight: 28, fontWeight: '900' },
-  claimMetricLabel: { color: '#AAB9D6', fontSize: 10.5, fontWeight: '900', marginTop: 1 },
-  claimMetricAmount: { color: '#7C8FB0', fontSize: 9.5, fontWeight: '800', marginTop: 3 },
-  claimTicker: { minHeight: 39, margin: 10, marginTop: 9, borderRadius: 14, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7 },
-  claimTickerHot: { backgroundColor: '#FFF8EA', borderColor: '#F1D59D' },
+  claimMetricValue: { fontSize: 21, lineHeight: 24, fontWeight: '900' },
+  claimMetricLabel: { color: '#AAB9D6', fontSize: 10, fontWeight: '900', marginTop: 0 },
+  claimMetricAmount: { color: '#7C8FB0', fontSize: 9, fontWeight: '800', marginTop: 1 },
+  claimTicker: { minHeight: 25, marginHorizontal: 10, marginTop: 3, marginBottom: 4, paddingHorizontal: 1, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  claimTickerHot: { borderRadius: 10, backgroundColor: '#FFF8EA', paddingHorizontal: 8 },
   claimTickerText: { flex: 1, color: palette.navy, fontSize: 11.5, fontWeight: '900' },
   claimCard: { borderRadius: 20, backgroundColor: palette.navy, borderWidth: 1, borderColor: '#0D2B63', padding: 14, overflow: 'hidden', shadowColor: '#071D49', shadowOpacity: 0.12, shadowRadius: 14, elevation: 3 },
   claimCardTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '900' },
@@ -674,19 +674,19 @@ const styles = StyleSheet.create({
   progressLabelActive: { color: '#FFFFFF' },
   claimFooter: { minHeight: 42, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 8 },
   claimFooterText: { flex: 1, color: '#E8F1FF', fontSize: 11.5, lineHeight: 16, fontWeight: '700' },
-  supportCard: { borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', padding: 11, shadowColor: '#122544', shadowOpacity: 0.04, shadowRadius: 9, elevation: 2 },
-  supportTop: { marginBottom: 9 },
+  supportCard: { paddingHorizontal: 2, paddingTop: 3, paddingBottom: 1 },
+  supportTop: { marginBottom: 13, paddingHorizontal: 2 },
   supportHeaderLine: { flexShrink: 1 },
   supportIcon: { width: 44, height: 44, borderRadius: 16, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' },
   supportCopy: { flex: 1 },
   supportTitle: { color: palette.navy, fontSize: 16, fontWeight: '900' },
   supportDivider: { color: '#B6C4D8', fontSize: 14, fontWeight: '900' },
   supportTagline: { color: '#607089', fontSize: 11.5, fontWeight: '800' },
-  supportActions: { flexDirection: 'row', gap: 8 },
-  supportButton: { flex: 1, minHeight: 58, alignItems: 'center', justifyContent: 'center', gap: 5 },
-  supportButtonIcon: { width: 33, height: 33, borderRadius: 13, alignItems: 'center', justifyContent: 'center', shadowColor: '#122544', shadowOpacity: 0.13, shadowRadius: 6, elevation: 3 },
+  supportActions: { flexDirection: 'row', gap: 12 },
+  supportButton: { flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', gap: 4 },
+  supportButtonIcon: { width: 32, height: 32, borderRadius: 12, alignItems: 'center', justifyContent: 'center', shadowColor: '#122544', shadowOpacity: 0.1, shadowRadius: 5, elevation: 2 },
   supportButtonText: { color: palette.navy, fontSize: 11, fontWeight: '900' },
-  appVersion: { color: '#A6B3C6', fontSize: 10.5, fontWeight: '700', textAlign: 'center', marginTop: 4 },
+  appVersion: { color: '#A6B3C6', fontSize: 9.5, fontWeight: '700', textAlign: 'center', marginTop: 0 },
   cardPressed: { transform: [{ scale: 0.985 }], opacity: 0.94 },
   kycBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, backgroundColor: 'rgba(10,18,31,0.66)' },
   kycModal: { width: '100%', maxWidth: 410, borderRadius: 20, backgroundColor: '#FFFFFF', paddingHorizontal: 24, paddingTop: 25, paddingBottom: 16, alignItems: 'center', shadowColor: '#071D49', shadowOpacity: 0.24, shadowRadius: 24, elevation: 12 },
