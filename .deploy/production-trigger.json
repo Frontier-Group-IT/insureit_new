@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy Portfolio reset icon-only update.",
-  "deploy_requested_at": "2026-08-20T15:44:00+05:30",
+  "purpose": "Deploy Policy Portfolio date filter placeholder update.",
+  "deploy_requested_at": "2026-08-20T15:58:00+05:30",
   "requested_by": "explicit user deploy request",
   "source": "Deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "a73e05927cb4731fc3042e6e3299f74e096cf45b",
-  "release_scope": "Deploy the Policy Portfolio header refinement that keeps the existing reset action and behavior but removes the visible Reset text, leaving only the reset icon with accessible aria-label and tooltip. Search, filters, counters, policy table, backend logic, database schema, Supabase, onboarding, permissions, and policy save workflows remain unchanged.",
+  "source_commit": "726c6b89606c5d21b9feb7e9134a88b43f70a5f1",
+  "release_scope": "Deploy PR #479, which updates only the Policy Portfolio date filter presentation: empty filters show From Date and To Date, selected dates display as dd-mm-yyyy, while native date picking, ISO yyyy-mm-dd state, existing filtering behavior, reset behavior, backend logic, database schema, Supabase, onboarding, permissions, and policy save workflows remain unchanged.",
   "verification": "This release has no Supabase migration. The protected production workflow must verify current main before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
