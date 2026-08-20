@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppDatePicker } from '@/components/design-system';
-import { ClaimContextStrip, ClaimFormSection, ClaimInlineNote, ClaimPrimaryAction, ExternalClaimStageHeader } from '@/components/external-claim-ui';
+import { ClaimContextStrip, ClaimFormSection, ClaimPrimaryAction, ExternalClaimStageHeader } from '@/components/external-claim-ui';
 import { LoadingState, Message, Screen, TextField } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { type ClaimMilestone } from '@/lib/claim-service-mode';
@@ -131,7 +131,6 @@ export default function SelfManagedSpotStatusScreen() {
 
       <ClaimFormSection title="Spot survey" subtitle="Survey completion date is required" icon="clipboard-check-outline">
         <AppDatePicker label="Spot Survey Done Date *" value={surveyDate} onChange={setSurveyDate} maxDate={todayIsoDate()} formatDisplay={formatDisplayDate} />
-        <ClaimInlineNote>Use the actual survey completion date. It must stay after Spot Intimation and before any later recorded stage.</ClaimInlineNote>
       </ClaimFormSection>
 
       <ClaimFormSection title="Surveyor details" subtitle="Add these only when available" optional icon="account-tie-outline">
