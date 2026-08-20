@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy compact Policy Portfolio source, insurer, and date filters.",
-  "deploy_requested_at": "2026-08-20T14:56:00+05:30",
+  "purpose": "Deploy Policy Portfolio filter polish and synchronized counters.",
+  "deploy_requested_at": "2026-08-20T15:23:00+05:30",
   "requested_by": "explicit user merge and deploy request",
-  "source": "Deploy merged PR #476 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "888b3b663218c656fb54071ebbd6a27eed933986",
-  "release_scope": "Deploy the Policy Portfolio filter-row update that narrows the Policy-specific Source and Insurer controls and adds compact From Date and To Date inputs. Date filtering is inclusive against policy start_date, supports either boundary independently, resets pagination on changes, and preserves status tabs, search, policy data loading, permissions, backend logic, database schema, Supabase, and policy workflows unchanged.",
-  "verification": "PR #476 Verify web portal run 32353691581 (#1437) passed successfully on head ee0f1101cbc01b1eba29a100179fd8a3e2f7eb44 before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #477 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "9b0cf2d4b613f3c112148f66d329746d57462b64",
+  "release_scope": "Deploy the Policy Portfolio filter polish that widens the Policy-specific Source and Insurer controls, removes outer date-picker wrapper borders, recalculates All / Active / Renewal due / Expired / Claims counters from the current Search + Source + Insurer + From Date + To Date filter set before applying the selected status tab, and adds a Reset control beside Search to clear all filters, the search phrase, selected status tab, and pagination. Policy table data loading, status rules, permissions, backend logic, database schema, Supabase, onboarding, and policy save workflows remain unchanged.",
+  "verification": "PR #477 Verify web portal run 32356084348 (#1441) passed successfully on head 8080ea62e5286ca70f538aeeb735ac56bcf5e478 before merge. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
