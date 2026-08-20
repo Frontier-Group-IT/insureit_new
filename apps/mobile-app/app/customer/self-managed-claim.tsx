@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppDatePicker } from '@/components/design-system';
 import { ClaimActionBar, ClaimFormSection, ClaimStageSummaryCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
@@ -214,6 +214,22 @@ export default function SelfManagedClaimScreen() {
         <TextField label="Location (Optional)" value={location} onChangeText={setLocation} />
       </ClaimFormSection>
 
+      <View style={styles.documentReadyCard}>
+        <View style={styles.documentReadyHeader}>
+          <View>
+            <Text style={styles.documentReadyTitle}>Documents to keep ready</Text>
+            <Text style={styles.documentReadySubtitle}>These are commonly needed as the claim progresses.</Text>
+          </View>
+          <View style={styles.documentReadyBadge}><Text style={styles.documentReadyBadgeText}>Optional now</Text></View>
+        </View>
+        <View style={styles.documentReadyGrid}>
+          <DocumentReadyTile title="RC Copy" source={require('../../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png')} />
+          <DocumentReadyTile title="Insurance Copy" source={require('../../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} />
+          <DocumentReadyTile title="Driver Licence" source={require('../../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} />
+          <DocumentReadyTile title="GR / Load Bill" source={require('../../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} />
+        </View>
+      </View>
+
       <View style={styles.voicePlaceholder}>
         <View style={styles.voiceIcon}><MaterialCommunityIcons name="microphone-outline" size={24} color="#0A43A3" /></View>
         <View style={styles.voiceCopy}>
@@ -258,6 +274,13 @@ export default function SelfManagedClaimScreen() {
   );
 }
 
+function DocumentReadyTile({ title, source }: { title: string; source: any }) {
+  return <View style={styles.documentReadyTile}>
+    <View style={styles.documentReadyArtworkWrap}><Image source={source} style={styles.documentReadyArtwork} resizeMode="contain" /></View>
+    <Text style={styles.documentReadyTileText} numberOfLines={2}>{title}</Text>
+  </View>;
+}
+
 function TimePickerField({ label, value, onPress }: { label: string; value: string; onPress: () => void }) {
   return <View style={styles.timeField}><Text style={styles.timeLabel}>{label}</Text><Pressable accessibilityRole="button" onPress={onPress} style={styles.timeButton}><MaterialCommunityIcons name="clock-outline" size={19} color="#0A43A3" /><Text style={[styles.timeValue, !value && styles.timePlaceholder]}>{value ? formatTime(value) : 'Select time'}</Text><MaterialCommunityIcons name="chevron-down" size={21} color={palette.navy} /></Pressable></View>;
 }
@@ -284,6 +307,17 @@ function formatTime(value: string) { const parsed = parseTime(value); const date
 const styles = StyleSheet.create({
   gap: { height: 10 },
   subsection: { marginTop: 16, marginBottom: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E7EBF0' }, subsectionTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
+  documentReadyCard: { borderRadius: 18, borderWidth: 1, borderColor: '#D7E2EF', backgroundColor: '#FFFFFF', padding: 12, marginBottom: 12, shadowColor: '#14375F', shadowOpacity: 0.05, shadowRadius: 9, shadowOffset: { width: 0, height: 4 }, elevation: 1 },
+  documentReadyHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 10 },
+  documentReadyTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
+  documentReadySubtitle: { color: '#6D7B8F', fontSize: 9.5, lineHeight: 13, fontWeight: '600', marginTop: 2 },
+  documentReadyBadge: { borderRadius: 999, backgroundColor: '#EEF5FF', paddingHorizontal: 9, paddingVertical: 5 },
+  documentReadyBadgeText: { color: '#0A43A3', fontSize: 8.5, fontWeight: '900' },
+  documentReadyGrid: { flexDirection: 'row', gap: 8 },
+  documentReadyTile: { flex: 1, minWidth: 0, borderRadius: 14, backgroundColor: '#F7FAFF', borderWidth: 1, borderColor: '#E2EAF4', paddingVertical: 9, paddingHorizontal: 5, alignItems: 'center' },
+  documentReadyArtworkWrap: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
+  documentReadyArtwork: { width: 46, height: 46 },
+  documentReadyTileText: { color: palette.navy, fontSize: 8.5, lineHeight: 11, fontWeight: '800', textAlign: 'center', marginTop: 4 },
   voicePlaceholder: { borderRadius: 17, borderWidth: 1, borderColor: '#CADAF0', backgroundColor: '#F5F9FF', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' },
   voiceIcon: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#E6F0FF', alignItems: 'center', justifyContent: 'center' },
   voiceCopy: { flex: 1, minWidth: 170 },

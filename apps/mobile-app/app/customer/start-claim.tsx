@@ -124,7 +124,7 @@ export default function StartClaimScreen() {
           <Text style={styles.title}>Select the vehicle</Text>
           <Text style={styles.subtitle}>Choose the vehicle involved and we’ll use its active policy.</Text>
         </View>
-        <Image accessible={false} source={require('../../assets/brand/start-claim/start-claim-hero.webp')} style={styles.heroArtwork} resizeMode="contain" />
+        <Image accessible={false} source={require('../../assets/brand/start-claim/start-claim-hero.png')} style={styles.heroArtwork} resizeMode="contain" />
       </View>
 
       {message ? <Message type="error">{message}</Message> : null}
@@ -174,7 +174,7 @@ export default function StartClaimScreen() {
         onAssistance={() => router.push('/customer/support')}
       />
 
-      <Image accessible={false} source={require('../../assets/brand/start-claim/start-claim-footer-scene.webp')} style={styles.footerArtwork} resizeMode="contain" />
+      <Image accessible={false} source={require('../../assets/brand/start-claim/start-claim-footer-scene.png')} style={styles.footerArtwork} resizeMode="contain" />
     </Screen>
   );
 }
