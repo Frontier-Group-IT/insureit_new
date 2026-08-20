@@ -216,7 +216,24 @@ export default function SelfManagedClaimScreen() {
 
       <View style={styles.voicePlaceholder}>
         <View style={styles.voiceIcon}><MaterialCommunityIcons name="microphone-outline" size={24} color="#0A43A3" /></View>
-        <View style={{ flex: 1 }}><Text style={styles.voiceTitle}>Incident Voice Note</Text><Text style={styles.voiceText}>Voice recording UI will be enabled once the audio recording module is approved for the preview build.</Text></View>
+        <View style={styles.voiceCopy}>
+          <Text style={styles.voiceTitle}>Incident Voice Note</Text>
+          <Text style={styles.voiceText}>Let the customer describe what happened to the vehicle.</Text>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Record Voice Note, available in a later app build"
+          accessibilityState={{ disabled: true }}
+          disabled
+          style={styles.voiceButton}
+        >
+          <MaterialCommunityIcons name="microphone" size={17} color="#FFFFFF" />
+          <Text style={styles.voiceButtonText}>Record Voice Note</Text>
+        </Pressable>
+        <View style={styles.voiceComingSoon}>
+          <MaterialCommunityIcons name="clock-outline" size={14} color="#60738B" />
+          <Text style={styles.voiceComingSoonText}>Recording will be enabled in a later app build.</Text>
+        </View>
       </View>
 
       <ClaimActionBar
@@ -267,7 +284,15 @@ function formatTime(value: string) { const parsed = parseTime(value); const date
 const styles = StyleSheet.create({
   gap: { height: 10 },
   subsection: { marginTop: 16, marginBottom: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E7EBF0' }, subsectionTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
-  voicePlaceholder: { borderRadius: 17, borderWidth: 1, borderColor: '#CADAF0', backgroundColor: '#F5F9FF', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }, voiceIcon: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#E6F0FF', alignItems: 'center', justifyContent: 'center' }, voiceTitle: { color: palette.navy, fontSize: 12, fontWeight: '900' }, voiceText: { color: '#68778D', fontSize: 9.5, lineHeight: 14, fontWeight: '600', marginTop: 2 },
+  voicePlaceholder: { borderRadius: 17, borderWidth: 1, borderColor: '#CADAF0', backgroundColor: '#F5F9FF', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' },
+  voiceIcon: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#E6F0FF', alignItems: 'center', justifyContent: 'center' },
+  voiceCopy: { flex: 1, minWidth: 170 },
+  voiceTitle: { color: palette.navy, fontSize: 12, fontWeight: '900' },
+  voiceText: { color: '#68778D', fontSize: 9.5, lineHeight: 14, fontWeight: '600', marginTop: 2 },
+  voiceButton: { minHeight: 44, borderRadius: 13, backgroundColor: '#0A43A3', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: 0.74 },
+  voiceButtonText: { color: '#FFFFFF', fontSize: 10.5, fontWeight: '900' },
+  voiceComingSoon: { width: '100%', borderTopWidth: 1, borderTopColor: '#D9E5F3', paddingTop: 9, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  voiceComingSoonText: { flex: 1, color: '#60738B', fontSize: 9.5, lineHeight: 13, fontWeight: '700' },
   timeField: { gap: 5, marginTop: 10 }, timeLabel: { color: '#3F4D63', fontSize: 11, fontWeight: '800' }, timeButton: { minHeight: 48, borderRadius: 13, borderWidth: 1, borderColor: '#D2DFEC', backgroundColor: '#FBFDFF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }, timeValue: { flex: 1, color: palette.navy, fontSize: 12.5, fontWeight: '800' }, timePlaceholder: { color: '#8A94A6' },
   timeModalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(7, 28, 62, 0.38)' }, timeModalCard: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 18, paddingBottom: 28 }, timeModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }, timeModalEyebrow: { color: '#0A43A3', fontSize: 9, fontWeight: '900', letterSpacing: 0.8 }, timeModalTitle: { color: palette.navy, fontSize: 19, fontWeight: '900', marginTop: 3 }, timeClose: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' }, timeColumns: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', gap: 10 }, timeColumn: { flex: 1, minWidth: 0 }, timeColumnLabel: { color: '#667085', fontSize: 10, fontWeight: '800', textAlign: 'center', marginBottom: 6 }, timeOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }, timeOption: { width: 48, height: 40, borderRadius: 10, backgroundColor: '#F5F8FC', alignItems: 'center', justifyContent: 'center' }, timeOptionSelected: { backgroundColor: '#0A43A3' }, timeOptionText: { color: '#56657A', fontSize: 12, fontWeight: '800' }, timeOptionTextSelected: { color: '#FFFFFF' }, timeColon: { color: palette.navy, fontSize: 23, fontWeight: '900', marginTop: 23 }, timeDone: { minHeight: 50, marginTop: 18, borderRadius: 14, backgroundColor: palette.navy, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }, timeDoneText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
 });
