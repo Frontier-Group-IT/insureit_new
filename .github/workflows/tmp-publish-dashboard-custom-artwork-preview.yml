@@ -1,0 +1,64 @@
+name: Temporary publish dashboard custom artwork preview
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/tmp-publish-dashboard-custom-artwork-preview.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      RELEASE_SHA: c0360daab4b100bd48083ece4825c935a02eb865
+      TARGET_MESSAGE: Dashboard custom artwork preview
+    steps:
+      - name: Check out merged main release
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_SHA }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Publish Expo preview OTA
+        working-directory: apps/mobile-app
+        shell: bash
+        run: |
+          npx eas-cli update \
+            --branch preview \
+            --environment preview \
+            --message "$TARGET_MESSAGE" \
+            --non-interactive \
+            --json > expo-update.json
+          cat expo-update.json
+
+      - name: Verify published preview update
+        working-directory: apps/mobile-app
+        shell: bash
+        run: |
+          found=0
+          for attempt in 1 2 3 4 5 6; do
+            npx eas-cli update:list --branch preview --limit 5 --json --non-interactive > expo-updates.json
+            if grep -Fq "$TARGET_MESSAGE" expo-updates.json; then
+              found=1
+              break
+            fi
+            sleep 20
+          done
+          if [ "$found" -ne 1 ]; then
+            echo "Target preview update not found" >&2
+            exit 1
+          fi
+          cat expo-updates.json
