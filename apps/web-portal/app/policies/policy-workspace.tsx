@@ -58,7 +58,7 @@ function policySourceKey(row: Pick<PolicyRow, "intermediary_type" | "intermediar
 
 function PolicyDateFilter({ label, value, min, max, onChange }: { label: string; value: string; min?: string; max?: string; onChange: (value: string) => void }) {
   return (
-    <label className="relative block h-10 w-[154px] shrink-0">
+    <label className="relative block h-10 w-[148px] shrink-0">
       <span className={`pointer-events-none absolute inset-y-0 left-3 right-9 z-10 flex items-center text-[10.5px] font-semibold ${value ? "text-[#334155]" : "text-[#64748B]"}`}>
         {value ? formatDateFilterValue(value) : label}
       </span>
@@ -177,15 +177,15 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
       </div>
 
       <div className="border-b border-[#E5ECF5] bg-white px-3 py-2 sm:px-4">
-        <div className="flex flex-col gap-2 xl:flex-row xl:flex-wrap xl:items-center">
-          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-            <div className="[&_select]:min-w-[190px] [&_select]:w-[190px]">
+        <div className="flex flex-col gap-2 xl:flex-row xl:flex-nowrap xl:items-center xl:justify-between">
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:flex-nowrap xl:gap-1.5">
+            <div className="[&_select]:min-w-[180px] [&_select]:w-[180px]">
               <RegisterSelect value={source} onChange={(value) => { setSource(value); setPage(1); }} label="Lead source">
                 <option value="all">All Sources</option>
                 {sourceOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
               </RegisterSelect>
             </div>
-            <div className="[&_select]:min-w-[210px] [&_select]:w-[210px]">
+            <div className="[&_select]:min-w-[200px] [&_select]:w-[200px]">
               <RegisterSelect value={insurer} onChange={(value) => { setInsurer(value); setPage(1); }} label="Insurance company">
                 <option value="all">All insurers</option>
                 {insurers.map((item) => <option key={item} value={item}>{item}</option>)}
@@ -194,7 +194,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
             <PolicyDateFilter label="From Date" value={fromDate} max={toDate || undefined} onChange={(value) => { setFromDate(value); setPage(1); }} />
             <PolicyDateFilter label="To Date" value={toDate} min={fromDate || undefined} onChange={(value) => { setToDate(value); setPage(1); }} />
           </div>
-          <div className="min-w-0 max-w-full xl:ml-auto xl:shrink-0">
+          <div className="min-w-0 max-w-full xl:ml-auto xl:shrink-0 xl:[&>div]:gap-0.5 xl:[&_button]:px-2.5 xl:[&_button]:text-[10px]">
             <RegisterViewTabs
               value={view}
               onChange={changeView}
