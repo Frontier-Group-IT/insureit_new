@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy iCall third-party cookie warning before training launch.",
-  "deploy_requested_at": "2026-08-20T14:49:00+05:30",
+  "purpose": "Deploy website-created customer membership synchronization for mobile customer access.",
+  "deploy_requested_at": "2026-08-20T14:52:00+05:30",
   "requested_by": "explicit user merge and deploy request",
-  "source": "Deploy merged PR #474 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "e0a338cbfc8d8743e79ea62504cb502d9d6f1b22",
-  "release_scope": "Deploy the iCall training launcher change that shows a third-party cookie notice before generating the fresh iCall SSO session. The existing secure iframe flow, new-tab fallback, gateway, authentication, Supabase, CSP, runtime and provider configuration remain unchanged.",
-  "verification": "PR #474 Verify web portal run 32353420720 passed successfully on head fa24f5d4d8863698b78e4172cc7ed14c8e13267d before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #475 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "42ddf6c8deb6f13b92979a46ca20f90df81f3808",
+  "release_scope": "Deploy the manager-portal Individual / Proprietor customer membership synchronization so website-created customers receive the active owner customer_memberships relationship required by mobile customer contexts. Existing active memberships remain unchanged and suspended/revoked memberships are not reactivated.",
+  "verification": "PR #475 Verify web portal run 32352896604 passed successfully on head 29fd884f05cbc8d638db0afdba81f336a35e438f before merge. The production Supabase migration sync_manager_portal_customer_memberships was applied successfully and verified with zero qualifying approved manager-portal customers missing membership. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
