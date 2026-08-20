@@ -29,5 +29,144 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Publish Expo preview OTA
+        id: publish
         working-directory: apps/mobile-app
-        run: npx eas-cli update --branch preview --environment preview --message "Add external claim stage timestamps" --non-interactive --json
+        shell: bash
+        run: |
+          set +e
+          npx eas-cli update \
+            --branch preview \
+            --environment preview \
+            --message "Add external claim stage timestamps" \
+            --non-interactive \
+            --json \
+            > expo-update.json \
+            2> expo-update.stderr.log
+          exit_code=$?
+          set -e
+
+          echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
+          if [ "$exit_code" -eq 0 ]; then
+            echo "result=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=failed" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ -s expo-update.json ]; then
+            echo "Expo publish JSON:"
+            cat expo-update.json
+          fi
+
+          if [ -s expo-update.stderr.log ]; then
+            echo "Expo CLI messages:" >&2
+            cat expo-update.stderr.log >&2
+          fi
+
+      - name: Verify latest preview update
+        if: steps.publish.outputs.result == 'success'
+        working-directory: apps/mobile-app
+        shell: bash
+        run: |
+          npx eas-cli update:list \
+            --branch preview \
+            --limit 1 \
+            --json \
+            --non-interactive \
+            > expo-update-latest.json
+          echo "Latest preview update JSON:"
+          cat expo-update-latest.json
+
+      - name: Write OTA publication summary
+        if: always()
+        working-directory: apps/mobile-app
+        env:
+          PUBLISH_RESULT: ${{ steps.publish.outputs.result }}
+          PUBLISH_EXIT_CODE: ${{ steps.publish.outputs.exit_code }}
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+
+          const readJson = (path) => {
+            try {
+              return JSON.parse(fs.readFileSync(path, 'utf8'));
+            } catch {
+              return null;
+            }
+          };
+
+          const collectObjects = (value, output = []) => {
+            if (!value || typeof value !== 'object') return output;
+            if (Array.isArray(value)) {
+              for (const item of value) collectObjects(item, output);
+              return output;
+            }
+            output.push(value);
+            for (const item of Object.values(value)) collectObjects(item, output);
+            return output;
+          };
+
+          const firstValue = (objects, keys) => {
+            for (const object of objects) {
+              for (const key of keys) {
+                const value = object?.[key];
+                if (value !== undefined && value !== null && value !== '') return String(value);
+              }
+            }
+            return null;
+          };
+
+          const uniqueValues = (objects, keys) => {
+            const values = [];
+            for (const object of objects) {
+              for (const key of keys) {
+                const value = object?.[key];
+                if (value !== undefined && value !== null && value !== '') values.push(String(value));
+              }
+            }
+            return [...new Set(values)];
+          };
+
+          const publish = readJson('expo-update.json');
+          const latest = readJson('expo-update-latest.json');
+          const objects = [
+            ...collectObjects(latest),
+            ...collectObjects(publish),
+          ];
+
+          const groupId = firstValue(objects, ['group', 'groupId', 'updateGroupId']);
+          const runtimeVersion = firstValue(objects, ['runtimeVersion']);
+          const updateIds = uniqueValues(objects, ['id', 'updateId'])
+            .filter((value) => value !== groupId)
+            .slice(0, 4);
+          const branch = firstValue(objects, ['branchName', 'branch']) || 'preview';
+          const result = process.env.PUBLISH_RESULT || 'unknown';
+          const exitCode = process.env.PUBLISH_EXIT_CODE || 'unknown';
+          const icon = result === 'success' ? '✅' : result === 'failed' ? '❌' : '⚠️';
+
+          const lines = [
+            '## Expo preview OTA publication',
+            '',
+            `| Field | Value |`,
+            `| --- | --- |`,
+            `| Publish result | ${icon} ${result} |`,
+            `| Expo branch | \`${branch}\` |`,
+            `| Runtime version | ${runtimeVersion ? `\`${runtimeVersion}\`` : 'Not returned by Expo'} |`,
+            `| Update group ID | ${groupId ? `\`${groupId}\`` : 'Not returned by Expo'} |`,
+            `| Update ID(s) | ${updateIds.length ? updateIds.map((id) => `\`${id}\``).join('<br>') : 'Not returned by Expo'} |`,
+            `| CLI exit code | \`${exitCode}\` |`,
+            `| Source commit | \`${process.env.GITHUB_SHA || 'unknown'}\` |`,
+            '',
+            'The workflow also logs the raw `eas update --json` response and the latest `preview` update returned by `eas update:list` for troubleshooting and independent verification.',
+            '',
+          ];
+
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
+          NODE
+
+      - name: Fail workflow when Expo publication fails
+        if: always() && steps.publish.outputs.result != 'success'
+        shell: bash
+        run: |
+          echo "Expo preview OTA publication failed with exit code ${{ steps.publish.outputs.exit_code }}." >&2
+          exit 1
