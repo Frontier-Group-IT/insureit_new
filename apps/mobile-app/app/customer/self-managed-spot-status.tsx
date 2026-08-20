@@ -3,11 +3,11 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppDatePicker } from '@/components/design-system';
-import { ClaimContextStrip, ClaimFormSection, ClaimPrimaryAction, ExternalClaimStageHeader } from '@/components/external-claim-ui';
+import { ClaimActionBar, ClaimFormSection, ClaimStageSummaryCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
 import { LoadingState, Message, Screen, TextField } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { type ClaimMilestone } from '@/lib/claim-service-mode';
-import { formatJourneyDate, validateStageChronology } from '@/lib/self-managed-claim-timeline';
+import { validateStageChronology } from '@/lib/self-managed-claim-timeline';
 import { supabase } from '@/lib/supabase';
 
 export default function SelfManagedSpotStatusScreen() {
@@ -102,7 +102,7 @@ export default function SelfManagedSpotStatusScreen() {
         setMessage('We could not save Spot Status right now. Please try again.');
         return;
       }
-      router.replace({ pathname: '/customer/self-managed-claim-detail', params: { id } });
+      router.replace({ pathname: '/customer/self-managed-milestone', params: { id, key: 'claim_intimation' } });
     } catch (error) {
       console.error('Self-managed Spot Status submit failed', error);
       setMessage('We could not save Spot Status right now. Please try again.');
@@ -113,35 +113,44 @@ export default function SelfManagedSpotStatusScreen() {
 
   if (loading) return <Screen title="Spot Status" showTitleHeader={false}><LoadingState label="Opening Spot Status" /></Screen>;
 
-  const spotIntimation = milestones.find((item) => item.milestone_key === 'spot_intimation');
-
   return (
     <Screen title="Spot Status" showTitleHeader={false}>
       <ExternalClaimStageHeader
         step={2}
         title="Spot Status"
-        subtitle="Record when the spot survey was completed."
+        subtitle="Record the completed spot survey."
         vehicleNo={vehicleNo}
         claimNo={claimNo}
         onBack={() => router.back()}
       />
 
-      <ClaimContextStrip previousLabel="Spot Intimation" previousValue={formatJourneyDate(spotIntimation)} />
+      <ClaimStageSummaryCard
+        title="Spot Status"
+        body="Record the survey completion details you received for this external claim."
+        icon="shield-check-outline"
+      />
+
       {message ? <Message type="error">{message}</Message> : null}
 
-      <ClaimFormSection title="Spot survey" subtitle="Survey completion date is required" icon="clipboard-check-outline">
+      <ClaimFormSection title="Spot Survey" subtitle="Survey completion date is mandatory" icon="clipboard-check-outline">
         <AppDatePicker label="Spot Survey Done Date *" value={surveyDate} onChange={setSurveyDate} maxDate={todayIsoDate()} formatDisplay={formatDisplayDate} />
       </ClaimFormSection>
 
-      <ClaimFormSection title="Surveyor details" subtitle="Add these only when available" optional icon="account-tie-outline">
+      <ClaimFormSection title="Surveyor Details" subtitle="Optional details for this claim stage" optional icon="account-tie-outline">
         <TextField label="Surveyor Name (Optional)" value={surveyorName} onChangeText={setSurveyorName} />
         <View style={styles.gap} />
-        <TextField label="Surveyor Number (Optional)" value={surveyorPhone} onChangeText={setSurveyorPhone} keyboardType="phone-pad" />
-        <View style={styles.gap} />
         <TextField label="Surveyor Email (Optional)" value={surveyorEmail} onChangeText={setSurveyorEmail} keyboardType="email-address" autoCapitalize="none" />
+        <View style={styles.gap} />
+        <TextField label="Surveyor Number (Optional)" value={surveyorPhone} onChangeText={setSurveyorPhone} keyboardType="phone-pad" />
       </ClaimFormSection>
 
-      <ClaimPrimaryAction disabled={submitting} icon="check" label={submitting ? 'Saving...' : 'Save Spot Status'} onPress={() => void submit()} />
+      <ClaimActionBar
+        primaryDisabled={submitting}
+        primaryLabel={submitting ? 'Saving...' : 'Save & Continue'}
+        primaryIcon="arrow-right"
+        onPrimary={() => void submit()}
+        onAssistance={() => id && router.push({ pathname: '/customer/request-claim-assistance', params: { id } })}
+      />
     </Screen>
   );
 }
