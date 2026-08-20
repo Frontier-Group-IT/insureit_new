@@ -67,6 +67,8 @@ export const claimStatuses = [
   'Closed',
 ] as const;
 
+const deletedCustomerLoginMessage = 'This customer account is no longer active. Use Sign Up to register again.';
+
 export function routeForRole(role: AppRole) {
   if (role === 'customer') return '/customer/home' as const;
   if (role === 'agent') return '/agent/dashboard' as const;
@@ -410,27 +412,60 @@ async function clearStoredAuthSession() {
   }
 }
 
+async function revokeLocalCustomerSession() {
+  try {
+    await supabase.auth.signOut({ scope: 'local' });
+  } catch (error) {
+    console.warn('Customer session sign out failed; clearing local auth state.', error);
+  } finally {
+    await clearStoredAuthSession();
+  }
+}
+
 export async function claimPendingCustomerMemberships() {
   const { error } = await supabase.rpc('claim_pending_customer_memberships');
   if (error) throw error;
 }
 
 export async function routeSignedInUser(user: User, router: Router, knownProfile?: Profile | null) {
+  const explicitSignupFlow = knownProfile !== undefined;
   let profile = knownProfile ?? await getProfile(user.id);
   const metadataRole = user.app_metadata?.app_role ?? user.user_metadata?.app_role;
   const looksLikeCustomerSignup = metadataRole === 'customer' || Boolean(user.phone && !metadataRole);
 
-  if (!profile && looksLikeCustomerSignup) {
+  if (!profile && explicitSignupFlow && looksLikeCustomerSignup) {
     profile = await ensureCustomerSignupProfile(user);
   }
+
+  if (profile?.role === 'customer' && !profile.is_active && !explicitSignupFlow) {
+    await revokeLocalCustomerSession();
+    router.replace('/login');
+    throw new Error(deletedCustomerLoginMessage);
+  }
+
   if (!isValidProfile(profile)) {
     router.replace('/access-denied');
     return profile;
   }
+
   if (profile.role === 'customer') {
     await clearSelectedCustomerContext();
     await claimPendingCustomerMemberships();
+
+    if (!explicitSignupFlow) {
+      const [customer, onboarding] = await Promise.all([
+        getCustomerForUser(user.id),
+        getOnboardingApplicationForUser(user.id),
+      ]);
+
+      if (!customer && !onboarding) {
+        await revokeLocalCustomerSession();
+        router.replace('/login');
+        throw new Error(deletedCustomerLoginMessage);
+      }
+    }
   }
+
   router.replace(routeForRole(profile.role));
   return profile;
 }
