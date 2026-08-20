@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { finalDocumentGroups, type FinalDocumentGroup, type RequiredDocument } from '@/lib/claim-documents';
 import { getCurrentSession } from '@/lib/auth';
@@ -10,6 +10,14 @@ import { palette } from '@/lib/theme';
 import type { ClaimDocument } from '@/lib/types';
 
 const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
+
+function documentArtwork(type: string) {
+  if (type === 'RC Copy') return require('../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png');
+  if (type === 'Insurance copy') return require('../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png');
+  if (type === 'Driver Licence') return require('../assets/brand/spot-intimation/glossy_purple_id_card_icon.png');
+  if (type === 'GR/Load bill') return require('../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png');
+  return null;
+}
 
 const orderedGroups: Array<{ key: string; label: string }> = [
   { key: 'spots-papers', label: 'Vehicle Docs' },
@@ -127,9 +135,10 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
         {activeGroup.group.documents.map((document) => {
           const uploaded = documents.find((item) => item.document_type === document.type && item.verification_status !== 'rejected');
           const uploading = uploadingType === document.type;
+          const artwork = documentArtwork(document.type);
           return <View key={document.type} style={[styles.documentCard, uploaded && styles.documentCardUploaded]}>
             <View style={[styles.documentIcon, uploaded && styles.documentIconUploaded]}>
-              <MaterialCommunityIcons name={(document.icon || 'file-document-outline') as keyof typeof MaterialCommunityIcons.glyphMap} size={23} color={uploaded ? '#FFFFFF' : '#0A43A3'} />
+              {artwork ? <Image source={artwork} style={styles.documentArtwork} resizeMode="contain" /> : <MaterialCommunityIcons name={(document.icon || 'file-document-outline') as keyof typeof MaterialCommunityIcons.glyphMap} size={23} color={uploaded ? '#FFFFFF' : '#0A43A3'} />}
             </View>
             <Text style={styles.documentTitle} numberOfLines={2}>{document.title}</Text>
             <Text style={styles.documentBody} numberOfLines={2}>{uploaded ? 'Uploaded' : document.body}</Text>
@@ -156,6 +165,6 @@ const styles = StyleSheet.create({
   optionalBadge: { borderRadius: 999, backgroundColor: '#EEF5FF', paddingHorizontal: 9, paddingVertical: 5 }, optionalBadgeText: { color: '#0A43A3', fontSize: 8.5, fontWeight: '900' },
   tabs: { borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#E6EDF5', backgroundColor: '#F7FAFF' }, tab: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 12, borderBottomWidth: 3, borderBottomColor: 'transparent' }, tabActive: { borderBottomColor: '#165DDB', backgroundColor: '#FFFFFF' }, tabText: { color: '#667085', fontSize: 9.8, fontWeight: '800' }, tabTextActive: { color: '#0A43A3' },
   message: { margin: 12, marginBottom: 0, borderRadius: 11, backgroundColor: '#FFF6E5', padding: 9, flexDirection: 'row', gap: 7, alignItems: 'center' }, messageText: { flex: 1, color: '#855200', fontSize: 10, lineHeight: 14, fontWeight: '700' },
-  grid: { padding: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 10 }, documentCard: { width: '48%', minHeight: 170, borderRadius: 15, borderWidth: 1, borderColor: '#DFE6EE', backgroundColor: '#FCFDFF', padding: 10, alignItems: 'center' }, documentCardUploaded: { borderColor: '#B6DEC9', backgroundColor: '#F8FFFB' }, documentIcon: { width: 48, height: 48, borderRadius: 15, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }, documentIconUploaded: { backgroundColor: '#168161' }, documentTitle: { color: palette.navy, fontSize: 10.5, lineHeight: 14, fontWeight: '900', textAlign: 'center', minHeight: 29 }, documentBody: { color: '#7A8799', fontSize: 8.8, lineHeight: 12, fontWeight: '600', textAlign: 'center', marginTop: 3, flex: 1 }, uploadButton: { minHeight: 34, borderRadius: 10, backgroundColor: '#0A43A3', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, alignSelf: 'stretch', marginTop: 8 }, replaceButton: { backgroundColor: '#168161' }, uploadButtonText: { color: '#FFFFFF', fontSize: 9.5, fontWeight: '900' },
+  grid: { padding: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 10 }, documentArtwork: { width: 42, height: 42 }, documentCard: { width: '48%', minHeight: 170, borderRadius: 15, borderWidth: 1, borderColor: '#DFE6EE', backgroundColor: '#FCFDFF', padding: 10, alignItems: 'center' }, documentCardUploaded: { borderColor: '#B6DEC9', backgroundColor: '#F8FFFB' }, documentIcon: { width: 48, height: 48, borderRadius: 15, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }, documentIconUploaded: { backgroundColor: '#168161' }, documentTitle: { color: palette.navy, fontSize: 10.5, lineHeight: 14, fontWeight: '900', textAlign: 'center', minHeight: 29 }, documentBody: { color: '#7A8799', fontSize: 8.8, lineHeight: 12, fontWeight: '600', textAlign: 'center', marginTop: 3, flex: 1 }, uploadButton: { minHeight: 34, borderRadius: 10, backgroundColor: '#0A43A3', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, alignSelf: 'stretch', marginTop: 8 }, replaceButton: { backgroundColor: '#168161' }, uploadButtonText: { color: '#FFFFFF', fontSize: 9.5, fontWeight: '900' },
   bulkHint: { margin: 12, marginTop: 0, borderRadius: 14, borderWidth: 1, borderStyle: 'dashed', borderColor: '#91A9C8', backgroundColor: '#F8FBFF', padding: 11, flexDirection: 'row', alignItems: 'center', gap: 10 }, bulkIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' }, bulkTitle: { color: palette.navy, fontSize: 10.5, fontWeight: '900' }, bulkText: { color: '#708097', fontSize: 9.3, lineHeight: 13, fontWeight: '600', marginTop: 2 },
 });
