@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, Linking, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, Linking, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
@@ -18,7 +18,7 @@ import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Claim, ClaimTask, Customer, CustomerOnboardingApplication, Policy, Profile, Vehicle } from '@/lib/types';
 
-const fleetSketch = require('../../assets/brand/customer-fleet-sketch.png');
+const fleetSketch = require('../../assets/brand/dashboard/dashboard-fleet-hero.png');
 const claimsDeskPhone = '+916264911014';
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -352,20 +352,22 @@ function QuickActionDock({ renewalDue, claimTasks, onRenewals, onQuote, onChalla
         <Text style={styles.sectionHint}>One tap services</Text>
       </View>
       <View style={styles.quickGrid}>
-        <QuickAction icon="calendar-month-outline" label="Renewal" badge={renewalDue} animateBadge tone="#FFF6E8" color="#C98918" onPress={onRenewals} />
-        <QuickAction icon="shield-plus-outline" label="Start claim" badge={claimTasks} tone="#E8F8F0" color="#10A66F" onPress={onClaim} />
-        <QuickAction icon="file-document-outline" label="Get quote" tone="#EAF3FF" color="#174EA6" onPress={onQuote} />
-        <QuickAction icon="ticket-confirmation-outline" label="E-Challan" tone="#E6FAFD" color="#0EAFC8" onPress={onChallan} />
+        <QuickAction icon="calendar-month-outline" image={require('../../assets/brand/dashboard/dashboard-renewal.png')} label="Renewal" badge={renewalDue} animateBadge tone="#FFF6E8" color="#C98918" onPress={onRenewals} />
+        <QuickAction icon="shield-plus-outline" image={require('../../assets/brand/dashboard/dashboard-start-claim.png')} label="Start claim" badge={claimTasks} tone="#E8F8F0" color="#10A66F" onPress={onClaim} />
+        <QuickAction icon="file-document-outline" image={require('../../assets/brand/dashboard/dashboard-get-quote.png')} label="Get quote" tone="#EAF3FF" color="#174EA6" onPress={onQuote} />
+        <QuickAction icon="ticket-confirmation-outline" image={require('../../assets/brand/dashboard/dashboard-echallan.png')} label="E-Challan" tone="#E6FAFD" color="#0EAFC8" onPress={onChallan} />
       </View>
     </View>
   );
 }
 
-function QuickAction({ icon, label, badge, animateBadge, tone, color, onPress }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; badge?: number; animateBadge?: boolean; tone: string; color: string; onPress: () => void }) {
+function QuickAction({ icon, image, label, badge, animateBadge, tone, color, onPress }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; image?: ImageSourcePropType; label: string; badge?: number; animateBadge?: boolean; tone: string; color: string; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.quickAction, pressed && styles.cardPressed]}>
       {badge ? <ActionBadge value={badge} animated={Boolean(animateBadge)} /> : null}
-      <View style={[styles.quickIcon, { backgroundColor: tone }]}><MaterialCommunityIcons name={icon} size={22} color={color} /></View>
+      <View style={[styles.quickIcon, { backgroundColor: tone }]}>
+        {image ? <Image source={image} style={styles.quickIconArtwork} resizeMode="contain" /> : <MaterialCommunityIcons name={icon} size={22} color={color} />}
+      </View>
       <Text style={styles.quickLabel} numberOfLines={2}>{label}</Text>
     </Pressable>
   );
@@ -629,6 +631,7 @@ const styles = StyleSheet.create({
   quickGrid: { flexDirection: 'row', gap: 8 },
   quickAction: { flex: 1, minHeight: 78, borderRadius: 16, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, position: 'relative' },
   quickIcon: { width: 36, height: 36, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  quickIconArtwork: { width: 32, height: 32 },
   quickLabel: { color: palette.navy, fontSize: 10.5, lineHeight: 13, fontWeight: '900', textAlign: 'center', marginTop: 6 },
   actionBadge: { position: 'absolute', right: 7, top: 7, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#E5484D', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, zIndex: 3 },
   actionBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '900' },
