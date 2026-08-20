@@ -33,7 +33,7 @@
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ],
-      "versionCode": 5
+      "versionCode": 4
     },
     "ios": {
       "bundleIdentifier": "com.insureit.mobile",
