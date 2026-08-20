@@ -1,19 +1,21 @@
 name: Verify mobile preview OTA
 
 on:
-  push:
+  pull_request:
     branches:
-      - tmp/external-claim-preview-ota-20260820
+      - main
+    paths:
+      - '.github/workflows/publish-mobile-preview-ota.yml'
 
 permissions:
   contents: read
   issues: write
-  pull-requests: read
+  pull-requests: write
 
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 12
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       TARGET_MESSAGE: External claim mockup redesign preview
@@ -35,25 +37,13 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Wait for published preview update
+      - name: Find target preview update
         working-directory: apps/mobile-app
         shell: bash
         run: |
-          found=0
-          for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            npx eas-cli update:list --branch preview --limit 5 --json --non-interactive > expo-updates.json
-            if grep -Fq "$TARGET_MESSAGE" expo-updates.json; then
-              found=1
-              break
-            fi
-            echo "Target update not visible yet (attempt $attempt/10)."
-            sleep 30
-          done
-          if [ "$found" -ne 1 ]; then
-            echo "Target Expo update was not found." >&2
-            exit 1
-          fi
+          npx eas-cli update:list --branch preview --limit 8 --json --non-interactive > expo-updates.json
           cat expo-updates.json
+          grep -Fq "$TARGET_MESSAGE" expo-updates.json
 
       - name: Build verification comment
         working-directory: apps/mobile-app
@@ -68,9 +58,9 @@ jobs:
             if (Array.isArray(value)) { for (const item of value) collect(item, out); return out; }
             out.push(value); for (const item of Object.values(value)) collect(item, out); return out;
           };
-          const objects = collect(data);
-          const matching = objects.filter((o) => String(o?.message ?? '').includes(target));
-          const pool = matching.length ? matching.flatMap((o) => collect(o)) : objects;
+          const all = collect(data);
+          const matching = all.filter((o) => String(o?.message ?? '').includes(target));
+          const pool = matching.length ? matching.flatMap((o) => collect(o)) : all;
           const first = (keys) => {
             for (const object of pool) for (const key of keys) {
               const value = object?.[key];
@@ -85,8 +75,8 @@ jobs:
           const createdAt = first(['createdAt']);
           const gitCommitHash = first(['gitCommitHash', 'gitCommitSha', 'commitHash']);
           const updateIds = unique(['id', 'updateId']).filter((value) => value !== groupId).slice(0, 6);
-          const lines = [
-            '## Expo preview OTA verification', '',
+          const body = [
+            '## Expo preview OTA verification — mockup redesign', '',
             '| Field | Value |', '| --- | --- |',
             '| Verification | ✅ target update found |',
             `| Message | \`${target}\` |`,
@@ -97,10 +87,10 @@ jobs:
             `| Expo git commit | ${gitCommitHash ? `\`${gitCommitHash}\`` : 'Not returned'} |`,
             `| Created at | ${createdAt ? `\`${createdAt}\`` : 'Not returned'} |`,
             `| Approved source SHA | \`${process.env.RELEASE_SHA}\` |`, '',
-          ];
-          fs.writeFileSync('verification.md', lines.join('\n'));
+          ].join('\n');
+          fs.writeFileSync('verification.md', body);
           NODE
 
-      - name: Post verification to PR 480
+      - name: Post verification to redesign PR
         working-directory: apps/mobile-app
         run: gh api repos/Frontier-Group-IT/insureit_new/issues/480/comments -f body="$(cat verification.md)"
