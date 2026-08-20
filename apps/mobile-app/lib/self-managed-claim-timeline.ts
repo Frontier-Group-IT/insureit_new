@@ -40,6 +40,7 @@ export function stageBusinessDateValue(milestone: TimelineMilestone | null | und
       ? stringValue(details.ri_done_date)
       : stringValue(details.repair_complete_date);
   }
+  if (milestone.milestone_key === 'vehicle_delivery' && milestone.milestone_status !== 'completed') return null;
   const field = DATE_FIELD_BY_STAGE[milestone.milestone_key];
   return field ? stringValue(details[field]) : null;
 }
