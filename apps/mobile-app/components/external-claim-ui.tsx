@@ -151,19 +151,19 @@ export function ClaimFinancialSummary({ rows }: { rows: Array<{ label: string; v
   );
 }
 
-export function ClaimPrimaryAction({ label, icon = 'arrow-right', disabled, onPress }: { label: string; icon?: keyof typeof MaterialCommunityIcons.glyphMap; disabled?: boolean; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={[styles.primaryAction, disabled && styles.primaryActionDisabled]}><Text style={styles.primaryActionText}>{label}</Text><MaterialCommunityIcons name={icon} size={22} color="#FFFFFF" /></Pressable>;
+export function ClaimPrimaryAction({ label, icon = 'arrow-right', disabled, fill = false, onPress }: { label: string; icon?: keyof typeof MaterialCommunityIcons.glyphMap; disabled?: boolean; fill?: boolean; onPress: () => void }) {
+  return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={[styles.primaryAction, fill && styles.actionBarItem, disabled && styles.primaryActionDisabled]}><Text style={styles.primaryActionText}>{label}</Text><MaterialCommunityIcons name={icon} size={20} color="#FFFFFF" /></Pressable>;
 }
 
-export function ClaimSecondaryAction({ icon, label, onPress }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" onPress={onPress} style={styles.secondaryAction}><MaterialCommunityIcons name={icon} size={19} color="#0A43A3" /><Text style={styles.secondaryActionText}>{label}</Text></Pressable>;
+export function ClaimSecondaryAction({ icon, label, fill = false, onPress }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; fill?: boolean; onPress: () => void }) {
+  return <Pressable accessibilityRole="button" onPress={onPress} style={[styles.secondaryAction, fill && styles.actionBarItem]}><MaterialCommunityIcons name={icon} size={18} color="#0A43A3" /><Text style={styles.secondaryActionText}>{label}</Text></Pressable>;
 }
 
 export function ClaimActionBar({ primaryLabel, primaryIcon = 'arrow-right', primaryDisabled, onPrimary, onAssistance }: { primaryLabel: string; primaryIcon?: keyof typeof MaterialCommunityIcons.glyphMap; primaryDisabled?: boolean; onPrimary: () => void; onAssistance: () => void }) {
   return (
     <View style={styles.actionBar}>
-      <ClaimSecondaryAction icon="account-tie-voice-outline" label="Ask for Assistance" onPress={onAssistance} />
-      <ClaimPrimaryAction label={primaryLabel} icon={primaryIcon} disabled={primaryDisabled} onPress={onPrimary} />
+      <ClaimSecondaryAction fill icon="account-tie-voice-outline" label="Ask for Assistance" onPress={onAssistance} />
+      <ClaimPrimaryAction fill label={primaryLabel} icon={primaryIcon} disabled={primaryDisabled} onPress={onPrimary} />
     </View>
   );
 }
@@ -234,11 +234,12 @@ const styles = StyleSheet.create({
   financialLabelEmphasis: { color: '#FFFFFF', fontWeight: '900' },
   financialValue: { color: '#FFFFFF', fontSize: 11.5, fontWeight: '900' },
   financialValueEmphasis: { fontSize: 13.5, color: '#DDF7ED' },
-  primaryAction: { minHeight: 52, borderRadius: 15, backgroundColor: '#07327B', paddingHorizontal: 17, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, shadowColor: '#07327B', shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
+  primaryAction: { minHeight: 52, borderRadius: 15, backgroundColor: '#07327B', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, shadowColor: '#07327B', shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
   primaryActionDisabled: { opacity: 0.5 },
-  primaryActionText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
-  secondaryAction: { minHeight: 47, borderRadius: 14, borderWidth: 1, borderColor: '#BFD2EE', backgroundColor: '#F7FAFF', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  secondaryActionText: { color: '#0A43A3', fontSize: 11, fontWeight: '900' },
-  actionBar: { gap: 8, marginTop: 2, marginBottom: 10 },
+  primaryActionText: { color: '#FFFFFF', fontSize: 12, lineHeight: 15, fontWeight: '900', textAlign: 'center', flexShrink: 1 },
+  secondaryAction: { minHeight: 52, borderRadius: 14, borderWidth: 1, borderColor: '#BFD2EE', backgroundColor: '#F7FAFF', paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  secondaryActionText: { color: '#0A43A3', fontSize: 10.5, lineHeight: 14, fontWeight: '900', textAlign: 'center', flexShrink: 1 },
+  actionBar: { flexDirection: 'row', alignItems: 'stretch', gap: 8, marginTop: 2, marginBottom: 10 },
+  actionBarItem: { flex: 1, minWidth: 0 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
 });
