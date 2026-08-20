@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy secure assistant policy document endpoint.",
-  "deploy_requested_at": "2026-08-20T06:42:00+05:30",
-  "requested_by": "explicit user deployment request",
-  "source": "Deploy merged PR #461 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "86d9e6e693154ccac3a9426fe2a6bcd32e499c4b",
-  "release_scope": "Deploy the read-only internal assistant policy-document endpoint that keeps policy-documents private, authenticates with a dedicated server-side bearer key, accepts one exact policy/document reference, and returns only short-lived five-minute signed URLs. No database migration or RLS change is included.",
-  "verification": "PR #461 Verify web portal run 32319956040 passed successfully on head 78b65bb13008952c95f3405c32719d0c4af1b5ec before merge. Production requires INSUREIT_ASSISTANT_API_KEY to be configured server-side before the endpoint can be used successfully. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "purpose": "Redeploy secure assistant policy document endpoint after production key configuration.",
+  "deploy_requested_at": "2026-08-20T08:51:00+05:30",
+  "requested_by": "explicit user deployment continuation after saving INSUREIT_ASSISTANT_API_KEY in Vercel",
+  "source": "Redeploy current main through the protected GitHub Actions production deployment workflow so Vercel picks up the new server-only assistant API key.",
+  "source_commit": "d4d6acad320cd937b3be10996808fb8b2ba4aada",
+  "release_scope": "Redeploy the already-merged read-only assistant policy-document endpoint with the newly configured production INSUREIT_ASSISTANT_API_KEY. No application code, database schema, RLS, storage visibility, or unrelated functionality is changed by this trigger.",
+  "verification": "PR #461 verification passed before merge, and the previous protected production deployment for d4d6acad320cd937b3be10996808fb8b2ba4aada reached Vercel READY. This redeploy is required only to load the newly saved server-side environment variable; the protected workflow must verify current main again before invoking the Vercel deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
