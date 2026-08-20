@@ -18,7 +18,7 @@ export { colors };
 
 type ScreenTopSpacing = 'default' | 'compact' | 'tight' | 'legacy';
 
-export function Screen({ title, subtitle, children, showLogout = false, showTitleHeader = true, topSpacing = 'default' }: PropsWithChildren<{ title: string; subtitle?: string; showLogout?: boolean; showTitleHeader?: boolean; topSpacing?: ScreenTopSpacing }>) {
+export function Screen({ title, subtitle, children, showLogout = false, showTitleHeader = true, showBackNavigation = true, topSpacing = 'default' }: PropsWithChildren<{ title: string; subtitle?: string; showLogout?: boolean; showTitleHeader?: boolean; showBackNavigation?: boolean; topSpacing?: ScreenTopSpacing }>) {
   const router = useRouter();
   const pathname = usePathname();
   const routeParams = useLocalSearchParams();
@@ -30,7 +30,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
   const showProfile = ['/customer', '/it', '/staff', '/agent', '/hierarchy', '/admin'].some((prefix) => pathname.startsWith(prefix));
   const compactTopSpacing = pathname === '/customer/upload-documents';
   const legalTopSpacing = pathname.startsWith('/customer/legal');
-  const showBackButton = showProfile && !isRootDashboard(pathname);
+  const showBackButton = showBackNavigation && showProfile && !isRootDashboard(pathname);
   const loadingOnly = isValidElement(children) && children.type === LoadingState;
   const tabRole = profileRole ?? (pathname.startsWith('/customer') ? 'customer' : null);
   const profileTopPadding = insets.top + topPaddingFor(topSpacing);
