@@ -171,6 +171,20 @@ Use visual inspection for the changed UI. If the relevant screen is blocked by d
 
 ## 7. Current Recent Preview Evidence
 
+Latest verified preview OTA for the refined customer Start Claim screen:
+
+```text
+Source commit: cb3a5aa1de9c134f62f5fa5ff5f035af21e0c183
+Message: Merge mobile Start Claim refinement
+Update group ID: 3ba0c189-d6ac-4efc-8d30-d10d84c56d79
+Android update ID: 01a01d3c-c4fb-799e-be08-e8dd10386091
+iOS update ID: 01a01d3c-c4fb-7089-8b71-a07bed8a84c9
+Runtime version: 0.2.0
+GitHub Actions run: 32328604314
+```
+
+The OTA publisher checked out the exact merged source commit and completed successfully for both Android and iOS on the existing `preview` branch/runtime. Installed-device cold-launch and screenshot verification remained blocked because no Android device was connected through ADB in the publishing session.
+
 Latest verified preview OTA wiring the previously unused Start Claim artwork into the live route:
 
 ```text
