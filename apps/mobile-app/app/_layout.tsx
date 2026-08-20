@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppLoadingProvider } from '@/components/app-loading';
-import { AppUpdateManager } from '@/components/app-update-manager';
 import { SplashIntro } from '@/components/first-look';
 import { RealtimeNotificationProvider } from '@/components/realtime-notifications';
 
@@ -33,7 +32,6 @@ function RootApplication() {
           <Stack.Screen name="customer/add-vehicle" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         </Stack>
       </RealtimeNotificationProvider>
-      <AppUpdateManager />
       {introVisible ? <View style={styles.introOverlay}><SplashIntro /></View> : null}
     </>
   );

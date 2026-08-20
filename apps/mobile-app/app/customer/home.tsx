@@ -18,11 +18,7 @@ import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Claim, ClaimTask, Customer, CustomerOnboardingApplication, Policy, Profile, Vehicle } from '@/lib/types';
 
-const dashboardFleetHero = require('../../assets/brand/dashboard/dashboard-fleet-hero.png');
-const dashboardRenewal = require('../../assets/brand/dashboard/dashboard-renewal.png');
-const dashboardStartClaim = require('../../assets/brand/dashboard/dashboard-start-claim.png');
-const dashboardGetQuote = require('../../assets/brand/dashboard/dashboard-get-quote.png');
-const dashboardEchallan = require('../../assets/brand/dashboard/dashboard-echallan.png');
+const fleetSketch = require('../../assets/brand/customer-fleet-sketch.png');
 const claimsDeskPhone = '+916264911014';
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -264,7 +260,7 @@ function FleetSnapshot({ vehicles, protectedVehicles, protectionScore, onOpen }:
           <Text style={styles.fleetCount}>{vehicles.length}</Text>
           <Text style={styles.fleetCountLabel}>Vehicles</Text>
         </View>
-        <Image source={dashboardFleetHero} style={styles.fleetImageHero} resizeMode="contain" />
+        <Image source={fleetSketch} style={styles.fleetImageHero} resizeMode="contain" />
         <FleetCoverageRing score={protectionScore} hasVehicles={vehicles.length > 0} />
       </View>
       <FleetStatusTicker totalVehicles={vehicles.length} unprotectedVehicles={unprotected} />
@@ -356,20 +352,20 @@ function QuickActionDock({ renewalDue, claimTasks, onRenewals, onQuote, onChalla
         <Text style={styles.sectionHint}>One tap services</Text>
       </View>
       <View style={styles.quickGrid}>
-        <QuickAction asset={dashboardRenewal} label="Renewal" badge={renewalDue} animateBadge onPress={onRenewals} />
-        <QuickAction asset={dashboardStartClaim} label="Start claim" badge={claimTasks} onPress={onClaim} />
-        <QuickAction asset={dashboardGetQuote} label="Get quote" onPress={onQuote} />
-        <QuickAction asset={dashboardEchallan} label="E-Challan" onPress={onChallan} />
+        <QuickAction icon="calendar-month-outline" label="Renewal" badge={renewalDue} animateBadge tone="#FFF6E8" color="#C98918" onPress={onRenewals} />
+        <QuickAction icon="shield-plus-outline" label="Start claim" badge={claimTasks} tone="#E8F8F0" color="#10A66F" onPress={onClaim} />
+        <QuickAction icon="file-document-outline" label="Get quote" tone="#EAF3FF" color="#174EA6" onPress={onQuote} />
+        <QuickAction icon="ticket-confirmation-outline" label="E-Challan" tone="#E6FAFD" color="#0EAFC8" onPress={onChallan} />
       </View>
     </View>
   );
 }
 
-function QuickAction({ asset, label, badge, animateBadge, onPress }: { asset: number; label: string; badge?: number; animateBadge?: boolean; onPress: () => void }) {
+function QuickAction({ icon, label, badge, animateBadge, tone, color, onPress }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; badge?: number; animateBadge?: boolean; tone: string; color: string; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.quickAction, pressed && styles.cardPressed]}>
       {badge ? <ActionBadge value={badge} animated={Boolean(animateBadge)} /> : null}
-      <Image source={asset} resizeMode="contain" style={styles.quickArtwork} />
+      <View style={[styles.quickIcon, { backgroundColor: tone }]}><MaterialCommunityIcons name={icon} size={22} color={color} /></View>
       <Text style={styles.quickLabel} numberOfLines={2}>{label}</Text>
     </Pressable>
   );
@@ -570,10 +566,10 @@ const styles = StyleSheet.create({
   avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: palette.ink, borderWidth: 2, borderColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#FFFFFF', fontWeight: '900', fontSize: 17 },
   scroll: { flex: 1 },
-  body: { flexGrow: 1, paddingHorizontal: 18, paddingTop: 13, paddingBottom: 126, gap: 14 },
+  body: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 11, paddingBottom: 120, gap: 11 },
   greetingBlock: { paddingHorizontal: 2, paddingTop: 2, paddingBottom: 1 },
-  greeting: { color: palette.navy, fontSize: 23, lineHeight: 29, fontWeight: '900' },
-  greetingMetaRow: { marginTop: 6, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 9 },
+  greeting: { color: palette.navy, fontSize: 22, lineHeight: 28, fontWeight: '900' },
+  greetingMetaRow: { marginTop: 5, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 7 },
   attentionLink: { minHeight: 22, flexDirection: 'row', alignItems: 'center', gap: 4 },
   attentionLinkStrong: { color: '#174EA6', fontSize: 12, lineHeight: 15, fontWeight: '900' },
   attentionLinkText: { color: '#5C6878', fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
@@ -601,43 +597,43 @@ const styles = StyleSheet.create({
   attentionValue: { fontSize: 17, lineHeight: 20, fontWeight: '900', marginTop: 1 },
   attentionLabel: { color: '#5C6878', fontSize: 10.5, fontWeight: '800', marginTop: 1 },
   textPressed: { opacity: 0.62 },
-  fleetCard: { minHeight: 188, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', padding: 14, overflow: 'hidden', shadowColor: '#122544', shadowOpacity: 0.08, shadowRadius: 14, elevation: 3 },
+  fleetCard: { minHeight: 158, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', padding: 12, overflow: 'hidden', shadowColor: '#122544', shadowOpacity: 0.07, shadowRadius: 12, elevation: 3 },
   fleetTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  fleetMainRow: { minHeight: 103, flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 6 },
-  fleetCountBlock: { width: 78, minWidth: 78, alignItems: 'center', justifyContent: 'center', paddingLeft: 2 },
-  fleetCount: { color: palette.navy, fontSize: 42, lineHeight: 46, fontWeight: '900' },
+  fleetMainRow: { minHeight: 86, flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 5 },
+  fleetCountBlock: { width: 92, minWidth: 92, alignItems: 'center', justifyContent: 'center', paddingLeft: 4 },
+  fleetCount: { color: palette.navy, fontSize: 40, lineHeight: 44, fontWeight: '900' },
   fleetCountLabel: { color: '#607089', fontSize: 9.5, fontWeight: '900', textTransform: 'uppercase', marginTop: 1 },
   fleetCopy: { flex: 1, minWidth: 0 },
   sectionEyebrow: { color: '#607089', fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
   fleetTitle: { color: palette.navy, fontSize: 19, lineHeight: 24, fontWeight: '900', marginTop: 4 },
-  scoreRing: { width: 78, height: 78, borderRadius: 39, alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  scoreCore: { position: 'absolute', width: 57, height: 57, borderRadius: 29, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E0EAF5', alignItems: 'center', justifyContent: 'center' },
-  scoreValue: { color: palette.navy, fontSize: 16, lineHeight: 19, fontWeight: '900' },
+  scoreRing: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  scoreCore: { position: 'absolute', width: 52, height: 52, borderRadius: 26, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E0EAF5', alignItems: 'center', justifyContent: 'center' },
+  scoreValue: { color: palette.navy, fontSize: 15, lineHeight: 18, fontWeight: '900' },
   scoreLabel: { color: '#607089', fontSize: 8, fontWeight: '900', marginTop: 0 },
   plateStack: { width: 142, zIndex: 2 },
   platePill: { alignSelf: 'flex-start', minHeight: 31, maxWidth: 135, borderRadius: 10, backgroundColor: '#F7FAFE', borderWidth: 1, borderColor: '#D8E7F7', paddingHorizontal: 9, alignItems: 'center', justifyContent: 'center', marginBottom: 5 },
   platePillOverlap: { marginLeft: 12 },
   plateText: { color: palette.navy, fontSize: 11.2, fontWeight: '900' },
   fleetImage: { flex: 1, height: 96, marginLeft: -18, marginRight: -6 },
-  fleetImageHero: { flex: 1, height: 104, marginLeft: -10, marginRight: -7, opacity: 0.95 },
+  fleetImageHero: { flex: 1, height: 92, marginLeft: -12, marginRight: -7, opacity: 0.95 },
   fleetFooter: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 6 },
   attentionPulseIcon: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#E5484D', alignItems: 'center', justifyContent: 'center' },
-  fleetTicker: { minHeight: 42, marginTop: 10, borderRadius: 15, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  fleetTicker: { minHeight: 37, marginTop: 8, borderRadius: 14, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
   fleetTickerText: { flex: 1, color: palette.navy, fontSize: 11.5, fontWeight: '900' },
   fleetTickerValue: { fontSize: 12.5, fontWeight: '900' },
   fleetTickerDivider: { color: '#B6C4D8', fontSize: 12, fontWeight: '900' },
-  quickDock: { borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', padding: 14, shadowColor: '#122544', shadowOpacity: 0.05, shadowRadius: 11, elevation: 2 },
+  quickDock: { borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', padding: 12, shadowColor: '#122544', shadowOpacity: 0.04, shadowRadius: 9, elevation: 2 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 },
   sectionTitle: { color: palette.navy, fontSize: 16, fontWeight: '900' },
   sectionHint: { color: '#607089', fontSize: 11, fontWeight: '800' },
-  quickGrid: { flexDirection: 'row', gap: 9 },
-  quickAction: { flex: 1, minHeight: 112, borderRadius: 18, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, position: 'relative' },
-  quickArtwork: { width: 64, height: 64 },
-  quickLabel: { color: palette.navy, fontSize: 11, lineHeight: 14, fontWeight: '900', textAlign: 'center', marginTop: 8 },
+  quickGrid: { flexDirection: 'row', gap: 8 },
+  quickAction: { flex: 1, minHeight: 78, borderRadius: 16, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, position: 'relative' },
+  quickIcon: { width: 36, height: 36, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  quickLabel: { color: palette.navy, fontSize: 10.5, lineHeight: 13, fontWeight: '900', textAlign: 'center', marginTop: 6 },
   actionBadge: { position: 'absolute', right: 7, top: 7, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#E5484D', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, zIndex: 3 },
   actionBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '900' },
-  claimSummaryCard: { borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', overflow: 'hidden', shadowColor: '#071D49', shadowOpacity: 0.11, shadowRadius: 15, elevation: 3 },
-  claimSummaryTop: { backgroundColor: palette.navy, padding: 15 },
+  claimSummaryCard: { borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', overflow: 'hidden', shadowColor: '#071D49', shadowOpacity: 0.1, shadowRadius: 13, elevation: 3 },
+  claimSummaryTop: { backgroundColor: palette.navy, padding: 13 },
   claimOpenLink: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   claimOpenLinkText: { color: '#BFD4F7', fontSize: 11, fontWeight: '900' },
   claimMetricRow: { flexDirection: 'row', alignItems: 'stretch' },
@@ -675,7 +671,7 @@ const styles = StyleSheet.create({
   progressLabelActive: { color: '#FFFFFF' },
   claimFooter: { minHeight: 42, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 8 },
   claimFooterText: { flex: 1, color: '#E8F1FF', fontSize: 11.5, lineHeight: 16, fontWeight: '700' },
-  supportCard: { borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', padding: 14, shadowColor: '#122544', shadowOpacity: 0.05, shadowRadius: 11, elevation: 2 },
+  supportCard: { borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', padding: 11, shadowColor: '#122544', shadowOpacity: 0.04, shadowRadius: 9, elevation: 2 },
   supportTop: { marginBottom: 9 },
   supportHeaderLine: { flexShrink: 1 },
   supportIcon: { width: 44, height: 44, borderRadius: 16, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' },

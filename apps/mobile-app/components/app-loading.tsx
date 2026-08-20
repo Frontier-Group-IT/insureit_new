@@ -1,3 +1,4 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
@@ -20,38 +21,21 @@ type LoadingContextValue = {
 };
 
 const LoadingContext = createContext<LoadingContextValue | null>(null);
-const minimumVisibleMs = 220;
-const quietPeriodMs = 140;
+const minimumVisibleMs = 420;
+const quietPeriodMs = 220;
 
 export function AppLoadingProvider({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<TrackedLoadingEntry[]>(getTrackedLoadingEntries());
-  const [overlayVisible, setOverlayVisible] = useState(true);
+  const [overlayVisible, setOverlayVisible] = useState(entries.length > 0);
   const [overlayLabel, setOverlayLabel] = useState(entries[entries.length - 1]?.label || 'Loading');
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const startupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const overlayShownAt = useRef(entries.length > 0 ? Date.now() : 0);
-  const overlayVisibleRef = useRef(true);
+  const overlayVisibleRef = useRef(entries.length > 0);
 
   const begin = useCallback((label = 'Loading') => beginTrackedLoading(label), []);
   const end = useCallback((id: string) => endTrackedLoading(id), []);
 
   useEffect(() => subscribeTrackedLoading(setEntries), []);
-
-  useEffect(() => {
-    if (startupTimer.current) clearTimeout(startupTimer.current);
-    startupTimer.current = setTimeout(() => {
-      if (entries.length === 0) {
-        overlayVisibleRef.current = false;
-        setOverlayVisible(false);
-      }
-      startupTimer.current = null;
-    }, 900);
-
-    return () => {
-      if (startupTimer.current) clearTimeout(startupTimer.current);
-      startupTimer.current = null;
-    };
-  }, [entries]);
 
   useEffect(() => {
     if (entries.length > 0) {
@@ -84,7 +68,6 @@ export function AppLoadingProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => () => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
-    if (startupTimer.current) clearTimeout(startupTimer.current);
   }, []);
 
   const value = useMemo<LoadingContextValue>(() => ({ begin, end, beginNavigation, runWithLoader }), [begin, beginNavigation, end, runWithLoader]);
@@ -112,14 +95,16 @@ export function useLoadingRouter(): ReturnType<typeof useRouter> {
 }
 
 function AppLoadingOverlay({ label }: { label: string }) {
-  return (
-    <View accessibilityRole="progressbar" accessibilityLabel={label} style={styles.overlay}>
-      <View style={styles.loaderCard}>
-        <ActivityIndicator size="large" color={palette.blue} />
-        <Text style={styles.loaderText}>{label}</Text>
+  return <View accessibilityRole="progressbar" accessibilityLabel={label} style={styles.overlay}>
+    <View style={styles.card}>
+      <View style={styles.iconShell}>
+        <MaterialCommunityIcons name="shield-check-outline" size={30} color="#0A43A3" />
       </View>
+      <ActivityIndicator size="large" color="#0A43A3" />
+      <Text style={styles.title}>{label}</Text>
+      <Text style={styles.subtitle}>Please wait while InsureIT finishes loading.</Text>
     </View>
-  );
+  </View>;
 }
 
 const styles = StyleSheet.create({
@@ -127,33 +112,49 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 10000,
     elevation: 10000,
-    backgroundColor: 'rgba(242,247,252,0.92)',
+    backgroundColor: 'rgba(247,249,253,0.96)',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
   },
-  loaderCard: {
-    width: 180,
-    minHeight: 120,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.92)',
+  card: {
+    width: '100%',
+    maxWidth: 360,
+    minHeight: 220,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(198,211,225,0.9)',
+    borderColor: '#DCE6F0',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    shadowColor: '#102443',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 4,
+    padding: 24,
+    shadowColor: '#122544',
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 8,
   },
-  loaderText: {
-    marginTop: 10,
-    color: '#1D3557',
-    fontSize: 13,
-    fontWeight: '700',
+  iconShell: {
+    width: 58,
+    height: 58,
+    borderRadius: 19,
+    backgroundColor: '#EEF5FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  title: {
+    marginTop: 14,
+    color: palette.navy,
+    fontSize: 16,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  subtitle: {
+    marginTop: 6,
+    color: '#65758B',
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: '600',
     textAlign: 'center',
   },
 });

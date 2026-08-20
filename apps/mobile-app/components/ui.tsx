@@ -18,7 +18,7 @@ export { colors };
 
 type ScreenTopSpacing = 'default' | 'compact' | 'tight' | 'legacy';
 
-export function Screen({ title, subtitle, children, showLogout = false, showTitleHeader = true, topSpacing = 'default', bottomTabsVariant = 'default', brandHeaderVariant = 'default' }: PropsWithChildren<{ title: string; subtitle?: string; showLogout?: boolean; showTitleHeader?: boolean; topSpacing?: ScreenTopSpacing; bottomTabsVariant?: 'default' | 'navy'; brandHeaderVariant?: 'default' | 'navy' }>) {
+export function Screen({ title, subtitle, children, showLogout = false, showTitleHeader = true, topSpacing = 'default' }: PropsWithChildren<{ title: string; subtitle?: string; showLogout?: boolean; showTitleHeader?: boolean; topSpacing?: ScreenTopSpacing }>) {
   const router = useRouter();
   const pathname = usePathname();
   const routeParams = useLocalSearchParams();
@@ -30,7 +30,6 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
   const showProfile = ['/customer', '/it', '/staff', '/agent', '/hierarchy', '/admin'].some((prefix) => pathname.startsWith(prefix));
   const compactTopSpacing = pathname === '/customer/upload-documents';
   const legalTopSpacing = pathname.startsWith('/customer/legal');
-  const navyBrandHeader = brandHeaderVariant === 'navy' && showProfile;
   const showBackButton = showProfile && !isRootDashboard(pathname);
   const loadingOnly = isValidElement(children) && children.type === LoadingState;
   const tabRole = profileRole ?? (pathname.startsWith('/customer') ? 'customer' : null);
@@ -96,20 +95,20 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
   const accent = accentForRole(profileRole);
   return (
     <SafeAreaView style={styles.safeArea} edges={[]}>
-      <View pointerEvents="none" style={[styles.backdropTop, navyBrandHeader && styles.backdropTopNavy]} />
-      <View pointerEvents="none" style={[styles.backdropBand, navyBrandHeader && styles.backdropBandNavy]} />
+      <View pointerEvents="none" style={styles.backdropTop} />
+      <View pointerEvents="none" style={styles.backdropBand} />
       {showProfile ? (
-        <View style={[styles.fixedBrandRow, navyBrandHeader && styles.fixedBrandRowNavy, { top: insets.top }]}>
+        <View style={[styles.fixedBrandRow, { top: insets.top }]}>
           {showBackButton ? (
-            <Pressable accessibilityRole="button" onPress={openBack} style={[styles.backButton, navyBrandHeader && styles.backButtonNavy]}>
-              <MaterialCommunityIcons name="chevron-left" size={25} color={navyBrandHeader ? '#FFFFFF' : palette.ink} />
+            <Pressable accessibilityRole="button" onPress={openBack} style={styles.backButton}>
+              <MaterialCommunityIcons name="chevron-left" size={25} color={palette.ink} />
             </Pressable>
           ) : null}
           <Pressable accessibilityRole="button" onPress={openDashboard} style={styles.brandPressable}>
-            <BrandLogo width={158} tone={navyBrandHeader ? 'light' : 'dark'} />
+            <BrandLogo width={158} />
           </Pressable>
-          <NotificationBell color={navyBrandHeader ? '#FFFFFF' : palette.ink} />
-          <Pressable accessibilityRole="button" onPress={openProfile} style={[styles.avatar, navyBrandHeader && styles.avatarNavy]}>
+          <NotificationBell />
+          <Pressable accessibilityRole="button" onPress={openProfile} style={styles.avatar}>
             <Text style={styles.avatarText}>{profileInitial}</Text>
           </Pressable>
         </View>
@@ -151,7 +150,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
           ) : null}
           {children}
         </ScrollView>
-        {showProfile && !keyboardVisible && tabRole && (!pathname.startsWith('/customer') || customerContext !== undefined) ? <UniversalBottomTabs role={tabRole} pathname={pathname} bottomInset={insets.bottom} customerContext={customerContext} variant={bottomTabsVariant} /> : null}
+        {showProfile && !keyboardVisible && tabRole && (!pathname.startsWith('/customer') || customerContext !== undefined) ? <UniversalBottomTabs role={tabRole} pathname={pathname} bottomInset={insets.bottom} customerContext={customerContext} /> : null}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -172,13 +171,12 @@ export function Button({ label, onPress, variant = 'primary', disabled = false, 
   );
 }
 
-export function TextField({ label, style, editable, required = false, rightIcon, ...props }: TextInputProps & { label: string; required?: boolean; rightIcon?: keyof typeof MaterialCommunityIcons.glyphMap }) {
+export function TextField({ label, style, editable, ...props }: TextInputProps & { label: string }) {
   return (
     <View style={styles.fieldWrap}>
-      <Text style={styles.label}>{label}{required ? <Text style={styles.requiredStar}> *</Text> : null}</Text>
+      <Text style={styles.label}>{label}</Text>
       <View style={[styles.inputShell, editable === false && styles.disabledInputShell]}>
         <TextInput placeholderTextColor="#8A94A6" editable={editable} style={[styles.input, style]} {...props} />
-        {rightIcon ? <MaterialCommunityIcons name={rightIcon} size={19} color="#7A8799" style={styles.inputRightIcon} /> : null}
       </View>
     </View>
   );
@@ -197,11 +195,33 @@ export function Message({ type = 'info', children }: PropsWithChildren<{ type?: 
 }
 
 export function LoadingState({ label }: { label?: string }) {
+  const spin = useRef(new Animated.Value(0)).current;
+  const pulse = useRef(new Animated.Value(0)).current;
+  void label;
+
+  useEffect(() => {
+    const spinLoop = Animated.loop(Animated.timing(spin, { toValue: 1, duration: 1300, easing: Easing.linear, useNativeDriver: true }));
+    const pulseLoop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 760, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0, duration: 760, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+    ]));
+    spinLoop.start();
+    pulseLoop.start();
+    return () => { spinLoop.stop(); pulseLoop.stop(); };
+  }, [pulse, spin]);
+
+  const rotation = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  const haloScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.12] });
+  const haloOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.24, 0.52] });
+
   return (
     <View style={styles.loaderStage}>
-      <View style={styles.loaderShell}>
-        <ActivityIndicator size="large" color={colors.blue} />
-        {label ? <Text style={styles.loaderLabel}>{label}</Text> : null}
+      <View style={styles.loaderScene}>
+        <Animated.View style={[styles.loaderHalo, { opacity: haloOpacity, transform: [{ scale: haloScale }] }]} />
+        <Animated.View style={[styles.loaderRing, { transform: [{ rotate: rotation }] }]} />
+        <View style={styles.loaderCore}>
+          <MaterialCommunityIcons name="shield-check-outline" size={28} color={roleTheme.customer.accent} />
+        </View>
       </View>
     </View>
   );
@@ -238,11 +258,10 @@ export function NavLink({ href, label }: { href: LinkProps['href']; label: strin
   );
 }
 
-export function UniversalBottomTabs({ role, pathname, bottomInset, customerContext, variant = 'default' }: { role: AppRole; pathname: string; bottomInset: number; customerContext?: CustomerAccountContext | null; variant?: 'default' | 'navy' }) {
+export function UniversalBottomTabs({ role, pathname, bottomInset, customerContext }: { role: AppRole; pathname: string; bottomInset: number; customerContext?: CustomerAccountContext | null }) {
   const router = useRouter();
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const tabs = tabsForRole(role, customerContext);
-  const useNavy = role === 'customer' || variant === 'navy';
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
@@ -256,18 +275,16 @@ export function UniversalBottomTabs({ role, pathname, bottomInset, customerConte
   if (keyboardVisible) return null;
 
   return (
-    <View
-      style={[styles.bottomTabsWrap, useNavy && styles.bottomTabsWrapNavy, { paddingBottom: Math.max(bottomInset, 10) }]}
-    >
-      <View style={[styles.bottomTabs, useNavy && styles.bottomTabsNavy]}>
+    <View style={[styles.bottomTabsWrap, { paddingBottom: Math.max(bottomInset, 10) }]}>
+      <View style={styles.bottomTabs}>
         {tabs.map((tab) => {
           const active = isTabActive(tab.href, pathname, customerContext);
           return (
             <Pressable key={`${tab.href}-${tab.label}`} accessibilityRole="button" onPress={() => router.push(tab.href as LinkProps['href'])} style={styles.bottomTab}>
-              <View style={[styles.bottomIconShell, useNavy && styles.bottomIconShellNavy, { backgroundColor: useNavy ? (active ? tabTone(tab.label, tab).accent : 'rgba(255,255,255,0.08)') : tabTone(tab.label, tab).soft }, active && [styles.bottomIconShellActive, useNavy && styles.bottomIconShellActiveNavy, { borderColor: tabTone(tab.label, tab).accent }]]}>
-                <MaterialCommunityIcons name={tab.icon} size={19} color={active ? tabTone(tab.label, tab).accent : useNavy ? '#D5E4FA' : palette.slate} />
+              <View style={[styles.bottomIconShell, { backgroundColor: tabTone(tab.label, tab).soft }, active && [styles.bottomIconShellActive, { borderColor: tabTone(tab.label, tab).accent }]]}>
+                <MaterialCommunityIcons name={tab.icon} size={19} color={active ? tabTone(tab.label, tab).accent : palette.slate} />
               </View>
-              <Text style={[styles.bottomTabText, useNavy && styles.bottomTabTextNavy, active && { color: useNavy ? '#FFFFFF' : tabTone(tab.label, tab).accent }]} numberOfLines={1}>{tab.label}</Text>
+              <Text style={[styles.bottomTabText, active && { color: tabTone(tab.label, tab).accent }]} numberOfLines={1}>{tab.label}</Text>
             </Pressable>
           );
         })}
@@ -492,23 +509,18 @@ export const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: 'transparent' },
   safeArea: { flex: 1, backgroundColor: '#EEF7FF' },
   backdropTop: { position: 'absolute', left: 0, right: 0, top: 0, height: 270, backgroundColor: '#EAF5FF' },
-  backdropTopNavy: { backgroundColor: palette.navy, height: 270 },
-  backdropBandNavy: { display: 'none' },
   backdropBand: { position: 'absolute', left: -60, right: -70, top: 170, height: 108, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.72)', transform: [{ rotateZ: '-7deg' }] },
   screenContent: { flexGrow: 1, paddingHorizontal: 14, paddingBottom: 142, backgroundColor: 'transparent' },
   screenContentWithTabs: { paddingTop: 92, paddingBottom: 156 },
   screenContentCompactTop: { paddingTop: 86 },
   screenContentLoading: { justifyContent: 'center', paddingBottom: 108 },
   fixedBrandRow: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, height: 66, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4, paddingVertical: 6, backgroundColor: 'rgba(255,255,255,0.98)', borderBottomWidth: 1, borderBottomColor: 'rgba(207,224,244,0.9)' },
-  fixedBrandRowNavy: { height: 76, backgroundColor: palette.navy, borderBottomColor: 'rgba(255,255,255,0.16)' },
   brandRow: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginHorizontal: -14, paddingHorizontal: 14, paddingTop: 24, paddingBottom: 10, marginBottom: 10, backgroundColor: 'transparent', zIndex: 10 },
   backButton: { width: 40, height: 40, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.86)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(191,216,255,0.78)' },
-  backButtonNavy: { backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.28)' },
   brandPressable: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 },
   brand: { color: palette.ink, fontSize: 21, fontWeight: '800' },
   brandLogo: { width: 150, height: 34 },
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: palette.ink, alignItems: 'center', justifyContent: 'center', marginLeft: 'auto', borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)' },
-  avatarNavy: { backgroundColor: 'transparent', borderColor: 'rgba(255,255,255,0.48)' },
   avatarText: { color: colors.white, fontSize: 16, fontWeight: '900' },
   header: { minHeight: 98, borderRadius: 22, padding: 16, marginBottom: 14, backgroundColor: 'rgba(255,255,255,0.88)', borderWidth: 1, borderColor: 'rgba(191,216,255,0.72)', shadowColor: '#0C4A88', shadowOpacity: 0.1, shadowRadius: 16, elevation: 3, overflow: 'hidden' },
   headerTop: { alignSelf: 'flex-start', minHeight: 27, borderRadius: 999, backgroundColor: '#F7FBFF', borderWidth: 1, borderColor: '#D6E7FA', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 8 },
@@ -528,11 +540,9 @@ export const styles = StyleSheet.create({
   secondaryButtonText: { color: colors.navy },
   fieldWrap: { marginBottom: 12 },
   label: { color: colors.navy, fontSize: 13, fontWeight: '700', marginBottom: 7 },
-  requiredStar: { color: '#D14343', fontWeight: '800' },
   inputShell: { minHeight: 54, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.9)', borderWidth: 1, borderColor: colors.border, justifyContent: 'center' },
   disabledInputShell: { opacity: 0.65 },
-  input: { paddingHorizontal: 14, paddingRight: 42, minHeight: 50, color: colors.navy, fontSize: 16, fontWeight: '600' },
-  inputRightIcon: { position: 'absolute', right: 14 },
+  input: { paddingHorizontal: 14, minHeight: 50, color: colors.navy, fontSize: 16, fontWeight: '600' },
   message: { backgroundColor: palette.blueSoft, borderRadius: radii.lg, padding: 12, marginVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: '#B9D5FF' },
   messageIcon: { width: 34, height: 34, borderRadius: 13, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
   messageText: { color: colors.navy, flex: 1, fontSize: 14, fontWeight: '500', lineHeight: 20 },
@@ -541,38 +551,11 @@ export const styles = StyleSheet.create({
   errorMessageText: { color: colors.danger },
   successMessageText: { color: '#067647' },
   center: { alignItems: 'center', justifyContent: 'center', padding: 26 },
-  loaderStage: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    backgroundColor: '#F5F9FF',
-  },
-  loaderShell: {
-    minWidth: 170,
-    paddingVertical: 20,
-    paddingHorizontal: 18,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.94)',
-    borderWidth: 1,
-    borderColor: '#DCE8F8',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#102443',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 2,
-  },
-  loaderLabel: {
-    marginTop: 12,
-    fontSize: 12,
-    color: '#4A5F7A',
-    fontWeight: '700',
-    letterSpacing: 0.2,
-    textAlign: 'center',
-  },
+  loaderStage: { flex: 1, minHeight: 340, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, paddingBottom: 42 },
+  loaderScene: { width: 114, height: 114, alignItems: 'center', justifyContent: 'center' },
+  loaderHalo: { position: 'absolute', width: 102, height: 102, borderRadius: 51, backgroundColor: '#DDF6EC' },
+  loaderRing: { position: 'absolute', width: 90, height: 90, borderRadius: 45, borderWidth: 4, borderColor: '#CFE8DE', borderTopColor: roleTheme.customer.accent, borderRightColor: '#7ED8B8' },
+  loaderCore: { width: 62, height: 62, borderRadius: 21, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center', shadowColor: palette.ink, shadowOpacity: 0.1, shadowRadius: 13, elevation: 3 },
   muted: { color: colors.grey, fontSize: 15, lineHeight: 22 },
   emptyIcon: { width: 44, height: 44, borderRadius: radii.md, backgroundColor: palette.emeraldSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   row: { borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: 8 },
@@ -582,15 +565,13 @@ export const styles = StyleSheet.create({
   navIcon: { width: 40, height: 40, borderRadius: radii.md, backgroundColor: palette.emeraldSoft, alignItems: 'center', justifyContent: 'center' },
   navLinkText: { color: colors.navy, fontSize: 15, fontWeight: '700', flex: 1 },
   bottomTabsWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 10, paddingTop: 8, backgroundColor: 'rgba(238,247,255,0.78)' },
-  bottomTabsWrapNavy: { backgroundColor: 'rgba(7,29,73,0.08)' },
   bottomTabs: { minHeight: 66, backgroundColor: 'rgba(255,255,255,0.98)', borderRadius: 20, paddingVertical: 7, paddingHorizontal: 4, flexDirection: 'row', justifyContent: 'space-between', borderWidth: 1, borderColor: 'rgba(198,211,225,0.9)', shadowColor: '#17202F', shadowOpacity: 0.1, shadowRadius: 12, elevation: 5 },
-  bottomTabsNavy: { backgroundColor: palette.navy, borderColor: '#123B7A', shadowColor: palette.navy, shadowOpacity: 0.2 },
   bottomTab: { flex: 1, minHeight: 50, alignItems: 'center', justifyContent: 'center', gap: 2, minWidth: 0 },
   bottomIconShell: { width: 35, height: 30, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'transparent' },
   bottomIconShellActive: { backgroundColor: palette.surface, shadowColor: palette.ink, shadowOpacity: 0.08, shadowRadius: 6, elevation: 1 },
-  bottomIconShellNavy: { borderColor: 'transparent' },
-  bottomIconShellActiveNavy: { backgroundColor: '#FFFFFF', shadowColor: '#000000', shadowOpacity: 0.14, shadowRadius: 7, elevation: 2 },
   bottomTabText: { color: colors.grey, fontSize: 9.5, fontWeight: '900' },
-  bottomTabTextNavy: { color: '#D5E4FA' },
   bottomTabTextActive: { color: colors.navy },
 });
+
+
+

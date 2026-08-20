@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { PropsWithChildren, useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
 
 import { Button, Card, EmptyState, LoadingState, Message, Screen, colors } from '@/components/ui';
 
@@ -174,19 +174,14 @@ export function AppDatePicker({
   onChange,
   formatDisplay,
   maxDate,
-  required = false,
-  fullScreen = false,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   formatDisplay?: (value: string) => string;
   maxDate?: string | Date;
-  required?: boolean;
-  fullScreen?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [jumpOpen, setJumpOpen] = useState(false);
   const [visibleMonth, setVisibleMonth] = useState(() => monthStart(parseDate(value) ?? new Date()));
   const selectedDate = parseDate(value);
   const maxSelectableDate = normalizeDateLimit(maxDate);
@@ -197,81 +192,52 @@ export function AppDatePicker({
     setVisibleMonth((current) => new Date(current.getFullYear(), current.getMonth() + direction, 1));
   }
 
-  const calendar = (
-    <View style={[designStyles.calendarPanel, fullScreen && designStyles.calendarFullScreen]}>
-      <View style={designStyles.calendarHeader}>
-        <Pressable accessibilityRole="button" onPress={() => moveMonth(-1)} style={designStyles.calendarNav}>
-          <MaterialCommunityIcons name="chevron-left" size={22} color={colors.navy} />
-        </Pressable>
-        <Pressable accessibilityRole="button" onPress={() => setJumpOpen((current) => !current)} style={designStyles.calendarMonthButton}>
-          <Text style={designStyles.calendarMonth}>{visibleMonth.toLocaleString('en-IN', { month: 'long', year: 'numeric' })}</Text>
-          <MaterialCommunityIcons name={jumpOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.navy} />
-        </Pressable>
-        <Pressable accessibilityRole="button" onPress={() => moveMonth(1)} style={designStyles.calendarNav}>
-          <MaterialCommunityIcons name="chevron-right" size={22} color={colors.navy} />
-        </Pressable>
-      </View>
-      {jumpOpen ? (
-        <View style={designStyles.calendarJumpPanel}>
-          <Text style={designStyles.calendarJumpLabel}>Choose month</Text>
-          <View style={designStyles.calendarJumpGrid}>
-            {Array.from({ length: 12 }, (_, month) => (
-              <Pressable key={month} accessibilityRole="button" onPress={() => { setVisibleMonth(new Date(visibleMonth.getFullYear(), month, 1)); setJumpOpen(false); }} style={[designStyles.calendarJumpOption, month === visibleMonth.getMonth() && designStyles.calendarJumpOptionActive]}>
-                <Text style={[designStyles.calendarJumpText, month === visibleMonth.getMonth() && designStyles.calendarJumpTextActive]}>{new Date(2000, month, 1).toLocaleString('en-IN', { month: 'short' })}</Text>
-              </Pressable>
-            ))}
-          </View>
-          <Text style={designStyles.calendarJumpLabel}>Choose year</Text>
-          <View style={designStyles.calendarJumpGrid}>
-            {Array.from({ length: 11 }, (_, index) => visibleMonth.getFullYear() - 5 + index).map((year) => (
-              <Pressable key={year} accessibilityRole="button" onPress={() => { setVisibleMonth(new Date(year, visibleMonth.getMonth(), 1)); setJumpOpen(false); }} style={[designStyles.calendarJumpOption, year === visibleMonth.getFullYear() && designStyles.calendarJumpOptionActive]}>
-                <Text style={[designStyles.calendarJumpText, year === visibleMonth.getFullYear() && designStyles.calendarJumpTextActive]}>{year}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-      ) : null}
-      <View style={designStyles.weekRow}>
-        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => <Text key={`${day}-${index}`} style={designStyles.weekDay}>{day}</Text>)}
-      </View>
-      <View style={designStyles.dateGrid}>
-        {monthDays.map((day, index) => {
-          const isSelected = Boolean(selectedDate && sameDate(selectedDate, day.date));
-          const isDisabled = Boolean(maxSelectableDate && day.date.getTime() > maxSelectableDate.getTime());
-          return (
-            <Pressable
-              key={`${day.date.toISOString()}-${index}`}
-              accessibilityRole="button"
-              disabled={isDisabled}
-              onPress={() => {
-                if (isDisabled) return;
-                onChange(formatIsoDate(day.date));
-                setOpen(false);
-              }}
-              style={[designStyles.dateCell, !day.inMonth && designStyles.dateCellMuted, isDisabled && designStyles.dateCellDisabled, isSelected && designStyles.dateCellSelected]}
-            >
-              <Text style={[designStyles.dateText, !day.inMonth && designStyles.dateTextMuted, isDisabled && designStyles.dateTextDisabled, isSelected && designStyles.dateTextSelected]}>{day.date.getDate()}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-    </View>
-  );
-
   return (
     <View style={designStyles.selectWrap}>
-      <Text style={designStyles.label}>{label}{required ? <Text style={designStyles.requiredStar}> *</Text> : null}</Text>
+      <Text style={designStyles.label}>{label}</Text>
       <Pressable accessibilityRole="button" onPress={() => setOpen((current) => !current)} style={designStyles.selectButton}>
         <View style={designStyles.selectCopy}>
-          <Text style={[designStyles.selectTitle, !value && designStyles.selectPlaceholder, !value && fullScreen && designStyles.datePickerPlaceholder]}>{displayValue || 'Select date'}</Text>
+          <Text style={[designStyles.selectTitle, !value && designStyles.selectPlaceholder]}>{displayValue || 'Select date'}</Text>
         </View>
         <MaterialCommunityIcons name="calendar-month-outline" size={22} color="#667085" />
       </Pressable>
-      {open ? (fullScreen ? (
-        <Modal visible transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-          <Pressable style={designStyles.calendarModalBackdrop} onPress={() => setOpen(false)}><Pressable style={designStyles.calendarModal} onPress={(event) => event.stopPropagation()}>{calendar}</Pressable></Pressable>
-        </Modal>
-      ) : calendar) : null}
+      {open ? (
+        <View style={designStyles.calendarPanel}>
+          <View style={designStyles.calendarHeader}>
+            <Pressable accessibilityRole="button" onPress={() => moveMonth(-1)} style={designStyles.calendarNav}>
+              <MaterialCommunityIcons name="chevron-left" size={22} color={colors.navy} />
+            </Pressable>
+            <Text style={designStyles.calendarMonth}>{visibleMonth.toLocaleString('en-IN', { month: 'long', year: 'numeric' })}</Text>
+            <Pressable accessibilityRole="button" onPress={() => moveMonth(1)} style={designStyles.calendarNav}>
+              <MaterialCommunityIcons name="chevron-right" size={22} color={colors.navy} />
+            </Pressable>
+          </View>
+          <View style={designStyles.weekRow}>
+            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => <Text key={`${day}-${index}`} style={designStyles.weekDay}>{day}</Text>)}
+          </View>
+          <View style={designStyles.dateGrid}>
+            {monthDays.map((day, index) => {
+              const isSelected = Boolean(selectedDate && sameDate(selectedDate, day.date));
+              const isDisabled = Boolean(maxSelectableDate && day.date.getTime() > maxSelectableDate.getTime());
+              return (
+                <Pressable
+                  key={`${day.date.toISOString()}-${index}`}
+                  accessibilityRole="button"
+                  disabled={isDisabled}
+                  onPress={() => {
+                    if (isDisabled) return;
+                    onChange(formatIsoDate(day.date));
+                    setOpen(false);
+                  }}
+                  style={[designStyles.dateCell, !day.inMonth && designStyles.dateCellMuted, isDisabled && designStyles.dateCellDisabled, isSelected && designStyles.dateCellSelected]}
+                >
+                  <Text style={[designStyles.dateText, !day.inMonth && designStyles.dateTextMuted, isDisabled && designStyles.dateTextDisabled, isSelected && designStyles.dateTextSelected]}>{day.date.getDate()}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -337,7 +303,6 @@ function formatReadableDate(value: string) {
 const designStyles = StyleSheet.create({
   inputWrap: { marginBottom: 12 },
   label: { color: colors.navy, fontSize: 13, fontWeight: '700', marginBottom: 7 },
-  requiredStar: { color: '#D14343', fontWeight: '800' },
   input: { minHeight: 54, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.9)', borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, color: colors.navy, fontSize: 16, fontWeight: '600' },
   badge: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.65)' },
   badgeText: { fontSize: 11, fontWeight: '800' },
@@ -386,7 +351,6 @@ const designStyles = StyleSheet.create({
   selectCopy: { flex: 1, minWidth: 0 },
   selectTitle: { color: colors.navy, fontSize: 15, fontWeight: '700' },
   selectPlaceholder: { color: '#8A94A6' },
-  datePickerPlaceholder: { fontSize: 13, fontWeight: '600' },
   selectSubtitle: { color: colors.grey, fontSize: 12, fontWeight: '700', marginTop: 3 },
   dropdownPanel: { borderRadius: 18, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white, padding: 10, marginTop: 8, shadowColor: colors.navy, shadowOpacity: 0.1, shadowRadius: 14, elevation: 4 },
   dropdownSearch: { minHeight: 44, borderRadius: 15, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
@@ -398,20 +362,9 @@ const designStyles = StyleSheet.create({
   dropdownSubtitle: { color: colors.grey, fontSize: 12, fontWeight: '700', marginTop: 3 },
   dropdownEmpty: { color: colors.grey, fontSize: 13, fontWeight: '800', padding: 12 },
   calendarPanel: { borderRadius: 18, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white, padding: 12, marginTop: 8, shadowColor: colors.navy, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 },
-  calendarFullScreen: { width: '100%', maxWidth: 420, padding: 16, borderRadius: 24 },
-  calendarModalBackdrop: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.3)', justifyContent: 'flex-end', alignItems: 'stretch' },
-  calendarModal: { width: '100%', maxWidth: 520, alignSelf: 'center', backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 14, paddingBottom: 28, shadowColor: '#0F172A', shadowOpacity: 0.12, shadowRadius: 18, shadowOffset: { width: 0, height: -8 }, elevation: 10 },
   calendarHeader: { minHeight: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   calendarNav: { width: 38, height: 38, borderRadius: 14, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-  calendarMonthButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
-  calendarMonth: { color: colors.navy, fontSize: 16, fontWeight: '900', textAlign: 'center' },
-  calendarJumpPanel: { marginBottom: 10, borderRadius: 14, backgroundColor: '#F7FAFF', borderWidth: 1, borderColor: colors.border, padding: 10 },
-  calendarJumpLabel: { color: colors.grey, fontSize: 10, fontWeight: '800', marginBottom: 7, marginTop: 2 },
-  calendarJumpGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
-  calendarJumpOption: { width: '23%', minHeight: 34, borderRadius: 9, backgroundColor: colors.white, borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' },
-  calendarJumpOptionActive: { backgroundColor: colors.green, borderColor: colors.green },
-  calendarJumpText: { color: colors.navy, fontSize: 11, fontWeight: '800' },
-  calendarJumpTextActive: { color: colors.white },
+  calendarMonth: { flex: 1, color: colors.navy, fontSize: 16, fontWeight: '900', textAlign: 'center' },
   weekRow: { flexDirection: 'row', marginBottom: 6 },
   weekDay: { width: `${100 / 7}%`, textAlign: 'center', color: colors.grey, fontSize: 12, fontWeight: '900' },
   dateGrid: { flexDirection: 'row', flexWrap: 'wrap' },

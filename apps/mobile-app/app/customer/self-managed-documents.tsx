@@ -227,18 +227,18 @@ export default function SelfManagedDocumentsScreen() {
   }
 
   if (loading) {
-    return <Screen title="Claim Documents" showTitleHeader={false} brandHeaderVariant="navy"><LoadingState label="Opening document vault" /></Screen>;
+    return <Screen title="Claim Documents" showTitleHeader={false}><LoadingState label="Opening document vault" /></Screen>;
   }
   if (error && !claim) {
-    return <Screen title="Claim Documents" showTitleHeader={false} brandHeaderVariant="navy"><Message type="error">{error}</Message></Screen>;
+    return <Screen title="Claim Documents" showTitleHeader={false}><Message type="error">{error}</Message></Screen>;
   }
 
   return (
-    <Screen title="Claim Documents" showTitleHeader={false} brandHeaderVariant="navy">
+    <Screen title="Claim Documents" showTitleHeader={false}>
       <View style={styles.top}>
-        <View style={styles.heroIcon}>
-          <MaterialCommunityIcons name="folder-account-outline" size={22} color="#0A43A3" />
-        </View>
+        <Pressable onPress={() => router.back()} style={styles.back}>
+          <MaterialCommunityIcons name="arrow-left" size={21} color={palette.navy} />
+        </Pressable>
         <View style={{ flex: 1 }}>
           <Text style={styles.eye}>EXTERNAL CLAIM</Text>
           <Text style={styles.title}>Document Vault</Text>
@@ -314,8 +314,8 @@ function stageLabel(key: ClaimMilestoneKey) {
 }
 
 const styles = StyleSheet.create({
-  top: { flexDirection: 'row', gap: 10, alignItems: 'center', marginTop: 0, marginBottom: 12 },
-  heroIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
+  top: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginTop: 0, marginBottom: 12 },
+  back: { width: 42, height: 42, borderRadius: 14, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center' },
   eye: { color: '#0A43A3', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.8 },
   title: { color: palette.navy, fontSize: 22, fontWeight: '900' },
   sub: { color: '#667085', fontSize: 10.5, lineHeight: 15, fontWeight: '700', marginTop: 3 },
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
   empty: { color: '#98A2B3', fontSize: 8.8, fontWeight: '600', marginTop: 2 },
   savedFile: { flexDirection: 'row', gap: 4, alignItems: 'center', marginTop: 4 },
   savedName: { maxWidth: 180, color: '#4F5F72', fontSize: 8.8, fontWeight: '700' },
-  upload: { minWidth: 68, height: 40, paddingHorizontal: 9, borderRadius: 10, flexDirection: 'row', gap: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.navy },
+  upload: { minWidth: 68, height: 34, paddingHorizontal: 9, borderRadius: 10, flexDirection: 'row', gap: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.navy },
   uploadBusy: { opacity: 0.65 },
   uploadText: { color: '#FFF', fontSize: 8.8, fontWeight: '900' },
   noStandard: { flexDirection: 'row', gap: 7, alignItems: 'center', paddingTop: 10 },
