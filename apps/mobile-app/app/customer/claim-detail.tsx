@@ -5,8 +5,9 @@ import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppBadge } from '@/components/design-system';
 import { EmptyState, LoadingState, Message, Screen } from '@/components/ui';
-import { SELF_MANAGED_MILESTONES, type ClaimMilestone } from '@/lib/claim-service-mode';
+import { SELF_MANAGED_MILESTONES, type ClaimMilestone, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
 import { customerStageCopy } from '@/lib/claim-workflow';
+import { formatJourneyAmount, formatJourneyDate, stageMainAmount, STAGE_DATE_LABELS } from '@/lib/self-managed-claim-timeline';
 import { supabase } from '@/lib/supabase';
 import { palette, roleTheme } from '@/lib/theme';
 import type { Claim, ClaimDocument, ClaimHistory, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
@@ -87,14 +88,20 @@ export default function ClaimDetailScreen() {
   if (loading) return <Screen title="Claim Detail"><LoadingState /></Screen>;
   if (!claim) return <Screen title="Claim Detail"><EmptyState title="Claim not found" body="Please choose another claim from your list." /></Screen>;
 
+  const claimId = claim.id;
   const tone = selfManaged ? externalClaimTone : claimTone(claim.current_status);
   const currentStage = SELF_MANAGED_MILESTONES[currentStageIndex];
   const settled = ['Settled', 'Closed', 'Claim Complete'].includes(claim.current_status) || (selfManaged && completedKeys.size >= 9);
 
+  function openSelfStage(key: ClaimMilestoneKey) {
+    if (key === 'spot_intimation') return router.push({ pathname: '/customer/self-managed-claim', params: { id: claimId } });
+    if (key === 'spot_status') return router.push({ pathname: '/customer/self-managed-spot-status', params: { id: claimId } });
+    return router.push({ pathname: '/customer/self-managed-milestone', params: { id: claimId, key } });
+  }
+
   function openCurrentSelfStage() {
     if (!selfManaged || settled || !currentStage) return;
-    if (currentStage.key === 'spot_status') router.push({ pathname: '/customer/self-managed-spot-status', params: { id: claim.id } });
-    else router.push({ pathname: '/customer/self-managed-milestone', params: { id: claim.id, key: currentStage.key } });
+    openSelfStage(currentStage.key);
   }
 
   async function openDocument(document: ClaimDocument) {
@@ -117,15 +124,15 @@ export default function ClaimDetailScreen() {
     <View style={[styles.heroCard, { backgroundColor: tone.background, borderColor: tone.border }]}>
       <View style={[styles.accentBar, { backgroundColor: tone.accent }]} />
       <View style={styles.heroTop}>
-        <View style={[styles.statusIcon, { backgroundColor: tone.soft }]}><MaterialCommunityIcons name={settled ? 'check-decagram-outline' : 'shield-check-outline'} size={25} color={tone.accent} /></View>
+        <View style={[styles.statusIcon, { backgroundColor: tone.soft }]}><MaterialCommunityIcons name={settled ? 'check-decagram-outline' : 'shield-check-outline'} size={23} color={tone.accent} /></View>
         <View style={styles.heroCopy}><Text style={[styles.stageLabel, { color: tone.accent }]}>{settled ? 'CLAIM COMPLETE' : currentStage?.label ?? claim.current_status}</Text><Text style={styles.vehicleNo}>{vehicle?.vehicle_no ?? 'Vehicle linked'}</Text></View>
         {!selfManaged ? <View style={[styles.focusStatusBadge, { backgroundColor: tone.soft, borderColor: tone.border }]}><Text style={[styles.focusStatusText, { color: tone.accent }]}>Sankalp Managed</Text></View> : null}
       </View>
       <View style={styles.numberRow}><InfoNumber label="Control No." value={claim.claim_no} /><InfoNumber label="Claim No." value={claim.insurer_claim_no || 'Awaiting insurer'} /></View>
-      <View style={styles.infoBox}><InfoPair leftLabel="Manufacturer" leftValue={vehicle?.make ?? '-'} rightLabel="Model" rightValue={vehicle?.model ?? '-'} /><InfoPair leftLabel="Policy" leftValue={policy?.policy_no ?? '-'} rightLabel="Insurer" rightValue={insurer?.name ?? '-'} /><InfoPair leftLabel="Incident Date" leftValue={formatDate(claim.accident_at)} rightLabel="Policy Source" rightValue={policy?.source === 'external' ? 'External' : 'Sankalp'} /></View>
+      <View style={styles.infoBox}><InfoPair leftLabel="Manufacturer" leftValue={vehicle?.make ?? '-'} rightLabel="Model" rightValue={vehicle?.model ?? '-'} /><InfoPair leftLabel="Policy" leftValue={policy?.policy_no ?? '-'} rightLabel="Insurer" rightValue={insurer?.name ?? '-'} /><InfoPair leftLabel="Incident" leftValue={selfManaged ? formatDateTime(claim.accident_at) : formatDate(claim.accident_at)} rightLabel="Policy Source" rightValue={policy?.source === 'external' ? 'External' : 'Sankalp'} /></View>
     </View>
 
-    <View style={[styles.nextActionCard, { borderColor: tone.border }]}><View style={[styles.nextActionIcon, { backgroundColor: tone.soft }]}><MaterialCommunityIcons name="arrow-right-circle-outline" size={22} color={tone.accent} /></View><View style={{ flex: 1 }}><Text style={[styles.nextLabel, { color: tone.accent }]}>{selfManaged ? 'CURRENT MILESTONE' : 'NEXT ACTION'}</Text><Text style={styles.nextTitle}>{settled ? 'Claim journey complete' : currentStage?.label ?? claim.current_status}</Text><Text style={styles.nextBody}>{selfManaged ? settled ? 'All nine external claim milestones are recorded.' : 'Record this milestone when you receive the related update from the insurer, surveyor, or workshop.' : customerStageCopy(claim.current_status)}</Text></View></View>
+    <View style={[styles.nextActionCard, { borderColor: tone.border }]}><View style={[styles.nextActionIcon, { backgroundColor: tone.soft }]}><MaterialCommunityIcons name="arrow-right-circle-outline" size={22} color={tone.accent} /></View><View style={{ flex: 1 }}><Text style={[styles.nextLabel, { color: tone.accent }]}>{selfManaged ? 'CURRENT MILESTONE' : 'NEXT ACTION'}</Text><Text style={styles.nextTitle}>{settled ? 'Claim journey complete' : currentStage?.label ?? claim.current_status}</Text><Text style={styles.nextBody}>{selfManaged ? settled ? 'All nine external claim milestones are recorded.' : 'Record the real event date when you receive this update from the insurer, surveyor, or workshop.' : customerStageCopy(claim.current_status)}</Text></View></View>
 
     <View style={styles.quickActions}>
       {selfManaged && !settled ? <QuickAction icon="pencil-circle-outline" label="Update Current Stage" primary onPress={openCurrentSelfStage} /> : null}
@@ -142,21 +149,29 @@ export default function ClaimDetailScreen() {
     {historyExpanded ? <View style={styles.sectionBody}>{history.length ? history.map((item) => <View key={item.id} style={styles.historyRow}><View style={styles.historyDot} /><View style={{ flex: 1 }}><Text style={styles.historyStatus}>{item.to_status}</Text><Text style={styles.documentMeta}>{formatDateTime(item.created_at)}</Text>{item.notes ? <Text style={styles.emptyText}>{item.notes}</Text> : null}</View></View>) : <Text style={styles.emptyText}>No timeline updates yet.</Text>}</View> : null}
 
     <SectionHeader title={selfManaged ? 'External Claim Journey' : 'Claim Journey'} subtitle={`${progress}% complete • ${currentStage?.label ?? claim.current_status}`} expanded={journeyExpanded} onPress={() => setJourneyExpanded((value) => !value)} />
-    {journeyExpanded ? <View style={styles.sectionBody}>{SELF_MANAGED_MILESTONES.map((stage, index) => {
+    {journeyExpanded ? <View style={[styles.sectionBody, selfManaged && styles.journeyBody]}>{SELF_MANAGED_MILESTONES.map((stage, index) => {
       const done = selfManaged ? completedKeys.has(stage.key) : index < currentStageIndex;
       const current = !settled && index === currentStageIndex;
       const milestone = selfManaged ? milestones.find((item) => item.milestone_key === stage.key) : null;
-      const editable = selfManaged && (done || current) && stage.key !== 'spot_intimation';
-      return <Pressable key={stage.key} disabled={!editable} onPress={() => {
-        if (stage.key === 'spot_status') router.push({ pathname: '/customer/self-managed-spot-status', params: { id: claim.id } });
-        else router.push({ pathname: '/customer/self-managed-milestone', params: { id: claim.id, key: stage.key } });
-      }} style={[styles.stageRow, current && { borderColor: tone.accent, backgroundColor: tone.soft }]}>
-        <View style={[styles.stageNode, done && styles.stageDone, current && { backgroundColor: tone.accent }]}><MaterialCommunityIcons name={done ? 'check' : current ? 'map-marker' : 'lock-outline'} size={14} color={done || current ? '#FFF' : '#7A8799'} /></View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.stageTitle}>{stage.label}</Text>
-          <Text style={styles.stageMeta}>{done ? selfManaged ? 'Completed • tap to review' : 'Completed' : current ? selfManaged ? 'Current stage • tap to update' : 'Current stage' : 'Upcoming'}</Text>
-          {selfManaged ? <View style={styles.stageTimeRow}><MaterialCommunityIcons name="clock-outline" size={13} color="#8090A6" /><Text style={styles.stageTime}>{stageTimestampLabel(milestone, done)}</Text></View> : null}
+      const editable = selfManaged && (done || current);
+      const amount = selfManaged ? formatJourneyAmount(stageMainAmount(milestone)) : null;
+      const dateText = selfManaged ? formatJourneyDate(milestone) : null;
+      const statusText = done ? 'Completed' : current ? (milestone?.milestone_status === 'in_progress' ? 'In progress' : 'Current stage') : 'Upcoming';
+      return <Pressable key={stage.key} disabled={!editable} onPress={() => openSelfStage(stage.key)} style={[styles.stageRow, current && { borderColor: tone.accent, backgroundColor: tone.soft }]}>
+        <View style={styles.stageRail}>
+          <View style={[styles.stageNode, done && styles.stageDone, current && { backgroundColor: tone.accent }]}><MaterialCommunityIcons name={done ? 'check' : current ? 'map-marker' : 'lock-outline'} size={14} color={done || current ? '#FFF' : '#7A8799'} /></View>
+          {index < SELF_MANAGED_MILESTONES.length - 1 ? <View style={[styles.stageLine, done && styles.stageLineDone]} /> : null}
         </View>
+        <View style={styles.stageCopy}>
+          <Text style={styles.stageTitle}>{stage.label}</Text>
+          <Text style={[styles.stageMeta, current && { color: tone.accent }]}>{statusText}</Text>
+          {selfManaged && (done || current) ? <Text style={styles.stageEventLabel}>{STAGE_DATE_LABELS[stage.key]}</Text> : null}
+        </View>
+        {selfManaged ? <View style={styles.stageRight}>
+          <Text numberOfLines={2} style={[styles.stageDate, !milestone && styles.stageDateMuted]}>{done || current ? dateText : 'Pending'}</Text>
+          {amount ? <Text style={styles.stageAmount}>{amount}</Text> : null}
+          {editable ? <MaterialCommunityIcons name="chevron-right" size={18} color="#8A98AA" /> : null}
+        </View> : null}
       </Pressable>;
     })}</View> : null}
   </Screen>;
@@ -170,15 +185,11 @@ function managedStageFor(status?: string | null) { const value = (status ?? '').
 const externalClaimTone = { accent:'#0A43A3',soft:'#EAF2FF',background:'#F7FAFF',border:'#C9DAF2' };
 function claimTone(status: string) { if (['Settled','Closed','Claim Complete'].includes(status)) return { accent:'#12805C',soft:'#E8F8F0',background:'#F7FCF9',border:'#BFE6D5' }; return { accent:'#B7791F',soft:'#FFF4E2',background:'#FFFBF3',border:'#F0D9AC' }; }
 function formatDate(value?: string | null) { return value ? new Date(value).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '-'; }
-function formatDateTime(value?: string | null) { return value ? new Date(value).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '-'; }
-function stageTimestampLabel(milestone: ClaimMilestone | null | undefined, done: boolean) {
-  if (milestone?.completed_at) return formatDateTime(milestone.completed_at);
-  if (done) return 'Completion time unavailable';
-  return 'Not recorded yet';
-}
+function formatDateTime(value?: string | null) { return value ? new Date(value).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}) : '-'; }
 
 const styles = StyleSheet.create({
-  pageHeading:{marginBottom:12,flexDirection:'row',alignItems:'flex-start',justifyContent:'space-between',gap:10},pageHeadingCopy:{flex:1,minWidth:0},pageEyebrow:{color:'#0A43A3',fontSize:9.5,fontWeight:'900',letterSpacing:1},pageTitle:{color:palette.navy,fontSize:24,fontWeight:'900',marginTop:2},heroCard:{borderWidth:1,borderRadius:21,padding:15,overflow:'hidden',marginBottom:12},accentBar:{position:'absolute',left:0,top:0,bottom:0,width:5},heroTop:{flexDirection:'row',alignItems:'center',gap:11},statusIcon:{width:48,height:48,borderRadius:15,alignItems:'center',justifyContent:'center'},heroCopy:{flex:1,minWidth:0},stageLabel:{fontSize:9,fontWeight:'900',letterSpacing:.5},vehicleNo:{color:palette.navy,fontSize:20,fontWeight:'900',marginTop:2},focusStatusBadge:{maxWidth:100,borderWidth:1,borderRadius:999,paddingHorizontal:8,paddingVertical:5},focusStatusText:{fontSize:8.5,fontWeight:'900',textAlign:'center'},numberRow:{flexDirection:'row',gap:14,marginTop:15,paddingTop:12,borderTopWidth:1,borderTopColor:'rgba(100,120,150,.16)'},numberLabel:{color:'#7A8799',fontSize:9,fontWeight:'800'},numberValue:{color:palette.navy,fontSize:12,fontWeight:'900',marginTop:2},infoBox:{marginTop:12,borderRadius:14,backgroundColor:'rgba(255,255,255,.72)',padding:11,gap:9},infoPair:{flexDirection:'row',gap:14},infoLabel:{color:'#7A8799',fontSize:8.5,fontWeight:'800'},infoValue:{color:'#334155',fontSize:10.5,fontWeight:'800',marginTop:2},
-  nextActionCard:{borderWidth:1,borderRadius:17,padding:12,flexDirection:'row',gap:10,backgroundColor:'#FFF',marginBottom:10},nextActionIcon:{width:42,height:42,borderRadius:13,alignItems:'center',justifyContent:'center'},nextLabel:{fontSize:8.5,fontWeight:'900',letterSpacing:.4},nextTitle:{color:palette.navy,fontSize:13,fontWeight:'900',marginTop:2},nextBody:{color:'#667085',fontSize:10.3,lineHeight:14,fontWeight:'600',marginTop:3},quickActions:{flexDirection:'row',flexWrap:'wrap',gap:8,marginBottom:10},quickAction:{minHeight:44,borderRadius:14,borderWidth:1,borderColor:'#DCE6F0',backgroundColor:'#FFF',paddingHorizontal:12,flexDirection:'row',alignItems:'center',gap:7},quickActionPrimary:{backgroundColor:palette.navy,borderColor:palette.navy},quickActionText:{color:palette.navy,fontSize:10,fontWeight:'900'},
-  sectionHeader:{minHeight:64,borderRadius:17,borderWidth:1,borderColor:'#DCE6F0',backgroundColor:'#FFF',padding:12,marginTop:10,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},sectionTitle:{color:palette.navy,fontSize:14,fontWeight:'900'},sectionSub:{color:'#7A8799',fontSize:9.8,fontWeight:'600',marginTop:2},sectionBody:{borderWidth:1,borderTopWidth:0,borderColor:'#DCE6F0',backgroundColor:'#FFF',borderBottomLeftRadius:17,borderBottomRightRadius:17,padding:10,gap:8},documentRow:{minHeight:50,borderRadius:12,backgroundColor:'#F8FBFF',padding:10,flexDirection:'row',alignItems:'center',gap:9},documentTitle:{color:palette.navy,fontSize:10.5,fontWeight:'900'},documentMeta:{color:'#7A8799',fontSize:9,fontWeight:'600',marginTop:2},emptyText:{color:'#7A8799',fontSize:10,fontWeight:'600',lineHeight:14},historyRow:{flexDirection:'row',gap:9,paddingVertical:7},historyDot:{width:9,height:9,borderRadius:5,backgroundColor:'#0A43A3',marginTop:4},historyStatus:{color:palette.navy,fontSize:10.5,fontWeight:'900'},stageRow:{minHeight:58,borderRadius:13,borderWidth:1,borderColor:'#E1E8F0',backgroundColor:'#FFF',padding:10,flexDirection:'row',alignItems:'center',gap:10},stageNode:{width:28,height:28,borderRadius:14,backgroundColor:'#EEF2F6',alignItems:'center',justifyContent:'center'},stageDone:{backgroundColor:'#12805C'},stageTitle:{color:palette.navy,fontSize:11,fontWeight:'900'},stageMeta:{color:'#7A8799',fontSize:9,fontWeight:'600',marginTop:2},stageTimeRow:{flexDirection:'row',alignItems:'center',gap:4,marginTop:4},stageTime:{color:'#8090A6',fontSize:9,fontWeight:'600'}
+  pageHeading:{marginBottom:10,flexDirection:'row',alignItems:'flex-start',justifyContent:'space-between',gap:10},pageHeadingCopy:{flex:1,minWidth:0},pageEyebrow:{color:'#0A43A3',fontSize:9.5,fontWeight:'900',letterSpacing:1},pageTitle:{color:palette.navy,fontSize:24,fontWeight:'900',marginTop:2},heroCard:{borderWidth:1,borderRadius:19,padding:13,overflow:'hidden',marginBottom:10},accentBar:{position:'absolute',left:0,top:0,bottom:0,width:4},heroTop:{flexDirection:'row',alignItems:'center',gap:10},statusIcon:{width:44,height:44,borderRadius:14,alignItems:'center',justifyContent:'center'},heroCopy:{flex:1,minWidth:0},stageLabel:{fontSize:8.8,fontWeight:'900',letterSpacing:.5},vehicleNo:{color:palette.navy,fontSize:19,fontWeight:'900',marginTop:2},focusStatusBadge:{maxWidth:100,borderWidth:1,borderRadius:999,paddingHorizontal:8,paddingVertical:5},focusStatusText:{fontSize:8.5,fontWeight:'900',textAlign:'center'},numberRow:{flexDirection:'row',gap:14,marginTop:12,paddingTop:10,borderTopWidth:1,borderTopColor:'rgba(100,120,150,.16)'},numberLabel:{color:'#7A8799',fontSize:9,fontWeight:'800'},numberValue:{color:palette.navy,fontSize:12,fontWeight:'900',marginTop:2},infoBox:{marginTop:10,borderRadius:13,backgroundColor:'rgba(255,255,255,.72)',padding:10,gap:8},infoPair:{flexDirection:'row',gap:14},infoLabel:{color:'#7A8799',fontSize:8.5,fontWeight:'800'},infoValue:{color:'#334155',fontSize:10.2,fontWeight:'800',marginTop:2},
+  nextActionCard:{borderWidth:1,borderRadius:16,padding:11,flexDirection:'row',gap:10,backgroundColor:'#FFF',marginBottom:9},nextActionIcon:{width:40,height:40,borderRadius:12,alignItems:'center',justifyContent:'center'},nextLabel:{fontSize:8.5,fontWeight:'900',letterSpacing:.4},nextTitle:{color:palette.navy,fontSize:13,fontWeight:'900',marginTop:2},nextBody:{color:'#667085',fontSize:10.2,lineHeight:14,fontWeight:'600',marginTop:3},quickActions:{flexDirection:'row',flexWrap:'wrap',gap:8,marginBottom:10},quickAction:{minHeight:44,borderRadius:14,borderWidth:1,borderColor:'#DCE6F0',backgroundColor:'#FFF',paddingHorizontal:12,flexDirection:'row',alignItems:'center',gap:7},quickActionPrimary:{backgroundColor:palette.navy,borderColor:palette.navy},quickActionText:{color:palette.navy,fontSize:10,fontWeight:'900'},
+  sectionHeader:{minHeight:60,borderRadius:16,borderWidth:1,borderColor:'#DCE6F0',backgroundColor:'#FFF',padding:12,marginTop:9,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},sectionTitle:{color:palette.navy,fontSize:14,fontWeight:'900'},sectionSub:{color:'#7A8799',fontSize:9.8,fontWeight:'600',marginTop:2},sectionBody:{borderWidth:1,borderTopWidth:0,borderColor:'#DCE6F0',backgroundColor:'#FFF',borderBottomLeftRadius:16,borderBottomRightRadius:16,padding:10,gap:8},journeyBody:{padding:8,gap:0},documentRow:{minHeight:50,borderRadius:12,backgroundColor:'#F8FBFF',padding:10,flexDirection:'row',alignItems:'center',gap:9},documentTitle:{color:palette.navy,fontSize:10.5,fontWeight:'900'},documentMeta:{color:'#7A8799',fontSize:9,fontWeight:'600',marginTop:2},emptyText:{color:'#7A8799',fontSize:10,fontWeight:'600',lineHeight:14},historyRow:{flexDirection:'row',gap:9,paddingVertical:7},historyDot:{width:9,height:9,borderRadius:5,backgroundColor:'#0A43A3',marginTop:4},historyStatus:{color:palette.navy,fontSize:10.5,fontWeight:'900'},
+  stageRow:{minHeight:72,borderRadius:13,borderWidth:1,borderColor:'#E1E8F0',backgroundColor:'#FFF',paddingHorizontal:10,paddingVertical:9,flexDirection:'row',alignItems:'stretch',gap:9,marginBottom:7},stageRail:{width:28,alignItems:'center'},stageNode:{width:28,height:28,borderRadius:14,backgroundColor:'#EEF2F6',alignItems:'center',justifyContent:'center'},stageDone:{backgroundColor:'#12805C'},stageLine:{width:2,flex:1,minHeight:21,marginTop:4,backgroundColor:'#E6EBF1'},stageLineDone:{backgroundColor:'#BFE6D5'},stageCopy:{flex:1,minWidth:0,justifyContent:'center'},stageTitle:{color:palette.navy,fontSize:11,fontWeight:'900'},stageMeta:{color:'#7A8799',fontSize:9,fontWeight:'700',marginTop:2},stageEventLabel:{color:'#98A2B3',fontSize:8.5,fontWeight:'600',marginTop:4},stageRight:{width:116,alignItems:'flex-end',justifyContent:'center',gap:3},stageDate:{color:'#344054',fontSize:9.5,lineHeight:13,fontWeight:'800',textAlign:'right'},stageDateMuted:{color:'#98A2B3'},stageAmount:{color:palette.navy,fontSize:10.5,fontWeight:'900',textAlign:'right'}
 });

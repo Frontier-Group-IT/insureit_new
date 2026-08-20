@@ -5,12 +5,14 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppBadge, AppDatePicker } from '@/components/design-system';
 import { Message, Screen, TextField } from '@/components/ui';
-import { SELF_MANAGED_MILESTONES, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
+import { getCurrentSession } from '@/lib/auth';
+import { SELF_MANAGED_MILESTONES, type ClaimMilestone, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
+import { stageBusinessDateOnly, validateStageChronology } from '@/lib/self-managed-claim-timeline';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 
 type FieldKey =
-  | 'dealership_name' | 'dealership_location' | 'gate_in_date' | 'estimate_amount'
+  | 'dealership_name' | 'dealership_location' | 'claim_intimation_date' | 'gate_in_date' | 'estimate_amount'
   | 'approval_received_date' | 'cashless' | 'surveyor_name' | 'surveyor_phone' | 'surveyor_email'
   | 'repair_complete_date' | 'ri_required' | 'ri_requested_date' | 'ri_done_date'
   | 'bill_date' | 'bill_amount' | 'assessment_received' | 'do_date' | 'do_amount'
@@ -26,6 +28,7 @@ export default function SelfManagedMilestoneScreen() {
   const key = (typeof params.key === 'string' ? params.key : '') as ClaimMilestoneKey;
   const definition = SELF_MANAGED_MILESTONES.find((item) => item.key === key);
   const [values, setValues] = useState<Values>({});
+  const [milestones, setMilestones] = useState<ClaimMilestone[]>([]);
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -34,11 +37,13 @@ export default function SelfManagedMilestoneScreen() {
     let active = true;
     async function load() {
       if (!claimId || !definition) { if (active) setLoading(false); return; }
-      const { data } = await supabase.from('claim_milestones').select('details').eq('claim_id', claimId).eq('milestone_key', key).maybeSingle();
-      if (active) {
-        setValues(((data?.details ?? {}) as Values));
-        setLoading(false);
-      }
+      const { data } = await (supabase as any).from('claim_milestones').select('*').eq('claim_id', claimId);
+      if (!active) return;
+      const nextMilestones = (data ?? []) as ClaimMilestone[];
+      setMilestones(nextMilestones);
+      const current = nextMilestones.find((item) => item.milestone_key === key);
+      setValues(toFormValues(current?.details));
+      setLoading(false);
     }
     void load();
     return () => { active = false; };
@@ -51,15 +56,36 @@ export default function SelfManagedMilestoneScreen() {
   async function save() {
     setMessage('');
     if (!claimId || !definition) return setMessage('Claim milestone is unavailable.');
-    const validation = validate(key, values);
+    const validation = validate(key, values, milestones);
     if (validation) return setMessage(validation);
-    setSaving(true);
+
     const details = normalizeDetails(key, values);
+    const current = milestones.find((item) => item.milestone_key === key);
+    setSaving(true);
+
+    if (key === 'vehicle_delivery') {
+      const session = await getCurrentSession();
+      if (!session?.user) { setSaving(false); return router.replace('/login'); }
+      const completed = values.vehicle_received === 'yes' && Boolean(values.vehicle_received_date);
+      const { error } = await (supabase as any).from('claim_milestones').upsert({
+        claim_id: claimId,
+        milestone_key: key,
+        milestone_status: completed ? 'completed' : 'in_progress',
+        details,
+        completed_at: completed ? (current?.completed_at ?? new Date().toISOString()) : null,
+        recorded_by: session.user.id,
+        recorded_by_actor: 'customer',
+      }, { onConflict: 'claim_id,milestone_key' });
+      setSaving(false);
+      if (error) return setMessage(error.message || 'We could not save this milestone.');
+      return router.replace({ pathname: '/customer/self-managed-claim-detail', params: { id: claimId } });
+    }
+
     const { error } = await (supabase.rpc as any)('save_self_managed_milestone', {
       p_claim_id: claimId,
       p_milestone_key: key,
       p_details: details,
-      p_completed_at: new Date().toISOString(),
+      p_completed_at: current?.completed_at ?? new Date().toISOString(),
     });
     setSaving(false);
     if (error) return setMessage(error.message || 'We could not save this milestone.');
@@ -85,7 +111,7 @@ export default function SelfManagedMilestoneScreen() {
         <View style={styles.contextCopy}>
           <Text style={styles.contextLabel}>CLAIM UPDATE</Text>
           <Text style={styles.contextTitle}>{definition.label}</Text>
-          <Text style={styles.contextBody}>Record this milestone using updates received from the insurer, surveyor, or workshop.</Text>
+          <Text style={styles.contextBody}>Record the real claim-event date. Journey dates must remain in chronological order.</Text>
         </View>
       </View>
 
@@ -95,7 +121,7 @@ export default function SelfManagedMilestoneScreen() {
         <View style={styles.card}>
           <View style={styles.formHeading}>
             <View style={styles.formIcon}><MaterialCommunityIcons name="clipboard-edit-outline" size={20} color="#B7791F" /></View>
-            <View style={styles.formHeadingCopy}><Text style={styles.formTitle}>Stage Details</Text><Text style={styles.formSub}>Update the available details for this claim stage</Text></View>
+            <View style={styles.formHeadingCopy}><Text style={styles.formTitle}>Stage Details</Text><Text style={styles.formSub}>Use the date the event actually happened, not the date you entered it</Text></View>
           </View>
           {renderFields(key, values, set)}
         </View>
@@ -108,7 +134,8 @@ export default function SelfManagedMilestoneScreen() {
 
 function renderFields(key: ClaimMilestoneKey, values: Values, set: (field: FieldKey, value: string) => void) {
   if (key === 'claim_intimation') return <>
-    <TextField label="Dealership Name *" value={values.dealership_name ?? ''} onChangeText={(v) => set('dealership_name', v)} />
+    <DateField label="Claim Intimation Date *" value={values.claim_intimation_date ?? ''} onChange={(v) => set('claim_intimation_date', v)} />
+    <Gap /><TextField label="Dealership Name *" value={values.dealership_name ?? ''} onChangeText={(v) => set('dealership_name', v)} />
     <Gap /><TextField label="Dealership Location *" value={values.dealership_location ?? ''} onChangeText={(v) => set('dealership_location', v)} />
     <Gap /><DateField label="Gate-in Date *" value={values.gate_in_date ?? ''} onChange={(v) => set('gate_in_date', v)} />
     <Gap /><TextField label="Estimate Amount *" value={values.estimate_amount ?? ''} onChangeText={(v) => set('estimate_amount', cleanMoney(v))} keyboardType="decimal-pad" />
@@ -137,7 +164,7 @@ function renderFields(key: ClaimMilestoneKey, values: Values, set: (field: Field
   </>;
   if (key === 'vehicle_delivery') return <>
     <Choice label="Vehicle Received? *" value={values.vehicle_received} options={[['yes','Yes'],['no','No']]} onChange={(v) => set('vehicle_received', v)} />
-    {values.vehicle_received === 'yes' ? <><Gap /><DateField label="Vehicle Received Date *" value={values.vehicle_received_date ?? ''} onChange={(v) => set('vehicle_received_date', v)} /></> : null}
+    {values.vehicle_received === 'yes' ? <><Gap /><DateField label="Vehicle Received Date *" value={values.vehicle_received_date ?? ''} onChange={(v) => set('vehicle_received_date', v)} /></> : <Info text="This stage remains in progress until the vehicle is received and the received date is recorded." />}
   </>;
   if (key === 'payment_encashment') return <>
     <Choice label="Depreciation Slip Submitted? *" value={values.depreciation_submitted} options={[['yes','Yes'],['no','No']]} onChange={(v) => set('depreciation_submitted', v)} />
@@ -150,9 +177,9 @@ function renderFields(key: ClaimMilestoneKey, values: Values, set: (field: Field
   return <Info text="This milestone is handled by its dedicated screen." />;
 }
 
-function validate(key: ClaimMilestoneKey, v: Values) {
+function validate(key: ClaimMilestoneKey, v: Values, milestones: ClaimMilestone[]) {
   const required: Partial<Record<ClaimMilestoneKey, FieldKey[]>> = {
-    claim_intimation: ['dealership_name','dealership_location','gate_in_date','estimate_amount'],
+    claim_intimation: ['claim_intimation_date','dealership_name','dealership_location','gate_in_date','estimate_amount'],
     work_approval: ['approval_received_date','cashless'],
     repair_ri: ['repair_complete_date','ri_required'],
     billing: ['bill_date','bill_amount'],
@@ -162,11 +189,37 @@ function validate(key: ClaimMilestoneKey, v: Values) {
   };
   for (const field of required[key] ?? []) if (!v[field]?.trim()) return 'Complete all mandatory fields.';
   if (key === 'repair_ri' && v.ri_required === 'yes' && !v.ri_done_date) return 'Enter the RI done date.';
+  if (key === 'repair_ri' && v.ri_requested_date && v.repair_complete_date && v.ri_requested_date < v.repair_complete_date) return 'RI Requested Date cannot be earlier than Repair Complete Date.';
+  if (key === 'repair_ri' && v.ri_done_date && v.repair_complete_date && v.ri_done_date < v.repair_complete_date) return 'RI Done Date cannot be earlier than Repair Complete Date.';
+  if (key === 'repair_ri' && v.ri_requested_date && v.ri_done_date && v.ri_done_date < v.ri_requested_date) return 'RI Done Date cannot be earlier than RI Requested Date.';
   if (key === 'vehicle_delivery' && v.vehicle_received === 'yes' && !v.vehicle_received_date) return 'Enter the vehicle received date.';
+  if (key === 'vehicle_delivery' && v.vehicle_received === 'no') {
+    const payment = milestones.find((item) => item.milestone_key === 'payment_encashment');
+    if (payment && payment.milestone_status !== 'not_started') return 'Vehicle cannot be marked as not received after the Payment Encashment stage has been recorded.';
+  }
+  if (key === 'payment_encashment' && v.documents_submit_date && v.payment_received_date && v.payment_received_date < v.documents_submit_date) return 'Payment Received Date cannot be earlier than Documents Submit Date.';
   for (const field of ['estimate_amount','bill_amount','do_amount','payment_received_amount'] as FieldKey[]) {
     if (v[field] && (!Number.isFinite(Number(v[field])) || Number(v[field]) < 0)) return 'Enter valid non-negative amounts.';
   }
+  const chronology = validateStageChronology(key, effectiveDateFor(key, v), milestones);
+  if (chronology) return chronology;
+  if (key === 'payment_encashment' && v.documents_submit_date) {
+    const previous = milestones.find((item) => item.milestone_key === 'vehicle_delivery');
+    const previousDate = stageBusinessDateOnly(previous);
+    if (previousDate && v.documents_submit_date < previousDate) return 'Documents Submit Date cannot be earlier than Vehicle Delivery.';
+  }
   return '';
+}
+
+function effectiveDateFor(key: ClaimMilestoneKey, v: Values): string | null {
+  if (key === 'claim_intimation') return v.claim_intimation_date ?? null;
+  if (key === 'work_approval') return v.approval_received_date ?? null;
+  if (key === 'repair_ri') return v.ri_required === 'yes' ? (v.ri_done_date ?? null) : (v.repair_complete_date ?? null);
+  if (key === 'billing') return v.bill_date ?? null;
+  if (key === 'delivery_order') return v.do_date ?? null;
+  if (key === 'vehicle_delivery') return v.vehicle_received === 'yes' ? (v.vehicle_received_date ?? null) : null;
+  if (key === 'payment_encashment') return v.payment_received_date ?? null;
+  return null;
 }
 
 function normalizeDetails(key: ClaimMilestoneKey, v: Values) {
@@ -177,13 +230,24 @@ function normalizeDetails(key: ClaimMilestoneKey, v: Values) {
   return result;
 }
 
+function toFormValues(details: Record<string, unknown> | null | undefined): Values {
+  if (!details) return {};
+  const next: Values = {};
+  Object.entries(details).forEach(([field, value]) => {
+    if (value === null || value === undefined) return;
+    if (typeof value === 'boolean') next[field as FieldKey] = value ? 'true' : 'false';
+    else next[field as FieldKey] = String(value);
+  });
+  return next;
+}
+
 function subtitleFor(key: ClaimMilestoneKey) {
-  if (key === 'claim_intimation') return 'Record dealership, gate-in and estimate details.';
+  if (key === 'claim_intimation') return 'Record the insurer intimation date, dealership and estimate.';
   if (key === 'work_approval') return 'Record insurer approval and cashless status.';
   if (key === 'repair_ri') return 'Track repair completion and re-inspection only when applicable.';
   if (key === 'billing') return 'Record the final workshop bill.';
   if (key === 'delivery_order') return 'Record delivery order and assessment details.';
-  if (key === 'vehicle_delivery') return 'Confirm when the repaired vehicle is received.';
+  if (key === 'vehicle_delivery') return 'Confirm when the repaired vehicle is actually received.';
   if (key === 'payment_encashment') return 'Record final documents and settlement payment.';
   return 'Update this claim milestone.';
 }
