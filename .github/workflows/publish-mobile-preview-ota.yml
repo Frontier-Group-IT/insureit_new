@@ -37,7 +37,7 @@ jobs:
           npx eas-cli update \
             --branch preview \
             --environment preview \
-            --message "Add external claim stage timestamps" \
+            --message "Dashboard and Start Claim balance preview" \
             --non-interactive \
             --json \
             > expo-update.json \
