@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy reversible deleted-customer access lifecycle.",
-  "deploy_requested_at": "2026-08-20T12:59:00+05:30",
+  "purpose": "Deploy deleted-customer mobile authorization guard and reversible re-signup flow.",
+  "deploy_requested_at": "2026-08-20T13:23:00+05:30",
   "requested_by": "explicit user merge and deploy request",
-  "source": "Deploy merged PR #471 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "c06051493506eaaafed7b9ece4225e6343592088",
-  "release_scope": "Deploy the reversible deleted-customer account lifecycle. Customer deletion now preserves the Supabase Auth identity, deactivates the customer profile only when no valid customer relationship remains, and deliberate mobile Sign Up may safely reactivate only profiles revoked by this deletion flow. Production Supabase migration reversible_customer_access_revocation was applied successfully before this web deployment trigger.",
-  "verification": "PR #471 Verify web portal run 32343879134 passed successfully on head 3ff9479824b9270419905cee81aba063ef136be1 before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source": "Deploy merged PR #472 from current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "465d2f2542613adaa6530ee87eb583a4f39fa030",
+  "release_scope": "Deploy the deleted-customer mobile authorization guard and reversible re-signup flow. Normal customer login/session routing now requires a live customer relationship or active onboarding application, while deliberate Sign Up can reactivate an eligible deleted-customer identity and create a fresh onboarding shell. Production Supabase migration create_signup_onboarding_shell was applied successfully before this deployment trigger.",
+  "verification": "PR #472 Verify mobile app run 32345819108 and Verify web portal run 32345819138 both passed successfully on head 31989bdfbba716df849492bf84612244013f4b6c before merge. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
