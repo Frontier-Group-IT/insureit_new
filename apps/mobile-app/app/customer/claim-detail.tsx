@@ -88,14 +88,15 @@ export default function ClaimDetailScreen() {
   if (loading) return <Screen title="Claim Detail"><LoadingState /></Screen>;
   if (!claim) return <Screen title="Claim Detail"><EmptyState title="Claim not found" body="Please choose another claim from your list." /></Screen>;
 
+  const claimId = claim.id;
   const tone = selfManaged ? externalClaimTone : claimTone(claim.current_status);
   const currentStage = SELF_MANAGED_MILESTONES[currentStageIndex];
   const settled = ['Settled', 'Closed', 'Claim Complete'].includes(claim.current_status) || (selfManaged && completedKeys.size >= 9);
 
   function openSelfStage(key: ClaimMilestoneKey) {
-    if (key === 'spot_intimation') return router.push({ pathname: '/customer/self-managed-claim', params: { id: claim.id } });
-    if (key === 'spot_status') return router.push({ pathname: '/customer/self-managed-spot-status', params: { id: claim.id } });
-    return router.push({ pathname: '/customer/self-managed-milestone', params: { id: claim.id, key } });
+    if (key === 'spot_intimation') return router.push({ pathname: '/customer/self-managed-claim', params: { id: claimId } });
+    if (key === 'spot_status') return router.push({ pathname: '/customer/self-managed-spot-status', params: { id: claimId } });
+    return router.push({ pathname: '/customer/self-managed-milestone', params: { id: claimId, key } });
   }
 
   function openCurrentSelfStage() {
