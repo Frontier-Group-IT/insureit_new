@@ -1,7 +1,9 @@
 name: Publish mobile preview OTA
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - tmp/external-claim-preview-ota-20260820
 
 permissions:
   contents: read
@@ -12,11 +14,12 @@ jobs:
     timeout-minutes: 20
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      RELEASE_SHA: 13cfcaaa2660fc8ba9f416d3e5eb4b1d37a9eb25
     steps:
-      - name: Check out merged source
+      - name: Check out approved release candidate
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: 13cfcaaa2660fc8ba9f416d3e5eb4b1d37a9eb25
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -37,7 +40,7 @@ jobs:
           npx eas-cli update \
             --branch preview \
             --environment preview \
-            --message "Add external claim stage timestamps" \
+            --message "External claim mockup redesign preview" \
             --non-interactive \
             --json \
             > expo-update.json \
@@ -86,87 +89,41 @@ jobs:
         run: |
           node <<'NODE'
           const fs = require('fs');
-
-          const readJson = (path) => {
-            try {
-              return JSON.parse(fs.readFileSync(path, 'utf8'));
-            } catch {
-              return null;
-            }
+          const readJson = (path) => { try { return JSON.parse(fs.readFileSync(path, 'utf8')); } catch { return null; } };
+          const collect = (value, out = []) => {
+            if (!value || typeof value !== 'object') return out;
+            if (Array.isArray(value)) { for (const item of value) collect(item, out); return out; }
+            out.push(value); for (const item of Object.values(value)) collect(item, out); return out;
           };
-
-          const collectObjects = (value, output = []) => {
-            if (!value || typeof value !== 'object') return output;
-            if (Array.isArray(value)) {
-              for (const item of value) collectObjects(item, output);
-              return output;
-            }
-            output.push(value);
-            for (const item of Object.values(value)) collectObjects(item, output);
-            return output;
-          };
-
-          const firstValue = (objects, keys) => {
-            for (const object of objects) {
-              for (const key of keys) {
-                const value = object?.[key];
-                if (value !== undefined && value !== null && value !== '') return String(value);
-              }
+          const first = (objects, keys) => {
+            for (const object of objects) for (const key of keys) {
+              const value = object?.[key];
+              if (value !== undefined && value !== null && value !== '') return String(value);
             }
             return null;
           };
-
-          const uniqueValues = (objects, keys) => {
-            const values = [];
-            for (const object of objects) {
-              for (const key of keys) {
-                const value = object?.[key];
-                if (value !== undefined && value !== null && value !== '') values.push(String(value));
-              }
-            }
-            return [...new Set(values)];
-          };
-
+          const unique = (objects, keys) => [...new Set(objects.flatMap((object) => keys.map((key) => object?.[key]).filter((value) => value !== undefined && value !== null && value !== '').map(String)))];
           const publish = readJson('expo-update.json');
           const latest = readJson('expo-update-latest.json');
-          const objects = [
-            ...collectObjects(latest),
-            ...collectObjects(publish),
-          ];
-
-          const groupId = firstValue(objects, ['group', 'groupId', 'updateGroupId']);
-          const runtimeVersion = firstValue(objects, ['runtimeVersion']);
-          const updateIds = uniqueValues(objects, ['id', 'updateId'])
-            .filter((value) => value !== groupId)
-            .slice(0, 4);
-          const branch = firstValue(objects, ['branchName', 'branch']) || 'preview';
-          const result = process.env.PUBLISH_RESULT || 'unknown';
-          const exitCode = process.env.PUBLISH_EXIT_CODE || 'unknown';
-          const icon = result === 'success' ? '✅' : result === 'failed' ? '❌' : '⚠️';
-
+          const objects = [...collect(latest), ...collect(publish)];
+          const groupId = first(objects, ['group', 'groupId', 'updateGroupId']);
+          const runtimeVersion = first(objects, ['runtimeVersion']);
+          const updateIds = unique(objects, ['id', 'updateId']).filter((value) => value !== groupId).slice(0, 4);
+          const branch = first(objects, ['branchName', 'branch']) || 'preview';
           const lines = [
-            '## Expo preview OTA publication',
-            '',
-            `| Field | Value |`,
-            `| --- | --- |`,
-            `| Publish result | ${icon} ${result} |`,
+            '## Expo preview OTA publication', '',
+            '| Field | Value |', '| --- | --- |',
+            `| Publish result | ${process.env.PUBLISH_RESULT === 'success' ? '✅ success' : '❌ failed'} |`,
             `| Expo branch | \`${branch}\` |`,
             `| Runtime version | ${runtimeVersion ? `\`${runtimeVersion}\`` : 'Not returned by Expo'} |`,
             `| Update group ID | ${groupId ? `\`${groupId}\`` : 'Not returned by Expo'} |`,
             `| Update ID(s) | ${updateIds.length ? updateIds.map((id) => `\`${id}\``).join('<br>') : 'Not returned by Expo'} |`,
-            `| CLI exit code | \`${exitCode}\` |`,
-            `| Source commit | \`${process.env.GITHUB_SHA || 'unknown'}\` |`,
-            '',
-            'The workflow also logs the raw `eas update --json` response and the latest `preview` update returned by `eas update:list` for troubleshooting and independent verification.',
-            '',
+            `| CLI exit code | \`${process.env.PUBLISH_EXIT_CODE || 'unknown'}\` |`,
+            `| Approved source SHA | \`${process.env.RELEASE_SHA}\` |`, '',
           ];
-
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
           NODE
 
       - name: Fail workflow when Expo publication fails
         if: always() && steps.publish.outputs.result != 'success'
-        shell: bash
-        run: |
-          echo "Expo preview OTA publication failed with exit code ${{ steps.publish.outputs.exit_code }}." >&2
-          exit 1
+        run: exit 1
