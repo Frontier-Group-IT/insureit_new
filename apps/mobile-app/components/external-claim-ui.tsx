@@ -162,7 +162,7 @@ export function ClaimSecondaryAction({ icon, label, fill = false, onPress }: { i
 export function ClaimActionBar({ primaryLabel, primaryIcon = 'arrow-right', primaryDisabled, onPrimary, onAssistance }: { primaryLabel: string; primaryIcon?: keyof typeof MaterialCommunityIcons.glyphMap; primaryDisabled?: boolean; onPrimary: () => void; onAssistance: () => void }) {
   return (
     <View style={styles.actionBar}>
-      <ClaimSecondaryAction fill icon="account-tie-voice-outline" label="Ask for Assistance" onPress={onAssistance} />
+      <ClaimSecondaryAction fill icon="account-tie-voice-outline" label="Get Assistance" onPress={onAssistance} />
       <ClaimPrimaryAction fill label={primaryLabel} icon={primaryIcon} disabled={primaryDisabled} onPress={onPrimary} />
     </View>
   );
