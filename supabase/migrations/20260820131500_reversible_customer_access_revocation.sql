@@ -13,7 +13,9 @@ set search_path = public, auth
 as $$
 declare
   v_customer record;
-  v_profile record;
+  v_profile_id uuid := null;
+  v_profile_role public.app_role := null;
+  v_profile_was_active boolean := false;
   v_has_remaining_relationship boolean := false;
   v_access_revoked boolean := false;
 begin
@@ -45,7 +47,7 @@ begin
 
   if v_customer.profile_id is not null then
     select id, role, is_active
-      into v_profile
+      into v_profile_id, v_profile_role, v_profile_was_active
     from public.profiles
     where id = v_customer.profile_id
     for update;
@@ -53,27 +55,27 @@ begin
 
   delete from public.customers where id = p_customer_id;
 
-  if v_profile.id is not null and v_profile.role = 'customer' then
+  if v_profile_id is not null and v_profile_role = 'customer' then
     select (
       exists (
         select 1
         from public.customers
-        where profile_id = v_profile.id
+        where profile_id = v_profile_id
       )
       or exists (
         select 1
         from public.customer_memberships cm
         join public.customers c on c.id = cm.customer_id
-        where cm.profile_id = v_profile.id
+        where cm.profile_id = v_profile_id
           and cm.status = 'active'
       )
     ) into v_has_remaining_relationship;
 
-    if not v_has_remaining_relationship and v_profile.is_active then
+    if not v_has_remaining_relationship and v_profile_was_active then
       update public.profiles
       set is_active = false,
           updated_by = p_actor_id
-      where id = v_profile.id
+      where id = v_profile_id
         and role = 'customer';
       v_access_revoked := true;
     end if;
