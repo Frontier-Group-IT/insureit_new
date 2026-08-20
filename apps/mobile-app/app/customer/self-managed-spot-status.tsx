@@ -6,7 +6,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppBadge, AppDatePicker } from '@/components/design-system';
 import { LoadingState, Message, Screen, TextField } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
-import { SELF_MANAGED_CLAIM_NOTICE } from '@/lib/claim-service-mode';
+import { SELF_MANAGED_CLAIM_NOTICE, type ClaimMilestone } from '@/lib/claim-service-mode';
+import { validateStageChronology } from '@/lib/self-managed-claim-timeline';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 
@@ -18,6 +19,7 @@ export default function SelfManagedSpotStatusScreen() {
   const [surveyorEmail, setSurveyorEmail] = useState('');
   const [surveyorPhone, setSurveyorPhone] = useState('');
   const [claimNo, setClaimNo] = useState('');
+  const [milestones, setMilestones] = useState<ClaimMilestone[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
@@ -32,7 +34,7 @@ export default function SelfManagedSpotStatusScreen() {
     async function load() {
       const [claimResult, milestoneResult] = await Promise.all([
         supabase.from('claims').select('id, claim_no, claim_service_mode').eq('id', id).maybeSingle(),
-        supabase.from('claim_milestones').select('*').eq('claim_id', id).eq('milestone_key', 'spot_status').maybeSingle(),
+        (supabase as any).from('claim_milestones').select('*').eq('claim_id', id),
       ]);
       if (!active) return;
       if (claimResult.error || !claimResult.data) {
@@ -45,7 +47,10 @@ export default function SelfManagedSpotStatusScreen() {
         return;
       }
       setClaimNo((claimResult.data as any).claim_no);
-      const details = (milestoneResult.data as any)?.details;
+      const nextMilestones = (milestoneResult.data ?? []) as ClaimMilestone[];
+      setMilestones(nextMilestones);
+      const current = nextMilestones.find((item) => item.milestone_key === 'spot_status');
+      const details = current?.details;
       if (details && typeof details === 'object' && !Array.isArray(details)) {
         const record = details as Record<string, unknown>;
         setSurveyDate(stringValue(record.spot_survey_done_date));
@@ -74,11 +79,17 @@ export default function SelfManagedSpotStatusScreen() {
       setMessage('Spot survey done date cannot be in the future.');
       return;
     }
+    const chronology = validateStageChronology('spot_status', surveyDate, milestones);
+    if (chronology) {
+      setMessage(chronology);
+      return;
+    }
 
     setSubmitting(true);
     try {
       const session = await getCurrentSession();
       if (!session?.user) return router.replace('/login');
+      const current = milestones.find((item) => item.milestone_key === 'spot_status');
       const { error } = await (supabase as any).from('claim_milestones').upsert({
         claim_id: id,
         milestone_key: 'spot_status',
@@ -89,7 +100,7 @@ export default function SelfManagedSpotStatusScreen() {
           surveyor_email: surveyorEmail.trim() || null,
           surveyor_phone: surveyorPhone.trim() || null,
         },
-        completed_at: surveyDoneAt.toISOString(),
+        completed_at: current?.completed_at ?? new Date().toISOString(),
         recorded_by: session.user.id,
         recorded_by_actor: 'customer',
       }, { onConflict: 'claim_id,milestone_key' });
@@ -126,7 +137,7 @@ export default function SelfManagedSpotStatusScreen() {
         <View style={styles.contextCopy}>
           <Text style={styles.contextLabel}>CLAIM UPDATE</Text>
           <Text style={styles.contextTitle}>Spot Status</Text>
-          <Text style={styles.contextBody}>Record the survey completion details you received for this external claim.</Text>
+          <Text style={styles.contextBody}>Use the actual survey completion date. It must remain between the surrounding claim stages.</Text>
         </View>
       </View>
 
