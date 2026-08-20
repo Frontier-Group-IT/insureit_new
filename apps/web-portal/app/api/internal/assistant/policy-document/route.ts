@@ -145,7 +145,7 @@ async function signDocument(
 ) {
   const { data: signed, error: signedError } = await admin.storage
     .from(documentRow.storage_bucket)
-    .createSignedUrl(documentRow.storage_path, SIGNED_URL_TTL_SECONDS, { download: documentRow.file_name });
+    .createSignedUrl(documentRow.storage_path, SIGNED_URL_TTL_SECONDS);
 
   if (signedError || !signed?.signedUrl) {
     console.error("Assistant policy document signing failed", {
