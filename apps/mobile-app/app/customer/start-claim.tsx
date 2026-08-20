@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { ClaimActionBar } from '@/components/external-claim-ui';
 import { EmptyState, LoadingState, Message, Screen } from '@/components/ui';
@@ -124,10 +124,7 @@ export default function StartClaimScreen() {
           <Text style={styles.title}>Select the vehicle</Text>
           <Text style={styles.subtitle}>Choose the vehicle involved and we’ll use its active policy.</Text>
         </View>
-        <View style={styles.illustrationPlaceholder}>
-          <View style={styles.illustrationShield}><MaterialCommunityIcons name="shield-check" size={39} color="#FFFFFF" /></View>
-          <MaterialCommunityIcons name="car" size={43} color="#145ED7" />
-        </View>
+        <Image accessible={false} source={require('../../assets/brand/start-claim/start-claim-hero.webp')} style={styles.heroArtwork} resizeMode="contain" />
       </View>
 
       {message ? <Message type="error">{message}</Message> : null}
@@ -177,7 +174,7 @@ export default function StartClaimScreen() {
         onAssistance={() => router.push('/customer/support')}
       />
 
-      <View style={styles.assetSlotNote}><MaterialCommunityIcons name="image-outline" size={16} color="#56708F" /><Text style={styles.assetSlotText}>The local start-claim artwork will replace the temporary shield/car illustration when the asset folder is committed.</Text></View>
+      <Image accessible={false} source={require('../../assets/brand/start-claim/start-claim-footer-scene.webp')} style={styles.footerArtwork} resizeMode="contain" />
     </Screen>
   );
 }
@@ -204,11 +201,11 @@ function formatDate(value: string) { return new Date(value).toLocaleDateString('
 function formatIsoDate(date: Date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
 
 const styles = StyleSheet.create({
-  hero: { position: 'relative', minHeight: 148, borderRadius: 22, backgroundColor: '#EEF5FF', marginBottom: 20, padding: 15, paddingTop: 18, overflow: 'hidden', flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  hero: { position: 'relative', minHeight: 160, borderRadius: 22, backgroundColor: '#EEF5FF', marginBottom: 20, padding: 15, paddingTop: 18, paddingRight: 118, overflow: 'hidden', flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   heroGlow: { position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: '#DDEBFF', right: -75, top: -85 },
-  backButton: { width: 48, height: 48, borderRadius: 15, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', shadowColor: '#153A67', shadowOpacity: 0.06, shadowRadius: 7, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
-  heroCopy: { flex: 1, minWidth: 0, paddingTop: 4 }, eyebrow: { color: '#145ED7', fontSize: 10, fontWeight: '900', letterSpacing: 0.55 }, title: { color: palette.navy, fontSize: 24, fontWeight: '900', marginTop: 3 }, subtitle: { color: '#68778D', fontSize: 10.5, lineHeight: 15, fontWeight: '600', marginTop: 4 },
-  illustrationPlaceholder: { width: 105, height: 105, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.62)', alignItems: 'center', justifyContent: 'center', gap: 2 }, illustrationShield: { width: 56, height: 56, borderRadius: 18, backgroundColor: '#145ED7', alignItems: 'center', justifyContent: 'center', marginBottom: -10, marginLeft: -20 },
+  backButton: { width: 48, height: 48, borderRadius: 15, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', shadowColor: '#153A67', shadowOpacity: 0.06, shadowRadius: 7, shadowOffset: { width: 0, height: 3 }, elevation: 1, zIndex: 2 },
+  heroCopy: { flex: 1, minWidth: 0, paddingTop: 4, zIndex: 2 }, eyebrow: { color: '#145ED7', fontSize: 10, fontWeight: '900', letterSpacing: 0.55 }, title: { color: palette.navy, fontSize: 24, fontWeight: '900', marginTop: 3 }, subtitle: { color: '#68778D', fontSize: 10.5, lineHeight: 15, fontWeight: '600', marginTop: 4 },
+  heroArtwork: { position: 'absolute', right: 2, bottom: -2, width: 146, height: 112, zIndex: 1 },
   section: { marginBottom: 20 }, sectionHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 9 }, sectionLabel: { color: palette.navy, fontSize: 12, fontWeight: '900', marginBottom: 8 }, sectionTitle: { color: palette.navy, fontSize: 15, fontWeight: '900' }, helper: { color: '#778296', fontSize: 10, fontWeight: '600', marginTop: 7 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, chip: { minHeight: 40, maxWidth: 190, justifyContent: 'center', borderRadius: 999, borderWidth: 1, borderColor: '#D6E2F0', backgroundColor: '#FFFFFF', paddingHorizontal: 13 }, chipActive: { backgroundColor: '#07327B', borderColor: '#07327B' }, chipText: { color: '#56657A', fontSize: 10.5, fontWeight: '800' }, chipTextActive: { color: '#FFFFFF' },
   vehicleField: { gap: 6 }, selectButton: { minHeight: 68, borderRadius: 16, borderWidth: 1, borderColor: '#C9D7E7', backgroundColor: '#FFFFFF', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }, selectIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' }, selectCopy: { flex: 1, minWidth: 0 }, selectValue: { color: palette.navy, fontSize: 14.5, fontWeight: '900' }, selectMeta: { color: '#718198', fontSize: 10.5, fontWeight: '600', marginTop: 2 }, placeholder: { color: '#7A8798', fontWeight: '700' },
@@ -216,5 +213,5 @@ const styles = StyleSheet.create({
   addPolicyButton: { minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 10, borderWidth: 1, borderColor: '#C9DAF2', backgroundColor: '#F7FAFF', paddingHorizontal: 9 }, addPolicyText: { color: '#0A43A3', fontSize: 10, fontWeight: '900' },
   policyCard: { position: 'relative', minHeight: 155, borderRadius: 20, backgroundColor: '#07327B', padding: 16, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', gap: 12, shadowColor: '#07327B', shadowOpacity: 0.15, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 3 }, policyArcOne: { position: 'absolute', width: 210, height: 210, borderRadius: 105, borderWidth: 1, borderColor: 'rgba(68,137,255,0.20)', right: -100, top: -118 }, policyArcTwo: { position: 'absolute', width: 160, height: 160, borderRadius: 80, borderWidth: 1, borderColor: 'rgba(68,137,255,0.18)', right: -50, top: -88 }, policyIcon: { width: 64, height: 64, borderRadius: 17, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }, policyCopy: { flex: 1, minWidth: 0 }, policyMode: { color: '#8EB8FF', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.55 }, policyNo: { color: '#FFFFFF', fontSize: 19, fontWeight: '900', marginTop: 4 }, policyInsurer: { color: '#E0E9F7', fontSize: 10.5, lineHeight: 15, fontWeight: '700', marginTop: 4 }, policyDates: { color: '#D2DEEF', fontSize: 10.5, fontWeight: '700', marginTop: 5 }, policyCheck: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#11A35D', alignItems: 'center', justifyContent: 'center' },
   noPolicy: { borderRadius: 15, borderWidth: 1, borderColor: '#F0D9AC', backgroundColor: '#FFFBF3', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }, noPolicyCopy: { flex: 1 }, noPolicyTitle: { color: '#77520B', fontSize: 12, fontWeight: '900' }, noPolicyText: { color: '#8A6A25', fontSize: 10.5, lineHeight: 15, fontWeight: '600', marginTop: 2 },
-  assetSlotNote: { marginTop: 3, marginBottom: 12, borderRadius: 12, backgroundColor: '#F4F7FB', padding: 9, flexDirection: 'row', gap: 7, alignItems: 'center' }, assetSlotText: { flex: 1, color: '#65778E', fontSize: 9, lineHeight: 13, fontWeight: '600' },
+  footerArtwork: { width: '100%', height: 155, marginTop: 1, marginBottom: 8, opacity: 0.94 },
 });
