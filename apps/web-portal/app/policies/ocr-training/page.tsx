@@ -11,7 +11,7 @@ type TrainingRow = {
   file_name: string;
   created_at: string;
   policies: { policy_no: string | null; policy_code: string | null; insurance_companies: { name: string } | null } | null;
-  policy_ocr_training_labels: TrainingLabel[];
+  policy_ocr_training_labels: TrainingLabel | TrainingLabel[] | null;
 };
 
 type TrainingLabel = {
@@ -66,7 +66,9 @@ export default async function PolicyOcrTrainingPage() {
 }
 
 function TrainingForm({ row }: { row: TrainingRow }) {
-  const label = row.policy_ocr_training_labels[0] ?? null;
+  const label = Array.isArray(row.policy_ocr_training_labels)
+    ? row.policy_ocr_training_labels[0] ?? null
+    : row.policy_ocr_training_labels;
   return (
     <form action={savePolicyOcrTrainingLabel} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
       <input type="hidden" name="policy_document_id" value={row.id} />
