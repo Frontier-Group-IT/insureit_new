@@ -27,7 +27,17 @@ type ExternalPolicy = {
 
 type TimeTarget = 'incident' | 'intimation' | null;
 type DocumentKey = 'rc' | 'insurance' | 'licence' | 'gr' | 'bulk';
-type PickedDocument = { name: string; uri: string; mimeType?: string | null };
+type PickedDocument = { name: string; uri: string; mimeType?: string | null; size?: number | null };
+type DocumentTileState = 'idle' | 'ready' | 'saved';
+
+const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
+const DOCUMENT_TYPE_BY_KEY: Record<Exclude<DocumentKey, 'bulk'>, string> = {
+  rc: 'RC Copy',
+  insurance: 'Insurance Copy',
+  licence: 'Driver Licence',
+  gr: 'GR / Load Bill',
+};
+const BULK_DOCUMENT_TYPE = 'Spot Intimation Attachment';
 
 export default function SelfManagedClaimScreen() {
   const router = useRouter();
@@ -47,6 +57,9 @@ export default function SelfManagedClaimScreen() {
   const [location, setLocation] = useState('');
   const [milestones, setMilestones] = useState<ClaimMilestone[]>([]);
   const [documents, setDocuments] = useState<Record<DocumentKey, PickedDocument[]>>({ rc: [], insurance: [], licence: [], gr: [], bulk: [] });
+  const [savedDocumentTypes, setSavedDocumentTypes] = useState<string[]>([]);
+  const [savedBulkCount, setSavedBulkCount] = useState(0);
+  const [uploadingDocuments, setUploadingDocuments] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -56,9 +69,10 @@ export default function SelfManagedClaimScreen() {
     let active = true;
     void (async () => {
       if (editing) {
-        const [claimResult, milestoneResult] = await Promise.all([
+        const [claimResult, milestoneResult, documentResult] = await Promise.all([
           (supabase as any).from('claims').select('id,customer_id,vehicle_id,external_policy_id,accident_at,accident_location,claim_service_mode').eq('id', claimId).maybeSingle(),
           (supabase as any).from('claim_milestones').select('*').eq('claim_id', claimId),
+          (supabase as any).from('claim_documents').select('document_type').eq('claim_id', claimId),
         ]);
         if (!active) return;
         const claim = claimResult.data as any;
@@ -75,6 +89,9 @@ export default function SelfManagedClaimScreen() {
         const nextPolicy = policyResult.data as ExternalPolicy | null;
         setPolicy(nextPolicy);
         setVehicle(vehicleResult.data ?? null);
+        const existingTypes = (documentResult.data ?? []).map((item: any) => String(item.document_type || '')).filter(Boolean);
+        setSavedDocumentTypes(existingTypes);
+        setSavedBulkCount(existingTypes.filter((type: string) => type === BULK_DOCUMENT_TYPE).length);
         if (nextPolicy?.insurance_company_id) {
           const insurerResult = await supabase.from('insurance_companies').select('name').eq('id', nextPolicy.insurance_company_id).maybeSingle();
           if (active && insurerResult.data?.name) setInsurerName(insurerResult.data.name);
@@ -119,21 +136,106 @@ export default function SelfManagedClaimScreen() {
   }, [claimId, editing, externalPolicyId]);
 
   async function pickDocument(key: Exclude<DocumentKey, 'bulk'>) {
+    setMessage('');
     const result = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/*'], multiple: false, copyToCacheDirectory: true });
     if (result.canceled || !result.assets?.length) return;
     const asset = result.assets[0];
-    setDocuments((current) => ({ ...current, [key]: [{ name: asset.name, uri: asset.uri, mimeType: asset.mimeType }] }));
+    const picked: PickedDocument = { name: asset.name, uri: asset.uri, mimeType: asset.mimeType, size: asset.size ?? null };
+    if (picked.size !== null && picked.size !== undefined && picked.size > MAX_UPLOAD_SIZE_BYTES) return setMessage(`${picked.name} is larger than 5 MB. Please choose a smaller file.`);
+
+    if (editing && policy) {
+      setUploadingDocuments(true);
+      const uploaded = await uploadClaimDocument(claimId, policy.customer_id, DOCUMENT_TYPE_BY_KEY[key], picked);
+      setUploadingDocuments(false);
+      if (!uploaded.ok) return setMessage(uploaded.message);
+      setSavedDocumentTypes((current) => [...current.filter((type) => type !== DOCUMENT_TYPE_BY_KEY[key]), DOCUMENT_TYPE_BY_KEY[key]]);
+      setDocuments((current) => ({ ...current, [key]: [] }));
+      return;
+    }
+
+    setDocuments((current) => ({ ...current, [key]: [picked] }));
   }
 
   async function pickBulkDocuments() {
+    setMessage('');
     const result = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/*'], multiple: true, copyToCacheDirectory: true });
     if (result.canceled || !result.assets?.length) return;
-    const additions = result.assets.map((asset) => ({ name: asset.name, uri: asset.uri, mimeType: asset.mimeType }));
+    const additions: PickedDocument[] = result.assets.map((asset) => ({ name: asset.name, uri: asset.uri, mimeType: asset.mimeType, size: asset.size ?? null }));
+    const tooLarge = additions.find((file) => file.size !== null && file.size !== undefined && file.size > MAX_UPLOAD_SIZE_BYTES);
+    if (tooLarge) return setMessage(`${tooLarge.name} is larger than 5 MB. Please choose smaller files.`);
+
+    if (editing && policy) {
+      setUploadingDocuments(true);
+      let successCount = 0;
+      for (const file of additions) {
+        const uploaded = await uploadClaimDocument(claimId, policy.customer_id, BULK_DOCUMENT_TYPE, file);
+        if (uploaded.ok) successCount += 1;
+      }
+      setUploadingDocuments(false);
+      if (successCount !== additions.length) setMessage(`${successCount} of ${additions.length} documents were saved. Please retry the remaining files.`);
+      if (successCount) setSavedBulkCount((current) => current + successCount);
+      return;
+    }
+
     setDocuments((current) => ({ ...current, bulk: [...current.bulk, ...additions] }));
   }
 
+  async function uploadClaimDocument(targetClaimId: string, customerId: string, documentType: string, pickedFile: PickedDocument) {
+    try {
+      const session = await getCurrentSession();
+      if (!session?.user) return { ok: false, message: 'Please sign in again before uploading documents.' };
+      const extension = pickedFile.name.includes('.') ? pickedFile.name.split('.').pop() : 'bin';
+      const storagePath = `${customerId}/${targetClaimId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+      const response = await fetch(pickedFile.uri);
+      const body = await response.arrayBuffer();
+      if (body.byteLength > MAX_UPLOAD_SIZE_BYTES) return { ok: false, message: `${pickedFile.name} is larger than 5 MB. Please choose a smaller file.` };
+
+      const uploadResult = await supabase.storage.from('claim-documents').upload(storagePath, body, {
+        contentType: pickedFile.mimeType ?? 'application/octet-stream',
+        upsert: false,
+      });
+      if (uploadResult.error) return { ok: false, message: `${pickedFile.name} could not be uploaded.` };
+
+      const { error } = await supabase.from('claim_documents').insert({
+        claim_id: targetClaimId,
+        customer_id: customerId,
+        document_type: documentType,
+        file_name: pickedFile.name,
+        storage_bucket: 'claim-documents',
+        storage_path: storagePath,
+        mime_type: pickedFile.mimeType ?? null,
+        file_size: pickedFile.size ?? body.byteLength,
+        uploaded_by: session.user.id,
+      });
+      if (error) return { ok: false, message: `${pickedFile.name} uploaded, but its claim document record could not be saved.` };
+      return { ok: true, message: '' };
+    } catch {
+      return { ok: false, message: `${pickedFile.name} could not be uploaded.` };
+    }
+  }
+
+  async function persistPendingDocuments(targetClaimId: string, customerId: string) {
+    const queued: Array<{ type: string; file: PickedDocument }> = [
+      ...documents.rc.map((file) => ({ type: DOCUMENT_TYPE_BY_KEY.rc, file })),
+      ...documents.insurance.map((file) => ({ type: DOCUMENT_TYPE_BY_KEY.insurance, file })),
+      ...documents.licence.map((file) => ({ type: DOCUMENT_TYPE_BY_KEY.licence, file })),
+      ...documents.gr.map((file) => ({ type: DOCUMENT_TYPE_BY_KEY.gr, file })),
+      ...documents.bulk.map((file) => ({ type: BULK_DOCUMENT_TYPE, file })),
+    ];
+    if (!queued.length) return { total: 0, saved: 0 };
+
+    setUploadingDocuments(true);
+    let saved = 0;
+    for (const item of queued) {
+      const result = await uploadClaimDocument(targetClaimId, customerId, item.type, item.file);
+      if (result.ok) saved += 1;
+    }
+    setUploadingDocuments(false);
+    return { total: queued.length, saved };
+  }
+
   async function submit() {
-    if (!policy || !vehicle || saving) return;
+    if (!policy || !vehicle || saving || uploadingDocuments) return;
     setMessage('');
     const incidentAt = parseDateTime(incidentDate, incidentTime);
     const spotIntimationAt = parseDateTime(intimationDate, intimationTime);
@@ -170,8 +272,10 @@ export default function SelfManagedClaimScreen() {
           recorded_by_actor: 'customer',
         }, { onConflict: 'claim_id,milestone_key' }),
       ]);
+      if (claimUpdate.error || milestoneUpdate.error) { setSaving(false); return setMessage(claimUpdate.error?.message || milestoneUpdate.error?.message || 'We could not update Spot Intimation.'); }
+      const persisted = await persistPendingDocuments(claimId, policy.customer_id);
       setSaving(false);
-      if (claimUpdate.error || milestoneUpdate.error) return setMessage(claimUpdate.error?.message || milestoneUpdate.error?.message || 'We could not update Spot Intimation.');
+      if (persisted.saved !== persisted.total) setMessage(`${persisted.saved} of ${persisted.total} queued documents were saved. You can retry the remaining documents from Spot Intimation.`);
       router.replace({ pathname: '/customer/self-managed-spot-status', params: { id: claimId } });
       return;
     }
@@ -201,9 +305,19 @@ export default function SelfManagedClaimScreen() {
       recorded_by: session?.user?.id ?? existing?.recorded_by ?? null,
       recorded_by_actor: 'customer',
     }, { onConflict: 'claim_id,milestone_key' });
+    if (milestoneResult.error) { setSaving(false); return setMessage('The claim was created, but the Spot Intimation event time could not be saved. Open the claim and update Spot Intimation before continuing.'); }
+
+    const persisted = await persistPendingDocuments(created.claim_id, policy.customer_id);
     setSaving(false);
-    if (milestoneResult.error) return setMessage('The claim was created, but the Spot Intimation event time could not be saved. Open the claim and update Spot Intimation before continuing.');
+    if (persisted.saved !== persisted.total) setMessage(`${persisted.saved} of ${persisted.total} selected documents were saved to the claim. The saved documents are available in Claim Tracker.`);
     router.replace({ pathname: '/customer/self-managed-spot-status', params: { id: created.claim_id } });
+  }
+
+  function tileState(key: Exclude<DocumentKey, 'bulk'>): DocumentTileState {
+    const type = DOCUMENT_TYPE_BY_KEY[key];
+    if (savedDocumentTypes.includes(type)) return 'saved';
+    if (documents[key].length) return 'ready';
+    return 'idle';
   }
 
   if (loading) return <Screen title="Spot Intimation"><LoadingState label={editing ? 'Opening Spot Intimation' : 'Opening policy'} /></Screen>;
@@ -240,25 +354,25 @@ export default function SelfManagedClaimScreen() {
         <View style={styles.documentReadyHeader}>
           <View style={styles.documentReadyHeaderCopy}>
             <Text style={styles.documentReadyTitle}>Upload claim documents</Text>
-            <Text style={styles.documentReadySubtitle}>Tap a document to choose the matching file from your phone.</Text>
+            <Text style={styles.documentReadySubtitle}>Files are saved to this claim and appear in Claim Tracker.</Text>
           </View>
           <View style={styles.documentReadyBadge}><Text style={styles.documentReadyBadgeText}>Optional now</Text></View>
         </View>
         <View style={styles.documentReadyGrid}>
-          <DocumentReadyTile title="RC Copy" source={require('../../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png')} selected={documents.rc.length > 0} onPress={() => void pickDocument('rc')} />
-          <DocumentReadyTile title="Insurance Copy" source={require('../../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} selected={documents.insurance.length > 0} onPress={() => void pickDocument('insurance')} />
-          <DocumentReadyTile title="Driver Licence" source={require('../../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} selected={documents.licence.length > 0} onPress={() => void pickDocument('licence')} />
-          <DocumentReadyTile title="GR / Load Bill" source={require('../../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} selected={documents.gr.length > 0} onPress={() => void pickDocument('gr')} />
+          <DocumentReadyTile title="RC Copy" source={require('../../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png')} state={tileState('rc')} onPress={() => void pickDocument('rc')} />
+          <DocumentReadyTile title="Insurance Copy" source={require('../../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} state={tileState('insurance')} onPress={() => void pickDocument('insurance')} />
+          <DocumentReadyTile title="Driver Licence" source={require('../../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} state={tileState('licence')} onPress={() => void pickDocument('licence')} />
+          <DocumentReadyTile title="GR / Load Bill" source={require('../../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} state={tileState('gr')} onPress={() => void pickDocument('gr')} />
         </View>
-        <Pressable accessibilityRole="button" onPress={() => void pickBulkDocuments()} style={[styles.bulkUpload, documents.bulk.length > 0 && styles.bulkUploadSelected]}>
-          <View style={[styles.bulkUploadIcon, documents.bulk.length > 0 && styles.bulkUploadIconSelected]}><MaterialCommunityIcons name={documents.bulk.length > 0 ? 'check' : 'file-multiple-outline'} size={20} color={documents.bulk.length > 0 ? '#18864B' : '#0A43A3'} /></View>
+        <Pressable accessibilityRole="button" disabled={uploadingDocuments} onPress={() => void pickBulkDocuments()} style={[styles.bulkUpload, (documents.bulk.length > 0 || savedBulkCount > 0) && styles.bulkUploadSelected]}>
+          <View style={[styles.bulkUploadIcon, savedBulkCount > 0 && styles.bulkUploadIconSelected]}><MaterialCommunityIcons name={savedBulkCount > 0 ? 'check' : 'file-multiple-outline'} size={20} color={savedBulkCount > 0 ? '#18864B' : '#0A43A3'} /></View>
           <View style={styles.bulkUploadCopy}>
             <Text style={styles.bulkUploadTitle}>Upload multiple documents</Text>
-            <Text style={styles.bulkUploadText}>{documents.bulk.length > 0 ? `${documents.bulk.length} file${documents.bulk.length === 1 ? '' : 's'} selected · Tap again to add more` : 'Select several files now, or tap again later to add more.'}</Text>
+            <Text style={styles.bulkUploadText}>{savedBulkCount > 0 ? `${savedBulkCount} file${savedBulkCount === 1 ? '' : 's'} saved · Tap again to add more` : documents.bulk.length > 0 ? `${documents.bulk.length} file${documents.bulk.length === 1 ? '' : 's'} ready · They will be saved when the claim starts` : 'Select several files now, or tap again later to add more.'}</Text>
           </View>
-          <MaterialCommunityIcons name="plus-circle-outline" size={21} color={documents.bulk.length > 0 ? '#18864B' : '#0A43A3'} />
+          <MaterialCommunityIcons name="plus-circle-outline" size={21} color={savedBulkCount > 0 ? '#18864B' : '#0A43A3'} />
         </Pressable>
-        <Text style={styles.documentUploadNote}>Selected files are prepared on this screen. Final claim-document storage will continue to use the existing claim document workflow.</Text>
+        <Text style={styles.documentUploadNote}>{editing ? 'Selected files upload immediately to Claim Documents.' : 'Before the claim exists, selected files are queued and automatically saved to Claim Documents when you tap Start Claim & Continue.'}</Text>
       </View>
 
       <View style={styles.voicePlaceholder}>
@@ -280,9 +394,9 @@ export default function SelfManagedClaimScreen() {
       </View>
 
       <ClaimActionBar
-        primaryDisabled={saving || !policy}
+        primaryDisabled={saving || uploadingDocuments || !policy}
         primaryIcon="arrow-right"
-        primaryLabel={saving ? 'Saving...' : editing ? 'Save & Continue' : 'Start Claim & Continue'}
+        primaryLabel={saving || uploadingDocuments ? 'Saving...' : editing ? 'Save & Continue' : 'Start Claim & Continue'}
         onPrimary={() => void submit()}
         onAssistance={() => editing ? router.push({ pathname: '/customer/request-claim-assistance', params: { id: claimId } }) : router.push('/customer/support')}
       />
@@ -304,7 +418,7 @@ export default function SelfManagedClaimScreen() {
 function PolicyIdentityCard({ policyNo, insurerName, vehicleNo }: { policyNo: string; insurerName: string; vehicleNo: string }) {
   return <View style={styles.policyIdentityCard}>
     <View style={styles.policyIdentityGlow} />
-    <View style={styles.policyIdentityLeft}>
+    <View style={styles.policyIdentityTop}>
       <View style={styles.policyIdentityIcon}><MaterialCommunityIcons name="file-document-outline" size={27} color="#083B9B" /></View>
       <View style={styles.policyIdentityCopy}>
         <Text style={styles.policyIdentityEyebrow}>EXTERNAL POLICY</Text>
@@ -312,19 +426,26 @@ function PolicyIdentityCard({ policyNo, insurerName, vehicleNo }: { policyNo: st
         <Text style={styles.policyIdentityInsurer} numberOfLines={2}>{insurerName}</Text>
       </View>
     </View>
-    <View style={styles.vehicleIdentityBlock}>
-      <Text style={styles.vehicleIdentityLabel}>VEHICLE</Text>
-      <Text style={styles.vehicleIdentityNo} numberOfLines={1}>{vehicleNo}</Text>
+    <View style={styles.policyVehicleDivider} />
+    <View style={styles.vehicleIdentityRow}>
+      <View style={styles.vehicleIdentityIcon}><MaterialCommunityIcons name="car-outline" size={20} color="#FFFFFF" /></View>
+      <View style={styles.vehicleIdentityCopy}>
+        <Text style={styles.vehicleIdentityLabel}>CLAIM VEHICLE</Text>
+        <Text style={styles.vehicleIdentityNo} numberOfLines={1}>{vehicleNo}</Text>
+      </View>
+      <View style={styles.vehicleIdentityFocus}><MaterialCommunityIcons name="crosshairs-gps" size={18} color="#AFCBFF" /></View>
     </View>
   </View>;
 }
 
-function DocumentReadyTile({ title, source, selected, onPress }: { title: string; source: any; selected: boolean; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress} style={[styles.documentReadyTile, selected && styles.documentReadyTileSelected]}>
-    {selected ? <View style={styles.documentSelectedCheck}><MaterialCommunityIcons name="check" size={17} color="#18864B" /></View> : null}
+function DocumentReadyTile({ title, source, state, onPress }: { title: string; source: any; state: DocumentTileState; onPress: () => void }) {
+  const saved = state === 'saved';
+  const ready = state === 'ready';
+  return <Pressable accessibilityRole="button" accessibilityState={{ selected: state !== 'idle' }} onPress={onPress} style={[styles.documentReadyTile, ready && styles.documentReadyTileReady, saved && styles.documentReadyTileSelected]}>
+    {saved ? <View style={styles.documentSelectedCheck}><MaterialCommunityIcons name="check" size={17} color="#18864B" /></View> : null}
     <View style={styles.documentReadyArtworkWrap}><Image source={source} style={styles.documentReadyArtwork} resizeMode="contain" /></View>
     <Text style={styles.documentReadyTileText} numberOfLines={2}>{title}</Text>
-    <Text style={[styles.documentReadyStatus, selected && styles.documentReadyStatusSelected]}>{selected ? 'Selected' : 'Tap to upload'}</Text>
+    <Text style={[styles.documentReadyStatus, ready && styles.documentReadyStatusReady, saved && styles.documentReadyStatusSelected]}>{saved ? 'Saved' : ready ? 'Ready' : 'Tap to upload'}</Text>
   </Pressable>;
 }
 
@@ -355,17 +476,21 @@ const styles = StyleSheet.create({
   gap: { height: 10 },
   subsection: { marginTop: 16, marginBottom: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E7EBF0' },
   subsectionTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
-  policyIdentityCard: { position: 'relative', minHeight: 112, borderRadius: 20, backgroundColor: '#07327B', padding: 14, marginBottom: 13, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', gap: 10, shadowColor: '#072C69', shadowOpacity: 0.16, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
-  policyIdentityGlow: { position: 'absolute', width: 190, height: 190, borderRadius: 95, borderWidth: 1, borderColor: 'rgba(72,139,255,0.24)', right: -90, top: -104 },
-  policyIdentityLeft: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  policyIdentityCard: { position: 'relative', minHeight: 132, borderRadius: 20, backgroundColor: '#07327B', padding: 14, marginBottom: 13, overflow: 'hidden', shadowColor: '#072C69', shadowOpacity: 0.16, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
+  policyIdentityGlow: { position: 'absolute', width: 210, height: 210, borderRadius: 105, borderWidth: 1, borderColor: 'rgba(72,139,255,0.24)', right: -98, top: -118 },
+  policyIdentityTop: { flexDirection: 'row', alignItems: 'center', gap: 11 },
   policyIdentityIcon: { width: 52, height: 52, borderRadius: 15, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   policyIdentityCopy: { flex: 1, minWidth: 0 },
   policyIdentityEyebrow: { color: '#CFDDF5', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.5 },
   policyIdentityNo: { color: '#FFFFFF', fontSize: 17, fontWeight: '900', marginTop: 3 },
   policyIdentityInsurer: { color: '#DCE8F7', fontSize: 10, lineHeight: 14, fontWeight: '700', marginTop: 4 },
-  vehicleIdentityBlock: { minWidth: 108, maxWidth: 138, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.13)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.30)', paddingHorizontal: 10, paddingVertical: 11, alignItems: 'flex-end' },
+  policyVehicleDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.18)', marginVertical: 11 },
+  vehicleIdentityRow: { minHeight: 55, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.09)', paddingHorizontal: 11, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  vehicleIdentityIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
+  vehicleIdentityCopy: { flex: 1, minWidth: 0 },
   vehicleIdentityLabel: { color: '#AFCBFF', fontSize: 8, fontWeight: '900', letterSpacing: 0.65 },
-  vehicleIdentityNo: { color: '#FFFFFF', fontSize: 15.5, fontWeight: '900', marginTop: 3 },
+  vehicleIdentityNo: { color: '#FFFFFF', fontSize: 19, lineHeight: 23, fontWeight: '900', letterSpacing: 0.25, marginTop: 1 },
+  vehicleIdentityFocus: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   documentReadyCard: { borderRadius: 18, borderWidth: 1, borderColor: '#D7E2EF', backgroundColor: '#FFFFFF', padding: 12, marginBottom: 12, shadowColor: '#14375F', shadowOpacity: 0.05, shadowRadius: 9, shadowOffset: { width: 0, height: 4 }, elevation: 1 },
   documentReadyHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 10 },
   documentReadyHeaderCopy: { flex: 1, minWidth: 0 },
@@ -375,12 +500,14 @@ const styles = StyleSheet.create({
   documentReadyBadgeText: { color: '#0A43A3', fontSize: 8.5, fontWeight: '900' },
   documentReadyGrid: { flexDirection: 'row', gap: 8 },
   documentReadyTile: { position: 'relative', flex: 1, minWidth: 0, minHeight: 106, borderRadius: 14, backgroundColor: '#F7FAFF', borderWidth: 1.5, borderColor: '#E2EAF4', paddingVertical: 8, paddingHorizontal: 5, alignItems: 'center', justifyContent: 'center' },
+  documentReadyTileReady: { backgroundColor: '#F2F7FF', borderColor: '#6D9EE8' },
   documentReadyTileSelected: { backgroundColor: '#EFFAF4', borderColor: '#52B57F', shadowColor: '#18864B', shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
   documentSelectedCheck: { position: 'absolute', top: 5, right: 5, width: 25, height: 25, borderRadius: 13, backgroundColor: 'rgba(46, 173, 99, 0.16)', alignItems: 'center', justifyContent: 'center' },
   documentReadyArtworkWrap: { width: 45, height: 45, alignItems: 'center', justifyContent: 'center' },
   documentReadyArtwork: { width: 43, height: 43 },
   documentReadyTileText: { color: palette.navy, fontSize: 8.5, lineHeight: 11, fontWeight: '800', textAlign: 'center', marginTop: 3 },
   documentReadyStatus: { color: '#7A8799', fontSize: 7.5, fontWeight: '800', marginTop: 3 },
+  documentReadyStatusReady: { color: '#326FC6' },
   documentReadyStatusSelected: { color: '#18864B' },
   bulkUpload: { minHeight: 58, marginTop: 10, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#AFC8E8', backgroundColor: '#F7FAFF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 9 },
   bulkUploadSelected: { borderStyle: 'solid', borderColor: '#52B57F', backgroundColor: '#EFFAF4' },
