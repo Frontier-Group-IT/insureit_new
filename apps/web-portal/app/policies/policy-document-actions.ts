@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { canAccessCustomer } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
+import { schedulePolicyOcrTraining } from "@/lib/policy-ocr-training-schedule";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { POLICY_ACTIVITY_ACTIONS, recordPolicyActivity } from "@/lib/policy-activity";
 
@@ -126,6 +127,7 @@ export async function uploadPolicyCopy(
   }
 
   await recordPolicyActivity(admin, policy.id, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_DOC_UPLOADED);
+  await schedulePolicyOcrTraining();
   revalidatePath("/policies");
   revalidatePath(`/policies/${policy.id}`);
   return { ok: true, documentId: documentRow.id };

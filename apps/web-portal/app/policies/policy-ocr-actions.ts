@@ -2,7 +2,9 @@
 
 import { headers } from "next/headers";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
+import { buildTrainingProposal } from "@/lib/policy-ocr-training";
 import { parsePolicyDocument, type ParsedPolicyField } from "@/lib/policy-ocr-parsers";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { refineAdditionalMotorPolicy } from "@/lib/policy-ocr-additional-motor-refiner";
 import { refineDigitCommercialPolicyV2 } from "@/lib/policy-ocr-digit-refiner-v2";
 import { refineIffcoCommercialPolicyV2 } from "@/lib/policy-ocr-iffco-refiner-v2";
@@ -91,6 +93,13 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
   await requirePolicyEditor();
 
   const file = formData.get("policy_document");
+  return extractPolicyFile(file);
+}
+
+async function extractPolicyFile(
+  file: FormDataEntryValue | null,
+  subjectTokenOverride?: string | null,
+): Promise<PolicyOcrResult> {
   if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Select a policy PDF or image." };
   if (!ALLOWED_TYPES.has(file.type)) return { ok: false, error: "Only PDF, JPG, PNG and WebP policy copies are supported." };
   if (file.size > MAX_FILE_SIZE) return { ok: false, error: "The policy document must be 15 MB or smaller." };
@@ -98,9 +107,10 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
   const config = getGoogleConfig();
   if (!config) return { ok: false, error: "Policy document reading is temporarily unavailable. Please contact the administrator if the issue continues." };
 
-  const requestHeaders = await headers();
-  const subjectToken = process.env.VERCEL_OIDC_TOKEN
-    || requestHeaders.get("x-vercel-oidc-token")
+  const requestHeaders = subjectTokenOverride ? null : await headers();
+  const subjectToken = subjectTokenOverride
+    || process.env.VERCEL_OIDC_TOKEN
+    || requestHeaders?.get("x-vercel-oidc-token")
     || process.env.GOOGLE_WORKLOAD_IDENTITY_SUBJECT_TOKEN;
   if (!subjectToken) {
     return { ok: false, error: "Policy document reading is temporarily unavailable. Please contact the administrator if the issue continues." };
@@ -180,6 +190,131 @@ export async function extractPolicyDocument(formData: FormData): Promise<PolicyO
   } finally {
     clearTimeout(timeout);
   }
+}
+
+type ClaimedTrainingJob = {
+  label_id: string;
+  policy_document_id: string;
+  file_name: string;
+  storage_bucket: string;
+  storage_path: string;
+  mime_type: string | null;
+  file_size: number | null;
+  lease_token: string;
+  attempt_count: number;
+};
+
+export async function processPolicyOcrTrainingBatch(
+  workerSecret: string,
+  requestedLimit = 2,
+  subjectToken?: string | null,
+) {
+  if (!isAuthorizedTrainingWorker(workerSecret)) {
+    return { ok: false as const, error: "worker_unauthorized", processed: 0 };
+  }
+
+  const admin = createSupabaseAdminClient();
+  const limit = Math.max(1, Math.min(Number(requestedLimit) || 2, 3));
+  const { data, error } = await admin.rpc("claim_policy_ocr_training_jobs", {
+    p_limit: limit,
+    p_lease_minutes: 4,
+  });
+  if (error) {
+    console.error("Policy OCR training claim failed", error.code);
+    return { ok: false as const, error: "claim_failed", processed: 0 };
+  }
+
+  const jobs = Array.isArray(data) ? data as ClaimedTrainingJob[] : [];
+  let succeeded = 0;
+  for (const job of jobs) {
+    const outcome = await processTrainingJob(job, subjectToken);
+    if (outcome) succeeded += 1;
+  }
+  return { ok: true as const, processed: jobs.length, succeeded };
+}
+
+async function processTrainingJob(job: ClaimedTrainingJob, subjectToken?: string | null) {
+  const admin = createSupabaseAdminClient();
+  try {
+    if (Number(job.file_size) > MAX_FILE_SIZE) {
+      await failTrainingJob(job, "file_too_large", false);
+      return false;
+    }
+    if (!ALLOWED_TYPES.has(job.mime_type ?? "")) {
+      await failTrainingJob(job, "unsupported_file_type", false);
+      return false;
+    }
+
+    const { data: blob, error } = await admin.storage
+      .from(job.storage_bucket)
+      .download(job.storage_path);
+    if (error || !blob) {
+      await failTrainingJob(job, "private_copy_unavailable", true);
+      return false;
+    }
+
+    const file = new File([blob], job.file_name, {
+      type: job.mime_type || blob.type || "application/pdf",
+    });
+    const result = await extractPolicyFile(file, subjectToken);
+    if (!result.ok) {
+      await failTrainingJob(job, classifyTrainingFailure(result.error), isRetryableTrainingFailure(result.error));
+      return false;
+    }
+
+    const proposal = buildTrainingProposal(result);
+    const { data: completed, error: completeError } = await admin.rpc(
+      "complete_policy_ocr_training_job",
+      {
+        p_label_id: job.label_id,
+        p_lease_token: job.lease_token,
+        p_proposal: proposal,
+        p_parser_id: result.parserId,
+        p_parser_version: result.parserVersion,
+        p_extraction_method: result.extractionMethod,
+      },
+    );
+    if (completeError || completed !== true) {
+      console.error("Policy OCR training completion failed", completeError?.code ?? "lease_rejected");
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error("Policy OCR training processing failed", safeErrorName(error));
+    await failTrainingJob(job, "processing_failed", true);
+    return false;
+  }
+}
+
+async function failTrainingJob(job: ClaimedTrainingJob, code: string, retryable: boolean) {
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.rpc("fail_policy_ocr_training_job", {
+    p_label_id: job.label_id,
+    p_lease_token: job.lease_token,
+    p_failure_code: code,
+    p_retryable: retryable,
+  });
+  if (error) console.error("Policy OCR training failure update failed", error.code);
+}
+
+function isAuthorizedTrainingWorker(value: string) {
+  const expected = process.env.POLICY_OCR_WORKER_SECRET?.trim() || process.env.CRON_SECRET?.trim();
+  return Boolean(expected && value && value.length === expected.length && value === expected);
+}
+
+function classifyTrainingFailure(message: string) {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("15 mb") || normalized.includes("smaller")) return "file_too_large";
+  if (normalized.includes("supported") || normalized.includes("pdf")) return "unsupported_document";
+  if (normalized.includes("no readable") || normalized.includes("no supported")) return "no_supported_fields";
+  if (normalized.includes("too long")) return "provider_timeout";
+  if (normalized.includes("unavailable")) return "provider_unavailable";
+  return "processing_failed";
+}
+
+function isRetryableTrainingFailure(message: string) {
+  const code = classifyTrainingFailure(message);
+  return code === "provider_timeout" || code === "provider_unavailable" || code === "processing_failed";
 }
 
 function getGoogleConfig() {

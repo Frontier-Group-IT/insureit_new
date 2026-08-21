@@ -363,3 +363,11 @@ npm run build
 ```
 
 After explicit deployment approval, verify the exact Vercel production commit and upload the same real IFFCO policy again. Target financial result: OD `15042`, TP `7367`, CPA `330`. If Layout Parser does not supply usable rows, expected safe behavior is Review Required with OD/TP/CPA withheld, not guessed.
+
+## 9. Automated premium training workflow — 2026-08-21
+
+**IMPLEMENTED / NOT YET APPLIED OR DEPLOYED:** `20260821153000_premium_ocr_training_workflow.sql` queues the existing policy-copy backlog and future inserts/replacements. The server worker claims at most three jobs with leases/`SKIP LOCKED`, allows three attempts with controlled retry timing, and stores only Section 03 proposal values, bounded evidence labels, confidence, parser metadata and sanitized warnings.
+
+The `/policies/ocr-training` queue compares proposal and correction, uses `DD/MM/YYYY` reviewer inputs with ISO date storage, and opens private copies in a new tab through a short-lived authorized URL. `review_policy_ocr_training` and `approve_policy_ocr_training` are separate capabilities; self-approval is blocked in both the action and database. Owner approval creates a sanitized candidate with a synthetic policy number. It never edits parser code.
+
+Automatic execution uses a protected Vercel cron plus best-effort post-upload/reviewer-page scheduling. `POLICY_OCR_WORKER_SECRET` or Vercel `CRON_SECRET` must be configured privately before deployment. Migration application, live backlog processing, authenticated two-person review and candidate inspection remain **UNVERIFIED**.

@@ -110,6 +110,10 @@ const migrationPath = resolve(
   "../../supabase/migrations/20260810140000_access_control_v2_shadow_rbac_foundation.sql",
 );
 const migrationSql = readFileSync(migrationPath, "utf8");
+const ocrExtensionSql = readFileSync(
+  resolve(process.cwd(), "../../supabase/migrations/20260821153000_premium_ocr_training_workflow.sql"),
+  "utf8",
+);
 
 function sectionBetween(startMarker, endMarker) {
   const start = migrationSql.indexOf(startMarker);
@@ -131,19 +135,24 @@ const permissionSeedSection = sectionBetween(
   "insert into public.access_permissions_v2",
   "-- Seed role defaults from the approved Phase 3 shadow matrix.",
 );
+const ocrPermissionSeedSection = ocrExtensionSql.slice(
+  ocrExtensionSql.indexOf("-- OCR training V2 permission extension."),
+  ocrExtensionSql.indexOf("-- OCR training V2 role grants."),
+);
+const combinedPermissionSeedSection = `${permissionSeedSection}\n${ocrPermissionSeedSection}`;
 for (const permission of permissionCatalogueV2) {
   const marker = `('${permission.key}'`;
-  if (!permissionSeedSection.includes(marker)) fail(`Phase 4 SQL permission seed is missing ${permission.key}`);
+  if (!combinedPermissionSeedSection.includes(marker)) fail(`V2 SQL permission seed is missing ${permission.key}`);
 }
 
-const sqlPermissionKeys = Array.from(permissionSeedSection.matchAll(/\('([^']+)'\s*,\s*'[^']+'/g), (match) => match[1]);
+const sqlPermissionKeys = Array.from(combinedPermissionSeedSection.matchAll(/\('([^']+)'\s*,\s*'[^']+'/g), (match) => match[1]);
 if (new Set(sqlPermissionKeys).size !== permissionCatalogueV2.length) {
   fail(`Phase 4 SQL permission seed count ${new Set(sqlPermissionKeys).size} does not match catalogue ${permissionCatalogueV2.length}`);
 }
 
 const grantsSection = sectionBetween(
   "with role_grants(role_code, permission_key, access_level, scope_type) as (",
-  ")\ninsert into public.access_role_permissions_v2",
+  "insert into public.access_role_permissions_v2",
 );
 const sqlGrantMatches = Array.from(
   grantsSection.matchAll(/\('([^']+)'\s*,\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*(null|'[^']+')\)/g),
@@ -154,6 +163,11 @@ const sqlGrants = new Set(
     return `${match[1]}|${match[2]}|${match[3]}|${scope}`;
   }),
 );
+for (const match of ocrExtensionSql
+  .slice(ocrExtensionSql.indexOf("-- OCR training V2 role grants."), ocrExtensionSql.indexOf("commit;"))
+  .matchAll(/\('([^']+)'\s*,\s*'([^']+)'\s*,\s*'([^']+)'\)/g)) {
+  sqlGrants.add(`${match[1]}|${match[2]}|${match[3]}|`);
+}
 const matrixGrants = new Set(
   roleMatrixV2.flatMap((role) =>
     role.grants.map((entry) => `${role.code}|${entry.permission}|${entry.access}|${entry.scope ?? ""}`),

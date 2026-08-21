@@ -502,3 +502,15 @@ After a material change, update this file with:
 - Remaining verification item
 
 Do not turn this file into a raw chat transcript. Keep it as the current, actionable source of truth, and retain failed approaches only when they explain a schema or workflow hazard that future developers must avoid.
+
+## 17. Premium OCR training workflow
+
+**IMPLEMENTED / NOT YET APPLIED:** migration `20260821153000_premium_ocr_training_workflow.sql` extends policy-copy training with an idempotent queue, three-attempt leased processing, bounded retry delays, proposal metadata, separate reviewer and owner approval, and sanitized approved-candidate storage.
+
+Durable rules:
+
+- Only approved Policy Onboarding Section 03 values and comparison totals enter proposals/corrections.
+- Raw OCR text, document bytes, identity fields and real policy numbers never enter training candidates.
+- `review_policy_ocr_training` submits corrections; `approve_policy_ocr_training` gives final owner approval. Reviewer and owner must be different profiles.
+- Approved candidates use deterministic synthetic policy numbers and do not modify parser source. Parser changes remain reviewed code changes with sanitized regressions.
+- Policy-copy inserts/replacements requeue processing; jobs are claimed with `FOR UPDATE SKIP LOCKED`, leases and a maximum of three attempts.
