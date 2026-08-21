@@ -425,3 +425,5 @@ Deployment requirements:
 - Vercel Secure Backend Access/OIDC must remain enabled so each function receives `x-vercel-oidc-token` for Google WIF;
 - after deployment, inspect cron runtime logs and verify queue counts move from pending to ready/failed without exhausted retries caused by configuration;
 - run one authenticated reviewer journey and inspect exact-match and mismatch behavior before claiming production completion.
+
+**CI learning:** PR #525 intentionally removed the OCR queue migration's dependency on the optional `access_*_v2` database tables, but the access-control static regression still expected those permission rows inside that migration. The regression now treats the two OCR permissions as application-only compatibility entries until the remote Access Control V2 schema is confirmed, while explicitly failing if the queue migration reintroduces any `access_permissions_v2`, `access_roles_v2` or `access_role_permissions_v2` dependency.
