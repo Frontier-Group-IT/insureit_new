@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy pending-vehicle identity consistency fix and Policy Edit document removal action.",
-  "deploy_requested_at": "2026-08-21T15:37:00+05:30",
-  "requested_by": "explicit user merge and deploy both changes request",
+  "purpose": "Deploy Policy linked master popup close fix after soft save redirect.",
+  "deploy_requested_at": "2026-08-21T15:53:00+05:30",
+  "requested_by": "explicit user merge and deploy request",
   "source": "Deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "eb9d4f4677df3413c7dea922d17c2f2648e7eded",
-  "release_scope": "Deploy PR #503 and PR #505 together. PR #503 records the registration-pending vehicle identity synchronization migration, rollback, and verification SQL so PENDING-<chassis> vehicle identifiers stay aligned after chassis edits; the corresponding production migration was already applied and verified with zero stale pending identifiers. PR #505 adds a subtle Remove Policy Copy action after Replace in Policy Edit, with confirmation, authorization, storage cleanup, audit activity, success/error feedback, and immediate fallback to Add Policy Copy after removal.",
-  "verification": "PR #503 Verify web portal run 32468750236 passed successfully and PR #505 Verify web portal run 32470907356 passed successfully. The protected production workflow must verify the combined current main again before invoking the Vercel production deploy hook.",
+  "source_commit": "2adf5d2e25c5fc9000c64ecf19f808e1c9e3ff6c",
+  "release_scope": "Deploy PR #506. The global EmbeddedMasterSaveBridge now reacts to Next.js pathname/search-parameter changes so successful customer or vehicle saves inside the Policy Section 02 popup are detected after soft client navigation, the parent Policy page reloads, the popup closes, Section 02 refreshes, and the success toast is shown on the parent page instead of leaving the Customer/Vehicle register inside the modal.",
+  "verification": "PR #506 Verify web portal run 32472278398 passed successfully, including regressions, typecheck, lint, and production build. This release changes only apps/web-portal/components/embedded-master-save-bridge.tsx and has no database schema, RLS, auth, security-header, Expo, or EAS changes. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
