@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy fix for Policy Section 02 embedded customer and vehicle editors.",
-  "deploy_requested_at": "2026-08-21T13:58:00+05:30",
+  "purpose": "Deploy Policy Section 02 popup save-close fix.",
+  "deploy_requested_at": "2026-08-21T14:17:00+05:30",
   "requested_by": "explicit user merge and deploy request",
   "source": "Deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "6d5b2cc0823048337c21009aa7b9f88227276d76",
-  "release_scope": "Deploy PR #499, which fixes the blank Edit Customer and Edit Vehicle policy modals by allowing same-origin framing only for the authenticated embedded customer and vehicle edit routes while preserving portal-wide anti-framing protections everywhere else.",
-  "verification": "PR #499 Verify web portal run 32462945950 passed successfully. This release changes only apps/web-portal/next.config.mjs and has no database schema migration, Supabase RLS/auth change, Expo change, or other production configuration change. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source_commit": "5e7414a15f5a0def1998b6b7bac69ee109323d41",
+  "release_scope": "Deploy PR #500, which fixes the Policy Edit customer/vehicle popup so successful saves close the popup, show the success toast, and refresh Section 02 even when Next.js performs a soft redirect; it also removes View Fleet only from the embedded Customer popup while leaving normal Customer and Vehicle pages unchanged.",
+  "verification": "PR #500 Verify web portal run 32464466327 passed successfully. This release changes only apps/web-portal/components/policy-linked-master-actions.tsx and has no database schema migration, Supabase RLS/auth change, Expo/EAS change, or production security-header change. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
