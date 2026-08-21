@@ -180,6 +180,62 @@ export default function SelfManagedClaimScreen() {
     setDocuments((current) => ({ ...current, bulk: [...current.bulk, ...additions] }));
   }
 
+  async function removeSavedDocuments(documentType: string) {
+    if (!editing || uploadingDocuments) return true;
+    setMessage('');
+    setUploadingDocuments(true);
+    try {
+      const { data, error } = await (supabase as any).from('claim_documents').select('id,storage_bucket,storage_path').eq('claim_id', claimId).eq('document_type', documentType);
+      if (error) {
+        setMessage('We could not load the saved document for removal. Please try again.');
+        return false;
+      }
+      const rows = data ?? [];
+      if (!rows.length) return true;
+      const ids = rows.map((item: any) => item.id).filter(Boolean);
+      if (ids.length) {
+        const removeRecords = await (supabase as any).from('claim_documents').delete().in('id', ids);
+        if (removeRecords.error) {
+          setMessage('We could not remove the document from this claim. Please try again.');
+          return false;
+        }
+      }
+      const pathsByBucket = new Map<string, string[]>();
+      for (const item of rows) {
+        if (!item.storage_bucket || !item.storage_path) continue;
+        const bucket = String(item.storage_bucket);
+        pathsByBucket.set(bucket, [...(pathsByBucket.get(bucket) ?? []), String(item.storage_path)]);
+      }
+      for (const [bucket, paths] of pathsByBucket) {
+        const storageResult = await supabase.storage.from(bucket).remove(paths);
+        if (storageResult.error) setMessage('The document was removed from the claim, but storage cleanup could not be completed.');
+      }
+      return true;
+    } finally {
+      setUploadingDocuments(false);
+    }
+  }
+
+  async function removeDocument(key: Exclude<DocumentKey, 'bulk'>) {
+    if (uploadingDocuments) return;
+    const type = DOCUMENT_TYPE_BY_KEY[key];
+    if (documents[key].length) {
+      setDocuments((current) => ({ ...current, [key]: [] }));
+      return;
+    }
+    if (!savedDocumentTypes.includes(type)) return;
+    const removed = await removeSavedDocuments(type);
+    if (removed) setSavedDocumentTypes((current) => current.filter((item) => item !== type));
+  }
+
+  async function removeBulkDocuments() {
+    if (uploadingDocuments) return;
+    if (documents.bulk.length) setDocuments((current) => ({ ...current, bulk: [] }));
+    if (!savedBulkCount) return;
+    const removed = await removeSavedDocuments(BULK_DOCUMENT_TYPE);
+    if (removed) setSavedBulkCount(0);
+  }
+
   async function uploadClaimDocument(targetClaimId: string, customerId: string, documentType: string, pickedFile: PickedDocument) {
     try {
       const session = await getCurrentSession();
@@ -332,7 +388,7 @@ export default function SelfManagedClaimScreen() {
         onBack={() => router.back()}
       />
 
-      {policy ? <PolicyIdentityCard policyNo={policy.policy_no} insurerName={insurerName} vehicleNo={vehicle?.vehicle_no ?? 'Vehicle'} /> : null}
+      {policy ? <PolicyIdentityCard policyNo={policy.policy_no} insurerName={insurerName} vehicleNo={vehicle?.vehicle_no ?? 'Vehicle'} vehicleMake={vehicle?.make ?? ''} vehicleModel={vehicle?.model ?? ''} /> : null}
 
       {message ? <Message type="error">{message}</Message> : null}
 
@@ -359,19 +415,22 @@ export default function SelfManagedClaimScreen() {
           <View style={styles.documentReadyBadge}><Text style={styles.documentReadyBadgeText}>Optional now</Text></View>
         </View>
         <View style={styles.documentReadyGrid}>
-          <DocumentReadyTile title="RC Copy" source={require('../../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png')} state={tileState('rc')} onPress={() => void pickDocument('rc')} />
-          <DocumentReadyTile title="Insurance Copy" source={require('../../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} state={tileState('insurance')} onPress={() => void pickDocument('insurance')} />
-          <DocumentReadyTile title="Driver Licence" source={require('../../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} state={tileState('licence')} onPress={() => void pickDocument('licence')} />
-          <DocumentReadyTile title="GR / Load Bill" source={require('../../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} state={tileState('gr')} onPress={() => void pickDocument('gr')} />
+          <DocumentReadyTile title="RC Copy" source={require('../../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png')} state={tileState('rc')} onPress={() => void pickDocument('rc')} onRemove={() => void removeDocument('rc')} />
+          <DocumentReadyTile title="Insurance Copy" source={require('../../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} state={tileState('insurance')} onPress={() => void pickDocument('insurance')} onRemove={() => void removeDocument('insurance')} />
+          <DocumentReadyTile title="Driver Licence" source={require('../../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} state={tileState('licence')} onPress={() => void pickDocument('licence')} onRemove={() => void removeDocument('licence')} />
+          <DocumentReadyTile title="GR / Load Bill" source={require('../../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} state={tileState('gr')} onPress={() => void pickDocument('gr')} onRemove={() => void removeDocument('gr')} />
         </View>
-        <Pressable accessibilityRole="button" disabled={uploadingDocuments} onPress={() => void pickBulkDocuments()} style={[styles.bulkUpload, (documents.bulk.length > 0 || savedBulkCount > 0) && styles.bulkUploadSelected]}>
-          <View style={[styles.bulkUploadIcon, savedBulkCount > 0 && styles.bulkUploadIconSelected]}><MaterialCommunityIcons name={savedBulkCount > 0 ? 'check' : 'file-multiple-outline'} size={20} color={savedBulkCount > 0 ? '#18864B' : '#0A43A3'} /></View>
-          <View style={styles.bulkUploadCopy}>
-            <Text style={styles.bulkUploadTitle}>Upload multiple documents</Text>
-            <Text style={styles.bulkUploadText}>{savedBulkCount > 0 ? `${savedBulkCount} file${savedBulkCount === 1 ? '' : 's'} saved · Tap again to add more` : documents.bulk.length > 0 ? `${documents.bulk.length} file${documents.bulk.length === 1 ? '' : 's'} ready · They will be saved when the claim starts` : 'Select several files now, or tap again later to add more.'}</Text>
-          </View>
-          <MaterialCommunityIcons name="plus-circle-outline" size={21} color={savedBulkCount > 0 ? '#18864B' : '#0A43A3'} />
-        </Pressable>
+        <View style={styles.bulkUploadShell}>
+          <Pressable accessibilityRole="button" disabled={uploadingDocuments} onPress={() => void pickBulkDocuments()} style={[styles.bulkUpload, (documents.bulk.length > 0 || savedBulkCount > 0) && styles.bulkUploadSelected]}>
+            <View style={[styles.bulkUploadIcon, savedBulkCount > 0 && styles.bulkUploadIconSelected]}><MaterialCommunityIcons name={savedBulkCount > 0 ? 'check' : 'file-multiple-outline'} size={20} color={savedBulkCount > 0 ? '#18864B' : '#0A43A3'} /></View>
+            <View style={styles.bulkUploadCopy}>
+              <Text style={styles.bulkUploadTitle}>Upload multiple documents</Text>
+              <Text style={styles.bulkUploadText}>{savedBulkCount > 0 ? `${savedBulkCount} file${savedBulkCount === 1 ? '' : 's'} saved · Tap again to add more` : documents.bulk.length > 0 ? `${documents.bulk.length} file${documents.bulk.length === 1 ? '' : 's'} ready · They will be saved when the claim starts` : 'Select several files now, or tap again later to add more.'}</Text>
+            </View>
+            {!documents.bulk.length && !savedBulkCount ? <MaterialCommunityIcons name="plus-circle-outline" size={21} color="#0A43A3" /> : null}
+          </Pressable>
+          {documents.bulk.length > 0 || savedBulkCount > 0 ? <Pressable accessibilityRole="button" accessibilityLabel="Remove all bulk documents" disabled={uploadingDocuments} onPress={() => void removeBulkDocuments()} style={styles.bulkRemoveButton}><MaterialCommunityIcons name="close" size={14} color="#7A8799" /></Pressable> : null}
+        </View>
         <Text style={styles.documentUploadNote}>{editing ? 'Selected files upload immediately to Claim Documents.' : 'Before the claim exists, selected files are queued and automatically saved to Claim Documents when you tap Start Claim & Continue.'}</Text>
       </View>
 
@@ -415,7 +474,8 @@ export default function SelfManagedClaimScreen() {
   );
 }
 
-function PolicyIdentityCard({ policyNo, insurerName, vehicleNo }: { policyNo: string; insurerName: string; vehicleNo: string }) {
+function PolicyIdentityCard({ policyNo, insurerName, vehicleNo, vehicleMake, vehicleModel }: { policyNo: string; insurerName: string; vehicleNo: string; vehicleMake: string; vehicleModel: string }) {
+  const vehicleMeta = [vehicleMake, vehicleModel].filter(Boolean).join(' · ');
   return <View style={styles.policyIdentityCard}>
     <View style={styles.policyIdentityGlow} />
     <View style={styles.policyIdentityTop}>
@@ -432,17 +492,19 @@ function PolicyIdentityCard({ policyNo, insurerName, vehicleNo }: { policyNo: st
       <View style={styles.vehicleIdentityCopy}>
         <Text style={styles.vehicleIdentityLabel}>CLAIM VEHICLE</Text>
         <Text style={styles.vehicleIdentityNo} numberOfLines={1}>{vehicleNo}</Text>
+        {vehicleMeta ? <Text style={styles.vehicleIdentityMeta} numberOfLines={1}>{vehicleMeta}</Text> : null}
       </View>
       <View style={styles.vehicleIdentityFocus}><MaterialCommunityIcons name="crosshairs-gps" size={18} color="#AFCBFF" /></View>
     </View>
   </View>;
 }
 
-function DocumentReadyTile({ title, source, state, onPress }: { title: string; source: any; state: DocumentTileState; onPress: () => void }) {
+function DocumentReadyTile({ title, source, state, onPress, onRemove }: { title: string; source: any; state: DocumentTileState; onPress: () => void; onRemove: () => void }) {
   const saved = state === 'saved';
   const ready = state === 'ready';
   return <Pressable accessibilityRole="button" accessibilityState={{ selected: state !== 'idle' }} onPress={onPress} style={[styles.documentReadyTile, ready && styles.documentReadyTileReady, saved && styles.documentReadyTileSelected]}>
-    {saved ? <View style={styles.documentSelectedCheck}><MaterialCommunityIcons name="check" size={17} color="#18864B" /></View> : null}
+    {saved ? <View style={styles.documentSelectedCheck}><MaterialCommunityIcons name="check" size={15} color="#18864B" /></View> : null}
+    {state !== 'idle' ? <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${title}`} onPress={(event) => { event.stopPropagation(); onRemove(); }} style={styles.documentRemoveButton}><MaterialCommunityIcons name="close" size={13} color="#7A8799" /></Pressable> : null}
     <View style={styles.documentReadyArtworkWrap}><Image source={source} style={styles.documentReadyArtwork} resizeMode="contain" /></View>
     <Text style={styles.documentReadyTileText} numberOfLines={2}>{title}</Text>
     <Text style={[styles.documentReadyStatus, ready && styles.documentReadyStatusReady, saved && styles.documentReadyStatusSelected]}>{saved ? 'Saved' : ready ? 'Ready' : 'Tap to upload'}</Text>
@@ -485,11 +547,12 @@ const styles = StyleSheet.create({
   policyIdentityNo: { color: '#FFFFFF', fontSize: 17, fontWeight: '900', marginTop: 3 },
   policyIdentityInsurer: { color: '#DCE8F7', fontSize: 10, lineHeight: 14, fontWeight: '700', marginTop: 4 },
   policyVehicleDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.18)', marginVertical: 11 },
-  vehicleIdentityRow: { minHeight: 55, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.09)', paddingHorizontal: 11, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  vehicleIdentityRow: { minHeight: 55, paddingHorizontal: 2, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 10 },
   vehicleIdentityIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
   vehicleIdentityCopy: { flex: 1, minWidth: 0 },
   vehicleIdentityLabel: { color: '#AFCBFF', fontSize: 8, fontWeight: '900', letterSpacing: 0.65 },
   vehicleIdentityNo: { color: '#FFFFFF', fontSize: 19, lineHeight: 23, fontWeight: '900', letterSpacing: 0.25, marginTop: 1 },
+  vehicleIdentityMeta: { color: '#CBDCF2', fontSize: 9, lineHeight: 12, fontWeight: '700', marginTop: 1 },
   vehicleIdentityFocus: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   documentReadyCard: { borderRadius: 18, borderWidth: 1, borderColor: '#D7E2EF', backgroundColor: '#FFFFFF', padding: 12, marginBottom: 12, shadowColor: '#14375F', shadowOpacity: 0.05, shadowRadius: 9, shadowOffset: { width: 0, height: 4 }, elevation: 1 },
   documentReadyHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 10 },
@@ -502,20 +565,23 @@ const styles = StyleSheet.create({
   documentReadyTile: { position: 'relative', flex: 1, minWidth: 0, minHeight: 106, borderRadius: 14, backgroundColor: '#F7FAFF', borderWidth: 1.5, borderColor: '#E2EAF4', paddingVertical: 8, paddingHorizontal: 5, alignItems: 'center', justifyContent: 'center' },
   documentReadyTileReady: { backgroundColor: '#F2F7FF', borderColor: '#6D9EE8' },
   documentReadyTileSelected: { backgroundColor: '#EFFAF4', borderColor: '#52B57F', shadowColor: '#18864B', shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
-  documentSelectedCheck: { position: 'absolute', top: 5, right: 5, width: 25, height: 25, borderRadius: 13, backgroundColor: 'rgba(46, 173, 99, 0.16)', alignItems: 'center', justifyContent: 'center' },
+  documentSelectedCheck: { position: 'absolute', top: 5, left: 5, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(46, 173, 99, 0.16)', alignItems: 'center', justifyContent: 'center' },
+  documentRemoveButton: { position: 'absolute', top: 5, right: 5, zIndex: 3, width: 23, height: 23, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.92)', borderWidth: 1, borderColor: '#DCE3EC', alignItems: 'center', justifyContent: 'center' },
   documentReadyArtworkWrap: { width: 45, height: 45, alignItems: 'center', justifyContent: 'center' },
   documentReadyArtwork: { width: 43, height: 43 },
   documentReadyTileText: { color: palette.navy, fontSize: 8.5, lineHeight: 11, fontWeight: '800', textAlign: 'center', marginTop: 3 },
   documentReadyStatus: { color: '#7A8799', fontSize: 7.5, fontWeight: '800', marginTop: 3 },
   documentReadyStatusReady: { color: '#326FC6' },
   documentReadyStatusSelected: { color: '#18864B' },
-  bulkUpload: { minHeight: 58, marginTop: 10, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#AFC8E8', backgroundColor: '#F7FAFF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  bulkUploadShell: { position: 'relative' },
+  bulkUpload: { minHeight: 58, marginTop: 10, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#AFC8E8', backgroundColor: '#F7FAFF', paddingHorizontal: 10, paddingRight: 38, flexDirection: 'row', alignItems: 'center', gap: 9 },
   bulkUploadSelected: { borderStyle: 'solid', borderColor: '#52B57F', backgroundColor: '#EFFAF4' },
   bulkUploadIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center' },
   bulkUploadIconSelected: { backgroundColor: 'rgba(46, 173, 99, 0.14)' },
   bulkUploadCopy: { flex: 1, minWidth: 0 },
   bulkUploadTitle: { color: palette.navy, fontSize: 10.5, fontWeight: '900' },
   bulkUploadText: { color: '#718198', fontSize: 8.5, lineHeight: 12, fontWeight: '600', marginTop: 2 },
+  bulkRemoveButton: { position: 'absolute', top: 15, right: 7, zIndex: 3, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE3EC', alignItems: 'center', justifyContent: 'center' },
   documentUploadNote: { color: '#7A8799', fontSize: 8, lineHeight: 11, fontWeight: '600', marginTop: 8 },
   voicePlaceholder: { borderRadius: 18, borderWidth: 1, borderColor: '#CADAF0', backgroundColor: '#F5F9FF', padding: 13, marginBottom: 12 },
   voiceHeadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
