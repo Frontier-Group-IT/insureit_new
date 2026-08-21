@@ -1,11 +1,12 @@
 "use client";
 
-import { Files, FileText, RefreshCw, Upload } from "lucide-react";
+import { Files, FileText, LoaderCircle, RefreshCw, Trash2, Upload } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   getPolicyCopyForEdit,
+  removePolicyCopyForEdit,
   savePolicyCopyForEdit,
   type PolicyEditCopy,
 } from "@/app/policies/policy-edit-document-actions";
@@ -32,6 +33,8 @@ export function PolicyEditCopyFooterActions() {
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
+  const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
 
   useEffect(() => {
@@ -84,8 +87,17 @@ export function PolicyEditCopyFooterActions() {
     return () => window.clearTimeout(timer);
   }, [notice]);
 
+  useEffect(() => {
+    if (!removeConfirmOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isRemoving) setRemoveConfirmOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [removeConfirmOpen, isRemoving]);
+
   function viewPolicy() {
-    if (!policyCopy || isOpening) return;
+    if (!policyCopy || isOpening || isRemoving) return;
     setIsOpening(true);
     setNotice(null);
 
@@ -98,7 +110,7 @@ export function PolicyEditCopyFooterActions() {
   }
 
   async function uploadPolicyCopy(file: File) {
-    if (!policyId || isUploading) return;
+    if (!policyId || isUploading || isRemoving) return;
     setIsUploading(true);
     setNotice(null);
 
@@ -120,6 +132,27 @@ export function PolicyEditCopyFooterActions() {
       setNotice({ tone: "error", message: "Policy copy could not be uploaded. Please try again." });
     } finally {
       setIsUploading(false);
+    }
+  }
+
+  async function removePolicyCopy() {
+    if (!policyId || !policyCopy || isRemoving) return;
+    setIsRemoving(true);
+    setNotice(null);
+
+    try {
+      const result = await removePolicyCopyForEdit(policyId);
+      if (!result.ok) {
+        setNotice({ tone: "error", message: result.error });
+        return;
+      }
+      setPolicyCopy(null);
+      setRemoveConfirmOpen(false);
+      setNotice({ tone: "success", message: "Policy copy removed successfully." });
+    } catch {
+      setNotice({ tone: "error", message: "Policy copy could not be removed. Please try again." });
+    } finally {
+      setIsRemoving(false);
     }
   }
 
@@ -156,7 +189,7 @@ export function PolicyEditCopyFooterActions() {
                 <button
                   type="button"
                   onClick={viewPolicy}
-                  disabled={isOpening || isUploading}
+                  disabled={isOpening || isUploading || isRemoving}
                   aria-label="View policy copy"
                   title={policyCopy.fileName ? `View policy: ${policyCopy.fileName}` : "View policy copy"}
                   className="inline-flex min-w-0 items-center gap-2 px-3 text-[10px] font-semibold transition hover:bg-[#EEF5FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#9CB9E6] disabled:cursor-wait disabled:opacity-60"
@@ -167,12 +200,22 @@ export function PolicyEditCopyFooterActions() {
                 <button
                   type="button"
                   onClick={() => inputRef.current?.click()}
-                  disabled={isUploading || isOpening}
+                  disabled={isUploading || isOpening || isRemoving}
                   aria-label="Replace policy copy"
                   title="Replace policy copy"
                   className="inline-flex w-9 items-center justify-center bg-[#DBEAFE] text-[#2563EB] transition hover:bg-[#BFDBFE] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#93C5FD] disabled:cursor-wait disabled:opacity-60"
                 >
                   <RefreshCw className={`h-3.5 w-3.5 ${isUploading ? "animate-spin" : ""}`} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRemoveConfirmOpen(true)}
+                  disabled={isUploading || isOpening || isRemoving}
+                  aria-label="Remove policy copy"
+                  title="Remove policy copy"
+                  className="inline-flex w-9 items-center justify-center border-l border-[#F2D5D1] bg-[#FFF5F3] text-[#B5534F] transition hover:bg-[#FDE9E6] hover:text-[#9E403C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#E9AAA3] disabled:cursor-wait disabled:opacity-60"
+                >
+                  {isRemoving ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                 </button>
               </div>
               <span
@@ -186,7 +229,7 @@ export function PolicyEditCopyFooterActions() {
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              disabled={isUploading}
+              disabled={isUploading || isRemoving}
               className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#BFD3F7] bg-[#F7FAFF] px-3 text-[10px] font-semibold text-[#174EA6] transition hover:bg-[#EEF5FF] disabled:cursor-wait disabled:opacity-60"
             >
               <Upload className={`h-3.5 w-3.5 ${isUploading ? "animate-pulse" : ""}`} />
@@ -196,6 +239,36 @@ export function PolicyEditCopyFooterActions() {
         </div>,
         footer,
       )}
+
+      {removeConfirmOpen && policyCopy ? createPortal(
+        <div className="fixed inset-0 z-[170] grid place-items-center bg-[#0F2544]/35 px-4 backdrop-blur-[2px]" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !isRemoving) setRemoveConfirmOpen(false); }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="remove-policy-copy-title" className="w-full max-w-[410px] overflow-hidden rounded-2xl border border-[#E8EDF4] bg-white shadow-[0_24px_70px_rgba(15,37,68,.24)]">
+            <div className="flex items-start gap-3 px-5 pb-4 pt-5">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#F3D8D4] bg-[#FFF5F3] text-[#B5534F]">
+                <Trash2 className="h-[17px] w-[17px]" />
+              </div>
+              <div className="min-w-0 pt-0.5">
+                <h3 id="remove-policy-copy-title" className="text-[13px] font-bold text-[#17203A]">Remove policy document?</h3>
+                <p className="mt-1.5 text-[10px] leading-[1.55] text-[#667085]">
+                  This will remove the attached policy copy from this policy. You can upload a new copy again at any time.
+                </p>
+                <p className="mt-2 max-w-[300px] truncate rounded-lg bg-[#F8FAFC] px-2.5 py-1.5 text-[9px] font-semibold text-[#526277]" title={policyCopy.fileName}>
+                  {policyCopy.fileName}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-[#EDF1F5] bg-[#FBFCFE] px-5 py-3.5">
+              <button type="button" onClick={() => setRemoveConfirmOpen(false)} disabled={isRemoving} className="rounded-xl border border-[#D8E0EA] bg-white px-3.5 py-2 text-[9.5px] font-semibold text-[#475467] transition hover:bg-[#F6F8FB] disabled:opacity-60">
+                Cancel
+              </button>
+              <button type="button" onClick={() => void removePolicyCopy()} disabled={isRemoving} className="inline-flex min-w-[118px] items-center justify-center gap-1.5 rounded-xl border border-[#EDC9C5] bg-[#FFF1EF] px-3.5 py-2 text-[9.5px] font-bold text-[#A84843] transition hover:bg-[#FDE3E0] hover:text-[#913B37] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F3CBC7] disabled:cursor-wait disabled:opacity-65">
+                {isRemoving ? <><LoaderCircle className="h-3.5 w-3.5 animate-spin" />Removing…</> : <><Trash2 className="h-3.5 w-3.5" />Remove document</>}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      ) : null}
 
       {notice ? (
         <div

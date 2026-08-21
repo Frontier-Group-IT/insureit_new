@@ -158,3 +158,46 @@ export async function savePolicyCopyForEdit(policyId: string, formData: FormData
   revalidatePath(`/policies/${normalizedPolicyId}/edit`);
   return { ok: true, document: metadata(saved) };
 }
+
+export async function removePolicyCopyForEdit(policyId: string): Promise<PolicyEditCopyResult> {
+  const profile = await requirePolicyEditor();
+  const normalizedPolicyId = policyId.trim();
+  if (!isUuid(normalizedPolicyId)) return { ok: false, error: "Invalid policy reference." };
+
+  const admin = createSupabaseAdminClient();
+  const { data: policy, error: policyError } = await admin
+    .from("policies")
+    .select("id")
+    .eq("id", normalizedPolicyId)
+    .maybeSingle<{ id: string }>();
+  if (policyError) return { ok: false, error: "Could not verify the policy. Please try again." };
+  if (!policy?.id) return { ok: false, error: "This policy no longer exists." };
+
+  const { data: existing, error: existingError } = await latestPolicyCopy(admin, normalizedPolicyId);
+  if (existingError) return { ok: false, error: "Could not verify the current policy copy. Please try again." };
+  if (!existing) return { ok: true, document: null };
+
+  const { error: deleteError } = await admin
+    .from("policy_documents")
+    .delete()
+    .eq("id", existing.id)
+    .eq("policy_id", normalizedPolicyId)
+    .eq("document_type", "policy_copy");
+  if (deleteError) return { ok: false, error: "Policy copy could not be removed. Please try again." };
+
+  if (existing.storage_path) {
+    await admin.storage
+      .from(existing.storage_bucket || POLICY_DOCUMENT_BUCKET)
+      .remove([existing.storage_path]);
+  }
+
+  await recordPolicyActivity(
+    admin,
+    normalizedPolicyId,
+    profile.id,
+    POLICY_ACTIVITY_ACTIONS.POLICY_DOC_REMOVED,
+  );
+  revalidatePath("/policies");
+  revalidatePath(`/policies/${normalizedPolicyId}/edit`);
+  return { ok: true, document: null };
+}
