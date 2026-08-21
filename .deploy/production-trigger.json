@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy Portfolio single-row filter layout.",
-  "deploy_requested_at": "2026-08-20T18:21:00+05:30",
+  "purpose": "Deploy Policy Section 02 linked customer and vehicle master edit workflow.",
+  "deploy_requested_at": "2026-08-21T13:39:00+05:30",
   "requested_by": "explicit user merge and deploy request",
   "source": "Deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "65fc3d4cdb752fd595135b5df11f44d9bed4a61c",
-  "release_scope": "Deploy PR #482, which keeps All Sources, All insurers, From Date, To Date and the policy status counters in one horizontal row at desktop 100% zoom by compacting control widths, gaps and status-tab spacing only within Policy Portfolio. Smaller layouts retain responsive wrapping. Filtering logic, date behavior, backend logic, database schema, Supabase, permissions, and policy workflows remain unchanged.",
-  "verification": "PR #482 Verify web portal run 32370817051 passed successfully, including regressions, typecheck, lint, and the Next.js production build. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source_commit": "a187aeb995333a551970f9d789548f0346540d3f",
+  "release_scope": "Deploy PR #497, which adds Edit Customer and Edit Vehicle actions to Policy Edit Section 02, opens the existing customer and vehicle editors in large embedded modals, locks vehicle ownership in policy context, warns before sensitive vehicle identifier corrections or discarding unsaved edits, and refreshes Section 02 from the authoritative linked customer/vehicle master records after successful save.",
+  "verification": "PR #497 Verify web portal run 32461517730 passed successfully. This release has no database schema migration, no Supabase RLS/auth change, and no production configuration change. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
