@@ -116,16 +116,17 @@ If the answer to either of the first two questions is no, do not save it.
 - It must run the Policy OCR regressions (IFFCO structured, IFFCO, Digit, New India), TypeScript typecheck, lint, and the Next.js production build.
 - Agents must inspect the GitHub Actions run and job logs themselves, fix CI/workflow/code failures themselves where repository access permits, and rerun through normal commits. Do not shift routine CI execution back to the user.
 - User-local terminal execution is reserved only for a genuinely local-only dependency that GitHub Actions cannot access or reproduce. If that rare case occurs, state the concrete reason before asking the user to run anything.
-- Production deployment must remain gated by the same reusable verification workflow. `.github/workflows/deploy-production.yml` must not call the Vercel production deploy hook unless the compulsory verification job has succeeded first.
+- Run the full canonical gate exactly once for a release, normally on the feature pull request. Do not rerun the same regressions/typecheck/lint/build after merge or inside the production deployment workflow.
+- `.github/workflows/deploy-production.yml` must validate the successful `Verify web portal` pull-request run ID, its exact verified commit, merged-PR status and current `main` ancestry before calling the Vercel production deploy hook. This fast provenance check reuses the green gate; it does not rebuild the application.
 - A green CI gate proves only the automated checks for that exact commit. It does not prove Vercel Ready, migrations applied, external integrations working, or the authenticated live user journey; verify those separately before claiming them.
 - Do not weaken, bypass, skip, or remove the CI gate merely to make a deployment proceed. Fix the underlying failure or record a real blocker.
 
-- Approved changes for this established project may be committed directly to `main` unless the user explicitly requests a branch or pull request.
+- Approved implementation changes use a feature branch and one pull request so the canonical verification gate runs once before merge.
 - Before modifying an existing file, fetch the current `main` version and use its current blob SHA.
 - Vercel deploys from `main`.
 - Automatic Vercel deployment from ordinary Git commits is intentionally disabled.
-- Ordinary development commits must not modify `.deploy/production-trigger.json`.
-- Trigger one batched production deployment only after the user explicitly says **deploy now** or **finish and deploy**. Do this by updating `.deploy/production-trigger.json`; `.github/workflows/deploy-production.yml` then calls the protected Vercel deploy hook.
+- `.deploy/production-trigger.json` is retained only as historical release metadata and no longer triggers deployment. Ordinary development commits must not modify it.
+- Trigger one batched production deployment only after the user explicitly says **deploy now** or **finish and deploy**. Dispatch `.github/workflows/deploy-production.yml` directly with the successful feature-PR verification run ID and its verified head commit. Do not create a deployment-trigger commit or deployment-trigger pull request.
 - A successful GitHub Actions hook request proves only that Vercel accepted the request. Check the Vercel build/deployment result before claiming production success.
 - A committed migration is not proof that it has been applied in Supabase.
 - Do not claim build, deployment, migration or live workflow success without direct evidence.
@@ -622,7 +623,7 @@ This section is a curated snapshot of current implementation decisions that mate
 - Canonical production application URL: `https://portal.insureit.in`.
 - Temporary fallback during stabilization: `https://insureit-drab.vercel.app`.
 - **DEPLOYMENT RULE:** automatic Vercel deployment from ordinary Git commits is intentionally disabled. Do not say a merge is live merely because it reached `main`.
-- Production deployment is intentionally triggered only when the user explicitly requests deployment. The protected workflow updates/calls the Vercel deploy hook through `.deploy/production-trigger.json` / `.github/workflows/deploy-production.yml` per the working agreement above.
+- Production deployment is intentionally triggered only when the user explicitly requests deployment. Dispatch `.github/workflows/deploy-production.yml` with the already-successful feature-PR verification run ID and verified head commit; do not create a second deployment PR or rerun the full gate.
 - A successful deploy-hook request means Vercel accepted the request; it is not proof that the final Vercel deployment completed. Verify the exact deployment before claiming **DEPLOYED**.
 - A committed Supabase migration is not proof that it was applied. Never claim **APPLIED** without target-environment evidence.
 

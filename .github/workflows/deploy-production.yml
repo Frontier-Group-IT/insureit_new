@@ -1,32 +1,97 @@
 name: Deploy production to Vercel
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - .deploy/production-trigger.json
   workflow_dispatch:
+    inputs:
+      verified_commit:
+        description: Feature/PR head commit verified by the canonical web-portal gate
+        required: true
+        type: string
+      verification_run_id:
+        description: Successful Verify web portal GitHub Actions run ID for verified_commit
+        required: true
+        type: string
 
 permissions:
+  actions: read
   contents: read
+  pull-requests: read
 
 concurrency:
   group: insureit-production-deployment
   cancel-in-progress: false
 
 jobs:
-  verify:
-    name: Run compulsory verification gate
-    uses: ./.github/workflows/verify-web-portal.yml
-
   deploy:
-    name: Trigger Vercel production deployment
-    needs: verify
+    name: Validate verified release and deploy
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
+      - name: Checkout exact main snapshot
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate verification provenance
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFIED_COMMIT: ${{ inputs.verified_commit }}
+          VERIFICATION_RUN_ID: ${{ inputs.verification_run_id }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$VERIFIED_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::verified_commit must be a full 40-character Git SHA."
+            exit 1
+          fi
+          if [[ ! "$VERIFICATION_RUN_ID" =~ ^[0-9]+$ ]]; then
+            echo "::error::verification_run_id must be numeric."
+            exit 1
+          fi
+
+          remote_main=$(git ls-remote origin refs/heads/main | awk '{print $1}')
+          if [[ "$remote_main" != "$GITHUB_SHA" ]]; then
+            echo "::error::main advanced after this deployment was dispatched. Re-dispatch for the latest verified main."
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$VERIFIED_COMMIT" "$GITHUB_SHA"; then
+            echo "::error::The verified commit is not contained in the selected main snapshot."
+            exit 1
+          fi
+
+          read -r -a main_parents <<<"$(git show -s --format=%P "$GITHUB_SHA")"
+          if [[ "${#main_parents[@]}" -eq 2 ]]; then
+            if [[ "${main_parents[1]}" != "$VERIFIED_COMMIT" ]]; then
+              echo "::error::verified_commit is not the feature head of the latest merge into main."
+              exit 1
+            fi
+          elif [[ "${#main_parents[@]}" -eq 1 && "$GITHUB_SHA" != "$VERIFIED_COMMIT" ]]; then
+            echo "::error::The selected main snapshot is not the directly verified commit."
+            exit 1
+          fi
+
+          run_json=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$VERIFICATION_RUN_ID")
+          run_name=$(jq -r '.name' <<<"$run_json")
+          run_event=$(jq -r '.event' <<<"$run_json")
+          run_head=$(jq -r '.head_sha' <<<"$run_json")
+          run_conclusion=$(jq -r '.conclusion' <<<"$run_json")
+          if [[ "$run_name" != "Verify web portal" || "$run_event" != "pull_request" || "$run_head" != "$VERIFIED_COMMIT" || "$run_conclusion" != "success" ]]; then
+            echo "::error::Verification provenance mismatch: expected a successful Verify web portal pull_request run for $VERIFIED_COMMIT."
+            exit 1
+          fi
+
+          merged_pr_count=$(gh api -H "Accept: application/vnd.github+json" \
+            "repos/$GITHUB_REPOSITORY/commits/$VERIFIED_COMMIT/pulls" \
+            --jq '[.[] | select(.base.ref == "main" and .merged_at != null)] | length')
+          if [[ "$merged_pr_count" -lt 1 ]]; then
+            echo "::error::The verified commit is not associated with a merged pull request into main."
+            exit 1
+          fi
+
+          echo "Verified release provenance: run $VERIFICATION_RUN_ID -> commit $VERIFIED_COMMIT -> current main $GITHUB_SHA"
+
       - name: Verify deploy hook secret
         shell: bash
         env:
@@ -71,7 +136,9 @@ jobs:
             echo "- Branch: \`main\`"
             echo "- Trigger commit: \`${GITHUB_SHA}\`"
             echo "- Requested by: \`${GITHUB_ACTOR}\`"
-            echo "- Verification gate: passed before deploy hook"
+            echo "- Full verification run reused: \`${{ inputs.verification_run_id }}\`"
+            echo "- Verified feature commit: \`${{ inputs.verified_commit }}\`"
+            echo "- Release provenance: successful PR gate, merged into the exact current main snapshot"
             echo
-            echo "This confirms the repository verification gate passed and Vercel accepted the deploy-hook request. Check Vercel for the final build and deployment result."
+            echo "The full regression/build suite is intentionally not rerun during deployment. This confirms the earlier successful gate was validated and Vercel accepted the deploy-hook request. Check Vercel for the final build and deployment result."
           } >> "$GITHUB_STEP_SUMMARY"

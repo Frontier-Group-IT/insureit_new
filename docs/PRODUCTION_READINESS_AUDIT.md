@@ -225,6 +225,7 @@ The mobile application was not included in this website audit and needs its own 
 - **Impact:** A failed build or unhealthy deployment can be mistaken for a successful release. No automated smoke test or rollback gate is shown.
 - **Required fix:** Tie deployment to a validated commit, poll final deployment state, execute smoke tests, record artifact/commit/migration versions, and document one-command rollback plus database forward-fix strategy.
 - **Acceptance test:** A deliberately failing Vercel build and failing smoke test both mark the release failed and preserve/restore the previous production version.
+- **PARTIALLY REMEDIATED 2026-08-22:** deployment now validates and reuses one successful feature-PR verification run for an exact commit merged into the current `main` snapshot, eliminating repeated full CI gates. The workflow still stops after Vercel accepts the hook; final Vercel polling, automated smoke tests and rollback remain open under this finding.
 
 ### PR-16 — Monitoring, alerting, backup and restore evidence is missing
 

@@ -348,7 +348,7 @@ Authenticated OCR upload/review/apply: UNVERIFIED
 
 ## 8. Release discipline / next steps
 
-Ordinary commits do not intentionally deploy production. Do not modify `.deploy/production-trigger.json` unless the user explicitly says `deploy now` or `finish and deploy` after the current code change.
+Ordinary commits do not intentionally deploy production. After the user explicitly says `deploy now` or `finish and deploy`, dispatch the protected production workflow with the successful feature-PR verification run ID and verified commit. Do not create a deployment-trigger commit/PR or rerun the same full gate during deployment.
 
 Before deployment of the dedicated Layout Parser integration, run:
 
