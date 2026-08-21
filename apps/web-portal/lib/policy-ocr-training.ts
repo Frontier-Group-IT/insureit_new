@@ -233,7 +233,10 @@ export function compareTrainingValue(
   if (key === "policy_product") {
     return normalizePolicyProduct(referenceValue) === normalizePolicyProduct(proposalValue) ? "match" : "mismatch";
   }
-  if (key === "vehicle_registration_number" || key === "vehicle_chassis_number" || key === "vehicle_engine_number") {
+  if (key === "vehicle_registration_number") {
+    return normalizeRegistrationIdentifier(referenceValue) === normalizeRegistrationIdentifier(proposalValue) ? "match" : "mismatch";
+  }
+  if (key === "vehicle_chassis_number" || key === "vehicle_engine_number") {
     return normalizeVehicleIdentifier(referenceValue) === normalizeVehicleIdentifier(proposalValue) ? "match" : "mismatch";
   }
   if (key === "vehicle_registration_status") {
@@ -243,7 +246,17 @@ export function compareTrainingValue(
     return normalizeVehicleClass(referenceValue) === normalizeVehicleClass(proposalValue) ? "match" : "mismatch";
   }
   if (key === "vehicle_capacity") {
-    return normalizeCapacity(referenceValue) === normalizeCapacity(proposalValue) ? "match" : "mismatch";
+    const referenceCapacity = parseCapacity(referenceValue);
+    const proposalCapacity = parseCapacity(proposalValue);
+    return referenceCapacity !== null && proposalCapacity !== null
+      ? Math.abs(referenceCapacity - proposalCapacity) <= 2 ? "match" : "mismatch"
+      : normalizeComparisonText(referenceValue) === normalizeComparisonText(proposalValue) ? "match" : "mismatch";
+  }
+  if (key === "vehicle_rto_name") {
+    return normalizeRto(referenceValue) === normalizeRto(proposalValue) ? "match" : "mismatch";
+  }
+  if (key === "vehicle_rto_state") {
+    return normalizeRtoState(referenceValue) === normalizeRtoState(proposalValue) ? "match" : "mismatch";
   }
   return normalizeComparisonText(referenceValue) === normalizeComparisonText(proposalValue) ? "match" : "mismatch";
 }
@@ -400,6 +413,10 @@ function normalizeVehicleIdentifier(value: string) {
   return value.toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
+function normalizeRegistrationIdentifier(value: string) {
+  return normalizeVehicleIdentifier(value).replace(/^([A-Z]{2})0([1-9])/, "$1$2");
+}
+
 function normalizeRegistrationStatus(value: string) {
   const normalized = normalizeComparisonText(value);
   return /pending|unregistered|new vehicle/.test(normalized) ? "registration_pending" : "registered";
@@ -415,7 +432,24 @@ function normalizeVehicleClass(value: string) {
   return normalized;
 }
 
-function normalizeCapacity(value: string) {
+function parseCapacity(value: string) {
   const number = value.replaceAll(",", "").match(/\d+(?:\.\d+)?/);
-  return number ? String(Number(number[0])) : normalizeComparisonText(value);
+  return number ? Number(number[0]) : null;
+}
+
+function normalizeRto(value: string) {
+  const normalized = normalizeComparisonText(value);
+  if (/\bjabalpur\b|\bmp\s*20\b/.test(normalized)) return "mp20";
+  if (/\bmandla\b|\bmp\s*51\b/.test(normalized)) return "mp51";
+  if (/\bdelhi\b|\bdl\s*0?8\b/.test(normalized)) return "dl8";
+  if (/\bballabgarh\b|\bhr\s*29\b/.test(normalized)) return "hr29";
+  return normalized.replace(/\s+/g, "");
+}
+
+function normalizeRtoState(value: string) {
+  const normalized = normalizeComparisonText(value);
+  if (/madhya pradesh|\bmp\b/.test(normalized)) return "madhya_pradesh";
+  if (/delhi/.test(normalized)) return "delhi";
+  if (/haryana/.test(normalized)) return "haryana";
+  return normalized;
 }

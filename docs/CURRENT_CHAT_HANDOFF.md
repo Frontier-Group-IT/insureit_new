@@ -861,3 +861,11 @@ Migration `20260822093000_policy_ocr_section_02_training.sql` adds service-role-
 **MIGRATION RERUN FIX:** after PR #535 merged, Supabase run `32527822191` stopped while rerunning `20260821153000_premium_ocr_training_workflow.sql` because that historical script re-added the retired different-operator constraint against already-approved single-operator rows. The rerunnable migration must continue dropping the legacy constraint but must never re-add it. The newer single-operator migration remains authoritative.
 
 The rerunnable queue migration now downgrades only legacy `approved` rows that have no approval actor. It no longer resets already-approved candidates to `reviewed` when the protected migration workflow is rerun.
+
+### Six approved-policy parser training — 2026-08-22
+
+**IMPLEMENTED LOCALLY / NOT MERGED OR DEPLOYED:** six approved Section 02 + Section 03 comparisons were converted into a privacy-safe structured-layout regression corpus. The production PDFs were inspected only from a temporary local directory; no PDF, raw OCR text or real identifier is in the branch.
+
+The parser now recognizes HDFC ERGO and Royal Sundaram directly, runs Google Layout Parser once for every manually selected PDF, and uses structured table alignment to extract vehicle and reconciled premium fields for the approved United India, HDFC ERGO, New India, National and Royal Sundaram shapes. The six sanitized cases pass with 24–25 comparable fields each; the complete OCR regression suite, TypeScript check and focused lint pass.
+
+This is parser training through reviewed code and regression evidence, not an automatically self-modifying model. The six live queue rows must be manually rerun after this branch is merged and explicitly deployed; their existing approvals alone do not reprocess them with the new parser.

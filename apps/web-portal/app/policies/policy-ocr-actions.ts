@@ -18,6 +18,7 @@ import {
 } from "@/lib/policy-ocr-iffco-structured-refiner";
 import { refineNewIndiaCommercialPolicy } from "@/lib/policy-ocr-new-india-refiner";
 import { refineNewIndiaStructuredPolicy } from "@/lib/policy-ocr-new-india-structured-refiner";
+import { refineApprovedMotorPolicyLayout } from "@/lib/policy-ocr-approved-layout-refiner";
 import { requirePolicyOcrTrainingOperator } from "@/lib/policy-ocr-training-access";
 import { loadPolicyOcrTrainingReference } from "@/lib/policy-ocr-training-reference";
 
@@ -167,14 +168,16 @@ async function extractPolicyFile(
           ? refineNewIndiaCommercialPolicy(pages, baseParsed)
           : refineAdditionalMotorPolicy(pages, baseParsed);
 
-    if ((baseParsed.parserId === "iffco_tokio_commercial_motor_v1" && parsed.fields.find((field) => field.key === "policy_product")?.value !== "SAOD") || baseParsed.parserId === "new_india_motor_v1") {
-      const tables = file.type === "application/pdf"
-        ? await processLayoutTables({ config, content, mimeType: file.type, accessToken: googleAccessToken, signal: controller.signal })
-        : [];
-      parsed = baseParsed.parserId === "iffco_tokio_commercial_motor_v1"
-        ? refineIffcoStructuredFinancials(tables, parsed)
-        : refineNewIndiaStructuredPolicy(tables, parsed);
+    const tables = file.type === "application/pdf"
+      ? await processLayoutTables({ config, content, mimeType: file.type, accessToken: googleAccessToken, signal: controller.signal })
+      : [];
+    if (baseParsed.parserId === "iffco_tokio_commercial_motor_v1" && parsed.fields.find((field) => field.key === "policy_product")?.value !== "SAOD") {
+      parsed = refineIffcoStructuredFinancials(tables, parsed);
     }
+    if (baseParsed.parserId === "new_india_motor_v1") {
+      parsed = refineNewIndiaStructuredPolicy(tables, parsed);
+    }
+    parsed = refineApprovedMotorPolicyLayout(pages, tables, parsed);
 
     if (!parsed.fields.length) return { ok: false, error: "No supported policy details could be read from this document. Please review the file and enter the details manually if needed." };
 

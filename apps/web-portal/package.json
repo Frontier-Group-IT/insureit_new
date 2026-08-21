@@ -18,8 +18,9 @@
     "policy-ocr:digit-regression": "node --experimental-strip-types scripts/policy-ocr-digit-regression.ts",
     "policy-ocr:new-india-regression": "node --experimental-strip-types scripts/policy-ocr-new-india-regression.ts",
     "policy-ocr:additional-regression": "node --experimental-strip-types scripts/policy-ocr-additional-regression.ts",
+    "policy-ocr:approved-layout-regression": "node --experimental-strip-types scripts/policy-ocr-approved-layout-regression.ts",
     "policy-ocr:training-workflow-regression": "node --experimental-strip-types scripts/policy-ocr-training-workflow-regression.ts",
-    "policy-ocr:all-regressions": "npm run policy-ocr:iffco-structured-regression && npm run policy-ocr:iffco-regression && npm run policy-ocr:digit-regression && npm run policy-ocr:new-india-regression && npm run policy-ocr:additional-regression && npm run policy-ocr:training-workflow-regression"
+    "policy-ocr:all-regressions": "npm run policy-ocr:iffco-structured-regression && npm run policy-ocr:iffco-regression && npm run policy-ocr:digit-regression && npm run policy-ocr:new-india-regression && npm run policy-ocr:additional-regression && npm run policy-ocr:approved-layout-regression && npm run policy-ocr:training-workflow-regression"
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",
