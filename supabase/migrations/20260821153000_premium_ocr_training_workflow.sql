@@ -17,6 +17,11 @@ alter table public.policy_ocr_training_labels
 
 alter table public.policy_ocr_training_labels
   drop constraint if exists policy_ocr_training_labels_status_check;
+alter table public.policy_ocr_training_labels
+  drop constraint if exists policy_ocr_training_labels_processing_status_check,
+  drop constraint if exists policy_ocr_training_labels_attempts_check,
+  drop constraint if exists policy_ocr_training_labels_separate_approval_check,
+  drop constraint if exists policy_ocr_training_labels_approved_state_check;
 
 update public.policy_ocr_training_labels
 set status = 'reviewed'
