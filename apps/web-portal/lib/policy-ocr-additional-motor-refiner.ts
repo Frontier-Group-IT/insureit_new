@@ -21,6 +21,8 @@ const INSURERS: Record<string, { name: string; version: string }> = {
   national_motor_v1: { name: "National Insurance Company Limited", version: "national_motor_v1.1.0" },
   universal_sompo_motor_v1: { name: "Universal Sompo General Insurance Company Limited", version: "universal_sompo_motor_v1.1.0" },
   united_india_motor_v1: { name: "United India Insurance Company Limited", version: "united_india_motor_v1.1.0" },
+  hdfc_ergo_motor_v1: { name: "HDFC ERGO General Insurance Company Limited", version: "hdfc_ergo_motor_v1.1.0" },
+  royal_sundaram_motor_v1: { name: "Royal Sundaram General Insurance Co. Limited", version: "royal_sundaram_motor_v1.1.0" },
 };
 
 export function refineAdditionalMotorPolicy(pages: string[], parsed: ParsedPolicyResult): ParsedPolicyResult {

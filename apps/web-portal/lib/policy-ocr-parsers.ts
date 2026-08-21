@@ -59,6 +59,8 @@ type InsurerFamily =
   | "national"
   | "universal_sompo"
   | "united_india"
+  | "hdfc_ergo"
+  | "royal_sundaram"
   | "generic";
 
 export function parsePolicyDocument(pages: string[]): ParsedPolicyResult {
@@ -72,7 +74,7 @@ export function parsePolicyDocument(pages: string[]): ParsedPolicyResult {
     result = parseIffco(cleanPages);
   } else if (family === "new_india") {
     result = parseNewIndia(cleanPages);
-  } else if (family === "shriram" || family === "oriental" || family === "national" || family === "universal_sompo" || family === "united_india") {
+  } else if (family === "shriram" || family === "oriental" || family === "national" || family === "universal_sompo" || family === "united_india" || family === "hdfc_ergo" || family === "royal_sundaram") {
     result = parseKnownInsurer(cleanPages, family);
   } else {
     result = parseGeneric(cleanPages);
@@ -154,6 +156,8 @@ function detectInsurerFamily(pages: string[]): InsurerFamily {
   let national = 0;
   let universalSompo = 0;
   let unitedIndia = 0;
+  let hdfcErgo = 0;
+  let royalSundaram = 0;
 
   // Insurer names near the beginning of page 1 are the strongest evidence.
   if (/GO\s+DIGIT\s+GENERAL\s+INSURANCE/.test(firstPage)) digit += 12;
@@ -164,6 +168,8 @@ function detectInsurerFamily(pages: string[]): InsurerFamily {
   if (/NATIONAL\s+INSURANCE(?:\s+COMPANY)?|customer\.support@nic\.co\.in/i.test(firstPage)) national += 12;
   if (/UNIVERSAL\s+SOMPO\s+GENERAL\s+INSURANCE/.test(firstPage)) universalSompo += 12;
   if (/UNITED\s+INDIA\s+INSURANCE/.test(firstPage)) unitedIndia += 12;
+  if (/HDFC\s+ERGO\s+GENERAL\s+INSURANCE/.test(firstPage)) hdfcErgo += 12;
+  if (/ROYAL\s+SUNDARAM\s+(?:GENERAL\s+)?INSURANCE/.test(firstPage)) royalSundaram += 12;
 
   // Family-specific schedule structure is more reliable than one stray insurer phrase.
   if (/DIGIT\s+COMMERCIAL\s+VEHICLE\s+(?:COMPREHENSIVE|PACKAGE)\s+POLICY/i.test(text)) digit += 8;
@@ -193,6 +199,8 @@ function detectInsurerFamily(pages: string[]): InsurerFamily {
   if (/NATIONAL\s+INSURANCE(?:\s+COMPANY)?/.test(upper)) national += 2;
   if (/UNIVERSAL\s+SOMPO\s+GENERAL\s+INSURANCE/.test(upper)) universalSompo += 2;
   if (/UNITED\s+INDIA\s+INSURANCE/.test(upper)) unitedIndia += 2;
+  if (/HDFC\s+ERGO\s+GENERAL\s+INSURANCE/.test(upper)) hdfcErgo += 2;
+  if (/ROYAL\s+SUNDARAM\s+(?:GENERAL\s+)?INSURANCE/.test(upper)) royalSundaram += 2;
 
   const ranked = [
     { family: "digit" as const, score: digit },
@@ -203,6 +211,8 @@ function detectInsurerFamily(pages: string[]): InsurerFamily {
     { family: "national" as const, score: national },
     { family: "universal_sompo" as const, score: universalSompo },
     { family: "united_india" as const, score: unitedIndia },
+    { family: "hdfc_ergo" as const, score: hdfcErgo },
+    { family: "royal_sundaram" as const, score: royalSundaram },
   ].sort((a, b) => b.score - a.score);
 
   if (ranked[0].score < 5) return "generic";
@@ -328,6 +338,16 @@ function parseKnownInsurer(pages: string[], family: Exclude<InsurerFamily, "digi
       insurer: "United India Insurance Company Limited",
       parserId: "united_india_motor_v1",
       version: "united_india_motor_v1.0.0",
+    },
+    hdfc_ergo: {
+      insurer: "HDFC ERGO General Insurance Company Limited",
+      parserId: "hdfc_ergo_motor_v1",
+      version: "hdfc_ergo_motor_v1.0.0",
+    },
+    royal_sundaram: {
+      insurer: "Royal Sundaram General Insurance Co. Limited",
+      parserId: "royal_sundaram_motor_v1",
+      version: "royal_sundaram_motor_v1.0.0",
     },
   };
   const selected = config[family];

@@ -457,3 +457,29 @@ The database reference loader uses the policy-time `policy_party_snapshots` row 
 Migration `20260822093000_policy_ocr_section_02_training.sql` adds protected `section_02_reference` JSONB and validates nested candidate schema `policy_ocr_training_candidate_v2`. Real policy, registration, chassis and engine values are replaced with deterministic synthetic identifiers in reusable candidates. Raw OCR text and raw evidence are not stored.
 
 The Policy Onboarding review modal can apply only operator-selected Section 02/03 values to the unsaved form. Registration mode is applied first so registered/unregistered form behavior is correct; all remaining values retain review-before-apply behavior.
+
+## 14. Six approved-policy parser training increment — 2026-08-22
+
+**IMPLEMENTED LOCALLY / NOT MERGED OR DEPLOYED:** the six operator-approved comparisons were used as ground truth to add a reusable Google Layout Parser refinement layer. No customer PDF, raw OCR text, name, address or real policy/registration/chassis/engine identifier is committed. The regression corpus reconstructs only the relevant table shapes with explicit synthetic identifiers.
+
+The manual **Run with Google Cloud** path now invokes Layout Parser once for every PDF, then applies insurer-specific structured extraction after the existing text parser. HDFC ERGO and Royal Sundaram have first-class insurer detection instead of falling through to the generic or Universal Sompo parser. The structured pass extracts Section 02 registration state, vehicle class, make/model, fuel, year, class-aware capacity, chassis/engine and RTO, plus reconciled Section 03 IDV/OD/basic-TP/liability-additions/net/GST/gross values.
+
+For these approved records, the portal's existing `cpa_premium` reference is treated as the liability additions outside basic TP when that is what makes `OD + TP + CPA = printed net` reconcile. This covers owner-driver PA and other scheduled liability additions without relabeling basic TP. No component is accepted unless the printed net equation reconciles within the existing comparison tolerance.
+
+Sanitized regression result:
+
+```text
+United India package #1: 24/24 comparable fields
+HDFC ERGO liability:    25/25 comparable fields
+New India SAOD:         25/25 comparable fields
+National package:       24/24 comparable fields
+United India package #2:24/24 comparable fields
+Royal Sundaram liability:25/25 comparable fields
+All OCR regressions: passed
+Typecheck: passed
+Focused lint: passed with 0 errors
+```
+
+Registration comparison now treats district-code zero padding such as `DL-08` and `DL8` as equivalent. Capacity tolerates a difference of at most two units, matching the existing money tolerance, and the approved RTO city/code pairs are normalized for comparison.
+
+The six production labels have **not** been rerun with the new parser because this code is not deployed. After merge and an explicit production deployment request, manually re-run those six rows and inspect the new Section 02/03 comparisons before confirming any replacement candidate.
