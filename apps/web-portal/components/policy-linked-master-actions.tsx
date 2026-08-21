@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 type EditorKind = "customer" | "vehicle";
@@ -100,14 +100,39 @@ export function PolicyLinkedMasterActions({ customerId, vehicleId, canEditCustom
     setEditor(null);
   }
 
-  function finishSuccess(kind: EditorKind) {
+  const finishSuccess = useCallback((kind: EditorKind) => {
     dirtyRef.current = false;
     setEditor(null);
     setCloseWarning(false);
     setIdentifierWarning(false);
     setToast(kind === "customer" ? "Customer updated successfully. Policy details refreshed." : "Vehicle updated successfully. Policy details refreshed.");
     router.refresh();
-  }
+  }, [router]);
+
+  useEffect(() => {
+    if (!editor) return;
+    const checkFrameLocation = () => {
+      const frameWindow = iframeRef.current?.contentWindow;
+      if (!frameWindow) return;
+      let url: URL;
+      try {
+        url = new URL(frameWindow.location.href);
+      } catch {
+        return;
+      }
+      const success = url.searchParams.get("success");
+      if (editor === "customer" && success && (url.pathname === "/customers" || url.pathname === `/customers/${customerId}/edit`)) {
+        finishSuccess("customer");
+        return;
+      }
+      if (editor === "vehicle" && url.pathname === "/vehicles" && success === "vehicle_updated") {
+        finishSuccess("vehicle");
+      }
+    };
+    checkFrameLocation();
+    const timer = window.setInterval(checkFrameLocation, 200);
+    return () => window.clearInterval(timer);
+  }, [customerId, editor, finishSuccess]);
 
   function onFrameLoad() {
     if (!editor) return;
@@ -154,6 +179,9 @@ export function PolicyLinkedMasterActions({ customerId, vehicleId, canEditCustom
           event.preventDefault();
           requestClose();
         });
+      }
+      if (editor === "customer" && href === `/customers/${customerId}/fleet`) {
+        link.remove();
       }
     }
 
