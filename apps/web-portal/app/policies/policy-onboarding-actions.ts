@@ -33,6 +33,7 @@ type VehicleOwnerRow = { id: string; vehicle_no: string; vehicle_no_normalized: 
 function normalizedPhone(value: string) { return value.replace(/\D/g, "").slice(-10); }
 function normalizedRegistration(value: string) { return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, ""); }
 function normalizedVehicleIdentity(value: unknown) { return String(value ?? "").trim().toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+function isTemporaryVehicleNumber(value: string | null | undefined) { return /^(?:NEW|PENDING)-/i.test(value?.trim() ?? ""); }
 function registrationMode(payload: PolicyOnboardingPayload) { return payload.vehicle.registrationMode === "unregistered" ? "unregistered" : "registered"; }
 function cleanName(value: string) { return value.trim().replace(/\s+/g, " "); }
 function canTransferVehicle(role: string | null | undefined) { return role === "manager" || role === "admin" || role === "super_admin" || role === "it_super_user"; }
@@ -209,7 +210,7 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
     const vehicle = mode === "unregistered" ? await findVehicleOwnerByChassis(chassis) : await findVehicleOwner(registration);
     let effectiveCustomerId = selectedCustomerId;
     const ownershipDecision = payload.resolution?.ownershipDecision ?? null;
-    const vehicleDisplay = vehicle?.vehicle_no?.startsWith("PENDING-") ? "Registration pending vehicle" : vehicle?.vehicle_no ?? "";
+    const vehicleDisplay = isTemporaryVehicleNumber(vehicle?.vehicle_no) ? "Registration pending vehicle" : vehicle?.vehicle_no ?? "";
 
     if (vehicle && effectiveCustomerId && vehicle.customer_id !== effectiveCustomerId && !ownershipDecision) {
       return { ok: false, kind: "ownership_conflict", conflict: { vehicleId: vehicle.id, registrationNumber: vehicleDisplay, customerId: vehicle.customer_id, customerName: vehicle.customers?.contact_name ?? "Existing customer", customerPhone: vehicle.customers?.phone ?? "", canTransfer: canTransferVehicle(profile.role) } };
@@ -252,7 +253,7 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
       const lowerMessage = message.toLowerCase();
       if (message.includes("OWNERSHIP_CONFLICT")) {
         const latestVehicle = mode === "unregistered" ? await findVehicleOwnerByChassis(chassis) : await findVehicleOwner(registration);
-        if (latestVehicle) return { ok: false, kind: "ownership_conflict", conflict: { vehicleId: latestVehicle.id, registrationNumber: latestVehicle.vehicle_no?.startsWith("PENDING-") ? "Registration pending vehicle" : latestVehicle.vehicle_no, customerId: latestVehicle.customer_id, customerName: latestVehicle.customers?.contact_name ?? "Existing customer", customerPhone: latestVehicle.customers?.phone ?? "", canTransfer: canTransferVehicle(profile.role) } };
+        if (latestVehicle) return { ok: false, kind: "ownership_conflict", conflict: { vehicleId: latestVehicle.id, registrationNumber: isTemporaryVehicleNumber(latestVehicle.vehicle_no) ? "Registration pending vehicle" : latestVehicle.vehicle_no, customerId: latestVehicle.customer_id, customerName: latestVehicle.customers?.contact_name ?? "Existing customer", customerPhone: latestVehicle.customers?.phone ?? "", canTransfer: canTransferVehicle(profile.role) } };
         return { ok: false, kind: "database", error: "The vehicle record changed while this form was open. Keep your form open and review the customer and vehicle details." };
       }
       if (lowerMessage.includes("customers_phone_normalized_uidx") || lowerMessage.includes("customers_mobile_unique_idx")) {

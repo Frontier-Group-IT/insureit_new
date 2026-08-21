@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 // @ts-expect-error -- This regression runner executes TypeScript directly with Node --experimental-strip-types.
-import { buildTrainingProposal, createSanitizedTrainingCandidate, formatReviewerDate, parseReviewerDate, sanitizeEvidenceNote } from "../lib/policy-ocr-training.ts";
+import { buildTrainingProposal, compareTrainingProposalToReference, compareTrainingValue, createSanitizedTrainingCandidate, formatReviewerDate, parseReviewerDate, sanitizeEvidenceNote } from "../lib/policy-ocr-training.ts";
 
 assert.equal(parseReviewerDate("21/08/2026"), "2026-08-21");
 assert.equal(parseReviewerDate("31/02/2026"), null);
@@ -38,6 +38,32 @@ assert.equal(JSON.stringify(proposal).includes("CUSTOMER NAME"), false);
 assert.equal(JSON.stringify(proposal).includes("PRIVATE PERSON"), false);
 assert.equal(proposal.warnings[0].includes("test@example.com"), false);
 assert.equal(proposal.warnings[0].includes("9876543210"), false);
+
+assert.equal(compareTrainingValue("policy_number", "31/28/003126/00001545", "312800312600001545"), "match");
+assert.equal(compareTrainingValue("policy_product", "Standalone Own Damage", "SAOD"), "match");
+assert.equal(compareTrainingValue("valid_from", "2026-08-21", "21/08/2026"), "match");
+assert.equal(compareTrainingValue("od_premium", 6121, "₹6,122"), "match");
+assert.equal(compareTrainingValue("tp_premium", 16369, null), "ocr_missing");
+
+const comparison = compareTrainingProposalToReference(proposal, {
+  insurer_name: null,
+  policy_product: null,
+  policy_number: null,
+  valid_from: null,
+  valid_upto: null,
+  idv: null,
+  od_premium: 6121,
+  tp_premium: 16369,
+  cpa_opted: null,
+  cpa_premium: null,
+  printed_net_premium: null,
+  printed_gst: null,
+  printed_gross_premium: null,
+});
+assert.equal(comparison.exactMatch, false);
+assert.equal(comparison.matchedFields, 1);
+assert.equal(comparison.missingOcrFields, 1);
+assert.equal(comparison.missingReferenceFields, 11);
 
 const candidate = createSanitizedTrainingCandidate({
   labelId: "abcdef12-3456-7890-abcd-ef1234567890",
@@ -84,17 +110,37 @@ assert.match(actions, /approve_policy_ocr_training/);
 assert.match(actions, /reviewed_by === owner\.id/);
 assert.match(workerActions, /google_ocr_configuration_missing/);
 assert.match(workerActions, /google_oidc_subject_token_missing/);
+assert.match(workerActions, /Automated comparison reference from saved Section 03 data/);
+assert.match(workerActions, /compareTrainingProposalToReference/);
+assert.match(workerActions, /processPolicyOcrTrainingDocument/);
+assert.match(workerActions, /\.eq\("id", label\.id\)/);
+assert.match(workerActions, /\.eq\("processing_status", label\.processing_status\)/);
+assert.match(actions, /runPolicyOcrTrainingLabel/);
 assert.doesNotMatch(actions, /writeFile|appendFile|apply_patch/);
+
+assert.equal(existsSync("app/api/internal/policy-ocr-training/process/route.ts"), false);
+assert.equal(existsSync("lib/policy-ocr-training-schedule.ts"), false);
+const vercelConfig = readFileSync("vercel.json", "utf8");
+assert.doesNotMatch(vercelConfig, /"crons"/);
 
 const uploadActions = [
   readFileSync("app/policies/policy-document-actions.ts", "utf8"),
   readFileSync("app/policies/policy-edit-document-actions.ts", "utf8"),
 ];
-for (const source of uploadActions) assert.match(source, /schedulePolicyOcrTraining/);
+for (const source of uploadActions) assert.doesNotMatch(source, /schedulePolicyOcrTraining|processPolicyOcrTraining/);
 
 const queuePage = readFileSync("app/policies/ocr-training/page.tsx", "utf8");
 assert.match(queuePage, /document\.file_name/);
 assert.match(queuePage, /\.range\(0, 999\)/);
+assert.doesNotMatch(queuePage, /schedulePolicyOcrTraining/);
+const queueComponent = readFileSync("app/policies/ocr-training/training-review-queue.tsx", "utf8");
+assert.match(queueComponent, /Run with Google Cloud/);
+assert.match(queueComponent, /Re-run with Google Cloud/);
+
+const section02Map = readFileSync("../../docs/POLICY_OCR_SECTION_02_FIELD_MAP.md", "utf8");
+for (const field of ["registrationNumber", "classCode", "engine_capacity_cc", "seating_capacity", "gvw_kg", "chassis_no", "engine_no"]) {
+  assert.match(section02Map, new RegExp(field));
+}
 
 const legacyLinkMigration = readFileSync("../../supabase/migrations/20260821220000_link_legacy_policy_copies_to_ocr.sql", "utf8");
 assert.match(legacyLinkMigration, /customer_documents/);

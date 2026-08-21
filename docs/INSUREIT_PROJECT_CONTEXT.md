@@ -393,13 +393,15 @@ The canonical save path remains `onboard_motor_policy(p_payload jsonb)`. Do not 
 
 Current storage rule:
 
-- `vehicles.vehicle_no` remains `not null unique`, so unregistered vehicles receive an internal `PENDING-<chassis>` vehicle reference.
+- `vehicles.vehicle_no` remains `not null unique`, so unregistered vehicles receive the canonical internal `NEW-<normalized chassis>` vehicle reference.
 - `vehicles.vehicle_no_normalized` stays null for unregistered vehicles so RC search/deduplication is not polluted by fake values.
 - `vehicles.registration_status` is saved as `registration_pending`.
 - `policy_party_snapshots.registration_number` stores `REGISTRATION PENDING` because that snapshot column is currently non-null.
 - Existing ownership checks for unregistered vehicles use chassis number. Registered vehicles continue to use normalized RC number.
 
 Do not enter fake registration values such as `NEW`, `NA`, `TEMP`, or `APPLIEDFOR` into the RC field. When the permanent RC number is later available, add a reviewed update flow that compares AuthBridge chassis/engine evidence before marking the vehicle as registered.
+
+**IMPLEMENTED IN PR #530 / PRODUCTION APPLICATION PENDING:** `20260821194052_canonical_new_vehicle_prefix.sql` supersedes the later conflicting `PENDING-` trigger, preflights missing/duplicate chassis and target collisions, repairs temporary vehicle rows to `NEW-<normalized chassis>`, keeps `vehicle_no_normalized` null and verifies that no vehicle row retains the legacy `PENDING-` prefix. `policy_party_snapshots.registration_number` remains the user-facing `REGISTRATION PENDING` snapshot value.
 
 ## 12. Migration and repair history
 
@@ -505,7 +507,7 @@ Do not turn this file into a raw chat transcript. Keep it as the current, action
 
 ## 17. Premium OCR training workflow
 
-**IMPLEMENTED / NOT YET APPLIED:** migration `20260821153000_premium_ocr_training_workflow.sql` extends policy-copy training with an idempotent queue, three-attempt leased processing, bounded retry delays, proposal metadata, separate reviewer and owner approval, and sanitized approved-candidate storage.
+**APPLIED / QUEUE VERIFIED 2026-08-21:** migration `20260821153000_premium_ocr_training_workflow.sql` extends policy-copy training with an idempotent queue, three-attempt leased processing, bounded retry delays, proposal metadata, separate reviewer and owner approval, and sanitized approved-candidate storage. Supabase workflow `32513396428` verified 286 policy-copy documents, 286 queue labels and 286 pending jobs.
 
 Durable rules:
 
@@ -513,4 +515,6 @@ Durable rules:
 - Raw OCR text, document bytes, identity fields and real policy numbers never enter training candidates.
 - `review_policy_ocr_training` submits corrections; `approve_policy_ocr_training` gives final owner approval. Reviewer and owner must be different profiles.
 - Approved candidates use deterministic synthetic policy numbers and do not modify parser source. Parser changes remain reviewed code changes with sanitized regressions.
-- Policy-copy inserts/replacements requeue processing; jobs are claimed with `FOR UPDATE SKIP LOCKED`, leases and a maximum of three attempts.
+- Policy-copy inserts/replacements create/reset the label only. They must not invoke Google automatically.
+- **IMPLEMENTED ON DRAFT PR #530 / NOT YET DEPLOYED 2026-08-22:** an authorized reviewer/owner explicitly selects one queue row and runs Google OCR. Configuration/OIDC preflight happens before an optimistic claim of that exact label; there is no cron, upload follow-up or page-visit scheduling. Section 03 comparison still reads saved policy/premium values and never overwrites policy records.
+- Vehicle extraction remains gated. Use `docs/POLICY_OCR_SECTION_02_FIELD_MAP.md` as the exact form/payload/database contract before adding Section 02 proposal fields.

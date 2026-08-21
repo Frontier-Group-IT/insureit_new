@@ -110,10 +110,17 @@ const migrationPath = resolve(
   "../../supabase/migrations/20260810140000_access_control_v2_shadow_rbac_foundation.sql",
 );
 const migrationSql = readFileSync(migrationPath, "utf8");
-const ocrExtensionSql = readFileSync(
+const ocrQueueMigrationSql = readFileSync(
   resolve(process.cwd(), "../../supabase/migrations/20260821153000_premium_ocr_training_workflow.sql"),
   "utf8",
 );
+const applicationOnlyPermissionKeys = new Set([
+  "policies.ocr_training.review",
+  "policies.ocr_training.approve",
+]);
+if (/access_(permissions|roles|role_permissions)_v2/.test(ocrQueueMigrationSql)) {
+  fail("OCR queue migration must remain independent from the optional Access Control V2 database schema");
+}
 
 function sectionBetween(startMarker, endMarker) {
   const start = migrationSql.indexOf(startMarker);
@@ -135,19 +142,17 @@ const permissionSeedSection = sectionBetween(
   "insert into public.access_permissions_v2",
   "-- Seed role defaults from the approved Phase 3 shadow matrix.",
 );
-const ocrPermissionSeedSection = ocrExtensionSql.slice(
-  ocrExtensionSql.indexOf("-- OCR training V2 permission extension."),
-  ocrExtensionSql.indexOf("-- OCR training V2 role grants."),
+const databasePermissionCatalogue = permissionCatalogueV2.filter(
+  (permission) => !applicationOnlyPermissionKeys.has(permission.key),
 );
-const combinedPermissionSeedSection = `${permissionSeedSection}\n${ocrPermissionSeedSection}`;
-for (const permission of permissionCatalogueV2) {
+for (const permission of databasePermissionCatalogue) {
   const marker = `('${permission.key}'`;
-  if (!combinedPermissionSeedSection.includes(marker)) fail(`V2 SQL permission seed is missing ${permission.key}`);
+  if (!permissionSeedSection.includes(marker)) fail(`V2 SQL permission seed is missing ${permission.key}`);
 }
 
-const sqlPermissionKeys = Array.from(combinedPermissionSeedSection.matchAll(/\('([^']+)'\s*,\s*'[^']+'/g), (match) => match[1]);
-if (new Set(sqlPermissionKeys).size !== permissionCatalogueV2.length) {
-  fail(`Phase 4 SQL permission seed count ${new Set(sqlPermissionKeys).size} does not match catalogue ${permissionCatalogueV2.length}`);
+const sqlPermissionKeys = Array.from(permissionSeedSection.matchAll(/\('([^']+)'\s*,\s*'[^']+'/g), (match) => match[1]);
+if (new Set(sqlPermissionKeys).size !== databasePermissionCatalogue.length) {
+  fail(`Phase 4 SQL permission seed count ${new Set(sqlPermissionKeys).size} does not match database-backed catalogue ${databasePermissionCatalogue.length}`);
 }
 
 const grantsSection = sectionBetween(
@@ -163,14 +168,11 @@ const sqlGrants = new Set(
     return `${match[1]}|${match[2]}|${match[3]}|${scope}`;
   }),
 );
-for (const match of ocrExtensionSql
-  .slice(ocrExtensionSql.indexOf("-- OCR training V2 role grants."), ocrExtensionSql.indexOf("commit;"))
-  .matchAll(/\('([^']+)'\s*,\s*'([^']+)'\s*,\s*'([^']+)'\)/g)) {
-  sqlGrants.add(`${match[1]}|${match[2]}|${match[3]}|`);
-}
 const matrixGrants = new Set(
   roleMatrixV2.flatMap((role) =>
-    role.grants.map((entry) => `${role.code}|${entry.permission}|${entry.access}|${entry.scope ?? ""}`),
+    role.grants
+      .filter((entry) => !applicationOnlyPermissionKeys.has(entry.permission))
+      .map((entry) => `${role.code}|${entry.permission}|${entry.access}|${entry.scope ?? ""}`),
   ),
 );
 

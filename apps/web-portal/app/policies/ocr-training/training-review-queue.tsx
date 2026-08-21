@@ -4,26 +4,17 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   approvePolicyOcrTrainingLabel,
-  retryPolicyOcrTrainingLabel,
+  runPolicyOcrTrainingLabel,
   submitPolicyOcrDatabaseComparison,
 } from "../ocr-training-actions";
-import { formatReviewerDate, type TrainingProposal } from "@/lib/policy-ocr-training";
-
-type DatabaseReference = {
-  insurer_name: string | null;
-  policy_product: string | null;
-  policy_number: string | null;
-  valid_from: string | null;
-  valid_upto: string | null;
-  idv: number | null;
-  od_premium: number | null;
-  tp_premium: number | null;
-  cpa_opted: boolean | null;
-  cpa_premium: number | null;
-  printed_net_premium: number | null;
-  printed_gst: number | null;
-  printed_gross_premium: number | null;
-};
+import {
+  compareTrainingProposalToReference,
+  compareTrainingValue,
+  formatReviewerDate,
+  type TrainingComparisonKey,
+  type TrainingDatabaseReference,
+  type TrainingProposal,
+} from "@/lib/policy-ocr-training";
 
 export type TrainingQueueRow = {
   documentId: string;
@@ -37,7 +28,7 @@ export type TrainingQueueRow = {
   processingAttempts: number;
   failureCode: string | null;
   proposal: TrainingProposal | null;
-  databaseReference: DatabaseReference;
+  databaseReference: TrainingDatabaseReference;
   parserId: string | null;
   parserVersion: string | null;
   proposedAt: string | null;
@@ -47,7 +38,7 @@ export type TrainingQueueRow = {
   approvedAt: string | null;
 };
 
-const FILTERS = ["all", "needs_review", "reviewed", "approved", "failed"] as const;
+const FILTERS = ["all", "needs_review", "exact_match", "reviewed", "approved", "failed"] as const;
 type Filter = (typeof FILTERS)[number];
 
 export function TrainingReviewQueue({
@@ -68,7 +59,11 @@ export function TrainingReviewQueue({
     const needle = query.trim().toLowerCase();
     return rows.filter((row) => {
       const matchesFilter = filter === "all"
-        || (filter === "failed" ? ["failed", "exhausted"].includes(row.processingStatus) : row.status === filter);
+        || (filter === "failed"
+          ? ["failed", "exhausted"].includes(row.processingStatus)
+          : filter === "exact_match"
+            ? isExactDatabaseMatch(row)
+            : row.status === filter);
       const matchesQuery = !needle || `${row.fileName} ${row.policyReference} ${row.linkedInsurer}`.toLowerCase().includes(needle);
       return matchesFilter && matchesQuery;
     });
@@ -80,7 +75,11 @@ export function TrainingReviewQueue({
         <div className="flex flex-wrap gap-2">
           {FILTERS.map((item) => {
             const count = rows.filter((row) => item === "all"
-              || (item === "failed" ? ["failed", "exhausted"].includes(row.processingStatus) : row.status === item)).length;
+              || (item === "failed"
+                ? ["failed", "exhausted"].includes(row.processingStatus)
+                : item === "exact_match"
+                  ? isExactDatabaseMatch(row)
+                  : row.status === item)).length;
             return (
               <button
                 key={item}
@@ -135,6 +134,9 @@ function TrainingReviewCard({
   const proposal = row.proposal?.fields ?? {};
   const ready = row.processingStatus === "ready";
   const canOwnerApprove = canApprove && row.status === "reviewed" && row.reviewedBy !== actorId;
+  const comparison = ready && row.proposal
+    ? compareTrainingProposalToReference(row.proposal, row.databaseReference)
+    : null;
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
@@ -169,11 +171,11 @@ function TrainingReviewCard({
             {row.failureCode ? ` · ${row.failureCode.replaceAll("_", " ")}` : ""}
           </span>
           {canReview || canApprove ? (
-            ["failed", "exhausted"].includes(row.processingStatus) ? (
-          <form action={retryPolicyOcrTrainingLabel}>
+            row.processingStatus !== "processing" ? (
+          <form action={runPolicyOcrTrainingLabel}>
             <input type="hidden" name="training_label_id" value={row.labelId} />
             <button className="rounded-lg bg-white px-3 py-2 text-xs font-bold text-amber-900 ring-1 ring-amber-300">
-              Retry OCR comparison
+              Run with Google Cloud
             </button>
           </form>
             ) : null
@@ -190,23 +192,42 @@ function TrainingReviewCard({
         </div>
       ) : null}
 
+      {ready && (canReview || canApprove) ? (
+        <div className="mt-4 flex justify-end">
+          <form action={runPolicyOcrTrainingLabel}>
+            <input type="hidden" name="training_label_id" value={row.labelId} />
+            <button className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-blue-700">
+              Re-run with Google Cloud
+            </button>
+          </form>
+        </div>
+      ) : null}
+
+      {comparison ? (
+        <div className={`mt-4 rounded-xl border p-3 text-sm ${comparison.exactMatch ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
+          {comparison.exactMatch
+            ? `Automatic comparison matched all ${comparison.comparableFields} stored Section 03 fields.`
+            : `Automatic comparison found ${comparison.mismatchedFields} mismatches and ${comparison.missingOcrFields} OCR-missing fields across ${comparison.comparableFields} stored values.`}
+        </div>
+      ) : null}
+
       <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
         <div className="grid min-w-[820px] grid-cols-[170px_1fr_1fr_120px] bg-slate-50 px-3 py-2 text-xs font-black uppercase tracking-wide text-slate-500">
           <span>Section 03 field</span><span>Database reference</span><span>Google OCR</span><span>Result</span>
         </div>
-        {comparisonField("Insurer", row.databaseReference.insurer_name, proposal.insurer_name)}
-        {comparisonField("Policy product", row.databaseReference.policy_product, proposal.policy_product)}
-        {comparisonField("Policy number", row.databaseReference.policy_number, proposal.policy_number)}
-        {comparisonField("Valid from", row.databaseReference.valid_from, proposal.policy_start_date, true)}
-        {comparisonField("Valid upto", row.databaseReference.valid_upto, proposal.policy_end_date, true)}
-        {comparisonField("IDV", row.databaseReference.idv, proposal.idv)}
-        {comparisonField("OD premium", row.databaseReference.od_premium, proposal.od_premium)}
-        {comparisonField("TP premium", row.databaseReference.tp_premium, proposal.tp_premium)}
-        {comparisonField("CPA opted", row.databaseReference.cpa_opted, proposal.cpa_opted)}
-        {comparisonField("CPA amount", row.databaseReference.cpa_premium, proposal.cpa_premium)}
-        {comparisonField("Printed net", row.databaseReference.printed_net_premium, proposal.total_premium)}
-        {comparisonField("Printed GST", row.databaseReference.printed_gst, proposal.tax_amount)}
-        {comparisonField("Printed gross", row.databaseReference.printed_gross_premium, proposal.gross_premium)}
+        {comparisonField("insurer_name", "Insurer", row.databaseReference.insurer_name, proposal.insurer_name)}
+        {comparisonField("policy_product", "Policy product", row.databaseReference.policy_product, proposal.policy_product)}
+        {comparisonField("policy_number", "Policy number", row.databaseReference.policy_number, proposal.policy_number)}
+        {comparisonField("valid_from", "Valid from", row.databaseReference.valid_from, proposal.policy_start_date, true)}
+        {comparisonField("valid_upto", "Valid upto", row.databaseReference.valid_upto, proposal.policy_end_date, true)}
+        {comparisonField("idv", "IDV", row.databaseReference.idv, proposal.idv)}
+        {comparisonField("od_premium", "OD premium", row.databaseReference.od_premium, proposal.od_premium)}
+        {comparisonField("tp_premium", "TP premium", row.databaseReference.tp_premium, proposal.tp_premium)}
+        {comparisonField("cpa_opted", "CPA opted", row.databaseReference.cpa_opted, proposal.cpa_opted)}
+        {comparisonField("cpa_premium", "CPA amount", row.databaseReference.cpa_premium, proposal.cpa_premium)}
+        {comparisonField("printed_net_premium", "Printed net", row.databaseReference.printed_net_premium, proposal.total_premium)}
+        {comparisonField("printed_gst", "Printed GST", row.databaseReference.printed_gst, proposal.tax_amount)}
+        {comparisonField("printed_gross_premium", "Printed gross", row.databaseReference.printed_gross_premium, proposal.gross_premium)}
       </div>
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -243,20 +264,21 @@ function TrainingReviewCard({
 }
 
 function comparisonField(
+  key: TrainingComparisonKey,
   label: string,
   databaseValue: string | number | boolean | null,
   proposal: TrainingProposal["fields"][keyof TrainingProposal["fields"]],
   date = false,
 ) {
   const ocrValue = proposal?.value ?? null;
-  const matches = compareValues(databaseValue, ocrValue, date);
+  const comparison = compareTrainingValue(key, databaseValue, ocrValue);
   return (
     <div className="grid min-w-[820px] grid-cols-[170px_1fr_1fr_120px] items-center border-t border-slate-100 px-3 py-2">
       <span className="text-xs font-bold text-slate-600">{label}</span>
       <span className="text-sm font-semibold text-navy-900">{formatValue(databaseValue, date)}</span>
       <ProposalValue field={proposal} />
-      <span className={`text-xs font-black uppercase ${matches === null ? "text-slate-400" : matches ? "text-emerald-700" : "text-amber-700"}`}>
-        {matches === null ? "Missing" : matches ? "Match" : "Review"}
+      <span className={`text-xs font-black uppercase ${comparison === "match" ? "text-emerald-700" : comparison === "mismatch" ? "text-amber-700" : "text-slate-400"}`}>
+        {comparison === "match" ? "Match" : comparison === "mismatch" ? "Review" : comparison === "ocr_missing" ? "OCR missing" : "Not stored"}
       </span>
     </div>
   );
@@ -274,18 +296,6 @@ function ProposalValue({ field }: { field: TrainingProposal["fields"][keyof Trai
   );
 }
 
-function compareValues(databaseValue: string | number | boolean | null, ocrValue: string | null, date: boolean) {
-  if (databaseValue === null || ocrValue === null) return null;
-  if (typeof databaseValue === "number") {
-    const parsed = Number(ocrValue.replaceAll(",", ""));
-    return Number.isFinite(parsed) && Math.abs(databaseValue - parsed) <= 2;
-  }
-  if (typeof databaseValue === "boolean") return databaseValue === /^yes$/i.test(ocrValue);
-  const expected = date ? formatReviewerDate(databaseValue) : databaseValue.trim().toLowerCase().replace(/\s+/g, " ");
-  const actual = date ? formatReviewerDate(ocrValue) : ocrValue.trim().toLowerCase().replace(/\s+/g, " ");
-  return expected === actual;
-}
-
 function formatValue(value: string | number | boolean | null, date: boolean) {
   if (value === null) return "Not stored";
   if (typeof value === "boolean") return value ? "Yes" : "No";
@@ -293,23 +303,29 @@ function formatValue(value: string | number | boolean | null, date: boolean) {
 }
 
 function filterLabel(filter: Filter) {
-  return filter === "all" ? "All" : filter === "needs_review" ? "Needs review" : filter === "reviewed" ? "Awaiting owner" : filter === "approved" ? "Approved" : "Failed";
+  return filter === "all" ? "All" : filter === "needs_review" ? "Needs review" : filter === "exact_match" ? "Exact match" : filter === "reviewed" ? "Awaiting owner" : filter === "approved" ? "Approved" : "Failed";
 }
 
 function statusLabel(row: TrainingQueueRow) {
   if (row.processingStatus !== "ready") return processingLabel(row.processingStatus);
+  if (isExactDatabaseMatch(row) && row.status === "needs_review") return "Exact database match";
   return row.status === "reviewed" ? "Awaiting owner" : row.status.replaceAll("_", " ");
 }
 
 function processingLabel(status: TrainingQueueRow["processingStatus"]) {
-  return status === "pending" ? "Queued" : status === "processing" ? "Reading copy" : status === "ready" ? "Proposal ready" : status === "failed" ? "Retry scheduled" : "Retry limit reached";
+  return status === "pending" ? "Not run" : status === "processing" ? "Reading copy" : status === "ready" ? "Proposal ready" : status === "failed" ? "Previous run failed" : "Previous run exhausted";
 }
 
 function statusTone(row: TrainingQueueRow) {
   if (["failed", "exhausted"].includes(row.processingStatus) || row.status === "rejected") return "red";
-  if (row.status === "approved") return "green";
+  if (row.status === "approved" || isExactDatabaseMatch(row)) return "green";
   if (row.status === "reviewed") return "blue";
   return "amber";
+}
+
+function isExactDatabaseMatch(row: TrainingQueueRow) {
+  if (row.processingStatus !== "ready" || !row.proposal) return false;
+  return compareTrainingProposalToReference(row.proposal, row.databaseReference).exactMatch;
 }
 
 function StatusBadge({ label, tone }: { label: string; tone: string }) {

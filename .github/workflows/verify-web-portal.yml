@@ -58,6 +58,9 @@ jobs:
       - name: Release blocker security regression
         run: npm run access-control:release-blockers-regression
 
+      - name: Canonical NEW vehicle prefix regression
+        run: npm run vehicle-prefix:new-regression
+
       - name: IFFCO structured regression
         run: npm run policy-ocr:iffco-structured-regression
 

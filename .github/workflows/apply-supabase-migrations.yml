@@ -59,6 +59,12 @@ jobs:
       - name: Record OCR queue and backlog migration as applied
         run: supabase migration repair --linked --status applied 20260821153000
 
+      - name: Apply canonical NEW vehicle identity migration
+        run: supabase db query --linked --file supabase/migrations/20260821194052_canonical_new_vehicle_prefix.sql
+
+      - name: Record canonical NEW vehicle identity migration as applied
+        run: supabase migration repair --linked --status applied 20260821194052
+
       - name: Apply OCR backlog linking migration
         run: supabase db query --linked --file supabase/migrations/20260821220000_link_legacy_policy_copies_to_ocr.sql
 
@@ -82,3 +88,19 @@ jobs:
               (select count(*) from public.policy_ocr_training_labels where processing_status = 'ready') as ready_jobs,
               (select count(*) from public.policy_ocr_training_labels where processing_status = 'exhausted') as exhausted_jobs
           "
+
+      - name: Verify canonical NEW vehicle identities
+        run: |
+          supabase db query --linked --output-format json "
+            select
+              count(*) filter (where registration_status = 'registration_pending') as registration_pending,
+              count(*) filter (where registration_status = 'registration_pending' and vehicle_no like 'NEW-%') as canonical_new,
+              count(*) filter (where vehicle_no like 'PENDING-%') as legacy_pending_prefix,
+              count(*) filter (
+                where registration_status = 'registration_pending'
+                  and vehicle_no is distinct from 'NEW-' || regexp_replace(upper(chassis_no), '[^A-Z0-9]', '', 'g')
+              ) as canonical_mismatch
+            from public.vehicles
+          " | tee new-vehicle-verification.json
+          grep -Eq '"legacy_pending_prefix"[[:space:]]*:[[:space:]]*0' new-vehicle-verification.json
+          grep -Eq '"canonical_mismatch"[[:space:]]*:[[:space:]]*0' new-vehicle-verification.json

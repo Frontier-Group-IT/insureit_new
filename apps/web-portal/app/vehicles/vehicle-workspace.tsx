@@ -178,6 +178,9 @@ function NextAction({ vehicle }: { vehicle: VehicleRow }) {
 }
 
 function displayVehicleNo(vehicle: VehicleRow) { return isRegistrationPending(vehicle) ? "Registration pending" : vehicle.vehicle_no; }
-function isRegistrationPending(vehicle: VehicleRow) { return vehicle.registration_status === "registration_pending" || vehicle.vehicle_no.toUpperCase().startsWith("PENDING-"); }
+function isRegistrationPending(vehicle: VehicleRow) {
+  const vehicleNo = vehicle.vehicle_no.toUpperCase();
+  return vehicle.registration_status === "registration_pending" || vehicleNo.startsWith("NEW-") || vehicleNo.startsWith("PENDING-");
+}
 function policyCount(row: VehicleRow) { return row.policies?.[0]?.count ?? 0; }
 function claimCount(row: VehicleRow) { return row.claims?.[0]?.count ?? 0; }

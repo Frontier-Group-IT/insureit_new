@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
-import { schedulePolicyOcrTraining } from "@/lib/policy-ocr-training-schedule";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { POLICY_ACTIVITY_ACTIONS, recordPolicyActivity } from "@/lib/policy-activity";
 
@@ -155,7 +154,6 @@ export async function savePolicyCopyForEdit(policyId: string, formData: FormData
     profile.id,
     existing ? POLICY_ACTIVITY_ACTIONS.POLICY_DOC_REPLACED : POLICY_ACTIVITY_ACTIONS.POLICY_DOC_UPLOADED,
   );
-  await schedulePolicyOcrTraining();
   revalidatePath("/policies");
   revalidatePath(`/policies/${normalizedPolicyId}/edit`);
   return { ok: true, document: metadata(saved) };

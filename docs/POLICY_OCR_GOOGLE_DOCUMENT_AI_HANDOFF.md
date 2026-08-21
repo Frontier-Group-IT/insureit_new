@@ -401,6 +401,41 @@ The easier long-term design is one idempotent server-side sync function/RPC that
 
 The first rerun after PR #524 exposed a second migration-order mistake: `20260821153000` had bundled inserts into `public.access_permissions_v2`, but that table is absent from the remote migration set. PR #525 removed the unrelated permission block, and Supabase workflow `32513044974` then completed the queue migration, backfill and legacy linking successfully. Idempotent verification workflow `32513396428` reported `policy_copy_documents=286`, `queue_labels=286`, `pending_jobs=286`, `ready_jobs=0`, `exhausted_jobs=0`. Keep permission catalog changes in a separate migration only after the remote access-control schema is confirmed. If the UI still shows nine after a hard refresh, inspect which deployment/project the browser is using; the live queue itself is no longer nine.
 
+## 10. Automatic queue draining and Section 03 comparison — 2026-08-22
+
+**IMPLEMENTED ON FEATURE BRANCH / NOT YET MERGED OR DEPLOYED:** the worker now loads the linked policy and `policy_premium_details` reference after Google OCR succeeds, writes only the approved Section 03 reference fields into the existing training-label row, and runs one shared comparison classifier used by both the server worker and reviewer UI.
+
+Comparison rules:
+
+- policy numbers ignore formatting separators but not characters;
+- dates compare ISO and `DD/MM/YYYY` representations;
+- Package/Comprehensive, SAOD/Standalone Own Damage and supported TP synonyms normalize to canonical product families;
+- currency values tolerate at most ₹2 difference;
+- missing OCR, missing database reference, mismatch and match are separate states;
+- an exact match means every Section 03 value that is actually stored in the database was also proposed and matched.
+
+The reviewer queue adds an `Exact match` filter and summarizes mismatch/missing counts. Exact matches still require reviewer confirmation and separate owner approval. Automation never overwrites Policy Onboarding Section 03, never self-approves a candidate and never edits parser source.
+
+The Vercel cron changes from once daily to hourly and keeps the established batch cap of three documents. `POLICY_OCR_WORKER_BATCH_SIZE` may reduce the batch but cannot raise it above three. With 286 pending documents, the nominal drain time is about four days, subject to Vercel cron timing, Google quotas and retry delays.
+
+Deployment requirements:
+
+- the Vercel project must be on a plan that supports sub-daily cron schedules (Pro or Enterprise); Hobby rejects this schedule;
+- `CRON_SECRET` or `POLICY_OCR_WORKER_SECRET` must remain configured privately;
+- Vercel Secure Backend Access/OIDC must remain enabled so each function receives `x-vercel-oidc-token` for Google WIF;
+- after deployment, inspect cron runtime logs and verify queue counts move from pending to ready/failed without exhausted retries caused by configuration;
+- run one authenticated reviewer journey and inspect exact-match and mismatch behavior before claiming production completion.
+
+**CI learning:** PR #525 intentionally removed the OCR queue migration's dependency on the optional `access_*_v2` database tables, but the access-control static regression still expected those permission rows inside that migration. The regression now treats the two OCR permissions as application-only compatibility entries until the remote Access Control V2 schema is confirmed, while explicitly failing if the queue migration reintroduces any `access_permissions_v2`, `access_roles_v2` or `access_role_permissions_v2` dependency.
+
 ### Worker scheduling finding — 2026-08-22
 
 All 286 jobs remained `pending` at attempt `0/3`, proving that no worker had claimed them yet. The prior cron was daily and the route supplied only the request OIDC header; when that header was absent, the server correctly returned `google_oidc_subject_token_missing` before claiming work. The route now falls back to server-only OIDC environment values and the cron is hourly, while the safe worker limit remains three jobs per invocation. This fix is **IMPLEMENTED / NOT YET DEPLOYED**. A production check must observe a job transition from `pending` to `processing` and then `ready` or an explicit failure before OCR processing is considered live.
+
+## 11. Phase 1 operator-controlled execution — 2026-08-22
+
+**SUPERSEDES THE AUTOMATIC-DRAINING DESIGN ABOVE / IMPLEMENTED ON DRAFT PR #530 / NOT DEPLOYED:** policy copies no longer run because of an upload, page visit or Vercel cron. The cron route and schedule are removed. An authorized reviewer/approver chooses one queue row and clicks **Run with Google Cloud** (or **Re-run with Google Cloud**).
+
+The server preflights the private worker secret, Google configuration and OIDC subject token before changing queue state. It then uses an optimistic compare-and-set on the exact selected label ID, creates a short lease and processes only that label's linked private `policy_copy`. Concurrent clicks cannot claim another queued policy or claim the selected label twice. A failed row advances only when the operator clicks again and remains capped at three attempts; an explicit re-run of a ready or exhausted row starts a fresh controlled cycle. Provider/parser failures remain visible on that row. Upload/replacement still creates or resets the queue label through the existing database trigger, but it does not invoke Google.
+
+Section 03 comparison, review-before-approval, separate owner approval and sanitized candidate safeguards remain unchanged. Vehicle/identity extraction is not included. The exact Section 02 form/payload/database map and the gate for the next increment are documented in `docs/POLICY_OCR_SECTION_02_FIELD_MAP.md`.

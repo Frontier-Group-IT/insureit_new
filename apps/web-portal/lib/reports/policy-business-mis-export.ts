@@ -180,7 +180,7 @@ function normalizeRow(row: PolicyRow): PolicyBusinessMisRow {
     leadSource: text(row.lead_source),
     intermediaryCode: text(row.intermediary_code),
     vehicleClass,
-    registrationNo: vehicleNo.startsWith("PENDING-") ? "NEW" : vehicleNo,
+    registrationNo: /^(?:NEW|PENDING)-/.test(vehicleNo) ? "NEW" : vehicleNo,
     insuredName: text(customer?.contact_name),
     phoneNo: text(customer?.phone),
     classDescription: text(vehicle?.vehicle_class_description) || classDescription(vehicleClass),
