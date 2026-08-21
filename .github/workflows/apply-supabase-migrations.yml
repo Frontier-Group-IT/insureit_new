@@ -44,5 +44,8 @@ jobs:
       - name: Link Supabase project
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
 
+      - name: Inspect migration history
+        run: supabase migration list
+
       - name: Apply migrations
         run: supabase db push
