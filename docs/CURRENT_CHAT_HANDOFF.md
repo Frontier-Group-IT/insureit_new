@@ -792,7 +792,7 @@ The migration workflow previously applied layer 1 and layer 3 but skipped layer 
 
 ### Corrective action
 
-PR #523 was merged as `70e09081d6bef2a8cc45d6bc7156d5e409bdbdcf`. The migration workflow was corrected to apply and record all three layers, including `20260821153000`. A production run must be executed and its Supabase verification must be checked for a label count near the eligible policy-document count. Do not declare success from a green workflow alone unless the live count is queried.
+PR #523 was merged as `70e09081d6bef2a8cc45d6bc7156d5e409bdbdcf`. PR #524 was then merged as `44f9fb9644d941a999c33059a1ec93ff70ee2f4e` to apply and record all three layers, including `20260821153000`. Its first production rerun failed because that migration also contained unrelated OCR permission inserts referencing the absent remote table `public.access_permissions_v2`. The queue schema/backfill itself is not dependent on that table; the permission block has now been removed from the queue migration and must be published before rerunning. Do not declare success from a green workflow alone unless the live count is queried.
 
 ### Easier and safer operating model
 
@@ -807,7 +807,7 @@ Run that operation once through the protected migration workflow, then use a pro
 
 ### Required next verification
 
-1. Apply the corrected workflow from `main` and inspect the live SQL result: count policy-copy `policy_documents` and count `policy_ocr_training_labels`.
+1. Publish the follow-up that removes the unrelated `access_permissions_v2` dependency, rerun the corrected workflow from `main`, and inspect the live SQL result: count policy-copy `policy_documents` and count `policy_ocr_training_labels`.
 2. Confirm the counts differ only for intentionally unlinked/ambiguous records.
 3. Confirm the worker secret, Google Document AI variables, and Vercel OIDC subject token are configured.
 4. Run one controlled job and verify `processing_status` changes to `ready` with a proposal or to an explicit parser/OCR failure; it must not silently remain `exhausted`.

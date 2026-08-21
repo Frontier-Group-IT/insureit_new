@@ -398,3 +398,5 @@ select processing_status, count(*) from public.policy_ocr_training_labels group 
 ```
 
 The easier long-term design is one idempotent server-side sync function/RPC that links eligible legacy copies, inserts missing labels with `on conflict do nothing`, and returns reconciliation counts. Run it once through the protected migration workflow; let a protected cron process small batches. The page should remain read-only and show a diagnostic when tracked documents exceed queue labels. Never infer the queue from a Storage listing or consume retry attempts before Google/OIDC preflight succeeds.
+
+The first rerun after PR #524 exposed a second migration-order mistake: `20260821153000` had bundled inserts into `public.access_permissions_v2`, but that table is absent from the remote migration set. The OCR queue tables, triggers, backfill and worker functions do not require that permission table. The unrelated permission block has therefore been removed from the queue migration; publish that follow-up and rerun the migration workflow. Keep permission catalog changes in a separate migration only after the remote access-control schema is confirmed.
