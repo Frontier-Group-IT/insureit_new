@@ -1,10 +1,10 @@
 {
     "purpose":  "Deploy premium OCR training review workflow.",
-    "deploy_requested_at":  "2026-08-21T21:35:11+05:30",
+    "deploy_requested_at":  "2026-08-21T21:32:00+05:30",
     "requested_by":  "explicit user merge and deploy request",
     "source":  "Deploy current main using the protected GitHub Actions production deployment workflow.",
-    "source_commit":  "6d2bef7f550b3da155a0cc89f4d900cdd99cfbf0",
-    "release_scope":  "Deploy merged premium OCR training review workflow PR #518: automatic OCR proposals for backlog and future uploads, reviewer correction queue, owner approval, sanitized training candidates, DD/MM/YYYY review dates, and separate-tab private document access.",
-    "verification":  "PR #518 passed the canonical web portal verification gate. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+    "source_commit":  "1dc85e0a64407f072bb1aa0085cddd76ccbc3956",
+    "release_scope":  "Deploy merged premium OCR training review workflow PR #519: compare Google OCR proposals with existing Section 03 database values, confirm database comparison, preserve reviewer/owner approval, and allow safe manual requeue of exhausted jobs.",
+    "verification":  "PR #519 passed the canonical web portal verification gate. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
     "instructions":  "Update this file only after explicit deployment approval."
 }
