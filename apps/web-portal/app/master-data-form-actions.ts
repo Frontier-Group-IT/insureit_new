@@ -98,7 +98,8 @@ export async function saveVehicle(id: string, formData: FormData) {
     puc_expiry_date: dateValue(formData, "puc_expiry_date"),
     road_tax_expiry_date: dateValue(formData, "road_tax_expiry_date"),
     national_permit_expiry_date: dateValue(formData, "national_permit_expiry_date"),
-    local_permit_expiry_date: dateValue(formData, "local_permit_expiry_date")
+    local_permit_expiry_date: dateValue(formData, "local_permit_expiry_date"),
+    updated_at: new Date().toISOString()
   }).eq("id", id);
   if (error) redirect(errorUrl(`/vehicles/${id}/edit`, `Vehicle could not be updated: ${error.message}`));
 
@@ -106,6 +107,7 @@ export async function saveVehicle(id: string, formData: FormData) {
 
   revalidatePath("/vehicles");
   revalidatePath(`/vehicles/${id}/edit`);
+  revalidatePath("/policies");
   redirect("/vehicles?success=vehicle_updated");
 }
 

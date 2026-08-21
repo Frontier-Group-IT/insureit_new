@@ -37,7 +37,7 @@ export async function updateCorporateProfile(customerId: string, formData: FormD
     if (!group) redirect(`/customers/${customerId}/edit?error=invalid_group`);
   }
 
-  const { error: customerError } = await admin.from("customers").update({ company_name: companyName, legal_trade_name: companyName, contact_name: spoc.name, phone: spoc.phone, email: spoc.email, pan_number: pan, is_gst_registered: Boolean(gst), gst_number: gst, address: [street, locality, city, state, postalCode].filter(Boolean).join(", "), address_street: street, address_locality: locality, india_location_id: locationId, city, state, postal_code: postalCode, fleet_size_band: fleet, updated_by: profile.id }).eq("id", customerId).eq("partner_type", "corporate");
+  const { error: customerError } = await admin.from("customers").update({ company_name: companyName, legal_trade_name: companyName, contact_name: spoc.name, phone: spoc.phone, email: spoc.email, pan_number: pan, is_gst_registered: Boolean(gst), gst_number: gst, address: [street, locality, city, state, postalCode].filter(Boolean).join(", "), address_street: street, address_locality: locality, india_location_id: locationId, city, state, postal_code: postalCode, fleet_size_band: fleet, updated_by: profile.id, updated_at: new Date().toISOString() }).eq("id", customerId).eq("partner_type", "corporate");
   if (customerError) redirect(`/customers/${customerId}/edit?error=customer_update_failed`);
 
   for (const contact of contacts) {
@@ -58,5 +58,6 @@ export async function updateCorporateProfile(customerId: string, formData: FormD
 
   revalidatePath(`/customers/${customerId}/edit`);
   revalidatePath("/customers");
+  revalidatePath("/policies");
   redirect(`/customers/${customerId}/edit?success=corporate_updated`);
 }

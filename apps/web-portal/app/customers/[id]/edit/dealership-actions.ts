@@ -115,5 +115,6 @@ export async function updateDealershipProfile(customerId: string, _state: Dealer
 
   revalidatePath("/customers");
   revalidatePath(`/customers/${customerId}/edit`);
+  revalidatePath("/policies");
   redirect("/customers?success=dealership_updated");
 }

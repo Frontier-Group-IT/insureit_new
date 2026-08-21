@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { PolicyActivityStatus } from "@/components/policy-activity-status";
 import { PolicyEditActionFooter } from "@/components/policy-edit-action-footer";
+import { PolicyLinkedMasterActions } from "@/components/policy-linked-master-actions";
 import { PolicyUnifiedForm, type PolicyRmOption, type PolicySourceOption, type PolicyUnifiedInitialValues } from "@/components/policy-unified-form";
 import { PolicyRemarksActionStyle } from "@/components/policy-remarks-action-style";
 import { AppShell } from "@/components/shell";
@@ -8,6 +9,8 @@ import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { loadPolicyPayinBilling } from "@/app/policies/policy-payin-billing-actions";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { getCustomerManager } from "@/lib/master-data-server";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
 
 type PolicyRow = {
   id: string; customer_id: string; vehicle_id: string; insurance_company_id: string;
@@ -17,13 +20,13 @@ type PolicyRow = {
   rm_name: string | null; business_line: string | null; issuance_date: string | null; remarks: string | null;
   status: string | null; created_by: string | null; created_at: string | null; updated_at: string | null;
 };
-type CustomerRow = { id: string; contact_name: string; phone: string | null };
+type CustomerRow = { id: string; contact_name: string; phone: string | null; updated_at: string | null };
 type VehicleRow = {
   id: string; vehicle_no: string; vehicle_type: string | null; vehicle_class_code: string | null;
   vehicle_class_description: string | null; make: string | null; model: string | null; year: number | null;
   chassis_no: string | null; engine_no: string | null; fuel_type: string | null;
   engine_capacity_cc: number | null; seating_capacity: number | null; gvw_kg: number | null;
-  rto_name: string | null; rto_state: string | null;
+  rto_name: string | null; rto_state: string | null; updated_at: string | null;
 };
 type PremiumRow = { od_premium: number | null; tp_premium: number | null; cpa_opted: boolean | null; cpa_amount: number | null };
 type PayinRow = { payout_basis: string | null; projected_od_percent: number | null; projected_tp_percent: number | null; insurer_scheme_amount: number | null };
@@ -56,7 +59,7 @@ function vehicleCapacity(vehicle: VehicleRow, vehicleClass: string) {
 }
 
 export default async function EditPolicyPage({ params }: { params: Promise<{ id: string }> }) {
-  await requirePolicyEditor();
+  const policyEditor = await requirePolicyEditor();
   const { id } = await params;
   const admin = createSupabaseAdminClient();
 
@@ -67,14 +70,19 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
   if (!policyResult.data) notFound();
   const policy = policyResult.data;
 
+  const [customerManager, canEditVehicle] = await Promise.all([
+    getCustomerManager(policy.customer_id),
+    hasEffectiveCapability(policyEditor, "view_vehicles", "edit"),
+  ]);
+
   const creatorResult = policy.created_by
     ? await admin.from("profiles").select("full_name").eq("id", policy.created_by).maybeSingle<CreatorProfileRow>()
     : { data: null as CreatorProfileRow | null, error: null };
   if (creatorResult.error) throw new Error(`Unable to load policy creator: ${creatorResult.error.message}`);
 
   const [customerResult, vehicleResult, premiumResult, payinResult, payoutResult, activeInsurersResult, currentInsurerResult, salesEmployees, intermediariesResult] = await Promise.all([
-    admin.from("customers").select("id,contact_name,phone").eq("id", policy.customer_id).maybeSingle<CustomerRow>(),
-    admin.from("vehicles").select("id,vehicle_no,vehicle_type,vehicle_class_code,vehicle_class_description,make,model,year,chassis_no,engine_no,fuel_type,engine_capacity_cc,seating_capacity,gvw_kg,rto_name,rto_state").eq("id", policy.vehicle_id).maybeSingle<VehicleRow>(),
+    admin.from("customers").select("id,contact_name,phone,updated_at").eq("id", policy.customer_id).maybeSingle<CustomerRow>(),
+    admin.from("vehicles").select("id,vehicle_no,vehicle_type,vehicle_class_code,vehicle_class_description,make,model,year,chassis_no,engine_no,fuel_type,engine_capacity_cc,seating_capacity,gvw_kg,rto_name,rto_state,updated_at").eq("id", policy.vehicle_id).maybeSingle<VehicleRow>(),
     admin.from("policy_premium_details").select("od_premium,tp_premium,cpa_opted,cpa_amount").eq("policy_id", id).maybeSingle<PremiumRow>(),
     admin.from("policy_payin_details").select("payout_basis,projected_od_percent,projected_tp_percent,insurer_scheme_amount").eq("policy_id", id).maybeSingle<PayinRow>(),
     admin.from("policy_intermediary_payouts").select("retention_amount,od_payout_percent,tp_payout_percent,status,payout_date,voucher_number").eq("policy_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle<PayoutRow>(),
@@ -240,11 +248,19 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     remarks: policy.remarks ?? "",
   };
 
+  const masterRevisionKey = `${customer.updated_at ?? "customer"}:${vehicle.updated_at ?? "vehicle"}`;
+
   return (
     <AppShell title="Edit Policy">
       <PolicyRemarksActionStyle />
       <div data-policy-edit-form>
-        <PolicyUnifiedForm mode="edit" insurers={insurerOptions} rms={rmOptions} sources={sourceOptions} initialValues={initialValues} />
+        <PolicyUnifiedForm key={masterRevisionKey} mode="edit" insurers={insurerOptions} rms={rmOptions} sources={sourceOptions} initialValues={initialValues} />
+        <PolicyLinkedMasterActions
+          customerId={policy.customer_id}
+          vehicleId={policy.vehicle_id}
+          canEditCustomer={Boolean(customerManager)}
+          canEditVehicle={canEditVehicle}
+        />
       </div>
       <div className="mx-auto mt-4 max-w-[1480px]">
         <PolicyActivityStatus
