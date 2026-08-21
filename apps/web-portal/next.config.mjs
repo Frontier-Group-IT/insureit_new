@@ -28,6 +28,8 @@ const contentSecurityPolicy = [
   ...(process.env.NODE_ENV === "production" ? ["upgrade-insecure-requests"] : [])
 ].join("; ");
 
+const embeddedEditorContentSecurityPolicy = contentSecurityPolicy.replace("frame-ancestors 'none'", "frame-ancestors 'self'");
+
 const securityHeaders = [
   { key: "Content-Security-Policy", value: contentSecurityPolicy },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -39,11 +41,28 @@ const securityHeaders = [
     : [])
 ];
 
+const embeddedEditorHeaders = [
+  { key: "Content-Security-Policy", value: embeddedEditorContentSecurityPolicy },
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: projectRoot,
   async headers() {
-    return [{ source: "/(.*)", headers: securityHeaders }];
+    return [
+      { source: "/(.*)", headers: securityHeaders },
+      {
+        source: "/customers/:id/edit",
+        has: [{ type: "query", key: "embedded", value: "1" }],
+        headers: embeddedEditorHeaders,
+      },
+      {
+        source: "/vehicles/:id/edit",
+        has: [{ type: "query", key: "embedded", value: "1" }],
+        headers: embeddedEditorHeaders,
+      },
+    ];
   },
   experimental: {
     optimizePackageImports: ["lucide-react"],
