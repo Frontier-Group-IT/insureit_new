@@ -1,4 +1,4 @@
-import { addVehicle } from "@/app/master-data-form-actions";
+import { addVehicleMaster } from "@/app/vehicles/vehicle-master-actions";
 import { VehicleForm } from "@/components/forms";
 import { AppShell } from "@/components/shell";
 import { requireCapability } from "@/lib/master-data-server";
@@ -40,7 +40,7 @@ export default async function NewVehiclePage({ searchParams }: { searchParams: P
 
   return (
     <AppShell title="Add Vehicle">
-      <VehicleForm action={addVehicle} customers={customerOptions} manufacturers={manufacturerOptions} values={{ customer_id: params.customer_id ?? null }} submitLabel="Create Vehicle" />
+      <VehicleForm action={addVehicleMaster} customers={customerOptions} manufacturers={manufacturerOptions} values={{ customer_id: params.customer_id ?? null }} submitLabel="Create Vehicle" />
     </AppShell>
   );
 }
