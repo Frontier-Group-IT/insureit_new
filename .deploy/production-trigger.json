@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy Section 02 popup save-close fix v2.",
-  "deploy_requested_at": "2026-08-21T14:58:00+05:30",
+  "purpose": "Deploy Policy Section 02 embedded-save and vehicle capacity mapping fix.",
+  "deploy_requested_at": "2026-08-21T15:33:00+05:30",
   "requested_by": "explicit user merge and deploy request",
   "source": "Deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "efdcd140168cf6e3f5209d9be3a062e5e69e9805",
-  "release_scope": "Deploy PR #502, which makes the Policy Edit customer/vehicle popup close reliably after a submitted save even when the redirected register URL does not retain the success query. The modal now tracks an actual embedded form submission before treating navigation to /customers or /vehicles as a successful save, while preserving the existing toast, Section 02 refresh, vehicle identity warning, owner lock, and View Fleet removal behavior.",
-  "verification": "PR #502 Verify web portal run 32467935776 passed successfully, including regressions, typecheck, lint, and production build. This release changes only apps/web-portal/components/policy-linked-master-actions.tsx and has no database schema migration, Supabase RLS/auth change, Expo/EAS change, or production security-header change. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source_commit": "d929c237d3f882bd463974a2f7571f5956b24ce8",
+  "release_scope": "Deploy PR #504, which makes embedded Customer/Vehicle saves deterministic by using an explicit same-origin embedded save bridge, and fixes Vehicle master capacity persistence so PCP/TWP/MISD use engine_capacity_cc, PCV uses seating_capacity, and GCV/CPM use gvw_kg. Vehicle edit/create now loads and saves the class-appropriate capacity value.",
+  "verification": "PR #504 Verify web portal run 32470404863 passed successfully, including regressions, typecheck, lint, and production build. No schema/RLS/auth, Expo/EAS, or security-header changes are included. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
