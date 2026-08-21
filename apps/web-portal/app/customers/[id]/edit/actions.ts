@@ -57,7 +57,8 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
     gst_number: isGstRegistered ? gstNumber : null,
     onboarding_status: textValue(formData, "onboarding_status") ?? "active",
     assigned_agent_id: assignedAgentId,
-    updated_by: profile.id
+    updated_by: profile.id,
+    updated_at: new Date().toISOString()
   }).eq("id", id);
 
   if (error) {
@@ -105,9 +106,10 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
   const savedTypes = new Set((savedDocuments ?? []).map((row: { document_type: string }) => row.document_type));
   const hasAllRequiredDocuments = requiredTypes.every((type) => savedTypes.has(type));
 
-  await admin.from("customers").update({ onboarding_status: hasAllRequiredDocuments ? "active" : "documents_pending", updated_by: profile.id }).eq("id", id);
+  await admin.from("customers").update({ onboarding_status: hasAllRequiredDocuments ? "active" : "documents_pending", updated_by: profile.id, updated_at: new Date().toISOString() }).eq("id", id);
 
   revalidatePath("/customers");
   revalidatePath(`/customers/${id}/edit`, "page");
+  revalidatePath("/policies");
   redirect(`/customers?success=${uploadedDocumentCount > 0 ? "documents_uploaded" : "customer_updated"}`);
 }

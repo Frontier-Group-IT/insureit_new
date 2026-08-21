@@ -37,9 +37,10 @@ type VehicleRow = VehicleValues & {
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function EditVehiclePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditVehiclePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ embedded?: string; error?: string }> }) {
   await requireCapability("view_vehicles", "edit");
-  const { id } = await params;
+  const [{ id }, query] = await Promise.all([params, searchParams]);
+  const embedded = query.embedded === "1";
   const admin = createSupabaseAdminClient();
 
   const [vehicleResult, customersResult, manufacturersResult, brandsResult] = await Promise.all([
@@ -62,8 +63,9 @@ export default async function EditVehiclePage({ params }: { params: Promise<{ id
   const manufacturerOptions = makeNames.map((name) => ({ value: name, label: name }));
   const vehicle = vehicleResult.data;
 
-  return (
-    <AppShell title="Edit Vehicle">
+  const editor = (
+    <>
+      {embedded && query.error ? <div className="mx-auto mb-3 max-w-[1480px] rounded-xl border border-[#F0C9C5] bg-[#FFF5F4] px-4 py-3 text-[10px] font-semibold text-[#B42318]">{query.error}</div> : null}
       <VehicleForm
         action={saveVehicle.bind(null, id)}
         customers={customerOptions}
@@ -72,6 +74,9 @@ export default async function EditVehiclePage({ params }: { params: Promise<{ id
         submitLabel="Save changes"
         beforeActions={<VehicleActivityStatus vehicleId={vehicle.id} createdAt={vehicle.created_at} updatedAt={vehicle.updated_at} />}
       />
-    </AppShell>
+    </>
   );
+
+  if (embedded) return <main data-embedded-editor="vehicle" className="min-h-screen bg-[#F6F8FB] p-3 sm:p-4">{editor}</main>;
+  return <AppShell title="Edit Vehicle">{editor}</AppShell>;
 }

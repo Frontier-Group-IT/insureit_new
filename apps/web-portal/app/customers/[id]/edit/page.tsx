@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import type { ReactNode } from "react";
 import { CustomerActivityStatus } from "@/components/customer-activity-status";
 import { AppShell } from "@/components/shell";
 import { getAccessibleCustomerIds, getEmployeeAccessScope } from "@/lib/employee-access-scope";
@@ -27,8 +28,13 @@ type Manufacturer = { name:string };
 type GroupOption = { id:string; customer_code:string; company_name:string|null; contact_name:string };
 type GroupRelationship = { parent_customer_id:string };
 
-export default async function EditCustomerPage({ params, searchParams }: { params:Promise<{id:string}>; searchParams:Promise<{error?:string;field?:string;success?:string}> }) {
+function EmbeddedEditor({ children }: { children: ReactNode }) {
+  return <main data-embedded-editor="customer" className="min-h-screen bg-[#F6F8FB] p-3 sm:p-4">{children}</main>;
+}
+
+export default async function EditCustomerPage({ params, searchParams }: { params:Promise<{id:string}>; searchParams:Promise<{error?:string;field?:string;success?:string;embedded?:string}> }) {
   const [{id},query] = await Promise.all([params,searchParams]);
+  const embedded = query.embedded === "1";
   const manager = await requireCustomerManager(id);
   const admin = createSupabaseAdminClient();
   const [scope, accessibleCustomerIds] = await Promise.all([
@@ -85,7 +91,8 @@ export default async function EditCustomerPage({ params, searchParams }: { param
       groupRequest.returns<GroupOption[]>(),
       admin.from("customer_relationships").select("parent_customer_id").eq("child_customer_id",id).eq("relationship_type","group_member").eq("is_active",true).eq("status","active").maybeSingle<GroupRelationship>()
     ]);
-    return <AppShell title="Corporate Profile"><CorporateProfileEditor customer={customer} contacts={contacts??[]} groups={groups??[]} currentGroupId={relationship?.parent_customer_id??null} action={updateCorporateProfile.bind(null,id)} errorMessage={query.error??null} successMessage={query.success??null}/>{activityStatus}</AppShell>;
+    const content = <><CorporateProfileEditor customer={customer} contacts={contacts??[]} groups={groups??[]} currentGroupId={relationship?.parent_customer_id??null} action={updateCorporateProfile.bind(null,id)} errorMessage={query.error??null} successMessage={query.success??null}/>{activityStatus}</>;
+    return embedded ? <EmbeddedEditor>{content}</EmbeddedEditor> : <AppShell title="Corporate Profile">{content}</AppShell>;
   }
 
   if(customer.partner_type==="dealership"){
@@ -97,8 +104,10 @@ export default async function EditCustomerPage({ params, searchParams }: { param
     ]);
     if(!dealership||!representative) notFound();
     const oems=(manufacturers??[]).map((item)=>({value:item.name,label:item.name}));
-    return <AppShell title="Dealership Profile"><DealershipProfileEditor action={updateDealershipProfile.bind(null,id)} values={{dealership_type:dealership.dealership_type,dealership_name:dealership.dealership_name,owner_name:dealership.owner_name,phone:customer.phone,email:customer.email,address_street:customer.address_street,address_locality:customer.address_locality,city:customer.city,state:customer.state,postal_code:customer.postal_code,india_location_id:customer.india_location_id,oem_name:dealership.oem_name,yearly_sales_band:dealership.yearly_sales_band,is_gst_registered:customer.is_gst_registered,gst_number:customer.gst_number,representative_name:representative.representative_name,representative_mobile:representative.mobile,representative_email:representative.email,representative_pan:representative.pan_number,aadhaar_last_four:representative.aadhaar_last_four}} contacts={contacts??[]} documents={documentsWithUrls} oems={oems}/>{activityStatus}</AppShell>;
+    const content = <><DealershipProfileEditor action={updateDealershipProfile.bind(null,id)} values={{dealership_type:dealership.dealership_type,dealership_name:dealership.dealership_name,owner_name:dealership.owner_name,phone:customer.phone,email:customer.email,address_street:customer.address_street,address_locality:customer.address_locality,city:customer.city,state:customer.state,postal_code:customer.postal_code,india_location_id:customer.india_location_id,oem_name:dealership.oem_name,yearly_sales_band:dealership.yearly_sales_band,is_gst_registered:customer.is_gst_registered,gst_number:customer.gst_number,representative_name:representative.representative_name,representative_mobile:representative.mobile,representative_email:representative.email,representative_pan:representative.pan_number,aadhaar_last_four:representative.aadhaar_last_four}} contacts={contacts??[]} documents={documentsWithUrls} oems={oems}/>{activityStatus}</>;
+    return embedded ? <EmbeddedEditor>{content}</EmbeddedEditor> : <AppShell title="Dealership Profile">{content}</AppShell>;
   }
 
-  return <AppShell title="Customer Profile"><CustomerProfileEditor customer={customer} documents={documentsWithUrls} vehicles={vehicles??[]} agents={agents??[]} internalOwnerName={internalOwnerName} leadSourceName={leadSourceName} action={updateCustomerProfile.bind(null,id)} errorMessage={query.error??null} errorField={query.field??null} beforeActions={activityStatus}/></AppShell>;
+  const content = <CustomerProfileEditor customer={customer} documents={documentsWithUrls} vehicles={vehicles??[]} agents={agents??[]} internalOwnerName={internalOwnerName} leadSourceName={leadSourceName} action={updateCustomerProfile.bind(null,id)} errorMessage={query.error??null} errorField={query.field??null} beforeActions={activityStatus}/>;
+  return embedded ? <EmbeddedEditor>{content}</EmbeddedEditor> : <AppShell title="Customer Profile">{content}</AppShell>;
 }
