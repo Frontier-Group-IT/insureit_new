@@ -47,5 +47,13 @@ jobs:
       - name: Inspect migration history
         run: supabase migration list
 
-      - name: Apply migrations
-        run: supabase db push
+      - name: Apply OCR training migration only
+        run: supabase db query --linked --file supabase/migrations/202608210001_policy_ocr_training_labels.sql
+
+      - name: Record OCR training migration as applied
+        run: supabase migration repair --linked --status applied 202608210001
+
+      - name: Verify OCR training table
+        run: |
+          result=$(supabase db query --linked --output-format json "select to_regclass('public.policy_ocr_training_labels') as table_name")
+          echo "$result" | grep -q "policy_ocr_training_labels"
