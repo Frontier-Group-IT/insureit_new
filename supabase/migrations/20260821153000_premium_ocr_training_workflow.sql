@@ -379,44 +379,4 @@ grant execute on function public.complete_policy_ocr_training_job(uuid, uuid, js
 grant execute on function public.fail_policy_ocr_training_job(uuid, uuid, text, boolean) to service_role;
 grant execute on function public.approve_policy_ocr_training_candidate(uuid, uuid, jsonb) to service_role;
 
--- OCR training V2 permission extension.
-insert into public.access_permissions_v2
-  (permission_key,module,label,description,risk,allowed_access_levels,allowed_scopes,scope_required,is_active)
-values
-  ('policies.ocr_training.review','Policies','Review premium OCR training','Correct OCR proposals and submit verified Section 03 training labels.','high',array['edit'],array['organization'],false,true),
-  ('policies.ocr_training.approve','Policies','Approve premium OCR training','Give separate owner approval for sanitized OCR training candidates.','critical',array['approve'],array['organization'],false,true)
-on conflict (permission_key) do update set
-  module = excluded.module,
-  label = excluded.label,
-  description = excluded.description,
-  risk = excluded.risk,
-  allowed_access_levels = excluded.allowed_access_levels,
-  allowed_scopes = excluded.allowed_scopes,
-  scope_required = excluded.scope_required,
-  is_active = excluded.is_active,
-  updated_at = now();
-
--- OCR training V2 role grants.
-with ocr_training_role_grants(role_code, permission_key, access_level) as (
-  values
-    ('super_admin','policies.ocr_training.review','edit'),
-    ('super_admin','policies.ocr_training.approve','approve'),
-    ('admin','policies.ocr_training.review','edit'),
-    ('admin','policies.ocr_training.approve','approve'),
-    ('it_super_user','policies.ocr_training.review','edit'),
-    ('it_super_user','policies.ocr_training.approve','approve')
-)
-insert into public.access_role_permissions_v2
-  (role_id,permission_id,access_level,scope_type,is_active,reason)
-select role.id, permission.id, grant_row.access_level, null, true, 'Premium OCR two-person training workflow'
-from ocr_training_role_grants grant_row
-join public.access_roles_v2 role on role.code = grant_row.role_code
-join public.access_permissions_v2 permission on permission.permission_key = grant_row.permission_key
-on conflict (role_id,permission_id) do update set
-  access_level = excluded.access_level,
-  scope_type = excluded.scope_type,
-  is_active = true,
-  reason = excluded.reason,
-  updated_at = now();
-
 commit;
