@@ -1,4 +1,5 @@
 import { PolicyUnifiedForm, type PolicyRmOption, type PolicySourceOption } from "@/components/policy-unified-form";
+import { PolicyOnboardingProductGuard } from "@/components/policy-onboarding-product-guard";
 import { PolicyRemarksActionStyle } from "@/components/policy-remarks-action-style";
 import { AppShell } from "@/components/shell";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
@@ -116,6 +117,7 @@ export default async function NewPolicyPage() {
   return (
     <AppShell title="Add Policy">
       <PolicyRemarksActionStyle />
+      <PolicyOnboardingProductGuard />
       <PolicyUnifiedForm mode="create" insurers={insurerOptions} rms={rmOptions} sources={sourceOptions} manufacturers={manufacturerOptions} />
     </AppShell>
   );
