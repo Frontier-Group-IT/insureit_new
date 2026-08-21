@@ -1,10 +1,10 @@
 {
-    "purpose":  "Deploy premium OCR training review workflow.",
-    "deploy_requested_at":  "2026-08-21T21:32:00+05:30",
-    "requested_by":  "explicit user merge and deploy request",
-    "source":  "Deploy current main using the protected GitHub Actions production deployment workflow.",
-    "source_commit":  "1dc85e0a64407f072bb1aa0085cddd76ccbc3956",
-    "release_scope":  "Deploy merged premium OCR training review workflow PR #519: compare Google OCR proposals with existing Section 03 database values, confirm database comparison, preserve reviewer/owner approval, and allow safe manual requeue of exhausted jobs.",
-    "verification":  "PR #519 passed the canonical web portal verification gate. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
-    "instructions":  "Update this file only after explicit deployment approval."
+  "purpose": "Deploy NEW-<chassis> registration-pending vehicle identity format.",
+  "deploy_requested_at": "2026-08-21T22:48:00+05:30",
+  "requested_by": "explicit user merge and deploy request",
+  "source": "Deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "b7c6d128f5b757680389d46bb3e114a495a2e7c5",
+  "release_scope": "Deploy merged PR #521 (policy OCR backlog coverage and safe worker preflight) together with current main vehicle-format changes. OCR now links only unambiguous legacy customer policy copies, loads up to 1,000 tracked policy copies, and prevents Google/OIDC configuration failures from consuming retry attempts.",
+  "verification": "PR #521 Verify web portal run 32505203343 passed successfully. Current main changes were already verified by their merge gate. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "instructions": "Update this file only after explicit deployment approval."
 }
