@@ -80,7 +80,7 @@ export function refineApprovedMotorPolicyLayout(
 
   return {
     ...parsed,
-    parserVersion: `${parsed.parserVersion}+approved-layout-v1`,
+    parserVersion: `${parsed.parserVersion}+approved-layout-v2`,
     fields: [...fields.values()],
   };
 }
@@ -90,6 +90,12 @@ function applyFinancials(tables: StructuredPolicyTable[], parserId: string, fiel
   const od = findAmount(tables, /(?:Gross|Total|Net|Calculated)?\s*(?:Own\s+Damage|\bOD\b)\s*(?:Premium)?/i, 0, 10_000_000);
   const basicTp = findAmount(tables, /(?:Basic\s+(?:TP|Liability)|Third\s+Party\s+Basic|Basic\s+Premium)/i, 0, 10_000_000);
   const grossLiability = findAmount(tables, /(?:Gross|Total|Net|Calculated)\s+(?:TP|Liability)(?:\s+Premium)?/i, 0, 10_000_000);
+  const ownerDriverCpa = findAmount(tables, /(?:Compulsory\s+(?:PA|Personal\s+Accident)\s+(?:for\s+)?Owner\s*[- ]?Driver|P\.?\s*A\.?\s+(?:Cover\s+)?(?:for\s+)?Owner\s*[- ]?Driver|Owner\s*[- ]?Driver\s+(?:CPA|PA)(?:\s+Premium)?)/i, 0, 10_000_000);
+  const ownerDriverCpaNo = findValue(
+    tables,
+    /(?:Compulsory\s+(?:PA|Personal\s+Accident)\s+(?:cover\s+)?(?:for\s+)?Owner\s*[- ]?Driver|P\.?\s*A\.?\s+(?:Cover\s+)?(?:for\s+)?Owner\s*[- ]?Driver|Owner\s*[- ]?Driver\s+(?:CPA|PA))/i,
+    (value) => /(?:NOT\s+(?:PROVIDED|OPTED|COVERED)|\bNO\b|\bNIL\b|^0(?:\.0+)?$)/i.test(normalize(value)),
+  );
   const net = findAmount(tables, /(?:Net\s+Premium|Premium\s*\(A\s*\+\s*B\)|Total\s+Premium(?!\s+Payable)|Premium\s+Amount)/i, 0, 10_000_000);
   const gross = findAmount(tables, /(?:Total\s+(?:Payable|Policy)\s+Premium|Gross\s+Premium|Total\s+Amount(?:\s+Payable)?)/i, 0, 10_000_000);
   let tax = findAmount(tables, /(?:Total\s+GST|GST\s+Amount|\bIGST\b)/i, 0, 10_000_000);
@@ -116,7 +122,14 @@ function applyFinancials(tables: StructuredPolicyTable[], parserId: string, fiel
     set(fields, "od_premium", money(odValue), .99, od?.page ?? net?.page ?? 1, od?.evidence ?? "Zero own-damage premium for liability-only policy");
     set(fields, "tp_premium", money(tpValue), .99, basicTp?.page ?? net?.page ?? 1, basicTp?.evidence ?? "Basic third-party premium");
     set(fields, "cpa_premium", money(extraLiability), .99, grossLiability?.page ?? net?.page ?? 1, "Liability additions = printed net - OD - basic TP");
-    set(fields, "cpa_opted", extraLiability > 0 ? "Yes" : "No", .99, grossLiability?.page ?? net?.page ?? 1, "Portal CPA field stores liability additions outside basic TP");
+
+    if (ownerDriverCpa) {
+      set(fields, "cpa_opted", ownerDriverCpa.value > 0 ? "Yes" : "No", .99, ownerDriverCpa.page, ownerDriverCpa.evidence);
+    } else if (ownerDriverCpaNo || extraLiability === 0) {
+      set(fields, "cpa_opted", "No", .99, ownerDriverCpaNo?.page ?? grossLiability?.page ?? net?.page ?? 1, ownerDriverCpaNo?.evidence ?? "No liability addition outside OD and basic TP");
+    } else {
+      fields.delete("cpa_opted");
+    }
   }
 }
 
