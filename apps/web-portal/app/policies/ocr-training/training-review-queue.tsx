@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import {
   approvePolicyOcrTrainingLabel,
   runPolicyOcrTrainingLabel,
   submitPolicyOcrDatabaseComparison,
+  type RunPolicyOcrTrainingState,
 } from "../ocr-training-actions";
 import {
   compareTrainingProposalToReference,
@@ -172,12 +173,7 @@ function TrainingReviewCard({
           </span>
           {canReview || canApprove ? (
             row.processingStatus !== "processing" ? (
-          <form action={runPolicyOcrTrainingLabel}>
-            <input type="hidden" name="training_label_id" value={row.labelId} />
-            <button className="rounded-lg bg-white px-3 py-2 text-xs font-bold text-amber-900 ring-1 ring-amber-300">
-              Run with Google Cloud
-            </button>
-          </form>
+          <OcrRunForm labelId={row.labelId} />
             ) : null
           ) : null}
         </div>
@@ -194,12 +190,7 @@ function TrainingReviewCard({
 
       {ready && (canReview || canApprove) ? (
         <div className="mt-4 flex justify-end">
-          <form action={runPolicyOcrTrainingLabel}>
-            <input type="hidden" name="training_label_id" value={row.labelId} />
-            <button className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-blue-700">
-              Re-run with Google Cloud
-            </button>
-          </form>
+          <OcrRunForm labelId={row.labelId} rerun />
         </div>
       ) : null}
 
@@ -260,6 +251,30 @@ function TrainingReviewCard({
         </div>
       ) : null}
     </section>
+  );
+}
+
+const INITIAL_OCR_RUN_STATE: RunPolicyOcrTrainingState = { status: "idle", message: null };
+
+function OcrRunForm({ labelId, rerun = false }: { labelId: string; rerun?: boolean }) {
+  const [state, formAction, pending] = useActionState(runPolicyOcrTrainingLabel, INITIAL_OCR_RUN_STATE);
+  return (
+    <form action={formAction} className="flex max-w-sm flex-col items-end gap-2">
+      <input type="hidden" name="training_label_id" value={labelId} />
+      <button
+        disabled={pending}
+        className={rerun
+          ? "rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-blue-700 disabled:cursor-wait disabled:opacity-60"
+          : "rounded-lg bg-white px-3 py-2 text-xs font-bold text-amber-900 ring-1 ring-amber-300 disabled:cursor-wait disabled:opacity-60"}
+      >
+        {pending ? "Reading with Google Cloud…" : rerun ? "Re-run with Google Cloud" : "Run with Google Cloud"}
+      </button>
+      {state.message ? (
+        <span className={`text-right text-xs font-semibold ${state.status === "success" ? "text-emerald-700" : "text-red-700"}`} role="status">
+          {state.message}
+        </span>
+      ) : null}
+    </form>
   );
 }
 
