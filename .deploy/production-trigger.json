@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy Section 02 embedded-save and vehicle capacity mapping fix.",
-  "deploy_requested_at": "2026-08-21T15:33:00+05:30",
-  "requested_by": "explicit user merge and deploy request",
+  "purpose": "Deploy pending-vehicle identity consistency fix and Policy Edit document removal action.",
+  "deploy_requested_at": "2026-08-21T15:37:00+05:30",
+  "requested_by": "explicit user merge and deploy both changes request",
   "source": "Deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "d929c237d3f882bd463974a2f7571f5956b24ce8",
-  "release_scope": "Deploy PR #504, which makes embedded Customer/Vehicle saves deterministic by using an explicit same-origin embedded save bridge, and fixes Vehicle master capacity persistence so PCP/TWP/MISD use engine_capacity_cc, PCV uses seating_capacity, and GCV/CPM use gvw_kg. Vehicle edit/create now loads and saves the class-appropriate capacity value.",
-  "verification": "PR #504 Verify web portal run 32470404863 passed successfully, including regressions, typecheck, lint, and production build. No schema/RLS/auth, Expo/EAS, or security-header changes are included. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source_commit": "eb9d4f4677df3413c7dea922d17c2f2648e7eded",
+  "release_scope": "Deploy PR #503 and PR #505 together. PR #503 records the registration-pending vehicle identity synchronization migration, rollback, and verification SQL so PENDING-<chassis> vehicle identifiers stay aligned after chassis edits; the corresponding production migration was already applied and verified with zero stale pending identifiers. PR #505 adds a subtle Remove Policy Copy action after Replace in Policy Edit, with confirmation, authorization, storage cleanup, audit activity, success/error feedback, and immediate fallback to Add Policy Copy after removal.",
+  "verification": "PR #503 Verify web portal run 32468750236 passed successfully and PR #505 Verify web portal run 32470907356 passed successfully. The protected production workflow must verify the combined current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
