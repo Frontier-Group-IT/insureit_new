@@ -483,3 +483,7 @@ Focused lint: passed with 0 errors
 Registration comparison now treats district-code zero padding such as `DL-08` and `DL8` as equivalent. Capacity tolerates a difference of at most two units, matching the existing money tolerance, and the approved RTO city/code pairs are normalized for comparison.
 
 The six production labels have **not** been rerun with the new parser because this code is not deployed. After merge and an explicit production deployment request, manually re-run those six rows and inspect the new Section 02/03 comparisons before confirming any replacement candidate.
+
+## 15. IT Super User-only training workspace — 2026-08-22
+
+**IMPLEMENTED / DEPLOYMENT PENDING:** OCR Training is a Development workspace available only to the protected `it_super_user` role. The desktop and mobile navigation expose `/policies/ocr-training` under **Development** only when the authenticated role is `it_super_user` and effective `manage_system` access is approve-level. The route and all training Server Actions independently enforce the same role restriction before retaining the existing OCR review/approval capability checks. Direct navigation by another role redirects to access denied.

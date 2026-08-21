@@ -1,7 +1,5 @@
-import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
-import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
-import { hasEffectiveCapability } from "@/lib/effective-permissions";
+import { requirePolicyOcrTrainingOperator } from "@/lib/policy-ocr-training-access";
 import type { TrainingProposal } from "@/lib/policy-ocr-training";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { TrainingReviewQueue, type TrainingQueueRow } from "./training-review-queue";
@@ -73,14 +71,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 export default async function PolicyOcrTrainingPage() {
-  const { profile } = await getAuthenticatedProfile(await getServerAccessToken());
-  if (!profile?.id) redirect("/access-denied");
-
-  const [canReview, canApprove] = await Promise.all([
-    hasEffectiveCapability(profile, "review_policy_ocr_training", "edit"),
-    hasEffectiveCapability(profile, "approve_policy_ocr_training", "approve"),
-  ]);
-  if (!canReview && !canApprove) redirect("/access-denied");
+  await requirePolicyOcrTrainingOperator();
   const admin = createSupabaseAdminClient();
   const { data, error, count } = await admin
     .from("policy_documents")
@@ -168,7 +159,7 @@ export default async function PolicyOcrTrainingPage() {
           The premium OCR reviewer queue is temporarily unavailable.
         </div>
       ) : (
-        <TrainingReviewQueue rows={rows} canTrain={canReview || canApprove} />
+        <TrainingReviewQueue rows={rows} canTrain />
       )}
     </AppShell>
   );

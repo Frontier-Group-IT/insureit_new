@@ -869,3 +869,7 @@ The rerunnable queue migration now downgrades only legacy `approved` rows that h
 The parser now recognizes HDFC ERGO and Royal Sundaram directly, runs Google Layout Parser once for every manually selected PDF, and uses structured table alignment to extract vehicle and reconciled premium fields for the approved United India, HDFC ERGO, New India, National and Royal Sundaram shapes. The six sanitized cases pass with 24–25 comparable fields each; the complete OCR regression suite, TypeScript check and focused lint pass.
 
 This is parser training through reviewed code and regression evidence, not an automatically self-modifying model. The six live queue rows must be manually rerun after this branch is merged and explicitly deployed; their existing approvals alone do not reprocess them with the new parser.
+
+### IT Super User-only OCR Training navigation — 2026-08-22
+
+**IMPLEMENTED / NOT YET MERGED OR DEPLOYED:** `/policies/ocr-training` is now listed under the Development menu, and that section remains visible only to `it_super_user` with approve-level `manage_system` access. The route and training Server Actions also reject every non-`it_super_user` role, so hiding the menu is not the only protection. The OCR workflow and database behavior are unchanged.
