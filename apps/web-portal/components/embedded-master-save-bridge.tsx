@@ -1,27 +1,29 @@
 "use client";
 
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type MasterKind = "customer" | "vehicle";
 
 const STORAGE_KEY = "insureit:policy-master-save-success";
 
-function successKindFromLocation(): MasterKind | null {
-  const params = new URLSearchParams(window.location.search);
-  const success = params.get("success");
+function successKindFromRoute(pathname: string, success: string | null): MasterKind | null {
   if (!success) return null;
 
-  if (window.location.pathname === "/vehicles" && success === "vehicle_updated") return "vehicle";
-  if (window.location.pathname === "/customers" && ["customer_updated", "documents_uploaded", "dealership_updated"].includes(success)) return "customer";
-  if (/^\/customers\/[^/]+\/edit$/.test(window.location.pathname) && success === "corporate_updated") return "customer";
+  if (pathname === "/vehicles" && success === "vehicle_updated") return "vehicle";
+  if (pathname === "/customers" && ["customer_updated", "documents_uploaded", "dealership_updated"].includes(success)) return "customer";
+  if (/^\/customers\/[^/]+\/edit$/.test(pathname) && success === "corporate_updated") return "customer";
   return null;
 }
 
 export function EmbeddedMasterSaveBridge() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [toast, setToast] = useState<MasterKind | null>(null);
+  const success = searchParams.get("success");
 
   useEffect(() => {
-    const kind = successKindFromLocation();
+    const kind = successKindFromRoute(pathname, success);
     if (window.self !== window.top && kind) {
       try {
         window.parent.sessionStorage.setItem(STORAGE_KEY, kind);
@@ -40,7 +42,7 @@ export function EmbeddedMasterSaveBridge() {
         setToast(saved);
       }
     }
-  }, []);
+  }, [pathname, success]);
 
   useEffect(() => {
     if (!toast) return;
