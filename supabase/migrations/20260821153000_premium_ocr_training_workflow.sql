@@ -25,7 +25,8 @@ alter table public.policy_ocr_training_labels
 
 update public.policy_ocr_training_labels
 set status = 'reviewed'
-where status = 'approved';
+where status = 'approved'
+  and owner_approved_by is null;
 
 alter table public.policy_ocr_training_labels
   add constraint policy_ocr_training_labels_status_check

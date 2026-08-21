@@ -775,7 +775,7 @@ private Storage object
   -> Google Document AI + INSUREIT parser/refiner
   -> Section 03 proposal only
   -> compare to existing policies/policy_premium_details
-  -> reviewer confirmation -> separate owner approval -> sanitized candidate
+  -> operator comparison review -> one-click sanitized candidate approval
 ```
 
 Google is only the reading layer. Parser “training” means human-approved, sanitized Section 03 regression cases; production must never self-modify parser source. OCR must not extract customer, insured, vehicle, PAN, address, chassis or engine identity fields.
@@ -815,7 +815,7 @@ Run that operation once through the protected migration workflow, then use a pro
 
 ### Automated comparison continuation — 2026-08-22
 
-**IMPLEMENTED ON `feature/automated-policy-ocr-comparison` / NOT MERGED OR DEPLOYED:** successful queue jobs now copy the linked policy's saved Section 03 reference into the training-label row and calculate a normalized OCR-vs-database comparison. The reviewer UI uses the same comparator, shows exact-match/mismatch/missing totals and adds an `Exact match` filter. Human reviewer confirmation and separate owner approval remain mandatory; policy data and parser source are never changed automatically.
+**HISTORICAL IMPLEMENTATION, SUPERSEDED BY THE SINGLE-OPERATOR DECISION BELOW:** successful queue jobs copy the linked policy's saved Section 03 reference into the training-label row and calculate a normalized OCR-vs-database comparison. The UI uses the same comparator, shows exact-match/mismatch/missing totals and adds an `Exact match` filter. Policy data and parser source are never changed automatically.
 
 The production cron definition follows the latest `main` decision: hourly with a maximum batch of three and server-only OIDC fallbacks. This requires a Vercel plan that permits hourly cron plus a valid private worker secret and runtime OIDC. Do not deploy until the plan is confirmed and the user explicitly requests deployment. After deployment, verify cron logs and live queue movement from the previously verified `286 pending / 0 ready / 0 exhausted` baseline.
 
@@ -845,3 +845,11 @@ Section 02 vehicle extraction has deliberately not been added. The exact current
 ### Canonical NEW vehicle identity — 2026-08-22
 
 **IMPLEMENTED IN PR #530 / PRODUCTION APPLICATION PENDING:** `NEW-<normalized chassis>` is the chosen internal identity for registration-pending vehicles. The forward migration `20260821194052_canonical_new_vehicle_prefix.sql` supersedes the later conflicting `PENDING-` trigger, checks missing and duplicate chassis values plus target collisions, updates the onboarding RPC, repairs temporary vehicle rows and asserts zero legacy `PENDING-` vehicle prefixes. Vehicle/fleet displays, ownership-conflict masking and MIS export recognize both prefixes during transition. The policy snapshot remains `REGISTRATION PENDING`; `vehicle_no_normalized` remains null.
+
+### Single-operator OCR training confirmation — 2026-08-22
+
+**LATEST DECISION / IMPLEMENTED LOCALLY / NOT APPLIED OR DEPLOYED:** the OCR training queue no longer uses separate reviewer and owner identities. The operator still inspects the Google OCR versus saved Section 03 comparison, but one **Confirm comparison & approve training** click now performs the database-reference confirmation and sanitized-candidate approval atomically. The same authenticated profile is recorded in the existing review/approval audit columns for schema compatibility. The self-approval UI block, different-owner message and separate approval form are removed. Expected confirmation errors return inline instead of causing a route-level application-error page.
+
+Forward migration: `20260822000100_single_operator_policy_ocr_training.sql`. It drops `policy_ocr_training_labels_separate_approval_check`, removes the self-approval exception from candidate approval and adds the service-role-only atomic RPC `approve_policy_ocr_database_comparison(uuid, uuid, jsonb, jsonb)`. Apply this migration before deploying the matching application commit; otherwise the new button cannot complete.
+
+The rerunnable queue migration now downgrades only legacy `approved` rows that have no approval actor. It no longer resets already-approved candidates to `reviewed` when the protected migration workflow is rerun.

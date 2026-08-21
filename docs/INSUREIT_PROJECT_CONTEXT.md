@@ -507,14 +507,16 @@ Do not turn this file into a raw chat transcript. Keep it as the current, action
 
 ## 17. Premium OCR training workflow
 
-**APPLIED / QUEUE VERIFIED 2026-08-21:** migration `20260821153000_premium_ocr_training_workflow.sql` extends policy-copy training with an idempotent queue, three-attempt leased processing, bounded retry delays, proposal metadata, separate reviewer and owner approval, and sanitized approved-candidate storage. Supabase workflow `32513396428` verified 286 policy-copy documents, 286 queue labels and 286 pending jobs.
+**APPLIED / QUEUE VERIFIED 2026-08-21:** migration `20260821153000_premium_ocr_training_workflow.sql` extends policy-copy training with an idempotent queue, three-attempt leased processing, bounded retry delays, proposal metadata and sanitized approved-candidate storage. Supabase workflow `32513396428` verified 286 policy-copy documents, 286 queue labels and 286 pending jobs. The original two-person approval rule is superseded by the single-operator migration below.
 
 Durable rules:
 
 - Only approved Policy Onboarding Section 03 values and comparison totals enter proposals/corrections.
 - Raw OCR text, document bytes, identity fields and real policy numbers never enter training candidates.
-- `review_policy_ocr_training` submits corrections; `approve_policy_ocr_training` gives final owner approval. Reviewer and owner must be different profiles.
+- Either existing OCR training capability authorizes the controlled trainer. The same operator inspects the comparison and confirms/approves the sanitized candidate in one click; there is no different-owner or self-approval restriction.
 - Approved candidates use deterministic synthetic policy numbers and do not modify parser source. Parser changes remain reviewed code changes with sanitized regressions.
 - Policy-copy inserts/replacements create/reset the label only. They must not invoke Google automatically.
 - **DEPLOYED BASELINE / FOLLOW-UP FIX PENDING 2026-08-22:** an authorized reviewer/owner explicitly selects one queue row and runs Google OCR. The action must independently enforce the training capability, then preflight Google configuration/OIDC before an optimistic claim of that exact label; there is no cron, external worker, upload follow-up or page-visit scheduling. A separate `POLICY_OCR_WORKER_SECRET`/`CRON_SECRET` is therefore not a Phase 1 operator-run dependency. Expected operational failures must render inline rather than throw a generic route-level application error. Section 03 comparison still reads saved policy/premium values and never overwrites policy records.
 - Vehicle extraction remains gated. Use `docs/POLICY_OCR_SECTION_02_FIELD_MAP.md` as the exact form/payload/database contract before adding Section 02 proposal fields.
+
+**IMPLEMENTED / NOT APPLIED 2026-08-22:** migration `20260822000100_single_operator_policy_ocr_training.sql` removes the separate-reviewer constraint and adds `approve_policy_ocr_database_comparison(...)`. The RPC atomically stores the saved Section 03 reference, records the current operator as the audit actor, creates/upserts the sanitized candidate and marks the label approved. The UI removes the owner panel and uses one inline-state button: **Confirm comparison & approve training**. A committed migration is not proof that this is live.

@@ -79,7 +79,7 @@ Before expanding further:
 - add insurer-specific sanitized regressions for each new key;
 - keep raw OCR text and real identity values out of source control, logs and approved candidate payloads;
 - show confidence and bounded non-PII evidence labels;
-- require a reviewer decision and separate owner approval;
+- require the authorized operator to inspect the comparison and explicitly confirm the sanitized candidate;
 - prove that a manual run targets exactly the selected `policy_ocr_training_labels.id`;
 - do not write OCR results back to Section 02.
 
