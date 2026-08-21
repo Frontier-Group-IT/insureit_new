@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy detailed business MIS Excel export.",
-  "deploy_requested_at": "2026-08-21T22:28:00+05:30",
+  "purpose": "Deploy NEW-<chassis> registration-pending vehicle identity format.",
+  "deploy_requested_at": "2026-08-21T22:48:00+05:30",
   "requested_by": "explicit user merge and deploy request",
   "source": "Deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "9648ad5d6fea78f38c4e00a1f62bd409159d2baa",
-  "release_scope": "Deploy merged PR #520: detailed Policy Business MIS .xlsx export with 44 ordered columns, totals row, frozen headers, autofilter, formatting, and live policy/customer/vehicle/pay-in/payout data while preserving current report filters and access scope.",
-  "verification": "PR #520 passed the canonical web portal verification gate on head bbeb67dc8b9576b9c5b290d525856d903b7017c5. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source_commit": "0c2a49d1cdaa29953f685b7a75b3cf27722d1a75",
+  "release_scope": "Deploy merged PR #522. Registration-pending vehicles now use NEW-<normalized chassis>; the production migration has been applied and verified with 346/346 pending vehicles in NEW format, zero PENDING vehicle rows, zero mismatches, zero duplicate vehicle/chassis groups, and zero broken policy-to-vehicle links. Vehicle UUID relationships remain unchanged.",
+  "verification": "PR #522 Verify web portal run 32506403331 passed successfully on head 94c93182d99364fe9a9ff6fab7e6c7698ee28a20. Production Supabase migration new_unregistered_vehicle_prefix applied successfully and post-migration invariants passed. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
