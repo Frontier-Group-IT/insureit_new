@@ -858,4 +858,6 @@ Forward migration: `20260822000100_single_operator_policy_ocr_training.sql`. It 
 
 Migration `20260822093000_policy_ocr_section_02_training.sql` adds service-role-only `section_02_reference` storage and replaces the atomic approval validators for the combined contract. `.github/workflows/apply-supabase-migrations.yml` applies and verifies it explicitly. The Policy Onboarding OCR review modal can also copy selected Section 02 values into the unsaved form; insured name and phone remain excluded. No training action overwrites a saved policy, vehicle or snapshot.
 
+**MIGRATION RERUN FIX:** after PR #535 merged, Supabase run `32527822191` stopped while rerunning `20260821153000_premium_ocr_training_workflow.sql` because that historical script re-added the retired different-operator constraint against already-approved single-operator rows. The rerunnable migration must continue dropping the legacy constraint but must never re-add it. The newer single-operator migration remains authoritative.
+
 The rerunnable queue migration now downgrades only legacy `approved` rows that have no approval actor. It no longer resets already-approved candidates to `reviewed` when the protected migration workflow is rerun.

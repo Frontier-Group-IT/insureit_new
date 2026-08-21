@@ -150,6 +150,7 @@ assert.match(migration, /for update skip locked/i);
 assert.match(migration, /status = 'approved'[\s\S]+owner_approved_by is null/);
 assert.match(migration, /insert into public\.policy_ocr_training_labels[\s\S]+policy_documents/);
 assert.match(migration, /after insert or update of storage_bucket, storage_path, mime_type, file_size/);
+assert.doesNotMatch(migration, /add constraint policy_ocr_training_labels_separate_approval_check/);
 
 const actions = readFileSync("app/policies/ocr-training-actions.ts", "utf8");
 const trainingAccess = readFileSync("lib/policy-ocr-training-access.ts", "utf8");
