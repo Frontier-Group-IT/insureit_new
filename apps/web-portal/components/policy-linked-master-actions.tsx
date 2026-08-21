@@ -28,6 +28,7 @@ export function PolicyLinkedMasterActions({ customerId, vehicleId, canEditCustom
   const router = useRouter();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const dirtyRef = useRef(false);
+  const submittedRef = useRef<EditorKind | null>(null);
   const vehicleIdentityRef = useRef<VehicleIdentity | null>(null);
   const pendingVehicleFormRef = useRef<HTMLFormElement | null>(null);
   const vehicleIdentifierConfirmedRef = useRef(false);
@@ -75,6 +76,7 @@ export function PolicyLinkedMasterActions({ customerId, vehicleId, canEditCustom
 
   function openEditor(kind: EditorKind) {
     dirtyRef.current = false;
+    submittedRef.current = null;
     vehicleIdentityRef.current = null;
     pendingVehicleFormRef.current = null;
     vehicleIdentifierConfirmedRef.current = false;
@@ -93,6 +95,7 @@ export function PolicyLinkedMasterActions({ customerId, vehicleId, canEditCustom
 
   function closeEditor() {
     dirtyRef.current = false;
+    submittedRef.current = null;
     pendingVehicleFormRef.current = null;
     vehicleIdentifierConfirmedRef.current = false;
     setCloseWarning(false);
@@ -102,12 +105,22 @@ export function PolicyLinkedMasterActions({ customerId, vehicleId, canEditCustom
 
   const finishSuccess = useCallback((kind: EditorKind) => {
     dirtyRef.current = false;
+    submittedRef.current = null;
     setEditor(null);
     setCloseWarning(false);
     setIdentifierWarning(false);
     setToast(kind === "customer" ? "Customer updated successfully. Policy details refreshed." : "Vehicle updated successfully. Policy details refreshed.");
     router.refresh();
   }, [router]);
+
+  const frameReachedSuccessfulDestination = useCallback((kind: EditorKind, url: URL) => {
+    const success = url.searchParams.get("success");
+    if (kind === "customer") {
+      return (url.pathname === "/customers" && (Boolean(success) || submittedRef.current === "customer"))
+        || (url.pathname === `/customers/${customerId}/edit` && Boolean(success));
+    }
+    return url.pathname === "/vehicles" && (success === "vehicle_updated" || submittedRef.current === "vehicle");
+  }, [customerId]);
 
   useEffect(() => {
     if (!editor) return;
@@ -120,19 +133,12 @@ export function PolicyLinkedMasterActions({ customerId, vehicleId, canEditCustom
       } catch {
         return;
       }
-      const success = url.searchParams.get("success");
-      if (editor === "customer" && success && (url.pathname === "/customers" || url.pathname === `/customers/${customerId}/edit`)) {
-        finishSuccess("customer");
-        return;
-      }
-      if (editor === "vehicle" && url.pathname === "/vehicles" && success === "vehicle_updated") {
-        finishSuccess("vehicle");
-      }
+      if (frameReachedSuccessfulDestination(editor, url)) finishSuccess(editor);
     };
     checkFrameLocation();
     const timer = window.setInterval(checkFrameLocation, 200);
     return () => window.clearInterval(timer);
-  }, [customerId, editor, finishSuccess]);
+  }, [editor, finishSuccess, frameReachedSuccessfulDestination]);
 
   function onFrameLoad() {
     if (!editor) return;
@@ -148,13 +154,8 @@ export function PolicyLinkedMasterActions({ customerId, vehicleId, canEditCustom
       return;
     }
 
-    const success = url.searchParams.get("success");
-    if (editor === "customer" && success && (url.pathname === "/customers" || url.pathname === `/customers/${customerId}/edit`)) {
-      finishSuccess("customer");
-      return;
-    }
-    if (editor === "vehicle" && url.pathname === "/vehicles" && success === "vehicle_updated") {
-      finishSuccess("vehicle");
+    if (frameReachedSuccessfulDestination(editor, url)) {
+      finishSuccess(editor);
       return;
     }
 
@@ -185,7 +186,13 @@ export function PolicyLinkedMasterActions({ customerId, vehicleId, canEditCustom
       }
     }
 
-    if (editor !== "vehicle") return;
+    const form = frameDocument.querySelector<HTMLFormElement>("form");
+    if (editor === "customer") {
+      form?.addEventListener("submit", () => {
+        submittedRef.current = "customer";
+      }, true);
+      return;
+    }
 
     const customerSelect = frameDocument.querySelector<HTMLSelectElement>('select[name="customer_id"]');
     if (customerSelect && !frameDocument.querySelector('[data-policy-locked-customer="true"]')) {
@@ -206,20 +213,29 @@ export function PolicyLinkedMasterActions({ customerId, vehicleId, canEditCustom
       engineNo: fieldValue(frameDocument, "engine_no"),
     };
 
-    const form = frameDocument.querySelector<HTMLFormElement>("form");
     form?.addEventListener("submit", (event) => {
-      if (vehicleIdentifierConfirmedRef.current) return;
+      if (vehicleIdentifierConfirmedRef.current) {
+        submittedRef.current = "vehicle";
+        return;
+      }
       const original = vehicleIdentityRef.current;
-      if (!original) return;
+      if (!original) {
+        submittedRef.current = "vehicle";
+        return;
+      }
       const current = {
         vehicleNo: fieldValue(frameDocument, "vehicle_no"),
         chassisNo: fieldValue(frameDocument, "chassis_no"),
         engineNo: fieldValue(frameDocument, "engine_no"),
       };
       const changed = current.vehicleNo !== original.vehicleNo || current.chassisNo !== original.chassisNo || current.engineNo !== original.engineNo;
-      if (!changed) return;
+      if (!changed) {
+        submittedRef.current = "vehicle";
+        return;
+      }
       event.preventDefault();
       event.stopPropagation();
+      submittedRef.current = null;
       pendingVehicleFormRef.current = form;
       setIdentifierWarning(true);
     }, true);
@@ -232,6 +248,7 @@ export function PolicyLinkedMasterActions({ customerId, vehicleId, canEditCustom
       return;
     }
     vehicleIdentifierConfirmedRef.current = true;
+    submittedRef.current = "vehicle";
     setIdentifierWarning(false);
     form.requestSubmit();
   }
