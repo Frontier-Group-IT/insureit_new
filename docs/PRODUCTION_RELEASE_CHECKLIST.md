@@ -34,7 +34,8 @@
 - [ ] Release commit is fixed and recorded.
 - [ ] All changes since the previous production commit are reviewed.
 - [ ] No unrelated migration, debug code, temporary bypass, test credential or UAT-only behavior is included.
-- [ ] `.deploy/production-trigger.json` has not been changed prematurely.
+- [ ] The protected production workflow has not been dispatched before explicit deployment approval.
+- [ ] The dispatch uses the successful feature-PR verification run ID and exact verified commit; no deployment-trigger commit/PR or duplicate full gate is created.
 - [ ] Open severity-4 findings: **zero**.
 - [ ] Open severity-3 findings have an explicit resolution or accepted-risk decision.
 - [ ] Business owner confirms which routes/features are production-ready and which are hidden/feature-flagged.

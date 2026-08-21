@@ -198,7 +198,7 @@ A merge is not proof of deployment. A deploy-hook response is not proof of Verce
 
 ## Production Verification
 
-Ordinary commits do not intentionally deploy production in this repository. Follow the current `AGENTS.md` production-trigger protocol and never modify `.deploy/production-trigger.json` without explicit deployment approval.
+Ordinary commits do not intentionally deploy production in this repository. Follow the current `AGENTS.md` direct workflow-dispatch protocol. Reuse the successful feature-PR verification run; do not create a deployment-trigger commit/PR or rerun the full gate during deployment.
 
 After a meaningful OCR release, verify the exact commit reaches Vercel `READY`, confirm the canonical alias, then re-upload the same real policy. Compare:
 
