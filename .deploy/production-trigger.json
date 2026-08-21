@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy policy OCR training corpus workflow.",
-  "deploy_requested_at": "2026-08-21T18:10:00+05:30",
+  "purpose": "Deploy MISP OEM validation fix.",
+  "deploy_requested_at": "2026-08-21T17:55:00+05:30",
   "requested_by": "explicit user merge and deploy request",
   "source": "Deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "c1ea77f5cde7ee7e1c85d46776b266e74feb69d2",
-  "release_scope": "Deploy merged OCR training workflow and the production server-error fix from PR #511. The fix handles nullable, one-to-one, and one-to-many Supabase training-label relation responses safely.",
-  "verification": "PR #511 verification passed: regressions, typecheck, lint, and build. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source_commit": "3ba877a89ebaf25849206fb5e979660db780ac70",
+  "release_scope": "Deploy PR #513. MISP OEM validation now uses the same active vehicle brand source as the UI dropdown, confirms the parent manufacturer is active, preserves the user-facing brand name, and maps invalid OEM selections to the oem_name field.",
+  "verification": "PR #513 Verify web portal completed successfully. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
