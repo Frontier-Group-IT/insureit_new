@@ -371,3 +371,30 @@ After explicit deployment approval, verify the exact Vercel production commit an
 The `/policies/ocr-training` queue compares Google proposals against the existing saved Section 03 values from `policies` and `policy_premium_details`; manual re-entry is not required. It shows match/missing/review results, keeps private copies in a new tab through a short-lived authorized URL, and lets an authorized reviewer confirm the database reference for the existing owner-approval flow. Exhausted jobs can be manually re-queued by reviewer or approver roles without raising the automatic three-attempt safety limit. Owner approval still creates a sanitized candidate with a synthetic policy number and never edits parser code.
 
 Automatic execution uses a protected Vercel cron plus best-effort post-upload/reviewer-page scheduling. `POLICY_OCR_WORKER_SECRET` or Vercel `CRON_SECRET` must be configured privately before deployment. The queue reads tracked `policy_documents` rows rather than arbitrary Storage objects; `20260821220000_link_legacy_policy_copies_to_ocr.sql` safely links older `customer_documents` policy copies only when the policy match is unambiguous. The worker now checks Google configuration and the OIDC subject token before claiming jobs, so missing infrastructure configuration does not burn retry attempts. Migration application, live backlog processing, authenticated two-person review and candidate inspection remain **UNVERIFIED**.
+
+### Queue-count incident and corrected migration order
+
+**LEARNING / VERIFIED FROM PRODUCTION UI:** the reviewer page reported 281 linked policy copies but only nine queue rows. The page is correct to render only documents that have a related `policy_ocr_training_labels` row; it does not scan the Storage bucket.
+
+The required migration order is:
+
+```text
+202608210001_policy_ocr_training_labels.sql
+  -> creates the label table
+20260821153000_premium_ocr_training_workflow.sql
+  -> adds queue state/triggers/worker functions and backfills labels for existing policy_documents
+20260821220000_link_legacy_policy_copies_to_ocr.sql
+  -> links only unambiguous legacy customer_documents uploads
+```
+
+The first production migration workflow applied the first and third files but skipped the second. That left the database with many `policy_documents` rows but only labels created by earlier events, explaining `All · 9` and the exhausted “Not proposed” rows. Applying the legacy-link migration alone cannot create labels because the queue trigger and backfill are defined in the skipped premium workflow migration.
+
+PR #523 corrected `.github/workflows/apply-supabase-migrations.yml` to apply and record all three layers. The next agent must run the workflow and query live counts before claiming repair:
+
+```sql
+select count(*) from public.policy_documents where document_type = 'policy_copy';
+select count(*) from public.policy_ocr_training_labels;
+select processing_status, count(*) from public.policy_ocr_training_labels group by processing_status;
+```
+
+The easier long-term design is one idempotent server-side sync function/RPC that links eligible legacy copies, inserts missing labels with `on conflict do nothing`, and returns reconciliation counts. Run it once through the protected migration workflow; let a protected cron process small batches. The page should remain read-only and show a diagnostic when tracked documents exceed queue labels. Never infer the queue from a Storage listing or consume retry attempts before Google/OIDC preflight succeeds.

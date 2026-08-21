@@ -53,6 +53,12 @@ jobs:
       - name: Record OCR training label foundation as applied
         run: supabase migration repair --linked --status applied 202608210001
 
+      - name: Apply OCR queue and backlog migration
+        run: supabase db query --linked --file supabase/migrations/20260821153000_premium_ocr_training_workflow.sql
+
+      - name: Record OCR queue and backlog migration as applied
+        run: supabase migration repair --linked --status applied 20260821153000
+
       - name: Apply OCR backlog linking migration
         run: supabase db query --linked --file supabase/migrations/20260821220000_link_legacy_policy_copies_to_ocr.sql
 
