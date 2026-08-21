@@ -47,13 +47,21 @@ jobs:
       - name: Inspect migration history
         run: supabase migration list
 
-      - name: Apply OCR training migration only
+      - name: Apply OCR training label foundation
         run: supabase db query --linked --file supabase/migrations/202608210001_policy_ocr_training_labels.sql
 
-      - name: Record OCR training migration as applied
+      - name: Record OCR training label foundation as applied
         run: supabase migration repair --linked --status applied 202608210001
 
-      - name: Verify OCR training table
+      - name: Apply OCR backlog linking migration
+        run: supabase db query --linked --file supabase/migrations/20260821220000_link_legacy_policy_copies_to_ocr.sql
+
+      - name: Record OCR backlog linking migration as applied
+        run: supabase migration repair --linked --status applied 20260821220000
+
+      - name: Verify OCR training tables
         run: |
           result=$(supabase db query --linked --output-format json "select to_regclass('public.policy_ocr_training_labels') as table_name")
           echo "$result" | grep -q "policy_ocr_training_labels"
+          legacy_result=$(supabase db query --linked --output-format json "select to_regclass('public.customer_documents') as table_name")
+          echo "$legacy_result" | grep -q "customer_documents"
