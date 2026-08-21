@@ -13,8 +13,10 @@ export async function GET(request: NextRequest) {
 
   const result = await processPolicyOcrTrainingBatch(
     secret,
-    2,
-    request.headers.get("x-vercel-oidc-token"),
+    3,
+    request.headers.get("x-vercel-oidc-token")
+      || process.env.VERCEL_OIDC_TOKEN
+      || process.env.GOOGLE_WORKLOAD_IDENTITY_SUBJECT_TOKEN,
   );
   return NextResponse.json(result, { status: result.ok ? 200 : 500 });
 }

@@ -812,3 +812,11 @@ Run that operation once through the protected migration workflow, then use a pro
 3. Confirm the worker secret, Google Document AI variables, and Vercel OIDC subject token are configured.
 4. Run one controlled job and verify `processing_status` changes to `ready` with a proposal or to an explicit parser/OCR failure; it must not silently remain `exhausted`.
 5. Only then ask a reviewer to use the queue. A synthetic regression or Vercel `READY` deployment is not proof of live OCR.
+
+### 2026-08-22 worker-scheduling finding
+
+**VERIFIED:** after the queue backfill, the live count report showed all 286 jobs as `pending`, with `processing_attempts=0`, `ready=0`, and `exhausted=0`. This means the worker had not claimed any job; it is not evidence that Google or the parser failed.
+
+The worker route was configured for one daily cron (`0 2 * * *`) and passed only `x-vercel-oidc-token` to the processor. The processor requires a Google subject token before claiming a job. The route now falls back to server-only `VERCEL_OIDC_TOKEN` and `GOOGLE_WORKLOAD_IDENTITY_SUBJECT_TOKEN`, and the cron is hourly (`0 * * * *`). Each run still claims at most three jobs because OCR calls can take up to two minutes and automatic attempts remain capped at three.
+
+This worker fix is **IMPLEMENTED but not yet production-deployed**. After the protected deployment, verify one cron/authorized request changes jobs from `pending` to `processing` and then `ready` or an explicit failure. With three jobs per hour, 286 copies are intentionally processed over multiple hours; do not expect all rows to become ready immediately.
