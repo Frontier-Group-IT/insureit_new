@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy automated policy OCR training proposals.",
-  "deploy_requested_at": "2026-08-21T18:12:00+05:30",
-  "requested_by": "explicit user merge and deploy request",
+  "purpose": "Deploy Partner master link repair.",
+  "deploy_requested_at": "2026-08-21T18:14:00+05:30",
+  "requested_by": "explicit user deploy request",
   "source": "Deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "9807ccbfd26f512b694287902fdae1ebe9869782",
-  "release_scope": "Deploy merged PR #514. Adds server-side Auto-read copy processing for the admin OCR training corpus, saving Section 03 proposals as needs_review without extracting identity fields or auto-approving labels.",
-  "verification": "PR #514 Verify web portal completed successfully. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source_commit": "eda43ae81786df3f3301b8ccb53e349bd9687d06",
+  "release_scope": "Deploy merged PR #516. Repairs missing canonical Partner master links for active legacy Partner records, safely reuses unambiguous existing Partner identities, backfills affected records, and adds an automatic enforcement trigger for future activations.",
+  "verification": "Production database repair has already been verified with zero active Partner register rows missing a canonical Partner link. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
