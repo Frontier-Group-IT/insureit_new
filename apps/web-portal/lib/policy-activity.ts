@@ -5,6 +5,7 @@ export const POLICY_ACTIVITY_ACTIONS = {
   POLICY_EDITED: "policy_edited",
   POLICY_DOC_UPLOADED: "policy_doc_uploaded",
   POLICY_DOC_REPLACED: "policy_doc_replaced",
+  POLICY_DOC_REMOVED: "policy_doc_removed",
   PAYIN_BILLING_ADDED: "payin_billing_added",
   PAYIN_BILLING_UPDATED: "payin_billing_updated",
 } as const;
@@ -16,6 +17,7 @@ const ACTION_LABELS: Record<PolicyActivityAction, string> = {
   policy_edited: "Policy Edited",
   policy_doc_uploaded: "Policy Doc. Uploaded",
   policy_doc_replaced: "Policy Doc. Replaced",
+  policy_doc_removed: "Policy Doc. Removed",
   payin_billing_added: "Pay-in Billing Added",
   payin_billing_updated: "Pay-in Billing Updated",
 };
@@ -144,7 +146,8 @@ export async function loadPolicyActivityHistory({
   }
 
   const hasDocumentAudit = auditActions.has(POLICY_ACTIVITY_ACTIONS.POLICY_DOC_UPLOADED)
-    || auditActions.has(POLICY_ACTIVITY_ACTIONS.POLICY_DOC_REPLACED);
+    || auditActions.has(POLICY_ACTIVITY_ACTIONS.POLICY_DOC_REPLACED)
+    || auditActions.has(POLICY_ACTIVITY_ACTIONS.POLICY_DOC_REMOVED);
   const document = documentResult.data;
   if (!hasDocumentAudit && (document?.updated_at || document?.created_at)) {
     const replaced = materiallyLater(document.updated_at, document.created_at);
