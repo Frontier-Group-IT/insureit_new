@@ -35,11 +35,6 @@ alter table public.policy_ocr_training_labels
     check (processing_status in ('pending', 'processing', 'ready', 'failed', 'exhausted')),
   add constraint policy_ocr_training_labels_attempts_check
     check (processing_attempts between 0 and 3),
-  add constraint policy_ocr_training_labels_separate_approval_check
-    check (
-      owner_approved_by is null
-      or (reviewed_by is not null and owner_approved_by <> reviewed_by)
-    ),
   add constraint policy_ocr_training_labels_approved_state_check
     check (
       status <> 'approved'
@@ -66,7 +61,7 @@ drop policy if exists "policy OCR training labels operations manage"
   on public.policy_ocr_training_labels;
 
 comment on table public.policy_ocr_training_labels is
-  'Service-role-only OCR proposal and two-person review state. Contains approved Section 03 values, never raw OCR text or document bytes.';
+  'Service-role-only OCR proposal and review state. The current workflow uses one operator; raw OCR text and document bytes are never stored.';
 comment on table public.policy_ocr_training_candidates is
   'Sanitized, owner-approved regression candidates. Candidate generation never modifies parser source.';
 
