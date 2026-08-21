@@ -71,7 +71,6 @@ function buildWorkbook(rows: PolicyBusinessMisRow[]) {
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, sheet, "Business MIS");
   workbook.Props = { Title: "InsureIt Detailed Business MIS", Subject: "Policy production business register", Company: "InsureIt" };
-  workbook.Workbook = { CalcPr: { calcMode: "auto" } };
 
   const raw = XLSX.write(workbook, { type: "array", bookType: "xlsx", compression: true }) as ArrayBuffer;
   return applyWorkbookStyles(new Uint8Array(raw));
