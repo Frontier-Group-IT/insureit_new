@@ -18,6 +18,7 @@ import {
 } from "@/lib/policy-ocr-iffco-structured-refiner";
 import { refineNewIndiaCommercialPolicy } from "@/lib/policy-ocr-new-india-refiner";
 import { refineNewIndiaStructuredPolicy } from "@/lib/policy-ocr-new-india-structured-refiner";
+import { requirePolicyOcrTrainingOperator } from "@/lib/policy-ocr-training-access";
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const OCR_TIMEOUT_MS = 120 * 1000;
@@ -209,23 +210,20 @@ type ClaimedTrainingJob = {
 };
 
 export async function processPolicyOcrTrainingDocument(
-  workerSecret: string,
   labelId: string,
-  subjectTokenOverride?: string | null,
 ) {
-  if (!isAuthorizedTrainingWorker(workerSecret)) {
-    return { ok: false as const, error: "worker_unauthorized", processed: 0 };
-  }
+  await requirePolicyOcrTrainingOperator();
 
   if (!getGoogleConfig()) {
+    console.error(JSON.stringify({ level: "error", message: "Policy OCR manual run preflight failed", code: "google_ocr_configuration_missing" }));
     return { ok: false as const, error: "google_ocr_configuration_missing", processed: 0 };
   }
-  const requestHeaders = subjectTokenOverride ? null : await headers();
-  const subjectToken = subjectTokenOverride
-    || process.env.VERCEL_OIDC_TOKEN
+  const requestHeaders = await headers();
+  const subjectToken = process.env.VERCEL_OIDC_TOKEN
     || requestHeaders?.get("x-vercel-oidc-token")
     || process.env.GOOGLE_WORKLOAD_IDENTITY_SUBJECT_TOKEN;
   if (!subjectToken?.trim()) {
+    console.error(JSON.stringify({ level: "error", message: "Policy OCR manual run preflight failed", code: "google_oidc_subject_token_missing" }));
     return { ok: false as const, error: "google_oidc_subject_token_missing", processed: 0 };
   }
 
@@ -464,11 +462,6 @@ async function failTrainingJob(job: ClaimedTrainingJob, code: string, retryable:
     p_retryable: retryable,
   });
   if (error) console.error("Policy OCR training failure update failed", error.code);
-}
-
-function isAuthorizedTrainingWorker(value: string) {
-  const expected = process.env.POLICY_OCR_WORKER_SECRET?.trim() || process.env.CRON_SECRET?.trim();
-  return Boolean(expected && value && value.length === expected.length && value === expected);
 }
 
 function classifyTrainingFailure(message: string) {

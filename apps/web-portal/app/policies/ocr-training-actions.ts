@@ -11,6 +11,7 @@ import {
   type TrainingProposal,
 } from "@/lib/policy-ocr-training";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { requirePolicyOcrTrainingOperator } from "@/lib/policy-ocr-training-access";
 import { processPolicyOcrTrainingDocument } from "./policy-ocr-actions";
 
 const TRAINING_COPY_URL_TTL_SECONDS = 5 * 60;
@@ -83,17 +84,6 @@ async function requireTrainingOwner() {
 }
 
 async function requireTrainingViewer() {
-  const { profile } = await getAuthenticatedProfile(await getServerAccessToken());
-  if (!profile?.id) redirect("/access-denied");
-  const [canReview, canApprove] = await Promise.all([
-    hasEffectiveCapability(profile, "review_policy_ocr_training", "edit"),
-    hasEffectiveCapability(profile, "approve_policy_ocr_training", "approve"),
-  ]);
-  if (!canReview && !canApprove) redirect("/access-denied");
-  return profile;
-}
-
-async function requireTrainingOperator() {
   const { profile } = await getAuthenticatedProfile(await getServerAccessToken());
   if (!profile?.id) redirect("/access-denied");
   const [canReview, canApprove] = await Promise.all([
@@ -302,10 +292,18 @@ export async function approvePolicyOcrTrainingLabel(formData: FormData) {
   revalidatePath("/policies/ocr-training");
 }
 
-export async function runPolicyOcrTrainingLabel(formData: FormData) {
-  await requireTrainingOperator();
+export type RunPolicyOcrTrainingState = {
+  status: "idle" | "success" | "error";
+  message: string | null;
+};
+
+export async function runPolicyOcrTrainingLabel(
+  _previousState: RunPolicyOcrTrainingState,
+  formData: FormData,
+): Promise<RunPolicyOcrTrainingState> {
+  await requirePolicyOcrTrainingOperator();
   const labelId = text(formData, "training_label_id");
-  if (!labelId) throw new Error("Training label reference is missing.");
+  if (!labelId) return { status: "error", message: "Training label reference is missing." };
 
   const admin = createSupabaseAdminClient();
   const { data: current, error: currentError } = await admin
@@ -313,18 +311,22 @@ export async function runPolicyOcrTrainingLabel(formData: FormData) {
     .select("id,processing_status")
     .eq("id", labelId)
     .maybeSingle<{ id: string; processing_status: string }>();
-  if (currentError || !current) throw new Error("The OCR comparison record could not be loaded.");
-  if (current.processing_status === "processing") throw new Error("This policy copy is already being read.");
-  const workerSecret = process.env.POLICY_OCR_WORKER_SECRET?.trim() || process.env.CRON_SECRET?.trim();
-  if (!workerSecret) throw new Error("Google OCR is not configured for manual runs. Contact the administrator.");
-  const result = await processPolicyOcrTrainingDocument(workerSecret, labelId);
+  if (currentError || !current) return { status: "error", message: "The OCR comparison record could not be loaded." };
+  if (current.processing_status === "processing") return { status: "error", message: "This policy copy is already being read." };
+  const result = await processPolicyOcrTrainingDocument(labelId);
   if (!result.ok) {
     const configurationError = result.error === "google_ocr_configuration_missing" || result.error === "google_oidc_subject_token_missing";
-    throw new Error(configurationError
-      ? "Google OCR is not configured for manual runs. Contact the administrator."
-      : "The selected policy copy could not be started. Refresh and try again.");
+    return {
+      status: "error",
+      message: configurationError
+        ? "Google OCR is not configured for manual runs. Contact the administrator."
+        : "The selected policy copy could not be started. Refresh and try again.",
+    };
   }
   revalidatePath("/policies/ocr-training");
+  return result.succeeded === 1
+    ? { status: "success", message: "Google OCR completed. Review the comparison below." }
+    : { status: "error", message: "Google OCR ran, but this copy did not produce a proposal. Review the row failure and retry if appropriate." };
 }
 
 function assertFinancialReconciliation(values: {

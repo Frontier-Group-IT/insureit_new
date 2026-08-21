@@ -113,6 +113,10 @@ assert.match(workerActions, /google_oidc_subject_token_missing/);
 assert.match(workerActions, /Automated comparison reference from saved Section 03 data/);
 assert.match(workerActions, /compareTrainingProposalToReference/);
 assert.match(workerActions, /processPolicyOcrTrainingDocument/);
+assert.match(workerActions, /requirePolicyOcrTrainingOperator/);
+assert.doesNotMatch(actions, /POLICY_OCR_WORKER_SECRET|CRON_SECRET/);
+assert.match(actions, /RunPolicyOcrTrainingState/);
+assert.match(actions, /Google OCR completed/);
 assert.match(workerActions, /\.eq\("id", label\.id\)/);
 assert.match(workerActions, /\.eq\("processing_status", label\.processing_status\)/);
 assert.match(actions, /runPolicyOcrTrainingLabel/);
@@ -136,6 +140,7 @@ assert.doesNotMatch(queuePage, /schedulePolicyOcrTraining/);
 const queueComponent = readFileSync("app/policies/ocr-training/training-review-queue.tsx", "utf8");
 assert.match(queueComponent, /Run with Google Cloud/);
 assert.match(queueComponent, /Re-run with Google Cloud/);
+assert.match(queueComponent, /useActionState/);
 
 const section02Map = readFileSync("../../docs/POLICY_OCR_SECTION_02_FIELD_MAP.md", "utf8");
 for (const field of ["registrationNumber", "classCode", "engine_capacity_cc", "seating_capacity", "gvw_kg", "chassis_no", "engine_no"]) {
