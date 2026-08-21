@@ -5,11 +5,11 @@ import { useMemo, useState } from "react";
 import {
   approvePolicyOcrTrainingLabel,
   retryPolicyOcrTrainingLabel,
-  savePolicyOcrTrainingReview,
+  submitPolicyOcrDatabaseComparison,
 } from "../ocr-training-actions";
 import { formatReviewerDate, type TrainingProposal } from "@/lib/policy-ocr-training";
 
-type Corrections = {
+type DatabaseReference = {
   insurer_name: string | null;
   policy_product: string | null;
   policy_number: string | null;
@@ -23,7 +23,6 @@ type Corrections = {
   printed_net_premium: number | null;
   printed_gst: number | null;
   printed_gross_premium: number | null;
-  evidence_note: string | null;
 };
 
 export type TrainingQueueRow = {
@@ -38,10 +37,10 @@ export type TrainingQueueRow = {
   processingAttempts: number;
   failureCode: string | null;
   proposal: TrainingProposal | null;
+  databaseReference: DatabaseReference;
   parserId: string | null;
   parserVersion: string | null;
   proposedAt: string | null;
-  corrections: Corrections;
   reviewedBy: string | null;
   reviewedAt: string | null;
   approvedBy: string | null;
@@ -169,13 +168,15 @@ function TrainingReviewCard({
             {processingLabel(row.processingStatus)} · attempt {row.processingAttempts}/3
             {row.failureCode ? ` · ${row.failureCode.replaceAll("_", " ")}` : ""}
           </span>
-          {canReview && ["failed", "exhausted"].includes(row.processingStatus) ? (
-            <form action={retryPolicyOcrTrainingLabel}>
-              <input type="hidden" name="training_label_id" value={row.labelId} />
-              <button className="rounded-lg bg-white px-3 py-2 text-xs font-bold text-amber-900 ring-1 ring-amber-300">
-                Retry automatic OCR
-              </button>
-            </form>
+          {canReview || canApprove ? (
+            ["failed", "exhausted"].includes(row.processingStatus) ? (
+          <form action={retryPolicyOcrTrainingLabel}>
+            <input type="hidden" name="training_label_id" value={row.labelId} />
+            <button className="rounded-lg bg-white px-3 py-2 text-xs font-bold text-amber-900 ring-1 ring-amber-300">
+              Retry OCR comparison
+            </button>
+          </form>
+            ) : null
           ) : null}
         </div>
       ) : null}
@@ -189,66 +190,38 @@ function TrainingReviewCard({
         </div>
       ) : null}
 
-      <form action={savePolicyOcrTrainingReview} className="mt-4">
-        <input type="hidden" name="policy_document_id" value={row.documentId} />
-        <div className="overflow-x-auto rounded-xl border border-slate-200">
-          <div className="grid min-w-[760px] grid-cols-[180px_1fr_1fr] bg-slate-50 px-3 py-2 text-xs font-black uppercase tracking-wide text-slate-500">
-            <span>Section 03 field</span><span>OCR proposal</span><span>Reviewer correction</span>
-          </div>
-          {reviewField("Insurer", "insurer_name", proposal.insurer_name, value(row, "insurer_name"), canReview && ready)}
-          {reviewField("Policy product", "policy_product", proposal.policy_product, value(row, "policy_product"), canReview && ready)}
-          {reviewField("Policy number", "policy_number", proposal.policy_number, value(row, "policy_number"), canReview && ready)}
-          {reviewField("Valid from", "valid_from", proposal.policy_start_date, dateValue(row, "valid_from", proposal.policy_start_date?.value), canReview && ready, true)}
-          {reviewField("Valid upto", "valid_upto", proposal.policy_end_date, dateValue(row, "valid_upto", proposal.policy_end_date?.value), canReview && ready, true)}
-          {reviewField("IDV", "idv", proposal.idv, value(row, "idv"), canReview && ready, false, "decimal")}
-          {reviewField("OD premium", "od_premium", proposal.od_premium, value(row, "od_premium"), canReview && ready, false, "decimal")}
-          {reviewField("TP premium", "tp_premium", proposal.tp_premium, value(row, "tp_premium"), canReview && ready, false, "decimal")}
-          {reviewField("CPA amount", "cpa_premium", proposal.cpa_premium, value(row, "cpa_premium"), canReview && ready, false, "decimal")}
-          {reviewField("Printed net", "printed_net_premium", proposal.total_premium, value(row, "printed_net_premium"), canReview && ready, false, "decimal")}
-          {reviewField("Printed GST", "printed_gst", proposal.tax_amount, value(row, "printed_gst"), canReview && ready, false, "decimal")}
-          {reviewField("Printed gross", "printed_gross_premium", proposal.gross_premium, value(row, "printed_gross_premium"), canReview && ready, false, "decimal")}
-          <div className="grid min-w-[760px] grid-cols-[180px_1fr_1fr] items-center border-t border-slate-100 px-3 py-2">
-            <span className="text-xs font-bold text-slate-600">CPA opted</span>
-            <ProposalValue field={proposal.cpa_opted} />
-            <select
-              name="cpa_opted"
-              disabled={!canReview || !ready}
-              defaultValue={row.corrections.cpa_opted === null ? (proposal.cpa_opted?.value.toLowerCase() === "yes" ? "yes" : "no") : row.corrections.cpa_opted ? "yes" : "no"}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50"
-            >
-              <option value="no">No</option><option value="yes">Yes</option>
-            </select>
-          </div>
+      <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+        <div className="grid min-w-[820px] grid-cols-[170px_1fr_1fr_120px] bg-slate-50 px-3 py-2 text-xs font-black uppercase tracking-wide text-slate-500">
+          <span>Section 03 field</span><span>Database reference</span><span>Google OCR</span><span>Result</span>
         </div>
+        {comparisonField("Insurer", row.databaseReference.insurer_name, proposal.insurer_name)}
+        {comparisonField("Policy product", row.databaseReference.policy_product, proposal.policy_product)}
+        {comparisonField("Policy number", row.databaseReference.policy_number, proposal.policy_number)}
+        {comparisonField("Valid from", row.databaseReference.valid_from, proposal.policy_start_date, true)}
+        {comparisonField("Valid upto", row.databaseReference.valid_upto, proposal.policy_end_date, true)}
+        {comparisonField("IDV", row.databaseReference.idv, proposal.idv)}
+        {comparisonField("OD premium", row.databaseReference.od_premium, proposal.od_premium)}
+        {comparisonField("TP premium", row.databaseReference.tp_premium, proposal.tp_premium)}
+        {comparisonField("CPA opted", row.databaseReference.cpa_opted, proposal.cpa_opted)}
+        {comparisonField("CPA amount", row.databaseReference.cpa_premium, proposal.cpa_premium)}
+        {comparisonField("Printed net", row.databaseReference.printed_net_premium, proposal.total_premium)}
+        {comparisonField("Printed GST", row.databaseReference.printed_gst, proposal.tax_amount)}
+        {comparisonField("Printed gross", row.databaseReference.printed_gross_premium, proposal.gross_premium)}
+      </div>
 
-        <label className="mt-3 block text-xs font-bold text-slate-600">
-          Bounded evidence note
-          <textarea
-            name="evidence_note"
-            defaultValue={row.corrections.evidence_note ?? ""}
-            disabled={!canReview || !ready}
-            required
-            className="mt-1 min-h-20 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50"
-            placeholder="Reference labels or rows only. Do not paste raw OCR, names, registration, phone, address or identifiers."
-          />
-        </label>
-
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs text-slate-500">
-            Dates are entered as DD/MM/YYYY and normalized to ISO dates on the server.
-          </p>
-          {canReview ? (
-            <div className="flex gap-2">
-              <button name="decision" value="rejected" disabled={!ready} className="rounded-lg border border-red-200 px-4 py-2 text-sm font-bold text-red-700 disabled:opacity-50">
-                Reject sample
-              </button>
-              <button name="decision" value="reviewed" disabled={!ready} className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
-                Submit reviewer correction
-              </button>
-            </div>
-          ) : null}
-        </div>
-      </form>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-slate-500">
+          Existing Section 03 values are the reference. Google OCR is compared against them; no manual re-entry is required.
+        </p>
+        {canReview && ready && row.status === "needs_review" ? (
+          <form action={submitPolicyOcrDatabaseComparison}>
+            <input type="hidden" name="policy_document_id" value={row.documentId} />
+            <button className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-bold text-white">
+              Confirm database comparison
+            </button>
+          </form>
+        ) : null}
+      </div>
 
       {canApprove && row.status === "reviewed" ? (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
@@ -269,28 +242,22 @@ function TrainingReviewCard({
   );
 }
 
-function reviewField(
+function comparisonField(
   label: string,
-  name: string,
+  databaseValue: string | number | boolean | null,
   proposal: TrainingProposal["fields"][keyof TrainingProposal["fields"]],
-  correction: string,
-  enabled: boolean,
   date = false,
-  inputMode?: "decimal",
 ) {
+  const ocrValue = proposal?.value ?? null;
+  const matches = compareValues(databaseValue, ocrValue, date);
   return (
-    <div className="grid min-w-[760px] grid-cols-[180px_1fr_1fr] items-center border-t border-slate-100 px-3 py-2">
+    <div className="grid min-w-[820px] grid-cols-[170px_1fr_1fr_120px] items-center border-t border-slate-100 px-3 py-2">
       <span className="text-xs font-bold text-slate-600">{label}</span>
+      <span className="text-sm font-semibold text-navy-900">{formatValue(databaseValue, date)}</span>
       <ProposalValue field={proposal} />
-      <input
-        name={name}
-        defaultValue={correction}
-        disabled={!enabled}
-        inputMode={date ? "numeric" : inputMode}
-        pattern={date ? "\\d{2}/\\d{2}/\\d{4}" : undefined}
-        placeholder={date ? "DD/MM/YYYY" : undefined}
-        className="rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50"
-      />
+      <span className={`text-xs font-black uppercase ${matches === null ? "text-slate-400" : matches ? "text-emerald-700" : "text-amber-700"}`}>
+        {matches === null ? "Missing" : matches ? "Match" : "Review"}
+      </span>
     </div>
   );
 }
@@ -307,31 +274,22 @@ function ProposalValue({ field }: { field: TrainingProposal["fields"][keyof Trai
   );
 }
 
-function value(row: TrainingQueueRow, key: keyof Corrections) {
-  const correction = row.corrections[key];
-  if (correction !== null && correction !== undefined && typeof correction !== "boolean") return String(correction);
-  const proposalKey = correctionProposalKey(key);
-  return proposalKey ? row.proposal?.fields[proposalKey]?.value ?? "" : "";
+function compareValues(databaseValue: string | number | boolean | null, ocrValue: string | null, date: boolean) {
+  if (databaseValue === null || ocrValue === null) return null;
+  if (typeof databaseValue === "number") {
+    const parsed = Number(ocrValue.replaceAll(",", ""));
+    return Number.isFinite(parsed) && Math.abs(databaseValue - parsed) <= 2;
+  }
+  if (typeof databaseValue === "boolean") return databaseValue === /^yes$/i.test(ocrValue);
+  const expected = date ? formatReviewerDate(databaseValue) : databaseValue.trim().toLowerCase().replace(/\s+/g, " ");
+  const actual = date ? formatReviewerDate(ocrValue) : ocrValue.trim().toLowerCase().replace(/\s+/g, " ");
+  return expected === actual;
 }
 
-function dateValue(row: TrainingQueueRow, key: "valid_from" | "valid_upto", proposal: string | undefined) {
-  return formatReviewerDate(row.corrections[key] ?? proposal ?? null);
-}
-
-function correctionProposalKey(key: keyof Corrections): keyof TrainingProposal["fields"] | null {
-  const map: Partial<Record<keyof Corrections, keyof TrainingProposal["fields"]>> = {
-    insurer_name: "insurer_name",
-    policy_product: "policy_product",
-    policy_number: "policy_number",
-    idv: "idv",
-    od_premium: "od_premium",
-    tp_premium: "tp_premium",
-    cpa_premium: "cpa_premium",
-    printed_net_premium: "total_premium",
-    printed_gst: "tax_amount",
-    printed_gross_premium: "gross_premium",
-  };
-  return map[key] ?? null;
+function formatValue(value: string | number | boolean | null, date: boolean) {
+  if (value === null) return "Not stored";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  return date ? formatReviewerDate(String(value)) : String(value);
 }
 
 function filterLabel(filter: Filter) {

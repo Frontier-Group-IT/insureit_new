@@ -93,6 +93,17 @@ async function requireTrainingViewer() {
   return profile;
 }
 
+async function requireTrainingOperator() {
+  const { profile } = await getAuthenticatedProfile(await getServerAccessToken());
+  if (!profile?.id) redirect("/access-denied");
+  const [canReview, canApprove] = await Promise.all([
+    hasEffectiveCapability(profile, "review_policy_ocr_training", "edit"),
+    hasEffectiveCapability(profile, "approve_policy_ocr_training", "approve"),
+  ]);
+  if (!canReview && !canApprove) redirect("/access-denied");
+  return profile;
+}
+
 export async function openPolicyOcrTrainingCopy(documentId: string) {
   await requireTrainingViewer();
   const normalizedDocumentId = documentId.trim();
@@ -175,6 +186,87 @@ export async function savePolicyOcrTrainingReview(formData: FormData) {
   revalidatePath("/policies/ocr-training");
 }
 
+export async function submitPolicyOcrDatabaseComparison(formData: FormData) {
+  const reviewer = await requireTrainingReviewer();
+  const documentId = text(formData, "policy_document_id");
+  if (!documentId) throw new Error("Policy document reference is missing.");
+
+  const admin = createSupabaseAdminClient();
+  const { data: document, error: documentError } = await admin
+    .from("policy_documents")
+    .select("policy_id")
+    .eq("id", documentId)
+    .eq("document_type", "policy_copy")
+    .maybeSingle<{ policy_id: string }>();
+  if (documentError || !document) throw new Error("The policy database reference could not be loaded.");
+
+  const [{ data: policy, error: policyError }, { data: premium, error: premiumError }] = await Promise.all([
+    admin
+      .from("policies")
+      .select("policy_no,policy_type,start_date,end_date,insured_declared_value,insurance_companies(name)")
+      .eq("id", document.policy_id)
+      .maybeSingle<{
+        policy_no: string | null;
+        policy_type: string | null;
+        start_date: string | null;
+        end_date: string | null;
+        insured_declared_value: number | null;
+        insurance_companies: { name: string } | null;
+      }>(),
+    admin
+      .from("policy_premium_details")
+      .select("od_premium,tp_premium,cpa_opted,cpa_amount,net_premium,gst_amount,gross_premium")
+      .eq("policy_id", document.policy_id)
+      .maybeSingle<{
+        od_premium: number | null;
+        tp_premium: number | null;
+        cpa_opted: boolean | null;
+        cpa_amount: number | null;
+        net_premium: number | null;
+        gst_amount: number | null;
+        gross_premium: number | null;
+      }>(),
+  ]);
+  if (policyError || premiumError || !policy) throw new Error("The Section 03 database values could not be loaded.");
+
+  const { data: label, error: labelError } = await admin
+    .from("policy_ocr_training_labels")
+    .select("id,processing_status")
+    .eq("policy_document_id", documentId)
+    .maybeSingle<{ id: string; processing_status: string }>();
+  if (labelError || !label) throw new Error("The OCR comparison record could not be loaded.");
+  if (label.processing_status !== "ready") throw new Error("Wait for the Google OCR proposal before confirming the comparison.");
+
+  const { error: updateError } = await admin
+    .from("policy_ocr_training_labels")
+    .update({
+      insurer_name: policy.insurance_companies?.name ?? null,
+      policy_product: policy.policy_type,
+      policy_number: policy.policy_no,
+      valid_from: policy.start_date,
+      valid_upto: policy.end_date,
+      idv: policy.insured_declared_value,
+      od_premium: premium?.od_premium ?? null,
+      tp_premium: premium?.tp_premium ?? null,
+      cpa_opted: premium?.cpa_opted ?? null,
+      cpa_premium: premium?.cpa_amount ?? null,
+      printed_net_premium: premium?.net_premium ?? null,
+      printed_gst: premium?.gst_amount ?? null,
+      printed_gross_premium: premium?.gross_premium ?? null,
+      evidence_note: "Existing Section 03 database values used as comparison reference.",
+      status: "reviewed",
+      reviewed_by: reviewer.id,
+      reviewed_at: new Date().toISOString(),
+      owner_approved_by: null,
+      owner_approved_at: null,
+    })
+    .eq("id", label.id);
+  if (updateError) throw new Error("Could not save the database comparison.");
+
+  await admin.from("policy_ocr_training_candidates").delete().eq("training_label_id", label.id);
+  revalidatePath("/policies/ocr-training");
+}
+
 export async function approvePolicyOcrTrainingLabel(formData: FormData) {
   const owner = await requireTrainingOwner();
   const labelId = text(formData, "training_label_id");
@@ -211,7 +303,7 @@ export async function approvePolicyOcrTrainingLabel(formData: FormData) {
 }
 
 export async function retryPolicyOcrTrainingLabel(formData: FormData) {
-  await requireTrainingReviewer();
+  await requireTrainingOperator();
   const labelId = text(formData, "training_label_id");
   if (!labelId) throw new Error("Training label reference is missing.");
 
