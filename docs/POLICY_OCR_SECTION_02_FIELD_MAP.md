@@ -64,11 +64,11 @@ Precedence:
 
 No OCR value may overwrite any of these records in the training flow. The UI must display stored value, OCR value, normalized result and confidence, then require human review.
 
-## 5. Known schema/history hazard
+## 5. Resolved schema/history hazard
 
-The migration history contains competing temporary identifiers for unregistered vehicles. `202608210001_new_unregistered_vehicle_prefix.sql` changes the onboarding RPC to construct `NEW-<normalized chassis>`, while the later `202608211501_sync_pending_vehicle_identity.sql` trigger rewrites registration-pending vehicle rows to `PENDING-<normalized chassis>`. The onboarding snapshot separately uses `REGISTRATION PENDING`.
+The migration history contains competing temporary identifiers for unregistered vehicles. `202608210001_new_unregistered_vehicle_prefix.sql` changes the onboarding RPC to construct `NEW-<normalized chassis>`, while the later `202608211501_sync_pending_vehicle_identity.sql` trigger rewrites registration-pending vehicle rows to `PENDING-<normalized chassis>`. `20260821194052_canonical_new_vehicle_prefix.sql` is the forward fix: it restores the `NEW-` trigger/RPC behavior, safely repairs legacy temporary rows and asserts zero `PENDING-` vehicle prefixes. The onboarding snapshot separately remains `REGISTRATION PENDING`.
 
-Therefore vehicle extraction must compare unregistered status through `registration_status = 'registration_pending'` and must not learn `NEW-`, `PENDING-` or `REGISTRATION PENDING` as a real registration number. Reconcile the prefix migrations in a separate reviewed database change before adding any auto-apply path.
+Vehicle extraction must compare unregistered status through `registration_status = 'registration_pending'` and must not learn `NEW-<chassis>`, legacy `PENDING-<chassis>` or `REGISTRATION PENDING` as a real registration number. The forward migration must be applied and verified in production before adding any auto-apply path.
 
 ## 6. Implementation gate for vehicle extraction
 
@@ -89,5 +89,5 @@ Before expanding further:
 - Server normalization/validation: `apps/web-portal/app/policies/policy-onboarding-actions.ts`
 - Vehicle/snapshot schema and onboarding RPC: `supabase/migrations/20260805182000_policy_onboarding_v2.sql`
 - Unregistered mode patch: `supabase/migrations/20260812170500_policy_onboarding_unregistered_vehicle_mode.sql`
-- Temporary vehicle identity migrations: `supabase/migrations/202608210001_new_unregistered_vehicle_prefix.sql`, `supabase/migrations/202608211501_sync_pending_vehicle_identity.sql`
+- Temporary vehicle identity migrations: `supabase/migrations/202608210001_new_unregistered_vehicle_prefix.sql`, `supabase/migrations/202608211501_sync_pending_vehicle_identity.sql`, `supabase/migrations/20260821194052_canonical_new_vehicle_prefix.sql`
 - Edit-page readback mapping: `apps/web-portal/app/policies/[id]/edit/page.tsx`

@@ -248,7 +248,8 @@ function VehicleClassIcon({ vehicle }: { vehicle: Vehicle }) {
 
 function getVehicleRegistrationDisplayStatus(vehicle: Vehicle) {
   const rawStatus = vehicle.registration_status?.trim().toLowerCase().replace(/[\s-]+/g, "_") ?? "";
-  const pendingRegistration = rawStatus === "registration_pending" || vehicle.vehicle_no.toUpperCase().startsWith("PENDING-");
+  const vehicleNo = vehicle.vehicle_no.toUpperCase();
+  const pendingRegistration = rawStatus === "registration_pending" || vehicleNo.startsWith("NEW-") || vehicleNo.startsWith("PENDING-");
   return pendingRegistration ? "REGISTRATION PENDING" : "REGISTERED";
 }
 
