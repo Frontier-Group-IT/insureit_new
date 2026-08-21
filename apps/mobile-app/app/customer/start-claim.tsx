@@ -197,14 +197,14 @@ function formatDate(value: string) { return new Date(value).toLocaleDateString('
 function formatIsoDate(date: Date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
 
 const styles = StyleSheet.create({
-  hero: { marginHorizontal: 0, marginBottom: 10 },
-  heroCopy: { paddingHorizontal: 0, paddingTop: 0, paddingBottom: 7 },
+  hero: { minHeight: 126, marginHorizontal: 0, marginBottom: 2, flexDirection: 'row', alignItems: 'flex-start' },
+  heroCopy: { flex: 1, minWidth: 0, paddingHorizontal: 0, paddingTop: 12, paddingBottom: 4, paddingRight: 4 },
   eyebrow: { color: '#145ED7', fontSize: 10, fontWeight: '900', letterSpacing: 0.55 },
-  title: { color: palette.navy, fontSize: 24, fontWeight: '900', marginTop: 2 },
-  subtitle: { color: '#68778D', fontSize: 10.5, lineHeight: 15, fontWeight: '600', marginTop: 3 },
-  heroArtwork: { width: '100%', height: 150 },
+  title: { color: palette.navy, fontSize: 23, lineHeight: 27, fontWeight: '900', marginTop: 2 },
+  subtitle: { color: '#68778D', fontSize: 10, lineHeight: 14, fontWeight: '600', marginTop: 4, maxWidth: 190 },
+  heroArtwork: { width: '46%', height: 122, marginTop: -2, marginRight: -4 },
   section: { marginBottom: 14 },
-  vehicleSection: { marginTop: 0 },
+  vehicleSection: { marginTop: -2 },
   sectionHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 },
   sectionLabel: { color: palette.navy, fontSize: 12, fontWeight: '900', marginBottom: 7 },
   sectionTitle: { color: palette.navy, fontSize: 15, fontWeight: '900' },
@@ -248,5 +248,5 @@ const styles = StyleSheet.create({
   noPolicyCopy: { flex: 1 },
   noPolicyTitle: { color: '#77520B', fontSize: 12, fontWeight: '900' },
   noPolicyText: { color: '#8A6A25', fontSize: 10.5, lineHeight: 15, fontWeight: '600', marginTop: 2 },
-  footerArtwork: { alignSelf: 'stretch', width: '100%', height: 142, marginHorizontal: 0, marginTop: -3, marginBottom: -2, opacity: 0.96 },
+  footerArtwork: { alignSelf: 'stretch', width: '100%', height: 190, marginHorizontal: 0, marginTop: -20, marginBottom: -4, opacity: 0.96 },
 });
