@@ -213,6 +213,13 @@ export async function processPolicyOcrTrainingBatch(
     return { ok: false as const, error: "worker_unauthorized", processed: 0 };
   }
 
+  if (!getGoogleConfig()) {
+    return { ok: false as const, error: "google_ocr_configuration_missing", processed: 0 };
+  }
+  if (!subjectToken?.trim()) {
+    return { ok: false as const, error: "google_oidc_subject_token_missing", processed: 0 };
+  }
+
   const admin = createSupabaseAdminClient();
   const limit = Math.max(1, Math.min(Number(requestedLimit) || 2, 3));
   const { data, error } = await admin.rpc("claim_policy_ocr_training_jobs", {

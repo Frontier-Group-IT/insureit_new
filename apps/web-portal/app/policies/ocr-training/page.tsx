@@ -10,6 +10,7 @@ import { TrainingReviewQueue, type TrainingQueueRow } from "./training-review-qu
 type TrainingDocumentRow = {
   id: string;
   policy_id: string;
+  file_name: string;
   created_at: string;
   policies: {
     policy_no: string | null;
@@ -78,12 +79,12 @@ export default async function PolicyOcrTrainingPage() {
   await schedulePolicyOcrTraining();
 
   const admin = createSupabaseAdminClient();
-  const { data, error } = await admin
+  const { data, error, count } = await admin
     .from("policy_documents")
-    .select("id,policy_id,created_at,policies(policy_no,policy_type,start_date,end_date,insured_declared_value,policy_code,insurance_companies(name),policy_premium_details(od_premium,tp_premium,cpa_opted,cpa_amount,net_premium,gst_amount,gross_premium)),policy_ocr_training_labels(*)")
+    .select("id,policy_id,file_name,created_at,policies(policy_no,policy_type,start_date,end_date,insured_declared_value,policy_code,insurance_companies(name),policy_premium_details(od_premium,tp_premium,cpa_opted,cpa_amount,net_premium,gst_amount,gross_premium)),policy_ocr_training_labels(*)", { count: "exact" })
     .eq("document_type", "policy_copy")
     .order("created_at", { ascending: false })
-    .limit(100)
+    .range(0, 999)
     .returns<TrainingDocumentRow[]>();
 
   const rows = (data ?? []).flatMap<TrainingQueueRow>((document) => {
@@ -96,7 +97,7 @@ export default async function PolicyOcrTrainingPage() {
     return [{
       documentId: document.id,
       labelId: label.id,
-      fileName: `Policy copy · ${document.id.slice(0, 8).toUpperCase()}`,
+      fileName: document.file_name || `Policy copy · ${document.id.slice(0, 8).toUpperCase()}`,
       uploadedAt: document.created_at,
       policyReference: document.policies?.policy_no ?? document.policies?.policy_code ?? "-",
       linkedInsurer: document.policies?.insurance_companies?.name ?? "Insurer not linked",
@@ -137,6 +138,9 @@ export default async function PolicyOcrTrainingPage() {
         <h1 className="mt-2 text-3xl font-black tracking-tight text-navy-900">Proposal and correction review</h1>
         <p className="mt-2 max-w-4xl text-sm text-slate-500">
            Google reads private policy copies server-side and compares only approved Section 03 fields with the values already saved in INSUREIT. No manual re-entry is required; mismatches are the only items needing attention.
+        </p>
+        <p className="mt-2 text-xs font-semibold text-slate-500">
+          Showing {count ?? rows.length} policy copies linked to policy records. Legacy customer-uploaded copies are included only after an unambiguous policy match.
         </p>
       </div>
       {error ? (
