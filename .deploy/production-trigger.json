@@ -1,10 +1,10 @@
 {
   "purpose": "Deploy policy OCR training corpus workflow.",
-  "deploy_requested_at": "2026-08-21T17:35:00+05:30",
+  "deploy_requested_at": "2026-08-21T18:10:00+05:30",
   "requested_by": "explicit user merge and deploy request",
   "source": "Deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "c74adb709ce48b8043ee20cfbb3b36ab447908d4",
-  "release_scope": "Deploy merged PRs #507, #508, and #509. Adds the admin-only Policy OCR training corpus page, human-verified Section 03 labels, RLS migration, and a safe Supabase migration workflow that applies only the new table without replaying the remote migration history.",
-  "verification": "PR verification passed for #507, #508, and #509. Supabase migration workflow run 32480011119 passed: the target table was created, migration version 202608210001 was recorded as applied, and the table verification query succeeded. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source_commit": "c1ea77f5cde7ee7e1c85d46776b266e74feb69d2",
+  "release_scope": "Deploy merged OCR training workflow and the production server-error fix from PR #511. The fix handles nullable, one-to-one, and one-to-many Supabase training-label relation responses safely.",
+  "verification": "PR #511 verification passed: regressions, typecheck, lint, and build. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
