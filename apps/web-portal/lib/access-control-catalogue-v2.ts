@@ -92,6 +92,8 @@ export const permissionCatalogueV2 = [
   { key: "policies.view", module: "Policies", label: "View policies", description: "View policies for accessible customers and vehicles.", risk: "standard", allowedAccess: ["view"], allowedScopes: recordScopes, scopeRequired: true },
   { key: "policies.create", module: "Policies", label: "Add policies", description: "Create policies for accessible customers and vehicles.", risk: "sensitive", allowedAccess: ["edit"], allowedScopes: recordScopes, scopeRequired: true },
   { key: "policies.edit", module: "Policies", label: "Edit policies", description: "Update accessible policy records.", risk: "sensitive", allowedAccess: ["edit"], allowedScopes: recordScopes, scopeRequired: true },
+  { key: "policies.ocr_training.review", module: "Policies", label: "Review premium OCR training", description: "Correct OCR proposals and submit verified Section 03 training labels.", risk: "high", allowedAccess: ["edit"], allowedScopes: adminScope, scopeRequired: false },
+  { key: "policies.ocr_training.approve", module: "Policies", label: "Approve premium OCR training", description: "Give separate owner approval for sanitized OCR training candidates.", risk: "critical", allowedAccess: ["approve"], allowedScopes: adminScope, scopeRequired: false },
 
   { key: "tasks.view", module: "Tasks", label: "View tasks", description: "View assigned or otherwise accessible tasks.", risk: "standard", allowedAccess: ["view"], allowedScopes: recordScopes, scopeRequired: true },
   { key: "tasks.create", module: "Tasks", label: "Create tasks", description: "Create operational follow-up tasks.", risk: "sensitive", allowedAccess: ["edit"], allowedScopes: hierarchyScopes, scopeRequired: true },
@@ -131,6 +133,8 @@ export const legacyCapabilityCompatibilityMap: Record<LegacyCapability, readonly
   view_org_tree: ["organisation.view"],
   view_vehicles: ["vehicles.view"],
   view_policies: ["policies.view"],
+  review_policy_ocr_training: ["policies.ocr_training.review"],
+  approve_policy_ocr_training: ["policies.ocr_training.approve"],
   view_tasks: ["tasks.view"],
   manage_tasks: ["tasks.create", "tasks.assign", "tasks.edit"],
   view_reports: ["reports.view"],

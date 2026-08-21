@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { FileText, LoaderCircle } from "lucide-react";
 import { useEffect, useState } from "react";
+import { openPolicyOcrTrainingCopy } from "@/app/policies/ocr-training-actions";
 import { openPolicyCopy } from "@/app/policies/policy-document-actions";
 
-export function PolicyDocumentOpening({ documentId }: { documentId: string }) {
+export function PolicyDocumentOpening({ documentId, training = false }: { documentId: string; training?: boolean }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -13,7 +14,9 @@ export function PolicyDocumentOpening({ documentId }: { documentId: string }) {
 
     async function openDocument() {
       try {
-        const result = await openPolicyCopy(documentId);
+        const result = training
+          ? await openPolicyOcrTrainingCopy(documentId)
+          : await openPolicyCopy(documentId);
         if (!active) return;
         if (!result.ok) {
           setError(result.error);
@@ -29,7 +32,7 @@ export function PolicyDocumentOpening({ documentId }: { documentId: string }) {
     return () => {
       active = false;
     };
-  }, [documentId]);
+  }, [documentId, training]);
 
   return (
     <main className="grid min-h-screen place-items-center bg-[#F4F7FB] px-4 py-8">
