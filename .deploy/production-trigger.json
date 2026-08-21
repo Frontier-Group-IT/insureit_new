@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Policy Section 02 popup save-close fix.",
-  "deploy_requested_at": "2026-08-21T14:17:00+05:30",
+  "purpose": "Deploy Policy Section 02 popup save-close fix v2.",
+  "deploy_requested_at": "2026-08-21T14:58:00+05:30",
   "requested_by": "explicit user merge and deploy request",
   "source": "Deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "5e7414a15f5a0def1998b6b7bac69ee109323d41",
-  "release_scope": "Deploy PR #500, which fixes the Policy Edit customer/vehicle popup so successful saves close the popup, show the success toast, and refresh Section 02 even when Next.js performs a soft redirect; it also removes View Fleet only from the embedded Customer popup while leaving normal Customer and Vehicle pages unchanged.",
-  "verification": "PR #500 Verify web portal run 32464466327 passed successfully. This release changes only apps/web-portal/components/policy-linked-master-actions.tsx and has no database schema migration, Supabase RLS/auth change, Expo/EAS change, or production security-header change. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source_commit": "efdcd140168cf6e3f5209d9be3a062e5e69e9805",
+  "release_scope": "Deploy PR #502, which makes the Policy Edit customer/vehicle popup close reliably after a submitted save even when the redirected register URL does not retain the success query. The modal now tracks an actual embedded form submission before treating navigation to /customers or /vehicles as a successful save, while preserving the existing toast, Section 02 refresh, vehicle identity warning, owner lock, and View Fleet removal behavior.",
+  "verification": "PR #502 Verify web portal run 32467935776 passed successfully, including regressions, typecheck, lint, and production build. This release changes only apps/web-portal/components/policy-linked-master-actions.tsx and has no database schema migration, Supabase RLS/auth change, Expo/EAS change, or production security-header change. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
