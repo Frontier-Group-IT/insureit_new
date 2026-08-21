@@ -10,8 +10,8 @@ import {
   sanitizeEvidenceNote,
   type TrainingProposal,
 } from "@/lib/policy-ocr-training";
-import { schedulePolicyOcrTraining } from "@/lib/policy-ocr-training-schedule";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { processPolicyOcrTrainingDocument } from "./policy-ocr-actions";
 
 const TRAINING_COPY_URL_TTL_SECONDS = 5 * 60;
 
@@ -302,30 +302,28 @@ export async function approvePolicyOcrTrainingLabel(formData: FormData) {
   revalidatePath("/policies/ocr-training");
 }
 
-export async function retryPolicyOcrTrainingLabel(formData: FormData) {
+export async function runPolicyOcrTrainingLabel(formData: FormData) {
   await requireTrainingOperator();
   const labelId = text(formData, "training_label_id");
   if (!labelId) throw new Error("Training label reference is missing.");
 
   const admin = createSupabaseAdminClient();
-  const { error } = await admin
+  const { data: current, error: currentError } = await admin
     .from("policy_ocr_training_labels")
-    .update({
-      processing_status: "pending",
-      processing_attempts: 0,
-      next_attempt_at: new Date().toISOString(),
-      lease_token: null,
-      lease_expires_at: null,
-      failure_code: null,
-      status: "needs_review",
-      owner_approved_by: null,
-      owner_approved_at: null,
-    })
-    .eq("id", labelId);
-  if (error) throw new Error("Could not queue the policy copy for another OCR attempt.");
-
-  await admin.from("policy_ocr_training_candidates").delete().eq("training_label_id", labelId);
-  await schedulePolicyOcrTraining();
+    .select("id,processing_status")
+    .eq("id", labelId)
+    .maybeSingle<{ id: string; processing_status: string }>();
+  if (currentError || !current) throw new Error("The OCR comparison record could not be loaded.");
+  if (current.processing_status === "processing") throw new Error("This policy copy is already being read.");
+  const workerSecret = process.env.POLICY_OCR_WORKER_SECRET?.trim() || process.env.CRON_SECRET?.trim();
+  if (!workerSecret) throw new Error("Google OCR is not configured for manual runs. Contact the administrator.");
+  const result = await processPolicyOcrTrainingDocument(workerSecret, labelId);
+  if (!result.ok) {
+    const configurationError = result.error === "google_ocr_configuration_missing" || result.error === "google_oidc_subject_token_missing";
+    throw new Error(configurationError
+      ? "Google OCR is not configured for manual runs. Contact the administrator."
+      : "The selected policy copy could not be started. Refresh and try again.");
+  }
   revalidatePath("/policies/ocr-training");
 }
 

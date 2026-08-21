@@ -3,7 +3,6 @@ import { AppShell } from "@/components/shell";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import type { TrainingProposal } from "@/lib/policy-ocr-training";
-import { schedulePolicyOcrTraining } from "@/lib/policy-ocr-training-schedule";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { TrainingReviewQueue, type TrainingQueueRow } from "./training-review-queue";
 
@@ -66,6 +65,7 @@ type TrainingLabel = {
 };
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 export default async function PolicyOcrTrainingPage() {
   const { profile } = await getAuthenticatedProfile(await getServerAccessToken());
@@ -76,8 +76,6 @@ export default async function PolicyOcrTrainingPage() {
     hasEffectiveCapability(profile, "approve_policy_ocr_training", "approve"),
   ]);
   if (!canReview && !canApprove) redirect("/access-denied");
-  await schedulePolicyOcrTraining();
-
   const admin = createSupabaseAdminClient();
   const { data, error, count } = await admin
     .from("policy_documents")
@@ -137,7 +135,7 @@ export default async function PolicyOcrTrainingPage() {
         <p className="text-sm font-bold uppercase tracking-wide text-blue-700">Premium OCR reviewer queue</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight text-navy-900">Proposal and correction review</h1>
         <p className="mt-2 max-w-4xl text-sm text-slate-500">
-           Google reads private policy copies server-side and compares only approved Section 03 fields with the values already saved in INSUREIT. No manual re-entry is required; mismatches are the only items needing attention.
+           Choose a policy copy and run it through Google server-side. INSUREIT compares only approved Section 03 fields with the values already saved; no policy copy runs automatically.
         </p>
         <p className="mt-2 text-xs font-semibold text-slate-500">
           Showing {count ?? rows.length} policy copies linked to policy records. Legacy customer-uploaded copies are included only after an unambiguous policy match.

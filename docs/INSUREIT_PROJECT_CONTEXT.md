@@ -513,5 +513,6 @@ Durable rules:
 - Raw OCR text, document bytes, identity fields and real policy numbers never enter training candidates.
 - `review_policy_ocr_training` submits corrections; `approve_policy_ocr_training` gives final owner approval. Reviewer and owner must be different profiles.
 - Approved candidates use deterministic synthetic policy numbers and do not modify parser source. Parser changes remain reviewed code changes with sanitized regressions.
-- Policy-copy inserts/replacements requeue processing; jobs are claimed with `FOR UPDATE SKIP LOCKED`, leases and a maximum of three attempts.
-- **IMPLEMENTED / NOT YET DEPLOYED 2026-08-22:** automated comparison work reads the linked policy and premium-detail Section 03 values after successful Google OCR, writes those approved reference fields to the training label, classifies match/mismatch/missing states through a shared server/UI comparator, and schedules bounded two-document worker batches every five minutes. Exact matches remain review-before-approval and never overwrite policy records.
+- Policy-copy inserts/replacements create/reset the label only. They must not invoke Google automatically.
+- **IMPLEMENTED ON DRAFT PR #530 / NOT YET DEPLOYED 2026-08-22:** an authorized reviewer/owner explicitly selects one queue row and runs Google OCR. Configuration/OIDC preflight happens before an optimistic claim of that exact label; there is no cron, upload follow-up or page-visit scheduling. Section 03 comparison still reads saved policy/premium values and never overwrites policy records.
+- Vehicle extraction remains gated. Use `docs/POLICY_OCR_SECTION_02_FIELD_MAP.md` as the exact form/payload/database contract before adding Section 02 proposal fields.

@@ -431,3 +431,11 @@ Deployment requirements:
 ### Worker scheduling finding — 2026-08-22
 
 All 286 jobs remained `pending` at attempt `0/3`, proving that no worker had claimed them yet. The prior cron was daily and the route supplied only the request OIDC header; when that header was absent, the server correctly returned `google_oidc_subject_token_missing` before claiming work. The route now falls back to server-only OIDC environment values and the cron is hourly, while the safe worker limit remains three jobs per invocation. This fix is **IMPLEMENTED / NOT YET DEPLOYED**. A production check must observe a job transition from `pending` to `processing` and then `ready` or an explicit failure before OCR processing is considered live.
+
+## 11. Phase 1 operator-controlled execution — 2026-08-22
+
+**SUPERSEDES THE AUTOMATIC-DRAINING DESIGN ABOVE / IMPLEMENTED ON DRAFT PR #530 / NOT DEPLOYED:** policy copies no longer run because of an upload, page visit or Vercel cron. The cron route and schedule are removed. An authorized reviewer/approver chooses one queue row and clicks **Run with Google Cloud** (or **Re-run with Google Cloud**).
+
+The server preflights the private worker secret, Google configuration and OIDC subject token before changing queue state. It then uses an optimistic compare-and-set on the exact selected label ID, creates a short lease and processes only that label's linked private `policy_copy`. Concurrent clicks cannot claim another queued policy or claim the selected label twice. A failed row advances only when the operator clicks again and remains capped at three attempts; an explicit re-run of a ready or exhausted row starts a fresh controlled cycle. Provider/parser failures remain visible on that row. Upload/replacement still creates or resets the queue label through the existing database trigger, but it does not invoke Google.
+
+Section 03 comparison, review-before-approval, separate owner approval and sanitized candidate safeguards remain unchanged. Vehicle/identity extraction is not included. The exact Section 02 form/payload/database map and the gate for the next increment are documented in `docs/POLICY_OCR_SECTION_02_FIELD_MAP.md`.

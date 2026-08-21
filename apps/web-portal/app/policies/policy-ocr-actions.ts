@@ -208,10 +208,10 @@ type ClaimedTrainingJob = {
   attempt_count: number;
 };
 
-export async function processPolicyOcrTrainingBatch(
+export async function processPolicyOcrTrainingDocument(
   workerSecret: string,
-  requestedLimit = 2,
-  subjectToken?: string | null,
+  labelId: string,
+  subjectTokenOverride?: string | null,
 ) {
   if (!isAuthorizedTrainingWorker(workerSecret)) {
     return { ok: false as const, error: "worker_unauthorized", processed: 0 };
@@ -220,34 +220,110 @@ export async function processPolicyOcrTrainingBatch(
   if (!getGoogleConfig()) {
     return { ok: false as const, error: "google_ocr_configuration_missing", processed: 0 };
   }
+  const requestHeaders = subjectTokenOverride ? null : await headers();
+  const subjectToken = subjectTokenOverride
+    || process.env.VERCEL_OIDC_TOKEN
+    || requestHeaders?.get("x-vercel-oidc-token")
+    || process.env.GOOGLE_WORKLOAD_IDENTITY_SUBJECT_TOKEN;
   if (!subjectToken?.trim()) {
     return { ok: false as const, error: "google_oidc_subject_token_missing", processed: 0 };
   }
 
   const admin = createSupabaseAdminClient();
-  const limit = Math.max(1, Math.min(Math.trunc(Number(requestedLimit) || 2), 3));
-  const { data, error } = await admin.rpc("claim_policy_ocr_training_jobs", {
-    p_limit: limit,
-    p_lease_minutes: 4,
-  });
-  if (error) {
-    console.error("Policy OCR training claim failed", error.code);
-    return { ok: false as const, error: "claim_failed", processed: 0 };
+  const normalizedLabelId = labelId.trim();
+  if (!normalizedLabelId) return { ok: false as const, error: "label_missing", processed: 0 };
+
+  const { data: label, error: labelError } = await admin
+    .from("policy_ocr_training_labels")
+    .select("id,policy_document_id,processing_status,processing_attempts")
+    .eq("id", normalizedLabelId)
+    .maybeSingle<{
+      id: string;
+      policy_document_id: string;
+      processing_status: string;
+      processing_attempts: number;
+    }>();
+  if (labelError || !label) {
+    console.error("Policy OCR selected label lookup failed", labelError?.code ?? "not_found");
+    return { ok: false as const, error: "label_not_found", processed: 0 };
+  }
+  if (label.processing_status === "processing") {
+    return { ok: false as const, error: "label_not_runnable", processed: 0 };
   }
 
-  const jobs = Array.isArray(data) ? data as ClaimedTrainingJob[] : [];
-  let succeeded = 0;
-  let exactMatches = 0;
-  let needsReview = 0;
-  for (const job of jobs) {
-    const outcome = await processTrainingJob(job, subjectToken);
-    if (outcome.ok) {
-      succeeded += 1;
-      if (outcome.exactMatch) exactMatches += 1;
-      else needsReview += 1;
-    }
+  const { data: document, error: documentError } = await admin
+    .from("policy_documents")
+    .select("id,file_name,storage_bucket,storage_path,mime_type,file_size")
+    .eq("id", label.policy_document_id)
+    .eq("document_type", "policy_copy")
+    .maybeSingle<{
+      id: string;
+      file_name: string;
+      storage_bucket: string;
+      storage_path: string;
+      mime_type: string | null;
+      file_size: number | null;
+    }>();
+  if (documentError || !document) {
+    console.error("Policy OCR selected document lookup failed", documentError?.code ?? "not_found");
+    return { ok: false as const, error: "policy_copy_not_found", processed: 0 };
   }
-  return { ok: true as const, processed: jobs.length, succeeded, exactMatches, needsReview };
+
+  const leaseToken = crypto.randomUUID();
+  const attemptCount = label.processing_status === "failed"
+    ? Math.min(label.processing_attempts + 1, 3)
+    : 1;
+  const leaseExpiresAt = new Date(Date.now() + 4 * 60 * 1000).toISOString();
+  const { data: claimed, error: claimError } = await admin
+    .from("policy_ocr_training_labels")
+    .update({
+      processing_status: "processing",
+      processing_attempts: attemptCount,
+      lease_token: leaseToken,
+      lease_expires_at: leaseExpiresAt,
+      failure_code: null,
+      proposal: null,
+      parser_id: null,
+      parser_version: null,
+      extraction_method: null,
+      proposed_at: null,
+      status: "needs_review",
+      reviewed_by: null,
+      reviewed_at: null,
+      owner_approved_by: null,
+      owner_approved_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", label.id)
+    .eq("processing_status", label.processing_status)
+    .eq("processing_attempts", label.processing_attempts)
+    .select("id")
+    .maybeSingle<{ id: string }>();
+  if (claimError) {
+    console.error("Policy OCR selected claim failed", claimError.code);
+    return { ok: false as const, error: "claim_failed", processed: 0 };
+  }
+  if (!claimed) return { ok: false as const, error: "already_claimed", processed: 0 };
+  await admin.from("policy_ocr_training_candidates").delete().eq("training_label_id", label.id);
+
+  const outcome = await processTrainingJob({
+    label_id: label.id,
+    policy_document_id: document.id,
+    file_name: document.file_name,
+    storage_bucket: document.storage_bucket,
+    storage_path: document.storage_path,
+    mime_type: document.mime_type,
+    file_size: document.file_size,
+    lease_token: leaseToken,
+    attempt_count: attemptCount,
+  }, subjectToken);
+  return {
+    ok: true as const,
+    processed: 1,
+    succeeded: outcome.ok ? 1 : 0,
+    exactMatches: outcome.ok && outcome.exactMatch ? 1 : 0,
+    needsReview: outcome.ok && !outcome.exactMatch ? 1 : 0,
+  };
 }
 
 async function processTrainingJob(job: ClaimedTrainingJob, subjectToken?: string | null) {

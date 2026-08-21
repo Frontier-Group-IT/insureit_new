@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 // @ts-expect-error -- This regression runner executes TypeScript directly with Node --experimental-strip-types.
 import { buildTrainingProposal, compareTrainingProposalToReference, compareTrainingValue, createSanitizedTrainingCandidate, formatReviewerDate, parseReviewerDate, sanitizeEvidenceNote } from "../lib/policy-ocr-training.ts";
 
@@ -112,24 +112,35 @@ assert.match(workerActions, /google_ocr_configuration_missing/);
 assert.match(workerActions, /google_oidc_subject_token_missing/);
 assert.match(workerActions, /Automated comparison reference from saved Section 03 data/);
 assert.match(workerActions, /compareTrainingProposalToReference/);
+assert.match(workerActions, /processPolicyOcrTrainingDocument/);
+assert.match(workerActions, /\.eq\("id", label\.id\)/);
+assert.match(workerActions, /\.eq\("processing_status", label\.processing_status\)/);
+assert.match(actions, /runPolicyOcrTrainingLabel/);
 assert.doesNotMatch(actions, /writeFile|appendFile|apply_patch/);
 
-const route = readFileSync("app/api/internal/policy-ocr-training/process/route.ts", "utf8");
-assert.match(route, /POLICY_OCR_WORKER_BATCH_SIZE/);
-assert.match(route, /VERCEL_OIDC_TOKEN/);
-assert.match(route, /GOOGLE_WORKLOAD_IDENTITY_SUBJECT_TOKEN/);
+assert.equal(existsSync("app/api/internal/policy-ocr-training/process/route.ts"), false);
+assert.equal(existsSync("lib/policy-ocr-training-schedule.ts"), false);
 const vercelConfig = readFileSync("vercel.json", "utf8");
-assert.match(vercelConfig, /0 \* \* \* \*/);
+assert.doesNotMatch(vercelConfig, /"crons"/);
 
 const uploadActions = [
   readFileSync("app/policies/policy-document-actions.ts", "utf8"),
   readFileSync("app/policies/policy-edit-document-actions.ts", "utf8"),
 ];
-for (const source of uploadActions) assert.match(source, /schedulePolicyOcrTraining/);
+for (const source of uploadActions) assert.doesNotMatch(source, /schedulePolicyOcrTraining|processPolicyOcrTraining/);
 
 const queuePage = readFileSync("app/policies/ocr-training/page.tsx", "utf8");
 assert.match(queuePage, /document\.file_name/);
 assert.match(queuePage, /\.range\(0, 999\)/);
+assert.doesNotMatch(queuePage, /schedulePolicyOcrTraining/);
+const queueComponent = readFileSync("app/policies/ocr-training/training-review-queue.tsx", "utf8");
+assert.match(queueComponent, /Run with Google Cloud/);
+assert.match(queueComponent, /Re-run with Google Cloud/);
+
+const section02Map = readFileSync("../../docs/POLICY_OCR_SECTION_02_FIELD_MAP.md", "utf8");
+for (const field of ["registrationNumber", "classCode", "engine_capacity_cc", "seating_capacity", "gvw_kg", "chassis_no", "engine_no"]) {
+  assert.match(section02Map, new RegExp(field));
+}
 
 const legacyLinkMigration = readFileSync("../../supabase/migrations/20260821220000_link_legacy_policy_copies_to_ocr.sql", "utf8");
 assert.match(legacyLinkMigration, /customer_documents/);

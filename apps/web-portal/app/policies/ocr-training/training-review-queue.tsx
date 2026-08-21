@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   approvePolicyOcrTrainingLabel,
-  retryPolicyOcrTrainingLabel,
+  runPolicyOcrTrainingLabel,
   submitPolicyOcrDatabaseComparison,
 } from "../ocr-training-actions";
 import {
@@ -171,11 +171,11 @@ function TrainingReviewCard({
             {row.failureCode ? ` · ${row.failureCode.replaceAll("_", " ")}` : ""}
           </span>
           {canReview || canApprove ? (
-            ["failed", "exhausted"].includes(row.processingStatus) ? (
-          <form action={retryPolicyOcrTrainingLabel}>
+            row.processingStatus !== "processing" ? (
+          <form action={runPolicyOcrTrainingLabel}>
             <input type="hidden" name="training_label_id" value={row.labelId} />
             <button className="rounded-lg bg-white px-3 py-2 text-xs font-bold text-amber-900 ring-1 ring-amber-300">
-              Retry OCR comparison
+              Run with Google Cloud
             </button>
           </form>
             ) : null
@@ -189,6 +189,17 @@ function TrainingReviewCard({
           <ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-amber-900">
             {row.proposal.warnings.map((warning) => <li key={warning}>{warning}</li>)}
           </ul>
+        </div>
+      ) : null}
+
+      {ready && (canReview || canApprove) ? (
+        <div className="mt-4 flex justify-end">
+          <form action={runPolicyOcrTrainingLabel}>
+            <input type="hidden" name="training_label_id" value={row.labelId} />
+            <button className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-blue-700">
+              Re-run with Google Cloud
+            </button>
+          </form>
         </div>
       ) : null}
 
@@ -302,7 +313,7 @@ function statusLabel(row: TrainingQueueRow) {
 }
 
 function processingLabel(status: TrainingQueueRow["processingStatus"]) {
-  return status === "pending" ? "Queued" : status === "processing" ? "Reading copy" : status === "ready" ? "Proposal ready" : status === "failed" ? "Retry scheduled" : "Retry limit reached";
+  return status === "pending" ? "Not run" : status === "processing" ? "Reading copy" : status === "ready" ? "Proposal ready" : status === "failed" ? "Previous run failed" : "Previous run exhausted";
 }
 
 function statusTone(row: TrainingQueueRow) {
