@@ -157,6 +157,7 @@ const trainingAccess = readFileSync("lib/policy-ocr-training-access.ts", "utf8")
 const workerActions = readFileSync("app/policies/policy-ocr-actions.ts", "utf8");
 assert.match(trainingAccess, /review_policy_ocr_training/);
 assert.match(trainingAccess, /approve_policy_ocr_training/);
+assert.match(trainingAccess, /profile\.role !== "it_super_user"/);
 assert.match(workerActions, /google_ocr_configuration_missing/);
 assert.match(workerActions, /google_oidc_subject_token_missing/);
 assert.match(workerActions, /Automated comparison reference from saved Section 02 and Section 03 data/);
@@ -183,6 +184,7 @@ const uploadActions = [
 for (const source of uploadActions) assert.doesNotMatch(source, /schedulePolicyOcrTraining|processPolicyOcrTraining/);
 
 const queuePage = readFileSync("app/policies/ocr-training/page.tsx", "utf8");
+assert.match(queuePage, /requirePolicyOcrTrainingOperator/);
 assert.match(queuePage, /document\.file_name/);
 assert.match(queuePage, /\.range\(0, 999\)/);
 assert.doesNotMatch(queuePage, /schedulePolicyOcrTraining/);
@@ -192,6 +194,11 @@ assert.match(queueComponent, /Re-run with Google Cloud/);
 assert.match(queueComponent, /useActionState/);
 assert.match(queueComponent, /Confirm comparison & approve training/);
 assert.doesNotMatch(queueComponent, /different training owner|No self-approval|Awaiting owner/);
+
+const appNavigation = readFileSync("components/claim-manager/app-navigation.tsx", "utf8");
+assert.match(appNavigation, /href:"\/policies\/ocr-training",label:"OCR Training"/);
+assert.match(appNavigation, /role==="it_super_user"[\s\S]+developmentSection/);
+assert.match(appNavigation, /pathname==="\/policies\/ocr-training"[\s\S]+return"development"/);
 
 const singleOperatorMigration = readFileSync("../../supabase/migrations/20260822000100_single_operator_policy_ocr_training.sql", "utf8");
 assert.match(singleOperatorMigration, /drop constraint if exists policy_ocr_training_labels_separate_approval_check/);
