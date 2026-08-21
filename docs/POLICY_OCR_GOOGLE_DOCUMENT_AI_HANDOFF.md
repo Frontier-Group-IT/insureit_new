@@ -370,7 +370,7 @@ After explicit deployment approval, verify the exact Vercel production commit an
 
 The `/policies/ocr-training` queue compares Google proposals against the existing saved Section 03 values from `policies` and `policy_premium_details`; manual re-entry is not required. It shows match/missing/review results, keeps private copies in a new tab through a short-lived authorized URL, and lets an authorized reviewer confirm the database reference for the existing owner-approval flow. Exhausted jobs can be manually re-queued by reviewer or approver roles without raising the automatic three-attempt safety limit. Owner approval still creates a sanitized candidate with a synthetic policy number and never edits parser code.
 
-Automatic execution uses a protected Vercel cron plus best-effort post-upload/reviewer-page scheduling. `POLICY_OCR_WORKER_SECRET` or Vercel `CRON_SECRET` must be configured privately before deployment. The queue reads tracked `policy_documents` rows rather than arbitrary Storage objects; `20260821220000_link_legacy_policy_copies_to_ocr.sql` safely links older `customer_documents` policy copies only when the policy match is unambiguous. The worker now checks Google configuration and the OIDC subject token before claiming jobs, so missing infrastructure configuration does not burn retry attempts. Migration application, live backlog processing, authenticated two-person review and candidate inspection remain **UNVERIFIED**.
+**HISTORICAL AUTOMATION DESIGN, SUPERSEDED BY OPERATOR-CONTROLLED EXECUTION AND SINGLE-OPERATOR CONFIRMATION BELOW:** the queue reads tracked `policy_documents` rows rather than arbitrary Storage objects; `20260821220000_link_legacy_policy_copies_to_ocr.sql` safely links older `customer_documents` policy copies only when the policy match is unambiguous.
 
 ### Queue-count incident and corrected migration order
 
@@ -414,7 +414,7 @@ Comparison rules:
 - missing OCR, missing database reference, mismatch and match are separate states;
 - an exact match means every Section 03 value that is actually stored in the database was also proposed and matched.
 
-The reviewer queue adds an `Exact match` filter and summarizes mismatch/missing counts. Exact matches still require reviewer confirmation and separate owner approval. Automation never overwrites Policy Onboarding Section 03, never self-approves a candidate and never edits parser source.
+The training queue adds an `Exact match` filter and summarizes mismatch/missing counts. Exact matches still require the operator's explicit comparison confirmation. Automation never overwrites Policy Onboarding Section 03 and never edits parser source.
 
 The Vercel cron changes from once daily to hourly and keeps the established batch cap of three documents. `POLICY_OCR_WORKER_BATCH_SIZE` may reduce the batch but cannot raise it above three. With 286 pending documents, the nominal drain time is about four days, subject to Vercel cron timing, Google quotas and retry delays.
 
@@ -440,4 +440,10 @@ The selected-run Server Action independently re-authenticates the caller and req
 
 **IMPLEMENTED AFTER PRODUCTION DIGEST `3201635344` / DEPLOYMENT PENDING:** the first Phase 1 deployment incorrectly retained the retired worker-secret preflight in the operator action. Production had no `POLICY_OCR_WORKER_SECRET` or `CRON_SECRET`, so every manual click threw a generic Next.js application error before Google configuration/OIDC was checked. The corrected action authorizes the operator directly, retains Google/OIDC preflight before claim, and returns pending/success/error state inline instead of throwing expected operational failures into the route error boundary.
 
-Section 03 comparison, review-before-approval, separate owner approval and sanitized candidate safeguards remain unchanged. Vehicle/identity extraction is not included. The exact Section 02 form/payload/database map and the gate for the next increment are documented in `docs/POLICY_OCR_SECTION_02_FIELD_MAP.md`.
+Section 03 comparison and sanitized-candidate safeguards remain unchanged. Vehicle/identity extraction is not included. The exact Section 02 form/payload/database map and the gate for the next increment are documented in `docs/POLICY_OCR_SECTION_02_FIELD_MAP.md`.
+
+## 12. Single-operator confirmation — 2026-08-22
+
+**LATEST DECISION / IMPLEMENTED / NOT YET APPLIED OR DEPLOYED:** there is one human safety checkpoint, not two people. The authorized operator reviews the visible Google OCR versus saved Section 03 comparison, then clicks **Confirm comparison & approve training**. One service-role-only RPC atomically records the database reference, writes the same actor into the legacy review/approval audit columns, upserts the sanitized candidate and marks the label approved. The UI no longer contains owner/reviewer wording, a self-approval block or a second approval button.
+
+Migration `20260822000100_single_operator_policy_ocr_training.sql` drops the distinct-reviewer constraint and installs `approve_policy_ocr_database_comparison(...)`. It must be applied before the application is deployed. The candidate remains sanitized, uses a synthetic policy number, excludes raw OCR/PII/vehicle identity, and never modifies parser source automatically.

@@ -175,6 +175,7 @@ Mandatory safeguards:
 - Do not create a service-account JSON key unless an explicit security-approved architecture change requires it. Production uses Vercel OIDC Workload Identity Federation and short-lived credentials.
 - OCR may propose only the approved Policy Onboarding Section 03 fields. Never populate customer, insured, owner, vehicle identification, registration, chassis, engine, address, phone, PAN, GST or similar identity fields from the policy document.
 - Maintain review-before-apply behavior. Never silently overwrite manual or saved form data.
+- The operator-controlled OCR training queue is a single-user confirmation workflow: after inspecting the Google-vs-database comparison, the same authorized operator confirms and approves the sanitized candidate in one atomic action. Do not reintroduce a different-reviewer/owner requirement or a self-approval block.
 - Printed net premium, GST and gross premium are comparison-only values unless the product schema is explicitly changed.
 - Before claiming support for a new insurer/policy type, obtain representative samples, define an approved mapping, add parser evidence/confidence behavior, and create regression tests.
 - Do not force incompatible products such as United India CPM into motor OD/TP/CPA fields without an approved schema decision.

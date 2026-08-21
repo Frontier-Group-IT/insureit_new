@@ -98,16 +98,15 @@ assert.equal(
 const migration = readFileSync("../../supabase/migrations/20260821153000_premium_ocr_training_workflow.sql", "utf8");
 assert.match(migration, /processing_attempts < 3/);
 assert.match(migration, /for update skip locked/i);
-assert.match(migration, /owner_approved_by <> reviewed_by/);
-assert.match(migration, /training_label_self_approval_forbidden/);
+assert.match(migration, /status = 'approved'[\s\S]+owner_approved_by is null/);
 assert.match(migration, /insert into public\.policy_ocr_training_labels[\s\S]+policy_documents/);
 assert.match(migration, /after insert or update of storage_bucket, storage_path, mime_type, file_size/);
 
 const actions = readFileSync("app/policies/ocr-training-actions.ts", "utf8");
+const trainingAccess = readFileSync("lib/policy-ocr-training-access.ts", "utf8");
 const workerActions = readFileSync("app/policies/policy-ocr-actions.ts", "utf8");
-assert.match(actions, /review_policy_ocr_training/);
-assert.match(actions, /approve_policy_ocr_training/);
-assert.match(actions, /reviewed_by === owner\.id/);
+assert.match(trainingAccess, /review_policy_ocr_training/);
+assert.match(trainingAccess, /approve_policy_ocr_training/);
 assert.match(workerActions, /google_ocr_configuration_missing/);
 assert.match(workerActions, /google_oidc_subject_token_missing/);
 assert.match(workerActions, /Automated comparison reference from saved Section 03 data/);
@@ -141,6 +140,15 @@ const queueComponent = readFileSync("app/policies/ocr-training/training-review-q
 assert.match(queueComponent, /Run with Google Cloud/);
 assert.match(queueComponent, /Re-run with Google Cloud/);
 assert.match(queueComponent, /useActionState/);
+assert.match(queueComponent, /Confirm comparison & approve training/);
+assert.doesNotMatch(queueComponent, /different training owner|No self-approval|Awaiting owner/);
+
+const singleOperatorMigration = readFileSync("../../supabase/migrations/20260822000100_single_operator_policy_ocr_training.sql", "utf8");
+assert.match(singleOperatorMigration, /drop constraint if exists policy_ocr_training_labels_separate_approval_check/);
+assert.match(singleOperatorMigration, /approve_policy_ocr_database_comparison/);
+assert.doesNotMatch(singleOperatorMigration, /self_approval_forbidden|owner_approved_by <> reviewed_by/);
+assert.match(actions, /approve_policy_ocr_database_comparison/);
+assert.doesNotMatch(actions, /requireTrainingOwner|requireTrainingReviewer|reviewed_by === owner\.id/);
 
 const section02Map = readFileSync("../../docs/POLICY_OCR_SECTION_02_FIELD_MAP.md", "utf8");
 for (const field of ["registrationNumber", "classCode", "engine_capacity_cc", "seating_capacity", "gvw_kg", "chassis_no", "engine_no"]) {

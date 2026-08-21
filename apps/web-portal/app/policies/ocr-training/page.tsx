@@ -146,12 +146,7 @@ export default async function PolicyOcrTrainingPage() {
           The premium OCR reviewer queue is temporarily unavailable.
         </div>
       ) : (
-        <TrainingReviewQueue
-          rows={rows}
-          actorId={profile.id}
-          canReview={canReview}
-          canApprove={canApprove}
-        />
+        <TrainingReviewQueue rows={rows} canTrain={canReview || canApprove} />
       )}
     </AppShell>
   );
