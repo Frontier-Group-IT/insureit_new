@@ -852,4 +852,10 @@ Section 02 vehicle extraction has deliberately not been added. The exact current
 
 Forward migration: `20260822000100_single_operator_policy_ocr_training.sql`. It drops `policy_ocr_training_labels_separate_approval_check`, removes the self-approval exception from candidate approval and adds the service-role-only atomic RPC `approve_policy_ocr_database_comparison(uuid, uuid, jsonb, jsonb)`. Apply this migration before deploying the matching application commit; otherwise the new button cannot complete.
 
+### Combined Section 02 + Section 03 OCR training — 2026-08-22
+
+**IMPLEMENTED LOCALLY / NOT MERGED / NOT APPLIED / NOT DEPLOYED:** one operator-selected Google Cloud run now extracts the approved visible Section 02 vehicle fields alongside Section 03. The training queue loads policy-time `policy_party_snapshots` first, falls back to the linked `vehicles` row where required, and renders two grouped field-by-field comparisons with one confirmation button. The confirmation creates `policy_ocr_training_candidate_v2` with nested `section_02` and `section_03` ground truth. Real policy, registration, chassis and engine identifiers are replaced with deterministic synthetic values in the candidate.
+
+Migration `20260822093000_policy_ocr_section_02_training.sql` adds service-role-only `section_02_reference` storage and replaces the atomic approval validators for the combined contract. `.github/workflows/apply-supabase-migrations.yml` applies and verifies it explicitly. The Policy Onboarding OCR review modal can also copy selected Section 02 values into the unsaved form; insured name and phone remain excluded. No training action overwrites a saved policy, vehicle or snapshot.
+
 The rerunnable queue migration now downgrades only legacy `approved` rows that have no approval actor. It no longer resets already-approved candidates to `reviewed` when the protected migration workflow is rerun.

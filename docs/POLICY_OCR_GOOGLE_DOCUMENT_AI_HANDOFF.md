@@ -447,3 +447,13 @@ Section 03 comparison and sanitized-candidate safeguards remain unchanged. Vehic
 **LATEST DECISION / IMPLEMENTED / NOT YET APPLIED OR DEPLOYED:** there is one human safety checkpoint, not two people. The authorized operator reviews the visible Google OCR versus saved Section 03 comparison, then clicks **Confirm comparison & approve training**. One service-role-only RPC atomically records the database reference, writes the same actor into the legacy review/approval audit columns, upserts the sanitized candidate and marks the label approved. The UI no longer contains owner/reviewer wording, a self-approval block or a second approval button.
 
 Migration `20260822000100_single_operator_policy_ocr_training.sql` drops the distinct-reviewer constraint and installs `approve_policy_ocr_database_comparison(...)`. It must be applied before the application is deployed. The candidate remains sanitized, uses a synthetic policy number, excludes raw OCR/PII/vehicle identity, and never modifies parser source automatically.
+
+## 13. Combined Section 02 + Section 03 training and reviewed autofill — 2026-08-22
+
+**IMPLEMENTED LOCALLY / NOT APPLIED OR DEPLOYED:** a selected manual Google Cloud run now returns one proposal containing approved visible Section 02 vehicle fields plus the existing Section 03 fields. Section 02 keys are registration status/number, class, make, model, fuel, manufacturing year, class-aware capacity, chassis, engine and RTO name/state. Insured name, phone and address remain prohibited.
+
+The database reference loader uses the policy-time `policy_party_snapshots` row first and the linked `vehicles` row as fallback for class code and technical capacity. The training page renders separate Section 02 and Section 03 tables, but there is still one operator and one **Confirm comparison & approve training** action. Confirmation never overwrites the policy or vehicle.
+
+Migration `20260822093000_policy_ocr_section_02_training.sql` adds protected `section_02_reference` JSONB and validates nested candidate schema `policy_ocr_training_candidate_v2`. Real policy, registration, chassis and engine values are replaced with deterministic synthetic identifiers in reusable candidates. Raw OCR text and raw evidence are not stored.
+
+The Policy Onboarding review modal can apply only operator-selected Section 02/03 values to the unsaved form. Registration mode is applied first so registered/unregistered form behavior is correct; all remaining values retain review-before-apply behavior.

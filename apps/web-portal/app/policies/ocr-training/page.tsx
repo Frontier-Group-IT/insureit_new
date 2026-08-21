@@ -18,6 +18,8 @@ type TrainingDocumentRow = {
     end_date: string | null;
     insured_declared_value: number | null;
     policy_code: string | null;
+    vehicles: VehicleReference | null;
+    policy_party_snapshots: PolicySnapshotReference | PolicySnapshotReference[] | null;
     insurance_companies: { name: string } | null;
     policy_premium_details: PolicyPremiumReference | PolicyPremiumReference[] | null;
   } | null;
@@ -33,6 +35,9 @@ type PolicyPremiumReference = {
   gst_amount: number | null;
   gross_premium: number | null;
 };
+
+type PolicySnapshotReference = { registration_number: string | null; vehicle_class: string | null; make: string | null; model: string | null; fuel_type: string | null; manufacturing_year: number | null; capacity_value: string | null; chassis_no: string | null; engine_no: string | null; rto_name: string | null; rto_state: string | null; created_at: string };
+type VehicleReference = { vehicle_no: string | null; registration_status: string | null; vehicle_type: string | null; vehicle_class_code: string | null; vehicle_class_description: string | null; make: string | null; model: string | null; fuel_type: string | null; year: number | null; engine_capacity_cc: number | null; seating_capacity: number | null; gvw_kg: number | null; chassis_no: string | null; engine_no: string | null; rto_name: string | null; rto_state: string | null };
 
 type TrainingLabel = {
   id: string;
@@ -79,7 +84,7 @@ export default async function PolicyOcrTrainingPage() {
   const admin = createSupabaseAdminClient();
   const { data, error, count } = await admin
     .from("policy_documents")
-    .select("id,policy_id,file_name,created_at,policies(policy_no,policy_type,start_date,end_date,insured_declared_value,policy_code,insurance_companies(name),policy_premium_details(od_premium,tp_premium,cpa_opted,cpa_amount,net_premium,gst_amount,gross_premium)),policy_ocr_training_labels(*)", { count: "exact" })
+    .select("id,policy_id,file_name,created_at,policies(policy_no,policy_type,start_date,end_date,insured_declared_value,policy_code,insurance_companies(name),vehicles(vehicle_no,registration_status,vehicle_type,vehicle_class_code,vehicle_class_description,make,model,fuel_type,year,engine_capacity_cc,seating_capacity,gvw_kg,chassis_no,engine_no,rto_name,rto_state),policy_party_snapshots(registration_number,vehicle_class,make,model,fuel_type,manufacturing_year,capacity_value,chassis_no,engine_no,rto_name,rto_state,created_at),policy_premium_details(od_premium,tp_premium,cpa_opted,cpa_amount,net_premium,gst_amount,gross_premium)),policy_ocr_training_labels(*)", { count: "exact" })
     .eq("document_type", "policy_copy")
     .order("created_at", { ascending: false })
     .range(0, 999)
@@ -92,6 +97,11 @@ export default async function PolicyOcrTrainingPage() {
     if (!label) return [];
     const premium = document.policies?.policy_premium_details;
     const databasePremium = Array.isArray(premium) ? premium[0] ?? null : premium;
+    const snapshots = document.policies?.policy_party_snapshots;
+    const snapshot = (Array.isArray(snapshots) ? snapshots : snapshots ? [snapshots] : []).sort((a, b) => b.created_at.localeCompare(a.created_at))[0] ?? null;
+    const vehicle = document.policies?.vehicles ?? null;
+    const pendingRegistration = isRegistrationPending(snapshot?.registration_number, vehicle?.registration_status, vehicle?.vehicle_no);
+    const vehicleClass = vehicle?.vehicle_class_code || snapshot?.vehicle_class || vehicle?.vehicle_class_description || vehicle?.vehicle_type || null;
     return [{
       documentId: document.id,
       labelId: label.id,
@@ -100,6 +110,18 @@ export default async function PolicyOcrTrainingPage() {
       policyReference: document.policies?.policy_no ?? document.policies?.policy_code ?? "-",
       linkedInsurer: document.policies?.insurance_companies?.name ?? "Insurer not linked",
       databaseReference: {
+        vehicle_registration_status: pendingRegistration ? "registration_pending" : "registered",
+        vehicle_registration_number: pendingRegistration ? null : usableRegistration(snapshot?.registration_number) || usableRegistration(vehicle?.vehicle_no),
+        vehicle_class: vehicleClass,
+        vehicle_make: snapshot?.make || vehicle?.make || null,
+        vehicle_model: snapshot?.model || vehicle?.model || null,
+        vehicle_fuel_type: snapshot?.fuel_type || vehicle?.fuel_type || null,
+        vehicle_manufacturing_year: snapshot?.manufacturing_year ?? vehicle?.year ?? null,
+        vehicle_capacity: snapshot?.capacity_value || capacityForClass(vehicle, vehicleClass),
+        vehicle_chassis_number: snapshot?.chassis_no || vehicle?.chassis_no || null,
+        vehicle_engine_number: snapshot?.engine_no || vehicle?.engine_no || null,
+        vehicle_rto_name: snapshot?.rto_name || vehicle?.rto_name || null,
+        vehicle_rto_state: snapshot?.rto_state || vehicle?.rto_state || null,
         insurer_name: document.policies?.insurance_companies?.name ?? null,
         policy_product: document.policies?.policy_type ?? null,
         policy_number: document.policies?.policy_no ?? null,
@@ -130,12 +152,12 @@ export default async function PolicyOcrTrainingPage() {
   });
 
   return (
-    <AppShell title="Premium OCR training">
+    <AppShell title="Policy OCR training">
       <div className="mb-5">
-        <p className="text-sm font-bold uppercase tracking-wide text-blue-700">Premium OCR reviewer queue</p>
+        <p className="text-sm font-bold uppercase tracking-wide text-blue-700">Policy OCR training queue</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight text-navy-900">Proposal and correction review</h1>
         <p className="mt-2 max-w-4xl text-sm text-slate-500">
-           Choose a policy copy and run it through Google server-side. INSUREIT compares only approved Section 03 fields with the values already saved; no policy copy runs automatically.
+           Choose a policy copy and run it through Google server-side. INSUREIT compares Section 02 vehicle details and Section 03 policy/premium details with the values already saved; no policy copy runs automatically.
         </p>
         <p className="mt-2 text-xs font-semibold text-slate-500">
           Showing {count ?? rows.length} policy copies linked to policy records. Legacy customer-uploaded copies are included only after an unambiguous policy match.
@@ -150,4 +172,22 @@ export default async function PolicyOcrTrainingPage() {
       )}
     </AppShell>
   );
+}
+
+function isRegistrationPending(snapshotRegistration?: string | null, status?: string | null, vehicleNo?: string | null) {
+  return /pending|unregistered/i.test(snapshotRegistration ?? "") || /pending|unregistered/i.test(status ?? "") || /^(?:NEW|PENDING)-/i.test(vehicleNo ?? "");
+}
+
+function usableRegistration(value?: string | null) {
+  const clean = value?.trim() ?? "";
+  return clean && !/pending|unregistered/i.test(clean) && !/^(?:NEW|PENDING)-/i.test(clean) ? clean : null;
+}
+
+function capacityForClass(vehicle: VehicleReference | null, vehicleClass: string | null) {
+  if (!vehicle) return null;
+  const normalizedClass = (vehicleClass ?? "").toUpperCase();
+  if (["PCP", "TWP"].includes(normalizedClass)) return vehicle.engine_capacity_cc;
+  if (normalizedClass === "PCV") return vehicle.seating_capacity;
+  if (["GCV", "CPM"].includes(normalizedClass)) return vehicle.gvw_kg;
+  return vehicle.engine_capacity_cc ?? vehicle.gvw_kg ?? vehicle.seating_capacity;
 }

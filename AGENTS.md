@@ -173,7 +173,8 @@ Mandatory safeguards:
 - Google Document AI is the OCR/text-reading layer only. Insurer detection and field interpretation remain in the INSUREIT backend.
 - Keep all Google token exchange, service-account impersonation and Document AI calls server-side. Never expose OIDC tokens, Google access tokens or credentials to the browser.
 - Do not create a service-account JSON key unless an explicit security-approved architecture change requires it. Production uses Vercel OIDC Workload Identity Federation and short-lived credentials.
-- OCR may propose only the approved Policy Onboarding Section 03 fields. Never populate customer, insured, owner, vehicle identification, registration, chassis, engine, address, phone, PAN, GST or similar identity fields from the policy document.
+- OCR may propose the approved visible Policy Onboarding Section 02 vehicle fields and Section 03 policy/premium fields. Section 02 proposals must remain review-before-apply. Never propose insured/customer/owner name, phone, address, PAN, GSTIN or other personal identity from the policy document.
+- Registration, chassis and engine may be held only in the protected service-role proposal/reference long enough to compare or apply after explicit review. Reusable candidates, logs, fixtures and source control must replace those identifiers with synthetic values; the internal `NEW-<chassis>` identity is never learned as a printed registration number.
 - Maintain review-before-apply behavior. Never silently overwrite manual or saved form data.
 - The operator-controlled OCR training queue is a single-user confirmation workflow: after inspecting the Google-vs-database comparison, the same authorized operator confirms and approves the sanitized candidate in one atomic action. Do not reintroduce a different-reviewer/owner requirement or a self-approval block.
 - Printed net premium, GST and gross premium are comparison-only values unless the product schema is explicitly changed.

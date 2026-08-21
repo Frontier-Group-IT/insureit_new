@@ -12,6 +12,18 @@ type OcrSuccess = {
 };
 
 export const TRAINING_FIELD_KEYS = [
+  "vehicle_registration_status",
+  "vehicle_registration_number",
+  "vehicle_class",
+  "vehicle_make",
+  "vehicle_model",
+  "vehicle_fuel_type",
+  "vehicle_manufacturing_year",
+  "vehicle_capacity",
+  "vehicle_chassis_number",
+  "vehicle_engine_number",
+  "vehicle_rto_name",
+  "vehicle_rto_state",
   "insurer_name",
   "policy_product",
   "policy_number",
@@ -42,6 +54,18 @@ export type TrainingProposal = {
 };
 
 export type TrainingDatabaseReference = {
+  vehicle_registration_status: string | null;
+  vehicle_registration_number: string | null;
+  vehicle_class: string | null;
+  vehicle_make: string | null;
+  vehicle_model: string | null;
+  vehicle_fuel_type: string | null;
+  vehicle_manufacturing_year: number | null;
+  vehicle_capacity: string | number | null;
+  vehicle_chassis_number: string | null;
+  vehicle_engine_number: string | null;
+  vehicle_rto_name: string | null;
+  vehicle_rto_state: string | null;
   insurer_name: string | null;
   policy_product: string | null;
   policy_number: string | null;
@@ -71,6 +95,18 @@ export type TrainingComparisonSummary = {
 };
 
 const COMPARISON_PROPOSAL_KEYS: Record<TrainingComparisonKey, TrainingFieldKey> = {
+  vehicle_registration_status: "vehicle_registration_status",
+  vehicle_registration_number: "vehicle_registration_number",
+  vehicle_class: "vehicle_class",
+  vehicle_make: "vehicle_make",
+  vehicle_model: "vehicle_model",
+  vehicle_fuel_type: "vehicle_fuel_type",
+  vehicle_manufacturing_year: "vehicle_manufacturing_year",
+  vehicle_capacity: "vehicle_capacity",
+  vehicle_chassis_number: "vehicle_chassis_number",
+  vehicle_engine_number: "vehicle_engine_number",
+  vehicle_rto_name: "vehicle_rto_name",
+  vehicle_rto_state: "vehicle_rto_state",
   insurer_name: "insurer_name",
   policy_product: "policy_product",
   policy_number: "policy_number",
@@ -88,6 +124,17 @@ const COMPARISON_PROPOSAL_KEYS: Record<TrainingComparisonKey, TrainingFieldKey> 
 
 const FIELD_KEY_SET = new Set<string>(TRAINING_FIELD_KEYS);
 const SAFE_EVIDENCE_LABELS: Array<[RegExp, string]> = [
+  [/\bregistration status\b/i, "Vehicle Registration Status"],
+  [/\bregistration(?: number| no)?\b|\bregn\.? no\b/i, "Vehicle Registration Number"],
+  [/\bvehicle class\b|\bclass of vehicle\b/i, "Vehicle Class"],
+  [/\bmake\b/i, "Vehicle Make"],
+  [/\bmodel\b/i, "Vehicle Model"],
+  [/\bfuel\b/i, "Fuel Type"],
+  [/\bmanufactur(?:ing|e) year\b|\byear of manufacture\b/i, "Manufacturing Year"],
+  [/\bcapacity\b|\bcc\b|\bgvw\b|\bseating\b/i, "Vehicle Capacity"],
+  [/\bchassis\b/i, "Chassis Number"],
+  [/\bengine\b/i, "Engine Number"],
+  [/\brto\b/i, "RTO"],
   [/\btotal od premium\b/i, "Total OD Premium"],
   [/\btotal tp premium\b/i, "Total TP Premium"],
   [/\bnet premium\b/i, "Net Premium"],
@@ -186,6 +233,18 @@ export function compareTrainingValue(
   if (key === "policy_product") {
     return normalizePolicyProduct(referenceValue) === normalizePolicyProduct(proposalValue) ? "match" : "mismatch";
   }
+  if (key === "vehicle_registration_number" || key === "vehicle_chassis_number" || key === "vehicle_engine_number") {
+    return normalizeVehicleIdentifier(referenceValue) === normalizeVehicleIdentifier(proposalValue) ? "match" : "mismatch";
+  }
+  if (key === "vehicle_registration_status") {
+    return normalizeRegistrationStatus(referenceValue) === normalizeRegistrationStatus(proposalValue) ? "match" : "mismatch";
+  }
+  if (key === "vehicle_class") {
+    return normalizeVehicleClass(referenceValue) === normalizeVehicleClass(proposalValue) ? "match" : "mismatch";
+  }
+  if (key === "vehicle_capacity") {
+    return normalizeCapacity(referenceValue) === normalizeCapacity(proposalValue) ? "match" : "mismatch";
+  }
   return normalizeComparisonText(referenceValue) === normalizeComparisonText(proposalValue) ? "match" : "mismatch";
 }
 
@@ -223,6 +282,18 @@ export function createSanitizedTrainingCandidate(args: {
   parserId: string | null;
   parserVersion: string | null;
   values: {
+    vehicle_registration_status: string | null;
+    vehicle_registration_number: string | null;
+    vehicle_class: string | null;
+    vehicle_make: string | null;
+    vehicle_model: string | null;
+    vehicle_fuel_type: string | null;
+    vehicle_manufacturing_year: number | null;
+    vehicle_capacity: string | number | null;
+    vehicle_chassis_number: string | null;
+    vehicle_engine_number: string | null;
+    vehicle_rto_name: string | null;
+    vehicle_rto_state: string | null;
     insurer_name: string | null;
     policy_product: string | null;
     valid_from: string | null;
@@ -240,23 +311,39 @@ export function createSanitizedTrainingCandidate(args: {
 }) {
   const syntheticId = args.labelId.replaceAll("-", "").slice(0, 12).toUpperCase().padEnd(12, "0");
   return {
-    schema_version: "policy_ocr_training_candidate_v1",
+    schema_version: "policy_ocr_training_candidate_v2",
     parser_id: args.parserId,
     parser_version: args.parserVersion,
     ground_truth: {
-      insurer_name: args.values.insurer_name,
-      policy_product: args.values.policy_product,
-      policy_number: `SYN-${syntheticId}`,
-      valid_from: args.values.valid_from,
-      valid_upto: args.values.valid_upto,
-      idv: args.values.idv,
-      od_premium: args.values.od_premium,
-      tp_premium: args.values.tp_premium,
-      cpa_opted: args.values.cpa_opted,
-      cpa_premium: args.values.cpa_premium,
-      printed_net_premium: args.values.printed_net_premium,
-      printed_gst: args.values.printed_gst,
-      printed_gross_premium: args.values.printed_gross_premium,
+      section_02: {
+        vehicle_registration_status: args.values.vehicle_registration_status,
+        vehicle_registration_number: args.values.vehicle_registration_number ? `SYNREG${syntheticId}` : null,
+        vehicle_class: args.values.vehicle_class,
+        vehicle_make: args.values.vehicle_make,
+        vehicle_model: args.values.vehicle_model,
+        vehicle_fuel_type: args.values.vehicle_fuel_type,
+        vehicle_manufacturing_year: args.values.vehicle_manufacturing_year,
+        vehicle_capacity: args.values.vehicle_capacity,
+        vehicle_chassis_number: args.values.vehicle_chassis_number ? `SYNCHASSIS${syntheticId}` : null,
+        vehicle_engine_number: args.values.vehicle_engine_number ? `SYNENGINE${syntheticId}` : null,
+        vehicle_rto_name: args.values.vehicle_rto_name,
+        vehicle_rto_state: args.values.vehicle_rto_state,
+      },
+      section_03: {
+        insurer_name: args.values.insurer_name,
+        policy_product: args.values.policy_product,
+        policy_number: `SYN-${syntheticId}`,
+        valid_from: args.values.valid_from,
+        valid_upto: args.values.valid_upto,
+        idv: args.values.idv,
+        od_premium: args.values.od_premium,
+        tp_premium: args.values.tp_premium,
+        cpa_opted: args.values.cpa_opted,
+        cpa_premium: args.values.cpa_premium,
+        printed_net_premium: args.values.printed_net_premium,
+        printed_gst: args.values.printed_gst,
+        printed_gross_premium: args.values.printed_gross_premium,
+      },
     },
     evidence_labels: Object.fromEntries(
       Object.entries(args.proposal?.fields ?? {}).map(([key, field]) => [key, field?.evidence ?? "Parser evidence"]),
@@ -307,4 +394,28 @@ function normalizeComparisonText(value: string) {
     .replace(/[^a-z0-9]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function normalizeVehicleIdentifier(value: string) {
+  return value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function normalizeRegistrationStatus(value: string) {
+  const normalized = normalizeComparisonText(value);
+  return /pending|unregistered|new vehicle/.test(normalized) ? "registration_pending" : "registered";
+}
+
+function normalizeVehicleClass(value: string) {
+  const normalized = normalizeComparisonText(value);
+  if (/\bgcv\b|goods carrying|goods carrier/.test(normalized)) return "gcv";
+  if (/\bpcv\b|passenger carrying|passenger vehicle/.test(normalized)) return "pcv";
+  if (/\bpcp\b|private car/.test(normalized)) return "pcp";
+  if (/\btwp\b|two wheeler/.test(normalized)) return "twp";
+  if (/\bcpm\b|contractors? plant|mobile plant/.test(normalized)) return "cpm";
+  return normalized;
+}
+
+function normalizeCapacity(value: string) {
+  const number = value.replaceAll(",", "").match(/\d+(?:\.\d+)?/);
+  return number ? String(Number(number[0])) : normalizeComparisonText(value);
 }

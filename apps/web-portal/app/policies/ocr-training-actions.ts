@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createSanitizedTrainingCandidate, type TrainingProposal } from "@/lib/policy-ocr-training";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { requirePolicyOcrTrainingOperator } from "@/lib/policy-ocr-training-access";
+import { loadPolicyOcrTrainingReference } from "@/lib/policy-ocr-training-reference";
 import { processPolicyOcrTrainingDocument } from "./policy-ocr-actions";
 
 const TRAINING_COPY_URL_TTL_SECONDS = 5 * 60;
@@ -42,14 +43,13 @@ async function confirmPolicyOcrDatabaseComparison(formData: FormData) {
   const { data: document, error: documentError } = await admin.from("policy_documents").select("policy_id").eq("id", documentId).eq("document_type", "policy_copy").maybeSingle<{ policy_id: string }>();
   if (documentError || !document) throw new Error("The policy database reference could not be loaded.");
 
-  const [{ data: policy, error: policyError }, { data: premium, error: premiumError }] = await Promise.all([admin.from("policies").select("policy_no,policy_type,start_date,end_date,insured_declared_value,insurance_companies(name)").eq("id", document.policy_id).maybeSingle<{ policy_no: string | null; policy_type: string | null; start_date: string | null; end_date: string | null; insured_declared_value: number | null; insurance_companies: { name: string } | null }>(), admin.from("policy_premium_details").select("od_premium,tp_premium,cpa_opted,cpa_amount,net_premium,gst_amount,gross_premium").eq("policy_id", document.policy_id).maybeSingle<{ od_premium: number | null; tp_premium: number | null; cpa_opted: boolean | null; cpa_amount: number | null; net_premium: number | null; gst_amount: number | null; gross_premium: number | null }>()]);
-  if (policyError || premiumError || !policy) throw new Error("The Section 03 database values could not be loaded.");
+  const reference = await loadPolicyOcrTrainingReference(document.policy_id);
+  if (!reference) throw new Error("The Section 02 and Section 03 database values could not be loaded.");
 
   const { data: label, error: labelError } = await admin.from("policy_ocr_training_labels").select("id,processing_status,parser_id,parser_version,proposal").eq("policy_document_id", documentId).maybeSingle<TrainingLabelForApproval>();
   if (labelError || !label) throw new Error("The OCR comparison record could not be loaded.");
   if (label.processing_status !== "ready") throw new Error("Wait for the Google OCR proposal before confirming the comparison.");
 
-  const reference = { insurer_name: policy.insurance_companies?.name ?? null, policy_product: policy.policy_type, policy_number: policy.policy_no, valid_from: policy.start_date, valid_upto: policy.end_date, idv: policy.insured_declared_value, od_premium: premium?.od_premium ?? null, tp_premium: premium?.tp_premium ?? null, cpa_opted: premium?.cpa_opted ?? null, cpa_premium: premium?.cpa_amount ?? null, printed_net_premium: premium?.net_premium ?? null, printed_gst: premium?.gst_amount ?? null, printed_gross_premium: premium?.gross_premium ?? null };
   assertFinancialReconciliation(reference);
 
   const candidate = createSanitizedTrainingCandidate({ labelId: label.id, parserId: label.parser_id, parserVersion: label.parser_version, values: reference, proposal: label.proposal });
