@@ -3,6 +3,7 @@ import { Suspense, type ReactNode } from "react";
 import { Manrope, Space_Grotesk } from "next/font/google";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 import { AadhaarMaskNormalizer } from "@/components/aadhaar-mask-normalizer";
+import { EmbeddedMasterSaveBridge } from "@/components/embedded-master-save-bridge";
 import { LegacyIntermediaryImportLink } from "@/components/legacy-intermediary-import-link";
 import { RouteProgressBar } from "@/components/loading/route-progress-bar";
 import { PolicyEditCopyFooterActions } from "@/components/policy-edit-copy-footer-actions";
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           {children}
           <Suspense fallback={null}>
             <AadhaarMaskNormalizer />
+            <EmbeddedMasterSaveBridge />
             <LegacyIntermediaryImportLink />
             <ProfessionalFormValidation />
             <PolicyEditCopyFooterActions />
