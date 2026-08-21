@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy Partner master link repair.",
-  "deploy_requested_at": "2026-08-21T18:14:00+05:30",
-  "requested_by": "explicit user deploy request",
+  "purpose": "Deploy Policy Onboarding SAOD restrictions.",
+  "deploy_requested_at": "2026-08-21T21:02:00+05:30",
+  "requested_by": "explicit user merge and deploy request",
   "source": "Deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "eda43ae81786df3f3301b8ccb53e349bd9687d06",
-  "release_scope": "Deploy merged PR #516. Repairs missing canonical Partner master links for active legacy Partner records, safely reuses unambiguous existing Partner identities, backfills affected records, and adds an automatic enforcement trigger for future activations.",
-  "verification": "Production database repair has already been verified with zero active Partner register rows missing a canonical Partner link. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source_commit": "9ec0da9023b93d769520459391ad19baad6bd329",
+  "release_scope": "Deploy merged PR #517. SAOD is removed for GCV, PCV, CPM and MISD during Policy Onboarding, and TP Premium is forced to zero and disabled when SAOD is selected for supported vehicle classes.",
+  "verification": "PR #517 Verify web portal completed successfully on head 42498e760884a4ccda91331514ec8a5c00144770. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
