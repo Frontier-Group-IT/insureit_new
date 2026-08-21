@@ -5,6 +5,18 @@ import { createPortal } from "react-dom";
 import { extractPolicyDocument, type PolicyOcrField } from "@/app/policies/policy-ocr-actions";
 
 const APPLY_FIELDS = new Set([
+  "vehicle_registration_status",
+  "vehicle_registration_number",
+  "vehicle_class",
+  "vehicle_make",
+  "vehicle_model",
+  "vehicle_fuel_type",
+  "vehicle_manufacturing_year",
+  "vehicle_capacity",
+  "vehicle_chassis_number",
+  "vehicle_engine_number",
+  "vehicle_rto_name",
+  "vehicle_rto_state",
   "policy_product",
   "idv",
   "od_premium",
@@ -19,6 +31,17 @@ const APPLY_FIELDS = new Set([
 const VERIFICATION_FIELDS = new Set(["total_premium", "tax_amount", "gross_premium"]);
 
 const FIELD_TARGETS: Record<string, string[]> = {
+  vehicle_registration_number: ["registration number", "registration no."],
+  vehicle_class: ["class"],
+  vehicle_make: ["make"],
+  vehicle_model: ["model"],
+  vehicle_fuel_type: ["fuel type"],
+  vehicle_manufacturing_year: ["year of manufacturing"],
+  vehicle_capacity: ["capacity"],
+  vehicle_chassis_number: ["chassis number"],
+  vehicle_engine_number: ["engine number"],
+  vehicle_rto_name: ["rto name"],
+  vehicle_rto_state: ["rto state"],
   policy_product: ["policy product"],
   idv: ["idv / sum insured", "idv"],
   od_premium: ["od premium"],
@@ -134,12 +157,20 @@ export function PolicyOcrImportPanel({ variant = "header" }: { variant?: "header
     setSelected(new Set(editableFields.map((field) => field.key)));
   }
 
-  function applySelected() {
+  async function applySelected() {
     const chosen = fields.filter((field) => selected.has(field.key) && APPLY_FIELDS.has(field.key));
     let applied = 0;
     const skipped: string[] = [];
 
+    const registrationStatus = chosen.find((field) => field.key === "vehicle_registration_status");
+    if (registrationStatus) {
+      if (applyRegistrationStatus(registrationStatus.value)) applied += 1;
+      else skipped.push(registrationStatus.label);
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    }
+
     for (const field of chosen) {
+      if (field.key === "vehicle_registration_status") continue;
       const control = findControl(FIELD_TARGETS[field.key] ?? []);
       if (!control) {
         skipped.push(field.label);
@@ -179,11 +210,11 @@ export function PolicyOcrImportPanel({ variant = "header" }: { variant?: "header
         <header className="flex shrink-0 items-start justify-between border-b border-[#E5EAF1] px-5 py-5 sm:px-7">
           <div className="pr-4">
             <div className="mb-2 flex items-center gap-2 text-[9px] font-bold uppercase tracking-[.12em] text-[#55708F]">
-              <span className="grid h-6 w-6 place-items-center rounded-lg bg-[#EAF1FB] text-[#173B67]">03</span>
+              <span className="grid h-6 w-6 place-items-center rounded-lg bg-[#EAF1FB] text-[#173B67]">02–03</span>
               Policy onboarding
             </div>
-            <h2 id="policy-import-title" className="text-[18px] font-bold tracking-[-.01em] text-[#102A4C]">Import policy and premium details</h2>
-            <p className="mt-1.5 max-w-2xl text-[10px] leading-5 text-[#667085]">Upload the policy schedule, confirm the extracted values, and copy the selected details into Policy product, premium &amp; validity.</p>
+            <h2 id="policy-import-title" className="text-[18px] font-bold tracking-[-.01em] text-[#102A4C]">Import vehicle, policy and premium details</h2>
+            <p className="mt-1.5 max-w-2xl text-[10px] leading-5 text-[#667085]">Upload the policy schedule, review every extracted value, and copy only the selected Section 02 and Section 03 details into the onboarding form.</p>
           </div>
           <button type="button" onClick={closeModal} disabled={pending} className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#D8E0EA] bg-white text-[20px] font-light text-[#526277] transition hover:bg-[#F4F7FA] disabled:opacity-50" aria-label="Close">×</button>
         </header>
@@ -206,7 +237,7 @@ export function PolicyOcrImportPanel({ variant = "header" }: { variant?: "header
                 {pending ? "Reading document…" : hasResult ? "Read another document" : "Read document"}
               </button>
             </div>
-            <p className="mt-2.5 text-[9px] leading-4 text-[#7C899A]">Supported formats: PDF, JPG, PNG and WebP. Customer and vehicle identification details are not copied from this document.</p>
+            <p className="mt-2.5 text-[9px] leading-4 text-[#7C899A]">Supported formats: PDF, JPG, PNG and WebP. Insured name and phone are never proposed. Vehicle identifiers require your review before they are copied.</p>
           </form>
 
           {pending ? <div className="flex items-center gap-3 border-b border-[#E7ECF2] py-6 text-[#42566F]">
@@ -362,7 +393,29 @@ function valueForControl(field: PolicyOcrField, control: HTMLInputElement | HTML
   if (!(control instanceof HTMLSelectElement)) return field.value;
   if (field.key === "policy_product") return matchPolicyProduct(control, field.value);
   if (field.key === "insurer_name") return matchInsurer(control, field.value);
+  if (field.key === "vehicle_class") return matchVehicleClass(control, field.value);
   return matchSimpleOption(control, field.value);
+}
+
+function matchVehicleClass(control: HTMLSelectElement, rawValue: string) {
+  const normalized = normalizeText(rawValue);
+  const code = /\bgcv\b|goods carrying|goods carrier/.test(normalized) ? "GCV"
+    : /\bpcv\b|passenger carrying|passenger vehicle/.test(normalized) ? "PCV"
+      : /\bpcp\b|private car/.test(normalized) ? "PCP"
+        : /\btwp\b|two wheeler/.test(normalized) ? "TWP"
+          : /\bcpm\b|contractors? plant|mobile plant/.test(normalized) ? "CPM"
+            : "";
+  return code ? findOptionValue(control, code) : "";
+}
+
+function applyRegistrationStatus(rawValue: string) {
+  const pending = /pending|unregistered|new vehicle/i.test(rawValue);
+  const group = document.querySelector('[role="radiogroup"][aria-label="Vehicle registration status"]');
+  const option = Array.from(group?.querySelectorAll<HTMLButtonElement>('button[role="radio"]') ?? [])
+    .find((button) => (button.textContent ?? "").trim().toLowerCase() === (pending ? "unregistered" : "registered"));
+  if (!option || option.disabled) return false;
+  option.click();
+  return true;
 }
 
 function matchPolicyProduct(control: HTMLSelectElement, rawValue: string) {

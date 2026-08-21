@@ -79,7 +79,7 @@ Comparison-only fields:
 - GST/tax amount
 - Gross premium
 
-OCR must not populate customer, insured, owner, vehicle registration, chassis, engine, address, phone, PAN, GSTIN, or other identity fields from the policy copy.
+OCR must not populate customer, insured, owner, address, phone, PAN, GSTIN, or other personal identity fields from the policy copy. Approved visible Section 02 vehicle fields may be proposed for explicit review and form application. Registration, chassis and engine values must be synthetic in reusable candidates and fixtures.
 
 ## 5. Training Data Rules
 
@@ -91,7 +91,7 @@ For each insurer sample:
    - policy numbers may be replaced with deterministic synthetic values that preserve format;
    - personal/company names, phone, email, address, PAN/GSTIN, vehicle number, chassis, and engine must be removed;
    - premium, IDV, date, product, and insurer labels may remain only where needed for parser tests.
-4. For each fixture, create a ground-truth JSON object containing only approved Section 03 fields and comparison totals.
+4. For each fixture, create a ground-truth JSON object containing only approved Section 02 vehicle fields and Section 03 fields/comparison totals. Replace policy, registration, chassis and engine identifiers with deterministic synthetic values.
 5. Add a short evidence note explaining which labeled row/table proves each financial value.
 
 ## 6. Parser Family Plan

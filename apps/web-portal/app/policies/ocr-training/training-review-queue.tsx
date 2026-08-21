@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { runPolicyOcrTrainingLabel, submitPolicyOcrDatabaseComparison, type ConfirmPolicyOcrTrainingState, type RunPolicyOcrTrainingState } from "../ocr-training-actions";
 import { compareTrainingProposalToReference, compareTrainingValue, formatReviewerDate, type TrainingComparisonKey, type TrainingDatabaseReference, type TrainingProposal } from "@/lib/policy-ocr-training";
 
@@ -102,15 +103,24 @@ function TrainingReviewCard({ row, canTrain }: { row: TrainingQueueRow; canTrain
         </div>
       ) : null}
 
-      {comparison ? <div className={`mt-4 rounded-xl border p-3 text-sm ${comparison.exactMatch ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-900"}`}>{comparison.exactMatch ? `Automatic comparison matched all ${comparison.comparableFields} stored Section 03 fields.` : `Automatic comparison found ${comparison.mismatchedFields} mismatches and ${comparison.missingOcrFields} OCR-missing fields across ${comparison.comparableFields} stored values.`}</div> : null}
+      {comparison ? <div className={`mt-4 rounded-xl border p-3 text-sm ${comparison.exactMatch ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-900"}`}>{comparison.exactMatch ? `Automatic comparison matched all ${comparison.comparableFields} stored Section 02 and Section 03 fields.` : `Automatic comparison found ${comparison.mismatchedFields} mismatches and ${comparison.missingOcrFields} OCR-missing fields across ${comparison.comparableFields} stored values.`}</div> : null}
 
-      <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
-        <div className="grid min-w-[820px] grid-cols-[170px_1fr_1fr_120px] bg-slate-50 px-3 py-2 text-xs font-black uppercase tracking-wide text-slate-500">
-          <span>Section 03 field</span>
-          <span>Database reference</span>
-          <span>Google OCR</span>
-          <span>Result</span>
-        </div>
+      <ComparisonSection title="Section 02 · Vehicle details">
+        {comparisonField("vehicle_registration_status", "Registration status", row.databaseReference.vehicle_registration_status, proposal.vehicle_registration_status)}
+        {comparisonField("vehicle_registration_number", "Registration number", row.databaseReference.vehicle_registration_number, proposal.vehicle_registration_number)}
+        {comparisonField("vehicle_class", "Vehicle class", row.databaseReference.vehicle_class, proposal.vehicle_class)}
+        {comparisonField("vehicle_make", "Make", row.databaseReference.vehicle_make, proposal.vehicle_make)}
+        {comparisonField("vehicle_model", "Model", row.databaseReference.vehicle_model, proposal.vehicle_model)}
+        {comparisonField("vehicle_fuel_type", "Fuel type", row.databaseReference.vehicle_fuel_type, proposal.vehicle_fuel_type)}
+        {comparisonField("vehicle_manufacturing_year", "Manufacturing year", row.databaseReference.vehicle_manufacturing_year, proposal.vehicle_manufacturing_year)}
+        {comparisonField("vehicle_capacity", "Class-aware capacity", row.databaseReference.vehicle_capacity, proposal.vehicle_capacity)}
+        {comparisonField("vehicle_chassis_number", "Chassis number", row.databaseReference.vehicle_chassis_number, proposal.vehicle_chassis_number)}
+        {comparisonField("vehicle_engine_number", "Engine number", row.databaseReference.vehicle_engine_number, proposal.vehicle_engine_number)}
+        {comparisonField("vehicle_rto_name", "RTO name", row.databaseReference.vehicle_rto_name, proposal.vehicle_rto_name)}
+        {comparisonField("vehicle_rto_state", "RTO state", row.databaseReference.vehicle_rto_state, proposal.vehicle_rto_state)}
+      </ComparisonSection>
+
+      <ComparisonSection title="Section 03 · Policy and premium">
         {comparisonField("insurer_name", "Insurer", row.databaseReference.insurer_name, proposal.insurer_name)}
         {comparisonField("policy_product", "Policy product", row.databaseReference.policy_product, proposal.policy_product)}
         {comparisonField("policy_number", "Policy number", row.databaseReference.policy_number, proposal.policy_number)}
@@ -124,13 +134,27 @@ function TrainingReviewCard({ row, canTrain }: { row: TrainingQueueRow; canTrain
         {comparisonField("printed_net_premium", "Printed net", row.databaseReference.printed_net_premium, proposal.total_premium)}
         {comparisonField("printed_gst", "Printed GST", row.databaseReference.printed_gst, proposal.tax_amount)}
         {comparisonField("printed_gross_premium", "Printed gross", row.databaseReference.printed_gross_premium, proposal.gross_premium)}
-      </div>
+      </ComparisonSection>
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-slate-500">Existing Section 03 values are the reference. Google OCR is compared against them; no manual re-entry is required.</p>
+        <p className="text-xs text-slate-500">Existing Section 02 and Section 03 values are the reference. Google OCR is compared against them; confirming creates one sanitized training candidate and does not overwrite the policy.</p>
         {canTrain && ready && (row.status === "needs_review" || row.status === "reviewed") ? <TrainingConfirmationForm documentId={row.documentId} /> : null}
       </div>
     </section>
+  );
+}
+
+function ComparisonSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+      <div className="grid min-w-[820px] grid-cols-[170px_1fr_1fr_120px] bg-slate-50 px-3 py-2 text-xs font-black uppercase tracking-wide text-slate-500">
+        <span>{title}</span>
+        <span>Database reference</span>
+        <span>Google OCR</span>
+        <span>Result</span>
+      </div>
+      {children}
+    </div>
   );
 }
 

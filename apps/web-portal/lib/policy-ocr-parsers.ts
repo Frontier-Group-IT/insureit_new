@@ -15,6 +15,18 @@ export type ParsedPolicyResult = {
 };
 
 const LABELS: Record<string, string> = {
+  vehicle_registration_status: "Registration status",
+  vehicle_registration_number: "Registration number",
+  vehicle_class: "Vehicle class",
+  vehicle_make: "Vehicle make",
+  vehicle_model: "Vehicle model",
+  vehicle_fuel_type: "Fuel type",
+  vehicle_manufacturing_year: "Manufacturing year",
+  vehicle_capacity: "Vehicle capacity",
+  vehicle_chassis_number: "Chassis number",
+  vehicle_engine_number: "Engine number",
+  vehicle_rto_name: "RTO name",
+  vehicle_rto_state: "RTO state",
   policy_product: "Policy product",
   idv: "IDV / Sum insured",
   od_premium: "OD premium",
@@ -67,9 +79,66 @@ export function parsePolicyDocument(pages: string[]): ParsedPolicyResult {
   }
 
   const present = new Set(result.fields.map((field) => field.key));
+  for (const field of extractVehicleFields(cleanPages)) {
+    if (!present.has(field.key)) {
+      result.fields.push(field);
+      present.add(field.key);
+    }
+  }
   const missing = [...REQUIRED].filter((key) => !present.has(key));
   if (missing.length) result.warnings.push(`Review required. Missing or uncertain fields: ${missing.join(", ")}.`);
   return result;
+}
+
+export function extractVehicleFields(pages: string[]): ParsedPolicyField[] {
+  const add = fieldCollector();
+  const labeledRegistration = find(pages, [
+    /(?:Registration|Regn\.?)\s*(?:No\.?|Number)\s*[:\-]?\s*([A-Z]{2}[\s-]?\d{1,2}[\s-]?[A-Z]{1,3}[\s-]?\d{4})/i,
+  ]);
+  const registration = labeledRegistration ?? find(pages, [
+    /\b([A-Z]{2}[\s-]?\d{1,2}[\s-]?[A-Z]{1,3}[\s-]?\d{4})\b/i,
+  ]);
+  const registrationConfidence = labeledRegistration ? .96 : .72;
+  const pending = findEvidence(pages, /\b(?:registration\s+pending|unregistered|new\s+vehicle)\b/i);
+  if (pending) add("vehicle_registration_status", "registration_pending", .96, pending.evidence, pending.page);
+  else if (registration) add("vehicle_registration_status", "registered", registrationConfidence, registration.evidence, registration.page);
+  if (registration) add("vehicle_registration_number", compactVehicleId(registration.value), registrationConfidence, registration.evidence, registration.page);
+
+  addFound(add, "vehicle_chassis_number", find(pages, [
+    /(?:Chassis|Chasis)\s*(?:No\.?|Number)?\s*[:\-]?\s*([A-Z0-9][A-Z0-9\-/]{7,29})/i,
+  ]), .96, compactVehicleId);
+  addFound(add, "vehicle_engine_number", find(pages, [
+    /Engine\s*(?:No\.?|Number)?\s*[:\-]?\s*([A-Z0-9][A-Z0-9\-/]{5,29})/i,
+  ]), .96, compactVehicleId);
+  addFound(add, "vehicle_manufacturing_year", find(pages, [
+    /(?:Year\s+of\s+Manufacture|Manufactur(?:ing|e)\s+Year|Mfg\.?\s*Year)\s*[:\-]?\s*((?:19|20)\d{2})/i,
+  ]), .94);
+  addFound(add, "vehicle_fuel_type", find(pages, [
+    /Fuel\s*(?:Type)?\s*[:\-]?\s*(PETROL|DIESEL|CNG|LPG|ELECTRIC|HYBRID|BATTERY)/i,
+  ]), .94, titleCase);
+  addFound(add, "vehicle_class", find(pages, [
+    /(?:Class\s+of\s+Vehicle|Vehicle\s+Class|Type\s+of\s+Vehicle)\s*[:\-]?\s*([^\n|]{2,60})/i,
+  ]), .9, cleanVehicleText);
+  addFound(add, "vehicle_make", find(pages, [
+    /(?:Vehicle\s+)?Make\s*[:\-]?\s*([^\n|]{2,50})/i,
+    /Make\s*\/\s*Model\s*[:\-]?\s*([A-Z0-9 .&()\-]{2,35})\s*\/\s*[A-Z0-9]/i,
+  ]), .9, cleanVehicleText);
+  addFound(add, "vehicle_model", find(pages, [
+    /(?:Vehicle\s+)?Model\s*[:\-]?\s*([^\n|]{2,60})/i,
+    /Make\s*\/\s*Model\s*[:\-]?\s*[A-Z0-9 .&()\-]{2,35}\s*\/\s*([A-Z0-9 .&()\-]{2,45})/i,
+  ]), .9, cleanVehicleText);
+  addFound(add, "vehicle_capacity", find(pages, [
+    /(?:Gross\s+Vehicle\s+Weight|GVW)\s*[:\-]?\s*([0-9,]+\s*(?:KG|KGS)?)/i,
+    /(?:Cubic\s+Capacity|Engine\s+Capacity|CC)\s*[:\-]?\s*([0-9,]+\s*(?:CC)?)\b/i,
+    /(?:Seating\s+Capacity|Seating\s+Cap)\s*[:\-]?\s*([0-9]+(?:\s*\+\s*[0-9]+)?)/i,
+  ]), .92, cleanVehicleText);
+  addFound(add, "vehicle_rto_name", find(pages, [
+    /(?:Registering\s+Authority|RTO\s+Name|RTO(?!\s+State))\s*[:\-]?\s*([^\n|]{2,60})/i,
+  ]), .86, cleanVehicleText);
+  addFound(add, "vehicle_rto_state", find(pages, [
+    /RTO\s+State\s*[:\-]?\s*([^\n|]{2,40})/i,
+  ]), .9, cleanVehicleText);
+  return add.fields;
 }
 
 function detectInsurerFamily(pages: string[]): InsurerFamily {
@@ -346,6 +415,24 @@ type Found = { value: string; page: number; evidence: string };
 type MoneyFound = { value: number; page: number; evidence: string };
 type Period = { start: string; end: string; page: number; evidence: string };
 
+function addFound(
+  add: ReturnType<typeof fieldCollector>,
+  key: string,
+  found: Found | null,
+  confidence: number,
+  transform: (value: string) => string = (value) => value.trim(),
+) {
+  if (found) add(key, transform(found.value), confidence, found.evidence, found.page);
+}
+
+function findEvidence(pages: string[], pattern: RegExp): { page: number; evidence: string } | null {
+  for (let index = 0; index < pages.length; index += 1) {
+    const match = pages[index].match(pattern);
+    if (match) return { page: index + 1, evidence: match[0] };
+  }
+  return null;
+}
+
 function fieldCollector() {
   const fields: ParsedPolicyField[] = [];
   const seen = new Set<string>();
@@ -455,6 +542,19 @@ function normalizeLabel(value: string) {
 
 function compact(value: string) {
   return value.toUpperCase().replace(/[^A-Z0-9\-/.]/g, "");
+}
+
+function compactVehicleId(value: string) {
+  return value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function cleanVehicleText(value: string) {
+  return value.replace(/\s+/g, " ").replace(/[;,]+$/, "").trim().slice(0, 80);
+}
+
+function titleCase(value: string) {
+  const lower = value.toLowerCase();
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
 }
 
 function parseMoney(value: string | undefined): number | null {

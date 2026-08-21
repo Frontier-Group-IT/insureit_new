@@ -19,6 +19,7 @@ import {
 import { refineNewIndiaCommercialPolicy } from "@/lib/policy-ocr-new-india-refiner";
 import { refineNewIndiaStructuredPolicy } from "@/lib/policy-ocr-new-india-structured-refiner";
 import { requirePolicyOcrTrainingOperator } from "@/lib/policy-ocr-training-access";
+import { loadPolicyOcrTrainingReference } from "@/lib/policy-ocr-training-reference";
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const OCR_TIMEOUT_MS = 120 * 1000;
@@ -363,8 +364,21 @@ async function processTrainingJob(job: ClaimedTrainingJob, subjectToken?: string
     const { error: referenceError } = await admin
       .from("policy_ocr_training_labels")
       .update({
-        ...reference,
-        evidence_note: "Automated comparison reference from saved Section 03 data.",
+        insurer_name: reference.insurer_name,
+        policy_product: reference.policy_product,
+        policy_number: reference.policy_number,
+        valid_from: reference.valid_from,
+        valid_upto: reference.valid_upto,
+        idv: reference.idv,
+        od_premium: reference.od_premium,
+        tp_premium: reference.tp_premium,
+        cpa_opted: reference.cpa_opted,
+        cpa_premium: reference.cpa_premium,
+        printed_net_premium: reference.printed_net_premium,
+        printed_gst: reference.printed_gst,
+        printed_gross_premium: reference.printed_gross_premium,
+        section_02_reference: section02Reference(reference),
+        evidence_note: "Automated comparison reference from saved Section 02 and Section 03 data.",
       })
       .eq("id", job.label_id)
       .eq("processing_status", "processing")
@@ -406,50 +420,23 @@ async function loadTrainingDatabaseReference(policyDocumentId: string): Promise<
   if (documentError) throw new Error("training_document_lookup_failed");
   if (!document?.policy_id) return null;
 
-  const [{ data: policy, error: policyError }, { data: premium, error: premiumError }] = await Promise.all([
-    admin
-      .from("policies")
-      .select("policy_no,policy_type,start_date,end_date,insured_declared_value,insurance_companies(name)")
-      .eq("id", document.policy_id)
-      .maybeSingle<{
-        policy_no: string | null;
-        policy_type: string | null;
-        start_date: string | null;
-        end_date: string | null;
-        insured_declared_value: number | null;
-        insurance_companies: { name: string } | null;
-      }>(),
-    admin
-      .from("policy_premium_details")
-      .select("od_premium,tp_premium,cpa_opted,cpa_amount,net_premium,gst_amount,gross_premium")
-      .eq("policy_id", document.policy_id)
-      .maybeSingle<{
-        od_premium: number | null;
-        tp_premium: number | null;
-        cpa_opted: boolean | null;
-        cpa_amount: number | null;
-        net_premium: number | null;
-        gst_amount: number | null;
-        gross_premium: number | null;
-      }>(),
-  ]);
-  if (policyError || premiumError) throw new Error("training_reference_lookup_failed");
-  if (!policy) return null;
+  return loadPolicyOcrTrainingReference(document.policy_id);
+}
 
+function section02Reference(reference: TrainingDatabaseReference) {
   return {
-    insurer_name: policy.insurance_companies?.name ?? null,
-    policy_product: policy.policy_type,
-    policy_number: policy.policy_no,
-    valid_from: policy.start_date,
-    valid_upto: policy.end_date,
-    idv: policy.insured_declared_value,
-    od_premium: premium?.od_premium ?? null,
-    tp_premium: premium?.tp_premium ?? null,
-    cpa_opted: premium?.cpa_opted ?? null,
-    cpa_premium: premium?.cpa_amount ?? null,
-    printed_net_premium: premium?.net_premium ?? null,
-    printed_gst: premium?.gst_amount ?? null,
-    printed_gross_premium: premium?.gross_premium ?? null,
+    vehicle_registration_status: reference.vehicle_registration_status,
+    vehicle_registration_number: reference.vehicle_registration_number,
+    vehicle_class: reference.vehicle_class,
+    vehicle_make: reference.vehicle_make,
+    vehicle_model: reference.vehicle_model,
+    vehicle_fuel_type: reference.vehicle_fuel_type,
+    vehicle_manufacturing_year: reference.vehicle_manufacturing_year,
+    vehicle_capacity: reference.vehicle_capacity,
+    vehicle_chassis_number: reference.vehicle_chassis_number,
+    vehicle_engine_number: reference.vehicle_engine_number,
+    vehicle_rto_name: reference.vehicle_rto_name,
+    vehicle_rto_state: reference.vehicle_rto_state,
   };
 }
 

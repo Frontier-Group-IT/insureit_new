@@ -77,6 +77,12 @@ jobs:
       - name: Record single-operator OCR training migration as applied
         run: supabase migration repair --linked --status applied 20260822000100
 
+      - name: Apply Section 02 and Section 03 OCR training migration
+        run: supabase db query --linked --file supabase/migrations/20260822093000_policy_ocr_section_02_training.sql
+
+      - name: Record Section 02 and Section 03 OCR training migration as applied
+        run: supabase migration repair --linked --status applied 20260822093000
+
       - name: Verify OCR training tables
         run: |
           result=$(supabase db query --linked --output-format json "select to_regclass('public.policy_ocr_training_labels') as table_name")
@@ -86,6 +92,12 @@ jobs:
           approval_result=$(supabase db query --linked --output-format json "
             select
               to_regprocedure('public.approve_policy_ocr_database_comparison(uuid,uuid,jsonb,jsonb)') is not null as single_operator_function,
+              exists (
+                select 1 from information_schema.columns
+                where table_schema = 'public'
+                  and table_name = 'policy_ocr_training_labels'
+                  and column_name = 'section_02_reference'
+              ) as section_02_reference_ready,
               not exists (
                 select 1
                 from pg_constraint
@@ -93,6 +105,7 @@ jobs:
               ) as separate_approval_removed
           ")
           echo "$approval_result" | grep -Eq '"single_operator_function"[[:space:]]*:[[:space:]]*true'
+          echo "$approval_result" | grep -Eq '"section_02_reference_ready"[[:space:]]*:[[:space:]]*true'
           echo "$approval_result" | grep -Eq '"separate_approval_removed"[[:space:]]*:[[:space:]]*true'
 
       - name: Report OCR queue counts

@@ -511,8 +511,8 @@ Do not turn this file into a raw chat transcript. Keep it as the current, action
 
 Durable rules:
 
-- Only approved Policy Onboarding Section 03 values and comparison totals enter proposals/corrections.
-- Raw OCR text, document bytes, identity fields and real policy numbers never enter training candidates.
+- Approved visible Section 02 vehicle fields and Section 03 policy/premium fields may enter protected proposals/comparisons. Insured name and phone remain excluded.
+- Raw OCR text, document bytes, personal identity fields, real policy numbers and real registration/chassis/engine identifiers never enter reusable training candidates.
 - Either existing OCR training capability authorizes the controlled trainer. The same operator inspects the comparison and confirms/approves the sanitized candidate in one click; there is no different-owner or self-approval restriction.
 - Approved candidates use deterministic synthetic policy numbers and do not modify parser source. Parser changes remain reviewed code changes with sanitized regressions.
 - Policy-copy inserts/replacements create/reset the label only. They must not invoke Google automatically.
@@ -520,3 +520,5 @@ Durable rules:
 - Vehicle extraction remains gated. Use `docs/POLICY_OCR_SECTION_02_FIELD_MAP.md` as the exact form/payload/database contract before adding Section 02 proposal fields.
 
 **IMPLEMENTED / NOT APPLIED 2026-08-22:** migration `20260822000100_single_operator_policy_ocr_training.sql` removes the separate-reviewer constraint and adds `approve_policy_ocr_database_comparison(...)`. The RPC atomically stores the saved Section 03 reference, records the current operator as the audit actor, creates/upserts the sanitized candidate and marks the label approved. The UI removes the owner panel and uses one inline-state button: **Confirm comparison & approve training**. A committed migration is not proof that this is live.
+
+**IMPLEMENTED LOCALLY / NOT APPLIED OR DEPLOYED 2026-08-22:** the next OCR increment combines visible Section 02 vehicle extraction with the existing Section 03 proposal. One operator-selected Google run compares both grouped sections against the policy snapshot/current vehicle reference, and one confirmation creates nested sanitized candidate schema `policy_ocr_training_candidate_v2`. Migration `20260822093000_policy_ocr_section_02_training.sql` adds protected `section_02_reference` storage and server-side payload validation. Registration/chassis/engine use synthetic candidate values. The onboarding OCR modal can apply only explicitly selected Section 02/03 proposals to the unsaved form; it never proposes insured name/phone and never silently updates saved records.

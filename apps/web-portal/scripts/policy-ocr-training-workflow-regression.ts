@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 // @ts-expect-error -- This regression runner executes TypeScript directly with Node --experimental-strip-types.
 import { buildTrainingProposal, compareTrainingProposalToReference, compareTrainingValue, createSanitizedTrainingCandidate, formatReviewerDate, parseReviewerDate, sanitizeEvidenceNote } from "../lib/policy-ocr-training.ts";
+// @ts-expect-error -- This regression runner executes TypeScript directly with Node --experimental-strip-types.
+import { extractVehicleFields } from "../lib/policy-ocr-parsers.ts";
 
 assert.equal(parseReviewerDate("21/08/2026"), "2026-08-21");
 assert.equal(parseReviewerDate("31/02/2026"), null);
@@ -44,8 +46,39 @@ assert.equal(compareTrainingValue("policy_product", "Standalone Own Damage", "SA
 assert.equal(compareTrainingValue("valid_from", "2026-08-21", "21/08/2026"), "match");
 assert.equal(compareTrainingValue("od_premium", 6121, "₹6,122"), "match");
 assert.equal(compareTrainingValue("tp_premium", 16369, null), "ocr_missing");
+assert.equal(compareTrainingValue("vehicle_registration_number", "MH-12-AB-1234", "MH12AB1234"), "match");
+assert.equal(compareTrainingValue("vehicle_class", "GCV", "Goods Carrying Vehicle"), "match");
+assert.equal(compareTrainingValue("vehicle_capacity", "3500 KG", "3,500"), "match");
+
+const vehicleFields = extractVehicleFields([`Vehicle Registration No: MH 12 AB 1234
+Class of Vehicle: Goods Carrying Vehicle
+Vehicle Make: TATA MOTORS
+Vehicle Model: ACE GOLD
+Fuel Type: DIESEL
+Year of Manufacture: 2025
+GVW: 3500 KG
+Chassis No: MAT12345678901234
+Engine No: ENG123456789
+RTO Name: Pune`]);
+const vehicleProposal = Object.fromEntries(vehicleFields.map((field) => [field.key, field.value]));
+assert.equal(vehicleProposal.vehicle_registration_number, "MH12AB1234");
+assert.equal(vehicleProposal.vehicle_chassis_number, "MAT12345678901234");
+assert.equal(vehicleProposal.vehicle_engine_number, "ENG123456789");
+assert.equal(vehicleProposal.vehicle_capacity, "3500 KG");
 
 const comparison = compareTrainingProposalToReference(proposal, {
+  vehicle_registration_status: null,
+  vehicle_registration_number: null,
+  vehicle_class: null,
+  vehicle_make: null,
+  vehicle_model: null,
+  vehicle_fuel_type: null,
+  vehicle_manufacturing_year: null,
+  vehicle_capacity: null,
+  vehicle_chassis_number: null,
+  vehicle_engine_number: null,
+  vehicle_rto_name: null,
+  vehicle_rto_state: null,
   insurer_name: null,
   policy_product: null,
   policy_number: null,
@@ -63,13 +96,25 @@ const comparison = compareTrainingProposalToReference(proposal, {
 assert.equal(comparison.exactMatch, false);
 assert.equal(comparison.matchedFields, 1);
 assert.equal(comparison.missingOcrFields, 1);
-assert.equal(comparison.missingReferenceFields, 11);
+assert.equal(comparison.missingReferenceFields, 23);
 
 const candidate = createSanitizedTrainingCandidate({
   labelId: "abcdef12-3456-7890-abcd-ef1234567890",
   parserId: "test_motor_v1",
   parserVersion: "1",
   values: {
+    vehicle_registration_status: "registered",
+    vehicle_registration_number: "MH12AB1234",
+    vehicle_class: "GCV",
+    vehicle_make: "Synthetic Make",
+    vehicle_model: "Synthetic Model",
+    vehicle_fuel_type: "Diesel",
+    vehicle_manufacturing_year: 2025,
+    vehicle_capacity: 3500,
+    vehicle_chassis_number: "RAWCHASSIS123456",
+    vehicle_engine_number: "RAWENGINE123456",
+    vehicle_rto_name: "Synthetic RTO",
+    vehicle_rto_state: "Synthetic State",
     insurer_name: "Synthetic Insurance",
     policy_product: "Package",
     valid_from: "2026-08-21",
@@ -86,7 +131,11 @@ const candidate = createSanitizedTrainingCandidate({
   proposal,
 });
 
-assert.equal(candidate.ground_truth.policy_number, "SYN-ABCDEF123456");
+assert.equal(candidate.ground_truth.section_03.policy_number, "SYN-ABCDEF123456");
+assert.equal(candidate.ground_truth.section_02.vehicle_registration_number, "SYNREGABCDEF123456");
+assert.equal(candidate.ground_truth.section_02.vehicle_chassis_number, "SYNCHASSISABCDEF123456");
+assert.equal(JSON.stringify(candidate).includes("MH12AB1234"), false);
+assert.equal(JSON.stringify(candidate).includes("RAWCHASSIS123456"), false);
 assert.equal(JSON.stringify(candidate).includes("evidence_note"), false);
 assert.equal(JSON.stringify(candidate).includes("PRIVATE PERSON"), false);
 
@@ -109,7 +158,7 @@ assert.match(trainingAccess, /review_policy_ocr_training/);
 assert.match(trainingAccess, /approve_policy_ocr_training/);
 assert.match(workerActions, /google_ocr_configuration_missing/);
 assert.match(workerActions, /google_oidc_subject_token_missing/);
-assert.match(workerActions, /Automated comparison reference from saved Section 03 data/);
+assert.match(workerActions, /Automated comparison reference from saved Section 02 and Section 03 data/);
 assert.match(workerActions, /compareTrainingProposalToReference/);
 assert.match(workerActions, /processPolicyOcrTrainingDocument/);
 assert.match(workerActions, /requirePolicyOcrTrainingOperator/);
@@ -149,6 +198,23 @@ assert.match(singleOperatorMigration, /approve_policy_ocr_database_comparison/);
 assert.doesNotMatch(singleOperatorMigration, /self_approval_forbidden|owner_approved_by <> reviewed_by/);
 assert.match(actions, /approve_policy_ocr_database_comparison/);
 assert.doesNotMatch(actions, /requireTrainingOwner|requireTrainingReviewer|reviewed_by === owner\.id/);
+
+const section02TrainingMigration = readFileSync("../../supabase/migrations/20260822093000_policy_ocr_section_02_training.sql", "utf8");
+assert.match(section02TrainingMigration, /section_02_reference/);
+assert.match(section02TrainingMigration, /policy_ocr_training_candidate_v2/);
+assert.match(section02TrainingMigration, /SYNCHASSIS/);
+assert.match(section02TrainingMigration, /set search_path = ''/);
+assert.match(section02TrainingMigration, /revoke all on function public\.approve_policy_ocr_database_comparison/);
+
+const migrationWorkflow = readFileSync("../../.github/workflows/apply-supabase-migrations.yml", "utf8");
+assert.match(migrationWorkflow, /20260822093000_policy_ocr_section_02_training\.sql/);
+assert.match(migrationWorkflow, /section_02_reference_ready/);
+
+const importPanel = readFileSync("components/policy-ocr-import-panel.tsx", "utf8");
+for (const field of ["vehicle_registration_status", "vehicle_registration_number", "vehicle_class", "vehicle_chassis_number", "vehicle_engine_number"]) {
+  assert.match(importPanel, new RegExp(field));
+}
+assert.doesNotMatch(importPanel, /"insured_name"|"phone_number"/);
 
 const section02Map = readFileSync("../../docs/POLICY_OCR_SECTION_02_FIELD_MAP.md", "utf8");
 for (const field of ["registrationNumber", "classCode", "engine_capacity_cc", "seating_capacity", "gvw_kg", "chassis_no", "engine_no"]) {

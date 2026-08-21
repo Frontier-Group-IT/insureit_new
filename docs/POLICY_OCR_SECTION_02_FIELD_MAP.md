@@ -1,6 +1,6 @@
 # Policy OCR Section 02 field map
 
-Status: **MAPPED 2026-08-22 / VEHICLE EXTRACTION NOT IMPLEMENTED**
+Status: **IMPLEMENTED LOCALLY 2026-08-22 / MIGRATION NOT APPLIED / NOT DEPLOYED**
 
 This is the implementation contract for the next OCR phase. It maps the current Policy Onboarding Section 02 form to the payload and database sources that must be used for OCR comparison. Google Document AI remains the reading layer; INSUREIT remains responsible for normalization, comparison, review and any later apply action.
 
@@ -70,9 +70,13 @@ The migration history contains competing temporary identifiers for unregistered 
 
 Vehicle extraction must compare unregistered status through `registration_status = 'registration_pending'` and must not learn `NEW-<chassis>`, legacy `PENDING-<chassis>` or `REGISTRATION PENDING` as a real registration number. The forward migration must be applied and verified in production before adding any auto-apply path.
 
-## 6. Implementation gate for vehicle extraction
+## 6. Implemented first vehicle-extraction increment
 
-The next PR increment should begin with only these review-only proposal keys: registration number/status, class code, make, model, fuel type, manufacturing year, class-aware capacity, chassis number and engine number. Insured name may be displayed masked for comparison, but must remain excluded from training candidates and logs; phone must remain excluded entirely.
+One manual Google run now produces a combined proposal with these review-only keys: registration number/status, class, make, model, fuel type, manufacturing year, class-aware capacity, chassis number, engine number, RTO name and RTO state. The queue loads the policy-time snapshot first and the linked vehicle master as fallback, then shows separate Section 02 and Section 03 comparison groups with one confirmation action.
+
+The same fields are available in the Policy Onboarding review modal and are copied only when the operator selects them and clicks **Apply selected details**. This is a reviewed form-fill action, not a training-flow database overwrite. Insured name and phone remain excluded.
+
+Migration `20260822093000_policy_ocr_section_02_training.sql` adds the protected `section_02_reference`, upgrades sanitized candidates to `policy_ocr_training_candidate_v2`, and validates both nested sections. Real registration, chassis and engine values stay only in protected comparison state; the candidate substitutes deterministic synthetic tokens.
 
 Before expanding further:
 
@@ -81,7 +85,7 @@ Before expanding further:
 - show confidence and bounded non-PII evidence labels;
 - require the authorized operator to inspect the comparison and explicitly confirm the sanitized candidate;
 - prove that a manual run targets exactly the selected `policy_ocr_training_labels.id`;
-- do not write OCR results back to Section 02.
+- do not write OCR results directly to saved Section 02 database records; applying selected values only updates the unsaved onboarding form.
 
 ## 7. Source locations
 
