@@ -761,12 +761,54 @@ The corrected update intentionally keeps the last-good preview claim and externa
 
 Verification before corrected publish: mobile typecheck passed, focused ESLint passed for the touched mobile files, and `npm --workspace apps/mobile-app run build:web` passed. The native Android keyboard mode still requires a fresh APK build to affect installed binaries; the JS/tab hiding portion is available through OTA.
 
-## Policy OCR training corpus
+## Policy OCR training corpus — corrected continuation handoff
 
-**IMPLEMENTED / NOT YET APPLIED OR DEPLOYED:** the premium OCR training workflow now automatically queues existing and future private policy copies, creates server-side Section 03 proposals through the existing Google/parser path, and uses a three-attempt leased worker with controlled retry timing. Future uploads schedule an immediate bounded attempt; a protected daily cron and authorized reviewer-page visits continue the backlog.
+**USER-OBSERVED:** production `/policies/ocr-training` displays “Showing 281 policy copies linked to policy records” but the tabs display `All · 9` and every row is exhausted with “Not proposed”. This is not a Storage-count problem. The page intentionally renders only `policy_documents` rows that have a related `policy_ocr_training_labels` row.
 
-The `/policies/ocr-training` queue compares Google proposals against the existing saved Section 03 values from `policies` and `policy_premium_details`; reviewers no longer re-enter those fields manually. It shows match/missing/review results, confidence and warnings, and lets an authorized reviewer confirm the database reference for the existing owner-approval flow. Exhausted jobs can be manually re-queued by reviewer or approver roles without raising the automatic three-attempt safety limit.
+### Intended architecture
 
-Migration `202608210001_policy_ocr_training_labels.sql` remains **APPLIED** from the earlier release. The queue currently reads `policy_documents` records, not arbitrary Storage objects; older mobile/customer uploads may instead be in `customer_documents`. Migration `20260821220000_link_legacy_policy_copies_to_ocr.sql` now links only unambiguous legacy customer policy copies to a policy record and lets the existing queue trigger create their labels. The queue reads up to 1,000 tracked records and displays the tracked count so it is not mistaken for a bucket-wide count.
+```text
+private Storage object
+  -> policy_documents (policy_copy, policy_id)
+  -> policy_ocr_training_labels (one queue row per document)
+  -> leased server worker
+  -> Google Document AI + INSUREIT parser/refiner
+  -> Section 03 proposal only
+  -> compare to existing policies/policy_premium_details
+  -> reviewer confirmation -> separate owner approval -> sanitized candidate
+```
 
-The worker now performs Google configuration and OIDC-subject-token preflight before claiming jobs, preventing infrastructure misconfiguration from consuming the three automatic attempts. The premium workflow migration, legacy-link migration, private worker secret/cron configuration, authenticated two-person review, and live backlog processing remain **UNVERIFIED** until applied and directly checked in production.
+Google is only the reading layer. Parser “training” means human-approved, sanitized Section 03 regression cases; production must never self-modify parser source. OCR must not extract customer, insured, vehicle, PAN, address, chassis or engine identity fields.
+
+### The precise failure
+
+The original queue requires three database layers, in order:
+
+1. `202608210001_policy_ocr_training_labels.sql` creates the label table only.
+2. `20260821153000_premium_ocr_training_workflow.sql` adds processing columns, triggers, worker functions, **and backfills one label for every existing `policy_documents.document_type = 'policy_copy'` row**.
+3. `20260821220000_link_legacy_policy_copies_to_ocr.sql` links only unambiguous legacy `customer_documents` uploads into `policy_documents`.
+
+The migration workflow previously applied layer 1 and layer 3 but skipped layer 2. Therefore the production database could have 281 `policy_documents` rows but only the nine labels created by earlier upload events. Layer 3 cannot repair this by itself: it only creates/updates `policy_documents`; the queue label trigger is defined in layer 2. The earlier claim that the backlog migration alone was sufficient was incorrect.
+
+### Corrective action
+
+PR #523 was merged as `70e09081d6bef2a8cc45d6bc7156d5e409bdbdcf`. The migration workflow was corrected to apply and record all three layers, including `20260821153000`. A production run must be executed and its Supabase verification must be checked for a label count near the eligible policy-document count. Do not declare success from a green workflow alone unless the live count is queried.
+
+### Easier and safer operating model
+
+Do not make the web page responsible for queue creation and do not rely on page visits to process a large backlog. Use one idempotent Supabase SQL/RPC operation that:
+
+- links eligible legacy copies;
+- inserts missing queue labels with `on conflict do nothing`;
+- resets only explicitly requeued/exhausted jobs;
+- returns counts for `policy_documents`, queue labels, pending, processing, ready and exhausted.
+
+Run that operation once through the protected migration workflow, then use a protected cron/worker with a batch size such as 5–10. The reviewer page should only read the queue and show a diagnostic banner when `policy_documents > queue_labels`, with a “sync backlog” action restricted to authorized operators. Keep the three-attempt safety limit, but never claim a job until Google/OIDC preflight succeeds. This is simpler than trying to infer Storage contents during page rendering.
+
+### Required next verification
+
+1. Apply the corrected workflow from `main` and inspect the live SQL result: count policy-copy `policy_documents` and count `policy_ocr_training_labels`.
+2. Confirm the counts differ only for intentionally unlinked/ambiguous records.
+3. Confirm the worker secret, Google Document AI variables, and Vercel OIDC subject token are configured.
+4. Run one controlled job and verify `processing_status` changes to `ready` with a proposal or to an explicit parser/OCR failure; it must not silently remain `exhausted`.
+5. Only then ask a reviewer to use the queue. A synthetic regression or Vercel `READY` deployment is not proof of live OCR.
