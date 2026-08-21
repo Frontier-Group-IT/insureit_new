@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy MISP OEM validation fix.",
-  "deploy_requested_at": "2026-08-21T17:55:00+05:30",
+  "purpose": "Deploy automated policy OCR training proposals.",
+  "deploy_requested_at": "2026-08-21T18:12:00+05:30",
   "requested_by": "explicit user merge and deploy request",
   "source": "Deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "3ba877a89ebaf25849206fb5e979660db780ac70",
-  "release_scope": "Deploy PR #513. MISP OEM validation now uses the same active vehicle brand source as the UI dropdown, confirms the parent manufacturer is active, preserves the user-facing brand name, and maps invalid OEM selections to the oem_name field.",
-  "verification": "PR #513 Verify web portal completed successfully. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source_commit": "9807ccbfd26f512b694287902fdae1ebe9869782",
+  "release_scope": "Deploy merged PR #514. Adds server-side Auto-read copy processing for the admin OCR training corpus, saving Section 03 proposals as needs_review without extracting identity fields or auto-approving labels.",
+  "verification": "PR #514 Verify web portal completed successfully. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
