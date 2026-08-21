@@ -78,9 +78,12 @@ assert.match(migration, /insert into public\.policy_ocr_training_labels[\s\S]+po
 assert.match(migration, /after insert or update of storage_bucket, storage_path, mime_type, file_size/);
 
 const actions = readFileSync("app/policies/ocr-training-actions.ts", "utf8");
+const workerActions = readFileSync("app/policies/policy-ocr-actions.ts", "utf8");
 assert.match(actions, /review_policy_ocr_training/);
 assert.match(actions, /approve_policy_ocr_training/);
 assert.match(actions, /reviewed_by === owner\.id/);
+assert.match(workerActions, /google_ocr_configuration_missing/);
+assert.match(workerActions, /google_oidc_subject_token_missing/);
 assert.doesNotMatch(actions, /writeFile|appendFile|apply_patch/);
 
 const uploadActions = [
@@ -90,6 +93,12 @@ const uploadActions = [
 for (const source of uploadActions) assert.match(source, /schedulePolicyOcrTraining/);
 
 const queuePage = readFileSync("app/policies/ocr-training/page.tsx", "utf8");
-assert.doesNotMatch(queuePage, /document\.file_name/);
+assert.match(queuePage, /document\.file_name/);
+assert.match(queuePage, /\.range\(0, 999\)/);
+
+const legacyLinkMigration = readFileSync("../../supabase/migrations/20260821220000_link_legacy_policy_copies_to_ocr.sql", "utf8");
+assert.match(legacyLinkMigration, /customer_documents/);
+assert.match(legacyLinkMigration, /candidate_count = 1/);
+assert.match(legacyLinkMigration, /filename_match_count = 1/);
 
 console.log("Policy OCR training workflow regression: passed.");
