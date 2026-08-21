@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/shell";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { savePolicyOcrTrainingLabel } from "../ocr-training-actions";
+import { autoReadPolicyOcrTrainingLabel, savePolicyOcrTrainingLabel } from "../ocr-training-actions";
 
 type TrainingRow = {
   id: string;
@@ -113,6 +113,9 @@ function TrainingForm({ row }: { row: TrainingRow }) {
           </select>
           <button type="submit" className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-bold text-white">Save labels</button>
         </div>
+        <button type="submit" formAction={autoReadPolicyOcrTrainingLabel} formNoValidate className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-bold text-blue-700">
+          Auto-read copy
+        </button>
       </div>
     </form>
   );
