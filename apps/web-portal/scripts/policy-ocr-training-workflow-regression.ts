@@ -116,8 +116,10 @@ assert.doesNotMatch(actions, /writeFile|appendFile|apply_patch/);
 
 const route = readFileSync("app/api/internal/policy-ocr-training/process/route.ts", "utf8");
 assert.match(route, /POLICY_OCR_WORKER_BATCH_SIZE/);
+assert.match(route, /VERCEL_OIDC_TOKEN/);
+assert.match(route, /GOOGLE_WORKLOAD_IDENTITY_SUBJECT_TOKEN/);
 const vercelConfig = readFileSync("vercel.json", "utf8");
-assert.match(vercelConfig, /\*\/5 \* \* \* \*/);
+assert.match(vercelConfig, /0 \* \* \* \*/);
 
 const uploadActions = [
   readFileSync("app/policies/policy-document-actions.ts", "utf8"),

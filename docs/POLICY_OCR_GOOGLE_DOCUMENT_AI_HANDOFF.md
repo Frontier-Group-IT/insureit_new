@@ -416,7 +416,7 @@ Comparison rules:
 
 The reviewer queue adds an `Exact match` filter and summarizes mismatch/missing counts. Exact matches still require reviewer confirmation and separate owner approval. Automation never overwrites Policy Onboarding Section 03, never self-approves a candidate and never edits parser source.
 
-The Vercel cron changes from once daily to every five minutes and keeps a sequential batch cap of two documents so a worst-case pair remains within the 300-second function budget. `POLICY_OCR_WORKER_BATCH_SIZE` may reduce the batch to one, but cannot raise it above two. With 286 pending documents, the nominal maximum drain time becomes about 12 hours instead of 143 days, subject to Vercel cron timing, Google quotas and retry delays.
+The Vercel cron changes from once daily to hourly and keeps the established batch cap of three documents. `POLICY_OCR_WORKER_BATCH_SIZE` may reduce the batch but cannot raise it above three. With 286 pending documents, the nominal drain time is about four days, subject to Vercel cron timing, Google quotas and retry delays.
 
 Deployment requirements:
 
@@ -427,3 +427,7 @@ Deployment requirements:
 - run one authenticated reviewer journey and inspect exact-match and mismatch behavior before claiming production completion.
 
 **CI learning:** PR #525 intentionally removed the OCR queue migration's dependency on the optional `access_*_v2` database tables, but the access-control static regression still expected those permission rows inside that migration. The regression now treats the two OCR permissions as application-only compatibility entries until the remote Access Control V2 schema is confirmed, while explicitly failing if the queue migration reintroduces any `access_permissions_v2`, `access_roles_v2` or `access_role_permissions_v2` dependency.
+
+### Worker scheduling finding — 2026-08-22
+
+All 286 jobs remained `pending` at attempt `0/3`, proving that no worker had claimed them yet. The prior cron was daily and the route supplied only the request OIDC header; when that header was absent, the server correctly returned `google_oidc_subject_token_missing` before claiming work. The route now falls back to server-only OIDC environment values and the cron is hourly, while the safe worker limit remains three jobs per invocation. This fix is **IMPLEMENTED / NOT YET DEPLOYED**. A production check must observe a job transition from `pending` to `processing` and then `ready` or an explicit failure before OCR processing is considered live.

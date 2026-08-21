@@ -817,7 +817,7 @@ Run that operation once through the protected migration workflow, then use a pro
 
 **IMPLEMENTED ON `feature/automated-policy-ocr-comparison` / NOT MERGED OR DEPLOYED:** successful queue jobs now copy the linked policy's saved Section 03 reference into the training-label row and calculate a normalized OCR-vs-database comparison. The reviewer UI uses the same comparator, shows exact-match/mismatch/missing totals and adds an `Exact match` filter. Human reviewer confirmation and separate owner approval remain mandatory; policy data and parser source are never changed automatically.
 
-The production cron definition is changed from once daily to every five minutes, with a maximum sequential batch of two to stay within the 300-second function limit. This requires a Vercel Pro/Enterprise sub-daily cron allowance and valid private worker secret plus runtime OIDC. Do not deploy until the Vercel plan is confirmed and the user explicitly requests deployment. After deployment, verify cron logs and live queue movement from the previously verified `286 pending / 0 ready / 0 exhausted` baseline.
+The production cron definition follows the latest `main` decision: hourly with a maximum batch of three and server-only OIDC fallbacks. This requires a Vercel plan that permits hourly cron plus a valid private worker secret and runtime OIDC. Do not deploy until the plan is confirmed and the user explicitly requests deployment. After deployment, verify cron logs and live queue movement from the previously verified `286 pending / 0 ready / 0 exhausted` baseline.
 
 Local verification on the feature branch:
 
@@ -827,3 +827,11 @@ Typecheck: passed
 Lint: passed with 72 existing warnings and 0 errors
 Production build: passed with CI placeholder public Supabase values
 ```
+
+### 2026-08-22 worker-scheduling finding
+
+**VERIFIED:** after the queue backfill, the live count report showed all 286 jobs as `pending`, with `processing_attempts=0`, `ready=0`, and `exhausted=0`. This means the worker had not claimed any job; it is not evidence that Google or the parser failed.
+
+The worker route was configured for one daily cron (`0 2 * * *`) and passed only `x-vercel-oidc-token` to the processor. The processor requires a Google subject token before claiming a job. The route now falls back to server-only `VERCEL_OIDC_TOKEN` and `GOOGLE_WORKLOAD_IDENTITY_SUBJECT_TOKEN`, and the cron is hourly (`0 * * * *`). Each run still claims at most three jobs because OCR calls can take up to two minutes and automatic attempts remain capped at three.
+
+This worker fix is **IMPLEMENTED but not yet production-deployed**. After the protected deployment, verify one cron/authorized request changes jobs from `pending` to `processing` and then `ready` or an explicit failure. With three jobs per hour, 286 copies are intentionally processed over multiple hours; do not expect all rows to become ready immediately.

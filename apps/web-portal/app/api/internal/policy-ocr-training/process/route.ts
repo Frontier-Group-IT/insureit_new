@@ -11,12 +11,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const configuredBatchSize = Number(process.env.POLICY_OCR_WORKER_BATCH_SIZE ?? "2");
-  const batchSize = Math.max(1, Math.min(Number.isFinite(configuredBatchSize) ? Math.trunc(configuredBatchSize) : 2, 2));
+  const configuredBatchSize = Number(process.env.POLICY_OCR_WORKER_BATCH_SIZE ?? "3");
+  const batchSize = Math.max(1, Math.min(Number.isFinite(configuredBatchSize) ? Math.trunc(configuredBatchSize) : 3, 3));
   const result = await processPolicyOcrTrainingBatch(
     secret,
     batchSize,
-    request.headers.get("x-vercel-oidc-token"),
+    request.headers.get("x-vercel-oidc-token")
+      || process.env.VERCEL_OIDC_TOKEN
+      || process.env.GOOGLE_WORKLOAD_IDENTITY_SUBJECT_TOKEN,
   );
   return NextResponse.json(result, { status: result.ok ? 200 : 500 });
 }
