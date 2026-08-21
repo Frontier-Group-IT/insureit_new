@@ -1,10 +1,11 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppDatePicker } from '@/components/design-system';
-import { ClaimActionBar, ClaimFormSection, ClaimStageSummaryCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
+import { ClaimActionBar, ClaimFormSection, ExternalClaimStageHeader } from '@/components/external-claim-ui';
 import { LoadingState, Message, Screen, TextField } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { type ClaimMilestone } from '@/lib/claim-service-mode';
@@ -25,6 +26,8 @@ type ExternalPolicy = {
 };
 
 type TimeTarget = 'incident' | 'intimation' | null;
+type DocumentKey = 'rc' | 'insurance' | 'licence' | 'gr' | 'bulk';
+type PickedDocument = { name: string; uri: string; mimeType?: string | null };
 
 export default function SelfManagedClaimScreen() {
   const router = useRouter();
@@ -34,6 +37,7 @@ export default function SelfManagedClaimScreen() {
   const editing = Boolean(claimId);
   const [policy, setPolicy] = useState<ExternalPolicy | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [insurerName, setInsurerName] = useState('Insurance company');
   const [incidentDate, setIncidentDate] = useState('');
   const [incidentTime, setIncidentTime] = useState('');
   const [intimationDate, setIntimationDate] = useState('');
@@ -42,6 +46,7 @@ export default function SelfManagedClaimScreen() {
   const [phone, setPhone] = useState('');
   const [location, setLocation] = useState('');
   const [milestones, setMilestones] = useState<ClaimMilestone[]>([]);
+  const [documents, setDocuments] = useState<Record<DocumentKey, PickedDocument[]>>({ rc: [], insurance: [], licence: [], gr: [], bulk: [] });
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -67,8 +72,13 @@ export default function SelfManagedClaimScreen() {
           supabase.from('vehicles').select('*').eq('id', claim.vehicle_id).maybeSingle(),
         ]);
         if (!active) return;
-        setPolicy(policyResult.data as ExternalPolicy | null);
+        const nextPolicy = policyResult.data as ExternalPolicy | null;
+        setPolicy(nextPolicy);
         setVehicle(vehicleResult.data ?? null);
+        if (nextPolicy?.insurance_company_id) {
+          const insurerResult = await supabase.from('insurance_companies').select('name').eq('id', nextPolicy.insurance_company_id).maybeSingle();
+          if (active && insurerResult.data?.name) setInsurerName(insurerResult.data.name);
+        }
         const nextMilestones = (milestoneResult.data ?? []) as ClaimMilestone[];
         setMilestones(nextMilestones);
         const spot = nextMilestones.find((item) => item.milestone_key === 'spot_intimation');
@@ -95,14 +105,32 @@ export default function SelfManagedClaimScreen() {
       if (!active) return;
       const next = data as ExternalPolicy | null;
       if (!next) { setMessage('This customer-added policy is not available.'); setLoading(false); return; }
-      const result = await supabase.from('vehicles').select('*').eq('id', next.vehicle_id).maybeSingle();
+      const [vehicleResult, insurerResult] = await Promise.all([
+        supabase.from('vehicles').select('*').eq('id', next.vehicle_id).maybeSingle(),
+        supabase.from('insurance_companies').select('name').eq('id', next.insurance_company_id).maybeSingle(),
+      ]);
       if (!active) return;
       setPolicy(next);
-      setVehicle(result.data ?? null);
+      setVehicle(vehicleResult.data ?? null);
+      if (insurerResult.data?.name) setInsurerName(insurerResult.data.name);
       setLoading(false);
     })();
     return () => { active = false; };
   }, [claimId, editing, externalPolicyId]);
+
+  async function pickDocument(key: Exclude<DocumentKey, 'bulk'>) {
+    const result = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/*'], multiple: false, copyToCacheDirectory: true });
+    if (result.canceled || !result.assets?.length) return;
+    const asset = result.assets[0];
+    setDocuments((current) => ({ ...current, [key]: [{ name: asset.name, uri: asset.uri, mimeType: asset.mimeType }] }));
+  }
+
+  async function pickBulkDocuments() {
+    const result = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/*'], multiple: true, copyToCacheDirectory: true });
+    if (result.canceled || !result.assets?.length) return;
+    const additions = result.assets.map((asset) => ({ name: asset.name, uri: asset.uri, mimeType: asset.mimeType }));
+    setDocuments((current) => ({ ...current, bulk: [...current.bulk, ...additions] }));
+  }
 
   async function submit() {
     if (!policy || !vehicle || saving) return;
@@ -186,17 +214,11 @@ export default function SelfManagedClaimScreen() {
         step={1}
         title="Spot Intimation"
         subtitle="Start tracking an incident."
-        vehicleNo={vehicle?.vehicle_no}
         claimNo={editing ? 'Existing claim' : undefined}
         onBack={() => router.back()}
       />
 
-      {policy ? <ClaimStageSummaryCard
-        label="EXTERNAL POLICY"
-        title={policy.policy_no}
-        body={vehicle?.vehicle_no ?? 'Vehicle linked to this external policy'}
-        icon="file-document-outline"
-      /> : null}
+      {policy ? <PolicyIdentityCard policyNo={policy.policy_no} insurerName={insurerName} vehicleNo={vehicle?.vehicle_no ?? 'Vehicle'} /> : null}
 
       {message ? <Message type="error">{message}</Message> : null}
 
@@ -216,39 +238,44 @@ export default function SelfManagedClaimScreen() {
 
       <View style={styles.documentReadyCard}>
         <View style={styles.documentReadyHeader}>
-          <View>
-            <Text style={styles.documentReadyTitle}>Documents to keep ready</Text>
-            <Text style={styles.documentReadySubtitle}>These are commonly needed as the claim progresses.</Text>
+          <View style={styles.documentReadyHeaderCopy}>
+            <Text style={styles.documentReadyTitle}>Upload claim documents</Text>
+            <Text style={styles.documentReadySubtitle}>Tap a document to choose the matching file from your phone.</Text>
           </View>
           <View style={styles.documentReadyBadge}><Text style={styles.documentReadyBadgeText}>Optional now</Text></View>
         </View>
         <View style={styles.documentReadyGrid}>
-          <DocumentReadyTile title="RC Copy" source={require('../../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png')} />
-          <DocumentReadyTile title="Insurance Copy" source={require('../../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} />
-          <DocumentReadyTile title="Driver Licence" source={require('../../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} />
-          <DocumentReadyTile title="GR / Load Bill" source={require('../../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} />
+          <DocumentReadyTile title="RC Copy" source={require('../../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png')} selected={documents.rc.length > 0} onPress={() => void pickDocument('rc')} />
+          <DocumentReadyTile title="Insurance Copy" source={require('../../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} selected={documents.insurance.length > 0} onPress={() => void pickDocument('insurance')} />
+          <DocumentReadyTile title="Driver Licence" source={require('../../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} selected={documents.licence.length > 0} onPress={() => void pickDocument('licence')} />
+          <DocumentReadyTile title="GR / Load Bill" source={require('../../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} selected={documents.gr.length > 0} onPress={() => void pickDocument('gr')} />
         </View>
+        <Pressable accessibilityRole="button" onPress={() => void pickBulkDocuments()} style={[styles.bulkUpload, documents.bulk.length > 0 && styles.bulkUploadSelected]}>
+          <View style={[styles.bulkUploadIcon, documents.bulk.length > 0 && styles.bulkUploadIconSelected]}><MaterialCommunityIcons name={documents.bulk.length > 0 ? 'check' : 'file-multiple-outline'} size={20} color={documents.bulk.length > 0 ? '#18864B' : '#0A43A3'} /></View>
+          <View style={styles.bulkUploadCopy}>
+            <Text style={styles.bulkUploadTitle}>Upload multiple documents</Text>
+            <Text style={styles.bulkUploadText}>{documents.bulk.length > 0 ? `${documents.bulk.length} file${documents.bulk.length === 1 ? '' : 's'} selected · Tap again to add more` : 'Select several files now, or tap again later to add more.'}</Text>
+          </View>
+          <MaterialCommunityIcons name="plus-circle-outline" size={21} color={documents.bulk.length > 0 ? '#18864B' : '#0A43A3'} />
+        </Pressable>
+        <Text style={styles.documentUploadNote}>Selected files are prepared on this screen. Final claim-document storage will continue to use the existing claim document workflow.</Text>
       </View>
 
       <View style={styles.voicePlaceholder}>
-        <View style={styles.voiceIcon}><MaterialCommunityIcons name="microphone-outline" size={24} color="#0A43A3" /></View>
-        <View style={styles.voiceCopy}>
-          <Text style={styles.voiceTitle}>Incident Voice Note</Text>
-          <Text style={styles.voiceText}>Let the customer describe what happened to the vehicle.</Text>
+        <View style={styles.voiceHeadingRow}>
+          <View style={styles.voiceIcon}><MaterialCommunityIcons name="microphone-outline" size={25} color="#0A43A3" /></View>
+          <View style={styles.voiceCopy}>
+            <Text style={styles.voiceTitle}>Incident Voice Note</Text>
+            <Text style={styles.voiceText}>Describe what happened in your own words so the incident is easier to understand later.</Text>
+          </View>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Record Voice Note, available in a later app build"
-          accessibilityState={{ disabled: true }}
-          disabled
-          style={styles.voiceButton}
-        >
-          <MaterialCommunityIcons name="microphone" size={17} color="#FFFFFF" />
+        <Pressable accessibilityRole="button" accessibilityLabel="Record Voice Note, feature coming soon" accessibilityState={{ disabled: true }} disabled style={styles.voiceButton}>
+          <MaterialCommunityIcons name="microphone" size={18} color="#FFFFFF" />
           <Text style={styles.voiceButtonText}>Record Voice Note</Text>
         </Pressable>
         <View style={styles.voiceComingSoon}>
           <MaterialCommunityIcons name="clock-outline" size={14} color="#60738B" />
-          <Text style={styles.voiceComingSoonText}>Recording will be enabled in a later app build.</Text>
+          <Text style={styles.voiceComingSoonText}>This feature will be added soon.</Text>
         </View>
       </View>
 
@@ -274,11 +301,31 @@ export default function SelfManagedClaimScreen() {
   );
 }
 
-function DocumentReadyTile({ title, source }: { title: string; source: any }) {
-  return <View style={styles.documentReadyTile}>
+function PolicyIdentityCard({ policyNo, insurerName, vehicleNo }: { policyNo: string; insurerName: string; vehicleNo: string }) {
+  return <View style={styles.policyIdentityCard}>
+    <View style={styles.policyIdentityGlow} />
+    <View style={styles.policyIdentityLeft}>
+      <View style={styles.policyIdentityIcon}><MaterialCommunityIcons name="file-document-outline" size={27} color="#083B9B" /></View>
+      <View style={styles.policyIdentityCopy}>
+        <Text style={styles.policyIdentityEyebrow}>EXTERNAL POLICY</Text>
+        <Text style={styles.policyIdentityNo} numberOfLines={1}>{policyNo}</Text>
+        <Text style={styles.policyIdentityInsurer} numberOfLines={2}>{insurerName}</Text>
+      </View>
+    </View>
+    <View style={styles.vehicleIdentityBlock}>
+      <Text style={styles.vehicleIdentityLabel}>VEHICLE</Text>
+      <Text style={styles.vehicleIdentityNo} numberOfLines={1}>{vehicleNo}</Text>
+    </View>
+  </View>;
+}
+
+function DocumentReadyTile({ title, source, selected, onPress }: { title: string; source: any; selected: boolean; onPress: () => void }) {
+  return <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress} style={[styles.documentReadyTile, selected && styles.documentReadyTileSelected]}>
+    {selected ? <View style={styles.documentSelectedCheck}><MaterialCommunityIcons name="check" size={17} color="#18864B" /></View> : null}
     <View style={styles.documentReadyArtworkWrap}><Image source={source} style={styles.documentReadyArtwork} resizeMode="contain" /></View>
     <Text style={styles.documentReadyTileText} numberOfLines={2}>{title}</Text>
-  </View>;
+    <Text style={[styles.documentReadyStatus, selected && styles.documentReadyStatusSelected]}>{selected ? 'Selected' : 'Tap to upload'}</Text>
+  </Pressable>;
 }
 
 function TimePickerField({ label, value, onPress }: { label: string; value: string; onPress: () => void }) {
@@ -306,27 +353,73 @@ function formatTime(value: string) { const parsed = parseTime(value); const date
 
 const styles = StyleSheet.create({
   gap: { height: 10 },
-  subsection: { marginTop: 16, marginBottom: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E7EBF0' }, subsectionTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
+  subsection: { marginTop: 16, marginBottom: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E7EBF0' },
+  subsectionTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
+  policyIdentityCard: { position: 'relative', minHeight: 112, borderRadius: 20, backgroundColor: '#07327B', padding: 14, marginBottom: 13, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', gap: 10, shadowColor: '#072C69', shadowOpacity: 0.16, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
+  policyIdentityGlow: { position: 'absolute', width: 190, height: 190, borderRadius: 95, borderWidth: 1, borderColor: 'rgba(72,139,255,0.24)', right: -90, top: -104 },
+  policyIdentityLeft: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  policyIdentityIcon: { width: 52, height: 52, borderRadius: 15, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  policyIdentityCopy: { flex: 1, minWidth: 0 },
+  policyIdentityEyebrow: { color: '#CFDDF5', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.5 },
+  policyIdentityNo: { color: '#FFFFFF', fontSize: 17, fontWeight: '900', marginTop: 3 },
+  policyIdentityInsurer: { color: '#DCE8F7', fontSize: 10, lineHeight: 14, fontWeight: '700', marginTop: 4 },
+  vehicleIdentityBlock: { minWidth: 108, maxWidth: 138, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.13)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.30)', paddingHorizontal: 10, paddingVertical: 11, alignItems: 'flex-end' },
+  vehicleIdentityLabel: { color: '#AFCBFF', fontSize: 8, fontWeight: '900', letterSpacing: 0.65 },
+  vehicleIdentityNo: { color: '#FFFFFF', fontSize: 15.5, fontWeight: '900', marginTop: 3 },
   documentReadyCard: { borderRadius: 18, borderWidth: 1, borderColor: '#D7E2EF', backgroundColor: '#FFFFFF', padding: 12, marginBottom: 12, shadowColor: '#14375F', shadowOpacity: 0.05, shadowRadius: 9, shadowOffset: { width: 0, height: 4 }, elevation: 1 },
   documentReadyHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 10 },
+  documentReadyHeaderCopy: { flex: 1, minWidth: 0 },
   documentReadyTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
   documentReadySubtitle: { color: '#6D7B8F', fontSize: 9.5, lineHeight: 13, fontWeight: '600', marginTop: 2 },
   documentReadyBadge: { borderRadius: 999, backgroundColor: '#EEF5FF', paddingHorizontal: 9, paddingVertical: 5 },
   documentReadyBadgeText: { color: '#0A43A3', fontSize: 8.5, fontWeight: '900' },
   documentReadyGrid: { flexDirection: 'row', gap: 8 },
-  documentReadyTile: { flex: 1, minWidth: 0, borderRadius: 14, backgroundColor: '#F7FAFF', borderWidth: 1, borderColor: '#E2EAF4', paddingVertical: 9, paddingHorizontal: 5, alignItems: 'center' },
-  documentReadyArtworkWrap: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
-  documentReadyArtwork: { width: 46, height: 46 },
-  documentReadyTileText: { color: palette.navy, fontSize: 8.5, lineHeight: 11, fontWeight: '800', textAlign: 'center', marginTop: 4 },
-  voicePlaceholder: { borderRadius: 17, borderWidth: 1, borderColor: '#CADAF0', backgroundColor: '#F5F9FF', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' },
-  voiceIcon: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#E6F0FF', alignItems: 'center', justifyContent: 'center' },
-  voiceCopy: { flex: 1, minWidth: 170 },
-  voiceTitle: { color: palette.navy, fontSize: 12, fontWeight: '900' },
-  voiceText: { color: '#68778D', fontSize: 9.5, lineHeight: 14, fontWeight: '600', marginTop: 2 },
-  voiceButton: { minHeight: 44, borderRadius: 13, backgroundColor: '#0A43A3', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: 0.74 },
-  voiceButtonText: { color: '#FFFFFF', fontSize: 10.5, fontWeight: '900' },
-  voiceComingSoon: { width: '100%', borderTopWidth: 1, borderTopColor: '#D9E5F3', paddingTop: 9, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  voiceComingSoonText: { flex: 1, color: '#60738B', fontSize: 9.5, lineHeight: 13, fontWeight: '700' },
-  timeField: { gap: 5, marginTop: 10 }, timeLabel: { color: '#3F4D63', fontSize: 11, fontWeight: '800' }, timeButton: { minHeight: 48, borderRadius: 13, borderWidth: 1, borderColor: '#D2DFEC', backgroundColor: '#FBFDFF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }, timeValue: { flex: 1, color: palette.navy, fontSize: 12.5, fontWeight: '800' }, timePlaceholder: { color: '#8A94A6' },
-  timeModalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(7, 28, 62, 0.38)' }, timeModalCard: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 18, paddingBottom: 28 }, timeModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }, timeModalEyebrow: { color: '#0A43A3', fontSize: 9, fontWeight: '900', letterSpacing: 0.8 }, timeModalTitle: { color: palette.navy, fontSize: 19, fontWeight: '900', marginTop: 3 }, timeClose: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' }, timeColumns: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', gap: 10 }, timeColumn: { flex: 1, minWidth: 0 }, timeColumnLabel: { color: '#667085', fontSize: 10, fontWeight: '800', textAlign: 'center', marginBottom: 6 }, timeOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }, timeOption: { width: 48, height: 40, borderRadius: 10, backgroundColor: '#F5F8FC', alignItems: 'center', justifyContent: 'center' }, timeOptionSelected: { backgroundColor: '#0A43A3' }, timeOptionText: { color: '#56657A', fontSize: 12, fontWeight: '800' }, timeOptionTextSelected: { color: '#FFFFFF' }, timeColon: { color: palette.navy, fontSize: 23, fontWeight: '900', marginTop: 23 }, timeDone: { minHeight: 50, marginTop: 18, borderRadius: 14, backgroundColor: palette.navy, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }, timeDoneText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
+  documentReadyTile: { position: 'relative', flex: 1, minWidth: 0, minHeight: 106, borderRadius: 14, backgroundColor: '#F7FAFF', borderWidth: 1.5, borderColor: '#E2EAF4', paddingVertical: 8, paddingHorizontal: 5, alignItems: 'center', justifyContent: 'center' },
+  documentReadyTileSelected: { backgroundColor: '#EFFAF4', borderColor: '#52B57F', shadowColor: '#18864B', shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
+  documentSelectedCheck: { position: 'absolute', top: 5, right: 5, width: 25, height: 25, borderRadius: 13, backgroundColor: 'rgba(46, 173, 99, 0.16)', alignItems: 'center', justifyContent: 'center' },
+  documentReadyArtworkWrap: { width: 45, height: 45, alignItems: 'center', justifyContent: 'center' },
+  documentReadyArtwork: { width: 43, height: 43 },
+  documentReadyTileText: { color: palette.navy, fontSize: 8.5, lineHeight: 11, fontWeight: '800', textAlign: 'center', marginTop: 3 },
+  documentReadyStatus: { color: '#7A8799', fontSize: 7.5, fontWeight: '800', marginTop: 3 },
+  documentReadyStatusSelected: { color: '#18864B' },
+  bulkUpload: { minHeight: 58, marginTop: 10, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#AFC8E8', backgroundColor: '#F7FAFF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  bulkUploadSelected: { borderStyle: 'solid', borderColor: '#52B57F', backgroundColor: '#EFFAF4' },
+  bulkUploadIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center' },
+  bulkUploadIconSelected: { backgroundColor: 'rgba(46, 173, 99, 0.14)' },
+  bulkUploadCopy: { flex: 1, minWidth: 0 },
+  bulkUploadTitle: { color: palette.navy, fontSize: 10.5, fontWeight: '900' },
+  bulkUploadText: { color: '#718198', fontSize: 8.5, lineHeight: 12, fontWeight: '600', marginTop: 2 },
+  documentUploadNote: { color: '#7A8799', fontSize: 8, lineHeight: 11, fontWeight: '600', marginTop: 8 },
+  voicePlaceholder: { borderRadius: 18, borderWidth: 1, borderColor: '#CADAF0', backgroundColor: '#F5F9FF', padding: 13, marginBottom: 12 },
+  voiceHeadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  voiceIcon: { width: 48, height: 48, borderRadius: 15, backgroundColor: '#E6F0FF', alignItems: 'center', justifyContent: 'center' },
+  voiceCopy: { flex: 1, minWidth: 0 },
+  voiceTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
+  voiceText: { color: '#68778D', fontSize: 9.5, lineHeight: 14, fontWeight: '600', marginTop: 3 },
+  voiceButton: { width: '100%', minHeight: 48, marginTop: 12, borderRadius: 14, backgroundColor: '#0A43A3', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, opacity: 0.78 },
+  voiceButtonText: { color: '#FFFFFF', fontSize: 11.5, fontWeight: '900' },
+  voiceComingSoon: { marginTop: 9, borderTopWidth: 1, borderTopColor: '#D9E5F3', paddingTop: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  voiceComingSoonText: { color: '#60738B', fontSize: 9.5, lineHeight: 13, fontWeight: '700' },
+  timeField: { gap: 5, marginTop: 10 },
+  timeLabel: { color: '#3F4D63', fontSize: 11, fontWeight: '800' },
+  timeButton: { minHeight: 48, borderRadius: 13, borderWidth: 1, borderColor: '#D2DFEC', backgroundColor: '#FBFDFF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  timeValue: { flex: 1, color: palette.navy, fontSize: 12.5, fontWeight: '800' },
+  timePlaceholder: { color: '#8A94A6' },
+  timeModalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(7, 28, 62, 0.38)' },
+  timeModalCard: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 18, paddingBottom: 28 },
+  timeModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
+  timeModalEyebrow: { color: '#0A43A3', fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
+  timeModalTitle: { color: palette.navy, fontSize: 19, fontWeight: '900', marginTop: 3 },
+  timeClose: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' },
+  timeColumns: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', gap: 10 },
+  timeColumn: { flex: 1, minWidth: 0 },
+  timeColumnLabel: { color: '#667085', fontSize: 10, fontWeight: '800', textAlign: 'center', marginBottom: 6 },
+  timeOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center' },
+  timeOption: { width: 48, height: 40, borderRadius: 10, backgroundColor: '#F5F8FC', alignItems: 'center', justifyContent: 'center' },
+  timeOptionSelected: { backgroundColor: '#0A43A3' },
+  timeOptionText: { color: '#56657A', fontSize: 12, fontWeight: '800' },
+  timeOptionTextSelected: { color: '#FFFFFF' },
+  timeColon: { color: palette.navy, fontSize: 23, fontWeight: '900', marginTop: 23 },
+  timeDone: { minHeight: 50, marginTop: 18, borderRadius: 14, backgroundColor: palette.navy, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  timeDoneText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
 });
