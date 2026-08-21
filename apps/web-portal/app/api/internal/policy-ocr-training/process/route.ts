@@ -11,9 +11,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  const configuredBatchSize = Number(process.env.POLICY_OCR_WORKER_BATCH_SIZE ?? "2");
+  const batchSize = Math.max(1, Math.min(Number.isFinite(configuredBatchSize) ? Math.trunc(configuredBatchSize) : 2, 2));
   const result = await processPolicyOcrTrainingBatch(
     secret,
-    2,
+    batchSize,
     request.headers.get("x-vercel-oidc-token"),
   );
   return NextResponse.json(result, { status: result.ok ? 200 : 500 });

@@ -400,3 +400,28 @@ select processing_status, count(*) from public.policy_ocr_training_labels group 
 The easier long-term design is one idempotent server-side sync function/RPC that links eligible legacy copies, inserts missing labels with `on conflict do nothing`, and returns reconciliation counts. Run it once through the protected migration workflow; let a protected cron process small batches. The page should remain read-only and show a diagnostic when tracked documents exceed queue labels. Never infer the queue from a Storage listing or consume retry attempts before Google/OIDC preflight succeeds.
 
 The first rerun after PR #524 exposed a second migration-order mistake: `20260821153000` had bundled inserts into `public.access_permissions_v2`, but that table is absent from the remote migration set. PR #525 removed the unrelated permission block, and Supabase workflow `32513044974` then completed the queue migration, backfill and legacy linking successfully. Idempotent verification workflow `32513396428` reported `policy_copy_documents=286`, `queue_labels=286`, `pending_jobs=286`, `ready_jobs=0`, `exhausted_jobs=0`. Keep permission catalog changes in a separate migration only after the remote access-control schema is confirmed. If the UI still shows nine after a hard refresh, inspect which deployment/project the browser is using; the live queue itself is no longer nine.
+
+## 10. Automatic queue draining and Section 03 comparison — 2026-08-22
+
+**IMPLEMENTED ON FEATURE BRANCH / NOT YET MERGED OR DEPLOYED:** the worker now loads the linked policy and `policy_premium_details` reference after Google OCR succeeds, writes only the approved Section 03 reference fields into the existing training-label row, and runs one shared comparison classifier used by both the server worker and reviewer UI.
+
+Comparison rules:
+
+- policy numbers ignore formatting separators but not characters;
+- dates compare ISO and `DD/MM/YYYY` representations;
+- Package/Comprehensive, SAOD/Standalone Own Damage and supported TP synonyms normalize to canonical product families;
+- currency values tolerate at most ₹2 difference;
+- missing OCR, missing database reference, mismatch and match are separate states;
+- an exact match means every Section 03 value that is actually stored in the database was also proposed and matched.
+
+The reviewer queue adds an `Exact match` filter and summarizes mismatch/missing counts. Exact matches still require reviewer confirmation and separate owner approval. Automation never overwrites Policy Onboarding Section 03, never self-approves a candidate and never edits parser source.
+
+The Vercel cron changes from once daily to every five minutes and keeps a sequential batch cap of two documents so a worst-case pair remains within the 300-second function budget. `POLICY_OCR_WORKER_BATCH_SIZE` may reduce the batch to one, but cannot raise it above two. With 286 pending documents, the nominal maximum drain time becomes about 12 hours instead of 143 days, subject to Vercel cron timing, Google quotas and retry delays.
+
+Deployment requirements:
+
+- the Vercel project must be on a plan that supports sub-daily cron schedules (Pro or Enterprise); Hobby rejects this schedule;
+- `CRON_SECRET` or `POLICY_OCR_WORKER_SECRET` must remain configured privately;
+- Vercel Secure Backend Access/OIDC must remain enabled so each function receives `x-vercel-oidc-token` for Google WIF;
+- after deployment, inspect cron runtime logs and verify queue counts move from pending to ready/failed without exhausted retries caused by configuration;
+- run one authenticated reviewer journey and inspect exact-match and mismatch behavior before claiming production completion.

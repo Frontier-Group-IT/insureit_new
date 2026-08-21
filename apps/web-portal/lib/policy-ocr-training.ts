@@ -41,6 +41,51 @@ export type TrainingProposal = {
   warnings: string[];
 };
 
+export type TrainingDatabaseReference = {
+  insurer_name: string | null;
+  policy_product: string | null;
+  policy_number: string | null;
+  valid_from: string | null;
+  valid_upto: string | null;
+  idv: number | null;
+  od_premium: number | null;
+  tp_premium: number | null;
+  cpa_opted: boolean | null;
+  cpa_premium: number | null;
+  printed_net_premium: number | null;
+  printed_gst: number | null;
+  printed_gross_premium: number | null;
+};
+
+export type TrainingComparisonKey = keyof TrainingDatabaseReference;
+export type TrainingComparisonStatus = "match" | "mismatch" | "ocr_missing" | "reference_missing";
+
+export type TrainingComparisonSummary = {
+  exactMatch: boolean;
+  comparableFields: number;
+  matchedFields: number;
+  mismatchedFields: number;
+  missingOcrFields: number;
+  missingReferenceFields: number;
+  fields: Record<TrainingComparisonKey, TrainingComparisonStatus>;
+};
+
+const COMPARISON_PROPOSAL_KEYS: Record<TrainingComparisonKey, TrainingFieldKey> = {
+  insurer_name: "insurer_name",
+  policy_product: "policy_product",
+  policy_number: "policy_number",
+  valid_from: "policy_start_date",
+  valid_upto: "policy_end_date",
+  idv: "idv",
+  od_premium: "od_premium",
+  tp_premium: "tp_premium",
+  cpa_opted: "cpa_opted",
+  cpa_premium: "cpa_premium",
+  printed_net_premium: "total_premium",
+  printed_gst: "tax_amount",
+  printed_gross_premium: "gross_premium",
+};
+
 const FIELD_KEY_SET = new Set<string>(TRAINING_FIELD_KEYS);
 const SAFE_EVIDENCE_LABELS: Array<[RegExp, string]> = [
   [/\btotal od premium\b/i, "Total OD Premium"],
@@ -72,6 +117,76 @@ export function buildTrainingProposal(result: OcrSuccess): TrainingProposal {
     fields,
     warnings: result.warnings.slice(0, 20).map(sanitizeWarning).filter(Boolean),
   };
+}
+
+export function compareTrainingProposalToReference(
+  proposal: TrainingProposal,
+  reference: TrainingDatabaseReference,
+): TrainingComparisonSummary {
+  const fields = {} as Record<TrainingComparisonKey, TrainingComparisonStatus>;
+  let comparableFields = 0;
+  let matchedFields = 0;
+  let mismatchedFields = 0;
+  let missingOcrFields = 0;
+  let missingReferenceFields = 0;
+
+  for (const key of Object.keys(COMPARISON_PROPOSAL_KEYS) as TrainingComparisonKey[]) {
+    const referenceValue = reference[key];
+    const proposalValue = proposal.fields[COMPARISON_PROPOSAL_KEYS[key]]?.value ?? null;
+    const status = compareTrainingValue(key, referenceValue, proposalValue);
+    fields[key] = status;
+    if (status === "reference_missing") missingReferenceFields += 1;
+    else {
+      comparableFields += 1;
+      if (status === "match") matchedFields += 1;
+      else if (status === "mismatch") mismatchedFields += 1;
+      else missingOcrFields += 1;
+    }
+  }
+
+  return {
+    exactMatch: comparableFields > 0 && mismatchedFields === 0 && missingOcrFields === 0,
+    comparableFields,
+    matchedFields,
+    mismatchedFields,
+    missingOcrFields,
+    missingReferenceFields,
+    fields,
+  };
+}
+
+export function compareTrainingValue(
+  key: TrainingComparisonKey,
+  referenceValue: string | number | boolean | null,
+  proposalValue: string | null,
+): TrainingComparisonStatus {
+  if (referenceValue === null || referenceValue === "") return "reference_missing";
+  if (proposalValue === null || !proposalValue.trim()) return "ocr_missing";
+
+  if (typeof referenceValue === "number") {
+    const parsed = Number(proposalValue.replaceAll(",", "").replace(/[^\d.-]/g, ""));
+    return Number.isFinite(parsed) && Math.abs(referenceValue - parsed) <= 2 ? "match" : "mismatch";
+  }
+  if (typeof referenceValue === "boolean") {
+    const normalized = proposalValue.trim().toLowerCase();
+    const parsed = ["yes", "true", "1", "opted"].includes(normalized)
+      ? true
+      : ["no", "false", "0", "not opted"].includes(normalized)
+        ? false
+        : null;
+    return parsed === referenceValue ? "match" : "mismatch";
+  }
+
+  if (key === "valid_from" || key === "valid_upto") {
+    return normalizeComparisonDate(referenceValue) === normalizeComparisonDate(proposalValue) ? "match" : "mismatch";
+  }
+  if (key === "policy_number") {
+    return normalizePolicyNumber(referenceValue) === normalizePolicyNumber(proposalValue) ? "match" : "mismatch";
+  }
+  if (key === "policy_product") {
+    return normalizePolicyProduct(referenceValue) === normalizePolicyProduct(proposalValue) ? "match" : "mismatch";
+  }
+  return normalizeComparisonText(referenceValue) === normalizeComparisonText(proposalValue) ? "match" : "mismatch";
 }
 
 export function parseReviewerDate(value: string | null | undefined) {
@@ -163,4 +278,33 @@ function sanitizeWarning(value: string) {
 function normalizeConfidence(value: number | null) {
   if (value === null || !Number.isFinite(value)) return null;
   return Math.max(0, Math.min(1, value));
+}
+
+function normalizeComparisonDate(value: string) {
+  const iso = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const display = value.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return display ? `${display[3]}-${display[2]}-${display[1]}` : value.trim();
+}
+
+function normalizePolicyNumber(value: string) {
+  return value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function normalizePolicyProduct(value: string) {
+  const normalized = normalizeComparisonText(value);
+  if (/\bsaod\b|standalone own damage/.test(normalized)) return "saod";
+  if (/\bbundled\b/.test(normalized)) return "bundled";
+  if (/\bpackage\b|comprehensive/.test(normalized)) return "package";
+  if (/third party|\btp\b|liability only/.test(normalized)) return "third_party";
+  return normalized;
+}
+
+function normalizeComparisonText(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }

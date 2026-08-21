@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 // @ts-expect-error -- This regression runner executes TypeScript directly with Node --experimental-strip-types.
-import { buildTrainingProposal, createSanitizedTrainingCandidate, formatReviewerDate, parseReviewerDate, sanitizeEvidenceNote } from "../lib/policy-ocr-training.ts";
+import { buildTrainingProposal, compareTrainingProposalToReference, compareTrainingValue, createSanitizedTrainingCandidate, formatReviewerDate, parseReviewerDate, sanitizeEvidenceNote } from "../lib/policy-ocr-training.ts";
 
 assert.equal(parseReviewerDate("21/08/2026"), "2026-08-21");
 assert.equal(parseReviewerDate("31/02/2026"), null);
@@ -38,6 +38,32 @@ assert.equal(JSON.stringify(proposal).includes("CUSTOMER NAME"), false);
 assert.equal(JSON.stringify(proposal).includes("PRIVATE PERSON"), false);
 assert.equal(proposal.warnings[0].includes("test@example.com"), false);
 assert.equal(proposal.warnings[0].includes("9876543210"), false);
+
+assert.equal(compareTrainingValue("policy_number", "31/28/003126/00001545", "312800312600001545"), "match");
+assert.equal(compareTrainingValue("policy_product", "Standalone Own Damage", "SAOD"), "match");
+assert.equal(compareTrainingValue("valid_from", "2026-08-21", "21/08/2026"), "match");
+assert.equal(compareTrainingValue("od_premium", 6121, "₹6,122"), "match");
+assert.equal(compareTrainingValue("tp_premium", 16369, null), "ocr_missing");
+
+const comparison = compareTrainingProposalToReference(proposal, {
+  insurer_name: null,
+  policy_product: null,
+  policy_number: null,
+  valid_from: null,
+  valid_upto: null,
+  idv: null,
+  od_premium: 6121,
+  tp_premium: 16369,
+  cpa_opted: null,
+  cpa_premium: null,
+  printed_net_premium: null,
+  printed_gst: null,
+  printed_gross_premium: null,
+});
+assert.equal(comparison.exactMatch, false);
+assert.equal(comparison.matchedFields, 1);
+assert.equal(comparison.missingOcrFields, 1);
+assert.equal(comparison.missingReferenceFields, 11);
 
 const candidate = createSanitizedTrainingCandidate({
   labelId: "abcdef12-3456-7890-abcd-ef1234567890",
@@ -84,7 +110,14 @@ assert.match(actions, /approve_policy_ocr_training/);
 assert.match(actions, /reviewed_by === owner\.id/);
 assert.match(workerActions, /google_ocr_configuration_missing/);
 assert.match(workerActions, /google_oidc_subject_token_missing/);
+assert.match(workerActions, /Automated comparison reference from saved Section 03 data/);
+assert.match(workerActions, /compareTrainingProposalToReference/);
 assert.doesNotMatch(actions, /writeFile|appendFile|apply_patch/);
+
+const route = readFileSync("app/api/internal/policy-ocr-training/process/route.ts", "utf8");
+assert.match(route, /POLICY_OCR_WORKER_BATCH_SIZE/);
+const vercelConfig = readFileSync("vercel.json", "utf8");
+assert.match(vercelConfig, /\*\/5 \* \* \* \*/);
 
 const uploadActions = [
   readFileSync("app/policies/policy-document-actions.ts", "utf8"),

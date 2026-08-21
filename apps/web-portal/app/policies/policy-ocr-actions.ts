@@ -2,7 +2,11 @@
 
 import { headers } from "next/headers";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
-import { buildTrainingProposal } from "@/lib/policy-ocr-training";
+import {
+  buildTrainingProposal,
+  compareTrainingProposalToReference,
+  type TrainingDatabaseReference,
+} from "@/lib/policy-ocr-training";
 import { parsePolicyDocument, type ParsedPolicyField } from "@/lib/policy-ocr-parsers";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { refineAdditionalMotorPolicy } from "@/lib/policy-ocr-additional-motor-refiner";
@@ -221,7 +225,7 @@ export async function processPolicyOcrTrainingBatch(
   }
 
   const admin = createSupabaseAdminClient();
-  const limit = Math.max(1, Math.min(Number(requestedLimit) || 2, 3));
+  const limit = Math.max(1, Math.min(Math.trunc(Number(requestedLimit) || 2), 3));
   const { data, error } = await admin.rpc("claim_policy_ocr_training_jobs", {
     p_limit: limit,
     p_lease_minutes: 4,
@@ -233,11 +237,17 @@ export async function processPolicyOcrTrainingBatch(
 
   const jobs = Array.isArray(data) ? data as ClaimedTrainingJob[] : [];
   let succeeded = 0;
+  let exactMatches = 0;
+  let needsReview = 0;
   for (const job of jobs) {
     const outcome = await processTrainingJob(job, subjectToken);
-    if (outcome) succeeded += 1;
+    if (outcome.ok) {
+      succeeded += 1;
+      if (outcome.exactMatch) exactMatches += 1;
+      else needsReview += 1;
+    }
   }
-  return { ok: true as const, processed: jobs.length, succeeded };
+  return { ok: true as const, processed: jobs.length, succeeded, exactMatches, needsReview };
 }
 
 async function processTrainingJob(job: ClaimedTrainingJob, subjectToken?: string | null) {
@@ -245,11 +255,11 @@ async function processTrainingJob(job: ClaimedTrainingJob, subjectToken?: string
   try {
     if (Number(job.file_size) > MAX_FILE_SIZE) {
       await failTrainingJob(job, "file_too_large", false);
-      return false;
+      return { ok: false as const };
     }
     if (!ALLOWED_TYPES.has(job.mime_type ?? "")) {
       await failTrainingJob(job, "unsupported_file_type", false);
-      return false;
+      return { ok: false as const };
     }
 
     const { data: blob, error } = await admin.storage
@@ -257,7 +267,7 @@ async function processTrainingJob(job: ClaimedTrainingJob, subjectToken?: string
       .download(job.storage_path);
     if (error || !blob) {
       await failTrainingJob(job, "private_copy_unavailable", true);
-      return false;
+      return { ok: false as const };
     }
 
     const file = new File([blob], job.file_name, {
@@ -266,10 +276,27 @@ async function processTrainingJob(job: ClaimedTrainingJob, subjectToken?: string
     const result = await extractPolicyFile(file, subjectToken);
     if (!result.ok) {
       await failTrainingJob(job, classifyTrainingFailure(result.error), isRetryableTrainingFailure(result.error));
-      return false;
+      return { ok: false as const };
     }
 
     const proposal = buildTrainingProposal(result);
+    const reference = await loadTrainingDatabaseReference(job.policy_document_id);
+    if (!reference) {
+      await failTrainingJob(job, "database_reference_missing", false);
+      return { ok: false as const };
+    }
+
+    const { error: referenceError } = await admin
+      .from("policy_ocr_training_labels")
+      .update({
+        ...reference,
+        evidence_note: "Automated comparison reference from saved Section 03 data.",
+      })
+      .eq("id", job.label_id)
+      .eq("processing_status", "processing")
+      .eq("lease_token", job.lease_token);
+    if (referenceError) throw new Error("training_reference_update_failed");
+
     const { data: completed, error: completeError } = await admin.rpc(
       "complete_policy_ocr_training_job",
       {
@@ -283,14 +310,73 @@ async function processTrainingJob(job: ClaimedTrainingJob, subjectToken?: string
     );
     if (completeError || completed !== true) {
       console.error("Policy OCR training completion failed", completeError?.code ?? "lease_rejected");
-      return false;
+      return { ok: false as const };
     }
-    return true;
+    const comparison = compareTrainingProposalToReference(proposal, reference);
+    return { ok: true as const, exactMatch: comparison.exactMatch };
   } catch (error) {
     console.error("Policy OCR training processing failed", safeErrorName(error));
     await failTrainingJob(job, "processing_failed", true);
-    return false;
+    return { ok: false as const };
   }
+}
+
+async function loadTrainingDatabaseReference(policyDocumentId: string): Promise<TrainingDatabaseReference | null> {
+  const admin = createSupabaseAdminClient();
+  const { data: document, error: documentError } = await admin
+    .from("policy_documents")
+    .select("policy_id")
+    .eq("id", policyDocumentId)
+    .eq("document_type", "policy_copy")
+    .maybeSingle<{ policy_id: string }>();
+  if (documentError) throw new Error("training_document_lookup_failed");
+  if (!document?.policy_id) return null;
+
+  const [{ data: policy, error: policyError }, { data: premium, error: premiumError }] = await Promise.all([
+    admin
+      .from("policies")
+      .select("policy_no,policy_type,start_date,end_date,insured_declared_value,insurance_companies(name)")
+      .eq("id", document.policy_id)
+      .maybeSingle<{
+        policy_no: string | null;
+        policy_type: string | null;
+        start_date: string | null;
+        end_date: string | null;
+        insured_declared_value: number | null;
+        insurance_companies: { name: string } | null;
+      }>(),
+    admin
+      .from("policy_premium_details")
+      .select("od_premium,tp_premium,cpa_opted,cpa_amount,net_premium,gst_amount,gross_premium")
+      .eq("policy_id", document.policy_id)
+      .maybeSingle<{
+        od_premium: number | null;
+        tp_premium: number | null;
+        cpa_opted: boolean | null;
+        cpa_amount: number | null;
+        net_premium: number | null;
+        gst_amount: number | null;
+        gross_premium: number | null;
+      }>(),
+  ]);
+  if (policyError || premiumError) throw new Error("training_reference_lookup_failed");
+  if (!policy) return null;
+
+  return {
+    insurer_name: policy.insurance_companies?.name ?? null,
+    policy_product: policy.policy_type,
+    policy_number: policy.policy_no,
+    valid_from: policy.start_date,
+    valid_upto: policy.end_date,
+    idv: policy.insured_declared_value,
+    od_premium: premium?.od_premium ?? null,
+    tp_premium: premium?.tp_premium ?? null,
+    cpa_opted: premium?.cpa_opted ?? null,
+    cpa_premium: premium?.cpa_amount ?? null,
+    printed_net_premium: premium?.net_premium ?? null,
+    printed_gst: premium?.gst_amount ?? null,
+    printed_gross_premium: premium?.gross_premium ?? null,
+  };
 }
 
 async function failTrainingJob(job: ClaimedTrainingJob, code: string, retryable: boolean) {

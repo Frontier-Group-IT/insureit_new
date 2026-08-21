@@ -812,3 +812,18 @@ Run that operation once through the protected migration workflow, then use a pro
 3. Confirm the worker secret, Google Document AI variables, and Vercel OIDC subject token are configured.
 4. Run one controlled job and verify `processing_status` changes to `ready` with a proposal or to an explicit parser/OCR failure; it must not silently remain `exhausted`.
 5. Only then ask a reviewer to use the queue. A synthetic regression or Vercel `READY` deployment is not proof of live OCR.
+
+### Automated comparison continuation — 2026-08-22
+
+**IMPLEMENTED ON `feature/automated-policy-ocr-comparison` / NOT MERGED OR DEPLOYED:** successful queue jobs now copy the linked policy's saved Section 03 reference into the training-label row and calculate a normalized OCR-vs-database comparison. The reviewer UI uses the same comparator, shows exact-match/mismatch/missing totals and adds an `Exact match` filter. Human reviewer confirmation and separate owner approval remain mandatory; policy data and parser source are never changed automatically.
+
+The production cron definition is changed from once daily to every five minutes, with a maximum sequential batch of two to stay within the 300-second function limit. This requires a Vercel Pro/Enterprise sub-daily cron allowance and valid private worker secret plus runtime OIDC. Do not deploy until the Vercel plan is confirmed and the user explicitly requests deployment. After deployment, verify cron logs and live queue movement from the previously verified `286 pending / 0 ready / 0 exhausted` baseline.
+
+Local verification on the feature branch:
+
+```text
+Policy OCR regressions: passed (IFFCO structured 5/5, IFFCO 12/12, Digit 5/5, New India 9/9, additional insurers 6/6, training workflow passed)
+Typecheck: passed
+Lint: passed with 72 existing warnings and 0 errors
+Production build: passed with CI placeholder public Supabase values
+```

@@ -505,7 +505,7 @@ Do not turn this file into a raw chat transcript. Keep it as the current, action
 
 ## 17. Premium OCR training workflow
 
-**IMPLEMENTED / NOT YET APPLIED:** migration `20260821153000_premium_ocr_training_workflow.sql` extends policy-copy training with an idempotent queue, three-attempt leased processing, bounded retry delays, proposal metadata, separate reviewer and owner approval, and sanitized approved-candidate storage.
+**APPLIED / QUEUE VERIFIED 2026-08-21:** migration `20260821153000_premium_ocr_training_workflow.sql` extends policy-copy training with an idempotent queue, three-attempt leased processing, bounded retry delays, proposal metadata, separate reviewer and owner approval, and sanitized approved-candidate storage. Supabase workflow `32513396428` verified 286 policy-copy documents, 286 queue labels and 286 pending jobs.
 
 Durable rules:
 
@@ -514,3 +514,4 @@ Durable rules:
 - `review_policy_ocr_training` submits corrections; `approve_policy_ocr_training` gives final owner approval. Reviewer and owner must be different profiles.
 - Approved candidates use deterministic synthetic policy numbers and do not modify parser source. Parser changes remain reviewed code changes with sanitized regressions.
 - Policy-copy inserts/replacements requeue processing; jobs are claimed with `FOR UPDATE SKIP LOCKED`, leases and a maximum of three attempts.
+- **IMPLEMENTED / NOT YET DEPLOYED 2026-08-22:** automated comparison work reads the linked policy and premium-detail Section 03 values after successful Google OCR, writes those approved reference fields to the training label, classifies match/mismatch/missing states through a shared server/UI comparator, and schedules bounded two-document worker batches every five minutes. Exact matches remain review-before-approval and never overwrite policy records.
