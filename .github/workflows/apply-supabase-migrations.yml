@@ -71,3 +71,14 @@ jobs:
           echo "$result" | grep -q "policy_ocr_training_labels"
           legacy_result=$(supabase db query --linked --output-format json "select to_regclass('public.customer_documents') as table_name")
           echo "$legacy_result" | grep -q "customer_documents"
+
+      - name: Report OCR queue counts
+        run: |
+          supabase db query --linked --output-format json "
+            select
+              (select count(*) from public.policy_documents where document_type = 'policy_copy') as policy_copy_documents,
+              (select count(*) from public.policy_ocr_training_labels) as queue_labels,
+              (select count(*) from public.policy_ocr_training_labels where processing_status = 'pending') as pending_jobs,
+              (select count(*) from public.policy_ocr_training_labels where processing_status = 'ready') as ready_jobs,
+              (select count(*) from public.policy_ocr_training_labels where processing_status = 'exhausted') as exhausted_jobs
+          "
