@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { reportWorkspace, reportWorkspaceForPath, reportWorkspaces } from "@/lib/reports/navigation";
+import { reportWorkspaceForPath, reportWorkspaces } from "@/lib/reports/navigation";
 
 type Props = { canViewGovernance: boolean; role?: string | null };
 
@@ -10,11 +10,13 @@ export function ReportNavigation({ canViewGovernance: _canViewGovernance, role }
   const pathname = usePathname();
   const router = useRouter();
   const backofficeRestricted = role === "backoffice_executive";
-  const visibleWorkspaces = reportWorkspaces.map((workspace) => backofficeRestricted && workspace.key === "business"
-    ? { ...workspace, routes: workspace.routes.filter((route) => route !== "/reports/finance"), sections: workspace.sections?.filter((section) => section.href !== "/reports/finance") }
-    : workspace);
-  const activeKey = reportWorkspaceForPath(pathname) ?? "overview";
-  const activeWorkspace = visibleWorkspaces.find((workspace) => workspace.key === activeKey) ?? reportWorkspace(activeKey);
+  const visibleWorkspaces = reportWorkspaces
+    .filter((workspace) => !backofficeRestricted || ["business", "portfolio", "operations"].includes(workspace.key))
+    .map((workspace) => backofficeRestricted && workspace.key === "business"
+      ? { ...workspace, routes: workspace.routes.filter((route) => route !== "/reports/finance"), sections: workspace.sections?.filter((section) => section.href !== "/reports/finance") }
+      : workspace);
+  const activeKey = reportWorkspaceForPath(pathname) ?? visibleWorkspaces[0]?.key ?? "business";
+  const activeWorkspace = visibleWorkspaces.find((workspace) => workspace.key === activeKey) ?? visibleWorkspaces[0];
   const activeSection = activeWorkspace?.sections
     ?.slice()
     .sort((a, b) => b.href.length - a.href.length)
@@ -35,7 +37,7 @@ export function ReportNavigation({ canViewGovernance: _canViewGovernance, role }
         <div className="reports-v2-nav__mobile">
           <label>
             <span>Reporting area</span>
-            <select value={activeWorkspace?.href ?? "/reports"} onChange={(event) => router.push(event.target.value)}>
+            <select value={activeWorkspace?.href ?? "/reports/business"} onChange={(event) => router.push(event.target.value)}>
               {visibleWorkspaces.map((workspace) => <option key={workspace.key} value={workspace.href}>{workspace.label}</option>)}
             </select>
           </label>
