@@ -1,7 +1,7 @@
 import { addVehicleMaster } from "@/app/vehicles/vehicle-master-actions";
 import { VehicleForm } from "@/components/forms";
 import { AppShell } from "@/components/shell";
-import { requireCapability } from "@/lib/master-data-server";
+import { requireAnyCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type CustomerOption = { id: string; company_name: string | null; contact_name: string };
@@ -12,7 +12,10 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function NewVehiclePage({ searchParams }: { searchParams: Promise<{ customer_id?: string }> }) {
-  await requireCapability("view_vehicles", "edit");
+  await requireAnyCapability([
+    { capability: "view_vehicles", minimumAccess: "edit" },
+    { capability: "create_vehicles", minimumAccess: "edit" },
+  ]);
   const admin = createSupabaseAdminClient();
   const params = await searchParams;
 
