@@ -8,13 +8,20 @@ import { createPortal } from "react-dom";
 import { lookupPolicyRegistrationRc, type PolicyRcReview } from "@/app/policies/authbridge-rc-actions";
 import { updatePolicyOnboarding, type PolicyEditPayload } from "@/app/policies/policy-edit-actions";
 import { savePolicyPayinBilling, type PolicyPayinStatus } from "@/app/policies/policy-payin-billing-actions";
+import { type PolicyOcrField } from "@/app/policies/policy-ocr-actions";
 import {
   onboardPolicy,
   type PolicyCustomerCandidate,
   type PolicyOnboardingPayload,
   type PolicyOwnershipConflict,
 } from "@/app/policies/policy-onboarding-actions";
-import { PolicyOcrImportPanel } from "@/components/policy-ocr-import-panel";
+import {
+  PolicyOcrImportPanel,
+  SECTION_02_OCR_FIELDS,
+  type PolicyOcrApplyOutcome,
+  type PolicyOcrImportContext,
+} from "@/components/policy-ocr-import-panel";
+import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-apply";
 import type { PolicyBusinessConflict } from "@/app/policies/policy-onboarding-conflicts";
 
 export type PolicyFormMode = "create" | "edit";
@@ -241,6 +248,23 @@ export function PolicyUnifiedForm({ mode, insurers, rms, sources, manufacturers 
     if(action==="edit_vehicle"||action==="edit_manufacturer")goToSection(1);else goToSection(2);
   }
 
+  function applyPolicyOcrFields(fields:PolicyOcrField[]):PolicyOcrApplyOutcome{
+    const result=buildPolicyOcrOnboardingUpdate({
+      mode,
+      registrationMode:vehicleRegistrationMode,
+      current:{registrationNo:form.registrationNo,vehicleClass:form.vehicleClass,make:form.make,model:form.model,fuelType:form.fuelType,manufacturingYear:form.manufacturingYear,capacity:form.capacity,chassisNo:form.chassisNo,engineNo:form.engineNo,rtoState:form.rtoState,rtoName:form.rtoName,policyProduct:form.policyProduct,idv:form.idv,od:form.od,tp:form.tp,cpa:form.cpa,policyNo:form.policyNo,insurerId:form.insurerId,validFrom:form.validFrom,validUpto:form.validUpto},
+      fields,
+      manufacturers,
+      insurers,
+      rcVerified:Boolean(appliedRc),
+    });
+    if(result.applied){
+      setForm(current=>({...current,...result.next}));
+      if(result.registrationMode!==vehicleRegistrationMode)setVehicleRegistrationMode(result.registrationMode);
+      if(result.touchedSection02){setLookupError(null);setRegistrationTouched(false);setRcReview(null);if(!appliedRc)setAppliedRc(null);}
+    }
+    return{applied:result.applied,skipped:result.skipped};
+  }
 
   const vehicleMeta=vehicleClassMap[form.vehicleClass];
   const policyProducts=form.vehicleClass==="PCP"||form.vehicleClass==="TWP"?["Package","Third Party","SAOD","Bundled","Long Term Package","Long Term Third Party"]:["Package","Third Party","SAOD"];
@@ -249,11 +273,40 @@ export function PolicyUnifiedForm({ mode, insurers, rms, sources, manufacturers 
   const headerTitle=isEdit?"Edit Policy":"Policy Onboarding";
   const submitText=isEdit?"Save Policy Changes":"Book Active Policy";
   const pendingText=isEdit?"Saving changes…":"Booking policy…";
+  const currentInsurerLabel=insurers.find(item=>item.value===form.insurerId)?.label??"";
+  const ocrImportContext:PolicyOcrImportContext={
+    mode,
+    registrationMode:vehicleRegistrationMode,
+    currentValues:{
+      vehicle_registration_status:vehicleRegistrationMode==="registered"?"Registered":"Unregistered",
+      vehicle_registration_number:form.registrationNo,
+      vehicle_class:form.vehicleClass,
+      vehicle_make:form.make,
+      vehicle_model:form.model,
+      vehicle_fuel_type:form.fuelType,
+      vehicle_manufacturing_year:form.manufacturingYear,
+      vehicle_capacity:form.capacity,
+      vehicle_chassis_number:form.chassisNo,
+      vehicle_engine_number:form.engineNo,
+      vehicle_rto_name:form.rtoName,
+      vehicle_rto_state:form.rtoState,
+      policy_product:form.policyProduct,
+      idv:form.idv,
+      od_premium:form.od,
+      tp_premium:form.tp,
+      cpa_premium:form.cpa,
+      policy_number:form.policyNo,
+      insurer_name:currentInsurerLabel,
+      policy_start_date:form.validFrom,
+      policy_end_date:form.validUpto,
+    },
+    protectedKeys:appliedRc?[...SECTION_02_OCR_FIELDS]:[],
+  };
 
   return <div className="mx-auto max-w-[1480px] pb-24">
     <div className="overflow-hidden rounded-t-2xl border border-b-0 border-[#D9E2F0] bg-white shadow-[0_10px_30px_rgba(15,23,42,.06)]">
       <div className="flex min-h-[88px] items-center bg-[linear-gradient(135deg,#071D49_0%,#123B75_60%,#315B9A_100%)] px-5 py-3.5 text-white">
-        <div><h1 className="text-[18px] font-semibold">{headerTitle}</h1></div>
+        <div className="flex w-full items-center justify-between gap-4"><div><h1 className="text-[18px] font-semibold">{headerTitle}</h1></div>{isMotorPolicy?<PolicyOcrImportPanel variant="header" context={ocrImportContext} onApply={applyPolicyOcrFields}/>:null}</div>
       </div>
     </div>
     <div className={`${isMotorPolicy?"sticky top-[72px] z-50 mb-4 flex":"hidden"} gap-1 overflow-x-auto rounded-b-2xl border border-t-0 border-[#D9E2F0] bg-white/95 px-3 py-2 shadow-[0_7px_18px_rgba(15,23,42,.08)] backdrop-blur`}>{sections.map((section,index)=>{const progress=sectionProgress[index];return <button key={section} type="button" onClick={()=>goToSection(index)} title={progress.complete?`${section} complete`:`${progress.remaining} required item${progress.remaining===1?"":"s"} remaining`} className={`group flex min-w-fit items-center gap-2 rounded-lg px-3 py-2 text-[9.5px] font-semibold transition ${activeSection===index?"bg-[#EEF2FF] text-[#4338CA]":"text-[#667085] hover:bg-[#F8FAFC]"}`}><span className={`grid h-5 w-5 place-items-center rounded-full text-[8px] font-bold ${progress.complete?"bg-[#E8F7EF] text-[#14845B]":progress.empty?(activeSection===index?"bg-[#4F46E5] text-white":"bg-[#EEF2F6] text-[#7A8798]"):"bg-[#FFF4D8] text-[#B76E00]"}`}>{progress.complete?<svg aria-hidden="true" viewBox="0 0 20 20" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 10 3 3 7-7"/></svg>:index+1}</span><span>{section}</span>{!progress.complete&&!progress.empty?<span className="text-[7.5px] font-semibold text-[#B76E00]">{progress.remaining} left</span>:null}</button>})}</div>
@@ -295,7 +348,7 @@ export function PolicyUnifiedForm({ mode, insurers, rms, sources, manufacturers 
         <Field label="Engine number" value={form.engineNo} onChange={e=>update("engineNo",e.target.value.toUpperCase())} placeholder={vehicleRegistrationMode==="unregistered"?"Mandatory for new vehicle":"Fetched from RC or enter manually"} disabled={isEdit} required={vehicleRegistrationMode==="unregistered"}/>
       </Section>
 
-      <Section number="03" title="Policy product, premium & validity" action={<PolicyOcrImportPanel variant="icon"/>}>
+      <Section number="03" title="Policy product, premium & validity">
         <Select label="Policy product" value={form.policyProduct} onChange={e=>update("policyProduct",e.target.value)} options={policyProducts} placeholder="Select product" disabled={!form.vehicleClass} required/>
         <Field label="Policy number" value={form.policyNo} onChange={e=>update("policyNo",e.target.value.toUpperCase())} placeholder="Policy number" required/>
         <div><label className={labelClass}>Insurance company <Required/></label><select className={inputClass} value={form.insurerId} onChange={e=>update("insurerId",e.target.value)} required><option value="">Select insurer</option>{insurers.map(i=><option key={i.value} value={i.value}>{i.label}</option>)}</select></div>
