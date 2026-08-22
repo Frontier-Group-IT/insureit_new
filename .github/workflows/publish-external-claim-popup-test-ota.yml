@@ -33,14 +33,14 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Publish Expo OTA to existing preview app
+      - name: Publish Expo OTA directly to existing preview channel
         id: publish
         working-directory: apps/mobile-app
         shell: bash
         run: |
           set +e
           npx eas-cli update \
-            --branch preview \
+            --channel preview \
             --environment preview \
             --message "Test external claim popup errors across all 9 stages" \
             --non-interactive \
@@ -67,19 +67,17 @@ jobs:
             cat expo-update.stderr.log >&2
           fi
 
-      - name: Verify latest preview update
+      - name: Inspect preview channel mapping
         if: steps.publish.outputs.result == 'success'
         working-directory: apps/mobile-app
         shell: bash
         run: |
-          npx eas-cli update:list \
-            --branch preview \
-            --limit 1 \
+          npx eas-cli channel:view preview \
             --json \
             --non-interactive \
-            > expo-update-latest.json
-          echo "Latest preview update JSON:"
-          cat expo-update-latest.json
+            > expo-channel-preview.json
+          echo "Preview channel mapping JSON:"
+          cat expo-channel-preview.json
 
       - name: Write OTA publication summary
         if: always()
@@ -117,12 +115,12 @@ jobs:
             return [...new Set(values)];
           };
           const publish = readJson('expo-update.json');
-          const latest = readJson('expo-update-latest.json');
-          const objects = [...collectObjects(latest), ...collectObjects(publish)];
+          const channel = readJson('expo-channel-preview.json');
+          const objects = [...collectObjects(channel), ...collectObjects(publish)];
           const groupId = firstValue(objects, ['group', 'groupId', 'updateGroupId']);
           const runtimeVersion = firstValue(objects, ['runtimeVersion']);
           const updateIds = uniqueValues(objects, ['id', 'updateId']).filter((value) => value !== groupId).slice(0, 4);
-          const branch = firstValue(objects, ['branchName', 'branch']) || 'preview';
+          const branch = firstValue(objects, ['branchName', 'branch']);
           const result = process.env.PUBLISH_RESULT || 'unknown';
           const exitCode = process.env.PUBLISH_EXIT_CODE || 'unknown';
           const icon = result === 'success' ? '✅' : result === 'failed' ? '❌' : '⚠️';
@@ -132,14 +130,15 @@ jobs:
             '| Field | Value |',
             '| --- | --- |',
             `| Publish result | ${icon} ${result} |`,
-            `| Expo branch | \`${branch}\` |`,
+            '| Expo channel | `preview` |',
+            `| Channel mapped branch | ${branch ? `\`${branch}\`` : 'Not returned by Expo'} |`,
             `| Runtime version | ${runtimeVersion ? `\`${runtimeVersion}\`` : 'Not returned by Expo'} |`,
             `| Update group ID | ${groupId ? `\`${groupId}\`` : 'Not returned by Expo'} |`,
             `| Update ID(s) | ${updateIds.length ? updateIds.map((id) => `\`${id}\``).join('<br>') : 'Not returned by Expo'} |`,
             `| CLI exit code | \`${exitCode}\` |`,
             `| Source commit | \`${process.env.GITHUB_SHA || 'unknown'}\` |`,
             '',
-            'This publishes only JavaScript/assets from the feature branch to the existing `preview` OTA branch. No APK is built.',
+            'This publishes only JavaScript/assets from the feature branch directly to the existing `preview` channel. No APK is built.',
             '',
           ];
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
