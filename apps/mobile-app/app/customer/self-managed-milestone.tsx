@@ -4,8 +4,9 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { AppDatePicker } from '@/components/design-system';
 import { ExternalClaimDocumentTabs } from '@/components/external-claim-document-tabs';
+import { ExternalClaimErrorPopup } from '@/components/external-claim-error-popup';
 import { ClaimActionBar, ClaimChoice, ClaimFinancialSummary, ClaimFormSection, ClaimInlineNote, ClaimStageSummaryCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
-import { Message, Screen, TextField } from '@/components/ui';
+import { Screen, TextField } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { SELF_MANAGED_MILESTONES, type ClaimMilestone, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
 import { stageBusinessDateOnly, validateStageChronology } from '@/lib/self-managed-claim-timeline';
@@ -35,6 +36,8 @@ export default function SelfManagedMilestoneScreen() {
   const [vehicleNo, setVehicleNo] = useState('');
   const [customerId, setCustomerId] = useState('');
   const [message, setMessage] = useState('');
+  const [validationMessage, setValidationMessage] = useState('');
+  const [definitionErrorVisible, setDefinitionErrorVisible] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -92,9 +95,10 @@ export default function SelfManagedMilestoneScreen() {
 
   async function save() {
     setMessage('');
+    setValidationMessage('');
     if (!claimId || !definition) return setMessage('Claim milestone is unavailable.');
     const validation = validate(key, values, milestones);
-    if (validation) return setMessage(validation);
+    if (validation) return setValidationMessage(validation);
 
     const details = normalizeDetails(key, values);
     const current = milestones.find((item) => item.milestone_key === key);
@@ -130,7 +134,16 @@ export default function SelfManagedMilestoneScreen() {
     continueAfterSave(true);
   }
 
-  if (!definition) return <Screen title="Claim Milestone" showTitleHeader={false}><Message type="error">This milestone is unavailable.</Message></Screen>;
+  if (!definition) return (
+    <Screen title="Claim Milestone" showTitleHeader={false}>
+      <ExternalClaimErrorPopup
+        visible={definitionErrorVisible}
+        message="This milestone is unavailable."
+        title="Something went wrong"
+        onClose={() => setDefinitionErrorVisible(false)}
+      />
+    </Screen>
+  );
 
   return (
     <Screen title={definition.label} showTitleHeader={false}>
@@ -150,7 +163,6 @@ export default function SelfManagedMilestoneScreen() {
         icon={summaryIconFor(key)}
       />
 
-      {message ? <Message type="error">{message}</Message> : null}
       {loading ? <Text style={styles.loading}>Loading saved details...</Text> : renderStage(key, values, set, milestones, claimId, customerId)}
 
       <ClaimActionBar
@@ -159,6 +171,18 @@ export default function SelfManagedMilestoneScreen() {
         primaryLabel={saving ? 'Saving...' : key === 'payment_encashment' ? 'Complete Claim' : key === 'vehicle_delivery' && values.vehicle_received !== 'yes' ? 'Save Vehicle Status' : 'Save & Continue'}
         onAssistance={openAssistance}
         onPrimary={() => void save()}
+      />
+
+      <ExternalClaimErrorPopup
+        visible={Boolean(validationMessage)}
+        message={validationMessage}
+        onClose={() => setValidationMessage('')}
+      />
+      <ExternalClaimErrorPopup
+        visible={Boolean(message)}
+        message={message}
+        title="Something went wrong"
+        onClose={() => setMessage('')}
       />
     </Screen>
   );
