@@ -121,12 +121,18 @@ for (const roleCode of internalRoles) {
       : v2GrantKeys.has(permission));
     const v2Any = grantedMapped.length > 0;
     const v2All = grantedMapped.length === mappedPermissions.length;
+    const permissionsRepresentedByOtherGrantedCapabilities = new Set(
+      Object.entries(legacyCapabilityCompatibilityMap)
+        .filter(([otherCapability]) => otherCapability !== legacyCapability && legacyCapabilities.has(otherCapability))
+        .flatMap(([, permissions]) => permissions),
+    );
+    const unrepresentedExpansion = grantedMapped.filter((permission) => !permissionsRepresentedByOtherGrantedCapabilities.has(permission));
 
     let classification = "retained-deny";
     if (legacyGranted && v2All) classification = "retained-grant";
     else if (legacyGranted && v2Any) classification = "narrowed";
     else if (legacyGranted && !v2Any) classification = "removed";
-    else if (!legacyGranted && v2Any) classification = "expanded";
+    else if (!legacyGranted && unrepresentedExpansion.length > 0) classification = "expanded";
 
     comparisonRows.push({ roleCode, legacyCapability, mappedPermissions, grantedMapped, classification });
   }
