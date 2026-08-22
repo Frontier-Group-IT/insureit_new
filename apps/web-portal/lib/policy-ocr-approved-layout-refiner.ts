@@ -132,8 +132,9 @@ function applyFinancials(
   fields: Map<string, ParsedPolicyField>,
   allText: string,
 ) {
-  let idv = findAmount(tables, /(?:Total\s+IDV|Vehicle\s+IDV|Insured\s+Declared\s+Value|Total\s+Value)/i, 0, 1_000_000_000, "largest");
+  let idv = findAmount(tables, /(?:Total\s+IDV|Insured\s+Declared\s+Value|Total\s+Value)/i, 0, 1_000_000_000, "largest");
   if (!idv && parserId === "new_india_motor_v1") idv = findNewIndiaComponentIdv(tables);
+  if (!idv) idv = findAmount(tables, /Vehicle\s+IDV/i, 0, 1_000_000_000, "largest");
 
   const od = findAmount(tables, /(?:Gross|Total|Net|Calculated)?\s*(?:Own\s+Damage|\bOD\b)\s*(?:Premium)?/i, 0, 10_000_000, "first");
   const basicTp = findAmount(tables, /(?:Basic\s+(?:TP|Liability)|Third\s+Party\s+Basic|Basic\s+Premium)/i, 0, 10_000_000, "first");
@@ -145,8 +146,8 @@ function applyFinancials(
     (value) => /(?:NOT\s+(?:PROVIDED|OPTED|COVERED)|\bNO\b|\bNIL\b|^0(?:\.0+)?$)/i.test(normalize(value)),
   );
   let net = findAmount(tables, /(?:Net\s+Premium|Premium\s*\(A\s*\+\s*B\)|Total\s+Premium(?!\s+Payable)|Premium\s+Amount)/i, 0, 10_000_000, "first");
-  let gross = findAmount(tables, /(?:Total\s+(?:Payable|Policy)\s+Premium|Gross\s+Premium|Total\s+Amount(?:\s+Payable)?)/i, 0, 10_000_000, "largest");
-  let tax = findAmount(tables, /(?:Total\s+GST|GST\s+Amount|\bIGST\b)/i, 0, 10_000_000, "largest");
+  let gross = findAmount(tables, /(?:Total\s+Payable(?:\s+Premium)?|Total\s+Policy\s+Premium|Gross\s+Premium|Total\s+Amount(?:\s+Payable)?)/i, 0, 10_000_000, "largest");
+  let tax = findAmount(tables, /(?:Total\s+GST|GST\s+Amount|\bIGST\b|\bGST\b)/i, 0, 10_000_000, "largest");
 
   if (!tax) {
     const cgst = findAmount(tables, /\bCGST\b/i, 0, 10_000_000, "last");
