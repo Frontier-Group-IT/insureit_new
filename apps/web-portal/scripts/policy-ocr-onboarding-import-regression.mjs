@@ -8,28 +8,28 @@ const panel = fs.readFileSync(path.join(here, "../components/policy-ocr-import-p
 const form = fs.readFileSync(path.join(here, "../components/policy-unified-form.tsx"), "utf8");
 const mapper = fs.readFileSync(path.join(here, "../lib/policy-ocr-onboarding-apply.ts"), "utf8");
 
-const structuralChecks = [
-  ["Section 02 field contract is exported", /export const SECTION_02_OCR_FIELDS = \[[\s\S]*vehicle_registration_number[\s\S]*vehicle_chassis_number[\s\S]*vehicle_engine_number/],
-  ["Section 03 field contract is exported", /export const SECTION_03_OCR_FIELDS = \[[\s\S]*policy_product[\s\S]*idv[\s\S]*od_premium[\s\S]*tp_premium[\s\S]*policy_end_date/],
-  ["CPA opted remains verification-only", /const VERIFICATION_FIELDS = new Set\(\["cpa_opted"/],
-  ["Current-vs-extracted review remains", /Current<\/span>[\s\S]*Extracted<\/span>[\s\S]*Status<\/span>/],
-  ["Panel delegates application to parent", /const outcome = await onApply\(chosen\)/],
-  ["Parent uses pure atomic mapper", /buildPolicyOcrOnboardingUpdate\(\{[\s\S]*setForm\(current=>\(\{\.\.\.current,\.\.\.result\.next\}\)\)/],
-  ["Importer receives current form context", /context=\{ocrImportContext\}[\s\S]*onApply=\{applyPolicyOcrFields\}/],
-  ["Shared importer moved to onboarding header", /variant="header" context=\{ocrImportContext\}/],
-  ["RC verified Section 02 is explicitly protected", /protectedKeys:appliedRc\?\[\.\.\.SECTION_02_OCR_FIELDS\]:\[\]/],
-  ["Edit or RC state protects Section 02 in mapper", /section02Protected = input\.mode === "edit" \|\| input\.rcVerified/],
-  ["Class dependency updates are atomic", /if \(changed && !byKey\.has\("vehicle_capacity"\)\) next\.capacity = "";[\s\S]*if \(changed && !byKey\.has\("policy_product"\)\) next\.policyProduct = "";/],
-  ["CPA amount does not set owner-driver opted state", /cpa_premium can include paid-driver\/workmen liability additions[\s\S]*next\.cpa = value/],
+const regexChecks = [
+  ["Section 02 field contract is exported", panel, /export const SECTION_02_OCR_FIELDS = \[[\s\S]*vehicle_registration_number[\s\S]*vehicle_chassis_number[\s\S]*vehicle_engine_number/],
+  ["Section 03 field contract is exported", panel, /export const SECTION_03_OCR_FIELDS = \[[\s\S]*policy_product[\s\S]*idv[\s\S]*od_premium[\s\S]*tp_premium[\s\S]*policy_end_date/],
+  ["CPA opted remains verification-only", panel, /const VERIFICATION_FIELDS = new Set\(\["cpa_opted"/],
+  ["Current-vs-extracted review remains", panel, /Current<\/span>[\s\S]*Extracted<\/span>[\s\S]*Status<\/span>/],
+  ["Panel delegates application to parent", panel, /const outcome = await onApply\(chosen\)/],
+  ["Importer receives current form context", form, /context=\{ocrImportContext\}[\s\S]*onApply=\{applyPolicyOcrFields\}/],
+  ["Shared importer moved to onboarding header", form, /variant="header" context=\{ocrImportContext\}/],
+  ["RC verified Section 02 is explicitly protected", form, /protectedKeys:appliedRc\?\[\.\.\.SECTION_02_OCR_FIELDS\]:\[\]/],
+  ["Edit or RC state protects Section 02 in mapper", mapper, /section02Protected = input\.mode === "edit" \|\| input\.rcVerified/],
+  ["Class dependency updates are atomic", mapper, /if \(changed && !byKey\.has\("vehicle_capacity"\)\) next\.capacity = "";[\s\S]*if \(changed && !byKey\.has\("policy_product"\)\) next\.policyProduct = "";/],
+  ["CPA amount does not set owner-driver opted state", mapper, /cpa_premium can include paid-driver\/workmen liability additions[\s\S]*next\.cpa = value/],
 ];
 
-for (const [name, pattern] of structuralChecks) {
-  const source = name.includes("mapper") || name.includes("Class dependency") || name.includes("CPA amount") || name.includes("Edit or RC") ? mapper
-    : name.includes("Parent") || name.includes("Importer receives") || name.includes("Shared importer") || name.includes("RC verified") ? form
-      : panel;
+for (const [name, source, pattern] of regexChecks) {
   if (!pattern.test(source)) throw new Error(`FAIL: ${name}`);
   console.log(`PASS: ${name}`);
 }
+
+if (!form.includes("const result=buildPolicyOcrOnboardingUpdate({")) throw new Error("FAIL: parent must use pure onboarding mapper");
+if (!form.includes("setForm(current=>({...current,...result.next}));")) throw new Error("FAIL: parent must commit mapper output in one React state update");
+console.log("PASS: parent uses pure mapper and one atomic React state commit");
 
 for (const forbidden of ["findControl(", "setNativeValue(", "control.disabled = false", "document.querySelector("]) {
   if (panel.includes(forbidden)) throw new Error(`FAIL: panel must not mutate onboarding controls via DOM (${forbidden})`);
@@ -154,4 +154,4 @@ if (cpaCompatibility.next.cpa !== "50") throw new Error("FAIL: historical liabil
 if ("cpaOpted" in cpaCompatibility.next) throw new Error("FAIL: mapper must not infer owner-driver CPA opted from liability-addition amount");
 console.log("PASS: CPA amount compatibility remains semantically separate from CPA opted");
 
-console.log(`Policy OCR onboarding import regression: ${structuralChecks.length + 6} checks passed.`);
+console.log(`Policy OCR onboarding import regression: ${regexChecks.length + 7} checks passed.`);
