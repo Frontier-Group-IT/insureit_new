@@ -155,23 +155,23 @@ export function ExternalPolicyWorkspace({ rows, canEdit }: { rows: ExternalPolic
       </div>
 
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[1080px] table-fixed text-left text-[11px] text-[#1E293B]">
+        <table className="w-full min-w-[930px] table-fixed text-left text-[11px] text-[#1E293B]">
           <thead className="sticky top-0 z-10 border-b border-[#E2E8F0] bg-[#F8FAFC] text-[9px] font-bold uppercase tracking-[0.06em] text-[#64748B]">
             <tr>
-              <th className="w-[150px] px-2.5 py-2.5">Policy No.</th>
-              <th className="w-[170px] px-2.5 py-2.5">Customer</th>
-              <th className="w-[115px] px-2.5 py-2.5">Vehicle</th>
-              <th className="w-[165px] px-2.5 py-2.5">Insurer</th>
-              <th className="w-[165px] px-2.5 py-2.5">Validity</th>
-              <th className="w-[105px] px-2.5 py-2.5">Status</th>
-              <th className="w-[105px] px-2.5 py-2.5 text-right">IDV</th>
-              <th className="w-[105px] px-2.5 py-2.5 text-right">Premium</th>
-              <th className="w-[70px] px-2.5 py-2.5 text-center">Claims</th>
+              <th className="w-[115px] px-2.5 py-2.5">Policy No.</th>
+              <th className="w-[140px] px-2.5 py-2.5">Customer</th>
+              <th className="w-[95px] px-2.5 py-2.5">Vehicle</th>
+              <th className="w-[135px] px-2.5 py-2.5">Insurer</th>
+              <th className="w-[150px] px-2.5 py-2.5">Validity</th>
+              <th className="w-[90px] px-2.5 py-2.5">Status</th>
+              <th className="w-[80px] px-2.5 py-2.5 text-right">IDV</th>
+              <th className="w-[80px] px-2.5 py-2.5 text-right">Premium</th>
+              <th className="w-[45px] px-2.5 py-2.5 text-center">Claims</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#EEF2F6]">
             {pageRows.map((policy) => (
-              <tr key={policy.id} className="h-12 transition hover:bg-[#FAFCFF]">
+              <tr key={policy.id} className="h-11 transition hover:bg-[#FAFCFF]">
                 <td className="px-2.5">
                   {canEdit ? (
                     <Link href={`/policies/external/${policy.id}/edit`} className="block truncate text-[12px] font-bold text-[#17365D] hover:underline" title={policy.policy_no}>
