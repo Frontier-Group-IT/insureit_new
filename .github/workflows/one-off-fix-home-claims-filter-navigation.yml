@@ -1,0 +1,178 @@
+name: One-off fix Home claims filter navigation
+
+on:
+  push:
+    branches:
+      - fix/external-claim-all-stage-error-popups
+    paths:
+      - '.github/workflows/one-off-fix-home-claims-filter-navigation.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/external-claim-all-stage-error-popups
+          fetch-depth: 0
+
+      - name: Apply Home claims filter navigation
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          home_path = Path('apps/mobile-app/app/customer/home.tsx')
+          home = home_path.read_text()
+
+          old_props = '''        onOpenAll={() => router.push('/customer/claims')}
+        onPendingAction={() => pendingTask ? router.push({ pathname: '/customer/upload-documents', params: { claimId: pendingTask.claim_id } }) : router.push('/customer/claims')}'''
+          new_props = '''        onOpenAll={() => router.push({ pathname: '/customer/claims', params: { filter: 'All' } })}
+        onOpen={() => router.push({ pathname: '/customer/claims', params: { filter: 'Open' } })}
+        onSettled={() => router.push({ pathname: '/customer/claims', params: { filter: 'Completed' } })}
+        onPendingAction={() => pendingTask ? router.push({ pathname: '/customer/upload-documents', params: { claimId: pendingTask.claim_id } }) : router.push('/customer/claims')}'''
+          if old_props not in home:
+              raise SystemExit('Expected ClaimsSummaryCard props were not found in home.tsx')
+          home = home.replace(old_props, new_props, 1)
+
+          old_card = '''function ClaimsSummaryCard({ totalCount, openCount, settledCount, totalAmount, openAmount, settledAmount, pendingActionCount, onOpenAll, onPendingAction }: { totalCount: number; openCount: number; settledCount: number; totalAmount: number; openAmount: number; settledAmount: number; pendingActionCount: number; onOpenAll: () => void; onPendingAction: () => void }) {
+  const hasPendingAction = pendingActionCount > 0;
+  return (
+    <View style={styles.claimSummaryCard}>
+      <Pressable onPress={onOpenAll} style={({ pressed }) => [styles.claimSummaryTop, pressed && styles.cardPressed]}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.claimCardTitle}>Claims</Text>
+          <View style={styles.claimOpenLink}><Text style={styles.claimOpenLinkText}>View all</Text><MaterialCommunityIcons name="arrow-right" size={15} color="#BFD4F7" /></View>
+        </View>
+        <View style={styles.claimMetricRow}>
+          <ClaimMetric label="Total" value={totalCount} amount={moneyCompact(totalAmount)} accent="#6FA8FF" />
+          <View style={styles.claimMetricDivider} />
+          <ClaimMetric label="Open" value={openCount} amount={moneyCompact(openAmount)} accent="#F5B94C" />
+          <View style={styles.claimMetricDivider} />
+          <ClaimMetric label="Settled" value={settledCount} amount={moneyCompact(settledAmount)} accent="#4FD79B" />
+        </View>
+      </Pressable>
+      <Pressable onPress={hasPendingAction ? onPendingAction : onOpenAll} style={({ pressed }) => [styles.claimTicker, hasPendingAction && styles.claimTickerHot, pressed && styles.cardPressed]}>
+        <MaterialCommunityIcons name={hasPendingAction ? 'alert-decagram' : 'check-decagram'} size={17} color={hasPendingAction ? '#C98918' : '#10A66F'} />
+        <Text style={styles.claimTickerText} numberOfLines={1}>{hasPendingAction ? `${pendingActionCount} pending claim action${pendingActionCount === 1 ? '' : 's'}` : totalCount ? 'All claim actions are clear' : 'No claims yet'}</Text>
+        <MaterialCommunityIcons name="chevron-right" size={18} color="#174EA6" />
+      </Pressable>
+    </View>
+  );
+}
+
+function ClaimMetric({ label, value, amount, accent }: { label: string; value: number; amount: string; accent: string }) {
+  return (
+    <View style={styles.claimMetric}>
+      <Text style={[styles.claimMetricValue, { color: accent }]}>{value}</Text>
+      <Text style={styles.claimMetricLabel}>{label}</Text>
+      <Text style={styles.claimMetricAmount}>{amount}</Text>
+    </View>
+  );
+}'''
+          new_card = '''function ClaimsSummaryCard({ totalCount, openCount, settledCount, totalAmount, openAmount, settledAmount, pendingActionCount, onOpenAll, onOpen, onSettled, onPendingAction }: { totalCount: number; openCount: number; settledCount: number; totalAmount: number; openAmount: number; settledAmount: number; pendingActionCount: number; onOpenAll: () => void; onOpen: () => void; onSettled: () => void; onPendingAction: () => void }) {
+  const hasPendingAction = pendingActionCount > 0;
+  return (
+    <View style={styles.claimSummaryCard}>
+      <View style={styles.claimSummaryTop}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.claimCardTitle}>Claims</Text>
+          <Pressable onPress={onOpenAll} style={({ pressed }) => [styles.claimOpenLink, pressed && styles.cardPressed]}><Text style={styles.claimOpenLinkText}>View all</Text><MaterialCommunityIcons name="arrow-right" size={15} color="#BFD4F7" /></Pressable>
+        </View>
+        <View style={styles.claimMetricRow}>
+          <ClaimMetric label="Total" value={totalCount} amount={moneyCompact(totalAmount)} accent="#6FA8FF" onPress={onOpenAll} />
+          <View style={styles.claimMetricDivider} />
+          <ClaimMetric label="Open" value={openCount} amount={moneyCompact(openAmount)} accent="#F5B94C" onPress={onOpen} />
+          <View style={styles.claimMetricDivider} />
+          <ClaimMetric label="Settled" value={settledCount} amount={moneyCompact(settledAmount)} accent="#4FD79B" onPress={onSettled} />
+        </View>
+      </View>
+      <Pressable onPress={hasPendingAction ? onPendingAction : onOpenAll} style={({ pressed }) => [styles.claimTicker, hasPendingAction && styles.claimTickerHot, pressed && styles.cardPressed]}>
+        <MaterialCommunityIcons name={hasPendingAction ? 'alert-decagram' : 'check-decagram'} size={17} color={hasPendingAction ? '#C98918' : '#10A66F'} />
+        <Text style={styles.claimTickerText} numberOfLines={1}>{hasPendingAction ? `${pendingActionCount} pending claim action${pendingActionCount === 1 ? '' : 's'}` : totalCount ? 'All claim actions are clear' : 'No claims yet'}</Text>
+        <MaterialCommunityIcons name="chevron-right" size={18} color="#174EA6" />
+      </Pressable>
+    </View>
+  );
+}
+
+function ClaimMetric({ label, value, amount, accent, onPress }: { label: string; value: number; amount: string; accent: string; onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.claimMetric, pressed && styles.cardPressed]}>
+      <Text style={[styles.claimMetricValue, { color: accent }]}>{value}</Text>
+      <Text style={styles.claimMetricLabel}>{label}</Text>
+      <Text style={styles.claimMetricAmount}>{amount}</Text>
+    </Pressable>
+  );
+}'''
+          if old_card not in home:
+              raise SystemExit('Expected ClaimsSummaryCard block was not found in home.tsx')
+          home = home.replace(old_card, new_card, 1)
+          home_path.write_text(home)
+
+          claims_path = Path('apps/mobile-app/app/customer/claims.tsx')
+          claims = claims_path.read_text()
+          old_import = "import { useRouter } from 'expo-router';"
+          new_import = "import { useLocalSearchParams, useRouter } from 'expo-router';"
+          if old_import not in claims:
+              raise SystemExit('Expected expo-router import was not found in claims.tsx')
+          claims = claims.replace(old_import, new_import, 1)
+
+          old_start = '''export default function ClaimsScreen() {
+  const router = useRouter();
+  const [claims, setClaims] = useState<CustomerClaim[]>([]);'''
+          new_start = '''export default function ClaimsScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams<{ filter?: string | string[] }>();
+  const requestedFilter = claimFilterFromParam(Array.isArray(params.filter) ? params.filter[0] : params.filter);
+  const [claims, setClaims] = useState<CustomerClaim[]>([]);'''
+          if old_start not in claims:
+              raise SystemExit('Expected ClaimsScreen start was not found in claims.tsx')
+          claims = claims.replace(old_start, new_start, 1)
+
+          old_filter = "  const [filter, setFilter] = useState<ClaimFilter>('All');"
+          new_filter = "  const [filter, setFilter] = useState<ClaimFilter>(requestedFilter ?? 'All');"
+          if old_filter not in claims:
+              raise SystemExit('Expected filter state was not found in claims.tsx')
+          claims = claims.replace(old_filter, new_filter, 1)
+
+          marker = '''  useEffect(() => {
+    async function load() {'''
+          insert = '''  useEffect(() => {
+    setFilter(requestedFilter ?? 'All');
+  }, [requestedFilter]);
+
+  useEffect(() => {
+    async function load() {'''
+          if marker not in claims:
+              raise SystemExit('Expected load effect marker was not found in claims.tsx')
+          claims = claims.replace(marker, insert, 1)
+
+          helper_marker = '''function matchesFilter(claim: CustomerClaim, filter: ClaimFilter) {'''
+          helper = '''function claimFilterFromParam(value?: string | null): ClaimFilter | null {
+  if (value === 'All' || value === 'Open' || value === 'Action Required' || value === 'Completed') return value;
+  return null;
+}
+
+function matchesFilter(claim: CustomerClaim, filter: ClaimFilter) {'''
+          if helper_marker not in claims:
+              raise SystemExit('Expected matchesFilter helper was not found in claims.tsx')
+          claims = claims.replace(helper_marker, helper, 1)
+          claims_path.write_text(claims)
+          PY
+
+      - name: Remove one-off workflow from branch
+        run: rm .github/workflows/one-off-fix-home-claims-filter-navigation.yml
+
+      - name: Commit claims navigation fix
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/mobile-app/app/customer/home.tsx apps/mobile-app/app/customer/claims.tsx .github/workflows/one-off-fix-home-claims-filter-navigation.yml
+          git commit -m "Open My Claims with selected dashboard filter"
+          git push origin HEAD:fix/external-claim-all-stage-error-popups
