@@ -38,7 +38,10 @@ export type Capability =
   | "manage_employees"
   | "view_org_tree"
   | "view_vehicles"
+  | "create_vehicles"
   | "view_policies"
+  | "create_policies"
+  | "create_external_policies"
   | "review_policy_ocr_training"
   | "approve_policy_ocr_training"
   | "view_tasks"
@@ -53,7 +56,7 @@ const ALL_OPERATIONAL: Capability[] = [
   "view_dashboard", "view_claims", "manage_claims", "view_intermediaries", "create_intermediary_application",
   "review_intermediary_application", "approve_intermediary_application", "activate_intermediary", "view_customers",
   "manage_customers", "view_kyc", "review_kyc", "view_employees", "manage_employees", "view_org_tree",
-  "view_vehicles", "view_policies", "review_policy_ocr_training", "view_tasks", "manage_tasks", "view_reports", "view_notifications",
+  "view_vehicles", "create_vehicles", "view_policies", "create_policies", "create_external_policies", "review_policy_ocr_training", "view_tasks", "manage_tasks", "view_reports", "view_notifications",
   "manage_master_data"
 ];
 
@@ -103,9 +106,11 @@ export const roleCapabilities: Record<AppRole, readonly Capability[]> = {
   claim_processor: ["view_dashboard", "view_claims", "manage_claims", "view_tasks", "manage_tasks", "view_notifications"],
   field_executive: ["view_dashboard", "view_claims", "view_tasks", "view_notifications"],
   backoffice_executive: [
-    "view_dashboard", "view_intermediaries", "create_intermediary_application", "review_intermediary_application",
-    "view_customers", "manage_customers", "view_kyc", "review_kyc", "view_tasks", "manage_tasks",
-    "view_notifications"
+    "view_dashboard",
+    "view_customers", "manage_customers",
+    "view_vehicles", "create_vehicles",
+    "view_policies", "create_policies", "create_external_policies",
+    "view_reports", "view_notifications"
   ],
   agent: ["view_dashboard", "view_customers", "manage_customers", "view_tasks", "view_notifications"],
   customer: [],
@@ -123,7 +128,7 @@ export const userManagementRoles: AppRole[] = ["it_super_user", "admin", "super_
 export const masterDataManagementRoles: AppRole[] = ["manager", "it_super_user", "admin", "super_admin"];
 export const pospMispManagementRoles: AppRole[] = [
   "manager", "it_super_user", "admin", "super_admin", "director", "sales_head", "zonal_head", "asm",
-  "sales_manager", "relationship_manager", "sales_operations_head", "backoffice_executive"
+  "sales_manager", "relationship_manager", "sales_operations_head"
 ];
 export const organizationTreeRoles: AppRole[] = [
   "it_super_user", "admin", "super_admin", "director", "sales_head", "zonal_head", "asm", "sales_manager"
@@ -151,7 +156,7 @@ export const roleLabels: Record<AppRole, string> = {
 };
 
 export const designationOptions = [
-  "Super Admin", "Admin", "IT Super User", "Manager", "Claim Processor", "Field Executive",
+  "Super Admin", "Admin", "IT Super User", "Manager", "Backoffice Executive", "Claim Processor", "Field Executive",
   "Relationship Manager", "Senior Relationship Manager", "Director", "CPO", "Operations Head",
   "Sales Head", "Zonal Head", "Area Sales Head", "Area Sales Manager", "ASM", "Sales Manager",
   "Agent", "Customer", "Claims Manager", "Administrator"
