@@ -6,6 +6,7 @@ on:
       - feature/self-managed-claims
       - feature/self-managed-production-integration-v2
       - feature/self-managed-production-integration-v3
+      - fix/external-claim-all-stage-error-popups
     paths:
       - 'apps/mobile-app/**'
       - 'package.json'
@@ -137,23 +138,38 @@ function ClaimMetric({ label, value, amount, accent, onPress }: { label: string;
 
           claims_path = Path('apps/mobile-app/app/customer/claims.tsx')
           claims = claims_path.read_text()
+          if "import { useRouter } from 'expo-router';" not in claims:
+              raise SystemExit('Expected expo-router import was not found in claims.tsx')
           claims = claims.replace("import { useRouter } from 'expo-router';", "import { useLocalSearchParams, useRouter } from 'expo-router';", 1)
-          claims = claims.replace('''export default function ClaimsScreen() {
+          old_start = '''export default function ClaimsScreen() {
   const router = useRouter();
-  const [claims, setClaims] = useState<CustomerClaim[]>([]);''', '''export default function ClaimsScreen() {
+  const [claims, setClaims] = useState<CustomerClaim[]>([]);'''
+          new_start = '''export default function ClaimsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ filter?: string | string[] }>();
   const requestedFilter = claimFilterFromParam(Array.isArray(params.filter) ? params.filter[0] : params.filter);
-  const [claims, setClaims] = useState<CustomerClaim[]>([]);''', 1)
-          claims = claims.replace("  const [filter, setFilter] = useState<ClaimFilter>('All');", "  const [filter, setFilter] = useState<ClaimFilter>(requestedFilter ?? 'All');", 1)
-          claims = claims.replace('''  useEffect(() => {
-    async function load() {''', '''  useEffect(() => {
+  const [claims, setClaims] = useState<CustomerClaim[]>([]);'''
+          if old_start not in claims:
+              raise SystemExit('Expected ClaimsScreen start was not found in claims.tsx')
+          claims = claims.replace(old_start, new_start, 1)
+          old_filter = "  const [filter, setFilter] = useState<ClaimFilter>('All');"
+          if old_filter not in claims:
+              raise SystemExit('Expected claims filter state was not found in claims.tsx')
+          claims = claims.replace(old_filter, "  const [filter, setFilter] = useState<ClaimFilter>(requestedFilter ?? 'All');", 1)
+          marker = '''  useEffect(() => {
+    async function load() {'''
+          if marker not in claims:
+              raise SystemExit('Expected load effect was not found in claims.tsx')
+          claims = claims.replace(marker, '''  useEffect(() => {
     setFilter(requestedFilter ?? 'All');
   }, [requestedFilter]);
 
   useEffect(() => {
     async function load() {''', 1)
-          claims = claims.replace('''function matchesFilter(claim: CustomerClaim, filter: ClaimFilter) {''', '''function claimFilterFromParam(value?: string | null): ClaimFilter | null {
+          helper_marker = '''function matchesFilter(claim: CustomerClaim, filter: ClaimFilter) {'''
+          if helper_marker not in claims:
+              raise SystemExit('Expected matchesFilter was not found in claims.tsx')
+          claims = claims.replace(helper_marker, '''function claimFilterFromParam(value?: string | null): ClaimFilter | null {
   if (value === 'All' || value === 'Open' || value === 'Action Required' || value === 'Completed') return value;
   return null;
 }
