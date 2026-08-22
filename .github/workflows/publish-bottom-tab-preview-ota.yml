@@ -1,0 +1,42 @@
+name: Publish bottom tab preview OTA
+
+on:
+  push:
+    branches:
+      - fix/external-claim-all-stage-error-popups
+    paths:
+      - '.github/workflows/publish-bottom-tab-preview-ota.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/external-claim-all-stage-error-popups
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Publish UI update to existing preview channel
+        working-directory: apps/mobile-app
+        run: |
+          npx eas-cli update \
+            --channel preview \
+            --environment preview \
+            --message "Prevent reload when tapping active bottom tab" \
+            --non-interactive
