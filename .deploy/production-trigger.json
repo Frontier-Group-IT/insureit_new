@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy the manual Google OCR run hotfix.",
-  "deploy_requested_at": "2026-08-22T01:41:09+05:30",
-  "requested_by": "explicit user implementation, merge and deployment request",
+  "purpose": "Deploy Policy Portfolio desktop filter width allocation fix.",
+  "deploy_requested_at": "2026-08-22T10:22:00+05:30",
+  "requested_by": "explicit user merge and deploy request",
   "source": "Deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "f4fedf9cbe34d5c4d309d683cb6788ac70badc1f",
-  "release_scope": "Deploy merged PR #531. The operator-controlled OCR action now authorizes the reviewer/owner directly, retains Google configuration and Vercel OIDC preflight before the exact-row claim, and renders pending/success/error results inline instead of throwing production digest 3201635344.",
-  "verification": "PR #531 Verify web portal run 32522049702 passed all access-control, NEW vehicle prefix, OCR regression, typecheck, lint and production-build gates. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source_commit": "75bcbe28ae12e1c88c6fe5c1edf533a2e5a3320a",
+  "release_scope": "Deploy merged PR #541. The Policy Portfolio desktop filter section now uses responsive grid width allocation so All Sources, All insurers, From Date, To Date, and the policy status counters each have dedicated desktop columns and do not overlap at 100% browser zoom. Existing UI style, filter behavior, date handling, APIs, database schema, permissions, and policy workflows remain unchanged.",
+  "verification": "PR #541 Verify web portal run 32552796190 passed successfully, including all regression suites, TypeScript typecheck, lint, and the Next.js production build. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
