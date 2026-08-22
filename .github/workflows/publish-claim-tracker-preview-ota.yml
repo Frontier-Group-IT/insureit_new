@@ -1,0 +1,43 @@
+name: Publish claim tracker preview OTA
+
+on:
+  push:
+    branches:
+      - fix/external-claim-all-stage-error-popups
+    paths:
+      - '.github/workflows/publish-claim-tracker-preview-ota.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: contains(github.event.head_commit.message, '[preview-ota]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/external-claim-all-stage-error-popups
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Publish UI update to existing preview channel
+        working-directory: apps/mobile-app
+        run: |
+          npx eas-cli update \
+            --channel preview \
+            --environment preview \
+            --message "Remove Activity History from self-tracked Claim Tracker" \
+            --non-interactive
