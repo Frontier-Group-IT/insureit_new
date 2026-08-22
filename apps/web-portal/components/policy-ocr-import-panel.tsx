@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
+import { Eraser, FileUp } from "lucide-react";
 import { extractPolicyDocument, type PolicyOcrField } from "@/app/policies/policy-ocr-actions";
 
 export const SECTION_02_OCR_FIELDS = [
@@ -58,6 +59,7 @@ const APPLY_ORDER = [
   "policy_start_date",
   "policy_end_date",
 ];
+const POLICY_DRAFT_KEY = "insureit:policy-onboarding:draft:v1";
 
 export type PolicyOcrImportContext = {
   mode: "create" | "edit";
@@ -82,6 +84,7 @@ type ReviewedField = PolicyOcrField & { currentValue: string; reviewState: Revie
 
 export function PolicyOcrImportPanel({ variant = "header", context, onApply }: PolicyOcrImportPanelProps) {
   const [open, setOpen] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const [fields, setFields] = useState<PolicyOcrField[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [documentName, setDocumentName] = useState("");
@@ -142,6 +145,12 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply }: P
     resetReview();
     setDocumentName("");
     formRef.current?.reset();
+  }
+
+  function clearPolicyDraft() {
+    try { sessionStorage.removeItem(POLICY_DRAFT_KEY); } catch {}
+    setConfirmClear(false);
+    window.location.reload();
   }
 
   function submit(formData: FormData) {
@@ -259,7 +268,19 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply }: P
       </div>
     </div>, document.body) : null;
 
-  return <>{variant === "icon" ? <button type="button" onClick={()=>setOpen(true)} aria-label="Import Section 02 and 03 from policy copy" title="Import vehicle + policy details" className="grid h-8 w-8 place-items-center rounded-lg border border-[#D7E0EA] bg-white text-[#315B9A] shadow-sm transition hover:border-[#B8C8DC] hover:bg-[#F3F7FC] focus:outline-none focus:ring-2 focus:ring-[#DCE8FA]"><PolicyReadIcon/></button> : <button type="button" onClick={()=>setOpen(true)} className="rounded-xl border border-white/35 bg-white/10 px-4 py-2.5 text-[10px] font-bold text-white shadow-sm transition hover:bg-white/20">Import Policy Details</button>}{modal}</>;
+  const clearModal = confirmClear && typeof document !== "undefined" ? createPortal(
+    <div className="fixed inset-0 z-[10000] grid min-h-[100dvh] w-screen place-items-center bg-[#071D49]/65 p-4 backdrop-blur-[3px]" role="alertdialog" aria-modal="true" aria-labelledby="clear-policy-form-title">
+      <div className="w-full max-w-[430px] overflow-hidden rounded-2xl border border-white/70 bg-white shadow-[0_26px_80px_rgba(7,29,73,.42)]">
+        <div className="px-6 pb-5 pt-6 text-center">
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#FFF4E2] text-[#C56B12] ring-8 ring-[#FFF9F0]"><Eraser className="h-5 w-5" strokeWidth={2}/></div>
+          <h2 id="clear-policy-form-title" className="mt-4 text-[15px] font-bold text-[#102A4C]">Clear policy form?</h2>
+          <p className="mx-auto mt-2 max-w-sm text-[10.5px] leading-5 text-[#667085]">This removes all details entered in the current policy onboarding draft and restores the form to its default state.</p>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-[#E6EBF2] bg-[#F8FAFC] px-5 py-3.5"><button type="button" onClick={()=>setConfirmClear(false)} className="h-10 rounded-xl border border-[#D1D9E4] bg-white px-4 text-[9.5px] font-semibold text-[#475467] transition hover:bg-[#F3F6FA]">Cancel</button><button type="button" onClick={clearPolicyDraft} className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#B85C16] px-4 text-[9.5px] font-bold text-white shadow-sm transition hover:bg-[#9F4E12]"><Eraser className="h-4 w-4" strokeWidth={2}/><span>Clear form</span></button></div>
+      </div>
+    </div>, document.body) : null;
+
+  return <>{variant === "icon" ? <button type="button" onClick={()=>setOpen(true)} aria-label="Import Section 02 and 03 from policy copy" title="Import vehicle + policy details" className="grid h-8 w-8 place-items-center rounded-lg border border-[#D7E0EA] bg-white text-[#315B9A] shadow-sm transition hover:border-[#B8C8DC] hover:bg-[#F3F7FC] focus:outline-none focus:ring-2 focus:ring-[#DCE8FA]"><FileUp className="h-4 w-4" strokeWidth={1.9}/></button> : <div className="flex flex-wrap items-center justify-end gap-2"><button type="button" onClick={()=>setOpen(true)} className="group inline-flex h-10 items-center gap-2 rounded-xl border border-white/30 bg-white/10 px-3.5 text-[10px] font-bold text-white shadow-sm transition hover:border-white/45 hover:bg-white/18 focus:outline-none focus:ring-2 focus:ring-white/25"><span className="grid h-7 w-7 place-items-center rounded-lg bg-[#0F466D]/55 text-[#7CE7E0] ring-1 ring-white/10 transition group-hover:bg-[#12547F]"><FileUp className="h-4 w-4" strokeWidth={2}/></span><span>Import Policy Details</span></button>{context.mode === "create" ? <button type="button" onClick={()=>setConfirmClear(true)} className="group inline-flex h-10 items-center gap-2 rounded-xl border border-white/22 bg-[#071D49]/24 px-3.5 text-[10px] font-semibold text-white/90 shadow-sm transition hover:border-[#FFC66D]/60 hover:bg-[#5B3514]/22 hover:text-white focus:outline-none focus:ring-2 focus:ring-[#FFC66D]/20"><span className="grid h-7 w-7 place-items-center rounded-lg bg-[#5A3A17]/45 text-[#FFC66D] ring-1 ring-[#FFC66D]/20 transition group-hover:bg-[#6A4319]/60"><Eraser className="h-4 w-4" strokeWidth={2}/></span><span>Clear Form</span></button> : null}</div>}{modal}{clearModal}</>;
 }
 
 function ReviewGroup({number,title,fields,selected,onToggle,onSelectAll,onClear}:{number:string;title:string;fields:ReviewedField[];selected:Set<string>;onToggle:(key:string)=>void;onSelectAll:()=>void;onClear:()=>void}){
@@ -272,7 +293,6 @@ function ReviewRow({field,checked,onToggle}:{field:ReviewedField;checked:boolean
 }
 
 function SummaryChip({label,value,tone="neutral"}:{label:string;value:string;tone?:"neutral"|"warn"|"ok"}){const style=tone==="warn"?"border-[#F0D9A8] bg-[#FFF8E8] text-[#8A5A10]":tone==="ok"?"border-[#CFE8DA] bg-[#F1FAF5] text-[#18794E]":"border-[#D6E0EB] bg-white text-[#53657D]";return <span className={`rounded-full border px-2.5 py-1 text-[8px] font-semibold ${style}`}>{label} · {value}</span>;}
-function PolicyReadIcon(){return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[16px] w-[16px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8"/><path d="M14 2v6h6"/><path d="M9 13h3"/><path d="M9 17h2"/><circle cx="17" cy="16" r="3"/><path d="m19.2 18.2 2 2"/></svg>;}
 function friendlyParserName(parserId:string){if(parserId.startsWith("digit_"))return"Digit commercial vehicle format";if(parserId.startsWith("iffco_tokio_"))return"IFFCO-Tokio commercial vehicle format";if(parserId.startsWith("new_india_"))return"New India motor format";return"Standard motor policy format";}
 function friendlyMethod(method:string){return method==="native_pdf_text"?"digital policy":"Google Document AI";}
 function formatFieldValue(field:PolicyOcrField){if(["idv","od_premium","tp_premium","cpa_premium","total_premium","tax_amount","gross_premium"].includes(field.key)){const number=Number(field.value.replace(/,/g,""));if(Number.isFinite(number))return new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2}).format(number);}return field.value;}
