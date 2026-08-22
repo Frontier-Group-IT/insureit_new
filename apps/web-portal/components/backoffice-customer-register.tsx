@@ -2,72 +2,21 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Plus, Search, Truck, ShieldCheck } from "lucide-react";
+import { Eye, Plus, Search, Truck, ShieldCheck } from "lucide-react";
 
-export type BackofficeCustomerRow = {
-  id: string;
-  customer_code: string;
-  partner_type: string | null;
-  company_name: string | null;
-  contact_name: string;
-  phone: string;
-  city: string | null;
-  onboarding_status: string;
-  vehicles: { count: number }[];
-  policies: { count: number }[];
-};
-
-const partnerLabels: Record<string, string> = {
-  individual_proprietor: "Individual / Proprietor",
-  dealership: "Dealership",
-  corporate: "Corporate",
-  group: "Group",
-  posp: "POSP",
-  misp: "MISP",
-};
+export type BackofficeCustomerRow = { id: string; customer_code: string; partner_type: string | null; company_name: string | null; contact_name: string; phone: string; city: string | null; onboarding_status: string; vehicles: { count: number }[]; policies: { count: number }[]; };
+const partnerLabels: Record<string, string> = { individual_proprietor: "Individual / Proprietor", dealership: "Dealership", corporate: "Corporate", group: "Group", posp: "POSP", misp: "MISP" };
 
 export function BackofficeCustomerRegister({ rows }: { rows: BackofficeCustomerRow[] }) {
   const [query, setQuery] = useState("");
-  const filtered = useMemo(() => {
-    const value = query.trim().toLowerCase();
-    if (!value) return rows;
-    return rows.filter((row) => [row.customer_code, row.contact_name, row.company_name, row.phone, row.city]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase()
-      .includes(value));
-  }, [query, rows]);
-
-  return (
-    <div className="mx-auto max-w-[1480px] overflow-hidden rounded-2xl border border-[#D9E2EE] bg-white shadow-sm">
-      <div className="flex flex-col gap-3 border-b border-[#E6EBF2] bg-[#F8FAFC] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-[9px] font-bold uppercase tracking-[.1em] text-[#64748B]">Operational register</p>
-          <h1 className="mt-1 text-[16px] font-semibold text-[#17365D]">Customer Register</h1>
-          <p className="mt-1 text-[9.5px] text-[#667085]">View operational customer records. Identity/KYC documents and protected profile editing are not available in this role.</p>
-        </div>
-        <Link href="/customers/data-entry/new" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-4 text-[10.5px] font-bold text-white shadow-sm transition hover:bg-[#102A49]"><Plus className="h-4 w-4" />Add Customer</Link>
-      </div>
-
-      <div className="border-b border-[#E6EBF2] px-4 py-3">
-        <label className="relative block max-w-[420px]"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search customer, code, mobile or city" className="h-10 w-full rounded-xl border border-[#D8E0EA] bg-white pl-9 pr-3 text-[10.5px] outline-none transition focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]" /></label>
-      </div>
-
-      <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[900px] text-left text-[10.5px]">
-          <thead className="border-b border-[#E6EBF2] bg-[#FBFCFE] text-[8.5px] font-bold uppercase tracking-[.06em] text-[#64748B]"><tr><th className="px-4 py-3">Customer</th><th className="px-3 py-3">Type</th><th className="px-3 py-3">Mobile</th><th className="px-3 py-3">City</th><th className="px-3 py-3 text-center">Vehicles</th><th className="px-3 py-3 text-center">Policies</th><th className="px-3 py-3">Status</th><th className="px-4 py-3 text-right">Data entry</th></tr></thead>
-          <tbody className="divide-y divide-[#EEF2F6]">{filtered.map((row) => <tr key={row.id} className="hover:bg-[#FAFCFF]"><td className="px-4 py-3"><p className="font-bold text-[#17203A]">{row.contact_name}</p><p className="mt-0.5 text-[8.5px] text-[#7A8798]">{row.company_name || row.customer_code}</p></td><td className="px-3 py-3 font-medium text-[#475467]">{row.partner_type ? partnerLabels[row.partner_type] ?? row.partner_type : "Customer"}</td><td className="px-3 py-3 tabular-nums text-[#334155]">{row.phone}</td><td className="px-3 py-3 text-[#475467]">{row.city || "—"}</td><td className="px-3 py-3 text-center font-semibold">{count(row.vehicles)}</td><td className="px-3 py-3 text-center font-semibold">{count(row.policies)}</td><td className="px-3 py-3"><Status active={row.onboarding_status === "active"} /></td><td className="px-4 py-3 text-right"><Link href={`/vehicles/new?customer_id=${row.id}`} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#C8D7EB] bg-[#F3F7FC] px-3 text-[9px] font-bold text-[#315B9A]"><Truck className="h-3.5 w-3.5" />Add Vehicle</Link></td></tr>)}</tbody>
-        </table>
-      </div>
-
-      <div className="space-y-2 p-3 md:hidden">{filtered.map((row) => <article key={row.id} className="rounded-xl border border-[#E1E7EF] bg-white p-3"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><p className="truncate text-[13px] font-bold text-[#17203A]">{row.contact_name}</p><p className="mt-0.5 text-[9px] text-[#7A8798]">{row.customer_code} · {row.phone}</p></div><Status active={row.onboarding_status === "active"} /></div><div className="mt-3 grid grid-cols-2 gap-2 text-[9.5px] text-[#53657D]"><span className="rounded-lg bg-[#F8FAFC] px-2.5 py-2">{row.city || "Location not set"}</span><span className="rounded-lg bg-[#F8FAFC] px-2.5 py-2">{count(row.vehicles)} vehicles · {count(row.policies)} policies</span></div><Link href={`/vehicles/new?customer_id=${row.id}`} className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-[#C8D7EB] bg-[#F3F7FC] text-[10px] font-bold text-[#315B9A]"><Truck className="h-3.5 w-3.5" />Add Vehicle</Link></article>)}</div>
-
-      {!filtered.length ? <div className="px-5 py-10 text-center text-[10px] text-[#7A8798]">No matching customers found.</div> : null}
-    </div>
-  );
+  const filtered = useMemo(() => { const value = query.trim().toLowerCase(); if (!value) return rows; return rows.filter((row) => [row.customer_code,row.contact_name,row.company_name,row.phone,row.city].filter(Boolean).join(" ").toLowerCase().includes(value)); }, [query, rows]);
+  return <div className="mx-auto max-w-[1480px] overflow-hidden rounded-2xl border border-[#D9E2EE] bg-white shadow-sm">
+    <div className="flex flex-col gap-3 border-b border-[#E6EBF2] bg-[#F8FAFC] px-4 py-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-[9px] font-bold uppercase tracking-[.1em] text-[#64748B]">Operational register · read-only existing records</p><h1 className="mt-1 text-[16px] font-semibold text-[#17365D]">Customer Register</h1><p className="mt-1 text-[9.5px] text-[#667085]">Open basic customer details for verification. KYC documents and protected profile editing remain unavailable.</p></div><Link href="/customers/data-entry/new" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-4 text-[10.5px] font-bold text-white"><Plus className="h-4 w-4"/>Add Customer</Link></div>
+    <div className="border-b border-[#E6EBF2] px-4 py-3"><label className="relative block max-w-[420px]"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]"/><input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Search customer, code, mobile or city" className="h-10 w-full rounded-xl border border-[#D8E0EA] bg-white pl-9 pr-3 text-[10.5px] outline-none"/></label></div>
+    <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[950px] text-left text-[10.5px]"><thead className="border-b border-[#E6EBF2] bg-[#FBFCFE] text-[8.5px] font-bold uppercase text-[#64748B]"><tr><th className="px-4 py-3">Customer</th><th className="px-3 py-3">Type</th><th className="px-3 py-3">Mobile</th><th className="px-3 py-3">City</th><th className="px-3 py-3 text-center">Vehicles</th><th className="px-3 py-3 text-center">Policies</th><th className="px-3 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-[#EEF2F6]">{filtered.map((row)=><tr key={row.id} className="hover:bg-[#FAFCFF]"><td className="px-4 py-3"><Link href={`/customers/${row.id}`} className="font-bold text-[#17203A] hover:text-[#315B9A]">{row.contact_name}</Link><p className="mt-0.5 text-[8.5px] text-[#7A8798]">{row.company_name || row.customer_code}</p></td><td className="px-3 py-3 text-[#475467]">{row.partner_type ? partnerLabels[row.partner_type] ?? row.partner_type : "Customer"}</td><td className="px-3 py-3">{row.phone}</td><td className="px-3 py-3">{row.city || "—"}</td><td className="px-3 py-3 text-center font-semibold">{count(row.vehicles)}</td><td className="px-3 py-3 text-center font-semibold">{count(row.policies)}</td><td className="px-3 py-3"><Status active={row.onboarding_status === "active"}/></td><td className="px-4 py-3 text-right"><div className="inline-flex gap-2"><Link href={`/customers/${row.id}`} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#CFE0F2] bg-[#EFF6FF] px-3 text-[9px] font-bold text-[#315B9A]"><Eye className="h-3.5 w-3.5"/>View</Link><Link href={`/vehicles/new?customer_id=${row.id}`} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#C8D7EB] bg-[#F3F7FC] px-3 text-[9px] font-bold text-[#315B9A]"><Truck className="h-3.5 w-3.5"/>Add Vehicle</Link></div></td></tr>)}</tbody></table></div>
+    <div className="space-y-2 p-3 md:hidden">{filtered.map((row)=><article key={row.id} className="rounded-xl border border-[#E1E7EF] bg-white p-3"><div className="flex items-start justify-between gap-2"><div><Link href={`/customers/${row.id}`} className="text-[13px] font-bold text-[#17203A]">{row.contact_name}</Link><p className="mt-0.5 text-[9px] text-[#7A8798]">{row.customer_code} · {row.phone}</p></div><Status active={row.onboarding_status === "active"}/></div><div className="mt-3 grid grid-cols-2 gap-2 text-[9.5px] text-[#53657D]"><span className="rounded-lg bg-[#F8FAFC] px-2.5 py-2">{row.city || "Location not set"}</span><span className="rounded-lg bg-[#F8FAFC] px-2.5 py-2">{count(row.vehicles)} vehicles · {count(row.policies)} policies</span></div><div className="mt-3 grid grid-cols-2 gap-2"><Link href={`/customers/${row.id}`} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-[#EFF6FF] text-[10px] font-bold text-[#315B9A]"><Eye className="h-3.5 w-3.5"/>View</Link><Link href={`/vehicles/new?customer_id=${row.id}`} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#C8D7EB] bg-[#F3F7FC] text-[10px] font-bold text-[#315B9A]"><Truck className="h-3.5 w-3.5"/>Add Vehicle</Link></div></article>)}</div>
+    {!filtered.length ? <div className="px-5 py-10 text-center text-[10px] text-[#7A8798]">No matching customers found.</div> : null}
+  </div>;
 }
-
-function Status({ active }: { active: boolean }) {
-  return <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[8px] font-bold ${active ? "bg-[#EAF7F0] text-[#18794E]" : "bg-[#FFF4DF] text-[#9A6412]"}`}><ShieldCheck className="h-3 w-3" />{active ? "Active" : "KYC pending"}</span>;
-}
+function Status({ active }: { active: boolean }) { return <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[8px] font-bold ${active ? "bg-[#EAF7F0] text-[#18794E]" : "bg-[#FFF4DF] text-[#9A6412]"}`}><ShieldCheck className="h-3 w-3"/>{active ? "Active" : "KYC pending"}</span>; }
 function count(value: { count: number }[] | undefined) { return value?.[0]?.count ?? 0; }
