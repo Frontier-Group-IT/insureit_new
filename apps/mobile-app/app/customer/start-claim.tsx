@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { ActiveClaimPopup } from '@/components/active-claim-popup';
 import { ClaimActionBar } from '@/components/external-claim-ui';
 import { EmptyState, LoadingState, Message, Screen } from '@/components/ui';
 import { customerAccountTitle, getOperationalCustomerContexts, type CustomerAccountContext } from '@/lib/customer-context';
@@ -22,6 +23,22 @@ type PolicyChoice = {
   source: 'sibl' | 'external';
 };
 
+type SelfManagedClaimRow = {
+  id: string;
+  current_status?: string | null;
+  created_at?: string | null;
+};
+
+type SelfManagedMilestoneRow = {
+  claim_id: string;
+  milestone_key: string;
+  milestone_status: string;
+};
+
+const SELF_MANAGED_MILESTONE_COUNT = 9;
+const SETTLED_SELF_MANAGED_STATUSES = new Set(['Settled', 'Closed', 'Claim Complete']);
+const COMPLETED_MILESTONE_STATUSES = new Set(['completed', 'not_applicable']);
+
 export default function StartClaimScreen() {
   const router = useRouter();
   const [contexts, setContexts] = useState<CustomerAccountContext[]>([]);
@@ -33,6 +50,8 @@ export default function StartClaimScreen() {
   const [vehicleQuery, setVehicleQuery] = useState('');
   const [vehicleOpen, setVehicleOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [checkingActiveClaim, setCheckingActiveClaim] = useState(false);
+  const [existingActiveClaimId, setExistingActiveClaimId] = useState('');
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -89,6 +108,7 @@ export default function StartClaimScreen() {
   useEffect(() => {
     setVehicleQuery('');
     setVehicleOpen(false);
+    setExistingActiveClaimId('');
   }, [selectedVehicleId]);
 
   function selectAccount(customerId: string) {
@@ -97,10 +117,24 @@ export default function StartClaimScreen() {
     setSelectedVehicleId(first?.id ?? '');
   }
 
-  function continueClaim() {
-    if (!selectedVehicle || !selectedPolicy) return;
+  async function continueClaim() {
+    if (!selectedVehicle || !selectedPolicy || checkingActiveClaim) return;
     if (selectedPolicy.source === 'external') {
-      router.push({ pathname: '/customer/self-managed-claim', params: { externalPolicyId: selectedPolicy.id } } as any);
+      setMessage('');
+      setCheckingActiveClaim(true);
+      try {
+        const existingClaim = await findActiveSelfManagedClaim(selectedPolicy.id);
+        if (existingClaim) {
+          setExistingActiveClaimId(existingClaim.id);
+          return;
+        }
+        router.push({ pathname: '/customer/self-managed-claim', params: { externalPolicyId: selectedPolicy.id } } as any);
+      } catch (error) {
+        console.warn('Active self-tracked claim check failed', error);
+        setMessage('We could not verify existing claims right now. Please try again.');
+      } finally {
+        setCheckingActiveClaim(false);
+      }
       return;
     }
     router.push({ pathname: '/customer/report-accident', params: { vehicleId: selectedVehicle.id, policyId: selectedPolicy.id } });
@@ -108,6 +142,13 @@ export default function StartClaimScreen() {
 
   function addPolicy() {
     router.push({ pathname: '/customer/add-policy', params: { vehicleId: selectedVehicleId } } as any);
+  }
+
+  function viewExistingClaim() {
+    if (!existingActiveClaimId) return;
+    const id = existingActiveClaimId;
+    setExistingActiveClaimId('');
+    router.push({ pathname: '/customer/claim-detail', params: { id } });
   }
 
   if (loading) return <Screen title="Start Claim"><LoadingState label="Loading your policies" /></Screen>;
@@ -163,16 +204,56 @@ export default function StartClaimScreen() {
       </View>
 
       <ClaimActionBar
-        primaryDisabled={!selectedPolicy}
-        primaryLabel={selectedPolicy?.source === 'external' ? 'Start Claim' : 'Continue to Incident Report'}
+        primaryDisabled={!selectedPolicy || checkingActiveClaim}
+        primaryLabel={checkingActiveClaim ? 'Checking...' : selectedPolicy?.source === 'external' ? 'Start Claim' : 'Continue to Incident Report'}
         primaryIcon="arrow-right"
-        onPrimary={continueClaim}
+        onPrimary={() => void continueClaim()}
         onAssistance={() => router.push('/customer/support')}
+      />
+
+      <ActiveClaimPopup
+        visible={Boolean(existingActiveClaimId)}
+        onViewClaim={viewExistingClaim}
+        onCancel={() => setExistingActiveClaimId('')}
       />
 
       <Image accessible={false} source={require('../../assets/brand/start-claim/start-claim-footer-scene.png')} style={styles.footerArtwork} resizeMode="contain" />
     </Screen>
   );
+}
+
+async function findActiveSelfManagedClaim(externalPolicyId: string): Promise<SelfManagedClaimRow | null> {
+  const claimResult = await (supabase as any)
+    .from('claims')
+    .select('id,current_status,created_at')
+    .eq('external_policy_id', externalPolicyId)
+    .eq('claim_service_mode', 'self_managed')
+    .order('created_at', { ascending: false });
+
+  if (claimResult.error) throw claimResult.error;
+  const claims = (claimResult.data ?? []) as SelfManagedClaimRow[];
+  if (!claims.length) return null;
+
+  const unsettledClaims = claims.filter((claim) => !SETTLED_SELF_MANAGED_STATUSES.has(claim.current_status ?? ''));
+  if (!unsettledClaims.length) return null;
+
+  const claimIds = unsettledClaims.map((claim) => claim.id);
+  const milestoneResult = await (supabase as any)
+    .from('claim_milestones')
+    .select('claim_id,milestone_key,milestone_status')
+    .in('claim_id', claimIds);
+  if (milestoneResult.error) throw milestoneResult.error;
+
+  const milestones = (milestoneResult.data ?? []) as SelfManagedMilestoneRow[];
+  for (const claim of unsettledClaims) {
+    const completedKeys = new Set(
+      milestones
+        .filter((item) => item.claim_id === claim.id && COMPLETED_MILESTONE_STATUSES.has(item.milestone_status))
+        .map((item) => item.milestone_key),
+    );
+    if (completedKeys.size < SELF_MANAGED_MILESTONE_COUNT) return claim;
+  }
+  return null;
 }
 
 function ChoiceChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
