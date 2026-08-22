@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
+import { BackofficeVehicleRegister } from "@/components/backoffice-vehicle-register";
 import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
@@ -30,7 +31,7 @@ export default async function VehiclesPage() {
   const admin = createSupabaseAdminClient();
 
   if (accessibleCustomerIds !== null && !accessibleCustomerIds.length) {
-    return <AppShell title="Vehicles"><VehicleWorkspace rows={[]} /></AppShell>;
+    return <AppShell title="Vehicles">{profile.role === "backoffice_executive" ? <BackofficeVehicleRegister rows={[]} /> : <VehicleWorkspace rows={[]} />}</AppShell>;
   }
 
   let query = admin
@@ -54,7 +55,7 @@ export default async function VehiclesPage() {
           }))}
         />
       ) : null}
-      {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3"><p className="text-[11px] font-semibold text-red-700">The vehicle register is temporarily unavailable.</p><p className="mt-1 text-[9.5px] text-[#64748B]">Please refresh the page or try again shortly.</p></div> : <VehicleWorkspace rows={rows} />}
+      {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3"><p className="text-[11px] font-semibold text-red-700">The vehicle register is temporarily unavailable.</p><p className="mt-1 text-[9.5px] text-[#64748B]">Please refresh the page or try again shortly.</p></div> : profile.role === "backoffice_executive" ? <BackofficeVehicleRegister rows={rows} /> : <VehicleWorkspace rows={rows} />}
     </AppShell>
   );
 }

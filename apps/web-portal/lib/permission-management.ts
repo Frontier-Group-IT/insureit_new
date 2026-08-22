@@ -25,7 +25,7 @@ const labels: Record<Capability, Omit<PermissionDefinition, "capability" | "role
   review_intermediary_application: { module: "Intermediaries", label: "Review onboarding applications", description: "Review and edit submitted onboarding information and documents.", risk: "sensitive" },
   approve_intermediary_application: { module: "Intermediaries", label: "Approve onboarding applications", description: "Give final onboarding approval before activation.", risk: "high" },
   activate_intermediary: { module: "Intermediaries", label: "Activate intermediary", description: "Activate approved Partner, POSP or MISP accounts.", risk: "critical" },
-  view_customers: { module: "Customers", label: "View customers", description: "Open customer register records within the permitted scope.", risk: "standard" },
+  view_customers: { module: "Customers", label: "View customers", description: "Open customer register and read-only customer details within the permitted scope.", risk: "standard" },
   create_customers: { module: "Customers", label: "Add customers", description: "Create new operational customer records without granting authority to edit existing customer identity or KYC records.", risk: "sensitive" },
   manage_customers: { module: "Customers", label: "Edit customers", description: "Create and modify customer and related fleet records.", risk: "sensitive" },
   view_kyc: { module: "KYC", label: "View KYC", description: "Open customer KYC records and documents.", risk: "sensitive" },
@@ -33,9 +33,9 @@ const labels: Record<Capability, Omit<PermissionDefinition, "capability" | "role
   view_employees: { module: "Employees", label: "View employees", description: "Open the employee directory and employee details.", risk: "sensitive" },
   manage_employees: { module: "Employees", label: "Edit employees", description: "Create, modify or deactivate employee records.", risk: "high" },
   view_org_tree: { module: "Employees", label: "View organisation tree", description: "View reporting hierarchy and organisation structure.", risk: "sensitive" },
-  view_vehicles: { module: "Fleet", label: "View vehicles", description: "Open vehicle and fleet records.", risk: "standard" },
+  view_vehicles: { module: "Fleet", label: "View vehicles", description: "Open vehicle register and read-only vehicle details.", risk: "standard" },
   create_vehicles: { module: "Fleet", label: "Add vehicles", description: "Create new vehicle records without granting authority to modify established vehicle identity records.", risk: "sensitive" },
-  view_policies: { module: "Policies", label: "View policies", description: "Open policy records and policy information.", risk: "standard" },
+  view_policies: { module: "Policies", label: "View policies", description: "Open policy registers and protected read-only policy details without financial settlement controls.", risk: "standard" },
   create_policies: { module: "Policies", label: "Add policies", description: "Create new managed policy records without granting edit authority over existing policies or financial settlement controls.", risk: "sensitive" },
   create_external_policies: { module: "Policies", label: "Add external policies", description: "Create new external policy records without granting edit authority over existing policy records.", risk: "sensitive" },
   review_policy_ocr_training: { module: "Policies", label: "Operate premium OCR training", description: "Run Google OCR, inspect comparisons and approve sanitized Section 03 training candidates.", risk: "high" },
@@ -67,11 +67,18 @@ const backofficePermissionCeiling: Partial<Record<Capability, PermissionAccess>>
   view_reports: "view",
   view_notifications: "view",
 };
-const accessRank: Record<PermissionAccess, number> = { none: 0, view: 1, edit: 2, approve: 3 };
+export const permissionAccessRank: Record<PermissionAccess, number> = { none: 0, view: 1, edit: 2, approve: 3 };
+
+export function maximumPermissionAccessForRole(role: AppRole, capability: Capability): PermissionAccess {
+  if (role === "it_super_user") return "approve";
+  if (role === "backoffice_executive") return backofficePermissionCeiling[capability] ?? "none";
+  return "approve";
+}
+
 function capBackofficeAccess(role: AppRole, capability: Capability, access: PermissionAccess): PermissionAccess {
   if (role !== "backoffice_executive") return access;
   const ceiling = backofficePermissionCeiling[capability] ?? "none";
-  return accessRank[access] > accessRank[ceiling] ? ceiling : access;
+  return permissionAccessRank[access] > permissionAccessRank[ceiling] ? ceiling : access;
 }
 
 export function rolePermissionAccess(role: string | null | undefined, capability: Capability): PermissionAccess {
@@ -80,15 +87,10 @@ export function rolePermissionAccess(role: string | null | undefined, capability
   return permissionDefinitions.find((item) => item.capability === capability)?.roleAccess ?? "view";
 }
 
-export function permissionModules() {
-  return Array.from(new Set(permissionDefinitions.map((item) => item.module)));
-}
+export function permissionModules() { return Array.from(new Set(permissionDefinitions.map((item) => item.module))); }
 
 export const getEffectivePermission = cache(async (profileId: string, role: AppRole, capability: Capability) => {
-  if (role === "it_super_user") {
-    return { access: "approve" as const, scope: "organization" as const, source: "protected_role" as const };
-  }
-
+  if (role === "it_super_user") return { access: "approve" as const, scope: "organization" as const, source: "protected_role" as const };
   const admin = createSupabaseAdminClient();
   const now = new Date().toISOString();
   const [{ data: employeeOverride }, { data: roleOverride }] = await Promise.all([
@@ -101,41 +103,19 @@ export const getEffectivePermission = cache(async (profileId: string, role: AppR
 });
 
 export const getEffectivePermissionAccessMapForRole = cache(async (profileId: string, role: AppRole) => {
-  if (role === "it_super_user") {
-    return Object.fromEntries(permissionDefinitions.map(({ capability }) => [capability, "approve" as const])) as Partial<Record<Capability, PermissionAccess>>;
-  }
-
+  if (role === "it_super_user") return Object.fromEntries(permissionDefinitions.map(({ capability }) => [capability, "approve" as const])) as Partial<Record<Capability, PermissionAccess>>;
   const admin = createSupabaseAdminClient();
   const now = new Date().toISOString();
   const [{ data: employeeOverrides }, { data: roleOverrides }] = await Promise.all([
-    admin
-      .from("employee_permission_overrides")
-      .select("capability,access_level,scope_type,expires_at")
-      .eq("profile_id", profileId)
-      .or(`expires_at.is.null,expires_at.gt.${now}`),
-    admin
-      .from("role_permission_overrides")
-      .select("capability,access_level,scope_type")
-      .eq("role", role),
+    admin.from("employee_permission_overrides").select("capability,access_level,scope_type,expires_at").eq("profile_id", profileId).or(`expires_at.is.null,expires_at.gt.${now}`),
+    admin.from("role_permission_overrides").select("capability,access_level,scope_type").eq("role", role),
   ]);
-
-  const employeeOverrideByCapability = new Map(
-    (employeeOverrides ?? [])
-      .filter((row) => row.access_level !== "inherit")
-      .map((row) => [row.capability as Capability, row.access_level as PermissionAccess]),
-  );
-  const roleOverrideByCapability = new Map(
-    (roleOverrides ?? []).map((row) => [row.capability as Capability, row.access_level as PermissionAccess]),
-  );
-
+  const employeeOverrideByCapability = new Map((employeeOverrides ?? []).filter((row) => row.access_level !== "inherit").map((row) => [row.capability as Capability, row.access_level as PermissionAccess]));
+  const roleOverrideByCapability = new Map((roleOverrides ?? []).map((row) => [row.capability as Capability, row.access_level as PermissionAccess]));
   return Object.fromEntries(permissionDefinitions.map(({ capability }) => {
-    const access = employeeOverrideByCapability.get(capability)
-      ?? roleOverrideByCapability.get(capability)
-      ?? rolePermissionAccess(role, capability);
+    const access = employeeOverrideByCapability.get(capability) ?? roleOverrideByCapability.get(capability) ?? rolePermissionAccess(role, capability);
     return [capability, capBackofficeAccess(role, capability, access)] as const;
   })) as Partial<Record<Capability, PermissionAccess>>;
 });
 
-export function roleCapabilityCount(role: AppRole) {
-  return roleCapabilities[role].length;
-}
+export function roleCapabilityCount(role: AppRole) { return roleCapabilities[role].length; }
