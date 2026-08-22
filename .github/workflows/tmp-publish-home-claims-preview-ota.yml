@@ -1,0 +1,54 @@
+name: Publish Home claims preview OTA
+
+on:
+  push:
+    branches:
+      - fix/external-claim-all-stage-error-popups
+    paths:
+      - '.github/workflows/tmp-publish-home-claims-preview-ota.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/external-claim-all-stage-error-popups
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Publish UI update to existing preview channel
+        working-directory: apps/mobile-app
+        shell: bash
+        run: |
+          npx eas-cli update \
+            --channel preview \
+            --environment preview \
+            --message "Open My Claims with selected Home dashboard filter" \
+            --non-interactive
+
+      - name: Remove temporary workflow from feature branch
+        if: success()
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/tmp-publish-home-claims-preview-ota.yml
+          git commit -m "Remove temporary Home claims preview OTA workflow"
+          git push origin HEAD:fix/external-claim-all-stage-error-popups
