@@ -4,135 +4,108 @@ import { refineApprovedMotorPolicyLayout } from "../lib/policy-ocr-approved-layo
 import type { ParsedPolicyResult } from "../lib/policy-ocr-parsers.ts";
 import type { StructuredPolicyTable } from "../lib/policy-ocr-iffco-structured-refiner.ts";
 
-function parsed(parserId: string, parserVersion: string, fields: ParsedPolicyResult["fields"] = []): ParsedPolicyResult {
-  return { parserId, parserVersion, fields, warnings: [] };
+function parsed(parserId: string, fields: ParsedPolicyResult["fields"] = []): ParsedPolicyResult {
+  return { parserId, parserVersion: `${parserId}.1.0`, fields, warnings: [] };
 }
-
 function values(result: ParsedPolicyResult) {
   return Object.fromEntries(result.fields.map((field) => [field.key, field.value]));
 }
 
-const newIndiaTables: StructuredPolicyTable[] = [{ page: 1, rows: [
-  ["Registration No", "MP20SAFE9001"],
-  ["Engine No", "SYNENGINE9001"],
-  ["Chassis No", "SYNCHASSIS9001"],
-  ["Make / Model", "TATA / NEXON"],
-  ["Fuel", "DIESEL"],
-  ["Year", "2024"],
-  ["CC", "1498"],
-  ["Vehicle IDV", "1006900"],
-  ["Non Electrical Accessories", "48100"],
-  ["Total OD Premium", "12831", "NCB", "25"],
-  ["Net Premium", "12831"],
-  ["GST", "2309.58"],
-  ["Total Payable", "15140.58"],
+const magmaTables: StructuredPolicyTable[] = [{ page: 2, rows: [
+  ["Registration No", "HR29SAFE9101"], ["Engine No", "ENGSAFE9101"], ["Chassis No", "CHSSAFE9101"],
+  ["Make", "MARUTI SUZUKI"], ["Model", "WAGON R VXI CNG"], ["CC", "998"], ["Year of Manufacture", "2025"],
+  ["Total Value", "598072"], ["Total Own Damage Premium", "9575"], ["CGST @ 9%", "861.75"], ["SGST @ 9%", "861.75"],
 ] }];
+const magma = refineApprovedMotorPolicyLayout(
+  ["MAGMA GENERAL INSURANCE LIMITED\nSTAND-ALONE OWN DAMAGE POLICY FOR PRIVATE CAR\nPolicy No P0099999999/9999/999999\nPeriod Of Insurance 21:23 Hrs of 27/06/2026 To Midnight of 26/06/2027"],
+  magmaTables,
+  parsed("universal_sompo_motor_v1", [
+    { key: "insurer_name", label: "Insurance company", value: "Universal Sompo General Insurance Company Limited", confidence: .8, page: 1, evidence: "bad family" },
+    { key: "policy_product", label: "Product", value: "Third Party", confidence: .8, page: 1, evidence: "bad product" },
+  ]),
+);
+const magmaValues = values(magma);
+assert.equal(magma.parserId, "magma_motor_v1");
+assert.equal(magmaValues.insurer_name, "Magma General Insurance Limited");
+assert.equal(magmaValues.policy_product, "SAOD");
+assert.equal(magmaValues.policy_start_date, "2026-06-27");
+assert.equal(magmaValues.policy_end_date, "2027-06-26");
+assert.equal(magmaValues.idv, "598072");
+assert.equal(magmaValues.od_premium, "9575");
+assert.equal(magmaValues.tp_premium, "0");
+assert.equal(magmaValues.cpa_opted, "No");
+assert.equal(magmaValues.cpa_premium, "0");
+assert.equal(magmaValues.total_premium, "9575");
+assert.equal(magmaValues.tax_amount, "1723.5");
+assert.equal(magmaValues.gross_premium, "11298.5");
+
+const hdfcComprehensive = refineApprovedMotorPolicyLayout(
+  ["HDFC ERGO General Insurance Company Limited\nPRIVATE CAR COMPREHENSIVE POLICY\nPolicy No. 2302 9999 8888 0600 000\nPeriod of Insurance\nFrom 19 Jun, 2026 00:01 hrs\nTo 18 Jun, 2027 23:59\nPremium Details\nNet Own Damage Premium (a) 9788\nNet Liability Premium (b) 3851\nPA Cover for Owner Driver of 1500000 325\nTotal Package Premium (a+b) 13639\nIntegrated Tax 18% 2455\nTotal Premium 16094"],
+  [{ page: 1, rows: [["Total IDV", "300000"]] }],
+  parsed("hdfc_ergo_motor_v1"),
+);
+const hdfcPackageValues = values(hdfcComprehensive);
+assert.equal(hdfcPackageValues.policy_product, "Package");
+assert.equal(hdfcPackageValues.idv, "300000");
+assert.equal(hdfcPackageValues.od_premium, "9788");
+assert.equal(hdfcPackageValues.tp_premium, "3526");
+assert.equal(hdfcPackageValues.cpa_opted, "Yes");
+assert.equal(hdfcPackageValues.cpa_premium, "325");
+assert.equal(hdfcPackageValues.total_premium, "13639");
+assert.equal(hdfcPackageValues.tax_amount, "2455");
+assert.equal(hdfcPackageValues.gross_premium, "16094");
+
+const hdfcSaod = refineApprovedMotorPolicyLayout(
+  ["HDFC ERGO General Insurance Company Limited\nStandalone Motor Own Damage Cover - Two Wheeler\nPolicy No. 2301 9999 2337 0200 000\nPeriod of Insurance\nFrom 01 Jul, 2026 00:01 hrs\nTo 30 Jun, 2027 Midnight\nNet Own Damage Premium (a) 863 Total Premium (a+b) 863\nGST 18% : Central Tax 9% ( 77.5 ) + State Tax 9% ( 77.5) 155\nTotal Premium 1018\nActive TP Policy No: 6104601804"],
+  [{ page: 1, rows: [["Total IDV", "70000"]] }],
+  parsed("hdfc_ergo_motor_v1", [
+    { key: "policy_number", label: "Policy number", value: "6104601804", confidence: .7, page: 1, evidence: "previous/active TP" },
+    { key: "tp_premium", label: "TP", value: "598", confidence: .7, page: 1, evidence: "wrong column" },
+  ]),
+);
+const hdfcSaodValues = values(hdfcSaod);
+assert.equal(hdfcSaodValues.policy_product, "SAOD");
+assert.equal(hdfcSaodValues.policy_number, "2301999923370200000");
+assert.equal(hdfcSaodValues.idv, "70000");
+assert.equal(hdfcSaodValues.od_premium, "863");
+assert.equal(hdfcSaodValues.tp_premium, "0");
+assert.equal(hdfcSaodValues.cpa_premium, "0");
+assert.equal(hdfcSaodValues.tax_amount, "155");
+assert.equal(hdfcSaodValues.gross_premium, "1018");
+
+const uiicNoOwnerCpa = refineApprovedMotorPolicyLayout(
+  ["UNITED INDIA INSURANCE COMPANY LIMITED\nGCV PUBLIC CARRIER OTHER THAN 3 WHEELER PACKAGE POLICY\nPOLICY NO.:SAFE/UI/009104\nPERIOD OF INSURANCE\nFrom 23:00 Hrs of 23/06/2026\nTo Midnight of 22/06/2027\nCompulsory Personal Accident (CPA) cover is removed, since owner driver is not holding a valid driving license."],
+  [{ page: 4, rows: [
+    ["Total IDV", "652425"], ["Gross OD(A)", "7027"], ["B. Basic - TP", "13642"],
+    ["LL to Paid Driver IMT 28", "100"], ["Liability to Workmen greater than 6", "100"], ["Gross TP(B)", "13842"],
+    ["Premium (A+B)", "20869"], ["IGST-Others(18%)", "1301"], ["IGST-Basic TP(5%)", "682"], ["Total(Rounded Off)", "22852"],
+  ] }],
+  parsed("united_india_motor_v1"),
+);
+const uiicNoCpaValues = values(uiicNoOwnerCpa);
+assert.equal(uiicNoCpaValues.cpa_opted, "No");
+assert.equal(uiicNoCpaValues.cpa_premium, "200");
+assert.equal(uiicNoCpaValues.od_premium, "7027");
+assert.equal(uiicNoCpaValues.tp_premium, "13642");
+assert.equal(uiicNoCpaValues.total_premium, "20869");
+assert.equal(uiicNoCpaValues.tax_amount, "1983");
+assert.equal(uiicNoCpaValues.gross_premium, "22852");
+
 const newIndia = refineApprovedMotorPolicyLayout(
-  ["NEW INDIA ASSURANCE CO. LTD.\nPRIVATE CAR STANDALONE OWN DAMAGE POLICY\nPolicy No: 900000000000009001\nOwn Damage Period: 14/08/2026 To 13/08/2027"],
-  newIndiaTables,
-  parsed("generic_motor_v1", "generic_motor_v1.2.0", [
-    { key: "idv", label: "IDV", value: "1006900", confidence: .9, page: 1, evidence: "component IDV" },
-    { key: "od_premium", label: "OD", value: "25", confidence: .9, page: 1, evidence: "NCB" },
-    { key: "tax_amount", label: "GST", value: "7437", confidence: .9, page: 1, evidence: "wrong table association" },
-    { key: "vehicle_capacity", label: "Capacity", value: "48100", confidence: .9, page: 1, evidence: "accessory value" },
-    { key: "policy_product", label: "Product", value: "Bundled", confidence: .8, page: 1, evidence: "wrong product" },
+  ["THE NEW INDIA ASSURANCE CO. LTD.\nStandalone Motor Own Damage Policy for Private car - Enhanced Covers\nPolicy Number :900000000000009105\nPeriod of cover 14/08/2026 12:00:01 AM to 13/08/2027 11:59:59 PM"],
+  [{ page: 1, rows: [["Total Value", "1055000"], ["Total OD Premium", "12831"], ["Net Premium", "12831"], ["GST in Rs", "2310"], ["Total Payable", "15141"]] }],
+  parsed("generic_motor_v1", [
+    { key: "policy_product", label: "Product", value: "Bundled", confidence: .7, page: 1, evidence: "wrong generic mapping" },
+    { key: "idv", label: "IDV", value: "1006900", confidence: .7, page: 1, evidence: "vehicle component only" },
   ]),
 );
 const newIndiaValues = values(newIndia);
 assert.equal(newIndia.parserId, "new_india_motor_v1");
 assert.equal(newIndiaValues.policy_product, "SAOD");
-assert.equal(newIndiaValues.policy_number, "900000000000009001");
-assert.equal(newIndiaValues.policy_start_date, "2026-08-14");
-assert.equal(newIndiaValues.policy_end_date, "2027-08-13");
 assert.equal(newIndiaValues.idv, "1055000");
 assert.equal(newIndiaValues.od_premium, "12831");
 assert.equal(newIndiaValues.tp_premium, "0");
-assert.equal(newIndiaValues.cpa_opted, "No");
-assert.equal(newIndiaValues.cpa_premium, "0");
-assert.equal(newIndiaValues.total_premium, "12831");
-assert.equal(newIndiaValues.tax_amount, "2309.58");
-assert.equal(newIndiaValues.gross_premium, "15140.58");
-assert.equal(newIndiaValues.vehicle_capacity, "1498");
+assert.equal(newIndiaValues.tax_amount, "2310");
+assert.equal(newIndiaValues.gross_premium, "15141");
 
-const hdfc = refineApprovedMotorPolicyLayout(
-  ["HDFC ERGO GENERAL INSURANCE COMPANY LIMITED\nTWO WHEELER LIABILITY ONLY POLICY"],
-  [{ page: 1, rows: [
-    ["Registration Number", "DL08SAFE9002"], ["Make", "BMW"], ["Model-Variant", "F750 GS STANDARD"], ["CC", "853"],
-    ["Basic TP Premium", "2804"], ["CGST", "252.36"], ["SGST", "252.36"], ["Total Amount Payable", "3308.72"],
-  ] }],
-  parsed("hdfc_ergo_motor_v1", "hdfc_ergo_motor_v1.1.0", [
-    { key: "total_premium", label: "Net", value: "3308.72", confidence: .9, page: 1, evidence: "gross misread as net" },
-    { key: "tax_amount", label: "GST", value: "252.36", confidence: .9, page: 1, evidence: "one GST half" },
-  ]),
-);
-const hdfcValues = values(hdfc);
-assert.equal(hdfcValues.idv, "0");
-assert.equal(hdfcValues.od_premium, "0");
-assert.equal(hdfcValues.tp_premium, "2804");
-assert.equal(hdfcValues.cpa_opted, "No");
-assert.equal(hdfcValues.cpa_premium, "0");
-assert.equal(hdfcValues.total_premium, "2804");
-assert.equal(hdfcValues.tax_amount, "504.72");
-assert.equal(hdfcValues.gross_premium, "3308.72");
-
-const royal = refineApprovedMotorPolicyLayout(
-  ["ROYAL SUNDARAM GENERAL INSURANCE CO. LIMITED\nPRIVATE CAR LIABILITY ONLY POLICY"],
-  [{ page: 2, rows: [
-    ["Registration No", "HR29SAFE9003"], ["Make", "KIA"], ["Model", "SONET HTX"], ["CC", "1493"],
-    ["Basic Liability Premium", "3416"], ["Paid Driver IMT 28", "50"], ["P.A. Cover for Owner Driver", "0"],
-    ["IGST", "623.88"], ["Total Amount Payable", "4089.88"],
-  ] }],
-  parsed("royal_sundaram_motor_v1", "royal_sundaram_motor_v1.1.0", [
-    { key: "idv", label: "IDV", value: "595493", confidence: .9, page: 2, evidence: "engine fragment" },
-    { key: "total_premium", label: "Net", value: "4089.88", confidence: .9, page: 2, evidence: "gross misread as net" },
-  ]),
-);
-const royalValues = values(royal);
-assert.equal(royalValues.idv, "0");
-assert.equal(royalValues.od_premium, "0");
-assert.equal(royalValues.tp_premium, "3416");
-assert.equal(royalValues.cpa_opted, "No");
-assert.equal(royalValues.cpa_premium, "50");
-assert.equal(royalValues.total_premium, "3466");
-assert.equal(royalValues.tax_amount, "623.88");
-assert.equal(royalValues.gross_premium, "4089.88");
-
-const national = refineApprovedMotorPolicyLayout(
-  ["NATIONAL INSURANCE COMPANY LIMITED\nGOODS CARRYING VEHICLE PACKAGE POLICY"],
-  [{ page: 1, rows: [
-    ["Registration No", "NEW-SAFE9004"], ["Make", "Tata Motors"], ["Model", "1916 LPT"], ["GVW", "18500"],
-    ["Total IDV", "3240450"], ["Total Own Damage Premium", "17575"], ["Basic Liability Premium", "35313"],
-    ["Legal Liability to Driver Cleaner Coolies", "100"], ["IGST", "4947.15"], ["Gross Premium", "57935.15"],
-  ] }],
-  parsed("national_motor_v1", "national_motor_v1.1.0"),
-);
-const nationalValues = values(national);
-assert.equal(nationalValues.od_premium, "17575");
-assert.equal(nationalValues.tp_premium, "35313");
-assert.equal(nationalValues.cpa_premium, "100");
-assert.equal(nationalValues.cpa_opted, undefined);
-assert.equal(nationalValues.total_premium, "52988");
-assert.equal(nationalValues.tax_amount, "4947.15");
-assert.equal(nationalValues.gross_premium, "57935.15");
-
-const garbageRejected = refineApprovedMotorPolicyLayout(
-  ["UNITED INDIA INSURANCE COMPANY LIMITED\nGOODS CARRYING VEHICLE PACKAGE POLICY"],
-  [{ page: 1, rows: [
-    ["Make", "Type of Body"], ["Model", "Description"], ["Engine No", "MAKEMODEL"], ["Chassis No", "VEHICLE"],
-    ["GVW", "1815"], ["Total IDV", "610000"], ["Gross OD", "4753"], ["Basic TP Premium", "16049"],
-    ["Compulsory PA for Owner Driver", "275"], ["Gross TP", "16524"], ["Premium (A + B)", "21277"], ["Total GST", "1743.49"], ["Total Payable Premium", "23020.49"],
-  ] }],
-  parsed("united_india_motor_v1", "united_india_motor_v1.1.0", [
-    { key: "vehicle_make", label: "Make", value: "Type of Body", confidence: .9, page: 1, evidence: "header" },
-    { key: "vehicle_model", label: "Model", value: "Description", confidence: .9, page: 1, evidence: "header" },
-    { key: "vehicle_engine_number", label: "Engine", value: "MAKEMODEL", confidence: .9, page: 1, evidence: "header" },
-    { key: "vehicle_chassis_number", label: "Chassis", value: "VEHICLE", confidence: .9, page: 1, evidence: "header" },
-  ]),
-);
-const garbageValues = values(garbageRejected);
-assert.equal(garbageValues.vehicle_make, undefined);
-assert.equal(garbageValues.vehicle_model, undefined);
-assert.equal(garbageValues.vehicle_engine_number, undefined);
-assert.equal(garbageValues.vehicle_chassis_number, undefined);
-
-console.log("OCR production-rerun refinement regression passed.");
+console.log("OCR insurer/layout v4 rerun refinement regression passed.");

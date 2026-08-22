@@ -1,378 +1,116 @@
 import type { ParsedPolicyField, ParsedPolicyResult } from "@/lib/policy-ocr-parsers";
 import type { StructuredPolicyTable } from "@/lib/policy-ocr-iffco-structured-refiner";
 
+type Fields = Map<string, ParsedPolicyField>;
 type Hit = { value: string; page: number; evidence: string };
-type AmountHit = { value: number; page: number; evidence: string };
+type Money = { value: number; page: number; evidence: string };
+type Layout = "uiic_gcv" | "hdfc_pcp" | "hdfc_twp_saod" | "hdfc_twp_tp" | "national_gcv" | "new_india_saod" | "royal_pcp_tp" | "magma_pcp_saod";
 
-const SUPPORTED = new Set([
-  "united_india_motor_v1",
-  "hdfc_ergo_motor_v1",
-  "new_india_motor_v1",
-  "national_motor_v1",
-  "royal_sundaram_motor_v1",
-]);
-
-const LABELS: Record<string, string> = {
-  vehicle_registration_status: "Registration status",
-  vehicle_registration_number: "Registration number",
-  vehicle_class: "Vehicle class",
-  vehicle_make: "Vehicle make",
-  vehicle_model: "Vehicle model",
-  vehicle_fuel_type: "Fuel type",
-  vehicle_manufacturing_year: "Manufacturing year",
-  vehicle_capacity: "Vehicle capacity",
-  vehicle_chassis_number: "Chassis number",
-  vehicle_engine_number: "Engine number",
-  vehicle_rto_name: "RTO name",
-  vehicle_rto_state: "RTO state",
-  policy_product: "Policy product",
-  policy_number: "Policy number",
-  insurer_name: "Insurance company",
-  policy_start_date: "Valid from",
-  policy_end_date: "Valid upto",
-  idv: "IDV / Sum insured",
-  od_premium: "OD premium",
-  tp_premium: "Third party premium",
-  cpa_opted: "CPA opted",
-  cpa_premium: "CPA amount",
-  total_premium: "Printed net premium",
-  tax_amount: "Printed GST",
-  gross_premium: "Printed gross premium",
+const labels: Record<string,string> = {
+  vehicle_registration_status:"Registration status",vehicle_registration_number:"Registration number",vehicle_class:"Vehicle class",vehicle_make:"Vehicle make",vehicle_model:"Vehicle model",vehicle_fuel_type:"Fuel type",vehicle_manufacturing_year:"Manufacturing year",vehicle_capacity:"Vehicle capacity",vehicle_chassis_number:"Chassis number",vehicle_engine_number:"Engine number",vehicle_rto_name:"RTO name",vehicle_rto_state:"RTO state",policy_product:"Policy product",policy_number:"Policy number",insurer_name:"Insurance company",policy_start_date:"Valid from",policy_end_date:"Valid upto",idv:"IDV / Sum insured",od_premium:"OD premium",tp_premium:"Third party premium",cpa_opted:"CPA opted",cpa_premium:"CPA amount",total_premium:"Printed net premium",tax_amount:"Printed GST",gross_premium:"Printed gross premium"
 };
+const policyKeys = ["policy_product","policy_number","insurer_name","policy_start_date","policy_end_date","idv","od_premium","tp_premium","cpa_opted","cpa_premium","total_premium","tax_amount","gross_premium"];
 
-export function refineApprovedMotorPolicyLayout(
-  pages: string[],
-  tables: StructuredPolicyTable[],
-  parsed: ParsedPolicyResult,
-): ParsedPolicyResult {
-  if (!tables.length) return parsed;
+export function refineApprovedMotorPolicyLayout(pages:string[], tables:StructuredPolicyTable[], parsed:ParsedPolicyResult):ParsedPolicyResult {
+  const text = norm([...pages,...tables.flatMap(t=>t.rows.flat())].join(" | "));
+  const layout = detect(text, parsed.parserId);
+  if (!layout) return parsed;
+  const parserId = parserFor(layout);
+  const f:Fields = new Map(parsed.fields.map(x=>[x.key,x]));
+  for (const key of policyKeys) f.delete(key);
+  cleanVehicle(f);
+  commonVehicle(tables,f,layout);
+  if (layout==="uiic_gcv") uiic(pages,tables,f,text);
+  else if (layout.startsWith("hdfc_")) hdfc(pages,tables,f,layout);
+  else if (layout==="national_gcv") national(pages,tables,f);
+  else if (layout==="new_india_saod") newIndia(pages,tables,f);
+  else if (layout==="royal_pcp_tp") royal(pages,tables,f);
+  else magma(pages,tables,f);
+  cleanVehicle(f); repairIds(f);
+  const warnings = parsed.warnings.filter(w=>!/not fully supported|missing or uncertain|financial fields require manual review|premium fields were withheld/i.test(w));
+  const required=["policy_product","idv","od_premium","tp_premium","policy_number","insurer_name","policy_start_date","policy_end_date"];
+  const missing=required.filter(k=>!f.get(k)?.value?.trim());
+  if(missing.length) warnings.push(`Review required. Missing or uncertain fields: ${missing.join(", ")}.`);
+  const base=parserId===parsed.parserId?parsed.parserVersion:`${parserId}.1.0`;
+  return {...parsed,parserId,parserVersion:`${base}+layout-${layout}-v4`,fields:[...f.values()],warnings};
+}
 
-  const allText = normalize([...pages, ...tables.flatMap((table) => table.rows.flat())].join(" | "));
-  const promoteNewIndia = parsed.parserId === "generic_motor_v1"
-    && /\bNEW\s+INDIA\s+ASSURANCE\b/i.test(allText)
-    && /\b(?:STANDALONE\s+OWN\s+DAMAGE|SAOD)\b/i.test(allText);
-  if (!SUPPORTED.has(parsed.parserId) && !promoteNewIndia) return parsed;
-
-  const parserId = promoteNewIndia ? "new_india_motor_v1" : parsed.parserId;
-  const fields = new Map(parsed.fields.map((field) => [field.key, field]));
-
-  if (promoteNewIndia) {
-    set(fields, "insurer_name", "The New India Assurance Company Limited", .99, 1, "New India insurer heading");
-    set(fields, "policy_product", "SAOD", .99, 1, "Standalone own-damage heading");
-    set(fields, "tp_premium", "0", .99, 1, "Standalone own-damage policy");
-    set(fields, "cpa_opted", "No", .99, 1, "Standalone own-damage policy");
-    set(fields, "cpa_premium", "0", .99, 1, "Standalone own-damage policy");
-    applyNewIndiaPeriodAndPolicyNumber(fields, pages, tables);
+function detect(t:string,p:string):Layout|null {
+  if(/MAGMA\s+GENERAL\s+INSURANCE|MAGMAINSURANCE\.COM/i.test(t)&&/STAND[-\s]*ALONE\s+OWN\s+DAMAGE.*PRIVATE\s+CAR|PRIVATE\s+CAR.*STAND[-\s]*ALONE\s+OWN\s+DAMAGE/i.test(t)) return "magma_pcp_saod";
+  if(/HDFC\s+ERGO\s+GENERAL\s+INSURANCE/i.test(t)){
+    if(/STANDALONE\s+MOTOR\s+OWN\s+DAMAGE\s+COVER\s*-?\s*TWO\s+WHEELER/i.test(t)) return "hdfc_twp_saod";
+    if(/TWO\s+WHEELER\s+LIABILITY\s+ONLY|MOTOR\s+INSURANCE\s*-?\s*TWO\s+WHEELER\s+LIABILITY/i.test(t)) return "hdfc_twp_tp";
+    if(/PRIVATE\s+CAR\s+COMPREHENSIVE\s+POLICY/i.test(t)) return "hdfc_pcp";
   }
+  if(/NEW\s+INDIA\s+ASSURANCE/i.test(t)&&/STANDALONE\s+MOTOR\s+OWN\s+DAMAGE|STAND[-\s]*ALONE\s+OWN\s+DAMAGE|\bSAOD\b/i.test(t)) return "new_india_saod";
+  if(/NATIONAL\s+INSURANCE/i.test(t)&&/GOODS\s+CARRYING\s+VEHICLE|\bGCV\b/i.test(t)) return "national_gcv";
+  if(/ROYAL\s+SUNDARAM/i.test(t)&&/LIABILITY\s+ONLY/i.test(t)) return "royal_pcp_tp";
+  if(/UNITED\s+INDIA\s+INSURANCE/i.test(t)&&/GCV|GOODS\s+CARRYING|PUBLIC\s+CARRIER/i.test(t)&&/PACKAGE/i.test(t)) return "uiic_gcv";
+  return p==="royal_sundaram_motor_v1"&&/LIABILITY\s+ONLY/i.test(t)?"royal_pcp_tp":null;
+}
+function parserFor(l:Layout){return l==="uiic_gcv"?"united_india_motor_v1":l.startsWith("hdfc_")?"hdfc_ergo_motor_v1":l==="national_gcv"?"national_motor_v1":l==="new_india_saod"?"new_india_motor_v1":l==="royal_pcp_tp"?"royal_sundaram_motor_v1":"magma_motor_v1";}
 
-  const registration = findValue(tables, /(?:Registration|Regn\.?)\s*(?:No\.?|Number)?/i, vehicleIdentifier);
-  const pending = /\bNEW(?:[-\s/]|$)|REGISTRATION\s+(?:PENDING|APPLIED)/i.test(registration?.value ?? allText);
-  if (pending) {
-    set(fields, "vehicle_registration_status", "registration_pending", .99, registration?.page ?? 1, registration?.evidence ?? "NEW vehicle");
-    fields.delete("vehicle_registration_number");
-  } else if (registration) {
-    set(fields, "vehicle_registration_status", "registered", .99, registration.page, registration.evidence);
-    set(fields, "vehicle_registration_number", compactId(registration.value), .99, registration.page, registration.evidence);
+function uiic(p:string[],t:StructuredPolicyTable[],f:Fields,text:string){
+  set(f,"insurer_name","United India Insurance Company Limited",1,1,"UIIC header");set(f,"policy_product","Package",1,1,"GCV package");identity(f,p,"uiic");
+  const idv=amt(t,/Insured'?s\s+Declared\s+Value|Total\s+IDV|Total\s+Value/i,1000,1e9,"largest")??txt(p,/Insured'?s\s+Declared\s+Value/i,1000,1e9,"first");
+  const od=amt(t,/Gross\s+OD\s*\(?A\)?/i,0,1e7,"last")??txt(p,/Gross\s+OD\s*\(?A\)?/i,0,1e7,"first");
+  const tp=amt(t,/(?:^|\b)B\.\s*Basic\s*-?\s*TP\b|^Basic\s+TP\s+Premium\b/i,0,1e7,"last")??txt(p,/B\.\s*Basic\s*-?\s*TP/i,0,1e7,"first");
+  const gtp=amt(t,/Gross\s+TP\s*\(?B\)?/i,0,1e7,"last")??txt(p,/Gross\s+TP\s*\(?B\)?/i,0,1e7,"first");
+  const owner=amt(t,/Compulsory\s+PA\s+for\s+Owner\s*[- ]?Driver/i,0,1e5,"last")??txt(p,/Compulsory\s+PA\s+for\s+Owner\s*[- ]?Driver/i,0,1e5,"first");
+  const net=amt(t,/Gross\s+OD\s*&\s*TP|Premium\s*\(?A\s*\+\s*B\)?/i,0,1e7,"last")??txt(p,/Gross\s+OD\s*&\s*TP|Premium\s*\(?A\s*\+\s*B\)?/i,0,1e7,"first")??txt(p,/^Premium\s*:/i,0,1e7,"first");
+  const tax=sumParts(p,t,[/IGST[-\s]*Others/i,/IGST[-\s]*Basic\s*TP/i])??sumParts(p,t,[/CGST/i,/SGST/i])??amt(t,/Total\s+GST/i,0,1e7,"last");
+  const gross=amt(t,/Total\s*\(?Rounded\s+Off\)?|Total\s+Payable\s+Premium/i,0,1e7,"last")??txt(p,/Total\s*\(?Rounded\s+Off\)?|Total\s+Payable\s+Premium/i,0,1e7,"first");
+  putMoney(f,"idv",idv);putMoney(f,"od_premium",od);putMoney(f,"tp_premium",tp);
+  const extra=gtp&&tp?round(gtp.value-tp.value):net&&od&&tp?round(net.value-od.value-tp.value):null;
+  if(extra!==null&&extra>=0)set(f,"cpa_premium",money(extra),.99,gtp?.page??net?.page??1,"liability additions");
+  if(owner)set(f,"cpa_opted",owner.value>0?"Yes":"No",.99,owner.page,owner.evidence);else if(/CPA\s+COVER\s+IS\s+REMOVED|COMPULSORY\s+PERSONAL\s+ACCIDENT.*COVER\s+IS\s+REMOVED/i.test(text))set(f,"cpa_opted","No",.99,1,"CPA removal note");else if(extra===0)set(f,"cpa_opted","No",.95,1,"no CPA");
+  putMoney(f,"total_premium",net);putMoney(f,"tax_amount",tax);putMoney(f,"gross_premium",gross);if(!gross&&net&&tax)set(f,"gross_premium",money(net.value+tax.value),.96,net.page,"net + tax");
+}
+
+function hdfc(p:string[],t:StructuredPolicyTable[],f:Fields,l:Layout){
+  set(f,"insurer_name","HDFC ERGO General Insurance Company Limited",1,1,"HDFC header");identity(f,p,"hdfc");
+  if(l==="hdfc_twp_tp"){
+    set(f,"policy_product","Third Party",1,1,"TWP liability");set(f,"idv","0",1,1,"liability only");set(f,"od_premium","0",1,1,"liability only");
+    const tp=amt(t,/Net\s+Liability\s+Premium|Basic\s+(?:Third\s+Party|TP)/i,0,1e7,"first")??txt(p,/Net\s+Liability\s+Premium|Basic\s+Third\s+Party\s+Liability/i,0,1e7,"first");putMoney(f,"tp_premium",tp);putMoney(f,"total_premium",tp);set(f,"cpa_opted","No",1,1,"CPA not provided");set(f,"cpa_premium","0",1,1,"CPA not provided");finishHdfc(p,t,f,tp);return;
   }
-
-  applyText(fields, "vehicle_chassis_number", findValue(tables, /Chassis\s*(?:No\.?|Number)?/i, vehicleIdentifier), compactId);
-  applyText(fields, "vehicle_engine_number", findValue(tables, /Engine\s*(?:No\.?|Number)?/i, vehicleIdentifier), compactId);
-  applyText(fields, "vehicle_make", findValue(tables, /(?:Manufacturer|Make)(?!\s*\/\s*Model)/i, vehicleText), cleanMake);
-  applyText(fields, "vehicle_model", findValue(tables, /(?:Model(?:\s*-\s*Variant)?|Variant)(?!\s*Year)/i, vehicleText), cleanModel);
-  applyText(fields, "vehicle_fuel_type", findValue(tables, /Fuel(?:\s+Type)?/i, /^(?:PETROL|DIESEL|CNG|LPG|ELECTRIC|HYBRID)$/i), title);
-  applyText(fields, "vehicle_manufacturing_year", findValue(tables, /(?:Year\s+of\s+Manufacture|Manufacturing\s+Year|Mfg\.?\s*Year|Year)/i, /^(?:19|20)\d{2}$/), identity);
-
-  const combinedMakeModel = findValue(tables, /Make\s*\/\s*Model/i, vehicleText);
-  if (combinedMakeModel) applyCombinedMakeModel(fields, combinedMakeModel);
-
-  const vehicleClass = classifyVehicle(allText);
-  if (vehicleClass) set(fields, "vehicle_class", vehicleClass, .97, 1, "Structured vehicle/policy heading");
-
-  const capacity = findCapacity(tables, vehicleClass);
-  if (capacity) set(fields, "vehicle_capacity", capacity.value, .98, capacity.page, capacity.evidence);
-
-  const authority = findValue(tables, /(?:Registration\s+Authority|Registering\s+Authority|RTO(?:\s+Name)?)/i, vehicleText);
-  const rto = deriveRto(authority?.value ?? registration?.value ?? "");
-  if (rto.name) set(fields, "vehicle_rto_name", rto.name, .94, authority?.page ?? registration?.page ?? 1, authority?.evidence ?? registration?.evidence ?? "Registration prefix");
-  if (rto.state) set(fields, "vehicle_rto_state", rto.state, .94, authority?.page ?? registration?.page ?? 1, authority?.evidence ?? registration?.evidence ?? "Registration prefix");
-
-  sanitizeVehicleFields(fields);
-  applyFinancials(tables, parserId, fields, allText);
-
-  return {
-    ...parsed,
-    parserId,
-    parserVersion: `${parsed.parserVersion}+approved-layout-v3`,
-    fields: [...fields.values()],
-  };
+  const idv=amt(t,/Total\s+IDV|Insured'?s\s+Declared\s+Value/i,1000,1e9,"largest")??txt(p,/Total\s+IDV/i,1000,1e9,"last");putMoney(f,"idv",idv);
+  const od=amt(t,/Net\s+Own\s+Damage\s+Premium/i,0,1e7,"last")??txt(p,/Net\s+Own\s+Damage\s+Premium/i,0,1e7,"first");
+  if(l==="hdfc_twp_saod") {set(f,"policy_product","SAOD",1,1,"TWP standalone OD");putMoney(f,"od_premium",od);putMoney(f,"total_premium",od);set(f,"tp_premium","0",1,1,"active TP separate");set(f,"cpa_opted","No",1,1,"SAOD");set(f,"cpa_premium","0",1,1,"SAOD");finishHdfc(p,t,f,od);return;}
+  set(f,"policy_product","Package",1,1,"PCP comprehensive");
+  const liab=amt(t,/Net\s+Liability\s+Premium/i,0,1e7,"last")??txt(p,/Net\s+Liability\s+Premium/i,0,1e7,"first");
+  const cpa=amt(t,/PA\s+Cover\s+for\s+Owner\s*[- ]?Driver/i,0,1e5,"last")??txt(p,/PA\s+Cover\s+for\s+Owner\s*[- ]?Driver/i,0,1e5,"first");
+  const net=amt(t,/Total\s+Package\s+Premium/i,0,1e7,"last")??txt(p,/Total\s+Package\s+Premium/i,0,1e7,"first");putMoney(f,"od_premium",od);
+  if(liab){const portal=round(liab.value-(cpa?.value??0));if(portal>=0)set(f,"tp_premium",money(portal),.99,liab.page,"liability less CPA");}
+  set(f,"cpa_opted",cpa&&cpa.value>0?"Yes":"No",1,cpa?.page??1,cpa?.evidence??"no CPA");set(f,"cpa_premium",money(cpa?.value??0),1,cpa?.page??1,cpa?.evidence??"no CPA");putMoney(f,"total_premium",net);finishHdfc(p,t,f,net);
 }
+function finishHdfc(p:string[],t:StructuredPolicyTable[],f:Fields,net:Money|null){const tax=hdfcTax(p,t);putMoney(f,"tax_amount",tax);const gross=txt(p,/Total\s+Premium(?!\s*\(a\s*\+\s*b\))/i,0,1e7,"last")??amt(t,/Total\s+Amount\s+Payable|Total\s+Premium/i,0,1e7,"last");putMoney(f,"gross_premium",gross);if(!gross&&net&&tax)set(f,"gross_premium",money(net.value+tax.value),.98,net.page,"net + GST");}
+function hdfcTax(p:string[],t:StructuredPolicyTable[]):Money|null{const igst=txt(p,/Integrated\s+Tax\s+18%|\bIGST\b/i,0,1e7,"last")??amt(t,/Integrated\s+Tax|\bIGST\b/i,0,1e7,"last");if(igst&&igst.value>20)return igst;const g=txt(p,/GST\s+18%/i,0,1e7,"last")??amt(t,/GST\s+18%|Total\s+GST/i,0,1e7,"last");if(g&&g.value>20)return g;return sumParts(p,t,[/CGST|Central\s+Tax/i,/SGST|State\s+Tax/i]);}
 
-function applyNewIndiaPeriodAndPolicyNumber(
-  fields: Map<string, ParsedPolicyField>,
-  pages: string[],
-  tables: StructuredPolicyTable[],
-) {
-  const text = normalize([...pages, ...tables.flatMap((table) => table.rows.flat())].join(" | "));
-  const policy = text.match(/(?:Policy\s*(?:No\.?|Number)?\s*[:#-]?\s*)(\d{18,25})\b/i)
-    ?? text.match(/\b(\d{18,25})\b/);
-  if (policy) set(fields, "policy_number", policy[1], .98, 1, "New India policy number");
+function national(p:string[],t:StructuredPolicyTable[],f:Fields){set(f,"insurer_name","National Insurance Company Limited",1,1,"National header");set(f,"policy_product","Package",1,1,"GCV package");identity(f,p,"national");const idv=amt(t,/Vehicle\s+IDV|Total\s+Value|Total\s+IDV/i,1000,1e9,"largest")??txt(p,/Vehicle\s+IDV/i,1000,1e9,"last");let od=amt(t,/Own\s+Damage\s+Cover|Total\s+Own\s+Damage\s+Premium/i,0,1e7,"last")??txt(p,/Own\s+Damage\s+Cover|Total\s+Own\s+Damage\s+Premium/i,0,1e7,"first");if(od)od={...od,value:Math.round(od.value)};const tp=amt(t,/Legal\s+Liability\s+Cover|Basic\s+Liability\s+Premium/i,0,1e7,"last")??txt(p,/Legal\s+Liability\s+Cover/i,0,1e7,"first");const tot=amt(t,/Total\s+Liability\s+Premium/i,0,1e7,"last");const drv=amt(t,/Legal\s+Liability\s+to\s+Driver|Driver\s*,?\s*Cleaner\s*,?\s*Coolies/i,0,1e5,"last")??txt(p,/Legal\s+Liability\s+to\s+Driver|Driver\s*,?\s*Cleaner\s*,?\s*Coolies/i,0,1e5,"first");const extra=tot&&tp?round(tot.value-tp.value):(drv?.value??0);const net=txt(p,/^Premium\s*[₹:]?/i,1000,1e7,"first")??(od&&tp?{value:round(od.value+tp.value+extra),page:od.page,evidence:"reconciled net"}:null);const tax=txt(p,/IGST/i,0,1e7,"last")??amt(t,/IGST/i,0,1e7,"last");const gross=txt(p,/Total\s+Amount/i,0,1e7,"last")??amt(t,/Gross\s+Premium|Total\s+Amount/i,0,1e7,"last");putMoney(f,"idv",idv);putMoney(f,"od_premium",od);putMoney(f,"tp_premium",tp);set(f,"cpa_premium",money(extra),.98,drv?.page??tot?.page??1,"non-owner liability additions");putMoney(f,"total_premium",net);putMoney(f,"tax_amount",tax);putMoney(f,"gross_premium",gross);if(!gross&&net&&tax)set(f,"gross_premium",money(net.value+tax.value),.97,net.page,"net + tax");}
+function newIndia(p:string[],t:StructuredPolicyTable[],f:Fields){set(f,"insurer_name","The New India Assurance Company Limited",1,1,"New India header");set(f,"policy_product","SAOD",1,1,"standalone OD");identity(f,p,"new_india");const idv=amt(t,/Total\s+Value|Total\s+IDV/i,1000,1e9,"largest")??txt(p,/Total\s+Value/i,1000,1e9,"last");const od=amt(t,/Total\s+OD\s+Premium|Calculated\s+OD\s+Premium/i,0,1e7,"last")??txt(p,/Total\s+OD\s+Premium|Calculated\s+OD\s+Premium/i,0,1e7,"first");const net=amt(t,/Net\s+Premium/i,0,1e7,"last")??txt(p,/Net\s+Premium/i,0,1e7,"first")??od;const tax=amt(t,/GST(?:\s+in\s+Rs)?|IGST/i,0,1e7,"last")??txt(p,/GST\s+in\s+Rs|IGST\s+18/i,0,1e7,"last");const gross=amt(t,/Total\s+Payable/i,0,1e7,"last")??txt(p,/Total\s+Payable/i,0,1e7,"first");putMoney(f,"idv",idv);putMoney(f,"od_premium",od);set(f,"tp_premium","0",1,1,"SAOD");set(f,"cpa_opted","No",1,1,"SAOD");set(f,"cpa_premium","0",1,1,"SAOD");putMoney(f,"total_premium",net);putMoney(f,"tax_amount",tax);putMoney(f,"gross_premium",gross);if(!gross&&net&&tax)set(f,"gross_premium",money(net.value+tax.value),.98,net.page,"net + GST");}
+function royal(p:string[],t:StructuredPolicyTable[],f:Fields){set(f,"insurer_name","Royal Sundaram General Insurance Co. Limited",1,1,"Royal header");set(f,"policy_product","Third Party",1,1,"liability only");identity(f,p,"royal");set(f,"idv","0",1,1,"liability only");set(f,"od_premium","0",1,1,"liability only");const tp=amt(t,/Basic\s+(?:premium.*TPPD|Liability\s+Premium)/i,0,1e7,"last")??txt(p,/Basic\s+premium\s+including\s+premium\s+for\s+TPPD/i,0,1e7,"first");const total=amt(t,/Total\s+Liability\s+Premium/i,0,1e7,"last")??txt(p,/Total\s+Liability\s+Premium/i,0,1e7,"first");const paid=amt(t,/Paid\s+Driver/i,0,1e5,"last")??txt(p,/Paid\s+Driver/i,0,1e5,"first");const extra=total&&tp?round(total.value-tp.value):(paid?.value??0);putMoney(f,"tp_premium",tp);set(f,"cpa_opted","No",1,2,"owner-driver PA zero");set(f,"cpa_premium",money(extra),1,total?.page??paid?.page??2,"paid-driver liability, not owner CPA");const net=total??(tp?{value:tp.value+extra,page:tp.page,evidence:"liability total"}:null);const tax=amt(t,/IGST/i,0,1e7,"last")??txt(p,/ADD\s*:\s*IGST|IGST/i,0,1e7,"last");const gross=amt(t,/Total\s+Premium\s+Payable|Total\s+Amount\s+Payable/i,0,1e7,"last")??txt(p,/TOTAL\s+PREMIUM\s+PAYABLE|Premium\s+Amount/i,0,1e7,"first");putMoney(f,"total_premium",net);putMoney(f,"tax_amount",tax);putMoney(f,"gross_premium",gross);if(!gross&&net&&tax)set(f,"gross_premium",money(net.value+tax.value),.98,net.page,"net + tax");}
+function magma(p:string[],t:StructuredPolicyTable[],f:Fields){set(f,"insurer_name","Magma General Insurance Limited",1,1,"Magma header");set(f,"policy_product","SAOD",1,1,"private-car standalone OD");identity(f,p,"magma");const idv=amt(t,/Total\s+Value|IDV\s+of\s+Vehicle/i,1000,1e9,"largest")??txt(p,/Total\s+Value/i,1000,1e9,"last");const od=amt(t,/Total\s+Own\s+Damage\s+Premium/i,0,1e7,"last")??txt(p,/Total\s+Own\s+Damage\s+Premium/i,0,1e7,"first");putMoney(f,"idv",idv);putMoney(f,"od_premium",od);putMoney(f,"total_premium",od);set(f,"tp_premium","0",1,1,"liability policy separate");set(f,"cpa_opted","No",1,1,"SAOD");set(f,"cpa_premium","0",1,1,"SAOD");const cg=amt(t,/CGST/i,0,1e7,"last")??txt(p,/CGST\s*@?\s*9%?/i,0,1e7,"last");const sg=amt(t,/SGST/i,0,1e7,"last")??txt(p,/SGST\s*@?\s*9%?/i,0,1e7,"last");const tax=cg&&sg?{value:round(cg.value+sg.value),page:cg.page,evidence:"CGST + SGST"}:null;putMoney(f,"tax_amount",tax);if(od&&tax)set(f,"gross_premium",money(od.value+tax.value),1,od.page,"net + tax before printed rounding");}
 
-  const period = text.match(/(?:Own\s+Damage\s+Period|Period\s+of\s+(?:Insurance|Cover))[^0-9]{0,40}(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})[^0-9]{1,40}(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i);
-  if (period) {
-    const from = isoDate(period[1]);
-    const upto = isoDate(period[2]);
-    if (from) set(fields, "policy_start_date", from, .98, 1, "New India own-damage period");
-    if (upto) set(fields, "policy_end_date", upto, .98, 1, "New India own-damage period");
-  }
-}
+function identity(f:Fields,p:string[],family:string){const no=policyNo(p,family);if(no)set(f,"policy_number",no.value,.99,no.page,no.evidence);const pr=period(p,family);if(pr){set(f,"policy_start_date",pr.from,.99,pr.page,pr.evidence);set(f,"policy_end_date",pr.to,.99,pr.page,pr.evidence);}}
+function policyNo(p:string[],family:string):Hit|null{for(let pi=0;pi<p.length;pi++)for(const raw of p[pi].split(/\r?\n/)){const line=norm(raw);if(!/Policy\s*(?:No\.?|Number|#)/i.test(line)||/Previous\s+Policy|Active\s+TP\s+Policy|Liability\s+Policy/i.test(line))continue;let v:string|undefined;if(family==="hdfc"){const m=line.match(/Policy\s*No\.?\s*[:#-]?\s*((?:\d[\s-]?){15,25})/i);v=m?.[1]?.replace(/\D/g,"");}else if(family==="royal")v=line.match(/Policy\s*No\.?\s*[:#-]?\s*(VPT[A-Z0-9/-]{8,30})/i)?.[1];else if(family==="magma")v=line.match(/Policy\s*(?:No\.?|Number)\s*[:#-]?\s*([A-Z0-9]+(?:\/[A-Z0-9]+){2,5})/i)?.[1];else v=line.match(/Policy\s*(?:No\.?|Number)\s*[:#-]?\s*([A-Z0-9/-]{6,40})/i)?.[1];if(!v){const generic=line.match(/Policy\s*(?:No\.?|Number|#)\s*[:#-]?\s*([A-Z0-9][A-Z0-9/-]{5,40})/i)?.[1];if(generic&&/\d/.test(generic))v=generic;}if(v&&/\d/.test(v))return{value:v.replace(/\s+/g,""),page:pi+1,evidence:line};}if(family==="hdfc"){const m=norm(p[0]??"").match(/\b(\d{18,22})\b/);if(m)return{value:m[1],page:1,evidence:"HDFC current header"};}return null;}
+function period(p:string[],family:string):{from:string;to:string;page:number;evidence:string}|null{const anchor=family==="royal"?/Period\s+of\s+Insurance|Valid\s+From/i:family==="new_india"?/Period\s+of\s+cover|Own\s+Damage\s+Period/i:/Period\s+of\s+Insurance|Policy\s+Effective\s+from|Effective\s+date\s+of\s+commencement/i;for(let pi=0;pi<Math.min(p.length,4);pi++){const lines=p[pi].split(/\r?\n/);for(let i=0;i<lines.length;i++){if(!test(anchor,lines[i]))continue;const block=lines.slice(i,i+7).join(" ");const ds=dates(block).map(date).filter((x):x is string=>!!x);if(ds.length>=2)return{from:ds[0],to:ds[1],page:pi+1,evidence:norm(block)};}}return null;}
 
-function applyFinancials(
-  tables: StructuredPolicyTable[],
-  parserId: string,
-  fields: Map<string, ParsedPolicyField>,
-  allText: string,
-) {
-  let idv = findAmount(tables, /(?:Total\s+IDV|Insured\s+Declared\s+Value|Total\s+Value)/i, 0, 1_000_000_000, "largest");
-  if (!idv && parserId === "new_india_motor_v1") idv = findNewIndiaComponentIdv(tables);
-  if (!idv) idv = findAmount(tables, /Vehicle\s+IDV/i, 0, 1_000_000_000, "largest");
+function commonVehicle(t:StructuredPolicyTable[],f:Fields,l:Layout){const reg=val(t,/(?:Registration|Regn\.?)\s*(?:No\.?|Number)(?!\s+Authority)/i,vehicleId);if(reg){if(/^NEW(?:[-/\s]|$)/i.test(reg.value)){set(f,"vehicle_registration_status","registration_pending",1,reg.page,reg.evidence);f.delete("vehicle_registration_number");}else{set(f,"vehicle_registration_status","registered",.99,reg.page,reg.evidence);set(f,"vehicle_registration_number",compact(reg.value),.99,reg.page,reg.evidence);}}const ch=val(t,/Chassis\s*(?:No\.?|Number)?/i,vehicleId),en=val(t,/Engine\s*(?:No\.?|Number)?/i,vehicleId),mk=val(t,/^(?:Vehicle\s+)?Make$/i,vehicleText),md=val(t,/^(?:Vehicle\s+)?Model(?:\s*-\s*Variant)?$/i,vehicleText),mm=val(t,/Make\s*\/\s*Model/i,vehicleText),fu=val(t,/Fuel(?:\s+Type)?/i,/^(?:PETROL|DIESEL|CNG|LPG|ELECTRIC|HYBRID|BATTERY)$/i),yr=val(t,/Year\s+of\s+(?:Manufacture|Mfg)|Mfg\.?\s*Year|^Year$/i,/^(?:19|20)\d{2}$/);if(ch)set(f,"vehicle_chassis_number",compact(ch.value),.98,ch.page,ch.evidence);if(en)set(f,"vehicle_engine_number",compact(en.value),.98,en.page,en.evidence);if(mk)set(f,"vehicle_make",cleanMake(mk.value),.98,mk.page,mk.evidence);if(md)set(f,"vehicle_model",cleanModel(md.value),.98,md.page,md.evidence);if(mm&&!mk&&!md){const a=norm(mm.value).split(/\s*[/|]\s*/,2);if(a.length===2){set(f,"vehicle_make",cleanMake(a[0]),.97,mm.page,mm.evidence);set(f,"vehicle_model",cleanModel(a[1]),.97,mm.page,mm.evidence);}}if(fu)set(f,"vehicle_fuel_type",title(fu.value),.97,fu.page,fu.evidence);if(yr)set(f,"vehicle_manufacturing_year",yr.value,.97,yr.page,yr.evidence);const cls=l.includes("gcv")?"GCV":l.includes("twp")?"TWP":"PCP";set(f,"vehicle_class",cls,1,1,"layout family");const cap=val(t,cls==="GCV"?/GVW|Gross\s+Vehicle\s+Weight/i:/Cubic\s+Capacity|Cubic\s+Capacity\/Watts|\bCC\b/i,/^\d{2,6}(?:\.\d+)?$/);if(cap)set(f,"vehicle_capacity",cap.value.replace(/,/g,""),.97,cap.page,cap.evidence);const auth=val(t,/Registration\s+Authority|RTO(?:\s+Name)?/i,vehicleText);const r=rto(auth?.value??reg?.value??"");if(r.name)set(f,"vehicle_rto_name",r.name,.94,auth?.page??reg?.page??1,auth?.evidence??reg?.evidence??"RTO");if(r.state)set(f,"vehicle_rto_state",r.state,.94,auth?.page??reg?.page??1,auth?.evidence??reg?.evidence??"RTO");}
 
-  const od = findAmount(tables, /(?:Gross|Total|Net|Calculated)?\s*(?:Own\s+Damage|\bOD\b)\s*(?:Premium)?/i, 0, 10_000_000, "first");
-  const basicTp = findAmount(tables, /(?:Basic\s+(?:TP|Liability)|Third\s+Party\s+Basic|Basic\s+Premium)/i, 0, 10_000_000, "first");
-  const grossLiability = findAmount(tables, /(?:Gross|Total|Net|Calculated)\s+(?:TP|Liability)(?:\s+Premium)?/i, 0, 10_000_000, "first");
-  const ownerDriverCpa = findAmount(tables, /(?:Compulsory\s+(?:PA|Personal\s+Accident)\s+(?:for\s+)?Owner\s*[- ]?Driver|P\.?\s*A\.?\s+(?:Cover\s+)?(?:for\s+)?Owner\s*[- ]?Driver|Owner\s*[- ]?Driver\s+(?:CPA|PA)(?:\s+Premium)?)/i, 0, 10_000_000, "last");
-  const ownerDriverCpaNo = findValue(
-    tables,
-    /(?:Compulsory\s+(?:PA|Personal\s+Accident)\s+(?:cover\s+)?(?:for\s+)?Owner\s*[- ]?Driver|P\.?\s*A\.?\s+(?:Cover\s+)?(?:for\s+)?Owner\s*[- ]?Driver|Owner\s*[- ]?Driver\s+(?:CPA|PA))/i,
-    (value) => /(?:NOT\s+(?:PROVIDED|OPTED|COVERED)|\bNO\b|\bNIL\b|^0(?:\.0+)?$)/i.test(normalize(value)),
-  );
-  let net = findAmount(tables, /(?:Net\s+Premium|Premium\s*\(A\s*\+\s*B\)|Total\s+Premium(?!\s+Payable)|Premium\s+Amount)/i, 0, 10_000_000, "first");
-  let gross = findAmount(tables, /(?:Total\s+Payable(?:\s+Premium)?|Total\s+Policy\s+Premium|Gross\s+Premium|Total\s+Amount(?:\s+Payable)?)/i, 0, 10_000_000, "largest");
-  let tax = findAmount(tables, /(?:Total\s+GST|GST\s+Amount|\bIGST\b|\bGST\b)/i, 0, 10_000_000, "largest");
-
-  if (!tax) {
-    const cgst = findAmount(tables, /\bCGST\b/i, 0, 10_000_000, "last");
-    const sgst = findAmount(tables, /\bSGST\b/i, 0, 10_000_000, "last");
-    if (cgst && sgst) tax = { value: round2(cgst.value + sgst.value), page: cgst.page, evidence: `${cgst.evidence} | ${sgst.evidence}` };
-  }
-
-  const existingTotal = numeric(fields.get("total_premium"));
-  const liabilityOnly = /(?:hdfc_ergo|royal_sundaram)/.test(parserId)
-    || /\b(?:LIABILITY\s+ONLY|THIRD\s+PARTY)\b/i.test(allText);
-
-  if (liabilityOnly && basicTp && !gross && existingTotal !== null && existingTotal > basicTp.value) {
-    const gap = round2(existingTotal - basicTp.value);
-    if (tax && close(gap, round2(tax.value * 2))) {
-      gross = { value: existingTotal, page: fields.get("total_premium")?.page ?? 1, evidence: "Printed total treated as gross after split-GST reconciliation" };
-      net = { value: basicTp.value, page: basicTp.page, evidence: "Liability-only net equals basic TP when no liability additions are present" };
-      tax = { value: gap, page: tax.page, evidence: "Combined split GST derived from gross minus liability-only net" };
-    }
-  }
-
-  if (gross && tax && gross.value >= tax.value) {
-    const derivedNet = round2(gross.value - tax.value);
-    if (!net || close(net.value, gross.value)) {
-      net = { value: derivedNet, page: gross.page, evidence: "Derived from printed gross minus printed GST" };
-    }
-  }
-
-  if (!tax && net && gross && gross.value >= net.value) {
-    tax = { value: round2(gross.value - net.value), page: gross.page, evidence: "Derived from printed gross minus printed net" };
-  }
-  if (!gross && net && tax) {
-    gross = { value: round2(net.value + tax.value), page: net.page, evidence: "Derived from printed net plus printed GST" };
-  }
-
-  if (liabilityOnly && idv && idv.value !== 0) {
-    idv = { value: 0, page: idv.page, evidence: "Liability-only policy has no own-damage IDV" };
-  } else if (liabilityOnly && !idv) {
-    idv = { value: 0, page: 1, evidence: "Liability-only policy has no own-damage IDV" };
-  }
-
-  const netValue = net?.value ?? numeric(fields.get("total_premium"));
-  const odValue = od?.value ?? (liabilityOnly ? 0 : numeric(fields.get("od_premium")));
-  const tpValue = basicTp?.value ?? numeric(fields.get("tp_premium")) ?? (parserId === "new_india_motor_v1" && /STANDALONE\s+OWN\s+DAMAGE|\bSAOD\b/i.test(allText) ? 0 : null);
-  let extraLiability: number | null = null;
-  if (grossLiability && tpValue !== null && grossLiability.value >= tpValue) extraLiability = round2(grossLiability.value - tpValue);
-  else if (netValue !== null && odValue !== null && tpValue !== null) extraLiability = round2(netValue - odValue - tpValue);
-
-  if (idv) set(fields, "idv", money(idv.value), .99, idv.page, idv.evidence);
-  if (net) set(fields, "total_premium", money(net.value), .99, net.page, net.evidence);
-  if (tax) set(fields, "tax_amount", money(tax.value), .99, tax.page, tax.evidence);
-  if (gross) set(fields, "gross_premium", money(gross.value), .99, gross.page, gross.evidence);
-
-  if (netValue !== null && odValue !== null && tpValue !== null && extraLiability !== null && extraLiability >= 0 && close(odValue + tpValue + extraLiability, netValue)) {
-    set(fields, "od_premium", money(odValue), .99, od?.page ?? net?.page ?? 1, od?.evidence ?? "Zero own-damage premium for liability-only policy");
-    set(fields, "tp_premium", money(tpValue), .99, basicTp?.page ?? net?.page ?? 1, basicTp?.evidence ?? "Basic third-party premium");
-    set(fields, "cpa_premium", money(extraLiability), .99, grossLiability?.page ?? net?.page ?? 1, "Liability additions = printed net - OD - basic TP");
-
-    if (ownerDriverCpa) {
-      set(fields, "cpa_opted", ownerDriverCpa.value > 0 ? "Yes" : "No", .99, ownerDriverCpa.page, ownerDriverCpa.evidence);
-    } else if (ownerDriverCpaNo || extraLiability === 0 || parserId === "new_india_motor_v1") {
-      set(fields, "cpa_opted", "No", .99, ownerDriverCpaNo?.page ?? grossLiability?.page ?? net?.page ?? 1, ownerDriverCpaNo?.evidence ?? "No owner-driver CPA evidence");
-    } else {
-      fields.delete("cpa_opted");
-    }
-  }
-}
-
-function findNewIndiaComponentIdv(tables: StructuredPolicyTable[]): AmountHit | null {
-  const components: AmountHit[] = [];
-  for (const table of tables) {
-    for (const row of table.rows) {
-      const joined = normalize(row.join(" | "));
-      if (!/(?:Vehicle\s+IDV|Accessory|Accessories|Bi[-\s]?Fuel|CNG|LPG)/i.test(joined)) continue;
-      const values = [...joined.matchAll(/\d[\d,]*(?:\.\d{1,2})?/g)]
-        .map((match) => Number(match[0].replaceAll(",", "")))
-        .filter((value) => Number.isFinite(value) && value >= 10_000 && value <= 1_000_000_000 && !(value >= 1900 && value <= 2100));
-      if (values.length) components.push({ value: values[values.length - 1], page: table.page, evidence: joined.slice(0, 400) });
-    }
-  }
-  if (components.length < 2) return null;
-  const total = round2(components.reduce((sum, item) => sum + item.value, 0));
-  return { value: total, page: components[0].page, evidence: "Summed New India IDV components from structured schedule" };
-}
-
-function findCapacity(tables: StructuredPolicyTable[], vehicleClass: string | null): Hit | null {
-  const preferred = vehicleClass === "GCV" ? /(?:GVW|Gross\s+Vehicle\s+Weight)/i
-    : vehicleClass === "TWP" || vehicleClass === "PCP" ? /(?:Cubic\s+Capacity|Engine\s+Capacity|\bCC\b)/i
-      : /(?:Seating\s+Capacity|GVW|Cubic\s+Capacity|\bCC\b)/i;
-  return findValue(tables, preferred, /^\d{2,6}(?:\.\d+)?$/);
-}
-
-function findValue(tables: StructuredPolicyTable[], label: RegExp, accepted: RegExp | ((value: string) => boolean)): Hit | null {
-  for (const table of tables) {
-    for (let rowIndex = 0; rowIndex < table.rows.length; rowIndex += 1) {
-      const row = table.rows[rowIndex].map(normalize);
-      for (let cellIndex = 0; cellIndex < row.length; cellIndex += 1) {
-        const cell = row[cellIndex];
-        if (!test(label, cell)) continue;
-        const inline = cleanCandidate(cell.replace(label, " "));
-        if (inline && accepts(accepted, inline)) return hit(inline, table.page, row);
-        for (const candidate of row.slice(cellIndex + 1)) {
-          const clean = cleanCandidate(candidate);
-          if (clean && accepts(accepted, clean)) return hit(clean, table.page, row);
-        }
-        for (let next = rowIndex + 1; next <= Math.min(rowIndex + 3, table.rows.length - 1); next += 1) {
-          const clean = cleanCandidate(table.rows[next][cellIndex] ?? "");
-          if (clean && accepts(accepted, clean)) return hit(clean, table.page, [cell, clean]);
-        }
-      }
-    }
-  }
-  return null;
-}
-
-function findAmount(
-  tables: StructuredPolicyTable[],
-  label: RegExp,
-  min: number,
-  max: number,
-  mode: "first" | "last" | "largest" = "first",
-): AmountHit | null {
-  const found = findValue(tables, label, /\d/);
-  if (!found) return null;
-  const values = [...found.value.matchAll(/\d[\d,]*(?:\.\d{1,2})?/g)]
-    .map((match) => Number(match[0].replaceAll(",", "")))
-    .filter((value) => Number.isFinite(value) && value >= min && value <= max && !(value >= 1900 && value <= 2100));
-  if (!values.length) return null;
-  const value = mode === "largest" ? Math.max(...values) : mode === "last" ? values[values.length - 1] : values[0];
-  return { value, page: found.page, evidence: found.evidence };
-}
-
-function applyText(fields: Map<string, ParsedPolicyField>, key: string, found: Hit | null, transform: (value: string) => string) {
-  if (found) set(fields, key, transform(found.value), .98, found.page, found.evidence);
-}
-
-function applyCombinedMakeModel(fields: Map<string, ParsedPolicyField>, found: Hit) {
-  const value = normalize(found.value);
-  const slash = value.split(/\s*[/|]\s*/, 2);
-  if (slash.length === 2 && slash.every(vehicleText)) {
-    set(fields, "vehicle_make", cleanMake(slash[0]), .97, found.page, found.evidence);
-    set(fields, "vehicle_model", cleanModel(slash[1]), .97, found.page, found.evidence);
-    return;
-  }
-  const known = value.match(/^(TATA(?:\s+MOTORS)?|BMW|KIA)\s+(.+)$/i);
-  if (known && vehicleText(known[2])) {
-    set(fields, "vehicle_make", cleanMake(known[1]), .96, found.page, found.evidence);
-    set(fields, "vehicle_model", cleanModel(known[2]), .96, found.page, found.evidence);
-  }
-}
-
-function classifyVehicle(text: string) {
-  if (/GOODS\s+CARRYING|GOODS\s+CARRIAGE|PUBLIC\s+CARRIER|\bGCV\b/i.test(text)) return "GCV";
-  if (/TWO\s*WHEELER|MOTOR\s*CYCLE|\bTWP\b/i.test(text)) return "TWP";
-  if (/PRIVATE\s+CAR|\bPCP\b/i.test(text)) return "PCP";
-  if (/PASSENGER\s+CARRYING|\bPCV\b/i.test(text)) return "PCV";
-  return null;
-}
-
-function deriveRto(value: string) {
-  const upper = normalize(value).toUpperCase();
-  const code = upper.match(/\b(MP|DL|HR)[-\s]?0?(\d{1,2})\b/);
-  const normalizedCode = code ? `${code[1]}${code[2]}` : null;
-  const city = /JABALPUR/.test(upper) ? "MP20" : /MANDLA/.test(upper) ? "MP51" : /DELHI/.test(upper) ? "DL8" : /BALLABGARH/.test(upper) ? "HR29" : null;
-  const name = normalizedCode ?? city;
-  const state = name?.startsWith("MP") ? "Madhya Pradesh" : name?.startsWith("DL") ? "Delhi" : name?.startsWith("HR") ? "Haryana" : null;
-  return { name, state };
-}
-
-function sanitizeVehicleFields(fields: Map<string, ParsedPolicyField>) {
-  for (const key of ["vehicle_make", "vehicle_model", "vehicle_registration_number", "vehicle_engine_number", "vehicle_chassis_number"]) {
-    const field = fields.get(key);
-    if (!field) continue;
-    const value = normalize(field.value);
-    if (isVehicleHeaderGarbage(value)) fields.delete(key);
-  }
-}
-
-function isVehicleHeaderGarbage(value: string) {
-  return /^(?:VEHICLE|DESCRIPTION|MODEL|MAKE|MAKE\s*\/\s*MODEL|FUEL\s+TYPE|TYPE\s+OF\s+BODY|YEAR\s+MAKE\s+MODEL.*|MAKEMODEL|ENGINE(?:\s+(?:NO\.?|NUMBER))?|CHASSIS(?:\s+(?:NO\.?|NUMBER))?|REGISTRATION(?:\s+(?:NO\.?|NUMBER))?|GVW|TOTAL\s+IDV)$/i.test(value)
-    || /SECTION\s+I\s*-\s*LOSS\s+OF\s+OR\s+DAMAGE/i.test(value)
-    || /GEOGRAPHICAL\s+AREA|भौगोलिक\s+क्षेत्र/i.test(value);
-}
-
-function set(fields: Map<string, ParsedPolicyField>, key: string, value: string, confidence: number, page: number | null, evidence: string) {
-  const clean = normalize(value);
-  if (!clean) return;
-  fields.set(key, { key, label: LABELS[key] ?? key, value: clean, confidence, page, evidence: normalize(evidence).slice(0, 400) });
-}
-
-function hit(value: string, page: number, evidence: string[]): Hit { return { value, page, evidence: normalize(evidence.join(" | ")).slice(0, 400) }; }
-function test(pattern: RegExp, value: string) { pattern.lastIndex = 0; const matched = pattern.test(value); pattern.lastIndex = 0; return matched; }
-function accepts(matcher: RegExp | ((value: string) => boolean), value: string) { return matcher instanceof RegExp ? test(matcher, value) : matcher(value); }
-function cleanCandidate(value: string) { return normalize(value).replace(/^[:|\-\s]+|[:|\-\s]+$/g, ""); }
-function normalize(value: string) { return value.replace(/\s+/g, " ").trim(); }
-function compactId(value: string) { return value.toUpperCase().replace(/[^A-Z0-9]/g, ""); }
-function cleanMake(value: string) { return normalize(value).replace(/\b(?:MOTORS?|INDIA|LTD\.?)\b/gi, " ").replace(/\s+/g, " ").trim().replace(/^TATA$/i, "Tata").replace(/^BMW$/i, "BMW").replace(/^KIA$/i, "Kia"); }
-function cleanModel(value: string) { return normalize(value).replace(/\bBS\s*VI\b/gi, "").replace(/\s+/g, " ").trim(); }
-function title(value: string) { const lower = value.toLowerCase(); return lower.charAt(0).toUpperCase() + lower.slice(1); }
-function identity(value: string) { return normalize(value); }
-function vehicleIdentifier(value: string) {
-  const clean = normalize(value);
-  return /^(?:NEW(?:[-/\s].*)?|[A-Z0-9][A-Z0-9\s/-]{4,35})$/i.test(clean)
-    && (/^NEW(?:[-/\s]|$)/i.test(clean) || (/[A-Z]/i.test(clean) && /\d/.test(clean)))
-    && !isVehicleHeaderGarbage(clean);
-}
-function vehicleText(value: string) {
-  const clean = normalize(value);
-  return clean.length >= 2
-    && clean.length <= 120
-    && /[A-Z]/i.test(clean)
-    && !/^(?:NA|N\/A|NONE)$/i.test(clean)
-    && !isVehicleHeaderGarbage(clean);
-}
-function numeric(field: ParsedPolicyField | undefined) { if (!field) return null; const value = Number(field.value.replace(/[^0-9.-]/g, "")); return Number.isFinite(value) ? value : null; }
-function close(value: number, expected: number) { return Math.abs(round2(value) - round2(expected)) <= 2; }
-function round2(value: number) { return Math.round((value + Number.EPSILON) * 100) / 100; }
-function money(value: number) { const rounded = round2(value); return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/0+$/, "").replace(/\.$/, ""); }
-
-function isoDate(value: string): string | null {
-  const match = value.trim().match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
-  if (!match) return null;
-  const day = Number(match[1]);
-  const month = Number(match[2]);
-  let year = Number(match[3]);
-  if (year < 100) year += year >= 70 ? 1900 : 2000;
-  if (day < 1 || day > 31 || month < 1 || month > 12) return null;
-  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
+function val(t:StructuredPolicyTable[],label:RegExp,accept:RegExp|((x:string)=>boolean)):Hit|null{for(const tb of t)for(let ri=0;ri<tb.rows.length;ri++){const row=tb.rows[ri].map(norm);for(let ci=0;ci<row.length;ci++){const cell=row[ci];if(!test(label,cell))continue;for(const x of row.slice(ci+1)){const c=trim(x);if(c&&ok(accept,c))return hit(c,tb.page,row);}for(let n=ri+1;n<=Math.min(ri+3,tb.rows.length-1);n++){const c=trim(tb.rows[n][ci]??"");if(c&&ok(accept,c))return hit(c,tb.page,[cell,c]);}}}return null;}
+function amt(t:StructuredPolicyTable[],label:RegExp,min:number,max:number,mode:"first"|"last"|"largest"="first"):Money|null{const hits:Money[]=[];for(const tb of t)for(let ri=0;ri<tb.rows.length;ri++){const row=tb.rows[ri].map(norm);for(let ci=0;ci<row.length;ci++){const cell=row[ci];if(!test(label,cell))continue;const m=cell.match(label);label.lastIndex=0;const sources=[row.slice(ci+1).join(" "),m?.index===undefined?"":cell.slice((m.index??0)+(m[0]?.length??0)),[1,2,3].map(o=>tb.rows[ri+o]?.[ci]??"").join(" ")];for(const src of sources){const a=nums(src).filter(x=>x>=min&&x<=max&&!year(x));if(!a.length)continue;const v=mode==="largest"?Math.max(...a):mode==="last"?a[a.length-1]:a[0];hits.push({value:v,page:tb.page,evidence:norm(row.join(" | "))});break;}}}if(!hits.length)return null;return mode==="last"?hits[hits.length-1]:mode==="largest"?hits.reduce((a,b)=>b.value>a.value?b:a):hits[0];}
+function txt(p:string[],label:RegExp,min:number,max:number,mode:"first"|"last"|"largest"="first"):Money|null{const hits:Money[]=[];for(let pi=0;pi<p.length;pi++){const lines=p[pi].split(/\r?\n/);for(let i=0;i<lines.length;i++){if(!test(label,lines[i]))continue;const m=lines[i].match(label);label.lastIndex=0;const after=m?.index===undefined?lines[i]:lines[i].slice((m.index??0)+(m[0]?.length??0));let a=nums(after).filter(x=>x>=min&&x<=max&&!year(x));if(!a.length)a=nums(lines.slice(i+1,i+3).join(" ")).filter(x=>x>=min&&x<=max&&!year(x));if(!a.length)continue;const v=mode==="largest"?Math.max(...a):mode==="last"?a[a.length-1]:a[0];hits.push({value:v,page:pi+1,evidence:norm(lines.slice(i,i+2).join(" "))});}}if(!hits.length)return null;return mode==="last"?hits[hits.length-1]:mode==="largest"?hits.reduce((a,b)=>b.value>a.value?b:a):hits[0];}
+function sumParts(p:string[],t:StructuredPolicyTable[],patterns:RegExp[]):Money|null{const h=patterns.map(x=>amt(t,x,0,1e7,"last")??txt(p,x,0,1e7,"last"));if(h.some(x=>!x||x.value<=20))return null;const a=h as Money[];return{value:round(a.reduce((s,x)=>s+x.value,0)),page:a[0].page,evidence:a.map(x=>x.evidence).join(" | ")};}
+function putMoney(f:Fields,k:string,x:Money|null){if(x)set(f,k,money(x.value),.99,x.page,x.evidence);}
+function set(f:Fields,k:string,v:string,c:number,p:number|null,e:string){const x=norm(v);if(x)f.set(k,{key:k,label:labels[k]??k,value:x,confidence:c,page:p,evidence:norm(e).slice(0,400)});}
+function cleanVehicle(f:Fields){for(const k of ["vehicle_make","vehicle_model","vehicle_registration_number","vehicle_engine_number","vehicle_chassis_number","vehicle_rto_name"]){const x=f.get(k);if(x&&garbage(x.value))f.delete(k);}}
+function repairIds(f:Fields){const e=f.get("vehicle_engine_number"),c=f.get("vehicle_chassis_number");if(!e||!c)return;const ev=compact(e.value),cv=compact(c.value);if(ev.length>cv.length+5&&ev.endsWith(cv)){const v=ev.slice(0,-cv.length);if(v.length>=6)f.set(e.key,{...e,value:v});}}
+function garbage(v:string){const x=norm(v);return /^(?:VEHICLE|DESCRIPTION|MODEL|MAKE|MAKE\s*\/\s*MODEL|FUEL\s+TYPE|TYPE\s+OF\s+BODY|MAKEMODEL|ENGINE(?:\s+(?:NO\.?|NUMBER))?|CHASSIS(?:\s+(?:NO\.?|NUMBER))?|REGISTRATION(?:\s+(?:NO\.?|NUMBER))?|GVW|TOTAL\s+IDV|RTO)$/i.test(x)||/SECTION\s+(?:I|II|III|IV)\b|GEOGRAPHICAL\s+AREA|TOWING\s+DISABLED/i.test(x);}
+function vehicleId(v:string){const x=norm(v);return /^(?:NEW(?:[-/\s].*)?|[A-Z0-9][A-Z0-9\s/-]{4,35})$/i.test(x)&&(/^NEW(?:[-/\s]|$)/i.test(x)||(/[A-Z]/i.test(x)&&/\d/.test(x)))&&!garbage(x);}
+function vehicleText(v:string){const x=norm(v);return x.length>=2&&x.length<=140&&/[A-Z]/i.test(x)&&!/^(?:NA|N\/A|NONE|NULL)$/i.test(x)&&!garbage(x);}
+function rto(v:string){const u=norm(v).toUpperCase(),m=u.match(/\b(MP|DL|HR)[-\s]?0?(\d{1,2})\b/);let name=m?`${m[1]}${Number(m[2])}`:null;if(!name)name=/JABALPUR/.test(u)?"MP20":/MANDLA/.test(u)?"MP51":/NARSINGHPUR/.test(u)?"MP49":/ANUPPUR/.test(u)?"MP65":/BALLABGARH|FARIDABAD/.test(u)?"HR29":/DELHI/.test(u)?"DL8":null;return{name,state:name?.startsWith("MP")?"Madhya Pradesh":name?.startsWith("DL")?"Delhi":name?.startsWith("HR")?"Haryana":null};}
+function dates(v:string){const n=v.match(/\b\d{1,2}\s*[\/-]\s*\d{1,2}\s*[\/-]\s*\d{2,4}\b/g)??[],w=v.match(/\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*,?\s+\d{4}\b/gi)??[];return[...n,...w].sort((a,b)=>v.indexOf(a)-v.indexOf(b));}
+function date(v:string):string|null{const x=norm(v).replace(/\s*([/-])\s*/g,"$1"),n=x.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);if(n){let y=+n[3];if(y<100)y+=y>=70?1900:2000;return iso(+n[1],+n[2],y);}const w=x.match(/^(\d{1,2})\s+([A-Za-z]{3,9}),?\s+(\d{4})$/);if(!w)return null;const ms:{[k:string]:number}={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};return iso(+w[1],ms[w[2].slice(0,3).toLowerCase()]??0,+w[3]);}
+function iso(d:number,m:number,y:number){return d<1||d>31||m<1||m>12?null:`${String(y).padStart(4,"0")}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;}
+function nums(v:string){return[...v.matchAll(/\d[\d,]*(?:\.\d{1,2})?/g)].map(m=>Number(m[0].replaceAll(",",""))).filter(Number.isFinite);}
+function hit(v:string,p:number,e:string[]):Hit{return{value:v,page:p,evidence:norm(e.join(" | "))}}function test(r:RegExp,v:string){r.lastIndex=0;const x=r.test(v);r.lastIndex=0;return x}function ok(r:RegExp|((x:string)=>boolean),v:string){return r instanceof RegExp?test(r,v):r(v)}function trim(v:string){return norm(v).replace(/^[:|\-\s]+|[:|\-\s]+$/g,"")}function norm(v:string){return v.replace(/\s+/g," ").trim()}function compact(v:string){return v.toUpperCase().replace(/[^A-Z0-9]/g,"")}function cleanMake(v:string){return norm(v).replace(/\b(?:MOTORS?|INDIA|LTD\.?)\b/gi," ").replace(/\s+/g," ").trim().replace(/^TATA$/i,"Tata").replace(/^BMW$/i,"BMW").replace(/^KIA$/i,"Kia")}function cleanModel(v:string){return norm(v).replace(/\bBS\s*VI\b/gi,"").replace(/\s+/g," ").trim()}function title(v:string){const x=norm(v).toLowerCase();return x[0]?.toUpperCase()+x.slice(1)}function year(v:number){return v>=1900&&v<=2100&&Number.isInteger(v)}function round(v:number){return Math.round((v+Number.EPSILON)*100)/100}function money(v:number){const x=round(v);return Number.isInteger(x)?String(x):x.toFixed(2).replace(/0+$/,"").replace(/\.$/,"")}
