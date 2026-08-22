@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireCapability } from "@/lib/master-data-server";
+import { requireAnyCapability, requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { recordVehicleActivity, VEHICLE_ACTIVITY_ACTIONS } from "@/lib/vehicle-activity";
 
@@ -61,7 +61,10 @@ function vehiclePayload(formData: FormData) {
 }
 
 export async function addVehicleMaster(formData: FormData) {
-  const profile = await requireCapability("view_vehicles", "edit");
+  const profile = await requireAnyCapability([
+    { capability: "view_vehicles", minimumAccess: "edit" },
+    { capability: "create_vehicles", minimumAccess: "edit" },
+  ]);
   const admin = createSupabaseAdminClient();
   const payload = vehiclePayload(formData);
   if (!payload) redirect(errorUrl("/vehicles/new", "Select a customer and enter the vehicle number and class."));
