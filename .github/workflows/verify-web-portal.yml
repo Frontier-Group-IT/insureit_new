@@ -55,6 +55,9 @@ jobs:
       - name: Release blocker security regression
         run: npm run access-control:release-blockers-regression
 
+      - name: Backoffice data-entry security regression
+        run: npm run access-control:backoffice-data-entry-regression
+
       - name: Canonical NEW vehicle prefix regression
         run: npm run vehicle-prefix:new-regression
 
@@ -102,7 +105,7 @@ jobs:
             echo "## Web portal verification gate"
             echo
             echo "- Commit: \`${GITHUB_SHA}\`"
-            echo "- Access control: V2 catalogue, scope, legacy compatibility, portal lifecycle, employee portal governance and release-blocker regressions"
+            echo "- Access control: V2 catalogue, scope, legacy compatibility, portal lifecycle, employee portal governance, release-blocker and Backoffice data-entry regressions"
             echo "- OCR regressions: IFFCO structured, IFFCO, Digit, New India, additional insurers, approved layouts, production rerun refinement, onboarding Section 02/03 import, premium training workflow"
             echo "- Static checks: typecheck and lint"
             echo "- Build: Next.js production build"
