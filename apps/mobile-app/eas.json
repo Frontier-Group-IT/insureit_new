@@ -8,14 +8,6 @@
         "buildType": "apk"
       }
     },
-    "externalClaimPopupTest": {
-      "distribution": "internal",
-      "channel": "external-claim-popup-test",
-      "autoIncrement": true,
-      "android": {
-        "buildType": "apk"
-      }
-    },
     "production": {
       "channel": "production",
       "autoIncrement": true
