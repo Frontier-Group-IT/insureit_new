@@ -2,12 +2,19 @@ name: Apply Supabase migrations
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260822163000_prevent_duplicate_active_self_managed_claims.sql'
+      - '.github/workflows/apply-supabase-migrations.yml'
 
 permissions:
   contents: read
 
 jobs:
   migrate:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '#547')
     name: Apply database migrations
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -82,6 +89,24 @@ jobs:
 
       - name: Record Section 02 and Section 03 OCR training migration as applied
         run: supabase migration repair --linked --status applied 20260822093000
+
+      - name: Apply self-tracked duplicate claim guard
+        run: supabase db query --linked --file supabase/migrations/20260822163000_prevent_duplicate_active_self_managed_claims.sql
+
+      - name: Record self-tracked duplicate claim guard as applied
+        run: supabase migration repair --linked --status applied 20260822163000
+
+      - name: Verify self-tracked duplicate claim guard
+        run: |
+          guard_result=$(supabase db query --linked --output-format json "
+            select
+              to_regprocedure('public.create_self_managed_external_claim(uuid,uuid,uuid,timestamp with time zone,text,text,text)') is not null as function_ready,
+              position('An active claim already exists for this policy.' in pg_get_functiondef(
+                to_regprocedure('public.create_self_managed_external_claim(uuid,uuid,uuid,timestamp with time zone,text,text,text)')
+              )) > 0 as duplicate_guard_ready
+          ")
+          echo "$guard_result" | grep -Eq '"function_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$guard_result" | grep -Eq '"duplicate_guard_ready"[[:space:]]*:[[:space:]]*true'
 
       - name: Verify OCR training tables
         run: |

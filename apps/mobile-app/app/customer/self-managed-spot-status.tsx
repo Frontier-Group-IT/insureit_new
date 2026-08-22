@@ -3,8 +3,9 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppDatePicker } from '@/components/design-system';
+import { ExternalClaimErrorPopup } from '@/components/external-claim-error-popup';
 import { ClaimActionBar, ClaimFormSection, ClaimStageSummaryCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
-import { LoadingState, Message, Screen, TextField } from '@/components/ui';
+import { LoadingState, Screen, TextField } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { type ClaimMilestone } from '@/lib/claim-service-mode';
 import { validateStageChronology } from '@/lib/self-managed-claim-timeline';
@@ -23,6 +24,7 @@ export default function SelfManagedSpotStatusScreen() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
+  const [validationMessage, setValidationMessage] = useState('');
 
   useEffect(() => {
     if (!id) {
@@ -71,12 +73,13 @@ export default function SelfManagedSpotStatusScreen() {
 
   async function submit() {
     setMessage('');
-    if (!id || !surveyDate) return setMessage('Spot Survey Done Date is required.');
-    if (surveyorEmail.trim() && !/^\S+@\S+\.\S+$/.test(surveyorEmail.trim())) return setMessage('Enter a valid surveyor email or leave it blank.');
+    setValidationMessage('');
+    if (!id || !surveyDate) return setValidationMessage('Spot Survey Done Date is required.');
+    if (surveyorEmail.trim() && !/^\S+@\S+\.\S+$/.test(surveyorEmail.trim())) return setValidationMessage('Enter a valid surveyor email or leave it blank.');
     const surveyDoneAt = dateAtNoon(surveyDate);
-    if (!surveyDoneAt || surveyDoneAt.getTime() > Date.now() + 12 * 60 * 60 * 1000) return setMessage('Spot Survey Done Date cannot be in the future.');
+    if (!surveyDoneAt || surveyDoneAt.getTime() > Date.now() + 12 * 60 * 60 * 1000) return setValidationMessage('Spot Survey Done Date cannot be in the future.');
     const chronology = validateStageChronology('spot_status', surveyDate, milestones);
-    if (chronology) return setMessage(chronology);
+    if (chronology) return setValidationMessage(chronology);
 
     setSubmitting(true);
     try {
@@ -130,8 +133,6 @@ export default function SelfManagedSpotStatusScreen() {
         icon="shield-check-outline"
       />
 
-      {message ? <Message type="error">{message}</Message> : null}
-
       <ClaimFormSection title="Spot Survey" subtitle="Survey completion date is mandatory" icon="clipboard-check-outline">
         <AppDatePicker label="Spot Survey Done Date *" value={surveyDate} onChange={setSurveyDate} maxDate={todayIsoDate()} formatDisplay={formatDisplayDate} />
       </ClaimFormSection>
@@ -150,6 +151,18 @@ export default function SelfManagedSpotStatusScreen() {
         primaryIcon="arrow-right"
         onPrimary={() => void submit()}
         onAssistance={() => id && router.push({ pathname: '/customer/request-claim-assistance', params: { id } })}
+      />
+
+      <ExternalClaimErrorPopup
+        visible={Boolean(validationMessage)}
+        message={validationMessage}
+        onClose={() => setValidationMessage('')}
+      />
+      <ExternalClaimErrorPopup
+        visible={Boolean(message)}
+        message={message}
+        title="Something went wrong"
+        onClose={() => setMessage('')}
       />
     </Screen>
   );
