@@ -2,12 +2,19 @@ name: Apply Supabase migrations
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260822163000_prevent_duplicate_active_self_managed_claims.sql'
+      - '.github/workflows/apply-supabase-migrations.yml'
 
 permissions:
   contents: read
 
 jobs:
   migrate:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '#547')
     name: Apply database migrations
     runs-on: ubuntu-latest
     timeout-minutes: 10
