@@ -1,7 +1,12 @@
 name: Publish external claim popup test OTA
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - fix/external-claim-all-stage-error-popups
+    paths:
+      - 'apps/mobile-app/**'
+      - '.github/workflows/publish-external-claim-popup-test-ota.yml'
 
 permissions:
   contents: read
