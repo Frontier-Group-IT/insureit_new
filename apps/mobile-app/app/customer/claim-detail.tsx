@@ -207,8 +207,10 @@ export default function ClaimDetailScreen() {
       <SectionHeader title="Documents" subtitle={`${documents.length} document${documents.length === 1 ? '' : 's'}`} expanded={documentsExpanded} onPress={() => setDocumentsExpanded((value) => !value)} />
       {documentsExpanded ? <View style={styles.sectionBody}>{documents.length ? documents.map((document) => <Pressable key={document.id} onPress={() => void openDocument(document)} style={styles.documentRow}><MaterialCommunityIcons name="file-document-outline" size={20} color={roleTheme.customer.accent} /><View style={{ flex: 1 }}><Text style={styles.documentTitle}>{document.document_type}</Text><Text style={styles.documentMeta}>{document.verification_status ?? 'uploaded'}</Text></View><MaterialCommunityIcons name="open-in-new" size={18} color={palette.slate} /></Pressable>) : <Text style={styles.emptyText}>No claim documents uploaded yet.</Text>}</View> : null}
 
-      <SectionHeader title="Activity History" subtitle={`${history.length} movement record${history.length === 1 ? '' : 's'}`} expanded={historyExpanded} onPress={() => setHistoryExpanded((value) => !value)} />
-      {historyExpanded ? <View style={styles.sectionBody}>{history.length ? history.map((item) => <View key={item.id} style={styles.historyRow}><View style={styles.historyDot} /><View style={{ flex: 1 }}><Text style={styles.historyStatus}>{item.to_status}</Text><Text style={styles.documentMeta}>{formatDateTime(item.created_at)}</Text>{item.notes ? <Text style={styles.emptyText}>{item.notes}</Text> : null}</View></View>) : <Text style={styles.emptyText}>No timeline updates yet.</Text>}</View> : null}
+      {!selfManaged ? <>
+        <SectionHeader title="Activity History" subtitle={`${history.length} movement record${history.length === 1 ? '' : 's'}`} expanded={historyExpanded} onPress={() => setHistoryExpanded((value) => !value)} />
+        {historyExpanded ? <View style={styles.sectionBody}>{history.length ? history.map((item) => <View key={item.id} style={styles.historyRow}><View style={styles.historyDot} /><View style={{ flex: 1 }}><Text style={styles.historyStatus}>{item.to_status}</Text><Text style={styles.documentMeta}>{formatDateTime(item.created_at)}</Text>{item.notes ? <Text style={styles.emptyText}>{item.notes}</Text> : null}</View></View>) : <Text style={styles.emptyText}>No timeline updates yet.</Text>}</View> : null}
+      </> : null}
     </Screen>
   );
 }
