@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { ReportQueryShortcuts } from "@/components/reports/report-query-shortcuts";
@@ -12,7 +13,7 @@ const PERIODS=[{value:"90d",label:"Last 90 days"},{value:"mtd",label:"Month to d
 type Props={searchParams:Promise<FinanceQuery>};
 
 export default async function FinanceReportsPage({searchParams}:Props){
- const profile=await requireCapability("view_reports"); const query=await searchParams;
+ const profile=await requireCapability("view_reports"); if(profile.role==="backoffice_executive")redirect("/access-denied"); const query=await searchParams;
  let payload:Awaited<ReturnType<typeof loadFinanceReport>>|null=null; let loadError=false;
  try{payload=await loadFinanceReport(profile,query)}catch(error){console.error("[reports] finance report failed",error instanceof Error?error.message:"unknown error");loadError=true}
  const report=payload?.report??emptyReport(); const filters=payload?.filters??fallbackFilters();
