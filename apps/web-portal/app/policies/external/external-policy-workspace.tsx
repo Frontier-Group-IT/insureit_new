@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Plus, RotateCcw, ShieldCheck } from "lucide-react";
+import { Funnel, Plus, RotateCcw, ShieldCheck } from "lucide-react";
 import {
   BrokerRegisterShell,
   BrokerRegisterToolbar,
@@ -32,14 +32,40 @@ type ExternalPolicyRow = {
 type PolicyState = "Active" | "Expiring soon" | "Expired";
 type ExternalPolicyViewRow = ExternalPolicyRow & { status: PolicyState };
 type ViewKey = "all" | "active" | "expiring" | "expired" | "claims";
+type ColumnFilters = {
+  policyNo: string;
+  customer: string;
+  vehicle: string;
+  insurer: string;
+  validityFrom: string;
+  validityTo: string;
+  status: "all" | PolicyState;
+  idvMin: string;
+  premiumMin: string;
+  claimsMin: string;
+};
 
 const PAGE_SIZE = 10;
+const EMPTY_COLUMN_FILTERS: ColumnFilters = {
+  policyNo: "",
+  customer: "",
+  vehicle: "",
+  insurer: "all",
+  validityFrom: "",
+  validityTo: "",
+  status: "all",
+  idvMin: "",
+  premiumMin: "",
+  claimsMin: ""
+};
 
 export function ExternalPolicyWorkspace({ rows, canEdit }: { rows: ExternalPolicyRow[]; canEdit: boolean }) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewKey>("all");
   const [insurer, setInsurer] = useState("all");
   const [page, setPage] = useState(1);
+  const [showColumnFilters, setShowColumnFilters] = useState(false);
+  const [columnFilters, setColumnFilters] = useState<ColumnFilters>(EMPTY_COLUMN_FILTERS);
 
   const enriched = useMemo<ExternalPolicyViewRow[]>(
     () => rows.map((row) => ({ ...row, status: policyStatus(row.end_date) })),
@@ -60,6 +86,13 @@ export function ExternalPolicyWorkspace({ rows, canEdit }: { rows: ExternalPolic
 
   const filteredRows = useMemo(() => {
     const normalized = query.trim().toLowerCase();
+    const policyNoFilter = columnFilters.policyNo.trim().toLowerCase();
+    const customerFilter = columnFilters.customer.trim().toLowerCase();
+    const vehicleFilter = columnFilters.vehicle.trim().toLowerCase();
+    const idvMin = Number(columnFilters.idvMin);
+    const premiumMin = Number(columnFilters.premiumMin);
+    const claimsMin = Number(columnFilters.claimsMin);
+
     return enriched.filter((row) => {
       const haystack = [
         row.policy_no,
@@ -70,15 +103,35 @@ export function ExternalPolicyWorkspace({ rows, canEdit }: { rows: ExternalPolic
         row.customers?.contact_name,
         row.added_via,
       ].filter(Boolean).join(" ").toLowerCase();
+      const customerHaystack = [row.customers?.contact_name, row.customers?.company_name].filter(Boolean).join(" ").toLowerCase();
       const matchesInsurer = insurer === "all" || row.insurance_companies?.name === insurer;
       const matchesView = view === "all"
         || (view === "active" && row.status === "Active")
         || (view === "expiring" && row.status === "Expiring soon")
         || (view === "expired" && row.status === "Expired")
         || (view === "claims" && row.claim_count > 0);
-      return matchesInsurer && matchesView && (!normalized || haystack.includes(normalized));
+      const matchesColumnInsurer = columnFilters.insurer === "all" || row.insurance_companies?.name === columnFilters.insurer;
+      const matchesValidity = (!columnFilters.validityFrom || row.end_date >= columnFilters.validityFrom)
+        && (!columnFilters.validityTo || row.start_date <= columnFilters.validityTo);
+      const matchesStatus = columnFilters.status === "all" || row.status === columnFilters.status;
+      const matchesIdv = !columnFilters.idvMin || ((row.insured_declared_value ?? -1) >= idvMin);
+      const matchesPremium = !columnFilters.premiumMin || ((row.premium_amount ?? -1) >= premiumMin);
+      const matchesClaims = !columnFilters.claimsMin || row.claim_count >= claimsMin;
+
+      return matchesInsurer
+        && matchesView
+        && matchesColumnInsurer
+        && matchesValidity
+        && matchesStatus
+        && matchesIdv
+        && matchesPremium
+        && matchesClaims
+        && (!normalized || haystack.includes(normalized))
+        && (!policyNoFilter || row.policy_no.toLowerCase().includes(policyNoFilter))
+        && (!customerFilter || customerHaystack.includes(customerFilter))
+        && (!vehicleFilter || (row.vehicles?.vehicle_no ?? "").toLowerCase().includes(vehicleFilter));
     });
-  }, [enriched, insurer, query, view]);
+  }, [columnFilters, enriched, insurer, query, view]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -89,14 +142,22 @@ export function ExternalPolicyWorkspace({ rows, canEdit }: { rows: ExternalPolic
     setPage(1);
   }
 
+  function setColumnFilter<K extends keyof ColumnFilters>(key: K, value: ColumnFilters[K]) {
+    setColumnFilters((current) => ({ ...current, [key]: value }));
+    setPage(1);
+  }
+
   function resetFilters() {
     setQuery("");
     setView("all");
     setInsurer("all");
+    setColumnFilters(EMPTY_COLUMN_FILTERS);
+    setShowColumnFilters(false);
     setPage(1);
   }
 
-  const resetDisabled = !query && insurer === "all" && view === "all";
+  const hasColumnFilters = Object.entries(columnFilters).some(([key, value]) => key === "insurer" || key === "status" ? value !== "all" : Boolean(value));
+  const resetDisabled = !query && insurer === "all" && view === "all" && !hasColumnFilters;
 
   return (
     <BrokerRegisterShell
@@ -158,16 +219,46 @@ export function ExternalPolicyWorkspace({ rows, canEdit }: { rows: ExternalPolic
         <table className="w-full min-w-[930px] table-fixed text-left text-[11px] text-[#1E293B]">
           <thead className="sticky top-0 z-10 border-b border-[#E2E8F0] bg-[#F8FAFC] text-[9px] font-bold uppercase tracking-[0.06em] text-[#64748B]">
             <tr>
-              <th className="w-[115px] px-2.5 py-2.5">Policy No.</th>
-              <th className="w-[140px] px-2.5 py-2.5">Customer</th>
-              <th className="w-[95px] px-2.5 py-2.5">Vehicle</th>
-              <th className="w-[135px] px-2.5 py-2.5">Insurer</th>
-              <th className="w-[150px] px-2.5 py-2.5">Validity</th>
-              <th className="w-[90px] px-2.5 py-2.5">Status</th>
-              <th className="w-[80px] px-2.5 py-2.5 text-right">IDV</th>
-              <th className="w-[80px] px-2.5 py-2.5 text-right">Premium</th>
-              <th className="w-[45px] px-2.5 py-2.5 text-center">Claims</th>
+              <FilterableHeader label="Policy No." active={Boolean(columnFilters.policyNo)} onToggle={() => setShowColumnFilters((current) => !current)} className="w-[115px]" />
+              <FilterableHeader label="Customer" active={Boolean(columnFilters.customer)} onToggle={() => setShowColumnFilters((current) => !current)} className="w-[140px]" />
+              <FilterableHeader label="Vehicle" active={Boolean(columnFilters.vehicle)} onToggle={() => setShowColumnFilters((current) => !current)} className="w-[95px]" />
+              <FilterableHeader label="Insurer" active={columnFilters.insurer !== "all"} onToggle={() => setShowColumnFilters((current) => !current)} className="w-[135px]" />
+              <FilterableHeader label="Validity" active={Boolean(columnFilters.validityFrom || columnFilters.validityTo)} onToggle={() => setShowColumnFilters((current) => !current)} className="w-[150px]" />
+              <FilterableHeader label="Status" active={columnFilters.status !== "all"} onToggle={() => setShowColumnFilters((current) => !current)} className="w-[90px]" />
+              <FilterableHeader label="IDV" active={Boolean(columnFilters.idvMin)} onToggle={() => setShowColumnFilters((current) => !current)} className="w-[80px] text-right" align="right" />
+              <FilterableHeader label="Premium" active={Boolean(columnFilters.premiumMin)} onToggle={() => setShowColumnFilters((current) => !current)} className="w-[80px] text-right" align="right" />
+              <FilterableHeader label="Claims" active={Boolean(columnFilters.claimsMin)} onToggle={() => setShowColumnFilters((current) => !current)} className="w-[45px] text-center" align="center" />
             </tr>
+            {showColumnFilters ? (
+              <tr className="border-t border-[#E2E8F0] bg-white normal-case tracking-normal">
+                <th className="px-1.5 py-1.5"><ColumnInput value={columnFilters.policyNo} onChange={(value) => setColumnFilter("policyNo", value)} placeholder="Filter" /></th>
+                <th className="px-1.5 py-1.5"><ColumnInput value={columnFilters.customer} onChange={(value) => setColumnFilter("customer", value)} placeholder="Filter" /></th>
+                <th className="px-1.5 py-1.5"><ColumnInput value={columnFilters.vehicle} onChange={(value) => setColumnFilter("vehicle", value)} placeholder="Filter" /></th>
+                <th className="px-1.5 py-1.5">
+                  <ColumnSelect value={columnFilters.insurer} onChange={(value) => setColumnFilter("insurer", value)}>
+                    <option value="all">All</option>
+                    {insurers.map((item) => <option key={item} value={item}>{item}</option>)}
+                  </ColumnSelect>
+                </th>
+                <th className="px-1.5 py-1.5">
+                  <div className="grid gap-1">
+                    <input type="date" value={columnFilters.validityFrom} max={columnFilters.validityTo || undefined} onChange={(event) => setColumnFilter("validityFrom", event.target.value)} aria-label="Validity from" className="h-7 w-full rounded-md border border-[#D8E2EE] bg-white px-1 text-[9px] font-medium text-[#475569] outline-none focus:border-[#17365D]" />
+                    <input type="date" value={columnFilters.validityTo} min={columnFilters.validityFrom || undefined} onChange={(event) => setColumnFilter("validityTo", event.target.value)} aria-label="Validity to" className="h-7 w-full rounded-md border border-[#D8E2EE] bg-white px-1 text-[9px] font-medium text-[#475569] outline-none focus:border-[#17365D]" />
+                  </div>
+                </th>
+                <th className="px-1.5 py-1.5">
+                  <ColumnSelect value={columnFilters.status} onChange={(value) => setColumnFilter("status", value as ColumnFilters["status"])}>
+                    <option value="all">All</option>
+                    <option value="Active">Active</option>
+                    <option value="Expiring soon">Renewal due</option>
+                    <option value="Expired">Expired</option>
+                  </ColumnSelect>
+                </th>
+                <th className="px-1.5 py-1.5"><ColumnInput type="number" value={columnFilters.idvMin} onChange={(value) => setColumnFilter("idvMin", value)} placeholder="Min" /></th>
+                <th className="px-1.5 py-1.5"><ColumnInput type="number" value={columnFilters.premiumMin} onChange={(value) => setColumnFilter("premiumMin", value)} placeholder="Min" /></th>
+                <th className="px-1.5 py-1.5"><ColumnInput type="number" value={columnFilters.claimsMin} onChange={(value) => setColumnFilter("claimsMin", value)} placeholder="Min" /></th>
+              </tr>
+            ) : null}
           </thead>
           <tbody className="divide-y divide-[#EEF2F6]">
             {pageRows.map((policy) => (
@@ -200,7 +291,7 @@ export function ExternalPolicyWorkspace({ rows, canEdit }: { rows: ExternalPolic
             ))}
           </tbody>
         </table>
-        {!pageRows.length ? <RegisterEmpty title="No matching policies" description="Adjust the search, insurer or status view." /> : null}
+        {!pageRows.length ? <RegisterEmpty title="No matching policies" description="Adjust the search, insurer, status or column filters." /> : null}
       </div>
 
       <RegisterPagination
@@ -214,6 +305,25 @@ export function ExternalPolicyWorkspace({ rows, canEdit }: { rows: ExternalPolic
       />
     </BrokerRegisterShell>
   );
+}
+
+function FilterableHeader({ label, active, onToggle, className, align = "left" }: { label: string; active: boolean; onToggle: () => void; className: string; align?: "left" | "right" | "center" }) {
+  return (
+    <th className={`${className} px-2.5 py-2.5`}>
+      <button type="button" onClick={onToggle} aria-label={`Toggle ${label} filter`} title={`Filter ${label}`} className={`inline-flex w-full items-center gap-1 ${align === "right" ? "justify-end" : align === "center" ? "justify-center" : "justify-start"} ${active ? "text-[#17365D]" : "text-[#64748B]"}`}>
+        <span>{label}</span>
+        <Funnel className={`h-3 w-3 ${active ? "fill-current" : ""}`} />
+      </button>
+    </th>
+  );
+}
+
+function ColumnInput({ value, onChange, placeholder, type = "text" }: { value: string; onChange: (value: string) => void; placeholder: string; type?: "text" | "number" }) {
+  return <input type={type} min={type === "number" ? 0 : undefined} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="h-7 w-full min-w-0 rounded-md border border-[#D8E2EE] bg-white px-2 text-[9px] font-medium text-[#475569] outline-none placeholder:text-[#A3AEC0] focus:border-[#17365D]" />;
+}
+
+function ColumnSelect({ value, onChange, children }: { value: string; onChange: (value: string) => void; children: React.ReactNode }) {
+  return <select value={value} onChange={(event) => onChange(event.target.value)} className="h-7 w-full min-w-0 rounded-md border border-[#D8E2EE] bg-white px-1.5 text-[9px] font-medium text-[#475569] outline-none focus:border-[#17365D]">{children}</select>;
 }
 
 function ExternalPolicyMobileCard({ policy, canEdit }: { policy: ExternalPolicyViewRow; canEdit: boolean }) {
