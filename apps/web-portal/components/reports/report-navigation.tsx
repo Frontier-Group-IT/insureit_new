@@ -13,7 +13,11 @@ export function ReportNavigation({ canViewGovernance: _canViewGovernance, role }
   const visibleWorkspaces = reportWorkspaces
     .filter((workspace) => !backofficeRestricted || ["business", "portfolio", "operations"].includes(workspace.key))
     .map((workspace) => backofficeRestricted && workspace.key === "business"
-      ? { ...workspace, routes: workspace.routes.filter((route) => route !== "/reports/finance"), sections: workspace.sections?.filter((section) => section.href !== "/reports/finance") }
+      ? {
+          ...workspace,
+          routes: workspace.routes.filter((route) => route === "/reports/business"),
+          sections: workspace.sections?.filter((section) => section.href === "/reports/business"),
+        }
       : workspace);
   const activeKey = reportWorkspaceForPath(pathname) ?? visibleWorkspaces[0]?.key ?? "business";
   const activeWorkspace = visibleWorkspaces.find((workspace) => workspace.key === activeKey) ?? visibleWorkspaces[0];
