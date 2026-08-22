@@ -280,7 +280,16 @@ export function UniversalBottomTabs({ role, pathname, bottomInset, customerConte
         {tabs.map((tab) => {
           const active = isTabActive(tab.href, pathname, customerContext);
           return (
-            <Pressable key={`${tab.href}-${tab.label}`} accessibilityRole="button" onPress={() => router.push(tab.href as LinkProps['href'])} style={styles.bottomTab}>
+            <Pressable
+    key={`${tab.href}-${tab.label}`}
+    accessibilityRole="button"
+    accessibilityState={{ selected: active }}
+    onPress={() => {
+      if (pathname === tab.href) return;
+      router.push(tab.href as LinkProps['href']);
+    }}
+    style={styles.bottomTab}
+  >
               <View style={[styles.bottomIconShell, { backgroundColor: tabTone(tab.label, tab).soft }, active && [styles.bottomIconShellActive, { borderColor: tabTone(tab.label, tab).accent }]]}>
                 <MaterialCommunityIcons name={tab.icon} size={19} color={active ? tabTone(tab.label, tab).accent : palette.slate} />
               </View>
