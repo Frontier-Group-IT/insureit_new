@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy External Policies register redesign to match Customer Register.",
-  "deploy_requested_at": "2026-08-22T11:13:00+05:30",
-  "requested_by": "explicit user merge and deploy request",
-  "source": "Deploy merged PR #543 from current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "f4217981212359122b7a32adb756c393e0b38588",
-  "release_scope": "Deploy the External Policies register redesign. The register now uses the shared Customer Register-style native table, toolbar, status tabs, insurer filter, reset action, and shared 10-row pagination instead of the MUI DataGrid fixed-height table and rows-per-page footer. Existing External Policy queries, permissions, add/edit/delete workflows, claim counts, status logic, and backend behavior remain unchanged.",
+  "purpose": "Re-trigger deployment of External Policies register redesign to match Customer Register.",
+  "deploy_requested_at": "2026-08-22T11:41:00+05:30",
+  "requested_by": "explicit user deploy request",
+  "source": "Re-deploy current main using the protected GitHub Actions production deployment workflow.",
+  "source_commit": "7eef50527cf67448c4b7417bbd3af39daf416ce6",
+  "release_scope": "Deploy the merged External Policies register redesign from PR #543. The register uses the shared Customer Register-style native table, toolbar, status tabs, insurer filter, reset action, and shared 10-row pagination instead of the MUI DataGrid fixed-height table and rows-per-page footer. Existing External Policy queries, permissions, add/edit/delete workflows, claim counts, status logic, and backend behavior remain unchanged.",
   "verification": "PR #543 Verify web portal run 32555057314 (#1614) passed successfully on head b71bd38a963dbb38e7c077d952b9d00d60c86739, including regressions, TypeScript typecheck, lint, and the Next.js production build. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
   "instructions": "Update this file only after explicit deployment approval."
 }
