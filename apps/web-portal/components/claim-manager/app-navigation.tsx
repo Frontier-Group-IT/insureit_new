@@ -28,16 +28,19 @@ export const navigationSections:NavigationSection[]=[
   {href:"/customers?choose_partner=1",label:"Add Customer",icon:Plus,capability:"manage_customers"},
   {href:"/customers/applications",label:"Onboarding Applications",icon:FileCheck2,capability:"review_kyc"}
  ]},
- {key:"fleet",label:"Fleet & Policies",icon:Gauge,tint:"from-[#3156b8] to-[#6759ff]",capability:"view_vehicles",anyCapabilities:["view_vehicles","view_policies"],items:[
+ {key:"fleet",label:"Fleet & Policies",icon:Gauge,tint:"from-[#3156b8] to-[#6759ff]",capability:"view_vehicles",anyCapabilities:["view_vehicles","view_policies","create_vehicles","create_policies","create_external_policies"],items:[
   {kind:"group",key:"vehicles",label:"Vehicles",icon:Gauge,capability:"view_vehicles",items:[
    {href:"/vehicles",label:"Vehicle Register",icon:Gauge,capability:"view_vehicles"},
-   {href:"/vehicles/new",label:"Add Vehicle",icon:Plus,capability:"view_vehicles",minimumAccess:"edit"}
+   {href:"/vehicles/new",label:"Add Vehicle",icon:Plus,capability:"view_vehicles",minimumAccess:"edit"},
+   {href:"/vehicles/new",label:"Add Vehicle",icon:Plus,capability:"create_vehicles",minimumAccess:"edit"}
   ]},
   {kind:"group",key:"policies",label:"Policies",icon:ShieldCheck,capability:"view_policies",items:[
    {href:"/policies",label:"Policy Register",icon:ShieldCheck,capability:"view_policies"},
    {href:"/policies/new",label:"Add Policy",icon:Plus,capability:"view_policies",minimumAccess:"edit"},
+   {href:"/policies/new",label:"Add Policy",icon:Plus,capability:"create_policies",minimumAccess:"edit"},
    {href:"/policies/external",label:"External Policies",icon:ShieldCheck,capability:"view_policies"},
-   {href:"/policies/external/new",label:"Add External Policy",icon:Plus,capability:"view_policies",minimumAccess:"edit"}
+   {href:"/policies/external/new",label:"Add External Policy",icon:Plus,capability:"view_policies",minimumAccess:"edit"},
+   {href:"/policies/external/new",label:"Add External Policy",icon:Plus,capability:"create_external_policies",minimumAccess:"edit"}
   ]}
  ]},
  {key:"claims",label:"Claims",icon:ShieldCheck,tint:"from-[#ff6f61] to-[#ff9f68]",capability:"view_claims",items:[
