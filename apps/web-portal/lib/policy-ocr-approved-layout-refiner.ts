@@ -326,7 +326,7 @@ function sanitizeVehicleFields(fields: Map<string, ParsedPolicyField>) {
 }
 
 function isVehicleHeaderGarbage(value: string) {
-  return /^(?:VEHICLE|DESCRIPTION|MODEL|MAKE|MAKE\s*\/\s*MODEL|FUEL\s+TYPE|TYPE\s+OF\s+BODY|YEAR\s+MAKE\s+MODEL.*|MAKEMODEL)$/i.test(value)
+  return /^(?:VEHICLE|DESCRIPTION|MODEL|MAKE|MAKE\s*\/\s*MODEL|FUEL\s+TYPE|TYPE\s+OF\s+BODY|YEAR\s+MAKE\s+MODEL.*|MAKEMODEL|ENGINE(?:\s+(?:NO\.?|NUMBER))?|CHASSIS(?:\s+(?:NO\.?|NUMBER))?|REGISTRATION(?:\s+(?:NO\.?|NUMBER))?|GVW|TOTAL\s+IDV)$/i.test(value)
     || /SECTION\s+I\s*-\s*LOSS\s+OF\s+OR\s+DAMAGE/i.test(value)
     || /GEOGRAPHICAL\s+AREA|भौगोलिक\s+क्षेत्र/i.test(value);
 }
