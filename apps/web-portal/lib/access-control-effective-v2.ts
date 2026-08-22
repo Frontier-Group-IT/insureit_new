@@ -177,11 +177,11 @@ export function resolveEffectivePermissionV2(
         ["backoffice_executive"],
       );
     }
-    if (directOverride && directOverride.access !== "none") {
+    if (directOverride) {
       const cappedAccess = accessRank[directOverride.access] > accessRank[ceiling] ? ceiling : directOverride.access;
       return {
         permission: input.permission,
-        allowed: cappedAccess !== "none",
+        allowed: true,
         access: cappedAccess,
         scopes: dedupeScopes([directOverride.scope ?? "organization"]),
         source: "employee_override",
