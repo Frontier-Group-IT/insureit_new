@@ -3,7 +3,9 @@ import { requireCapability } from "@/lib/master-data-server";
 import { loadFinanceReport, type FinanceQuery } from "@/lib/reports/finance";
 
 export async function GET(request:NextRequest){
- const profile=await requireCapability("view_reports"); const base=toQuery(request.nextUrl.searchParams);
+ const profile=await requireCapability("view_reports");
+ if(profile.role==="backoffice_executive")return new Response("Finance reporting is not available for this role.",{status:403,headers:{"Content-Type":"text/plain; charset=utf-8","Cache-Control":"private, no-store, max-age=0"}});
+ const base=toQuery(request.nextUrl.searchParams);
  try{
   const first=await loadFinanceReport(profile,{...base,page:"1"}); const total=first.report.register.total_count;
   if(total>10000)return new Response("This export contains more than 10,000 rows. Narrow the report filters before exporting.",{status:422,headers:{"Content-Type":"text/plain; charset=utf-8","Cache-Control":"no-store"}});
