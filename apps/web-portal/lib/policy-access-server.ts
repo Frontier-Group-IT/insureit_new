@@ -13,8 +13,9 @@ const accessRank: Record<PermissionAccess, number> = {
 
 async function authenticatedPolicyProfile() {
   const { profile } = await getAuthenticatedProfile(await getServerAccessToken());
-  if (!profile?.id || !isAppRole(profile.role)) redirect("/access-denied");
-  return profile;
+  const role = profile?.role;
+  if (!profile?.id || !isAppRole(role)) redirect("/access-denied");
+  return { ...profile, role };
 }
 
 export async function requirePolicyCreator() {
