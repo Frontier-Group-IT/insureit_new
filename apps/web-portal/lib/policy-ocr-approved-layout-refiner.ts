@@ -347,8 +347,20 @@ function cleanMake(value: string) { return normalize(value).replace(/\b(?:MOTORS
 function cleanModel(value: string) { return normalize(value).replace(/\bBS\s*VI\b/gi, "").replace(/\s+/g, " ").trim(); }
 function title(value: string) { const lower = value.toLowerCase(); return lower.charAt(0).toUpperCase() + lower.slice(1); }
 function identity(value: string) { return normalize(value); }
-function vehicleIdentifier(value: string) { return /^(?:NEW(?:[-/\s].*)?|[A-Z0-9][A-Z0-9\s/-]{4,35})$/i.test(normalize(value)) && !isVehicleHeaderGarbage(normalize(value)); }
-function vehicleText(value: string) { const clean = normalize(value); return clean.length >= 2 && clean.length <= 120 && !/^(?:NA|N\/A|NONE)$/i.test(clean) && !isVehicleHeaderGarbage(clean); }
+function vehicleIdentifier(value: string) {
+  const clean = normalize(value);
+  return /^(?:NEW(?:[-/\s].*)?|[A-Z0-9][A-Z0-9\s/-]{4,35})$/i.test(clean)
+    && (/^NEW(?:[-/\s]|$)/i.test(clean) || /[A-Z]/i.test(clean))
+    && !isVehicleHeaderGarbage(clean);
+}
+function vehicleText(value: string) {
+  const clean = normalize(value);
+  return clean.length >= 2
+    && clean.length <= 120
+    && /[A-Z]/i.test(clean)
+    && !/^(?:NA|N\/A|NONE)$/i.test(clean)
+    && !isVehicleHeaderGarbage(clean);
+}
 function numeric(field: ParsedPolicyField | undefined) { if (!field) return null; const value = Number(field.value.replace(/[^0-9.-]/g, "")); return Number.isFinite(value) ? value : null; }
 function close(value: number, expected: number) { return Math.abs(round2(value) - round2(expected)) <= 2; }
 function round2(value: number) { return Math.round((value + Number.EPSILON) * 100) / 100; }
