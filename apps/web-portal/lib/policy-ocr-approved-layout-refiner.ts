@@ -350,7 +350,7 @@ function identity(value: string) { return normalize(value); }
 function vehicleIdentifier(value: string) {
   const clean = normalize(value);
   return /^(?:NEW(?:[-/\s].*)?|[A-Z0-9][A-Z0-9\s/-]{4,35})$/i.test(clean)
-    && (/^NEW(?:[-/\s]|$)/i.test(clean) || /[A-Z]/i.test(clean))
+    && (/^NEW(?:[-/\s]|$)/i.test(clean) || (/[A-Z]/i.test(clean) && /\d/.test(clean)))
     && !isVehicleHeaderGarbage(clean);
 }
 function vehicleText(value: string) {
