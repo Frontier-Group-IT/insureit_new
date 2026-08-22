@@ -1,4 +1,4 @@
-name: Publish external claim popup test OTA
+name: Publish external claim popup OTA to existing preview app
 
 on:
   push:
@@ -33,14 +33,14 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Publish Expo test OTA
+      - name: Publish Expo OTA to existing preview app
         id: publish
         working-directory: apps/mobile-app
         shell: bash
         run: |
           set +e
           npx eas-cli update \
-            --branch external-claim-popup-test \
+            --branch preview \
             --environment preview \
             --message "Test external claim popup errors across all 9 stages" \
             --non-interactive \
@@ -67,18 +67,18 @@ jobs:
             cat expo-update.stderr.log >&2
           fi
 
-      - name: Verify latest test update
+      - name: Verify latest preview update
         if: steps.publish.outputs.result == 'success'
         working-directory: apps/mobile-app
         shell: bash
         run: |
           npx eas-cli update:list \
-            --branch external-claim-popup-test \
+            --branch preview \
             --limit 1 \
             --json \
             --non-interactive \
             > expo-update-latest.json
-          echo "Latest test update JSON:"
+          echo "Latest preview update JSON:"
           cat expo-update-latest.json
 
       - name: Write OTA publication summary
@@ -91,69 +91,46 @@ jobs:
         run: |
           node <<'NODE'
           const fs = require('fs');
-
           const readJson = (path) => {
-            try {
-              return JSON.parse(fs.readFileSync(path, 'utf8'));
-            } catch {
-              return null;
-            }
+            try { return JSON.parse(fs.readFileSync(path, 'utf8')); } catch { return null; }
           };
-
           const collectObjects = (value, output = []) => {
             if (!value || typeof value !== 'object') return output;
-            if (Array.isArray(value)) {
-              for (const item of value) collectObjects(item, output);
-              return output;
-            }
+            if (Array.isArray(value)) { for (const item of value) collectObjects(item, output); return output; }
             output.push(value);
             for (const item of Object.values(value)) collectObjects(item, output);
             return output;
           };
-
           const firstValue = (objects, keys) => {
-            for (const object of objects) {
-              for (const key of keys) {
-                const value = object?.[key];
-                if (value !== undefined && value !== null && value !== '') return String(value);
-              }
+            for (const object of objects) for (const key of keys) {
+              const value = object?.[key];
+              if (value !== undefined && value !== null && value !== '') return String(value);
             }
             return null;
           };
-
           const uniqueValues = (objects, keys) => {
             const values = [];
-            for (const object of objects) {
-              for (const key of keys) {
-                const value = object?.[key];
-                if (value !== undefined && value !== null && value !== '') values.push(String(value));
-              }
+            for (const object of objects) for (const key of keys) {
+              const value = object?.[key];
+              if (value !== undefined && value !== null && value !== '') values.push(String(value));
             }
             return [...new Set(values)];
           };
-
           const publish = readJson('expo-update.json');
           const latest = readJson('expo-update-latest.json');
-          const objects = [
-            ...collectObjects(latest),
-            ...collectObjects(publish),
-          ];
-
+          const objects = [...collectObjects(latest), ...collectObjects(publish)];
           const groupId = firstValue(objects, ['group', 'groupId', 'updateGroupId']);
           const runtimeVersion = firstValue(objects, ['runtimeVersion']);
-          const updateIds = uniqueValues(objects, ['id', 'updateId'])
-            .filter((value) => value !== groupId)
-            .slice(0, 4);
-          const branch = firstValue(objects, ['branchName', 'branch']) || 'external-claim-popup-test';
+          const updateIds = uniqueValues(objects, ['id', 'updateId']).filter((value) => value !== groupId).slice(0, 4);
+          const branch = firstValue(objects, ['branchName', 'branch']) || 'preview';
           const result = process.env.PUBLISH_RESULT || 'unknown';
           const exitCode = process.env.PUBLISH_EXIT_CODE || 'unknown';
           const icon = result === 'success' ? '✅' : result === 'failed' ? '❌' : '⚠️';
-
           const lines = [
-            '## External claim popup test OTA publication',
+            '## External claim popup OTA publication',
             '',
-            `| Field | Value |`,
-            `| --- | --- |`,
+            '| Field | Value |',
+            '| --- | --- |',
             `| Publish result | ${icon} ${result} |`,
             `| Expo branch | \`${branch}\` |`,
             `| Runtime version | ${runtimeVersion ? `\`${runtimeVersion}\`` : 'Not returned by Expo'} |`,
@@ -162,10 +139,9 @@ jobs:
             `| CLI exit code | \`${exitCode}\` |`,
             `| Source commit | \`${process.env.GITHUB_SHA || 'unknown'}\` |`,
             '',
-            'This workflow publishes only the feature branch to the isolated Expo branch `external-claim-popup-test`.',
+            'This publishes only JavaScript/assets from the feature branch to the existing `preview` OTA branch. No APK is built.',
             '',
           ];
-
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
           NODE
 
@@ -173,5 +149,5 @@ jobs:
         if: always() && steps.publish.outputs.result != 'success'
         shell: bash
         run: |
-          echo "Expo test OTA publication failed with exit code ${{ steps.publish.outputs.exit_code }}." >&2
+          echo "Expo preview OTA publication failed with exit code ${{ steps.publish.outputs.exit_code }}." >&2
           exit 1
