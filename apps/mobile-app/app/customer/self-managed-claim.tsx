@@ -61,6 +61,7 @@ export default function SelfManagedClaimScreen() {
   const [savedBulkCount, setSavedBulkCount] = useState(0);
   const [uploadingDocuments, setUploadingDocuments] = useState(false);
   const [message, setMessage] = useState('');
+  const [validationMessage, setValidationMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [timeTarget, setTimeTarget] = useState<TimeTarget>(null);
@@ -293,15 +294,16 @@ export default function SelfManagedClaimScreen() {
   async function submit() {
     if (!policy || !vehicle || saving || uploadingDocuments) return;
     setMessage('');
+    setValidationMessage('');
     const incidentAt = parseDateTime(incidentDate, incidentTime);
     const spotIntimationAt = parseDateTime(intimationDate, intimationTime);
-    if (!incidentAt) return setMessage('Enter a valid Incident Date and Time.');
-    if (!spotIntimationAt) return setMessage('Enter a valid Spot Intimation Date and Time.');
-    if (incidentAt.getTime() > Date.now()) return setMessage('Incident Date / Time cannot be in the future.');
-    if (spotIntimationAt.getTime() > Date.now()) return setMessage('Spot Intimation Date / Time cannot be in the future.');
-    if (spotIntimationAt.getTime() < incidentAt.getTime()) return setMessage('Spot Intimation Date / Time cannot be earlier than Incident Date / Time.');
+    if (!incidentAt) return setValidationMessage('Please enter Accident Date and Time.');
+    if (!spotIntimationAt) return setValidationMessage('Please enter Spot Intimation Date and Time.');
+    if (incidentAt.getTime() > Date.now()) return setValidationMessage('Accident Date / Time cannot be in the future.');
+    if (spotIntimationAt.getTime() > Date.now()) return setValidationMessage('Spot Intimation Date / Time cannot be in the future.');
+    if (spotIntimationAt.getTime() < incidentAt.getTime()) return setValidationMessage('Spot Intimation Date / Time cannot be earlier than Accident Date / Time.');
     const chronology = validateStageChronology('spot_intimation', spotIntimationAt.toISOString(), milestones);
-    if (chronology) return setMessage(chronology);
+    if (chronology) return setValidationMessage(chronology);
 
     setSaving(true);
     const details = {
@@ -460,6 +462,21 @@ export default function SelfManagedClaimScreen() {
         onAssistance={() => editing ? router.push({ pathname: '/customer/request-claim-assistance', params: { id: claimId } }) : router.push('/customer/support')}
       />
 
+      <Modal visible={Boolean(validationMessage)} transparent animationType="fade" onRequestClose={() => setValidationMessage('')}>
+        <View style={styles.validationBackdrop}>
+          <View accessibilityRole="alert" style={styles.validationCard}>
+            <View style={styles.validationIcon}>
+              <MaterialCommunityIcons name="alert-outline" size={18} color="#D66B4E" />
+            </View>
+            <Text style={styles.validationTitle}>Missing information</Text>
+            <Text style={styles.validationBody}>{validationMessage}</Text>
+            <Pressable accessibilityRole="button" onPress={() => setValidationMessage('')} style={styles.validationButton}>
+              <Text style={styles.validationButtonText}>OK</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
       <TimePickerModal
         value={timeTarget === 'intimation' ? intimationTime : incidentTime}
         visible={timeTarget !== null}
@@ -593,6 +610,13 @@ const styles = StyleSheet.create({
   voiceButtonText: { color: '#FFFFFF', fontSize: 11.5, fontWeight: '900' },
   voiceComingSoon: { marginTop: 9, borderTopWidth: 1, borderTopColor: '#D9E5F3', paddingTop: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   voiceComingSoonText: { color: '#60738B', fontSize: 9.5, lineHeight: 13, fontWeight: '700' },
+  validationBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(7, 24, 50, 0.48)', paddingHorizontal: 24 },
+  validationCard: { width: '100%', maxWidth: 340, borderRadius: 20, backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingTop: 18, paddingBottom: 16, alignItems: 'center', shadowColor: '#071D49', shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: 10 }, elevation: 10 },
+  validationIcon: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#FFF1EC', alignItems: 'center', justifyContent: 'center', marginBottom: 11 },
+  validationTitle: { color: '#172033', fontSize: 18, lineHeight: 22, fontWeight: '900', textAlign: 'center' },
+  validationBody: { color: '#667085', fontSize: 13, lineHeight: 18, fontWeight: '600', textAlign: 'center', marginTop: 7, paddingHorizontal: 4 },
+  validationButton: { width: '100%', minHeight: 46, borderRadius: 13, backgroundColor: '#07327B', alignItems: 'center', justifyContent: 'center', marginTop: 17 },
+  validationButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
   timeField: { gap: 5, marginTop: 10 },
   timeLabel: { color: '#3F4D63', fontSize: 11, fontWeight: '800' },
   timeButton: { minHeight: 48, borderRadius: 13, borderWidth: 1, borderColor: '#D2DFEC', backgroundColor: '#FBFDFF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
