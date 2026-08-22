@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
-import { requirePolicyEditor } from "@/lib/policy-access-server";
+import { requireExternalPolicyCreator, requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export type ExternalPolicyPayload = {
@@ -51,8 +51,10 @@ function friendlyExternalPolicyError(message: string | null | undefined) {
   return "External policy could not be saved. Your entered details are still on this form. Review the details and try again.";
 }
 
-async function validatePayload(payload: ExternalPolicyPayload) {
-  const profile = await requirePolicyEditor();
+async function validatePayload(
+  payload: ExternalPolicyPayload,
+  profile: { id: string; role: string },
+) {
   if (!isUuid(payload.customerId)) return { ok: false as const, error: "Select a valid customer." };
   if (!isUuid(payload.vehicleId)) return { ok: false as const, error: "Select an existing vehicle for the customer." };
   if (!isUuid(payload.insuranceCompanyId)) return { ok: false as const, error: "Select an insurance company." };
@@ -90,7 +92,8 @@ async function validatePayload(payload: ExternalPolicyPayload) {
 }
 
 export async function createExternalPolicy(payload: ExternalPolicyPayload): Promise<ExternalPolicyResult> {
-  const validation = await validatePayload(payload);
+  const profile = await requireExternalPolicyCreator();
+  const validation = await validatePayload(payload, profile);
   if (!validation.ok) return validation;
 
   const { data, error } = await validation.admin
@@ -117,7 +120,8 @@ export async function createExternalPolicy(payload: ExternalPolicyPayload): Prom
 
 export async function updateExternalPolicy(policyId: string, payload: ExternalPolicyPayload): Promise<ExternalPolicyResult> {
   if (!isUuid(policyId)) return { ok: false, error: "Invalid external policy reference." };
-  const validation = await validatePayload(payload);
+  const profile = await requirePolicyEditor();
+  const validation = await validatePayload(payload, profile);
   if (!validation.ok) return validation;
 
   const { data: existing, error: existingError } = await validation.admin
@@ -127,7 +131,6 @@ export async function updateExternalPolicy(policyId: string, payload: ExternalPo
     .maybeSingle<{ id: string; customer_id: string }>();
   if (existingError || !existing) return { ok: false, error: "External policy was not found." };
 
-  const profile = await requirePolicyEditor();
   const accessibleCustomerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_policies");
   if (accessibleCustomerIds !== null && !accessibleCustomerIds.includes(existing.customer_id)) {
     return { ok: false, error: "You do not have access to edit this external policy." };
