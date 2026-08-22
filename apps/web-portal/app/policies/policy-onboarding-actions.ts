@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePolicyEditor } from "@/lib/policy-access-server";
+import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-source";
 import { recordVehicleActivity, VEHICLE_ACTIVITY_ACTIONS } from "@/lib/vehicle-activity";
@@ -96,6 +96,16 @@ function sanitizeFinancialNumbers(payload: PolicyOnboardingPayload) {
   };
 }
 
+function operationalEntryPayload(payload: PolicyOnboardingPayload, role: string | null | undefined): PolicyOnboardingPayload {
+  if (role !== "backoffice_executive") return payload;
+  return {
+    ...payload,
+    payin: { basis: "NET", odPercent: "0", tpPercent: "0", scheme: "0" },
+    billing: { billNumber: "", billedAmount: "0", billDate: "", status: "Unbilled" },
+    payout: { retention: "0", odPercent: "0", tpPercent: "0", status: "Pending", date: "", voucherNumber: "" },
+  };
+}
+
 function validatePayload(payload: PolicyOnboardingPayload) {
   const phone = normalizedPhone(payload.customer.phone ?? "");
   const rawRegistration = String(payload.vehicle.registrationNumber ?? "").trim().toUpperCase();
@@ -168,7 +178,8 @@ async function findVehicleOwnerByChassis(chassis: string) {
 }
 
 export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<PolicyOnboardingResult> {
-  const profile = await requirePolicyEditor();
+  const profile = await requirePolicyCreator();
+  payload = operationalEntryPayload(payload, profile.role);
   const validationError = validatePayload(payload);
   if (validationError) return { ok: false, kind: "validation", error: validationError };
   const sourceResolution = await resolvePolicyIntermediarySource(payload.policy);
@@ -192,9 +203,6 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
 
     if (!selectedCustomerId && !createNewCustomer && customerCandidates.length) {
       if (phoneMatches.length > 0 && exactNameMatches.length === 0) {
-        // Reuse the existing customer-review modal but permit its explicit "Create New Customer"
-        // action for a shared contact number. The actual phone match is revalidated server-side
-        // on the follow-up request before a new customer is inserted.
         return {
           ok: false,
           kind: "customer_match",
