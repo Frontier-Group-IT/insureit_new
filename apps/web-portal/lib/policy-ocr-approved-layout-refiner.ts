@@ -22,36 +22,9 @@ type Layout =
   | "digit_pcp_package";
 
 const labels: Record<string, string> = {
-  vehicle_registration_status: "Registration status",
-  vehicle_registration_number: "Registration number",
-  vehicle_class: "Vehicle class",
-  vehicle_make: "Vehicle make",
-  vehicle_model: "Vehicle model",
-  vehicle_fuel_type: "Fuel type",
-  vehicle_manufacturing_year: "Manufacturing year",
-  vehicle_capacity: "Vehicle capacity",
-  vehicle_chassis_number: "Chassis number",
-  vehicle_engine_number: "Engine number",
-  vehicle_rto_name: "RTO name",
-  vehicle_rto_state: "RTO state",
-  policy_product: "Policy product",
-  policy_number: "Policy number",
-  insurer_name: "Insurance company",
-  policy_start_date: "Valid from",
-  policy_end_date: "Valid upto",
-  idv: "IDV / Sum insured",
-  od_premium: "OD premium",
-  tp_premium: "Third party premium",
-  cpa_opted: "CPA opted",
-  cpa_premium: "CPA amount",
-  total_premium: "Printed net premium",
-  tax_amount: "Printed GST",
-  gross_premium: "Printed gross premium",
+  vehicle_registration_status: "Registration status", vehicle_registration_number: "Registration number", vehicle_class: "Vehicle class", vehicle_make: "Vehicle make", vehicle_model: "Vehicle model", vehicle_fuel_type: "Fuel type", vehicle_manufacturing_year: "Manufacturing year", vehicle_capacity: "Vehicle capacity", vehicle_chassis_number: "Chassis number", vehicle_engine_number: "Engine number", vehicle_rto_name: "RTO name", vehicle_rto_state: "RTO state", policy_product: "Policy product", policy_number: "Policy number", insurer_name: "Insurance company", policy_start_date: "Valid from", policy_end_date: "Valid upto", idv: "IDV / Sum insured", od_premium: "OD premium", tp_premium: "Third party premium", cpa_opted: "CPA opted", cpa_premium: "CPA amount", total_premium: "Printed net premium", tax_amount: "Printed GST", gross_premium: "Printed gross premium",
 };
-
-const policyKeys = [
-  "policy_product","policy_number","insurer_name","policy_start_date","policy_end_date","idv","od_premium","tp_premium","cpa_opted","cpa_premium","total_premium","tax_amount","gross_premium",
-];
+const policyKeys = ["policy_product","policy_number","insurer_name","policy_start_date","policy_end_date","idv","od_premium","tp_premium","cpa_opted","cpa_premium","total_premium","tax_amount","gross_premium"];
 
 export function refineApprovedMotorPolicyLayout(pages: string[], tables: StructuredPolicyTable[], parsed: ParsedPolicyResult): ParsedPolicyResult {
   const text = norm([...pages, ...tables.flatMap((table) => table.rows.flat())].join(" | "));
@@ -62,12 +35,12 @@ export function refineApprovedMotorPolicyLayout(pages: string[], tables: Structu
   for (const key of policyKeys) fields.delete(key);
   cleanVehicle(fields);
   commonVehicle(pages, tables, fields, layout);
-  if (layout.startsWith("uiic_")) refineUiic(pages, tables, fields, text, layout);
-  else if (layout.startsWith("hdfc_")) refineHdfc(pages, tables, fields, layout);
-  else if (layout.startsWith("national_")) refineNational(pages, tables, fields, text, layout);
+  if (layout.startsWith("uiic_")) refineUiic(pages, tables, fields, text, layout as Extract<Layout, `uiic_${string}`>);
+  else if (layout.startsWith("hdfc_")) refineHdfc(pages, tables, fields, layout as Extract<Layout, `hdfc_${string}`>);
+  else if (layout.startsWith("national_")) refineNational(pages, tables, fields, text, layout as Extract<Layout, `national_${string}`>);
   else if (layout === "new_india_saod") refineNewIndia(pages, tables, fields);
   else if (layout === "royal_pcp_tp") refineRoyal(pages, tables, fields);
-  else if (layout.startsWith("magma_")) refineMagma(pages, tables, fields, text, layout);
+  else if (layout.startsWith("magma_")) refineMagma(pages, tables, fields, text, layout as Extract<Layout, `magma_${string}`>);
   else refineDigit(pages, tables, fields);
   cleanVehicle(fields); repairIds(fields);
   const warnings = parsed.warnings.filter((warning) => !/not fully supported|missing or uncertain|financial fields require manual review|premium fields were withheld/i.test(warning));
