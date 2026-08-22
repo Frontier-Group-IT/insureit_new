@@ -1,6 +1,6 @@
 "use server";
 
-import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
@@ -8,7 +8,6 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { isAppRole, type Capability } from "@/lib/roles";
 import { maximumPermissionAccessForRole, permissionAccessRank, permissionDefinitions, type EmployeePermissionAccess, type PermissionAccess, type PermissionScope } from "@/lib/permission-management";
 
-const editableRoles = new Set(["it_super_user", "super_admin"]);
 const allowedAccess = new Set<EmployeePermissionAccess>(["inherit", "none", "view", "edit", "approve"]);
 const allowedScope = new Set<PermissionScope>(["inherit", "self", "hierarchy", "organization"]);
 
