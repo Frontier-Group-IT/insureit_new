@@ -33,7 +33,10 @@ const labels: Record<Capability, Omit<PermissionDefinition, "capability" | "role
   manage_employees: { module: "Employees", label: "Edit employees", description: "Create, modify or deactivate employee records.", risk: "high" },
   view_org_tree: { module: "Employees", label: "View organisation tree", description: "View reporting hierarchy and organisation structure.", risk: "sensitive" },
   view_vehicles: { module: "Fleet", label: "View vehicles", description: "Open vehicle and fleet records.", risk: "standard" },
+  create_vehicles: { module: "Fleet", label: "Add vehicles", description: "Create new vehicle records without granting authority to modify established vehicle identity records.", risk: "sensitive" },
   view_policies: { module: "Policies", label: "View policies", description: "Open policy records and policy information.", risk: "standard" },
+  create_policies: { module: "Policies", label: "Add policies", description: "Create new managed policy records without granting edit authority over existing policies or financial settlement controls.", risk: "sensitive" },
+  create_external_policies: { module: "Policies", label: "Add external policies", description: "Create new external policy records without granting edit authority over existing policy records.", risk: "sensitive" },
   review_policy_ocr_training: { module: "Policies", label: "Operate premium OCR training", description: "Run Google OCR, inspect comparisons and approve sanitized Section 03 training candidates.", risk: "high" },
   approve_policy_ocr_training: { module: "Policies", label: "Operate premium OCR training (legacy)", description: "Compatibility permission for the single-operator OCR training workflow.", risk: "critical" },
   view_tasks: { module: "Tasks", label: "View tasks", description: "Open assigned and accessible tasks.", risk: "standard" },
@@ -62,9 +65,6 @@ export function permissionModules() {
 }
 
 export const getEffectivePermission = cache(async (profileId: string, role: AppRole, capability: Capability) => {
-  // IT Super User is the protected developer role. It must always retain full
-  // organisation-wide access and must never be downgraded by role or employee
-  // override rows created through the permission-management interface.
   if (role === "it_super_user") {
     return { access: "approve" as const, scope: "organization" as const, source: "protected_role" as const };
   }
