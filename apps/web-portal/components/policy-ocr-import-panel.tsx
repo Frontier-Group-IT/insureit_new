@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { extractPolicyDocument, type PolicyOcrField } from "@/app/policies/policy-ocr-actions";
 
-const SECTION_02_FIELDS = new Set([
+export const SECTION_02_OCR_FIELDS = [
   "vehicle_registration_status",
   "vehicle_registration_number",
   "vehicle_class",
@@ -17,9 +17,9 @@ const SECTION_02_FIELDS = new Set([
   "vehicle_engine_number",
   "vehicle_rto_name",
   "vehicle_rto_state",
-]);
+] as const;
 
-const SECTION_03_FIELDS = new Set([
+export const SECTION_03_OCR_FIELDS = [
   "policy_product",
   "idv",
   "od_premium",
@@ -29,34 +29,12 @@ const SECTION_03_FIELDS = new Set([
   "insurer_name",
   "policy_start_date",
   "policy_end_date",
-]);
+] as const;
 
+const SECTION_02_FIELDS = new Set<string>(SECTION_02_OCR_FIELDS);
+const SECTION_03_FIELDS = new Set<string>(SECTION_03_OCR_FIELDS);
 const VERIFICATION_FIELDS = new Set(["cpa_opted", "total_premium", "tax_amount", "gross_premium"]);
 const APPLY_FIELDS = new Set([...SECTION_02_FIELDS, ...SECTION_03_FIELDS]);
-
-const FIELD_TARGETS: Record<string, string[]> = {
-  vehicle_registration_number: ["registration number", "registration no."],
-  vehicle_class: ["class"],
-  vehicle_make: ["make"],
-  vehicle_model: ["model"],
-  vehicle_fuel_type: ["fuel type"],
-  vehicle_manufacturing_year: ["year of manufacturing"],
-  vehicle_capacity: ["capacity"],
-  vehicle_chassis_number: ["chassis number"],
-  vehicle_engine_number: ["engine number"],
-  vehicle_rto_name: ["rto name"],
-  vehicle_rto_state: ["rto state"],
-  policy_product: ["policy product"],
-  idv: ["idv / sum insured", "idv"],
-  od_premium: ["od premium"],
-  tp_premium: ["third party premium", "tp premium"],
-  cpa_premium: ["cpa amount", "cpa premium"],
-  policy_number: ["policy number"],
-  insurer_name: ["insurance company", "insurer"],
-  policy_start_date: ["valid from"],
-  policy_end_date: ["valid upto", "valid up to"],
-};
-
 const APPLY_ORDER = [
   "vehicle_registration_status",
   "vehicle_registration_number",
@@ -81,30 +59,28 @@ const APPLY_ORDER = [
   "policy_end_date",
 ];
 
-const PRODUCT_ALIASES: Record<string, string[]> = {
-  Package: ["package", "package policy", "comprehensive", "comprehensive policy"],
-  "Third Party": ["third party", "third party policy", "liability only", "act only"],
-  SAOD: ["saod", "standalone od", "stand alone od", "standalone own damage", "stand alone own damage"],
-  Bundled: ["bundled", "bundled policy"],
-  "Long Term Package": ["long term package", "multi year package"],
-  "Long Term Third Party": ["long term third party", "long term liability", "multi year third party"],
+export type PolicyOcrImportContext = {
+  mode: "create" | "edit";
+  registrationMode: "registered" | "unregistered";
+  currentValues: Partial<Record<string, string>>;
+  protectedKeys?: string[];
 };
 
-const INSURER_ALIASES: Record<string, string[]> = {
-  digit: ["digit", "go digit"],
-  iffco: ["iffco tokio", "iffco-tokio"],
-  newindia: ["new india assurance", "the new india assurance"],
-  shriram: ["shriram general", "shriram"],
-  oriental: ["oriental insurance", "the oriental insurance"],
-  national: ["national insurance"],
-  universalSompo: ["universal sompo"],
-  unitedIndia: ["united india"],
+export type PolicyOcrApplyOutcome = {
+  applied: number;
+  skipped: string[];
+};
+
+export type PolicyOcrImportPanelProps = {
+  variant?: "header" | "icon";
+  context: PolicyOcrImportContext;
+  onApply: (fields: PolicyOcrField[]) => PolicyOcrApplyOutcome | Promise<PolicyOcrApplyOutcome>;
 };
 
 type ReviewState = "ready" | "review" | "conflict" | "protected";
 type ReviewedField = PolicyOcrField & { currentValue: string; reviewState: ReviewState };
 
-export function PolicyOcrImportPanel({ variant = "header" }: { variant?: "header" | "icon" }) {
+export function PolicyOcrImportPanel({ variant = "header", context, onApply }: PolicyOcrImportPanelProps) {
   const [open, setOpen] = useState(false);
   const [fields, setFields] = useState<PolicyOcrField[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -115,12 +91,12 @@ export function PolicyOcrImportPanel({ variant = "header" }: { variant?: "header
   const [pending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
 
+  const protectedKeys = useMemo(() => new Set(context.protectedKeys ?? []), [context.protectedKeys]);
   const reviewedFields = useMemo(() => fields
     .filter((field) => APPLY_FIELDS.has(field.key))
     .map((field): ReviewedField => {
-      const currentValue = currentFormValue(field);
-      const control = field.key === "vehicle_registration_status" ? null : findControl(FIELD_TARGETS[field.key] ?? []);
-      const protectedField = Boolean(control?.disabled);
+      const currentValue = context.currentValues[field.key] ?? "";
+      const protectedField = (context.mode === "edit" && SECTION_02_FIELDS.has(field.key)) || protectedKeys.has(field.key);
       const confidence = field.confidence ?? 0;
       const same = valuesEquivalent(field, currentValue);
       const conflict = Boolean(currentValue.trim()) && !same;
@@ -129,7 +105,7 @@ export function PolicyOcrImportPanel({ variant = "header" }: { variant?: "header
         currentValue,
         reviewState: protectedField ? "protected" : conflict ? "conflict" : confidence >= .9 ? "ready" : "review",
       };
-    }), [fields, open]);
+    }), [fields, context.currentValues, context.mode, protectedKeys]);
 
   const section02 = reviewedFields.filter((field) => SECTION_02_FIELDS.has(field.key));
   const section03 = reviewedFields.filter((field) => SECTION_03_FIELDS.has(field.key));
@@ -186,18 +162,15 @@ export function PolicyOcrImportPanel({ variant = "header" }: { variant?: "header
       setFields(result.fields);
       setParserInfo(`${friendlyParserName(result.parserId)} · ${friendlyMethod(result.extractionMethod)}`);
       setWarnings(result.warnings);
-      requestAnimationFrame(() => {
-        const safeKeys = result.fields
-          .filter((field) => APPLY_FIELDS.has(field.key) && (field.confidence ?? 0) >= .9)
-          .filter((field) => {
-            const control = field.key === "vehicle_registration_status" ? null : findControl(FIELD_TARGETS[field.key] ?? []);
-            if (control?.disabled) return false;
-            const current = currentFormValue(field);
-            return !current.trim() || valuesEquivalent(field, current);
-          })
-          .map((field) => field.key);
-        setSelected(new Set(safeKeys));
-      });
+      const safeKeys = result.fields
+        .filter((field) => APPLY_FIELDS.has(field.key) && (field.confidence ?? 0) >= .9)
+        .filter((field) => {
+          if ((context.mode === "edit" && SECTION_02_FIELDS.has(field.key)) || protectedKeys.has(field.key)) return false;
+          const current = context.currentValues[field.key] ?? "";
+          return !current.trim() || valuesEquivalent(field, current);
+        })
+        .map((field) => field.key);
+      setSelected(new Set(safeKeys));
     });
   }
 
@@ -226,33 +199,14 @@ export function PolicyOcrImportPanel({ variant = "header" }: { variant?: "header
   }
 
   async function applySelected() {
-    const chosen = new Map(fields.filter((field) => selected.has(field.key) && APPLY_FIELDS.has(field.key)).map((field) => [field.key, field]));
-    let applied = 0;
-    const skipped: string[] = [];
+    const selectedByKey = new Map(fields
+      .filter((field) => selected.has(field.key) && APPLY_FIELDS.has(field.key))
+      .map((field) => [field.key, field]));
+    const chosen = APPLY_ORDER.map((key) => selectedByKey.get(key)).filter((field): field is PolicyOcrField => Boolean(field));
+    if (!chosen.length) return;
 
-    for (const key of APPLY_ORDER) {
-      const field = chosen.get(key);
-      if (!field) continue;
-      if (key === "vehicle_registration_status") {
-        if (applyRegistrationStatus(field.value)) applied += 1; else skipped.push(field.label);
-        await frame();
-        continue;
-      }
-      const control = findControl(FIELD_TARGETS[key] ?? []);
-      if (!control || control.disabled) {
-        skipped.push(field.label);
-        continue;
-      }
-      const value = valueForControl(field, control);
-      if (!value || !setNativeValue(control, value)) {
-        skipped.push(field.label);
-        continue;
-      }
-      applied += 1;
-      if (key === "vehicle_class" || key === "policy_start_date") await frame();
-    }
-
-    if (!applied) {
+    const outcome = await onApply(chosen);
+    if (!outcome.applied) {
       setError("The selected details could not be applied. Protected or unmatched values were left unchanged.");
       return;
     }
@@ -261,8 +215,7 @@ export function PolicyOcrImportPanel({ variant = "header" }: { variant?: "header
     resetReview();
     setDocumentName("");
     formRef.current?.reset();
-
-    window.dispatchEvent(new CustomEvent("insureit:policy-import-result", { detail: { applied, skipped } }));
+    window.dispatchEvent(new CustomEvent("insureit:policy-import-result", { detail: outcome }));
     requestAnimationFrame(() => {
       const target = document.getElementById("policy-section-2") ?? document.getElementById("policy-section-3");
       target?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -287,7 +240,7 @@ export function PolicyOcrImportPanel({ variant = "header" }: { variant?: "header
               <label className="block"><span className="mb-2 block text-[9px] font-bold uppercase tracking-[.08em] text-[#475467]">Policy document</span><input name="policy_document" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required disabled={pending} className="block h-[48px] w-full rounded-xl border border-[#D7DFE9] bg-white text-[10px] text-[#536174] shadow-sm outline-none transition file:mr-4 file:h-full file:border-0 file:border-r file:border-[#D7DFE9] file:bg-[#F2F6FB] file:px-5 file:text-[10px] file:font-semibold file:text-[#173B67] hover:border-[#AEBAC9] focus:border-[#315B9A] disabled:opacity-60"/></label>
               <button disabled={pending} className="h-[48px] rounded-xl bg-[#173B67] px-7 text-[10px] font-bold text-white shadow-sm transition hover:bg-[#102E52] disabled:cursor-wait disabled:opacity-60">{pending ? "Reading document…" : hasResult ? "Read another document" : "Read document"}</button>
             </div>
-            <p className="mt-2.5 text-[9px] leading-4 text-[#7C899A]">Insured name and phone are never proposed. Existing values that disagree with OCR are marked as conflicts. Protected edit-mode vehicle fields are never overwritten.</p>
+            <p className="mt-2.5 text-[9px] leading-4 text-[#7C899A]">Insured name and phone are never proposed. Existing values that disagree with OCR are marked as conflicts. RC-verified and edit-mode vehicle fields are protected from policy-copy overwrite.</p>
           </form>
 
           {pending ? <div className="flex items-center gap-3 border-b border-[#E7ECF2] py-6 text-[#42566F]"><span className="h-5 w-5 animate-spin rounded-full border-2 border-[#BFD0E5] border-t-[#173B67]"/><div><p className="text-[10px] font-semibold">Reading policy schedule</p><p className="mt-0.5 text-[9px] text-[#7A8798]">Vehicle, policy and premium sections are processed together.</p></div></div> : null}
@@ -324,34 +277,5 @@ function friendlyParserName(parserId:string){if(parserId.startsWith("digit_"))re
 function friendlyMethod(method:string){return method==="native_pdf_text"?"digital policy":"Google Document AI";}
 function formatFieldValue(field:PolicyOcrField){if(["idv","od_premium","tp_premium","cpa_premium","total_premium","tax_amount","gross_premium"].includes(field.key)){const number=Number(field.value.replace(/,/g,""));if(Number.isFinite(number))return new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2}).format(number);}return field.value;}
 function normalizeText(value:string){return value.toLowerCase().replace(/\b(?:the|co|company|limited|ltd|general|insurance)\b/g," ").replace(/[^a-z0-9]+/g," ").replace(/\s+/g," ").trim();}
-function frame(){return new Promise<void>((resolve)=>requestAnimationFrame(()=>resolve()));}
-
-function currentFormValue(field:PolicyOcrField){
-  if(field.key==="vehicle_registration_status"){
-    const checked=document.querySelector('[role="radiogroup"][aria-label="Vehicle registration status"] button[role="radio"][aria-checked="true"]');
-    return (checked?.textContent??"").trim();
-  }
-  const control=findControl(FIELD_TARGETS[field.key]??[]);
-  if(!control)return"";
-  if(control instanceof HTMLSelectElement){return control.options[control.selectedIndex]?.textContent?.trim()??control.value;}
-  if(control instanceof HTMLInputElement&&control.type==="date")return control.value;
-  return control.value;
-}
-
-function valuesEquivalent(field:PolicyOcrField,current:string){
-  if(!current.trim())return false;
-  if(field.key==="vehicle_registration_status")return /pending|unregistered|new vehicle/i.test(field.value)?/unregistered/i.test(current):/registered/i.test(current)&&!/unregistered/i.test(current);
-  if(["idv","od_premium","tp_premium","cpa_premium"].includes(field.key)){const a=Number(field.value.replace(/,/g,"")),b=Number(current.replace(/[^0-9.]/g,""));return Number.isFinite(a)&&Number.isFinite(b)&&Math.abs(a-b)<=2;}
-  if(field.key==="policy_start_date"||field.key==="policy_end_date")return toIsoDate(field.value)===toIsoDate(current);
-  return normalizeText(field.value)===normalizeText(current) || normalizeText(current).includes(normalizeText(field.value)) || normalizeText(field.value).includes(normalizeText(current));
-}
-
-function findControl(aliases:string[]){const normalizedAliases=aliases.map((alias)=>alias.toLowerCase().replace(/\s+/g," ").trim());const ariaControls=Array.from(document.querySelectorAll("input[aria-label],select[aria-label],textarea[aria-label]"));for(const control of ariaControls){const aria=(control.getAttribute("aria-label")??"").toLowerCase().replace(/\s+/g," ").trim();if(!normalizedAliases.some((alias)=>aria===alias||aria.startsWith(alias)))continue;if(control instanceof HTMLInputElement&&control.type!=="date"){const nativeDate=control.parentElement?.querySelector("input[type='date']");if(nativeDate instanceof HTMLInputElement)return nativeDate;}if(control instanceof HTMLInputElement||control instanceof HTMLSelectElement||control instanceof HTMLTextAreaElement)return control;}const labels=Array.from(document.querySelectorAll("label"));for(const label of labels){const text=(label.textContent??"").toLowerCase().replace(/\s+/g," ").trim();if(!normalizedAliases.some((alias)=>text.startsWith(alias)))continue;const control=label.querySelector("input,select,textarea")??label.parentElement?.querySelector("input,select,textarea");if(control instanceof HTMLInputElement||control instanceof HTMLSelectElement||control instanceof HTMLTextAreaElement)return control;}return null;}
-function valueForControl(field:PolicyOcrField,control:HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement){if(control instanceof HTMLInputElement&&control.type==="date")return toIsoDate(field.value);if(!(control instanceof HTMLSelectElement))return field.value;if(field.key==="policy_product")return matchPolicyProduct(control,field.value);if(field.key==="insurer_name")return matchInsurer(control,field.value);if(field.key==="vehicle_class")return matchVehicleClass(control,field.value);return findOptionValue(control,field.value);}
-function matchVehicleClass(control:HTMLSelectElement,rawValue:string){const normalized=normalizeText(rawValue);const code=/\bgcv\b|goods carrying|goods carrier/.test(normalized)?"GCV":/\bpcv\b|passenger carrying|passenger vehicle/.test(normalized)?"PCV":/\bpcp\b|private car/.test(normalized)?"PCP":/\btwp\b|two wheeler/.test(normalized)?"TWP":/\bcpm\b|contractors? plant|mobile plant/.test(normalized)?"CPM":"";return code?findOptionValue(control,code):"";}
-function applyRegistrationStatus(rawValue:string){const pending=/pending|unregistered|new vehicle/i.test(rawValue);const group=document.querySelector('[role="radiogroup"][aria-label="Vehicle registration status"]');const option=Array.from(group?.querySelectorAll<HTMLButtonElement>('button[role="radio"]')??[]).find((button)=>(button.textContent??"").trim().toLowerCase()===(pending?"unregistered":"registered"));if(!option||option.disabled)return false;option.click();return true;}
-function matchPolicyProduct(control:HTMLSelectElement,rawValue:string){const wanted=normalizeText(rawValue);const canonical=Object.entries(PRODUCT_ALIASES).find(([,aliases])=>aliases.some((alias)=>normalizeText(alias)===wanted||wanted.includes(normalizeText(alias))))?.[0]??rawValue;return findOptionValue(control,canonical);}
-function matchInsurer(control:HTMLSelectElement,rawValue:string){const normalizedRaw=normalizeText(rawValue);const aliasKey=Object.entries(INSURER_ALIASES).find(([,aliases])=>aliases.some((alias)=>normalizedRaw.includes(normalizeText(alias))))?.[0];const wantedTokens=new Set(normalizedRaw.split(" ").filter(Boolean));let best:{value:string;score:number}|null=null;for(const option of Array.from(control.options)){if(!option.value)continue;const normalizedOption=normalizeText(option.textContent??option.label);const optionTokens=new Set(normalizedOption.split(" ").filter(Boolean));if(!optionTokens.size)continue;let score=Array.from(wantedTokens).filter((token)=>optionTokens.has(token)).length/Math.max(wantedTokens.size,1);if(aliasKey&&INSURER_ALIASES[aliasKey].some((alias)=>normalizedOption.includes(normalizeText(alias))))score=Math.max(score,.95);if(!best||score>best.score)best={value:option.value,score};}return best&&best.score>=.5?best.value:"";}
-function findOptionValue(control:HTMLSelectElement,rawValue:string){const wanted=normalizeText(rawValue);const exact=Array.from(control.options).find((option)=>normalizeText(option.textContent??option.label)===wanted||normalizeText(option.value)===wanted);if(exact)return exact.value;const contains=Array.from(control.options).find((option)=>{const optionText=normalizeText(option.textContent??option.label);return optionText&&wanted&&(optionText.includes(wanted)||wanted.includes(optionText));});return contains?.value??"";}
+function valuesEquivalent(field:PolicyOcrField,current:string){if(!current.trim())return false;if(field.key==="vehicle_registration_status")return /pending|unregistered|new vehicle/i.test(field.value)?/unregistered/i.test(current):/registered/i.test(current)&&!/unregistered/i.test(current);if(["idv","od_premium","tp_premium","cpa_premium"].includes(field.key)){const a=Number(field.value.replace(/,/g,"")),b=Number(current.replace(/[^0-9.]/g,""));return Number.isFinite(a)&&Number.isFinite(b)&&Math.abs(a-b)<=2;}if(field.key==="policy_start_date"||field.key==="policy_end_date")return toIsoDate(field.value)===toIsoDate(current);const a=normalizeText(field.value),b=normalizeText(current);return Boolean(a&&b&&(a===b||a.includes(b)||b.includes(a)));}
 function toIsoDate(value:string){if(/^\d{4}-\d{2}-\d{2}$/.test(value))return value;const months:Record<string,string>={JAN:"01",FEB:"02",MAR:"03",APR:"04",MAY:"05",JUN:"06",JUL:"07",AUG:"08",SEP:"09",OCT:"10",NOV:"11",DEC:"12"};const match=value.toUpperCase().match(/(\d{1,2})[-/]([A-Z]{3}|\d{1,2})[-/](\d{4})/);if(!match)return"";const month=months[match[2]]??match[2].padStart(2,"0");return`${match[3]}-${month}-${match[1].padStart(2,"0")}`;}
-function setNativeValue(control:HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement,value:string){if(!value||control.disabled)return false;const prototype=control instanceof HTMLInputElement?HTMLInputElement.prototype:control instanceof HTMLSelectElement?HTMLSelectElement.prototype:HTMLTextAreaElement.prototype;const setter=Object.getOwnPropertyDescriptor(prototype,"value")?.set;if(!setter)return false;setter.call(control,value);control.dispatchEvent(new Event("input",{bubbles:true}));control.dispatchEvent(new Event("change",{bubbles:true}));return true;}
