@@ -26,6 +26,9 @@ export type ManagementPack = {
 };
 
 export async function loadManagementPack(profile: ViewerProfile, query: ManagementPackQuery): Promise<ManagementPack> {
+  if (profile.role === "backoffice_executive") {
+    throw new Error("Backoffice Executive cannot access management-pack finance, payout or governance data.");
+  }
   const filters = resolveManagementPackFilters(query);
   const monthQuery = { period: "custom", from: filters.fromDate, to: filters.toDate, page: "1" };
   const canViewGovernance = await hasEffectiveCapability(profile, "manage_users");

@@ -2,15 +2,25 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { reportWorkspace, reportWorkspaceForPath, reportWorkspaces } from "@/lib/reports/navigation";
+import { reportWorkspaceForPath, reportWorkspaces } from "@/lib/reports/navigation";
 
-type Props = { canViewGovernance: boolean };
+type Props = { canViewGovernance: boolean; role?: string | null };
 
-export function ReportNavigation({ canViewGovernance: _canViewGovernance }: Props) {
+export function ReportNavigation({ canViewGovernance: _canViewGovernance, role }: Props) {
   const pathname = usePathname();
   const router = useRouter();
-  const activeKey = reportWorkspaceForPath(pathname) ?? "overview";
-  const activeWorkspace = reportWorkspace(activeKey);
+  const backofficeRestricted = role === "backoffice_executive";
+  const visibleWorkspaces = reportWorkspaces
+    .filter((workspace) => !backofficeRestricted || ["business", "portfolio", "operations"].includes(workspace.key))
+    .map((workspace) => backofficeRestricted && workspace.key === "business"
+      ? {
+          ...workspace,
+          routes: workspace.routes.filter((route) => route === "/reports/business"),
+          sections: workspace.sections?.filter((section) => section.href === "/reports/business"),
+        }
+      : workspace);
+  const activeKey = reportWorkspaceForPath(pathname) ?? visibleWorkspaces[0]?.key ?? "business";
+  const activeWorkspace = visibleWorkspaces.find((workspace) => workspace.key === activeKey) ?? visibleWorkspaces[0];
   const activeSection = activeWorkspace?.sections
     ?.slice()
     .sort((a, b) => b.href.length - a.href.length)
@@ -21,7 +31,7 @@ export function ReportNavigation({ canViewGovernance: _canViewGovernance }: Prop
       <style>{`.reports-r1-content header nav{display:none!important}`}</style>
       <div className="reports-v2-nav">
         <div className="reports-v2-nav__desktop">
-          {reportWorkspaces.map((workspace) => (
+          {visibleWorkspaces.map((workspace) => (
             <Link key={workspace.key} href={workspace.href} className={workspaceClass(activeKey === workspace.key)}>
               {workspace.label}
             </Link>
@@ -31,8 +41,8 @@ export function ReportNavigation({ canViewGovernance: _canViewGovernance }: Prop
         <div className="reports-v2-nav__mobile">
           <label>
             <span>Reporting area</span>
-            <select value={activeWorkspace?.href ?? "/reports"} onChange={(event) => router.push(event.target.value)}>
-              {reportWorkspaces.map((workspace) => <option key={workspace.key} value={workspace.href}>{workspace.label}</option>)}
+            <select value={activeWorkspace?.href ?? "/reports/business"} onChange={(event) => router.push(event.target.value)}>
+              {visibleWorkspaces.map((workspace) => <option key={workspace.key} value={workspace.href}>{workspace.label}</option>)}
             </select>
           </label>
         </div>

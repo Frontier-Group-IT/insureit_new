@@ -10,6 +10,7 @@ export type FinanceRow={id:string;customer_id:string;vehicle_id:string|null;insu
 type RmOptionRow={id:string|null;name:string|null};
 
 export async function loadFinanceReport(profile:ViewerProfile,query:FinanceQuery){
+ if(profile.role==="backoffice_executive")throw new Error("Finance reporting is not available for the Backoffice Executive role.");
  const filters=resolveFinanceFilters(query);
  const[customerIds,scope]=await Promise.all([getAccessibleCustomerIds(profile.id,profile.role,"view_reports"),getEmployeeAccessScope(profile.id,profile.role,"view_reports")]);
  if(customerIds!==null&&customerIds.length===0)return{report:emptyFinanceReport(filters.page),filters,scopeMode:scope.mode};

@@ -3,7 +3,7 @@ import { PolicyOnboardingProductGuard } from "@/components/policy-onboarding-pro
 import { PolicyRemarksActionStyle } from "@/components/policy-remarks-action-style";
 import { AppShell } from "@/components/shell";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
-import { requirePolicyEditor } from "@/lib/policy-access-server";
+import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type InsurerOption = { id: string; name: string };
@@ -24,7 +24,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function NewPolicyPage() {
-  await requirePolicyEditor();
+  await requirePolicyCreator();
   const admin = createSupabaseAdminClient();
 
   let salesEmployees: Awaited<ReturnType<typeof loadPospMispAssociates>> = [];

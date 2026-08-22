@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { DataError } from "@/components/record-list";
 import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel";
+import { BackofficeCustomerRegister } from "@/components/backoffice-customer-register";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -36,8 +37,7 @@ export default async function CustomersPage() {
   if (accessibleIds !== null && !accessibleIds.length) {
     return (
       <AppShell title="Customers">
-        <DealershipEntryActivator />
-        <div className="mx-auto max-w-[1480px]"><CustomerWorkspace rows={[]} /></div>
+        {profile.role === "backoffice_executive" ? <div className="mx-auto max-w-[1480px]"><BackofficeCustomerRegister rows={[]} /></div> : <><DealershipEntryActivator /><div className="mx-auto max-w-[1480px]"><CustomerWorkspace rows={[]} /></div></>}
       </AppShell>
     );
   }
@@ -52,7 +52,7 @@ export default async function CustomersPage() {
 
   return (
     <AppShell title="Customers">
-      <DealershipEntryActivator />
+      {profile.role !== "backoffice_executive" ? <DealershipEntryActivator /> : null}
       <div className="mx-auto max-w-[1480px]">
         {profile.role === "it_super_user" && !customersResult.error ? (
           <ItSuperUserDeletePanel
@@ -67,6 +67,8 @@ export default async function CustomersPage() {
         ) : null}
         {customersResult.error ? (
           <DataError message="The customer register could not be loaded." />
+        ) : profile.role === "backoffice_executive" ? (
+          <BackofficeCustomerRegister rows={rows} />
         ) : (
           <CustomerWorkspace rows={rows} />
         )}

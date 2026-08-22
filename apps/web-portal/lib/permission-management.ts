@@ -25,7 +25,8 @@ const labels: Record<Capability, Omit<PermissionDefinition, "capability" | "role
   review_intermediary_application: { module: "Intermediaries", label: "Review onboarding applications", description: "Review and edit submitted onboarding information and documents.", risk: "sensitive" },
   approve_intermediary_application: { module: "Intermediaries", label: "Approve onboarding applications", description: "Give final onboarding approval before activation.", risk: "high" },
   activate_intermediary: { module: "Intermediaries", label: "Activate intermediary", description: "Activate approved Partner, POSP or MISP accounts.", risk: "critical" },
-  view_customers: { module: "Customers", label: "View customers", description: "Open customer records and customer details.", risk: "standard" },
+  view_customers: { module: "Customers", label: "View customers", description: "Open customer register records within the permitted scope.", risk: "standard" },
+  create_customers: { module: "Customers", label: "Add customers", description: "Create new operational customer records without granting authority to edit existing customer identity or KYC records.", risk: "sensitive" },
   manage_customers: { module: "Customers", label: "Edit customers", description: "Create and modify customer and related fleet records.", risk: "sensitive" },
   view_kyc: { module: "KYC", label: "View KYC", description: "Open customer KYC records and documents.", risk: "sensitive" },
   review_kyc: { module: "KYC", label: "Review KYC", description: "Review and update KYC verification status.", risk: "high" },
@@ -33,12 +34,15 @@ const labels: Record<Capability, Omit<PermissionDefinition, "capability" | "role
   manage_employees: { module: "Employees", label: "Edit employees", description: "Create, modify or deactivate employee records.", risk: "high" },
   view_org_tree: { module: "Employees", label: "View organisation tree", description: "View reporting hierarchy and organisation structure.", risk: "sensitive" },
   view_vehicles: { module: "Fleet", label: "View vehicles", description: "Open vehicle and fleet records.", risk: "standard" },
+  create_vehicles: { module: "Fleet", label: "Add vehicles", description: "Create new vehicle records without granting authority to modify established vehicle identity records.", risk: "sensitive" },
   view_policies: { module: "Policies", label: "View policies", description: "Open policy records and policy information.", risk: "standard" },
+  create_policies: { module: "Policies", label: "Add policies", description: "Create new managed policy records without granting edit authority over existing policies or financial settlement controls.", risk: "sensitive" },
+  create_external_policies: { module: "Policies", label: "Add external policies", description: "Create new external policy records without granting edit authority over existing policy records.", risk: "sensitive" },
   review_policy_ocr_training: { module: "Policies", label: "Operate premium OCR training", description: "Run Google OCR, inspect comparisons and approve sanitized Section 03 training candidates.", risk: "high" },
   approve_policy_ocr_training: { module: "Policies", label: "Operate premium OCR training (legacy)", description: "Compatibility permission for the single-operator OCR training workflow.", risk: "critical" },
   view_tasks: { module: "Tasks", label: "View tasks", description: "Open assigned and accessible tasks.", risk: "standard" },
   manage_tasks: { module: "Tasks", label: "Edit and assign tasks", description: "Create, assign, update and close tasks.", risk: "sensitive" },
-  view_reports: { module: "Reports", label: "View reports", description: "Open reports and management summaries.", risk: "sensitive" },
+  view_reports: { module: "Reports", label: "View reports", description: "Open permitted operational and general reports.", risk: "sensitive" },
   view_notifications: { module: "Notifications", label: "View notifications", description: "Open system and workflow notifications.", risk: "standard" },
   manage_users: { module: "Administration", label: "Manage portal users", description: "Create and manage internal portal user access.", risk: "critical" },
   manage_master_data: { module: "Administration", label: "Manage master data", description: "Create and edit operational master data.", risk: "high" },
@@ -51,6 +55,25 @@ export const permissionDefinitions: PermissionDefinition[] = Object.entries(labe
   roleAccess: capability.startsWith("view_") ? "view" : definition.risk === "critical" || capability.startsWith("approve_") || capability.startsWith("activate_") ? "approve" : "edit",
 }));
 
+const backofficePermissionCeiling: Partial<Record<Capability, PermissionAccess>> = {
+  view_dashboard: "view",
+  view_customers: "view",
+  create_customers: "edit",
+  view_vehicles: "view",
+  create_vehicles: "edit",
+  view_policies: "view",
+  create_policies: "edit",
+  create_external_policies: "edit",
+  view_reports: "view",
+  view_notifications: "view",
+};
+const accessRank: Record<PermissionAccess, number> = { none: 0, view: 1, edit: 2, approve: 3 };
+function capBackofficeAccess(role: AppRole, capability: Capability, access: PermissionAccess): PermissionAccess {
+  if (role !== "backoffice_executive") return access;
+  const ceiling = backofficePermissionCeiling[capability] ?? "none";
+  return accessRank[access] > accessRank[ceiling] ? ceiling : access;
+}
+
 export function rolePermissionAccess(role: string | null | undefined, capability: Capability): PermissionAccess {
   if (role === "it_super_user") return "approve";
   if (!hasCapability(role, capability)) return "none";
@@ -62,9 +85,6 @@ export function permissionModules() {
 }
 
 export const getEffectivePermission = cache(async (profileId: string, role: AppRole, capability: Capability) => {
-  // IT Super User is the protected developer role. It must always retain full
-  // organisation-wide access and must never be downgraded by role or employee
-  // override rows created through the permission-management interface.
   if (role === "it_super_user") {
     return { access: "approve" as const, scope: "organization" as const, source: "protected_role" as const };
   }
@@ -75,9 +95,9 @@ export const getEffectivePermission = cache(async (profileId: string, role: AppR
     admin.from("employee_permission_overrides").select("access_level,scope_type,expires_at").eq("profile_id", profileId).eq("capability", capability).or(`expires_at.is.null,expires_at.gt.${now}`).maybeSingle(),
     admin.from("role_permission_overrides").select("access_level,scope_type").eq("role", role).eq("capability", capability).maybeSingle(),
   ]);
-  if (employeeOverride && employeeOverride.access_level !== "inherit") return { access: employeeOverride.access_level as PermissionAccess, scope: employeeOverride.scope_type as PermissionScope, source: "employee_override" as const };
-  if (roleOverride) return { access: roleOverride.access_level as PermissionAccess, scope: roleOverride.scope_type as PermissionScope, source: "role_override" as const };
-  return { access: rolePermissionAccess(role, capability), scope: "role_default" as const, source: "role" as const };
+  if (employeeOverride && employeeOverride.access_level !== "inherit") return { access: capBackofficeAccess(role, capability, employeeOverride.access_level as PermissionAccess), scope: employeeOverride.scope_type as PermissionScope, source: "employee_override" as const };
+  if (roleOverride) return { access: capBackofficeAccess(role, capability, roleOverride.access_level as PermissionAccess), scope: roleOverride.scope_type as PermissionScope, source: "role_override" as const };
+  return { access: capBackofficeAccess(role, capability, rolePermissionAccess(role, capability)), scope: "role_default" as const, source: "role" as const };
 });
 
 export const getEffectivePermissionAccessMapForRole = cache(async (profileId: string, role: AppRole) => {
@@ -112,7 +132,7 @@ export const getEffectivePermissionAccessMapForRole = cache(async (profileId: st
     const access = employeeOverrideByCapability.get(capability)
       ?? roleOverrideByCapability.get(capability)
       ?? rolePermissionAccess(role, capability);
-    return [capability, access] as const;
+    return [capability, capBackofficeAccess(role, capability, access)] as const;
   })) as Partial<Record<Capability, PermissionAccess>>;
 });
 

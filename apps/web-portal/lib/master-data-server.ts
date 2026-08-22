@@ -11,6 +11,17 @@ export async function requireCapability(capability: Capability, minimumAccess?: 
   return profile;
 }
 
+export async function requireAnyCapability(
+  requirements: Array<{ capability: Capability; minimumAccess?: "view" | "edit" | "approve" }>,
+) {
+  const accessToken = await getServerAccessToken();
+  const { profile } = await getAuthenticatedProfile(accessToken);
+  if (!profile) redirect("/access-denied");
+  const allowed = await Promise.all(requirements.map(({ capability, minimumAccess }) => hasEffectiveCapability(profile, capability, minimumAccess)));
+  if (!allowed.some(Boolean)) redirect("/access-denied");
+  return profile;
+}
+
 export async function requireMasterDataManager() {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);

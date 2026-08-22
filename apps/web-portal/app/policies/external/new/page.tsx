@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
-import { requirePolicyEditor } from "@/lib/policy-access-server";
+import { requireExternalPolicyCreator } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { ExternalPolicyForm } from "../external-policy-form";
 
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function NewExternalPolicyPage() {
-  const profile = await requirePolicyEditor();
+  const profile = await requireExternalPolicyCreator();
   const accessibleCustomerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_policies");
   if (accessibleCustomerIds !== null && !accessibleCustomerIds.length) redirect("/access-denied");
 

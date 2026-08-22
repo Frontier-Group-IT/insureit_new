@@ -100,8 +100,9 @@ expect(
 );
 
 // Static compatibility comparison. This does not claim full production parity:
-// it compares the current code-defined legacy role capabilities only against
-// the V2 permissions explicitly mapped from those capabilities. RLS, stored
+// it compares the current code-defined legacy role capabilities against the
+// effective V2 permission outcome for Backoffice (which has an explicit safety
+// ceiling) and against raw mapped V2 grants for the other roles. RLS, stored
 // overrides and record-level scope are separate Phase 8 parity inputs.
 const internalRoles = appRoles.filter((role) => role !== "customer" && role !== "intermediary");
 const roleByCode = new Map(roleMatrixV2.map((role) => [role.code, role]));
@@ -115,15 +116,23 @@ for (const roleCode of internalRoles) {
 
   for (const [legacyCapability, mappedPermissions] of Object.entries(legacyCapabilityCompatibilityMap)) {
     const legacyGranted = legacyCapabilities.has(legacyCapability);
-    const grantedMapped = mappedPermissions.filter((permission) => v2GrantKeys.has(permission));
+    const grantedMapped = mappedPermissions.filter((permission) => roleCode === "backoffice_executive"
+      ? decide(permission, roleCode).allowed
+      : v2GrantKeys.has(permission));
     const v2Any = grantedMapped.length > 0;
     const v2All = grantedMapped.length === mappedPermissions.length;
+    const permissionsRepresentedByOtherGrantedCapabilities = new Set(
+      Object.entries(legacyCapabilityCompatibilityMap)
+        .filter(([otherCapability]) => otherCapability !== legacyCapability && legacyCapabilities.has(otherCapability))
+        .flatMap(([, permissions]) => permissions),
+    );
+    const unrepresentedExpansion = grantedMapped.filter((permission) => !permissionsRepresentedByOtherGrantedCapabilities.has(permission));
 
     let classification = "retained-deny";
     if (legacyGranted && v2All) classification = "retained-grant";
     else if (legacyGranted && v2Any) classification = "narrowed";
     else if (legacyGranted && !v2Any) classification = "removed";
-    else if (!legacyGranted && v2Any) classification = "expanded";
+    else if (!legacyGranted && unrepresentedExpansion.length > 0) classification = "expanded";
 
     comparisonRows.push({ roleCode, legacyCapability, mappedPermissions, grantedMapped, classification });
   }
@@ -163,6 +172,6 @@ console.log(JSON.stringify({
   scopedDecisionCases: 7,
   compatibilityRows: comparisonRows.length,
   compatibilityCounts: counts,
-  caveat: "Static comparison covers code-defined legacy capabilities and mapped V2 grants only; production RLS, stored overrides and record ownership parity remain Phase 8 work.",
+  caveat: "Static comparison covers code-defined legacy capabilities and mapped V2 outcomes only; production RLS, stored overrides and record ownership parity remain Phase 8 work.",
   status: "ok",
 }, null, 2));

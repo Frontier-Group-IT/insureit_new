@@ -52,6 +52,18 @@ const accessRank: Record<AccessLevel, number> = {
   approve: 3,
 };
 
+const backofficePermissionCeiling: Partial<Record<PermissionKeyV2, Exclude<AccessLevel, "none">>> = {
+  "dashboard.view": "view",
+  "customers.view": "view",
+  "customers.create": "edit",
+  "vehicles.view": "view",
+  "vehicles.create": "edit",
+  "policies.view": "view",
+  "policies.create": "edit",
+  "reports.view": "view",
+  "notifications.view": "view",
+};
+
 function asDate(value: string | Date | null | undefined) {
   if (!value) return null;
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
@@ -101,12 +113,10 @@ function noAccess(
  * Precedence:
  * 1. inactive employee or portal identity => deny
  * 2. protected IT Super User grant => protected grant, ordinary overrides ignored
- * 3. active employee override => explicit deny or direct grant
- * 4. active role grants => strongest access level, union of scopes at that level
- * 5. no grant => deny
- *
- * The function is intentionally pure and receives the role matrix as data. It is
- * not connected to production authorization, RLS, navigation or server actions.
+ * 3. Backoffice Executive safety ceiling => create/view operational data only
+ * 4. active employee override => explicit deny or direct grant
+ * 5. active role grants => strongest access level, union of scopes at that level
+ * 6. no grant => deny
  */
 export function resolveEffectivePermissionV2(
   input: ResolveEffectivePermissionV2Input,
@@ -143,10 +153,53 @@ export function resolveEffectivePermissionV2(
     }
   }
 
+  const backofficeOnly = activeRoles.length > 0 && activeRoles.every((role) => role.code === "backoffice_executive");
   const matchingOverrides = (input.overrides ?? []).filter(
     (override) => override.permission === input.permission && overrideIsCurrent(override, now),
   );
   const directOverride = matchingOverrides.at(-1);
+
+  if (backofficeOnly) {
+    const ceiling = backofficePermissionCeiling[input.permission];
+    if (!ceiling) {
+      return noAccess(
+        input.permission,
+        "no_grant",
+        "Backoffice Executive is restricted to operational create/view permissions.",
+        ["backoffice_executive"],
+      );
+    }
+    if (directOverride?.access === "none") {
+      return noAccess(
+        input.permission,
+        "employee_deny",
+        directOverride.reason?.trim() || "An active employee-specific deny overrides the Backoffice baseline.",
+        ["backoffice_executive"],
+      );
+    }
+    if (directOverride) {
+      const cappedAccess = accessRank[directOverride.access] > accessRank[ceiling] ? ceiling : directOverride.access;
+      return {
+        permission: input.permission,
+        allowed: true,
+        access: cappedAccess,
+        scopes: dedupeScopes([directOverride.scope ?? "organization"]),
+        source: "employee_override",
+        contributingRoles: [],
+        reason: "Employee override is capped by the Backoffice Executive safety ceiling.",
+      };
+    }
+    return {
+      permission: input.permission,
+      allowed: true,
+      access: ceiling,
+      scopes: input.permission === "notifications.view" ? ["self"] : ["organization"],
+      source: "role_grant",
+      contributingRoles: ["backoffice_executive"],
+      reason: "Granted by the Backoffice Executive operational data-entry baseline.",
+    };
+  }
+
   if (directOverride) {
     if (directOverride.access === "none") {
       return noAccess(
