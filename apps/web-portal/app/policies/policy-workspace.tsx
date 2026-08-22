@@ -58,7 +58,7 @@ function policySourceKey(row: Pick<PolicyRow, "intermediary_type" | "intermediar
 
 function PolicyDateFilter({ label, value, min, max, onChange }: { label: string; value: string; min?: string; max?: string; onChange: (value: string) => void }) {
   return (
-    <label className="relative block h-10 w-[148px] shrink-0">
+    <label className="relative block h-10 w-[148px] shrink-0 xl:w-full xl:min-w-0">
       <span className={`pointer-events-none absolute inset-y-0 left-3 right-9 z-10 flex items-center text-[10.5px] font-semibold ${value ? "text-[#334155]" : "text-[#64748B]"}`}>
         {value ? formatDateFilterValue(value) : label}
       </span>
@@ -177,24 +177,22 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
       </div>
 
       <div className="border-b border-[#E5ECF5] bg-white px-3 py-2 sm:px-4">
-        <div className="flex flex-col gap-2 xl:flex-row xl:flex-nowrap xl:items-center xl:justify-between">
-          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:flex-nowrap xl:gap-1.5">
-            <div className="[&_select]:min-w-[180px] [&_select]:w-[180px]">
-              <RegisterSelect value={source} onChange={(value) => { setSource(value); setPage(1); }} label="Lead source">
-                <option value="all">All Sources</option>
-                {sourceOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-              </RegisterSelect>
-            </div>
-            <div className="[&_select]:min-w-[200px] [&_select]:w-[200px]">
-              <RegisterSelect value={insurer} onChange={(value) => { setInsurer(value); setPage(1); }} label="Insurance company">
-                <option value="all">All insurers</option>
-                {insurers.map((item) => <option key={item} value={item}>{item}</option>)}
-              </RegisterSelect>
-            </div>
-            <PolicyDateFilter label="From Date" value={fromDate} max={toDate || undefined} onChange={(value) => { setFromDate(value); setPage(1); }} />
-            <PolicyDateFilter label="To Date" value={toDate} min={fromDate || undefined} onChange={(value) => { setToDate(value); setPage(1); }} />
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:grid xl:grid-cols-[minmax(140px,0.9fr)_minmax(160px,1fr)_minmax(132px,0.72fr)_minmax(132px,0.72fr)_minmax(330px,auto)] xl:gap-1.5">
+          <div className="[&>label]:block [&>label]:w-full [&_select]:min-w-[180px] [&_select]:w-[180px] xl:[&_select]:min-w-0 xl:[&_select]:w-full">
+            <RegisterSelect value={source} onChange={(value) => { setSource(value); setPage(1); }} label="Lead source">
+              <option value="all">All Sources</option>
+              {sourceOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </RegisterSelect>
           </div>
-          <div className="min-w-0 max-w-full xl:ml-auto xl:shrink-0 xl:[&>div]:gap-0.5 xl:[&_button]:px-2.5 xl:[&_button]:text-[10px]">
+          <div className="[&>label]:block [&>label]:w-full [&_select]:min-w-[200px] [&_select]:w-[200px] xl:[&_select]:min-w-0 xl:[&_select]:w-full">
+            <RegisterSelect value={insurer} onChange={(value) => { setInsurer(value); setPage(1); }} label="Insurance company">
+              <option value="all">All insurers</option>
+              {insurers.map((item) => <option key={item} value={item}>{item}</option>)}
+            </RegisterSelect>
+          </div>
+          <PolicyDateFilter label="From Date" value={fromDate} max={toDate || undefined} onChange={(value) => { setFromDate(value); setPage(1); }} />
+          <PolicyDateFilter label="To Date" value={toDate} min={fromDate || undefined} onChange={(value) => { setToDate(value); setPage(1); }} />
+          <div className="min-w-0 max-w-full xl:min-w-[330px] xl:[&>div]:w-full xl:[&>div]:justify-between xl:[&>div]:gap-0.5 xl:[&_button]:px-2.5 xl:[&_button]:text-[10px]">
             <RegisterViewTabs
               value={view}
               onChange={changeView}
