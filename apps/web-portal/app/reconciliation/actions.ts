@@ -22,16 +22,34 @@ export type ReconciliationMatchResult = {
   status: "matched" | "unmatched";
 };
 
-export type ReconciliationSubmitRow = {
+export type ReconciliationSourceMethod = "manual" | "excel_paste" | "template_import" | "expected_policies";
+
+export type ReconciliationDraftRow = {
   policyNo: string;
-  actualPayin: number;
-  tds?: number;
-  adjustment?: number;
+  actualPayin: number | null;
+  tds?: number | null;
+  adjustment?: number | null;
   transactionType?: string;
   reason?: string;
   reference?: string;
   remarks?: string;
 };
+
+export type ReconciliationDraftInput = {
+  cycleId?: string | null;
+  insurerId: string;
+  periodStart: string;
+  periodEnd: string;
+  accountingPeriodStart?: string;
+  accountingPeriodEnd?: string;
+  statementDate?: string;
+  statementReference?: string;
+  settlementCycle?: string;
+  sourceMethod?: ReconciliationSourceMethod;
+  rows: ReconciliationDraftRow[];
+};
+
+export type ReconciliationSubmitRow = Omit<ReconciliationDraftRow, "actualPayin"> & { actualPayin: number };
 
 type PolicyLookupRow = {
   id: string;
@@ -52,6 +70,16 @@ function normalizePolicyNo(value: string) {
 function finiteNumber(value: unknown, fallback = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function optionalFinite(value: unknown) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function isDate(value: string | undefined) {
+  return !value || /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
 function projectedPayin(row: PolicyLookupRow) {
@@ -79,6 +107,28 @@ async function requireReconciliationUser() {
   const profile = await requireCapability("view_accounts");
   if (!canAccessPolicyCommercials(profile)) throw new Error("Commercial details restricted");
   return profile;
+}
+
+function validateHeader(input: ReconciliationDraftInput, requireInsurer = true) {
+  if (requireInsurer && !input.insurerId) throw new Error("Select an insurer.");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.periodStart) || !/^\d{4}-\d{2}-\d{2}$/.test(input.periodEnd) || input.periodEnd < input.periodStart) {
+    throw new Error("Enter a valid statement period.");
+  }
+  if (!isDate(input.statementDate) || !isDate(input.accountingPeriodStart) || !isDate(input.accountingPeriodEnd)) throw new Error("Enter valid dates.");
+  if (input.accountingPeriodStart && input.accountingPeriodEnd && input.accountingPeriodEnd < input.accountingPeriodStart) throw new Error("Accounting period end cannot be before its start.");
+}
+
+function cleanDraftRows(rows: ReconciliationDraftRow[]) {
+  return rows.slice(0, 2000).map((row) => ({
+    policyNo: String(row.policyNo ?? "").trim(),
+    actualPayin: optionalFinite(row.actualPayin),
+    tds: optionalFinite(row.tds),
+    adjustment: optionalFinite(row.adjustment),
+    transactionType: row.transactionType?.trim() || "Commission",
+    reason: row.reason?.trim() || "",
+    reference: row.reference?.trim() || "",
+    remarks: row.remarks?.trim() || "",
+  }));
 }
 
 async function loadPolicyMap(policyNumbers: string[], insurerId?: string) {
@@ -135,22 +185,87 @@ export async function loadExpectedReconciliationPolicies(input: { insurerId: str
   return (data ?? []).map((row) => toMatch(row as unknown as PolicyLookupRow));
 }
 
-export async function submitReconciliationCycle(input: {
-  insurerId: string;
-  periodStart: string;
-  periodEnd: string;
-  statementReference?: string;
-  rows: ReconciliationSubmitRow[];
-}) {
+export async function saveReconciliationDraft(input: ReconciliationDraftInput) {
   const profile = await requireReconciliationUser();
   if (!profile?.id) throw new Error("User profile unavailable.");
-  if (!input.insurerId) throw new Error("Select an insurer.");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.periodStart) || !/^\d{4}-\d{2}-\d{2}$/.test(input.periodEnd) || input.periodEnd < input.periodStart) throw new Error("Enter a valid reconciliation period.");
+  validateHeader(input);
+  const admin = createSupabaseAdminClient();
+  const now = new Date().toISOString();
+  const rows = cleanDraftRows(input.rows);
+  const activeRowCount = rows.filter((row) => normalizePolicyNo(row.policyNo)).length;
+  const values = {
+    insurer_id: input.insurerId,
+    period_start: input.periodStart,
+    period_end: input.periodEnd,
+    accounting_period_start: input.accountingPeriodStart || null,
+    accounting_period_end: input.accountingPeriodEnd || null,
+    statement_date: input.statementDate || null,
+    statement_reference: input.statementReference?.trim() || null,
+    settlement_cycle: input.settlementCycle?.trim() || null,
+    source_method: input.sourceMethod || "manual",
+    status: "Draft",
+    row_count: activeRowCount,
+    draft_payload: { version: 2, rows },
+    draft_saved_at: now,
+    updated_at: now,
+  };
 
-  const rows = input.rows.filter((row) => normalizePolicyNo(row.policyNo));
+  if (input.cycleId) {
+    const { data, error } = await admin.from("reconciliation_cycles").update(values).eq("id", input.cycleId).eq("status", "Draft").select("id").single();
+    if (error || !data) throw new Error("This draft can no longer be edited.");
+    return { cycleId: String(data.id), savedAt: now };
+  }
+
+  const { data, error } = await admin.from("reconciliation_cycles").insert({ ...values, created_by: profile.id, submitted_at: null }).select("id").single();
+  if (error || !data?.id) throw new Error("Draft could not be created.");
+  await admin.from("reconciliation_events").insert({
+    cycle_id: data.id,
+    event_type: "Draft created",
+    to_status: "Draft",
+    event_data: { source_method: values.source_method, row_count: activeRowCount },
+    actor_profile_id: profile.id,
+  });
+  return { cycleId: String(data.id), savedAt: now };
+}
+
+export async function getReconciliationDraft(cycleId: string) {
+  const profile = await requireReconciliationUser();
+  if (!profile?.id) throw new Error("User profile unavailable.");
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin.from("reconciliation_cycles")
+    .select("id,insurer_id,period_start,period_end,accounting_period_start,accounting_period_end,statement_date,statement_reference,settlement_cycle,source_method,draft_payload,draft_saved_at,status,created_by")
+    .eq("id", cycleId).eq("status", "Draft").single();
+  if (error || !data) throw new Error("Draft not found.");
+  return data;
+}
+
+export async function listReconciliationDrafts() {
+  await requireReconciliationUser();
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin.from("reconciliation_cycles")
+    .select("id,period_start,period_end,statement_reference,statement_date,settlement_cycle,source_method,row_count,draft_saved_at,insurance_companies(name),profiles!reconciliation_cycles_created_by_fkey(full_name)")
+    .eq("status", "Draft").order("draft_saved_at", { ascending: false }).limit(25);
+  if (error) throw new Error("Drafts are temporarily unavailable.");
+  return data ?? [];
+}
+
+export async function discardReconciliationDraft(cycleId: string) {
+  const profile = await requireReconciliationUser();
+  if (!profile?.id) throw new Error("User profile unavailable.");
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin.from("reconciliation_cycles").delete().eq("id", cycleId).eq("status", "Draft").select("id").single();
+  if (error || !data) throw new Error("Draft could not be discarded.");
+  return { ok: true };
+}
+
+export async function submitReconciliationCycle(input: ReconciliationDraftInput) {
+  const profile = await requireReconciliationUser();
+  if (!profile?.id) throw new Error("User profile unavailable.");
+  validateHeader(input);
+  const rows = cleanDraftRows(input.rows).filter((row) => normalizePolicyNo(row.policyNo));
   if (!rows.length) throw new Error("Add at least one reconciliation row.");
   for (const row of rows) {
-    if (!Number.isFinite(Number(row.actualPayin))) throw new Error(`Actual recognized pay-in is required for ${row.policyNo}.`);
+    if (row.actualPayin === null) throw new Error(`Actual Recognized Brokerage is required for ${row.policyNo}.`);
   }
 
   const policyMap = await loadPolicyMap(rows.map((row) => row.policyNo), input.insurerId);
@@ -174,10 +289,10 @@ export async function submitReconciliationCycle(input: {
       tds_amount: tds,
       adjustment_amount: adjustment,
       variance_amount: variance,
-      transaction_type: row.transactionType?.trim() || "Commission",
-      variance_reason: row.reason?.trim() || null,
-      insurer_reference: row.reference?.trim() || null,
-      remarks: row.remarks?.trim() || null,
+      transaction_type: row.transactionType || "Commission",
+      variance_reason: row.reason || null,
+      insurer_reference: row.reference || null,
+      remarks: row.remarks || null,
       review_status: exact ? "Accepted" : "Pending",
       reviewed_by: exact ? profile.id : null,
       reviewed_at: exact ? new Date().toISOString() : null,
@@ -196,11 +311,39 @@ export async function submitReconciliationCycle(input: {
   }, { projected: 0, actual: 0, adjustment: 0, tds: 0, variance: 0, matched: 0, varianceRows: 0 });
 
   const admin = createSupabaseAdminClient();
-  const { data: cycle, error: cycleError } = await admin.from("reconciliation_cycles").insert({
+  let cycleId = input.cycleId ?? null;
+  if (cycleId) {
+    const { data: draft, error } = await admin.from("reconciliation_cycles").select("id,status").eq("id", cycleId).eq("status", "Draft").single();
+    if (error || !draft) throw new Error("This draft can no longer be submitted.");
+  } else {
+    const { data: draft, error } = await admin.from("reconciliation_cycles").insert({
+      insurer_id: input.insurerId,
+      period_start: input.periodStart,
+      period_end: input.periodEnd,
+      status: "Draft",
+      created_by: profile.id,
+      submitted_at: null,
+      row_count: prepared.length,
+    }).select("id").single();
+    if (error || !draft?.id) throw new Error("Reconciliation cycle could not be created.");
+    cycleId = String(draft.id);
+  }
+
+  await admin.from("reconciliation_lines").delete().eq("cycle_id", cycleId);
+  const { data: insertedLines, error: lineError } = await admin.from("reconciliation_lines").insert(prepared.map((row) => ({ ...row, cycle_id: cycleId }))).select("id,source_row_no");
+  if (lineError) throw new Error("Reconciliation rows could not be saved. The cycle remains a draft.");
+
+  const now = new Date().toISOString();
+  const { data: submitted, error: cycleError } = await admin.from("reconciliation_cycles").update({
     insurer_id: input.insurerId,
     period_start: input.periodStart,
     period_end: input.periodEnd,
+    accounting_period_start: input.accountingPeriodStart || null,
+    accounting_period_end: input.accountingPeriodEnd || null,
+    statement_date: input.statementDate || null,
     statement_reference: input.statementReference?.trim() || null,
+    settlement_cycle: input.settlementCycle?.trim() || null,
+    source_method: input.sourceMethod || "manual",
     status: "Submitted",
     row_count: prepared.length,
     matched_row_count: totals.matched,
@@ -210,25 +353,24 @@ export async function submitReconciliationCycle(input: {
     adjustment_total: totals.adjustment,
     tds_total: totals.tds,
     variance_total: totals.variance,
-    created_by: profile.id,
-  }).select("id").single();
-  if (cycleError || !cycle?.id) throw new Error("Reconciliation cycle could not be created.");
-
-  const cycleId = String(cycle.id);
-  const { data: insertedLines, error: lineError } = await admin.from("reconciliation_lines").insert(prepared.map((row) => ({ ...row, cycle_id: cycleId }))).select("id,source_row_no");
-  if (lineError) {
-    await admin.from("reconciliation_cycles").delete().eq("id", cycleId);
-    throw new Error("Reconciliation rows could not be saved.");
+    draft_payload: null,
+    draft_saved_at: null,
+    submitted_at: now,
+    updated_at: now,
+  }).eq("id", cycleId).eq("status", "Draft").select("id").single();
+  if (cycleError || !submitted) {
+    await admin.from("reconciliation_lines").delete().eq("cycle_id", cycleId);
+    throw new Error("Cycle submission could not be finalized. The draft has been preserved.");
   }
 
-  const { error: eventError } = await admin.from("reconciliation_events").insert({
+  await admin.from("reconciliation_events").insert({
     cycle_id: cycleId,
     event_type: "Cycle submitted",
+    from_status: "Draft",
     to_status: "Submitted",
-    event_data: { row_count: prepared.length, matched_row_count: totals.matched, variance_row_count: totals.varianceRows, inserted_line_count: insertedLines?.length ?? 0 },
+    event_data: { row_count: prepared.length, matched_row_count: totals.matched, variance_row_count: totals.varianceRows, inserted_line_count: insertedLines?.length ?? 0, source_method: input.sourceMethod || "manual" },
     actor_profile_id: profile.id,
   });
-  if (eventError) console.error("Reconciliation audit event insert failed", eventError);
   return { cycleId };
 }
 
@@ -236,8 +378,8 @@ export async function listReconciliationCycles() {
   await requireReconciliationUser();
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin.from("reconciliation_cycles")
-    .select("id,period_start,period_end,statement_reference,status,row_count,matched_row_count,variance_row_count,projected_total,actual_total,variance_total,submitted_at,insurance_companies(name),profiles!reconciliation_cycles_created_by_fkey(full_name)")
-    .order("submitted_at", { ascending: false }).limit(100);
+    .select("id,period_start,period_end,accounting_period_start,accounting_period_end,statement_date,statement_reference,settlement_cycle,source_method,status,row_count,matched_row_count,variance_row_count,projected_total,actual_total,variance_total,submitted_at,updated_at,insurance_companies(name),profiles!reconciliation_cycles_created_by_fkey(full_name)")
+    .neq("status", "Draft").order("submitted_at", { ascending: false }).limit(100);
   if (error) throw new Error("Reconciliation history is temporarily unavailable.");
   return data ?? [];
 }
@@ -266,6 +408,23 @@ export async function reviewReconciliationLine(input: { cycleId: string; lineId:
   if (cycle.status === "Submitted") await admin.from("reconciliation_cycles").update({ status: "Under Review", updated_at: new Date().toISOString() }).eq("id", input.cycleId);
   await admin.from("reconciliation_events").insert({ cycle_id: input.cycleId, line_id: input.lineId, event_type: "Line reviewed", to_status: input.reviewStatus, reason: input.reason?.trim() || null, actor_profile_id: profile.id });
   return { ok: true };
+}
+
+export async function bulkReviewReconciliationLines(input: { cycleId: string; lineIds: string[]; reviewStatus: "Accepted" | "Follow-up" | "Resolved"; reason?: string }) {
+  const profile = await requireReconciliationUser();
+  if (!profile?.id) throw new Error("User profile unavailable.");
+  const lineIds = Array.from(new Set(input.lineIds.filter(Boolean))).slice(0, 1000);
+  if (!lineIds.length) throw new Error("Select at least one reconciliation row.");
+  const admin = createSupabaseAdminClient();
+  const { data: cycle } = await admin.from("reconciliation_cycles").select("status").eq("id", input.cycleId).single();
+  if (!cycle || !["Submitted", "Under Review", "Reopened"].includes(String(cycle.status))) throw new Error("This cycle is not open for review.");
+  const now = new Date().toISOString();
+  const values = { review_status: input.reviewStatus, reviewed_by: profile.id, reviewed_at: now, ...(input.reason?.trim() ? { variance_reason: input.reason.trim() } : {}) };
+  const { data, error } = await admin.from("reconciliation_lines").update(values).eq("cycle_id", input.cycleId).in("id", lineIds).select("id");
+  if (error || !data?.length) throw new Error("Selected rows could not be reviewed.");
+  if (cycle.status === "Submitted") await admin.from("reconciliation_cycles").update({ status: "Under Review", updated_at: now }).eq("id", input.cycleId);
+  await admin.from("reconciliation_events").insert({ cycle_id: input.cycleId, event_type: "Bulk line review", to_status: input.reviewStatus, reason: input.reason?.trim() || null, event_data: { line_count: data.length }, actor_profile_id: profile.id });
+  return { ok: true, updated: data.length };
 }
 
 export async function markReconciliationCycleReconciled(cycleId: string) {
