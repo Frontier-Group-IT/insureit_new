@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
-import { requirePolicyEditor } from "@/lib/policy-access-server";
+import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type BulkCommercialInput = {
@@ -52,7 +52,7 @@ function optionalAmount(value: string | undefined) {
 }
 
 export async function bulkSavePolicyCommercials(input: BulkCommercialInput) {
-  const profile = await requirePolicyEditor();
+  const profile = await requireCapability("view_accounts");
   if (!canAccessPolicyCommercials(profile)) return { ok: false as const, error: "Commercial details restricted" };
 
   const policyIds = Array.from(new Set(input.policyIds.filter(Boolean)));
@@ -156,6 +156,7 @@ export async function bulkSavePolicyCommercials(input: BulkCommercialInput) {
     updated += 1;
   }
 
+  revalidatePath("/accounts");
   revalidatePath("/policies/commercial-review");
   revalidatePath("/reports");
   revalidatePath("/reports/finance");
