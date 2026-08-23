@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { requireCapability } from "@/lib/master-data-server";
 import { loadManagementPack, managementPackCsvRows } from "@/lib/reports/management-pack";
 import { loadManagementPackSnapshot } from "@/lib/reports/management-pack-archive";
@@ -8,7 +9,12 @@ export const revalidate = 0;
 
 export async function GET(request: NextRequest) {
   const profile = await requireCapability("view_reports");
-  if (!profile) return new Response("Access denied", { status: 403 });
+  if (!profile || !canAccessPolicyCommercials(profile)) {
+    return new Response("Commercial details restricted", {
+      status: 403,
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "private, no-store, max-age=0" },
+    });
+  }
 
   const month = request.nextUrl.searchParams.get("month") || undefined;
   const snapshotId = request.nextUrl.searchParams.get("snapshot") || undefined;
