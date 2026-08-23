@@ -20,7 +20,7 @@ const base = {
 };
 
 const digit = refineProductionRound3Precision({ ...base, parserVersion: "digit+prod-r2-digit" });
-const digitKeys = new Set(digit.fields.map((item: any) => item.key));
+const digitKeys = new Set(digit.fields.map((item) => item.key));
 for (const key of ["od_premium","tp_premium","cpa_opted","cpa_premium","total_premium","tax_amount","gross_premium","vehicle_make","vehicle_model","vehicle_fuel_type","vehicle_capacity"]) {
   assert.equal(digitKeys.has(key), false, `Digit must withhold ${key}`);
 }
@@ -28,7 +28,7 @@ assert.equal(digitKeys.has("policy_number"), true, "Digit must preserve stable i
 assert.match(digit.parserVersion, /prod-r3-precision-digit/);
 
 const iffco = refineProductionRound3Precision({ ...base, parserVersion: "iffco+prod-r2-iffco" });
-const iffcoKeys = new Set(iffco.fields.map((item: any) => item.key));
+const iffcoKeys = new Set(iffco.fields.map((item) => item.key));
 for (const key of ["od_premium","tp_premium","cpa_premium","vehicle_make","vehicle_capacity"]) {
   assert.equal(iffcoKeys.has(key), false, `IFFCO must withhold ${key}`);
 }
