@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { ReportQueryShortcuts } from "@/components/reports/report-query-shortcuts";
@@ -21,6 +22,7 @@ type Props = { searchParams: Promise<FinanceQuery> };
 
 export default async function FinanceReportsPage({ searchParams }: Props) {
   const profile = await requireCapability("view_reports");
+  if(profile.role==="backoffice_executive")redirect("/access-denied");
   if (!canAccessPolicyCommercials(profile)) {
     return (
       <AppShell title="Reports">
