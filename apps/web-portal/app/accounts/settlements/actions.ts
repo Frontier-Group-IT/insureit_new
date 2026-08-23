@@ -38,31 +38,17 @@ export async function recordReceipt(input: { insurerId: string; receiptDate: str
   const allocations = input.allocations.map((a) => ({ invoiceId: a.invoiceId, amount: money(a.amount) })).filter((a) => a.invoiceId && a.amount > 0);
   const allocatedTotal = money(allocations.reduce((s, a) => s + a.amount, 0));
   if (!allocations.length || allocatedTotal !== bankAmount) throw new Error("Invoice allocations must equal the bank receipt amount.");
-
-  const { data: invoices, error } = await db.from("accounts_invoices").select("id,insurer_id,status,outstanding_amount,invoice_no").in("id", allocations.map((a) => a.invoiceId));
-  if (error || !invoices || invoices.length !== allocations.length) throw new Error(error?.message ?? "Unable to load selected invoices.");
-  for (const allocation of allocations) {
-    const invoice = invoices.find((i) => i.id === allocation.invoiceId)!;
-    if (invoice.insurer_id !== input.insurerId || !["Raised","Partially Received"].includes(invoice.status) || allocation.amount > money(invoice.outstanding_amount)) throw new Error("Receipt allocation exceeds an eligible invoice balance or mixes insurers.");
-  }
-
-  const { data: receipt, error: receiptError } = await db.from("accounts_receipts").insert({ insurer_id: input.insurerId, receipt_date: input.receiptDate, bank_reference: input.bankReference.trim(), bank_amount: bankAmount, notes: input.notes?.trim() || null, created_by: profile.id }).select("id").single();
-  if (receiptError || !receipt) throw new Error(receiptError?.message ?? "Unable to record receipt.");
-
-  const { error: allocError } = await db.from("accounts_receipt_allocations").insert(allocations.map((a) => ({ receipt_id: receipt.id, invoice_id: a.invoiceId, allocated_amount: a.amount })));
-  if (allocError) { await db.from("accounts_receipts").delete().eq("id", receipt.id); throw new Error(allocError.message); }
-
-  for (const allocation of allocations) {
-    const invoice = invoices.find((i) => i.id === allocation.invoiceId)!;
-    const nextOutstanding = money(money(invoice.outstanding_amount) - allocation.amount);
-    const nextStatus = nextOutstanding === 0 ? "Received" : "Partially Received";
-    const { error: ledgerError } = await db.from("accounts_receivable_entries").insert({ insurer_id: input.insurerId, invoice_id: invoice.id, entry_date: input.receiptDate, entry_type: "Receipt", document_reference: input.bankReference.trim(), debit_amount: 0, credit_amount: allocation.amount, description: "Bank receipt allocated", created_by: profile.id });
-    if (ledgerError) throw new Error(ledgerError.message);
-    const { error: updateError } = await db.from("accounts_invoices").update({ outstanding_amount: nextOutstanding, status: nextStatus, updated_at: new Date().toISOString() }).eq("id", invoice.id);
-    if (updateError) throw new Error(updateError.message);
-    await db.from("accounts_invoice_events").insert({ invoice_id: invoice.id, event_type: "Receipt allocated", from_status: invoice.status, to_status: nextStatus, event_data: { receipt_id: receipt.id, amount: allocation.amount, bank_reference: input.bankReference.trim() }, actor_profile_id: profile.id });
-  }
-  return { receiptId: receipt.id };
+  const { data, error } = await db.rpc("post_accounts_receipt", {
+    p_insurer_id: input.insurerId,
+    p_receipt_date: input.receiptDate,
+    p_bank_reference: input.bankReference.trim(),
+    p_bank_amount: bankAmount,
+    p_notes: input.notes?.trim() || null,
+    p_created_by: profile.id,
+    p_allocations: allocations,
+  });
+  if (error) throw new Error(error.message);
+  return { receiptId: String(data) };
 }
 
 export async function recordTds(input: { invoiceId: string; tdsDate: string; tdsAmount: number; certificatePeriod?: string; certificateReference?: string; matchedStatus?: "Pending"|"Matched"|"Mismatch"; notes?: string }) {
@@ -70,17 +56,16 @@ export async function recordTds(input: { invoiceId: string; tdsDate: string; tds
   const db = createSupabaseAdminClient();
   const amount = money(input.tdsAmount);
   if (!input.invoiceId || !/^\d{4}-\d{2}-\d{2}$/.test(input.tdsDate) || amount <= 0) throw new Error("Invoice, TDS date and a positive TDS amount are required.");
-  const { data: invoice, error } = await db.from("accounts_invoices").select("id,insurer_id,status,outstanding_amount,invoice_no").eq("id", input.invoiceId).single();
-  if (error || !invoice) throw new Error(error?.message ?? "Invoice not found.");
-  if (!["Raised","Partially Received"].includes(invoice.status) || amount > money(invoice.outstanding_amount)) throw new Error("TDS cannot exceed the eligible outstanding invoice balance.");
-
-  const { data: tds, error: tdsError } = await db.from("accounts_tds_entries").insert({ insurer_id: invoice.insurer_id, invoice_id: invoice.id, tds_date: input.tdsDate, tds_amount: amount, certificate_period: input.certificatePeriod?.trim() || null, certificate_reference: input.certificateReference?.trim() || null, matched_status: input.matchedStatus ?? "Pending", notes: input.notes?.trim() || null, created_by: profile.id }).select("id").single();
-  if (tdsError || !tds) throw new Error(tdsError?.message ?? "Unable to record TDS.");
-  const { error: ledgerError } = await db.from("accounts_receivable_entries").insert({ insurer_id: invoice.insurer_id, invoice_id: invoice.id, entry_date: input.tdsDate, entry_type: "TDS", document_reference: input.certificateReference?.trim() || input.certificatePeriod?.trim() || "TDS", debit_amount: 0, credit_amount: amount, description: "TDS receivable recognized", created_by: profile.id });
-  if (ledgerError) { await db.from("accounts_tds_entries").delete().eq("id", tds.id); throw new Error(ledgerError.message); }
-  const nextOutstanding = money(money(invoice.outstanding_amount) - amount);
-  const nextStatus = nextOutstanding === 0 ? "Received" : "Partially Received";
-  await db.from("accounts_invoices").update({ outstanding_amount: nextOutstanding, status: nextStatus, updated_at: new Date().toISOString() }).eq("id", invoice.id);
-  await db.from("accounts_invoice_events").insert({ invoice_id: invoice.id, event_type: "TDS recorded", from_status: invoice.status, to_status: nextStatus, event_data: { tds_id: tds.id, amount }, actor_profile_id: profile.id });
-  return { tdsId: tds.id };
+  const { data, error } = await db.rpc("post_accounts_tds", {
+    p_invoice_id: input.invoiceId,
+    p_tds_date: input.tdsDate,
+    p_tds_amount: amount,
+    p_certificate_period: input.certificatePeriod?.trim() || null,
+    p_certificate_reference: input.certificateReference?.trim() || null,
+    p_matched_status: input.matchedStatus ?? "Pending",
+    p_notes: input.notes?.trim() || null,
+    p_created_by: profile.id,
+  });
+  if (error) throw new Error(error.message);
+  return { tdsId: String(data) };
 }
