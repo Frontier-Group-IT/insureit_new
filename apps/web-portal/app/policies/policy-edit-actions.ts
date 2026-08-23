@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-source";
@@ -32,6 +33,21 @@ export type PolicyEditResult =
   | { ok: true; policyId: string; policyCode: string }
   | { ok: false; error: string };
 
+type ExistingPayin = {
+  payout_basis: string | null;
+  projected_od_percent: number | null;
+  projected_tp_percent: number | null;
+  insurer_scheme_amount: number | null;
+};
+type ExistingPayout = {
+  retention_amount: number | null;
+  od_payout_percent: number | null;
+  tp_payout_percent: number | null;
+  status: string | null;
+  payout_date: string | null;
+  voucher_number: string | null;
+};
+
 function validDate(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
@@ -46,6 +62,10 @@ function validPercent(value: string) {
   if (value.trim() === "") return true;
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 && parsed <= 100;
+}
+
+function textNumber(value: number | null | undefined) {
+  return value === null || value === undefined ? "" : String(value);
 }
 
 export async function updatePolicyOnboarding(policyId: string, payload: PolicyEditPayload): Promise<PolicyEditResult> {
@@ -64,28 +84,50 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
     return { ok: false, error: "CPA amount is mandatory for GCV policies and must be greater than 0." };
   }
 
-  const monetaryValues = [
-    payload.policy.idv,
-    payload.premium.od,
-    payload.premium.tp,
-    payload.premium.cpa,
-    payload.payin.scheme,
-  ];
-  if (monetaryValues.some((value) => !validNumber(value))) return { ok: false, error: "Review the premium, scheme and retention values." };
+  const monetaryValues = [payload.policy.idv, payload.premium.od, payload.premium.tp, payload.premium.cpa, payload.payin.scheme];
+  if (monetaryValues.some((value) => !validNumber(value))) return { ok: false, error: "Review the premium and scheme values." };
 
-  const percentageValues = [
-    payload.payin.odPercent,
-    payload.payin.tpPercent,
-    payload.payout.odPercent,
-    payload.payout.tpPercent,
-  ];
+  const percentageValues = [payload.payin.odPercent, payload.payin.tpPercent, payload.payout.odPercent, payload.payout.tpPercent];
   if (percentageValues.some((value) => !validPercent(value))) return { ok: false, error: "Pay-in and payout percentages must be between 0 and 100." };
 
   try {
     const sourceResolution = await resolvePolicyIntermediarySource(payload.policy);
     if (!sourceResolution.ok) return { ok: false, error: sourceResolution.error };
-    const normalizedPayload = { ...payload, policy: { ...payload.policy, ...sourceResolution.source } };
+
     const admin = createSupabaseAdminClient();
+    let protectedPayin = payload.payin;
+    let protectedPayout = payload.payout;
+
+    if (!canAccessPolicyCommercials(profile)) {
+      const [payinResult, payoutResult] = await Promise.all([
+        admin.from("policy_payin_details").select("payout_basis,projected_od_percent,projected_tp_percent,insurer_scheme_amount").eq("policy_id", policyId).maybeSingle<ExistingPayin>(),
+        admin.from("policy_intermediary_payouts").select("retention_amount,od_payout_percent,tp_payout_percent,status,payout_date,voucher_number").eq("policy_id", policyId).order("created_at", { ascending: false }).limit(1).maybeSingle<ExistingPayout>(),
+      ]);
+      if (payinResult.error || payoutResult.error) return { ok: false, error: "We couldn't preserve the restricted commercial details. Please try again." };
+      const payin = payinResult.data;
+      const payout = payoutResult.data;
+      protectedPayin = {
+        basis: payin?.payout_basis ?? "NET",
+        odPercent: textNumber(payin?.projected_od_percent),
+        tpPercent: textNumber(payin?.projected_tp_percent),
+        scheme: textNumber(payin?.insurer_scheme_amount),
+      };
+      protectedPayout = {
+        retention: textNumber(payout?.retention_amount),
+        odPercent: textNumber(payout?.od_payout_percent),
+        tpPercent: textNumber(payout?.tp_payout_percent),
+        status: payout?.status ?? "Pending",
+        date: payout?.payout_date ?? "",
+        voucherNumber: payout?.voucher_number ?? "",
+      };
+    }
+
+    const normalizedPayload = {
+      ...payload,
+      policy: { ...payload.policy, ...sourceResolution.source },
+      payin: protectedPayin,
+      payout: protectedPayout,
+    };
     const { data, error } = await admin.rpc("update_motor_policy", {
       p_policy_id: policyId,
       p_payload: normalizedPayload,
