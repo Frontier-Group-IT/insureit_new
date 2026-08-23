@@ -42,6 +42,7 @@ const labels: Record<Capability, Omit<PermissionDefinition, "capability" | "role
   approve_policy_ocr_training: { module: "Policies", label: "Operate premium OCR training (legacy)", description: "Compatibility permission for the single-operator OCR training workflow.", risk: "critical" },
   view_tasks: { module: "Tasks", label: "View tasks", description: "Open assigned and accessible tasks.", risk: "standard" },
   manage_tasks: { module: "Tasks", label: "Edit and assign tasks", description: "Create, assign, update and close tasks.", risk: "sensitive" },
+  view_accounts: { module: "Accounts", label: "View Accounts workspace", description: "Open sensitive commercial, reconciliation and accounts-operation workspaces. Profile-specific commercial authorization is enforced in addition to this capability.", risk: "high" },
   view_reports: { module: "Reports", label: "View reports", description: "Open permitted operational and general reports.", risk: "sensitive" },
   view_notifications: { module: "Notifications", label: "View notifications", description: "Open system and workflow notifications.", risk: "standard" },
   manage_users: { module: "Administration", label: "Manage portal users", description: "Create and manage internal portal user access.", risk: "critical" },
