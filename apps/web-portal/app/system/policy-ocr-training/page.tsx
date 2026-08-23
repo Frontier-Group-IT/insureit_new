@@ -1,9 +1,7 @@
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { requirePolicyOcrTrainingOperator } from "@/lib/policy-ocr-training-access";
-import {
-  createProductionOcrBenchmarkRun,
-  processNextProductionOcrBenchmarkBatch,
-} from "./actions";
+import { createProductionOcrBenchmarkRun } from "./actions";
+import { BenchmarkRunner } from "./benchmark-runner";
 
 export const dynamic = "force-dynamic";
 
@@ -113,17 +111,7 @@ export default async function PolicyOcrTrainingControlPage() {
                 {activeRun.selection_strategy} · {activeRun.sample_per_family} policies per selected insurer family
               </p>
             </div>
-            {counts.pending > 0 ? (
-              <form action={processNextProductionOcrBenchmarkBatch}>
-                <input type="hidden" name="runId" value={activeRun.id} />
-                <button
-                  type="submit"
-                  className="rounded-xl bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-800"
-                >
-                  Process next 2 baseline policies
-                </button>
-              </form>
-            ) : null}
+            {counts.pending > 0 ? <BenchmarkRunner runId={activeRun.id} pending={counts.pending} /> : null}
           </div>
 
           <div className="overflow-x-auto">
