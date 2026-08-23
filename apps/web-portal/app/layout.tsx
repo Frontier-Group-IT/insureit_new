@@ -43,11 +43,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <AadhaarMaskNormalizer />
             <EmbeddedMasterSaveBridge />
             <LegacyIntermediaryImportLink />
-            <RouteProgressBar />
+            <ProfessionalFormValidation />
             <PolicyEditCopyFooterActions />
             <PolicySaveConfirmation />
             <SuccessPopup />
-            <ProfessionalFormValidation />
+            <RouteProgressBar />
           </Suspense>
         </AppRouterCacheProvider>
       </body>
