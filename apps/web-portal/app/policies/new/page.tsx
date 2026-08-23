@@ -1,8 +1,10 @@
-import { PolicyUnifiedForm, type PolicyRmOption, type PolicySourceOption } from "@/components/policy-unified-form";
+import { PolicyCommercialShell } from "@/components/policy-commercial-shell";
+import { type PolicyRmOption, type PolicySourceOption } from "@/components/policy-unified-form";
 import { PolicyOnboardingProductGuard } from "@/components/policy-onboarding-product-guard";
 import { PolicyRemarksActionStyle } from "@/components/policy-remarks-action-style";
 import { AppShell } from "@/components/shell";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
+import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -24,7 +26,8 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function NewPolicyPage() {
-  await requirePolicyCreator();
+  const profile = await requirePolicyCreator();
+  const commercialAccess = canAccessPolicyCommercials(profile);
   const admin = createSupabaseAdminClient();
 
   let salesEmployees: Awaited<ReturnType<typeof loadPospMispAssociates>> = [];
@@ -118,7 +121,14 @@ export default async function NewPolicyPage() {
     <AppShell title="Add Policy">
       <PolicyRemarksActionStyle />
       <PolicyOnboardingProductGuard />
-      <PolicyUnifiedForm mode="create" insurers={insurerOptions} rms={rmOptions} sources={sourceOptions} manufacturers={manufacturerOptions} />
+      <PolicyCommercialShell
+        mode="create"
+        insurers={insurerOptions}
+        rms={rmOptions}
+        sources={sourceOptions}
+        manufacturers={manufacturerOptions}
+        commercialAccess={commercialAccess}
+      />
     </AppShell>
   );
 }
