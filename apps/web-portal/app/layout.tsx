@@ -14,6 +14,7 @@ import "./globals.css";
 import "./experience.css";
 import "./mobile.css";
 import "./document-grid.css";
+import "./reconciliation-workbench.css";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -42,11 +43,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <AadhaarMaskNormalizer />
             <EmbeddedMasterSaveBridge />
             <LegacyIntermediaryImportLink />
-            <ProfessionalFormValidation />
+            <RouteProgressBar />
             <PolicyEditCopyFooterActions />
             <PolicySaveConfirmation />
             <SuccessPopup />
-            <RouteProgressBar />
+            <ProfessionalFormValidation />
           </Suspense>
         </AppRouterCacheProvider>
       </body>
