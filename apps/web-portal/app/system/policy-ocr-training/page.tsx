@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { requirePolicyOcrTrainingOperator } from "@/lib/policy-ocr-training-access";
 import { createProductionOcrBenchmarkRun } from "./actions";
@@ -15,6 +16,16 @@ type BenchmarkRun = {
   created_at: string;
 };
 
+type BaselineMetrics = {
+  expected?: number;
+  autoFilled?: number;
+  correct?: number;
+  perfect?: boolean;
+  referenceConflicts?: number;
+  ocrMissing?: number;
+  semanticErrors?: number;
+};
+
 type BenchmarkItem = {
   id: string;
   run_id: string;
@@ -30,6 +41,8 @@ type BenchmarkItem = {
   baseline_parser_id: string | null;
   baseline_parser_version: string | null;
   baseline_failure_code: string | null;
+  truth_status: string;
+  baseline_metrics: BaselineMetrics | null;
 };
 
 export default async function PolicyOcrTrainingControlPage() {
@@ -47,7 +60,7 @@ export default async function PolicyOcrTrainingControlPage() {
   if (activeRun) {
     const { data } = await admin
       .from("policy_ocr_benchmark_items")
-      .select("id,run_id,public_key,insurer_name,policy_product,vehicle_segment,cohort_role,production_count,policies_with_pdf,approved_layout_samples,baseline_status,baseline_parser_id,baseline_parser_version,baseline_failure_code")
+      .select("id,run_id,public_key,insurer_name,policy_product,vehicle_segment,cohort_role,production_count,policies_with_pdf,approved_layout_samples,baseline_status,baseline_parser_id,baseline_parser_version,baseline_failure_code,truth_status,baseline_metrics")
       .eq("run_id", activeRun.id)
       .order("priority_score", { ascending: false })
       .order("created_at", { ascending: true });
@@ -62,10 +75,21 @@ export default async function PolicyOcrTrainingControlPage() {
       if (item.baseline_status === "failed") acc.failed += 1;
       if (item.cohort_role === "blind_holdout") acc.holdout += 1;
       else acc.training += 1;
+      if (item.truth_status === "verified") acc.truthVerified += 1;
+      const metrics = item.truth_status === "verified" ? item.baseline_metrics : null;
+      acc.expected += metrics?.expected ?? 0;
+      acc.autoFilled += metrics?.autoFilled ?? 0;
+      acc.correct += metrics?.correct ?? 0;
+      if (metrics?.perfect) acc.perfectPolicies += 1;
+      acc.referenceConflicts += metrics?.referenceConflicts ?? 0;
+      acc.ocrMissing += metrics?.ocrMissing ?? 0;
+      acc.semanticErrors += metrics?.semanticErrors ?? 0;
       return acc;
     },
-    { total: 0, ready: 0, pending: 0, failed: 0, training: 0, holdout: 0 },
+    { total: 0, ready: 0, pending: 0, failed: 0, training: 0, holdout: 0, truthVerified: 0, expected: 0, autoFilled: 0, correct: 0, perfectPolicies: 0, referenceConflicts: 0, ocrMissing: 0, semanticErrors: 0 },
   );
+  const precision = counts.autoFilled ? counts.correct / counts.autoFilled : null;
+  const coverage = counts.expected ? counts.autoFilled / counts.expected : null;
 
   return (
     <main className="mx-auto w-full max-w-[1500px] space-y-5 px-4 py-5 sm:px-6 lg:px-8">
@@ -76,27 +100,26 @@ export default async function PolicyOcrTrainingControlPage() {
             <h1 className="mt-1 text-2xl font-semibold text-slate-950">Production Benchmark Control</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
               Selects fresh policy copies from the five most-used insurers, keeps well-covered layouts as blind holdouts,
-              and records the current parser result before any new training change. Operational policy records remain read-only.
+              captures the untouched baseline, then measures verified PDF truth before any parser refinement.
             </p>
           </div>
           <form action={createProductionOcrBenchmarkRun}>
-            <button
-              type="submit"
-              className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-            >
+            <button type="submit" className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800">
               Create production benchmark
             </button>
           </form>
         </div>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-        <Metric label="Selected" value={counts.total} />
-        <Metric label="Baseline ready" value={counts.ready} />
-        <Metric label="Pending" value={counts.pending} />
-        <Metric label="Failed" value={counts.failed} />
-        <Metric label="Training" value={counts.training} />
-        <Metric label="Blind holdout" value={counts.holdout} />
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-8">
+        <Metric label="Selected" value={String(counts.total)} />
+        <Metric label="Baseline ready" value={String(counts.ready)} />
+        <Metric label="Training" value={String(counts.training)} />
+        <Metric label="Blind holdout" value={String(counts.holdout)} />
+        <Metric label="Truth verified" value={`${counts.truthVerified}/${counts.training}`} />
+        <Metric label="Measured precision" value={formatPercent(precision)} />
+        <Metric label="Measured coverage" value={formatPercent(coverage)} />
+        <Metric label="Perfect policies" value={counts.truthVerified ? `${counts.perfectPolicies}/${counts.truthVerified}` : "—"} />
       </section>
 
       {activeRun ? (
@@ -124,10 +147,12 @@ export default async function PolicyOcrTrainingControlPage() {
                   <th className="px-4 py-3">Segment</th>
                   <th className="px-4 py-3 text-right">Production</th>
                   <th className="px-4 py-3 text-right">PDFs</th>
-                  <th className="px-4 py-3 text-right">Approved samples</th>
+                  <th className="px-4 py-3 text-right">Approved</th>
                   <th className="px-4 py-3">Role</th>
                   <th className="px-4 py-3">Baseline</th>
+                  <th className="px-4 py-3">Truth</th>
                   <th className="px-4 py-3">Parser</th>
+                  <th className="px-4 py-3">Next</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -145,15 +170,19 @@ export default async function PolicyOcrTrainingControlPage() {
                       <StatusBadge status={item.baseline_status} />
                       {item.baseline_failure_code ? <div className="mt-1 text-xs text-rose-600">{item.baseline_failure_code}</div> : null}
                     </td>
+                    <td className="px-4 py-3"><TruthBadge status={item.truth_status} /></td>
                     <td className="max-w-[280px] px-4 py-3 text-xs text-slate-600">
                       <div>{item.baseline_parser_id ?? "—"}</div>
                       <div className="mt-1 break-all text-slate-400">{item.baseline_parser_version ?? ""}</div>
                     </td>
+                    <td className="px-4 py-3">
+                      <Link href={`/system/policy-ocr-training/${item.id}`} className="inline-flex rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50">
+                        {item.cohort_role === "blind_holdout" ? "View sealed" : item.truth_status === "verified" ? "Review truth" : "Verify PDF truth"}
+                      </Link>
+                    </td>
                   </tr>
                 ))}
-                {!items.length ? (
-                  <tr><td colSpan={10} className="px-4 py-10 text-center text-slate-500">No benchmark policies selected.</td></tr>
-                ) : null}
+                {!items.length ? <tr><td colSpan={12} className="px-4 py-10 text-center text-slate-500">No benchmark policies selected.</td></tr> : null}
               </tbody>
             </table>
           </div>
@@ -164,42 +193,44 @@ export default async function PolicyOcrTrainingControlPage() {
         </section>
       )}
 
+      {counts.truthVerified > 0 ? (
+        <section className="grid gap-3 sm:grid-cols-3">
+          <Metric label="Reference conflicts" value={String(counts.referenceConflicts)} />
+          <Metric label="OCR missing" value={String(counts.ocrMissing)} />
+          <Metric label="Semantic mismatches" value={String(counts.semanticErrors)} />
+        </section>
+      ) : null}
+
       <section className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-950">
-        <div className="font-semibold">Important measurement rule</div>
+        <div className="font-semibold">Measurement rule</div>
         <p className="mt-1 leading-6">
-          Baseline results are captured before parser refinement. PDF truth, reference conflicts, rounding-equivalent values,
-          and fresh-sibling results must be classified separately before an accuracy percentage is reported.
+          Percentages appear only from fields explicitly verified against the actual PDF. Database values are prefilled as reference candidates only; they never become truth automatically. Blind holdouts remain sealed until post-training verification.
         </p>
       </section>
     </main>
   );
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <div className="text-xs font-medium text-slate-500">{label}</div>
-      <div className="mt-1 text-2xl font-semibold tabular-nums text-slate-950">{value}</div>
-    </div>
-  );
+function Metric({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm"><div className="text-xs font-medium text-slate-500">{label}</div><div className="mt-1 text-2xl font-semibold tabular-nums text-slate-950">{value}</div></div>;
 }
 
 function RoleBadge({ role }: { role: string }) {
   const holdout = role === "blind_holdout";
-  return (
-    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${holdout ? "bg-violet-50 text-violet-700" : "bg-emerald-50 text-emerald-700"}`}>
-      {holdout ? "Blind holdout" : "Training"}
-    </span>
-  );
+  return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${holdout ? "bg-violet-50 text-violet-700" : "bg-emerald-50 text-emerald-700"}`}>{holdout ? "Blind holdout" : "Training"}</span>;
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const classes = status === "ready"
-    ? "bg-emerald-50 text-emerald-700"
-    : status === "failed"
-      ? "bg-rose-50 text-rose-700"
-      : status === "processing"
-        ? "bg-blue-50 text-blue-700"
-        : "bg-slate-100 text-slate-600";
+  const classes = status === "ready" ? "bg-emerald-50 text-emerald-700" : status === "failed" ? "bg-rose-50 text-rose-700" : status === "processing" ? "bg-blue-50 text-blue-700" : "bg-slate-100 text-slate-600";
   return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${classes}`}>{status}</span>;
+}
+
+function TruthBadge({ status }: { status: string }) {
+  const classes = status === "verified" ? "bg-emerald-50 text-emerald-700" : status === "sealed_holdout" ? "bg-violet-50 text-violet-700" : "bg-amber-50 text-amber-800";
+  const label = status === "sealed_holdout" ? "sealed" : status;
+  return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${classes}`}>{label}</span>;
+}
+
+function formatPercent(value: number | null) {
+  return value == null ? "—" : `${(value * 100).toFixed(1)}%`;
 }
