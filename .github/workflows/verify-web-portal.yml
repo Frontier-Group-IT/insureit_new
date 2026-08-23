@@ -29,17 +29,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/web-portal/package.json
-
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-
       - name: Access control V2 catalogue regression
         run: npm run access-control:v2-regression
       - name: Access control V2 scope and compatibility regression
@@ -72,6 +69,8 @@ jobs:
         run: npm run policy-ocr:production-benchmark-regression
       - name: Production round 2 OCR regression
         run: npm run policy-ocr:production-round2-regression
+      - name: Production round 3 precision regression
+        run: npm run policy-ocr:production-round3-regression
       - name: Post-training replay safety regression
         run: npm run policy-ocr:post-training-replay-regression
       - name: Policy onboarding OCR import regression
@@ -94,7 +93,7 @@ jobs:
             echo
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo "- Access control: V2 catalogue, scope, legacy compatibility, portal lifecycle, employee portal governance, release-blocker and Backoffice data-entry regressions"
-            echo "- OCR regressions: IFFCO structured, IFFCO, Digit, New India, additional insurers, approved layouts, production rerun refinement, production benchmark siblings, production round 2, post-training replay safety, onboarding Section 02/03 import, premium training workflow"
+            echo "- OCR regressions: IFFCO structured, IFFCO, Digit, New India, additional insurers, approved layouts, production rerun refinement, production benchmark siblings, production rounds 2 and 3, post-training replay safety, onboarding Section 02/03 import, premium training workflow"
             echo "- Static checks: typecheck and lint"
             echo "- Build: Next.js production build"
             echo "- Build-only public env: non-secret CI placeholders; no production credentials used"
