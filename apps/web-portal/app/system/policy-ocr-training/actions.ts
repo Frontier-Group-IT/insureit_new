@@ -111,7 +111,7 @@ export async function processNextProductionOcrPostTrainingBatch(formData: FormDa
     .eq("run_id", runId)
     .eq("cohort_role", "training")
     .eq("truth_status", "verified")
-    .eq("post_training_status", "pending")
+    .in("post_training_status", ["pending", "failed"])
     .order("priority_score", { ascending: false })
     .order("created_at", { ascending: true })
     .limit(MAX_BATCH_SIZE);
@@ -132,7 +132,7 @@ export async function processNextProductionOcrPostTrainingBatch(formData: FormDa
       .eq("id", item.id)
       .eq("cohort_role", "training")
       .eq("truth_status", "verified")
-      .eq("post_training_status", "pending")
+      .in("post_training_status", ["pending", "failed"])
       .select("id")
       .maybeSingle<{ id: string }>();
     if (claimError || !claimed) continue;
