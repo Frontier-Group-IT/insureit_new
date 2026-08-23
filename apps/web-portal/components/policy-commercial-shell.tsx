@@ -1,6 +1,5 @@
 "use client";
 
-import { createPortal } from "react-dom";
 import { useEffect, useMemo, useState } from "react";
 import {
   PolicyUnifiedForm,
@@ -21,8 +20,14 @@ export type PolicyCommercialShellProps = {
 
 type ModalKind = "payin" | "payout" | null;
 
+/**
+ * Commercial orchestration for the policy form.
+ *
+ * Projected pay-in and partner payout are optional commercial inputs.
+ * Billing is deliberately excluded from the visible policy-onboarding UI and
+ * is protected server-side from amount-only/projected writes.
+ */
 export function PolicyCommercialShell(props: PolicyCommercialShellProps) {
-  const [host, setHost] = useState<HTMLElement | null>(null);
   const [modal, setModal] = useState<ModalKind>(null);
 
   const sanitizedInitialValues = useMemo(() => {
@@ -46,23 +51,10 @@ export function PolicyCommercialShell(props: PolicyCommercialShellProps) {
     } satisfies PolicyUnifiedInitialValues;
   }, [props.commercialAccess, props.initialValues]);
 
-  useEffect(() => {
-    const root = document.querySelector<HTMLElement>("[data-policy-commercial-shell]");
-    const section = root?.querySelector<HTMLElement>("#policy-section-3");
-    if (!root || !section) return;
-
-    let portalHost = root.querySelector<HTMLElement>("[data-commercial-actions-host]");
-    if (!portalHost) {
-      portalHost = document.createElement("div");
-      portalHost.dataset.commercialActionsHost = "true";
-      section.insertAdjacentElement("afterend", portalHost);
-    }
-    setHost(portalHost);
-    return () => {
-      if (portalHost?.isConnected) portalHost.remove();
-    };
-  }, []);
-
+  // Legacy compatibility only: the underlying form still derives a billed
+  // amount in create mode. Clear that transient value before submission until
+  // the final form-state extraction is completed. The server billing action
+  // independently rejects amount-only billing writes.
   useEffect(() => {
     if (props.mode !== "create" || !props.commercialAccess) return;
     let attempts = 0;
@@ -134,23 +126,23 @@ export function PolicyCommercialShell(props: PolicyCommercialShellProps) {
           z-index:102;
           left:50%;
           top:50%;
-          width:min(760px,calc(100vw - 28px));
-          max-height:min(78vh,720px);
+          width:min(720px,calc(100vw - 28px));
+          max-height:min(76vh,680px);
           overflow:auto;
           transform:translate(-50%,-50%);
           box-shadow:0 30px 90px rgba(15,23,42,.28);
         }
-        .policy-commercial-shell #policy-section-4 > div:nth-child(2) > div:nth-child(4) { display:none; }
+        /* Projected pay-in popup: never expose legacy billing or retention. */
+        .policy-commercial-shell #policy-section-4 > div:nth-child(2) > div:nth-child(4),
         .policy-commercial-shell #policy-section-4 > div:nth-child(2) > div:last-child > button { display:none; }
+        /* Partner payout popup: commercial rates only; settlement is a separate workflow. */
+        .policy-commercial-shell #policy-section-5 > div:nth-child(2) > div:nth-child(3),
+        .policy-commercial-shell #policy-section-5 > div:nth-child(2) > div:nth-child(4),
+        .policy-commercial-shell #policy-section-5 > div:nth-child(2) > div:last-child > button { display:none; }
         .policy-commercial-shell[data-commercial-access="restricted"] [data-commercial-sensitive] { display:none!important; }
       `}</style>
 
-      {host
-        ? createPortal(
-            <CommercialEntryCard access={props.commercialAccess} onOpen={setModal} />,
-            host,
-          )
-        : null}
+      <CommercialEntryCard access={props.commercialAccess} onOpen={setModal} />
 
       <PolicyUnifiedForm
         mode={props.mode}
@@ -183,7 +175,7 @@ function CommercialEntryCard({ access, onOpen }: { access: boolean; onOpen: (kin
       <div className="flex items-center justify-between border-b border-[#E5EAF1] bg-[#FBFCFE] px-4 py-3">
         <div>
           <h2 className="text-[13px] font-semibold text-[#17365D]">Commercials</h2>
-          <p className="mt-0.5 text-[9px] text-[#667085]">Optional sensitive commercial terms for this policy.</p>
+          <p className="mt-0.5 text-[9px] text-[#667085]">Optional sensitive commercial terms. Billing is handled separately from onboarding.</p>
         </div>
         <span className={`rounded-full px-2.5 py-1 text-[8px] font-bold ${access ? "bg-[#EAF7F2] text-[#18794E]" : "bg-[#F2F4F7] text-[#667085]"}`}>
           {access ? "Authorized" : "Restricted"}
@@ -198,7 +190,7 @@ function CommercialEntryCard({ access, onOpen }: { access: boolean; onOpen: (kin
             className="group rounded-xl border border-[#D8E2EF] bg-[linear-gradient(135deg,#F8FBFF,#F1F6FC)] px-4 py-4 text-left transition hover:border-[#9FB5D3] hover:shadow-sm"
           >
             <div className="text-[10px] font-bold text-[#17365D]">Projected Pay-in</div>
-            <div className="mt-1 text-[9px] leading-4 text-[#667085]">Record expected OD, TP/CPA and scheme pay-in. This is a projection only.</div>
+            <div className="mt-1 text-[9px] leading-4 text-[#667085]">Expected OD, TP/CPA and scheme pay-in only. A 0% rate is valid.</div>
             <div className="mt-3 text-[9px] font-bold text-[#315B9A]">Open details →</div>
           </button>
           <button
@@ -207,7 +199,7 @@ function CommercialEntryCard({ access, onOpen }: { access: boolean; onOpen: (kin
             className="group rounded-xl border border-[#D8E2EF] bg-[linear-gradient(135deg,#FBFCFF,#F6F4FF)] px-4 py-4 text-left transition hover:border-[#B9AED8] hover:shadow-sm"
           >
             <div className="text-[10px] font-bold text-[#17365D]">Partner Payout</div>
-            <div className="mt-1 text-[9px] leading-4 text-[#667085]">Record the actual agreed payout commercial. Zero is a valid OD or TP/CPA rate.</div>
+            <div className="mt-1 text-[9px] leading-4 text-[#667085]">Actual agreed OD and TP/CPA payout commercial. A 0% rate is valid.</div>
             <div className="mt-3 text-[9px] font-bold text-[#5D4E9C]">Open details →</div>
           </button>
         </div>
