@@ -39,6 +39,14 @@ function normalizedStatus(value: string | null, billedAmount: number | null, bil
   return hasAmount && hasBillNumber && hasBillDate ? "Billed" : "Billing details incomplete";
 }
 
+/**
+ * Billing is real evidence, not a projected commercial calculation.
+ * A projected amount on its own must never create or update a billing row.
+ */
+function hasBillingEvidence(billNumber: string, billDate: string) {
+  return Boolean(billNumber.trim()) || Boolean(billDate.trim());
+}
+
 export async function loadPolicyPayinBilling(policyId: string): Promise<{ ok: true; billing: PolicyPayinBilling } | { ok: false; error: string }> {
   const profile = await requirePolicyEditor();
   if (!canAccessPolicyCommercials(profile)) return { ok: false, error: "Commercial details restricted" };
@@ -72,9 +80,20 @@ export async function savePolicyPayinBilling(
   const profile = await requirePolicyEditor();
   if (!canAccessPolicyCommercials(profile)) return { ok: true };
   if (!validPolicyId(policyId)) return { ok: false, error: "Invalid policy reference." };
+
+  const billNumber = billing.billNumber.trim();
+  const billDate = billing.billDate.trim();
+
+  // The legacy policy form may still carry a calculated projected amount in memory.
+  // Until billing has its own reconciliation workflow, amount-only submissions are ignored.
+  if (!hasBillingEvidence(billNumber, billDate)) return { ok: true };
+
+  // Once a user starts a real billing entry, both evidence fields are required.
+  if (!billNumber || !billDate) return { ok: false, error: "Enter both the PayIn bill number and bill date before saving billing." };
+  if (!validDate(billDate)) return { ok: false, error: "Enter a valid PayIn Bill Date." };
+
   const billedAmount = amount(billing.billedAmount);
   if (billedAmount === null) return { ok: false, error: "PayIn Billed Amt Rs. must be zero or a positive amount." };
-  if (!validDate(billing.billDate)) return { ok: false, error: "Enter a valid PayIn Bill Date." };
   if (!allowedStatuses.has(billing.status)) return { ok: false, error: "Invalid PayIn Status." };
 
   const admin = createSupabaseAdminClient();
@@ -87,8 +106,6 @@ export async function savePolicyPayinBilling(
     .maybeSingle<PayinBillRow>();
   if (lookupError) return { ok: false, error: "Billing details could not be saved. Please try again." };
 
-  const billNumber = billing.billNumber.trim() || null;
-  const billDate = billing.billDate || null;
   const values = {
     bill_number: billNumber,
     billed_amount: billedAmount,
@@ -101,9 +118,9 @@ export async function savePolicyPayinBilling(
   if (existing?.id) {
     const currentStatus = normalizedStatus(existing.status, existing.billed_amount, existing.bill_number, existing.bill_date);
     const unchanged =
-      (existing.bill_number ?? null) === billNumber &&
+      (existing.bill_number ?? "") === billNumber &&
       Number(existing.billed_amount ?? 0) === billedAmount &&
-      (existing.bill_date ?? null) === billDate &&
+      (existing.bill_date ?? "") === billDate &&
       currentStatus === billing.status;
     if (unchanged) return { ok: true };
   }
