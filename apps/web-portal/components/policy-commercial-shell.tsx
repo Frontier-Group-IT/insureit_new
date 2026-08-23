@@ -51,21 +51,21 @@ export function PolicyCommercialShell(props: PolicyCommercialShellProps) {
     } satisfies PolicyUnifiedInitialValues;
   }, [props.commercialAccess, props.initialValues]);
 
-  // Legacy compatibility only: the underlying form still derives a billed
-  // amount in create mode. Clear that transient value before submission until
-  // the final form-state extraction is completed. The server billing action
-  // independently rejects amount-only billing writes.
+  // Temporary create-mode compatibility bridge. The legacy unified form still
+  // derives a billed amount internally. We clear that transient value so it
+  // cannot reach the onboarding RPC. Real billing is independently protected
+  // server-side and will move to the reconciliation/billing workflow.
   useEffect(() => {
     if (props.mode !== "create" || !props.commercialAccess) return;
     let attempts = 0;
     let stopped = false;
 
-    const neutralizeLegacyAutoBilling = () => {
+    const clearLegacyDerivedBilling = () => {
       if (stopped || attempts++ > 12) return;
       const section = document.querySelector<HTMLElement>("[data-policy-commercial-shell] #policy-section-4");
       const toggle = Array.from(section?.querySelectorAll<HTMLButtonElement>("button") ?? []).find((button) => button.textContent?.includes("Billing Details"));
       if (!section || !toggle) {
-        window.setTimeout(neutralizeLegacyAutoBilling, 80);
+        window.setTimeout(clearLegacyDerivedBilling, 80);
         return;
       }
 
@@ -86,7 +86,7 @@ export function PolicyCommercialShell(props: PolicyCommercialShellProps) {
       }, 0);
     };
 
-    const timer = window.setTimeout(neutralizeLegacyAutoBilling, 50);
+    const timer = window.setTimeout(clearLegacyDerivedBilling, 50);
     return () => {
       stopped = true;
       window.clearTimeout(timer);
