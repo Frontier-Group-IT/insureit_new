@@ -467,7 +467,6 @@ export default function SelfManagedClaimScreen() {
       {policy ? <PolicyIdentityCard policyNo={policy.policy_no} insurerName={insurerName} vehicleNo={vehicle?.vehicle_no ?? 'Vehicle'} vehicleMake={vehicle?.make ?? ''} vehicleModel={vehicle?.model ?? ''} /> : null}
 
       {message ? <Message type="error">{message}</Message> : null}
-      {successMessage ? <View pointerEvents="none" style={styles.deleteSuccessToast}><View style={styles.deleteSuccessToastIcon}><MaterialCommunityIcons name="check" size={16} color="#FFFFFF" /></View><Text style={styles.deleteSuccessToastText}>{successMessage}</Text></View> : null}
 
       <ClaimFormSection title="Incident Details" subtitle="Accident date, time and first insurer intimation" icon="clipboard-text-outline">
         <AppDatePicker label="Accident Date *" value={incidentDate} onChange={setIncidentDate} maxDate={todayIsoDate()} />
@@ -536,6 +535,15 @@ export default function SelfManagedClaimScreen() {
         onPrimary={() => void submit()}
         onAssistance={() => editing ? router.push({ pathname: '/customer/request-claim-assistance', params: { id: claimId } }) : router.push('/customer/support')}
       />
+
+      <Modal visible={Boolean(successMessage)} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setSuccessMessage('')}>
+        <View pointerEvents="none" style={styles.deleteSuccessToastOverlay}>
+          <View accessibilityRole="alert" style={styles.deleteSuccessToast}>
+            <View style={styles.deleteSuccessToastIcon}><MaterialCommunityIcons name="check" size={16} color="#FFFFFF" /></View>
+            <Text style={styles.deleteSuccessToastText}>{successMessage}</Text>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={Boolean(deleteTarget)} transparent animationType="fade" onRequestClose={() => setDeleteTarget(null)}>
         <View style={styles.validationBackdrop}>
@@ -708,7 +716,8 @@ const styles = StyleSheet.create({
   voiceComingSoon: { marginTop: 9, borderTopWidth: 1, borderTopColor: '#D9E5F3', paddingTop: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   voiceComingSoonText: { color: '#60738B', fontSize: 9.5, lineHeight: 13, fontWeight: '700' },
   validationBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(7, 24, 50, 0.48)', paddingHorizontal: 24 },
-  deleteSuccessToast: { position: 'absolute', top: 10, left: 14, right: 14, zIndex: 30, elevation: 14, minHeight: 48, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#B7E4CC', paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 9, shadowColor: '#0E5C3D', shadowOpacity: 0.16, shadowRadius: 12, shadowOffset: { width: 0, height: 5 } },
+  deleteSuccessToastOverlay: { flex: 1, justifyContent: 'flex-start', paddingTop: 54, paddingHorizontal: 14 },
+  deleteSuccessToast: { minHeight: 48, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#B7E4CC', paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 9, shadowColor: '#0E5C3D', shadowOpacity: 0.16, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 14 },
   deleteSuccessToastIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#168161', alignItems: 'center', justifyContent: 'center' },
   deleteSuccessToastText: { flex: 1, color: '#145E43', fontSize: 11.5, lineHeight: 16, fontWeight: '900' },
   deleteConfirmIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#FFF0F0', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
