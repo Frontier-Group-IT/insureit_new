@@ -14,5 +14,16 @@ export function refineApprovedMotorPolicyLayout(
   parsed: ParsedPolicyResult,
 ): ParsedPolicyResult {
   const approved = refineApprovedMotorPolicyLayoutBase(pages, tables, parsed);
+
+  // The fresh Magma PCP production family has a distinct Google table failure
+  // shape where the make column collapses to the heading `/Model`. Keep older
+  // already-trained Magma package layouts on their proven v6 path instead of
+  // broadening the new CPA/TP rule across the whole insurer.
+  const header = (pages[0] ?? "").split(/\r?\n/).slice(0, 55).join(" ");
+  if (/MAGMA\s+GENERAL\s+INSURANCE|MAGMAINSURANCE\.COM/i.test(header)) {
+    const make = approved.fields.find((field) => field.key === "vehicle_make")?.value?.trim() ?? "";
+    if (!/^\/?MODEL$/i.test(make)) return approved;
+  }
+
   return refineProductionBenchmarkPolicy(pages, tables, approved);
 }
