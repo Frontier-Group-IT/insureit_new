@@ -1,7 +1,7 @@
 import type { ParsedPolicyResult } from "@/lib/policy-ocr-parsers";
 import type { StructuredPolicyTable } from "@/lib/policy-ocr-iffco-structured-refiner";
-import { refineApprovedMotorPolicyLayout as refineApprovedMotorPolicyLayoutBase } from "@/lib/policy-ocr-approved-layout-refiner-base";
-import { refineProductionBenchmarkPolicy } from "@/lib/policy-ocr-production-benchmark-refiner";
+import { refineApprovedMotorPolicyLayout as refineApprovedMotorPolicyLayoutBase } from "./policy-ocr-approved-layout-refiner-base.ts";
+import { refineProductionBenchmarkPolicy } from "./policy-ocr-production-benchmark-refiner.ts";
 
 /**
  * Stable approved-layout behavior is preserved in the base module. Production
