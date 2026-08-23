@@ -86,7 +86,7 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
             {commercialAccess ? (
               <section className="r2-panel px-5 py-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div><h2 className="text-[13px] font-semibold text-[#17365D]">Commercial & Reconciliation Foundation</h2><p className="mt-1 text-[9.5px] text-[#667085]">Projected insurer pay-in and agreed partner payout are now separate from real billing. Reconciliation will compare insurer-reported actuals against these projections.</p></div>
+                  <div><h2 className="text-[13px] font-semibold text-[#17365D]">Commercial & Reconciliation Foundation</h2><p className="mt-1 text-[9.5px] text-[#667085]">Projected insurer pay-in and agreed partner payout are separate from real billing. Reconciliation will compare insurer-reported actuals against these projections.</p></div>
                   <div className="flex flex-wrap gap-2"><Link href="/policies/commercial-review" className="r2-action">Commercial Review</Link><Link href="/reports/finance" className="r2-action r2-action--primary">Commercial Report</Link></div>
                 </div>
               </section>
