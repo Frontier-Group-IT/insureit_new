@@ -12,7 +12,7 @@ import { type ClaimMilestone } from '@/lib/claim-service-mode';
 import { detailRecord, stringValue, validateStageChronology } from '@/lib/self-managed-claim-timeline';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
-import type { Vehicle } from '@/lib/types';
+import type { ClaimDocument, Vehicle } from '@/lib/types';
 
 type ExternalPolicy = {
   id: string;
@@ -29,6 +29,7 @@ type TimeTarget = 'incident' | 'intimation' | null;
 type DocumentKey = 'rc' | 'insurance' | 'licence' | 'gr' | 'bulk';
 type PickedDocument = { name: string; uri: string; mimeType?: string | null; size?: number | null };
 type DocumentTileState = 'idle' | 'ready' | 'saved';
+type DeleteTarget = { key: DocumentKey; title: string } | null;
 
 const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
 const DOCUMENT_TYPE_BY_KEY: Record<Exclude<DocumentKey, 'bulk'>, string> = {
@@ -58,9 +59,12 @@ export default function SelfManagedClaimScreen() {
   const [milestones, setMilestones] = useState<ClaimMilestone[]>([]);
   const [documents, setDocuments] = useState<Record<DocumentKey, PickedDocument[]>>({ rc: [], insurance: [], licence: [], gr: [], bulk: [] });
   const [savedDocumentTypes, setSavedDocumentTypes] = useState<string[]>([]);
+  const [savedDocuments, setSavedDocuments] = useState<ClaimDocument[]>([]);
   const [savedBulkCount, setSavedBulkCount] = useState(0);
   const [uploadingDocuments, setUploadingDocuments] = useState(false);
   const [message, setMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [validationMessage, setValidationMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -73,7 +77,7 @@ export default function SelfManagedClaimScreen() {
         const [claimResult, milestoneResult, documentResult] = await Promise.all([
           (supabase as any).from('claims').select('id,customer_id,vehicle_id,external_policy_id,accident_at,accident_location,claim_service_mode').eq('id', claimId).maybeSingle(),
           (supabase as any).from('claim_milestones').select('*').eq('claim_id', claimId),
-          (supabase as any).from('claim_documents').select('document_type').eq('claim_id', claimId),
+          (supabase as any).from('claim_documents').select('*').eq('claim_id', claimId).order('created_at', { ascending: false }),
         ]);
         if (!active) return;
         const claim = claimResult.data as any;
@@ -90,7 +94,9 @@ export default function SelfManagedClaimScreen() {
         const nextPolicy = policyResult.data as ExternalPolicy | null;
         setPolicy(nextPolicy);
         setVehicle(vehicleResult.data ?? null);
-        const existingTypes = (documentResult.data ?? []).map((item: any) => String(item.document_type || '')).filter(Boolean);
+        const existingDocuments = (documentResult.data ?? []) as ClaimDocument[];
+        const existingTypes = existingDocuments.map((item) => String(item.document_type || '')).filter(Boolean);
+        setSavedDocuments(existingDocuments);
         setSavedDocumentTypes(existingTypes);
         setSavedBulkCount(existingTypes.filter((type: string) => type === BULK_DOCUMENT_TYPE).length);
         if (nextPolicy?.insurance_company_id) {
@@ -149,6 +155,9 @@ export default function SelfManagedClaimScreen() {
       const uploaded = await uploadClaimDocument(claimId, policy.customer_id, DOCUMENT_TYPE_BY_KEY[key], picked);
       setUploadingDocuments(false);
       if (!uploaded.ok) return setMessage(uploaded.message);
+      if (uploaded.document) {
+        setSavedDocuments((current) => [uploaded.document!, ...current]);
+      }
       setSavedDocumentTypes((current) => [...current.filter((type) => type !== DOCUMENT_TYPE_BY_KEY[key]), DOCUMENT_TYPE_BY_KEY[key]]);
       setDocuments((current) => ({ ...current, [key]: [] }));
       return;
@@ -217,43 +226,103 @@ export default function SelfManagedClaimScreen() {
     }
   }
 
+  async function removeSavedDocument(document: ClaimDocument) {
+    if (!editing || uploadingDocuments) return false;
+    setMessage('');
+    setSuccessMessage('');
+    setUploadingDocuments(true);
+    try {
+      const removeRecord = await (supabase as any).from('claim_documents').delete().eq('id', document.id).eq('claim_id', claimId);
+      if (removeRecord.error) {
+        setMessage('We could not remove the document from this claim. Please try again.');
+        return false;
+      }
+      if (document.storage_bucket && document.storage_path) {
+        const storageResult = await supabase.storage.from(document.storage_bucket).remove([document.storage_path]);
+        if (storageResult.error) {
+          setMessage('The document was removed from the claim, but storage cleanup could not be completed.');
+        }
+      }
+      return true;
+    } finally {
+      setUploadingDocuments(false);
+    }
+  }
+
   async function removeDocument(key: Exclude<DocumentKey, 'bulk'>) {
     if (uploadingDocuments) return;
     const type = DOCUMENT_TYPE_BY_KEY[key];
     if (documents[key].length) {
       setDocuments((current) => ({ ...current, [key]: [] }));
+      setSuccessMessage(`${type} removed successfully.`);
       return;
     }
-    if (!savedDocumentTypes.includes(type)) return;
-    const removed = await removeSavedDocuments(type);
-    if (removed) setSavedDocumentTypes((current) => current.filter((item) => item !== type));
+    const savedDocument = savedDocuments.find((item) => item.document_type === type);
+    if (!savedDocument) return;
+    const removed = await removeSavedDocument(savedDocument);
+    if (!removed) return;
+    setSavedDocuments((current) => {
+      const next = current.filter((item) => item.id !== savedDocument.id);
+      setSavedDocumentTypes([...new Set(next.map((item) => item.document_type).filter(Boolean))]);
+      return next;
+    });
+    setSuccessMessage(`${savedDocument.file_name || type} deleted successfully.`);
   }
 
   async function removeBulkDocuments() {
     if (uploadingDocuments) return;
     if (documents.bulk.length) setDocuments((current) => ({ ...current, bulk: [] }));
-    if (!savedBulkCount) return;
+    if (!savedBulkCount) {
+      setSuccessMessage('Selected documents removed successfully.');
+      return;
+    }
     const removed = await removeSavedDocuments(BULK_DOCUMENT_TYPE);
-    if (removed) setSavedBulkCount(0);
+    if (removed) {
+      setSavedBulkCount(0);
+      setSavedDocuments((current) => current.filter((item) => item.document_type !== BULK_DOCUMENT_TYPE));
+      setSuccessMessage('Uploaded documents deleted successfully.');
+    }
+  }
+
+  function requestDelete(key: DocumentKey, title: string) {
+    if (uploadingDocuments) return;
+    setSuccessMessage('');
+    setDeleteTarget({ key, title });
+  }
+
+  async function confirmDelete() {
+    const target = deleteTarget;
+    if (!target) return;
+    setDeleteTarget(null);
+    if (target.key === 'bulk') {
+      await removeBulkDocuments();
+      return;
+    }
+    await removeDocument(target.key);
+  }
+
+  function savedDocumentFor(key: Exclude<DocumentKey, 'bulk'>) {
+    const type = DOCUMENT_TYPE_BY_KEY[key];
+    return savedDocuments.find((item) => item.document_type === type) ?? null;
   }
 
   async function uploadClaimDocument(targetClaimId: string, customerId: string, documentType: string, pickedFile: PickedDocument) {
     try {
       const session = await getCurrentSession();
-      if (!session?.user) return { ok: false, message: 'Please sign in again before uploading documents.' };
+      if (!session?.user) return { ok: false, message: 'Please sign in again before uploading documents.', document: null };
       const extension = pickedFile.name.includes('.') ? pickedFile.name.split('.').pop() : 'bin';
       const storagePath = `${customerId}/${targetClaimId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
       const response = await fetch(pickedFile.uri);
       const body = await response.arrayBuffer();
-      if (body.byteLength > MAX_UPLOAD_SIZE_BYTES) return { ok: false, message: `${pickedFile.name} is larger than 5 MB. Please choose a smaller file.` };
+      if (body.byteLength > MAX_UPLOAD_SIZE_BYTES) return { ok: false, message: `${pickedFile.name} is larger than 5 MB. Please choose a smaller file.`, document: null };
 
       const uploadResult = await supabase.storage.from('claim-documents').upload(storagePath, body, {
         contentType: pickedFile.mimeType ?? 'application/octet-stream',
         upsert: false,
       });
-      if (uploadResult.error) return { ok: false, message: `${pickedFile.name} could not be uploaded.` };
+      if (uploadResult.error) return { ok: false, message: `${pickedFile.name} could not be uploaded.`, document: null };
 
-      const { error } = await supabase.from('claim_documents').insert({
+      const { data, error } = await supabase.from('claim_documents').insert({
         claim_id: targetClaimId,
         customer_id: customerId,
         document_type: documentType,
@@ -263,11 +332,11 @@ export default function SelfManagedClaimScreen() {
         mime_type: pickedFile.mimeType ?? null,
         file_size: pickedFile.size ?? body.byteLength,
         uploaded_by: session.user.id,
-      });
-      if (error) return { ok: false, message: `${pickedFile.name} uploaded, but its claim document record could not be saved.` };
-      return { ok: true, message: '' };
+      }).select('*').single();
+      if (error) return { ok: false, message: `${pickedFile.name} uploaded, but its claim document record could not be saved.`, document: null };
+      return { ok: true, message: '', document: data as ClaimDocument };
     } catch {
-      return { ok: false, message: `${pickedFile.name} could not be uploaded.` };
+      return { ok: false, message: `${pickedFile.name} could not be uploaded.`, document: null };
     }
   }
 
@@ -393,6 +462,7 @@ export default function SelfManagedClaimScreen() {
       {policy ? <PolicyIdentityCard policyNo={policy.policy_no} insurerName={insurerName} vehicleNo={vehicle?.vehicle_no ?? 'Vehicle'} vehicleMake={vehicle?.make ?? ''} vehicleModel={vehicle?.model ?? ''} /> : null}
 
       {message ? <Message type="error">{message}</Message> : null}
+      {successMessage ? <Message type="success">{successMessage}</Message> : null}
 
       <ClaimFormSection title="Incident Details" subtitle="Accident date, time and first insurer intimation" icon="clipboard-text-outline">
         <AppDatePicker label="Accident Date *" value={incidentDate} onChange={setIncidentDate} maxDate={todayIsoDate()} />
@@ -417,10 +487,10 @@ export default function SelfManagedClaimScreen() {
           <View style={styles.documentReadyBadge}><Text style={styles.documentReadyBadgeText}>Optional now</Text></View>
         </View>
         <View style={styles.documentReadyGrid}>
-          <DocumentReadyTile title="RC Copy" source={require('../../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png')} state={tileState('rc')} onPress={() => void pickDocument('rc')} onRemove={() => void removeDocument('rc')} />
-          <DocumentReadyTile title="Insurance Copy" source={require('../../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} state={tileState('insurance')} onPress={() => void pickDocument('insurance')} onRemove={() => void removeDocument('insurance')} />
-          <DocumentReadyTile title="Driver Licence" source={require('../../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} state={tileState('licence')} onPress={() => void pickDocument('licence')} onRemove={() => void removeDocument('licence')} />
-          <DocumentReadyTile title="GR / Load Bill" source={require('../../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} state={tileState('gr')} onPress={() => void pickDocument('gr')} onRemove={() => void removeDocument('gr')} />
+          <DocumentReadyTile title="RC Copy" fileName={savedDocumentFor('rc')?.file_name ?? documents.rc[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png')} state={tileState('rc')} onPress={() => void pickDocument('rc')} onRemove={() => requestDelete('rc', savedDocumentFor('rc')?.file_name ?? documents.rc[0]?.name ?? 'RC Copy')} />
+          <DocumentReadyTile title="Insurance Copy" fileName={savedDocumentFor('insurance')?.file_name ?? documents.insurance[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} state={tileState('insurance')} onPress={() => void pickDocument('insurance')} onRemove={() => requestDelete('insurance', savedDocumentFor('insurance')?.file_name ?? documents.insurance[0]?.name ?? 'Insurance Copy')} />
+          <DocumentReadyTile title="Driver Licence" fileName={savedDocumentFor('licence')?.file_name ?? documents.licence[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} state={tileState('licence')} onPress={() => void pickDocument('licence')} onRemove={() => requestDelete('licence', savedDocumentFor('licence')?.file_name ?? documents.licence[0]?.name ?? 'Driver Licence')} />
+          <DocumentReadyTile title="GR / Load Bill" fileName={savedDocumentFor('gr')?.file_name ?? documents.gr[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} state={tileState('gr')} onPress={() => void pickDocument('gr')} onRemove={() => requestDelete('gr', savedDocumentFor('gr')?.file_name ?? documents.gr[0]?.name ?? 'GR / Load Bill')} />
         </View>
         <View style={styles.bulkUploadShell}>
           <Pressable accessibilityRole="button" disabled={uploadingDocuments} onPress={() => void pickBulkDocuments()} style={[styles.bulkUpload, (documents.bulk.length > 0 || savedBulkCount > 0) && styles.bulkUploadSelected]}>
@@ -431,7 +501,7 @@ export default function SelfManagedClaimScreen() {
             </View>
             {!documents.bulk.length && !savedBulkCount ? <MaterialCommunityIcons name="plus-circle-outline" size={21} color="#0A43A3" /> : null}
           </Pressable>
-          {documents.bulk.length > 0 || savedBulkCount > 0 ? <Pressable accessibilityRole="button" accessibilityLabel="Remove all bulk documents" disabled={uploadingDocuments} onPress={() => void removeBulkDocuments()} style={styles.bulkRemoveButton}><MaterialCommunityIcons name="close" size={14} color="#7A8799" /></Pressable> : null}
+          {documents.bulk.length > 0 || savedBulkCount > 0 ? <Pressable accessibilityRole="button" accessibilityLabel="Remove all bulk documents" disabled={uploadingDocuments} onPress={() => requestDelete('bulk', 'uploaded documents')} style={styles.bulkRemoveButton}><MaterialCommunityIcons name="close" size={14} color="#7A8799" /></Pressable> : null}
         </View>
         <Text style={styles.documentUploadNote}>{editing ? 'Selected files upload immediately to Claim Documents.' : 'Before the claim exists, selected files are queued and automatically saved to Claim Documents when you tap Start Claim & Continue.'}</Text>
       </View>
@@ -461,6 +531,26 @@ export default function SelfManagedClaimScreen() {
         onPrimary={() => void submit()}
         onAssistance={() => editing ? router.push({ pathname: '/customer/request-claim-assistance', params: { id: claimId } }) : router.push('/customer/support')}
       />
+
+      <Modal visible={Boolean(deleteTarget)} transparent animationType="fade" onRequestClose={() => setDeleteTarget(null)}>
+        <View style={styles.validationBackdrop}>
+          <View accessibilityRole="alert" style={styles.validationCard}>
+            <View style={styles.deleteConfirmIcon}>
+              <MaterialCommunityIcons name="trash-can-outline" size={19} color="#C43232" />
+            </View>
+            <Text style={styles.validationTitle}>Delete document?</Text>
+            <Text style={styles.validationBody}>{deleteTarget ? `Are you sure you want to delete ${deleteTarget.title}?` : ''}</Text>
+            <View style={styles.deleteConfirmActions}>
+              <Pressable accessibilityRole="button" onPress={() => setDeleteTarget(null)} style={styles.deleteCancelButton}>
+                <Text style={styles.deleteCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" disabled={uploadingDocuments} onPress={() => void confirmDelete()} style={styles.deleteConfirmButton}>
+                <Text style={styles.deleteConfirmText}>{uploadingDocuments ? 'Deleting...' : 'Delete'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={Boolean(validationMessage)} transparent animationType="fade" onRequestClose={() => setValidationMessage('')}>
         <View style={styles.validationBackdrop}>
@@ -516,7 +606,7 @@ function PolicyIdentityCard({ policyNo, insurerName, vehicleNo, vehicleMake, veh
   </View>;
 }
 
-function DocumentReadyTile({ title, source, state, onPress, onRemove }: { title: string; source: any; state: DocumentTileState; onPress: () => void; onRemove: () => void }) {
+function DocumentReadyTile({ title, fileName, source, state, onPress, onRemove }: { title: string; fileName?: string; source: any; state: DocumentTileState; onPress: () => void; onRemove: () => void }) {
   const saved = state === 'saved';
   const ready = state === 'ready';
   return <Pressable accessibilityRole="button" accessibilityState={{ selected: state !== 'idle' }} onPress={onPress} style={[styles.documentReadyTile, ready && styles.documentReadyTileReady, saved && styles.documentReadyTileSelected]}>
@@ -524,6 +614,7 @@ function DocumentReadyTile({ title, source, state, onPress, onRemove }: { title:
     {state !== 'idle' ? <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${title}`} onPress={(event) => { event.stopPropagation(); onRemove(); }} style={styles.documentRemoveButton}><MaterialCommunityIcons name="close" size={13} color="#7A8799" /></Pressable> : null}
     <View style={styles.documentReadyArtworkWrap}><Image source={source} style={styles.documentReadyArtwork} resizeMode="contain" /></View>
     <Text style={styles.documentReadyTileText} numberOfLines={2}>{title}</Text>
+    {fileName ? <Text style={styles.documentReadyFileName} numberOfLines={1}>{fileName}</Text> : null}
     <Text style={[styles.documentReadyStatus, ready && styles.documentReadyStatusReady, saved && styles.documentReadyStatusSelected]}>{saved ? 'Saved' : ready ? 'Ready' : 'Tap to upload'}</Text>
   </Pressable>;
 }
@@ -587,6 +678,7 @@ const styles = StyleSheet.create({
   documentReadyArtworkWrap: { width: 45, height: 45, alignItems: 'center', justifyContent: 'center' },
   documentReadyArtwork: { width: 43, height: 43 },
   documentReadyTileText: { color: palette.navy, fontSize: 8.5, lineHeight: 11, fontWeight: '800', textAlign: 'center', marginTop: 3 },
+  documentReadyFileName: { maxWidth: '100%', color: '#56657A', fontSize: 7.3, lineHeight: 10, fontWeight: '700', textAlign: 'center', marginTop: 2 },
   documentReadyStatus: { color: '#7A8799', fontSize: 7.5, fontWeight: '800', marginTop: 3 },
   documentReadyStatusReady: { color: '#326FC6' },
   documentReadyStatusSelected: { color: '#18864B' },
@@ -611,6 +703,12 @@ const styles = StyleSheet.create({
   voiceComingSoon: { marginTop: 9, borderTopWidth: 1, borderTopColor: '#D9E5F3', paddingTop: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   voiceComingSoonText: { color: '#60738B', fontSize: 9.5, lineHeight: 13, fontWeight: '700' },
   validationBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(7, 24, 50, 0.48)', paddingHorizontal: 24 },
+  deleteConfirmIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#FFF0F0', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  deleteConfirmActions: { width: '100%', flexDirection: 'row', gap: 8, marginTop: 14 },
+  deleteCancelButton: { flex: 1, minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: '#CBD5E1', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  deleteCancelText: { color: palette.navy, fontSize: 11, fontWeight: '900' },
+  deleteConfirmButton: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: '#C43232', alignItems: 'center', justifyContent: 'center' },
+  deleteConfirmText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
   validationCard: { width: '100%', maxWidth: 340, borderRadius: 20, backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingTop: 18, paddingBottom: 16, alignItems: 'center', shadowColor: '#071D49', shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: 10 }, elevation: 10 },
   validationIcon: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#FFF1EC', alignItems: 'center', justifyContent: 'center', marginBottom: 11 },
   validationTitle: { color: '#172033', fontSize: 18, lineHeight: 22, fontWeight: '900', textAlign: 'center' },
