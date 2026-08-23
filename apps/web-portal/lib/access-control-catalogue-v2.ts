@@ -141,6 +141,10 @@ export const legacyCapabilityCompatibilityMap: Record<LegacyCapability, readonly
   approve_policy_ocr_training: ["policies.ocr_training.approve"],
   view_tasks: ["tasks.view"],
   manage_tasks: ["tasks.create", "tasks.assign", "tasks.edit"],
+  // Phase A compatibility only. Runtime Accounts authorization is still enforced by the
+  // dedicated legacy view_accounts capability plus canAccessPolicyCommercials(profile).
+  // A native V2 accounts.* permission will be introduced with its reviewed access-control migration.
+  view_accounts: ["reports.view"],
   view_reports: ["reports.view"],
   view_notifications: ["notifications.view"],
   manage_users: ["admin.portal_users.manage"],
