@@ -75,9 +75,11 @@ function findCurrentValidity(pages: string[]) {
       if (/Previous|Prev\.?|Active\s+TP|Existing\s+TP|Earlier/i.test(line)) continue;
       const block = lines.slice(i, i + 4).join(" ");
       const dates = extractDates(block);
-      if (dates.length < 2) continue;
-      const start = toIso(dates[0]);
-      const end = toIso(dates[1]);
+      const first = dates[0];
+      const second = dates[1];
+      if (!first || !second) continue;
+      const start = toIso(first);
+      const end = toIso(second);
       if (!start || !end || start >= end) continue;
       const startYear = Number(start.slice(0, 4));
       const endYear = Number(end.slice(0, 4));
