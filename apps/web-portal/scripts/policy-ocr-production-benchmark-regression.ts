@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 // @ts-expect-error -- Node regression runner executes TypeScript directly.
 import { refineProductionBenchmarkPolicy } from "../lib/policy-ocr-production-benchmark-refiner.ts";
 // @ts-expect-error -- Node regression runner executes TypeScript directly.
+import { refineProductionPolicyIdentity } from "../lib/policy-ocr-production-identity-refiner.ts";
+// @ts-expect-error -- Node regression runner executes TypeScript directly.
 import { proposalFieldValue } from "../app/system/policy-ocr-training/benchmark-truth.ts";
 import type { ParsedPolicyResult } from "../lib/policy-ocr-parsers.ts";
 import type { StructuredPolicyTable } from "../lib/policy-ocr-iffco-structured-refiner.ts";
@@ -22,7 +24,8 @@ function run(
   baseline: ParsedPolicyResult,
   expected: Record<string, string>,
 ) {
-  const result = refineProductionBenchmarkPolicy(pages, tables, baseline);
+  const production = refineProductionBenchmarkPolicy(pages, tables, baseline);
+  const result = refineProductionPolicyIdentity(pages, production);
   const actual = values(result);
   for (const [key, value] of Object.entries(expected)) assert.equal(actual[key], value, `${name}: ${key}`);
   assert.match(result.parserVersion, /\+prod-r1-/);
@@ -39,7 +42,7 @@ run(
     ["CGST", "816.9831"], ["SGST", "816.9831"], ["Final Premium", "10711.5562"],
   ] }],
   parsed("digit_commercial_motor_v1", [field("total_premium", "1230.59"), field("cpa_opted", "No"), field("cpa_premium", "0")]),
-  { insurer_name: "Go Digit General Insurance Limited", policy_product: "Package", vehicle_class: "MISD", vehicle_make: "Tata", vehicle_model: "YODHA / CASH VAN", vehicle_fuel_type: "Diesel", vehicle_manufacturing_year: "2022", vehicle_capacity: "2850KG", od_premium: "1230.59", tp_premium: "7847", total_premium: "9077.59", tax_amount: "1633.97", gross_premium: "10711.5562", cpa_opted: "No", cpa_premium: "0" },
+  { insurer_name: "Go Digit General Insurance Limited", policy_product: "Package", policy_number: "D-SAFE-001", vehicle_class: "MISD", vehicle_make: "Tata", vehicle_model: "YODHA / CASH VAN", vehicle_fuel_type: "Diesel", vehicle_manufacturing_year: "2022", vehicle_capacity: "2850KG", od_premium: "1230.59", tp_premium: "7847", total_premium: "9077.59", tax_amount: "1633.97", gross_premium: "10711.5562", cpa_opted: "No", cpa_premium: "0" },
 );
 
 run(
@@ -57,13 +60,13 @@ run(
 
 run(
   "Magma PCP fresh failure sibling",
-  ["MAGMA GENERAL INSURANCE LIMITED\nPRIVATE CAR PACKAGE POLICY\nReason for not opting PA Cover of Owner Driver : Do not hold a valid driving license"],
+  ["MAGMA GENERAL INSURANCE LIMITED\nPRIVATE CAR PACKAGE POLICY\nPolicy No P0027100023/4101/199999\nPeriod of Insurance 11/08/2026 TO 10/08/2027\nReason for not opting PA Cover of Owner Driver : Do not hold a valid driving license"],
   [{ page: 1, rows: [
     ["Vehicle Make", "MARUTI SUZUKI"], ["Vehicle Model", "BALENO ZETA"], ["Fuel Type", "PETROL"], ["Year of Manufacture", "2020"],
     ["Registration No", "HR30SAFE01"], ["Chassis No", "SYNCHASSISMAGMA001"], ["Engine No", "SYNENGMAGMA001"],
   ] }],
   parsed("magma_motor_v1", [field("vehicle_make", "/Model"), field("od_premium", "4478"), field("total_premium", "8379"), field("tax_amount", "1508.22"), field("gross_premium", "9887")]),
-  { insurer_name: "Magma General Insurance Limited", policy_product: "Package", vehicle_class: "PCP", vehicle_make: "Maruti Suzuki", vehicle_model: "BALENO ZETA", vehicle_fuel_type: "Petrol", vehicle_manufacturing_year: "2020", od_premium: "4478", tp_premium: "3901", cpa_opted: "No", cpa_premium: "0", total_premium: "8379" },
+  { insurer_name: "Magma General Insurance Limited", policy_product: "Package", policy_number: "P0027100023/4101/199999", policy_start_date: "2026-08-11", policy_end_date: "2027-08-10", vehicle_class: "PCP", vehicle_make: "Maruti Suzuki", vehicle_model: "BALENO ZETA", vehicle_fuel_type: "Petrol", vehicle_manufacturing_year: "2020", od_premium: "4478", tp_premium: "3901", cpa_opted: "No", cpa_premium: "0", total_premium: "8379" },
 );
 
 run(
@@ -89,4 +92,4 @@ assert.equal(proposalFieldValue(aliasedProposal, "printed_net_premium"), "12345.
 assert.equal(proposalFieldValue(aliasedProposal, "printed_gst"), "2222.22");
 assert.equal(proposalFieldValue(aliasedProposal, "printed_gross_premium"), "14567.89");
 
-console.log("Production benchmark OCR regression: 4 layout siblings + evaluator aliases passed.");
+console.log("Production benchmark OCR regression: 4 layout siblings + identity recovery + evaluator aliases passed.");
