@@ -23,10 +23,11 @@
     "policy-ocr:rerun-refinement-regression": "node --experimental-strip-types scripts/policy-ocr-rerun-refinement-regression.ts",
     "policy-ocr:production-benchmark-regression": "node --experimental-strip-types scripts/policy-ocr-production-benchmark-regression.ts",
     "policy-ocr:production-round2-regression": "node --experimental-strip-types scripts/policy-ocr-production-round2-regression.ts",
+    "policy-ocr:production-round3-regression": "node --experimental-strip-types scripts/policy-ocr-production-round3-regression.ts",
     "policy-ocr:post-training-replay-regression": "node --experimental-strip-types scripts/policy-ocr-post-training-replay-regression.ts",
     "policy-ocr:onboarding-import-regression": "node --experimental-strip-types scripts/policy-ocr-onboarding-import-regression.mjs",
     "policy-ocr:training-workflow-regression": "node --experimental-strip-types scripts/policy-ocr-training-workflow-regression.ts",
-    "policy-ocr:all-regressions": "npm run policy-ocr:iffco-structured-regression && npm run policy-ocr:iffco-regression && npm run policy-ocr:digit-regression && npm run policy-ocr:new-india-regression && npm run policy-ocr:additional-regression && npm run policy-ocr:approved-layout-regression && npm run policy-ocr:rerun-refinement-regression && npm run policy-ocr:production-benchmark-regression && npm run policy-ocr:production-round2-regression && npm run policy-ocr:post-training-replay-regression && npm run policy-ocr:onboarding-import-regression && npm run policy-ocr:training-workflow-regression"
+    "policy-ocr:all-regressions": "npm run policy-ocr:iffco-structured-regression && npm run policy-ocr:iffco-regression && npm run policy-ocr:digit-regression && npm run policy-ocr:new-india-regression && npm run policy-ocr:additional-regression && npm run policy-ocr:approved-layout-regression && npm run policy-ocr:rerun-refinement-regression && npm run policy-ocr:production-benchmark-regression && npm run policy-ocr:production-round2-regression && npm run policy-ocr:production-round3-regression && npm run policy-ocr:post-training-replay-regression && npm run policy-ocr:onboarding-import-regression && npm run policy-ocr:training-workflow-regression"
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",
