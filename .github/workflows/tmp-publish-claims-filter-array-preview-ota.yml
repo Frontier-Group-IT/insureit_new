@@ -1,0 +1,44 @@
+name: Publish claims filter array preview OTA
+
+on:
+  push:
+    branches:
+      - feat/self-managed-stage-navigation
+    paths:
+      - .github/workflows/tmp-publish-claims-filter-array-preview-ota.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/self-managed-stage-navigation
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install mobile dependencies
+        working-directory: apps/mobile-app
+        run: npm ci
+
+      - name: Publish Expo preview OTA
+        working-directory: apps/mobile-app
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npx eas-cli update --channel preview --environment preview --message "Fix Claims filter route array handling" --non-interactive
+
+      - name: Remove temporary workflow
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/tmp-publish-claims-filter-array-preview-ota.yml
+          git commit -m "Remove temporary Claims filter OTA workflow"
+          git push origin HEAD:feat/self-managed-stage-navigation
