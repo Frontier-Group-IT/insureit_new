@@ -34,161 +34,75 @@ begin
   on conflict (policy_document_id) do nothing;
 
   with production_families as (
-    select
-      i.name as insurer_name,
+    select i.name as insurer_name,
       coalesce(p.policy_type, 'Unknown') as policy_product,
       coalesce(v.vehicle_type, v.vehicle_category, v.vehicle_class_code, 'Unknown') as vehicle_segment,
       count(*)::integer as production_count,
-      count(*) filter (where exists (
-        select 1 from public.policy_documents d
-        where d.policy_id = p.id
-          and d.document_type = 'policy_copy'
-          and d.mime_type = 'application/pdf'
-      ))::integer as policies_with_pdf
+      count(*) filter (where exists (select 1 from public.policy_documents d where d.policy_id = p.id and d.document_type = 'policy_copy' and d.mime_type = 'application/pdf'))::integer as policies_with_pdf
     from public.policies p
     join public.insurance_companies i on i.id = p.insurance_company_id
     left join public.vehicles v on v.id = p.vehicle_id
     where coalesce(p.business_line, 'Motor') = 'Motor'
     group by i.name, coalesce(p.policy_type, 'Unknown'), coalesce(v.vehicle_type, v.vehicle_category, v.vehicle_class_code, 'Unknown')
-  ),
-  insurer_totals as (
-    select insurer_name, sum(production_count)::integer as insurer_count
-    from production_families
-    group by insurer_name
-  ),
-  top_insurers as (
-    select insurer_name, insurer_count
-    from insurer_totals
-    order by insurer_count desc, insurer_name
-    limit 5
-  ),
-  approved_counts as (
-    select
-      tl.insurer_name,
-      tl.policy_product,
-      coalesce(tl.section_02_reference ->> 'vehicle_class', 'Unknown') as vehicle_segment,
-      count(*)::integer as approved_layout_samples
-    from public.policy_ocr_training_labels tl
-    where tl.status = 'approved'
+  ), insurer_totals as (
+    select insurer_name, sum(production_count)::integer as insurer_count from production_families group by insurer_name
+  ), top_insurers as (
+    select insurer_name, insurer_count from insurer_totals order by insurer_count desc, insurer_name limit 5
+  ), approved_counts as (
+    select tl.insurer_name, tl.policy_product, coalesce(tl.section_02_reference ->> 'vehicle_class', 'Unknown') as vehicle_segment, count(*)::integer as approved_layout_samples
+    from public.policy_ocr_training_labels tl where tl.status = 'approved'
     group by tl.insurer_name, tl.policy_product, coalesce(tl.section_02_reference ->> 'vehicle_class', 'Unknown')
-  ),
-  ranked_families as (
-    select
-      pf.*,
-      coalesce(ac.approved_layout_samples, 0) as approved_layout_samples,
-      row_number() over (
-        partition by pf.insurer_name
-        order by
-          case when pf.policies_with_pdf >= v_per_family then 0 else 1 end,
-          pf.production_count desc,
-          pf.policies_with_pdf desc,
-          pf.policy_product,
-          pf.vehicle_segment
-      ) as family_rank
-    from production_families pf
-    join top_insurers ti on ti.insurer_name = pf.insurer_name
-    left join approved_counts ac
-      on ac.insurer_name = pf.insurer_name
-     and ac.policy_product = pf.policy_product
-     and ac.vehicle_segment = pf.vehicle_segment
-  ),
-  selected_families as (
+  ), ranked_families as (
+    select pf.*, coalesce(ac.approved_layout_samples, 0) as approved_layout_samples,
+      row_number() over (partition by pf.insurer_name order by case when pf.policies_with_pdf >= v_per_family then 0 else 1 end, pf.production_count desc, pf.policies_with_pdf desc, pf.policy_product, pf.vehicle_segment) as family_rank
+    from production_families pf join top_insurers ti on ti.insurer_name = pf.insurer_name
+    left join approved_counts ac on ac.insurer_name = pf.insurer_name and ac.policy_product = pf.policy_product and ac.vehicle_segment = pf.vehicle_segment
+  ), selected_families as (
     select * from ranked_families where family_rank = 1
-  ),
-  candidate_documents as (
-    select
-      sf.insurer_name,
-      sf.policy_product,
-      sf.vehicle_segment,
-      sf.production_count,
-      sf.policies_with_pdf,
-      sf.approved_layout_samples,
+  ), candidate_documents as (
+    select sf.insurer_name, sf.policy_product, sf.vehicle_segment, sf.production_count, sf.policies_with_pdf, sf.approved_layout_samples,
       case when sf.approved_layout_samples >= 4 then 'blind_holdout' else 'training' end as cohort_role,
-      (sf.production_count::numeric * greatest(sf.policies_with_pdf, 1)::numeric)
-        / greatest(sf.approved_layout_samples + 1, 1)::numeric as priority_score,
-      d.id as policy_document_id,
-      tl.id as training_label_id,
-      row_number() over (
-        partition by sf.insurer_name, sf.policy_product, sf.vehicle_segment
-        order by p.issuance_date desc nulls last, p.created_at desc, d.created_at desc
-      ) as candidate_rank
+      (sf.production_count::numeric * greatest(sf.policies_with_pdf, 1)::numeric) / greatest(sf.approved_layout_samples + 1, 1)::numeric as priority_score,
+      d.id as policy_document_id, tl.id as training_label_id,
+      row_number() over (partition by sf.insurer_name, sf.policy_product, sf.vehicle_segment order by p.issuance_date desc nulls last, p.created_at desc, d.created_at desc) as candidate_rank
     from selected_families sf
     join public.insurance_companies i on i.name = sf.insurer_name
-    join public.policies p
-      on p.insurance_company_id = i.id
-     and coalesce(p.policy_type, 'Unknown') = sf.policy_product
+    join public.policies p on p.insurance_company_id = i.id and coalesce(p.policy_type, 'Unknown') = sf.policy_product
     left join public.vehicles v on v.id = p.vehicle_id
-    join public.policy_documents d
-      on d.policy_id = p.id
-     and d.document_type = 'policy_copy'
-     and d.mime_type = 'application/pdf'
+    join public.policy_documents d on d.policy_id = p.id and d.document_type = 'policy_copy' and d.mime_type = 'application/pdf'
     join public.policy_ocr_training_labels tl on tl.policy_document_id = d.id
     where coalesce(v.vehicle_type, v.vehicle_category, v.vehicle_class_code, 'Unknown') = sf.vehicle_segment
-      and tl.status <> 'approved'
-      and tl.processing_status <> 'processing'
-      and not exists (
-        select 1 from public.policy_ocr_benchmark_items previous
-        where previous.policy_document_id = d.id
-      )
+      and tl.status <> 'approved' and tl.processing_status <> 'processing'
+      and not exists (select 1 from public.policy_ocr_benchmark_items previous where previous.policy_document_id = d.id)
   )
   insert into public.policy_ocr_benchmark_items (
-    run_id, training_label_id, policy_document_id, public_key,
-    insurer_name, policy_product, vehicle_segment, cohort_role,
+    run_id, training_label_id, policy_document_id, public_key, insurer_name, policy_product, vehicle_segment, cohort_role,
     production_count, policies_with_pdf, approved_layout_samples, priority_score
   )
-  select
-    v_run_id,
-    c.training_label_id,
-    c.policy_document_id,
+  select v_run_id, c.training_label_id, c.policy_document_id,
     left(encode(digest(v_run_id::text || ':' || c.policy_document_id::text, 'sha256'), 'hex'), 12),
-    c.insurer_name,
-    c.policy_product,
-    c.vehicle_segment,
-    c.cohort_role,
-    c.production_count,
-    c.policies_with_pdf,
-    c.approved_layout_samples,
-    c.priority_score
-  from candidate_documents c
-  where c.candidate_rank <= v_per_family;
+    c.insurer_name, c.policy_product, c.vehicle_segment, c.cohort_role, c.production_count, c.policies_with_pdf, c.approved_layout_samples, c.priority_score
+  from candidate_documents c where c.candidate_rank <= v_per_family;
 
   get diagnostics v_item_count = row_count;
 
   with production_families as (
-    select
-      i.name as insurer_name,
+    select i.name as insurer_name,
       coalesce(p.policy_type, 'Unknown') as policy_product,
       coalesce(v.vehicle_type, v.vehicle_category, v.vehicle_class_code, 'Unknown') as vehicle_segment,
       count(*)::integer as production_count,
-      count(*) filter (where exists (
-        select 1 from public.policy_documents d
-        where d.policy_id = p.id
-          and d.document_type = 'policy_copy'
-          and d.mime_type = 'application/pdf'
-      ))::integer as policies_with_pdf
-    from public.policies p
-    join public.insurance_companies i on i.id = p.insurance_company_id
+      count(*) filter (where exists (select 1 from public.policy_documents d where d.policy_id = p.id and d.document_type = 'policy_copy' and d.mime_type = 'application/pdf'))::integer as policies_with_pdf
+    from public.policies p join public.insurance_companies i on i.id = p.insurance_company_id
     left join public.vehicles v on v.id = p.vehicle_id
     where coalesce(p.business_line, 'Motor') = 'Motor'
     group by i.name, coalesce(p.policy_type, 'Unknown'), coalesce(v.vehicle_type, v.vehicle_category, v.vehicle_class_code, 'Unknown')
-  ),
-  insurer_totals as (
-    select insurer_name, sum(production_count)::integer as insurer_count
-    from production_families
-    group by insurer_name
-  ),
-  top_insurers as (
-    select insurer_name
-    from insurer_totals
-    order by insurer_count desc, insurer_name
-    limit 5
-  ),
-  ranked as (
-    select
-      pf.*,
-      row_number() over (partition by pf.insurer_name order by pf.production_count desc) as rn
-    from production_families pf
-    join top_insurers ti on ti.insurer_name = pf.insurer_name
+  ), insurer_totals as (
+    select insurer_name, sum(production_count)::integer as insurer_count from production_families group by insurer_name
+  ), top_insurers as (
+    select insurer_name from insurer_totals order by insurer_count desc, insurer_name limit 5
+  ), ranked as (
+    select pf.*, row_number() over (partition by pf.insurer_name order by pf.production_count desc) as rn
+    from production_families pf join top_insurers ti on ti.insurer_name = pf.insurer_name
   )
   select coalesce(jsonb_agg(jsonb_build_object(
     'insurer', ranked.insurer_name,
@@ -199,8 +113,7 @@ begin
   ) order by ranked.production_count desc), '[]'::jsonb)
   into v_data_gap
   from ranked
-  where ranked.rn = 1
-    and ranked.policies_with_pdf = 0;
+  where ranked.rn = 1 and ranked.policies_with_pdf = 0;
 
   update public.policy_ocr_benchmark_runs
   set status = case when v_item_count = 0 then 'blocked' else 'selected' end,
