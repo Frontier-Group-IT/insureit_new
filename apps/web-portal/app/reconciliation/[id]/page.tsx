@@ -10,7 +10,7 @@ type Props = { params: Promise<{ id: string }> };
 type CorrectionLine = { id: string; source_row_no: number; input_policy_no: string; match_status: string };
 
 export default async function ReconciliationCyclePage({ params }: Props) {
-  const profile = await requireCapability("view_reports");
+  const profile = await requireCapability("view_accounts");
   if (!canAccessPolicyCommercials(profile)) redirect("/access-denied");
   const { id } = await params;
   const data = await getReconciliationCycle(id);

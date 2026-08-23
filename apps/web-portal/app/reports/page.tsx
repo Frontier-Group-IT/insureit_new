@@ -83,15 +83,6 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
               <Kpi label="Renewals · 30 Days" value={number(pack.renewals.summary.due_30_count)} note={money(pack.renewals.summary.premium_due_30)} />
             </section>
 
-            {commercialAccess ? (
-              <section className="r2-panel px-5 py-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div><h2 className="text-[13px] font-semibold text-[#17365D]">Commercial & Reconciliation</h2><p className="mt-1 text-[9.5px] text-[#667085]">Projected insurer pay-in and agreed partner payout remain separate from actual insurer-recognized pay-in. Use the workspace for manual entry, Excel paste, or standard-template import.</p></div>
-                  <div className="flex flex-wrap gap-2"><Link href="/policies/commercial-review" className="r2-action">Commercial Review</Link><Link href="/reports/finance" className="r2-action">Commercial Report</Link><Link href="/reconciliation" className="r2-action r2-action--primary">Reconciliation Workspace</Link></div>
-                </div>
-              </section>
-            ) : null}
-
             <section className="r2-main-grid">
               <article className="r2-panel overflow-hidden">
                 <div className="r2-section-head"><h2>Premium & Policy Trend</h2><Link href="/reports/business" className="r2-section-link">Business <ArrowRight className="ml-1 inline h-3 w-3" /></Link></div>

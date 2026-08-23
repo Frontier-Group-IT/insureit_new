@@ -10,7 +10,7 @@ function firstName(value: Relation) { const row = Array.isArray(value) ? value[0
 function money(value: unknown) { const number = Number(value ?? 0); return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(Number.isFinite(number) ? number : 0); }
 
 export default async function ReconciliationHistoryPage() {
-  const profile = await requireCapability("view_reports");
+  const profile = await requireCapability("view_accounts");
   if (!canAccessPolicyCommercials(profile)) redirect("/access-denied");
   const cycles = await listReconciliationCycles();
   return <AppShell title="Reconciliation History">

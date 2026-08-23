@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { CommercialReviewClient, type CommercialReviewRow } from "@/app/policies/commercial-review/commercial-review-client";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
-import { requirePolicyEditor } from "@/lib/policy-access-server";
+import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type PolicyRow = { id: string; policy_no: string; insurance_company_id: string; issuance_date: string | null; start_date: string };
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function PolicyCommercialReviewPage() {
-  const profile = await requirePolicyEditor();
+  const profile = await requireCapability("view_accounts");
   if (!canAccessPolicyCommercials(profile)) redirect("/access-denied");
 
   const admin = createSupabaseAdminClient();
@@ -61,13 +61,13 @@ export default async function PolicyCommercialReviewPage() {
   const payoutReviewCount = rows.filter((row) => row.payoutOdPercent === 0 && row.payoutTpPercent === 0).length;
 
   return (
-    <AppShell title="Commercial Review">
+    <AppShell title="Commercial Control">
       <div className="mx-auto max-w-[1560px] space-y-4 pb-8">
         <section className="rounded-2xl border border-[#D9E2F0] bg-white px-5 py-4 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="text-[17px] font-semibold text-[#17365D]">Policy Commercial Review</h1>
-              <p className="mt-1 max-w-3xl text-[10px] leading-5 text-[#667085]">Complete historical projected insurer pay-in and actual partner payout terms without reopening policies one by one. All-zero legacy rows are flagged for review because the old schema could not distinguish an intentional 0% from a missing entry.</p>
+              <h1 className="text-[17px] font-semibold text-[#17365D]">Commercial Control</h1>
+              <p className="mt-1 max-w-3xl text-[10px] leading-5 text-[#667085]">Maintain historical projected insurer pay-in and actual agreed partner payout terms. This is now an Accounts operation; Phase B will replace this legacy bulk-review surface with a governed commercial control ledger.</p>
             </div>
             <div className="flex gap-2">
               <Metric label="Pay-in review" value={payinReviewCount} />

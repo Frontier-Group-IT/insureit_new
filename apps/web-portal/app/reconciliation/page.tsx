@@ -6,12 +6,12 @@ import { listReconciliationInsurers } from "./actions";
 import { ReconciliationWorkspace } from "./reconciliation-workspace";
 
 export default async function ReconciliationPage() {
-  const profile = await requireCapability("view_reports");
+  const profile = await requireCapability("view_accounts");
   if (!canAccessPolicyCommercials(profile)) redirect("/access-denied");
   const insurers = await listReconciliationInsurers();
 
   return (
-    <AppShell title="Reconciliation">
+    <AppShell title="Insurer Reconciliation">
       <ReconciliationWorkspace insurers={insurers} />
     </AppShell>
   );

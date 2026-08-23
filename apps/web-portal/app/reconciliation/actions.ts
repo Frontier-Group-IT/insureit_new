@@ -76,7 +76,7 @@ function toMatch(row: PolicyLookupRow): ReconciliationPolicyMatch {
 }
 
 async function requireReconciliationUser() {
-  const profile = await requireCapability("view_reports");
+  const profile = await requireCapability("view_accounts");
   if (!canAccessPolicyCommercials(profile)) throw new Error("Commercial details restricted");
   return profile;
 }
