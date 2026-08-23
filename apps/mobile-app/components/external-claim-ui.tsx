@@ -1,8 +1,11 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { PropsWithChildren, ReactNode } from 'react';
+import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
+import { PropsWithChildren, ReactNode, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppBadge } from '@/components/design-system';
+import { SELF_MANAGED_MILESTONES, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
+import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 
 const stageIcons: Array<keyof typeof MaterialCommunityIcons.glyphMap> = [
@@ -161,9 +164,138 @@ export function ClaimSecondaryAction({ icon, label, fill = false, onPress }: { i
 
 export function ClaimActionBar({ primaryLabel, primaryIcon = 'arrow-right', primaryDisabled, onPrimary, onAssistance }: { primaryLabel: string; primaryIcon?: keyof typeof MaterialCommunityIcons.glyphMap; primaryDisabled?: boolean; onPrimary: () => void; onAssistance: () => void }) {
   return (
-    <View style={styles.actionBar}>
-      <ClaimSecondaryAction fill icon="account-tie-voice-outline" label="Get Assistance" onPress={onAssistance} />
-      <ClaimPrimaryAction fill label={primaryLabel} icon={primaryIcon} disabled={primaryDisabled} onPress={onPrimary} />
+    <View>
+      <View style={styles.actionBar}>
+        <ClaimSecondaryAction fill icon="account-tie-voice-outline" label="Get Assistance" onPress={onAssistance} />
+        <ClaimPrimaryAction fill label={primaryLabel} icon={primaryIcon} disabled={primaryDisabled} onPress={onPrimary} />
+      </View>
+      <SelfManagedStageNavigation />
+    </View>
+  );
+}
+
+type StageProgressRecord = {
+  milestone_key: ClaimMilestoneKey;
+  milestone_status: string;
+};
+
+function SelfManagedStageNavigation() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useLocalSearchParams<{ id?: string; key?: string }>();
+  const claimId = typeof params.id === 'string' ? params.id : '';
+  const milestoneKey = typeof params.key === 'string' ? params.key as ClaimMilestoneKey : null;
+  const selfManagedPage = pathname === '/customer/self-managed-claim'
+    || pathname === '/customer/self-managed-spot-status'
+    || pathname === '/customer/self-managed-milestone';
+  const currentIndex = useMemo(() => {
+    if (pathname === '/customer/self-managed-claim') return 0;
+    if (pathname === '/customer/self-managed-spot-status') return 1;
+    if (pathname === '/customer/self-managed-milestone' && milestoneKey) {
+      return SELF_MANAGED_MILESTONES.findIndex((item) => item.key === milestoneKey);
+    }
+    return -1;
+  }, [milestoneKey, pathname]);
+  const [progress, setProgress] = useState<StageProgressRecord[]>([]);
+
+  useEffect(() => {
+    if (!selfManagedPage || !claimId) {
+      setProgress([]);
+      return;
+    }
+    let active = true;
+    void (async () => {
+      const { data } = await (supabase as any)
+        .from('claim_milestones')
+        .select('milestone_key,milestone_status')
+        .eq('claim_id', claimId);
+      if (active) setProgress((data ?? []) as StageProgressRecord[]);
+    })();
+    return () => { active = false; };
+  }, [claimId, selfManagedPage]);
+
+  const completedKeys = useMemo(() => new Set(
+    progress
+      .filter((item) => item.milestone_status === 'completed' || item.milestone_status === 'not_applicable')
+      .map((item) => item.milestone_key),
+  ), [progress]);
+
+  const unlockedIndex = useMemo(() => {
+    let furthest = 0;
+    for (const item of progress) {
+      const index = SELF_MANAGED_MILESTONES.findIndex((stage) => stage.key === item.milestone_key);
+      if (index < 0) continue;
+      furthest = Math.max(furthest, index);
+      if (item.milestone_status === 'completed' || item.milestone_status === 'not_applicable') {
+        furthest = Math.max(furthest, Math.min(index + 1, SELF_MANAGED_MILESTONES.length - 1));
+      }
+    }
+    return furthest;
+  }, [progress]);
+
+  if (!selfManagedPage || currentIndex < 0) return null;
+
+  const previousEnabled = Boolean(claimId) && currentIndex > 0;
+  const nextEnabled = Boolean(claimId)
+    && currentIndex < SELF_MANAGED_MILESTONES.length - 1
+    && currentIndex + 1 <= unlockedIndex;
+
+  function openStage(index: number) {
+    if (!claimId) return;
+    const stage = SELF_MANAGED_MILESTONES[index];
+    if (!stage) return;
+    if (stage.key === 'spot_intimation') {
+      router.push({ pathname: '/customer/self-managed-claim', params: { id: claimId } });
+      return;
+    }
+    if (stage.key === 'spot_status') {
+      router.push({ pathname: '/customer/self-managed-spot-status', params: { id: claimId } });
+      return;
+    }
+    router.push({ pathname: '/customer/self-managed-milestone', params: { id: claimId, key: stage.key } });
+  }
+
+  return (
+    <View style={styles.stageNavigation}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Previous claim stage"
+        accessibilityState={{ disabled: !previousEnabled }}
+        disabled={!previousEnabled}
+        onPress={() => openStage(currentIndex - 1)}
+        style={[styles.stageNavigationButton, !previousEnabled && styles.stageNavigationButtonDisabled]}
+      >
+        <MaterialCommunityIcons name="arrow-left" size={20} color={previousEnabled ? '#0A43A3' : '#AEB9C8'} />
+        <Text style={[styles.stageNavigationButtonText, !previousEnabled && styles.stageNavigationButtonTextDisabled]}>Previous</Text>
+      </Pressable>
+
+      <View style={styles.stageNavigationDots} accessibilityLabel={`Claim stage ${currentIndex + 1} of ${SELF_MANAGED_MILESTONES.length}`}>
+        {SELF_MANAGED_MILESTONES.map((stage, index) => {
+          const completed = completedKeys.has(stage.key);
+          const current = index === currentIndex;
+          const locked = index > unlockedIndex;
+          const unlocked = !locked && !completed && !current;
+          return <View key={stage.key} style={[
+            styles.stageNavigationDot,
+            completed && styles.stageNavigationDotCompleted,
+            unlocked && styles.stageNavigationDotUnlocked,
+            locked && styles.stageNavigationDotLocked,
+            current && styles.stageNavigationDotCurrent,
+          ]} />;
+        })}
+      </View>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Next claim stage"
+        accessibilityState={{ disabled: !nextEnabled }}
+        disabled={!nextEnabled}
+        onPress={() => openStage(currentIndex + 1)}
+        style={[styles.stageNavigationButton, !nextEnabled && styles.stageNavigationButtonDisabled]}
+      >
+        <Text style={[styles.stageNavigationButtonText, !nextEnabled && styles.stageNavigationButtonTextDisabled]}>Next</Text>
+        <MaterialCommunityIcons name="arrow-right" size={20} color={nextEnabled ? '#0A43A3' : '#AEB9C8'} />
+      </Pressable>
     </View>
   );
 }
@@ -240,6 +372,17 @@ const styles = StyleSheet.create({
   secondaryAction: { minHeight: 52, borderRadius: 14, borderWidth: 1, borderColor: '#BFD2EE', backgroundColor: '#F7FAFF', paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   secondaryActionText: { color: '#0A43A3', fontSize: 10.5, lineHeight: 14, fontWeight: '900', textAlign: 'center', flexShrink: 1 },
   actionBar: { flexDirection: 'row', alignItems: 'stretch', gap: 8, marginTop: 2, marginBottom: 10 },
+  stageNavigation: { minHeight: 70, borderRadius: 18, borderWidth: 1, borderColor: '#DCE5F0', backgroundColor: '#FFFFFF', paddingHorizontal: 9, paddingVertical: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, shadowColor: '#17365D', shadowOpacity: 0.04, shadowRadius: 7, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
+  stageNavigationButton: { width: 96, minHeight: 46, borderRadius: 13, borderWidth: 1, borderColor: '#AFC8EA', backgroundColor: '#F9FBFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 8 },
+  stageNavigationButtonDisabled: { borderColor: '#E1E6ED', backgroundColor: '#FAFBFC', opacity: 0.62 },
+  stageNavigationButtonText: { color: '#0A43A3', fontSize: 10, lineHeight: 13, fontWeight: '900' },
+  stageNavigationButtonTextDisabled: { color: '#AEB9C8' },
+  stageNavigationDots: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 2 },
+  stageNavigationDot: { width: 8, height: 8, borderRadius: 999, borderWidth: 1, borderColor: '#C9D3E0', backgroundColor: '#EEF2F6' },
+  stageNavigationDotCompleted: { borderColor: '#43A96C', backgroundColor: '#43A96C' },
+  stageNavigationDotUnlocked: { borderColor: '#7CA5DE', backgroundColor: '#FFFFFF' },
+  stageNavigationDotLocked: { borderColor: '#D0D8E3', backgroundColor: '#EEF1F5', opacity: 0.78 },
+  stageNavigationDotCurrent: { width: 11, height: 11, borderColor: '#0A43A3', backgroundColor: '#2D78E5' },
   actionBarItem: { flex: 1, minWidth: 0 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
 });
