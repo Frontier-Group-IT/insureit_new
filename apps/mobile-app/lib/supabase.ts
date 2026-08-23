@@ -59,8 +59,11 @@ function shouldTrackRequest(url: string, method: string) {
 }
 
 function requestLabel(url: string, method: string) {
-  if (url.includes('/storage/v1/object') && method !== 'GET') return 'Uploading document';
-  return 'Processing request';
+  if (!url.includes('/storage/v1/object')) return 'Processing request';
+  if (method === 'DELETE') return 'Deleting document';
+  if (method === 'PUT' || method === 'PATCH') return 'Updating document';
+  if (method === 'POST') return 'Uploading document';
+  return 'Processing document';
 }
 
 function xhrFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {

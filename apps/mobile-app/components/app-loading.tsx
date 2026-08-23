@@ -94,6 +94,14 @@ export function useLoadingRouter(): ReturnType<typeof useRouter> {
   return router;
 }
 
+function loadingSubtitle(label: string) {
+  if (label === 'Uploading document') return 'Please wait while InsureIT uploads the document.';
+  if (label === 'Deleting document') return 'Please wait while InsureIT deletes the document.';
+  if (label === 'Updating document') return 'Please wait while InsureIT updates the document.';
+  if (label === 'Processing document') return 'Please wait while InsureIT processes the document.';
+  return 'Please wait while InsureIT finishes loading.';
+}
+
 function AppLoadingOverlay({ label }: { label: string }) {
   return <View accessibilityRole="progressbar" accessibilityLabel={label} style={styles.overlay}>
     <View style={styles.card}>
@@ -102,7 +110,7 @@ function AppLoadingOverlay({ label }: { label: string }) {
       </View>
       <ActivityIndicator size="large" color="#0A43A3" />
       <Text style={styles.title}>{label}</Text>
-      <Text style={styles.subtitle}>Please wait while InsureIT finishes loading.</Text>
+      <Text style={styles.subtitle}>{loadingSubtitle(label)}</Text>
     </View>
   </View>;
 }
