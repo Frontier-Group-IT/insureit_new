@@ -66,11 +66,25 @@ export type BenchmarkTruthMetrics = {
 
 type Proposal = { fields?: Record<string, { value?: unknown } | unknown> } | null;
 
+const PROPOSAL_KEY_ALIASES: Record<string, string[]> = {
+  printed_net_premium: ["printed_net_premium", "total_premium"],
+  printed_gst: ["printed_gst", "tax_amount"],
+  printed_gross_premium: ["printed_gross_premium", "gross_premium"],
+};
+
 export function proposalFieldValue(proposal: Proposal, key: string): string | null {
-  const entry = proposal?.fields?.[key];
-  if (entry == null) return null;
-  if (typeof entry === "object" && entry && "value" in entry) return cleanValue((entry as { value?: unknown }).value);
-  return cleanValue(entry);
+  for (const proposalKey of PROPOSAL_KEY_ALIASES[key] ?? [key]) {
+    const entry = proposal?.fields?.[proposalKey];
+    if (entry == null) continue;
+    if (typeof entry === "object" && entry && "value" in entry) {
+      const cleaned = cleanValue((entry as { value?: unknown }).value);
+      if (cleaned != null) return cleaned;
+      continue;
+    }
+    const cleaned = cleanValue(entry);
+    if (cleaned != null) return cleaned;
+  }
+  return null;
 }
 
 export function buildReferenceFields(label: Record<string, unknown>): Record<string, string> {
