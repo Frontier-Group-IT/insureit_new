@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -18,13 +18,19 @@ type CustomerClaim = Claim & {
 
 export default function ClaimsScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ filter?: string | string[] }>();
+  const requestedFilter = validClaimFilter(Array.isArray(params.filter) ? params.filter[0] : params.filter);
   const [claims, setClaims] = useState<CustomerClaim[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [insurers, setInsurers] = useState<InsuranceCompany[]>([]);
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<ClaimFilter>('All');
+  const [filter, setFilter] = useState<ClaimFilter>(requestedFilter);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setFilter(requestedFilter);
+  }, [requestedFilter]);
 
   useEffect(() => {
     async function load() {
@@ -137,6 +143,10 @@ export default function ClaimsScreen() {
       {claims.length > 0 && filteredClaims.length === 0 ? <EmptyState title="No matching claim" body="Try another search or filter." /> : null}
     </Screen>
   );
+}
+
+function validClaimFilter(value?: string): ClaimFilter {
+  return value === 'Open' || value === 'Action Required' || value === 'Completed' || value === 'All' ? value : 'All';
 }
 
 function matchesFilter(claim: CustomerClaim, filter: ClaimFilter) {

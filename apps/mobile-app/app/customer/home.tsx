@@ -198,8 +198,10 @@ export default function CustomerMockupHomeScreen() {
         openAmount={openClaimAmount}
         settledAmount={settledClaimAmount}
         pendingActionCount={pendingActionCount || claimAttentionCount}
-        onOpenAll={() => router.push('/customer/claims')}
-        onPendingAction={() => pendingTask ? router.push({ pathname: '/customer/upload-documents', params: { claimId: pendingTask.claim_id } }) : router.push('/customer/claims')}
+        onOpenAll={() => router.push({ pathname: '/customer/claims', params: { filter: 'All' } })}
+        onOpenOpen={() => router.push({ pathname: '/customer/claims', params: { filter: 'Open' } })}
+        onOpenCompleted={() => router.push({ pathname: '/customer/claims', params: { filter: 'Completed' } })}
+        onPendingAction={() => pendingTask ? router.push({ pathname: '/customer/upload-documents', params: { claimId: pendingTask.claim_id } }) : router.push({ pathname: '/customer/claims', params: { filter: 'All' } })}
       />
       <SupportActionCenter onSupport={() => router.push('/customer/support')} />
       <Text style={styles.appVersion}>Version 1.8.3</Text>
@@ -388,23 +390,23 @@ function ActionBadge({ value, animated }: { value: number; animated: boolean }) 
   return <Animated.View style={[styles.actionBadge, { transform: [{ scale }] }]}><Text style={styles.actionBadgeText}>{value}</Text></Animated.View>;
 }
 
-function ClaimsSummaryCard({ totalCount, openCount, settledCount, totalAmount, openAmount, settledAmount, pendingActionCount, onOpenAll, onPendingAction }: { totalCount: number; openCount: number; settledCount: number; totalAmount: number; openAmount: number; settledAmount: number; pendingActionCount: number; onOpenAll: () => void; onPendingAction: () => void }) {
+function ClaimsSummaryCard({ totalCount, openCount, settledCount, totalAmount, openAmount, settledAmount, pendingActionCount, onOpenAll, onOpenOpen, onOpenCompleted, onPendingAction }: { totalCount: number; openCount: number; settledCount: number; totalAmount: number; openAmount: number; settledAmount: number; pendingActionCount: number; onOpenAll: () => void; onOpenOpen: () => void; onOpenCompleted: () => void; onPendingAction: () => void }) {
   const hasPendingAction = pendingActionCount > 0;
   return (
     <View style={styles.claimSummaryCard}>
-      <Pressable onPress={onOpenAll} style={({ pressed }) => [styles.claimSummaryTop, pressed && styles.cardPressed]}>
+      <View style={styles.claimSummaryTop}>
         <View style={styles.sectionHeader}>
           <Text style={styles.claimCardTitle}>Claims</Text>
-          <View style={styles.claimOpenLink}><Text style={styles.claimOpenLinkText}>View all</Text><MaterialCommunityIcons name="arrow-right" size={15} color="#BFD4F7" /></View>
+          <Pressable accessibilityRole="button" accessibilityLabel="View all claims" onPress={onOpenAll} style={({ pressed }) => [styles.claimOpenLink, pressed && styles.cardPressed]}><Text style={styles.claimOpenLinkText}>View all</Text><MaterialCommunityIcons name="arrow-right" size={15} color="#BFD4F7" /></Pressable>
         </View>
         <View style={styles.claimMetricRow}>
-          <ClaimMetric label="Total" value={totalCount} amount={moneyCompact(totalAmount)} accent="#6FA8FF" />
+          <ClaimMetric label="Total" value={totalCount} amount={moneyCompact(totalAmount)} accent="#6FA8FF" onPress={onOpenAll} />
           <View style={styles.claimMetricDivider} />
-          <ClaimMetric label="Open" value={openCount} amount={moneyCompact(openAmount)} accent="#F5B94C" />
+          <ClaimMetric label="Open" value={openCount} amount={moneyCompact(openAmount)} accent="#F5B94C" onPress={onOpenOpen} />
           <View style={styles.claimMetricDivider} />
-          <ClaimMetric label="Settled" value={settledCount} amount={moneyCompact(settledAmount)} accent="#4FD79B" />
+          <ClaimMetric label="Settled" value={settledCount} amount={moneyCompact(settledAmount)} accent="#4FD79B" onPress={onOpenCompleted} />
         </View>
-      </Pressable>
+      </View>
       <Pressable onPress={hasPendingAction ? onPendingAction : onOpenAll} style={({ pressed }) => [styles.claimTicker, hasPendingAction && styles.claimTickerHot, pressed && styles.cardPressed]}>
         <MaterialCommunityIcons name={hasPendingAction ? 'alert-decagram' : 'check-decagram'} size={17} color={hasPendingAction ? '#C98918' : '#10A66F'} />
         <Text style={styles.claimTickerText} numberOfLines={1}>{hasPendingAction ? `${pendingActionCount} pending claim action${pendingActionCount === 1 ? '' : 's'}` : totalCount ? 'All claim actions are clear' : 'No claims yet'}</Text>
@@ -414,13 +416,13 @@ function ClaimsSummaryCard({ totalCount, openCount, settledCount, totalAmount, o
   );
 }
 
-function ClaimMetric({ label, value, amount, accent }: { label: string; value: number; amount: string; accent: string }) {
+function ClaimMetric({ label, value, amount, accent, onPress }: { label: string; value: number; amount: string; accent: string; onPress: () => void }) {
   return (
-    <View style={styles.claimMetric}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`Open ${label} claims`} onPress={onPress} style={({ pressed }) => [styles.claimMetric, pressed && styles.cardPressed]}>
       <Text style={[styles.claimMetricValue, { color: accent }]}>{value}</Text>
       <Text style={styles.claimMetricLabel}>{label}</Text>
       <Text style={styles.claimMetricAmount}>{amount}</Text>
-    </View>
+    </Pressable>
   );
 }
 

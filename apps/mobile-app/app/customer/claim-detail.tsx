@@ -11,7 +11,7 @@ import { customerStageCopy } from '@/lib/claim-workflow';
 import { formatJourneyAmount, formatJourneyDate, stageMainAmount, STAGE_DATE_LABELS } from '@/lib/self-managed-claim-timeline';
 import { supabase } from '@/lib/supabase';
 import { palette, roleTheme } from '@/lib/theme';
-import type { Claim, ClaimDocument, ClaimHistory, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
+import type { Claim, ClaimDocument, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
 
 type ClaimWithOwnership = Claim & {
   external_policy_id?: string | null;
@@ -28,7 +28,6 @@ export default function ClaimDetailScreen() {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [policy, setPolicy] = useState<PolicyDisplay | null>(null);
   const [insurer, setInsurer] = useState<InsuranceCompany | null>(null);
-  const [history, setHistory] = useState<ClaimHistory[]>([]);
   const [documents, setDocuments] = useState<ClaimDocument[]>([]);
   const [milestones, setMilestones] = useState<ClaimMilestone[]>([]);
   const [message, setMessage] = useState('');
@@ -36,22 +35,19 @@ export default function ClaimDetailScreen() {
   const [detailsExpanded, setDetailsExpanded] = useState(false);
   const [documentsExpanded, setDocumentsExpanded] = useState(false);
   const [journeyExpanded, setJourneyExpanded] = useState(true);
-  const [historyExpanded, setHistoryExpanded] = useState(false);
 
   useEffect(() => {
     let active = true;
     void (async () => {
       if (!id) return;
-      const [claimResult, historyResult, documentsResult, milestoneResult] = await Promise.all([
+      const [claimResult, documentsResult, milestoneResult] = await Promise.all([
         supabase.from('claims').select('*').eq('id', id).maybeSingle(),
-        supabase.from('claim_status_history').select('*').eq('claim_id', id).order('created_at', { ascending: false }),
         supabase.from('claim_documents').select('*').eq('claim_id', id).order('created_at', { ascending: false }),
         (supabase as any).from('claim_milestones').select('*').eq('claim_id', id),
       ]);
       if (!active) return;
       const nextClaim = claimResult.data as ClaimWithOwnership | null;
       setClaim(nextClaim);
-      setHistory(historyResult.data ?? []);
       setDocuments(documentsResult.data ?? []);
       setMilestones((milestoneResult.data ?? []) as ClaimMilestone[]);
       if (!nextClaim) { setLoading(false); return; }
@@ -207,8 +203,6 @@ export default function ClaimDetailScreen() {
       <SectionHeader title="Documents" subtitle={`${documents.length} document${documents.length === 1 ? '' : 's'}`} expanded={documentsExpanded} onPress={() => setDocumentsExpanded((value) => !value)} />
       {documentsExpanded ? <View style={styles.sectionBody}>{documents.length ? documents.map((document) => <Pressable key={document.id} onPress={() => void openDocument(document)} style={styles.documentRow}><MaterialCommunityIcons name="file-document-outline" size={20} color={roleTheme.customer.accent} /><View style={{ flex: 1 }}><Text style={styles.documentTitle}>{document.document_type}</Text><Text style={styles.documentMeta}>{document.verification_status ?? 'uploaded'}</Text></View><MaterialCommunityIcons name="open-in-new" size={18} color={palette.slate} /></Pressable>) : <Text style={styles.emptyText}>No claim documents uploaded yet.</Text>}</View> : null}
 
-      <SectionHeader title="Activity History" subtitle={`${history.length} movement record${history.length === 1 ? '' : 's'}`} expanded={historyExpanded} onPress={() => setHistoryExpanded((value) => !value)} />
-      {historyExpanded ? <View style={styles.sectionBody}>{history.length ? history.map((item) => <View key={item.id} style={styles.historyRow}><View style={styles.historyDot} /><View style={{ flex: 1 }}><Text style={styles.historyStatus}>{item.to_status}</Text><Text style={styles.documentMeta}>{formatDateTime(item.created_at)}</Text>{item.notes ? <Text style={styles.emptyText}>{item.notes}</Text> : null}</View></View>) : <Text style={styles.emptyText}>No timeline updates yet.</Text>}</View> : null}
     </Screen>
   );
 }
@@ -266,5 +260,5 @@ const styles = StyleSheet.create({
   currentCard:{position:'relative',borderWidth:1,borderRadius:18,padding:12,paddingLeft:15,flexDirection:'row',alignItems:'center',gap:10,marginBottom:10,overflow:'hidden'},currentAccent:{position:'absolute',left:0,top:0,bottom:0,width:4},currentIcon:{width:42,height:42,borderRadius:13,alignItems:'center',justifyContent:'center'},currentCopy:{flex:1,minWidth:0},currentEyebrow:{fontSize:8.5,fontWeight:'900',letterSpacing:.5},currentTitle:{color:palette.navy,fontSize:14.5,fontWeight:'900',marginTop:2},currentBody:{color:'#5F7086',fontSize:10.8,lineHeight:15,fontWeight:'700',marginTop:3},
   sectionHeader:{minHeight:62,borderRadius:17,borderWidth:1,borderColor:'#D6E2EE',backgroundColor:'#F7FAFF',padding:11,marginTop:10,flexDirection:'row',alignItems:'center',gap:10},sectionHeaderIcon:{width:38,height:38,borderRadius:12,backgroundColor:'#E7F0FC',borderWidth:1,borderColor:'#D4E2F2',alignItems:'center',justifyContent:'center'},sectionHeaderCopy:{flex:1,minWidth:0},sectionTitle:{color:palette.navy,fontSize:14,fontWeight:'900'},sectionSub:{color:'#718198',fontSize:10,fontWeight:'700',marginTop:2},sectionBody:{borderWidth:1,borderTopWidth:0,borderColor:'#D6E2EE',backgroundColor:'#FFFFFF',borderBottomLeftRadius:17,borderBottomRightRadius:17,padding:10,gap:8},journeyBody:{padding:8,gap:0},
   stageRow:{minHeight:72,paddingHorizontal:8,paddingVertical:9,flexDirection:'row',alignItems:'stretch',gap:9,borderBottomWidth:1,borderBottomColor:'#EEF2F6'},stageRowCurrent:{backgroundColor:'#EDF5FF',borderRadius:14,borderWidth:1,borderColor:'#C8DCF3',marginVertical:4,paddingHorizontal:10},stageRail:{width:30,alignItems:'center'},stageNode:{width:30,height:30,borderRadius:15,backgroundColor:'#EEF2F6',borderWidth:1,borderColor:'#E0E6ED',alignItems:'center',justifyContent:'center'},stageDone:{backgroundColor:'#168161',borderColor:'#168161'},stageCurrent:{backgroundColor:'#0A43A3',borderColor:'#0A43A3'},stageLine:{width:2,flex:1,minHeight:20,marginTop:4,backgroundColor:'#E4EAF1'},stageLineDone:{backgroundColor:'#A9D8C7'},stageCopy:{flex:1,minWidth:0,justifyContent:'center'},stageTitle:{color:palette.navy,fontSize:11.5,fontWeight:'900'},stageMeta:{color:'#7A8799',fontSize:9.5,fontWeight:'700',marginTop:2},stageMetaCurrent:{color:'#0A43A3',fontWeight:'900'},stageEventLabel:{color:'#8B9AAD',fontSize:8.5,fontWeight:'700',marginTop:3},stageRight:{width:112,alignItems:'flex-end',justifyContent:'center',gap:3},stageDate:{color:'#344054',fontSize:9.5,lineHeight:13,fontWeight:'800',textAlign:'right'},stageDateMuted:{color:'#98A2B3'},stageAmount:{color:'#10365F',fontSize:10.8,fontWeight:'900',backgroundColor:'#EEF4FB',paddingHorizontal:7,paddingVertical:3,borderRadius:999},
-  documentRow:{minHeight:52,borderRadius:13,backgroundColor:'#F7FAFF',borderWidth:1,borderColor:'#E1E9F2',padding:10,flexDirection:'row',alignItems:'center',gap:9},documentTitle:{color:palette.navy,fontSize:10.5,fontWeight:'900'},documentMeta:{color:'#7A8799',fontSize:9,fontWeight:'600',marginTop:2},emptyText:{color:'#7A8799',fontSize:10,fontWeight:'600',lineHeight:14},historyRow:{flexDirection:'row',gap:9,paddingVertical:7},historyDot:{width:10,height:10,borderRadius:5,backgroundColor:'#0A43A3',marginTop:4,borderWidth:2,borderColor:'#D7E6F8'},historyStatus:{color:palette.navy,fontSize:10.5,fontWeight:'900'},
+  documentRow:{minHeight:52,borderRadius:13,backgroundColor:'#F7FAFF',borderWidth:1,borderColor:'#E1E9F2',padding:10,flexDirection:'row',alignItems:'center',gap:9},documentTitle:{color:palette.navy,fontSize:10.5,fontWeight:'900'},documentMeta:{color:'#7A8799',fontSize:9,fontWeight:'600',marginTop:2},emptyText:{color:'#7A8799',fontSize:10,fontWeight:'600',lineHeight:14},
 });
