@@ -27,7 +27,9 @@ for (const source of [vehicleWorkspace, fleetSummary, onboardingActions, misExpo
 }
 
 const policyOnboardingForm = readFileSync("components/policy-unified-form.tsx", "utf8");
+const policySaveConfirmation = readFileSync("components/policy-save-confirmation.tsx", "utf8");
 assert.match(policyOnboardingForm, /bharatSeries=\/\^\\d\{2\}BH\\d\{4\}\[A-HJ-NP-Z\]\{1,2\}\$\//);
+assert.match(policySaveConfirmation, /\\d\{2\}BH\\d\{4\}\[A-HJ-NP-Z\]\{1,2\}/);
 const bhRegistrationPattern = /^\d{2}BH\d{4}[A-HJ-NP-Z]{1,2}$/;
 for (const value of ["24BH3275H", "24BH3275AB"]) assert.match(value, bhRegistrationPattern);
 for (const value of ["24BH327H", "24BH3275I", "24BH3275O", "BH243275H"]) assert.doesNotMatch(value, bhRegistrationPattern);
