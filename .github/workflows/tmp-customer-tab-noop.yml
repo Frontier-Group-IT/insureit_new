@@ -74,3 +74,5 @@ jobs:
           git add apps/mobile-app/components/ui.tsx
           git commit -m "Avoid repeat customer root-tab navigation"
           git push origin HEAD:feat/self-managed-stage-navigation
+
+# trigger retry
