@@ -1,0 +1,62 @@
+name: Temporary BH registration patch
+
+on:
+  push:
+    branches:
+      - fix/bh-series-policy-registration
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/bh-series-policy-registration
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Patch BH-series registration validation
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          form_path = Path('apps/web-portal/components/policy-unified-form.tsx')
+          source = form_path.read_text()
+          old = 'function isValidRegisteredVehicleNumber(value:string){return /^[A-Z]{2}[A-Z0-9]*[0-9]{2}$/.test(value);}'
+          new = 'function isValidRegisteredVehicleNumber(value:string){const normalized=normalizeRegistrationInput(value);const standard=/^[A-Z]{2}[A-Z0-9]*[0-9]{2}$/.test(normalized);const bharatSeries=/^\\d{2}BH\\d{4}[A-HJ-NP-Z]{1,2}$/.test(normalized);return standard||bharatSeries;}'
+          if old not in source:
+              raise SystemExit('Expected registration validator was not found; refusing to patch.')
+          form_path.write_text(source.replace(old, new, 1))
+
+          regression_path = Path('apps/web-portal/scripts/new-vehicle-prefix-regression.mjs')
+          regression = regression_path.read_text()
+          marker = 'console.log("Canonical NEW vehicle prefix regression: passed.");'
+          checks = '''const policyOnboardingForm = readFileSync("components/policy-unified-form.tsx", "utf8");
+          assert.match(policyOnboardingForm, /bharatSeries=\/\^\\\\d\{2\}BH\\\\d\{4\}\[A-HJ-NP-Z\]\{1,2\}\$\//);
+          const bhRegistrationPattern = /^\\d{2}BH\\d{4}[A-HJ-NP-Z]{1,2}$/;
+          for (const value of ["24BH3275H", "24BH3275AB"]) assert.match(value, bhRegistrationPattern);
+          for (const value of ["24BH327H", "24BH3275I", "24BH3275O", "BH243275H"]) assert.doesNotMatch(value, bhRegistrationPattern);
+
+          '''
+          if 'bhRegistrationPattern' not in regression:
+              if marker not in regression:
+                  raise SystemExit('Regression insertion marker was not found; refusing to patch.')
+              regression_path.write_text(regression.replace(marker, checks + marker, 1))
+          PY
+      - name: Run focused regression
+        working-directory: apps/web-portal
+        run: node scripts/new-vehicle-prefix-regression.mjs
+      - name: Remove temporary workflow and commit patch
+        shell: bash
+        run: |
+          rm .github/workflows/tmp-patch-bh-series-registration.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal/components/policy-unified-form.tsx apps/web-portal/scripts/new-vehicle-prefix-regression.mjs .github/workflows/tmp-patch-bh-series-registration.yml
+          git commit -m "Support BH-series registration in policy onboarding"
+          git push origin HEAD:fix/bh-series-policy-registration
