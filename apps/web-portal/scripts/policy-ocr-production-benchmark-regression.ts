@@ -39,7 +39,7 @@ run(
     ["CGST", "816.9831"], ["SGST", "816.9831"], ["Final Premium", "10711.5562"],
   ] }],
   parsed("digit_commercial_motor_v1", [field("total_premium", "1230.59"), field("cpa_opted", "No"), field("cpa_premium", "0")]),
-  { insurer_name: "Go Digit General Insurance Limited", policy_product: "Package", vehicle_class: "MISD", vehicle_make: "Tata", vehicle_model: "YODHA / CASH VAN", vehicle_fuel_type: "Diesel", vehicle_manufacturing_year: "2022", vehicle_capacity: "2850KG", od_premium: "1230.59", tp_premium: "7847", total_premium: "9077.59", tax_amount: "1633.97", gross_premium: "10711.56", cpa_opted: "No", cpa_premium: "0" },
+  { insurer_name: "Go Digit General Insurance Limited", policy_product: "Package", vehicle_class: "MISD", vehicle_make: "Tata", vehicle_model: "YODHA / CASH VAN", vehicle_fuel_type: "Diesel", vehicle_manufacturing_year: "2022", vehicle_capacity: "2850KG", od_premium: "1230.59", tp_premium: "7847", total_premium: "9077.59", tax_amount: "1633.97", gross_premium: "10711.5562", cpa_opted: "No", cpa_premium: "0" },
 );
 
 run(
