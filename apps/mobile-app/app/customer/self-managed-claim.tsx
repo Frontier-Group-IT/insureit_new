@@ -71,6 +71,12 @@ export default function SelfManagedClaimScreen() {
   const [timeTarget, setTimeTarget] = useState<TimeTarget>(null);
 
   useEffect(() => {
+    if (!successMessage) return;
+    const timer = setTimeout(() => setSuccessMessage(''), 2800);
+    return () => clearTimeout(timer);
+  }, [successMessage]);
+
+  useEffect(() => {
     let active = true;
     void (async () => {
       if (editing) {
@@ -254,19 +260,18 @@ export default function SelfManagedClaimScreen() {
     const type = DOCUMENT_TYPE_BY_KEY[key];
     if (documents[key].length) {
       setDocuments((current) => ({ ...current, [key]: [] }));
-      setSuccessMessage(`${type} removed successfully.`);
+      setSavedDocumentTypes((current) => current.filter((item) => item !== type));
+      setSuccessMessage('Document deleted successfully');
       return;
     }
     const savedDocument = savedDocuments.find((item) => item.document_type === type);
     if (!savedDocument) return;
     const removed = await removeSavedDocument(savedDocument);
     if (!removed) return;
-    setSavedDocuments((current) => {
-      const next = current.filter((item) => item.id !== savedDocument.id);
-      setSavedDocumentTypes([...new Set(next.map((item) => item.document_type).filter(Boolean))]);
-      return next;
-    });
-    setSuccessMessage(`${savedDocument.file_name || type} deleted successfully.`);
+    setSavedDocuments((current) => current.filter((item) => item.document_type !== type));
+    setSavedDocumentTypes((current) => current.filter((item) => item !== type));
+    setDocuments((current) => ({ ...current, [key]: [] }));
+    setSuccessMessage('Document deleted successfully');
   }
 
   async function removeBulkDocuments() {
@@ -462,7 +467,7 @@ export default function SelfManagedClaimScreen() {
       {policy ? <PolicyIdentityCard policyNo={policy.policy_no} insurerName={insurerName} vehicleNo={vehicle?.vehicle_no ?? 'Vehicle'} vehicleMake={vehicle?.make ?? ''} vehicleModel={vehicle?.model ?? ''} /> : null}
 
       {message ? <Message type="error">{message}</Message> : null}
-      {successMessage ? <Message type="success">{successMessage}</Message> : null}
+      {successMessage ? <View pointerEvents="none" style={styles.deleteSuccessToast}><View style={styles.deleteSuccessToastIcon}><MaterialCommunityIcons name="check" size={16} color="#FFFFFF" /></View><Text style={styles.deleteSuccessToastText}>{successMessage}</Text></View> : null}
 
       <ClaimFormSection title="Incident Details" subtitle="Accident date, time and first insurer intimation" icon="clipboard-text-outline">
         <AppDatePicker label="Accident Date *" value={incidentDate} onChange={setIncidentDate} maxDate={todayIsoDate()} />
@@ -703,6 +708,9 @@ const styles = StyleSheet.create({
   voiceComingSoon: { marginTop: 9, borderTopWidth: 1, borderTopColor: '#D9E5F3', paddingTop: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   voiceComingSoonText: { color: '#60738B', fontSize: 9.5, lineHeight: 13, fontWeight: '700' },
   validationBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(7, 24, 50, 0.48)', paddingHorizontal: 24 },
+  deleteSuccessToast: { position: 'absolute', top: 10, left: 14, right: 14, zIndex: 30, elevation: 14, minHeight: 48, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#B7E4CC', paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 9, shadowColor: '#0E5C3D', shadowOpacity: 0.16, shadowRadius: 12, shadowOffset: { width: 0, height: 5 } },
+  deleteSuccessToastIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#168161', alignItems: 'center', justifyContent: 'center' },
+  deleteSuccessToastText: { flex: 1, color: '#145E43', fontSize: 11.5, lineHeight: 16, fontWeight: '900' },
   deleteConfirmIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#FFF0F0', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   deleteConfirmActions: { width: '100%', flexDirection: 'row', gap: 8, marginTop: 14 },
   deleteCancelButton: { flex: 1, minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: '#CBD5E1', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
