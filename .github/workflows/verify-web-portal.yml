@@ -82,6 +82,9 @@ jobs:
       - name: Production rerun OCR refinement regression
         run: npm run policy-ocr:rerun-refinement-regression
 
+      - name: Production benchmark OCR regression
+        run: npm run policy-ocr:production-benchmark-regression
+
       - name: Policy onboarding OCR import regression
         run: npm run policy-ocr:onboarding-import-regression
 
@@ -106,7 +109,7 @@ jobs:
             echo
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo "- Access control: V2 catalogue, scope, legacy compatibility, portal lifecycle, employee portal governance, release-blocker and Backoffice data-entry regressions"
-            echo "- OCR regressions: IFFCO structured, IFFCO, Digit, New India, additional insurers, approved layouts, production rerun refinement, onboarding Section 02/03 import, premium training workflow"
+            echo "- OCR regressions: IFFCO structured, IFFCO, Digit, New India, additional insurers, approved layouts, production rerun refinement, production benchmark siblings, onboarding Section 02/03 import, premium training workflow"
             echo "- Static checks: typecheck and lint"
             echo "- Build: Next.js production build"
             echo "- Build-only public env: non-secret CI placeholders; no production credentials used"
