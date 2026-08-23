@@ -47,6 +47,7 @@ export type Capability =
   | "approve_policy_ocr_training"
   | "view_tasks"
   | "manage_tasks"
+  | "view_accounts"
   | "view_reports"
   | "view_notifications"
   | "manage_users"
@@ -61,10 +62,12 @@ const ALL_OPERATIONAL: Capability[] = [
   "manage_master_data"
 ];
 
+const ACCOUNTS_VIEW: Capability[] = ["view_accounts"];
+
 export const roleCapabilities: Record<AppRole, readonly Capability[]> = {
-  super_admin: [...ALL_OPERATIONAL, "approve_policy_ocr_training", "manage_users", "manage_system"],
+  super_admin: [...ALL_OPERATIONAL, ...ACCOUNTS_VIEW, "approve_policy_ocr_training", "manage_users", "manage_system"],
   admin: [...ALL_OPERATIONAL, "approve_policy_ocr_training", "manage_users", "manage_system"],
-  it_super_user: [...ALL_OPERATIONAL, "approve_policy_ocr_training", "manage_users", "manage_system"],
+  it_super_user: [...ALL_OPERATIONAL, ...ACCOUNTS_VIEW, "approve_policy_ocr_training", "manage_users", "manage_system"],
   manager: ALL_OPERATIONAL,
   director: [
     "view_dashboard", "view_claims", "view_intermediaries", "review_intermediary_application",
@@ -76,13 +79,13 @@ export const roleCapabilities: Record<AppRole, readonly Capability[]> = {
     "view_dashboard", "view_claims", "manage_claims", "view_intermediaries", "create_intermediary_application",
     "review_intermediary_application", "approve_intermediary_application", "activate_intermediary",
     "view_customers", "create_customers", "manage_customers", "view_kyc", "review_kyc", "view_tasks", "manage_tasks",
-    "view_reports", "view_notifications"
+    "view_accounts", "view_reports", "view_notifications"
   ],
   sales_head: [
     "view_dashboard", "view_claims", "view_intermediaries", "create_intermediary_application",
     "review_intermediary_application", "view_customers", "create_customers", "manage_customers", "view_kyc", "review_kyc",
     "view_employees", "view_org_tree", "view_vehicles", "view_policies", "view_tasks", "manage_tasks",
-    "view_reports", "view_notifications"
+    "view_accounts", "view_reports", "view_notifications"
   ],
   zonal_head: [
     "view_dashboard", "view_intermediaries", "create_intermediary_application", "review_intermediary_application",
