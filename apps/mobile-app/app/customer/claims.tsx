@@ -18,8 +18,8 @@ type CustomerClaim = Claim & {
 
 export default function ClaimsScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ filter?: string }>();
-  const requestedFilter = validClaimFilter(typeof params.filter === 'string' ? params.filter : undefined);
+  const params = useLocalSearchParams<{ filter?: string | string[] }>();
+  const requestedFilter = validClaimFilter(Array.isArray(params.filter) ? params.filter[0] : params.filter);
   const [claims, setClaims] = useState<CustomerClaim[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [policies, setPolicies] = useState<Policy[]>([]);
