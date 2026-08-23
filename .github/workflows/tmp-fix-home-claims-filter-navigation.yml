@@ -1,0 +1,90 @@
+name: Temporary fix home claims filter navigation
+
+on:
+  push:
+    branches:
+      - feat/self-managed-stage-navigation
+    paths:
+      - .github/workflows/tmp-fix-home-claims-filter-navigation.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/self-managed-stage-navigation
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Patch Home and My Claims navigation
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          home = Path('apps/mobile-app/app/customer/home.tsx')
+          text = home.read_text()
+          old = """        onOpenAll={() => router.push('/customer/claims')}\n        onPendingAction={() => pendingTask ? router.push({ pathname: '/customer/upload-documents', params: { claimId: pendingTask.claim_id } }) : router.push('/customer/claims')}\n"""
+          new = """        onOpenAll={() => router.push({ pathname: '/customer/claims', params: { filter: 'All' } })}\n        onOpenOpen={() => router.push({ pathname: '/customer/claims', params: { filter: 'Open' } })}\n        onOpenCompleted={() => router.push({ pathname: '/customer/claims', params: { filter: 'Completed' } })}\n        onPendingAction={() => pendingTask ? router.push({ pathname: '/customer/upload-documents', params: { claimId: pendingTask.claim_id } }) : router.push({ pathname: '/customer/claims', params: { filter: 'All' } })}\n"""
+          if old not in text:
+              raise SystemExit('Home ClaimsSummaryCard invocation target not found')
+          text = text.replace(old, new, 1)
+
+          old = """function ClaimsSummaryCard({ totalCount, openCount, settledCount, totalAmount, openAmount, settledAmount, pendingActionCount, onOpenAll, onPendingAction }: { totalCount: number; openCount: number; settledCount: number; totalAmount: number; openAmount: number; settledAmount: number; pendingActionCount: number; onOpenAll: () => void; onPendingAction: () => void }) {\n  const hasPendingAction = pendingActionCount > 0;\n  return (\n    <View style={styles.claimSummaryCard}>\n      <Pressable onPress={onOpenAll} style={({ pressed }) => [styles.claimSummaryTop, pressed && styles.cardPressed]}>\n        <View style={styles.sectionHeader}>\n          <Text style={styles.claimCardTitle}>Claims</Text>\n          <View style={styles.claimOpenLink}><Text style={styles.claimOpenLinkText}>View all</Text><MaterialCommunityIcons name=\"arrow-right\" size={15} color=\"#BFD4F7\" /></View>\n        </View>\n        <View style={styles.claimMetricRow}>\n          <ClaimMetric label=\"Total\" value={totalCount} amount={moneyCompact(totalAmount)} accent=\"#6FA8FF\" />\n          <View style={styles.claimMetricDivider} />\n          <ClaimMetric label=\"Open\" value={openCount} amount={moneyCompact(openAmount)} accent=\"#F5B94C\" />\n          <View style={styles.claimMetricDivider} />\n          <ClaimMetric label=\"Settled\" value={settledCount} amount={moneyCompact(settledAmount)} accent=\"#4FD79B\" />\n        </View>\n      </Pressable>\n"""
+          new = """function ClaimsSummaryCard({ totalCount, openCount, settledCount, totalAmount, openAmount, settledAmount, pendingActionCount, onOpenAll, onOpenOpen, onOpenCompleted, onPendingAction }: { totalCount: number; openCount: number; settledCount: number; totalAmount: number; openAmount: number; settledAmount: number; pendingActionCount: number; onOpenAll: () => void; onOpenOpen: () => void; onOpenCompleted: () => void; onPendingAction: () => void }) {\n  const hasPendingAction = pendingActionCount > 0;\n  return (\n    <View style={styles.claimSummaryCard}>\n      <View style={styles.claimSummaryTop}>\n        <View style={styles.sectionHeader}>\n          <Text style={styles.claimCardTitle}>Claims</Text>\n          <Pressable accessibilityRole=\"button\" accessibilityLabel=\"View all claims\" onPress={onOpenAll} style={({ pressed }) => [styles.claimOpenLink, pressed && styles.cardPressed]}><Text style={styles.claimOpenLinkText}>View all</Text><MaterialCommunityIcons name=\"arrow-right\" size={15} color=\"#BFD4F7\" /></Pressable>\n        </View>\n        <View style={styles.claimMetricRow}>\n          <ClaimMetric label=\"Total\" value={totalCount} amount={moneyCompact(totalAmount)} accent=\"#6FA8FF\" onPress={onOpenAll} />\n          <View style={styles.claimMetricDivider} />\n          <ClaimMetric label=\"Open\" value={openCount} amount={moneyCompact(openAmount)} accent=\"#F5B94C\" onPress={onOpenOpen} />\n          <View style={styles.claimMetricDivider} />\n          <ClaimMetric label=\"Settled\" value={settledCount} amount={moneyCompact(settledAmount)} accent=\"#4FD79B\" onPress={onOpenCompleted} />\n        </View>\n      </View>\n"""
+          if old not in text:
+              raise SystemExit('ClaimsSummaryCard component target not found')
+          text = text.replace(old, new, 1)
+
+          old = """function ClaimMetric({ label, value, amount, accent }: { label: string; value: number; amount: string; accent: string }) {\n  return (\n    <View style={styles.claimMetric}>\n      <Text style={[styles.claimMetricValue, { color: accent }]}>{value}</Text>\n      <Text style={styles.claimMetricLabel}>{label}</Text>\n      <Text style={styles.claimMetricAmount}>{amount}</Text>\n    </View>\n  );\n}\n"""
+          new = """function ClaimMetric({ label, value, amount, accent, onPress }: { label: string; value: number; amount: string; accent: string; onPress: () => void }) {\n  return (\n    <Pressable accessibilityRole=\"button\" accessibilityLabel={`Open ${label} claims`} onPress={onPress} style={({ pressed }) => [styles.claimMetric, pressed && styles.cardPressed]}>\n      <Text style={[styles.claimMetricValue, { color: accent }]}>{value}</Text>\n      <Text style={styles.claimMetricLabel}>{label}</Text>\n      <Text style={styles.claimMetricAmount}>{amount}</Text>\n    </Pressable>\n  );\n}\n"""
+          if old not in text:
+              raise SystemExit('ClaimMetric target not found')
+          text = text.replace(old, new, 1)
+          home.write_text(text)
+
+          claims = Path('apps/mobile-app/app/customer/claims.tsx')
+          text = claims.read_text()
+          text = text.replace("import { useRouter } from 'expo-router';", "import { useLocalSearchParams, useRouter } from 'expo-router';", 1)
+          old = """export default function ClaimsScreen() {\n  const router = useRouter();\n  const [claims, setClaims] = useState<CustomerClaim[]>([]);\n"""
+          new = """export default function ClaimsScreen() {\n  const router = useRouter();\n  const params = useLocalSearchParams<{ filter?: string }>();\n  const requestedFilter = validClaimFilter(typeof params.filter === 'string' ? params.filter : undefined);\n  const [claims, setClaims] = useState<CustomerClaim[]>([]);\n"""
+          if old not in text:
+              raise SystemExit('Claims screen header target not found')
+          text = text.replace(old, new, 1)
+          text = text.replace("  const [filter, setFilter] = useState<ClaimFilter>('All');", "  const [filter, setFilter] = useState<ClaimFilter>(requestedFilter);", 1)
+          anchor = """  useEffect(() => {\n    async function load() {\n"""
+          replacement = """  useEffect(() => {\n    setFilter(requestedFilter);\n  }, [requestedFilter]);\n\n  useEffect(() => {\n    async function load() {\n"""
+          if anchor not in text:
+              raise SystemExit('Claims load effect anchor not found')
+          text = text.replace(anchor, replacement, 1)
+          anchor = """function matchesFilter(claim: CustomerClaim, filter: ClaimFilter) {\n"""
+          helper = """function validClaimFilter(value?: string): ClaimFilter {\n  return value === 'Open' || value === 'Action Required' || value === 'Completed' || value === 'All' ? value : 'All';\n}\n\nfunction matchesFilter(claim: CustomerClaim, filter: ClaimFilter) {\n"""
+          if anchor not in text:
+              raise SystemExit('matchesFilter anchor not found')
+          text = text.replace(anchor, helper, 1)
+          claims.write_text(text)
+          PY
+
+      - name: Install mobile dependencies
+        working-directory: apps/mobile-app
+        run: npm ci
+
+      - name: Typecheck mobile app
+        working-directory: apps/mobile-app
+        run: npm run typecheck
+
+      - name: Commit changes and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/tmp-fix-home-claims-filter-navigation.yml
+          git add apps/mobile-app/app/customer/home.tsx apps/mobile-app/app/customer/claims.tsx
+          git commit -m "Fix Home claims filter navigation"
+          git push origin HEAD:feat/self-managed-stage-navigation
