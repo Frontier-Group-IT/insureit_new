@@ -1,6 +1,8 @@
 import type { ParsedPolicyResult } from "@/lib/policy-ocr-parsers";
 import type { StructuredPolicyTable } from "@/lib/policy-ocr-iffco-structured-refiner";
+// @ts-ignore -- raw Node OCR regression requires explicit TypeScript extension.
 import { refineApprovedMotorPolicyLayout as refineApprovedMotorPolicyLayoutBase } from "./policy-ocr-approved-layout-refiner-base.ts";
+// @ts-ignore -- raw Node OCR regression requires explicit TypeScript extension.
 import { refineProductionBenchmarkPolicy } from "./policy-ocr-production-benchmark-refiner.ts";
 
 /**
