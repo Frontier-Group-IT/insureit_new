@@ -6,11 +6,13 @@ import { refineApprovedMotorPolicyLayout as refineApprovedMotorPolicyLayoutBase 
 import { refineProductionBenchmarkPolicy } from "./policy-ocr-production-benchmark-refiner.ts";
 // @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
 import { refineProductionPolicyIdentity } from "./policy-ocr-production-identity-refiner.ts";
+// @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
+import { refineProductionRound2Policy } from "./policy-ocr-production-round2-refiner.ts";
 
 /**
- * Stable approved-layout behavior is preserved in the base module. Production
- * benchmark refinements run only after that proven layer and are hard-gated by
- * the current-policy insurer header + supported production family.
+ * Stable approved-layout behavior remains the base. Round 1 handles the four
+ * original production benchmark families; Round 2 then applies narrower
+ * structural corrections for the still-failing Digit/IFFCO/National layouts.
  */
 export function refineApprovedMotorPolicyLayout(
   pages: string[],
@@ -18,30 +20,36 @@ export function refineApprovedMotorPolicyLayout(
   parsed: ParsedPolicyResult,
 ): ParsedPolicyResult {
   const approved = refineApprovedMotorPolicyLayoutBase(pages, tables, parsed);
-  const header = (pages[0] ?? "").split(/\r?\n/).slice(0, 55).join(" ");
+  const header = (pages[0] ?? "").split(/\r?\n/).slice(0, 140).join(" ");
 
-  // The fresh Magma PCP production family has a distinct Google table failure
-  // shape where the make column collapses to the heading `/Model`. Keep older
-  // already-trained Magma package layouts on their proven v6 path instead of
-  // broadening the new CPA/TP rule across the whole insurer.
+  // Keep already-correct Magma package layouts on their proven v6 path unless
+  // they have the exact fresh-production `/Model` failure signature.
   if (/MAGMA\s+GENERAL\s+INSURANCE|MAGMAINSURANCE\.COM/i.test(header)) {
     const make = approved.fields.find((field) => field.key === "vehicle_make")?.value?.trim() ?? "";
     if (!/^\/?MODEL$/i.test(make)) return approved;
+    const production = refineProductionBenchmarkPolicy(pages, tables, approved);
+    return refineProductionPolicyIdentity(pages, production);
   }
 
-  // National has both a genuine Bundled TWP layout and a newer Package family
-  // whose current baseline sometimes routes to Oriental or Third Party. Only
-  // apply Round #1 when that failure signature is present; a correctly routed
-  // National Bundled result must remain on the established v6 path.
+  let production = approved;
+
+  // National has both a genuine Bundled TWP layout and newer Package schedules.
+  // Round 1 remains failure-gated, while Round 2 can still correct a strongly
+  // identified current National Package schedule even when v6 produced a
+  // superficially plausible Bundled result.
   if (/NATIONAL\s+INSURANCE(?:\s+COMPANY)?|CUSTOMER\.SUPPORT@NIC\.CO\.IN|NIC\.CO\.IN/i.test(header)) {
     const product = approved.fields.find((field) => field.key === "policy_product")?.value?.trim() ?? "";
     const model = approved.fields.find((field) => field.key === "vehicle_model")?.value?.trim() ?? "";
     const failedRouting = approved.parserId === "oriental_motor_v1";
     const failedProduct = /THIRD\s+PARTY/i.test(product);
     const failedModel = /^(?:NO\.?|MODEL\s*-?|.*VARIANT.*)$/i.test(model);
-    if (!failedRouting && !failedProduct && !failedModel) return approved;
+    if (failedRouting || failedProduct || failedModel) {
+      production = refineProductionBenchmarkPolicy(pages, tables, approved);
+    }
+  } else {
+    production = refineProductionBenchmarkPolicy(pages, tables, approved);
   }
 
-  const production = refineProductionBenchmarkPolicy(pages, tables, approved);
-  return refineProductionPolicyIdentity(pages, production);
+  const round2 = refineProductionRound2Policy(pages, tables, production);
+  return refineProductionPolicyIdentity(pages, round2);
 }
