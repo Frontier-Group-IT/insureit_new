@@ -133,7 +133,7 @@ function policyExpiryFrom(start:string){if(!/^\d{4}-\d{2}-\d{2}$/.test(start))re
 function shiftedPolicyEnd(newStart:string,oldStart:string,oldEnd:string){if(!/^\d{4}-\d{2}-\d{2}$/.test(newStart)||!/^\d{4}-\d{2}-\d{2}$/.test(oldStart)||!/^\d{4}-\d{2}-\d{2}$/.test(oldEnd))return policyExpiryFrom(newStart);const oldStartMs=new Date(`${oldStart}T00:00:00Z`).getTime(),oldEndMs=new Date(`${oldEnd}T00:00:00Z`).getTime();if(oldEndMs<oldStartMs)return policyExpiryFrom(newStart);const durationDays=Math.round((oldEndMs-oldStartMs)/86400000);const next=new Date(`${newStart}T00:00:00Z`);next.setUTCDate(next.getUTCDate()+durationDays);return next.toISOString().slice(0,10);}
 function boolValue(value: string | null) { return value==="true"||value==="Yes"||value==="YES"; }
 function normalizeRegistrationInput(value:string){return value.toUpperCase().replace(/[^A-Z0-9]/g,"");}
-function isValidRegisteredVehicleNumber(value:string){return /^[A-Z]{2}[A-Z0-9]*[0-9]{2}$/.test(value);}
+function isValidRegisteredVehicleNumber(value:string){const normalized=normalizeRegistrationInput(value);const standard=/^[A-Z]{2}[A-Z0-9]*[0-9]{2}$/.test(normalized);const bharatSeries=/^\d{2}BH\d{4}[A-HJ-NP-Z]{1,2}$/.test(normalized);return standard||bharatSeries;}
 const registrationValidationMessage="Enter a valid Registration number.";
 function assessPayinStatus(amount:string,billNumber:string,billDate:string){
   const hasAmount=Number(amount||0)>0;
