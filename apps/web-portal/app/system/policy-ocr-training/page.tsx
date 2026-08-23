@@ -3,6 +3,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { requirePolicyOcrTrainingOperator } from "@/lib/policy-ocr-training-access";
 import { createProductionOcrBenchmarkRun } from "./actions";
 import { BenchmarkRunner } from "./benchmark-runner";
+import { PostTrainingRunner } from "./post-training-runner";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,8 @@ type BaselineMetrics = {
   expected?: number;
   autoFilled?: number;
   correct?: number;
+  precision?: number | null;
+  coverage?: number | null;
   perfect?: boolean;
   referenceConflicts?: number;
   ocrMissing?: number;
@@ -43,6 +46,11 @@ type BenchmarkItem = {
   baseline_failure_code: string | null;
   truth_status: string;
   baseline_metrics: BaselineMetrics | null;
+  post_training_status: string;
+  post_training_parser_id: string | null;
+  post_training_parser_version: string | null;
+  post_training_failure_code: string | null;
+  post_training_metrics: BaselineMetrics | null;
 };
 
 export default async function PolicyOcrTrainingControlPage() {
@@ -60,7 +68,7 @@ export default async function PolicyOcrTrainingControlPage() {
   if (activeRun) {
     const { data } = await admin
       .from("policy_ocr_benchmark_items")
-      .select("id,run_id,public_key,insurer_name,policy_product,vehicle_segment,cohort_role,production_count,policies_with_pdf,approved_layout_samples,baseline_status,baseline_parser_id,baseline_parser_version,baseline_failure_code,truth_status,baseline_metrics")
+      .select("id,run_id,public_key,insurer_name,policy_product,vehicle_segment,cohort_role,production_count,policies_with_pdf,approved_layout_samples,baseline_status,baseline_parser_id,baseline_parser_version,baseline_failure_code,truth_status,baseline_metrics,post_training_status,post_training_parser_id,post_training_parser_version,post_training_failure_code,post_training_metrics")
       .eq("run_id", activeRun.id)
       .order("priority_score", { ascending: false })
       .order("created_at", { ascending: true });
@@ -84,12 +92,34 @@ export default async function PolicyOcrTrainingControlPage() {
       acc.referenceConflicts += metrics?.referenceConflicts ?? 0;
       acc.ocrMissing += metrics?.ocrMissing ?? 0;
       acc.semanticErrors += metrics?.semanticErrors ?? 0;
+
+      if (item.cohort_role === "training" && item.truth_status === "verified") {
+        if (item.post_training_status === "pending") acc.postPending += 1;
+        if (item.post_training_status === "processing") acc.postProcessing += 1;
+        if (item.post_training_status === "ready") acc.postReady += 1;
+        if (item.post_training_status === "failed") acc.postFailed += 1;
+        const post = item.post_training_status === "ready" ? item.post_training_metrics : null;
+        acc.postExpected += post?.expected ?? 0;
+        acc.postAutoFilled += post?.autoFilled ?? 0;
+        acc.postCorrect += post?.correct ?? 0;
+        if (post?.perfect) acc.postPerfectPolicies += 1;
+        acc.postOcrMissing += post?.ocrMissing ?? 0;
+        acc.postSemanticErrors += post?.semanticErrors ?? 0;
+      }
       return acc;
     },
-    { total: 0, ready: 0, pending: 0, failed: 0, training: 0, holdout: 0, truthVerified: 0, expected: 0, autoFilled: 0, correct: 0, perfectPolicies: 0, referenceConflicts: 0, ocrMissing: 0, semanticErrors: 0 },
+    {
+      total: 0, ready: 0, pending: 0, failed: 0, training: 0, holdout: 0, truthVerified: 0,
+      expected: 0, autoFilled: 0, correct: 0, perfectPolicies: 0, referenceConflicts: 0, ocrMissing: 0, semanticErrors: 0,
+      postPending: 0, postProcessing: 0, postReady: 0, postFailed: 0, postExpected: 0, postAutoFilled: 0, postCorrect: 0,
+      postPerfectPolicies: 0, postOcrMissing: 0, postSemanticErrors: 0,
+    },
   );
   const precision = counts.autoFilled ? counts.correct / counts.autoFilled : null;
   const coverage = counts.expected ? counts.autoFilled / counts.expected : null;
+  const postPrecision = counts.postAutoFilled ? counts.postCorrect / counts.postAutoFilled : null;
+  const postCoverage = counts.postExpected ? counts.postAutoFilled / counts.postExpected : null;
+  const replayPending = counts.postPending + counts.postFailed;
 
   return (
     <main className="mx-auto w-full max-w-[1500px] space-y-5 px-4 py-5 sm:px-6 lg:px-8">
@@ -100,7 +130,7 @@ export default async function PolicyOcrTrainingControlPage() {
             <h1 className="mt-1 text-2xl font-semibold text-slate-950">Production Benchmark Control</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
               Selects fresh policy copies from the five most-used insurers, keeps well-covered layouts as blind holdouts,
-              captures the untouched baseline, then measures verified PDF truth before any parser refinement.
+              captures the untouched baseline, then measures verified PDF truth before and after parser refinement.
             </p>
           </div>
           <form action={createProductionOcrBenchmarkRun}>
@@ -117,10 +147,38 @@ export default async function PolicyOcrTrainingControlPage() {
         <Metric label="Training" value={String(counts.training)} />
         <Metric label="Blind holdout" value={String(counts.holdout)} />
         <Metric label="Truth verified" value={`${counts.truthVerified}/${counts.training}`} />
-        <Metric label="Measured precision" value={formatPercent(precision)} />
-        <Metric label="Measured coverage" value={formatPercent(coverage)} />
-        <Metric label="Perfect policies" value={counts.truthVerified ? `${counts.perfectPolicies}/${counts.truthVerified}` : "—"} />
+        <Metric label="Baseline precision" value={formatPercent(precision)} />
+        <Metric label="Baseline coverage" value={formatPercent(coverage)} />
+        <Metric label="Baseline perfect" value={counts.truthVerified ? `${counts.perfectPolicies}/${counts.truthVerified}` : "—"} />
       </section>
+
+      {counts.postReady > 0 || replayPending > 0 ? (
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Round #1 replay</p>
+              <h2 className="mt-1 text-lg font-semibold text-slate-950">Measured post-training result</h2>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
+                Reprocesses only PDF-verified training policies. Baseline values stay frozen and United India blind holdouts remain sealed.
+              </p>
+            </div>
+            {activeRun && replayPending > 0 ? <PostTrainingRunner runId={activeRun.id} pending={replayPending} /> : null}
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+            <Metric label="Replay ready" value={`${counts.postReady}/${counts.training}`} />
+            <Metric label="Replay failed" value={String(counts.postFailed)} />
+            <Metric label="Post precision" value={formatPercent(postPrecision)} />
+            <Metric label="Post coverage" value={formatPercent(postCoverage)} />
+            <Metric label="Post perfect" value={counts.postReady ? `${counts.postPerfectPolicies}/${counts.postReady}` : "—"} />
+            <Metric label="Correct fields" value={counts.postExpected ? `${counts.postCorrect}/${counts.postExpected}` : "—"} />
+          </div>
+          {counts.postReady > 0 ? (
+            <div className="mt-3 text-sm text-slate-700">
+              Delta: precision <strong>{formatDelta(postPrecision, precision)}</strong> · coverage <strong>{formatDelta(postCoverage, coverage)}</strong> · remaining OCR-missing <strong>{counts.postOcrMissing}</strong> · semantic mismatches <strong>{counts.postSemanticErrors}</strong>.
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       {activeRun ? (
         <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -151,6 +209,7 @@ export default async function PolicyOcrTrainingControlPage() {
                   <th className="px-4 py-3">Role</th>
                   <th className="px-4 py-3">Baseline</th>
                   <th className="px-4 py-3">Truth</th>
+                  <th className="px-4 py-3">Replay</th>
                   <th className="px-4 py-3">Parser</th>
                   <th className="px-4 py-3">Next</th>
                 </tr>
@@ -171,9 +230,19 @@ export default async function PolicyOcrTrainingControlPage() {
                       {item.baseline_failure_code ? <div className="mt-1 text-xs text-rose-600">{item.baseline_failure_code}</div> : null}
                     </td>
                     <td className="px-4 py-3"><TruthBadge status={item.truth_status} /></td>
-                    <td className="max-w-[280px] px-4 py-3 text-xs text-slate-600">
-                      <div>{item.baseline_parser_id ?? "—"}</div>
-                      <div className="mt-1 break-all text-slate-400">{item.baseline_parser_version ?? ""}</div>
+                    <td className="px-4 py-3">
+                      {item.cohort_role === "blind_holdout" ? (
+                        <span className="text-xs font-semibold text-violet-700">sealed</span>
+                      ) : (
+                        <>
+                          <StatusBadge status={item.post_training_status} />
+                          {item.post_training_failure_code ? <div className="mt-1 text-xs text-rose-600">{item.post_training_failure_code}</div> : null}
+                        </>
+                      )}
+                    </td>
+                    <td className="max-w-[300px] px-4 py-3 text-xs text-slate-600">
+                      <div>{item.post_training_parser_id ?? item.baseline_parser_id ?? "—"}</div>
+                      <div className="mt-1 break-all text-slate-400">{item.post_training_parser_version ?? item.baseline_parser_version ?? ""}</div>
                     </td>
                     <td className="px-4 py-3">
                       <Link href={`/system/policy-ocr-training/${item.id}`} className="inline-flex rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50">
@@ -182,7 +251,7 @@ export default async function PolicyOcrTrainingControlPage() {
                     </td>
                   </tr>
                 ))}
-                {!items.length ? <tr><td colSpan={12} className="px-4 py-10 text-center text-slate-500">No benchmark policies selected.</td></tr> : null}
+                {!items.length ? <tr><td colSpan={13} className="px-4 py-10 text-center text-slate-500">No benchmark policies selected.</td></tr> : null}
               </tbody>
             </table>
           </div>
@@ -204,7 +273,7 @@ export default async function PolicyOcrTrainingControlPage() {
       <section className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-950">
         <div className="font-semibold">Measurement rule</div>
         <p className="mt-1 leading-6">
-          Percentages appear only from fields explicitly verified against the actual PDF. Database values are prefilled as reference candidates only; they never become truth automatically. Blind holdouts remain sealed until post-training verification.
+          Percentages appear only from fields explicitly verified against the actual PDF. Database values are reference candidates only; they never become truth automatically. Post-training replay writes separate benchmark columns and never changes the frozen baseline or approved training labels. Blind holdouts stay sealed until a later generalization test.
         </p>
       </section>
     </main>
@@ -233,4 +302,10 @@ function TruthBadge({ status }: { status: string }) {
 
 function formatPercent(value: number | null) {
   return value == null ? "—" : `${(value * 100).toFixed(1)}%`;
+}
+
+function formatDelta(after: number | null, before: number | null) {
+  if (after == null || before == null) return "—";
+  const points = (after - before) * 100;
+  return `${points >= 0 ? "+" : ""}${points.toFixed(1)} pp`;
 }
