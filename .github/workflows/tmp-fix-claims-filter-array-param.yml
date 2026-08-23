@@ -1,0 +1,58 @@
+name: Temporary fix claims filter array param
+
+on:
+  push:
+    branches:
+      - feat/self-managed-stage-navigation
+    paths:
+      - .github/workflows/tmp-fix-claims-filter-array-param.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/self-managed-stage-navigation
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Fix My Claims filter route parsing
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('apps/mobile-app/app/customer/claims.tsx')
+          text = path.read_text()
+
+          old = """  const params = useLocalSearchParams<{ filter?: string }>();\n  const requestedFilter = validClaimFilter(typeof params.filter === 'string' ? params.filter : undefined);\n"""
+          new = """  const params = useLocalSearchParams<{ filter?: string | string[] }>();\n  const requestedFilter = validClaimFilter(Array.isArray(params.filter) ? params.filter[0] : params.filter);\n"""
+          if old not in text:
+              raise SystemExit('Claims filter param parsing target not found')
+          text = text.replace(old, new, 1)
+          path.write_text(text)
+          PY
+
+      - name: Install mobile dependencies
+        working-directory: apps/mobile-app
+        run: npm ci
+
+      - name: Typecheck mobile app
+        working-directory: apps/mobile-app
+        run: npm run typecheck
+
+      - name: Commit fix and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/tmp-fix-claims-filter-array-param.yml
+          git add apps/mobile-app/app/customer/claims.tsx
+          git commit -m "Handle Claims filter route arrays"
+          git push origin HEAD:feat/self-managed-stage-navigation
