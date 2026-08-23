@@ -15,6 +15,11 @@ const money = (value: unknown) => {
   return Number.isFinite(parsed) ? Math.round(parsed * 100) / 100 : 0;
 };
 
+function one<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
 export async function listBillingWorkbench() {
   await requireAccountsUser();
   const db = createSupabaseAdminClient();
@@ -30,20 +35,22 @@ export async function listBillingWorkbench() {
 
   const invoicedIds = new Set((invoiced ?? []).map((row) => row.reconciliation_line_id).filter(Boolean));
   const eligible = (lines ?? []).filter((row) => !invoicedIds.has(row.id)).map((row) => {
-    const cycle = Array.isArray(row.reconciliation_cycles) ? row.reconciliation_cycles[0] : row.reconciliation_cycles;
-    const policy = Array.isArray(row.policies) ? row.policies[0] : row.policies;
-    const insurer = cycle?.insurance_companies;
+    const cycle = one(row.reconciliation_cycles);
+    const policy = one(row.policies);
+    const insurer = one(cycle?.insurance_companies as { name: string | null } | Array<{ name: string | null }> | null | undefined);
+    const customer = one(policy?.customers);
+    const vehicle = one(policy?.vehicles);
     return {
       id: row.id,
       cycleId: row.cycle_id,
       insurerId: cycle?.insurer_id ?? "",
-      insurerName: Array.isArray(insurer) ? insurer[0]?.name ?? "" : insurer?.name ?? "",
+      insurerName: insurer?.name ?? "",
       periodStart: cycle?.period_start ?? "",
       periodEnd: cycle?.period_end ?? "",
       policyId: row.policy_id,
       policyNo: policy?.policy_no ?? row.input_policy_no ?? "",
-      customerName: policy?.customers?.contact_name ?? "",
-      vehicleNo: policy?.vehicles?.vehicle_no ?? "",
+      customerName: customer?.contact_name ?? "",
+      vehicleNo: vehicle?.vehicle_no ?? "",
       recognized: money(row.actual_recognized_payin),
       adjustment: money(row.adjustment_amount),
       invoiceable: money(money(row.actual_recognized_payin) + money(row.adjustment_amount)),
@@ -72,8 +79,8 @@ export async function createBrokerageInvoiceDraft(input: {
   if (!lines || lines.length !== ids.length) throw new Error("One or more reconciliation lines could not be loaded.");
 
   const normalized = lines.map((row) => {
-    const cycle = Array.isArray(row.reconciliation_cycles) ? row.reconciliation_cycles[0] : row.reconciliation_cycles;
-    const policy = Array.isArray(row.policies) ? row.policies[0] : row.policies;
+    const cycle = one(row.reconciliation_cycles);
+    const policy = one(row.policies);
     if (!cycle || !["Reconciled", "Closed"].includes(cycle.status) || row.match_status !== "Matched" || !["Accepted", "Resolved"].includes(row.review_status)) throw new Error("Only finalized matched reconciliation lines can be invoiced.");
     return { row, cycle, policy };
   });
@@ -167,7 +174,7 @@ export async function listInsurerReceivables() {
   if (error) throw new Error(error.message);
   const balances = new Map<string, { insurerId: string; insurerName: string; debit: number; credit: number; balance: number }>();
   for (const row of entries ?? []) {
-    const insurer = Array.isArray(row.insurance_companies) ? row.insurance_companies[0] : row.insurance_companies;
+    const insurer = one(row.insurance_companies);
     const current = balances.get(row.insurer_id) ?? { insurerId: row.insurer_id, insurerName: insurer?.name ?? "", debit: 0, credit: 0, balance: 0 };
     current.debit = money(current.debit + money(row.debit_amount));
     current.credit = money(current.credit + money(row.credit_amount));
