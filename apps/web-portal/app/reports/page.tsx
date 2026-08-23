@@ -15,8 +15,8 @@ const BUSINESS_QUERY_KEYS = ["period", "from", "to", "insurer", "rm", "intermedi
 export default async function ReportsOverviewPage({ searchParams }: Props) {
   const profile = await requireCapability("view_reports");
   if (!profile) return null;
-  const commercialAccess = canAccessPolicyCommercials(profile);
   const query = await searchParams;
+  const commercialAccess = canAccessPolicyCommercials(profile);
 
   if (BUSINESS_QUERY_KEYS.some((key) => query[key] !== undefined)) {
     const params = new URLSearchParams();
@@ -75,14 +75,22 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
           <section className="r2-panel px-5 py-8 text-center text-[11px] font-semibold text-[#b42318]">Reporting service unavailable</section>
         ) : (
           <>
-            <section className={`r2-panel grid ${commercialAccess ? "sm:grid-cols-2 xl:grid-cols-6" : "sm:grid-cols-2 xl:grid-cols-4"}`} aria-label="Broker performance summary">
+            <section className="r2-panel r2-kpis" aria-label="Broker performance summary">
               <Kpi label="Gross Premium" value={money(pack.business.summary.gross_premium)} note="Month to date" />
               <Kpi label="Policies" value={number(pack.business.summary.policy_count)} note="Month to date" />
-              {commercialAccess ? <Kpi label="Projected Pay-in" value={money(pack.finance.summary.projected_payin)} note="Commercial expectation" /> : null}
-              {commercialAccess ? <Kpi label="Partner Payout" value={money(pack.finance.summary.gross_payout)} note="Recorded payout commercial" /> : null}
+              <Kpi label={commercialAccess ? "Projected PayIn" : "Commercials"} value={commercialAccess ? money(pack.finance.summary.projected_payin) : "Restricted"} note={commercialAccess ? "Expectation only" : "Authorized users only"} />
               <Kpi label="Open Claims" value={number(pack.claims.summary.open_claim_count)} note="Current open book" />
               <Kpi label="Renewals · 30 Days" value={number(pack.renewals.summary.due_30_count)} note={money(pack.renewals.summary.premium_due_30)} />
             </section>
+
+            {commercialAccess ? (
+              <section className="r2-panel px-5 py-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div><h2 className="text-[13px] font-semibold text-[#17365D]">Commercial & Reconciliation Foundation</h2><p className="mt-1 text-[9.5px] text-[#667085]">Projected insurer pay-in and agreed partner payout are now separate from real billing. Reconciliation will compare insurer-reported actuals against these projections.</p></div>
+                  <div className="flex flex-wrap gap-2"><Link href="/policies/commercial-review" className="r2-action">Commercial Review</Link><Link href="/reports/finance" className="r2-action r2-action--primary">Commercial Report</Link></div>
+                </div>
+              </section>
+            ) : null}
 
             <section className="r2-main-grid">
               <article className="r2-panel overflow-hidden">
@@ -103,7 +111,7 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
                 <div className="r2-section-head"><h2>Attention</h2><Link href="/reports/readiness" className="r2-section-link">Data Quality <ArrowRight className="ml-1 inline h-3 w-3" /></Link></div>
                 <div className="r2-attention-list">
                   <Attention label="Renewals due within 30 days" value={pack.renewals.summary.due_30_count} tone="warn" />
-                  <Attention label="Open claims" value={pack.claims.summary.open_claim_count} tone="warn" />
+                  {commercialAccess ? <Attention label="Pending partner payout" value={pack.finance.summary.pending_payout_count} tone="warn" /> : null}
                   <Attention label="Expired compliance documents" value={pack.operations.summary.expired_document_count} tone="danger" />
                   <Attention label="Missing compliance fields" value={pack.operations.summary.missing_compliance_fields} tone="danger" />
                   <Attention label="Open intermediary onboarding" value={pack.distribution.summary.onboarding_open_count} />
@@ -132,29 +140,16 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
             </section>
 
             <section className="r2-panel overflow-hidden">
-              <div className="r2-section-head"><h2>Commercial & Reconciliation Foundation</h2>{commercialAccess ? <Link href="/policies/commercial-review" className="r2-section-link">Commercial Review <ArrowRight className="ml-1 inline h-3 w-3" /></Link> : null}</div>
-              {commercialAccess ? (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-4">
-                  <Position label="Projected Insurer Pay-in" value={money(pack.finance.summary.projected_payin)} href="/reports/finance" />
-                  <Position label="Recorded Partner Payout" value={money(pack.finance.summary.gross_payout)} href="/reports/finance" />
-                  <Position label="Commercial Review" value="Backfill & review" href="/policies/commercial-review" />
-                  <Position label="Reconciliation" value="Next phase" href="/reports/finance" />
-                </div>
-              ) : (
-                <div className="px-5 py-6 text-[10px] font-semibold text-[#667085]">Commercial details restricted</div>
-              )}
-            </section>
-
-            <section className="r2-panel overflow-hidden">
               <div className="r2-section-head"><h2>Broker Position</h2></div>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-5">
                 <Position label="Producing Intermediaries" value={pack.distribution.summary.producing_intermediary_count} href="/reports/distribution" />
+                {commercialAccess ? <Position label="Projected PayIn" value={money(pack.finance.summary.projected_payin)} href="/reports/finance" /> : <Position label="Commercials" value="Restricted" href="/reports" />}
+                {commercialAccess ? <Position label="Partner Payout" value={money(pack.finance.summary.gross_payout)} href="/reports/finance" /> : <Position label="Commercial access" value="Restricted" href="/reports" />}
                 <Position label="Claims Estimated Loss" value={money(pack.claims.summary.estimated_loss)} href="/reports/claims" />
                 <Position label="Premium at Renewal Risk" value={money(pack.renewals.summary.premium_at_risk)} href="/reports/renewals" />
-                <Position label="Business Analysis" value="Open" href="/reports/business" />
               </div>
               <div className="r2-month-end">
-                <div className="r2-month-end__copy"><strong>Month-end reporting</strong><span>Business, operational and commercial reporting are now separated so projected commercials are not presented as actual insurer settlements.</span></div>
+                <div className="r2-month-end__copy"><strong>Month-end reporting</strong><span>Review the live pack, freeze the eligible month, or open a previous frozen snapshot.</span></div>
                 <div className="flex flex-wrap gap-2"><Link href="/reports/management-pack" className="r2-action">Management Pack</Link><Link href="/reports/management-pack/archive" className="r2-action">Frozen Packs</Link></div>
               </div>
             </section>
@@ -166,7 +161,7 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
 }
 
 function Kpi({ label, value, note }: { label: string; value: string; note: string }) {
-  return <div className="border-b border-r border-[#e8ecf1] px-4 py-4"><div className="text-[9px] font-semibold text-[#667085]">{label}</div><div className="mt-2 text-[18px] font-bold tabular-nums text-[#26364f]">{value}</div><div className="mt-1 text-[8px] text-[#98a2b3]">{note}</div></div>;
+  return <div className="r2-kpi"><div className="r2-kpi__label">{label}</div><div className="r2-kpi__value">{value}</div><div className="r2-kpi__note">{note}</div></div>;
 }
 
 function Attention({ label, value, tone }: { label: string; value: number; tone?: "warn" | "danger" }) {
