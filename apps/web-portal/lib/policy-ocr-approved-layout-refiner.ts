@@ -4,6 +4,8 @@ import type { StructuredPolicyTable } from "@/lib/policy-ocr-iffco-structured-re
 import { refineApprovedMotorPolicyLayout as refineApprovedMotorPolicyLayoutBase } from "./policy-ocr-approved-layout-refiner-base.ts";
 // @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
 import { refineProductionBenchmarkPolicy } from "./policy-ocr-production-benchmark-refiner.ts";
+// @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
+import { refineProductionPolicyIdentity } from "./policy-ocr-production-identity-refiner.ts";
 
 /**
  * Stable approved-layout behavior is preserved in the base module. Production
@@ -40,5 +42,6 @@ export function refineApprovedMotorPolicyLayout(
     if (!failedRouting && !failedProduct && !failedModel) return approved;
   }
 
-  return refineProductionBenchmarkPolicy(pages, tables, approved);
+  const production = refineProductionBenchmarkPolicy(pages, tables, approved);
+  return refineProductionPolicyIdentity(pages, production);
 }
