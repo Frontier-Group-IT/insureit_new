@@ -74,6 +74,10 @@ export async function processNextProductionOcrBenchmarkBatch(formData: FormData)
       .maybeSingle();
 
     const baselineReady = Boolean(actionResult?.ok && label?.processing_status === "ready" && label?.proposal);
+    const actionError = actionResult && !actionResult.ok && "error" in actionResult
+      ? actionResult.error
+      : null;
+
     await admin
       .from("policy_ocr_benchmark_items")
       .update({
@@ -82,7 +86,7 @@ export async function processNextProductionOcrBenchmarkBatch(formData: FormData)
         baseline_parser_id: label?.parser_id ?? null,
         baseline_parser_version: label?.parser_version ?? null,
         baseline_extraction_method: label?.extraction_method ?? null,
-        baseline_failure_code: baselineReady ? null : (label?.failure_code ?? actionResult && "error" in actionResult ? actionResult.error : "processing_failed"),
+        baseline_failure_code: baselineReady ? null : (label?.failure_code ?? actionError ?? "processing_failed"),
         baseline_captured_at: label?.proposed_at ?? new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
