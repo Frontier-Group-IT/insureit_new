@@ -11,7 +11,7 @@ const allowedTypes = ".pdf,.jpg,.jpeg,.png,.webp";
 const maxFileBytes = 50 * 1024 * 1024;
 const legacySaveButtonLabel = "Book Active Policy";
 const saveButtonLabel = "Upload Policy";
-const registrationPattern = /^[A-Z]{2}[A-Z0-9]*[0-9]{2}$/;
+const registrationPattern = /^(?:[A-Z]{2}[A-Z0-9]*[0-9]{2}|\d{2}BH\d{4}[A-HJ-NP-Z]{1,2})$/;
 
 function hasUiValidationFailure() {
   const requiredControls = Array.from(
