@@ -1,0 +1,52 @@
+name: Temporary record cumulative mobile recovery conflicts
+
+on:
+  push:
+    branches:
+      - recovery/mobile-today-cumulative
+    paths:
+      - '.github/workflows/tmp-audit-mobile-recovery-report.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out recovery branch
+        uses: actions/checkout@v4
+        with:
+          ref: recovery/mobile-today-cumulative
+          fetch-depth: 0
+
+      - name: Audit merges and write report
+        shell: bash
+        run: |
+          set -u
+          git config user.name "recovery-audit"
+          git config user.email "recovery-audit@users.noreply.github.com"
+          git fetch origin ui/mobile-claim-tracker-progress-ring fix/claim-intimation-bulk-picker-runtime ui/my-claims-self-tracked-status-colors-v2 ui/compact-document-upload-actions ui/compact-claim-identity-card
+          : > recovery-merge-audit.txt
+          for branch in ui/mobile-claim-tracker-progress-ring fix/claim-intimation-bulk-picker-runtime ui/my-claims-self-tracked-status-colors-v2 ui/compact-document-upload-actions ui/compact-claim-identity-card; do
+            echo "===== $branch =====" >> recovery-merge-audit.txt
+            if git merge --no-ff --no-edit "origin/$branch"; then
+              echo "CLEAN" >> recovery-merge-audit.txt
+            else
+              echo "CONFLICT" >> recovery-merge-audit.txt
+              git diff --name-only --diff-filter=U >> recovery-merge-audit.txt
+              git status --short >> recovery-merge-audit.txt
+              git merge --abort
+              break
+            fi
+          done
+          git reset --hard origin/recovery/mobile-today-cumulative
+          git clean -fd
+          git checkout -- recovery-merge-audit.txt 2>/dev/null || true
+          if [ ! -f recovery-merge-audit.txt ]; then
+            echo "audit report unavailable" > recovery-merge-audit.txt
+          fi
+          git add recovery-merge-audit.txt
+          git commit -m "chore: record cumulative mobile merge audit" || true
+          git push origin HEAD:recovery/mobile-today-cumulative
