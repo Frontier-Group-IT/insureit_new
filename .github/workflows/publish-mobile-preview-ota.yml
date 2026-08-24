@@ -4,8 +4,9 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - fix/claim-intimation-bulk-upload-v2
+      - main
     paths:
+      - 'apps/mobile-app/**'
       - '.github/workflows/publish-mobile-preview-ota.yml'
 
 permissions:
@@ -13,15 +14,16 @@ permissions:
 
 jobs:
   publish:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '#547')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
-      - name: Check out feature branch source
+      - name: Check out merged source
         uses: actions/checkout@v4
         with:
-          ref: fix/claim-intimation-bulk-upload-v2
+          ref: main
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -42,29 +44,131 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Add claim document delete controls and green bulk upload state" \
+            --message "Block duplicate active self-tracked claims" \
             --non-interactive \
             --json \
             > expo-update.json \
             2> expo-update.stderr.log
           exit_code=$?
           set -e
+
           echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
           if [ "$exit_code" -eq 0 ]; then
             echo "result=success" >> "$GITHUB_OUTPUT"
           else
             echo "result=failed" >> "$GITHUB_OUTPUT"
           fi
-          if [ -s expo-update.json ]; then cat expo-update.json; fi
-          if [ -s expo-update.stderr.log ]; then cat expo-update.stderr.log >&2; fi
+
+          if [ -s expo-update.json ]; then
+            echo "Expo publish JSON:"
+            cat expo-update.json
+          fi
+
+          if [ -s expo-update.stderr.log ]; then
+            echo "Expo CLI messages:" >&2
+            cat expo-update.stderr.log >&2
+          fi
 
       - name: Inspect preview channel mapping
         if: steps.publish.outputs.result == 'success'
         working-directory: apps/mobile-app
         shell: bash
         run: |
-          npx eas-cli channel:view preview --json --non-interactive > expo-channel-preview.json
+          npx eas-cli channel:view preview \
+            --json \
+            --non-interactive \
+            > expo-channel-preview.json
+          echo "Preview channel mapping JSON:"
           cat expo-channel-preview.json
+
+      - name: Write OTA publication summary
+        if: always()
+        working-directory: apps/mobile-app
+        env:
+          PUBLISH_RESULT: ${{ steps.publish.outputs.result }}
+          PUBLISH_EXIT_CODE: ${{ steps.publish.outputs.exit_code }}
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+
+          const readJson = (path) => {
+            try {
+              return JSON.parse(fs.readFileSync(path, 'utf8'));
+            } catch {
+              return null;
+            }
+          };
+
+          const collectObjects = (value, output = []) => {
+            if (!value || typeof value !== 'object') return output;
+            if (Array.isArray(value)) {
+              for (const item of value) collectObjects(item, output);
+              return output;
+            }
+            output.push(value);
+            for (const item of Object.values(value)) collectObjects(item, output);
+            return output;
+          };
+
+          const firstValue = (objects, keys) => {
+            for (const object of objects) {
+              for (const key of keys) {
+                const value = object?.[key];
+                if (value !== undefined && value !== null && value !== '') return String(value);
+              }
+            }
+            return null;
+          };
+
+          const uniqueValues = (objects, keys) => {
+            const values = [];
+            for (const object of objects) {
+              for (const key of keys) {
+                const value = object?.[key];
+                if (value !== undefined && value !== null && value !== '') values.push(String(value));
+              }
+            }
+            return [...new Set(values)];
+          };
+
+          const publish = readJson('expo-update.json');
+          const channel = readJson('expo-channel-preview.json');
+          const objects = [
+            ...collectObjects(channel),
+            ...collectObjects(publish),
+          ];
+
+          const groupId = firstValue(objects, ['group', 'groupId', 'updateGroupId']);
+          const runtimeVersion = firstValue(objects, ['runtimeVersion']);
+          const updateIds = uniqueValues(objects, ['id', 'updateId'])
+            .filter((value) => value !== groupId)
+            .slice(0, 4);
+          const branch = firstValue(objects, ['branchName', 'branch']);
+          const result = process.env.PUBLISH_RESULT || 'unknown';
+          const exitCode = process.env.PUBLISH_EXIT_CODE || 'unknown';
+          const icon = result === 'success' ? '✅' : result === 'failed' ? '❌' : '⚠️';
+
+          const lines = [
+            '## Expo preview OTA publication',
+            '',
+            `| Field | Value |`,
+            `| --- | --- |`,
+            `| Publish result | ${icon} ${result} |`,
+            '| Expo channel | `preview` |',
+            `| Channel mapped branch | ${branch ? `\`${branch}\`` : 'Not returned by Expo'} |`,
+            `| Runtime version | ${runtimeVersion ? `\`${runtimeVersion}\`` : 'Not returned by Expo'} |`,
+            `| Update group ID | ${groupId ? `\`${groupId}\`` : 'Not returned by Expo'} |`,
+            `| Update ID(s) | ${updateIds.length ? updateIds.map((id) => `\`${id}\``).join('<br>') : 'Not returned by Expo'} |`,
+            `| CLI exit code | \`${exitCode}\` |`,
+            `| Source commit | \`${process.env.GITHUB_SHA || 'unknown'}\` |`,
+            '',
+            'This publishes only JavaScript/assets to the existing `preview` channel. No APK is built.',
+            '',
+          ];
+
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
+          NODE
 
       - name: Fail workflow when Expo publication fails
         if: always() && steps.publish.outputs.result != 'success'
