@@ -75,6 +75,8 @@ jobs:
         run: npm run policy-ocr:production-round4-uiic-regression
       - name: Production round 5 UIIC precision regression
         run: npm run policy-ocr:production-round5-uiic-regression
+      - name: Production round 6 UIIC residual regression
+        run: npm run policy-ocr:production-round6-uiic-regression
       - name: Post-training replay safety regression
         run: npm run policy-ocr:post-training-replay-regression
       - name: Policy onboarding OCR import regression
@@ -97,7 +99,7 @@ jobs:
             echo
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo "- Access control: V2 catalogue, scope, legacy compatibility, portal lifecycle, employee portal governance, release-blocker and Backoffice data-entry regressions"
-            echo "- OCR regressions: IFFCO structured, IFFCO, Digit, New India, additional insurers, approved layouts, production rerun refinement, production benchmark siblings, production rounds 2, 3, 4 UIIC and 5 UIIC precision, post-training replay safety, onboarding Section 02/03 import, premium training workflow"
+            echo "- OCR regressions: IFFCO structured, IFFCO, Digit, New India, additional insurers, approved layouts, production rerun refinement, production benchmark siblings, production rounds 2, 3, 4 UIIC, 5 UIIC precision and 6 UIIC residual, post-training replay safety, onboarding Section 02/03 import, premium training workflow"
             echo "- Static checks: typecheck and lint"
             echo "- Build: Next.js production build"
             echo "- Build-only public env: non-secret CI placeholders; no production credentials used"

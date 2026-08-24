@@ -15,6 +15,8 @@ import { refineProductionRound4Uiic } from "./policy-ocr-production-round4-uiic-
 // @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
 import { refineProductionRound5Uiic } from "./policy-ocr-production-round5-uiic-refiner.ts";
 // @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
+import { refineProductionRound6Uiic } from "./policy-ocr-production-round6-uiic-refiner.ts";
+// @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
 import { guardProductionRound5UiicPolicyNumber, guardProductionRound5UiicMakeModel, guardProductionRound5UiicVehicleIds } from "./policy-ocr-production-round5-uiic-policy-guard.ts";
 
 /**
@@ -22,7 +24,8 @@ import { guardProductionRound5UiicPolicyNumber, guardProductionRound5UiicMakeMod
  * original production benchmark families; Round 2 applies structural repairs;
  * Round 3 is a precision-first guard for Digit/IFFCO; Round 4 adds a narrowly
  * gated United India GCV package repair learned only after blind evaluation;
- * Round 5 tightens that revealed UIIC family using bounded schedule blocks.
+ * Round 5 tightens that revealed UIIC family using bounded schedule blocks;
+ * Round 6 repairs only the remaining revealed UIIC residuals.
  */
 export function refineApprovedMotorPolicyLayout(
   pages: string[],
@@ -67,5 +70,6 @@ export function refineApprovedMotorPolicyLayout(
   const guardedPolicy = guardProductionRound5UiicPolicyNumber(pages, round5);
   const guardedMakeModel = guardProductionRound5UiicMakeModel(pages, guardedPolicy);
   const guardedIds = guardProductionRound5UiicVehicleIds(pages, guardedMakeModel);
-  return refineProductionPolicyIdentity(pages, guardedIds);
+  const round6 = refineProductionRound6Uiic(pages, tables, guardedIds);
+  return refineProductionPolicyIdentity(pages, round6);
 }
