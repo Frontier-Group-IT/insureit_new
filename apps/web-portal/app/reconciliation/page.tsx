@@ -3,7 +3,7 @@ import { AppShell } from "@/components/shell";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { requireCapability } from "@/lib/master-data-server";
 import { getReconciliationDraft, listReconciliationDrafts, listReconciliationInsurers } from "./actions";
-import { ReconciliationWorkspace } from "./reconciliation-workspace";
+import { ReconciliationScreen } from "./reconciliation-screen";
 
 type Props = { searchParams: Promise<{ draft?: string }> };
 
@@ -19,7 +19,7 @@ export default async function ReconciliationPage({ searchParams }: Props) {
 
   return (
     <AppShell title="Insurer Reconciliation">
-      <ReconciliationWorkspace insurers={insurers} drafts={drafts as never[]} initialDraft={initialDraft as never} />
+      <ReconciliationScreen insurers={insurers} drafts={drafts as never[]} initialDraft={initialDraft as never} />
     </AppShell>
   );
 }

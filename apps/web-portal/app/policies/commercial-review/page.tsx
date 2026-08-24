@@ -33,7 +33,7 @@ export default async function PolicyCommercialReviewPage() {
   ]);
 
   const error = policiesResult.error ?? premiumResult.error ?? payinResult.error ?? payoutResult.error ?? insurersResult.error ?? intermediariesResult.error ?? eventsResult.error;
-  if (error) throw new Error(`Unable to load Commercial Control: ${error.message}`);
+  if (error) throw new Error(`Unable to load Pay-In / Payout: ${error.message}`);
 
   const premiumByPolicy = new Map((premiumResult.data ?? []).map((row) => [row.policy_id, row]));
   const payinByPolicy = new Map((payinResult.data ?? []).map((row) => [row.policy_id, row]));
@@ -90,10 +90,10 @@ export default async function PolicyCommercialReviewPage() {
   });
 
   return (
-    <AppShell title="Commercial Control">
+    <AppShell title="Pay-In / Payout">
       <div className="mx-auto max-w-[1720px] space-y-2.5 pb-6">
         <section className="flex items-center justify-between rounded-2xl border border-[#D9E2F0] bg-white px-4 py-2.5 shadow-sm">
-          <h1 className="text-[17px] font-semibold text-[#17365D]">Commercial Control</h1>
+          <h1 className="text-[17px] font-semibold text-[#17365D]">Pay-In / Payout</h1>
           <div className="rounded-lg border border-[#DDE6EE] bg-[#F8FAFC] px-2.5 py-1.5 text-[8.5px] font-semibold text-[#526277]">{rows.length.toLocaleString("en-IN")} policies</div>
         </section>
         <CommercialReviewClient rows={rows} />
