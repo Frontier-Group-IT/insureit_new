@@ -150,7 +150,7 @@ export default function SelfManagedSpotStatusScreen() {
         primaryLabel={submitting ? 'Saving...' : 'Save & Continue'}
         primaryIcon="arrow-right"
         onPrimary={() => void submit()}
-        onAssistance={() => id && router.push({ pathname: '/customer/request-claim-assistance', params: { id } })}
+        onAssistance={() => id && router.push({ pathname: '/customer/request-claim-assistance', params: { id, returnStage: 'spot_status' } })}
       />
 
       <ExternalClaimErrorPopup
