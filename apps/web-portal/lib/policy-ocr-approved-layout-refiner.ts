@@ -19,17 +19,10 @@ import { refineProductionRound6Uiic } from "./policy-ocr-production-round6-uiic-
 // @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
 import { refineProductionRound7UiicPrecision } from "./policy-ocr-production-round7-uiic-precision-guard.ts";
 // @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
+import { refineProductionRound8Fresh20Precision } from "./policy-ocr-production-round8-fresh20-precision-guard.ts";
+// @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
 import { guardProductionRound5UiicPolicyNumber, guardProductionRound5UiicMakeModel, guardProductionRound5UiicVehicleIds } from "./policy-ocr-production-round5-uiic-policy-guard.ts";
 
-/**
- * Stable approved-layout behavior remains the base. Round 1 handles the four
- * original production benchmark families; Round 2 applies structural repairs;
- * Round 3 is a precision-first guard for Digit/IFFCO; Round 4 adds a narrowly
- * gated United India GCV package repair learned only after blind evaluation;
- * Round 5 tightens that revealed UIIC family using bounded schedule blocks;
- * Round 6 repairs only the remaining revealed UIIC residuals; Round 7 is a
- * precision-only guard for impossible UIIC residual values.
- */
 export function refineApprovedMotorPolicyLayout(
   pages: string[],
   tables: StructuredPolicyTable[],
@@ -38,30 +31,23 @@ export function refineApprovedMotorPolicyLayout(
   const approved = refineApprovedMotorPolicyLayoutBase(pages, tables, parsed);
   const header = (pages[0] ?? "").split(/\r?\n/).slice(0, 140).join(" ");
 
-  // Keep already-correct Magma package layouts on their proven v6 path unless
-  // they have the exact fresh-production `/Model` failure signature.
   if (/MAGMA\s+GENERAL\s+INSURANCE|MAGMAINSURANCE\.COM/i.test(header)) {
     const make = approved.fields.find((field) => field.key === "vehicle_make")?.value?.trim() ?? "";
-    if (!/^\/?MODEL$/i.test(make)) return approved;
+    if (!/^\/?MODEL$/i.test(make)) {
+      return refineProductionPolicyIdentity(pages, refineProductionRound8Fresh20Precision(pages, tables, approved));
+    }
     const production = refineProductionBenchmarkPolicy(pages, tables, approved);
-    return refineProductionPolicyIdentity(pages, production);
+    return refineProductionPolicyIdentity(pages, refineProductionRound8Fresh20Precision(pages, tables, production));
   }
 
   let production = approved;
-
-  // National has both a genuine Bundled TWP layout and newer Package schedules.
-  // Round 1 remains failure-gated, while Round 2 can still correct a strongly
-  // identified current National Package schedule even when v6 produced a
-  // superficially plausible Bundled result.
   if (/NATIONAL\s+INSURANCE(?:\s+COMPANY)?|CUSTOMER\.SUPPORT@NIC\.CO\.IN|NIC\.CO\.IN/i.test(header)) {
     const product = approved.fields.find((field) => field.key === "policy_product")?.value?.trim() ?? "";
     const model = approved.fields.find((field) => field.key === "vehicle_model")?.value?.trim() ?? "";
     const failedRouting = approved.parserId === "oriental_motor_v1";
     const failedProduct = /THIRD\s+PARTY/i.test(product);
     const failedModel = /^(?:NO\.?|MODEL\s*-?|.*VARIANT.*)$/i.test(model);
-    if (failedRouting || failedProduct || failedModel) {
-      production = refineProductionBenchmarkPolicy(pages, tables, approved);
-    }
+    if (failedRouting || failedProduct || failedModel) production = refineProductionBenchmarkPolicy(pages, tables, approved);
   } else {
     production = refineProductionBenchmarkPolicy(pages, tables, approved);
   }
@@ -75,5 +61,6 @@ export function refineApprovedMotorPolicyLayout(
   const guardedIds = guardProductionRound5UiicVehicleIds(pages, guardedMakeModel);
   const round6 = refineProductionRound6Uiic(pages, tables, guardedIds);
   const round7 = refineProductionRound7UiicPrecision(round6);
-  return refineProductionPolicyIdentity(pages, round7);
+  const round8 = refineProductionRound8Fresh20Precision(pages, tables, round7);
+  return refineProductionPolicyIdentity(pages, round8);
 }
