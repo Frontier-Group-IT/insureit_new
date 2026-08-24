@@ -1,0 +1,55 @@
+name: Temporary audit cumulative mobile recovery merges
+
+on:
+  push:
+    branches:
+      - recovery/mobile-today-cumulative
+    paths:
+      - '.github/workflows/tmp-audit-mobile-recovery-merge.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out recovery branch
+        uses: actions/checkout@v4
+        with:
+          ref: recovery/mobile-today-cumulative
+          fetch-depth: 0
+
+      - name: Fetch feature branches
+        run: |
+          git fetch origin \
+            ui/mobile-claim-tracker-progress-ring \
+            fix/claim-intimation-bulk-picker-runtime \
+            ui/my-claims-self-tracked-status-colors-v2 \
+            ui/compact-document-upload-actions \
+            ui/compact-claim-identity-card
+
+      - name: Test cumulative merges without pushing
+        shell: bash
+        run: |
+          set -e
+          git config user.name "recovery-audit"
+          git config user.email "recovery-audit@users.noreply.github.com"
+          for branch in \
+            ui/mobile-claim-tracker-progress-ring \
+            fix/claim-intimation-bulk-picker-runtime \
+            ui/my-claims-self-tracked-status-colors-v2 \
+            ui/compact-document-upload-actions \
+            ui/compact-claim-identity-card
+          do
+            echo "===== MERGING $branch ====="
+            if ! git merge --no-ff --no-edit "origin/$branch"; then
+              echo "===== CONFLICTS AFTER $branch ====="
+              git status --short
+              git diff --name-only --diff-filter=U
+              exit 1
+            fi
+          done
+          echo "===== ALL MERGES CLEAN ====="
+          git status --short
