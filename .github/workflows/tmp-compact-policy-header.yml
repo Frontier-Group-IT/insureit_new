@@ -1,0 +1,66 @@
+name: Temporary compact policy header patch
+
+on:
+  push:
+    branches:
+      - ui/compact-policy-onboarding-header
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ui/compact-policy-onboarding-header
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply compact header redesign
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          form_path = Path('apps/web-portal/components/policy-unified-form.tsx')
+          source = form_path.read_text()
+
+          old = '''    <div className="overflow-hidden rounded-t-2xl border border-b-0 border-[#D9E2F0] bg-white shadow-[0_10px_30px_rgba(15,23,42,.06)]">\n      <div className="flex min-h-[88px] items-center bg-[linear-gradient(135deg,#071D49_0%,#123B75_60%,#315B9A_100%)] px-5 py-3.5 text-white">\n        <div className="flex w-full items-center justify-between gap-4"><div><h1 className="text-[18px] font-semibold">{headerTitle}</h1></div>{isMotorPolicy?<PolicyOcrImportPanel variant="header" context={ocrImportContext} onApply={applyPolicyOcrFields} onClearForm={clearPolicyForm}/>:null}</div>\n      </div>\n    </div>\n    <div className={`${isMotorPolicy?"sticky top-[72px] z-50 mb-4 flex":"hidden"} gap-1 overflow-x-auto rounded-b-2xl border border-t-0 border-[#D9E2F0] bg-white/95 px-3 py-2 shadow-[0_7px_18px_rgba(15,23,42,.08)] backdrop-blur`}>{sections.map((section,index)=>{const progress=sectionProgress[index];return <button key={section} type="button" onClick={()=>goToSection(index)} title={progress.complete?`${section} complete`:`${progress.remaining} required item${progress.remaining===1?"":"s"} remaining`} className={`group flex min-w-fit items-center gap-2 rounded-lg px-3 py-2 text-[9.5px] font-semibold transition ${activeSection===index?"bg-[#EEF2FF] text-[#4338CA]":"text-[#667085] hover:bg-[#F8FAFC]"}`}><span className={`grid h-5 w-5 place-items-center rounded-full text-[8px] font-bold ${progress.complete?"bg-[#E8F7EF] text-[#14845B]":progress.empty?(activeSection===index?"bg-[#4F46E5] text-white":"bg-[#EEF2F6] text-[#7A8798]"):"bg-[#FFF4D8] text-[#B76E00]"}`}>{progress.complete?<svg aria-hidden="true" viewBox="0 0 20 20" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 10 3 3 7-7"/></svg>:index+1}</span><span>{section}</span>{!progress.complete&&!progress.empty?<span className="text-[7.5px] font-semibold text-[#B76E00]">{progress.remaining} left</span>:null}</button>})}</div>'''
+
+          new = '''    <div className="overflow-hidden rounded-t-xl border border-b-0 border-[#D9E2F0] bg-white shadow-[0_8px_22px_rgba(15,23,42,.05)]">\n      <div className="flex min-h-[52px] items-center bg-[linear-gradient(135deg,#071D49_0%,#123B75_60%,#315B9A_100%)] px-4 py-2 text-white sm:px-5">\n        <div className="flex w-full items-center justify-between gap-3"><h1 className="text-[15px] font-semibold tracking-[-0.01em]">{headerTitle}</h1>{isMotorPolicy?<PolicyOcrImportPanel variant="header" context={ocrImportContext} onApply={applyPolicyOcrFields} onClearForm={clearPolicyForm}/>:null}</div>\n      </div>\n    </div>\n    <nav aria-label="Policy sections" className={`${isMotorPolicy?"sticky top-[72px] z-50 mb-3 flex":"hidden"} min-h-[36px] items-stretch gap-4 overflow-x-auto rounded-b-xl border border-t-0 border-[#D9E2F0] bg-white/96 px-4 shadow-[0_5px_14px_rgba(15,23,42,.06)] backdrop-blur`}>{sections.map((section,index)=>{const progress=sectionProgress[index];const active=activeSection===index;return <button key={section} type="button" onClick={()=>goToSection(index)} title={progress.complete?`${section} complete`:`${progress.remaining} required item${progress.remaining===1?"":"s"} remaining`} aria-current={active?"step":undefined} className={`group relative flex min-w-fit items-center gap-1.5 border-b-2 px-0.5 py-2 text-[9px] font-semibold transition ${active?"border-[#4F46E5] text-[#3346B8]":"border-transparent text-[#667085] hover:border-[#CBD5E1] hover:text-[#344054]"}`}>{progress.complete?<svg aria-hidden="true" viewBox="0 0 20 20" className="h-3 w-3 shrink-0 text-[#159566]" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 10 3 3 7-7"/></svg>:<span className={`text-[8px] font-bold tabular-nums ${active?"text-[#4F46E5]":"text-[#98A2B3]"}`}>{String(index+1).padStart(2,"0")}</span>}<span>{section}</span></button>})}</nav>'''
+
+          if old not in source:
+              raise SystemExit('Expected policy header block not found; refusing to patch')
+          form_path.write_text(source.replace(old, new, 1))
+
+          regression_path = Path('apps/web-portal/scripts/policy-ocr-onboarding-import-regression.mjs')
+          regression = regression_path.read_text()
+          anchor = '  ["Summary rail restored to wider desktop width", form, /xl:grid-cols-\\[minmax\\(0,1fr\\)_336px\\]/],\n'
+          additions = '''  ["Compact policy title row", form, /min-h-\\[52px\\][\\s\\S]*text-\\[15px\\][\\s\\S]*\\{headerTitle\\}/],\n  ["Compact section navigation", form, /aria-label="Policy sections"[\\s\\S]*min-h-\\[36px\\][\\s\\S]*aria-current=\\{active\\?"step":undefined\\}/],\n  ["Section navigation removes visible remaining counters", form, /String\\(index\\+1\\)\\.padStart\\(2,"0"\\)/],\n'''
+          if 'Compact policy title row' not in regression:
+              if anchor not in regression:
+                  raise SystemExit('Regression anchor not found')
+              regression = regression.replace(anchor, anchor + additions, 1)
+          if 'left</span>' not in regression:
+              marker = 'console.log("PASS: Payin-Payout controls live only in the compact summary rail");\n'
+              extra = '''if (form.includes('left</span>')) throw new Error("FAIL: visible remaining-field counters must not remain in compact section navigation");\nif (form.includes('min-h-[88px]')) throw new Error("FAIL: oversized policy header height must not remain");\nconsole.log("PASS: policy header and section navigation are compact and progress-noise free");\n'''
+              if marker not in regression:
+                  raise SystemExit('Regression marker not found')
+              regression = regression.replace(marker, marker + '\n' + extra, 1)
+          regression_path.write_text(regression)
+          PY
+      - name: Run focused regression
+        working-directory: apps/web-portal
+        run: npm ci && npm run policy-ocr:onboarding-import-regression
+      - name: Remove temporary workflow and commit
+        shell: bash
+        run: |
+          rm .github/workflows/tmp-compact-policy-header.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal/components/policy-unified-form.tsx apps/web-portal/scripts/policy-ocr-onboarding-import-regression.mjs .github/workflows/tmp-compact-policy-header.yml
+          git commit -m "Compact policy onboarding header and section navigation"
+          git push origin HEAD:ui/compact-policy-onboarding-header
