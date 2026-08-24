@@ -1,0 +1,52 @@
+name: Temporary compact claim identity preview OTA
+
+on:
+  push:
+    branches:
+      - ui/compact-claim-identity-card
+    paths:
+      - '.github/workflows/tmp-preview-compact-claim-identity.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: ui/compact-claim-identity-card
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Publish Expo preview OTA
+        working-directory: apps/mobile-app
+        run: |
+          npx eas-cli update \
+            --channel preview \
+            --environment preview \
+            --message "Preview compact claim identity card across all stages" \
+            --non-interactive
+
+      - name: Remove temporary workflow
+        if: success()
+        run: |
+          git config user.name "antnish1"
+          git config user.email "shahdolho@gmail.com"
+          git rm .github/workflows/tmp-preview-compact-claim-identity.yml
+          git commit -m "chore: remove temporary compact claim identity preview workflow"
+          git push origin HEAD:ui/compact-claim-identity-card
