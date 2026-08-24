@@ -23,10 +23,6 @@ grant all on public.policy_intake_documents to service_role;
 
 alter table public.policy_documents
   add column if not exists source_intake_id uuid references public.policy_intake_requests(id) on delete set null,
-  add column if not exists source_intake_document_id uuid references public.policy_intake_documents(id) on delete set null,
-  add column if not exists is_official boolean not null default true;
+  add column if not exists source_intake_document_id uuid references public.policy_intake_documents(id) on delete set null;
 
 create index if not exists idx_policy_documents_source_intake on public.policy_documents(source_intake_id);
-create unique index if not exists idx_policy_documents_official_copy
-  on public.policy_documents(policy_id, document_type)
-  where is_official;
