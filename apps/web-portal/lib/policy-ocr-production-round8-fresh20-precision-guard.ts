@@ -64,7 +64,10 @@ export function refineProductionRound8Fresh20Precision(
 
   const cpaOpted = fields.get("cpa_opted")?.value?.trim() ?? "";
   const cpa = numberField(fields, "cpa_premium");
-  if (/^No$/i.test(cpaOpted) && cpa != null && cpa > 0) {
+  // Some approved layouts retain a small non-owner-driver PA component while
+  // cpa_opted is No. Preserve the established ₹50 compatibility case; only
+  // withhold larger contradictory values that match the fresh20 contamination.
+  if (/^No$/i.test(cpaOpted) && cpa != null && cpa > 50) {
     fields.delete("cpa_premium");
     changed = true;
   }
