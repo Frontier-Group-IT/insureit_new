@@ -138,8 +138,10 @@ Current `main` at the time this plan was recorded: `59ae5aedfe1ef669fb0869f345fc
           PY
 
           git add .github/workflows/publish-mobile-preview-ota.yml AGENTS.md docs/CURRENT_CHAT_HANDOFF.md
-          git commit -m "Enforce main-only Expo preview OTA publishing"
+          git commit -m "Enforce main-only Expo preview OTA publishing" || true
 
           git rm .github/workflows/tmp-apply-main-only-preview-policy.yml
           git commit -m "chore: remove temporary preview policy workflow"
           git push origin HEAD:chore/main-only-expo-preview-ota
+
+# trigger-v2
