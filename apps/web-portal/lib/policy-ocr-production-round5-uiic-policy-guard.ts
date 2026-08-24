@@ -28,6 +28,23 @@ export function guardProductionRound5UiicPolicyNumber(
   return { ...parsed, fields };
 }
 
+export function guardProductionRound5UiicMakeModel(
+  pages: string[],
+  parsed: ParsedPolicyResult,
+): ParsedPolicyResult {
+  if (!parsed.parserVersion.includes("+prod-r5-uiic_precision")) return parsed;
+  const recovered = findExplicitMakeModel(pages.slice(0, 2));
+  if (!recovered) return parsed;
+
+  const fields = parsed.fields.filter((field) => !["vehicle_make", "vehicle_model", "vehicle_fuel_type"].includes(field.key));
+  fields.push({ key: "vehicle_make", label: "Vehicle make", value: recovered.make, confidence: .999, page: recovered.page, evidence: "Round 5 explicit UIIC Vehicle Make & Model block" });
+  fields.push({ key: "vehicle_model", label: "Vehicle model", value: recovered.model, confidence: .999, page: recovered.page, evidence: "Round 5 explicit UIIC Vehicle Make & Model block" });
+  if (/\bEV\b|ELECTRIC/i.test(`${recovered.make} ${recovered.model}`)) {
+    fields.push({ key: "vehicle_fuel_type", label: "Fuel type", value: "Electric", confidence: .999, page: recovered.page, evidence: "Round 5 explicit EV marker in UIIC make/model" });
+  }
+  return { ...parsed, fields };
+}
+
 export function guardProductionRound5UiicVehicleIds(
   pages: string[],
   parsed: ParsedPolicyResult,
@@ -88,6 +105,38 @@ function findStrictPolicyNumber(pages: string[]) {
   return null;
 }
 
+function findExplicitMakeModel(pages: string[]) {
+  for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
+    const pageLines = pages[pageIndex].split(/\r?\n/).map((line) => line.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim()).filter(Boolean);
+    for (let i = 0; i < pageLines.length; i += 1) {
+      const line = pageLines[i];
+      const label = /Vehicle\s+Make\s*&\s*Model/i;
+      if (!label.test(line)) continue;
+
+      const pieces: string[] = [];
+      const afterLabel = line.replace(/^.*?Vehicle\s+Make\s*&\s*Model\s*/i, "").trim();
+      if (afterLabel) pieces.push(afterLabel);
+      for (let j = i + 1; j < Math.min(pageLines.length, i + 6); j += 1) {
+        if (/Type\s+Of\s+Body|Registration\s+Date|Engine\s+Number|INSURED\s+DECLARED\s+VALUE/i.test(pageLines[j])) break;
+        pieces.push(pageLines[j]);
+        if (/\//.test(pageLines[j]) && j + 1 < pageLines.length && /Type\s+Of\s+Body/i.test(pageLines[j + 1])) {
+          // same-line make/model case has already included both sides of slash.
+          break;
+        }
+      }
+      const block = pieces.join(" ").replace(/\bnull\b/gi, " ").replace(/\s+/g, " ").trim();
+      const slash = block.indexOf("/");
+      if (slash < 1) continue;
+      const make = block.slice(0, slash).trim();
+      let model = block.slice(slash + 1).trim();
+      model = model.replace(/\s+Type\s+Of\s+Body.*$/i, "").trim();
+      if (!goodVehicleText(make) || !goodVehicleText(model)) continue;
+      return { make, model, page: pageIndex + 1 };
+    }
+  }
+  return null;
+}
+
 function findStrictVehicleId(pages: string[], label: RegExp) {
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
     const pageLines = pages[pageIndex].split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -95,16 +144,10 @@ function findStrictVehicleId(pages: string[], label: RegExp) {
       const line = pageLines[i];
       if (!label.test(line)) continue;
 
-      // Prefer a value printed on the same line immediately after the label.
-      // This is important for UIIC page 2, where Chassis/Engine have explicit
-      // values. A page-1 multi-column header must never borrow the next row,
-      // because the engine column appears before the chassis column there.
       const sameLine = line.replace(label, " ").trim();
       const same = firstPlausibleVehicleId(sameLine);
       if (same) return { value: same, page: pageIndex + 1 };
 
-      // Only allow next-line recovery when the current line is effectively a
-      // standalone label. Skip multi-column header lines with sibling labels.
       const remainder = line.replace(label, " ").replace(/[:#&|.,;()\s/-]+/g, "").trim();
       const hasSiblingLabel = /Engine|Chassis|Make|Model|Body|Year|Capacity|GVW|Weight|Registration/i.test(remainder);
       if (remainder || hasSiblingLabel) continue;
@@ -123,6 +166,11 @@ function firstPlausibleVehicleId(text: string): string | null {
     if (plausibleVehicleId(value)) return value;
   }
   return null;
+}
+
+function goodVehicleText(value: string) {
+  return value.length >= 3 && value.length <= 80 && !/^(?:MODEL|YEAR|TYPE OF BODY|CUBIC CAPACITY|WEIGHT)$/i.test(value)
+    && !/SEATING CAPACITY|YEAR OF MANUFACTURE|GROSS VEHICLE WEIGHT/i.test(value);
 }
 
 function plausiblePolicyNumber(value: string) {
