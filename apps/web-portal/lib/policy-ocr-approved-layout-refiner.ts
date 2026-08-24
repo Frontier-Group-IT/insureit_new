@@ -10,12 +10,14 @@ import { refineProductionPolicyIdentity } from "./policy-ocr-production-identity
 import { refineProductionRound2Policy } from "./policy-ocr-production-round2-refiner.ts";
 // @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
 import { refineProductionRound3Precision } from "./policy-ocr-production-round3-precision-guard.ts";
+// @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
+import { refineProductionRound4Uiic } from "./policy-ocr-production-round4-uiic-refiner.ts";
 
 /**
  * Stable approved-layout behavior remains the base. Round 1 handles the four
  * original production benchmark families; Round 2 applies structural repairs;
- * Round 3 is a precision-first guard that withholds repeatedly ambiguous
- * Digit/IFFCO outputs instead of auto-filling low-confidence values.
+ * Round 3 is a precision-first guard for Digit/IFFCO; Round 4 adds a narrowly
+ * gated United India GCV package repair learned only after blind evaluation.
  */
 export function refineApprovedMotorPolicyLayout(
   pages: string[],
@@ -55,5 +57,6 @@ export function refineApprovedMotorPolicyLayout(
 
   const round2 = refineProductionRound2Policy(pages, tables, production);
   const round3 = refineProductionRound3Precision(round2);
-  return refineProductionPolicyIdentity(pages, round3);
+  const round4 = refineProductionRound4Uiic(pages, tables, round3);
+  return refineProductionPolicyIdentity(pages, round4);
 }
