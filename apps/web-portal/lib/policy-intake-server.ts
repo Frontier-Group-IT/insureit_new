@@ -1,7 +1,6 @@
 import { getAccessibleIntermediaryIds } from "@/lib/employee-access-scope";
 import { requireAnyCapability, requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import type { AppRole } from "@/lib/roles";
 
 export type PolicyIntakeSource = {
   id: string;
@@ -25,7 +24,7 @@ export async function requirePolicyIntakeReviewer() {
   return requireCapability("review_policy_intakes", "edit");
 }
 
-export async function loadEligiblePolicyIntakeSources(profile: { id: string; role: AppRole | null }) {
+export async function loadEligiblePolicyIntakeSources(profile: { id: string; role: string | null }) {
   const admin = createSupabaseAdminClient();
   const ids = await getAccessibleIntermediaryIds(profile.id, profile.role, "view_intermediaries");
   if (ids !== null && !ids.length) return [] as PolicyIntakeSource[];
