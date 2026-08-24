@@ -128,16 +128,26 @@ export default function AddVehicleScreen() {
     if (!Number.isInteger(parsedYear) || parsedYear < 1950 || parsedYear > new Date().getFullYear() + 1) return setMessage('Enter a valid manufacturing year.');
     const parsedGvw = gvwKg ? Number(gvwKg) : null;
     if (parsedGvw !== null && (!Number.isFinite(parsedGvw) || parsedGvw <= 0)) return setMessage('Enter a valid capacity.');
-    if (!selectedCompanyId) return setMessage('Search and select the insurer.');
-    if (!policyNo.trim()) return setMessage('Enter policy number.');
-    if (!policyType.trim()) return setMessage('Select policy type.');
-    if (!policyStartDate) return setMessage('Select policy start date.');
-    if (!policyEndDate) return setMessage('Select policy end date.');
-    if (new Date(policyEndDate).getTime() < new Date(policyStartDate).getTime()) return setMessage('End date must be after start date.');
+
+    const hasPolicyDetails = Boolean(
+      selectedCompanyId
+      || policyNo.trim()
+      || policyStartDate
+      || policyEndDate
+      || premium.trim()
+      || idv.trim()
+      || policyCopy,
+    );
+    if (hasPolicyDetails && !selectedCompanyId) return setMessage('Search and select the insurer to save policy details.');
+    if (hasPolicyDetails && !policyNo.trim()) return setMessage('Enter policy number to save policy details.');
+    if (hasPolicyDetails && !policyType.trim()) return setMessage('Select policy type to save policy details.');
+    if (hasPolicyDetails && !policyStartDate) return setMessage('Select policy start date to save policy details.');
+    if (hasPolicyDetails && !policyEndDate) return setMessage('Select policy end date to save policy details.');
+    if (hasPolicyDetails && new Date(policyEndDate).getTime() < new Date(policyStartDate).getTime()) return setMessage('End date must be after start date.');
     const premiumValue = premium ? Number(premium) : null;
-    if (premiumValue !== null && (!Number.isFinite(premiumValue) || premiumValue < 0)) return setMessage('Enter a valid premium amount.');
+    if (hasPolicyDetails && premiumValue !== null && (!Number.isFinite(premiumValue) || premiumValue < 0)) return setMessage('Enter a valid premium amount.');
     const idvValue = idv ? Number(idv) : null;
-    if (idvValue !== null && (!Number.isFinite(idvValue) || idvValue < 0)) return setMessage('Enter a valid IDV.');
+    if (hasPolicyDetails && idvValue !== null && (!Number.isFinite(idvValue) || idvValue < 0)) return setMessage('Enter a valid IDV.');
 
     const rpcPayload = {
       p_customer_id: target.customer_id,
@@ -182,30 +192,32 @@ export default function AddVehicleScreen() {
     const createdVehicle = Array.isArray(vehicleData) ? vehicleData[0] : vehicleData;
     if (!createdVehicle?.id) {
       setSaving(false);
-      return setMessage('Vehicle was saved, but we could not attach the policy details.');
+      return setMessage('Vehicle was saved, but we could not confirm the new vehicle record.');
     }
 
-    const policyPayload = {
-      p_customer_id: target.customer_id,
-      p_vehicle_id: createdVehicle.id,
-      p_insurance_company_id: selectedCompanyId,
-      p_policy_no: policyNo.trim().toUpperCase(),
-      p_policy_type: policyType.trim(),
-      p_start_date: policyStartDate,
-      p_end_date: policyEndDate,
-      p_premium_amount: premiumValue,
-      p_insured_declared_value: idvValue,
-    };
-    const policyResult = await (supabase.rpc as any)('create_customer_external_policy', policyPayload);
-    if (policyResult.error) {
-      setSaving(false);
-      return setMessage(`Vehicle saved, but policy details could not be saved: ${policyResult.error.message || 'Please try again.'}`);
-    }
-    if (policyCopy) {
-      const uploadError = await uploadPolicyCopy(target.customer_id, policyCopy, session.user.id);
-      if (uploadError) {
+    if (hasPolicyDetails) {
+      const policyPayload = {
+        p_customer_id: target.customer_id,
+        p_vehicle_id: createdVehicle.id,
+        p_insurance_company_id: selectedCompanyId,
+        p_policy_no: policyNo.trim().toUpperCase(),
+        p_policy_type: policyType.trim(),
+        p_start_date: policyStartDate,
+        p_end_date: policyEndDate,
+        p_premium_amount: premiumValue,
+        p_insured_declared_value: idvValue,
+      };
+      const policyResult = await (supabase.rpc as any)('create_customer_external_policy', policyPayload);
+      if (policyResult.error) {
         setSaving(false);
-        return setMessage(`Vehicle and policy saved, but the policy copy could not be uploaded: ${uploadError}`);
+        return setMessage(`Vehicle saved, but policy details could not be saved: ${policyResult.error.message || 'Please try again.'}`);
+      }
+      if (policyCopy) {
+        const uploadError = await uploadPolicyCopy(target.customer_id, policyCopy, session.user.id);
+        if (uploadError) {
+          setSaving(false);
+          return setMessage(`Vehicle and policy saved, but the policy copy could not be uploaded: ${uploadError}`);
+        }
       }
     }
     setSaving(false);
@@ -262,15 +274,15 @@ export default function AddVehicleScreen() {
           </View>
         </FormSection>
 
-        <FormSection title="Policy details" icon="file-document-outline" tone="policy">
+        <FormSection title="Policy details · Optional" icon="file-document-outline" tone="policy">
           <SearchInsurer query={insurerQuery} selectedInsurer={companies.find((company) => company.id === selectedCompanyId) ?? null} companies={companies.filter((company) => !insurerQuery.trim() || company.name.toLowerCase().includes(insurerQuery.trim().toLowerCase())).slice(0, 10)} onChange={(value) => { setSelectedCompanyId(''); setInsurerQuery(value); }} onSelect={(company) => { setSelectedCompanyId(company.id); setInsurerQuery(company.name); }} />
           <View style={styles.twoColumnRow}>
-            <View style={styles.column}><InputField icon="identifier" label="Policy no. *" value={policyNo} onChangeText={(value) => setPolicyNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" /></View>
+            <View style={styles.column}><InputField icon="identifier" label="Policy no." value={policyNo} onChangeText={(value) => setPolicyNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" /></View>
             <View style={styles.column}><PolicyTypeDropdown value={policyType} open={policyTypeOpen} onToggle={() => setPolicyTypeOpen((value) => !value)} onSelect={(value) => { setPolicyType(value); setPolicyTypeOpen(false); }} /></View>
           </View>
           <View style={styles.twoColumnRow}>
             <View style={styles.column}><PremiumDateField label="Start date" value={policyStartDate} onPress={() => setDateTarget({ label: 'Policy start date', value: policyStartDate, onChange: (value) => { setPolicyStartDate(value); setPolicyEndDate(defaultPolicyEndDate(value)); }, autoEnd: true })} /></View>
-            <View style={styles.column}><ReadonlyDateField label="End date *" value={policyEndDate} /></View>
+            <View style={styles.column}><ReadonlyDateField label="End date" value={policyEndDate} /></View>
           </View>
           <View style={styles.twoColumnRow}>
             <View style={styles.column}><MoneyField label="IDV" icon="car-info" value={idv} onChangeText={setIdv} /></View>
@@ -282,8 +294,6 @@ export default function AddVehicleScreen() {
             <MaterialCommunityIcons name="upload-outline" size={18} color="#0A43A3" />
           </Pressable>
         </FormSection>
-
-
 
         <Button label={saving ? 'Saving vehicle...' : 'Save vehicle'} onPress={save} disabled={saving} />
         {saving ? <ActivityIndicator color={palette.navy} /> : null}
@@ -386,7 +396,7 @@ function FuelDropdown({ value, onSelect }: { value: string; onSelect: (value: st
 function SearchInsurer({ query, selectedInsurer, companies, onChange, onSelect }: { query: string; selectedInsurer: InsuranceCompany | null; companies: InsuranceCompany[]; onChange: (value: string) => void; onSelect: (company: InsuranceCompany) => void }) {
   return (
     <View style={styles.field}>
-      <Text style={styles.fieldLabel}>Insurer *</Text>
+      <Text style={styles.fieldLabel}>Insurer</Text>
       <View style={styles.inputShell}>
         <MaterialCommunityIcons name="magnify" size={17} color="#6A7A90" />
         <TextInput value={query} onChangeText={onChange} placeholder="Search insurer by name" placeholderTextColor="#9AA7B8" style={styles.input} />
@@ -402,7 +412,7 @@ function SearchInsurer({ query, selectedInsurer, companies, onChange, onSelect }
 function PolicyTypeDropdown({ value, open, onToggle, onSelect }: { value: string; open: boolean; onToggle: () => void; onSelect: (value: string) => void }) {
   return (
     <View style={styles.field}>
-      <Text style={styles.fieldLabel}>Policy type *</Text>
+      <Text style={styles.fieldLabel}>Policy type</Text>
       <Pressable accessibilityRole="button" onPress={onToggle} style={styles.selectButton}>
         <View style={styles.selectIcon}><MaterialCommunityIcons name="shield-car" size={18} color="#0A43A3" /></View>
         <Text style={styles.selectValue} numberOfLines={1}>{value}</Text>
@@ -423,7 +433,6 @@ function ReadonlyDateField({ label, value }: { label: string; value: string }) {
 function MoneyField({ label, icon, value, onChangeText }: { label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; value: string; onChangeText: (value: string) => void }) {
   return <View style={styles.field}><Text style={styles.fieldLabel}>{label} optional</Text><View style={styles.inputShell}><MaterialCommunityIcons name={icon} size={17} color="#12805C" /><Text style={styles.moneyPrefix}>Rs.</Text><TextInput value={value} onChangeText={(next) => onChangeText(next.replace(/[^0-9.]/g, ''))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#9AA7B8" style={styles.input} /></View></View>;
 }
-
 
 function AccountDropdown({ contexts, selectedCustomerId, open, onToggle, onSelect }: { contexts: CustomerAccountContext[]; selectedCustomerId: string; open: boolean; onToggle: () => void; onSelect: (customerId: string) => void }) {
   const selected = contexts.find((context) => context.customer_id === selectedCustomerId);
