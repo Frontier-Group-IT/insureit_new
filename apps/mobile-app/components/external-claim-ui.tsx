@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
   secondaryAction: { minHeight: 52, borderRadius: 14, borderWidth: 1, borderColor: '#BFD2EE', backgroundColor: '#F7FAFF', paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   secondaryActionText: { color: '#0A43A3', fontSize: 10.5, lineHeight: 14, fontWeight: '900', textAlign: 'center', flexShrink: 1 },
   actionBar: { flexDirection: 'row', alignItems: 'stretch', gap: 8, marginTop: 2, marginBottom: 10 },
-  stageNavigation: { minHeight: 70, borderRadius: 18, borderWidth: 1, borderColor: '#DCE5F0', backgroundColor: '#FFFFFF', paddingHorizontal: 9, paddingVertical: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, shadowColor: '#17365D', shadowOpacity: 0.04, shadowRadius: 7, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
+  stageNavigation: { minHeight: 70, paddingHorizontal: 9, paddingVertical: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   stageNavigationButton: { width: 96, minHeight: 46, borderRadius: 13, borderWidth: 1, borderColor: '#AFC8EA', backgroundColor: '#F9FBFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 8 },
   stageNavigationButtonDisabled: { borderColor: '#E1E6ED', backgroundColor: '#FAFBFC', opacity: 0.62 },
   stageNavigationButtonText: { color: '#0A43A3', fontSize: 10, lineHeight: 13, fontWeight: '900' },
