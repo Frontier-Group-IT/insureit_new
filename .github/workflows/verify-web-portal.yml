@@ -83,6 +83,8 @@ jobs:
         run: npm run policy-ocr:production-round7-uiic-regression
       - name: Production round 8 fresh20 precision regression
         run: node --experimental-strip-types scripts/policy-ocr-production-round8-fresh20-regression.ts
+      - name: Production round 9 fresh20 Digit recovery regression
+        run: npm run policy-ocr:production-round9-fresh20-regression
       - name: Post-training replay safety regression
         run: npm run policy-ocr:post-training-replay-regression
       - name: Policy onboarding OCR import regression
@@ -105,7 +107,7 @@ jobs:
             echo
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo "- Access control: V2 catalogue, scope, legacy compatibility, portal lifecycle, employee portal governance, release-blocker, Backoffice data-entry and policy-intake workflow regressions"
-            echo "- OCR regressions: IFFCO structured, IFFCO, Digit, New India, additional insurers, approved layouts, production rerun refinement, production benchmark siblings, production rounds 2, 3, 4 UIIC, 5 UIIC precision, 6 UIIC residual, 7 UIIC precision guard and 8 fresh20 precision, post-training replay safety, onboarding Section 02/03 import, premium training workflow"
+            echo "- OCR regressions: IFFCO structured, IFFCO, Digit, New India, additional insurers, approved layouts, production rerun refinement, production benchmark siblings, production rounds 2, 3, 4 UIIC, 5 UIIC precision, 6 UIIC residual, 7 UIIC precision guard, 8 fresh20 precision and 9 fresh20 Digit recovery, post-training replay safety, onboarding Section 02/03 import, premium training workflow"
             echo "- Static checks: typecheck and lint"
             echo "- Build: Next.js production build"
             echo "- Build-only public env: non-secret CI placeholders; no production credentials used"

@@ -351,3 +351,53 @@ aggregate the remaining `151` missing fields and `65` semantic errors by insurer
 layout and structural cause; fix reusable parser rules; retain safe withholding;
 and rerun the full canonical PR gate before another explicitly approved merge and
 deployment.
+
+## 17. Round 9 Digit MISD cash-van recovery
+
+**IMPLEMENTED / LOCALLY VERIFIED / NOT MERGED OR DEPLOYED 2026-08-25:** the
+first Round 9 increment targets the three Go Digit Package/MISD cash-van
+siblings in the revealed fresh-20 corpus.
+
+Read-only classification from the latest production benchmark showed the same
+large gap on all three siblings: CPA opted/premium, OD, TP, net, GST, gross,
+make, model, fuel, manufacturing year, GVW and chassis were withheld on every
+copy; one engine field was also withheld; and all three RTO states contained
+registration prefixes instead of state names. Across those three policies this
+is `40` missing fields plus `3` semantic errors.
+
+The protected PDFs were opened through the authorized production portal and
+inspected only from a temporary local directory. No PDF, raw extracted text or
+real policy/registration/engine/chassis/customer identifier is in the branch or
+fixtures. The repeated printed structure is:
+
+- `Make ... Trailer Reg. No. ... RTO Location city,state`;
+- `Model/Vehicle Variant ... Year of Regn. / Manufacturing` plus an optional
+  `(Sub-Type)` continuation;
+- one bounded `Engine No. ... Chassis No. ... Cubic Capacity` row;
+- one `Fuel Type ... Gross Vehicle Weight ... Vehicle Body Type Cash Van` row;
+- an explicit owner-driver PA opt-out;
+- page-two `Total OD`, `Total Act`, `Net Premium [A+B]`, GST and `Total Premium`
+  rows.
+
+`policy-ocr-production-round9-fresh20-recovery.ts` recovers only this strongly
+gated Digit cash-van layout. It accepts the financial block only when
+`OD + TP + CPA = net` and `net + GST = gross` within two paise. Mismatched
+totals remain withheld. Three privacy-safe synthetic siblings and a deliberate
+financial-mismatch case are covered by
+`policy-ocr-production-round9-fresh20-regression.ts`; the canonical workflow
+also includes that regression.
+
+Local checks passed for the Round 9 regression, Round 8 regression, Round 3
+precision guard, the existing Digit regression and all approved-layout
+regressions. A protected local replay of the new refiner against text extracted
+from all three real PDFs recovered every checked approved value for the new
+layout; engine/chassis were asserted only for presence and were not printed in
+logs. This is parser evidence, not a live Google replay.
+
+If the deployed Google page text preserves the same printed labels, the maximum
+expected corpus delta is `+40` proposed fields and `+43` correct fields (the 40
+withheld values plus three corrected RTO states). That would project the
+revealed-corpus aggregate from `267/332` to `310/372`, or approximately `83.3%`
+precision and `77.0%` coverage. Treat this strictly as **UNVERIFIED** until a
+separate post-deployment replay measures it. Never overwrite the immutable
+Round 8 frozen prediction/result to obtain the replay score.
