@@ -36,8 +36,18 @@ const stageIcons: Array<keyof typeof MaterialCommunityIcons.glyphMap> = [
 
 export function CompactDocumentStageHeader({ step, title, subtitle, vehicleNo, claimNo }: HeaderProps) {
   const icon = stageIcons[Math.max(0, Math.min(stageIcons.length - 1, step - 1))];
+  const currentIndex = Math.max(0, Math.min(SELF_MANAGED_MILESTONES.length - 1, step - 1));
+
   return (
     <View style={styles.headerWrap}>
+      <View style={styles.topDots} accessibilityLabel={`Claim stage ${step} of ${SELF_MANAGED_MILESTONES.length}`}>
+        {SELF_MANAGED_MILESTONES.map((stage, index) => {
+          const completed = index < currentIndex;
+          const current = index === currentIndex;
+          return <View key={stage.key} style={[styles.dot, completed && styles.dotCompleted, current && styles.dotCurrent]} />;
+        })}
+      </View>
+
       <View style={styles.stageHero}>
         <View style={styles.stageIcon}>
           <View style={styles.stageIconGlow} />
@@ -55,15 +65,10 @@ export function CompactDocumentStageHeader({ step, title, subtitle, vehicleNo, c
   );
 }
 
-export function CompactDocumentActionBar({ claimId, step, milestones, primaryLabel, primaryDisabled, onPrimary }: ActionProps) {
+export function CompactDocumentActionBar({ claimId, step, primaryLabel, primaryDisabled, onPrimary }: ActionProps) {
   const router = useRouter();
   const currentIndex = Math.max(0, Math.min(SELF_MANAGED_MILESTONES.length - 1, step - 1));
   const previousEnabled = Boolean(claimId) && currentIndex > 0;
-  const completedKeys = new Set(
-    milestones
-      .filter((item) => item.milestone_status === 'completed' || item.milestone_status === 'not_applicable')
-      .map((item) => item.milestone_key),
-  );
 
   function openPrevious() {
     if (!previousEnabled) return;
@@ -82,14 +87,6 @@ export function CompactDocumentActionBar({ claimId, step, milestones, primaryLab
 
   return (
     <View style={styles.actionSection}>
-      <View style={styles.dots} accessibilityLabel={`Claim stage ${step} of ${SELF_MANAGED_MILESTONES.length}`}>
-        {SELF_MANAGED_MILESTONES.map((stage, index) => {
-          const completed = completedKeys.has(stage.key);
-          const current = index === currentIndex;
-          return <View key={stage.key} style={[styles.dot, completed && styles.dotCompleted, current && styles.dotCurrent]} />;
-        })}
-      </View>
-
       <View style={styles.actionRow}>
         <Pressable
           accessibilityRole="button"
@@ -120,6 +117,7 @@ export function CompactDocumentActionBar({ claimId, step, milestones, primaryLab
 
 const styles = StyleSheet.create({
   headerWrap: { marginBottom: 14 },
+  topDots: { minHeight: 28, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingBottom: 7 },
   stageHero: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingHorizontal: 2, minHeight: 90 },
   stageIcon: { position: 'relative', width: 72, height: 72, borderRadius: 21, backgroundColor: '#07368B', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', shadowColor: '#072C69', shadowOpacity: 0.22, shadowRadius: 9, shadowOffset: { width: 0, height: 5 }, elevation: 4 },
   stageIconGlow: { position: 'absolute', width: 74, height: 74, borderRadius: 37, backgroundColor: '#1267D9', right: -33, top: -34, opacity: 0.68 },
@@ -138,7 +136,6 @@ const styles = StyleSheet.create({
   primaryText: { color: '#FFFFFF', fontSize: 12, lineHeight: 15, fontWeight: '900', textAlign: 'center', flexShrink: 1 },
   buttonDisabled: { opacity: 0.5 },
   disabledText: { color: '#AEB9C8' },
-  dots: { minHeight: 30, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingBottom: 9 },
   dot: { width: 8, height: 8, borderRadius: 999, borderWidth: 1, borderColor: '#D0D8E3', backgroundColor: '#EEF1F5' },
   dotCompleted: { borderColor: '#43A96C', backgroundColor: '#43A96C' },
   dotCurrent: { width: 11, height: 11, borderColor: '#0A43A3', backgroundColor: '#2D78E5' },
