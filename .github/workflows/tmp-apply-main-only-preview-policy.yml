@@ -6,6 +6,11 @@ on:
       - chore/main-only-expo-preview-ota
     paths:
       - '.github/workflows/tmp-apply-main-only-preview-policy.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/tmp-apply-main-only-preview-policy.yml'
 
 permissions:
   contents: write
