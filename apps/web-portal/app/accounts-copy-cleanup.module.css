@@ -1,0 +1,7 @@
+.clean p[class*='text-[#667085]'],
+.clean p[class*='text-white/70'],
+.clean p[class*='text-white/60'],
+.clean section:first-child > p[class*='uppercase'],
+.clean div[class*='border-dashed'][class*='text-[#667085]'] {
+  display: none;
+}
