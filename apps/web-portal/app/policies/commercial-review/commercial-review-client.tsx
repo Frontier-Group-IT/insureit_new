@@ -1,9 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
-import { CheckCircle2, Filter, Search, ShieldCheck, UserRoundCheck } from "lucide-react";
+import { useMemo, useState, useTransition, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import type { LucideIcon } from "lucide-react";
+import {
+  BadgeCheck,
+  ChevronLeft,
+  ChevronRight,
+  CircleOff,
+  FilterX,
+  History,
+  Pencil,
+  Save,
+  Search,
+  Settings2,
+  ShieldCheck,
+  Undo2,
+  UserRoundCheck,
+  X,
+} from "lucide-react";
 import { bulkSavePolicyCommercials, type CommercialSide, type CommercialStatus } from "@/app/policies/commercial-review/actions";
+import { savePolicyCommercialRow } from "@/app/policies/commercial-review/row-actions";
 
 export type LedgerStatus = CommercialStatus | "not_entered";
 export type CommercialReviewRow = {
@@ -36,6 +54,9 @@ export type CommercialReviewRow = {
   partnerLastActionAt: string | null;
 };
 
+type BackfillFilter = "all" | "incomplete" | "complete" | "zero_od" | "zero_tp" | "zero_total";
+type EditState = { od: string; tp: string; scheme: string; note: string };
+
 const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 const statusLabels: Record<LedgerStatus, string> = {
   not_entered: "Not entered",
@@ -44,49 +65,70 @@ const statusLabels: Record<LedgerStatus, string> = {
   reviewed: "Reviewed",
   not_applicable: "Not applicable",
 };
+const incompleteStatuses = new Set<LedgerStatus>(["not_entered", "needs_review"]);
 
 export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }) {
+  const router = useRouter();
   const [side, setSide] = useState<CommercialSide>("insurer");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
   const [insurer, setInsurer] = useState("all");
   const [status, setStatus] = useState<LedgerStatus | "all">("all");
-  const [od, setOd] = useState("");
-  const [tp, setTp] = useState("");
-  const [scheme, setScheme] = useState("");
-  const [note, setNote] = useState("");
-  const [nextStatus, setNextStatus] = useState<CommercialStatus | "">("");
+  const [backfill, setBackfill] = useState<BackfillFilter>("incomplete");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [showMore, setShowMore] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [edit, setEdit] = useState<EditState>({ od: "", tp: "", scheme: "", note: "" });
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulk, setBulk] = useState<EditState>({ od: "", tp: "", scheme: "", note: "" });
+  const [bulkStatus, setBulkStatus] = useState<CommercialStatus | "">("");
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const insurers = useMemo(() => Array.from(new Set(rows.map((row) => row.insurerName))).sort(), [rows]);
-  const counts = useMemo(() => {
-    const key = side === "insurer" ? "insurerStatus" : "partnerStatus";
-    return rows.reduce<Record<LedgerStatus, number>>((acc, row) => {
-      acc[row[key]] += 1;
-      return acc;
-    }, { not_entered: 0, needs_review: 0, entered: 0, reviewed: 0, not_applicable: 0 });
-  }, [rows, side]);
+  const statusKey = side === "insurer" ? "insurerStatus" : "partnerStatus";
+  const counts = useMemo(() => rows.reduce<Record<LedgerStatus, number>>((acc, row) => {
+    acc[row[statusKey]] += 1;
+    return acc;
+  }, { not_entered: 0, needs_review: 0, entered: 0, reviewed: 0, not_applicable: 0 }), [rows, statusKey]);
+  const incompleteCount = counts.not_entered + counts.needs_review;
+  const completeCount = rows.length - incompleteCount;
 
   const filteredRows = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return rows.filter((row) => {
-      const rowStatus = side === "insurer" ? row.insurerStatus : row.partnerStatus;
+      const rowStatus = row[statusKey];
+      const odValue = side === "insurer" ? row.projectedOdPercent : row.payoutOdPercent;
+      const tpValue = side === "insurer" ? row.projectedTpPercent : row.payoutTpPercent;
+      const totalValue = side === "insurer" ? row.projectedTotal : row.payoutTotal;
       if (status !== "all" && rowStatus !== status) return false;
       if (insurer !== "all" && row.insurerName !== insurer) return false;
+      if (backfill === "incomplete" && !incompleteStatuses.has(rowStatus)) return false;
+      if (backfill === "complete" && incompleteStatuses.has(rowStatus)) return false;
+      if (backfill === "zero_od" && odValue !== 0) return false;
+      if (backfill === "zero_tp" && tpValue !== 0) return false;
+      if (backfill === "zero_total" && totalValue !== 0) return false;
+      if (dateFrom && row.issuanceDate < dateFrom) return false;
+      if (dateTo && row.issuanceDate > dateTo) return false;
       if (!normalizedQuery) return true;
       return [row.policyNo, row.insurerName, row.partnerCode ?? "", row.partnerType ?? ""].some((value) => value.toLowerCase().includes(normalizedQuery));
     });
-  }, [rows, query, insurer, status, side]);
+  }, [rows, statusKey, status, insurer, backfill, dateFrom, dateTo, query, side]);
 
   const allFilteredSelected = filteredRows.length > 0 && filteredRows.every((row) => selected.has(row.id));
+  const activeTotal = side === "insurer"
+    ? filteredRows.reduce((sum, row) => sum + row.projectedTotal, 0)
+    : filteredRows.reduce((sum, row) => sum + row.payoutTotal, 0);
 
   function switchSide(value: CommercialSide) {
     setSide(value);
     setSelected(new Set());
+    setEditingId(null);
     setStatus("all");
+    setBackfill("incomplete");
+    setBulkOpen(false);
     setMessage(null);
-    setOd(""); setTp(""); setScheme(""); setNote(""); setNextStatus("");
   }
 
   function toggle(id: string) {
@@ -106,108 +148,201 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
     });
   }
 
-  function apply() {
+  function beginEdit(row: CommercialReviewRow) {
+    setEditingId(row.id);
+    setEdit({
+      od: String(side === "insurer" ? row.projectedOdPercent : row.payoutOdPercent),
+      tp: String(side === "insurer" ? row.projectedTpPercent : row.payoutTpPercent),
+      scheme: side === "insurer" ? String(row.schemeAmount) : "",
+      note: side === "insurer" ? row.insurerNote : row.partnerNote,
+    });
     setMessage(null);
+  }
+
+  function saveRow(row: CommercialReviewRow, moveNext = false) {
     startTransition(async () => {
-      const result = await bulkSavePolicyCommercials({
-        policyIds: Array.from(selected),
-        side,
-        odPercent: od,
-        tpPercent: tp,
-        schemeAmount: side === "insurer" ? scheme : undefined,
-        status: nextStatus || undefined,
-        note,
-      });
+      setMessage(null);
+      const result = await savePolicyCommercialRow({ policyId: row.id, side, odPercent: edit.od, tpPercent: edit.tp, schemeAmount: edit.scheme, note: edit.note });
       if (!result.ok) return setMessage(result.error);
-      setMessage(`${result.updated} polic${result.updated === 1 ? "y" : "ies"} updated. Refresh to see the committed ledger state.`);
-      setSelected(new Set());
-      setOd(""); setTp(""); setScheme(""); setNote(""); setNextStatus("");
+      const currentIndex = filteredRows.findIndex((item) => item.id === row.id);
+      const nextRow = moveNext ? filteredRows.slice(currentIndex + 1).find((item) => incompleteStatuses.has(item[statusKey])) : undefined;
+      if (nextRow) beginEdit(nextRow); else setEditingId(null);
+      setMessage(`${row.policyNo} saved.`);
+      router.refresh();
     });
   }
 
-  const activeTotal = side === "insurer"
-    ? filteredRows.reduce((sum, row) => sum + row.projectedTotal, 0)
-    : filteredRows.reduce((sum, row) => sum + row.payoutTotal, 0);
+  function applyBulk(statusOverride?: CommercialStatus) {
+    const policyIds = Array.from(selected);
+    startTransition(async () => {
+      setMessage(null);
+      const result = await bulkSavePolicyCommercials({
+        policyIds,
+        side,
+        odPercent: bulk.od,
+        tpPercent: bulk.tp,
+        schemeAmount: side === "insurer" ? bulk.scheme : undefined,
+        status: statusOverride ?? (bulkStatus || undefined),
+        note: bulk.note,
+      });
+      if (!result.ok) return setMessage(result.error);
+      setMessage(`${result.updated} policies updated.`);
+      setSelected(new Set());
+      setBulk({ od: "", tp: "", scheme: "", note: "" });
+      setBulkStatus("");
+      setBulkOpen(false);
+      router.refresh();
+    });
+  }
 
-  return (
-    <div className="space-y-4">
-      <section className="rounded-2xl border border-[#D9E2F0] bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex rounded-xl border border-[#D9E2F0] bg-[#F8FAFC] p-1">
-            <TabButton active={side === "insurer"} onClick={() => switchSide("insurer")} icon={ShieldCheck}>Insurer Commercials</TabButton>
-            <TabButton active={side === "partner"} onClick={() => switchSide("partner")} icon={UserRoundCheck}>Partner Commercials</TabButton>
-          </div>
-          <div className="text-[9px] text-[#667085]">{filteredRows.length.toLocaleString("en-IN")} visible · {money.format(activeTotal)}</div>
-        </div>
+  function applyRowStatus(row: CommercialReviewRow, nextStatus: CommercialStatus) {
+    startTransition(async () => {
+      setMessage(null);
+      const result = await bulkSavePolicyCommercials({ policyIds: [row.id], side, status: nextStatus });
+      if (!result.ok) return setMessage(result.error);
+      setMessage(`${row.policyNo} updated.`);
+      if (editingId === row.id) setEditingId(null);
+      router.refresh();
+    });
+  }
 
-        <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-          <StatusCard label="Not entered" value={counts.not_entered} active={status === "not_entered"} onClick={() => setStatus(status === "not_entered" ? "all" : "not_entered")} tone="slate" />
-          <StatusCard label="Needs review" value={counts.needs_review} active={status === "needs_review"} onClick={() => setStatus(status === "needs_review" ? "all" : "needs_review")} tone="amber" />
-          <StatusCard label="Entered" value={counts.entered} active={status === "entered"} onClick={() => setStatus(status === "entered" ? "all" : "entered")} tone="blue" />
-          <StatusCard label="Reviewed" value={counts.reviewed} active={status === "reviewed"} onClick={() => setStatus(status === "reviewed" ? "all" : "reviewed")} tone="green" />
-          <StatusCard label="Not applicable" value={counts.not_applicable} active={status === "not_applicable"} onClick={() => setStatus(status === "not_applicable" ? "all" : "not_applicable")} tone="slate" />
-        </div>
-      </section>
+  function clearFilters() {
+    setQuery(""); setInsurer("all"); setStatus("all"); setBackfill("all"); setDateFrom(""); setDateTo("");
+  }
 
-      <section className="rounded-2xl border border-[#D9E2F0] bg-white p-4 shadow-sm">
-        <div className="grid gap-3 xl:grid-cols-[minmax(260px,1.5fr)_minmax(180px,.8fr)_minmax(180px,.8fr)_auto]">
-          <label className="relative"><Search className="absolute left-3 top-3 h-4 w-4 text-[#98A2B3]" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search policy, insurer or partner code" className="h-10 w-full rounded-xl border border-[#D8DEE9] pl-9 pr-3 text-[10px] outline-none focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]" /></label>
-          <select value={insurer} onChange={(e) => setInsurer(e.target.value)} className="h-10 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[10px]"><option value="all">All insurers</option>{insurers.map((name) => <option key={name} value={name}>{name}</option>)}</select>
-          <select value={status} onChange={(e) => setStatus(e.target.value as LedgerStatus | "all")} className="h-10 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[10px]"><option value="all">All statuses</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
-          <button type="button" onClick={() => { setQuery(""); setInsurer("all"); setStatus("all"); }} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#D8DEE9] px-4 text-[9px] font-bold text-[#526277]"><Filter className="h-3.5 w-3.5" />Clear filters</button>
-        </div>
-      </section>
+  const currentEditIndex = editingId ? filteredRows.findIndex((row) => row.id === editingId) : -1;
+  const jumpEdit = (direction: -1 | 1) => {
+    if (!filteredRows.length) return;
+    let index = currentEditIndex >= 0 ? currentEditIndex + direction : direction > 0 ? 0 : filteredRows.length - 1;
+    while (index >= 0 && index < filteredRows.length) {
+      if (incompleteStatuses.has(filteredRows[index][statusKey])) return beginEdit(filteredRows[index]);
+      index += direction;
+    }
+  };
 
-      <section className="rounded-2xl border border-[#D9E2F0] bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div><h2 className="text-[12px] font-semibold text-[#17365D]">Bulk control action</h2><p className="mt-1 text-[9px] text-[#667085]">Blank numeric fields remain unchanged. Explicit 0 is valid. Marking Not applicable records that decision instead of treating zero as missing.</p></div>
-          <span className="rounded-full bg-[#EEF3F8] px-3 py-1.5 text-[9px] font-bold text-[#315B6B]">{selected.size} selected</span>
+  return <div className="space-y-2.5">
+    <section className="rounded-2xl border border-[#D9E2F0] bg-white px-3 py-2.5 shadow-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex rounded-xl border border-[#D9E2F0] bg-[#F8FAFC] p-1">
+          <TabButton active={side === "insurer"} onClick={() => switchSide("insurer")} icon={ShieldCheck}>Insurer Pay-In</TabButton>
+          <TabButton active={side === "partner"} onClick={() => switchSide("partner")} icon={UserRoundCheck}>Partner Payout</TabButton>
         </div>
-        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-          <Field label={side === "insurer" ? "OD Brokerage %" : "OD Payout %"} value={od} onChange={setOd} />
-          <Field label={side === "insurer" ? "TP/CPA Brokerage %" : "TP/CPA Payout %"} value={tp} onChange={setTp} />
-          {side === "insurer" ? <Field label="Scheme / incentive" value={scheme} onChange={setScheme} amount /> : <div className="hidden xl:block" />}
-          <label><span className="mb-1.5 block text-[8px] font-bold uppercase tracking-[.055em] text-[#667085]">Set control status</span><select value={nextStatus} onChange={(e) => setNextStatus(e.target.value as CommercialStatus | "")} className="h-10 w-full rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9.5px]"><option value="">Leave unchanged</option><option value="entered">Entered</option><option value="reviewed">Reviewed</option><option value="needs_review">Needs review</option><option value="not_applicable">Not applicable</option></select></label>
-          <label><span className="mb-1.5 block text-[8px] font-bold uppercase tracking-[.055em] text-[#667085]">Control note</span><input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Reason / reference" className="h-10 w-full rounded-xl border border-[#D8DEE9] px-3 text-[9.5px]" /></label>
-          <div className="flex items-end"><button type="button" disabled={!selected.size || isPending} onClick={apply} className="h-10 w-full rounded-xl bg-[#17365D] px-4 text-[9.5px] font-bold text-white disabled:opacity-40">{isPending ? "Saving…" : "Apply control"}</button></div>
-        </div>
-        {message ? <p className="mt-3 rounded-lg bg-[#F0F7F6] px-3 py-2 text-[9px] font-semibold text-[#21645F]">{message}</p> : null}
-      </section>
+        <button type="button" onClick={() => setBackfill(backfill === "incomplete" ? "all" : "incomplete")} className={`rounded-lg border px-3 py-2 text-[8.5px] font-bold ${backfill === "incomplete" ? "border-[#D7A94B] bg-[#FFF7E6] text-[#9A6700]" : "border-[#D9E2F0] text-[#526277]"}`}>Incomplete {incompleteCount}</button>
+        <button type="button" onClick={() => setBackfill(backfill === "complete" ? "all" : "complete")} className={`rounded-lg border px-3 py-2 text-[8.5px] font-bold ${backfill === "complete" ? "border-[#A7D7BE] bg-[#ECF8F1] text-[#137A4A]" : "border-[#D9E2F0] text-[#526277]"}`}>Complete {completeCount}</button>
+        <div className="ml-auto flex items-center gap-1.5 text-[8.5px] text-[#667085]"><span>{filteredRows.length.toLocaleString("en-IN")} rows</span><span>·</span><span>{money.format(activeTotal)}</span></div>
+      </div>
+      <div className="mt-2 grid gap-2 xl:grid-cols-[minmax(280px,1.4fr)_minmax(180px,.7fr)_minmax(170px,.65fr)_minmax(180px,.7fr)_auto_auto]">
+        <label className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-[#98A2B3]" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Policy / insurer / partner" className="h-9 w-full rounded-xl border border-[#D8DEE9] pl-9 pr-3 text-[9.5px] outline-none focus:border-[#315B9A]" /></label>
+        <select value={insurer} onChange={(e) => setInsurer(e.target.value)} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All insurers</option>{insurers.map((name) => <option key={name}>{name}</option>)}</select>
+        <select value={status} onChange={(e) => setStatus(e.target.value as LedgerStatus | "all")} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All statuses</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+        <select value={backfill} onChange={(e) => setBackfill(e.target.value as BackfillFilter)} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All entries</option><option value="incomplete">Backfill incomplete</option><option value="complete">Complete</option><option value="zero_od">OD = 0%</option><option value="zero_tp">TP = 0%</option><option value="zero_total">Total = ₹0</option></select>
+        <IconButton label="More filters" onClick={() => setShowMore((value) => !value)} active={showMore}><Settings2 className="h-4 w-4" /></IconButton>
+        <IconButton label="Clear filters" onClick={clearFilters}><FilterX className="h-4 w-4" /></IconButton>
+      </div>
+      {showMore ? <div className="mt-2 flex flex-wrap items-end gap-2 rounded-xl bg-[#F8FAFC] p-2">
+        <DateField label="Issued from" value={dateFrom} onChange={setDateFrom} />
+        <DateField label="Issued to" value={dateTo} onChange={setDateTo} />
+        <StatusPills counts={counts} value={status} onChange={setStatus} />
+      </div> : null}
+    </section>
 
-      <section className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-sm">
-        <div className="overflow-auto max-h-[68vh]">
-          {side === "insurer" ? <InsurerLedger rows={filteredRows} selected={selected} toggle={toggle} allSelected={allFilteredSelected} toggleAll={toggleFiltered} /> : <PartnerLedger rows={filteredRows} selected={selected} toggle={toggle} allSelected={allFilteredSelected} toggleAll={toggleFiltered} />}
+    {selected.size ? <section className="rounded-2xl border border-[#C9D8EA] bg-[#F8FBFF] px-3 py-2 shadow-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-full bg-[#17365D] px-2.5 py-1 text-[8px] font-bold text-white">{selected.size} selected</span>
+        <IconButton label="Edit selected" onClick={() => setBulkOpen((value) => !value)} active={bulkOpen}><Pencil className="h-4 w-4" /></IconButton>
+        <IconButton label="Mark reviewed" onClick={() => applyBulk("reviewed")}><BadgeCheck className="h-4 w-4" /></IconButton>
+        <IconButton label="Mark not applicable" onClick={() => applyBulk("not_applicable")}><CircleOff className="h-4 w-4" /></IconButton>
+        <IconButton label="Clear selection" onClick={() => { setSelected(new Set()); setBulkOpen(false); }}><X className="h-4 w-4" /></IconButton>
+      </div>
+      {bulkOpen ? <div className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-[repeat(3,minmax(120px,.65fr))_minmax(160px,.8fr)_minmax(180px,1fr)_auto]">
+        <CompactInput label={side === "insurer" ? "OD Pay-In %" : "OD Payout %"} value={bulk.od} onChange={(value) => setBulk((state) => ({ ...state, od: value }))} />
+        <CompactInput label={side === "insurer" ? "TP/CPA Pay-In %" : "TP/CPA Payout %"} value={bulk.tp} onChange={(value) => setBulk((state) => ({ ...state, tp: value }))} />
+        {side === "insurer" ? <CompactInput label="Scheme" value={bulk.scheme} onChange={(value) => setBulk((state) => ({ ...state, scheme: value }))} amount /> : <div />}
+        <label className="text-[7.5px] font-bold uppercase text-[#667085]">Status<select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value as CommercialStatus | "")} className="mt-1 h-8 w-full rounded-lg border border-[#D8DEE9] bg-white px-2 text-[8.5px]"><option value="">Unchanged</option><option value="entered">Entered</option><option value="reviewed">Reviewed</option><option value="needs_review">Needs review</option><option value="not_applicable">Not applicable</option></select></label>
+        <label className="text-[7.5px] font-bold uppercase text-[#667085]">Note<input value={bulk.note} onChange={(e) => setBulk((state) => ({ ...state, note: e.target.value }))} placeholder="Reason / reference" className="mt-1 h-8 w-full rounded-lg border border-[#D8DEE9] px-2 text-[8.5px]" /></label>
+        <button disabled={isPending} onClick={() => applyBulk()} className="mt-4 h-8 rounded-lg bg-[#17365D] px-4 text-[8.5px] font-bold text-white disabled:opacity-40">Apply</button>
+      </div> : null}
+    </section> : null}
+
+    {message ? <div className="rounded-xl border border-[#B8DDD0] bg-[#EFF9F5] px-3 py-2 text-[8.5px] font-semibold text-[#21645F]">{message}</div> : null}
+
+    <section className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-sm">
+      <div className="flex items-center justify-between border-b border-[#EDF0F4] px-3 py-2">
+        <div className="text-[8.5px] font-semibold text-[#526277]">{side === "insurer" ? "Projected insurer pay-in" : "Actual agreed partner payout"}</div>
+        <div className="flex items-center gap-1">
+          <IconButton label="Previous incomplete" onClick={() => jumpEdit(-1)}><ChevronLeft className="h-4 w-4" /></IconButton>
+          <span className="px-1 text-[8px] font-bold text-[#A96A00]">{incompleteCount} incomplete</span>
+          <IconButton label="Next incomplete" onClick={() => jumpEdit(1)}><ChevronRight className="h-4 w-4" /></IconButton>
         </div>
-        <div className="flex items-center justify-between border-t border-[#EDF0F4] px-4 py-2 text-[8.5px] text-[#7A8798]"><span>{filteredRows.length.toLocaleString("en-IN")} rows shown</span><span>Commercial state is explicit; zero values are not treated as missing.</span></div>
-      </section>
-    </div>
-  );
+      </div>
+      <div className="max-h-[70vh] overflow-auto">
+        <table className="w-full min-w-[1180px] text-[8.5px]">
+          <thead className="sticky top-0 z-30 bg-[#F8FAFC] text-[7px] font-black uppercase tracking-[.05em] text-[#7C899B]"><tr>
+            <SelectHead checked={allFilteredSelected} onChange={toggleFiltered} />
+            <th className="sticky left-[38px] z-40 bg-[#F8FAFC] px-2 py-2 text-left">Policy</th>
+            <th className="px-2 py-2 text-left">{side === "insurer" ? "Insurer" : "Partner"}</th>
+            <th className="px-2 py-2 text-left">Issued</th>
+            <th className="px-2 py-2 text-right">OD Premium</th>
+            <th className="px-2 py-2 text-right">TP/CPA</th>
+            <th className="px-2 py-2 text-right">{side === "insurer" ? "OD Pay-In %" : "OD Payout %"}</th>
+            <th className="px-2 py-2 text-right">{side === "insurer" ? "TP Pay-In %" : "TP Payout %"}</th>
+            {side === "insurer" ? <th className="px-2 py-2 text-right">Scheme</th> : null}
+            <th className="px-2 py-2 text-right">{side === "insurer" ? "Projected Pay-In" : "Agreed Payout"}</th>
+            <th className="px-2 py-2 text-left">Status</th>
+            <th className="sticky right-0 z-40 bg-[#F8FAFC] px-2 py-2 text-center">Actions</th>
+          </tr></thead>
+          <tbody className="divide-y divide-[#EDF0F4]">{filteredRows.map((row) => {
+            const isEditing = editingId === row.id;
+            const rowStatus = row[statusKey];
+            const od = side === "insurer" ? row.projectedOdPercent : row.payoutOdPercent;
+            const tp = side === "insurer" ? row.projectedTpPercent : row.payoutTpPercent;
+            const total = side === "insurer" ? row.projectedTotal : row.payoutTotal;
+            const preview = isEditing ? calculatePreview(row, side, edit) : total;
+            return <tr key={row.id} className={isEditing ? "bg-[#FFF9EC]" : "hover:bg-[#FBFCFE]"}>
+              <td className="sticky left-0 z-10 bg-inherit px-2 py-2"><input aria-label={`Select ${row.policyNo}`} type="checkbox" checked={selected.has(row.id)} onChange={() => toggle(row.id)} /></td>
+              <td className="sticky left-[38px] z-10 bg-inherit px-2 py-2"><Link href={`/policies/${row.id}/edit`} className="font-bold text-[#1E2D49] hover:text-[#315B9A] hover:underline">{row.policyNo}</Link></td>
+              <td className="max-w-[210px] px-2 py-2"><div className="truncate font-medium text-[#26364F]">{side === "insurer" ? row.insurerName : row.partnerCode || "—"}</div>{side === "partner" ? <div className="text-[7px] text-[#98A2B3]">{row.partnerType || "No intermediary"}</div> : null}</td>
+              <td className="whitespace-nowrap px-2 py-2">{date(row.issuanceDate)}</td>
+              <MoneyCell value={row.odPremium} /><MoneyCell value={row.tpCpaPremium} />
+              <EditableNumber editing={isEditing} value={isEditing ? edit.od : od.toFixed(2)} onChange={(value) => setEdit((state) => ({ ...state, od: value }))} onEnter={() => saveRow(row, true)} suffix="%" />
+              <EditableNumber editing={isEditing} value={isEditing ? edit.tp : tp.toFixed(2)} onChange={(value) => setEdit((state) => ({ ...state, tp: value }))} onEnter={() => saveRow(row, true)} suffix="%" />
+              {side === "insurer" ? <EditableNumber editing={isEditing} value={isEditing ? edit.scheme : String(row.schemeAmount)} onChange={(value) => setEdit((state) => ({ ...state, scheme: value }))} onEnter={() => saveRow(row, true)} moneyValue /> : null}
+              <td className="bg-[#FAFCFF] px-2 py-2 text-right font-bold text-[#315B9A] tabular-nums">{money.format(preview)}</td>
+              <td className="px-2 py-2"><StatusBadge status={rowStatus} /></td>
+              <td className="sticky right-0 z-10 bg-inherit px-2 py-2"><div className="flex justify-center gap-1">
+                {isEditing ? <><IconButton label="Save" onClick={() => saveRow(row)} disabled={isPending}><Save className="h-3.5 w-3.5" /></IconButton><IconButton label="Undo" onClick={() => setEditingId(null)}><Undo2 className="h-3.5 w-3.5" /></IconButton></> : <IconButton label="Edit row" onClick={() => beginEdit(row)}><Pencil className="h-3.5 w-3.5" /></IconButton>}
+                <IconButton label="Mark not applicable" onClick={() => applyRowStatus(row, "not_applicable")} disabled={isPending}><CircleOff className="h-3.5 w-3.5" /></IconButton>
+                <button type="button" title={`${side === "insurer" ? row.insurerNote : row.partnerNote}\n${(side === "insurer" ? row.insurerLastAction : row.partnerLastAction) ?? "No history"}`} className="grid h-9 w-9 place-items-center rounded-xl border border-[#D8E2EF] text-[#667085]"><History className="h-3.5 w-3.5" /></button>
+              </div></td>
+            </tr>;
+          })}</tbody>
+        </table>
+      </div>
+      <div className="flex items-center justify-between border-t border-[#EDF0F4] px-3 py-1.5 text-[7.5px] text-[#7A8798]"><span>{filteredRows.length.toLocaleString("en-IN")} rows shown</span><span>Enter saves and moves to the next incomplete row · Tab moves across fields</span></div>
+    </section>
+  </div>;
 }
 
-function InsurerLedger({ rows, selected, toggle, allSelected, toggleAll }: LedgerProps) {
-  return <table className="w-full min-w-[1320px] text-[9px]"><thead className="sticky top-0 z-20 bg-[#F8FAFC] text-[7.5px] font-black uppercase tracking-[.06em] text-[#7C899B]"><tr><SelectHead checked={allSelected} onChange={toggleAll} /><th className="sticky left-[42px] z-30 bg-[#F8FAFC] px-3 py-3 text-left">Policy</th><th className="px-3 py-3 text-left">Insurer</th><th className="px-3 py-3 text-left">Issued</th><th className="px-3 py-3 text-right">OD Premium</th><th className="px-3 py-3 text-right">TP/CPA</th><th className="px-3 py-3 text-right">OD %</th><th className="px-3 py-3 text-right">TP %</th><th className="px-3 py-3 text-right">Scheme</th><th className="px-3 py-3 text-right">Projected Brokerage</th><th className="px-3 py-3 text-left">Control Status</th><th className="px-3 py-3 text-left">Note / Last action</th><th className="px-3 py-3 text-center">Policy</th></tr></thead><tbody className="divide-y divide-[#EDF0F4]">{rows.map((row) => <tr key={row.id} className="hover:bg-[#FBFCFE]"><SelectCell row={row} checked={selected.has(row.id)} toggle={toggle} /><PolicyCell row={row} /><td className="px-3 py-3">{row.insurerName}</td><td className="px-3 py-3 whitespace-nowrap">{date(row.issuanceDate)}</td><MoneyCell value={row.odPremium} /><MoneyCell value={row.tpCpaPremium} /><PercentCell value={row.projectedOdPercent} /><PercentCell value={row.projectedTpPercent} /><MoneyCell value={row.schemeAmount} /><td className="px-3 py-3 text-right font-bold text-[#315B9A] tabular-nums">{money.format(row.projectedTotal)}</td><td className="px-3 py-3"><StatusBadge status={row.insurerStatus} /></td><AuditCell note={row.insurerNote} action={row.insurerLastAction} at={row.insurerLastActionAt ?? row.insurerUpdatedAt} /><OpenCell row={row} /></tr>)}</tbody></table>;
+function calculatePreview(row: CommercialReviewRow, side: CommercialSide, edit: EditState) {
+  const od = Number(edit.od || 0);
+  const tp = Number(edit.tp || 0);
+  const scheme = side === "insurer" ? Number(edit.scheme || 0) : 0;
+  return row.odPremium * od / 100 + row.tpCpaPremium * tp / 100 + scheme;
 }
 
-function PartnerLedger({ rows, selected, toggle, allSelected, toggleAll }: LedgerProps) {
-  return <table className="w-full min-w-[1280px] text-[9px]"><thead className="sticky top-0 z-20 bg-[#F8FAFC] text-[7.5px] font-black uppercase tracking-[.06em] text-[#7C899B]"><tr><SelectHead checked={allSelected} onChange={toggleAll} /><th className="sticky left-[42px] z-30 bg-[#F8FAFC] px-3 py-3 text-left">Policy</th><th className="px-3 py-3 text-left">Insurer</th><th className="px-3 py-3 text-left">Partner</th><th className="px-3 py-3 text-right">OD Premium</th><th className="px-3 py-3 text-right">TP/CPA</th><th className="px-3 py-3 text-right">OD %</th><th className="px-3 py-3 text-right">TP %</th><th className="px-3 py-3 text-right">Agreed Payout</th><th className="px-3 py-3 text-left">Control Status</th><th className="px-3 py-3 text-left">Note / Last action</th><th className="px-3 py-3 text-center">Policy</th></tr></thead><tbody className="divide-y divide-[#EDF0F4]">{rows.map((row) => <tr key={row.id} className="hover:bg-[#FBFCFE]"><SelectCell row={row} checked={selected.has(row.id)} toggle={toggle} /><PolicyCell row={row} /><td className="px-3 py-3">{row.insurerName}</td><td className="px-3 py-3"><div className="font-semibold text-[#26364F]">{row.partnerCode || "—"}</div><div className="text-[7.5px] text-[#7A8798]">{row.partnerType || "No linked intermediary"}</div></td><MoneyCell value={row.odPremium} /><MoneyCell value={row.tpCpaPremium} /><PercentCell value={row.payoutOdPercent} /><PercentCell value={row.payoutTpPercent} /><td className="px-3 py-3 text-right font-bold text-[#5D4E9C] tabular-nums">{money.format(row.payoutTotal)}</td><td className="px-3 py-3"><StatusBadge status={row.partnerStatus} /></td><AuditCell note={row.partnerNote} action={row.partnerLastAction} at={row.partnerLastActionAt ?? row.partnerUpdatedAt} /><OpenCell row={row} /></tr>)}</tbody></table>;
+function EditableNumber({ editing, value, onChange, onEnter, suffix, moneyValue }: { editing: boolean; value: string | number; onChange: (value: string) => void; onEnter: () => void; suffix?: string; moneyValue?: boolean }) {
+  if (!editing) return <td className="px-2 py-2 text-right font-semibold tabular-nums">{moneyValue ? money.format(Number(value)) : `${value}${suffix ?? ""}`}</td>;
+  return <td className="px-1.5 py-1"><input type="number" min="0" max={suffix ? "100" : undefined} step="0.01" value={value} onChange={(e) => onChange(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onEnter(); } }} className="h-7 w-full min-w-[76px] rounded-md border border-[#D7A94B] bg-white px-2 text-right text-[8.5px] font-semibold outline-none focus:ring-2 focus:ring-[#F8DFA8]" /></td>;
 }
 
-type LedgerProps = { rows: CommercialReviewRow[]; selected: Set<string>; toggle: (id: string) => void; allSelected: boolean; toggleAll: () => void };
-function SelectHead({ checked, onChange }: { checked: boolean; onChange: () => void }) { return <th className="sticky left-0 z-30 w-[42px] bg-[#F8FAFC] px-3 py-3 text-left"><input aria-label="Select visible policies" type="checkbox" checked={checked} onChange={onChange} /></th>; }
-function SelectCell({ row, checked, toggle }: { row: CommercialReviewRow; checked: boolean; toggle: (id: string) => void }) { return <td className="sticky left-0 z-10 bg-white px-3 py-3"><input aria-label={`Select ${row.policyNo}`} type="checkbox" checked={checked} onChange={() => toggle(row.id)} /></td>; }
-function PolicyCell({ row }: { row: CommercialReviewRow }) { return <td className="sticky left-[42px] z-10 bg-white px-3 py-3"><div className="font-bold text-[#1E2D49]">{row.policyNo}</div><div className="text-[7.5px] text-[#98A2B3]">{date(row.issuanceDate)}</div></td>; }
-function MoneyCell({ value }: { value: number }) { return <td className="px-3 py-3 text-right tabular-nums">{money.format(value)}</td>; }
-function PercentCell({ value }: { value: number }) { return <td className="px-3 py-3 text-right font-semibold tabular-nums">{value.toFixed(2)}%</td>; }
-function AuditCell({ note, action, at }: { note: string; action: string | null; at: string | null }) { return <td className="max-w-[240px] px-3 py-3"><div className="truncate font-medium text-[#475467]" title={note}>{note || "—"}</div><div className="mt-0.5 text-[7.5px] text-[#98A2B3]">{action ? action.replaceAll("_", " ") : "No control event"}{at ? ` · ${dateTime(at)}` : ""}</div></td>; }
-function OpenCell({ row }: { row: CommercialReviewRow }) { return <td className="px-3 py-3 text-center"><Link href={`/policies/${row.id}/edit`} className="rounded-lg border border-[#D8E2EF] px-2.5 py-1.5 text-[8px] font-bold text-[#315B9A]">Open</Link></td>; }
-
-function StatusBadge({ status }: { status: LedgerStatus }) {
-  const styles: Record<LedgerStatus, string> = { not_entered: "bg-[#F2F4F7] text-[#667085]", needs_review: "bg-[#FFF4D8] text-[#A96A00]", entered: "bg-[#EAF2FF] text-[#315B9A]", reviewed: "bg-[#E8F7EF] text-[#137A4A]", not_applicable: "bg-[#F2F4F7] text-[#667085]" };
-  return <span className={`inline-flex whitespace-nowrap rounded-full px-2 py-1 text-[7.5px] font-bold ${styles[status]}`}>{statusLabels[status]}</span>;
+function StatusPills({ counts, value, onChange }: { counts: Record<LedgerStatus, number>; value: LedgerStatus | "all"; onChange: (value: LedgerStatus | "all") => void }) {
+  return <div className="flex flex-wrap gap-1">{(Object.keys(statusLabels) as LedgerStatus[]).map((item) => <button key={item} type="button" onClick={() => onChange(value === item ? "all" : item)} className={`rounded-full border px-2 py-1 text-[7.5px] font-bold ${value === item ? "border-[#315B9A] bg-[#EEF4FF] text-[#315B9A]" : "border-[#D8DEE9] bg-white text-[#667085]"}`}>{statusLabels[item]} {counts[item]}</button>)}</div>;
 }
-
-function TabButton({ active, onClick, icon: Icon, children }: { active: boolean; onClick: () => void; icon: typeof CheckCircle2; children: React.ReactNode }) { return <button type="button" onClick={onClick} className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[9px] font-bold ${active ? "bg-[#17365D] text-white shadow-sm" : "text-[#526277] hover:bg-white"}`}><Icon className="h-3.5 w-3.5" />{children}</button>; }
-function StatusCard({ label, value, active, onClick, tone }: { label: string; value: number; active: boolean; onClick: () => void; tone: "slate" | "amber" | "blue" | "green" }) { const toneClass = { slate: "border-[#DDE3EA]", amber: "border-[#F0D59A]", blue: "border-[#BFD1EC]", green: "border-[#B9DFC8]" }[tone]; return <button type="button" onClick={onClick} className={`rounded-xl border bg-white px-3 py-3 text-left transition hover:-translate-y-0.5 ${toneClass} ${active ? "ring-2 ring-[#17365D]/20" : ""}`}><div className="text-[7.5px] font-black uppercase tracking-[.06em] text-[#7A8798]">{label}</div><div className="mt-1 text-[18px] font-semibold text-[#17365D]">{value.toLocaleString("en-IN")}</div></button>; }
-function Field({ label, value, onChange, amount = false }: { label: string; value: string; onChange: (value: string) => void; amount?: boolean }) { return <label><span className="mb-1.5 block text-[8px] font-bold uppercase tracking-[.055em] text-[#667085]">{label}</span><input type="number" min="0" max={amount ? undefined : "100"} step="0.01" value={value} onChange={(event) => onChange(event.target.value)} placeholder={amount ? "₹ 0.00" : "0.00"} className="h-10 w-full rounded-xl border border-[#D8DEE9] px-3 text-[9.5px] outline-none focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]" /></label>; }
-function date(value: string | null) { if (!value) return "—"; const parsed = new Date(value); return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString("en-IN"); }
-function dateTime(value: string) { const parsed = new Date(value); return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }); }
+function SelectHead({ checked, onChange }: { checked: boolean; onChange: () => void }) { return <th className="sticky left-0 z-40 w-[38px] bg-[#F8FAFC] px-2 py-2 text-left"><input aria-label="Select visible policies" type="checkbox" checked={checked} onChange={onChange} /></th>; }
+function MoneyCell({ value }: { value: number }) { return <td className="px-2 py-2 text-right tabular-nums">{money.format(value)}</td>; }
+function StatusBadge({ status }: { status: LedgerStatus }) { const styles: Record<LedgerStatus, string> = { not_entered: "bg-[#F2F4F7] text-[#667085]", needs_review: "bg-[#FFF4D8] text-[#A96A00]", entered: "bg-[#EAF2FF] text-[#315B9A]", reviewed: "bg-[#E8F7EF] text-[#137A4A]", not_applicable: "bg-[#F2F4F7] text-[#667085]" }; return <span className={`inline-flex whitespace-nowrap rounded-full px-2 py-1 text-[7px] font-bold ${styles[status]}`}>{statusLabels[status]}</span>; }
+function TabButton({ active, onClick, icon: Icon, children }: { active: boolean; onClick: () => void; icon: LucideIcon; children: ReactNode }) { return <button type="button" onClick={onClick} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[8.5px] font-bold ${active ? "bg-[#17365D] text-white shadow-sm" : "text-[#526277] hover:bg-white"}`}><Icon className="h-3.5 w-3.5" />{children}</button>; }
+function IconButton({ label, onClick, children, active = false, disabled = false }: { label: string; onClick: () => void; children: ReactNode; active?: boolean; disabled?: boolean }) { return <button type="button" title={label} aria-label={label} disabled={disabled} onClick={onClick} className={`grid h-9 w-9 place-items-center rounded-xl border transition disabled:opacity-40 ${active ? "border-[#315B9A] bg-[#EEF4FF] text-[#315B9A]" : "border-[#D8DEE9] bg-white text-[#526277] hover:bg-[#F8FAFC]"}`}>{children}</button>; }
+function CompactInput({ label, value, onChange, amount = false }: { label: string; value: string; onChange: (value: string) => void; amount?: boolean }) { return <label className="text-[7.5px] font-bold uppercase text-[#667085]">{label}<input type="number" min="0" max={amount ? undefined : "100"} step="0.01" value={value} onChange={(e) => onChange(e.target.value)} placeholder="0.00" className="mt-1 h-8 w-full rounded-lg border border-[#D8DEE9] px-2 text-[8.5px]" /></label>; }
+function DateField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <label className="text-[7.5px] font-bold uppercase text-[#667085]">{label}<input type="date" value={value} onChange={(e) => onChange(e.target.value)} className="ml-2 h-8 rounded-lg border border-[#D8DEE9] bg-white px-2 text-[8.5px]" /></label>; }
+function date(value: string | null) { if (!value) return "—"; const parsed = new Date(`${value.slice(0, 10)}T00:00:00`); return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString("en-IN"); }
