@@ -279,6 +279,20 @@ Mandatory safeguards:
 - When publishing from a temporary/clean worktree, load mobile public environment variables into the process without printing or recording their values. A missing mobile environment can create a startup-crashing OTA.
 - If a change touches native dependencies, Expo SDK/runtime, app config, package identifiers, permissions, plugins, native assets, or anything the current preview binary cannot consume, OTA is insufficient and a new preview build requires user approval.
 
+### Expo preview OTA source-of-truth protocol
+
+**MANDATORY FOR ALL AGENTS:** the shared Expo `preview` channel is a single moving OTA target. Its only authoritative source is the exact current `main` commit.
+
+- Only `.github/workflows/publish-mobile-preview-ota.yml` may publish to Expo channel `preview`.
+- That workflow must run from `refs/heads/main`, check out `main`, fetch `origin/main`, and refuse publication unless checked-out HEAD exactly equals current `origin/main`.
+- Never create or use a temporary feature-branch, recovery-branch, PR-branch, or local workflow that runs `eas update --channel preview`. A later isolated-branch OTA can replace the cumulative `main` snapshot on installed preview apps even when Git history is correct.
+- Feature and recovery branches may use GitHub CI, Expo web review exports, screenshots, or other non-OTA review methods. They must not publish to the shared `preview` channel.
+- Merge approved mobile work in controlled phases. Before each merge phase, refresh against current `main`, resolve overlaps, and require the canonical CI gate. After the phase is merged and `main` is verified, publish the exact current `main` commit to `preview`.
+- When a cumulative recovery PR supersedes multiple feature PRs, merge the cumulative PR only. Do not then merge the superseded source PRs individually; close them as superseded after the cumulative merge is verified.
+- If the installed preview app appears to lose previously approved changes, first compare the served OTA source with current `main`. Repair by restoring/merging the approved cumulative code into `main`, verifying it, and then republishing from `main`; do not repair by publishing another isolated feature branch to `preview`.
+- A JavaScript/assets-only OTA must not create an APK. A new native build is required only when a native/runtime/build-profile change actually requires one and the user explicitly approves it.
+- Do not change Expo app version, runtimeVersion, EAS channel/build configuration, project ID, owner, package/bundle IDs, or other protected mobile configuration merely to solve an OTA source-order problem.
+
 ## Hermes collaboration protocol
 
 When the user mentions Hermes, the free agent, `Hermes/observations.md`, or any file inside the `Hermes/` folder, use `Hermes/AGENT_BRIDGE.md` as the working contract before acting.
