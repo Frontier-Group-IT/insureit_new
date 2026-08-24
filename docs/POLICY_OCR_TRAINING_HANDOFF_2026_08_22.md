@@ -307,3 +307,47 @@ The next phase is successful when:
 - live post-deployment measurement moves materially toward the user's 90–95% target.
 
 Do not sacrifice safe withholding to inflate the apparent match rate.
+
+## 16. Round 8 fresh-20 production handoff
+
+**DEPLOYED / VERIFIED 2026-08-24:** Round 8 parser refinement from the sealed
+fresh-20 benchmark is live in production.
+
+Release evidence:
+
+- feature commit: `ca851513b4bd7f03300a6e55c1b72b28f5d85347`;
+- canonical `Verify web portal` pull-request run: `32761770469` (`success`),
+  including all OCR regressions, typecheck, lint and the production build;
+- PR `#608` merged to `main` as
+  `320949898c7080591842b06ad8528c1174659767`;
+- GitHub production deployment `6068839674` targets that exact merge commit and
+  reports `success` / `Deployment has completed`;
+- the authenticated production route
+  `https://portal.insureit.in/system/policy-ocr-training/holdout` was opened after
+  deployment and rendered all 20 verified holdouts without a capture failure.
+
+Final sealed-set result shown in production:
+
+- precision: `80.4%` (`267/332` proposed fields correct);
+- coverage: `68.7%` (`332/483` expected fields proposed);
+- withheld/missing: `151`;
+- semantic errors: `65`;
+- perfect policies: `0/20`;
+- predictions frozen: `20/20`;
+- truth verified: `20/20`;
+- capture failures: `0`.
+
+The live page still says **"Round #3 parser logic is frozen."** This is stale UI
+copy on the holdout page, not evidence that production is running the Round 3
+parser. The exact deployed commit above contains the Round 8 refinement. A future
+UI-only cleanup may update the wording, but must not rewrite the recorded sealed
+benchmark result.
+
+These 20 documents are no longer blind holdouts because their truth has been
+revealed. Treat them as a privacy-safe regression/training corpus from this point
+forward. Any further generalization claim must use a new sealed sibling set with
+predictions frozen before PDF truth is inspected. The next refinement should
+aggregate the remaining `151` missing fields and `65` semantic errors by insurer,
+layout and structural cause; fix reusable parser rules; retain safe withholding;
+and rerun the full canonical PR gate before another explicitly approved merge and
+deployment.
