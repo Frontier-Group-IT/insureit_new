@@ -2,6 +2,87 @@
 .clean p[class*='text-white/70'],
 .clean p[class*='text-white/60'],
 .clean section:first-child > p[class*='uppercase'],
+.clean section:first-child span[class*='uppercase'][class*='tracking'],
 .clean div[class*='border-dashed'][class*='text-[#667085]'] {
   display: none;
+}
+
+/* Shared compact hierarchy for Accounts, Reconciliation and Accounts Reports. */
+.clean > div[class*='space-y-4'] {
+  gap: .625rem !important;
+  padding-bottom: 1.5rem !important;
+}
+
+.clean section[class*='rounded-2xl'][class*='p-5'] {
+  padding: .75rem !important;
+}
+
+.clean section[class*='rounded-2xl'][class*='p-4'] {
+  padding: .75rem !important;
+}
+
+.clean h1[class*='text-[21px]'],
+.clean h1[class*='text-[20px]'] {
+  margin-top: 0 !important;
+  font-size: 17px !important;
+  line-height: 1.25 !important;
+}
+
+.clean h2[class*='text-[13px]'] {
+  font-size: 11px !important;
+  line-height: 1.3 !important;
+}
+
+.clean section[class*='grid'][class*='gap-3'] {
+  gap: .5rem !important;
+}
+
+.clean section[class*='grid'][class*='gap-4'] {
+  gap: .625rem !important;
+}
+
+.clean table[class*='text-[9.5px]'],
+.clean table[class*='text-[9px]'] {
+  font-size: 8.5px !important;
+}
+
+.clean input,
+.clean select,
+.clean textarea,
+.clean button {
+  font-family: inherit;
+}
+
+.clean input[class*='text-[10px]'],
+.clean select[class*='text-[10px]'],
+.clean input[class*='text-[9.5px]'],
+.clean select[class*='text-[9.5px]'] {
+  font-size: 9px !important;
+}
+
+.clean button[class*='text-[10px]'],
+.clean button[class*='text-[9.5px]'] {
+  font-size: 9px !important;
+}
+
+.clean [class*='max-h-[480px]'],
+.clean [class*='max-h-[620px]'] {
+  scrollbar-gutter: stable;
+}
+
+.clean [class*='shadow-sm'] {
+  box-shadow: 0 2px 8px rgba(23,54,93,.045) !important;
+}
+
+/* Older reconciliation detail pages used a large gradient hero. Keep the information, not the hero. */
+.clean section:first-child > div[class*='linear-gradient'] {
+  background: #fff !important;
+  color: #17365D !important;
+  padding: .75rem 1rem !important;
+}
+
+.clean section:first-child > div[class*='linear-gradient'] a {
+  border-color: #D8DEE9 !important;
+  background: #fff !important;
+  color: #17365D !important;
 }

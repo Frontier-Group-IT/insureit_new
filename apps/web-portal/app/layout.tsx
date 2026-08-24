@@ -15,6 +15,7 @@ import "./experience.css";
 import "./mobile.css";
 import "./document-grid.css";
 import "./reconciliation-workbench.css";
+import "./accounts-navigation-labels.css";
 
 const manrope = Manrope({
   subsets: ["latin"],
