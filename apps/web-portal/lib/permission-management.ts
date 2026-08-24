@@ -38,6 +38,9 @@ const labels: Record<Capability, Omit<PermissionDefinition, "capability" | "role
   view_policies: { module: "Policies", label: "View policies", description: "Open policy registers and protected read-only policy details without financial settlement controls.", risk: "standard" },
   create_policies: { module: "Policies", label: "Add policies", description: "Create new managed policy records without granting edit authority over existing policies or financial settlement controls.", risk: "sensitive" },
   create_external_policies: { module: "Policies", label: "Add external policies", description: "Create new external policy records without granting edit authority over existing policy records.", risk: "sensitive" },
+  view_policy_intakes: { module: "Policies", label: "View policy intakes", description: "Open Policy Intake requests inside the permitted sales or Operations scope.", risk: "standard" },
+  create_policy_intakes: { module: "Policies", label: "Initiate policy onboarding", description: "Submit an assigned Partner/POSP/MISP lead source, customer mobile number and policy copy for OCR-assisted Operations review.", risk: "sensitive" },
+  review_policy_intakes: { module: "Policies", label: "Review policy intakes", description: "Review sales-originated Policy Intakes, request corrections and hand approved OCR data into governed Policy Onboarding.", risk: "high" },
   review_policy_ocr_training: { module: "Policies", label: "Operate premium OCR training", description: "Run Google OCR, inspect comparisons and approve sanitized Section 03 training candidates.", risk: "high" },
   approve_policy_ocr_training: { module: "Policies", label: "Operate premium OCR training (legacy)", description: "Compatibility permission for the single-operator OCR training workflow.", risk: "critical" },
   view_tasks: { module: "Tasks", label: "View tasks", description: "Open assigned and accessible tasks.", risk: "standard" },
@@ -65,6 +68,8 @@ const backofficePermissionCeiling: Partial<Record<Capability, PermissionAccess>>
   view_policies: "view",
   create_policies: "edit",
   create_external_policies: "edit",
+  view_policy_intakes: "view",
+  review_policy_intakes: "edit",
   view_reports: "view",
   view_notifications: "view",
 };

@@ -60,6 +60,8 @@ const backofficePermissionCeiling: Partial<Record<PermissionKeyV2, Exclude<Acces
   "vehicles.create": "edit",
   "policies.view": "view",
   "policies.create": "edit",
+  "policy_intakes.view": "view",
+  "policy_intakes.review": "edit",
   "reports.view": "view",
   "notifications.view": "view",
 };
