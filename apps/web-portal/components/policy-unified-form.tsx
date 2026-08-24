@@ -107,6 +107,8 @@ const labelClass = "mb-1.5 flex items-center gap-1.5 text-[9px] font-bold upperc
 const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
 const sections = ["Source", "Customer & Vehicle", "Policy & Premium"];
 const POLICY_DRAFT_KEY = "insureit:policy-onboarding:draft:v2";
+const POLICY_INTAKE_PENDING_KEY = "insureit:policy-intake:pending:v1";
+const POLICY_ONBOARDING_RESET_EVENT = "insureit:policy-onboarding:reset";
 const vehicleClassMap: Record<string, { description: string; capacityLabel: string }> = {
   PCP: { description: "Private Car", capacityLabel: "CC" },
   TWP: { description: "Two Wheeler", capacityLabel: "CC" },
@@ -236,7 +238,7 @@ export function PolicyUnifiedForm({ mode, insurers, rms, sources, manufacturers 
 
   function clearPolicyForm(){
     if(isEdit)return;
-    try{sessionStorage.removeItem(POLICY_DRAFT_KEY);}catch{}
+    try{sessionStorage.removeItem(POLICY_DRAFT_KEY);sessionStorage.removeItem(POLICY_INTAKE_PENDING_KEY);window.dispatchEvent(new Event(POLICY_ONBOARDING_RESET_EVENT));}catch{}
     setForm(stateFrom(initialValues));
     setVehicleRegistrationMode("registered");
     setCommercialModal(null);
