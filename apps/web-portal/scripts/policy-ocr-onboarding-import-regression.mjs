@@ -27,6 +27,9 @@ const regexChecks = [
   ["Header wires parent reset callback", form, /onClearForm=\{clearPolicyForm\}/],
   ["Payin-Payout is integrated into summary rail", form, /function LiveSummary\([\s\S]*Payin–Payout[\s\S]*Insurer Pay-in[\s\S]*Partner Payout/],
   ["Summary rail restored to wider desktop width", form, /xl:grid-cols-\[minmax\(0,1fr\)_336px\]/],
+  ["Compact policy title row", form, /min-h-\[52px\][\s\S]*text-\[15px\][\s\S]*\{headerTitle\}/],
+  ["Compact section navigation", form, /aria-label="Policy sections"[\s\S]*min-h-\[36px\][\s\S]*aria-current=\{active\?"step":undefined\}/],
+  ["Section navigation removes visible remaining counters", form, /String\(index\+1\)\.padStart\(2,"0"\)/],
 ];
 
 for (const [name, source, pattern] of regexChecks) {
@@ -50,6 +53,10 @@ console.log("PASS: clear form reset is parent-owned and reload-free");
 if (form.includes("function CommercialCard")) throw new Error("FAIL: legacy full-width Commercials card must not remain");
 if (form.includes(">Commercials<")) throw new Error("FAIL: user-facing Commercials label must be replaced by Payin-Payout");
 console.log("PASS: Payin-Payout controls live only in the compact summary rail");
+
+if (form.includes('left</span>')) throw new Error("FAIL: visible remaining-field counters must not remain in compact section navigation");
+if (form.includes('min-h-[88px]')) throw new Error("FAIL: oversized policy header height must not remain");
+console.log("PASS: policy header and section navigation are compact and progress-noise free");
 
 
 const blank = {
