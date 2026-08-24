@@ -1,12 +1,18 @@
 # Current Chat Handoff
 
-> **Consolidated:** 2026-08-12 (IST)
+> **Consolidated:** 2026-08-24 (IST)
 >
 > Read with `docs/INSUREIT_PROJECT_CONTEXT.md` and `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md`. Never store secrets, raw OCR text, policyholder PII, or complete policy documents here.
 
 ## Active track
 
 Policy Onboarding OCR hardening remains an active workstream. Production portal is `https://portal.insureit.in`. Ordinary commits do not intentionally deploy production. After explicit `deploy now` or `finish and deploy` approval, dispatch the protected production workflow with the already-successful feature-PR verification run ID and verified commit; do not create a deployment-trigger commit/PR or repeat the full gate.
+
+## Active performance remediation
+
+**IMPLEMENTED, NOT DEPLOYED:** feature branch `perf/safe-remediation-foundation` adds Vercel Speed Insights, replaces the 224 KB remote GitHub brand mark with a local 14.5 KB WebP, and adds hover/focus prefetch only for common read routes. Typecheck, lint (zero errors; existing warnings), production build, and `git diff --check` passed locally. No production data, Supabase schema/RLS/storage, Vercel region, environment, permission, or business workflow was changed.
+
+The current audit baseline, staged fix order, safety gates, and deferred region/database/upload/query work are in `docs/PERFORMANCE_REMEDIATION_PLAN_2026_08_24.md`. The short user actions are in `docs/PERFORMANCE_OWNER_TODO_2026_08_24.md`. Do not deploy without the canonical feature-PR verification gate and explicit user instruction.
 
 ## Mobile Expo preview
 
