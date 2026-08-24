@@ -82,6 +82,14 @@ export function CompactDocumentActionBar({ claimId, step, milestones, primaryLab
 
   return (
     <View style={styles.actionSection}>
+      <View style={styles.dots} accessibilityLabel={`Claim stage ${step} of ${SELF_MANAGED_MILESTONES.length}`}>
+        {SELF_MANAGED_MILESTONES.map((stage, index) => {
+          const completed = completedKeys.has(stage.key);
+          const current = index === currentIndex;
+          return <View key={stage.key} style={[styles.dot, completed && styles.dotCompleted, current && styles.dotCurrent]} />;
+        })}
+      </View>
+
       <View style={styles.actionRow}>
         <Pressable
           accessibilityRole="button"
@@ -105,14 +113,6 @@ export function CompactDocumentActionBar({ claimId, step, milestones, primaryLab
           <Text style={styles.primaryText}>{primaryLabel}</Text>
           <MaterialCommunityIcons name="arrow-right" size={21} color="#FFFFFF" />
         </Pressable>
-      </View>
-
-      <View style={styles.dots} accessibilityLabel={`Claim stage ${step} of ${SELF_MANAGED_MILESTONES.length}`}>
-        {SELF_MANAGED_MILESTONES.map((stage, index) => {
-          const completed = completedKeys.has(stage.key);
-          const current = index === currentIndex;
-          return <View key={stage.key} style={[styles.dot, completed && styles.dotCompleted, current && styles.dotCurrent]} />;
-        })}
       </View>
     </View>
   );
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
   primaryText: { color: '#FFFFFF', fontSize: 12, lineHeight: 15, fontWeight: '900', textAlign: 'center', flexShrink: 1 },
   buttonDisabled: { opacity: 0.5 },
   disabledText: { color: '#AEB9C8' },
-  dots: { minHeight: 30, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingTop: 9 },
+  dots: { minHeight: 30, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingBottom: 9 },
   dot: { width: 8, height: 8, borderRadius: 999, borderWidth: 1, borderColor: '#D0D8E3', backgroundColor: '#EEF1F5' },
   dotCompleted: { borderColor: '#43A96C', backgroundColor: '#43A96C' },
   dotCurrent: { width: 11, height: 11, borderColor: '#0A43A3', backgroundColor: '#2D78E5' },
