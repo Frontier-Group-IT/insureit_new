@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { CompactDocumentActionBar, CompactDocumentStageHeader } from '@/components/compact-document-upload-navigation';
 import { AppDatePicker } from '@/components/design-system';
 import { ExternalClaimDocumentTabs } from '@/components/external-claim-document-tabs';
 import { ExternalClaimErrorPopup } from '@/components/external-claim-error-popup';
@@ -145,16 +146,25 @@ export default function SelfManagedMilestoneScreen() {
     </Screen>
   );
 
+  const documentUploadStage = key === 'claim_intimation';
+  const primaryLabel = saving ? 'Saving...' : key === 'payment_encashment' ? 'Complete Claim' : key === 'vehicle_delivery' && values.vehicle_received !== 'yes' ? 'Save Vehicle Status' : 'Save & Continue';
+
   return (
     <Screen title={definition.label} showTitleHeader={false}>
-      <ExternalClaimStageHeader
+      {documentUploadStage ? <CompactDocumentStageHeader
+        step={step}
+        title={definition.label}
+        subtitle={subtitleFor(key)}
+        vehicleNo={vehicleNo}
+        claimNo={claimNo}
+      /> : <ExternalClaimStageHeader
         step={step}
         title={definition.label}
         subtitle={subtitleFor(key)}
         vehicleNo={vehicleNo}
         claimNo={claimNo}
         onBack={() => router.back()}
-      />
+      />}
 
       <ClaimStageSummaryCard
         title={definition.label}
@@ -165,13 +175,20 @@ export default function SelfManagedMilestoneScreen() {
 
       {loading ? <Text style={styles.loading}>Loading saved details...</Text> : renderStage(key, values, set, milestones, claimId, customerId)}
 
-      <ClaimActionBar
+      {documentUploadStage ? <CompactDocumentActionBar
+        claimId={claimId}
+        step={step}
+        milestones={milestones}
+        primaryDisabled={saving || loading}
+        primaryLabel={primaryLabel}
+        onPrimary={() => void save()}
+      /> : <ClaimActionBar
         primaryDisabled={saving || loading}
         primaryIcon={key === 'payment_encashment' ? 'check' : 'arrow-right'}
-        primaryLabel={saving ? 'Saving...' : key === 'payment_encashment' ? 'Complete Claim' : key === 'vehicle_delivery' && values.vehicle_received !== 'yes' ? 'Save Vehicle Status' : 'Save & Continue'}
+        primaryLabel={primaryLabel}
         onAssistance={openAssistance}
         onPrimary={() => void save()}
-      />
+      />}
 
       <ExternalClaimErrorPopup
         visible={Boolean(validationMessage)}
