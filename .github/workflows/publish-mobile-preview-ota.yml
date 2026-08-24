@@ -1,9 +1,10 @@
 name: Publish mobile preview OTA
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - preview/claim-tracker-complete-ui
+      - main
     paths:
       - 'apps/mobile-app/**'
       - '.github/workflows/publish-mobile-preview-ota.yml'
@@ -13,15 +14,16 @@ permissions:
 
 jobs:
   publish:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '#547')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
-      - name: Check out preview source
+      - name: Check out merged source
         uses: actions/checkout@v4
         with:
-          ref: preview/claim-tracker-complete-ui
+          ref: main
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -42,7 +44,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Hide completed Claim Tracker sections" \
+            --message "Block duplicate active self-tracked claims" \
             --non-interactive \
             --json \
             > expo-update.json \
