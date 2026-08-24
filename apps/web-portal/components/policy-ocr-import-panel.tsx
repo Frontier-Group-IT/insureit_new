@@ -59,7 +59,6 @@ const APPLY_ORDER = [
   "policy_start_date",
   "policy_end_date",
 ];
-const POLICY_DRAFT_KEY = "insureit:policy-onboarding:draft:v1";
 
 export type PolicyOcrImportContext = {
   mode: "create" | "edit";
@@ -77,12 +76,13 @@ export type PolicyOcrImportPanelProps = {
   variant?: "header" | "icon";
   context: PolicyOcrImportContext;
   onApply: (fields: PolicyOcrField[]) => PolicyOcrApplyOutcome | Promise<PolicyOcrApplyOutcome>;
+  onClearForm?: () => void;
 };
 
 type ReviewState = "ready" | "review" | "conflict" | "protected";
 type ReviewedField = PolicyOcrField & { currentValue: string; reviewState: ReviewState };
 
-export function PolicyOcrImportPanel({ variant = "header", context, onApply }: PolicyOcrImportPanelProps) {
+export function PolicyOcrImportPanel({ variant = "header", context, onApply, onClearForm }: PolicyOcrImportPanelProps) {
   const [open, setOpen] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [fields, setFields] = useState<PolicyOcrField[]>([]);
@@ -145,12 +145,6 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply }: P
     resetReview();
     setDocumentName("");
     formRef.current?.reset();
-  }
-
-  function clearPolicyDraft() {
-    try { sessionStorage.removeItem(POLICY_DRAFT_KEY); } catch {}
-    setConfirmClear(false);
-    window.location.reload();
   }
 
   function submit(formData: FormData) {
@@ -276,11 +270,11 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply }: P
           <h2 id="clear-policy-form-title" className="mt-4 text-[15px] font-bold text-[#102A4C]">Clear policy form?</h2>
           <p className="mx-auto mt-2 max-w-sm text-[10.5px] leading-5 text-[#667085]">This removes all details entered in the current policy onboarding draft and restores the form to its default state.</p>
         </div>
-        <div className="flex justify-end gap-2 border-t border-[#E6EBF2] bg-[#F8FAFC] px-5 py-3.5"><button type="button" onClick={()=>setConfirmClear(false)} className="h-10 rounded-xl border border-[#D1D9E4] bg-white px-4 text-[9.5px] font-semibold text-[#475467] transition hover:bg-[#F3F6FA]">Cancel</button><button type="button" onClick={clearPolicyDraft} className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#B85C16] px-4 text-[9.5px] font-bold text-white shadow-sm transition hover:bg-[#9F4E12]"><Eraser className="h-4 w-4" strokeWidth={2}/><span>Clear form</span></button></div>
+        <div className="flex justify-end gap-2 border-t border-[#E6EBF2] bg-[#F8FAFC] px-5 py-3.5"><button type="button" onClick={()=>setConfirmClear(false)} className="h-10 rounded-xl border border-[#D1D9E4] bg-white px-4 text-[9.5px] font-semibold text-[#475467] transition hover:bg-[#F3F6FA]">Cancel</button><button type="button" onClick={()=>{setConfirmClear(false);onClearForm?.();}} className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#B85C16] px-4 text-[9.5px] font-bold text-white shadow-sm transition hover:bg-[#9F4E12]"><Eraser className="h-4 w-4" strokeWidth={2}/><span>Clear form</span></button></div>
       </div>
     </div>, document.body) : null;
 
-  return <>{variant === "icon" ? <button type="button" onClick={()=>setOpen(true)} aria-label="Import Section 02 and 03 from policy copy" title="Import vehicle + policy details" className="grid h-8 w-8 place-items-center rounded-lg border border-[#D7E0EA] bg-white text-[#315B9A] shadow-sm transition hover:border-[#B8C8DC] hover:bg-[#F3F7FC] focus:outline-none focus:ring-2 focus:ring-[#DCE8FA]"><FileUp className="h-4 w-4" strokeWidth={1.9}/></button> : <div className="flex items-center justify-end gap-2.5"><button type="button" onClick={()=>setOpen(true)} aria-label="Import policy details" title="Import policy details" className="group grid h-11 w-11 place-items-center rounded-xl border border-[#77E8E1]/35 bg-[#0E456E]/70 text-[#7CE7E0] shadow-[0_7px_18px_rgba(4,26,56,.18)] transition hover:-translate-y-0.5 hover:border-[#8CF2EB]/65 hover:bg-[#12547F] hover:text-[#A1FFF8] focus:outline-none focus:ring-2 focus:ring-[#7CE7E0]/35"><FileUp className="h-[19px] w-[19px] transition-transform group-hover:-translate-y-0.5" strokeWidth={2.1}/></button>{context.mode === "create" ? <button type="button" onClick={()=>setConfirmClear(true)} aria-label="Clear policy form" title="Clear policy form" className="group grid h-11 w-11 place-items-center rounded-xl border border-[#FFC66D]/30 bg-[#6A4319]/45 text-[#FFC66D] shadow-[0_7px_18px_rgba(4,26,56,.18)] transition hover:-translate-y-0.5 hover:border-[#FFD58F]/65 hover:bg-[#7B4D1C]/65 hover:text-[#FFE0A6] focus:outline-none focus:ring-2 focus:ring-[#FFC66D]/30"><Eraser className="h-[19px] w-[19px] transition-transform group-hover:-rotate-6" strokeWidth={2.1}/></button> : null}</div>}{modal}{clearModal}</>;
+  return <>{variant === "icon" ? <button type="button" onClick={()=>setOpen(true)} aria-label="Import Section 02 and 03 from policy copy" title="Import vehicle + policy details" className="grid h-8 w-8 place-items-center rounded-lg border border-[#D7E0EA] bg-white text-[#315B9A] shadow-sm transition hover:border-[#B8C8DC] hover:bg-[#F3F7FC] focus:outline-none focus:ring-2 focus:ring-[#DCE8FA]"><FileUp className="h-4 w-4" strokeWidth={1.9}/></button> : <div className="flex items-center justify-end gap-2.5"><button type="button" onClick={()=>setOpen(true)} aria-label="Import policy details" title="Import policy details" className="group grid h-11 w-11 place-items-center rounded-xl border border-[#77E8E1]/35 bg-[#0E456E]/70 text-[#7CE7E0] shadow-[0_7px_18px_rgba(4,26,56,.18)] transition hover:-translate-y-0.5 hover:border-[#8CF2EB]/65 hover:bg-[#12547F] hover:text-[#A1FFF8] focus:outline-none focus:ring-2 focus:ring-[#7CE7E0]/35"><FileUp className="h-[19px] w-[19px] transition-transform group-hover:-translate-y-0.5" strokeWidth={2.1}/></button>{context.mode === "create" && onClearForm ? <button type="button" onClick={()=>setConfirmClear(true)} aria-label="Clear policy form" title="Clear policy form" className="group grid h-11 w-11 place-items-center rounded-xl border border-[#FFC66D]/30 bg-[#6A4319]/45 text-[#FFC66D] shadow-[0_7px_18px_rgba(4,26,56,.18)] transition hover:-translate-y-0.5 hover:border-[#FFD58F]/65 hover:bg-[#7B4D1C]/65 hover:text-[#FFE0A6] focus:outline-none focus:ring-2 focus:ring-[#FFC66D]/30"><Eraser className="h-[19px] w-[19px] transition-transform group-hover:-rotate-6" strokeWidth={2.1}/></button> : null}</div>}{modal}{clearModal}</>;
 }
 
 function ReviewGroup({number,title,fields,selected,onToggle,onSelectAll,onClear}:{number:string;title:string;fields:ReviewedField[];selected:Set<string>;onToggle:(key:string)=>void;onSelectAll:()=>void;onClear:()=>void}){

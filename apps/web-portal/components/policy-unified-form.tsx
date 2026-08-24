@@ -232,6 +232,25 @@ export function PolicyUnifiedForm({ mode, insurers, rms, sources, manufacturers 
     if(action==="edit_vehicle"||action==="edit_manufacturer")goToSection(1);else goToSection(2);
   }
 
+  function clearPolicyForm(){
+    if(isEdit)return;
+    try{sessionStorage.removeItem(POLICY_DRAFT_KEY);}catch{}
+    setForm(stateFrom(initialValues));
+    setVehicleRegistrationMode("registered");
+    setCommercialModal(null);
+    setActiveSection(0);
+    setRcReview(null);
+    setAppliedRc(null);
+    setApplyGroups(defaultGroups);
+    setLookupError(null);
+    setRegistrationTouched(false);
+    setSubmitError(null);
+    setCustomerCandidates(null);
+    setOwnershipConflict(null);
+    setBusinessConflict(null);
+    setPendingPayload(null);
+  }
+
   function applyPolicyOcrFields(fields:PolicyOcrField[]):PolicyOcrApplyOutcome{
     const result=buildPolicyOcrOnboardingUpdate({
       mode,
@@ -293,7 +312,7 @@ export function PolicyUnifiedForm({ mode, insurers, rms, sources, manufacturers 
   return <div className="mx-auto max-w-[1480px] pb-24">
     <div className="overflow-hidden rounded-t-2xl border border-b-0 border-[#D9E2F0] bg-white shadow-[0_10px_30px_rgba(15,23,42,.06)]">
       <div className="flex min-h-[88px] items-center bg-[linear-gradient(135deg,#071D49_0%,#123B75_60%,#315B9A_100%)] px-5 py-3.5 text-white">
-        <div className="flex w-full items-center justify-between gap-4"><div><h1 className="text-[18px] font-semibold">{headerTitle}</h1></div>{isMotorPolicy?<PolicyOcrImportPanel variant="header" context={ocrImportContext} onApply={applyPolicyOcrFields}/>:null}</div>
+        <div className="flex w-full items-center justify-between gap-4"><div><h1 className="text-[18px] font-semibold">{headerTitle}</h1></div>{isMotorPolicy?<PolicyOcrImportPanel variant="header" context={ocrImportContext} onApply={applyPolicyOcrFields} onClearForm={clearPolicyForm}/>:null}</div>
       </div>
     </div>
     <div className={`${isMotorPolicy?"sticky top-[72px] z-50 mb-4 flex":"hidden"} gap-1 overflow-x-auto rounded-b-2xl border border-t-0 border-[#D9E2F0] bg-white/95 px-3 py-2 shadow-[0_7px_18px_rgba(15,23,42,.08)] backdrop-blur`}>{sections.map((section,index)=>{const progress=sectionProgress[index];return <button key={section} type="button" onClick={()=>goToSection(index)} title={progress.complete?`${section} complete`:`${progress.remaining} required item${progress.remaining===1?"":"s"} remaining`} className={`group flex min-w-fit items-center gap-2 rounded-lg px-3 py-2 text-[9.5px] font-semibold transition ${activeSection===index?"bg-[#EEF2FF] text-[#4338CA]":"text-[#667085] hover:bg-[#F8FAFC]"}`}><span className={`grid h-5 w-5 place-items-center rounded-full text-[8px] font-bold ${progress.complete?"bg-[#E8F7EF] text-[#14845B]":progress.empty?(activeSection===index?"bg-[#4F46E5] text-white":"bg-[#EEF2F6] text-[#7A8798]"):"bg-[#FFF4D8] text-[#B76E00]"}`}>{progress.complete?<svg aria-hidden="true" viewBox="0 0 20 20" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 10 3 3 7-7"/></svg>:index+1}</span><span>{section}</span>{!progress.complete&&!progress.empty?<span className="text-[7.5px] font-semibold text-[#B76E00]">{progress.remaining} left</span>:null}</button>})}</div>
