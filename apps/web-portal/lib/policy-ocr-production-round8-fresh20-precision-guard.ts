@@ -14,10 +14,11 @@ const LABELS: Record<string, string> = {
 
 export function refineProductionRound8Fresh20Precision(
   pages: string[],
-  _tables: StructuredPolicyTable[],
+  tables: StructuredPolicyTable[],
   parsed: ParsedPolicyResult,
 ): ParsedPolicyResult {
   const fields: Fields = new Map(parsed.fields.map((field) => [field.key, field]));
+  const initialRegistration = fields.get("vehicle_registration_number")?.value ?? "";
   const header = (pages[0] ?? "").split(/\r?\n/).slice(0, 180).join(" ");
   let changed = false;
 
@@ -80,6 +81,14 @@ export function refineProductionRound8Fresh20Precision(
     if (premium != null) { setMoney(fields, "total_premium", premium, 1, "Round 8 National printed Premium"); changed = true; }
     if (igst != null) { setMoney(fields, "tax_amount", igst, 1, "Round 8 National printed IGST"); changed = true; }
     if (total != null) { setMoney(fields, "gross_premium", total, 1, "Round 8 National printed Total Amount"); changed = true; }
+    const liability = firstMoney(pages.join("\n"), /Legal\s+Liability\s+Cover\s+([\d,]+(?:\.\d+)?)/i);
+    if (premium != null && liability != null && premium >= liability) {
+      setMoney(fields, "od_premium", premium - liability, findPage(pages, /Legal\s+Liability\s+Cover/i), "Round 8 National printed premium less legal-liability cover");
+      setMoney(fields, "tp_premium", liability, findPage(pages, /Legal\s+Liability\s+Cover/i), "Round 8 National printed legal-liability cover");
+      set(fields, "cpa_opted", "No", .999, 1, "Round 8 National schedule has no payable owner-driver CPA");
+      setMoney(fields, "cpa_premium", 0, 1, "Round 8 National schedule has no payable owner-driver CPA");
+      changed = true;
+    }
   }
 
   if (parsed.parserId === "united_india_motor_v1" && /UNITED\s+INDIA\s+INSURANCE/i.test(header)) {
@@ -112,6 +121,68 @@ export function refineProductionRound8Fresh20Precision(
         changed = true;
       }
     }
+  }
+
+  if (parsed.parserId === "iffco_tokio_commercial_motor_v2" && /IFFCO[-\s]*TOKIO/i.test(header)) {
+    const text = pages.join("\n");
+    const netParts = text.match(/Net\s*\(A\)\s*([\d,]+(?:\.\d+)?)\s+Net\s*\(B\)\s*([\d,]+(?:\.\d+)?)/i);
+    const od = parseMoney(netParts?.[1]);
+    const netB = parseMoney(netParts?.[2]);
+    const basicTp = firstMoney(text, /Basic\s+TP\s+Premium\s+([\d,]+(?:\.\d+)?)/i);
+    if (od != null && netB != null) {
+      const page = findPage(pages, /Net\s*\(A\)/i);
+      setMoney(fields, "od_premium", od, page, "Round 8 IFFCO printed Net(A)");
+      if (basicTp != null) setMoney(fields, "tp_premium", basicTp, page, "Round 8 IFFCO printed Basic TP; liability additions remain separate");
+      set(fields, "cpa_opted", "No", .999, page, "Round 8 IFFCO PA Owner Driver CSI is zero");
+      setMoney(fields, "cpa_premium", 0, page, "Round 8 IFFCO PA Owner Driver CSI is zero");
+      changed = true;
+    }
+    const totals = [...text.matchAll(/(?:^|\n)\s*Total\s+([\d,]+(?:\.\d+)?)\s+([\d,]+(?:\.\d+)?)\s+([\d,]+(?:\.\d+)?)/gi)];
+    const last = totals.at(-1);
+    const printedNet = parseMoney(last?.[1]);
+    const printedTax = parseMoney(last?.[2]);
+    const printedGross = parseMoney(last?.[3]);
+    if (printedNet != null && printedTax != null && printedGross != null) {
+      setMoney(fields, "total_premium", printedNet, 1, "Round 8 IFFCO final printed total row");
+      setMoney(fields, "tax_amount", printedTax, 1, "Round 8 IFFCO final printed total row");
+      setMoney(fields, "gross_premium", printedGross, 1, "Round 8 IFFCO final printed total row");
+      changed = true;
+    }
+  }
+
+  if (parsed.parserId === "magma_motor_v1" && /MAGMA\s+GENERAL\s+INSURANCE/i.test(header)) {
+    const text = pages.join("\n");
+    const cpaPrinted = firstMoney(text, /PA\s+Owner\s+Driver[^\n]*?Tenure\s+\d+\s+Year\(s\)\s+([\d,]+(?:\.\d+)?)/i);
+    const basicTp = firstMoney(text, /Basic\s*-\s*TP\s+([\d,]+(?:\.\d+)?)/i);
+    const paidDriver = firstMoney(text, /LL\s+to\s+Paid\s+Driver(?:\s+IMT\s*28)?\s+([\d,]+(?:\.\d+)?)/i) ?? 0;
+    if (cpaPrinted != null && cpaPrinted > 0) {
+      set(fields, "cpa_opted", "Yes", .999, findPage(pages, /PA\s+Owner\s+Driver/i), "Round 8 Magma printed owner-driver PA");
+      setMoney(fields, "cpa_premium", cpaPrinted, findPage(pages, /PA\s+Owner\s+Driver/i), "Round 8 Magma printed owner-driver PA");
+      changed = true;
+    }
+    if (basicTp != null) {
+      setMoney(fields, "tp_premium", basicTp + paidDriver, findPage(pages, /Basic\s*-\s*TP/i), "Round 8 Magma basic TP plus paid-driver liability");
+      changed = true;
+    }
+    const registration = fields.get("vehicle_registration_number")?.value ?? initialRegistration;
+    const joinedRegistration = registration.match(/^([A-Z]{2}\d{1,2}[A-Z]{1,3}\d{4})\d{8}$/i);
+    if (joinedRegistration) {
+      set(fields, "vehicle_registration_number", joinedRegistration[1], .999, 1, "Round 8 Magma registration separated from adjacent date");
+      changed = true;
+    }
+  }
+
+  if (parsed.parserId === "hdfc_ergo_motor_v1" && /HDFC\s+ERGO/i.test(header)) {
+    const text = pages.join("\n");
+    const policy = text.match(/Policy\s+No\.?\s+([0-9 ]{15,30})/i)?.[1]?.replace(/\s+/g, "");
+    if (policy && /^\d{15,24}$/.test(policy)) {
+      set(fields, "policy_number", policy, .999, 1, "Round 8 HDFC printed policy number");
+      changed = true;
+    }
+    const printedGst = tableMoney(tables, /GST\s*18%/i, "largest") ?? firstMoney(text, /GST\s*18%[\s\S]{0,220}?\)\s*([\d,]+(?:\.\d+)?)\s*(?:\r?\n)+\s*Total\s+Premium/i);
+    const printedGross = tableMoney(tables, /^Total\s+Premium$/i, "largest") ?? firstMoney(text, /Total\s+Premium\s+([\d,]+(?:\.\d+)?)/i);
+    if (printedGst != null) { setMoney(fields, "tax_amount", printedGst, 1, "Round 8 HDFC printed GST total"); changed = true; }
+    if (printedGross != null) { setMoney(fields, "gross_premium", printedGross, 1, "Round 8 HDFC printed total premium"); changed = true; }
   }
 
   if (!changed) return parsed;
@@ -166,6 +237,19 @@ function firstMoney(text: string, pattern: RegExp): number | null {
 function findPage(pages: string[], pattern: RegExp) {
   const index = pages.findIndex((page) => pattern.test(page));
   return index >= 0 ? index + 1 : 1;
+}
+
+function tableMoney(tables: StructuredPolicyTable[], label: RegExp, mode: "largest" | "smallest") {
+  const values = tables.flatMap((table) => table.rows.flatMap((row) => {
+    const labelIndex = row.findIndex((cell) => label.test(cell));
+    if (labelIndex < 0) return [];
+    return row.slice(labelIndex + 1).flatMap((cell) => {
+      const value = parseMoney(cell);
+      return value == null ? [] : [value];
+    });
+  }));
+  if (!values.length) return null;
+  return mode === "largest" ? Math.max(...values) : Math.min(...values);
 }
 
 function setMoney(fields: Fields, key: string, value: number, page: number, evidence: string) {
