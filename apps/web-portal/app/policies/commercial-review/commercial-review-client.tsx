@@ -291,21 +291,20 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
         </div>
       </div>
       <div className="max-h-[70vh] overflow-auto">
-        <table className="w-full min-w-[1320px] text-[8.5px]">
+        <table className="w-full min-w-[1140px] table-auto text-[8.5px]">
           <thead className="sticky top-0 z-30 bg-[#F8FAFC] text-[7px] font-black uppercase tracking-[.05em] text-[#7C899B]"><tr>
             <SelectHead checked={allFilteredSelected} onChange={toggleFiltered} />
-            <th className="sticky left-[38px] z-40 bg-[#F8FAFC] px-2 py-2 text-left">Policy</th>
-            <th className="px-2 py-2 text-left">Insurer</th>
-            <th className="px-2 py-2 text-left">Intermediary</th>
+            <th className="sticky left-[38px] z-40 min-w-[235px] bg-[#F8FAFC] px-2 py-2 text-left">Policy</th>
+            <th className="min-w-[170px] px-2 py-2 text-left">Intermediary</th>
             <th className="px-2 py-2 text-left">Issued</th>
             <th className="px-2 py-2 text-right">OD Premium</th>
             <th className="px-2 py-2 text-right">TP/CPA</th>
             <th className="px-2 py-2 text-right">{side === "insurer" ? "OD Pay-In %" : "OD Payout %"}</th>
             <th className="px-2 py-2 text-right">{side === "insurer" ? "TP Pay-In %" : "TP Payout %"}</th>
             {side === "insurer" ? <th className="px-2 py-2 text-right">Scheme</th> : null}
-            <th className="px-2 py-2 text-right">{side === "insurer" ? "Projected Pay-In" : "Agreed Payout"}</th>
-            <th className="px-2 py-2 text-left">Status</th>
-            <th className="sticky right-0 z-40 bg-[#F8FAFC] px-2 py-2 text-center">Actions</th>
+            <th className="min-w-[100px] px-2 py-2 text-right">{side === "insurer" ? "Projected Pay-In" : "Agreed Payout"}</th>
+            <th className="min-w-[88px] px-2 py-2 text-left">Status</th>
+            <th className="sticky right-0 z-40 w-[126px] min-w-[126px] bg-[#F8FAFC] px-2 py-2 text-center">Actions</th>
           </tr></thead>
           <tbody className="divide-y divide-[#EDF0F4]">{filteredRows.map((row) => {
             const isEditing = editingId === row.id;
@@ -316,8 +315,7 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
             const preview = isEditing ? calculatePreview(row, side, edit) : total;
             return <tr key={row.id} className={isEditing ? "bg-[#FFF9EC]" : "hover:bg-[#FBFCFE]"}>
               <td className="sticky left-0 z-10 bg-inherit px-2 py-2"><input aria-label={`Select ${row.policyNo}`} type="checkbox" checked={selected.has(row.id)} onChange={() => toggle(row.id)} /></td>
-              <td className="sticky left-[38px] z-10 bg-inherit px-2 py-2"><Link href={`/policies/${row.id}/edit`} className="font-bold text-[#1E2D49] hover:text-[#315B9A] hover:underline">{row.policyNo}</Link></td>
-              <td className="max-w-[190px] px-2 py-2"><div className="truncate font-medium text-[#26364F]">{row.insurerName}</div></td>
+              <td className="sticky left-[38px] z-10 min-w-[235px] max-w-[260px] bg-inherit px-2 py-2"><Link href={`/policies/${row.id}/edit`} className="block truncate font-bold text-[#1E2D49] hover:text-[#315B9A] hover:underline">{row.policyNo}</Link><div className="mt-0.5 truncate text-[7px] font-medium text-[#98A2B3]" title={row.insurerName}>{row.insurerName}</div></td>
               <td className="max-w-[190px] px-2 py-2"><div className="truncate font-semibold text-[#26364F]" title={row.intermediaryName}>{row.intermediaryName}</div><div className="truncate text-[7px] text-[#98A2B3]">{[row.intermediaryType, row.intermediaryCode].filter(Boolean).join(" · ") || "—"}</div></td>
               <td className="whitespace-nowrap px-2 py-2">{date(row.issuanceDate)}</td>
               <MoneyCell value={row.odPremium} /><MoneyCell value={row.tpCpaPremium} />
@@ -326,7 +324,7 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
               {side === "insurer" ? <EditableNumber editing={isEditing} value={isEditing ? edit.scheme : String(row.schemeAmount)} onChange={(value) => setEdit((state) => ({ ...state, scheme: value }))} onEnter={() => saveRow(row, true)} moneyValue /> : null}
               <td className="bg-[#FAFCFF] px-2 py-2 text-right font-bold text-[#315B9A] tabular-nums">{money.format(preview)}</td>
               <td className="px-2 py-2"><StatusBadge status={rowStatus} /></td>
-              <td className="sticky right-0 z-10 bg-inherit px-2 py-2"><div className="flex justify-center gap-1">
+              <td className="sticky right-0 z-20 w-[126px] min-w-[126px] bg-white px-2 py-2 shadow-[-8px_0_12px_-12px_rgba(15,23,42,.35)]"><div className="flex justify-center gap-1">
                 {isEditing ? <><IconButton label="Save" onClick={() => saveRow(row)} disabled={isPending}><Save className="h-3.5 w-3.5" /></IconButton><IconButton label="Undo" onClick={() => setEditingId(null)}><Undo2 className="h-3.5 w-3.5" /></IconButton></> : <IconButton label="Edit row" onClick={() => beginEdit(row)}><Pencil className="h-3.5 w-3.5" /></IconButton>}
                 <IconButton label="Mark not applicable" onClick={() => applyRowStatus(row, "not_applicable")} disabled={isPending}><CircleOff className="h-3.5 w-3.5" /></IconButton>
                 <button type="button" title={`${side === "insurer" ? row.insurerNote : row.partnerNote}\n${(side === "insurer" ? row.insurerLastAction : row.partnerLastAction) ?? "No history"}`} className="grid h-9 w-9 place-items-center rounded-xl border border-[#D8E2EF] text-[#667085]"><History className="h-3.5 w-3.5" /></button>
