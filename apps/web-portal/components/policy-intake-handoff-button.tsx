@@ -19,7 +19,8 @@ export function PolicyIntakeHandoffButton({ id }: { id: string }) {
       const result = await preparePolicyIntakeHandoff(id);
       if (!result.ok) { setError(result.error); return; }
       try {
-        sessionStorage.setItem(POLICY_DRAFT_KEY, JSON.stringify({ savedAt: Date.now(), form: result.draft, registrationMode: result.draft.registrationNo ? "registered" : "registered" }));
+        const { registrationMode, ...form } = result.draft;
+        sessionStorage.setItem(POLICY_DRAFT_KEY, JSON.stringify({ savedAt: Date.now(), form, registrationMode }));
         sessionStorage.setItem(POLICY_INTAKE_PENDING_KEY, JSON.stringify({ id, savedAt: Date.now() }));
       } catch {
         setError("This browser could not prepare the onboarding draft. Please refresh and try again.");
