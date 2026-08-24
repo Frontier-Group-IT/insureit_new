@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Patch reset linkage and regression
+      - name: Patch reset linkage and focused regression
         shell: bash
         run: |
           python - <<'PY'
@@ -33,11 +33,12 @@ jobs:
           if 'POLICY_INTAKE_PENDING_KEY' not in form:
               form = form.replace(key_anchor, key_anchor + 'const POLICY_INTAKE_PENDING_KEY = "insureit:policy-intake:pending:v1";\nconst POLICY_ONBOARDING_RESET_EVENT = "insureit:policy-onboarding:reset";\n', 1)
 
-          old = '    try{sessionStorage.removeItem(POLICY_DRAFT_KEY);}catch{}\n    setForm(stateFrom(initialValues));'
-          new = '    try{sessionStorage.removeItem(POLICY_DRAFT_KEY);sessionStorage.removeItem(POLICY_INTAKE_PENDING_KEY);window.dispatchEvent(new Event(POLICY_ONBOARDING_RESET_EVENT));}catch{}\n    setForm(stateFrom(initialValues));'
-          if old not in form:
-              raise SystemExit('clearPolicyForm reset anchor not found')
-          form = form.replace(old, new, 1)
+          reset_anchor = 'try{sessionStorage.removeItem(POLICY_DRAFT_KEY);}catch{}'
+          replacement = 'try{sessionStorage.removeItem(POLICY_DRAFT_KEY);sessionStorage.removeItem(POLICY_INTAKE_PENDING_KEY);window.dispatchEvent(new Event(POLICY_ONBOARDING_RESET_EVENT));}catch{}'
+          if replacement not in form:
+              if reset_anchor not in form:
+                  raise SystemExit('clearPolicyForm storage reset anchor not found')
+              form = form.replace(reset_anchor, replacement, 1)
           form_path.write_text(form)
 
           card_path = Path('apps/web-portal/components/policy-intake-onboarding-context.tsx')
@@ -45,30 +46,27 @@ jobs:
           key = 'const KEY="insureit:policy-intake:pending:v1";\n'
           if key not in card:
               raise SystemExit('Policy intake context key anchor not found')
-          if 'RESET_EVENT=' not in card:
+          if 'const RESET_EVENT=' not in card:
               card = card.replace(key, key + 'const RESET_EVENT="insureit:policy-onboarding:reset";\n', 1)
-
-          load_effect = '  useEffect(()=>{let pending:{id?:string;savedAt?:number}|null=null;try{pending=JSON.parse(sessionStorage.getItem(KEY)||"null");}catch{}if(!pending?.id||!pending.savedAt||Date.now()-pending.savedAt>8*60*60*1000)return;void loadPolicyIntakeOnboardingContext(pending.id).then(result=>{if(result.ok)setContext(result.context);});},[]);\n'
-          if load_effect not in card:
-              raise SystemExit('Policy intake context load effect not found')
-          reset_effect = '  useEffect(()=>{const clear=()=>{setContext(null);setError(null);setOpening(false);setPosition(null);};window.addEventListener(RESET_EVENT,clear);return()=>window.removeEventListener(RESET_EVENT,clear);},[]);\n'
-          if reset_effect not in card:
-              card = card.replace(load_effect, load_effect + reset_effect, 1)
+          reset_effect = '''  useEffect(()=>{\n    const clear=()=>{setContext(null);setError(null);setOpening(false);setDesktopTarget(null);};\n    window.addEventListener(RESET_EVENT,clear);\n    return()=>window.removeEventListener(RESET_EVENT,clear);\n  },[]);\n\n'''
+          marker = '  useEffect(()=>{\n    if(!context)return;\n'
+          if 'addEventListener(RESET_EVENT,clear)' not in card:
+              if marker not in card:
+                  raise SystemExit('Policy intake desktop effect anchor not found')
+              card = card.replace(marker, reset_effect + marker, 1)
           card_path.write_text(card)
 
           regression_path = Path('apps/web-portal/scripts/policy-ocr-onboarding-import-regression.mjs')
           regression = regression_path.read_text()
-          marker = '  ["Parent owns complete create-form reset", form, /function clearPolicyForm\\(\\)\\{[\\s\\S]*sessionStorage\\.removeItem\\(POLICY_DRAFT_KEY\\)[\\s\\S]*setForm\\(stateFrom\\(initialValues\\)\\)[\\s\\S]*setVehicleRegistrationMode\\("registered"\\)[\\s\\S]*setAppliedRc\\(null\\)[\\s\\S]*setPendingPayload\\(null\\)/],\n'
-          if marker not in regression:
-              raise SystemExit('Reset regression marker not found')
-          additions = '  ["Clear form also detaches pending policy intake context", form, /sessionStorage\\.removeItem\\(POLICY_INTAKE_PENDING_KEY\\)[\\s\\S]*dispatchEvent\\(new Event\\(POLICY_ONBOARDING_RESET_EVENT\\)\\)/],\n  ["Policy intake sidebar listens for onboarding reset", intakeContext, /addEventListener\\(RESET_EVENT,clear\\)[\\s\\S]*setContext\\(null\\)/],\n'
-          if 'Clear form also detaches pending policy intake context' not in regression:
-              regression = regression.replace(marker, marker + additions, 1)
-          declaration_anchor = 'const form=read("components/policy-unified-form.tsx");\n'
-          if declaration_anchor not in regression:
-              raise SystemExit('Regression form declaration not found')
-          if 'const intakeContext=' not in regression:
-              regression = regression.replace(declaration_anchor, declaration_anchor + 'const intakeContext=read("components/policy-intake-onboarding-context.tsx");\n', 1)
+          if 'policy-intake-onboarding-context.tsx' not in regression:
+              anchor = 'const form=read("components/policy-unified-form.tsx");'
+              if anchor in regression:
+                  regression = regression.replace(anchor, anchor + '\nconst intakeContext=read("components/policy-intake-onboarding-context.tsx");', 1)
+              else:
+                  regression += '\nconst intakeContext=read("components/policy-intake-onboarding-context.tsx");\n'
+          checks = '''\nif (!form.includes('sessionStorage.removeItem(POLICY_INTAKE_PENDING_KEY)')) throw new Error("FAIL: clear form must remove pending Policy Intake context");\nif (!form.includes('dispatchEvent(new Event(POLICY_ONBOARDING_RESET_EVENT))')) throw new Error("FAIL: clear form must notify Policy Intake sidebar");\nif (!intakeContext.includes('addEventListener(RESET_EVENT,clear)') || !intakeContext.includes('setContext(null)')) throw new Error("FAIL: Policy Intake sidebar must clear immediately with onboarding reset");\nconsole.log("PASS: policy intake sidebar resets with policy onboarding form");\n'''
+          if 'PASS: policy intake sidebar resets with policy onboarding form' not in regression:
+              regression += checks
           regression_path.write_text(regression)
           PY
       - name: Run focused onboarding regression
