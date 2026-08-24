@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SELF_MANAGED_MILESTONES, type ClaimMilestone } from '@/lib/claim-service-mode';
@@ -35,8 +36,23 @@ const stageIcons: Array<keyof typeof MaterialCommunityIcons.glyphMap> = [
 ];
 
 export function CompactDocumentStageHeader({ step, title, subtitle, vehicleNo, claimNo }: HeaderProps) {
+  const router = useRouter();
+  const params = useLocalSearchParams<{ id?: string; key?: string }>();
+  const [assistanceTooltipVisible, setAssistanceTooltipVisible] = useState(false);
   const icon = stageIcons[Math.max(0, Math.min(stageIcons.length - 1, step - 1))];
   const currentIndex = Math.max(0, Math.min(SELF_MANAGED_MILESTONES.length - 1, step - 1));
+  const claimId = typeof params.id === 'string' ? params.id : '';
+  const returnStage = typeof params.key === 'string' ? params.key : 'claim_intimation';
+
+  function openAssistance() {
+    if (!claimId) return;
+    router.push({ pathname: '/customer/request-claim-assistance', params: { id: claimId, returnStage } });
+  }
+
+  function showLongPressTooltip() {
+    setAssistanceTooltipVisible(true);
+    setTimeout(() => setAssistanceTooltipVisible(false), 1600);
+  }
 
   return (
     <View style={styles.headerWrap}>
@@ -59,7 +75,22 @@ export function CompactDocumentStageHeader({ step, title, subtitle, vehicleNo, c
           {vehicleNo || claimNo ? <Text style={styles.identity}>{[vehicleNo, claimNo].filter(Boolean).join('  •  ')}</Text> : null}
           {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         </View>
-        <View style={styles.selfTrackedBadge}><Text style={styles.selfTrackedText}>Self Tracked</Text></View>
+        <View style={styles.assistanceWrap}>
+          {assistanceTooltipVisible ? <View style={styles.assistanceTooltip} pointerEvents="none"><Text style={styles.assistanceTooltipText}>Get Assistance</Text></View> : null}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Get Assistance"
+            accessibilityHint="Opens the existing claim assistance flow"
+            disabled={!claimId}
+            onPress={openAssistance}
+            onLongPress={showLongPressTooltip}
+            onHoverIn={() => setAssistanceTooltipVisible(true)}
+            onHoverOut={() => setAssistanceTooltipVisible(false)}
+            style={({ pressed }) => [styles.assistanceButton, pressed && styles.assistanceButtonPressed, !claimId && styles.buttonDisabled]}
+          >
+            <MaterialCommunityIcons name="help-circle-outline" size={23} color="#145ED7" />
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -126,8 +157,11 @@ const styles = StyleSheet.create({
   title: { color: palette.navy, fontSize: 23, lineHeight: 28, fontWeight: '900', marginTop: 3 },
   identity: { color: '#52637B', fontSize: 10.5, lineHeight: 14, fontWeight: '800', marginTop: 3 },
   subtitle: { color: '#6C7889', fontSize: 11.5, lineHeight: 16, fontWeight: '600', marginTop: 4 },
-  selfTrackedBadge: { alignSelf: 'flex-start', borderRadius: 999, backgroundColor: '#EDF3FF', paddingHorizontal: 12, paddingVertical: 8, marginTop: 8 },
-  selfTrackedText: { color: '#145ED7', fontSize: 10.5, fontWeight: '900' },
+  assistanceWrap: { position: 'relative', alignSelf: 'flex-start', marginTop: 7 },
+  assistanceButton: { width: 40, height: 40, borderRadius: 14, borderWidth: 1, borderColor: '#C6D9F5', backgroundColor: '#EDF3FF', alignItems: 'center', justifyContent: 'center' },
+  assistanceButtonPressed: { backgroundColor: '#E0EBFF', transform: [{ scale: 0.97 }] },
+  assistanceTooltip: { position: 'absolute', right: 0, bottom: 46, backgroundColor: '#0A2858', borderRadius: 8, paddingHorizontal: 9, paddingVertical: 6, zIndex: 10, minWidth: 94, alignItems: 'center' },
+  assistanceTooltipText: { color: '#FFFFFF', fontSize: 10, lineHeight: 12, fontWeight: '800' },
   actionSection: { marginTop: 0, marginBottom: 6 },
   actionRow: { flexDirection: 'row', alignItems: 'stretch', gap: 9 },
   previousButton: { flex: 0.9, minHeight: 52, borderRadius: 15, borderWidth: 1, borderColor: '#AFC8EA', backgroundColor: '#F9FBFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 10 },
