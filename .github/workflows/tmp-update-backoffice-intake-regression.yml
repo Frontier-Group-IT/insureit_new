@@ -1,0 +1,34 @@
+name: Temporary update Backoffice intake regression
+
+on:
+  push:
+    branches:
+      - feat/policy-intake-sales-operations
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/policy-intake-sales-operations
+      - name: Update Backoffice regression expectations
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('apps/web-portal/scripts/backoffice-data-entry-regression.mjs')
+          s=p.read_text()
+          s=s.replace('"create_external_policies","view_reports"','"create_external_policies","view_policy_intakes","review_policy_intakes","view_reports"',1)
+          s=s.replace('["policies.create","edit"],["reports.view","view"]','["policies.create","edit"],["policy_intakes.view","view"],["policy_intakes.review","edit"],["reports.view","view"]',1)
+          p.write_text(s)
+          PY
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add apps/web-portal/scripts/backoffice-data-entry-regression.mjs
+          git commit -m "Extend Backoffice regression for policy intake review"
+          git push origin HEAD:feat/policy-intake-sales-operations
