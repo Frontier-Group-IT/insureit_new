@@ -1,0 +1,50 @@
+name: Temporary finalize policy intake patches
+
+on:
+  push:
+    branches:
+      - feat/policy-intake-sales-operations
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/policy-intake-sales-operations
+      - name: Apply consistency patches
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p=Path('apps/web-portal/scripts/access-control-catalogue-v2-regression.mjs')
+          s=p.read_text()
+          old='const applicationOnlyPermissionKeys = new Set([\n  "policies.ocr_training.review",\n  "policies.ocr_training.approve",\n]);'
+          new='const applicationOnlyPermissionKeys = new Set([\n  // Policy-intake permissions are application-managed through the current legacy/effective\n  // permission tables. Keep the optional V2 SQL foundation immutable until its next schema phase.\n  "policy_intakes.view",\n  "policy_intakes.create",\n  "policy_intakes.review",\n  "policies.ocr_training.review",\n  "policies.ocr_training.approve",\n]);'
+          if old not in s: raise SystemExit('application-only marker missing')
+          p.write_text(s.replace(old,new,1))
+
+          p=Path('apps/web-portal/components/claim-manager/app-navigation.tsx')
+          s=p.read_text()
+          old='if(pathname==="/vehicles"||pathname.startsWith("/vehicles/")||pathname==="/policies"||pathname.startsWith("/policies/"))return"fleet";'
+          new='if(pathname==="/vehicles"||pathname.startsWith("/vehicles/")||pathname==="/policies"||pathname.startsWith("/policies/")||pathname==="/policy-intakes"||pathname.startsWith("/policy-intakes/"))return"fleet";'
+          if old not in s: raise SystemExit('navigation route marker missing')
+          p.write_text(s.replace(old,new,1))
+
+          p=Path('apps/web-portal/components/policy-unified-form.tsx')
+          s=p.read_text()
+          old='  const selectedSourceId=useMemo(()=>availableSources.find(item=>item.code===form.intermediaryCode&&item.label.trim().toLowerCase()===form.leadSource.trim().toLowerCase())?.value??"",[availableSources,form.intermediaryCode,form.leadSource]);\n  function changeIntermediaryType'
+          new='  const selectedSourceId=useMemo(()=>availableSources.find(item=>item.code===form.intermediaryCode&&item.label.trim().toLowerCase()===form.leadSource.trim().toLowerCase())?.value??"",[availableSources,form.intermediaryCode,form.leadSource]);\n  useEffect(()=>{if(form.rmName||!selectedSourceId)return;const selected=availableSources.find(item=>item.value===selectedSourceId);if(selected?.rmName)setForm(current=>current.rmName?current:{...current,rmName:selected.rmName});},[availableSources,form.rmName,selectedSourceId]);\n  function changeIntermediaryType'
+          if old not in s: raise SystemExit('source hydration marker missing')
+          p.write_text(s.replace(old,new,1))
+          PY
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add apps/web-portal/scripts/access-control-catalogue-v2-regression.mjs apps/web-portal/components/claim-manager/app-navigation.tsx apps/web-portal/components/policy-unified-form.tsx
+          git commit -m "Finalize policy intake access and handoff consistency"
+          git push origin HEAD:feat/policy-intake-sales-operations
