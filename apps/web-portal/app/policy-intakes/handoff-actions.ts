@@ -3,7 +3,6 @@
 import { claimPolicyIntakeForReview } from "@/app/policy-intakes/actions";
 import type { PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
 import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-apply";
-import { loadVehicleManufacturers } from "@/lib/master-data-server";
 import { requirePolicyIntakeReviewer } from "@/lib/policy-intake-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -14,6 +13,11 @@ export type PolicyIntakeDraft = {
   policyProduct:string; idv:string; od:string; tp:string; cpaOpted:"Yes"|"No"; cpa:string; policyNo:string; insurerId:string; validFrom:string; validUpto:string;
   payoutBasis:string; projectedOdPercent:string; projectedTpPercent:string; insurerScheme:string; payinBillNo:string; payinBilledAmount:string; payinBillDate:string; payinStatus:string; retention:string; payoutOdPercent:string; payoutTpPercent:string; payoutStatus:string; payoutDate:string; payoutVoucherNo:string; remarks:string;
 };
+
+type ManufacturerId={id:string};
+type BrandOption={manufacturer_id:string;brand_name:string};
+type InsurerOption={id:string;name:string};
+type CustomerOption={contact_name:string;company_name:string|null};
 
 export async function preparePolicyIntakeHandoff(id:string):Promise<{ok:true;draft:PolicyIntakeDraft}|{ok:false;error:string}> {
   await requirePolicyIntakeReviewer();
@@ -26,12 +30,19 @@ export async function preparePolicyIntakeHandoff(id:string):Promise<{ok:true;dra
     .maybeSingle<{lead_source_type:"posp"|"misp"|"partner";lead_source_name:string;lead_source_code:string|null;customer_mobile:string;matched_customer_id:string|null;ocr_fields:PolicyIntakeOcrField[];status:string}>();
   if (!intake || ["completed","rejected"].includes(intake.status)) return {ok:false,error:"This intake is no longer available for onboarding."};
 
-  const [manufacturerOptions, insurerResult, customerResult] = await Promise.all([
-    loadVehicleManufacturers(),
-    admin.from("insurance_companies").select("id,name").eq("is_active",true).order("name"),
-    intake.matched_customer_id ? admin.from("customers").select("contact_name,company_name").eq("id",intake.matched_customer_id).maybeSingle<{contact_name:string;company_name:string|null}>() : Promise.resolve({data:null}),
+  const [manufacturerResult, brandResult, insurerResult, customerResult] = await Promise.all([
+    admin.from("vehicle_manufacturers").select("id").eq("is_active",true).returns<ManufacturerId[]>(),
+    admin.from("vehicle_manufacturer_brands").select("manufacturer_id,brand_name").eq("is_active",true).order("brand_name").returns<BrandOption[]>(),
+    admin.from("insurance_companies").select("id,name").eq("is_active",true).order("name").returns<InsurerOption[]>(),
+    intake.matched_customer_id
+      ? admin.from("customers").select("contact_name,company_name").eq("id",intake.matched_customer_id).maybeSingle<CustomerOption>()
+      : Promise.resolve({data:null,error:null}),
   ]);
-  const insurers=(insurerResult.data??[]).map(row=>({value:String(row.id),label:String(row.name)}));
+  if(manufacturerResult.error||brandResult.error||insurerResult.error)return {ok:false,error:"Policy onboarding master data is temporarily unavailable."};
+
+  const activeManufacturerIds=new Set((manufacturerResult.data??[]).map(row=>row.id));
+  const manufacturerOptions=Array.from(new Set((brandResult.data??[]).filter(row=>activeManufacturerIds.has(row.manufacturer_id)).map(row=>row.brand_name))).sort((a,b)=>a.localeCompare(b));
+  const insurers=(insurerResult.data??[]).map((row:InsurerOption)=>({value:row.id,label:row.name}));
   const mapped=buildPolicyOcrOnboardingUpdate({
     mode:"create",
     registrationMode:"registered",
