@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildPolicyOcrOnboardingUpdate } from "../lib/policy-ocr-onboarding-apply.ts";
 
+// Clear-form regression intentionally verifies parent-owned reset behavior.
 const here = path.dirname(fileURLToPath(import.meta.url));
 const panel = fs.readFileSync(path.join(here, "../components/policy-ocr-import-panel.tsx"), "utf8");
 const form = fs.readFileSync(path.join(here, "../components/policy-unified-form.tsx"), "utf8");
@@ -20,6 +21,10 @@ const regexChecks = [
   ["Edit or RC state protects Section 02 in mapper", mapper, /section02Protected = input\.mode === "edit" \|\| input\.rcVerified/],
   ["Class dependency updates are atomic", mapper, /if \(changed && !byKey\.has\("vehicle_capacity"\)\) next\.capacity = "";[\s\S]*if \(changed && !byKey\.has\("policy_product"\)\) next\.policyProduct = "";/],
   ["CPA amount does not set owner-driver opted state", mapper, /cpa_premium can include paid-driver\/workmen liability additions[\s\S]*next\.cpa = value/],
+  ["Clear form is delegated to parent", panel, /onClearForm\?: \(\) => void[\s\S]*onClearForm\?\.\(\)/],
+  ["OCR panel no longer owns onboarding draft storage", panel, /PolicyOcrImportPanel/],
+  ["Parent owns complete create-form reset", form, /function clearPolicyForm\(\)\{[\s\S]*sessionStorage\.removeItem\(POLICY_DRAFT_KEY\)[\s\S]*setForm\(stateFrom\(initialValues\)\)[\s\S]*setVehicleRegistrationMode\("registered"\)[\s\S]*setAppliedRc\(null\)[\s\S]*setPendingPayload\(null\)/],
+  ["Header wires parent reset callback", form, /onClearForm=\{clearPolicyForm\}/],
 ];
 
 for (const [name, source, pattern] of regexChecks) {
@@ -35,6 +40,10 @@ for (const forbidden of ["findControl(", "setNativeValue(", "control.disabled = 
   if (panel.includes(forbidden)) throw new Error(`FAIL: panel must not mutate onboarding controls via DOM (${forbidden})`);
 }
 console.log("PASS: popup contains no DOM-based form mutation path");
+
+if (panel.includes('insureit:policy-onboarding:draft:v1')) throw new Error("FAIL: OCR panel must not own an obsolete onboarding draft key");
+if (panel.includes('window.location.reload()')) throw new Error("FAIL: clear form must not rely on full-page reload");
+console.log("PASS: clear form reset is parent-owned and reload-free");
 
 const blank = {
   registrationNo: "",
