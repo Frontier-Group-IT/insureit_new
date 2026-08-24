@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Scale } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { CommercialReviewClient, type CommercialReviewRow } from "@/app/policies/commercial-review/commercial-review-client";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
@@ -93,7 +94,10 @@ export default async function PolicyCommercialReviewPage() {
     <AppShell title="Pay-In / Payout">
       <div className="mx-auto max-w-[1720px] space-y-2.5 pb-6">
         <section className="flex items-center justify-between rounded-2xl border border-[#D9E2F0] bg-white px-4 py-2.5 shadow-sm">
-          <h1 className="text-[17px] font-semibold text-[#17365D]">Pay-In / Payout</h1>
+          <div className="flex items-center gap-2">
+            <Scale className="h-[18px] w-[18px] text-[#0f766e]" />
+            <h1 className="text-[17px] font-semibold text-[#17365D]">Pay-In / Payout</h1>
+          </div>
           <div className="rounded-lg border border-[#DDE6EE] bg-[#F8FAFC] px-2.5 py-1.5 text-[8.5px] font-semibold text-[#526277]">{rows.length.toLocaleString("en-IN")} policies</div>
         </section>
         <CommercialReviewClient rows={rows} />
