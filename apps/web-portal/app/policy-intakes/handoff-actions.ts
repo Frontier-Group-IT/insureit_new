@@ -8,6 +8,7 @@ import { requirePolicyIntakeReviewer } from "@/lib/policy-intake-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export type PolicyIntakeDraft = {
+  registrationMode:"registered"|"unregistered";
   issuanceDate:string; rmName:string; intermediaryType:string; leadSource:string; intermediaryCode:string; businessLine:string;
   registrationNo:string; insuredName:string; phoneNo:string; vehicleClass:string; make:string; model:string; fuelType:string; capacity:string; manufacturingYear:string; chassisNo:string; engineNo:string; rtoState:string; rtoName:string;
   policyProduct:string; idv:string; od:string; tp:string; cpaOpted:"Yes"|"No"; cpa:string; policyNo:string; insurerId:string; validFrom:string; validUpto:string;
@@ -40,6 +41,7 @@ export async function preparePolicyIntakeHandoff(id:string):Promise<{ok:true;dra
   const customerName=customerResult.data?.company_name?.trim()||customerResult.data?.contact_name?.trim()||"";
   const intermediaryType=intake.lead_source_type==="posp"?"POSP":intake.lead_source_type==="misp"?"MISP":"SIBL / Partner";
   const draft:PolicyIntakeDraft={
+    registrationMode:mapped.registrationMode,
     issuanceDate:new Date().toISOString().slice(0,10),rmName:"",intermediaryType,leadSource:intake.lead_source_name,intermediaryCode:intake.lead_source_code??"",businessLine:"Motor",
     registrationNo:mapped.next.registrationNo,insuredName:customerName,phoneNo:intake.customer_mobile,vehicleClass:mapped.next.vehicleClass,make:mapped.next.make,model:mapped.next.model,fuelType:mapped.next.fuelType,capacity:mapped.next.capacity,manufacturingYear:mapped.next.manufacturingYear,chassisNo:mapped.next.chassisNo,engineNo:mapped.next.engineNo,rtoState:mapped.next.rtoState,rtoName:mapped.next.rtoName,
     policyProduct:mapped.next.policyProduct,idv:mapped.next.idv,od:mapped.next.od,tp:mapped.next.tp,cpaOpted:"No",cpa:mapped.next.cpa,policyNo:mapped.next.policyNo,insurerId:mapped.next.insurerId,validFrom:mapped.next.validFrom,validUpto:mapped.next.validUpto,
