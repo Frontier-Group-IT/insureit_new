@@ -123,7 +123,7 @@ export default function ClaimDetailScreen() {
       </View>
       {message ? <Message type="error">{message}</Message> : null}
 
-      {selfManaged ? <ClaimProgressStrip step={Math.min(9, currentStageIndex + 1)} /> : null}
+      {selfManaged && !settled ? <ClaimProgressStrip step={Math.min(9, currentStageIndex + 1)} /> : null}
 
       <View style={[styles.heroCard, { borderColor: tone.border }]}>
         <View style={styles.heroOrbLarge} />
@@ -149,15 +149,15 @@ export default function ClaimDetailScreen() {
         </View> : null}
       </View>
 
-      <View style={[styles.currentCard, { borderColor: tone.border, backgroundColor: tone.background }]}>
+      {!settled ? <View style={[styles.currentCard, { borderColor: tone.border, backgroundColor: tone.background }]}>
         <View style={[styles.currentAccent, { backgroundColor: tone.accent }]} />
-        <View style={[styles.currentIcon, { backgroundColor: tone.soft }]}><MaterialCommunityIcons name={settled ? 'check-circle-outline' : 'arrow-right-circle-outline'} size={23} color={tone.accent} /></View>
+        <View style={[styles.currentIcon, { backgroundColor: tone.soft }]}><MaterialCommunityIcons name="arrow-right-circle-outline" size={23} color={tone.accent} /></View>
         <View style={styles.currentCopy}>
           <Text style={[styles.currentEyebrow, { color: tone.accent }]}>{selfManaged ? 'CURRENT MILESTONE' : 'NEXT ACTION'}</Text>
-          <Text style={styles.currentTitle}>{settled ? 'Claim journey complete' : currentStage?.label ?? claim.current_status}</Text>
-          <Text style={styles.currentBody}>{selfManaged ? settled ? 'All nine external claim milestones are recorded.' : currentStageHint(currentStage?.key) : customerStageCopy(claim.current_status)}</Text>
+          <Text style={styles.currentTitle}>{currentStage?.label ?? claim.current_status}</Text>
+          <Text style={styles.currentBody}>{selfManaged ? currentStageHint(currentStage?.key) : customerStageCopy(claim.current_status)}</Text>
         </View>
-      </View>
+      </View> : null}
 
       {selfManaged && !settled ? <ClaimActionBar
         primaryLabel="Proceed to Next Step"
