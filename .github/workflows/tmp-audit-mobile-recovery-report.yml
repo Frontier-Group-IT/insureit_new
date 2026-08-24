@@ -28,25 +28,22 @@ jobs:
           git config user.name "recovery-audit"
           git config user.email "recovery-audit@users.noreply.github.com"
           git fetch origin ui/mobile-claim-tracker-progress-ring fix/claim-intimation-bulk-picker-runtime ui/my-claims-self-tracked-status-colors-v2 ui/compact-document-upload-actions ui/compact-claim-identity-card
-          : > recovery-merge-audit.txt
+          : > /tmp/recovery-merge-audit.txt
           for branch in ui/mobile-claim-tracker-progress-ring fix/claim-intimation-bulk-picker-runtime ui/my-claims-self-tracked-status-colors-v2 ui/compact-document-upload-actions ui/compact-claim-identity-card; do
-            echo "===== $branch =====" >> recovery-merge-audit.txt
+            echo "===== $branch =====" >> /tmp/recovery-merge-audit.txt
             if git merge --no-ff --no-edit "origin/$branch"; then
-              echo "CLEAN" >> recovery-merge-audit.txt
+              echo "CLEAN" >> /tmp/recovery-merge-audit.txt
             else
-              echo "CONFLICT" >> recovery-merge-audit.txt
-              git diff --name-only --diff-filter=U >> recovery-merge-audit.txt
-              git status --short >> recovery-merge-audit.txt
+              echo "CONFLICT" >> /tmp/recovery-merge-audit.txt
+              git diff --name-only --diff-filter=U >> /tmp/recovery-merge-audit.txt
+              git status --short >> /tmp/recovery-merge-audit.txt
               git merge --abort
               break
             fi
           done
           git reset --hard origin/recovery/mobile-today-cumulative
           git clean -fd
-          git checkout -- recovery-merge-audit.txt 2>/dev/null || true
-          if [ ! -f recovery-merge-audit.txt ]; then
-            echo "audit report unavailable" > recovery-merge-audit.txt
-          fi
+          cp /tmp/recovery-merge-audit.txt recovery-merge-audit.txt
           git add recovery-merge-audit.txt
           git commit -m "chore: record cumulative mobile merge audit" || true
           git push origin HEAD:recovery/mobile-today-cumulative
