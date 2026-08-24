@@ -6,6 +6,11 @@ on:
       - recovery/mobile-today-cumulative
     paths:
       - '.github/workflows/tmp-build-mobile-recovery.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/tmp-build-mobile-recovery.yml'
 
 permissions:
   contents: write
@@ -41,10 +46,6 @@ jobs:
           git merge --no-ff --no-edit origin/fix/claim-intimation-bulk-picker-runtime
           git merge --no-ff --no-edit origin/ui/my-claims-self-tracked-status-colors-v2
           git merge --no-ff --no-edit origin/ui/compact-document-upload-actions
-
-          # PR #607 overlaps PR #603 in the shared milestone/header files.
-          # Prefer #607 for overlapping identity-card hunks, then restore #603's
-          # document-upload-only compact navigation behavior below.
           git merge --no-ff --no-edit -X theirs origin/ui/compact-claim-identity-card
 
           python <<'PY'
@@ -52,21 +53,16 @@ jobs:
 
           milestone = Path('apps/mobile-app/app/customer/self-managed-milestone.tsx')
           text = milestone.read_text()
-
           import_line = "import { CompactDocumentActionBar, CompactDocumentStageHeader } from '@/components/compact-document-upload-navigation';\n"
           anchor = "import { AppDatePicker } from '@/components/design-system';\n"
           if import_line not in text:
-              if anchor not in text:
-                  raise SystemExit('milestone import anchor missing')
+              if anchor not in text: raise SystemExit('milestone import anchor missing')
               text = text.replace(anchor, import_line + anchor, 1)
-
           marker = "  return (\n    <Screen title={definition.label} showTitleHeader={false}>\n"
           if "const documentUploadStage = key === 'claim_intimation';" not in text:
-              if marker not in text:
-                  raise SystemExit('milestone return marker missing')
+              if marker not in text: raise SystemExit('milestone return marker missing')
               prefix = "  const documentUploadStage = key === 'claim_intimation';\n  const primaryLabel = saving ? 'Saving...' : key === 'payment_encashment' ? 'Complete Claim' : key === 'vehicle_delivery' && values.vehicle_received !== 'yes' ? 'Save Vehicle Status' : 'Save & Continue';\n\n"
               text = text.replace(marker, prefix + marker, 1)
-
           old_header = """      <ExternalClaimStageHeader
         step={step}
         title={definition.label}
@@ -92,10 +88,8 @@ jobs:
       />}
 """
           if '<CompactDocumentStageHeader' not in text:
-              if old_header not in text:
-                  raise SystemExit('milestone shared header block missing')
+              if old_header not in text: raise SystemExit('milestone shared header block missing')
               text = text.replace(old_header, new_header, 1)
-
           old_action = """      <ClaimActionBar
         primaryDisabled={saving || loading}
         primaryIcon={key === 'payment_encashment' ? 'check' : 'arrow-right'}
@@ -120,15 +114,12 @@ jobs:
       />}
 """
           if '<CompactDocumentActionBar' not in text:
-              if old_action not in text:
-                  raise SystemExit('milestone shared action block missing')
+              if old_action not in text: raise SystemExit('milestone shared action block missing')
               text = text.replace(old_action, new_action, 1)
-
           milestone.write_text(text)
 
           ui = Path('apps/mobile-app/components/external-claim-ui.tsx')
-          ui_text = ui.read_text()
-          ui_text = ui_text.replace('          <Text style={styles.eyebrow}>STEP {step} OF 9</Text>\n', '', 1)
+          ui_text = ui.read_text().replace('          <Text style={styles.eyebrow}>STEP {step} OF 9</Text>\n', '', 1)
           ui.write_text(ui_text)
           PY
 
@@ -160,6 +151,7 @@ jobs:
         run: npm run lint:mobile
 
       - name: Clean temporary recovery audit files and push
+        if: github.event_name == 'push'
         shell: bash
         run: |
           set -euo pipefail
