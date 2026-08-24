@@ -21,6 +21,8 @@ import { refineProductionRound7UiicPrecision } from "./policy-ocr-production-rou
 // @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
 import { refineProductionRound8Fresh20Precision } from "./policy-ocr-production-round8-fresh20-precision-guard.ts";
 // @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
+import { refineProductionRound9Fresh20Recovery } from "./policy-ocr-production-round9-fresh20-recovery.ts";
+// @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
 import { guardProductionRound5UiicPolicyNumber, guardProductionRound5UiicMakeModel, guardProductionRound5UiicVehicleIds } from "./policy-ocr-production-round5-uiic-policy-guard.ts";
 
 export function refineApprovedMotorPolicyLayout(
@@ -62,5 +64,6 @@ export function refineApprovedMotorPolicyLayout(
   const round6 = refineProductionRound6Uiic(pages, tables, guardedIds);
   const round7 = refineProductionRound7UiicPrecision(round6);
   const round8 = refineProductionRound8Fresh20Precision(pages, tables, round7);
-  return refineProductionPolicyIdentity(pages, round8);
+  const round9 = refineProductionRound9Fresh20Recovery(pages, round8);
+  return refineProductionPolicyIdentity(pages, round9);
 }
