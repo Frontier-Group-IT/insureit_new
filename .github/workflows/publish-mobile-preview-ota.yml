@@ -5,7 +5,12 @@ on:
   push:
     branches:
       - main
-      - ui/mobile-claim-tracker-progress-ring
+    paths:
+      - 'apps/mobile-app/**'
+      - '.github/workflows/publish-mobile-preview-ota.yml'
+  pull_request:
+    branches:
+      - main
     paths:
       - 'apps/mobile-app/**'
       - '.github/workflows/publish-mobile-preview-ota.yml'
@@ -16,7 +21,7 @@ permissions:
 
 jobs:
   publish:
-    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/ui/mobile-claim-tracker-progress-ring' || contains(github.event.head_commit.message, '#547')
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.head_ref == 'ui/mobile-claim-tracker-progress-ring') || contains(github.event.head_commit.message, '#547')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -25,7 +30,7 @@ jobs:
       - name: Check out OTA source
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -179,7 +184,7 @@ jobs:
               `- Runtime version: ${runtimeVersion ? `\`${runtimeVersion}\`` : 'Not returned by Expo'}`,
               `- Update group ID: ${groupId ? `\`${groupId}\`` : 'Not returned by Expo'}`,
               `- Update ID(s): ${updateIds.length ? updateIds.map((id) => `\`${id}\``).join(', ') : 'Not returned by Expo'}`,
-              `- Source commit: \`${process.env.GITHUB_SHA || 'unknown'}\``,
+              `- Source commit: \`${process.env.GITHUB_EVENT_NAME === 'pull_request' ? process.env.PR_HEAD_SHA : process.env.GITHUB_SHA || 'unknown'}\``,
               '- Build type: OTA JavaScript/assets only — no APK/AAB built',
             ];
             fs.writeFileSync('expo-pr-comment.md', `${comment.join('\n')}\n`);
