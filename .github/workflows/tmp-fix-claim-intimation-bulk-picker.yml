@@ -1,0 +1,64 @@
+name: Temporary Fix Claim Intimation Bulk Picker
+
+on:
+  push:
+    branches:
+      - fix/claim-intimation-bulk-picker-runtime
+    paths:
+      - .github/workflows/tmp-fix-claim-intimation-bulk-picker.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/claim-intimation-bulk-picker-runtime
+
+      - name: Patch bulk picker to match Stage 1
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('apps/mobile-app/components/external-claim-document-tabs.tsx')
+          text = path.read_text()
+
+          old = """  async function pickAndUploadSeveral() {\n    if (uploadingType) return;\n    setMessage('');\n    const result = await DocumentPicker.getDocumentAsync({\n      type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],\n      multiple: true,\n      copyToCacheDirectory: true,\n    });\n    if (result.canceled || !result.assets?.length) return;\n"""
+          new = """  async function pickAndUploadSeveral() {\n    if (uploadingType) return;\n    setMessage('');\n    let result: Awaited<ReturnType<typeof DocumentPicker.getDocumentAsync>>;\n    try {\n      result = await DocumentPicker.getDocumentAsync({\n        type: ['application/pdf', 'image/*'],\n        multiple: true,\n        copyToCacheDirectory: true,\n      });\n    } catch {\n      setMessage('The document picker could not be opened. Please try again.');\n      return;\n    }\n    if (result.canceled || !result.assets?.length) return;\n"""
+          if old not in text:
+              raise SystemExit('Expected bulk picker block not found')
+          text = text.replace(old, new, 1)
+
+          old_press = """          onPress={() => void pickAndUploadSeveral()}\n          style={({ pressed }) => [styles.bulkHint, bulkUploadedCount > 0 && styles.bulkHintUploaded, pressed && styles.bulkHintPressed, Boolean(uploadingType) && styles.bulkHintDisabled]}\n"""
+          new_press = """          onPress={() => void pickAndUploadSeveral()}\n          android_ripple={{ color: '#E6F0FF' }}\n          style={({ pressed }) => [styles.bulkHint, bulkUploadedCount > 0 && styles.bulkHintUploaded, pressed && styles.bulkHintPressed, Boolean(uploadingType) && styles.bulkHintDisabled]}\n"""
+          if old_press not in text:
+              raise SystemExit('Expected bulk Pressable block not found')
+          text = text.replace(old_press, new_press, 1)
+          path.write_text(text)
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck mobile app
+        working-directory: apps/mobile-app
+        run: npx tsc --noEmit
+
+      - name: Commit fix and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/tmp-fix-claim-intimation-bulk-picker.yml
+          git add apps/mobile-app/components/external-claim-document-tabs.tsx
+          git commit -m "Fix Claim Intimation bulk document picker"
+          git push origin HEAD:fix/claim-intimation-bulk-picker-runtime
