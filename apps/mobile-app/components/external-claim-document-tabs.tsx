@@ -169,11 +169,17 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
   async function pickAndUploadSeveral() {
     if (uploadingType) return;
     setMessage('');
-    const result = await DocumentPicker.getDocumentAsync({
-      type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
-      multiple: true,
-      copyToCacheDirectory: true,
-    });
+    let result: Awaited<ReturnType<typeof DocumentPicker.getDocumentAsync>>;
+    try {
+      result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*'],
+        multiple: true,
+        copyToCacheDirectory: true,
+      });
+    } catch {
+      setMessage('The document picker could not be opened. Please try again.');
+      return;
+    }
     if (result.canceled || !result.assets?.length) return;
 
     const tooLarge = result.assets.find((file) => file.size !== undefined && file.size !== null && file.size > MAX_UPLOAD_SIZE_BYTES);
@@ -293,6 +299,7 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
           accessibilityState={{ disabled: Boolean(uploadingType) }}
           disabled={Boolean(uploadingType)}
           onPress={() => void pickAndUploadSeveral()}
+          android_ripple={{ color: '#E6F0FF' }}
           style={({ pressed }) => [styles.bulkHint, bulkUploadedCount > 0 && styles.bulkHintUploaded, pressed && styles.bulkHintPressed, Boolean(uploadingType) && styles.bulkHintDisabled]}
         >
           <View style={[styles.bulkIcon, bulkUploadedCount > 0 && styles.bulkIconUploaded]}>
