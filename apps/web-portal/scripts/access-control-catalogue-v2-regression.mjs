@@ -115,6 +115,11 @@ const ocrQueueMigrationSql = readFileSync(
   "utf8",
 );
 const applicationOnlyPermissionKeys = new Set([
+  // Policy-intake permissions are application-managed through the current legacy/effective
+  // permission tables. Keep the optional V2 SQL foundation immutable until its next schema phase.
+  "policy_intakes.view",
+  "policy_intakes.create",
+  "policy_intakes.review",
   "policies.ocr_training.review",
   "policies.ocr_training.approve",
 ]);
