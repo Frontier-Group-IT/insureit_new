@@ -25,6 +25,8 @@ const regexChecks = [
   ["OCR panel no longer owns onboarding draft storage", panel, /PolicyOcrImportPanel/],
   ["Parent owns complete create-form reset", form, /function clearPolicyForm\(\)\{[\s\S]*sessionStorage\.removeItem\(POLICY_DRAFT_KEY\)[\s\S]*setForm\(stateFrom\(initialValues\)\)[\s\S]*setVehicleRegistrationMode\("registered"\)[\s\S]*setAppliedRc\(null\)[\s\S]*setPendingPayload\(null\)/],
   ["Header wires parent reset callback", form, /onClearForm=\{clearPolicyForm\}/],
+  ["Payin-Payout is integrated into summary rail", form, /function LiveSummary\([\s\S]*Payin–Payout[\s\S]*Insurer Pay-in[\s\S]*Partner Payout/],
+  ["Summary rail restored to wider desktop width", form, /xl:grid-cols-\[minmax\(0,1fr\)_336px\]/],
 ];
 
 for (const [name, source, pattern] of regexChecks) {
@@ -44,6 +46,11 @@ console.log("PASS: popup contains no DOM-based form mutation path");
 if (panel.includes('insureit:policy-onboarding:draft:v1')) throw new Error("FAIL: OCR panel must not own an obsolete onboarding draft key");
 if (panel.includes('window.location.reload()')) throw new Error("FAIL: clear form must not rely on full-page reload");
 console.log("PASS: clear form reset is parent-owned and reload-free");
+
+if (form.includes("function CommercialCard")) throw new Error("FAIL: legacy full-width Commercials card must not remain");
+if (form.includes(">Commercials<")) throw new Error("FAIL: user-facing Commercials label must be replaced by Payin-Payout");
+console.log("PASS: Payin-Payout controls live only in the compact summary rail");
+
 
 const blank = {
   registrationNo: "",
