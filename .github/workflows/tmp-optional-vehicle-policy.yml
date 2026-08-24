@@ -129,7 +129,6 @@ jobs:
           if old_created not in text:
               raise SystemExit('Expected policy creation block not found')
           text = text.replace(old_created, new_created, 1)
-
           text = text.replace('<FormSection title="Policy details" icon="file-document-outline" tone="policy">', '<FormSection title="Policy details · Optional" icon="file-document-outline" tone="policy">', 1)
           text = text.replace('label="Policy no. *"', 'label="Policy no."', 1)
           text = text.replace('label="End date *"', 'label="End date"', 1)
@@ -177,3 +176,5 @@ jobs:
             -f message='Remove temporary optional vehicle policy workflow' \
             -f sha="$sha" \
             -f branch='feat/self-managed-stage-navigation'
+
+      # trigger revision 2
