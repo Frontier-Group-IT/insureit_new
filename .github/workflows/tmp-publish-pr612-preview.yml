@@ -1,0 +1,52 @@
+name: Temporary publish PR 612 cumulative recovery preview
+
+on:
+  push:
+    branches:
+      - recovery/mobile-today-cumulative
+    paths:
+      - '.github/workflows/tmp-publish-pr612-preview.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - name: Check out cumulative recovery branch
+        uses: actions/checkout@v4
+        with:
+          ref: recovery/mobile-today-cumulative
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Publish PR 612 to Expo preview
+        working-directory: apps/mobile-app
+        run: |
+          npx eas-cli update \
+            --channel preview \
+            --environment preview \
+            --message "PR #612 cumulative mobile recovery preview" \
+            --non-interactive
+
+      - name: Remove temporary workflow
+        if: success()
+        run: |
+          git config user.name "antnish1"
+          git config user.email "shahdolho@gmail.com"
+          git rm .github/workflows/tmp-publish-pr612-preview.yml
+          git commit -m "chore: remove temporary PR 612 preview workflow"
+          git push origin HEAD:recovery/mobile-today-cumulative
