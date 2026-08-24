@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildPolicyOcrOnboardingUpdate } from "../lib/policy-ocr-onboarding-apply.ts";
 
+// Clear-form regression intentionally verifies parent-owned reset behavior.
 const here = path.dirname(fileURLToPath(import.meta.url));
 const panel = fs.readFileSync(path.join(here, "../components/policy-ocr-import-panel.tsx"), "utf8");
 const form = fs.readFileSync(path.join(here, "../components/policy-unified-form.tsx"), "utf8");
