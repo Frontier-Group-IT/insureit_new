@@ -34,16 +34,18 @@ export function guardProductionRound5UiicVehicleIds(
 ): ParsedPolicyResult {
   if (!parsed.parserVersion.includes("+prod-r5-uiic_precision")) return parsed;
   const fields = [...parsed.fields];
-  const currentChassis = fields.find((field) => field.key === "vehicle_chassis_number")?.value?.trim() ?? "";
-  const currentEngine = fields.find((field) => field.key === "vehicle_engine_number")?.value?.trim() ?? "";
-
   const boundedPages = pages.slice(0, 2);
-  if (!plausibleVehicleId(currentChassis)) {
-    replaceField(fields, "vehicle_chassis_number", findStrictVehicleId(boundedPages, /(?:Chassis\s+Number|Chassis\s+No\.?)\b/i), "Chassis number");
-  }
-  if (!plausibleVehicleId(currentEngine)) {
-    replaceField(fields, "vehicle_engine_number", findStrictVehicleId(boundedPages, /(?:Engine\s+Number|Engine\s+No\.?)\b/i), "Engine number");
-  }
+
+  const currentChassis = fields.find((field) => field.key === "vehicle_chassis_number")?.value?.trim() ?? "";
+  const recoveredChassis = findStrictVehicleId(boundedPages, /(?:Chassis\s+Number|Chassis\s+No\.?)\b/i);
+  if (recoveredChassis) replaceField(fields, "vehicle_chassis_number", recoveredChassis, "Chassis number");
+  else if (!plausibleVehicleId(currentChassis)) replaceField(fields, "vehicle_chassis_number", null, "Chassis number");
+
+  const currentEngine = fields.find((field) => field.key === "vehicle_engine_number")?.value?.trim() ?? "";
+  const recoveredEngine = findStrictVehicleId(boundedPages, /(?:Engine\s+Number|Engine\s+No\.?)\b/i);
+  if (recoveredEngine) replaceField(fields, "vehicle_engine_number", recoveredEngine, "Engine number");
+  else if (!plausibleVehicleId(currentEngine)) replaceField(fields, "vehicle_engine_number", null, "Engine number");
+
   return { ...parsed, fields };
 }
 
