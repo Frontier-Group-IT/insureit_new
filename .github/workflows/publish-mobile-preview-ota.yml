@@ -1,12 +1,10 @@
 name: Publish mobile preview OTA
 
 on:
-  workflow_dispatch:
-  push:
+  pull_request:
     branches:
       - main
     paths:
-      - 'apps/mobile-app/**'
       - '.github/workflows/publish-mobile-preview-ota.yml'
 
 permissions:
@@ -14,16 +12,15 @@ permissions:
 
 jobs:
   publish:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '#547')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
-      - name: Check out merged source
+      - name: Check out preview source
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -44,7 +41,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Block duplicate active self-tracked claims" \
+            --message "Preview PR603 compact document upload navigation" \
             --non-interactive \
             --json \
             > expo-update.json \
