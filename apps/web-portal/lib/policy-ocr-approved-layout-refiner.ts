@@ -12,12 +12,17 @@ import { refineProductionRound2Policy } from "./policy-ocr-production-round2-ref
 import { refineProductionRound3Precision } from "./policy-ocr-production-round3-precision-guard.ts";
 // @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
 import { refineProductionRound4Uiic } from "./policy-ocr-production-round4-uiic-refiner.ts";
+// @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
+import { refineProductionRound5Uiic } from "./policy-ocr-production-round5-uiic-refiner.ts";
+// @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
+import { guardProductionRound5UiicPolicyNumber, guardProductionRound5UiicMakeModel, guardProductionRound5UiicVehicleIds } from "./policy-ocr-production-round5-uiic-policy-guard.ts";
 
 /**
  * Stable approved-layout behavior remains the base. Round 1 handles the four
  * original production benchmark families; Round 2 applies structural repairs;
  * Round 3 is a precision-first guard for Digit/IFFCO; Round 4 adds a narrowly
- * gated United India GCV package repair learned only after blind evaluation.
+ * gated United India GCV package repair learned only after blind evaluation;
+ * Round 5 tightens that revealed UIIC family using bounded schedule blocks.
  */
 export function refineApprovedMotorPolicyLayout(
   pages: string[],
@@ -58,5 +63,9 @@ export function refineApprovedMotorPolicyLayout(
   const round2 = refineProductionRound2Policy(pages, tables, production);
   const round3 = refineProductionRound3Precision(round2);
   const round4 = refineProductionRound4Uiic(pages, tables, round3);
-  return refineProductionPolicyIdentity(pages, round4);
+  const round5 = refineProductionRound5Uiic(pages, tables, round4);
+  const guardedPolicy = guardProductionRound5UiicPolicyNumber(pages, round5);
+  const guardedMakeModel = guardProductionRound5UiicMakeModel(pages, guardedPolicy);
+  const guardedIds = guardProductionRound5UiicVehicleIds(pages, guardedMakeModel);
+  return refineProductionPolicyIdentity(pages, guardedIds);
 }
