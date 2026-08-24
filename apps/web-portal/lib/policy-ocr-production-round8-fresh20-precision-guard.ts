@@ -29,9 +29,6 @@ export function refineProductionRound8Fresh20Precision(
     return /REGISTRATION(?:DATE|NO|NUMBER)/.test(normalized) || normalized.length > 15;
   }) || changed;
   changed = deleteIf(fields, "vehicle_engine_number", looksLikeIdentifierLabelNoise) || changed;
-  // Chassis formats vary across insurers and legacy/approved layouts. Round 8 is
-  // precision-first, so only withhold values that are clearly label contamination;
-  // do not reject a value solely because it is shorter than a VIN-like 17 chars.
   changed = deleteIf(fields, "vehicle_chassis_number", looksLikeIdentifierLabelNoise) || changed;
 
   const engine = compact(fields.get("vehicle_engine_number")?.value ?? "");
@@ -42,8 +39,6 @@ export function refineProductionRound8Fresh20Precision(
   }
 
   const capacity = numberField(fields, "vehicle_capacity");
-  // Reject obvious year contamination. PCP/TWP capacity is commonly engine CC,
-  // so values such as 853/1493/1498 are legitimate and must not be blanket-rejected.
   if (capacity != null && capacity >= 1900 && capacity <= 2100) {
     fields.delete("vehicle_capacity");
     changed = true;
@@ -64,13 +59,10 @@ export function refineProductionRound8Fresh20Precision(
 
   const cpaOpted = fields.get("cpa_opted")?.value?.trim() ?? "";
   const cpa = numberField(fields, "cpa_premium");
-  // Some approved layouts retain a small non-owner-driver PA component while
-  // cpa_opted is No. Preserve the established ₹50 compatibility case; only
-  // withhold larger contradictory values that match the fresh20 contamination.
-  if (/^No$/i.test(cpaOpted) && cpa != null && cpa > 50) {
-    fields.delete("cpa_premium");
-    changed = true;
-  }
+  // cpa_opted=No does not universally imply that every PA-related premium-like
+  // component must be absent: established Magma/UIIC/Royal layouts deliberately
+  // retain paid-driver/passenger components in the legacy cpa_premium slot.
+  // Only apply the proven impossible-range guard when CPA is explicitly opted in.
   if (/^Yes$/i.test(cpaOpted) && cpa != null && (cpa < 50 || cpa > 1000)) {
     fields.delete("cpa_premium");
     changed = true;
