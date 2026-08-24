@@ -12,6 +12,8 @@ This is the repository-owned plan for fixing the 24 August 2026 performance audi
 
 **VERIFIED public performance:** desktop login Lighthouse 100; mobile login 90 with LCP 2.86 s, CLS 0.129, and about 520 KB transferred. Warm public HTTP requests from India were usually 0.18–0.25 s.
 
+**VERIFIED authenticated directional baseline:** two read-only production loads per route from India averaged Dashboard 3.263 s, Customers 5.400 s, Vehicles 5.767 s, Policies 6.358 s, Claims 5.210 s, Tasks 1.429 s, Reports 3.450 s, and Accounts 1.290 s. The OCR Training page settled in 4.09 s and rendered 371 buttons plus 328 links. See `docs/PERFORMANCE_AUTHENTICATED_BASELINE_2026_08_24.md`. This small sample confirms the slowdown but is not p75/p95 evidence.
+
 **VERIFIED source/build profile:** 109 pages, about 103 KB shared first-load JS, 79 `force-dynamic` files, 67 `revalidate = 0` files, 146 client files, 80 Server Action files, and 20 explicit `prefetch={false}` uses.
 
 **VERIFIED database profile:** the database is still small (approximately 582 customers, 617 vehicles, 609 policies, and 31 claims), but the Supabase performance advisor returned 400 findings: 90 uncovered foreign keys, 81 RLS init-plan warnings, 62 multiple-permissive-policy warnings, 164 unused-index notices, and 3 duplicate-index warnings.
@@ -42,11 +44,11 @@ This is the repository-owned plan for fixing the 24 August 2026 performance audi
 
 ## Implementation status
 
-### Implemented safely on `perf/safe-remediation-foundation`
+### Merged safely on `main`, not deployed
 
-- **IMPLEMENTED, not deployed:** Vercel Speed Insights is mounted in the root layout to collect field LCP, INP, CLS, FCP, and TTFB after deployment.
-- **IMPLEMENTED, not deployed:** the 224 KB GitHub-hosted logo is replaced by a visually equivalent local 14.5 KB WebP. The external GitHub request and `unoptimized` bypass are removed.
-- **IMPLEMENTED, not deployed:** common read-only navigation destinations prefetch on hover/focus. Create/edit/workflow routes remain opted out, preventing indiscriminate background execution.
+- **MERGED, not deployed:** PR #620 merged Vercel Speed Insights into the root layout to collect field LCP, INP, CLS, FCP, and TTFB after deployment.
+- **MERGED, not deployed:** PR #620 replaced the 224 KB GitHub-hosted logo with a visually equivalent local 14.5 KB WebP. The external GitHub request and `unoptimized` bypass are removed.
+- **MERGED, not deployed:** PR #620 added intent-only prefetch for common read destinations. Create/edit/workflow routes remain opted out, preventing indiscriminate background execution.
 - **IMPLEMENTED:** durable plan and agent safety guardrails are recorded; no production data, Supabase schema, RLS policy, storage object, region, environment, or workflow was changed.
 
 ### Deferred intentionally

@@ -141,6 +141,8 @@ If the answer to either of the first two questions is no, do not save it.
 - Measure before and after. Public Lighthouse alone is not sufficient; use authenticated route/action p75 and p95 evidence.
 - Keep performance changes isolated from business logic, permissions, RLS, accounting, document lifecycle, OCR mapping, and workflow-state changes.
 - The verified audit topology is Vercel Functions in `iad1` and Supabase Auth/Database/Storage in `ap-northeast-2`. Test `icn1` only in preview first; never switch the production region without explicit user approval, an exact-revision comparison, workflow verification, and rollback instructions.
+- The 2026-08-24 authenticated production baseline confirms multi-second protected-page loads: Policies, Vehicles, Customers, and Claims were the slowest measured common routes. Treat the two-run values in `docs/PERFORMANCE_AUTHENTICATED_BASELINE_2026_08_24.md` as directional evidence, not p75/p95 or an SLA.
+- OCR Training rendered hundreds of interactive elements in the authenticated baseline. Prefer pagination/virtualization and progressive disclosure there; never prefetch expensive OCR actions or retain record contents in performance telemetry.
 - Never apply Supabase advisor suggestions blindly. RLS/index changes require exact-query evidence, safe EXPLAIN, reversible migrations, security review, and role-by-role access regressions. A committed migration is not **APPLIED**.
 - Never cache protected data without a correct permission/scope key and invalidation rule.
 - Prefer intent-based prefetch for common read routes. Do not indiscriminately prefetch create/edit/OCR/import/reconciliation workflows.
