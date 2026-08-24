@@ -144,15 +144,14 @@ export async function completePolicyIntakeByPolicyCode(id:string, policyCode:str
   const admin = createSupabaseAdminClient();
   const { data:policy } = await admin.from("policies").select("id").eq("policy_code", policyCode).maybeSingle<{id:string}>();
   if (!policy) return { ok:false as const, error:"Final policy could not be linked to the intake." };
-  const { error } = await admin.from("policy_intake_requests").update({
+  const { data:completed, error } = await admin.from("policy_intake_requests").update({
     status:"completed",
     final_policy_id:policy.id,
     finalized_by_profile_id:profile.id,
     finalized_at:new Date().toISOString(),
-    assigned_to_profile_id:profile.id,
     attention_reason:null,
-  }).eq("id", id).neq("status", "rejected");
-  if (error) return { ok:false as const, error:"Policy was booked but the intake could not be closed automatically." };
+  }).eq("id", id).eq("status", "in_review").eq("assigned_to_profile_id", profile.id).select("id").maybeSingle<{id:string}>();
+  if (error || !completed) return { ok:false as const, error:"Policy was booked but the intake could not be closed automatically." };
   revalidatePath("/policy-intakes");
   return { ok:true as const };
 }

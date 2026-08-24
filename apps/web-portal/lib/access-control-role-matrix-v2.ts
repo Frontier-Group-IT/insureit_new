@@ -217,8 +217,6 @@ export const roleMatrixV2: readonly RoleDefinitionV2[] = [
       grant("kyc.view", "view", "organization"),
       grant("kyc.review", "edit", "organization"),
       grant("kyc.approve", "approve", "organization"),
-      grant("policies.view", "view", "organization"),
-      grant("policies.create", "edit", "organization"),
       grant("policy_intakes.view", "view", "organization"),
       grant("policy_intakes.create", "edit", "organization"),
       grant("policy_intakes.review", "edit", "organization"),

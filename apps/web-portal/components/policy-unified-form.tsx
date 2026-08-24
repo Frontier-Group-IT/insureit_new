@@ -210,6 +210,7 @@ export function PolicyUnifiedForm({ mode, insurers, rms, sources, manufacturers 
 
   const availableSources=useMemo(()=>sources.filter(item=>item.type===form.intermediaryType),[sources,form.intermediaryType]);
   const selectedSourceId=useMemo(()=>availableSources.find(item=>item.code===form.intermediaryCode&&item.label.trim().toLowerCase()===form.leadSource.trim().toLowerCase())?.value??"",[availableSources,form.intermediaryCode,form.leadSource]);
+  useEffect(()=>{if(form.rmName||!selectedSourceId)return;const selected=availableSources.find(item=>item.value===selectedSourceId);if(selected?.rmName)setForm(current=>current.rmName?current:{...current,rmName:selected.rmName});},[availableSources,form.rmName,selectedSourceId]);
   function changeIntermediaryType(value:string){ setForm(current=>({...current,intermediaryType:value,leadSource:"",intermediaryCode:"",rmName:""})); }
   function changeLeadSource(value:string){ const selected=availableSources.find(item=>item.value===value); setForm(current=>({...current,leadSource:selected?.label??"",intermediaryCode:selected?.code??"",rmName:selected?.rmName??""})); }
   function changeRegistrationMode(mode:VehicleRegistrationMode){ if(isEdit)return; setVehicleRegistrationMode(mode); setLookupError(null); setRegistrationTouched(false); setRcReview(null); setAppliedRc(null); if(mode==="unregistered")setForm(current=>({...current,registrationNo:""})); }
