@@ -81,16 +81,10 @@ export default async function PolicyCommercialReviewPage() {
 
   return (
     <AppShell title="Commercial Control">
-      <div className="mx-auto max-w-[1680px] space-y-4 pb-8">
-        <section className="rounded-2xl border border-[#D9E2F0] bg-white px-5 py-4 shadow-sm">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="text-[8px] font-black uppercase tracking-[.12em] text-[#0F766E]">Accounts · Commercial governance</div>
-              <h1 className="mt-1 text-[19px] font-semibold text-[#17365D]">Commercial Control</h1>
-              <p className="mt-1 max-w-4xl text-[10px] leading-5 text-[#667085]">Govern projected insurer brokerage and actual agreed partner payout separately. Zero is a valid commercial value; completeness is controlled by explicit status, not inferred from percentages. TDS is intentionally excluded from this commercial-control workflow.</p>
-            </div>
-            <div className="rounded-xl border border-[#DDE6EE] bg-[#F8FAFC] px-3 py-2 text-[9px] text-[#526277]">{rows.length.toLocaleString("en-IN")} policies in control ledger</div>
-          </div>
+      <div className="mx-auto max-w-[1720px] space-y-2.5 pb-6">
+        <section className="flex items-center justify-between rounded-2xl border border-[#D9E2F0] bg-white px-4 py-2.5 shadow-sm">
+          <h1 className="text-[17px] font-semibold text-[#17365D]">Commercial Control</h1>
+          <div className="rounded-lg border border-[#DDE6EE] bg-[#F8FAFC] px-2.5 py-1.5 text-[8.5px] font-semibold text-[#526277]">{rows.length.toLocaleString("en-IN")} policies</div>
         </section>
         <CommercialReviewClient rows={rows} />
       </div>
