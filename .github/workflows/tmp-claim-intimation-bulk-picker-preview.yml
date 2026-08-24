@@ -1,0 +1,51 @@
+name: Temporary Claim Bulk Picker Preview OTA
+
+on:
+  push:
+    branches:
+      - fix/claim-intimation-bulk-picker-runtime
+    paths:
+      - '.github/workflows/tmp-claim-intimation-bulk-picker-preview.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/claim-intimation-bulk-picker-runtime
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Publish Expo preview OTA
+        working-directory: apps/mobile-app
+        run: |
+          npx eas-cli update \
+            --channel preview \
+            --environment preview \
+            --message "Fix Claim Intimation bulk document picker on Android" \
+            --non-interactive
+
+      - name: Remove temporary workflow
+        run: |
+          git config user.name "antnish1"
+          git config user.email "shahdolho@gmail.com"
+          git rm .github/workflows/tmp-claim-intimation-bulk-picker-preview.yml
+          git commit -m "chore: remove temporary claim bulk picker preview workflow"
+          git push origin HEAD:fix/claim-intimation-bulk-picker-runtime
