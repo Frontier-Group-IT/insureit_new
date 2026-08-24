@@ -6,6 +6,14 @@
 >
 > Never store secrets, cookies, private data, full PAN/Aadhaar/bank values, raw provider responses, or customer documents in this file.
 
+## 2026-08-24 audit continuation
+
+**VERIFIED:** production revision `59ae5aedfe1ef669fb0869f345fc97c62c3b4fbd` runs Vercel Functions in `iad1`; Supabase Auth/Database/Storage run in `ap-northeast-2`. The region split, repeated protected-page round trips, broad dynamic rendering, disabled prefetch, unbounded registers, and server-buffered uploads are the current main performance risks.
+
+**IMPLEMENTED, NOT DEPLOYED:** branch `perf/safe-remediation-foundation` adds Vercel Speed Insights, replaces the 224 KB remote GitHub logo with a local 14.5 KB WebP, and adds intent-only prefetch for common read routes. No data, schema, RLS, storage, environment, region, authorization, or business workflow was changed.
+
+The complete evidence, staged plan, safety gates, and deferred work are in `docs/PERFORMANCE_REMEDIATION_PLAN_2026_08_24.md`. Follow that file before region, cache, pagination, RLS/index, upload, export, root-layout, or workflow-navigation work.
+
 ## 1. Why this file exists
 
 The portal was repeatedly slowed by architectural patterns that looked harmless in isolation:

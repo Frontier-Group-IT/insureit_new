@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-const markUrl = "https://raw.githubusercontent.com/Frontier-Group-IT/insureit_new/main/apps/mobile-app/assets/brand/logo%20%282%29.png";
+const markUrl = "/assets/brand/insureit-mark.webp";
 
 type Props = {
   compact?: boolean;
@@ -25,7 +25,6 @@ export function BrandLockup({ compact = false, inverse = false, className = "", 
         width={isHero ? 76 : isCompact ? 38 : 44}
         height={isHero ? 76 : isCompact ? 38 : 44}
         className={`${isHero ? "h-[76px] w-[76px]" : isCompact ? "h-[38px] w-[38px]" : "h-11 w-11"} shrink-0 object-contain ${markTreatment}`}
-        unoptimized
         priority
       />
       <div className={`${isHero ? "w-[250px]" : isCompact ? "w-[142px]" : "w-[158px]"} leading-none`}>

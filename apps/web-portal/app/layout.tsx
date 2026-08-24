@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense, type ReactNode } from "react";
 import { Manrope, Space_Grotesk } from "next/font/google";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AadhaarMaskNormalizer } from "@/components/aadhaar-mask-normalizer";
 import { EmbeddedMasterSaveBridge } from "@/components/embedded-master-save-bridge";
 import { LegacyIntermediaryImportLink } from "@/components/legacy-intermediary-import-link";
@@ -50,6 +51,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <SuccessPopup />
             <RouteProgressBar />
           </Suspense>
+          <SpeedInsights />
         </AppRouterCacheProvider>
       </body>
     </html>
