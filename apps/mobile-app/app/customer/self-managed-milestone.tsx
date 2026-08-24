@@ -5,7 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AppDatePicker } from '@/components/design-system';
 import { ExternalClaimDocumentTabs } from '@/components/external-claim-document-tabs';
 import { ExternalClaimErrorPopup } from '@/components/external-claim-error-popup';
-import { ClaimActionBar, ClaimChoice, ClaimFinancialSummary, ClaimFormSection, ClaimInlineNote, ClaimStageSummaryCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
+import { ClaimActionBar, ClaimChoice, ClaimFinancialSummary, ClaimFormSection, ClaimIdentityCard, ClaimInlineNote, ExternalClaimStageHeader } from '@/components/external-claim-ui';
 import { Screen, TextField } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { SELF_MANAGED_MILESTONES, type ClaimMilestone, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
@@ -22,7 +22,7 @@ type FieldKey =
   | 'documents_submit_date' | 'payment_received_date' | 'payment_received_amount';
 
 type Values = Partial<Record<FieldKey, string>>;
-type ClaimIdentity = { claim_no?: string | null; vehicle_id?: string | null; customer_id?: string | null };
+type ClaimIdentity = { claim_no?: string | null; vehicle_id?: string | null; customer_id?: string | null; external_policy_id?: string | null };
 
 export default function SelfManagedMilestoneScreen() {
   const router = useRouter();
@@ -35,6 +35,9 @@ export default function SelfManagedMilestoneScreen() {
   const [claimNo, setClaimNo] = useState('');
   const [vehicleNo, setVehicleNo] = useState('');
   const [customerId, setCustomerId] = useState('');
+  const [vehicleMeta, setVehicleMeta] = useState('');
+  const [policyNo, setPolicyNo] = useState('');
+  const [insurerName, setInsurerName] = useState('Insurance company');
   const [message, setMessage] = useState('');
   const [validationMessage, setValidationMessage] = useState('');
   const [definitionErrorVisible, setDefinitionErrorVisible] = useState(true);
@@ -47,7 +50,7 @@ export default function SelfManagedMilestoneScreen() {
       if (!claimId || !definition) { if (active) setLoading(false); return; }
       const [milestoneResult, claimResult] = await Promise.all([
         (supabase as any).from('claim_milestones').select('*').eq('claim_id', claimId),
-        supabase.from('claims').select('claim_no, vehicle_id, customer_id').eq('id', claimId).maybeSingle(),
+        supabase.from('claims').select('claim_no, vehicle_id, customer_id, external_policy_id').eq('id', claimId).maybeSingle(),
       ]);
       if (!active) return;
       const nextMilestones = (milestoneResult.data ?? []) as ClaimMilestone[];
@@ -58,8 +61,21 @@ export default function SelfManagedMilestoneScreen() {
       setClaimNo(identity.claim_no ?? '');
       setCustomerId(identity.customer_id ?? '');
       if (identity.vehicle_id) {
-        const vehicleResult = await supabase.from('vehicles').select('vehicle_no').eq('id', identity.vehicle_id).maybeSingle();
-        if (active && vehicleResult.data) setVehicleNo((vehicleResult.data as any).vehicle_no ?? '');
+        const vehicleResult = await supabase.from('vehicles').select('vehicle_no,make,model').eq('id', identity.vehicle_id).maybeSingle();
+        if (active && vehicleResult.data) {
+          setVehicleNo((vehicleResult.data as any).vehicle_no ?? '');
+          setVehicleMeta([(vehicleResult.data as any).make, (vehicleResult.data as any).model].filter(Boolean).join(' · '));
+        }
+      }
+      if (identity.external_policy_id) {
+        const policyResult = await (supabase as any).from('external_policies').select('policy_no,insurance_company_id').eq('id', identity.external_policy_id).maybeSingle();
+        if (active && policyResult.data) {
+          setPolicyNo(policyResult.data.policy_no ?? '');
+          if (policyResult.data.insurance_company_id) {
+            const insurerResult = await supabase.from('insurance_companies').select('name').eq('id', policyResult.data.insurance_company_id).maybeSingle();
+            if (active && insurerResult.data?.name) setInsurerName(insurerResult.data.name);
+          }
+        }
       }
       if (active) setLoading(false);
     }
@@ -156,11 +172,12 @@ export default function SelfManagedMilestoneScreen() {
         onBack={() => router.back()}
       />
 
-      <ClaimStageSummaryCard
-        title={definition.label}
-        body={summaryBodyFor(key)}
-        label={key === 'vehicle_delivery' ? 'CLAIM STATUS' : 'CLAIM UPDATE'}
-        icon={summaryIconFor(key)}
+      <ClaimIdentityCard
+        claimNo={claimNo}
+        insurerName={insurerName}
+        vehicleNo={vehicleNo}
+        policyNo={policyNo}
+        vehicleMeta={vehicleMeta}
       />
 
       {loading ? <Text style={styles.loading}>Loading saved details...</Text> : renderStage(key, values, set, milestones, claimId, customerId)}

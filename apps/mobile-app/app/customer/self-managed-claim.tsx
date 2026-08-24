@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppDatePicker } from '@/components/design-system';
-import { ClaimActionBar, ClaimFormSection, ExternalClaimStageHeader } from '@/components/external-claim-ui';
+import { ClaimActionBar, ClaimFormSection, ClaimIdentityCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
 import { LoadingState, Message, Screen, TextField } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { type ClaimMilestone } from '@/lib/claim-service-mode';
@@ -49,6 +49,7 @@ export default function SelfManagedClaimScreen() {
   const [policy, setPolicy] = useState<ExternalPolicy | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [insurerName, setInsurerName] = useState('Insurance company');
+  const [claimNo, setClaimNo] = useState('');
   const [incidentDate, setIncidentDate] = useState('');
   const [incidentTime, setIncidentTime] = useState('');
   const [intimationDate, setIntimationDate] = useState('');
@@ -81,12 +82,13 @@ export default function SelfManagedClaimScreen() {
     void (async () => {
       if (editing) {
         const [claimResult, milestoneResult, documentResult] = await Promise.all([
-          (supabase as any).from('claims').select('id,customer_id,vehicle_id,external_policy_id,accident_at,accident_location,claim_service_mode').eq('id', claimId).maybeSingle(),
+          (supabase as any).from('claims').select('id,claim_no,customer_id,vehicle_id,external_policy_id,accident_at,accident_location,claim_service_mode').eq('id', claimId).maybeSingle(),
           (supabase as any).from('claim_milestones').select('*').eq('claim_id', claimId),
           (supabase as any).from('claim_documents').select('*').eq('claim_id', claimId).order('created_at', { ascending: false }),
         ]);
         if (!active) return;
         const claim = claimResult.data as any;
+        setClaimNo(claim?.claim_no ?? '');
         if (!claim || claim.claim_service_mode !== 'self_managed' || !claim.external_policy_id) {
           setMessage('This external claim is not available for self-tracked editing.');
           setLoading(false);
@@ -460,11 +462,12 @@ export default function SelfManagedClaimScreen() {
         step={1}
         title="Spot Intimation"
         subtitle="Start tracking an incident."
-        claimNo={editing ? 'Existing claim' : undefined}
+        vehicleNo={vehicle?.vehicle_no ?? undefined}
+        claimNo={claimNo || undefined}
         onBack={() => router.back()}
       />
 
-      {policy ? <PolicyIdentityCard policyNo={policy.policy_no} insurerName={insurerName} vehicleNo={vehicle?.vehicle_no ?? 'Vehicle'} vehicleMake={vehicle?.make ?? ''} vehicleModel={vehicle?.model ?? ''} /> : null}
+      {policy ? <ClaimIdentityCard claimNo={claimNo || (editing ? 'Claim' : 'New claim')} insurerName={insurerName} vehicleNo={vehicle?.vehicle_no ?? 'Vehicle'} policyNo={policy.policy_no} vehicleMeta={[vehicle?.make, vehicle?.model].filter(Boolean).join(' · ')} /> : null}
 
       {message ? <Message type="error">{message}</Message> : null}
 
@@ -594,31 +597,6 @@ export default function SelfManagedClaimScreen() {
   );
 }
 
-function PolicyIdentityCard({ policyNo, insurerName, vehicleNo, vehicleMake, vehicleModel }: { policyNo: string; insurerName: string; vehicleNo: string; vehicleMake: string; vehicleModel: string }) {
-  const vehicleMeta = [vehicleMake, vehicleModel].filter(Boolean).join(' · ');
-  return <View style={styles.policyIdentityCard}>
-    <View style={styles.policyIdentityGlow} />
-    <View style={styles.policyIdentityTop}>
-      <View style={styles.policyIdentityIcon}><MaterialCommunityIcons name="file-document-outline" size={27} color="#083B9B" /></View>
-      <View style={styles.policyIdentityCopy}>
-        <Text style={styles.policyIdentityEyebrow}>EXTERNAL POLICY</Text>
-        <Text style={styles.policyIdentityNo} numberOfLines={1}>{policyNo}</Text>
-        <Text style={styles.policyIdentityInsurer} numberOfLines={2}>{insurerName}</Text>
-      </View>
-    </View>
-    <View style={styles.policyVehicleDivider} />
-    <View style={styles.vehicleIdentityRow}>
-      <View style={styles.vehicleIdentityIcon}><MaterialCommunityIcons name="car-outline" size={20} color="#FFFFFF" /></View>
-      <View style={styles.vehicleIdentityCopy}>
-        <Text style={styles.vehicleIdentityLabel}>CLAIM VEHICLE</Text>
-        <Text style={styles.vehicleIdentityNo} numberOfLines={1}>{vehicleNo}</Text>
-        {vehicleMeta ? <Text style={styles.vehicleIdentityMeta} numberOfLines={1}>{vehicleMeta}</Text> : null}
-      </View>
-      <View style={styles.vehicleIdentityFocus}><MaterialCommunityIcons name="crosshairs-gps" size={18} color="#AFCBFF" /></View>
-    </View>
-  </View>;
-}
-
 function DocumentReadyTile({ title, fileName, source, state, onPress, onRemove }: { title: string; fileName?: string; source: any; state: DocumentTileState; onPress: () => void; onRemove: () => void }) {
   const saved = state === 'saved';
   const ready = state === 'ready';
@@ -659,22 +637,6 @@ const styles = StyleSheet.create({
   gap: { height: 10 },
   subsection: { marginTop: 16, marginBottom: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E7EBF0' },
   subsectionTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
-  policyIdentityCard: { position: 'relative', minHeight: 132, borderRadius: 20, backgroundColor: '#07327B', padding: 14, marginBottom: 13, overflow: 'hidden', shadowColor: '#072C69', shadowOpacity: 0.16, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
-  policyIdentityGlow: { position: 'absolute', width: 210, height: 210, borderRadius: 105, borderWidth: 1, borderColor: 'rgba(72,139,255,0.24)', right: -98, top: -118 },
-  policyIdentityTop: { flexDirection: 'row', alignItems: 'center', gap: 11 },
-  policyIdentityIcon: { width: 52, height: 52, borderRadius: 15, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
-  policyIdentityCopy: { flex: 1, minWidth: 0 },
-  policyIdentityEyebrow: { color: '#CFDDF5', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.5 },
-  policyIdentityNo: { color: '#FFFFFF', fontSize: 17, fontWeight: '900', marginTop: 3 },
-  policyIdentityInsurer: { color: '#DCE8F7', fontSize: 10, lineHeight: 14, fontWeight: '700', marginTop: 4 },
-  policyVehicleDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.18)', marginVertical: 11 },
-  vehicleIdentityRow: { minHeight: 55, paddingHorizontal: 2, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  vehicleIdentityIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
-  vehicleIdentityCopy: { flex: 1, minWidth: 0 },
-  vehicleIdentityLabel: { color: '#AFCBFF', fontSize: 8, fontWeight: '900', letterSpacing: 0.65 },
-  vehicleIdentityNo: { color: '#FFFFFF', fontSize: 19, lineHeight: 23, fontWeight: '900', letterSpacing: 0.25, marginTop: 1 },
-  vehicleIdentityMeta: { color: '#CBDCF2', fontSize: 9, lineHeight: 12, fontWeight: '700', marginTop: 1 },
-  vehicleIdentityFocus: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   documentReadyCard: { borderRadius: 18, borderWidth: 1, borderColor: '#D7E2EF', backgroundColor: '#FFFFFF', padding: 12, marginBottom: 12, shadowColor: '#14375F', shadowOpacity: 0.05, shadowRadius: 9, shadowOffset: { width: 0, height: 4 }, elevation: 1 },
   documentReadyHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 10 },
   documentReadyHeaderCopy: { flex: 1, minWidth: 0 },
