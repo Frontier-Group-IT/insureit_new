@@ -142,7 +142,7 @@ function labelledNumeric(text: string, label: RegExp, value: RegExp): string | n
   return null;
 }
 function isolatedNumericMatch(text: string, value: RegExp): string | null {
-  const candidates = text.split(/\s+/).map((token) => token.replace(/^[^0-9]+|[^0-9]+$/g, "")).filter(Boolean);
+  const candidates = text.split(/\s+/).map((token) => token.replace(/^[,:;()]+|[,:;()]+$/g, "")).filter(Boolean);
   for (const candidate of candidates) {
     if (!/^\d+$/.test(candidate)) continue;
     if (value.test(candidate)) return candidate;
