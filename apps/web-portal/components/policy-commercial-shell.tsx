@@ -1,5 +1,6 @@
 "use client";
 
+import { PolicyIntakeOnboardingContextCard } from "@/components/policy-intake-onboarding-context";
 import {
   PolicyUnifiedForm,
   type PolicyRmOption,
@@ -17,21 +18,19 @@ export type PolicyCommercialShellProps = {
   commercialAccess: boolean;
 };
 
-/**
- * Thin server-to-client access boundary.
- * The unified form now owns its commercial card and native popups directly;
- * there is no DOM insertion, hidden-section CSS, or billing-neutralization hack.
- */
 export function PolicyCommercialShell(props: PolicyCommercialShellProps) {
   return (
-    <PolicyUnifiedForm
-      mode={props.mode}
-      insurers={props.insurers}
-      rms={props.rms}
-      sources={props.sources}
-      manufacturers={props.manufacturers}
-      initialValues={props.initialValues}
-      commercialAccess={props.commercialAccess}
-    />
+    <>
+      <PolicyUnifiedForm
+        mode={props.mode}
+        insurers={props.insurers}
+        rms={props.rms}
+        sources={props.sources}
+        manufacturers={props.manufacturers}
+        initialValues={props.initialValues}
+        commercialAccess={props.commercialAccess}
+      />
+      {props.mode === "create" ? <PolicyIntakeOnboardingContextCard /> : null}
+    </>
   );
 }
