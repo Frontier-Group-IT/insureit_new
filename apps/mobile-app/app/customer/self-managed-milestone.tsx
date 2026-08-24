@@ -72,7 +72,7 @@ export default function SelfManagedMilestoneScreen() {
   function set(field: FieldKey, value: string) { setValues((current) => ({ ...current, [field]: value })); }
 
   function openAssistance() {
-    router.push({ pathname: '/customer/request-claim-assistance', params: { id: claimId } });
+    router.push({ pathname: '/customer/request-claim-assistance', params: { id: claimId, returnStage: key } });
   }
 
   function continueAfterSave(completed = true) {

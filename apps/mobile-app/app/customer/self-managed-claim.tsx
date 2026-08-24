@@ -533,7 +533,7 @@ export default function SelfManagedClaimScreen() {
         primaryIcon="arrow-right"
         primaryLabel={saving || uploadingDocuments ? 'Saving...' : editing ? 'Save & Continue' : 'Start Claim & Continue'}
         onPrimary={() => void submit()}
-        onAssistance={() => editing ? router.push({ pathname: '/customer/request-claim-assistance', params: { id: claimId } }) : router.push('/customer/support')}
+        onAssistance={() => editing ? router.push({ pathname: '/customer/request-claim-assistance', params: { id: claimId, returnStage: 'spot_intimation' } }) : router.push('/customer/support')}
       />
 
       <Modal visible={Boolean(successMessage)} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setSuccessMessage('')}>

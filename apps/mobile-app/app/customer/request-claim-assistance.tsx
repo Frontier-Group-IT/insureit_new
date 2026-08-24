@@ -17,9 +17,21 @@ type ClaimRow = {
   policy_service_source: string | null;
 };
 
+const MILESTONE_RETURN_STAGES = new Set([
+  'claim_intimation',
+  'work_approval',
+  'repair_ri',
+  'billing',
+  'delivery_order',
+  'vehicle_delivery',
+  'payment_encashment',
+]);
+
 export default function RequestClaimAssistanceScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const params = useLocalSearchParams<{ id?: string | string[]; returnStage?: string | string[] }>();
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  const returnStage = Array.isArray(params.returnStage) ? params.returnStage[0] : params.returnStage;
   const [claim, setClaim] = useState<ClaimRow | null>(null);
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(true);
@@ -44,6 +56,18 @@ export default function RequestClaimAssistanceScreen() {
     const { error: rpcError } = await (supabase.rpc as any)('request_claim_assistance', { p_claim_id: claim.id, p_note: note.trim() || null });
     setSubmitting(false);
     if (rpcError) { setError(rpcError.message || 'We could not send your assistance request.'); return; }
+    if (returnStage === 'spot_intimation') {
+      router.replace({ pathname: '/customer/self-managed-claim', params: { id: claim.id } });
+      return;
+    }
+    if (returnStage === 'spot_status') {
+      router.replace({ pathname: '/customer/self-managed-spot-status', params: { id: claim.id } });
+      return;
+    }
+    if (returnStage && MILESTONE_RETURN_STAGES.has(returnStage)) {
+      router.replace({ pathname: '/customer/self-managed-milestone', params: { id: claim.id, key: returnStage } });
+      return;
+    }
     router.replace({ pathname: '/customer/self-managed-claim-detail', params: { id: claim.id, assistance: 'requested' } });
   }
 
