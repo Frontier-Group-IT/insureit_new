@@ -29,6 +29,9 @@ export type CommercialReviewRow = {
   policyNo: string;
   insurerName: string;
   issuanceDate: string;
+  intermediaryName: string;
+  intermediaryType: string | null;
+  intermediaryCode: string | null;
   odPremium: number;
   tpCpaPremium: number;
   projectedOdPercent: number;
@@ -73,6 +76,8 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
   const [insurer, setInsurer] = useState("all");
+  const [intermediary, setIntermediary] = useState("all");
+  const [intermediaryType, setIntermediaryType] = useState("all");
   const [status, setStatus] = useState<LedgerStatus | "all">("all");
   const [backfill, setBackfill] = useState<BackfillFilter>("incomplete");
   const [dateFrom, setDateFrom] = useState("");
@@ -87,6 +92,12 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
   const [isPending, startTransition] = useTransition();
 
   const insurers = useMemo(() => Array.from(new Set(rows.map((row) => row.insurerName))).sort(), [rows]);
+  const intermediaries = useMemo(() => {
+    const byCode = new Map<string, CommercialReviewRow>();
+    for (const row of rows) if (row.intermediaryCode && !byCode.has(row.intermediaryCode)) byCode.set(row.intermediaryCode, row);
+    return Array.from(byCode.values()).sort((a, b) => a.intermediaryName.localeCompare(b.intermediaryName));
+  }, [rows]);
+  const intermediaryTypes = useMemo(() => Array.from(new Set(rows.map((row) => row.intermediaryType).filter((value): value is string => Boolean(value)))).sort(), [rows]);
   const statusKey = side === "insurer" ? "insurerStatus" : "partnerStatus";
   const counts = useMemo(() => rows.reduce<Record<LedgerStatus, number>>((acc, row) => {
     acc[row[statusKey]] += 1;
@@ -104,6 +115,8 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
       const totalValue = side === "insurer" ? row.projectedTotal : row.payoutTotal;
       if (status !== "all" && rowStatus !== status) return false;
       if (insurer !== "all" && row.insurerName !== insurer) return false;
+      if (intermediary !== "all" && row.intermediaryCode !== intermediary) return false;
+      if (intermediaryType !== "all" && row.intermediaryType !== intermediaryType) return false;
       if (backfill === "incomplete" && !incompleteStatuses.has(rowStatus)) return false;
       if (backfill === "complete" && incompleteStatuses.has(rowStatus)) return false;
       if (backfill === "zero_od" && odValue !== 0) return false;
@@ -112,9 +125,9 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
       if (dateFrom && row.issuanceDate < dateFrom) return false;
       if (dateTo && row.issuanceDate > dateTo) return false;
       if (!normalizedQuery) return true;
-      return [row.policyNo, row.insurerName, row.partnerCode ?? "", row.partnerType ?? ""].some((value) => value.toLowerCase().includes(normalizedQuery));
+      return [row.policyNo, row.insurerName, row.intermediaryName, row.intermediaryCode ?? "", row.intermediaryType ?? ""].some((value) => value.toLowerCase().includes(normalizedQuery));
     });
-  }, [rows, statusKey, status, insurer, backfill, dateFrom, dateTo, query, side]);
+  }, [rows, statusKey, status, insurer, intermediary, intermediaryType, backfill, dateFrom, dateTo, query, side]);
 
   const allFilteredSelected = filteredRows.length > 0 && filteredRows.every((row) => selected.has(row.id));
   const activeTotal = side === "insurer"
@@ -207,7 +220,7 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
   }
 
   function clearFilters() {
-    setQuery(""); setInsurer("all"); setStatus("all"); setBackfill("all"); setDateFrom(""); setDateTo("");
+    setQuery(""); setInsurer("all"); setIntermediary("all"); setIntermediaryType("all"); setStatus("all"); setBackfill("all"); setDateFrom(""); setDateTo("");
   }
 
   const currentEditIndex = editingId ? filteredRows.findIndex((row) => row.id === editingId) : -1;
@@ -231,9 +244,10 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
         <button type="button" onClick={() => setBackfill(backfill === "complete" ? "all" : "complete")} className={`rounded-lg border px-3 py-2 text-[8.5px] font-bold ${backfill === "complete" ? "border-[#A7D7BE] bg-[#ECF8F1] text-[#137A4A]" : "border-[#D9E2F0] text-[#526277]"}`}>Complete {completeCount}</button>
         <div className="ml-auto flex items-center gap-1.5 text-[8.5px] text-[#667085]"><span>{filteredRows.length.toLocaleString("en-IN")} rows</span><span>·</span><span>{money.format(activeTotal)}</span></div>
       </div>
-      <div className="mt-2 grid gap-2 xl:grid-cols-[minmax(280px,1.4fr)_minmax(180px,.7fr)_minmax(170px,.65fr)_minmax(180px,.7fr)_auto_auto]">
-        <label className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-[#98A2B3]" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Policy / insurer / partner" className="h-9 w-full rounded-xl border border-[#D8DEE9] pl-9 pr-3 text-[9.5px] outline-none focus:border-[#315B9A]" /></label>
+      <div className="mt-2 grid gap-2 xl:grid-cols-[minmax(250px,1.2fr)_minmax(165px,.7fr)_minmax(210px,.85fr)_minmax(150px,.6fr)_minmax(170px,.7fr)_auto_auto]">
+        <label className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-[#98A2B3]" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Policy / insurer / intermediary" className="h-9 w-full rounded-xl border border-[#D8DEE9] pl-9 pr-3 text-[9.5px] outline-none focus:border-[#315B9A]" /></label>
         <select value={insurer} onChange={(e) => setInsurer(e.target.value)} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All insurers</option>{insurers.map((name) => <option key={name}>{name}</option>)}</select>
+        <select value={intermediary} onChange={(e) => setIntermediary(e.target.value)} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All intermediaries</option>{intermediaries.map((row) => <option key={row.intermediaryCode ?? row.id} value={row.intermediaryCode ?? ""}>{row.intermediaryName} · {row.intermediaryCode}</option>)}</select>
         <select value={status} onChange={(e) => setStatus(e.target.value as LedgerStatus | "all")} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All statuses</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
         <select value={backfill} onChange={(e) => setBackfill(e.target.value as BackfillFilter)} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All entries</option><option value="incomplete">Backfill incomplete</option><option value="complete">Complete</option><option value="zero_od">OD = 0%</option><option value="zero_tp">TP = 0%</option><option value="zero_total">Total = ₹0</option></select>
         <IconButton label="More filters" onClick={() => setShowMore((value) => !value)} active={showMore}><Settings2 className="h-4 w-4" /></IconButton>
@@ -242,6 +256,7 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
       {showMore ? <div className="mt-2 flex flex-wrap items-end gap-2 rounded-xl bg-[#F8FAFC] p-2">
         <DateField label="Issued from" value={dateFrom} onChange={setDateFrom} />
         <DateField label="Issued to" value={dateTo} onChange={setDateTo} />
+        <label className="text-[7.5px] font-bold uppercase text-[#667085]">Intermediary type<select value={intermediaryType} onChange={(e) => setIntermediaryType(e.target.value)} className="ml-2 h-8 rounded-lg border border-[#D8DEE9] bg-white px-2 text-[8.5px]"><option value="all">All types</option>{intermediaryTypes.map((value) => <option key={value}>{value}</option>)}</select></label>
         <StatusPills counts={counts} value={status} onChange={setStatus} />
       </div> : null}
     </section>
@@ -276,11 +291,12 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
         </div>
       </div>
       <div className="max-h-[70vh] overflow-auto">
-        <table className="w-full min-w-[1180px] text-[8.5px]">
+        <table className="w-full min-w-[1320px] text-[8.5px]">
           <thead className="sticky top-0 z-30 bg-[#F8FAFC] text-[7px] font-black uppercase tracking-[.05em] text-[#7C899B]"><tr>
             <SelectHead checked={allFilteredSelected} onChange={toggleFiltered} />
             <th className="sticky left-[38px] z-40 bg-[#F8FAFC] px-2 py-2 text-left">Policy</th>
-            <th className="px-2 py-2 text-left">{side === "insurer" ? "Insurer" : "Partner"}</th>
+            <th className="px-2 py-2 text-left">Insurer</th>
+            <th className="px-2 py-2 text-left">Intermediary</th>
             <th className="px-2 py-2 text-left">Issued</th>
             <th className="px-2 py-2 text-right">OD Premium</th>
             <th className="px-2 py-2 text-right">TP/CPA</th>
@@ -301,7 +317,8 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
             return <tr key={row.id} className={isEditing ? "bg-[#FFF9EC]" : "hover:bg-[#FBFCFE]"}>
               <td className="sticky left-0 z-10 bg-inherit px-2 py-2"><input aria-label={`Select ${row.policyNo}`} type="checkbox" checked={selected.has(row.id)} onChange={() => toggle(row.id)} /></td>
               <td className="sticky left-[38px] z-10 bg-inherit px-2 py-2"><Link href={`/policies/${row.id}/edit`} className="font-bold text-[#1E2D49] hover:text-[#315B9A] hover:underline">{row.policyNo}</Link></td>
-              <td className="max-w-[210px] px-2 py-2"><div className="truncate font-medium text-[#26364F]">{side === "insurer" ? row.insurerName : row.partnerCode || "—"}</div>{side === "partner" ? <div className="text-[7px] text-[#98A2B3]">{row.partnerType || "No intermediary"}</div> : null}</td>
+              <td className="max-w-[190px] px-2 py-2"><div className="truncate font-medium text-[#26364F]">{row.insurerName}</div></td>
+              <td className="max-w-[190px] px-2 py-2"><div className="truncate font-semibold text-[#26364F]" title={row.intermediaryName}>{row.intermediaryName}</div><div className="truncate text-[7px] text-[#98A2B3]">{[row.intermediaryType, row.intermediaryCode].filter(Boolean).join(" · ") || "—"}</div></td>
               <td className="whitespace-nowrap px-2 py-2">{date(row.issuanceDate)}</td>
               <MoneyCell value={row.odPremium} /><MoneyCell value={row.tpCpaPremium} />
               <EditableNumber editing={isEditing} value={isEditing ? edit.od : od.toFixed(2)} onChange={(value) => setEdit((state) => ({ ...state, od: value }))} onEnter={() => saveRow(row, true)} suffix="%" />
