@@ -1,0 +1,179 @@
+name: Temporary optional vehicle policy implementation
+
+on:
+  push:
+    branches:
+      - feat/self-managed-stage-navigation
+    paths:
+      - '.github/workflows/tmp-optional-vehicle-policy.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/self-managed-stage-navigation
+          fetch-depth: 0
+
+      - name: Patch Add Vehicle and preserve transparent claim navigation
+        shell: python
+        run: |
+          from pathlib import Path
+
+          vehicle_path = Path('apps/mobile-app/app/customer/add-vehicle.tsx')
+          text = vehicle_path.read_text()
+
+          old_validation = """    if (!selectedCompanyId) return setMessage('Search and select the insurer.');
+    if (!policyNo.trim()) return setMessage('Enter policy number.');
+    if (!policyType.trim()) return setMessage('Select policy type.');
+    if (!policyStartDate) return setMessage('Select policy start date.');
+    if (!policyEndDate) return setMessage('Select policy end date.');
+    if (new Date(policyEndDate).getTime() < new Date(policyStartDate).getTime()) return setMessage('End date must be after start date.');
+    const premiumValue = premium ? Number(premium) : null;
+    if (premiumValue !== null && (!Number.isFinite(premiumValue) || premiumValue < 0)) return setMessage('Enter a valid premium amount.');
+    const idvValue = idv ? Number(idv) : null;
+    if (idvValue !== null && (!Number.isFinite(idvValue) || idvValue < 0)) return setMessage('Enter a valid IDV.');
+"""
+          new_validation = """    const hasPolicyDetails = Boolean(
+      selectedCompanyId
+      || policyNo.trim()
+      || policyStartDate
+      || policyEndDate
+      || premium.trim()
+      || idv.trim()
+      || policyCopy,
+    );
+    if (hasPolicyDetails && !selectedCompanyId) return setMessage('Search and select the insurer to save policy details.');
+    if (hasPolicyDetails && !policyNo.trim()) return setMessage('Enter policy number to save policy details.');
+    if (hasPolicyDetails && !policyType.trim()) return setMessage('Select policy type to save policy details.');
+    if (hasPolicyDetails && !policyStartDate) return setMessage('Select policy start date to save policy details.');
+    if (hasPolicyDetails && !policyEndDate) return setMessage('Select policy end date to save policy details.');
+    if (hasPolicyDetails && new Date(policyEndDate).getTime() < new Date(policyStartDate).getTime()) return setMessage('End date must be after start date.');
+    const premiumValue = premium ? Number(premium) : null;
+    if (hasPolicyDetails && premiumValue !== null && (!Number.isFinite(premiumValue) || premiumValue < 0)) return setMessage('Enter a valid premium amount.');
+    const idvValue = idv ? Number(idv) : null;
+    if (hasPolicyDetails && idvValue !== null && (!Number.isFinite(idvValue) || idvValue < 0)) return setMessage('Enter a valid IDV.');
+"""
+          if old_validation not in text:
+              raise SystemExit('Expected policy validation block not found')
+          text = text.replace(old_validation, new_validation, 1)
+
+          old_created = """    const createdVehicle = Array.isArray(vehicleData) ? vehicleData[0] : vehicleData;
+    if (!createdVehicle?.id) {
+      setSaving(false);
+      return setMessage('Vehicle was saved, but we could not attach the policy details.');
+    }
+
+    const policyPayload = {
+      p_customer_id: target.customer_id,
+      p_vehicle_id: createdVehicle.id,
+      p_insurance_company_id: selectedCompanyId,
+      p_policy_no: policyNo.trim().toUpperCase(),
+      p_policy_type: policyType.trim(),
+      p_start_date: policyStartDate,
+      p_end_date: policyEndDate,
+      p_premium_amount: premiumValue,
+      p_insured_declared_value: idvValue,
+    };
+    const policyResult = await (supabase.rpc as any)('create_customer_external_policy', policyPayload);
+    if (policyResult.error) {
+      setSaving(false);
+      return setMessage(`Vehicle saved, but policy details could not be saved: ${policyResult.error.message || 'Please try again.'}`);
+    }
+    if (policyCopy) {
+      const uploadError = await uploadPolicyCopy(target.customer_id, policyCopy, session.user.id);
+      if (uploadError) {
+        setSaving(false);
+        return setMessage(`Vehicle and policy saved, but the policy copy could not be uploaded: ${uploadError}`);
+      }
+    }
+"""
+          new_created = """    const createdVehicle = Array.isArray(vehicleData) ? vehicleData[0] : vehicleData;
+    if (!createdVehicle?.id) {
+      setSaving(false);
+      return setMessage('Vehicle was saved, but we could not confirm the new vehicle record.');
+    }
+
+    if (hasPolicyDetails) {
+      const policyPayload = {
+        p_customer_id: target.customer_id,
+        p_vehicle_id: createdVehicle.id,
+        p_insurance_company_id: selectedCompanyId,
+        p_policy_no: policyNo.trim().toUpperCase(),
+        p_policy_type: policyType.trim(),
+        p_start_date: policyStartDate,
+        p_end_date: policyEndDate,
+        p_premium_amount: premiumValue,
+        p_insured_declared_value: idvValue,
+      };
+      const policyResult = await (supabase.rpc as any)('create_customer_external_policy', policyPayload);
+      if (policyResult.error) {
+        setSaving(false);
+        return setMessage(`Vehicle saved, but policy details could not be saved: ${policyResult.error.message || 'Please try again.'}`);
+      }
+      if (policyCopy) {
+        const uploadError = await uploadPolicyCopy(target.customer_id, policyCopy, session.user.id);
+        if (uploadError) {
+          setSaving(false);
+          return setMessage(`Vehicle and policy saved, but the policy copy could not be uploaded: ${uploadError}`);
+        }
+      }
+    }
+"""
+          if old_created not in text:
+              raise SystemExit('Expected policy creation block not found')
+          text = text.replace(old_created, new_created, 1)
+
+          text = text.replace('<FormSection title="Policy details" icon="file-document-outline" tone="policy">', '<FormSection title="Policy details · Optional" icon="file-document-outline" tone="policy">', 1)
+          text = text.replace('label="Policy no. *"', 'label="Policy no."', 1)
+          text = text.replace('label="End date *"', 'label="End date"', 1)
+          vehicle_path.write_text(text)
+
+          nav_path = Path('apps/mobile-app/components/external-claim-ui.tsx')
+          nav = nav_path.read_text()
+          old_nav = "stageNavigation: { minHeight: 70, borderRadius: 18, borderWidth: 1, borderColor: '#DCE5F0', backgroundColor: '#FFFFFF', paddingHorizontal: 9, paddingVertical: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, shadowColor: '#17365D', shadowOpacity: 0.04, shadowRadius: 7, shadowOffset: { width: 0, height: 2 }, elevation: 1 },"
+          new_nav = "stageNavigation: { minHeight: 70, paddingHorizontal: 9, paddingVertical: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },"
+          if old_nav in nav:
+              nav = nav.replace(old_nav, new_nav, 1)
+          elif new_nav not in nav:
+              raise SystemExit('Expected stage navigation style not found')
+          nav_path.write_text(nav)
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck mobile app
+        run: npm run typecheck --workspace apps/mobile-app
+
+      - name: Commit implementation
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/mobile-app/app/customer/add-vehicle.tsx apps/mobile-app/components/external-claim-ui.tsx
+          git commit -m "Make vehicle policy details optional"
+          git push origin HEAD:feat/self-managed-stage-navigation
+
+      - name: Remove temporary workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          sha=$(gh api repos/${{ github.repository }}/contents/.github/workflows/tmp-optional-vehicle-policy.yml?ref=feat/self-managed-stage-navigation --jq .sha)
+          gh api --method DELETE repos/${{ github.repository }}/contents/.github/workflows/tmp-optional-vehicle-policy.yml \
+            -f message='Remove temporary optional vehicle policy workflow' \
+            -f sha="$sha" \
+            -f branch='feat/self-managed-stage-navigation'
