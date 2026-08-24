@@ -238,7 +238,7 @@ export function PolicyUnifiedForm({ mode, insurers, rms, sources, manufacturers 
 
   function clearPolicyForm(){
     if(isEdit)return;
-    try{sessionStorage.removeItem(POLICY_DRAFT_KEY);}catch{}
+    try{sessionStorage.removeItem(POLICY_DRAFT_KEY);sessionStorage.removeItem(POLICY_INTAKE_PENDING_KEY);window.dispatchEvent(new Event(POLICY_ONBOARDING_RESET_EVENT));}catch{}
     setForm(stateFrom(initialValues));
     setVehicleRegistrationMode("registered");
     setCommercialModal(null);
