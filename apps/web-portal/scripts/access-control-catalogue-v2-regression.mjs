@@ -102,9 +102,6 @@ for (const role of roleMatrixV2.filter((entry) => entry.code !== "it_super_user"
   }
 }
 
-// Phase 4 database seed must remain a byte-independent semantic mirror of the
-// TypeScript shadow catalogue/matrix. This checks the static migration without
-// applying it to any Supabase project.
 const migrationPath = resolve(
   process.cwd(),
   "../../supabase/migrations/20260810140000_access_control_v2_shadow_rbac_foundation.sql",
@@ -115,11 +112,10 @@ const ocrQueueMigrationSql = readFileSync(
   "utf8",
 );
 const applicationOnlyPermissionKeys = new Set([
-  // Policy-intake permissions are application-managed through the current legacy/effective
-  // permission tables. Keep the optional V2 SQL foundation immutable until its next schema phase.
   "policy_intakes.view",
   "policy_intakes.create",
   "policy_intakes.review",
+  "policy_intakes.finalize",
   "policies.ocr_training.review",
   "policies.ocr_training.approve",
 ]);
@@ -198,7 +194,6 @@ if (!migrationSql.includes("Phase 4 shadow foundation must not auto-assign emplo
   fail("Phase 4 migration is missing the no-auto-assignment invariant");
 }
 
-// Phase 5 shadow resolver behavioural gates.
 const fixedNow = new Date("2026-08-10T08:00:00.000Z");
 function decide(input) {
   return resolveEffectivePermissionV2({ employeeActive: true, portalIdentityActive: true, now: fixedNow, ...input }, roleMatrixV2);
@@ -219,67 +214,44 @@ expectDecision(
   resolveEffectivePermissionV2({ permission: "claims.view", employeeActive: false, portalIdentityActive: true, assignments: [{ roleCode: "claims_head", isActive: true }], now: fixedNow }, roleMatrixV2),
   { allowed: false, access: "none", source: "inactive_identity" },
 );
-
 expectDecision(
   "expired temporary role",
   decide({ permission: "claims.view", assignments: [{ roleCode: "claims_head", isActive: true, endsAt: "2026-08-10T07:59:59.000Z" }] }),
   { allowed: false, access: "none", source: "no_grant" },
 );
-
 expectDecision(
   "claim processor assigned claim",
   decide({ permission: "claims.edit", assignments: [{ roleCode: "claim_processor", isActive: true }] }),
   { allowed: true, access: "edit", scopes: ["assigned"], source: "role_grant" },
 );
-
 expectDecision(
   "claim processor cannot assign tasks",
   decide({ permission: "tasks.assign", assignments: [{ roleCode: "claim_processor", isActive: true }] }),
   { allowed: false, access: "none", source: "no_grant" },
 );
-
 expectDecision(
   "claim processor creates only self followup",
   decide({ permission: "tasks.create", assignments: [{ roleCode: "claim_processor", isActive: true }] }),
   { allowed: true, access: "edit", scopes: ["self"], source: "role_grant" },
 );
-
 expectDecision(
   "employee deny overrides role grant",
-  decide({
-    permission: "customers.view",
-    assignments: [{ roleCode: "sales_head", isActive: true }],
-    overrides: [{ permission: "customers.view", access: "none", isActive: true, reason: "Temporary restriction" }],
-  }),
+  decide({ permission: "customers.view", assignments: [{ roleCode: "sales_head", isActive: true }], overrides: [{ permission: "customers.view", access: "none", isActive: true, reason: "Temporary restriction" }] }),
   { allowed: false, access: "none", source: "employee_deny" },
 );
-
 expectDecision(
   "expired employee deny is ignored",
-  decide({
-    permission: "customers.view",
-    assignments: [{ roleCode: "sales_head", isActive: true }],
-    overrides: [{ permission: "customers.view", access: "none", isActive: true, expiresAt: "2026-08-10T07:59:59.000Z" }],
-  }),
+  decide({ permission: "customers.view", assignments: [{ roleCode: "sales_head", isActive: true }], overrides: [{ permission: "customers.view", access: "none", isActive: true, expiresAt: "2026-08-10T07:59:59.000Z" }] }),
   { allowed: true, access: "view", scopes: ["hierarchy"], source: "role_grant" },
 );
-
 expectDecision(
   "strongest multi-role grant",
-  decide({
-    permission: "claims.verify_documents",
-    assignments: [{ roleCode: "claim_processor", isActive: true }, { roleCode: "claims_head", isActive: true }],
-  }),
+  decide({ permission: "claims.verify_documents", assignments: [{ roleCode: "claim_processor", isActive: true }, { roleCode: "claims_head", isActive: true }] }),
   { allowed: true, access: "approve", scopes: ["organization"], source: "role_grant" },
 );
-
 expectDecision(
   "protected IT grant ignores ordinary deny",
-  decide({
-    permission: "system.integrations.configure",
-    assignments: [{ roleCode: "it_super_user", isActive: true }],
-    overrides: [{ permission: "system.integrations.configure", access: "none", isActive: true, reason: "Should not downgrade protected role" }],
-  }),
+  decide({ permission: "system.integrations.configure", assignments: [{ roleCode: "it_super_user", isActive: true }], overrides: [{ permission: "system.integrations.configure", access: "none", isActive: true, reason: "Should not downgrade protected role" }] }),
   { allowed: true, access: "approve", source: "protected_role" },
 );
 

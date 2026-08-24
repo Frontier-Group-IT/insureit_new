@@ -3,7 +3,7 @@
 import { claimPolicyIntakeForReview } from "@/app/policy-intakes/actions";
 import type { PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
 import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-apply";
-import { requirePolicyIntakeReviewer } from "@/lib/policy-intake-server";
+import { requirePolicyIntakeFinalizer } from "@/lib/policy-intake-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export type PolicyIntakeDraft = {
@@ -20,7 +20,7 @@ type InsurerOption={id:string;name:string};
 type CustomerOption={contact_name:string;company_name:string|null};
 
 export async function preparePolicyIntakeHandoff(id:string):Promise<{ok:true;draft:PolicyIntakeDraft}|{ok:false;error:string}> {
-  await requirePolicyIntakeReviewer();
+  await requirePolicyIntakeFinalizer();
   const claimed = await claimPolicyIntakeForReview(id);
   if (!claimed.ok) return claimed;
   const admin = createSupabaseAdminClient();
