@@ -1,0 +1,85 @@
+name: Temporary policy intake reset context fix
+
+on:
+  push:
+    branches:
+      - fix/policy-intake-reset-context
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/policy-intake-reset-context
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Patch reset linkage and regression
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          form_path = Path('apps/web-portal/components/policy-unified-form.tsx')
+          form = form_path.read_text()
+          key_anchor = 'const POLICY_DRAFT_KEY = "insureit:policy-onboarding:draft:v2";\n'
+          if key_anchor not in form:
+              raise SystemExit('Policy draft key anchor not found')
+          if 'POLICY_INTAKE_PENDING_KEY' not in form:
+              form = form.replace(key_anchor, key_anchor + 'const POLICY_INTAKE_PENDING_KEY = "insureit:policy-intake:pending:v1";\nconst POLICY_ONBOARDING_RESET_EVENT = "insureit:policy-onboarding:reset";\n', 1)
+
+          old = '    try{sessionStorage.removeItem(POLICY_DRAFT_KEY);}catch{}\n    setForm(stateFrom(initialValues));'
+          new = '    try{sessionStorage.removeItem(POLICY_DRAFT_KEY);sessionStorage.removeItem(POLICY_INTAKE_PENDING_KEY);window.dispatchEvent(new Event(POLICY_ONBOARDING_RESET_EVENT));}catch{}\n    setForm(stateFrom(initialValues));'
+          if old not in form:
+              raise SystemExit('clearPolicyForm reset anchor not found')
+          form = form.replace(old, new, 1)
+          form_path.write_text(form)
+
+          card_path = Path('apps/web-portal/components/policy-intake-onboarding-context.tsx')
+          card = card_path.read_text()
+          key = 'const KEY="insureit:policy-intake:pending:v1";\n'
+          if key not in card:
+              raise SystemExit('Policy intake context key anchor not found')
+          if 'RESET_EVENT=' not in card:
+              card = card.replace(key, key + 'const RESET_EVENT="insureit:policy-onboarding:reset";\n', 1)
+
+          load_effect = '  useEffect(()=>{let pending:{id?:string;savedAt?:number}|null=null;try{pending=JSON.parse(sessionStorage.getItem(KEY)||"null");}catch{}if(!pending?.id||!pending.savedAt||Date.now()-pending.savedAt>8*60*60*1000)return;void loadPolicyIntakeOnboardingContext(pending.id).then(result=>{if(result.ok)setContext(result.context);});},[]);\n'
+          if load_effect not in card:
+              raise SystemExit('Policy intake context load effect not found')
+          reset_effect = '  useEffect(()=>{const clear=()=>{setContext(null);setError(null);setOpening(false);setPosition(null);};window.addEventListener(RESET_EVENT,clear);return()=>window.removeEventListener(RESET_EVENT,clear);},[]);\n'
+          if reset_effect not in card:
+              card = card.replace(load_effect, load_effect + reset_effect, 1)
+          card_path.write_text(card)
+
+          regression_path = Path('apps/web-portal/scripts/policy-ocr-onboarding-import-regression.mjs')
+          regression = regression_path.read_text()
+          marker = '  ["Parent owns complete create-form reset", form, /function clearPolicyForm\\(\\)\\{[\\s\\S]*sessionStorage\\.removeItem\\(POLICY_DRAFT_KEY\\)[\\s\\S]*setForm\\(stateFrom\\(initialValues\\)\\)[\\s\\S]*setVehicleRegistrationMode\\("registered"\\)[\\s\\S]*setAppliedRc\\(null\\)[\\s\\S]*setPendingPayload\\(null\\)/],\n'
+          if marker not in regression:
+              raise SystemExit('Reset regression marker not found')
+          additions = '  ["Clear form also detaches pending policy intake context", form, /sessionStorage\\.removeItem\\(POLICY_INTAKE_PENDING_KEY\\)[\\s\\S]*dispatchEvent\\(new Event\\(POLICY_ONBOARDING_RESET_EVENT\\)\\)/],\n  ["Policy intake sidebar listens for onboarding reset", intakeContext, /addEventListener\\(RESET_EVENT,clear\\)[\\s\\S]*setContext\\(null\\)/],\n'
+          if 'Clear form also detaches pending policy intake context' not in regression:
+              regression = regression.replace(marker, marker + additions, 1)
+          declaration_anchor = 'const form=read("components/policy-unified-form.tsx");\n'
+          if declaration_anchor not in regression:
+              raise SystemExit('Regression form declaration not found')
+          if 'const intakeContext=' not in regression:
+              regression = regression.replace(declaration_anchor, declaration_anchor + 'const intakeContext=read("components/policy-intake-onboarding-context.tsx");\n', 1)
+          regression_path.write_text(regression)
+          PY
+      - name: Run focused onboarding regression
+        working-directory: apps/web-portal
+        run: npm run policy-ocr:onboarding-import-regression
+      - name: Commit fix and remove temporary workflow
+        shell: bash
+        run: |
+          rm .github/workflows/tmp-fix-policy-intake-reset-context.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal/components/policy-unified-form.tsx apps/web-portal/components/policy-intake-onboarding-context.tsx apps/web-portal/scripts/policy-ocr-onboarding-import-regression.mjs .github/workflows/tmp-fix-policy-intake-reset-context.yml
+          git commit -m "Reset policy intake context with onboarding form"
+          git push origin HEAD:fix/policy-intake-reset-context
