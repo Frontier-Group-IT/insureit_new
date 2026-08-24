@@ -119,7 +119,7 @@ function extractMakeModel(text: string): { make: string; model: string } | null 
     }
     const joined = cleanText(parts.join(" "))
       .replace(/^(?:null\s+)+/i, "")
-      .replace(/\b(?:RTA\s+Name|Gross\s+vehicle\s+Weight)\b.*$/i, "")
+      .replace(/\b(?:Type\s+Of\s+Body|Registration\s+Date|Cubic\s+Capacity|Engine\s+Number|Year\s+Of\s+Manufacture|RTA\s+Name|Gross\s+vehicle\s+Weight)\b[\s\S]*$/i, "")
       .trim();
     const slash = joined.indexOf("/");
     if (slash < 0) continue;
@@ -199,7 +199,7 @@ function cleanVehicleText(value: string) {
 }
 function goodVehicleText(value: string) {
   return value.length >= 3 && value.length <= 80
-    && !/Vehicle|Capacity|Weight|Registration|Engine|Chassis|Year\s+Of\s+Manufacture/i.test(value);
+    && !/Vehicle|Capacity|Weight|Registration|Engine|Chassis|Year\s+Of\s+Manufacture|Type\s+Of\s+Body/i.test(value);
 }
 function compact(value: string) { return value.toUpperCase().replace(/[^A-Z0-9]/g, ""); }
 function plausibleId(value: string) {
