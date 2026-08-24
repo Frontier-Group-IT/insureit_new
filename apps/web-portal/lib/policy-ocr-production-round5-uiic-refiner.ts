@@ -69,10 +69,10 @@ export function refineProductionRound5Uiic(
     }
     if (engine && plausibleId(engine)) set(fields, "vehicle_engine_number", compact(engine), .999, 2, "Round 5 UIIC engine label block");
 
-    const year = labelledValue(vehicleBlock, /Year\s+Of\s+Manufacture/i, /(?:19|20)\d{2}/);
+    const year = labelledNumeric(vehicleBlock, /Year\s+Of\s+Manufacture/i, /(?:19|20)\d{2}/);
     if (year) set(fields, "vehicle_manufacturing_year", year, .999, 2, "Round 5 UIIC manufacturing year");
 
-    const gvw = labelledValue(vehicleBlock, /Gross\s+vehicle\s+Weight/i, /\d{3,6}/i);
+    const gvw = labelledNumeric(vehicleBlock, /Gross\s+vehicle\s+Weight/i, /\d{3,6}/);
     if (gvw) set(fields, "vehicle_capacity", gvw, .999, 2, "Round 5 UIIC gross vehicle weight");
 
     const rto = labelledFreeText(vehicleBlock, /RTA\s+Name/i, /Vehicle\s+Make\s*&\s*Model/i)
@@ -126,6 +126,26 @@ function labelledValue(text: string, label: RegExp, value: RegExp): string | nul
     if (!label.test(ls[i])) continue;
     const block = ls.slice(i, i + 4).join(" ").replace(label, " ");
     const match = block.match(value); if (match) return match[0];
+  }
+  return null;
+}
+function labelledNumeric(text: string, label: RegExp, value: RegExp): string | null {
+  const ls = lines(text);
+  for (let i = 0; i < ls.length; i += 1) {
+    if (!label.test(ls[i])) continue;
+    const sameLine = ls[i].replace(label, " ").trim();
+    const same = isolatedNumericMatch(sameLine, value);
+    if (same) return same;
+    const next = isolatedNumericMatch(ls[i + 1] ?? "", value);
+    if (next) return next;
+  }
+  return null;
+}
+function isolatedNumericMatch(text: string, value: RegExp): string | null {
+  const candidates = text.split(/\s+/).map((token) => token.replace(/^[^0-9]+|[^0-9]+$/g, "")).filter(Boolean);
+  for (const candidate of candidates) {
+    if (!/^\d+$/.test(candidate)) continue;
+    if (value.test(candidate)) return candidate;
   }
   return null;
 }
