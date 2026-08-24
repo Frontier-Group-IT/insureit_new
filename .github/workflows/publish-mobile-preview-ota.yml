@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   publish:
@@ -169,7 +170,29 @@ jobs:
           ];
 
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
+
+          if (result === 'success') {
+            const comment = [
+              '### Expo preview OTA published ✅',
+              '',
+              '- Channel: `preview`',
+              `- Runtime version: ${runtimeVersion ? `\`${runtimeVersion}\`` : 'Not returned by Expo'}`,
+              `- Update group ID: ${groupId ? `\`${groupId}\`` : 'Not returned by Expo'}`,
+              `- Update ID(s): ${updateIds.length ? updateIds.map((id) => `\`${id}\``).join(', ') : 'Not returned by Expo'}`,
+              `- Source commit: \`${process.env.GITHUB_SHA || 'unknown'}\``,
+              '- Build type: OTA JavaScript/assets only — no APK/AAB built',
+            ];
+            fs.writeFileSync('expo-pr-comment.md', `${comment.join('\n')}\n`);
+          }
           NODE
+
+      - name: Record successful OTA on PR 588
+        if: steps.publish.outputs.result == 'success'
+        working-directory: apps/mobile-app
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: gh pr comment 588 --body-file expo-pr-comment.md
 
       - name: Fail workflow when Expo publication fails
         if: always() && steps.publish.outputs.result != 'success'
