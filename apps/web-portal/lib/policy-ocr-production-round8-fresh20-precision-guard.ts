@@ -29,7 +29,10 @@ export function refineProductionRound8Fresh20Precision(
     return /REGISTRATION(?:DATE|NO|NUMBER)/.test(normalized) || normalized.length > 15;
   }) || changed;
   changed = deleteIf(fields, "vehicle_engine_number", looksLikeIdentifierLabelNoise) || changed;
-  changed = deleteIf(fields, "vehicle_chassis_number", (value) => looksLikeIdentifierLabelNoise(value) || compact(value).length < 15) || changed;
+  // Chassis formats vary across insurers and legacy/approved layouts. Round 8 is
+  // precision-first, so only withhold values that are clearly label contamination;
+  // do not reject a value solely because it is shorter than a VIN-like 17 chars.
+  changed = deleteIf(fields, "vehicle_chassis_number", looksLikeIdentifierLabelNoise) || changed;
 
   const engine = compact(fields.get("vehicle_engine_number")?.value ?? "");
   const chassis = compact(fields.get("vehicle_chassis_number")?.value ?? "");
@@ -38,9 +41,10 @@ export function refineProductionRound8Fresh20Precision(
     changed = true;
   }
 
-  const vehicleClass = fields.get("vehicle_class")?.value?.trim() ?? "";
   const capacity = numberField(fields, "vehicle_capacity");
-  if (capacity != null && ((capacity >= 1900 && capacity <= 2100) || (/^(?:PCP|TWP)$/i.test(vehicleClass) && capacity > 20))) {
+  // Reject obvious year contamination. PCP/TWP capacity is commonly engine CC,
+  // so values such as 853/1493/1498 are legitimate and must not be blanket-rejected.
+  if (capacity != null && capacity >= 1900 && capacity <= 2100) {
     fields.delete("vehicle_capacity");
     changed = true;
   }
