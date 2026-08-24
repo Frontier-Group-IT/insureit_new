@@ -14,6 +14,8 @@ import { refineProductionRound3Precision } from "./policy-ocr-production-round3-
 import { refineProductionRound4Uiic } from "./policy-ocr-production-round4-uiic-refiner.ts";
 // @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
 import { refineProductionRound5Uiic } from "./policy-ocr-production-round5-uiic-refiner.ts";
+// @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
+import { guardProductionRound5UiicPolicyNumber } from "./policy-ocr-production-round5-uiic-policy-guard.ts";
 
 /**
  * Stable approved-layout behavior remains the base. Round 1 handles the four
@@ -62,5 +64,6 @@ export function refineApprovedMotorPolicyLayout(
   const round3 = refineProductionRound3Precision(round2);
   const round4 = refineProductionRound4Uiic(pages, tables, round3);
   const round5 = refineProductionRound5Uiic(pages, tables, round4);
-  return refineProductionPolicyIdentity(pages, round5);
+  const guardedRound5 = guardProductionRound5UiicPolicyNumber(pages, round5);
+  return refineProductionPolicyIdentity(pages, guardedRound5);
 }
