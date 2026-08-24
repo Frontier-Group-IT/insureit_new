@@ -1,0 +1,140 @@
+name: Temporary apply main-only Expo preview policy
+
+on:
+  push:
+    branches:
+      - chore/main-only-expo-preview-ota
+    paths:
+      - '.github/workflows/tmp-apply-main-only-preview-policy.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out policy branch
+        uses: actions/checkout@v4
+        with:
+          ref: chore/main-only-expo-preview-ota
+          fetch-depth: 0
+
+      - name: Apply workflow and documentation policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "antnish1"
+          git config user.email "shahdolho@gmail.com"
+
+          python <<'PY'
+          from pathlib import Path
+
+          workflow = Path('.github/workflows/publish-mobile-preview-ota.yml')
+          text = workflow.read_text()
+          old_if = "    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '#547')\n"
+          new_if = "    if: github.ref == 'refs/heads/main'\n"
+          if old_if in text:
+              text = text.replace(old_if, new_if, 1)
+          elif new_if not in text:
+              raise SystemExit('Expected Expo preview publish job guard was not found')
+
+          checkout = """      - name: Check out merged source
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+"""
+          guarded_checkout = """      - name: Check out merged source
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Verify OTA source is exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          current_head=\"$(git rev-parse HEAD)\"
+          remote_main=\"$(git rev-parse origin/main)\"
+          if [ \"$current_head\" != \"$remote_main\" ]; then
+            echo \"Refusing Expo preview OTA: checked-out source is not current origin/main.\" >&2
+            echo \"HEAD=$current_head\" >&2
+            echo \"origin/main=$remote_main\" >&2
+            exit 1
+          fi
+
+"""
+          if 'Verify OTA source is exact current main' not in text:
+              if checkout not in text:
+                  raise SystemExit('Expected checkout block was not found')
+              text = text.replace(checkout, guarded_checkout, 1)
+
+          text = text.replace('--message "Block duplicate active self-tracked claims" \\\n', '--message "Expo preview from main ${GITHUB_SHA}" \\\n', 1)
+
+          summary_anchor = "            '| Expo channel | `preview` |',\n"
+          summary_line = "            '| Source policy | `current main only` |',\n"
+          if summary_line not in text:
+              if summary_anchor not in text:
+                  raise SystemExit('Expected OTA summary anchor was not found')
+              text = text.replace(summary_anchor, summary_anchor + summary_line, 1)
+          workflow.write_text(text)
+
+          agents = Path('AGENTS.md')
+          agents_text = agents.read_text()
+          marker = '### Expo preview OTA source-of-truth protocol'
+          if marker not in agents_text:
+              agents_text += """
+
+### Expo preview OTA source-of-truth protocol
+
+**MANDATORY FOR ALL AGENTS:** the shared Expo `preview` channel is a single moving OTA target. It must have one authoritative source: the exact current `main` commit.
+
+- Only `.github/workflows/publish-mobile-preview-ota.yml` may publish to Expo channel `preview`.
+- That workflow must run from `refs/heads/main`, check out `main`, fetch `origin/main`, and refuse publication unless the checked-out commit exactly equals current `origin/main`.
+- Never create or use a temporary feature-branch, recovery-branch, PR-branch, or local workflow that runs `eas update --channel preview`. A later feature-branch OTA can replace the cumulative `main` snapshot on installed preview apps even when Git history is correct.
+- Feature and recovery branches may use GitHub CI, Expo web review exports, screenshots, or other non-OTA review methods. They must not publish to the shared `preview` channel.
+- Merge approved mobile work in controlled phases. Before each merge phase, refresh against current `main`, resolve overlaps, and require the canonical CI gate. After the phase is merged and `main` is verified, publish the exact current `main` commit to `preview`.
+- When a cumulative recovery PR supersedes multiple feature PRs, merge the cumulative PR only. Do not then merge the superseded source PRs individually; close them as superseded after the cumulative merge is verified.
+- If the installed preview app appears to lose previously approved changes, first compare the served OTA source with current `main`. Repair by restoring/merging the approved cumulative code into `main`, verifying it, and then republishing from `main`; do not repair by publishing another isolated feature branch to `preview`.
+- A JavaScript/assets-only OTA must not create an APK. A new native build is required only when a native/runtime/build-profile change actually requires one and the user explicitly approves it.
+- Do not change Expo app version, runtimeVersion, EAS channel/build configuration, project ID, owner, package/bundle IDs, or other protected mobile configuration merely to solve an OTA source-order problem.
+"""
+              agents.write_text(agents_text)
+
+          handoff = Path('docs/CURRENT_CHAT_HANDOFF.md')
+          handoff_text = handoff.read_text()
+          handoff_marker = '## 2026-08-24 phased mobile merge and main-only Expo preview plan'
+          if handoff_marker not in handoff_text:
+              handoff_text += """
+
+## 2026-08-24 phased mobile merge and main-only Expo preview plan
+
+**USER-APPROVED OPERATING DECISION:** stop publishing isolated feature/recovery branches to the shared Expo `preview` channel. From this point forward, `preview` is sourced only from the exact current `main` commit through `.github/workflows/publish-mobile-preview-ota.yml`.
+
+Root cause learned today: Expo `preview` is a moving channel. Publishing PR #588, #593, #595, #603, #607, PR #612, or any other branch directly to the same channel does not layer updates. The newest compatible OTA can replace the cumulative app snapshot and make earlier changes appear reverted even though their Git commits still exist.
+
+### Phased merge plan
+
+1. **Phase 0 — deployment guard first.** Merge the main-only Expo preview workflow/documentation PR before the mobile recovery merge. The workflow must refuse non-`main` refs and verify checked-out HEAD equals `origin/main` before `eas update --channel preview`.
+2. **Phase 1 — refresh cumulative mobile recovery.** Bring PR #612 (`recovery/mobile-today-cumulative`) onto the then-current `main`, resolve any overlap with later merged work, and rerun canonical mobile and web verification. Do not merge the five superseded source PRs separately.
+3. **Phase 2 — merge cumulative mobile recovery.** Merge PR #612 only after its refreshed head is green and mergeable. Then verify the exact new `main` commit.
+4. **Phase 3 — publish authoritative preview.** Run the main-only OTA workflow from the exact verified `main` commit. No APK for JS/assets-only changes. Confirm Expo publish success and channel mapping before claiming the phone is on the restored cumulative state.
+5. **Phase 4 — close superseded mobile PRs.** After Phase 3 verification, close #588, #593, #595, #603 and #607 as superseded by #612 rather than merging them again.
+6. **Phase 5 — remaining independent PRs.** Handle unrelated open PRs (for example OCR work such as #608) separately, one logical batch at a time, refreshed onto current `main` and passing their own required CI. A web-only merge does not require a mobile OTA; any mobile-affecting merge is followed by the same main-only preview publication rule.
+
+Current `main` at the time this plan was recorded: `59ae5aedfe1ef669fb0869f345fc97c62c3b4fbd` (PR #618 merged). PR #612 remains open and must be refreshed before merge because its earlier base predates this latest `main`.
+
+**Safety boundaries:** no direct production data changes, no Supabase schema/RLS/auth changes, no Expo runtime/version/build-profile changes, and no APK creation are part of this merge/deployment-control plan.
+"""
+              handoff.write_text(handoff_text)
+          PY
+
+          git add .github/workflows/publish-mobile-preview-ota.yml AGENTS.md docs/CURRENT_CHAT_HANDOFF.md
+          git commit -m "Enforce main-only Expo preview OTA publishing"
+
+          git rm .github/workflows/tmp-apply-main-only-preview-policy.yml
+          git commit -m "chore: remove temporary preview policy workflow"
+          git push origin HEAD:chore/main-only-expo-preview-ota
