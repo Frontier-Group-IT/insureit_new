@@ -44,7 +44,6 @@ export function ExternalClaimStageHeader({
           <MaterialCommunityIcons name={icon} size={35} color="#FFFFFF" />
         </View>
         <View style={styles.headerCopy}>
-          <Text style={styles.eyebrow}>STEP {step} OF 9</Text>
           <Text style={styles.title}>{title}</Text>
           {vehicleNo || claimNo ? <Text style={styles.identity}>{[vehicleNo, claimNo].filter(Boolean).join('  •  ')}</Text> : null}
           {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
