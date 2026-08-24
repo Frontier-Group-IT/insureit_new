@@ -32,7 +32,11 @@ export function refineProductionRound7UiicPrecision(parsed: ParsedPolicyResult):
   const gross = money(fields, "gross_premium");
   const tax = money(fields, "tax_amount");
 
+  // A package-policy gross premium cannot be below the printed net premium.
   if (net != null && gross != null && gross < net) fields.delete("gross_premium");
+
+  // UIIC tax rows are monetary amounts. Tiny values here are rate/column
+  // contamination, not printed GST. Keep only plausible monetary tax values.
   if (net != null && tax != null && (tax < 100 || tax > net * 0.30)) fields.delete("tax_amount");
 
   const idv = money(fields, "idv");
