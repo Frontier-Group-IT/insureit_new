@@ -43,6 +43,9 @@ export type Capability =
   | "view_policies"
   | "create_policies"
   | "create_external_policies"
+  | "view_policy_intakes"
+  | "create_policy_intakes"
+  | "review_policy_intakes"
   | "review_policy_ocr_training"
   | "approve_policy_ocr_training"
   | "view_tasks"
@@ -58,7 +61,8 @@ const ALL_OPERATIONAL: Capability[] = [
   "view_dashboard", "view_claims", "manage_claims", "view_intermediaries", "create_intermediary_application",
   "review_intermediary_application", "approve_intermediary_application", "activate_intermediary", "view_customers",
   "create_customers", "manage_customers", "view_kyc", "review_kyc", "view_employees", "manage_employees", "view_org_tree",
-  "view_vehicles", "create_vehicles", "view_policies", "create_policies", "create_external_policies", "review_policy_ocr_training", "view_tasks", "manage_tasks", "view_reports", "view_notifications",
+  "view_vehicles", "create_vehicles", "view_policies", "create_policies", "create_external_policies",
+  "view_policy_intakes", "create_policy_intakes", "review_policy_intakes", "review_policy_ocr_training", "view_tasks", "manage_tasks", "view_reports", "view_notifications",
   "manage_master_data"
 ];
 
@@ -73,38 +77,39 @@ export const roleCapabilities: Record<AppRole, readonly Capability[]> = {
     "view_dashboard", "view_claims", "view_intermediaries", "review_intermediary_application",
     "approve_intermediary_application", "view_customers", "view_kyc", "review_kyc", "view_employees",
     "view_org_tree", "view_vehicles", "view_policies", "view_tasks", "manage_tasks", "view_reports",
-    "view_notifications"
+    "view_notifications", "view_policy_intakes", "create_policy_intakes"
   ],
   sales_operations_head: [
     "view_dashboard", "view_claims", "manage_claims", "view_intermediaries", "create_intermediary_application",
     "review_intermediary_application", "approve_intermediary_application", "activate_intermediary",
     "view_customers", "create_customers", "manage_customers", "view_kyc", "review_kyc", "view_tasks", "manage_tasks",
-    "view_accounts", "view_reports", "view_notifications"
+    "view_accounts", "view_reports", "view_notifications", "view_policy_intakes", "create_policy_intakes", "review_policy_intakes"
   ],
   sales_head: [
     "view_dashboard", "view_claims", "view_intermediaries", "create_intermediary_application",
     "review_intermediary_application", "view_customers", "create_customers", "manage_customers", "view_kyc", "review_kyc",
     "view_employees", "view_org_tree", "view_vehicles", "view_policies", "view_tasks", "manage_tasks",
-    "view_accounts", "view_reports", "view_notifications"
+    "view_accounts", "view_reports", "view_notifications", "view_policy_intakes", "create_policy_intakes"
   ],
   zonal_head: [
     "view_dashboard", "view_intermediaries", "create_intermediary_application", "review_intermediary_application",
     "view_customers", "create_customers", "manage_customers", "view_kyc", "review_kyc", "view_org_tree", "view_tasks",
-    "manage_tasks", "view_reports", "view_notifications"
+    "manage_tasks", "view_reports", "view_notifications", "view_policy_intakes", "create_policy_intakes"
   ],
   asm: [
     "view_dashboard", "view_intermediaries", "create_intermediary_application", "review_intermediary_application",
     "view_customers", "create_customers", "manage_customers", "view_kyc", "review_kyc", "view_org_tree", "view_tasks",
-    "manage_tasks", "view_reports", "view_notifications"
+    "manage_tasks", "view_reports", "view_notifications", "view_policy_intakes", "create_policy_intakes"
   ],
   sales_manager: [
     "view_dashboard", "view_intermediaries", "create_intermediary_application", "review_intermediary_application",
     "view_customers", "create_customers", "manage_customers", "view_kyc", "review_kyc", "view_org_tree", "view_tasks",
-    "manage_tasks", "view_reports", "view_notifications"
+    "manage_tasks", "view_reports", "view_notifications", "view_policy_intakes", "create_policy_intakes"
   ],
   relationship_manager: [
     "view_dashboard", "view_claims", "view_intermediaries", "create_intermediary_application", "view_customers",
-    "create_customers", "manage_customers", "view_kyc", "view_vehicles", "view_policies", "view_tasks", "view_notifications"
+    "create_customers", "manage_customers", "view_kyc", "view_vehicles", "view_policies", "view_tasks", "view_notifications",
+    "view_policy_intakes", "create_policy_intakes"
   ],
   claims_head: ["view_dashboard", "view_claims", "manage_claims", "view_tasks", "manage_tasks", "view_reports", "view_notifications"],
   claim_processor: ["view_dashboard", "view_claims", "manage_claims", "view_tasks", "manage_tasks", "view_notifications"],
@@ -114,6 +119,7 @@ export const roleCapabilities: Record<AppRole, readonly Capability[]> = {
     "view_customers", "create_customers",
     "view_vehicles", "create_vehicles",
     "view_policies", "create_policies", "create_external_policies",
+    "view_policy_intakes", "review_policy_intakes",
     "view_reports", "view_notifications"
   ],
   agent: ["view_dashboard", "view_customers", "create_customers", "manage_customers", "view_tasks", "view_notifications"],
