@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { loadPolicyIntakeOnboardingContext, openPolicyIntakeDocument, type PolicyIntakeOnboardingContext } from "@/app/policy-intakes/actions";
 
 const KEY="insureit:policy-intake:pending:v1";
+const RESET_EVENT="insureit:policy-onboarding:reset";
 
 export function PolicyIntakeOnboardingContextCard(){
   const[context,setContext]=useState<PolicyIntakeOnboardingContext|null>(null);
@@ -18,6 +19,12 @@ export function PolicyIntakeOnboardingContextCard(){
     try{pending=JSON.parse(sessionStorage.getItem(KEY)||"null");}catch{}
     if(!pending?.id||!pending.savedAt||Date.now()-pending.savedAt>8*60*60*1000)return;
     void loadPolicyIntakeOnboardingContext(pending.id).then(result=>{if(result.ok)setContext(result.context);});
+  },[]);
+
+  useEffect(()=>{
+    const clear=()=>{setContext(null);setError(null);setOpening(false);setDesktopTarget(null);};
+    window.addEventListener(RESET_EVENT,clear);
+    return()=>window.removeEventListener(RESET_EVENT,clear);
   },[]);
 
   useEffect(()=>{
