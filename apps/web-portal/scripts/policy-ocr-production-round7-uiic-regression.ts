@@ -54,7 +54,10 @@ assert.equal(field(preserved, "od_premium"), "7467");
 assert.equal(field(preserved, "vehicle_capacity"), "1610");
 assert.equal(field(preserved, "vehicle_engine_number"), "000FT741700026070394");
 
-const unrelated: ParsedPolicyResult = { ...broken, parserId: "digit_commercial_motor_v1" };
+const unrelated: ParsedPolicyResult = {
+  ...broken,
+  parserId: "digit_commercial_motor_v1",
+};
 assert.deepEqual(refineProductionRound7UiicPrecision(unrelated), unrelated);
 
 console.log("Round 7 UIIC precision guard regression passed.");
