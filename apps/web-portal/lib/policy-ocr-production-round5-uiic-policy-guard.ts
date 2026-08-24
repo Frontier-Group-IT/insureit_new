@@ -70,12 +70,12 @@ function replaceField(
 
 function findStrictPolicyNumber(pages: string[]) {
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
-    const lines = pages[pageIndex].split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-    for (let i = 0; i < lines.length; i += 1) {
-      if (!/^\s*Policy\s+(?:Number|No\.?)\b/i.test(lines[i])) continue;
-      if (/Previous|Prev\.?/i.test(lines[i])) continue;
-      const sameLine = lines[i].replace(/^\s*Policy\s+(?:Number|No\.?)\s*[:#-]?\s*/i, "").trim();
-      const candidates = [sameLine, lines[i + 1] ?? ""];
+    const pageLines = pages[pageIndex].split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    for (let i = 0; i < pageLines.length; i += 1) {
+      if (!/^\s*Policy\s+(?:Number|No\.?)\b/i.test(pageLines[i])) continue;
+      if (/Previous|Prev\.?/i.test(pageLines[i])) continue;
+      const sameLine = pageLines[i].replace(/^\s*Policy\s+(?:Number|No\.?)\s*[:#-]?\s*/i, "").trim();
+      const candidates = [sameLine, pageLines[i + 1] ?? ""];
       for (const candidate of candidates) {
         const tokens = candidate.match(/[A-Z0-9][A-Z0-9\/-]{7,34}/gi) ?? [];
         for (const token of tokens) {
@@ -90,16 +90,37 @@ function findStrictPolicyNumber(pages: string[]) {
 
 function findStrictVehicleId(pages: string[], label: RegExp) {
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
-    const lines = pages[pageIndex].split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-    for (let i = 0; i < lines.length; i += 1) {
-      if (!label.test(lines[i])) continue;
-      const after = lines[i].replace(label, " ");
-      const candidates = [after, lines[i + 1] ?? ""].join(" ").match(/[A-Z0-9][A-Z0-9\/-]{11,34}/gi) ?? [];
-      for (const raw of candidates) {
-        const value = raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
-        if (plausibleVehicleId(value)) return { value, page: pageIndex + 1 };
-      }
+    const pageLines = pages[pageIndex].split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    for (let i = 0; i < pageLines.length; i += 1) {
+      const line = pageLines[i];
+      if (!label.test(line)) continue;
+
+      // Prefer a value printed on the same line immediately after the label.
+      // This is important for UIIC page 2, where Chassis/Engine have explicit
+      // values. A page-1 multi-column header must never borrow the next row,
+      // because the engine column appears before the chassis column there.
+      const sameLine = line.replace(label, " ").trim();
+      const same = firstPlausibleVehicleId(sameLine);
+      if (same) return { value: same, page: pageIndex + 1 };
+
+      // Only allow next-line recovery when the current line is effectively a
+      // standalone label. Skip multi-column header lines with sibling labels.
+      const remainder = line.replace(label, " ").replace(/[:#&|.,;()\s/-]+/g, "").trim();
+      const hasSiblingLabel = /Engine|Chassis|Make|Model|Body|Year|Capacity|GVW|Weight|Registration/i.test(remainder);
+      if (remainder || hasSiblingLabel) continue;
+
+      const next = firstPlausibleVehicleId(pageLines[i + 1] ?? "");
+      if (next) return { value: next, page: pageIndex + 1 };
     }
+  }
+  return null;
+}
+
+function firstPlausibleVehicleId(text: string): string | null {
+  const candidates = text.match(/[A-Z0-9][A-Z0-9\/-]{11,34}/gi) ?? [];
+  for (const raw of candidates) {
+    const value = raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (plausibleVehicleId(value)) return value;
   }
   return null;
 }
