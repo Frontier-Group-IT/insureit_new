@@ -17,7 +17,7 @@ const broken: ParsedPolicyResult = {
     { key: "od_premium", label: "OD", value: "2706", confidence: .99, page: 2, evidence: "existing" },
     { key: "tp_premium", label: "TP", value: "13642", confidence: .99, page: 2, evidence: "existing" },
     { key: "vehicle_capacity", label: "Capacity", value: "2026", confidence: .99, page: 2, evidence: "failure" },
-    { key: "vehicle_engine_number", label: "Engine", value: "SYNTHCHASSIS00001", confidence: .99, page: 1, evidence: "failure" },
+    { key: "vehicle_engine_number", label: "Engine", value: "SYNTHVIN000000001", confidence: .99, page: 1, evidence: "failure" },
   ],
   warnings: [],
 };
@@ -29,7 +29,7 @@ MOTOR INSURANCE - GCV PUBLIC CARRIER OTHER THAN 3 WHEELER PACKAGE POLICY`,
 VEHICLE DETAILS
 Registration Number NEW
 Obsolete Vehicle & Chassis Number
-No & SYNTHCHASSIS00001 Gross vehicle Weight
+No & SYNTHVIN000000001 Gross vehicle Weight
 2300
 RTA Name RJ14 TEST Vehicle Make & Model
 EULER
@@ -37,7 +37,7 @@ MOTORS_NONGICOUNCIL /
 TURBO EV 1000 MAXX FB
 Type Of Body GOODS CARRIER
 Engine Number
-SYNTHENGINE0000000001
+SYNTHMTR0000000000001
 Year Of Manufacture 2026
 INSURED DECLARED VALUE
 SCHEDULE OF PREMIUM
@@ -64,8 +64,8 @@ assert.equal(field(result, "vehicle_make"), "EULER MOTORS_NONGICOUNCIL");
 assert.equal(field(result, "vehicle_model"), "TURBO EV 1000 MAXX FB");
 assert.equal(field(result, "vehicle_fuel_type"), "Electric");
 assert.equal(field(result, "vehicle_capacity"), "2300");
-assert.equal(field(result, "vehicle_engine_number"), "SYNTHENGINE0000000001");
-assert.equal(field(result, "vehicle_chassis_number"), "SYNTHCHASSIS00001");
+assert.equal(field(result, "vehicle_engine_number"), "SYNTHMTR0000000000001");
+assert.equal(field(result, "vehicle_chassis_number"), "SYNTHVIN000000001");
 assert.match(result.parserVersion, /prod-r6-uiic_residual/);
 
 const second: ParsedPolicyResult = {
@@ -74,11 +74,11 @@ const second: ParsedPolicyResult = {
 };
 const secondPages = [pages[0], `MOTOR INSURANCE - GCV PUBLIC CARRIER OTHER THAN 3 WHEELER PACKAGE POLICY SCHEDULE
 VEHICLE DETAILS
-Chassis Number TESTCHASSIS000002
+Chassis Number TESTVIN0000000002
 Gross vehicle Weight 1610
 Vehicle Make & Model Tata Motors / ACE PRO EV CLB
 Type Of Body Closed
-Engine Number TESTENGINE0000000002
+Engine Number TESTMTR0000000000002
 Year Of Manufacture 2026
 INSURED DECLARED VALUE
 SCHEDULE OF PREMIUM
@@ -94,7 +94,7 @@ assert.equal(field(secondResult, "tax_amount"), "2094");
 assert.equal(field(secondResult, "gross_premium"), "23578");
 assert.equal(field(secondResult, "vehicle_make"), "Tata Motors");
 assert.equal(field(secondResult, "vehicle_model"), "ACE PRO EV CLB");
-assert.equal(field(secondResult, "vehicle_engine_number"), "TESTENGINE0000000002");
-assert.equal(field(secondResult, "vehicle_chassis_number"), "TESTCHASSIS000002");
+assert.equal(field(secondResult, "vehicle_engine_number"), "TESTMTR0000000000002");
+assert.equal(field(secondResult, "vehicle_chassis_number"), "TESTVIN0000000002");
 
 console.log("Round 6 UIIC residual regression passed.");
