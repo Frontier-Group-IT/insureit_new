@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - ui/mobile-claim-tracker-progress-ring
     paths:
       - 'apps/mobile-app/**'
       - '.github/workflows/publish-mobile-preview-ota.yml'
@@ -14,16 +15,16 @@ permissions:
 
 jobs:
   publish:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '#547')
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/ui/mobile-claim-tracker-progress-ring' || contains(github.event.head_commit.message, '#547')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
-      - name: Check out merged source
+      - name: Check out OTA source
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -44,7 +45,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Block duplicate active self-tracked claims" \
+            --message "Compact Claim Tracker progress into header ring" \
             --non-interactive \
             --json \
             > expo-update.json \
