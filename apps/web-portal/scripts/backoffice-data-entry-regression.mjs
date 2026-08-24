@@ -8,7 +8,7 @@ function fail(message) { throw new Error(`[backoffice-data-entry] ${message}`); 
 function expect(condition, message) { if (!condition) fail(message); }
 function source(path) { return readFileSync(resolve(process.cwd(), path), "utf8"); }
 
-const expectedLegacyCapabilities = new Set(["view_dashboard","view_customers","create_customers","view_vehicles","create_vehicles","view_policies","create_policies","create_external_policies","view_policy_intakes","review_policy_intakes","view_reports","view_notifications"]);
+const expectedLegacyCapabilities = new Set(["view_dashboard","view_customers","create_customers","view_vehicles","create_vehicles","view_policies","create_policies","create_external_policies","view_policy_intakes","review_policy_intakes","finalize_policy_intakes","view_reports","view_notifications"]);
 const actualLegacyCapabilities = new Set(roleCapabilities.backoffice_executive);
 expect(actualLegacyCapabilities.size === expectedLegacyCapabilities.size, "Backoffice role must not inherit unrelated legacy capabilities.");
 for (const capability of expectedLegacyCapabilities) expect(actualLegacyCapabilities.has(capability), `Backoffice role is missing ${capability}.`);
@@ -16,7 +16,7 @@ for (const capability of actualLegacyCapabilities) expect(expectedLegacyCapabili
 
 const fixedNow = new Date("2026-08-22T10:00:00.000Z");
 function decide(permission, overrides = []) { return resolveEffectivePermissionV2({ permission, employeeActive: true, portalIdentityActive: true, assignments: [{ roleCode: "backoffice_executive", isActive: true }], overrides, now: fixedNow }, roleMatrixV2); }
-for (const [permission, access] of [["customers.view","view"],["customers.create","edit"],["vehicles.view","view"],["vehicles.create","edit"],["policies.view","view"],["policies.create","edit"],["policy_intakes.view","view"],["policy_intakes.review","edit"],["reports.view","view"]]) {
+for (const [permission, access] of [["customers.view","view"],["customers.create","edit"],["vehicles.view","view"],["vehicles.create","edit"],["policies.view","view"],["policies.create","edit"],["policy_intakes.view","view"],["policy_intakes.review","edit"],["policy_intakes.finalize","approve"],["reports.view","view"]]) {
   const decision = decide(permission); expect(decision.allowed && decision.access === access, `V2 Backoffice baseline must allow ${permission} at ${access}.`);
 }
 for (const permission of ["customers.edit","kyc.view","kyc.review","vehicles.edit","policies.edit","claims.view","intermediaries.view","tasks.view","admin.portal_users.manage","master_data.manage","system.manage"]) expect(!decide(permission).allowed, `V2 Backoffice ceiling must deny ${permission}.`);
