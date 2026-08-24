@@ -53,7 +53,6 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
   const activeGroup = groups.find((item) => item.key === activeKey) ?? groups[0];
   const bulkUploadedCount = documents.filter((item) => item.document_type === BULK_DOCUMENT_TYPE && item.verification_status !== 'rejected').length;
   const bulkUploading = uploadingType === BULK_UPLOAD_KEY;
-  const deleting = uploadingType.startsWith(DELETE_UPLOAD_KEY);
 
   async function pickAndUpload(document: RequiredDocument) {
     setMessage('');
@@ -144,12 +143,13 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
       const bulkDocuments = documents.filter((item) => item.document_type === BULK_DOCUMENT_TYPE && item.verification_status !== 'rejected');
       const ids = bulkDocuments.map((item) => item.id).filter(Boolean);
       if (!ids.length) return;
-      const removeRecords = await supabase.from('claim_documents').delete().in('id', ids).eq('claim_id', claimId);
+      const removeRecords = await supabase.from('claim_documents').delete().eq('claim_id', claimId).in('id', ids);
       if (removeRecords.error) {
         setMessage('Uploaded documents could not be deleted. Please try again.');
         return;
       }
-      setDocuments((current) => current.filter((item) => !ids.includes(item.id)));
+      const idSet = new Set(ids);
+      setDocuments((current) => current.filter((item) => !idSet.has(item.id)));
       const pathsByBucket = new Map<string, string[]>();
       for (const document of bulkDocuments) {
         if (!document.storage_bucket || !document.storage_path) continue;
