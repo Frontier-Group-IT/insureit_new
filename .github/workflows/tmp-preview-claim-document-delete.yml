@@ -1,0 +1,52 @@
+name: Temporary Expo Preview - Claim Document Delete
+
+on:
+  push:
+    branches:
+      - fix/claim-intimation-bulk-upload-v2
+    paths:
+      - .github/workflows/tmp-preview-claim-document-delete.yml
+
+permissions:
+  contents: write
+
+jobs:
+  publish-preview:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile-app
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/claim-intimation-bulk-upload-v2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/mobile-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Publish OTA to preview
+        run: eas update --channel preview --environment preview --message "Add claim document delete controls and green bulk upload state" --non-interactive
+
+      - name: Remove temporary workflow
+        if: success()
+        working-directory: .
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/tmp-preview-claim-document-delete.yml
+          git commit -m "Remove temporary Expo preview workflow"
+          git push origin HEAD:fix/claim-intimation-bulk-upload-v2
