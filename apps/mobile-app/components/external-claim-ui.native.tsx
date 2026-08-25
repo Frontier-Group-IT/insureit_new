@@ -1,7 +1,9 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { palette } from '@/lib/theme';
+import { ClaimIdentityCard as SharedClaimIdentityCard } from './external-claim-ui.tsx';
 
 export * from './external-claim-ui.tsx';
 
@@ -13,7 +15,16 @@ type ClaimIdentityCardProps = {
   vehicleMeta?: string | null;
 };
 
-export function ClaimIdentityCard({ claimNo, insurerName, vehicleNo, policyNo, vehicleMeta }: ClaimIdentityCardProps) {
+export function ClaimIdentityCard(props: ClaimIdentityCardProps) {
+  const params = useLocalSearchParams<{ key?: string }>();
+  const milestoneKey = typeof params.key === 'string' ? params.key : '';
+
+  if (milestoneKey !== 'claim_intimation') {
+    return <SharedClaimIdentityCard {...props} />;
+  }
+
+  const { claimNo, insurerName, vehicleNo, policyNo, vehicleMeta } = props;
+
   return (
     <View style={styles.card}>
       <View style={styles.glow} />
