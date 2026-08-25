@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { finalDocumentGroups, type FinalDocumentGroup, type RequiredDocument } from '@/lib/claim-documents';
 import { getCurrentSession } from '@/lib/auth';
@@ -35,6 +35,14 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
   const [documents, setDocuments] = useState<ClaimDocument[]>([]);
   const [uploadingType, setUploadingType] = useState('');
   const [message, setMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [bulkDeleteConfirmVisible, setBulkDeleteConfirmVisible] = useState(false);
+
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = setTimeout(() => setSuccessMessage(''), 2800);
+    return () => clearTimeout(timer);
+  }, [successMessage]);
 
   useEffect(() => {
     let active = true;
@@ -138,6 +146,7 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
   async function deleteBulkDocuments() {
     if (uploadingType || !bulkUploadedCount) return;
     setMessage('');
+    setSuccessMessage('');
     setUploadingType(`${DELETE_UPLOAD_KEY}bulk`);
     try {
       const bulkDocuments = documents.filter((item) => item.document_type === BULK_DOCUMENT_TYPE && item.verification_status !== 'rejected');
@@ -159,11 +168,24 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
         const storageResult = await supabase.storage.from(bucket).remove(paths);
         if (storageResult.error) setMessage('Documents removed from the claim, but some storage cleanup could not be completed.');
       }
+      setSuccessMessage('Uploaded documents deleted successfully.');
     } catch {
       setMessage('Uploaded documents could not be deleted. Please try again.');
     } finally {
       setUploadingType('');
     }
+  }
+
+  function requestBulkDelete() {
+    if (uploadingType || !bulkUploadedCount) return;
+    setSuccessMessage('');
+    setBulkDeleteConfirmVisible(true);
+  }
+
+  async function confirmBulkDelete() {
+    if (uploadingType) return;
+    setBulkDeleteConfirmVisible(false);
+    await deleteBulkDocuments();
   }
 
   async function pickAndUploadSeveral() {
@@ -311,8 +333,37 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
           </View>
           <MaterialCommunityIcons name="chevron-right" size={20} color={bulkUploadedCount > 0 ? '#18864B' : '#0A43A3'} />
         </Pressable>
-        {bulkUploadedCount > 0 ? <Pressable accessibilityRole="button" accessibilityLabel="Delete all uploaded additional claim documents" disabled={Boolean(uploadingType)} onPress={() => void deleteBulkDocuments()} hitSlop={8} style={styles.bulkDeleteButton}><MaterialCommunityIcons name="close" size={15} color="#60738B" /></Pressable> : null}
+        {bulkUploadedCount > 0 ? <Pressable accessibilityRole="button" accessibilityLabel="Delete all uploaded additional claim documents" disabled={Boolean(uploadingType)} onPress={requestBulkDelete} hitSlop={8} style={styles.bulkDeleteButton}><MaterialCommunityIcons name="close" size={15} color="#60738B" /></Pressable> : null}
       </View>
+
+      <Modal visible={Boolean(successMessage)} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setSuccessMessage('')}>
+        <View pointerEvents="none" style={styles.deleteSuccessToastOverlay}>
+          <View accessibilityRole="alert" style={styles.deleteSuccessToast}>
+            <View style={styles.deleteSuccessToastIcon}><MaterialCommunityIcons name="check" size={16} color="#FFFFFF" /></View>
+            <Text style={styles.deleteSuccessToastText}>{successMessage}</Text>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={bulkDeleteConfirmVisible} transparent animationType="fade" onRequestClose={() => setBulkDeleteConfirmVisible(false)}>
+        <View style={styles.validationBackdrop}>
+          <View accessibilityRole="alert" style={styles.validationCard}>
+            <View style={styles.deleteConfirmIcon}>
+              <MaterialCommunityIcons name="trash-can-outline" size={19} color="#C43232" />
+            </View>
+            <Text style={styles.validationTitle}>Delete document?</Text>
+            <Text style={styles.validationBody}>Are you sure you want to delete the uploaded documents?</Text>
+            <View style={styles.deleteConfirmActions}>
+              <Pressable accessibilityRole="button" onPress={() => setBulkDeleteConfirmVisible(false)} style={styles.deleteCancelButton}>
+                <Text style={styles.deleteCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" disabled={Boolean(uploadingType)} onPress={() => void confirmBulkDelete()} style={styles.deleteConfirmButton}>
+                <Text style={styles.deleteConfirmText}>{uploadingType ? 'Deleting...' : 'Delete'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -326,4 +377,18 @@ const styles = StyleSheet.create({
   message: { margin: 10, marginBottom: 0, borderRadius: 11, backgroundColor: '#FFF6E5', padding: 8, flexDirection: 'row', gap: 7, alignItems: 'center' }, messageText: { flex: 1, color: '#855200', fontSize: 10, lineHeight: 14, fontWeight: '700' },
   grid: { padding: 10, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, documentArtwork: { width: 38, height: 38 }, documentCard: { width: '48%', minHeight: 154, borderRadius: 15, borderWidth: 1, borderColor: '#DFE6EE', backgroundColor: '#FCFDFF', padding: 8, alignItems: 'center', position: 'relative' }, documentCardUploaded: { borderColor: '#9FD4B6', backgroundColor: '#F1FBF5' }, documentDeleteButton: { position: 'absolute', top: 6, right: 6, zIndex: 2, width: 23, height: 23, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD7E2', alignItems: 'center', justifyContent: 'center' }, documentIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center', marginBottom: 6 }, documentIconUploaded: { backgroundColor: '#168161' }, documentTitle: { color: palette.navy, fontSize: 10.3, lineHeight: 13.5, fontWeight: '900', textAlign: 'center', minHeight: 27 }, documentBody: { color: '#7A8799', fontSize: 8.6, lineHeight: 11.5, fontWeight: '600', textAlign: 'center', marginTop: 2, flex: 1 }, uploadButton: { minHeight: 32, borderRadius: 10, backgroundColor: '#0A43A3', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, alignSelf: 'stretch', marginTop: 6 }, replaceButton: { backgroundColor: '#168161' }, uploadButtonDisabled: { opacity: 0.55 }, uploadButtonText: { color: '#FFFFFF', fontSize: 9.3, fontWeight: '900' },
   bulkWrap: { position: 'relative' }, bulkHint: { margin: 10, marginTop: 0, borderRadius: 14, borderWidth: 1, borderStyle: 'dashed', borderColor: '#91A9C8', backgroundColor: '#F8FBFF', padding: 9, flexDirection: 'row', alignItems: 'center', gap: 9 }, bulkHintUploaded: { borderStyle: 'solid', borderColor: '#9FD4B6', backgroundColor: '#F1FBF5', paddingRight: 40 }, bulkHintPressed: { backgroundColor: '#EEF5FF' }, bulkHintDisabled: { opacity: 0.6 }, bulkIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' }, bulkIconUploaded: { backgroundColor: '#E1F5E9' }, bulkCopy: { flex: 1, minWidth: 0 }, bulkTitle: { color: palette.navy, fontSize: 10.3, fontWeight: '900' }, bulkText: { color: '#708097', fontSize: 9.1, lineHeight: 12.5, fontWeight: '600', marginTop: 1 }, bulkDeleteButton: { position: 'absolute', top: 6, right: 18, zIndex: 2, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD7E2', alignItems: 'center', justifyContent: 'center' },
+  validationBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(7, 24, 50, 0.48)', paddingHorizontal: 24 },
+  deleteSuccessToastOverlay: { flex: 1, justifyContent: 'flex-start', paddingTop: 54, paddingHorizontal: 14 },
+  deleteSuccessToast: { minHeight: 48, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#B7E4CC', paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 9, shadowColor: '#0E5C3D', shadowOpacity: 0.16, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 14 },
+  deleteSuccessToastIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#168161', alignItems: 'center', justifyContent: 'center' },
+  deleteSuccessToastText: { flex: 1, color: '#145E43', fontSize: 11.5, lineHeight: 16, fontWeight: '900' },
+  deleteConfirmIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#FFF0F0', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  deleteConfirmActions: { width: '100%', flexDirection: 'row', gap: 8, marginTop: 14 },
+  deleteCancelButton: { flex: 1, minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: '#CBD5E1', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  deleteCancelText: { color: palette.navy, fontSize: 11, fontWeight: '900' },
+  deleteConfirmButton: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: '#C43232', alignItems: 'center', justifyContent: 'center' },
+  deleteConfirmText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
+  validationCard: { width: '100%', maxWidth: 340, borderRadius: 20, backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingTop: 18, paddingBottom: 16, alignItems: 'center', shadowColor: '#071D49', shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: 10 }, elevation: 10 },
+  validationTitle: { color: '#172033', fontSize: 18, lineHeight: 22, fontWeight: '900', textAlign: 'center' },
+  validationBody: { color: '#667085', fontSize: 13, lineHeight: 18, fontWeight: '600', textAlign: 'center', marginTop: 7, paddingHorizontal: 4 },
 });
