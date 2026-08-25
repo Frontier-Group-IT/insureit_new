@@ -112,6 +112,7 @@ export default function ClaimDetailScreen() {
   const claimId = claim.id;
   const tone = selfManaged ? externalClaimTone : claimTone(claim.current_status);
   const currentStage = SELF_MANAGED_MILESTONES[currentStageIndex];
+  const compactClaimIntimation = selfManaged && currentStage?.key === 'claim_intimation';
   const settled = ['Settled', 'Closed', 'Claim Complete'].includes(claim.current_status) || (selfManaged && completedKeys.size >= 9);
   const financialRows = selfManaged ? buildFinancialRows(milestones) : [];
 
@@ -169,21 +170,21 @@ export default function ClaimDetailScreen() {
       </View>
       {message ? <Message type="error">{message}</Message> : null}
 
-      <View style={[styles.heroCard, { borderColor: tone.border }]}>
-        <View style={styles.heroOrbLarge} />
-        <View style={styles.heroOrbSmall} />
-        <View style={styles.heroTop}>
-          <View style={styles.statusIcon}><MaterialCommunityIcons name={settled ? 'check-decagram-outline' : 'shield-check-outline'} size={28} color="#0A43A3" /></View>
+      <View style={[styles.heroCard, compactClaimIntimation && styles.heroCardCompact, { borderColor: tone.border }]}>
+        <View style={[styles.heroOrbLarge, compactClaimIntimation && styles.heroOrbLargeCompact]} />
+        <View style={[styles.heroOrbSmall, compactClaimIntimation && styles.heroOrbSmallCompact]} />
+        <View style={[styles.heroTop, compactClaimIntimation && styles.heroTopCompact]}>
+          <View style={[styles.statusIcon, compactClaimIntimation && styles.statusIconCompact]}><MaterialCommunityIcons name={settled ? 'check-decagram-outline' : 'shield-check-outline'} size={compactClaimIntimation ? 22 : 28} color="#0A43A3" /></View>
           <View style={styles.heroCopy}>
-            <Text style={styles.stageLabel}>{settled ? 'CLAIM COMPLETE' : currentStage?.label ?? claim.current_status}</Text>
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={styles.vehicleNo}>{vehicle?.vehicle_no ?? 'Vehicle linked'}</Text>
-            <Text numberOfLines={1} style={styles.heroIdentity}>{claim.claim_no}{claim.insurer_claim_no ? ` · ${claim.insurer_claim_no}` : ''}</Text>
+            <Text style={[styles.stageLabel, compactClaimIntimation && styles.stageLabelCompact]}>{settled ? 'CLAIM COMPLETE' : currentStage?.label ?? claim.current_status}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={[styles.vehicleNo, compactClaimIntimation && styles.vehicleNoCompact]}>{vehicle?.vehicle_no ?? 'Vehicle linked'}</Text>
+            <Text numberOfLines={1} style={[styles.heroIdentity, compactClaimIntimation && styles.heroIdentityCompact]}>{claim.claim_no}{claim.insurer_claim_no ? ` · ${claim.insurer_claim_no}` : ''}</Text>
           </View>
-          <ProgressRing progress={progress} />
+          <ProgressRing progress={progress} compact={compactClaimIntimation} />
         </View>
-        <View style={styles.incidentRow}>
-          <View><Text style={styles.metaLabel}>INCIDENT</Text><Text style={styles.incidentValue}>{selfManaged ? formatDateTime(claim.accident_at) : formatDate(claim.accident_at)}</Text></View>
-          <Pressable accessibilityRole="button" accessibilityState={{ expanded: detailsExpanded }} onPress={() => setDetailsExpanded((value) => !value)} style={styles.detailsToggle}><Text style={styles.detailsToggleText}>Claim details</Text><MaterialCommunityIcons name={detailsExpanded ? 'chevron-up' : 'chevron-down'} size={18} color="#FFFFFF" /></Pressable>
+        <View style={[styles.incidentRow, compactClaimIntimation && styles.incidentRowCompact]}>
+          <View><Text style={[styles.metaLabel, compactClaimIntimation && styles.metaLabelCompact]}>INCIDENT</Text><Text style={[styles.incidentValue, compactClaimIntimation && styles.incidentValueCompact]}>{selfManaged ? formatDateTime(claim.accident_at) : formatDate(claim.accident_at)}</Text></View>
+          <Pressable accessibilityRole="button" accessibilityState={{ expanded: detailsExpanded }} onPress={() => setDetailsExpanded((value) => !value)} style={[styles.detailsToggle, compactClaimIntimation && styles.detailsToggleCompact]}><Text style={[styles.detailsToggleText, compactClaimIntimation && styles.detailsToggleTextCompact]}>Claim details</Text><MaterialCommunityIcons name={detailsExpanded ? 'chevron-up' : 'chevron-down'} size={compactClaimIntimation ? 15 : 18} color="#FFFFFF" /></Pressable>
         </View>
         {detailsExpanded ? <View style={styles.infoBox}>
           <InfoPair leftLabel="Control No." leftValue={claim.claim_no} rightLabel="Claim No." rightValue={claim.insurer_claim_no || 'Awaiting insurer'} />
@@ -291,20 +292,20 @@ function stageCompletedCopy(key: ClaimMilestoneKey) {
   return 'Payment received';
 }
 
-function ProgressRing({ progress }: { progress: number }) {
-  const size = 70;
-  const strokeWidth = 6;
+function ProgressRing({ progress, compact = false }: { progress: number; compact?: boolean }) {
+  const size = compact ? 38 : 70;
+  const strokeWidth = compact ? 4 : 6;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const normalizedProgress = Math.max(0, Math.min(100, progress));
   const dashOffset = circumference * (1 - normalizedProgress / 100);
 
-  return <View accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: normalizedProgress }} accessibilityLabel={`Journey progress ${normalizedProgress}%`} style={styles.progressRing}>
+  return <View accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: normalizedProgress }} accessibilityLabel={`Journey progress ${normalizedProgress}%`} style={[styles.progressRing, compact && styles.progressRingCompact]}>
     <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       <Circle cx={size / 2} cy={size / 2} r={radius} fill="transparent" stroke="rgba(255,255,255,.18)" strokeWidth={strokeWidth} />
       <Circle cx={size / 2} cy={size / 2} r={radius} fill="transparent" stroke="#63A9FF" strokeWidth={strokeWidth} strokeLinecap="round" strokeDasharray={`${circumference} ${circumference}`} strokeDashoffset={dashOffset} rotation="-90" origin={`${size / 2}, ${size / 2}`} />
     </Svg>
-    <View pointerEvents="none" style={styles.progressRingLabel}><Text style={styles.progressRingValue}>{normalizedProgress}%</Text></View>
+    <View pointerEvents="none" style={styles.progressRingLabel}><Text style={[styles.progressRingValue, compact && styles.progressRingValueCompact]}>{normalizedProgress}%</Text></View>
   </View>;
 }
 
@@ -321,7 +322,7 @@ function formatDateTime(value?: string | null) { return value ? new Date(value).
 
 const styles = StyleSheet.create({
   pageHeading:{marginBottom:8,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10},pageHeadingCopy:{flex:1,minWidth:0},pageEyebrow:{color:'#145ED7',fontSize:10,fontWeight:'900',letterSpacing:1},pageTitle:{color:palette.navy,fontSize:24,fontWeight:'900',marginTop:2},pageSubtitle:{color:'#6A7789',fontSize:10.5,lineHeight:15,fontWeight:'600',marginTop:3},headingActions:{flexDirection:'row',alignItems:'flex-start',gap:7,flexShrink:0},assistanceActionWrap:{position:'relative',alignItems:'center'},assistanceIconButton:{minWidth:68,minHeight:48,borderRadius:13,paddingHorizontal:7,paddingVertical:5,alignItems:'center',justifyContent:'center',gap:1,backgroundColor:'#EDF5FF',borderWidth:1,borderColor:'#C7DCF7',shadowColor:'#0A43A3',shadowOpacity:.16,shadowRadius:7,shadowOffset:{width:0,height:3},elevation:3},assistanceIconButtonPressed:{backgroundColor:'#DDEBFF',transform:[{scale:.97}]},assistanceActionLabel:{color:'#0A43A3',fontSize:7.5,lineHeight:9,fontWeight:'900',textAlign:'center'},assistanceTooltip:{position:'absolute',right:0,top:55,zIndex:20,minWidth:116,borderRadius:10,paddingHorizontal:9,paddingVertical:6,backgroundColor:'#07327B',shadowColor:'#001B44',shadowOpacity:.22,shadowRadius:8,shadowOffset:{width:0,height:4},elevation:6},assistanceTooltipText:{color:'#FFFFFF',fontSize:9,lineHeight:12,fontWeight:'800',textAlign:'center'},assistanceTooltipArrow:{position:'absolute',right:25,top:-5,width:10,height:10,backgroundColor:'#07327B',transform:[{rotate:'45deg'}]},
-  heroCard:{position:'relative',borderWidth:1,borderRadius:21,padding:15,backgroundColor:'#07327B',overflow:'hidden',marginTop:13,marginBottom:11,shadowColor:'#07327B',shadowOpacity:.16,shadowRadius:12,shadowOffset:{width:0,height:6},elevation:3},heroOrbLarge:{position:'absolute',width:190,height:190,borderRadius:95,right:-75,top:-108,borderWidth:1,borderColor:'rgba(75,145,255,.20)'},heroOrbSmall:{position:'absolute',width:130,height:130,borderRadius:65,right:-23,top:-74,borderWidth:1,borderColor:'rgba(75,145,255,.18)'},heroTop:{flexDirection:'row',alignItems:'center',gap:11},statusIcon:{width:54,height:54,borderRadius:16,alignItems:'center',justifyContent:'center',backgroundColor:'#FFFFFF'},heroCopy:{flex:1,minWidth:0},stageLabel:{color:'#A8C8FF',fontSize:9,fontWeight:'900',letterSpacing:.7},vehicleNo:{color:'#FFFFFF',fontSize:21,fontWeight:'900',marginTop:2},heroIdentity:{color:'#DCE8F7',fontSize:10.5,fontWeight:'800',marginTop:2},progressRing:{width:70,height:70,flexShrink:0,alignItems:'center',justifyContent:'center',marginLeft:2},progressRingLabel:{...StyleSheet.absoluteFillObject,alignItems:'center',justifyContent:'center'},progressRingValue:{color:'#FFFFFF',fontSize:15,fontWeight:'900',letterSpacing:-.3},incidentRow:{marginTop:13,paddingTop:11,borderTopWidth:1,borderTopColor:'rgba(255,255,255,.27)',flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10},metaLabel:{color:'#A9C0E0',fontSize:8.5,fontWeight:'900',letterSpacing:.6},incidentValue:{color:'#FFFFFF',fontSize:11,fontWeight:'900',marginTop:2},detailsToggle:{minHeight:38,borderRadius:11,paddingHorizontal:10,flexDirection:'row',alignItems:'center',gap:3,backgroundColor:'rgba(255,255,255,.10)',borderWidth:1,borderColor:'rgba(255,255,255,.22)'},detailsToggleText:{color:'#FFFFFF',fontSize:9.5,fontWeight:'900'},infoBox:{marginTop:10,borderRadius:14,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#D9E4F0',padding:10,gap:8,shadowColor:'#001B44',shadowOpacity:.08,shadowRadius:7,shadowOffset:{width:0,height:3},elevation:2},infoPair:{flexDirection:'row',gap:14},infoLabel:{color:'#6C7D93',fontSize:8.5,fontWeight:'800'},infoValue:{color:palette.navy,fontSize:10.2,fontWeight:'900',marginTop:2},
+  heroCard:{position:'relative',borderWidth:1,borderRadius:21,padding:15,backgroundColor:'#07327B',overflow:'hidden',marginTop:13,marginBottom:11,shadowColor:'#07327B',shadowOpacity:.16,shadowRadius:12,shadowOffset:{width:0,height:6},elevation:3},heroCardCompact:{borderRadius:18,paddingVertical:10,paddingHorizontal:11,marginTop:9,marginBottom:8},heroOrbLarge:{position:'absolute',width:190,height:190,borderRadius:95,right:-75,top:-108,borderWidth:1,borderColor:'rgba(75,145,255,.20)'},heroOrbLargeCompact:{width:128,height:128,borderRadius:64,right:-47,top:-74},heroOrbSmall:{position:'absolute',width:130,height:130,borderRadius:65,right:-23,top:-74,borderWidth:1,borderColor:'rgba(75,145,255,.18)'},heroOrbSmallCompact:{width:90,height:90,borderRadius:45,right:-15,top:-48},heroTop:{flexDirection:'row',alignItems:'center',gap:11},heroTopCompact:{gap:8},statusIcon:{width:54,height:54,borderRadius:16,alignItems:'center',justifyContent:'center',backgroundColor:'#FFFFFF'},statusIconCompact:{width:42,height:42,borderRadius:12},heroCopy:{flex:1,minWidth:0},stageLabel:{color:'#A8C8FF',fontSize:9,fontWeight:'900',letterSpacing:.7},stageLabelCompact:{fontSize:8.5,letterSpacing:.55},vehicleNo:{color:'#FFFFFF',fontSize:21,fontWeight:'900',marginTop:2},vehicleNoCompact:{fontSize:18.5,marginTop:1},heroIdentity:{color:'#DCE8F7',fontSize:10.5,fontWeight:'800',marginTop:2},heroIdentityCompact:{fontSize:9.5,marginTop:1},progressRing:{width:70,height:70,flexShrink:0,alignItems:'center',justifyContent:'center',marginLeft:2},progressRingCompact:{width:38,height:38,marginLeft:0},progressRingLabel:{...StyleSheet.absoluteFillObject,alignItems:'center',justifyContent:'center'},progressRingValue:{color:'#FFFFFF',fontSize:15,fontWeight:'900',letterSpacing:-.3},progressRingValueCompact:{fontSize:10.5,letterSpacing:-.15},incidentRow:{marginTop:13,paddingTop:11,borderTopWidth:1,borderTopColor:'rgba(255,255,255,.27)',flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10},incidentRowCompact:{marginTop:8,paddingTop:7,gap:8},metaLabel:{color:'#A9C0E0',fontSize:8.5,fontWeight:'900',letterSpacing:.6},metaLabelCompact:{fontSize:8,letterSpacing:.5},incidentValue:{color:'#FFFFFF',fontSize:11,fontWeight:'900',marginTop:2},incidentValueCompact:{fontSize:10.2,marginTop:1},detailsToggle:{minHeight:38,borderRadius:11,paddingHorizontal:10,flexDirection:'row',alignItems:'center',gap:3,backgroundColor:'rgba(255,255,255,.10)',borderWidth:1,borderColor:'rgba(255,255,255,.22)'},detailsToggleCompact:{minHeight:32,borderRadius:9,paddingHorizontal:8,gap:2},detailsToggleText:{color:'#FFFFFF',fontSize:9.5,fontWeight:'900'},detailsToggleTextCompact:{fontSize:8.8},infoBox:{marginTop:10,borderRadius:14,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#D9E4F0',padding:10,gap:8,shadowColor:'#001B44',shadowOpacity:.08,shadowRadius:7,shadowOffset:{width:0,height:3},elevation:2},infoPair:{flexDirection:'row',gap:14},infoLabel:{color:'#6C7D93',fontSize:8.5,fontWeight:'800'},infoValue:{color:palette.navy,fontSize:10.2,fontWeight:'900',marginTop:2},
   currentCard:{position:'relative',borderWidth:1,borderRadius:16,paddingVertical:9,paddingHorizontal:10,paddingLeft:14,flexDirection:'row',alignItems:'center',gap:9,marginBottom:7,overflow:'hidden'},currentCardPressed:{opacity:.84,transform:[{scale:.995}]},currentAccent:{position:'absolute',left:0,top:0,bottom:0,width:4},currentIcon:{width:36,height:36,borderRadius:11,alignItems:'center',justifyContent:'center'},currentCopy:{flex:1,minWidth:0},currentEyebrow:{fontSize:8,fontWeight:'900',letterSpacing:.5},currentTitle:{color:palette.navy,fontSize:13.5,fontWeight:'900',marginTop:1},currentBody:{color:'#5F7086',fontSize:10,lineHeight:13.5,fontWeight:'700',marginTop:2},currentContinue:{flexDirection:'row',alignItems:'center',gap:1,marginLeft:3},currentContinueText:{color:'#0A43A3',fontSize:9.5,fontWeight:'900'},
   sectionHeader:{minHeight:62,borderRadius:17,borderWidth:1,borderColor:'#D6E2EE',backgroundColor:'#F7FAFF',padding:11,marginTop:10,flexDirection:'row',alignItems:'center',gap:10},sectionHeaderIcon:{width:38,height:38,borderRadius:12,backgroundColor:'#E7F0FC',borderWidth:1,borderColor:'#D4E2F2',alignItems:'center',justifyContent:'center'},sectionHeaderCopy:{flex:1,minWidth:0},sectionTitle:{color:palette.navy,fontSize:14,fontWeight:'900'},sectionSub:{color:'#718198',fontSize:10,fontWeight:'700',marginTop:2},sectionBody:{borderWidth:1,borderTopWidth:0,borderColor:'#D6E2EE',backgroundColor:'#FFFFFF',borderBottomLeftRadius:17,borderBottomRightRadius:17,padding:10,gap:8},
   journeyHeader:{minHeight:34,borderRadius:12,paddingVertical:4,paddingHorizontal:6,marginTop:6,gap:5},journeyHeaderIcon:{width:25,height:25,borderRadius:8},journeyHeaderTitle:{fontSize:10.8,lineHeight:12.5},journeyHeaderSub:{fontSize:8.2,lineHeight:9.5,marginTop:1},journeyBody:{paddingVertical:3,paddingHorizontal:4,gap:2},
