@@ -142,12 +142,12 @@ export function CompactDocumentActionBar({ claimId, step, primaryLabel, primaryD
 }
 
 const styles = StyleSheet.create({
-  headerWrap: { marginBottom: 14 },
-  stageHero: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingHorizontal: 2, minHeight: 74 },
-  stageIcon: { position: 'relative', width: 36, height: 36, borderRadius: 11, backgroundColor: '#07368B', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', shadowColor: '#072C69', shadowOpacity: 0.22, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 3 },
+  headerWrap: { marginBottom: 10, marginTop: -4 },
+  stageHero: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingHorizontal: 2, minHeight: 54 },
+  stageIcon: { position: 'relative', width: 34, height: 34, borderRadius: 11, backgroundColor: '#07368B', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', shadowColor: '#072C69', shadowOpacity: 0.22, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 3, marginTop: 1 },
   stageIconGlow: { position: 'absolute', width: 38, height: 38, borderRadius: 19, backgroundColor: '#1267D9', right: -17, top: -17, opacity: 0.68 },
-  headerCopy: { flex: 1, minWidth: 0 },
-  title: { color: '#071F49', fontSize: 23, lineHeight: 28, fontWeight: '900' },
+  headerCopy: { flex: 1, minWidth: 0, paddingTop: 2 },
+  title: { color: '#071F49', fontSize: 22, lineHeight: 27, fontWeight: '900' },
   assistanceWrap: { position: 'relative', alignSelf: 'flex-start', marginTop: 0 },
   assistanceButton: { width: 40, height: 40, borderRadius: 14, borderWidth: 1, borderColor: '#C6D9F5', backgroundColor: '#EDF3FF', alignItems: 'center', justifyContent: 'center' },
   assistanceButtonPressed: { backgroundColor: '#E0EBFF', transform: [{ scale: 0.97 }] },
