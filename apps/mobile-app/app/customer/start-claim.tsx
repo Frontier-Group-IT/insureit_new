@@ -6,7 +6,6 @@ import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-nativ
 import { ActiveClaimPopup } from '@/components/active-claim-popup';
 import { ClaimActionBar } from '@/components/external-claim-ui';
 import { EmptyState, LoadingState, Message, Screen } from '@/components/ui';
-import { RENEWAL_DUE_WINDOW_DAYS } from '@/lib/compliance-renewals';
 import { customerAccountTitle, getOperationalCustomerContexts, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
@@ -35,8 +34,6 @@ type SelfManagedMilestoneRow = {
   milestone_key: string;
   milestone_status: string;
 };
-
-type PolicyBadgeState = 'active' | 'due' | 'expired';
 
 const SELF_MANAGED_MILESTONE_COUNT = 9;
 const SETTLED_SELF_MANAGED_STATUSES = new Set(['Settled', 'Closed', 'Claim Complete']);
@@ -107,7 +104,6 @@ export default function StartClaimScreen() {
   }, [vehiclePolicies]);
   const selectedPolicy = activePolicy ?? vehiclePolicies[0] ?? null;
   const selectedInsurer = selectedPolicy ? insurers.find((item) => item.id === selectedPolicy.insurance_company_id) ?? null : null;
-  const policyBadgeState = selectedPolicy ? getPolicyBadgeState(selectedPolicy) : null;
 
   useEffect(() => {
     setVehicleQuery('');
@@ -200,7 +196,7 @@ export default function StartClaimScreen() {
               <Text style={styles.policyInsurer}>{selectedInsurer?.name ?? 'Insurance company'} · {selectedPolicy.policy_type}</Text>
               <Text style={styles.policyDates}>{formatDate(selectedPolicy.start_date)} – {formatDate(selectedPolicy.end_date)}</Text>
             </View>
-            <PolicyStatusBadge state={policyBadgeState ?? 'active'} />
+            <View style={styles.policyCheck}><MaterialCommunityIcons name="check" size={20} color="#FFFFFF" /></View>
           </View>
         ) : (
           <View style={styles.noPolicy}><MaterialCommunityIcons name="shield-alert-outline" size={26} color="#B7791F" /><View style={styles.noPolicyCopy}><Text style={styles.noPolicyTitle}>No policy recorded for this vehicle</Text><Text style={styles.noPolicyText}>Add the policy details before starting a claim.</Text></View></View>
@@ -258,29 +254,6 @@ async function findActiveSelfManagedClaim(externalPolicyId: string): Promise<Sel
     if (completedKeys.size < SELF_MANAGED_MILESTONE_COUNT) return claim;
   }
   return null;
-}
-
-function PolicyStatusBadge({ state }: { state: PolicyBadgeState }) {
-  const accessibilityLabel = state === 'expired' ? 'Policy expired' : state === 'due' ? 'Policy renewal due soon' : 'Policy active';
-  return (
-    <View accessible accessibilityRole="image" accessibilityLabel={accessibilityLabel} style={[styles.policyStatusBadge, state === 'due' && styles.policyStatusDue, state === 'expired' && styles.policyStatusExpired]}>
-      {state === 'expired'
-        ? <Text style={styles.policyStatusExpiredMark}>!</Text>
-        : <MaterialCommunityIcons name={state === 'due' ? 'clock-outline' : 'check'} size={20} color="#FFFFFF" />}
-    </View>
-  );
-}
-
-function getPolicyBadgeState(policy: PolicyChoice): PolicyBadgeState {
-  const today = startOfLocalDay(new Date());
-  const expiry = startOfLocalDay(new Date(`${policy.end_date}T00:00:00`));
-  if (expiry.getTime() < today.getTime()) return 'expired';
-  const daysUntilExpiry = Math.ceil((expiry.getTime() - today.getTime()) / 86400000);
-  return daysUntilExpiry <= RENEWAL_DUE_WINDOW_DAYS ? 'due' : 'active';
-}
-
-function startOfLocalDay(value: Date) {
-  return new Date(value.getFullYear(), value.getMonth(), value.getDate());
 }
 
 function ChoiceChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
@@ -351,10 +324,7 @@ const styles = StyleSheet.create({
   policyNo: { color: '#FFFFFF', fontSize: 18, fontWeight: '900', marginTop: 4 },
   policyInsurer: { color: '#E0E9F7', fontSize: 10.5, lineHeight: 15, fontWeight: '700', marginTop: 4 },
   policyDates: { color: '#D2DEEF', fontSize: 10.5, fontWeight: '700', marginTop: 5 },
-  policyStatusBadge: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#11A35D', alignItems: 'center', justifyContent: 'center' },
-  policyStatusDue: { backgroundColor: '#D88A0A' },
-  policyStatusExpired: { backgroundColor: '#D0443E' },
-  policyStatusExpiredMark: { color: '#FFFFFF', fontSize: 23, lineHeight: 25, fontWeight: '900' },
+  policyCheck: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#11A35D', alignItems: 'center', justifyContent: 'center' },
   noPolicy: { borderRadius: 15, borderWidth: 1, borderColor: '#F0D9AC', backgroundColor: '#FFFBF3', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   noPolicyCopy: { flex: 1 },
   noPolicyTitle: { color: '#77520B', fontSize: 12, fontWeight: '900' },
