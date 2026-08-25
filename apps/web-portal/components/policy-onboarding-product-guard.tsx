@@ -52,10 +52,15 @@ function syncPolicyTypeOptions(select: HTMLSelectElement) {
   }
 }
 
-function syncDevelopmentNotice(policyType: string) {
+function syncNonMotorPresentation(policyTypeSelect: HTMLSelectElement) {
+  const policyType = policyTypeSelect.value;
   const notices = Array.from(document.querySelectorAll("section"));
   const notice = notices.find((section) => section.querySelector("h2")?.textContent?.trim() === `${policyType} onboarding`);
   if (notice instanceof HTMLElement) notice.style.display = policyType === "Non Motor" ? "none" : "";
+
+  const section = policyTypeSelect.closest("section");
+  const root = section?.parentElement?.parentElement?.parentElement;
+  if (root instanceof HTMLElement) root.style.paddingBottom = policyType === "Non Motor" ? "0px" : "";
 }
 
 export function PolicyOnboardingProductGuard() {
@@ -68,7 +73,7 @@ export function PolicyOnboardingProductGuard() {
       const policyTypeSelect = fieldControl("Policy type") as HTMLSelectElement | null;
       if (!policyTypeSelect) return;
       syncPolicyTypeOptions(policyTypeSelect);
-      syncDevelopmentNotice(policyTypeSelect.value);
+      syncNonMotorPresentation(policyTypeSelect);
 
       if (policyTypeSelect.value !== "Motor") {
         lastPolicyTypes = policyTypeSignature(policyTypeSelect);
