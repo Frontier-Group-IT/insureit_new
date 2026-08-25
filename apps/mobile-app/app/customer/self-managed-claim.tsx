@@ -5,8 +5,9 @@ import { useEffect, useState } from 'react';
 import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppDatePicker } from '@/components/design-system';
+import { ExternalClaimErrorPopup } from '@/components/external-claim-error-popup';
 import { ClaimActionBar, ClaimFormSection, ClaimIdentityCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
-import { LoadingState, Message, Screen, TextField } from '@/components/ui';
+import { LoadingState, Screen, TextField } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { type ClaimMilestone } from '@/lib/claim-service-mode';
 import { detailRecord, stringValue, validateStageChronology } from '@/lib/self-managed-claim-timeline';
@@ -469,7 +470,12 @@ export default function SelfManagedClaimScreen() {
 
       {policy ? <ClaimIdentityCard claimNo={claimNo || (editing ? 'Claim' : 'New claim')} insurerName={insurerName} vehicleNo={vehicle?.vehicle_no ?? 'Vehicle'} policyNo={policy.policy_no} vehicleMeta={[vehicle?.make, vehicle?.model].filter(Boolean).join(' · ')} /> : null}
 
-      {message ? <Message type="error">{message}</Message> : null}
+      <ExternalClaimErrorPopup
+        visible={Boolean(message)}
+        message={message}
+        title="Something went wrong"
+        onClose={() => setMessage('')}
+      />
 
       <ClaimFormSection title="Incident Details" subtitle="Accident date, time and first insurer intimation" icon="clipboard-text-outline">
         <AppDatePicker label="Accident Date *" value={incidentDate} onChange={setIncidentDate} maxDate={todayIsoDate()} />
@@ -568,20 +574,12 @@ export default function SelfManagedClaimScreen() {
         </View>
       </Modal>
 
-      <Modal visible={Boolean(validationMessage)} transparent animationType="fade" onRequestClose={() => setValidationMessage('')}>
-        <View style={styles.validationBackdrop}>
-          <View accessibilityRole="alert" style={styles.validationCard}>
-            <View style={styles.validationIcon}>
-              <MaterialCommunityIcons name="alert-outline" size={18} color="#D66B4E" />
-            </View>
-            <Text style={styles.validationTitle}>Missing information</Text>
-            <Text style={styles.validationBody}>{validationMessage}</Text>
-            <Pressable accessibilityRole="button" onPress={() => setValidationMessage('')} style={styles.validationButton}>
-              <Text style={styles.validationButtonText}>OK</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
+      <ExternalClaimErrorPopup
+        visible={Boolean(validationMessage)}
+        message={validationMessage}
+        title="Alert"
+        onClose={() => setValidationMessage('')}
+      />
 
       <TimePickerModal
         value={timeTarget === 'intimation' ? intimationTime : incidentTime}

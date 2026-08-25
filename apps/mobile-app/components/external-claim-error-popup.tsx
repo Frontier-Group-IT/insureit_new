@@ -5,7 +5,7 @@ export function ExternalClaimErrorPopup({
   message,
   visible,
   onClose,
-  title = 'Missing information',
+  title = 'Alert',
 }: {
   message: string;
   visible: boolean;
