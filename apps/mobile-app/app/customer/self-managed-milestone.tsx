@@ -191,6 +191,7 @@ export default function SelfManagedMilestoneScreen() {
       />
 
       {loading ? <Text style={styles.loading}>Loading saved details...</Text> : renderStage(key, values, set, milestones, claimId, customerId)}
+      {!loading && !documentUploadStage && claimId && customerId ? <ExternalClaimDocumentTabs claimId={claimId} customerId={customerId} /> : null}
 
       {documentUploadStage ? <CompactDocumentActionBar
         claimId={claimId}
