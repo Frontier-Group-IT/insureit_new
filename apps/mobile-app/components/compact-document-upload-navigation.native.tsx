@@ -5,8 +5,6 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SELF_MANAGED_MILESTONES, type ClaimMilestone } from '@/lib/claim-service-mode';
 
-export * from './compact-document-upload-navigation.tsx';
-
 type HeaderProps = {
   step: number;
   title: string;
