@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   publish:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '#547')
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -24,6 +24,21 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
+          fetch-depth: 0
+
+      - name: Verify OTA source is exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          current_head="$(git rev-parse HEAD)"
+          remote_main="$(git rev-parse origin/main)"
+          if [ "$current_head" != "$remote_main" ]; then
+            echo "Refusing Expo preview OTA: checked-out source is not current origin/main." >&2
+            echo "HEAD=$current_head" >&2
+            echo "origin/main=$remote_main" >&2
+            exit 1
+          fi
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -44,7 +59,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Block duplicate active self-tracked claims" \
+            --message "Expo preview from main ${GITHUB_SHA}" \
             --non-interactive \
             --json \
             > expo-update.json \
@@ -156,6 +171,7 @@ jobs:
             `| --- | --- |`,
             `| Publish result | ${icon} ${result} |`,
             '| Expo channel | `preview` |',
+            '| Source policy | `current main only` |',
             `| Channel mapped branch | ${branch ? `\`${branch}\`` : 'Not returned by Expo'} |`,
             `| Runtime version | ${runtimeVersion ? `\`${runtimeVersion}\`` : 'Not returned by Expo'} |`,
             `| Update group ID | ${groupId ? `\`${groupId}\`` : 'Not returned by Expo'} |`,

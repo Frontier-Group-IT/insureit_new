@@ -767,3 +767,18 @@ The following merged PRs/commits are useful landmarks when tracing why the curre
 ### Safe continuation rule
 
 When a new request touches any area above, first fetch the current `main` implementation and reconcile it with this snapshot. Prefer the current code when it intentionally supersedes an older detail. Keep future context updates concise: replace stale rules rather than appending contradictory history, and never convert a proposed or unverified behavior into current fact.
+
+
+### Expo preview OTA source-of-truth protocol
+
+**MANDATORY FOR ALL AGENTS:** the shared Expo `preview` channel is a single moving OTA target. Its authoritative source is the exact current `main` commit.
+
+- Only `.github/workflows/publish-mobile-preview-ota.yml` may publish to Expo channel `preview`.
+- The workflow must run from `refs/heads/main`, check out `main`, fetch `origin/main`, and refuse publication unless checked-out HEAD exactly equals current `origin/main`.
+- Never publish a feature branch, PR branch, recovery branch, temporary branch, or local worktree directly to the shared `preview` channel. Expo OTAs do not layer branch snapshots; the newest compatible OTA can make earlier changes appear reverted.
+- Merge approved mobile work in controlled phases. Refresh each phase against current `main`, resolve overlaps, pass canonical CI, merge, verify the exact resulting `main`, then publish that exact `main` commit to `preview`.
+- When a cumulative recovery PR supersedes several feature PRs, merge only the cumulative PR and close the source PRs as superseded after verification. Do not merge the same changes twice.
+- Feature/recovery branches may use CI, Expo web review exports, screenshots, or other non-OTA review methods, but must not publish to shared `preview`.
+- If preview appears to lose approved work, compare the served OTA source with current `main`; restore/merge approved code into `main`, verify it, then republish from `main`. Do not repair by sending another isolated branch to `preview`.
+- JS/assets-only OTA publishing must not create an APK. Native/runtime/build-profile changes require separate explicit approval.
+- Do not change Expo app version, runtimeVersion, EAS channel/build configuration, project ID, owner, package/bundle IDs, or other protected mobile configuration merely to solve OTA ordering.
