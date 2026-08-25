@@ -31,8 +31,15 @@ assert(intakeForm.includes("fetched in the background"),"Sales must be told poli
 assert(intakeForm.includes("Upload couldn't be completed"),"Upload failures must stay on the form with a recoverable error");
 const detail=read("app/policy-intakes/[id]/page.tsx");
 assert(detail.includes("PolicyIntakeResponseUpload"),"Needs-attention intake must expose the response uploader to its initiator");
-assert(detail.includes('hasEffectiveCapability(profile,"finalize_policy_intakes","approve")'),"Detail page must distinguish Review from Finalize authority");
+assert(/hasEffectiveCapability\(profile,\s*["']finalize_policy_intakes["'],\s*["']approve["']\)/.test(detail),"Detail page must distinguish Review from Finalize authority");
 assert(detail.includes("Manual review required"),"OCR technical failure must remain reviewable instead of blaming Sales");
+assert(detail.includes("Policy Intake Review")&&detail.includes("Vehicle details")&&detail.includes("Policy & premium"),"Intake detail must retain the compact pre-onboarding review structure");
+assert(detail.includes('source="Sales"')&&detail.includes('source="OCR"'),"Review page must distinguish Sales-supplied values from OCR proposals");
+const workspace=read("components/policy-intake-workspace.tsx");
+assert(workspace.includes("Policy Intake Queue"),"Operations intake queue must use the register workspace");
+assert(workspace.includes("Action Required")&&workspace.includes("RegisterPagination"),"Operations intake queue must expose status views and pagination");
+assert(workspace.includes("rowTones")&&workspace.includes("ready_for_review"),"Intake rows must retain status-based background coding");
+assert(workspace.includes("All lead sources")&&workspace.includes("All detail states")&&workspace.includes("From date")&&workspace.includes("To date"),"Operations queue must expose lead-source, OCR and date filters");
 
 const contextCard=read("components/policy-intake-onboarding-context.tsx");
 assert(contextCard.includes("View Policy Copy"),"Onboarding sidebar must keep the intake policy copy available to Operations");
