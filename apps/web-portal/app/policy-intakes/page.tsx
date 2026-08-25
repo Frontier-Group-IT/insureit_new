@@ -1,23 +1,28 @@
-import Link from "next/link";
-import { Clock3, FileCheck2, Plus, Search, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/shell";
+import { PolicyIntakeWorkspace, type PolicyIntakeWorkspaceRow } from "@/components/policy-intake-workspace";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { requirePolicyIntakeViewer } from "@/lib/policy-intake-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-export const dynamic="force-dynamic";
-type Row={id:string;intake_number:string;status:string;lead_source_name:string;lead_source_type:string;customer_mobile:string;created_at:string;ocr_status:string;submitted_by_profile_id:string};
-const tones:Record<string,string>={processing:"bg-blue-50 text-blue-700",ready_for_review:"bg-indigo-50 text-indigo-700",in_review:"bg-violet-50 text-violet-700",needs_attention:"bg-amber-50 text-amber-800",completed:"bg-emerald-50 text-emerald-700",rejected:"bg-red-50 text-red-700"};
-function statusLabel(status:string,ocrStatus:string){if(status==="processing"&&ocrStatus==="failed")return"Manual review required";return({processing:"Fetching policy & vehicle details",ready_for_review:"Ready for review",in_review:"In review",needs_attention:"Needs attention",completed:"Completed",rejected:"Rejected"}[status]??status);}
-function ocrLabel(status:string){return status==="completed"?"Details fetched":status==="failed"?"Auto-fetch unavailable":status==="processing"?"Fetching details":"Queued";}
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-export default async function PolicyIntakesPage(){
-  const profile=await requirePolicyIntakeViewer();const reviewer=await hasEffectiveCapability(profile,"review_policy_intakes","edit");const creator=await hasEffectiveCapability(profile,"create_policy_intakes","edit");const admin=createSupabaseAdminClient();
-  let query=admin.from("policy_intake_requests").select("id,intake_number,status,lead_source_name,lead_source_type,customer_mobile,created_at,ocr_status,submitted_by_profile_id").order("created_at",{ascending:false}).limit(100);if(!reviewer)query=query.eq("submitted_by_profile_id",profile.id);const{data,error}=await query.returns<Row[]>();
-  return <AppShell title={reviewer?"Policy Intakes":"My Policy Intakes"}><div className="mx-auto max-w-[1180px] space-y-3">
-    <section className="flex items-center justify-between gap-3 rounded-2xl border border-white/75 bg-white/80 px-4 py-3 shadow-sm"><div><div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#315B9A]"/><h1 className="text-[14px] font-bold text-[#17365D]">{reviewer?"Operations intake queue":"My policy intakes"}</h1></div><p className="mt-1 text-[9px] text-[#7A8798]">{reviewer?"Policy copies appear immediately; extracted details are added in the background.":"Track policy copies you submitted to Operations."}</p></div>{creator?<Link href="/policy-intakes/new" className="grid h-10 w-10 place-items-center rounded-xl bg-[#17365D] text-white" aria-label="New policy intake"><Plus className="h-4 w-4"/></Link>:null}</section>
-    {error?<div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">Policy Intakes are temporarily unavailable.</div>:null}
-    <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{(data??[]).map(row=><Link key={row.id} href={`/policy-intakes/${row.id}`} className="rounded-2xl border border-[#DFE6EF] bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,.05)] transition hover:-translate-y-0.5 hover:border-[#B9C9DD]"><div className="flex items-start justify-between gap-2"><div><p className="text-[8px] font-bold uppercase tracking-[.08em] text-[#8491A3]">{row.intake_number}</p><h2 className="mt-1 text-[12px] font-bold text-[#17365D]">{row.lead_source_name}</h2><p className="mt-0.5 text-[9px] text-[#667085]">{row.lead_source_type.toUpperCase()} · {row.customer_mobile}</p></div><span className={`max-w-[132px] rounded-full px-2 py-1 text-center text-[8px] font-bold ${tones[row.status]??"bg-slate-50 text-slate-700"}`}>{statusLabel(row.status,row.ocr_status)}</span></div><div className="mt-4 flex items-center justify-between border-t border-[#EDF1F5] pt-3 text-[8.5px] text-[#7A8798]"><span className="flex items-center gap-1"><Clock3 className="h-3 w-3"/>{new Date(row.created_at).toLocaleString("en-IN",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}</span><span className="flex items-center gap-1"><FileCheck2 className="h-3 w-3"/>{ocrLabel(row.ocr_status)}</span></div></Link>)}</div>
-    {!error&&!(data??[]).length?<div className="rounded-2xl border border-dashed border-[#CBD5E1] bg-white/70 px-5 py-12 text-center"><Search className="mx-auto h-5 w-5 text-[#98A2B3]"/><p className="mt-2 text-[11px] font-semibold text-[#475467]">No policy intakes yet</p></div>:null}
-  </div></AppShell>;
+export default async function PolicyIntakesPage() {
+  const profile = await requirePolicyIntakeViewer();
+  const [reviewer, creator] = await Promise.all([
+    hasEffectiveCapability(profile, "review_policy_intakes", "edit"),
+    hasEffectiveCapability(profile, "create_policy_intakes", "edit"),
+  ]);
+  const admin = createSupabaseAdminClient();
+  let query = admin
+    .from("policy_intake_requests")
+    .select("id,intake_number,status,lead_source_name,lead_source_type,lead_source_code,customer_mobile,created_at,ocr_status,ocr_fields,file_name")
+    .order("created_at", { ascending: false })
+    .limit(500);
+  if (!reviewer) query = query.eq("submitted_by_profile_id", profile.id);
+  const { data, error } = await query.returns<PolicyIntakeWorkspaceRow[]>();
+
+  return <AppShell title={reviewer ? "Policy Intakes" : "My Policy Intakes"}>
+    {error ? <div className="mx-auto max-w-[1480px] rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">Policy Intakes are temporarily unavailable.</div> : <PolicyIntakeWorkspace rows={data ?? []} reviewer={reviewer} creator={creator} />}
+  </AppShell>;
 }
