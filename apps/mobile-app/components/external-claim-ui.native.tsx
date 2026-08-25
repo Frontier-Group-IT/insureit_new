@@ -99,8 +99,9 @@ export function ClaimIdentityCard(props: ClaimIdentityCardProps) {
             <View style={styles.policyBadge}>
               <MaterialCommunityIcons name="file-document-outline" size={14} color="#0B7A57" />
             </View>
-            <Text style={[styles.detailLabel, styles.policyLabel]}>Policy</Text>
-            <Text style={styles.detailValue} numberOfLines={1}>{policyNo || '—'}</Text>
+            <Text style={styles.policyInline} numberOfLines={1}>
+              <Text style={styles.policyLabel}>Policy: </Text>{policyNo || '—'}
+            </Text>
           </View>
 
           {vehicleMeta ? <>
@@ -152,7 +153,8 @@ const styles = StyleSheet.create({
   vehicleBadge: { width: 27, height: 27, borderRadius: 14, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   policyBadge: { width: 27, height: 27, borderRadius: 14, backgroundColor: '#E8F7F1', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   detailLabel: { color: '#FFFFFF', fontSize: 9.5, lineHeight: 12, fontWeight: '800', flexShrink: 0 },
-  policyLabel: { color: '#9EE2C6' },
+  policyLabel: { color: '#9EE2C6', fontWeight: '800' },
+  policyInline: { flex: 1, minWidth: 0, color: '#FFFFFF', fontSize: 10.5, lineHeight: 14, fontWeight: '900' },
   detailValue: { flex: 1, minWidth: 0, color: '#FFFFFF', fontSize: 10.5, lineHeight: 14, fontWeight: '900', textAlign: 'right' },
   rowDivider: { height: 1, backgroundColor: 'rgba(175,203,255,0.18)', marginLeft: 34, marginVertical: 3 },
   vehicleMeta: { color: '#C9DBFA', fontSize: 8.5, lineHeight: 12, fontWeight: '700', paddingLeft: 34, paddingTop: 1 },
