@@ -1,6 +1,6 @@
-import DashboardCommandCenter from "./dashboard-command-center";
+import DashboardCommandCenterMtd from "./dashboard-command-center-mtd";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default DashboardCommandCenter;
+export default DashboardCommandCenterMtd;
