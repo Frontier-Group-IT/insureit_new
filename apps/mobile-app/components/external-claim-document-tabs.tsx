@@ -36,6 +36,7 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
   const [uploadingType, setUploadingType] = useState('');
   const [message, setMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [individualDeleteTarget, setIndividualDeleteTarget] = useState<ClaimDocument | null>(null);
   const [bulkDeleteConfirmVisible, setBulkDeleteConfirmVisible] = useState(false);
 
   useEffect(() => {
@@ -124,6 +125,7 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
   async function deleteUploadedDocument(document: ClaimDocument) {
     if (uploadingType) return;
     setMessage('');
+    setSuccessMessage('');
     setUploadingType(`${DELETE_UPLOAD_KEY}${document.id}`);
     try {
       const removeRecord = await supabase.from('claim_documents').delete().eq('id', document.id).eq('claim_id', claimId);
@@ -136,6 +138,7 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
         const storageResult = await supabase.storage.from(document.storage_bucket).remove([document.storage_path]);
         if (storageResult.error) setMessage('Document removed from the claim, but storage cleanup could not be completed.');
       }
+      setSuccessMessage('Uploaded documents deleted successfully.');
     } catch {
       setMessage('This document could not be deleted. Please try again.');
     } finally {
@@ -174,6 +177,19 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
     } finally {
       setUploadingType('');
     }
+  }
+
+  function requestIndividualDelete(document: ClaimDocument) {
+    if (uploadingType) return;
+    setSuccessMessage('');
+    setIndividualDeleteTarget(document);
+  }
+
+  async function confirmIndividualDelete() {
+    if (uploadingType || !individualDeleteTarget) return;
+    const document = individualDeleteTarget;
+    setIndividualDeleteTarget(null);
+    await deleteUploadedDocument(document);
   }
 
   function requestBulkDelete() {
@@ -300,7 +316,7 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
           const uploading = uploadingType === document.type;
           const artwork = documentArtwork(document.type);
           return <View key={document.type} style={[styles.documentCard, uploaded && styles.documentCardUploaded]}>
-            {uploaded ? <Pressable accessibilityRole="button" accessibilityLabel={`Delete ${document.title}`} disabled={Boolean(uploadingType)} onPress={() => void deleteUploadedDocument(uploaded)} hitSlop={8} style={styles.documentDeleteButton}><MaterialCommunityIcons name="close" size={15} color="#60738B" /></Pressable> : null}
+            {uploaded ? <Pressable accessibilityRole="button" accessibilityLabel={`Delete ${document.title}`} disabled={Boolean(uploadingType)} onPress={() => requestIndividualDelete(uploaded)} hitSlop={8} style={styles.documentDeleteButton}><MaterialCommunityIcons name="close" size={15} color="#60738B" /></Pressable> : null}
             <View style={[styles.documentIcon, uploaded && styles.documentIconUploaded]}>
               {artwork ? <Image source={artwork} style={styles.documentArtwork} resizeMode="contain" /> : <MaterialCommunityIcons name={(document.icon || 'file-document-outline') as keyof typeof MaterialCommunityIcons.glyphMap} size={23} color={uploaded ? '#FFFFFF' : '#0A43A3'} />}
             </View>
@@ -345,6 +361,26 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
         </View>
       </Modal>
 
+      <Modal visible={Boolean(individualDeleteTarget)} transparent animationType="fade" onRequestClose={() => setIndividualDeleteTarget(null)}>
+        <View style={styles.validationBackdrop}>
+          <View accessibilityRole="alert" style={styles.validationCard}>
+            <View style={styles.deleteConfirmIcon}>
+              <MaterialCommunityIcons name="trash-can-outline" size={19} color="#C43232" />
+            </View>
+            <Text style={styles.validationTitle}>Delete document?</Text>
+            <Text style={styles.validationBody}>Are you sure you want to delete this uploaded document?</Text>
+            <View style={styles.deleteConfirmActions}>
+              <Pressable accessibilityRole="button" onPress={() => setIndividualDeleteTarget(null)} style={styles.deleteCancelButton}>
+                <Text style={styles.deleteCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" disabled={Boolean(uploadingType)} onPress={() => void confirmIndividualDelete()} style={styles.deleteConfirmButton}>
+                <Text style={styles.deleteConfirmText}>{uploadingType ? 'Deleting...' : 'Delete'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={bulkDeleteConfirmVisible} transparent animationType="fade" onRequestClose={() => setBulkDeleteConfirmVisible(false)}>
         <View style={styles.validationBackdrop}>
           <View accessibilityRole="alert" style={styles.validationCard}>
@@ -375,7 +411,7 @@ const styles = StyleSheet.create({
   optionalBadge: { borderRadius: 999, backgroundColor: '#EEF5FF', paddingHorizontal: 8, paddingVertical: 4 }, optionalBadgeText: { color: '#0A43A3', fontSize: 8.2, fontWeight: '900' },
   tabs: { borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#E6EDF5', backgroundColor: '#F7FAFF' }, tab: { minHeight: 40, justifyContent: 'center', paddingHorizontal: 11, borderBottomWidth: 3, borderBottomColor: 'transparent' }, tabActive: { borderBottomColor: '#165DDB', backgroundColor: '#FFFFFF' }, tabText: { color: '#667085', fontSize: 9.5, fontWeight: '800' }, tabTextActive: { color: '#0A43A3' },
   message: { margin: 10, marginBottom: 0, borderRadius: 11, backgroundColor: '#FFF6E5', padding: 8, flexDirection: 'row', gap: 7, alignItems: 'center' }, messageText: { flex: 1, color: '#855200', fontSize: 10, lineHeight: 14, fontWeight: '700' },
-  grid: { padding: 10, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, documentArtwork: { width: 38, height: 38 }, documentCard: { width: '48%', minHeight: 154, borderRadius: 15, borderWidth: 1, borderColor: '#DFE6EE', backgroundColor: '#FCFDFF', padding: 8, alignItems: 'center', position: 'relative' }, documentCardUploaded: { borderColor: '#9FD4B6', backgroundColor: '#F1FBF5' }, documentDeleteButton: { position: 'absolute', top: 6, right: 6, zIndex: 2, width: 23, height: 23, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD7E2', alignItems: 'center', justifyContent: 'center' }, documentIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center', marginBottom: 6 }, documentIconUploaded: { backgroundColor: '#168161' }, documentTitle: { color: palette.navy, fontSize: 10.3, lineHeight: 13.5, fontWeight: '900', textAlign: 'center', minHeight: 27 }, documentBody: { color: '#7A8799', fontSize: 8.6, lineHeight: 11.5, fontWeight: '600', textAlign: 'center', marginTop: 2, flex: 1 }, uploadButton: { minHeight: 32, borderRadius: 10, backgroundColor: '#0A43A3', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, alignSelf: 'stretch', marginTop: 6 }, replaceButton: { backgroundColor: '#168161' }, uploadButtonDisabled: { opacity: 0.55 }, uploadButtonText: { color: '#FFFFFF', fontSize: 9.3, fontWeight: '900' },
+  grid: { padding: 10, flexDirection: 'row', flexWrap: 'wrap', rowGap: 8, justifyContent: 'space-between' }, documentArtwork: { width: 38, height: 38 }, documentCard: { width: '31%', minHeight: 154, borderRadius: 15, borderWidth: 1, borderColor: '#DFE6EE', backgroundColor: '#FCFDFF', padding: 8, alignItems: 'center', position: 'relative' }, documentCardUploaded: { borderColor: '#9FD4B6', backgroundColor: '#F1FBF5' }, documentDeleteButton: { position: 'absolute', top: 6, right: 6, zIndex: 2, width: 23, height: 23, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD7E2', alignItems: 'center', justifyContent: 'center' }, documentIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center', marginBottom: 6 }, documentIconUploaded: { backgroundColor: '#168161' }, documentTitle: { color: palette.navy, fontSize: 10.3, lineHeight: 13.5, fontWeight: '900', textAlign: 'center', minHeight: 27 }, documentBody: { color: '#7A8799', fontSize: 8.6, lineHeight: 11.5, fontWeight: '600', textAlign: 'center', marginTop: 2, flex: 1 }, uploadButton: { minHeight: 32, borderRadius: 10, backgroundColor: '#0A43A3', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, alignSelf: 'stretch', marginTop: 6 }, replaceButton: { backgroundColor: '#168161' }, uploadButtonDisabled: { opacity: 0.55 }, uploadButtonText: { color: '#FFFFFF', fontSize: 9.3, fontWeight: '900' },
   bulkWrap: { position: 'relative' }, bulkHint: { margin: 10, marginTop: 0, borderRadius: 14, borderWidth: 1, borderStyle: 'dashed', borderColor: '#91A9C8', backgroundColor: '#F8FBFF', padding: 9, flexDirection: 'row', alignItems: 'center', gap: 9 }, bulkHintUploaded: { borderStyle: 'solid', borderColor: '#9FD4B6', backgroundColor: '#F1FBF5', paddingRight: 40 }, bulkHintPressed: { backgroundColor: '#EEF5FF' }, bulkHintDisabled: { opacity: 0.6 }, bulkIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' }, bulkIconUploaded: { backgroundColor: '#E1F5E9' }, bulkCopy: { flex: 1, minWidth: 0 }, bulkTitle: { color: palette.navy, fontSize: 10.3, fontWeight: '900' }, bulkText: { color: '#708097', fontSize: 9.1, lineHeight: 12.5, fontWeight: '600', marginTop: 1 }, bulkDeleteButton: { position: 'absolute', top: 6, right: 18, zIndex: 2, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD7E2', alignItems: 'center', justifyContent: 'center' },
   validationBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(7, 24, 50, 0.48)', paddingHorizontal: 24 },
   deleteSuccessToastOverlay: { flex: 1, justifyContent: 'flex-start', paddingTop: 54, paddingHorizontal: 14 },
