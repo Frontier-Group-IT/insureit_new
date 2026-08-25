@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 const SAOD_BLOCKED_CLASSES = new Set(["GCV", "PCV", "CPM", "MISD"]);
@@ -53,25 +52,26 @@ function syncPolicyTypeOptions(select: HTMLSelectElement) {
   }
 }
 
-export function PolicyOnboardingProductGuard() {
-  const router = useRouter();
+function syncDevelopmentNotice(policyType: string) {
+  const notices = Array.from(document.querySelectorAll("section"));
+  const notice = notices.find((section) => section.querySelector("h2")?.textContent?.trim() === `${policyType} onboarding`);
+  if (notice instanceof HTMLElement) notice.style.display = policyType === "Non Motor" ? "none" : "";
+}
 
+export function PolicyOnboardingProductGuard() {
   useEffect(() => {
     let lastClass = "";
     let lastProduct = "";
     let lastPolicyTypes = "";
-    let routingToNonMotor = false;
 
     const sync = () => {
       const policyTypeSelect = fieldControl("Policy type") as HTMLSelectElement | null;
       if (!policyTypeSelect) return;
       syncPolicyTypeOptions(policyTypeSelect);
+      syncDevelopmentNotice(policyTypeSelect.value);
 
-      if (policyTypeSelect.value === "Non Motor") {
-        if (!routingToNonMotor) {
-          routingToNonMotor = true;
-          router.push("/policies/new/non-motor");
-        }
+      if (policyTypeSelect.value !== "Motor") {
+        lastPolicyTypes = policyTypeSignature(policyTypeSelect);
         return;
       }
 
@@ -117,7 +117,7 @@ export function PolicyOnboardingProductGuard() {
       const vehicleClass = classSelect?.value.trim().toUpperCase() ?? "";
       const product = productSelect?.value.trim().toUpperCase() ?? "";
       const policyTypes = policyTypeSelect ? policyTypeSignature(policyTypeSelect) : "";
-      if (policyTypeSelect?.value === "Non Motor" || vehicleClass !== lastClass || product !== lastProduct || policyTypes !== lastPolicyTypes) sync();
+      if (vehicleClass !== lastClass || product !== lastProduct || policyTypes !== lastPolicyTypes) sync();
     }, 250);
 
     return () => {
@@ -125,7 +125,7 @@ export function PolicyOnboardingProductGuard() {
       observer.disconnect();
       window.clearInterval(timer);
     };
-  }, [router]);
+  }, []);
 
   return null;
 }
