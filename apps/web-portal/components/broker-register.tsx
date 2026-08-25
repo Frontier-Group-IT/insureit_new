@@ -35,6 +35,7 @@ export function BrokerRegisterShell({
   description,
   icon,
   metrics,
+  compactMetrics = false,
   children
 }: {
   title: string;
@@ -42,6 +43,7 @@ export function BrokerRegisterShell({
   description: string;
   icon: ReactNode;
   metrics: Array<{ label: string; value: string | number; hint: string; tone?: MetricTone }>;
+  compactMetrics?: boolean;
   children: ReactNode;
 }) {
   const showSupportingCopy = title !== "Customer Portfolio" && title !== "Vehicle Portfolio" && title !== "Policy Portfolio" && title !== "External Policy Portfolio" && title !== "External Policies";
@@ -102,7 +104,7 @@ export function BrokerRegisterShell({
 
   return (
     <section className="mx-auto max-w-[1480px] overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
-      <div className={`border-b border-[#E5ECF5] bg-[#F8FAFC] px-4 sm:px-5 ${compactReferenceLayout ? "py-3" : "py-4"}`}>
+      <div className={`border-b border-[#E5ECF5] bg-[#F8FAFC] px-4 sm:px-5 ${compactReferenceLayout || compactMetrics ? "py-3" : "py-4"}`}>
         {compactReferenceLayout ? (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-2.5">
@@ -112,21 +114,21 @@ export function BrokerRegisterShell({
             {headerActions}
           </div>
         ) : (
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(620px,0.95fr)] xl:items-center">
+          <div className={`grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(620px,0.95fr)] xl:items-center ${compactMetrics ? "xl:gap-4" : "gap-4"}`}>
             <div className="flex min-w-0 items-start gap-3">
               <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#17365D] text-white shadow-[0_10px_22px_rgba(23,54,93,0.18)]">{icon}</span>
               <div className="min-w-0">
                 {showSupportingCopy ? <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#64748B]">{eyebrow}</p> : null}
                 <h2 className="mt-1 text-[18px] font-semibold leading-tight text-[#0F172A]">{title}</h2>
-                {showSupportingCopy ? <p className="mt-1 max-w-2xl text-[11.5px] leading-5 text-[#64748B]">{description}</p> : null}
+                {showSupportingCopy && description ? <p className="mt-1 max-w-2xl text-[11.5px] leading-5 text-[#64748B]">{description}</p> : null}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
               {metrics.map((metric) => (
-                <div key={metric.label} className={`rounded-xl border px-3 py-2.5 ${metricTones[metric.tone ?? "slate"]}`}>
+                <div key={metric.label} className={`rounded-xl border px-3 ${compactMetrics ? "py-2" : "py-2.5"} ${metricTones[metric.tone ?? "slate"]}`}>
                   <p className="text-[8.5px] font-bold uppercase tracking-[0.08em] opacity-70">{metric.label}</p>
-                  <p className="mt-1 text-[20px] font-semibold leading-none tabular-nums">{metric.value}</p>
-                  <p className="mt-1 truncate text-[9.5px] font-medium opacity-75">{metric.hint}</p>
+                  <p className={`${compactMetrics ? "mt-0.5 text-[18px]" : "mt-1 text-[20px]"} font-semibold leading-none tabular-nums`}>{metric.value}</p>
+                  {!compactMetrics ? <p className="mt-1 truncate text-[9.5px] font-medium opacity-75">{metric.hint}</p> : null}
                 </div>
               ))}
             </div>
