@@ -96,6 +96,7 @@ export function NonMotorPolicyForm({ insurers, customers, rms, sources }: Props)
 
   const availableSources = useMemo(() => sources.filter((item) => item.type === form.intermediaryType), [sources, form.intermediaryType]);
   const selectedInsurer = insurers.find((item) => item.value === form.insurerId)?.label ?? "Not selected";
+  const selectedRmLabel = rms.find((rm) => rm.value === form.rmName)?.label ?? form.rmName;
   const riskLocation = form.riskLocation || form.transitFrom || form.projectName || "Not entered";
   const requiredValues = useMemo(() => [
     form.issuanceDate, form.intermediaryType, form.intermediaryCode, form.rmName,
@@ -147,13 +148,19 @@ export function NonMotorPolicyForm({ insurers, customers, rms, sources }: Props)
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_336px]">
         <div className="space-y-4">
-          <Section number="01" title="Source">
-            <Field label="Issuance date" type="date" value={form.issuanceDate} onChange={(e) => update("issuanceDate", e.target.value)} required />
+          <Section number="01" title="Policy source & ownership">
+            <Field label="Policy issuance date" type="date" value={form.issuanceDate} onChange={(e) => update("issuanceDate", e.target.value)} required />
             <Field label="Policy type" value="Non Motor" disabled />
-            <Select label="Intermediary type" value={form.intermediaryType} onChange={(e) => changeIntermediaryType(e.target.value as FormState["intermediaryType"])} required><option value="">Select type</option><option>POSP</option><option>MISP</option><option>SIBL / Partner</option></Select>
-            <Select label="Lead source" value={form.sourceId} onChange={(e) => changeSource(e.target.value)} disabled={!form.intermediaryType} required><option value="">Select source</option>{availableSources.map((item) => <option key={item.value} value={item.value}>{item.label} - {item.code}</option>)}</Select>
-            <Select label="Relationship manager" value={form.rmName} onChange={(e) => update("rmName", e.target.value)} required><option value="">Select RM</option>{rms.map((rm) => <option key={rm.value} value={rm.value}>{rm.label}</option>)}</Select>
-            <Field label="Intermediary code" value={form.intermediaryCode} disabled placeholder="Auto filled" />
+            <div>
+              <Select label="Intermediary type" value={form.intermediaryType} onChange={(e) => changeIntermediaryType(e.target.value as FormState["intermediaryType"])} required><option value="">Select type</option><option>POSP</option><option>MISP</option><option>SIBL / Partner</option></Select>
+              <CompactSourceMeta label="RM" value={selectedRmLabel || "Select lead source"} />
+              <input type="hidden" aria-label="RM name" value={form.rmName} readOnly />
+            </div>
+            <div>
+              <Select label="Lead source" value={form.sourceId} onChange={(e) => changeSource(e.target.value)} disabled={!form.intermediaryType} required><option value="">{form.intermediaryType ? "Select registered source" : "Select intermediary type first"}</option>{availableSources.map((item) => <option key={item.value} value={item.value}>{item.label} · {item.code}</option>)}</Select>
+              <CompactSourceMeta label="ID" value={form.intermediaryCode || "Select lead source"} />
+              <input type="hidden" aria-label="Intermediary code" value={form.intermediaryCode} readOnly />
+            </div>
           </Section>
 
           <Section number="02" title="Customer & policy">
@@ -262,5 +269,6 @@ function NumberBadge({ value }: { value: string }) { return <span className="fle
 function Section({ number, title, subtitle, children }: { number: string; title: string; subtitle?: string; children: ReactNode }) { return <section className="overflow-hidden rounded-xl border border-[#D9E2F0] bg-white shadow-[0_5px_16px_rgba(15,23,42,.04)]"><div className="flex items-center gap-3 border-b border-[#E9EDF3] px-4 py-3 sm:px-5"><NumberBadge value={number} /><div><h2 className="text-[11px] font-semibold text-[#17203A]">{title}</h2>{subtitle ? <p className="mt-0.5 text-[9px] text-[#7C8798]">{subtitle}</p> : null}</div></div><div className="grid gap-3 px-4 py-4 sm:grid-cols-2 xl:grid-cols-4 sm:px-5">{children}</div></section>; }
 function Field({ label, required, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; required?: boolean }) { return <label><span className={labelClass}>{label}{required ? <span className="text-red-500">*</span> : null}</span><input {...props} required={required} className={inputClass} /></label>; }
 function Select({ label, required, children, ...props }: SelectHTMLAttributes<HTMLSelectElement> & { label: string; required?: boolean; children: ReactNode }) { return <label><span className={labelClass}>{label}{required ? <span className="text-red-500">*</span> : null}</span><select {...props} required={required} className={inputClass}>{children}</select></label>; }
+function CompactSourceMeta({ label, value }: { label: string; value: string }) { return <div className="mt-1.5 flex min-h-5 items-center gap-1.5 px-0.5 text-[8.5px] text-[#7C8798]"><span className="font-bold uppercase tracking-[0.06em] text-[#98A2B3]">{label}</span><span className="truncate font-semibold text-[#475467]" title={value}>{value}</span></div>; }
 function Segmented({ label, value, options, labels, onChange }: { label: string; value: string; options: string[]; labels: string[]; onChange: (value: string) => void }) { return <div><span className={labelClass}>{label}</span><div className="flex h-10 rounded-xl border border-[#D8DEE9] bg-[#F8FAFC] p-1">{options.map((option, index) => <button key={option} type="button" onClick={() => onChange(option)} className={`flex-1 rounded-lg text-[9px] font-semibold transition ${value === option ? "bg-white text-[#123B75] shadow-sm" : "text-[#667085]"}`}>{labels[index]}</button>)}</div></div>; }
 function SummaryRow({ icon, label, value }: { icon: ReactNode; label: string; value: string }) { return <div className="flex items-start gap-2.5"><span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#EEF4FF] text-[#315B9A]">{icon}</span><div className="min-w-0"><p className="text-[8px] font-bold uppercase tracking-[0.08em] text-[#98A2B3]">{label}</p><p className="mt-0.5 truncate text-[10.5px] font-semibold text-[#344054]" title={value}>{value}</p></div></div>; }
