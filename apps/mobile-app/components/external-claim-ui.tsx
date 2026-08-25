@@ -44,7 +44,6 @@ export function ExternalClaimStageHeader({
           <MaterialCommunityIcons name={icon} size={35} color="#FFFFFF" />
         </View>
         <View style={styles.headerCopy}>
-          <Text style={styles.eyebrow}>STEP {step} OF 9</Text>
           <Text style={styles.title}>{title}</Text>
           {vehicleNo || claimNo ? <Text style={styles.identity}>{[vehicleNo, claimNo].filter(Boolean).join('  •  ')}</Text> : null}
           {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
@@ -63,6 +62,52 @@ export function ClaimProgressStrip({ step }: { step: number }) {
         const active = item <= step;
         return <View key={item} style={[styles.progressSegment, active && styles.progressActive]} />;
       })}
+    </View>
+  );
+}
+
+export function ClaimIdentityCard({
+  claimNo,
+  insurerName,
+  vehicleNo,
+  policyNo,
+  vehicleMeta,
+}: {
+  claimNo?: string | null;
+  insurerName?: string | null;
+  vehicleNo?: string | null;
+  policyNo?: string | null;
+  vehicleMeta?: string | null;
+}) {
+  return (
+    <View style={styles.claimIdentityCard}>
+      <View style={styles.claimIdentityGlow} />
+      <View style={styles.claimIdentitySection}>
+        <View style={styles.claimIdentityPrimaryIcon}>
+          <MaterialCommunityIcons name="file-document-outline" size={23} color="#083B9B" />
+        </View>
+        <View style={styles.claimIdentityCopy}>
+          <Text style={styles.claimIdentityLabel}>CLAIM DETAILS</Text>
+          <Text style={styles.claimIdentityValue} numberOfLines={1}>{claimNo || 'New claim'}</Text>
+          <Text style={styles.claimIdentityMeta} numberOfLines={1}>{insurerName || 'Insurance company'}</Text>
+        </View>
+      </View>
+      <View style={styles.claimIdentityDivider} />
+      <View style={styles.claimIdentitySection}>
+        <View style={styles.claimIdentityVehicleIcon}>
+          <MaterialCommunityIcons name="car-outline" size={21} color="#FFFFFF" />
+        </View>
+        <View style={styles.claimIdentityCopy}>
+          <Text style={styles.claimIdentityLabel}>CLAIM VEHICLE</Text>
+          <Text style={styles.claimIdentityValue} numberOfLines={1}>{vehicleNo || 'Vehicle'}</Text>
+          <Text style={styles.claimIdentityMeta} numberOfLines={1}>
+            {[policyNo ? `Policy: ${policyNo}` : '', vehicleMeta || ''].filter(Boolean).join('  •  ')}
+          </Text>
+        </View>
+        <View style={styles.claimIdentityFocus}>
+          <MaterialCommunityIcons name="crosshairs-gps" size={18} color="#AFCBFF" />
+        </View>
+      </View>
     </View>
   );
 }
@@ -317,6 +362,17 @@ const styles = StyleSheet.create({
   subtitle: { color: '#6C7889', fontSize: 11.5, lineHeight: 16, fontWeight: '600', marginTop: 4 },
   selfTrackedBadge: { alignSelf: 'flex-start', borderRadius: 999, backgroundColor: '#EDF3FF', paddingHorizontal: 12, paddingVertical: 8, marginTop: 8 },
   selfTrackedText: { color: '#145ED7', fontSize: 10.5, fontWeight: '900' },
+  claimIdentityCard: { position: 'relative', minHeight: 92, borderRadius: 18, backgroundColor: '#07327B', paddingHorizontal: 12, paddingVertical: 11, marginBottom: 13, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', shadowColor: '#072C69', shadowOpacity: 0.14, shadowRadius: 9, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  claimIdentityGlow: { position: 'absolute', width: 150, height: 150, borderRadius: 75, borderWidth: 1, borderColor: 'rgba(72,139,255,0.22)', right: -62, top: -78 },
+  claimIdentitySection: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  claimIdentityPrimaryIcon: { width: 44, height: 44, borderRadius: 13, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  claimIdentityVehicleIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
+  claimIdentityCopy: { flex: 1, minWidth: 0 },
+  claimIdentityLabel: { color: '#BBD1F6', fontSize: 7.8, lineHeight: 10, fontWeight: '900', letterSpacing: 0.55 },
+  claimIdentityValue: { color: '#FFFFFF', fontSize: 14.5, lineHeight: 19, fontWeight: '900', marginTop: 2 },
+  claimIdentityMeta: { color: '#D8E4F4', fontSize: 8.2, lineHeight: 11, fontWeight: '700', marginTop: 2 },
+  claimIdentityDivider: { width: 1, alignSelf: 'stretch', backgroundColor: 'rgba(255,255,255,0.22)', marginHorizontal: 11 },
+  claimIdentityFocus: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   summaryCard: { position: 'relative', borderRadius: 20, backgroundColor: '#07327B', padding: 16, marginBottom: 13, overflow: 'hidden', shadowColor: '#072C69', shadowOpacity: 0.16, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
   summaryArcOne: { position: 'absolute', width: 210, height: 210, borderRadius: 105, borderWidth: 1, borderColor: 'rgba(72,139,255,0.22)', right: -95, top: -105 },
   summaryArcTwo: { position: 'absolute', width: 150, height: 150, borderRadius: 75, borderWidth: 1, borderColor: 'rgba(72,139,255,0.18)', right: -48, top: -72 },
