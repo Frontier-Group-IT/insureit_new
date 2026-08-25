@@ -514,7 +514,7 @@ export default function SelfManagedClaimScreen() {
             </View>
             {!documents.bulk.length && !savedBulkCount ? <MaterialCommunityIcons name="plus-circle-outline" size={21} color="#0A43A3" /> : null}
           </Pressable>
-          {documents.bulk.length > 0 || savedBulkCount > 0 ? <Pressable accessibilityRole="button" accessibilityLabel="Remove all bulk documents" disabled={uploadingDocuments} onPress={() => requestDelete('bulk', 'uploaded documents')} style={styles.bulkRemoveButton}><MaterialCommunityIcons name="close" size={14} color="#7A8799" /></Pressable> : null}
+          {documents.bulk.length > 0 || savedBulkCount > 0 ? <Pressable accessibilityRole="button" accessibilityLabel="Remove all bulk documents" disabled={uploadingDocuments} onPress={() => requestDelete('bulk', 'uploaded documents')} style={styles.bulkRemoveButton}><MaterialCommunityIcons name="close" size={14} color="#C43232" /></Pressable> : null}
         </View>
         <Text style={styles.documentUploadNote}>{editing ? 'Selected files upload immediately to Claim Documents.' : 'Before the claim exists, selected files are queued and automatically saved to Claim Documents when you tap Start Claim & Continue.'}</Text>
       </View>
@@ -600,7 +600,7 @@ function DocumentReadyTile({ title, fileName, source, state, onPress, onRemove }
   const ready = state === 'ready';
   return <Pressable accessibilityRole="button" accessibilityState={{ selected: state !== 'idle' }} onPress={onPress} style={[styles.documentReadyTile, ready && styles.documentReadyTileReady, saved && styles.documentReadyTileSelected]}>
     {saved ? <View style={styles.documentSelectedCheck}><MaterialCommunityIcons name="check" size={15} color="#18864B" /></View> : null}
-    {state !== 'idle' ? <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${title}`} onPress={(event) => { event.stopPropagation(); onRemove(); }} style={styles.documentRemoveButton}><MaterialCommunityIcons name="close" size={13} color="#7A8799" /></Pressable> : null}
+    {state !== 'idle' ? <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${title}`} onPress={(event) => { event.stopPropagation(); onRemove(); }} style={styles.documentRemoveButton}><MaterialCommunityIcons name="close" size={13} color="#C43232" /></Pressable> : null}
     <View style={styles.documentReadyArtworkWrap}><Image source={source} style={styles.documentReadyArtwork} resizeMode="contain" /></View>
     <Text style={styles.documentReadyTileText} numberOfLines={2}>{title}</Text>
     {fileName ? <Text style={styles.documentReadyFileName} numberOfLines={1}>{fileName}</Text> : null}
@@ -647,7 +647,7 @@ const styles = StyleSheet.create({
   documentReadyTileReady: { backgroundColor: '#F2F7FF', borderColor: '#6D9EE8' },
   documentReadyTileSelected: { backgroundColor: '#EFFAF4', borderColor: '#52B57F', shadowColor: '#18864B', shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
   documentSelectedCheck: { position: 'absolute', top: 5, left: 5, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(46, 173, 99, 0.16)', alignItems: 'center', justifyContent: 'center' },
-  documentRemoveButton: { position: 'absolute', top: 5, right: 5, zIndex: 3, width: 23, height: 23, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.92)', borderWidth: 1, borderColor: '#DCE3EC', alignItems: 'center', justifyContent: 'center' },
+  documentRemoveButton: { position: 'absolute', top: 5, right: 5, zIndex: 3, width: 23, height: 23, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
   documentReadyArtworkWrap: { width: 45, height: 45, alignItems: 'center', justifyContent: 'center' },
   documentReadyArtwork: { width: 43, height: 43 },
   documentReadyTileText: { color: palette.navy, fontSize: 8.5, lineHeight: 11, fontWeight: '800', textAlign: 'center', marginTop: 3 },
@@ -663,7 +663,7 @@ const styles = StyleSheet.create({
   bulkUploadCopy: { flex: 1, minWidth: 0 },
   bulkUploadTitle: { color: palette.navy, fontSize: 10.5, fontWeight: '900' },
   bulkUploadText: { color: '#718198', fontSize: 8.5, lineHeight: 12, fontWeight: '600', marginTop: 2 },
-  bulkRemoveButton: { position: 'absolute', top: 15, right: 7, zIndex: 3, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE3EC', alignItems: 'center', justifyContent: 'center' },
+  bulkRemoveButton: { position: 'absolute', top: 15, right: 7, zIndex: 3, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
   documentUploadNote: { color: '#7A8799', fontSize: 8, lineHeight: 11, fontWeight: '600', marginTop: 8 },
   voicePlaceholder: { borderRadius: 18, borderWidth: 1, borderColor: '#CADAF0', backgroundColor: '#F5F9FF', padding: 13, marginBottom: 12 },
   voiceHeadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
