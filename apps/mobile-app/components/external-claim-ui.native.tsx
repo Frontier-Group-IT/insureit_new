@@ -64,10 +64,10 @@ export function ClaimIdentityCard(props: ClaimIdentityCardProps) {
           </View>
 
           <View style={styles.secondaryInfoRow}>
-            <View style={[styles.iconBadge, styles.makeModelBadge]}>
+            <View style={[styles.iconBadge, styles.makeModelBadge]} accessible={false}>
               <MaterialCommunityIcons name="car-info" size={16} color="#2C6FD5" />
             </View>
-            <Text style={styles.secondaryValue} numberOfLines={1}>{vehicleMeta || '—'}</Text>
+            <Text accessibilityLabel={`Make and model: ${vehicleMeta || 'Not available'}`} style={styles.secondaryValue} numberOfLines={1}>{vehicleMeta || '—'}</Text>
           </View>
         </View>
 
@@ -85,10 +85,10 @@ export function ClaimIdentityCard(props: ClaimIdentityCardProps) {
           </View>
 
           <View style={styles.secondaryInfoRow}>
-            <View style={[styles.iconBadge, styles.insurerBadge]}>
+            <View style={[styles.iconBadge, styles.insurerBadge]} accessible={false}>
               <MaterialCommunityIcons name="office-building-outline" size={16} color="#8A5A0A" />
             </View>
-            <Text style={styles.secondaryValue} numberOfLines={2}>{insurerName || 'Insurance company'}</Text>
+            <Text accessibilityLabel={`Insurance company: ${insurerName || 'Not available'}`} style={styles.secondaryValue} numberOfLines={2}>{insurerName || 'Insurance company'}</Text>
           </View>
         </View>
       </View>
