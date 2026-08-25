@@ -41,6 +41,7 @@ export function CompactDocumentStageHeader({ step, title, subtitle, vehicleNo, c
   const icon = stageIcons[Math.max(0, Math.min(stageIcons.length - 1, step - 1))];
   const claimId = typeof params.id === 'string' ? params.id : '';
   const returnStage = typeof params.key === 'string' ? params.key : 'claim_intimation';
+  const isClaimIntimation = returnStage === 'claim_intimation' && title.trim().toLowerCase() === 'claim intimation';
 
   function openAssistance() {
     if (!claimId) return;
@@ -51,6 +52,9 @@ export function CompactDocumentStageHeader({ step, title, subtitle, vehicleNo, c
     setAssistanceTooltipVisible(true);
     setTimeout(() => setAssistanceTooltipVisible(false), 1600);
   }
+
+  // Claim Intimation owns its title/icon/assistance action inside the single navy identity card.
+  if (isClaimIntimation) return null;
 
   return (
     <View style={styles.headerWrap}>
