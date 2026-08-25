@@ -3,7 +3,8 @@
   "git": {
     "deploymentEnabled": {
       "*": false,
-      "main": true
+      "main": true,
+      "feat/dashboard-v2-command-center": true
     }
   },
   "framework": "nextjs",
