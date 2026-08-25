@@ -2,10 +2,20 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { palette } from '@/lib/theme';
-import { ClaimIdentityCard as SharedClaimIdentityCard } from './external-claim-ui.tsx';
+const sharedUi = require('./external-claim-ui.tsx') as Record<string, any>;
 
-export * from './external-claim-ui.tsx';
+export const ExternalClaimStageHeader = sharedUi.ExternalClaimStageHeader;
+export const ClaimProgressStrip = sharedUi.ClaimProgressStrip;
+export const ClaimStageSummaryCard = sharedUi.ClaimStageSummaryCard;
+export const ClaimContextStrip = sharedUi.ClaimContextStrip;
+export const ClaimFormSection = sharedUi.ClaimFormSection;
+export const ClaimChoice = sharedUi.ClaimChoice;
+export const ClaimInlineNote = sharedUi.ClaimInlineNote;
+export const ClaimFinancialSummary = sharedUi.ClaimFinancialSummary;
+export const ClaimPrimaryAction = sharedUi.ClaimPrimaryAction;
+export const ClaimSecondaryAction = sharedUi.ClaimSecondaryAction;
+export const ClaimActionBar = sharedUi.ClaimActionBar;
+export const ClaimMetaRow = sharedUi.ClaimMetaRow;
 
 type ClaimIdentityCardProps = {
   claimNo?: string | null;
@@ -20,6 +30,7 @@ export function ClaimIdentityCard(props: ClaimIdentityCardProps) {
   const milestoneKey = typeof params.key === 'string' ? params.key : '';
 
   if (milestoneKey !== 'claim_intimation') {
+    const SharedClaimIdentityCard = sharedUi.ClaimIdentityCard;
     return <SharedClaimIdentityCard {...props} />;
   }
 
