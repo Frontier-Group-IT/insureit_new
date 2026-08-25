@@ -63,9 +63,16 @@ export function PolicyOnboardingProductGuard() {
       const classSelect = fieldControl("Class") as HTMLSelectElement | null;
       const productSelect = fieldControl("Policy product") as HTMLSelectElement | null;
       const tpInput = fieldControl("TP premium") as HTMLInputElement | null;
-      if (!policyTypeSelect || !classSelect || !productSelect || !tpInput) return;
+      if (!policyTypeSelect) return;
 
       syncPolicyTypeOptions(policyTypeSelect);
+
+      if (policyTypeSelect.value === "Non Motor" && window.location.pathname === "/policies/new") {
+        window.location.assign("/policies/new/non-motor");
+        return;
+      }
+
+      if (!classSelect || !productSelect || !tpInput) return;
 
       const vehicleClass = classSelect.value.trim().toUpperCase();
       const product = productSelect.value.trim().toUpperCase();
