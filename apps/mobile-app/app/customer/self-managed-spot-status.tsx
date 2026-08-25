@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { AppDatePicker } from '@/components/design-system';
 import { ExternalClaimErrorPopup } from '@/components/external-claim-error-popup';
-import { ClaimActionBar, ClaimFormSection, ClaimStageSummaryCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
+import { ClaimActionBar, ClaimFormSection, ClaimIdentityCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
 import { LoadingState, Screen, TextField } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { type ClaimMilestone } from '@/lib/claim-service-mode';
@@ -20,6 +20,9 @@ export default function SelfManagedSpotStatusScreen() {
   const [surveyorPhone, setSurveyorPhone] = useState('');
   const [claimNo, setClaimNo] = useState('');
   const [vehicleNo, setVehicleNo] = useState('');
+  const [vehicleMeta, setVehicleMeta] = useState('');
+  const [policyNo, setPolicyNo] = useState('');
+  const [insurerName, setInsurerName] = useState('Insurance company');
   const [milestones, setMilestones] = useState<ClaimMilestone[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -35,7 +38,7 @@ export default function SelfManagedSpotStatusScreen() {
     let active = true;
     async function load() {
       const [claimResult, milestoneResult] = await Promise.all([
-        supabase.from('claims').select('id, claim_no, claim_service_mode, vehicle_id').eq('id', id).maybeSingle(),
+        supabase.from('claims').select('id, claim_no, claim_service_mode, vehicle_id, external_policy_id').eq('id', id).maybeSingle(),
         (supabase as any).from('claim_milestones').select('*').eq('claim_id', id),
       ]);
       if (!active) return;
@@ -51,8 +54,22 @@ export default function SelfManagedSpotStatusScreen() {
       setClaimNo((claimResult.data as any).claim_no);
       const vehicleId = (claimResult.data as any).vehicle_id as string | undefined;
       if (vehicleId) {
-        const vehicleResult = await supabase.from('vehicles').select('vehicle_no').eq('id', vehicleId).maybeSingle();
-        if (active && vehicleResult.data) setVehicleNo((vehicleResult.data as any).vehicle_no ?? '');
+        const vehicleResult = await supabase.from('vehicles').select('vehicle_no,make,model').eq('id', vehicleId).maybeSingle();
+        if (active && vehicleResult.data) {
+          setVehicleNo((vehicleResult.data as any).vehicle_no ?? '');
+          setVehicleMeta([(vehicleResult.data as any).make, (vehicleResult.data as any).model].filter(Boolean).join(' · '));
+        }
+      }
+      const externalPolicyId = (claimResult.data as any).external_policy_id as string | undefined;
+      if (externalPolicyId) {
+        const policyResult = await (supabase as any).from('external_policies').select('policy_no,insurance_company_id').eq('id', externalPolicyId).maybeSingle();
+        if (active && policyResult.data) {
+          setPolicyNo(policyResult.data.policy_no ?? '');
+          if (policyResult.data.insurance_company_id) {
+            const insurerResult = await supabase.from('insurance_companies').select('name').eq('id', policyResult.data.insurance_company_id).maybeSingle();
+            if (active && insurerResult.data?.name) setInsurerName(insurerResult.data.name);
+          }
+        }
       }
       const nextMilestones = (milestoneResult.data ?? []) as ClaimMilestone[];
       setMilestones(nextMilestones);
@@ -127,10 +144,12 @@ export default function SelfManagedSpotStatusScreen() {
         onBack={() => router.back()}
       />
 
-      <ClaimStageSummaryCard
-        title="Spot Status"
-        body="Record the survey completion details you received for this external claim."
-        icon="shield-check-outline"
+      <ClaimIdentityCard
+        claimNo={claimNo}
+        insurerName={insurerName}
+        vehicleNo={vehicleNo}
+        policyNo={policyNo}
+        vehicleMeta={vehicleMeta}
       />
 
       <ClaimFormSection title="Spot Survey" subtitle="Survey completion date is mandatory" icon="clipboard-check-outline">
