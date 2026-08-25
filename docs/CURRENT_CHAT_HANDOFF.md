@@ -879,3 +879,21 @@ This is parser training through reviewed code and regression evidence, not an au
 ### IT Super User-only OCR Training navigation — 2026-08-22
 
 **IMPLEMENTED / NOT YET MERGED OR DEPLOYED:** `/policies/ocr-training` is now listed under the Development menu, and that section remains visible only to `it_super_user` with approve-level `manage_system` access. The route and training Server Actions also reject every non-`it_super_user` role, so hiding the menu is not the only protection. The OCR workflow and database behavior are unchanged.
+
+
+## 2026-08-25 phased mobile merge and main-only Expo preview plan
+
+**USER-APPROVED OPERATING DECISION:** the shared Expo `preview` channel must now be sourced only from the exact current `main` commit. Isolated feature/recovery/PR branches must no longer publish directly to `preview`.
+
+**LEARNING:** Expo `preview` is a moving channel, not a stack of branch updates. Publishing #588, #593, #595, #603, #607, #612, or any other branch directly to the same channel can replace the cumulative snapshot and make earlier work appear reverted even when Git history is intact.
+
+### Phased merge plan
+
+1. **Phase 0 — deployment guard.** Merge the main-only Expo preview workflow/documentation PR first. It must reject non-`main` refs and verify checked-out HEAD equals `origin/main` before `eas update --channel preview`.
+2. **Phase 1 — refresh cumulative recovery.** Refresh PR #612 (`recovery/mobile-today-cumulative`) against the then-current `main`, resolve overlaps with later merges, and rerun required mobile/web CI. Do not merge #588/#593/#595/#603/#607 separately.
+3. **Phase 2 — merge cumulative recovery.** Merge #612 only when refreshed, green and mergeable; verify the exact resulting `main` commit.
+4. **Phase 3 — authoritative OTA.** Publish the exact verified `main` commit to Expo `preview`. OTA only for JS/assets changes; no APK. Confirm Expo publish success/channel mapping before claiming the installed preview is restored.
+5. **Phase 4 — close superseded PRs.** Close #588, #593, #595, #603 and #607 as superseded by #612 after Phase 3 verification.
+6. **Phase 5 — independent remaining work.** Handle unrelated PRs separately, refreshed against current `main` with their own CI. Web-only merges need no mobile OTA; mobile-affecting merges follow the same main-only preview rule.
+
+At this handoff update, `main` had advanced beyond the original #612 base, so #612 must be refreshed before any merge. No direct production-data, Supabase schema/RLS/auth, Expo runtime/version/build-profile, or APK change is part of this plan.
