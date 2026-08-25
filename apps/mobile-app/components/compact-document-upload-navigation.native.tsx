@@ -87,10 +87,15 @@ export function CompactDocumentStageHeader({ step, title, subtitle, vehicleNo, c
   );
 }
 
-export function CompactDocumentActionBar({ claimId, step, primaryLabel, primaryDisabled, onPrimary }: ActionProps) {
+export function CompactDocumentActionBar({ claimId, step, milestones, primaryLabel, primaryDisabled, onPrimary }: ActionProps) {
   const router = useRouter();
   const currentIndex = Math.max(0, Math.min(SELF_MANAGED_MILESTONES.length - 1, step - 1));
   const previousEnabled = Boolean(claimId) && currentIndex > 0;
+  const completedKeys = new Set(
+    milestones
+      .filter((item) => item.milestone_status === 'completed' || item.milestone_status === 'not_applicable')
+      .map((item) => item.milestone_key),
+  );
 
   function openPrevious() {
     if (!previousEnabled) return;
@@ -136,7 +141,7 @@ export function CompactDocumentActionBar({ claimId, step, primaryLabel, primaryD
 
       <View style={styles.bottomDots} accessibilityLabel={`Claim progress step ${step} of 9`}>
         {SELF_MANAGED_MILESTONES.map((stage, index) => {
-          const completed = index < currentIndex;
+          const completed = completedKeys.has(stage.key);
           const current = index === currentIndex;
           return <View key={stage.key} style={[styles.dot, completed && styles.dotCompleted, current && styles.dotCurrent]} />;
         })}
