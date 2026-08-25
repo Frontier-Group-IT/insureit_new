@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   claimValueRow: { flexDirection: 'row', alignItems: 'center', gap: 7, minWidth: 0 },
   claimIcon: { width: 24, height: 24, borderRadius: 7, borderWidth: 1, borderColor: 'rgba(255,255,255,0.55)', backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   claimValue: { flex: 1, minWidth: 0, color: '#FFFFFF', fontSize: 15.5, lineHeight: 19, fontWeight: '900' },
-  insurerMeta: { color: '#DDE9FF', fontSize: 9, lineHeight: 12.5, fontWeight: '650', marginTop: 4, paddingLeft: 31 },
+  insurerMeta: { color: '#DDE9FF', fontSize: 9, lineHeight: 12.5, fontWeight: '600', marginTop: 4, paddingLeft: 31 },
   detailRow: { minHeight: 27, flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0, marginBottom: 2 },
   vehicleBadge: { width: 25, height: 25, borderRadius: 13, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   policyBadge: { width: 25, height: 25, borderRadius: 13, backgroundColor: '#E8F7F1', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
