@@ -98,18 +98,19 @@ export default function ClaimsScreen() {
         const policyExpiredBeforeIncident = isIncidentAfterPolicyExpiry(claim, policy);
         const selfTracked = claim.claim_service_mode === 'self_managed';
         const completed = ['Closed', 'Settled', 'Claim Complete'].includes(claim.current_status);
+        const selfTrackedStatusColor = completed ? '#12805C' : '#C43838';
         const assistanceRequested = selfTracked && !completed && claim.assistance_status === 'requested';
 
         return (
           <Pressable key={claim.id} accessibilityRole="button" accessibilityLabel={`Open claim ${claim.claim_no}`} onPress={() => router.push({ pathname: selfTracked ? '/customer/self-managed-claim-detail' : '/customer/claim-detail', params: { id: claim.id } })} style={[styles.claimCard, selfTracked && styles.externalCard, { borderColor: selfTracked ? '#C9DAF2' : tone.border }]}>
-            <View style={[styles.accentBar, { backgroundColor: selfTracked ? '#0A43A3' : tone.accent }]} />
+            <View style={[styles.accentBar, { backgroundColor: selfTracked ? selfTrackedStatusColor : tone.accent }]} />
 
             <View style={styles.claimTop}>
               <View style={[styles.statusIcon, { backgroundColor: selfTracked ? '#EEF5FF' : tone.soft }]}>
                 <MaterialCommunityIcons name={selfTracked ? 'timeline-check-outline' : statusIcon(claim.current_status)} size={22} color={selfTracked ? '#0A43A3' : tone.accent} />
               </View>
               <View style={styles.claimTitleCopy}>
-                <Text style={[styles.modeLabel, { color: selfTracked ? '#0A43A3' : tone.accent }]}>{selfTracked ? 'SELF TRACKED' : claimStageLabel(claim.current_status)}</Text>
+                <Text style={[styles.modeLabel, { color: selfTracked ? selfTrackedStatusColor : tone.accent }]}>{selfTracked ? 'SELF TRACKED' : claimStageLabel(claim.current_status)}</Text>
                 <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle?.vehicle_no ?? 'Vehicle linked'}</Text>
                 <Text style={styles.vehicleMeta} numberOfLines={1}>{[vehicle?.make, vehicle?.model].filter(Boolean).join(' · ') || insurer?.name || 'Claim record'}</Text>
               </View>
