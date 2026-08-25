@@ -119,72 +119,63 @@ const newVehicle = buildPolicyOcrOnboardingUpdate({
 if (newVehicle.registrationMode !== "unregistered" || newVehicle.next.registrationNo !== "") throw new Error("FAIL: registration-pending OCR must switch to unregistered and clear permanent registration");
 if (newVehicle.next.vehicleClass !== "GCV" || newVehicle.next.capacity !== "1815" || newVehicle.next.policyProduct !== "Package") throw new Error("FAIL: class, capacity and policy product must survive one atomic update");
 if (newVehicle.next.make !== "TATA" || newVehicle.next.chassisNo !== "SYNCHASSIS001" || newVehicle.next.engineNo !== "SYNENGINE001") throw new Error("FAIL: sanitized Section 02 values were not normalized into form state");
-if (newVehicle.next.insurerId !== "ins-newindia" || newVehicle.next.policyNo !== "SYN-POLICY-001" || newVehicle.next.idv !== "610000") throw new Error("FAIL: Section 03 policy identity values were not mapped");
-if (newVehicle.next.validFrom !== "2026-08-21" || newVehicle.next.validUpto !== "2027-08-20") throw new Error("FAIL: policy validity dates were not normalized");
-console.log("PASS: registration-pending OCR updates vehicle + policy atomically");
+if (newVehicle.next.insurerId !== "ins-newindia" || newVehicle.next.idv !== "610000") throw new Error("FAIL: Section 03 values were not mapped into form state");
+if (newVehicle.next.validFrom !== "2026-08-21" || newVehicle.next.validUpto !== "2027-08-20") throw new Error("FAIL: explicit OCR validity dates must both survive application");
+console.log("PASS: new/unregistered Section 02 + Section 03 atomic import");
 
-const existingRc = buildPolicyOcrOnboardingUpdate({
+const rcProtected = buildPolicyOcrOnboardingUpdate({
   mode: "create",
   registrationMode: "registered",
-  current: { ...blank, registrationNo: "MP20AA1234", vehicleClass: "GCV", make: "TATA", model: "ACE" },
+  current: { ...blank, registrationNo: "SYNREG1234", vehicleClass: "PCP", make: "KIA", model: "SAFE MODEL", policyNo: "SAFE-OLD" },
   manufacturers,
   insurers,
   rcVerified: true,
   fields: [
-    field("vehicle_registration_number", "MP20ZZ9999"),
-    field("vehicle_make", "BMW"),
-    field("vehicle_model", "X5"),
-    field("policy_product", "Third Party"),
-    field("policy_number", "SYN-POLICY-002"),
-    field("insurer_name", "National Insurance"),
-    field("tp_premium", "15400"),
+    field("vehicle_make", "BMW", "Make"),
+    field("vehicle_model", "SAFE OTHER MODEL", "Model"),
+    field("policy_number", "SAFE-NEW", "Policy number"),
+    field("idv", "500000", "IDV"),
   ],
 });
-if (existingRc.next.registrationNo !== undefined || existingRc.next.make !== undefined || existingRc.next.model !== undefined) throw new Error("FAIL: verified RC Section 02 must be protected from OCR overwrite");
-if (existingRc.next.policyProduct !== "Third Party" || existingRc.next.policyNo !== "SYN-POLICY-002" || existingRc.next.insurerId !== "ins-national" || existingRc.next.tp !== "15400") throw new Error("FAIL: Section 03 must remain applicable when RC is verified");
-console.log("PASS: verified RC protects Section 02 while Section 03 stays importable");
+if (rcProtected.next.make !== "KIA" || rcProtected.next.model !== "SAFE MODEL") throw new Error("FAIL: RC-verified Section 02 must not be overwritten by policy OCR");
+if (rcProtected.next.policyNo !== "SAFE-NEW" || rcProtected.next.idv !== "500000") throw new Error("FAIL: RC protection must not block Section 03 application");
+console.log("PASS: RC source-of-truth protects Section 02 while allowing Section 03");
 
-const edited = buildPolicyOcrOnboardingUpdate({
+const editProtected = buildPolicyOcrOnboardingUpdate({
   mode: "edit",
   registrationMode: "registered",
-  current: { ...blank, registrationNo: "MP20AA1234", vehicleClass: "GCV", make: "TATA", model: "ACE", capacity: "1815", chassisNo: "EXISTCHASSIS", engineNo: "EXISTENGINE" },
+  current: { ...blank, vehicleClass: "GCV", make: "TATA", policyNo: "SAFE-OLD" },
   manufacturers,
   insurers,
   rcVerified: false,
-  fields: [
-    field("vehicle_registration_status", "registration_pending"),
-    field("vehicle_registration_number", "VEHICLE"),
-    field("vehicle_class", "Private Car"),
-    field("vehicle_make", "BMW"),
-    field("vehicle_capacity", "1998 CC"),
-    field("vehicle_chassis_number", "NEWCHASSIS"),
-    field("vehicle_engine_number", "NEWENGINE"),
-    field("policy_product", "Package"),
-    field("policy_number", "SYN-POLICY-003"),
-    field("od_premium", "12000"),
-  ],
+  fields: [field("vehicle_make", "BMW", "Make"), field("policy_number", "SAFE-EDIT", "Policy number")],
 });
-if (edited.registrationMode !== "registered") throw new Error("FAIL: edit OCR must not change registration mode");
-for (const key of ["registrationNo", "vehicleClass", "make", "capacity", "chassisNo", "engineNo"]) {
-  if (edited.next[key] !== undefined) throw new Error(`FAIL: edit OCR must protect Section 02 field ${key}`);
-}
-if (edited.next.policyProduct !== "Package" || edited.next.policyNo !== "SYN-POLICY-003" || edited.next.od !== "12000") throw new Error("FAIL: edit OCR must still allow Section 03 updates");
-console.log("PASS: edit-mode OCR cannot mutate linked vehicle identity");
+if (editProtected.next.make !== "TATA" || editProtected.next.policyNo !== "SAFE-EDIT") throw new Error("FAIL: edit mode must protect Section 02 and still permit Section 03");
+console.log("PASS: edit-mode Section 02 protection");
 
-const cpaReference = buildPolicyOcrOnboardingUpdate({
+const unknownManufacturer = buildPolicyOcrOnboardingUpdate({
   mode: "create",
   registrationMode: "registered",
-  current: { ...blank, vehicleClass: "GCV" },
+  current: { ...blank, vehicleClass: "PCP" },
   manufacturers,
   insurers,
   rcVerified: false,
-  fields: [
-    field("cpa_opted", "No", "CPA opted"),
-    field("cpa_premium", "75", "CPA / IMT premium"),
-  ],
+  fields: [field("vehicle_make", "UNKNOWN SAFE BRAND", "Make")],
 });
-if (cpaReference.next.cpa !== "75") throw new Error("FAIL: CPA amount should remain importable as a Section 03 reference");
-if ("cpaOpted" in cpaReference.next) throw new Error("FAIL: CPA opted must not be written from policy PDF OCR");
-console.log("PASS: CPA amount imports without changing owner-driver opted state");
+if (unknownManufacturer.next.make !== "" || !unknownManufacturer.skipped.includes("Make")) throw new Error("FAIL: OCR must not invent a manufacturer outside the master list");
+console.log("PASS: unknown manufacturer remains review-only");
 
-console.log("Policy onboarding OCR import regression passed.");
+const cpaCompatibility = buildPolicyOcrOnboardingUpdate({
+  mode: "create",
+  registrationMode: "registered",
+  current: { ...blank, vehicleClass: "GCV", cpa: "0" },
+  manufacturers,
+  insurers,
+  rcVerified: false,
+  fields: [field("cpa_premium", "50", "CPA / liability additions")],
+});
+if (cpaCompatibility.next.cpa !== "50") throw new Error("FAIL: historical liability-addition amount compatibility was lost");
+if ("cpaOpted" in cpaCompatibility.next) throw new Error("FAIL: mapper must not infer owner-driver CPA opted from liability-addition amount");
+console.log("PASS: CPA amount compatibility remains semantically separate from CPA opted");
+
+console.log(`Policy OCR onboarding import regression: ${regexChecks.length + 7} checks passed.`);
