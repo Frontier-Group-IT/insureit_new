@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
 import { AppBadge } from '@/components/design-system';
@@ -218,34 +218,30 @@ export default function ClaimDetailScreen() {
       {selfManaged && claim.assistance_status === 'requested' && !settled ? <Message type="info">Sankalp assistance has already been requested. Until accepted, you remain in control of this claim.</Message> : null}
 
       <SectionHeader title="Claim Journey" subtitle={`${progress}% complete • ${currentStage?.label ?? claim.current_status}`} expanded={journeyExpanded} onPress={() => setJourneyExpanded((value) => !value)} />
-      {journeyExpanded ? <View style={[styles.sectionBody, styles.journeyViewport]}>
-        <ScrollView nestedScrollEnabled showsVerticalScrollIndicator contentContainerStyle={styles.journeyBody}>
-          {SELF_MANAGED_MILESTONES.map((stage, index) => {
-            const done = selfManaged ? completedKeys.has(stage.key) : index < currentStageIndex;
-            const current = !settled && index === currentStageIndex;
-            const milestone = selfManaged ? milestones.find((item) => item.milestone_key === stage.key) : null;
-            const editable = selfManaged && (done || current);
-            const amount = selfManaged ? formatJourneyAmount(stageMainAmount(milestone)) : null;
-            const dateText = selfManaged ? formatJourneyDate(milestone) : null;
-            const statusText = done ? stageCompletedCopy(stage.key) : current ? (milestone?.milestone_status === 'in_progress' ? 'In progress' : 'Current milestone') : 'Upcoming';
-            return <Pressable key={stage.key} accessibilityRole={editable ? 'button' : undefined} disabled={!editable} onPress={() => openSelfStage(stage.key)} style={[styles.stageRow, current && styles.stageRowCurrent]}>
-              <View style={styles.stageRail}>
-                <View style={[styles.stageNode, done && styles.stageDone, current && styles.stageCurrent]}><MaterialCommunityIcons name={done ? 'check' : current ? 'circle-slice-8' : 'lock-outline'} size={8} color={done || current ? '#FFFFFF' : '#98A2B3'} /></View>
-                {index < SELF_MANAGED_MILESTONES.length - 1 ? <View style={[styles.stageLine, done && styles.stageLineDone]} /> : null}
-              </View>
-              <View style={styles.stageCopy}>
-                <Text style={styles.stageTitle}>{stage.label}</Text>
-                <Text style={[styles.stageMeta, current && styles.stageMetaCurrent]}>{statusText}</Text>
-              </View>
-              {selfManaged ? <View style={styles.stageRight}>
-                <Text numberOfLines={2} style={[styles.stageDate, !milestone && styles.stageDateMuted]}>{done || current ? dateText : 'Pending'}</Text>
-                {amount ? <Text style={styles.stageAmount}>{amount}</Text> : null}
-                {editable ? <MaterialCommunityIcons name="chevron-right" size={11} color="#6782A2" /> : null}
-              </View> : null}
-            </Pressable>;
-          })}
-        </ScrollView>
-      </View> : null}
+      {journeyExpanded ? <View style={[styles.sectionBody, styles.journeyBody]}>{SELF_MANAGED_MILESTONES.map((stage, index) => {
+        const done = selfManaged ? completedKeys.has(stage.key) : index < currentStageIndex;
+        const current = !settled && index === currentStageIndex;
+        const milestone = selfManaged ? milestones.find((item) => item.milestone_key === stage.key) : null;
+        const editable = selfManaged && (done || current);
+        const amount = selfManaged ? formatJourneyAmount(stageMainAmount(milestone)) : null;
+        const dateText = selfManaged ? formatJourneyDate(milestone) : null;
+        const statusText = done ? stageCompletedCopy(stage.key) : current ? (milestone?.milestone_status === 'in_progress' ? 'In progress' : 'Current milestone') : 'Upcoming';
+        return <Pressable key={stage.key} accessibilityRole={editable ? 'button' : undefined} disabled={!editable} onPress={() => openSelfStage(stage.key)} style={[styles.stageRow, current && styles.stageRowCurrent]}>
+          <View style={styles.stageRail}>
+            <View style={[styles.stageNode, done && styles.stageDone, current && styles.stageCurrent]}><MaterialCommunityIcons name={done ? 'check' : current ? 'circle-slice-8' : 'lock-outline'} size={8} color={done || current ? '#FFFFFF' : '#98A2B3'} /></View>
+            {index < SELF_MANAGED_MILESTONES.length - 1 ? <View style={[styles.stageLine, done && styles.stageLineDone]} /> : null}
+          </View>
+          <View style={styles.stageCopy}>
+            <Text style={styles.stageTitle}>{stage.label}</Text>
+            <Text style={[styles.stageMeta, current && styles.stageMetaCurrent]}>{statusText}</Text>
+          </View>
+          {selfManaged ? <View style={styles.stageRight}>
+            <Text numberOfLines={2} style={[styles.stageDate, !milestone && styles.stageDateMuted]}>{done || current ? dateText : 'Pending'}</Text>
+            {amount ? <Text style={styles.stageAmount}>{amount}</Text> : null}
+            {editable ? <MaterialCommunityIcons name="chevron-right" size={11} color="#6782A2" /> : null}
+          </View> : null}
+        </Pressable>;
+      })}</View> : null}
 
       {selfManaged && financialRows.length ? <ClaimFinancialSummary rows={financialRows} /> : null}
 
@@ -328,7 +324,7 @@ const styles = StyleSheet.create({
   heroCard:{position:'relative',borderWidth:1,borderRadius:21,padding:15,backgroundColor:'#07327B',overflow:'hidden',marginTop:13,marginBottom:11,shadowColor:'#07327B',shadowOpacity:.16,shadowRadius:12,shadowOffset:{width:0,height:6},elevation:3},heroOrbLarge:{position:'absolute',width:190,height:190,borderRadius:95,right:-75,top:-108,borderWidth:1,borderColor:'rgba(75,145,255,.20)'},heroOrbSmall:{position:'absolute',width:130,height:130,borderRadius:65,right:-23,top:-74,borderWidth:1,borderColor:'rgba(75,145,255,.18)'},heroTop:{flexDirection:'row',alignItems:'center',gap:11},statusIcon:{width:54,height:54,borderRadius:16,alignItems:'center',justifyContent:'center',backgroundColor:'#FFFFFF'},heroCopy:{flex:1,minWidth:0},stageLabel:{color:'#A8C8FF',fontSize:9,fontWeight:'900',letterSpacing:.7},vehicleNo:{color:'#FFFFFF',fontSize:21,fontWeight:'900',marginTop:2},heroIdentity:{color:'#DCE8F7',fontSize:10.5,fontWeight:'800',marginTop:2},progressRing:{width:70,height:70,flexShrink:0,alignItems:'center',justifyContent:'center',marginLeft:2},progressRingLabel:{...StyleSheet.absoluteFillObject,alignItems:'center',justifyContent:'center'},progressRingValue:{color:'#FFFFFF',fontSize:15,fontWeight:'900',letterSpacing:-.3},incidentRow:{marginTop:13,paddingTop:11,borderTopWidth:1,borderTopColor:'rgba(255,255,255,.27)',flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10},metaLabel:{color:'#A9C0E0',fontSize:8.5,fontWeight:'900',letterSpacing:.6},incidentValue:{color:'#FFFFFF',fontSize:11,fontWeight:'900',marginTop:2},detailsToggle:{minHeight:38,borderRadius:11,paddingHorizontal:10,flexDirection:'row',alignItems:'center',gap:3,backgroundColor:'rgba(255,255,255,.10)',borderWidth:1,borderColor:'rgba(255,255,255,.22)'},detailsToggleText:{color:'#FFFFFF',fontSize:9.5,fontWeight:'900'},infoBox:{marginTop:10,borderRadius:14,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#D9E4F0',padding:10,gap:8,shadowColor:'#001B44',shadowOpacity:.08,shadowRadius:7,shadowOffset:{width:0,height:3},elevation:2},infoPair:{flexDirection:'row',gap:14},infoLabel:{color:'#6C7D93',fontSize:8.5,fontWeight:'800'},infoValue:{color:palette.navy,fontSize:10.2,fontWeight:'900',marginTop:2},
   currentCard:{position:'relative',borderWidth:1,borderRadius:16,paddingVertical:9,paddingHorizontal:10,paddingLeft:14,flexDirection:'row',alignItems:'center',gap:9,marginBottom:7,overflow:'hidden'},currentCardPressed:{opacity:.84,transform:[{scale:.995}]},currentAccent:{position:'absolute',left:0,top:0,bottom:0,width:4},currentIcon:{width:36,height:36,borderRadius:11,alignItems:'center',justifyContent:'center'},currentCopy:{flex:1,minWidth:0},currentEyebrow:{fontSize:8,fontWeight:'900',letterSpacing:.5},currentTitle:{color:palette.navy,fontSize:13.5,fontWeight:'900',marginTop:1},currentBody:{color:'#5F7086',fontSize:10,lineHeight:13.5,fontWeight:'700',marginTop:2},currentContinue:{flexDirection:'row',alignItems:'center',gap:1,marginLeft:3},currentContinueText:{color:'#0A43A3',fontSize:9.5,fontWeight:'900'},
   sectionHeader:{minHeight:62,borderRadius:17,borderWidth:1,borderColor:'#D6E2EE',backgroundColor:'#F7FAFF',padding:11,marginTop:10,flexDirection:'row',alignItems:'center',gap:10},sectionHeaderIcon:{width:38,height:38,borderRadius:12,backgroundColor:'#E7F0FC',borderWidth:1,borderColor:'#D4E2F2',alignItems:'center',justifyContent:'center'},sectionHeaderCopy:{flex:1,minWidth:0},sectionTitle:{color:palette.navy,fontSize:14,fontWeight:'900'},sectionSub:{color:'#718198',fontSize:10,fontWeight:'700',marginTop:2},sectionBody:{borderWidth:1,borderTopWidth:0,borderColor:'#D6E2EE',backgroundColor:'#FFFFFF',borderBottomLeftRadius:17,borderBottomRightRadius:17,padding:10,gap:8},
-  journeyHeader:{minHeight:30,borderRadius:11,paddingVertical:3,paddingHorizontal:5,marginTop:5,gap:4},journeyHeaderIcon:{width:22,height:22,borderRadius:7},journeyHeaderTitle:{fontSize:9.6,lineHeight:11},journeyHeaderSub:{fontSize:7.2,lineHeight:8.5,marginTop:0},journeyViewport:{height:180,padding:0,overflow:'hidden'},journeyBody:{paddingVertical:1,paddingHorizontal:3,gap:0},
+  journeyHeader:{minHeight:30,borderRadius:11,paddingVertical:3,paddingHorizontal:5,marginTop:5,gap:4},journeyHeaderIcon:{width:22,height:22,borderRadius:7},journeyHeaderTitle:{fontSize:9.6,lineHeight:11},journeyHeaderSub:{fontSize:7.2,lineHeight:8.5,marginTop:0},journeyBody:{paddingVertical:1,paddingHorizontal:3,gap:0},
   stageRow:{minHeight:40,paddingHorizontal:3,paddingVertical:1,flexDirection:'row',alignItems:'stretch',gap:4,borderBottomWidth:1,borderBottomColor:'#EEF2F6'},stageRowCurrent:{backgroundColor:'#EDF5FF',borderRadius:7,borderWidth:1,borderColor:'#C8DCF3',marginVertical:0,paddingHorizontal:4},stageRail:{width:17,alignItems:'center'},stageNode:{width:16,height:16,borderRadius:8,backgroundColor:'#EEF2F6',borderWidth:1,borderColor:'#E0E6ED',alignItems:'center',justifyContent:'center'},stageDone:{backgroundColor:'#168161',borderColor:'#168161'},stageCurrent:{backgroundColor:'#0A43A3',borderColor:'#0A43A3'},stageLine:{width:1,flex:1,minHeight:5,marginTop:1,backgroundColor:'#E4EAF1'},stageLineDone:{backgroundColor:'#A9D8C7'},stageCopy:{flex:1,minWidth:0,justifyContent:'center'},stageTitle:{color:palette.navy,fontSize:8.4,lineHeight:9.6,fontWeight:'900'},stageMeta:{color:'#7A8799',fontSize:6.9,lineHeight:8,fontWeight:'700',marginTop:0},stageMetaCurrent:{color:'#0A43A3',fontWeight:'900'},stageRight:{width:78,alignItems:'flex-end',justifyContent:'center',gap:0},stageDate:{color:'#344054',fontSize:6.8,lineHeight:8,fontWeight:'800',textAlign:'right'},stageDateMuted:{color:'#98A2B3'},stageAmount:{color:'#10365F',fontSize:7.1,lineHeight:8.5,fontWeight:'900',backgroundColor:'#EEF4FB',paddingHorizontal:4,paddingVertical:0,borderRadius:999},
   documentRow:{minHeight:52,borderRadius:13,backgroundColor:'#F7FAFF',borderWidth:1,borderColor:'#E1E9F2',padding:10,flexDirection:'row',alignItems:'center',gap:9},documentTitle:{color:palette.navy,fontSize:10.5,fontWeight:'900'},documentMeta:{color:'#7A8799',fontSize:9,fontWeight:'600',marginTop:2},emptyText:{color:'#7A8799',fontSize:10,fontWeight:'600',lineHeight:14},
 });
