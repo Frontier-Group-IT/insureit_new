@@ -48,6 +48,8 @@ type AccountsSummary = {
   partnerPayableCount: number;
 };
 
+type SnapshotItem = { icon: string; value: number; label: string };
+
 export default async function DashboardV2Core() {
   const supabase = await createServerSupabaseClient();
   const accessToken = await getServerAccessToken();
@@ -56,19 +58,30 @@ export default async function DashboardV2Core() {
     getOperationsDashboardData(supabase),
   ]);
 
-  const [canViewPolicyIntakes, canReviewPolicyIntakes, canCreatePolicyIntakes, accountsCapability, canViewPolicies, canViewClaims] = await Promise.all([
+  const [
+    canViewPolicyIntakes,
+    canReviewPolicyIntakes,
+    canCreatePolicyIntakes,
+    accountsCapability,
+    canViewPolicies,
+    canViewClaims,
+    canViewCustomers,
+    canViewTasks,
+    canViewKyc,
+  ] = await Promise.all([
     hasEffectiveCapability(profile, "view_policy_intakes", "view"),
     hasEffectiveCapability(profile, "review_policy_intakes", "edit"),
     hasEffectiveCapability(profile, "create_policy_intakes", "edit"),
     hasEffectiveCapability(profile, "view_accounts", "view"),
     hasEffectiveCapability(profile, "view_policies", "view"),
     hasEffectiveCapability(profile, "view_claims", "view"),
+    hasEffectiveCapability(profile, "view_customers", "view"),
+    hasEffectiveCapability(profile, "view_tasks", "view"),
+    hasEffectiveCapability(profile, "view_kyc", "view"),
   ]);
   const canViewAccounts = accountsCapability && canAccessPolicyCommercials(profile);
 
-  const [analytics] = await Promise.all([
-    getDashboardV2Analytics(profile, { policies: canViewPolicies, claims: canViewClaims }),
-  ]);
+  const analytics = await getDashboardV2Analytics(profile, { policies: canViewPolicies, claims: canViewClaims });
 
   const admin = createSupabaseAdminClient();
   let intakeRows: IntakeRow[] = [];
@@ -130,9 +143,9 @@ export default async function DashboardV2Core() {
   const allActions: ActionItem[] = [
     ...(canReviewPolicyIntakes ? [{ label: "Policy Intakes need review", value: intakeAction, detail: intakeManual ? `${intakeManual} require manual OCR review` : "Ready for Operations review", href: "/policy-intakes", icon: DASHBOARD_ICON_ASSETS.policyIntakeReview, tone: intakeManual ? "warning" as const : "info" as const }] : []),
     ...(canViewPolicies ? [{ label: "Expired policies", value: dashboard.totals.expiredPolicies, detail: "Coverage requires immediate review", href: "/policies", icon: DASHBOARD_ICON_ASSETS.expiredPolicy, tone: "critical" as const }] : []),
-    { label: "Overdue tasks", value: dashboard.attention.overdueTasks, detail: `${dashboard.attention.openTasks} open follow-ups`, href: "/tasks", icon: DASHBOARD_ICON_ASSETS.tasksWorkQueue, tone: "warning" },
-    { label: "Documents pending review", value: dashboard.attention.documents, detail: "Pending or returned files", href: "/documents", icon: DASHBOARD_ICON_ASSETS.documentsPending, tone: "neutral" },
-    { label: "KYC corrections requested", value: dashboard.attention.changesRequested, detail: `${dashboard.attention.submittedOnboarding} newly submitted`, href: "/customers/applications", icon: DASHBOARD_ICON_ASSETS.kycCorrection, tone: "info" },
+    ...(canViewTasks ? [{ label: "Overdue tasks", value: dashboard.attention.overdueTasks, detail: `${dashboard.attention.openTasks} open follow-ups`, href: "/tasks", icon: DASHBOARD_ICON_ASSETS.tasksWorkQueue, tone: "warning" as const }] : []),
+    ...((canViewClaims || canViewKyc) ? [{ label: "Documents pending review", value: dashboard.attention.documents, detail: "Pending or returned files", href: canViewClaims ? "/claims" : "/customers/applications", icon: DASHBOARD_ICON_ASSETS.documentsPending, tone: "neutral" as const }] : []),
+    ...(canViewKyc ? [{ label: "KYC corrections requested", value: dashboard.attention.changesRequested, detail: `${dashboard.attention.submittedOnboarding} newly submitted`, href: "/customers/applications", icon: DASHBOARD_ICON_ASSETS.kycCorrection, tone: "info" as const }] : []),
     ...(accounts?.overdueInvoiceCount ? [{ label: "Insurer receivables overdue", value: accounts.overdueInvoiceCount, detail: `${formatMoney(accounts.overdueReceivableAmount)} outstanding past due`, href: "/accounts/receivables", icon: DASHBOARD_ICON_ASSETS.receivableOverdue, tone: "warning" as const }] : []),
   ];
   const actionItems = allActions.filter((item) => item.value > 0).slice(0, 6);
@@ -141,9 +154,24 @@ export default async function DashboardV2Core() {
     ...(canViewPolicies ? [{ eyebrow: "Policies", value: dashboard.totals.activePolicies, title: "Active policies", detail: `${dashboard.totals.expiringPolicies} due within 45 days`, href: "/policies", icon: DASHBOARD_ICON_ASSETS.policy, accent: "from-[#6257F7]/14 to-[#6257F7]/2" }] : []),
     ...(canViewClaims ? [{ eyebrow: "Claims", value: dashboard.totals.openClaims, title: "Open claims", detail: `${dashboard.totals.recentClaims} reported in 30 days`, href: "/claims", icon: DASHBOARD_ICON_ASSETS.claims, accent: "from-[#FF6F61]/13 to-[#FF6F61]/2" }] : []),
     ...(canViewPolicyIntakes ? [{ eyebrow: "Policy Intake", value: intakeActive, title: "Active intakes", detail: `${intakeAction} action required · ${intakeProcessing} processing`, href: "/policy-intakes", icon: DASHBOARD_ICON_ASSETS.policyIntake, accent: "from-[#7C67F8]/14 to-[#7C67F8]/2" }] : []),
-    { eyebrow: "Customer base", value: dashboard.totals.activeCustomers, title: "Active customers", detail: `${dashboard.totals.newCustomers} added in 30 days`, href: "/customers", icon: DASHBOARD_ICON_ASSETS.customers, accent: "from-[#17BFC5]/13 to-[#17BFC5]/2" },
+    ...(canViewCustomers ? [{ eyebrow: "Customer base", value: dashboard.totals.activeCustomers, title: "Active customers", detail: `${dashboard.totals.newCustomers} added in 30 days`, href: "/customers", icon: DASHBOARD_ICON_ASSETS.customers, accent: "from-[#17BFC5]/13 to-[#17BFC5]/2" }] : []),
   ];
 
+  const snapshotItems: SnapshotItem[] = [
+    ...(canViewCustomers ? [{ icon: DASHBOARD_ICON_ASSETS.customers, value: dashboard.totals.newCustomers, label: "New customers" }] : []),
+    ...(canViewClaims ? [{ icon: DASHBOARD_ICON_ASSETS.claimsIntimatedToday, value: dashboard.totals.recentClaims, label: "Claims reported" }] : []),
+    ...(canViewPolicyIntakes ? [
+      { icon: DASHBOARD_ICON_ASSETS.intakesReceived, value: intakeReceived30d, label: "Intakes received" },
+      { icon: DASHBOARD_ICON_ASSETS.policyBooked, value: intakeCompleted30d, label: "Intakes completed" },
+    ] : []),
+    ...(!canViewPolicyIntakes && canViewKyc ? [
+      { icon: DASHBOARD_ICON_ASSETS.kyc, value: dashboard.attention.onboarding, label: "KYC in progress" },
+      { icon: DASHBOARD_ICON_ASSETS.kycCorrection, value: dashboard.attention.changesRequested, label: "KYC corrections" },
+    ] : []),
+    ...(canViewTasks ? [{ icon: DASHBOARD_ICON_ASSETS.tasksWorkQueue, value: dashboard.attention.openTasks, label: "Open tasks" }] : []),
+  ].slice(0, 4);
+
+  const showPrimaryWorkQueue = canViewPolicyIntakes || canViewKyc;
   const warnings = [...dashboard.errors, intakeWarning, accountsWarning, ...analytics.warnings].filter(Boolean) as string[];
   const displayName = firstName(profile?.full_name) || "Operations Team";
   const generatedAt = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
@@ -189,19 +217,12 @@ export default async function DashboardV2Core() {
 
           <div className="overflow-hidden rounded-[18px] border border-[#E4E9F1] bg-[#F8FAFD] shadow-[0_14px_38px_rgba(31,45,76,.04)]">
             <div className="border-b border-[#E8ECF3] px-4 py-4 sm:px-5"><p className="text-[8px] font-bold uppercase tracking-[.14em] text-[#8A96A8]">30-day activity</p><div className="mt-1 flex items-center justify-between gap-3"><h2 className="portal-display text-[17px] font-semibold text-[#13203B]">Operating snapshot</h2><Sparkles className="h-4 w-4 text-[#6759FF]" /></div></div>
-            <div className="grid grid-cols-2 gap-px bg-[#E8ECF3]">
-              <SnapshotCell icon={DASHBOARD_ICON_ASSETS.customers} value={dashboard.totals.newCustomers} label="New customers" />
-              <SnapshotCell icon={DASHBOARD_ICON_ASSETS.claimsIntimatedToday} value={dashboard.totals.recentClaims} label="Claims reported" />
-              {canViewPolicyIntakes ? <SnapshotCell icon={DASHBOARD_ICON_ASSETS.intakesReceived} value={intakeReceived30d} label="Intakes received" /> : <SnapshotCell icon={DASHBOARD_ICON_ASSETS.kyc} value={dashboard.attention.onboarding} label="KYC in progress" />}
-              {canViewPolicyIntakes ? <SnapshotCell icon={DASHBOARD_ICON_ASSETS.policyBooked} value={intakeCompleted30d} label="Intakes completed" /> : <SnapshotCell icon={DASHBOARD_ICON_ASSETS.documents} value={dashboard.attention.documents} label="Docs to review" />}
-            </div>
-            <Link href="/customers" className="flex items-center justify-between px-4 py-3 text-[9px] font-bold text-[#536079] hover:bg-white sm:px-5"><span>{dashboard.totals.customers.toLocaleString("en-IN")} customers in the current portfolio</span><ChevronRight className="h-3.5 w-3.5" /></Link>
+            {snapshotItems.length ? <div className="grid grid-cols-2 gap-px bg-[#E8ECF3]">{snapshotItems.map((item) => <SnapshotCell key={item.label} {...item} />)}</div> : <div className="px-5 py-8 text-center text-[9px] text-[#7B8799]">No 30-day activity metrics are available for this role.</div>}
+            {canViewCustomers ? <Link href="/customers" className="flex items-center justify-between px-4 py-3 text-[9px] font-bold text-[#536079] hover:bg-white sm:px-5"><span>{dashboard.totals.customers.toLocaleString("en-IN")} customers in the current portfolio</span><ChevronRight className="h-3.5 w-3.5" /></Link> : null}
           </div>
         </section>
 
-        <section className={`grid gap-3 sm:grid-cols-2 ${pulseCards.length >= 4 ? "xl:grid-cols-4" : "xl:grid-cols-3"}`} aria-label="Business pulse">
-          {pulseCards.map((card) => <Pulse key={card.eyebrow} card={card} />)}
-        </section>
+        {pulseCards.length ? <section className={`grid gap-3 sm:grid-cols-2 ${pulseCards.length >= 4 ? "xl:grid-cols-4" : "xl:grid-cols-3"}`} aria-label="Business pulse">{pulseCards.map((card) => <Pulse key={card.eyebrow} card={card} />)}</section> : null}
 
         {accounts ? <section className="overflow-hidden rounded-[18px] border border-[#DDE6EA] bg-gradient-to-r from-[#F7FBFA] via-white to-[#FAF9FF] shadow-[0_14px_38px_rgba(31,45,76,.04)]">
           <div className="flex flex-col gap-3 border-b border-[#E7ECEF] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5"><div className="flex items-center gap-3"><IconAsset src={DASHBOARD_ICON_ASSETS.accountsFinance} size={38} /><div><p className="text-[8px] font-bold uppercase tracking-[.14em] text-[#7B8C91]">Accounts pulse</p><h2 className="portal-display mt-0.5 text-[16px] font-semibold text-[#17365D]">Financial operations</h2></div></div><Link href="/accounts" className="inline-flex h-8 items-center gap-1 rounded-xl border border-[#D8E4E5] bg-white px-2.5 text-[8.5px] font-bold text-[#315E62]">Open Accounts <ArrowUpRight className="h-3 w-3" /></Link></div>
@@ -239,16 +260,17 @@ export default async function DashboardV2Core() {
           </div> : null}
         </section> : null}
 
-        <section className="grid gap-4 xl:grid-cols-2">
-          <QueuePanel title={canViewPolicyIntakes ? "Policy Intake queue" : "Onboarding queue"} subtitle={canViewPolicyIntakes ? `${intakeInReview} in review · ${intakeProcessing} processing · ${intakeCompleted} completed` : `${dashboard.attention.onboarding} KYC applications need processing`} href={canViewPolicyIntakes ? "/policy-intakes" : "/customers/applications"}>
+        {(showPrimaryWorkQueue || canViewClaims) ? <section className={`grid gap-4 ${showPrimaryWorkQueue && canViewClaims ? "xl:grid-cols-2" : "xl:grid-cols-1"}`}>
+          {showPrimaryWorkQueue ? <QueuePanel title={canViewPolicyIntakes ? "Policy Intake queue" : "Onboarding queue"} subtitle={canViewPolicyIntakes ? `${intakeInReview} in review · ${intakeProcessing} processing · ${intakeCompleted} completed` : `${dashboard.attention.onboarding} KYC applications need processing`} href={canViewPolicyIntakes ? "/policy-intakes" : "/customers/applications"}>
             {canViewPolicyIntakes ? recentActiveIntakes.map((row) => <IntakeQueueRow key={row.id} row={row} />) : dashboard.recentApplications.slice(0, 5).map((row) => <Link key={row.id} href={`/customers/applications/${row.id}`} className="group flex items-center gap-3 py-3"><IconAsset src={DASHBOARD_ICON_ASSETS.kyc} size={32} /><div className="min-w-0 flex-1"><p className="truncate text-[10.5px] font-bold text-[#1A2743]">{row.display_name || "Customer application"}</p><p className="mt-0.5 truncate text-[9px] text-[#778399]">{row.status.replaceAll("_", " ")} · {formatAge(row.updated_at)}</p></div><ChevronRight className="h-3.5 w-3.5 text-[#A5AEBD] group-hover:text-[#6759FF]" /></Link>)}
             {canViewPolicyIntakes && !recentActiveIntakes.length ? <EmptyQueue label="No active Policy Intakes right now" /> : null}
-          </QueuePanel>
-          <QueuePanel title="Latest claim movement" subtitle="Recent movement across the claim portfolio." href="/claims">
+            {!canViewPolicyIntakes && !dashboard.recentApplications.length ? <EmptyQueue label="No KYC applications need attention" /> : null}
+          </QueuePanel> : null}
+          {canViewClaims ? <QueuePanel title="Latest claim movement" subtitle="Recent movement across the claim portfolio." href="/claims">
             {dashboard.latestClaims.slice(0, 5).map((row) => <Link key={row.id} href={`/claims/${row.id}`} className="group flex items-center gap-3 py-3"><IconAsset src={DASHBOARD_ICON_ASSETS.claims} size={32} /><div className="min-w-0 flex-1"><div className="flex min-w-0 items-center gap-2"><p className="truncate text-[10.5px] font-bold text-[#1A2743]">{row.vehicles?.vehicle_no ?? row.claim_no}</p><span className="shrink-0 rounded-full bg-[#FFF0ED] px-2 py-0.5 text-[7.5px] font-bold uppercase tracking-[.04em] text-[#C95348]">{row.current_status}</span></div><p className="mt-0.5 truncate text-[9px] text-[#778399]">{row.customers?.company_name ?? row.customers?.contact_name ?? "Customer"} · {row.claim_no} · {formatAge(row.updated_at)}</p></div><ChevronRight className="h-3.5 w-3.5 text-[#A5AEBD] group-hover:text-[#6759FF]" /></Link>)}
             {!dashboard.latestClaims.length ? <EmptyQueue label="No recent claim movement" /> : null}
-          </QueuePanel>
-        </section>
+          </QueuePanel> : null}
+        </section> : null}
       </main>
     </ClaimManagerShell>
   );
@@ -267,7 +289,7 @@ function Pulse({ card }: { card: PulseCard }) {
   return <Link href={card.href} className="group relative overflow-hidden rounded-[18px] border border-[#E4E9F1] bg-white p-4 shadow-[0_10px_30px_rgba(31,45,76,.04)] transition hover:-translate-y-0.5 hover:border-[#D9D5FA] hover:shadow-[0_16px_36px_rgba(31,45,76,.07)]"><div className={`pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b ${card.accent}`} /><div className="relative flex items-start justify-between gap-3"><div><p className="text-[8px] font-bold uppercase tracking-[.14em] text-[#8995A7]">{card.eyebrow}</p><p className="portal-display mt-2.5 text-[28px] font-semibold leading-none text-[#13203B]">{card.value.toLocaleString("en-IN")}</p></div><IconAsset src={card.icon} size={44} /></div><div className="relative mt-3.5 border-t border-[#EEF1F5] pt-3"><div className="flex items-center justify-between gap-2"><p className="text-[10px] font-bold text-[#23304A]">{card.title}</p><ArrowUpRight className="h-3.5 w-3.5 text-[#A5AEBD] group-hover:text-[#6759FF]" /></div><p className="mt-1 text-[8.5px] text-[#7A869A]">{card.detail}</p></div></Link>;
 }
 
-function SnapshotCell({ icon, value, label }: { icon: string; value: number; label: string }) {
+function SnapshotCell({ icon, value, label }: SnapshotItem) {
   return <div className="bg-white px-4 py-4"><div className="flex items-center gap-3"><IconAsset src={icon} size={32} /><div><p className="portal-display text-[19px] font-semibold leading-none text-[#17223D]">{value.toLocaleString("en-IN")}</p><p className="mt-1.5 text-[8.2px] font-semibold text-[#7B8799]">{label}</p></div></div></div>;
 }
 
