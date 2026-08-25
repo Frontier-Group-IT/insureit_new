@@ -12,6 +12,8 @@ export function ExternalClaimErrorPopup({
   onClose: () => void;
   title?: string;
 }) {
+  const resolvedTitle = title === 'Alert' && isMissingInformationMessage(message) ? 'Missing information' : title;
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
@@ -19,7 +21,7 @@ export function ExternalClaimErrorPopup({
           <View style={styles.icon}>
             <MaterialCommunityIcons name="alert-outline" size={18} color="#D66B4E" />
           </View>
-          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.title}>{resolvedTitle}</Text>
           <Text style={styles.body}>{message}</Text>
           <Pressable accessibilityRole="button" onPress={onClose} style={styles.button}>
             <Text style={styles.buttonText}>OK</Text>
@@ -28,6 +30,14 @@ export function ExternalClaimErrorPopup({
       </View>
     </Modal>
   );
+}
+
+function isMissingInformationMessage(message: string) {
+  const normalized = message.trim();
+  return normalized === 'Complete all mandatory fields.'
+    || normalized === 'Enter the vehicle received date.'
+    || normalized.startsWith('Please enter ')
+    || normalized.endsWith(' is required.');
 }
 
 const styles = StyleSheet.create({
