@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CompactDocumentActionBar, CompactDocumentStageHeader } from '@/components/compact-document-upload-navigation';
 import { AppDatePicker } from '@/components/design-system';
@@ -26,9 +26,13 @@ type FieldKey =
 
 type Values = Partial<Record<FieldKey, string>>;
 type ClaimIdentity = { claim_no?: string | null; vehicle_id?: string | null; customer_id?: string | null; external_policy_id?: string | null };
-type ApprovalDocumentRecord = { id: string; file_name: string; storage_bucket?: string | null; storage_path?: string | null };
+type ApprovalDocumentRecord = { id: string; document_type: string; file_name: string; storage_bucket?: string | null; storage_path?: string | null };
+type ApprovalDocumentKey = 'insurer' | 'surveyor' | 'bulk';
+type ApprovalDeleteTarget = { key: ApprovalDocumentKey; label: string } | null;
 
 const APPROVAL_DOCUMENT_TYPE = 'Approval PDF';
+const SURVEYOR_APPROVAL_DOCUMENT_TYPE = 'Surveyor Approval / Report';
+const WORK_APPROVAL_BULK_DOCUMENT_TYPE = 'Work Approval Attachment';
 const MAX_APPROVAL_PDF_SIZE_BYTES = 5 * 1024 * 1024;
 
 export default function SelfManagedMilestoneScreen() {
@@ -240,14 +244,16 @@ function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldK
     {claimId && customerId ? <ExternalClaimDocumentTabs claimId={claimId} customerId={customerId} /> : null}
   </>;
 
-  if (key === 'work_approval') return <ClaimFormSection title="Stage Details" subtitle="Record approval and surveyor details" icon="clipboard-check-outline">
-    <DateField label="Approval Received Date *" value={values.approval_received_date ?? ''} onChange={(v) => set('approval_received_date', v)} />
-    <Gap /><ClaimChoice label="Cashless Claim *" value={values.cashless} options={[{ value: 'true', label: 'Yes' }, { value: 'false', label: 'No' }]} onChange={(v) => set('cashless', v)} />
-    {claimId && customerId ? <><Gap /><WorkApprovalPdfUpload claimId={claimId} customerId={customerId} /></> : null}
-    <Gap /><TextField label="Surveyor Name (Optional)" value={values.surveyor_name ?? ''} onChangeText={(v) => set('surveyor_name', v)} />
-    <Gap /><TextField label="Surveyor Phone (Optional)" value={values.surveyor_phone ?? ''} onChangeText={(v) => set('surveyor_phone', v)} keyboardType="phone-pad" />
-    <Gap /><TextField label="Surveyor Email (Optional)" value={values.surveyor_email ?? ''} onChangeText={(v) => set('surveyor_email', v)} keyboardType="email-address" autoCapitalize="none" />
-  </ClaimFormSection>;
+  if (key === 'work_approval') return <>
+    <ClaimFormSection title="Stage Details" subtitle="Record approval and surveyor details" icon="clipboard-check-outline">
+      <DateField label="Approval Received Date *" value={values.approval_received_date ?? ''} onChange={(v) => set('approval_received_date', v)} />
+      <Gap /><ClaimChoice label="Cashless Claim *" value={values.cashless} options={[{ value: 'true', label: 'Yes' }, { value: 'false', label: 'No' }]} onChange={(v) => set('cashless', v)} />
+      <Gap /><TextField label="Surveyor Name (Optional)" value={values.surveyor_name ?? ''} onChangeText={(v) => set('surveyor_name', v)} />
+      <Gap /><TextField label="Surveyor Phone (Optional)" value={values.surveyor_phone ?? ''} onChangeText={(v) => set('surveyor_phone', v)} keyboardType="phone-pad" />
+      <Gap /><TextField label="Surveyor Email (Optional)" value={values.surveyor_email ?? ''} onChangeText={(v) => set('surveyor_email', v)} keyboardType="email-address" autoCapitalize="none" />
+    </ClaimFormSection>
+    {claimId && customerId ? <WorkApprovalPdfUpload claimId={claimId} customerId={customerId} /> : null}
+  </>;
 
   if (key === 'repair_ri') return <ClaimFormSection title="Stage Details" subtitle="Repair completion and re-inspection details" icon="tools">
     <DateField label="Repair Complete Date *" value={values.repair_complete_date ?? ''} onChange={(v) => set('repair_complete_date', v)} />
@@ -304,11 +310,11 @@ function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldK
 }
 
 function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; customerId: string }) {
-  const [document, setDocument] = useState<ApprovalDocumentRecord | null>(null);
+  const [documents, setDocuments] = useState<ApprovalDocumentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [removing, setRemoving] = useState(false);
-  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ApprovalDeleteTarget>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -318,15 +324,13 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
       setLoading(true);
       const { data, error: loadError } = await (supabase as any)
         .from('claim_documents')
-        .select('id,file_name,storage_bucket,storage_path')
+        .select('id,document_type,file_name,storage_bucket,storage_path')
         .eq('claim_id', claimId)
-        .eq('document_type', APPROVAL_DOCUMENT_TYPE)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .in('document_type', [APPROVAL_DOCUMENT_TYPE, SURVEYOR_APPROVAL_DOCUMENT_TYPE, WORK_APPROVAL_BULK_DOCUMENT_TYPE])
+        .order('created_at', { ascending: false });
       if (!active) return;
-      if (loadError) setError('We could not load the saved approval PDF. Please try again.');
-      else setDocument((data ?? null) as ApprovalDocumentRecord | null);
+      if (loadError) setError('We could not load the saved Work Approval documents. Please try again.');
+      else setDocuments((data ?? []) as ApprovalDocumentRecord[]);
       setLoading(false);
     })();
     return () => { active = false; };
@@ -338,182 +342,184 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
     return () => clearTimeout(timer);
   }, [success]);
 
-  async function viewApprovalPdf() {
-    if (!document?.storage_bucket || !document.storage_path || uploading || removing) return;
-    setError('');
-    try {
-      const { data, error: signedUrlError } = await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 600);
-      if (signedUrlError || !data?.signedUrl) {
-        setError('We could not open the approval PDF. Please try again.');
-        return;
-      }
-      const supported = await Linking.canOpenURL(data.signedUrl);
-      if (!supported) {
-        setError('This approval PDF could not be opened on this device.');
-        return;
-      }
-      await Linking.openURL(data.signedUrl);
-    } catch {
-      setError('We could not open the approval PDF. Please try again.');
+  const insurerDocument = documents.find((item) => item.document_type === APPROVAL_DOCUMENT_TYPE) ?? null;
+  const surveyorDocument = documents.find((item) => item.document_type === SURVEYOR_APPROVAL_DOCUMENT_TYPE) ?? null;
+  const bulkDocuments = documents.filter((item) => item.document_type === WORK_APPROVAL_BULK_DOCUMENT_TYPE);
+
+  async function uploadFile(documentType: string, file: DocumentPicker.DocumentPickerAsset) {
+    const session = await getCurrentSession();
+    if (!session?.user) return { ok: false, document: null as ApprovalDocumentRecord | null };
+    const response = await fetch(file.uri);
+    const body = await response.arrayBuffer();
+    if (body.byteLength > MAX_APPROVAL_PDF_SIZE_BYTES) return { ok: false, document: null as ApprovalDocumentRecord | null };
+    const extension = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
+    const storagePath = `${customerId}/${claimId}/work-approval/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+    const uploadResult = await supabase.storage.from('claim-documents').upload(storagePath, body, {
+      contentType: file.mimeType ?? 'application/octet-stream',
+      upsert: false,
+    });
+    if (uploadResult.error) return { ok: false, document: null as ApprovalDocumentRecord | null };
+    const { data, error: insertError } = await supabase.from('claim_documents').insert({
+      claim_id: claimId,
+      customer_id: customerId,
+      document_type: documentType,
+      file_name: file.name,
+      storage_bucket: 'claim-documents',
+      storage_path: storagePath,
+      mime_type: file.mimeType ?? null,
+      file_size: file.size ?? body.byteLength,
+      uploaded_by: session.user.id,
+    }).select('id,document_type,file_name,storage_bucket,storage_path').single();
+    if (insertError || !data) {
+      await supabase.storage.from('claim-documents').remove([storagePath]);
+      return { ok: false, document: null as ApprovalDocumentRecord | null };
     }
+    return { ok: true, document: data as ApprovalDocumentRecord };
   }
 
-  async function chooseAndUpload() {
+  async function removeRows(rows: ApprovalDocumentRecord[]) {
+    if (!rows.length) return true;
+    const ids = rows.map((item) => item.id);
+    const removeRecords = await (supabase as any).from('claim_documents').delete().in('id', ids).eq('claim_id', claimId);
+    if (removeRecords.error) return false;
+    const byBucket = new Map<string, string[]>();
+    for (const item of rows) {
+      if (!item.storage_bucket || !item.storage_path) continue;
+      byBucket.set(item.storage_bucket, [...(byBucket.get(item.storage_bucket) ?? []), item.storage_path]);
+    }
+    for (const [bucket, paths] of byBucket) await supabase.storage.from(bucket).remove(paths);
+    return true;
+  }
+
+  async function chooseSingle(key: 'insurer' | 'surveyor') {
     if (uploading || removing) return;
     setError('');
     setSuccess('');
     const result = await DocumentPicker.getDocumentAsync({
-      type: 'application/pdf',
+      type: ['application/pdf', 'image/*'],
       multiple: false,
       copyToCacheDirectory: true,
     });
     if (result.canceled || !result.assets?.length) return;
     const file = result.assets[0];
-    const isPdf = file.mimeType === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-    if (!isPdf) return setError('Please select a PDF file.');
-    if (file.size !== null && file.size !== undefined && file.size > MAX_APPROVAL_PDF_SIZE_BYTES) return setError('Approval PDF must be 5 MB or smaller.');
-
-    const session = await getCurrentSession();
-    if (!session?.user) return setError('Please sign in again before uploading the approval PDF.');
-
+    if (file.size !== null && file.size !== undefined && file.size > MAX_APPROVAL_PDF_SIZE_BYTES) return setError(`${file.name} is larger than 5 MB. Please choose a smaller file.`);
+    const documentType = key === 'insurer' ? APPROVAL_DOCUMENT_TYPE : SURVEYOR_APPROVAL_DOCUMENT_TYPE;
+    const previous = key === 'insurer' ? insurerDocument : surveyorDocument;
     setUploading(true);
-    let newStoragePath = '';
     try {
-      const response = await fetch(file.uri);
-      const body = await response.arrayBuffer();
-      if (body.byteLength > MAX_APPROVAL_PDF_SIZE_BYTES) {
-        setError('Approval PDF must be 5 MB or smaller.');
-        return;
-      }
-
-      newStoragePath = `${customerId}/${claimId}/work-approval/${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`;
-      const uploadResult = await supabase.storage.from('claim-documents').upload(newStoragePath, body, {
-        contentType: 'application/pdf',
-        upsert: false,
-      });
-      if (uploadResult.error) {
-        setError('The approval PDF could not be uploaded. Please try again.');
-        return;
-      }
-
-      const { data: inserted, error: insertError } = await supabase.from('claim_documents').insert({
-        claim_id: claimId,
-        customer_id: customerId,
-        document_type: APPROVAL_DOCUMENT_TYPE,
-        file_name: file.name,
-        storage_bucket: 'claim-documents',
-        storage_path: newStoragePath,
-        mime_type: 'application/pdf',
-        file_size: file.size ?? body.byteLength,
-        uploaded_by: session.user.id,
-      }).select('id,file_name,storage_bucket,storage_path').single();
-
-      if (insertError || !inserted) {
-        await supabase.storage.from('claim-documents').remove([newStoragePath]);
-        setError('The approval PDF uploaded, but its claim document record could not be saved.');
-        return;
-      }
-
-      const previous = document;
-      setDocument(inserted as ApprovalDocumentRecord);
-      setSuccess(previous ? 'Approval PDF replaced successfully.' : 'Approval PDF uploaded successfully.');
-
-      if (previous) {
-        const removeOldRecord = await (supabase as any).from('claim_documents').delete().eq('id', previous.id).eq('claim_id', claimId);
-        if (!removeOldRecord.error && previous.storage_bucket && previous.storage_path) {
-          await supabase.storage.from(previous.storage_bucket).remove([previous.storage_path]);
-        } else if (removeOldRecord.error) {
-          setError('The new approval PDF is saved, but the previous document record could not be cleaned up.');
-        }
-      }
+      const uploaded = await uploadFile(documentType, file);
+      if (!uploaded.ok || !uploaded.document) return setError(`${file.name} could not be uploaded. Please try again.`);
+      if (previous) await removeRows([previous]);
+      setDocuments((current) => [uploaded.document!, ...current.filter((item) => item.id !== previous?.id)]);
+      setSuccess(`${key === 'insurer' ? 'Insurer Approval Letter' : 'Surveyor Approval / Report'} ${previous ? 'replaced' : 'uploaded'} successfully.`);
     } catch {
-      if (newStoragePath) await supabase.storage.from('claim-documents').remove([newStoragePath]);
-      setError('The approval PDF could not be uploaded. Please try again.');
+      setError(`${file.name} could not be uploaded. Please try again.`);
     } finally {
       setUploading(false);
     }
   }
 
-  async function removeApprovalPdf() {
-    if (!document || uploading || removing) return;
-    setConfirmRemove(false);
+  async function chooseBulk() {
+    if (uploading || removing) return;
     setError('');
     setSuccess('');
-    setRemoving(true);
-    const current = document;
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['application/pdf', 'image/*'],
+      multiple: true,
+      copyToCacheDirectory: true,
+    });
+    if (result.canceled || !result.assets?.length) return;
+    const tooLarge = result.assets.find((file) => file.size !== null && file.size !== undefined && file.size > MAX_APPROVAL_PDF_SIZE_BYTES);
+    if (tooLarge) return setError(`${tooLarge.name} is larger than 5 MB. Please choose smaller files.`);
+    setUploading(true);
+    const uploadedDocuments: ApprovalDocumentRecord[] = [];
+    let failed = 0;
     try {
-      const removeRecord = await (supabase as any).from('claim_documents').delete().eq('id', current.id).eq('claim_id', claimId);
-      if (removeRecord.error) {
-        setError('We could not remove the approval PDF. Please try again.');
-        return;
+      for (const file of result.assets) {
+        const uploaded = await uploadFile(WORK_APPROVAL_BULK_DOCUMENT_TYPE, file);
+        if (uploaded.ok && uploaded.document) uploadedDocuments.push(uploaded.document);
+        else failed += 1;
       }
-      if (current.storage_bucket && current.storage_path) {
-        const storageResult = await supabase.storage.from(current.storage_bucket).remove([current.storage_path]);
-        if (storageResult.error) setError('The approval PDF was removed from the claim, but storage cleanup could not be completed.');
-      }
-      setDocument(null);
-      setSuccess('Approval PDF deleted successfully.');
+      if (uploadedDocuments.length) setDocuments((current) => [...uploadedDocuments, ...current]);
+      if (failed) setError(`${uploadedDocuments.length} of ${result.assets.length} documents were saved. Please retry the remaining ${failed}.`);
+      else if (uploadedDocuments.length) setSuccess(`${uploadedDocuments.length} document${uploadedDocuments.length === 1 ? '' : 's'} uploaded successfully.`);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget || removing || uploading) return;
+    setRemoving(true);
+    setError('');
+    setSuccess('');
+    const target = deleteTarget;
+    setDeleteTarget(null);
+    const rows = target.key === 'insurer' ? (insurerDocument ? [insurerDocument] : []) : target.key === 'surveyor' ? (surveyorDocument ? [surveyorDocument] : []) : bulkDocuments;
+    try {
+      const removed = await removeRows(rows);
+      if (!removed) return setError('We could not remove the selected Work Approval documents. Please try again.');
+      const removedIds = new Set(rows.map((item) => item.id));
+      setDocuments((current) => current.filter((item) => !removedIds.has(item.id)));
+      setSuccess(`${target.label} deleted successfully.`);
     } finally {
       setRemoving(false);
     }
   }
 
-  return <View style={styles.approvalUploadSection}>
-    <View style={styles.approvalUploadHeadingRow}>
-      <View style={styles.approvalUploadIcon}>
-        <MaterialCommunityIcons name="file-pdf-box" size={22} color="#0A43A3" />
+  function DocumentTile({ title, subtitle, icon, document, tileKey }: { title: string; subtitle: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; document: ApprovalDocumentRecord | null; tileKey: 'insurer' | 'surveyor' }) {
+    return <Pressable accessibilityRole="button" disabled={loading || uploading || removing} onPress={() => void chooseSingle(tileKey)} style={[styles.approvalDocumentTile, document && styles.approvalDocumentTileSaved]}>
+      {document ? <View style={styles.approvalDocumentCheck}><MaterialCommunityIcons name="check" size={14} color="#168161" /></View> : null}
+      {document ? <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${title}`} onPress={(event) => { event.stopPropagation(); setDeleteTarget({ key: tileKey, label: title }); }} style={styles.approvalDocumentRemove}><MaterialCommunityIcons name="close" size={13} color="#C43232" /></Pressable> : null}
+      <View style={styles.approvalDocumentIcon}><MaterialCommunityIcons name={icon} size={26} color="#0A43A3" /></View>
+      <Text style={styles.approvalDocumentTitle} numberOfLines={2}>{title}</Text>
+      {document ? <Text style={styles.approvalDocumentFile} numberOfLines={1}>{document.file_name}</Text> : <Text style={styles.approvalDocumentSubtitle} numberOfLines={2}>{subtitle}</Text>}
+      <Text style={[styles.approvalDocumentStatus, document && styles.approvalDocumentStatusSaved]}>{document ? 'Saved · Tap to replace' : 'Tap to upload'}</Text>
+    </Pressable>;
+  }
+
+  return <View style={styles.approvalDocumentsCard}>
+    <View style={styles.approvalDocumentsHeader}>
+      <View style={styles.approvalDocumentsHeaderIcon}><MaterialCommunityIcons name="file-document-multiple-outline" size={20} color="#0A43A3" /></View>
+      <View style={styles.approvalDocumentsHeaderCopy}>
+        <Text style={styles.approvalDocumentsTitle}>Approval Documents</Text>
+        <Text style={styles.approvalDocumentsSubtitle}>Upload approval letters, surveyor reports or supporting documents.</Text>
       </View>
-      <View style={styles.approvalUploadHeadingCopy}>
-        <Text style={styles.approvalUploadTitle}>Approval Document</Text>
-        <Text style={styles.approvalUploadSubtitle}>Upload insurer approval in PDF format</Text>
-      </View>
-      {!loading && !document ? <Pressable accessibilityRole="button" disabled={uploading || removing} onPress={() => void chooseAndUpload()} style={styles.approvalUploadButton}>
-        <MaterialCommunityIcons name="upload" size={19} color="#FFFFFF" />
-        <Text style={styles.approvalUploadButtonText}>{uploading ? 'Uploading PDF...' : 'Upload Approval PDF'}</Text>
-      </Pressable> : null}
+      <View style={styles.approvalDocumentsBadge}><Text style={styles.approvalDocumentsBadgeText}>Optional</Text></View>
     </View>
 
-    {loading ? <Text style={styles.approvalUploadLoading}>Checking saved approval PDF...</Text> : document ? <>
-      <View style={styles.approvalUploadedCard}>
-        <View style={styles.approvalUploadedFileIcon}>
-          <MaterialCommunityIcons name="file-pdf-box" size={24} color="#168161" />
-        </View>
-        <View style={styles.approvalUploadedCopy}>
-          <Text style={styles.approvalUploadedName} numberOfLines={1}>{document.file_name}</Text>
-          <View style={styles.approvalUploadedStatusRow}>
-            <MaterialCommunityIcons name="check-circle" size={13} color="#168161" />
-            <Text style={styles.approvalUploadedStatus}>Uploaded</Text>
-          </View>
-        </View>
+    {loading ? <Text style={styles.approvalUploadLoading}>Checking saved approval documents...</Text> : <>
+      <View style={styles.approvalDocumentGrid}>
+        <DocumentTile title="Insurer Approval Letter" subtitle="Approval letter or insurer mail" icon="file-certificate-outline" document={insurerDocument} tileKey="insurer" />
+        <DocumentTile title="Surveyor Approval / Report" subtitle="Surveyor approval or report" icon="clipboard-check-outline" document={surveyorDocument} tileKey="surveyor" />
       </View>
-      <View style={styles.approvalUploadActions}>
-        <Pressable accessibilityRole="button" disabled={uploading || removing} onPress={() => void viewApprovalPdf()} style={styles.approvalReplaceButton}>
-          <MaterialCommunityIcons name="eye-outline" size={17} color="#0A43A3" />
-          <Text style={styles.approvalReplaceText}>View</Text>
-        </Pressable>
-        <Pressable accessibilityRole="button" disabled={uploading || removing} onPress={() => void chooseAndUpload()} style={styles.approvalReplaceButton}>
-          <MaterialCommunityIcons name="refresh" size={17} color="#0A43A3" />
-          <Text style={styles.approvalReplaceText}>{uploading ? 'Uploading...' : 'Replace'}</Text>
-        </Pressable>
-        <Pressable accessibilityRole="button" disabled={uploading || removing} onPress={() => setConfirmRemove(true)} style={styles.approvalRemoveButton}>
-          <MaterialCommunityIcons name="trash-can-outline" size={16} color="#C43232" />
-          <Text style={styles.approvalRemoveText}>{removing ? 'Removing...' : 'Remove'}</Text>
-        </Pressable>
-      </View>
-    </> : null}
 
+      <View style={styles.approvalBulkShell}>
+        <Pressable accessibilityRole="button" disabled={uploading || removing} onPress={() => void chooseBulk()} style={[styles.approvalBulkUpload, bulkDocuments.length > 0 && styles.approvalBulkUploadSaved]}>
+          <View style={[styles.approvalBulkIcon, bulkDocuments.length > 0 && styles.approvalBulkIconSaved]}><MaterialCommunityIcons name={bulkDocuments.length > 0 ? 'check' : 'file-multiple-outline'} size={20} color={bulkDocuments.length > 0 ? '#168161' : '#0A43A3'} /></View>
+          <View style={styles.approvalBulkCopy}>
+            <Text style={styles.approvalBulkTitle}>Upload Multiple Documents</Text>
+            <Text style={styles.approvalBulkText}>{bulkDocuments.length > 0 ? `${bulkDocuments.length} file${bulkDocuments.length === 1 ? '' : 's'} saved · Tap again to add more` : 'Select several files now, or tap again later to add more.'}</Text>
+          </View>
+          {!bulkDocuments.length ? <MaterialCommunityIcons name="plus-circle-outline" size={21} color="#0A43A3" /> : null}
+        </Pressable>
+        {bulkDocuments.length > 0 ? <Pressable accessibilityRole="button" accessibilityLabel="Remove all Work Approval bulk documents" disabled={uploading || removing} onPress={() => setDeleteTarget({ key: 'bulk', label: 'Uploaded documents' })} style={styles.approvalBulkRemove}><MaterialCommunityIcons name="close" size={14} color="#C43232" /></Pressable> : null}
+      </View>
+    </>}
+
+    <Text style={styles.approvalDocumentsNote}>PDF and image files up to 5 MB each. Selected files upload immediately to Claim Documents.</Text>
     {success ? <View style={styles.approvalFeedbackSuccess}><MaterialCommunityIcons name="check-circle-outline" size={14} color="#168161" /><Text style={styles.approvalFeedbackSuccessText}>{success}</Text></View> : null}
     {error ? <View style={styles.approvalFeedbackError}><MaterialCommunityIcons name="alert-circle-outline" size={14} color="#B42318" /><Text style={styles.approvalFeedbackErrorText}>{error}</Text></View> : null}
 
-    <Modal visible={confirmRemove} transparent animationType="fade" onRequestClose={() => setConfirmRemove(false)}>
+    <Modal visible={Boolean(deleteTarget)} transparent animationType="fade" onRequestClose={() => setDeleteTarget(null)}>
       <View style={styles.approvalModalBackdrop}>
         <View accessibilityRole="alert" style={styles.approvalModalCard}>
           <View style={styles.approvalModalIcon}><MaterialCommunityIcons name="trash-can-outline" size={20} color="#C43232" /></View>
-          <Text style={styles.approvalModalTitle}>Delete approval PDF?</Text>
-          <Text style={styles.approvalModalBody}>Are you sure you want to remove {document?.file_name ?? 'this approval PDF'} from the claim?</Text>
+          <Text style={styles.approvalModalTitle}>Delete document?</Text>
+          <Text style={styles.approvalModalBody}>{deleteTarget ? `Are you sure you want to delete ${deleteTarget.label}?` : ''}</Text>
           <View style={styles.approvalModalActions}>
-            <Pressable accessibilityRole="button" onPress={() => setConfirmRemove(false)} style={styles.approvalModalCancel}><Text style={styles.approvalModalCancelText}>Cancel</Text></Pressable>
-            <Pressable accessibilityRole="button" disabled={removing} onPress={() => void removeApprovalPdf()} style={styles.approvalModalDelete}><Text style={styles.approvalModalDeleteText}>{removing ? 'Deleting...' : 'Delete'}</Text></Pressable>
+            <Pressable accessibilityRole="button" onPress={() => setDeleteTarget(null)} style={styles.approvalModalCancel}><Text style={styles.approvalModalCancelText}>Cancel</Text></Pressable>
+            <Pressable accessibilityRole="button" disabled={removing} onPress={() => void confirmDelete()} style={styles.approvalModalDelete}><Text style={styles.approvalModalDeleteText}>{removing ? 'Deleting...' : 'Delete'}</Text></Pressable>
           </View>
         </View>
       </View>
@@ -629,26 +635,36 @@ const styles = StyleSheet.create({
   subsectionHeader: { marginTop: 17, marginBottom: 10, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E5EAF0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   subsectionTitle: { color: palette.navy, fontSize: 13, fontWeight: '900' },
   subsectionMeta: { color: '#145ED7', fontSize: 9.5, fontWeight: '800', backgroundColor: '#EEF4FF', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 },
-  approvalUploadSection: { borderRadius: 14, borderWidth: 1, borderColor: '#D9E4F0', backgroundColor: '#F8FBFF', padding: 11 },
-  approvalUploadHeadingRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  approvalUploadIcon: { width: 38, height: 38, borderRadius: 11, backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center' },
-  approvalUploadHeadingCopy: { flex: 1, minWidth: 0 },
-  approvalUploadTitle: { color: palette.navy, fontSize: 11.5, fontWeight: '900' },
-  approvalUploadSubtitle: { color: '#718198', fontSize: 8.7, lineHeight: 12, fontWeight: '600', marginTop: 2 },
+  approvalDocumentsCard: { borderRadius: 18, borderWidth: 1, borderColor: '#D7E2EF', backgroundColor: '#FFFFFF', padding: 12, marginBottom: 12, shadowColor: '#14375F', shadowOpacity: 0.05, shadowRadius: 9, shadowOffset: { width: 0, height: 4 }, elevation: 1 },
+  approvalDocumentsHeader: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 10 },
+  approvalDocumentsHeaderIcon: { width: 38, height: 38, borderRadius: 11, backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center' },
+  approvalDocumentsHeaderCopy: { flex: 1, minWidth: 0 },
+  approvalDocumentsTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
+  approvalDocumentsSubtitle: { color: '#6D7B8F', fontSize: 9.2, lineHeight: 13, fontWeight: '600', marginTop: 2 },
+  approvalDocumentsBadge: { borderRadius: 999, backgroundColor: '#EEF5FF', paddingHorizontal: 9, paddingVertical: 5 },
+  approvalDocumentsBadgeText: { color: '#0A43A3', fontSize: 8.5, fontWeight: '900' },
+  approvalDocumentGrid: { flexDirection: 'row', gap: 8 },
+  approvalDocumentTile: { position: 'relative', flex: 1, minWidth: 0, minHeight: 122, borderRadius: 14, backgroundColor: '#F7FAFF', borderWidth: 1.5, borderColor: '#E2EAF4', paddingVertical: 9, paddingHorizontal: 7, alignItems: 'center', justifyContent: 'center' },
+  approvalDocumentTileSaved: { backgroundColor: '#EFFAF4', borderColor: '#52B57F' },
+  approvalDocumentCheck: { position: 'absolute', top: 5, left: 5, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(46,173,99,0.16)', alignItems: 'center', justifyContent: 'center' },
+  approvalDocumentRemove: { position: 'absolute', top: 5, right: 5, zIndex: 3, width: 23, height: 23, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
+  approvalDocumentIcon: { width: 45, height: 45, borderRadius: 13, backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center' },
+  approvalDocumentTitle: { color: palette.navy, fontSize: 9.2, lineHeight: 12, fontWeight: '900', textAlign: 'center', marginTop: 5 },
+  approvalDocumentSubtitle: { color: '#718198', fontSize: 7.7, lineHeight: 10, fontWeight: '600', textAlign: 'center', marginTop: 3 },
+  approvalDocumentFile: { maxWidth: '100%', color: '#56657A', fontSize: 7.5, lineHeight: 10, fontWeight: '700', textAlign: 'center', marginTop: 3 },
+  approvalDocumentStatus: { color: '#7A8799', fontSize: 7.7, fontWeight: '800', marginTop: 4 },
+  approvalDocumentStatusSaved: { color: '#168161' },
+  approvalBulkShell: { position: 'relative' },
+  approvalBulkUpload: { minHeight: 58, marginTop: 10, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#AFC8E8', backgroundColor: '#F7FAFF', paddingHorizontal: 10, paddingRight: 38, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  approvalBulkUploadSaved: { borderStyle: 'solid', borderColor: '#52B57F', backgroundColor: '#EFFAF4' },
+  approvalBulkIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center' },
+  approvalBulkIconSaved: { backgroundColor: 'rgba(46,173,99,0.14)' },
+  approvalBulkCopy: { flex: 1, minWidth: 0 },
+  approvalBulkTitle: { color: palette.navy, fontSize: 10.5, fontWeight: '900' },
+  approvalBulkText: { color: '#718198', fontSize: 8.5, lineHeight: 12, fontWeight: '600', marginTop: 2 },
+  approvalBulkRemove: { position: 'absolute', top: 15, right: 7, zIndex: 3, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
+  approvalDocumentsNote: { color: '#7A8799', fontSize: 8, lineHeight: 11, fontWeight: '600', marginTop: 8 },
   approvalUploadLoading: { color: '#718198', fontSize: 9.5, fontWeight: '700', marginTop: 10 },
-  approvalUploadButton: { minHeight: 38, borderRadius: 12, backgroundColor: '#0A43A3', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 12, flexShrink: 0 },
-  approvalUploadButtonText: { color: '#FFFFFF', fontSize: 10.5, fontWeight: '900' },
-  approvalUploadedCard: { minHeight: 54, marginTop: 10, borderRadius: 12, borderWidth: 1, borderColor: '#A9DCC0', backgroundColor: '#EFFAF4', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 9 },
-  approvalUploadedFileIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#DDF4E7', alignItems: 'center', justifyContent: 'center' },
-  approvalUploadedCopy: { flex: 1, minWidth: 0 },
-  approvalUploadedName: { color: palette.navy, fontSize: 10, fontWeight: '900' },
-  approvalUploadedStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
-  approvalUploadedStatus: { color: '#168161', fontSize: 8.5, fontWeight: '900' },
-  approvalUploadActions: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  approvalReplaceButton: { flex: 1, minHeight: 39, borderRadius: 11, borderWidth: 1, borderColor: '#AFC8E8', backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  approvalReplaceText: { color: '#0A43A3', fontSize: 9.5, fontWeight: '900' },
-  approvalRemoveButton: { flex: 1, minHeight: 39, borderRadius: 11, borderWidth: 1, borderColor: '#F1B5B5', backgroundColor: '#FFF5F5', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  approvalRemoveText: { color: '#C43232', fontSize: 9.5, fontWeight: '900' },
   approvalFeedbackSuccess: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
   approvalFeedbackSuccessText: { flex: 1, color: '#168161', fontSize: 8.5, lineHeight: 12, fontWeight: '800' },
   approvalFeedbackError: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
