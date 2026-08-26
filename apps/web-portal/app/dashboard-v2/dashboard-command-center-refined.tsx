@@ -253,12 +253,16 @@ function MtdBusinessExecutive({ distribution }: { distribution: DistributionMtdA
   const channelTotal = production.byType.partner + production.byType.posp + production.byType.misp + production.byType.other;
   const channelItems = (["partner", "posp", "misp", "other"] as DistributionType[]).filter((type) => production.byType[type] > 0);
   const producerPolicyTotal = Math.max(production.policiesMtd, 1);
+  const producerPremiumTotal = Math.max(production.grossPremiumMtd ?? 0, 1);
 
-  const headline = [
+  const headline = commercial ? [
+    { label: "Gross premium", value: formatMoneyCompact(production.grossPremiumMtd ?? 0) },
     { label: "Policies", value: production.policiesMtd.toLocaleString("en-IN") },
-    ...(commercial ? [{ label: "Gross premium", value: formatMoneyCompact(production.grossPremiumMtd ?? 0) }] : []),
+    { label: "Avg. premium / policy", value: formatMoneyCompact(production.averageGrossPremiumMtd ?? 0) },
     { label: "Active producers", value: production.activeProducersMtd.toLocaleString("en-IN") },
-    ...(commercial ? [{ label: "Avg. premium / policy", value: formatMoneyCompact(production.averageGrossPremiumMtd ?? 0) }] : []),
+  ] : [
+    { label: "Policies", value: production.policiesMtd.toLocaleString("en-IN") },
+    { label: "Active producers", value: production.activeProducersMtd.toLocaleString("en-IN") },
   ];
 
   return <section className="mt-6 overflow-hidden border-y border-[#D8E0EA] bg-white">
@@ -268,7 +272,7 @@ function MtdBusinessExecutive({ distribution }: { distribution: DistributionMtdA
     </div>
 
     <div className="border-t border-[#E8EDF3] bg-[linear-gradient(90deg,#FBFCFF_0%,#F7FAFD_48%,#FBFFFE_100%)] px-4 py-5 sm:px-5">
-      <div className={`grid gap-x-8 gap-y-5 ${headline.length === 4 ? "sm:grid-cols-2 xl:grid-cols-4" : "sm:grid-cols-2"}`}>{headline.map((item) => <div key={item.label}><p className="portal-display text-[28px] font-semibold leading-none tracking-[-.025em] text-[#10213D]">{item.value}</p><p className="mt-2 text-[8px] font-bold uppercase tracking-[.1em] text-[#77869B]">{item.label} MTD</p></div>)}</div>
+      <div className={`grid gap-x-8 gap-y-5 ${headline.length === 4 ? "sm:grid-cols-2 xl:grid-cols-4" : "sm:grid-cols-2"}`}>{headline.map((item) => <div key={item.label}><p className="portal-display text-[29px] font-semibold leading-none tracking-[-.025em] text-[#10213D]">{item.value}</p><p className="mt-2 text-[8px] font-bold uppercase tracking-[.1em] text-[#77869B]">{item.label} MTD</p></div>)}</div>
     </div>
 
     <div className="grid border-t border-[#E8EDF3] xl:grid-cols-[1.05fr_.95fr_.95fr]">
@@ -285,14 +289,14 @@ function MtdBusinessExecutive({ distribution }: { distribution: DistributionMtdA
       </div>
 
       <div className="border-t border-[#E8EDF3] px-4 py-5 sm:px-5 xl:border-t-0">
-        <InsightHeading title="Top insurers" value="MTD" />
-        <div className="mt-3 space-y-3">{production.topInsurers.slice(0, 5).map((item, index) => <InsurerRank key={item.id} rank={index + 1} name={item.name} policies={item.policies} amount={item.grossPremium} total={producerPolicyTotal} />)}{!production.topInsurers.length ? <EmptyInsight /> : null}</div>
+        <InsightHeading title="Top insurers" value={commercial ? "Ranked by gross premium" : "By policy volume"} />
+        <div className="mt-3 space-y-3">{production.topInsurers.slice(0, 5).map((item, index) => <InsurerRank key={item.id} rank={index + 1} name={item.name} policies={item.policies} amount={item.grossPremium} policyTotal={producerPolicyTotal} premiumTotal={producerPremiumTotal} />)}{!production.topInsurers.length ? <EmptyInsight /> : null}</div>
       </div>
     </div>
 
     <div className="border-t border-[#DDE4EC] px-4 py-4 sm:px-5">
-      <div className="flex items-end justify-between gap-4"><div><p className="text-[8px] font-bold uppercase tracking-[.11em] text-[#8290A3]">Producer leaderboard</p><h3 className="mt-1 text-[11.5px] font-bold text-[#1A2A46]">Top producers MTD</h3></div><span className="text-[7.5px] font-semibold uppercase tracking-[.08em] text-[#97A1B0]">Policies{commercial ? " · Premium · Share" : " · Share"}</span></div>
-      <div className="mt-3 divide-y divide-[#EEF2F6] border-t border-[#E7ECF2]">{distribution.topSources.slice(0, 6).map((row, index) => <ProducerRow key={row.code} rank={index + 1} row={row} total={producerPolicyTotal} />)}{!distribution.topSources.length ? <EmptyInsight /> : null}</div>
+      <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-[8px] font-bold uppercase tracking-[.11em] text-[#8290A3]">Producer leaderboard</p><h3 className="mt-1 text-[11.5px] font-bold text-[#1A2A46]">Top producers MTD</h3></div><span className="text-[7.5px] font-semibold uppercase tracking-[.08em] text-[#97A1B0]">{commercial ? "Ranked by gross premium · policies for context" : "Ranked by policy volume"}</span></div>
+      <div className="mt-3 divide-y divide-[#EEF2F6] border-t border-[#E7ECF2]">{distribution.topSources.slice(0, 6).map((row, index) => <ProducerRow key={row.code} rank={index + 1} row={row} policyTotal={producerPolicyTotal} premiumTotal={producerPremiumTotal} />)}{!distribution.topSources.length ? <EmptyInsight /> : null}</div>
     </div>
   </section>;
 }
@@ -355,14 +359,14 @@ function RankedBar({ label, count, total, tone, compact = false }: { label: stri
   return <div><div className="flex items-center justify-between gap-3"><span className={`${compact ? "text-[8px]" : "text-[8.5px]"} min-w-0 truncate font-semibold text-[#44526A]`}>{label}</span><span className="shrink-0 text-[8px] font-bold text-[#26354F]">{count} <span className="font-semibold text-[#9AA4B3]">· {share}%</span></span></div><div className={`${compact ? "mt-1 h-1" : "mt-1.5 h-1.5"} overflow-hidden bg-[#EDF1F5]`}><div className={`h-full ${tone}`} style={{ width: `${Math.max(count ? 4 : 0, share)}%` }} /></div></div>;
 }
 
-function InsurerRank({ rank, name, policies, amount, total }: { rank: number; name: string; policies: number; amount: number | null; total: number }) {
-  const share = Math.round((policies / total) * 100);
-  return <div className="grid grid-cols-[22px_minmax(0,1fr)_auto] items-center gap-2"><span className="portal-display text-[13px] font-semibold text-[#A0AABB]">{String(rank).padStart(2, "0")}</span><div className="min-w-0"><p className="truncate text-[8.5px] font-semibold text-[#394760]">{name}</p><div className="mt-1 h-1 overflow-hidden bg-[#EDF1F5]"><div className="h-full bg-[#4C9DD1]" style={{ width: `${Math.max(4, share)}%` }} /></div></div><div className="text-right"><p className="text-[8.5px] font-bold text-[#26354F]">{policies}</p>{amount !== null ? <p className="mt-0.5 text-[7px] font-semibold text-[#8F9AAA]">{formatMoneyCompact(amount)}</p> : null}</div></div>;
+function InsurerRank({ rank, name, policies, amount, policyTotal, premiumTotal }: { rank: number; name: string; policies: number; amount: number | null; policyTotal: number; premiumTotal: number }) {
+  const share = amount !== null ? Math.round((amount / premiumTotal) * 100) : Math.round((policies / policyTotal) * 100);
+  return <div className="grid grid-cols-[24px_minmax(0,1fr)_auto] items-center gap-2.5"><span className="portal-display text-[13px] font-semibold text-[#A0AABB]">{String(rank).padStart(2, "0")}</span><div className="min-w-0"><p className="truncate text-[9px] font-semibold text-[#34425C]">{name}</p><div className="mt-1.5 h-1 overflow-hidden bg-[#EDF1F5]"><div className="h-full bg-[#4C9DD1]" style={{ width: `${Math.max(4, share)}%` }} /></div></div><div className="min-w-[92px] text-right">{amount !== null ? <><p className="portal-display text-[11px] font-semibold text-[#1D2D49]">{formatMoneyCompact(amount)}</p><p className="mt-0.5 text-[7px] font-semibold text-[#8F9AAA]">{policies} policies · {share}%</p></> : <><p className="portal-display text-[11px] font-semibold text-[#1D2D49]">{policies}</p><p className="mt-0.5 text-[7px] font-semibold text-[#8F9AAA]">policies · {share}%</p></>}</div></div>;
 }
 
-function ProducerRow({ rank, row, total }: { rank: number; row: DistributionMtdAnalytics["topSources"][number]; total: number }) {
-  const share = Math.round((row.policies / total) * 100);
-  return <Link href="/intermediaries" className="group grid grid-cols-[34px_minmax(0,1fr)_54px_86px_48px] items-center gap-3 py-3 hover:bg-[#FAFBFD] sm:px-2"><span className="portal-display text-[14px] font-semibold text-[#A2ACBB]">{String(rank).padStart(2, "0")}</span><div className="min-w-0"><p className="truncate text-[9.5px] font-bold text-[#26344E]">{row.name}</p><p className="mt-0.5 text-[7px] font-bold uppercase tracking-[.07em] text-[#96A1B1]">{typeLabel(row.type)}</p></div><p className="text-right text-[10px] font-bold text-[#25344E]">{row.policies}</p><p className="text-right text-[8px] font-bold text-[#66758B]">{row.grossPremium !== null ? formatMoneyCompact(row.grossPremium) : "—"}</p><p className="text-right text-[8px] font-bold text-[#8B97A8]">{share}%</p></Link>;
+function ProducerRow({ rank, row, policyTotal, premiumTotal }: { rank: number; row: DistributionMtdAnalytics["topSources"][number]; policyTotal: number; premiumTotal: number }) {
+  const share = row.grossPremium !== null ? Math.round((row.grossPremium / premiumTotal) * 100) : Math.round((row.policies / policyTotal) * 100);
+  return <Link href="/intermediaries" className="group grid grid-cols-[34px_minmax(0,1fr)_110px_72px_52px] items-center gap-3 py-3.5 hover:bg-[#FAFBFD] sm:px-2"><span className="portal-display text-[14px] font-semibold text-[#A2ACBB]">{String(rank).padStart(2, "0")}</span><div className="min-w-0"><p className="truncate text-[10px] font-bold text-[#26344E]">{row.name}</p><p className="mt-0.5 text-[7.5px] font-bold uppercase tracking-[.07em] text-[#96A1B1]">{typeLabel(row.type)}</p></div><div className="text-right">{row.grossPremium !== null ? <><p className="portal-display text-[12px] font-semibold text-[#1D2D49]">{formatMoneyCompact(row.grossPremium)}</p><p className="mt-0.5 text-[7px] font-semibold text-[#929DAC]">Gross premium</p></> : <p className="text-[9px] font-semibold text-[#929DAC]">—</p>}</div><div className="text-right"><p className="text-[10px] font-bold text-[#25344E]">{row.policies}</p><p className="mt-0.5 text-[7px] font-semibold text-[#929DAC]">Policies</p></div><div className="text-right"><p className="text-[9px] font-bold text-[#6F7D91]">{share}%</p><p className="mt-0.5 text-[7px] font-semibold text-[#A0A9B7]">Share</p></div></Link>;
 }
 
 function WorkStream({ title, href, divided = false, children }: { title: string; href: string; divided?: boolean; children: React.ReactNode }) {
