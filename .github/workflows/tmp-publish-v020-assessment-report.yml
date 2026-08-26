@@ -1,4 +1,4 @@
-name: Publish v020 Assessment Report OTA
+name: Publish v020 Billing and Assessment OTA
 
 on:
   push:
@@ -10,8 +10,9 @@ permissions:
 
 jobs:
   publish:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
@@ -26,17 +27,20 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: package-lock.json
-      - name: Confirm v020 baseline
+      - name: Confirm v020 native-compatible baseline
         run: node -e "const c=require('./apps/mobile-app/app.json');if(c.expo.version!=='0.2.0')process.exit(2);if(JSON.stringify(c).includes('react-native-compressor'))process.exit(3)"
-      - name: Apply hotfix
-        run: python scripts/apply-v020-assessment-report-hotfix.py
-      - name: Commit hotfix source
+      - name: Backport Billing Bill Upload
+        shell: bash
         run: |
           git config user.name github-actions
           git config user.email actions@github.com
-          git add apps/mobile-app/app/customer/self-managed-milestone.tsx
-          git commit -m "Show Stage 7 Assessment Report inline on v0.2"
-          git push origin HEAD:hotfix/mobile-v0.2-delivery-order-assessment-report
+          git fetch origin feature/mobile-billing-bill-upload-v3
+          if grep -q "function FinalBillUpload" apps/mobile-app/app/customer/self-managed-milestone.tsx; then
+            echo "Billing Bill Upload is already present."
+          else
+            git cherry-pick cf2708aa537a9e6ed5c96097253fecb289fd6b21..origin/feature/mobile-billing-bill-upload-v3
+            git push origin HEAD:hotfix/mobile-v0.2-delivery-order-assessment-report
+          fi
       - name: Install
         run: npm ci --no-audit --no-fund
       - name: Typecheck
@@ -47,4 +51,4 @@ jobs:
         run: npm run build:mobile:web
       - name: Publish OTA
         working-directory: apps/mobile-app
-        run: npx eas-cli update --channel preview --environment preview --message "Stage 7 Assessment Report inline row for v0.2.0" --non-interactive
+        run: npx eas-cli update --channel preview --environment preview --message "Billing Bill Upload and Stage 7 Assessment Report for v0.2.0" --non-interactive
