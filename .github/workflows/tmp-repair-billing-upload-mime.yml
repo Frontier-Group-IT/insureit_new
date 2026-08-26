@@ -1,0 +1,47 @@
+name: Repair mobile billing bill upload mime
+
+on:
+  push:
+    branches:
+      - feature/mobile-billing-bill-upload-v2
+    paths:
+      - '.github/workflows/tmp-repair-billing-upload-mime.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/mobile-billing-bill-upload-v2
+          fetch-depth: 0
+      - name: Repair bill document MIME persistence
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('apps/mobile-app/app/customer/self-managed-milestone.tsx')
+          text = path.read_text(encoding='utf-8')
+          wrong = "mime_type: ['application/pdf', 'image/jpeg', 'image/png'],"
+          right = 'mime_type: contentType,'
+          if text.count(wrong) != 1:
+              raise SystemExit('Expected incorrect bill MIME line was not found exactly once.')
+          text = text.replace(wrong, right, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+          git diff --check
+      - name: Commit repair and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "antnish1"
+          git config user.email "shahdolho@gmail.com"
+          git rm .github/workflows/tmp-repair-billing-upload-mime.yml
+          git add apps/mobile-app/app/customer/self-managed-milestone.tsx
+          git diff --cached --check
+          git commit -m "Fix final bill MIME persistence"
+          git push origin HEAD:feature/mobile-billing-bill-upload-v2
