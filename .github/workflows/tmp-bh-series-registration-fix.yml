@@ -33,13 +33,17 @@ jobs:
         working-directory: apps/web-portal
         run: npm run vehicle-registration:regression
 
-      - name: Remove temporary helpers and commit source fix
+      - name: Commit and push source fix
         shell: bash
         run: |
-          rm .github/workflows/tmp-bh-series-registration-fix.yml
-          rm .github/scripts/tmp_bh_series_registration_fix.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
+          git add apps/web-portal/lib/vehicle-registration.ts \
+                  apps/web-portal/components/policy-unified-form.tsx \
+                  apps/web-portal/lib/authbridge-rc-api.ts \
+                  apps/web-portal/app/policies/policy-onboarding-actions.ts \
+                  apps/web-portal/scripts/vehicle-registration-regression.mjs \
+                  apps/web-portal/package.json \
+                  infrastructure/icall-gateway/server.js
           git commit -m "Support BH-series vehicle registrations end to end"
           git push origin HEAD:fix/bh-series-registration-end-to-end
