@@ -11,6 +11,7 @@ type RouteItem = {
 
 const segmentLabels: Record<string, string> = {
   intermediaries: "Intermediatory",
+  groups: "Intermediary Groups",
   partners: "Partners",
   partner: "Partners",
   posp: "POSP",
@@ -30,6 +31,14 @@ const segmentLabels: Record<string, string> = {
 };
 
 const explicitRoutes: Array<{ match: RegExp; items: RouteItem[] }> = [
+  {
+    match: /^\/intermediaries\/groups\/?$/,
+    items: [
+      { label: "Intermediatory", href: "/intermediaries" },
+      { label: "Partners", href: "/intermediaries/partner" },
+      { label: "Intermediary Groups" },
+    ],
+  },
   {
     match: /^\/intermediaries\/misp\/?$/,
     items: [
