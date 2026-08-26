@@ -243,7 +243,9 @@ export async function getDistributionMtdAnalytics(
     : options.canViewCommercials ? 0 : null;
 
   const topSources = Array.from(sourceMap.values())
-    .sort((a, b) => b.policies - a.policies || b.grossPremium - a.grossPremium)
+    .sort((a, b) => options.canViewCommercials
+      ? b.grossPremium - a.grossPremium || b.policies - a.policies
+      : b.policies - a.policies || a.name.localeCompare(b.name))
     .slice(0, 6)
     .map((row) => ({
       code: row.code,
@@ -260,7 +262,9 @@ export async function getDistributionMtdAnalytics(
       policies: value.policies,
       grossPremium: options.canViewCommercials ? value.grossPremium : null,
     }))
-    .sort((a, b) => b.policies - a.policies || (b.grossPremium ?? 0) - (a.grossPremium ?? 0))
+    .sort((a, b) => options.canViewCommercials
+      ? (b.grossPremium ?? 0) - (a.grossPremium ?? 0) || b.policies - a.policies
+      : b.policies - a.policies || a.name.localeCompare(b.name))
     .slice(0, 5);
 
   return {
