@@ -1,4 +1,4 @@
-name: Publish v020 Billing and Assessment OTA
+name: Publish v020 Billing Assessment and Work Approval Icons OTA
 
 on:
   push:
@@ -29,33 +29,26 @@ jobs:
           cache-dependency-path: package-lock.json
       - name: Confirm v020 native-compatible baseline
         run: node -e "const c=require('./apps/mobile-app/app.json');if(c.expo.version!=='0.2.0')process.exit(2);if(JSON.stringify(c).includes('react-native-compressor'))process.exit(3)"
-      - name: Apply Billing Bill Upload safely
+      - name: Confirm Billing Bill Upload
+        run: |
+          grep -q "function FinalBillUpload" apps/mobile-app/app/customer/self-managed-milestone.tsx
+      - name: Backport Work Approval custom icons from PR 703
         shell: bash
         run: |
           git config user.name github-actions
           git config user.email actions@github.com
-          if grep -q "function FinalBillUpload" apps/mobile-app/app/customer/self-managed-milestone.tsx; then
-            echo "Billing Bill Upload is already present."
+          if grep -q "WORK_APPROVAL_ICONS" apps/mobile-app/app/customer/self-managed-milestone.tsx; then
+            echo "Work Approval custom icons are already present."
           else
-            git show cf18e724a7646ff37361cb218c1c42d6158eb3f2:.github/tmp/apply-final-bill-v3.py > /tmp/apply-final-bill-v3.py
-            python /tmp/apply-final-bill-v3.py
-            python - <<'PY'
-          from pathlib import Path
-          p=Path('apps/mobile-app/app/customer/self-managed-milestone.tsx')
-          s=p.read_text()
-          old="import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';"
-          new="import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';"
-          if old in s:
-              s=s.replace(old,new,1)
-          elif 'Linking' not in s.split('\n')[4]:
-              raise SystemExit('React Native import anchor mismatch')
-          p.write_text(s)
-          PY
-            git diff --check
-            git add apps/mobile-app/app/customer/self-managed-milestone.tsx
-            git commit -m "Backport Billing Bill Upload to v0.2"
+            git cherry-pick e12e918a699d0b053a942280dda09e7fe089b275
             git push origin HEAD:hotfix/mobile-v0.2-delivery-order-assessment-report
           fi
+      - name: Verify Work Approval icon assets
+        run: |
+          grep -q "WORK_APPROVAL_ICONS" apps/mobile-app/app/customer/self-managed-milestone.tsx
+          test -f apps/mobile-app/assets/claims/claim-approval.png
+          test -f apps/mobile-app/assets/claims/claim-survey.png
+          test -f apps/mobile-app/assets/claims/claim-documents.png
       - name: Install
         run: npm ci --no-audit --no-fund
       - name: Typecheck
@@ -66,4 +59,4 @@ jobs:
         run: npm run build:mobile:web
       - name: Publish OTA
         working-directory: apps/mobile-app
-        run: npx eas-cli update --channel preview --environment preview --message "Billing Bill Upload and Stage 7 Assessment Report for v0.2.0" --non-interactive
+        run: npx eas-cli update --channel preview --environment preview --message "Work Approval custom icons plus Billing and Stage 7 fixes for v0.2.0" --non-interactive
