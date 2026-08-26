@@ -547,18 +547,18 @@ export default function SelfManagedClaimScreen() {
         <View style={styles.gap} />
         <TextField label="Driver Number (Optional)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
         <View style={styles.gap} />
-        <TextField label="Location (Optional)" value={location} onChangeText={(value) => { setLocation(value); setLocationNotice(null); }} />
-        <View style={styles.locationActions}>
+        <View style={styles.locationFieldWrap}>
+          <TextField label="Location (Optional)" value={location} onChangeText={(value) => { setLocation(value); setLocationNotice(null); }} />
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Use current location"
+            accessibilityLabel={locating ? 'Locating current location' : 'Use current location'}
             accessibilityState={{ disabled: locating }}
+            hitSlop={8}
             disabled={locating}
             onPress={() => void captureCurrentLocation()}
-            style={[styles.gpsLocationButton, locating && styles.gpsLocationButtonDisabled]}
+            style={({ pressed }) => [styles.gpsLocationIconButton, locating && styles.gpsLocationButtonDisabled, pressed && !locating && styles.gpsLocationIconButtonPressed]}
           >
-            <MaterialCommunityIcons name="crosshairs-gps" size={17} color="#0A43A3" />
-            <Text style={styles.gpsLocationButtonText}>{locating ? 'Locating...' : 'Use Current Location'}</Text>
+            <MaterialCommunityIcons name="crosshairs-gps" size={18} color="#0A43A3" />
           </Pressable>
         </View>
         {locationNotice ? (
@@ -717,10 +717,10 @@ const styles = StyleSheet.create({
   gap: { height: 10 },
   subsection: { marginTop: 16, marginBottom: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E7EBF0' },
   subsectionTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
-  locationActions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: -6, marginBottom: 3 },
-  gpsLocationButton: { minHeight: 38, borderRadius: 12, borderWidth: 1, borderColor: '#B9D5FF', backgroundColor: '#EEF5FF', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
+  locationFieldWrap: { position: 'relative' },
+  gpsLocationIconButton: { position: 'absolute', top: -5, right: 0, zIndex: 2, width: 30, height: 30, borderRadius: 10, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' },
+  gpsLocationIconButtonPressed: { backgroundColor: '#E2EEFF', transform: [{ scale: 0.96 }] },
   gpsLocationButtonDisabled: { opacity: 0.58 },
-  gpsLocationButtonText: { color: '#0A43A3', fontSize: 10.5, fontWeight: '900' },
   locationNotice: { marginTop: 7, borderRadius: 11, backgroundColor: '#EFFAF4', borderWidth: 1, borderColor: '#B7E4CC', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 7 },
   locationNoticeError: { backgroundColor: '#FFF5F5', borderColor: '#F2C5C2' },
   locationNoticeText: { flex: 1, color: '#166A45', fontSize: 9.5, lineHeight: 13, fontWeight: '700' },
