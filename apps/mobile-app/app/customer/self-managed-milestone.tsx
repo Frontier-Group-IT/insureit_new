@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CompactDocumentActionBar, CompactDocumentStageHeader } from '@/components/compact-document-upload-navigation';
 import { AppDatePicker } from '@/components/design-system';
@@ -37,6 +37,12 @@ const WORK_APPROVAL_BULK_DOCUMENT_TYPE = 'Work Approval Attachment';
 const MAX_APPROVAL_PDF_SIZE_BYTES = 5 * 1024 * 1024;
 const FINAL_BILL_DOCUMENT_TYPE = 'Final Workshop Bill';
 const MAX_FINAL_BILL_SIZE_BYTES = 10 * 1024 * 1024;
+
+const WORK_APPROVAL_ICONS = {
+  insurer: require('../../assets/claims/claim-approval.png'),
+  surveyor: require('../../assets/claims/claim-survey.png'),
+  documents: require('../../assets/claims/claim-documents.png'),
+} as const;
 
 export default function SelfManagedMilestoneScreen() {
   const router = useRouter();
@@ -471,11 +477,11 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
     }
   }
 
-  function DocumentTile({ title, subtitle, icon, document, tileKey }: { title: string; subtitle: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; document: ApprovalDocumentRecord | null; tileKey: 'insurer' | 'surveyor' }) {
+  function DocumentTile({ title, subtitle, iconSource, document, tileKey }: { title: string; subtitle: string; iconSource: number; document: ApprovalDocumentRecord | null; tileKey: 'insurer' | 'surveyor' }) {
     return <Pressable accessibilityRole="button" disabled={loading || uploading || removing} onPress={() => void chooseSingle(tileKey)} style={[styles.approvalDocumentTile, document && styles.approvalDocumentTileSaved]}>
       {document ? <View style={styles.approvalDocumentCheck}><MaterialCommunityIcons name="check" size={14} color="#168161" /></View> : null}
       {document ? <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${title}`} onPress={(event) => { event.stopPropagation(); setDeleteTarget({ key: tileKey, label: title }); }} style={styles.approvalDocumentRemove}><MaterialCommunityIcons name="close" size={13} color="#C43232" /></Pressable> : null}
-      <View style={styles.approvalDocumentIcon}><MaterialCommunityIcons name={icon} size={26} color="#0A43A3" /></View>
+      <View style={styles.approvalDocumentIcon}><Image source={iconSource} style={styles.approvalDocumentIconImage} resizeMode="contain" /></View>
       <Text style={styles.approvalDocumentTitle} numberOfLines={2}>{title}</Text>
       {document ? <Text style={styles.approvalDocumentFile} numberOfLines={1}>{document.file_name}</Text> : <Text style={styles.approvalDocumentSubtitle} numberOfLines={2}>{subtitle}</Text>}
       <Text style={[styles.approvalDocumentStatus, document && styles.approvalDocumentStatusSaved]}>{document ? 'Saved · Tap to replace' : 'Tap to upload'}</Text>
@@ -484,7 +490,7 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
 
   return <View style={styles.approvalDocumentsCard}>
     <View style={styles.approvalDocumentsHeader}>
-      <View style={styles.approvalDocumentsHeaderIcon}><MaterialCommunityIcons name="file-document-multiple-outline" size={20} color="#0A43A3" /></View>
+      <View style={styles.approvalDocumentsHeaderIcon}><Image source={WORK_APPROVAL_ICONS.documents} style={styles.approvalDocumentsHeaderIconImage} resizeMode="contain" /></View>
       <View style={styles.approvalDocumentsHeaderCopy}>
         <Text style={styles.approvalDocumentsTitle}>Approval Documents</Text>
         <Text style={styles.approvalDocumentsSubtitle}>Upload approval letters, surveyor reports or supporting documents.</Text>
@@ -494,13 +500,13 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
 
     {loading ? <Text style={styles.approvalUploadLoading}>Checking saved approval documents...</Text> : <>
       <View style={styles.approvalDocumentGrid}>
-        <DocumentTile title="Insurer Approval Letter" subtitle="Approval letter or insurer mail" icon="file-certificate-outline" document={insurerDocument} tileKey="insurer" />
-        <DocumentTile title="Surveyor Approval / Report" subtitle="Surveyor approval or report" icon="clipboard-check-outline" document={surveyorDocument} tileKey="surveyor" />
+        <DocumentTile title="Insurer Approval Letter" subtitle="Approval letter or insurer mail" iconSource={WORK_APPROVAL_ICONS.insurer} document={insurerDocument} tileKey="insurer" />
+        <DocumentTile title="Surveyor Approval / Report" subtitle="Surveyor approval or report" iconSource={WORK_APPROVAL_ICONS.surveyor} document={surveyorDocument} tileKey="surveyor" />
       </View>
 
       <View style={styles.approvalBulkShell}>
         <Pressable accessibilityRole="button" disabled={uploading || removing} onPress={() => void chooseBulk()} style={[styles.approvalBulkUpload, bulkDocuments.length > 0 && styles.approvalBulkUploadSaved]}>
-          <View style={[styles.approvalBulkIcon, bulkDocuments.length > 0 && styles.approvalBulkIconSaved]}><MaterialCommunityIcons name={bulkDocuments.length > 0 ? 'check' : 'file-multiple-outline'} size={20} color={bulkDocuments.length > 0 ? '#168161' : '#0A43A3'} /></View>
+          <View style={[styles.approvalBulkIcon, bulkDocuments.length > 0 && styles.approvalBulkIconSaved]}><Image source={WORK_APPROVAL_ICONS.documents} style={styles.approvalBulkIconImage} resizeMode="contain" /></View>
           <View style={styles.approvalBulkCopy}>
             <Text style={styles.approvalBulkTitle}>Upload Multiple Documents</Text>
             <Text style={styles.approvalBulkText}>{bulkDocuments.length > 0 ? `${bulkDocuments.length} file${bulkDocuments.length === 1 ? '' : 's'} saved · Tap again to add more` : 'Select several files now, or tap again later to add more.'}</Text>
@@ -530,7 +536,6 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
     </Modal>
   </View>;
 }
-
 
 function FinalBillUpload({ claimId, customerId }: { claimId: string; customerId: string }) {
   const [document, setDocument] = useState<BillDocumentRecord | null>(null);
@@ -825,6 +830,7 @@ const styles = StyleSheet.create({
   approvalDocumentsCard: { borderRadius: 18, borderWidth: 1, borderColor: '#D7E2EF', backgroundColor: '#FFFFFF', padding: 12, marginBottom: 12, shadowColor: '#14375F', shadowOpacity: 0.05, shadowRadius: 9, shadowOffset: { width: 0, height: 4 }, elevation: 1 },
   approvalDocumentsHeader: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 10 },
   approvalDocumentsHeaderIcon: { width: 38, height: 38, borderRadius: 11, backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center' },
+  approvalDocumentsHeaderIconImage: { width: 27, height: 27 },
   approvalDocumentsHeaderCopy: { flex: 1, minWidth: 0 },
   approvalDocumentsTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
   approvalDocumentsSubtitle: { color: '#6D7B8F', fontSize: 9.2, lineHeight: 13, fontWeight: '600', marginTop: 2 },
@@ -836,6 +842,7 @@ const styles = StyleSheet.create({
   approvalDocumentCheck: { position: 'absolute', top: 5, left: 5, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(46,173,99,0.16)', alignItems: 'center', justifyContent: 'center' },
   approvalDocumentRemove: { position: 'absolute', top: 5, right: 5, zIndex: 3, width: 23, height: 23, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
   approvalDocumentIcon: { width: 45, height: 45, borderRadius: 13, backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center' },
+  approvalDocumentIconImage: { width: 34, height: 34 },
   approvalDocumentTitle: { color: palette.navy, fontSize: 9.2, lineHeight: 12, fontWeight: '900', textAlign: 'center', marginTop: 5 },
   approvalDocumentSubtitle: { color: '#718198', fontSize: 7.7, lineHeight: 10, fontWeight: '600', textAlign: 'center', marginTop: 3 },
   approvalDocumentFile: { maxWidth: '100%', color: '#56657A', fontSize: 7.5, lineHeight: 10, fontWeight: '700', textAlign: 'center', marginTop: 3 },
@@ -846,6 +853,7 @@ const styles = StyleSheet.create({
   approvalBulkUploadSaved: { borderStyle: 'solid', borderColor: '#52B57F', backgroundColor: '#EFFAF4' },
   approvalBulkIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center' },
   approvalBulkIconSaved: { backgroundColor: 'rgba(46,173,99,0.14)' },
+  approvalBulkIconImage: { width: 27, height: 27 },
   approvalBulkCopy: { flex: 1, minWidth: 0 },
   approvalBulkTitle: { color: palette.navy, fontSize: 10.5, fontWeight: '900' },
   approvalBulkText: { color: '#718198', fontSize: 8.5, lineHeight: 12, fontWeight: '600', marginTop: 2 },
