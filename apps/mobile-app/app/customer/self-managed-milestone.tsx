@@ -29,7 +29,7 @@ type ClaimIdentity = { claim_no?: string | null; vehicle_id?: string | null; cus
 type ApprovalDocumentRecord = { id: string; document_type: string; file_name: string; storage_bucket?: string | null; storage_path?: string | null };
 type BillDocumentRecord = { id: string; file_name: string; storage_bucket?: string | null; storage_path?: string | null };
 type DeliveryOrderDocumentRecord = { id: string; document_type: string; file_name: string; storage_bucket?: string | null; storage_path?: string | null };
-type DeliveryOrderDocumentKey = 'assessment_upload' | 'assessment_report';
+type DeliveryOrderDocumentKey = 'assessment_report';
 type ApprovalDocumentKey = 'insurer' | 'surveyor' | 'bulk';
 type ApprovalDeleteTarget = { key: ApprovalDocumentKey; label: string } | null;
 
@@ -39,7 +39,6 @@ const WORK_APPROVAL_BULK_DOCUMENT_TYPE = 'Work Approval Attachment';
 const MAX_APPROVAL_PDF_SIZE_BYTES = 5 * 1024 * 1024;
 const FINAL_BILL_DOCUMENT_TYPE = 'Final Workshop Bill';
 const MAX_FINAL_BILL_SIZE_BYTES = 10 * 1024 * 1024;
-const ASSESSMENT_UPLOAD_DOCUMENT_TYPE = 'Assessment Upload';
 const ASSESSMENT_REPORT_DOCUMENT_TYPE = 'Assessment Report';
 const MAX_DELIVERY_ORDER_DOCUMENT_SIZE_BYTES = 10 * 1024 * 1024;
 
@@ -338,7 +337,7 @@ function DeliveryOrderDocuments({ claimId, customerId }: { claimId: string; cust
         .from('claim_documents')
         .select('id,document_type,file_name,storage_bucket,storage_path')
         .eq('claim_id', claimId)
-        .in('document_type', [ASSESSMENT_UPLOAD_DOCUMENT_TYPE, ASSESSMENT_REPORT_DOCUMENT_TYPE])
+        .eq('document_type', ASSESSMENT_REPORT_DOCUMENT_TYPE)
         .order('created_at', { ascending: false });
       if (!active) return;
       if (loadError) setError('We could not load the saved assessment documents. Please try again.');
@@ -354,9 +353,8 @@ function DeliveryOrderDocuments({ claimId, customerId }: { claimId: string; cust
     return () => clearTimeout(timer);
   }, [success]);
 
-  const assessmentUpload = documents.find((item) => item.document_type === ASSESSMENT_UPLOAD_DOCUMENT_TYPE) ?? null;
   const assessmentReport = documents.find((item) => item.document_type === ASSESSMENT_REPORT_DOCUMENT_TYPE) ?? null;
-  const documentFor = (key: DeliveryOrderDocumentKey) => key === 'assessment_upload' ? assessmentUpload : assessmentReport;
+  const documentFor = (_key: DeliveryOrderDocumentKey) => assessmentReport;
 
   async function uploadFile(documentType: string, file: DocumentPicker.DocumentPickerAsset) {
     const session = await getCurrentSession();
@@ -394,7 +392,7 @@ function DeliveryOrderDocuments({ claimId, customerId }: { claimId: string; cust
     if (result.canceled || !result.assets?.length) return;
     const file = result.assets[0];
     if (file.size !== null && file.size !== undefined && file.size > MAX_DELIVERY_ORDER_DOCUMENT_SIZE_BYTES) return setError(`${file.name} is larger than 10 MB. Please choose a smaller file.`);
-    const documentType = key === 'assessment_upload' ? ASSESSMENT_UPLOAD_DOCUMENT_TYPE : ASSESSMENT_REPORT_DOCUMENT_TYPE;
+    const documentType = ASSESSMENT_REPORT_DOCUMENT_TYPE;
     const previous = documentFor(key);
     setUploading(true);
     try {
@@ -421,15 +419,14 @@ function DeliveryOrderDocuments({ claimId, customerId }: { claimId: string; cust
   }
 
   const tiles: Array<{ key: DeliveryOrderDocumentKey; title: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }> = [
-    { key: 'assessment_upload', title: 'Assessment Upload', icon: 'file-upload-outline' },
     { key: 'assessment_report', title: 'Assessment Report', icon: 'file-document-check-outline' },
   ];
 
   return <View style={styles.approvalDocumentsCard}>
     <View style={styles.approvalDocumentsHeader}>
       <View style={styles.approvalDocumentsHeaderIcon}><MaterialCommunityIcons name="folder-upload-outline" size={21} color="#0A43A3" /></View>
-      <View style={styles.approvalDocumentsHeaderCopy}><Text style={styles.approvalDocumentsTitle}>Documents</Text><Text style={styles.approvalDocumentsSubtitle}>Upload Delivery Order assessment documents</Text></View>
-      <View style={styles.approvalDocumentsBadge}><Text style={styles.approvalDocumentsBadgeText}>2 ITEMS</Text></View>
+      <View style={styles.approvalDocumentsHeaderCopy}><Text style={styles.approvalDocumentsTitle}>Documents</Text><Text style={styles.approvalDocumentsSubtitle}>Upload the Delivery Order assessment report</Text></View>
+      <View style={styles.approvalDocumentsBadge}><Text style={styles.approvalDocumentsBadgeText}>1 ITEM</Text></View>
     </View>
     <View style={styles.approvalDocumentGrid}>
       {tiles.map((tile) => {
@@ -445,7 +442,7 @@ function DeliveryOrderDocuments({ claimId, customerId }: { claimId: string; cust
         </Pressable>;
       })}
     </View>
-    <Text style={styles.approvalDocumentsNote}>PDF and image files up to 10 MB each. Selected files upload immediately to Claim Documents.</Text>
+    <Text style={styles.approvalDocumentsNote}>PDF or image up to 10 MB. The selected Assessment Report uploads immediately to Claim Documents.</Text>
     {success ? <View style={styles.approvalFeedbackSuccess}><MaterialCommunityIcons name="check-circle-outline" size={14} color="#168161" /><Text style={styles.approvalFeedbackSuccessText}>{success}</Text></View> : null}
     {error ? <View style={styles.approvalFeedbackError}><MaterialCommunityIcons name="alert-circle-outline" size={14} color="#B42318" /><Text style={styles.approvalFeedbackErrorText}>{error}</Text></View> : null}
     <Modal visible={Boolean(deleteTarget)} transparent animationType="fade" onRequestClose={() => setDeleteTarget(null)}>
