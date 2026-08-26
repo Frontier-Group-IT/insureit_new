@@ -237,39 +237,52 @@ function MtdBusinessSection({ distribution }: { distribution: NonNullable<Awaite
   const production = distribution.production!;
   const commercial = production.grossPremiumMtd !== null;
   const channelTotal = production.byType.partner + production.byType.posp + production.byType.misp + production.byType.other;
-  const headline = [
+  const headline = commercial ? [
+    { label: "Gross premium MTD", value: formatMoneyCompact(production.grossPremiumMtd ?? 0) },
+    { label: "Policies MTD", value: production.policiesMtd.toLocaleString("en-IN") },
+    { label: "Average premium / policy", value: formatMoneyCompact(production.averageGrossPremiumMtd ?? 0) },
+    { label: "Active producers MTD", value: production.activeProducersMtd.toLocaleString("en-IN") },
+  ] : [
     { label: "Policies MTD", value: production.policiesMtd.toLocaleString("en-IN") },
     { label: "Active producers MTD", value: production.activeProducersMtd.toLocaleString("en-IN") },
-    ...(commercial ? [
-      { label: "Gross premium MTD", value: formatMoneyCompact(production.grossPremiumMtd ?? 0) },
-      { label: "Average premium / policy", value: formatMoneyCompact(production.averageGrossPremiumMtd ?? 0) },
-    ] : []),
   ];
 
   return <section className="mt-6 border-y border-[#DDE4EC] bg-white">
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E6EBF1] px-4 py-3">
-      <div className="flex items-center gap-2.5"><Icon src={DASHBOARD_ICON_ASSETS.reportsAnalytics} size={28} /><div><h2 className="text-[11px] font-bold text-[#22304B]">Month-to-date business</h2><p className="mt-0.5 text-[7.5px] font-bold uppercase tracking-[.09em] text-[#8A96A8]">{distribution.monthLabel}</p></div></div>
-      <Link href="/reports" className="text-[8px] font-bold text-[#718096] hover:text-[#263B66]">Business reports ↗</Link>
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E6EBF1] px-5 py-3.5">
+      <div className="flex items-center gap-3"><Icon src={DASHBOARD_ICON_ASSETS.reportsAnalytics} size={30} /><div><h2 className="text-[12px] font-bold text-[#1F2E4A]">Month-to-date business</h2><p className="mt-0.5 text-[8px] font-bold uppercase tracking-[.09em] text-[#8793A5]">{distribution.monthLabel}</p></div></div>
+      <Link href="/reports" className="text-[8.5px] font-bold text-[#66758D] hover:text-[#263B66]">Business reports ↗</Link>
     </div>
 
-    <div className={`grid border-b border-[#E6EBF1] ${headline.length === 4 ? "md:grid-cols-4" : "md:grid-cols-2"}`}>{headline.map((item, index) => <div key={item.label} className={`${index ? "border-t md:border-l md:border-t-0" : ""} border-[#E6EBF1] px-4 py-4`}><p className="portal-display text-[24px] font-semibold leading-none text-[#13213D]">{item.value}</p><p className="mt-2 text-[7.5px] font-bold uppercase tracking-[.09em] text-[#7D8A9D]">{item.label}</p></div>)}</div>
+    <div className={`grid border-b border-[#E6EBF1] ${headline.length === 4 ? "md:grid-cols-4" : "md:grid-cols-2"}`}>{headline.map((item, index) => <div key={item.label} className={`${index ? "border-t md:border-l md:border-t-0" : ""} border-[#E6EBF1] px-5 py-5`}><p className="portal-display text-[27px] font-semibold leading-none tracking-[-.02em] text-[#10213D]">{item.value}</p><p className="mt-2.5 text-[8px] font-bold uppercase tracking-[.09em] text-[#748298]">{item.label}</p></div>)}</div>
 
-    <div className="grid xl:grid-cols-[.92fr_1.08fr]">
-      <div className="border-b border-[#E6EBF1] px-4 py-4 xl:border-b-0 xl:border-r">
-        <h3 className="text-[8px] font-bold uppercase tracking-[.1em] text-[#7E8B9E]">Channel contribution · MTD</h3>
-        <div className="mt-4 space-y-3">{(["partner", "posp", "misp"] as DistributionType[]).map((type) => <MixBar key={type} label={typeLabel(type)} value={production.byType[type]} total={Math.max(channelTotal, 1)} />)}</div>
-        {production.byBusinessType.length ? <div className="mt-6 border-t border-[#EEF1F5] pt-4"><h3 className="text-[8px] font-bold uppercase tracking-[.1em] text-[#7E8B9E]">Business type · MTD</h3><div className="mt-3 grid grid-cols-2 gap-x-5 gap-y-3">{production.byBusinessType.map((item) => <CompactCount key={item.label} label={item.label} count={item.count} total={Math.max(production.policiesMtd, 1)} />)}</div></div> : null}
+    <div className="grid xl:grid-cols-[.9fr_1.1fr]">
+      <div className="border-b border-[#E6EBF1] px-5 py-5 xl:border-b-0 xl:border-r">
+        <h3 className="text-[8.5px] font-bold uppercase tracking-[.1em] text-[#748298]">Channel contribution · MTD</h3>
+        <div className="mt-4 space-y-3.5">{(["partner", "posp", "misp"] as DistributionType[]).map((type) => <MixBar key={type} label={typeLabel(type)} value={production.byType[type]} total={Math.max(channelTotal, 1)} />)}</div>
+        {production.byBusinessType.length ? <div className="mt-6 border-t border-[#EEF1F5] pt-4"><h3 className="text-[8.5px] font-bold uppercase tracking-[.1em] text-[#748298]">Business type · MTD</h3><div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3.5">{production.byBusinessType.map((item) => <CompactCount key={item.label} label={item.label} count={item.count} total={Math.max(production.policiesMtd, 1)} />)}</div></div> : null}
       </div>
 
       <div className="grid md:grid-cols-2">
-        <div className="border-b border-[#E6EBF1] px-4 py-4 md:border-b-0 md:border-r"><h3 className="text-[8px] font-bold uppercase tracking-[.1em] text-[#7E8B9E]">Top insurers · MTD</h3><div className="mt-2 divide-y divide-[#EEF1F5]">{production.topInsurers.slice(0, 5).map((item) => <InsightRow key={item.id} label={item.name} count={item.policies} amount={item.grossPremium} />)}{!production.topInsurers.length ? <EmptyInsight /> : null}</div></div>
-        <div className="px-4 py-4"><h3 className="text-[8px] font-bold uppercase tracking-[.1em] text-[#7E8B9E]">Policy product · MTD</h3><div className="mt-2 divide-y divide-[#EEF1F5]">{production.byProduct.map((item) => <InsightRow key={item.label} label={item.label} count={item.count} />)}{!production.byProduct.length ? <EmptyInsight /> : null}</div></div>
+        <div className="border-b border-[#E6EBF1] px-5 py-5 md:border-b-0 md:border-r">
+          <div className="flex items-end justify-between gap-3"><h3 className="text-[8.5px] font-bold uppercase tracking-[.1em] text-[#748298]">Top insurers · MTD</h3><span className="text-[7px] font-semibold uppercase tracking-[.07em] text-[#9AA5B4]">{commercial ? "Ranked by gross premium" : "By policy volume"}</span></div>
+          <div className="mt-2 divide-y divide-[#EEF1F5]">{production.topInsurers.slice(0, 5).map((item, index) => <TopAmountRow key={item.id} rank={index + 1} label={item.name} count={item.policies} amount={item.grossPremium} />)}{!production.topInsurers.length ? <EmptyInsight /> : null}</div>
+        </div>
+        <div className="px-5 py-5"><h3 className="text-[8.5px] font-bold uppercase tracking-[.1em] text-[#748298]">Policy product · MTD</h3><div className="mt-2 divide-y divide-[#EEF1F5]">{production.byProduct.map((item) => <InsightRow key={item.label} label={item.label} count={item.count} />)}{!production.byProduct.length ? <EmptyInsight /> : null}</div></div>
       </div>
     </div>
 
     <div className="border-t border-[#E6EBF1]">
-      <div className="flex items-center justify-between px-4 py-3"><h3 className="text-[8px] font-bold uppercase tracking-[.1em] text-[#7E8B9E]">Top producers · MTD</h3><span className="text-[7.5px] font-semibold text-[#8B97A8]">Policies{commercial ? " · Gross premium" : ""}</span></div>
-      <div className="grid border-t border-[#EEF1F5] lg:grid-cols-2">{distribution.topSources.slice(0, 6).map((row, index) => <Link key={row.code} href="/intermediaries" className={`${index >= 2 ? "border-t" : ""} ${index % 2 ? "lg:border-l" : ""} border-[#EEF1F5] flex items-center gap-3 px-4 py-3 hover:bg-[#FAFBFD]`}><div className="min-w-0 flex-1"><p className="truncate text-[9px] font-bold text-[#26344E]">{row.name}</p><p className="mt-0.5 text-[7px] font-bold uppercase tracking-[.06em] text-[#98A3B3]">{typeLabel(row.type)}</p></div><p className="portal-display text-[15px] font-semibold text-[#1E2D48]">{row.policies}</p>{row.grossPremium !== null ? <p className="w-[72px] text-right text-[8px] font-bold text-[#718096]">{formatMoneyCompact(row.grossPremium)}</p> : null}</Link>)}</div>
+      <div className="flex flex-wrap items-end justify-between gap-2 px-5 py-3.5"><h3 className="text-[8.5px] font-bold uppercase tracking-[.1em] text-[#748298]">Top producers · MTD</h3><span className="text-[7px] font-semibold uppercase tracking-[.07em] text-[#9AA5B4]">{commercial ? "Ranked by gross premium · policies shown for context" : "Ranked by policy volume"}</span></div>
+      <div className="border-t border-[#EEF1F5]">{distribution.topSources.slice(0, 6).map((row, index) => {
+        const premiumShare = row.grossPremium !== null && (production.grossPremiumMtd ?? 0) > 0
+          ? Math.round((row.grossPremium / (production.grossPremiumMtd ?? 1)) * 100)
+          : null;
+        return <Link key={row.code} href="/intermediaries" className="group grid min-h-[58px] grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-3 border-t border-[#EEF1F5] px-5 py-3 first:border-t-0 hover:bg-[#FAFBFD]">
+          <span className="portal-display text-[13px] font-semibold text-[#A0AABA]">{String(index + 1).padStart(2, "0")}</span>
+          <div className="min-w-0"><p className="truncate text-[10px] font-bold text-[#22314D]">{row.name}</p><p className="mt-0.5 text-[7.5px] font-bold uppercase tracking-[.06em] text-[#98A3B3]">{typeLabel(row.type)}</p></div>
+          <div className="min-w-[150px] text-right">{row.grossPremium !== null ? <><p className="portal-display text-[14px] font-semibold text-[#17243E]">{formatMoneyCompact(row.grossPremium)}</p><p className="mt-0.5 text-[7.5px] font-semibold text-[#8995A7]">{row.policies} policies{premiumShare !== null ? ` · ${premiumShare}% of MTD premium` : ""}</p></> : <><p className="portal-display text-[14px] font-semibold text-[#17243E]">{row.policies}</p><p className="mt-0.5 text-[7.5px] font-semibold text-[#8995A7]">policies MTD</p></>}</div>
+        </Link>;
+      })}</div>
     </div>
   </section>;
 }
@@ -302,15 +315,19 @@ function IntakeRowItem({ row }: { row: IntakeRow }) {
 
 function MixBar({ label, value, total }: { label: string; value: number; total: number }) {
   const share = Math.round((value / total) * 100);
-  return <div><div className="flex items-center justify-between"><span className="text-[8px] font-bold text-[#33405A]">{label}</span><span className="text-[8px] font-bold text-[#33405A]">{value} <span className="font-semibold text-[#96A1B1]">· {share}%</span></span></div><div className="mt-1.5 h-1.5 bg-[#EEF1F5]"><div className="h-full bg-[#6257D9]" style={{ width: `${Math.max(value ? 5 : 0, share)}%` }} /></div></div>;
+  return <div><div className="flex items-center justify-between"><span className="text-[8.5px] font-bold text-[#33405A]">{label}</span><span className="text-[8.5px] font-bold text-[#33405A]">{value} <span className="font-semibold text-[#96A1B1]">· {share}%</span></span></div><div className="mt-1.5 h-1.5 bg-[#EEF1F5]"><div className="h-full bg-[#6257D9]" style={{ width: `${Math.max(value ? 5 : 0, share)}%` }} /></div></div>;
 }
 
 function CompactCount({ label, count, total }: { label: string; count: number; total: number }) {
-  return <div className="flex items-center justify-between gap-2"><span className="truncate text-[8px] font-semibold text-[#536078]">{label}</span><span className="shrink-0 text-[8px] font-bold text-[#29364E]">{count} <span className="font-semibold text-[#9AA5B4]">· {Math.round((count / total) * 100)}%</span></span></div>;
+  return <div className="flex items-center justify-between gap-2"><span className="truncate text-[8.5px] font-semibold text-[#536078]">{label}</span><span className="shrink-0 text-[8.5px] font-bold text-[#29364E]">{count} <span className="font-semibold text-[#9AA5B4]">· {Math.round((count / total) * 100)}%</span></span></div>;
 }
 
-function InsightRow({ label, count, amount }: { label: string; count: number; amount?: number | null }) {
-  return <div className="flex items-center gap-3 py-2.5"><p className="min-w-0 flex-1 truncate text-[8.5px] font-semibold text-[#344159]">{label}</p><span className="text-[8.5px] font-bold text-[#26344E]">{count}</span>{amount !== undefined && amount !== null ? <span className="w-[68px] text-right text-[7.5px] font-bold text-[#7E8B9E]">{formatMoneyCompact(amount)}</span> : null}</div>;
+function InsightRow({ label, count }: { label: string; count: number }) {
+  return <div className="flex items-center gap-3 py-2.5"><p className="min-w-0 flex-1 truncate text-[9px] font-semibold text-[#344159]">{label}</p><span className="text-[9px] font-bold text-[#26344E]">{count}</span></div>;
+}
+
+function TopAmountRow({ rank, label, count, amount }: { rank: number; label: string; count: number; amount?: number | null }) {
+  return <div className="grid grid-cols-[24px_minmax(0,1fr)_auto] items-center gap-2.5 py-2.5"><span className="portal-display text-[10px] font-semibold text-[#A1ABBA]">{String(rank).padStart(2, "0")}</span><p className="min-w-0 truncate text-[9px] font-semibold text-[#344159]">{label}</p><div className="text-right">{amount !== undefined && amount !== null ? <><p className="portal-display text-[11px] font-semibold text-[#1D2C47]">{formatMoneyCompact(amount)}</p><p className="mt-0.5 text-[7px] font-semibold text-[#929EAE]">{count} policies</p></> : <><p className="portal-display text-[11px] font-semibold text-[#1D2C47]">{count}</p><p className="mt-0.5 text-[7px] font-semibold text-[#929EAE]">policies</p></>}</div></div>;
 }
 
 function EmptyInsight() { return <p className="py-5 text-[8px] text-[#95A0B0]">No MTD data</p>; }
