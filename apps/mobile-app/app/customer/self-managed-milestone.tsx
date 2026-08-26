@@ -958,7 +958,7 @@ function summaryIconFor(key: ClaimMilestoneKey): keyof typeof import('@expo/vect
 
 function Gap() { return <View style={styles.gap} />; }
 function DateField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <AppDatePicker label={label} value={value} onChange={onChange} maxDate={todayIso()} formatDisplay={formatDisplayDate} />; }
-function MoneyField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <View><TextField label={label} value={value} onChangeText={(v) => onChange(cleanMoney(v))} keyboardType="decimal-pad" />{value ? <Text style={styles.moneyPreview}>{currency(Number(value))}</Text> : null}</View>; }
+function MoneyField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <TextField label={label} value={value} onChangeText={(v) => onChange(cleanMoney(v))} keyboardType="decimal-pad" />; }
 function cleanMoney(value: string) { return value.replace(/[^0-9.]/g, ''); }
 function todayIso() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function formatDisplayDate(value: string) { if (!value) return ''; const [y,m,d] = value.split('-'); return `${d}-${m}-${y}`; }
@@ -969,7 +969,6 @@ function currency(value: number) { return `₹${Math.round(value).toLocaleString
 const styles = StyleSheet.create({
   loading: { color: '#7A8799', fontSize: 11, fontWeight: '600', padding: 16 },
   gap: { height: 10 },
-  moneyPreview: { color: palette.navy, fontSize: 11.5, fontWeight: '900', marginTop: 6, textAlign: 'right' },
   subsectionHeader: { marginTop: 17, marginBottom: 10, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E5EAF0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   subsectionTitle: { color: palette.navy, fontSize: 13, fontWeight: '900' },
   subsectionMeta: { color: '#145ED7', fontSize: 9.5, fontWeight: '800', backgroundColor: '#EEF4FF', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 },
