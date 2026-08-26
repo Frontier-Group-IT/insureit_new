@@ -1,0 +1,37 @@
+name: Apply final bill upload v3
+
+on:
+  push:
+    branches:
+      - feature/mobile-billing-bill-upload-v3
+    paths:
+      - '.github/workflows/tmp-final-bill-upload-v3b.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/mobile-billing-bill-upload-v3
+          fetch-depth: 0
+      - name: Apply targeted bill upload patch
+        run: |
+          python .github/tmp/apply-final-bill-v3.py
+          git diff --check
+      - name: Commit clean feature change
+        run: |
+          git config user.name "antnish1"
+          git config user.email "shahdolho@gmail.com"
+          git rm .github/workflows/tmp-final-bill-upload-v3.yml
+          git rm .github/workflows/tmp-final-bill-upload-v3b.yml
+          git rm .github/tmp/apply-final-bill-v3.py
+          git add apps/mobile-app/app/customer/self-managed-milestone.tsx
+          git diff --cached --check
+          git commit -m "Add final bill upload to Billing stage"
+          git push origin HEAD:feature/mobile-billing-bill-upload-v3
