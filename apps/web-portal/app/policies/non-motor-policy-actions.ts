@@ -7,6 +7,16 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export type NonMotorCommercialBasis = "NET_PREMIUM_PERCENT" | "FIXED_AMOUNT";
 
+type NonMotorCommercialPayload = {
+  payinBasis: NonMotorCommercialBasis;
+  payinPercent: string;
+  payinFixedAmount: string;
+  insurerSchemeAmount: string;
+  payoutBasis: NonMotorCommercialBasis;
+  payoutPercent: string;
+  payoutFixedAmount: string;
+};
+
 export type NonMotorPolicyPayload = {
   source: {
     issuanceDate: string;
@@ -38,15 +48,7 @@ export type NonMotorPolicyPayload = {
     grossPremium: string;
     deductible?: string;
   };
-  commercial: {
-    payinBasis: NonMotorCommercialBasis;
-    payinPercent: string;
-    payinFixedAmount: string;
-    insurerSchemeAmount: string;
-    payoutBasis: NonMotorCommercialBasis;
-    payoutPercent: string;
-    payoutFixedAmount: string;
-  };
+  commercial?: NonMotorCommercialPayload;
   risk: Record<string, string>;
   additional: Record<string, string>;
 };
@@ -54,6 +56,16 @@ export type NonMotorPolicyPayload = {
 export type NonMotorPolicyResult =
   | { ok: true; policyId: string; policyCode: string }
   | { ok: false; error: string };
+
+const EMPTY_COMMERCIAL: NonMotorCommercialPayload = {
+  payinBasis: "NET_PREMIUM_PERCENT",
+  payinPercent: "",
+  payinFixedAmount: "",
+  insurerSchemeAmount: "",
+  payoutBasis: "NET_PREMIUM_PERCENT",
+  payoutPercent: "",
+  payoutFixedAmount: "",
+};
 
 function clean(value: unknown) {
   return String(value ?? "").trim();
@@ -103,6 +115,7 @@ function customerCode() {
 export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Promise<NonMotorPolicyResult> {
   const profile = await requirePolicyCreator();
   const admin = createSupabaseAdminClient();
+  const commercial = payload.commercial ?? EMPTY_COMMERCIAL;
 
   const policyNumber = clean(payload.policy.policyNumber).toUpperCase();
   const normalizedPolicy = normalizePolicyNumber(policyNumber);
@@ -119,19 +132,19 @@ export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Prom
   const netPremium = enteredNetPremium ?? Math.max(0, (grossPremium ?? 0) - (enteredGst ?? 0));
   const gstAmount = enteredGst ?? Math.max(0, (grossPremium ?? 0) - netPremium);
 
-  const payinPercentEntered = clean(payload.commercial.payinPercent) !== "";
-  const payinFixedEntered = clean(payload.commercial.payinFixedAmount) !== "";
-  const schemeEntered = clean(payload.commercial.insurerSchemeAmount) !== "";
-  const payoutPercentEntered = clean(payload.commercial.payoutPercent) !== "";
-  const payoutFixedEntered = clean(payload.commercial.payoutFixedAmount) !== "";
+  const payinPercentEntered = clean(commercial.payinPercent) !== "";
+  const payinFixedEntered = clean(commercial.payinFixedAmount) !== "";
+  const schemeEntered = clean(commercial.insurerSchemeAmount) !== "";
+  const payoutPercentEntered = clean(commercial.payoutPercent) !== "";
+  const payoutFixedEntered = clean(commercial.payoutFixedAmount) !== "";
   const payinEntered = payinPercentEntered || payinFixedEntered || schemeEntered;
   const payoutEntered = payoutPercentEntered || payoutFixedEntered;
 
-  const payinPercent = moneyOrZero(payload.commercial.payinPercent);
-  const payinFixedAmount = moneyOrZero(payload.commercial.payinFixedAmount);
-  const schemeAmount = moneyOrZero(payload.commercial.insurerSchemeAmount);
-  const payoutPercent = moneyOrZero(payload.commercial.payoutPercent);
-  const payoutFixedAmount = moneyOrZero(payload.commercial.payoutFixedAmount);
+  const payinPercent = moneyOrZero(commercial.payinPercent);
+  const payinFixedAmount = moneyOrZero(commercial.payinFixedAmount);
+  const schemeAmount = moneyOrZero(commercial.insurerSchemeAmount);
+  const payoutPercent = moneyOrZero(commercial.payoutPercent);
+  const payoutFixedAmount = moneyOrZero(commercial.payoutFixedAmount);
 
   if (!policyNumber) return { ok: false, error: "Enter the policy number." };
   if (!insurerId) return { ok: false, error: "Select an insurance company." };
@@ -145,14 +158,14 @@ export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Prom
   if (payinPercent < 0 || payinPercent > 100 || payoutPercent < 0 || payoutPercent > 100) return { ok: false, error: "Pay-in and payout percentages must be between 0 and 100." };
   if (payinFixedAmount < 0 || schemeAmount < 0 || payoutFixedAmount < 0) return { ok: false, error: "Commercial amounts cannot be negative." };
 
-  const payinBaseAmount = payload.commercial.payinBasis === "FIXED_AMOUNT"
+  const payinBaseAmount = commercial.payinBasis === "FIXED_AMOUNT"
     ? payinFixedAmount
     : netPremium * payinPercent / 100;
   const totalProjectedPayin = payinBaseAmount + schemeAmount;
   const tdsPercent = 10;
   const tdsAmount = totalProjectedPayin * tdsPercent / 100;
   const payinAfterTds = totalProjectedPayin - tdsAmount;
-  const partnerPayoutAmount = payload.commercial.payoutBasis === "FIXED_AMOUNT"
+  const partnerPayoutAmount = commercial.payoutBasis === "FIXED_AMOUNT"
     ? payoutFixedAmount
     : netPremium * payoutPercent / 100;
   const retentionAmount = payinAfterTds - partnerPayoutAmount;
@@ -300,8 +313,8 @@ export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Prom
       projected_od_amount: 0,
       projected_tp_percent: 0,
       projected_tp_amount: 0,
-      commercial_basis: payinEntered ? payload.commercial.payinBasis : null,
-      projected_commission_percent: payinEntered && payload.commercial.payinBasis === "NET_PREMIUM_PERCENT" ? payinPercent : null,
+      commercial_basis: payinEntered ? commercial.payinBasis : null,
+      projected_commission_percent: payinEntered && commercial.payinBasis === "NET_PREMIUM_PERCENT" ? payinPercent : null,
       projected_commission_amount: payinEntered ? payinBaseAmount : null,
       insurer_scheme_amount: schemeAmount,
       total_projected_payin: totalProjectedPayin,
@@ -327,8 +340,8 @@ export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Prom
       policy_id: policy.id,
       intermediary_type: sourceResolution.source.intermediaryType,
       intermediary_code: sourceResolution.source.intermediaryCode,
-      payout_basis: payoutEntered ? payload.commercial.payoutBasis : null,
-      partner_payout_percent: payoutEntered && payload.commercial.payoutBasis === "NET_PREMIUM_PERCENT" ? payoutPercent : null,
+      payout_basis: payoutEntered ? commercial.payoutBasis : null,
+      partner_payout_percent: payoutEntered && commercial.payoutBasis === "NET_PREMIUM_PERCENT" ? payoutPercent : null,
       partner_payout_amount: payoutEntered ? partnerPayoutAmount : null,
       retention_amount: retentionAmount,
       od_payout_percent: 0,
