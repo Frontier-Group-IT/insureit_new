@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { PolicyActivityStatus } from "@/components/policy-activity-status";
 import { PolicyCommercialShell } from "@/components/policy-commercial-shell";
 import { PolicyEditActionFooter } from "@/components/policy-edit-action-footer";
@@ -15,7 +15,7 @@ import { getCustomerManager } from "@/lib/master-data-server";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 
 type PolicyRow = {
-  id: string; customer_id: string; vehicle_id: string; insurance_company_id: string;
+  id: string; customer_id: string; vehicle_id: string | null; insurance_company_id: string;
   policy_no: string; policy_type: string; insured_declared_value: number | null;
   start_date: string; end_date: string; policy_code: string | null;
   intermediary_type: string | null; intermediary_code: string | null; lead_source: string | null;
@@ -72,6 +72,12 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
   if (policyResult.error) throw new Error(`Unable to load policy details: ${policyResult.error.message}`);
   if (!policyResult.data) notFound();
   const policy = policyResult.data;
+  const vehicleId = policy.vehicle_id;
+
+  // Non-Motor (and any other vehicle-less policy) is a valid policy record.
+  // The current edit surface is Motor-specific, so send these records to the
+  // safe policy detail view instead of querying vehicles.id with a null UUID.
+  if (!vehicleId) redirect(`/policies/${id}`);
 
   const [customerManager, canEditVehicle] = await Promise.all([
     getCustomerManager(policy.customer_id),
@@ -85,7 +91,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
 
   const [customerResult, vehicleResult, premiumResult, payinResult, payoutResult, activeInsurersResult, currentInsurerResult, salesEmployees, intermediariesResult] = await Promise.all([
     admin.from("customers").select("id,contact_name,phone,updated_at").eq("id", policy.customer_id).maybeSingle<CustomerRow>(),
-    admin.from("vehicles").select("id,vehicle_no,vehicle_type,vehicle_class_code,vehicle_class_description,make,model,year,chassis_no,engine_no,fuel_type,engine_capacity_cc,seating_capacity,gvw_kg,rto_name,rto_state,updated_at").eq("id", policy.vehicle_id).maybeSingle<VehicleRow>(),
+    admin.from("vehicles").select("id,vehicle_no,vehicle_type,vehicle_class_code,vehicle_class_description,make,model,year,chassis_no,engine_no,fuel_type,engine_capacity_cc,seating_capacity,gvw_kg,rto_name,rto_state,updated_at").eq("id", vehicleId).maybeSingle<VehicleRow>(),
     admin.from("policy_premium_details").select("od_premium,tp_premium,cpa_opted,cpa_amount").eq("policy_id", id).maybeSingle<PremiumRow>(),
     admin.from("policy_payin_details").select("payout_basis,projected_od_percent,projected_tp_percent,insurer_scheme_amount").eq("policy_id", id).maybeSingle<PayinRow>(),
     admin.from("policy_intermediary_payouts").select("retention_amount,od_payout_percent,tp_payout_percent,status,payout_date,voucher_number").eq("policy_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle<PayoutRow>(),
@@ -240,7 +246,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
         />
         <PolicyLinkedMasterActions
           customerId={policy.customer_id}
-          vehicleId={policy.vehicle_id}
+          vehicleId={vehicleId}
           canEditCustomer={Boolean(customerManager)}
           canEditVehicle={canEditVehicle}
         />
