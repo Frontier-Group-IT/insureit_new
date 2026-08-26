@@ -5,6 +5,7 @@ import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-source";
 import { recordVehicleActivity, VEHICLE_ACTIVITY_ACTIONS } from "@/lib/vehicle-activity";
+import { isValidVehicleRegistrationNumber, normalizeVehicleRegistrationNumber } from "@/lib/vehicle-registration";
 import { findPolicyOnboardingBusinessConflict, type PolicyBusinessConflict } from "./policy-onboarding-conflicts";
 
 export type PolicyCustomerCandidate = { id: string; name: string; phone: string; city: string | null; state: string | null; phoneMatch: boolean; nameMatch: boolean };
@@ -31,7 +32,7 @@ type CustomerRow = { id: string; contact_name: string; phone: string; city: stri
 type VehicleOwnerRow = { id: string; vehicle_no: string; vehicle_no_normalized: string | null; customer_id: string; customers: { contact_name: string; phone: string } | null };
 
 function normalizedPhone(value: string) { return value.replace(/\D/g, "").slice(-10); }
-function normalizedRegistration(value: string) { return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+function normalizedRegistration(value: string) { return normalizeVehicleRegistrationNumber(value); }
 function normalizedVehicleIdentity(value: unknown) { return String(value ?? "").trim().toUpperCase().replace(/[^A-Z0-9]/g, ""); }
 function isTemporaryVehicleNumber(value: string | null | undefined) { return /^(?:NEW|PENDING)-/i.test(value?.trim() ?? ""); }
 function registrationMode(payload: PolicyOnboardingPayload) { return payload.vehicle.registrationMode === "unregistered" ? "unregistered" : "registered"; }
@@ -125,7 +126,7 @@ function validatePayload(payload: PolicyOnboardingPayload) {
   const cpaAmount = Number(numericPayloadValue(payload.premium.cpa, false, "0"));
   if (!name) return "Enter the insured/customer name.";
   if (!/^[6-9][0-9]{9}$/.test(phone)) return "Enter a valid 10 digit Indian mobile number.";
-  if (mode === "registered" && !/^[A-Z]{2}[A-Z0-9]*[0-9]{2}$/.test(rawRegistration)) return "Enter a valid vehicle registration number starting with 2 letters and ending with 2 digits.";
+  if (mode === "registered" && !isValidVehicleRegistrationNumber(rawRegistration)) return "Enter a valid vehicle registration number.";
   if (!vehicleClass) return "Select the vehicle class.";
   if (!make) return "Select the vehicle make.";
   if (!model) return "Enter the vehicle model.";
