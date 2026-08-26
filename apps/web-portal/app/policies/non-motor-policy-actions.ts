@@ -30,12 +30,15 @@ export type NonMotorPolicyPayload = {
 
 export type NonMotorPolicyResult = { ok: true; policyId: string; policyCode: string } | { ok: false; error: string };
 
+type CustomerIdentityRow = { id: string; contact_name: string; company_name: string | null };
+
 const EMPTY_COMMERCIAL: NonMotorCommercialPayload = {
   payinBasis: "NET_PREMIUM_PERCENT", payinPercent: "", payinFixedAmount: "", insurerSchemeAmount: "",
   payoutBasis: "NET_PREMIUM_PERCENT", payoutPercent: "", payoutFixedAmount: "",
 };
 
 const clean = (value: unknown) => String(value ?? "").trim();
+function cleanCustomerName(value: unknown) { return clean(value).replace(/\s+/g, " "); }
 function numberOrNull(value: unknown) { const normalized = clean(value).replace(/,/g, ""); if (!normalized) return null; const parsed = Number(normalized); return Number.isFinite(parsed) ? parsed : null; }
 const moneyOrZero = (value: unknown) => numberOrNull(value) ?? 0;
 const validDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -43,6 +46,7 @@ const normalizePhone = (value: string) => value.replace(/\D/g, "").slice(-10);
 const normalizePolicyNumber = (value: string) => value.trim().toUpperCase().replace(/\s+/g, "");
 function policyCode() { const now = new Date(); return `POL-${[now.getUTCFullYear(),String(now.getUTCMonth()+1).padStart(2,"0"),String(now.getUTCDate()).padStart(2,"0"),String(now.getUTCHours()).padStart(2,"0"),String(now.getUTCMinutes()).padStart(2,"0"),String(now.getUTCSeconds()).padStart(2,"0"),String(now.getUTCMilliseconds()).padStart(3,"0")].join("")}`; }
 const customerCode = () => `CUS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2,6).toUpperCase()}`;
+function customerIdentityName(row: CustomerIdentityRow) { return cleanCustomerName(row.company_name || row.contact_name).toLowerCase(); }
 
 export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Promise<NonMotorPolicyResult> {
   const profile = await requirePolicyCreator();
@@ -114,15 +118,29 @@ export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Prom
       const { data: existingCustomer, error } = await admin.from("customers").select("id").eq("id", customerId).maybeSingle<{id:string}>();
       if (error || !existingCustomer) return { ok:false, error:"The selected customer is no longer available. Refresh and try again." };
     } else {
-      const insuredName = clean(payload.customer.insuredName);
+      const insuredName = cleanCustomerName(payload.customer.insuredName);
+      const normalizedName = insuredName.toLowerCase();
       const phone = normalizePhone(payload.customer.phone);
       if (!insuredName) return { ok:false, error:"Enter the insured/customer name." };
       if (!/^[6-9][0-9]{9}$/.test(phone)) return { ok:false, error:"Enter a valid 10 digit Indian mobile number." };
-      const { data: phoneMatch, error: phoneError } = await admin.from("customers").select("id,contact_name,company_name").eq("phone", phone).limit(2).returns<Array<{id:string;contact_name:string;company_name:string|null}>>();
+
+      // Mirror Motor onboarding identity semantics: a mobile number is a contact point, not a unique customer key.
+      // If the same mobile belongs to a differently named customer (for example an intermediary's shared number),
+      // create a distinct customer. Only name + mobile together identify a likely existing customer.
+      const { data: phoneMatches, error: phoneError } = await admin
+        .from("customers")
+        .select("id,contact_name,company_name")
+        .eq("phone", phone)
+        .limit(10)
+        .returns<CustomerIdentityRow[]>();
       if (phoneError) return { ok:false, error:"Customer validation is temporarily unavailable. Please try again." };
-      if ((phoneMatch ?? []).length === 1) customerId = phoneMatch![0].id;
-      else if ((phoneMatch ?? []).length > 1) return { ok:false, error:"More than one customer uses this mobile number. Select the existing customer instead of creating a new one." };
-      else {
+
+      const exactIdentityMatches = (phoneMatches ?? []).filter((row) => customerIdentityName(row) === normalizedName);
+      if (exactIdentityMatches.length === 1) {
+        customerId = exactIdentityMatches[0].id;
+      } else if (exactIdentityMatches.length > 1) {
+        return { ok:false, error:"More than one existing customer has the same name and mobile number. Select the correct existing customer from Customer / Organisation." };
+      } else {
         const isOrganisation = payload.customer.customerType === "Organisation";
         const { data: createdCustomer, error } = await admin.from("customers").insert({
           customer_code:customerCode(), company_name:isOrganisation?insuredName:null, contact_name:clean(payload.customer.contactName)||insuredName,
