@@ -556,9 +556,10 @@ export default function SelfManagedClaimScreen() {
             hitSlop={8}
             disabled={locating}
             onPress={() => void captureCurrentLocation()}
-            style={({ pressed }) => [styles.gpsLocationIconButton, locating && styles.gpsLocationButtonDisabled, pressed && !locating && styles.gpsLocationIconButtonPressed]}
+            style={({ pressed }) => [styles.gpsLocationInlineAction, locating && styles.gpsLocationButtonDisabled, pressed && !locating && styles.gpsLocationInlineActionPressed]}
           >
-            <MaterialCommunityIcons name="crosshairs-gps" size={18} color="#0A43A3" />
+            <MaterialCommunityIcons name="crosshairs-gps" size={16} color="#0A43A3" />
+            <Text style={styles.gpsLocationInlineText}>Use Current Location</Text>
           </Pressable>
         </View>
         {locationNotice ? (
@@ -718,9 +719,10 @@ const styles = StyleSheet.create({
   subsection: { marginTop: 16, marginBottom: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E7EBF0' },
   subsectionTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
   locationFieldWrap: { position: 'relative' },
-  gpsLocationIconButton: { position: 'absolute', top: -5, right: 0, zIndex: 2, width: 30, height: 30, borderRadius: 10, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' },
-  gpsLocationIconButtonPressed: { backgroundColor: '#E2EEFF', transform: [{ scale: 0.96 }] },
+  gpsLocationInlineAction: { position: 'absolute', top: -3, right: 0, zIndex: 2, minHeight: 26, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4, paddingHorizontal: 2 },
+  gpsLocationInlineActionPressed: { opacity: 0.72 },
   gpsLocationButtonDisabled: { opacity: 0.58 },
+  gpsLocationInlineText: { color: '#0A43A3', fontSize: 10.5, lineHeight: 14, fontWeight: '900' },
   locationNotice: { marginTop: 7, borderRadius: 11, backgroundColor: '#EFFAF4', borderWidth: 1, borderColor: '#B7E4CC', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 7 },
   locationNoticeError: { backgroundColor: '#FFF5F5', borderColor: '#F2C5C2' },
   locationNoticeText: { flex: 1, color: '#166A45', fontSize: 9.5, lineHeight: 13, fontWeight: '700' },
