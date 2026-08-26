@@ -278,7 +278,7 @@ function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldK
   if (key === 'billing') return <ClaimFormSection title="Stage Details" subtitle="Record the final workshop bill" icon="receipt-text-outline">
     <DateField label="Bill Date *" value={values.bill_date ?? ''} onChange={(v) => set('bill_date', v)} />
     <Gap /><MoneyField label="Bill Amount *" value={values.bill_amount ?? ''} onChange={(v) => set('bill_amount', v)} />
-    {claimId && customerId ? <><Gap /><FinalBillUpload claimId={claimId} customerId={customerId} /></> : null}
+    {claimId ? <><Gap /><FinalBillUpload claimId={claimId} /></> : null}
   </ClaimFormSection>;
 
   if (key === 'delivery_order') {
@@ -674,7 +674,7 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
 }
 
 
-function FinalBillUpload({ claimId, customerId }: { claimId: string; customerId: string }) {
+function FinalBillUpload({ claimId }: { claimId: string }) {
   const [document, setDocument] = useState<BillDocumentRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -727,6 +727,15 @@ function FinalBillUpload({ claimId, customerId }: { claimId: string; customerId:
     if (uploading || removing) return;
     setError('');
     setSuccess('');
+
+    const { data: claimIdentity, error: claimIdentityError } = await supabase
+      .from('claims')
+      .select('customer_id')
+      .eq('id', claimId)
+      .maybeSingle();
+    const resolvedCustomerId = claimIdentity?.customer_id ?? '';
+    if (claimIdentityError || !resolvedCustomerId) return setError('We could not identify the customer for this claim. Please reopen the claim and try again.');
+
     const result = await DocumentPicker.getDocumentAsync({
       type: ['application/pdf', 'image/jpeg', 'image/png'],
       multiple: false,
@@ -754,13 +763,13 @@ function FinalBillUpload({ claimId, customerId }: { claimId: string; customerId:
       const body = await response.arrayBuffer();
       if (body.byteLength > MAX_FINAL_BILL_SIZE_BYTES) return setError('Selected bill file is too large. Please choose a smaller file.');
 
-      newStoragePath = `${customerId}/${claimId}/billing/${Date.now()}-${Math.random().toString(36).slice(2)}.${normalizedExtension}`;
+      newStoragePath = `${resolvedCustomerId}/${claimId}/billing/${Date.now()}-${Math.random().toString(36).slice(2)}.${normalizedExtension}`;
       const uploadResult = await supabase.storage.from('claim-documents').upload(newStoragePath, body, { contentType, upsert: false });
       if (uploadResult.error) return setError('The bill could not be uploaded. Please try again.');
 
       const { data: inserted, error: insertError } = await supabase.from('claim_documents').insert({
         claim_id: claimId,
-        customer_id: customerId,
+        customer_id: resolvedCustomerId,
         document_type: FINAL_BILL_DOCUMENT_TYPE,
         file_name: file.name,
         storage_bucket: 'claim-documents',
