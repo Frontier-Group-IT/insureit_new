@@ -1,6 +1,7 @@
 "use client";
 
 import type { NonMotorCustomerOption } from "@/components/non-motor-policy-form";
+import { PolicyCommercialAccessProvider } from "@/components/policy-commercial-access-context";
 import { PolicyIntakeOnboardingContextCard } from "@/components/policy-intake-onboarding-context";
 import {
   PolicyUnifiedForm,
@@ -22,7 +23,7 @@ export type PolicyCommercialShellProps = {
 
 export function PolicyCommercialShell(props: PolicyCommercialShellProps) {
   return (
-    <>
+    <PolicyCommercialAccessProvider access={props.commercialAccess}>
       <PolicyUnifiedForm
         mode={props.mode}
         insurers={props.insurers}
@@ -34,6 +35,6 @@ export function PolicyCommercialShell(props: PolicyCommercialShellProps) {
         commercialAccess={props.commercialAccess}
       />
       {props.mode === "create" ? <PolicyIntakeOnboardingContextCard /> : null}
-    </>
+    </PolicyCommercialAccessProvider>
   );
 }
