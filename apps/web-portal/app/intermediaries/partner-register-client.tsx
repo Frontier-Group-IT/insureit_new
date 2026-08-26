@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { FolderTree, Search } from "lucide-react";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { FreshAccountReviewLink } from "./applications/account-review-back-link";
 import { createLinkedIntermediaryAccount } from "./applications/[id]/account-review-actions";
@@ -105,7 +106,11 @@ export function PartnerRegisterClient({
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#94A3B8]" />
             <input value={search} onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }} placeholder="Search partner name, mobile, email or ID" className="h-9 w-full rounded-lg border border-[#D8E1EC] bg-white pl-9 pr-3 text-[10.5px] text-[#17203A] outline-none placeholder:text-[#94A3B8] focus:border-[#315FEA] focus:ring-2 focus:ring-[#E6ECFF]" />
           </form>
-          <div className="flex items-center justify-end gap-1.5 whitespace-nowrap text-[9.5px] font-semibold">
+          <div className="flex flex-wrap items-center justify-end gap-1.5 whitespace-nowrap text-[9.5px] font-semibold">
+            <Link href="/intermediaries/groups" className="mr-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#CAD7E7] bg-white px-2.5 text-[#17365D] shadow-sm transition hover:border-[#9FB4CD] hover:bg-[#F5F8FC]" title="Manage Intermediary Groups">
+              <FolderTree className="h-3.5 w-3.5" />
+              Groups
+            </Link>
             <FilterButton label="All" count={searchedRows.length} active={selectedFilter === "all"} onClick={() => selectFilter("all")} />
             <FilterButton label="Active" count={counts.active} active={selectedFilter === "active"} onClick={() => selectFilter("active")} />
             <FilterButton label="Onboarding" count={counts.onboarding} active={selectedFilter === "onboarding"} onClick={() => selectFilter("onboarding")} />
