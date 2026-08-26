@@ -465,8 +465,12 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
       </View>
       <View style={styles.approvalUploadHeadingCopy}>
         <Text style={styles.approvalUploadTitle}>Approval Document</Text>
-        <Text style={styles.approvalUploadSubtitle}>Upload insurer approval in PDF format · Max 5 MB</Text>
+        <Text style={styles.approvalUploadSubtitle}>Upload insurer approval in PDF format</Text>
       </View>
+      {!loading && !document ? <Pressable accessibilityRole="button" disabled={uploading || removing} onPress={() => void chooseAndUpload()} style={styles.approvalUploadButton}>
+        <MaterialCommunityIcons name="upload" size={19} color="#FFFFFF" />
+        <Text style={styles.approvalUploadButtonText}>{uploading ? 'Uploading PDF...' : 'Upload Approval PDF'}</Text>
+      </Pressable> : null}
     </View>
 
     {loading ? <Text style={styles.approvalUploadLoading}>Checking saved approval PDF...</Text> : document ? <>
@@ -496,10 +500,7 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
           <Text style={styles.approvalRemoveText}>{removing ? 'Removing...' : 'Remove'}</Text>
         </Pressable>
       </View>
-    </> : <Pressable accessibilityRole="button" disabled={uploading || removing} onPress={() => void chooseAndUpload()} style={styles.approvalUploadButton}>
-      <MaterialCommunityIcons name="upload" size={19} color="#FFFFFF" />
-      <Text style={styles.approvalUploadButtonText}>{uploading ? 'Uploading PDF...' : 'Upload Approval PDF'}</Text>
-    </Pressable>}
+    </> : null}
 
     {success ? <View style={styles.approvalFeedbackSuccess}><MaterialCommunityIcons name="check-circle-outline" size={14} color="#168161" /><Text style={styles.approvalFeedbackSuccessText}>{success}</Text></View> : null}
     {error ? <View style={styles.approvalFeedbackError}><MaterialCommunityIcons name="alert-circle-outline" size={14} color="#B42318" /><Text style={styles.approvalFeedbackErrorText}>{error}</Text></View> : null}
@@ -635,7 +636,7 @@ const styles = StyleSheet.create({
   approvalUploadTitle: { color: palette.navy, fontSize: 11.5, fontWeight: '900' },
   approvalUploadSubtitle: { color: '#718198', fontSize: 8.7, lineHeight: 12, fontWeight: '600', marginTop: 2 },
   approvalUploadLoading: { color: '#718198', fontSize: 9.5, fontWeight: '700', marginTop: 10 },
-  approvalUploadButton: { minHeight: 44, marginTop: 10, borderRadius: 12, backgroundColor: '#0A43A3', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
+  approvalUploadButton: { minHeight: 38, borderRadius: 12, backgroundColor: '#0A43A3', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 12, flexShrink: 0 },
   approvalUploadButtonText: { color: '#FFFFFF', fontSize: 10.5, fontWeight: '900' },
   approvalUploadedCard: { minHeight: 54, marginTop: 10, borderRadius: 12, borderWidth: 1, borderColor: '#A9DCC0', backgroundColor: '#EFFAF4', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 9 },
   approvalUploadedFileIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#DDF4E7', alignItems: 'center', justifyContent: 'center' },
