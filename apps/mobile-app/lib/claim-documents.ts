@@ -53,6 +53,8 @@ export const finalDocumentGroups: FinalDocumentGroup[] = [
       { type: 'Fitness copy', title: 'Fitness copy', body: 'Vehicle fitness copy', icon: 'file-certificate-outline' },
       { type: 'GR/Load bill', title: 'GR/Load bill', body: 'GR or load bill copy', icon: 'file-document-multiple-outline' },
       { type: 'Fasttag report last 15 days', title: 'Fasttag report last 15 days', body: 'Fastag report for last 15 days', icon: 'file-document-outline' },
+      { type: 'Spot Report', title: 'Spot Report', body: 'Spot survey or inspection report', icon: 'clipboard-text-outline' },
+      { type: 'Estimate Copy', title: 'Estimate Copy', body: 'Workshop estimate copy', icon: 'receipt-text-outline' },
     ],
   },
   {
