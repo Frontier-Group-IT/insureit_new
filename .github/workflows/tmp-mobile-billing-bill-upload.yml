@@ -1,0 +1,115 @@
+name: Apply mobile billing bill upload
+
+on:
+  push:
+    branches:
+      - feature/mobile-billing-bill-upload-v2
+    paths:
+      - '.github/workflows/tmp-mobile-billing-bill-upload.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/mobile-billing-bill-upload-v2
+          fetch-depth: 0
+
+      - name: Add final bill upload to Billing stage
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('apps/mobile-app/app/customer/self-managed-milestone.tsx')
+          text = path.read_text(encoding='utf-8')
+
+          old_constants = "const APPROVAL_DOCUMENT_TYPE = 'Approval PDF';\nconst MAX_APPROVAL_PDF_SIZE_BYTES = 5 * 1024 * 1024;"
+          new_constants = old_constants + "\nconst FINAL_BILL_DOCUMENT_TYPE = 'Final Workshop Bill';\nconst MAX_FINAL_BILL_SIZE_BYTES = 10 * 1024 * 1024;"
+          if text.count(old_constants) != 1:
+              raise SystemExit('Approval constants block mismatch.')
+          text = text.replace(old_constants, new_constants, 1)
+
+          old_billing = "\n".join([
+              "  if (key === 'billing') return <ClaimFormSection title=\"Stage Details\" subtitle=\"Record the final workshop bill\" icon=\"receipt-text-outline\">",
+              "    <DateField label=\"Bill Date *\" value={values.bill_date ?? ''} onChange={(v) => set('bill_date', v)} />",
+              "    <Gap /><MoneyField label=\"Bill Amount *\" value={values.bill_amount ?? ''} onChange={(v) => set('bill_amount', v)} />",
+              "  </ClaimFormSection>;"
+          ])
+          new_billing = "\n".join([
+              "  if (key === 'billing') return <ClaimFormSection title=\"Stage Details\" subtitle=\"Record the final workshop bill\" icon=\"receipt-text-outline\">",
+              "    <DateField label=\"Bill Date *\" value={values.bill_date ?? ''} onChange={(v) => set('bill_date', v)} />",
+              "    <Gap /><MoneyField label=\"Bill Amount *\" value={values.bill_amount ?? ''} onChange={(v) => set('bill_amount', v)} />",
+              "    {claimId && customerId ? <><Gap /><FinalBillUpload claimId={claimId} customerId={customerId} /></> : null}",
+              "  </ClaimFormSection>;"
+          ])
+          if text.count(old_billing) != 1:
+              raise SystemExit('Billing block mismatch.')
+          text = text.replace(old_billing, new_billing, 1)
+
+          start = text.index('function WorkApprovalPdfUpload')
+          end = text.index('\nfunction validate(', start)
+          bill = text[start:end]
+          bill = bill.replace('function WorkApprovalPdfUpload', 'function FinalBillUpload', 1)
+          bill = bill.replace('APPROVAL_DOCUMENT_TYPE', 'FINAL_BILL_DOCUMENT_TYPE')
+          bill = bill.replace('MAX_APPROVAL_PDF_SIZE_BYTES', 'MAX_FINAL_BILL_SIZE_BYTES')
+          bill = bill.replace('viewApprovalPdf', 'viewBill')
+          bill = bill.replace('removeApprovalPdf', 'removeBill')
+          bill = bill.replace('approval PDF', 'bill')
+          bill = bill.replace('Approval PDF', 'Bill')
+          bill = bill.replace('Approval Document', 'Bill Upload')
+          bill = bill.replace('Upload insurer approval in PDF format', 'Upload final workshop bill · PDF, JPG or PNG')
+          bill = bill.replace("type: 'application/pdf',", "type: ['application/pdf', 'image/jpeg', 'image/png'],")
+          old_pdf_validation = "\n".join([
+              "    const isPdf = file.mimeType === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');",
+              "    if (!isPdf) return setError('Please select a PDF file.');",
+              "    if (file.size !== null && file.size !== undefined && file.size > MAX_FINAL_BILL_SIZE_BYTES) return setError('Bill must be 5 MB or smaller.');"
+          ])
+          new_file_validation = "\n".join([
+              "    const lowerName = file.name.toLowerCase();",
+              "    const extension = lowerName.includes('.') ? lowerName.split('.').pop() ?? '' : '';",
+              "    const allowedExtension = ['pdf', 'jpg', 'jpeg', 'png'].includes(extension);",
+              "    const allowedMime = ['application/pdf', 'image/jpeg', 'image/png'].includes(file.mimeType ?? '');",
+              "    if (!allowedExtension && !allowedMime) return setError('Please select a PDF, JPG or PNG file.');",
+              "    if (file.size !== null && file.size !== undefined && file.size > MAX_FINAL_BILL_SIZE_BYTES) return setError('Selected bill file is too large. Please choose a smaller file.');",
+              "    const normalizedExtension = extension === 'jpeg' ? 'jpg' : extension || (file.mimeType === 'application/pdf' ? 'pdf' : file.mimeType === 'image/png' ? 'png' : 'jpg');",
+              "    const contentType = normalizedExtension === 'pdf' ? 'application/pdf' : normalizedExtension === 'png' ? 'image/png' : 'image/jpeg';"
+          ])
+          if old_pdf_validation not in bill:
+              raise SystemExit('PDF validation block mismatch.')
+          bill = bill.replace(old_pdf_validation, new_file_validation, 1)
+          bill = bill.replace("setError('Bill must be 5 MB or smaller.');", "setError('Selected bill file is too large. Please choose a smaller file.');")
+          bill = bill.replace("`${customerId}/${claimId}/work-approval/${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`", "`${customerId}/${claimId}/billing/${Date.now()}-${Math.random().toString(36).slice(2)}.${normalizedExtension}`")
+          bill = bill.replace("contentType: 'application/pdf',", "contentType,")
+          bill = bill.replace("mime_type: 'application/pdf',", "mime_type: contentType,")
+          bill = bill.replace('file-pdf-box', 'cloud-upload-outline', 1)
+          bill = bill.replace(">{uploading ? 'Uploading PDF...' : 'Upload Bill'}</Text>", ">{uploading ? 'Uploading...' : 'Choose File'}</Text>", 1)
+          bill = bill.replace('file-pdf-box', 'file-document-check-outline')
+
+          if '5 MB' in bill or 'Max size' in bill or '(Max:' in bill:
+              raise SystemExit('Visible size-limit copy remains in bill upload component.')
+          if 'FinalBillUpload' not in bill or "type: ['application/pdf', 'image/jpeg', 'image/png']" not in bill:
+              raise SystemExit('Bill upload transformation did not complete.')
+
+          text = text[:end] + '\n' + bill + text[end:]
+          path.write_text(text, encoding='utf-8')
+          PY
+
+          git diff --check
+
+      - name: Commit clean feature change
+        shell: bash
+        run: |
+          git config user.name "antnish1"
+          git config user.email "shahdolho@gmail.com"
+          git rm .github/workflows/tmp-mobile-billing-bill-upload.yml
+          git add apps/mobile-app/app/customer/self-managed-milestone.tsx
+          git diff --cached --check
+          git commit -m "Add final bill upload to Billing stage"
+          git push origin HEAD:feature/mobile-billing-bill-upload-v2
