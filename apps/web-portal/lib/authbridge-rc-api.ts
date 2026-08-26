@@ -1,3 +1,7 @@
+import { isValidVehicleRegistrationNumber, normalizeVehicleRegistrationNumber } from "@/lib/vehicle-registration";
+
+export { normalizeVehicleRegistrationNumber };
+
 export type AuthbridgeRcLookupResponse = {
   statusCode: number;
   status: string;
@@ -17,14 +21,6 @@ function configuration() {
   if (!gatewaySecret) throw new Error("ICALL_GATEWAY_SECRET is not configured.");
 
   return { gatewayUrl, gatewaySecret };
-}
-
-export function normalizeVehicleRegistrationNumber(value: string) {
-  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-}
-
-export function isValidVehicleRegistrationNumber(value: string) {
-  return /^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{1,4}$/.test(normalizeVehicleRegistrationNumber(value));
 }
 
 export async function lookupAuthbridgeRc(registrationNumber: string): Promise<AuthbridgeRcLookupResponse> {

@@ -24,6 +24,10 @@ import {
 import { NonMotorUnifiedMode, type NonMotorProgress } from "@/components/non-motor-unified-mode";
 import type { NonMotorCustomerOption } from "@/components/non-motor-policy-form";
 import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-apply";
+import {
+  isValidVehicleRegistrationNumber as isValidRegisteredVehicleNumber,
+  normalizeVehicleRegistrationNumber as normalizeRegistrationInput,
+} from "@/lib/vehicle-registration";
 import type { PolicyBusinessConflict } from "@/app/policies/policy-onboarding-conflicts";
 
 export type PolicyFormMode = "create" | "edit";
@@ -143,8 +147,6 @@ function dateTyping(value:string){const digits=value.replace(/\D/g,"").slice(0,8
 function policyExpiryFrom(start:string){if(!/^\d{4}-\d{2}-\d{2}$/.test(start))return"";const[y,m,d]=start.split("-").map(Number);const expiry=new Date(Date.UTC(y+1,m-1,d));expiry.setUTCDate(expiry.getUTCDate()-1);return expiry.toISOString().slice(0,10);}
 function shiftedPolicyEnd(newStart:string,oldStart:string,oldEnd:string){if(!/^\d{4}-\d{2}-\d{2}$/.test(newStart)||!/^\d{4}-\d{2}-\d{2}$/.test(oldStart)||!/^\d{4}-\d{2}-\d{2}$/.test(oldEnd))return policyExpiryFrom(newStart);const oldStartMs=new Date(`${oldStart}T00:00:00Z`).getTime(),oldEndMs=new Date(`${oldEnd}T00:00:00Z`).getTime();if(oldEndMs<oldStartMs)return policyExpiryFrom(newStart);const durationDays=Math.round((oldEndMs-oldStartMs)/86400000);const next=new Date(`${newStart}T00:00:00Z`);next.setUTCDate(next.getUTCDate()+durationDays);return next.toISOString().slice(0,10);}
 function boolValue(value: string | null) { return value==="true"||value==="Yes"||value==="YES"; }
-function normalizeRegistrationInput(value:string){return value.toUpperCase().replace(/[^A-Z0-9]/g,"");}
-function isValidRegisteredVehicleNumber(value:string){const normalized=normalizeRegistrationInput(value);const standard=/^[A-Z]{2}[A-Z0-9]*[0-9]{2}$/.test(normalized);const bharatSeries=/^\d{2}BH\d{4}[A-HJ-NP-Z]{1,2}$/.test(normalized);return standard||bharatSeries;}
 const registrationValidationMessage="Enter a valid Registration number.";
 
 export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources, manufacturers = [], initialValues, commercialAccess = true }: Props) {

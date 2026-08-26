@@ -47,7 +47,9 @@ function normalizeRegistrationNumber(value) {
 }
 
 function validRegistrationNumber(value) {
-  return /^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{1,4}$/.test(value);
+  const standard = /^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{1,4}$/.test(value);
+  const bharatSeries = /^\d{2}BH\d{4}[A-HJ-NP-Z]{1,2}$/.test(value);
+  return standard || bharatSeries;
 }
 
 function decodeIcallResponse(response) {
