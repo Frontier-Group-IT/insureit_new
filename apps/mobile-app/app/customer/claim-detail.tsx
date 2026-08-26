@@ -112,7 +112,7 @@ export default function ClaimDetailScreen() {
   const tone = selfManaged ? externalClaimTone : claimTone(claim.current_status);
   const currentStage = SELF_MANAGED_MILESTONES[currentStageIndex];
   const settled = ['Settled', 'Closed', 'Claim Complete'].includes(claim.current_status) || (selfManaged && completedKeys.size >= 9);
-  const compactClaimIntimation = selfManaged && (currentStage?.key === 'claim_intimation' || settled);
+  const compactClaimIntimation = selfManaged;
   const financialRows = selfManaged ? buildFinancialRows(milestones) : [];
 
   function openSelfStage(key: ClaimMilestoneKey) {
