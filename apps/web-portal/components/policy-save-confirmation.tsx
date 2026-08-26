@@ -11,7 +11,23 @@ const allowedTypes = ".pdf,.jpg,.jpeg,.png,.webp";
 const maxFileBytes = 50 * 1024 * 1024;
 const legacySaveButtonLabel = "Book Active Policy";
 const saveButtonLabel = "Upload Policy";
+const POLICY_INTAKE_PENDING_KEY = "insureit:policy-intake:pending:v1";
+const POLICY_INTAKE_MAX_AGE_MS = 8 * 60 * 60 * 1000;
 const registrationPattern = /^(?:[A-Z]{2}[A-Z0-9]*[0-9]{2}|\d{2}BH\d{4}[A-HJ-NP-Z]{1,2})$/;
+
+function getPendingPolicyIntakeId() {
+  if (typeof window === "undefined") return null;
+  try {
+    const pending = JSON.parse(sessionStorage.getItem(POLICY_INTAKE_PENDING_KEY) || "null") as { id?: string; savedAt?: number } | null;
+    if (!pending?.id || !pending.savedAt || Date.now() - pending.savedAt > POLICY_INTAKE_MAX_AGE_MS) {
+      if (pending) sessionStorage.removeItem(POLICY_INTAKE_PENDING_KEY);
+      return null;
+    }
+    return pending.id;
+  } catch {
+    return null;
+  }
+}
 
 function hasUiValidationFailure() {
   const requiredControls = Array.from(
@@ -61,6 +77,11 @@ export function PolicySaveConfirmation() {
         return;
       }
 
+      // Policy Intake already owns a stored/current policy copy. Let the normal
+      // Policy Onboarding submit run directly; finalization links that existing
+      // intake document to the newly booked policy.
+      if (getPendingPolicyIntakeId()) return;
+
       // Preserve the existing validation behavior: invalid form values continue
       // through the original PolicyUnifiedForm click handler and do not open this modal.
       if (hasUiValidationFailure()) return;
@@ -88,9 +109,10 @@ export function PolicySaveConfirmation() {
 
     function bindSaveButton() {
       const nextButton = findSaveButton();
+      const desiredLabel = getPendingPolicyIntakeId() ? legacySaveButtonLabel : saveButtonLabel;
 
-      if (nextButton && nextButton.textContent?.trim() !== saveButtonLabel) {
-        nextButton.textContent = saveButtonLabel;
+      if (nextButton && nextButton.textContent?.trim() !== desiredLabel) {
+        nextButton.textContent = desiredLabel;
       }
 
       if (nextButton === boundButton) return;
