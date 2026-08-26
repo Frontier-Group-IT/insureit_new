@@ -23,6 +23,8 @@ type PolicyChoice = {
   source: 'sibl' | 'external';
 };
 
+type PolicyCondition = 'active' | 'due' | 'expired';
+
 type SelfManagedClaimRow = {
   id: string;
   current_status?: string | null;
@@ -104,6 +106,7 @@ export default function StartClaimScreen() {
   }, [vehiclePolicies]);
   const selectedPolicy = activePolicy ?? vehiclePolicies[0] ?? null;
   const selectedInsurer = selectedPolicy ? insurers.find((item) => item.id === selectedPolicy.insurance_company_id) ?? null : null;
+  const selectedPolicyCondition = selectedPolicy ? policyCondition(selectedPolicy.end_date) : null;
 
   useEffect(() => {
     setVehicleQuery('');
@@ -196,7 +199,9 @@ export default function StartClaimScreen() {
               <Text style={styles.policyInsurer}>{selectedInsurer?.name ?? 'Insurance company'} · {selectedPolicy.policy_type}</Text>
               <Text style={styles.policyDates}>{formatDate(selectedPolicy.start_date)} – {formatDate(selectedPolicy.end_date)}</Text>
             </View>
-            <View style={styles.policyCheck}><MaterialCommunityIcons name="check" size={20} color="#FFFFFF" /></View>
+            <View style={[styles.policyCheck, selectedPolicyCondition === 'expired' && styles.policyCheckExpired, selectedPolicyCondition === 'due' && styles.policyCheckDue]}>
+              {selectedPolicyCondition === 'expired' ? <Text style={styles.policyStatusExclamation}>!</Text> : <MaterialCommunityIcons name={selectedPolicyCondition === 'due' ? 'alert-outline' : 'check'} size={selectedPolicyCondition === 'due' ? 21 : 20} color="#FFFFFF" />}
+            </View>
           </View>
         ) : (
           <View style={styles.noPolicy}><MaterialCommunityIcons name="shield-alert-outline" size={26} color="#B7791F" /><View style={styles.noPolicyCopy}><Text style={styles.noPolicyTitle}>No policy recorded for this vehicle</Text><Text style={styles.noPolicyText}>Add the policy details before starting a claim.</Text></View></View>
@@ -276,6 +281,8 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
 
 function formatDate(value: string) { return new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }
 function formatIsoDate(date: Date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
+function daysUntil(value: string) { return Math.ceil((new Date(value).getTime() - Date.now()) / 86400000); }
+function policyCondition(endDate: string): PolicyCondition { const days = daysUntil(endDate); return days < 0 ? 'expired' : days <= 30 ? 'due' : 'active'; }
 
 const styles = StyleSheet.create({
   hero: { minHeight: 126, marginHorizontal: 0, marginBottom: 2, flexDirection: 'row', alignItems: 'flex-start' },
@@ -325,6 +332,9 @@ const styles = StyleSheet.create({
   policyInsurer: { color: '#E0E9F7', fontSize: 10.5, lineHeight: 15, fontWeight: '700', marginTop: 4 },
   policyDates: { color: '#D2DEEF', fontSize: 10.5, fontWeight: '700', marginTop: 5 },
   policyCheck: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#11A35D', alignItems: 'center', justifyContent: 'center' },
+  policyCheckExpired: { backgroundColor: '#E85D63' },
+  policyCheckDue: { backgroundColor: '#F59E0B' },
+  policyStatusExclamation: { color: '#FFFFFF', fontSize: 23, lineHeight: 25, fontWeight: '900', textAlign: 'center' },
   noPolicy: { borderRadius: 15, borderWidth: 1, borderColor: '#F0D9AC', backgroundColor: '#FFFBF3', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   noPolicyCopy: { flex: 1 },
   noPolicyTitle: { color: '#77520B', fontSize: 12, fontWeight: '900' },
