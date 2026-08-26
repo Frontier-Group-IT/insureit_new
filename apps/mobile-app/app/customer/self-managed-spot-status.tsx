@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppDatePicker } from '@/components/design-system';
-import { ExternalClaimDocumentTabs } from '@/components/external-claim-document-tabs';
 import { ExternalClaimErrorPopup } from '@/components/external-claim-error-popup';
 import { ClaimActionBar, ClaimFormSection, ClaimIdentityCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
 import { LoadingState, Screen, TextField } from '@/components/ui';
@@ -20,7 +19,6 @@ export default function SelfManagedSpotStatusScreen() {
   const [surveyorEmail, setSurveyorEmail] = useState('');
   const [surveyorPhone, setSurveyorPhone] = useState('');
   const [claimNo, setClaimNo] = useState('');
-  const [customerId, setCustomerId] = useState('');
   const [vehicleNo, setVehicleNo] = useState('');
   const [vehicleMeta, setVehicleMeta] = useState('');
   const [policyNo, setPolicyNo] = useState('');
@@ -54,7 +52,6 @@ export default function SelfManagedSpotStatusScreen() {
         return;
       }
       setClaimNo((claimResult.data as any).claim_no);
-      setCustomerId((claimResult.data as any).customer_id ?? '');
       const vehicleId = (claimResult.data as any).vehicle_id as string | undefined;
       if (vehicleId) {
         const vehicleResult = await supabase.from('vehicles').select('vehicle_no,make,model').eq('id', vehicleId).maybeSingle();
@@ -166,8 +163,6 @@ export default function SelfManagedSpotStatusScreen() {
         <View style={styles.gap} />
         <TextField label="Surveyor Number (Optional)" value={surveyorPhone} onChangeText={setSurveyorPhone} keyboardType="phone-pad" />
       </ClaimFormSection>
-
-      {id && customerId ? <ExternalClaimDocumentTabs claimId={id} customerId={customerId} /> : null}
 
       <ClaimActionBar
         primaryDisabled={submitting}
