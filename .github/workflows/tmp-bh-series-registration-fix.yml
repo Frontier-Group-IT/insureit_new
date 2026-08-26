@@ -22,155 +22,7 @@ jobs:
           fetch-depth: 0
 
       - name: Apply focused registration validation changes
-        shell: bash
-        run: |
-          python3 <<'PY'
-          from pathlib import Path
-
-          def replace_once(path, old, new):
-              file = Path(path)
-              text = file.read_text()
-              count = text.count(old)
-              if count != 1:
-                  raise SystemExit(f"Expected exactly one match in {path}, found {count}: {old[:120]!r}")
-              file.write_text(text.replace(old, new, 1))
-
-          Path("apps/web-portal/lib/vehicle-registration.ts").write_text('''const STANDARD_VEHICLE_REGISTRATION = /^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{1,4}$/;
-const BHARAT_SERIES_REGISTRATION = /^\\d{2}BH\\d{4}[A-HJ-NP-Z]{1,2}$/;
-
-export function normalizeVehicleRegistrationNumber(value: string) {
-  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-}
-
-export function isValidVehicleRegistrationNumber(value: string) {
-  const normalized = normalizeVehicleRegistrationNumber(value);
-  return STANDARD_VEHICLE_REGISTRATION.test(normalized) || BHARAT_SERIES_REGISTRATION.test(normalized);
-}
-''')
-
-          replace_once(
-              "apps/web-portal/components/policy-unified-form.tsx",
-              'import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-apply";\nimport type { PolicyBusinessConflict } from "@/app/policies/policy-onboarding-conflicts";',
-              'import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-apply";\nimport {\n  isValidVehicleRegistrationNumber as isValidRegisteredVehicleNumber,\n  normalizeVehicleRegistrationNumber as normalizeRegistrationInput,\n} from "@/lib/vehicle-registration";\nimport type { PolicyBusinessConflict } from "@/app/policies/policy-onboarding-conflicts";',
-          )
-          replace_once(
-              "apps/web-portal/components/policy-unified-form.tsx",
-              'function normalizeRegistrationInput(value:string){return value.toUpperCase().replace(/[^A-Z0-9]/g,"");}\nfunction isValidRegisteredVehicleNumber(value:string){const normalized=normalizeRegistrationInput(value);const standard=/^[A-Z]{2}[A-Z0-9]*[0-9]{2}$/.test(normalized);const bharatSeries=/^\\d{2}BH\\d{4}[A-HJ-NP-Z]{1,2}$/.test(normalized);return standard||bharatSeries;}\n',
-              '',
-          )
-
-          replace_once(
-              "apps/web-portal/lib/authbridge-rc-api.ts",
-              'export type AuthbridgeRcLookupResponse = {',
-              'import { isValidVehicleRegistrationNumber, normalizeVehicleRegistrationNumber } from "@/lib/vehicle-registration";\n\nexport { normalizeVehicleRegistrationNumber };\n\nexport type AuthbridgeRcLookupResponse = {',
-          )
-          replace_once(
-              "apps/web-portal/lib/authbridge-rc-api.ts",
-              'export function normalizeVehicleRegistrationNumber(value: string) {\n  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");\n}\n\nexport function isValidVehicleRegistrationNumber(value: string) {\n  return /^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{1,4}$/.test(normalizeVehicleRegistrationNumber(value));\n}\n\n',
-              '',
-          )
-
-          replace_once(
-              "apps/web-portal/app/policies/policy-onboarding-actions.ts",
-              'import { recordVehicleActivity, VEHICLE_ACTIVITY_ACTIONS } from "@/lib/vehicle-activity";\n',
-              'import { recordVehicleActivity, VEHICLE_ACTIVITY_ACTIONS } from "@/lib/vehicle-activity";\nimport { isValidVehicleRegistrationNumber, normalizeVehicleRegistrationNumber } from "@/lib/vehicle-registration";\n',
-          )
-          replace_once(
-              "apps/web-portal/app/policies/policy-onboarding-actions.ts",
-              'function normalizedRegistration(value: string) { return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, ""); }',
-              'function normalizedRegistration(value: string) { return normalizeVehicleRegistrationNumber(value); }',
-          )
-          replace_once(
-              "apps/web-portal/app/policies/policy-onboarding-actions.ts",
-              'if (mode === "registered" && !/^[A-Z]{2}[A-Z0-9]*[0-9]{2}$/.test(rawRegistration)) return "Enter a valid vehicle registration number starting with 2 letters and ending with 2 digits.";',
-              'if (mode === "registered" && !isValidVehicleRegistrationNumber(rawRegistration)) return "Enter a valid vehicle registration number.";',
-          )
-
-          replace_once(
-              "infrastructure/icall-gateway/server.js",
-              'function validRegistrationNumber(value) {\n  return /^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{1,4}$/.test(value);\n}',
-              'function validRegistrationNumber(value) {\n  const standard = /^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{1,4}$/.test(value);\n  const bharatSeries = /^\\d{2}BH\\d{4}[A-HJ-NP-Z]{1,2}$/.test(value);\n  return standard || bharatSeries;\n}',
-          )
-
-          Path("apps/web-portal/scripts/vehicle-registration-regression.mjs").write_text('''import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import {
-  isValidVehicleRegistrationNumber,
-  normalizeVehicleRegistrationNumber,
-} from "../lib/vehicle-registration.ts";
-
-const here = path.dirname(fileURLToPath(import.meta.url));
-const portalRoot = path.resolve(here, "..");
-const repoRoot = path.resolve(portalRoot, "../..");
-
-const valid = [
-  "MP20AB1234",
-  "MP20DD0002",
-  "24BH3275H",
-  "24BH3275HK",
-  " 24 bh-3275 h ",
-];
-for (const value of valid) {
-  assert.equal(isValidVehicleRegistrationNumber(value), true, `${value} should be accepted`);
-}
-
-assert.equal(normalizeVehicleRegistrationNumber(" 24 bh-3275 h "), "24BH3275H");
-
-const invalid = [
-  "24BH327H",
-  "24BH3275I",
-  "24BH3275O",
-  "BH24BH3275H",
-  "MP20AB",
-  "20AB1234",
-];
-for (const value of invalid) {
-  assert.equal(isValidVehicleRegistrationNumber(value), false, `${value} should be rejected`);
-}
-
-const unifiedForm = fs.readFileSync(path.join(portalRoot, "components/policy-unified-form.tsx"), "utf8");
-assert.match(unifiedForm, /from "@\\/lib\\/vehicle-registration"/);
-assert.doesNotMatch(unifiedForm, /function isValidRegisteredVehicleNumber/);
-assert.doesNotMatch(unifiedForm, /function normalizeRegistrationInput/);
-
-const authbridgeApi = fs.readFileSync(path.join(portalRoot, "lib/authbridge-rc-api.ts"), "utf8");
-assert.match(authbridgeApi, /from "@\\/lib\\/vehicle-registration"/);
-assert.doesNotMatch(authbridgeApi, /function isValidVehicleRegistrationNumber/);
-
-const onboardingActions = fs.readFileSync(path.join(portalRoot, "app/policies/policy-onboarding-actions.ts"), "utf8");
-assert.match(onboardingActions, /isValidVehicleRegistrationNumber\\(rawRegistration\\)/);
-assert.doesNotMatch(onboardingActions, /starting with 2 letters and ending with 2 digits/);
-
-const gateway = fs.readFileSync(path.join(repoRoot, "infrastructure/icall-gateway/server.js"), "utf8");
-assert.match(gateway, /bharatSeries = \/\\^\\\\d\\{2\\}BH/);
-
-console.log("Vehicle registration regression passed, including BH-series 24BH3275H.");
-''')
-
-          package_path = Path("apps/web-portal/package.json")
-          package_text = package_path.read_text()
-          package_marker = '    "vehicle-prefix:new-regression": "node scripts/new-vehicle-prefix-regression.mjs",\n'
-          if package_text.count(package_marker) != 1:
-              raise SystemExit("Could not locate package.json regression insertion point")
-          package_path.write_text(package_text.replace(
-              package_marker,
-              package_marker + '    "vehicle-registration:regression": "node --experimental-strip-types scripts/vehicle-registration-regression.mjs",\n',
-              1,
-          ))
-
-          workflow_path = Path(".github/workflows/verify-web-portal.yml")
-          workflow_text = workflow_path.read_text()
-          workflow_marker = '      - name: Canonical NEW vehicle prefix regression\n        run: npm run vehicle-prefix:new-regression\n'
-          if workflow_text.count(workflow_marker) != 1:
-              raise SystemExit("Could not locate Verify web portal insertion point")
-          workflow_path.write_text(workflow_text.replace(
-              workflow_marker,
-              workflow_marker + '      - name: Vehicle registration regression\n        run: npm run vehicle-registration:regression\n',
-              1,
-          ))
-          PY
+        run: python3 .github/scripts/tmp_bh_series_registration_fix.py
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -181,20 +33,13 @@ console.log("Vehicle registration regression passed, including BH-series 24BH327
         working-directory: apps/web-portal
         run: npm run vehicle-registration:regression
 
-      - name: Remove temporary workflow and commit source fix
+      - name: Remove temporary helpers and commit source fix
         shell: bash
         run: |
           rm .github/workflows/tmp-bh-series-registration-fix.yml
+          rm .github/scripts/tmp_bh_series_registration_fix.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add apps/web-portal/lib/vehicle-registration.ts \
-                  apps/web-portal/components/policy-unified-form.tsx \
-                  apps/web-portal/lib/authbridge-rc-api.ts \
-                  apps/web-portal/app/policies/policy-onboarding-actions.ts \
-                  apps/web-portal/scripts/vehicle-registration-regression.mjs \
-                  apps/web-portal/package.json \
-                  infrastructure/icall-gateway/server.js \
-                  .github/workflows/verify-web-portal.yml \
-                  .github/workflows/tmp-bh-series-registration-fix.yml
+          git add -A
           git commit -m "Support BH-series vehicle registrations end to end"
           git push origin HEAD:fix/bh-series-registration-end-to-end
