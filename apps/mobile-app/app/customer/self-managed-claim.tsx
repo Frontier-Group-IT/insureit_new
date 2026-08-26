@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
+import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -32,6 +33,7 @@ type PickedDocument = { name: string; uri: string; mimeType?: string | null; siz
 type DocumentTileState = 'idle' | 'ready' | 'saved';
 type DeleteTarget = { key: DocumentKey; title: string } | null;
 type DocumentTileIconName = keyof typeof MaterialCommunityIcons.glyphMap;
+type LocationNotice = { tone: 'info' | 'error'; text: string } | null;
 
 const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
 const DOCUMENT_TYPE_BY_KEY: Record<Exclude<DocumentKey, 'bulk'>, string> = {
@@ -61,6 +63,8 @@ export default function SelfManagedClaimScreen() {
   const [driver, setDriver] = useState('');
   const [phone, setPhone] = useState('');
   const [location, setLocation] = useState('');
+  const [locationNotice, setLocationNotice] = useState<LocationNotice>(null);
+  const [locating, setLocating] = useState(false);
   const [milestones, setMilestones] = useState<ClaimMilestone[]>([]);
   const [documents, setDocuments] = useState<Record<DocumentKey, PickedDocument[]>>({ rc: [], insurance: [], licence: [], gr: [], accident_photo: [], accident_video: [], bulk: [] });
   const [savedDocumentTypes, setSavedDocumentTypes] = useState<string[]>([]);
@@ -374,6 +378,55 @@ export default function SelfManagedClaimScreen() {
     return { total: queued.length, saved };
   }
 
+  async function captureCurrentLocation() {
+    if (locating) return;
+    setLocationNotice(null);
+    setLocating(true);
+
+    try {
+      const servicesEnabled = await Location.hasServicesEnabledAsync();
+      if (!servicesEnabled) {
+        setLocationNotice({ tone: 'error', text: 'Turn on device location services, or enter the location manually.' });
+        return;
+      }
+
+      let permission = await Location.getForegroundPermissionsAsync();
+      if (permission.status !== Location.PermissionStatus.GRANTED) {
+        permission = await Location.requestForegroundPermissionsAsync();
+      }
+
+      if (permission.status !== Location.PermissionStatus.GRANTED) {
+        setLocationNotice({ tone: 'error', text: 'Location permission is not available. You can still enter the location manually.' });
+        return;
+      }
+
+      const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const coordinates = { latitude: current.coords.latitude, longitude: current.coords.longitude };
+      let resolvedLocation = `${coordinates.latitude.toFixed(6)}, ${coordinates.longitude.toFixed(6)}`;
+
+      try {
+        const [address] = await Location.reverseGeocodeAsync(coordinates);
+        if (address) {
+          const parts = [address.name, address.street, address.district, address.city || address.subregion, address.region, address.postalCode]
+            .map((part) => part?.trim())
+            .filter((part): part is string => Boolean(part));
+          const uniqueParts = parts.filter((part, index, items) => items.findIndex((candidate) => candidate.toLowerCase() === part.toLowerCase()) === index);
+          if (uniqueParts.length) resolvedLocation = uniqueParts.join(', ');
+        }
+      } catch (error) {
+        console.warn('Spot Intimation reverse geocoding failed; using coordinates instead', error);
+      }
+
+      setLocation(resolvedLocation);
+      setLocationNotice({ tone: 'info', text: 'Current location added. You can edit it if needed.' });
+    } catch (error) {
+      console.warn('Spot Intimation GPS location capture failed', error);
+      setLocationNotice({ tone: 'error', text: 'Could not fetch your current location. Please try again or enter it manually.' });
+    } finally {
+      setLocating(false);
+    }
+  }
+
   async function submit() {
     if (!policy || !vehicle || saving || uploadingDocuments) return;
     setMessage('');
@@ -494,7 +547,26 @@ export default function SelfManagedClaimScreen() {
         <View style={styles.gap} />
         <TextField label="Driver Number (Optional)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
         <View style={styles.gap} />
-        <TextField label="Location (Optional)" value={location} onChangeText={setLocation} />
+        <TextField label="Location (Optional)" value={location} onChangeText={(value) => { setLocation(value); setLocationNotice(null); }} />
+        <View style={styles.locationActions}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Use current location"
+            accessibilityState={{ disabled: locating }}
+            disabled={locating}
+            onPress={() => void captureCurrentLocation()}
+            style={[styles.gpsLocationButton, locating && styles.gpsLocationButtonDisabled]}
+          >
+            <MaterialCommunityIcons name="crosshairs-gps" size={17} color="#0A43A3" />
+            <Text style={styles.gpsLocationButtonText}>{locating ? 'Locating...' : 'Use Current Location'}</Text>
+          </Pressable>
+        </View>
+        {locationNotice ? (
+          <View style={[styles.locationNotice, locationNotice.tone === 'error' && styles.locationNoticeError]}>
+            <MaterialCommunityIcons name={locationNotice.tone === 'error' ? 'alert-circle-outline' : 'check-circle-outline'} size={15} color={locationNotice.tone === 'error' ? '#B42318' : '#16764B'} />
+            <Text style={[styles.locationNoticeText, locationNotice.tone === 'error' && styles.locationNoticeTextError]}>{locationNotice.text}</Text>
+          </View>
+        ) : null}
       </ClaimFormSection>
 
       <View style={styles.documentReadyCard}>
@@ -645,6 +717,14 @@ const styles = StyleSheet.create({
   gap: { height: 10 },
   subsection: { marginTop: 16, marginBottom: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E7EBF0' },
   subsectionTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
+  locationActions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: -6, marginBottom: 3 },
+  gpsLocationButton: { minHeight: 38, borderRadius: 12, borderWidth: 1, borderColor: '#B9D5FF', backgroundColor: '#EEF5FF', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
+  gpsLocationButtonDisabled: { opacity: 0.58 },
+  gpsLocationButtonText: { color: '#0A43A3', fontSize: 10.5, fontWeight: '900' },
+  locationNotice: { marginTop: 7, borderRadius: 11, backgroundColor: '#EFFAF4', borderWidth: 1, borderColor: '#B7E4CC', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  locationNoticeError: { backgroundColor: '#FFF5F5', borderColor: '#F2C5C2' },
+  locationNoticeText: { flex: 1, color: '#166A45', fontSize: 9.5, lineHeight: 13, fontWeight: '700' },
+  locationNoticeTextError: { color: '#9F2D24' },
   documentReadyCard: { borderRadius: 18, borderWidth: 1, borderColor: '#D7E2EF', backgroundColor: '#FFFFFF', padding: 12, marginBottom: 12, shadowColor: '#14375F', shadowOpacity: 0.05, shadowRadius: 9, shadowOffset: { width: 0, height: 4 }, elevation: 1 },
   documentReadyHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 10 },
   documentReadyHeaderCopy: { flex: 1, minWidth: 0 },
