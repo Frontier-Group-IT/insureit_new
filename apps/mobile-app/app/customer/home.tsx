@@ -35,6 +35,12 @@ type ExternalPolicyRow = {
   insured_declared_value?: number | null;
 };
 
+type ClaimFinancialRow = {
+  claim_id: string;
+  estimate_amount: number | null;
+  do_amount: number | null;
+};
+
 const closedStatuses = new Set<Claim['current_status']>(['Settled', 'Closed', 'Rejected', 'Claim Complete']);
 
 export default function CustomerMockupHomeScreen() {
@@ -46,6 +52,7 @@ export default function CustomerMockupHomeScreen() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
+  const [claimFinancials, setClaimFinancials] = useState<ClaimFinancialRow[]>([]);
   const [tasks, setTasks] = useState<ClaimTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -78,6 +85,7 @@ export default function CustomerMockupHomeScreen() {
       setVehicles([]);
       setPolicies([]);
       setClaims([]);
+      setClaimFinancials([]);
       setTasks([]);
       const promptDismissed = await getKycPromptDismissed(session.user.id);
       if (mountedRef.current) setKycPromptDismissed(Boolean(promptDismissed) || Boolean(nextCustomer) || nextOnboarding?.status === 'submitted' || nextOnboarding?.status === 'under_review');
@@ -96,10 +104,17 @@ export default function CustomerMockupHomeScreen() {
         if (claimResult.error) console.warn('Customer claims load failed', claimResult.error.message);
         if (taskResult.error) console.warn('Customer claim tasks load failed', taskResult.error.message);
         const nextClaims = claimResult.data ?? [];
+        const claimIds = nextClaims.map((claim) => claim.id);
+        const financialResult = claimIds.length
+          ? await (supabase as any).from('claim_financials').select('claim_id,estimate_amount,do_amount').in('claim_id', claimIds)
+          : { data: [], error: null };
+        if (!mountedRef.current) return;
+        if (financialResult.error) console.warn('Customer claim financials load failed', financialResult.error.message);
         const nextPolicies = [...(policyResult.data ?? []), ...((externalPolicyResult.data ?? []) as ExternalPolicyRow[]).map(externalToPolicy)];
         setVehicles(vehicleResult.data ?? []);
         setPolicies(nextPolicies);
         setClaims(nextClaims);
+        setClaimFinancials((financialResult.data ?? []) as ClaimFinancialRow[]);
         setTasks((taskResult.data ?? []).filter((task) => nextClaims.some((claim) => claim.id === task.claim_id)));
       }
       setLastUpdated(new Date());
@@ -124,6 +139,7 @@ export default function CustomerMockupHomeScreen() {
   const firstName = name.split(' ')[0] || 'Customer';
   const activeClaims = useMemo(() => claims.filter((claim) => !closedStatuses.has(claim.current_status)), [claims]);
   const settledClaims = useMemo(() => claims.filter((claim) => claim.current_status === 'Settled' || claim.current_status === 'Closed' || claim.current_status === 'Claim Complete'), [claims]);
+  const claimFinancialById = useMemo(() => new Map(claimFinancials.map((row) => [row.claim_id, row])), [claimFinancials]);
   const documentTasks = useMemo(() => tasks.filter((task) => /^Final document: /i.test(task.title) || /reupload|upload.*document/i.test(task.title)), [tasks]);
   const pendingTask = documentTasks[0];
   const pendingActionCount = pendingTask ? documentTasks.filter((task) => task.claim_id === pendingTask.claim_id).length : 0;
@@ -134,8 +150,8 @@ export default function CustomerMockupHomeScreen() {
   const protectionScore = vehicles.length ? Math.round((protectedVehicles / vehicles.length) * 100) : 0;
   const claimAttentionCount = documentTasks.length;
   const attentionCount = renewalAttentionCount + claimAttentionCount;
-  const openClaimAmount = activeClaims.reduce((total, claim) => total + (claim.estimated_loss ?? 0), 0);
-  const settledClaimAmount = settledClaims.reduce((total, claim) => total + (claim.settlement_amount ?? claim.approved_amount ?? 0), 0);
+  const openClaimAmount = activeClaims.reduce((total, claim) => total + (claimFinancialById.get(claim.id)?.estimate_amount ?? 0), 0);
+  const settledClaimAmount = settledClaims.reduce((total, claim) => total + (claimFinancialById.get(claim.id)?.do_amount ?? 0), 0);
   const totalClaimAmount = openClaimAmount + settledClaimAmount;
   const kycRoute = onboarding?.partner_type === 'individual_proprietor' ? '/customer/kyc/individual' : '/customer/kyc/partner-type';
   const kycAwaitingReview = onboarding?.status === 'submitted' || onboarding?.status === 'under_review';
