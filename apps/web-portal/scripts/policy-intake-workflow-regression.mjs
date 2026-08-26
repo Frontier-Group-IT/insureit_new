@@ -45,6 +45,10 @@ const contextCard=read("components/policy-intake-onboarding-context.tsx");
 assert(contextCard.includes("View Policy Copy"),"Onboarding sidebar must keep the intake policy copy available to Operations");
 assert(contextCard.includes('document.getElementById("policy-summary-fixed-card")'),"Intake context must align with the existing right-side summary area");
 const commercialShell=read("components/policy-commercial-shell.tsx");assert(commercialShell.includes("PolicyIntakeOnboardingContextCard"),"Policy Onboarding must render the intake context in its summary sidebar");
+const saveConfirmation=read("components/policy-save-confirmation.tsx");
+assert(saveConfirmation.includes('POLICY_INTAKE_PENDING_KEY = "insureit:policy-intake:pending:v1"'),"Policy save confirmation must recognize Policy Intake onboarding context");
+assert(saveConfirmation.includes("if (getPendingPolicyIntakeId()) return;"),"Policy Intake onboarding must bypass the generic policy-copy upload choice modal");
+assert(saveConfirmation.includes("getPendingPolicyIntakeId() ? legacySaveButtonLabel : saveButtonLabel"),"Policy Intake onboarding must retain Book Active Policy wording instead of Upload Policy");
 
 const handoff=read("app/policy-intakes/handoff-actions.ts");assert(handoff.includes("buildPolicyOcrOnboardingUpdate"),"Operations handoff must reuse the governed OCR onboarding mapper");assert(handoff.includes('cpaOpted:"No"'),"OCR liability amount must not silently opt owner-driver CPA in");
 const migration=read("../../supabase/migrations/202608240001_policy_intake_workflow.sql");assert(migration.includes("create table if not exists public.policy_intake_requests"),"Intake table migration missing");assert(migration.includes("enable row level security"),"Intake table must enable RLS");assert(migration.includes("revoke all on public.policy_intake_requests from anon, authenticated"),"Browser roles must not receive direct intake-table access");
