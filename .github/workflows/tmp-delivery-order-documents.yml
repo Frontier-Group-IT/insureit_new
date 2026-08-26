@@ -1,0 +1,232 @@
+name: Temporary Delivery Order document editor
+
+on:
+  push:
+    branches:
+      - ui/delivery-order-assessment-documents
+
+permissions:
+  contents: write
+
+jobs:
+  edit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ui/delivery-order-assessment-documents
+      - name: Update Delivery Order document section
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('apps/mobile-app/app/customer/self-managed-milestone.tsx')
+          s = p.read_text()
+
+          s = s.replace(
+          "type BillDocumentRecord = { id: string; file_name: string; storage_bucket?: string | null; storage_path?: string | null };\n",
+          "type BillDocumentRecord = { id: string; file_name: string; storage_bucket?: string | null; storage_path?: string | null };\ntype DeliveryOrderDocumentRecord = { id: string; document_type: string; file_name: string; storage_bucket?: string | null; storage_path?: string | null };\ntype DeliveryOrderDocumentKey = 'assessment_upload' | 'assessment_report';\n"
+          )
+
+          s = s.replace(
+          "const MAX_FINAL_BILL_SIZE_BYTES = 10 * 1024 * 1024;\n",
+          "const MAX_FINAL_BILL_SIZE_BYTES = 10 * 1024 * 1024;\nconst ASSESSMENT_UPLOAD_DOCUMENT_TYPE = 'Assessment Upload';\nconst ASSESSMENT_REPORT_DOCUMENT_TYPE = 'Assessment Report';\nconst MAX_DELIVERY_ORDER_DOCUMENT_SIZE_BYTES = 10 * 1024 * 1024;\n"
+          )
+
+          old = '''    return <ClaimFormSection title="Stage Details" subtitle="Record assessment and delivery order details" icon="clipboard-plus-outline">\n      <ClaimChoice label="Assessment Received? *" value={values.assessment_received} options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]} onChange={(v) => set('assessment_received', v)} />\n      <Gap /><DateField label="DO Date *" value={values.do_date ?? ''} onChange={(v) => set('do_date', v)} />\n      <Gap /><MoneyField label="DO Amount *" value={values.do_amount ?? ''} onChange={(v) => set('do_amount', v)} />\n      <ClaimFinancialSummary rows={[\n        ...(bill !== null ? [{ label: 'Bill Amount', value: currency(bill) }] : []),\n        ...(currentDo !== null ? [{ label: 'DO Amount', value: currency(currentDo) }] : []),\n        ...(contribution !== null ? [{ label: 'Customer Contribution', value: currency(contribution), emphasis: true }] : []),\n      ]} />\n    </ClaimFormSection>;\n'''
+          new = '''    return <>\n      <ClaimFormSection title="Stage Details" subtitle="Record assessment and delivery order details" icon="clipboard-plus-outline">\n        <ClaimChoice label="Assessment Received? *" value={values.assessment_received} options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]} onChange={(v) => set('assessment_received', v)} />\n        <Gap /><DateField label="DO Date *" value={values.do_date ?? ''} onChange={(v) => set('do_date', v)} />\n        <Gap /><MoneyField label="DO Amount *" value={values.do_amount ?? ''} onChange={(v) => set('do_amount', v)} />\n        <ClaimFinancialSummary rows={[\n          ...(bill !== null ? [{ label: 'Bill Amount', value: currency(bill) }] : []),\n          ...(currentDo !== null ? [{ label: 'DO Amount', value: currency(currentDo) }] : []),\n          ...(contribution !== null ? [{ label: 'Customer Contribution', value: currency(contribution), emphasis: true }] : []),\n        ]} />\n      </ClaimFormSection>\n      {claimId && customerId ? <DeliveryOrderDocuments claimId={claimId} customerId={customerId} /> : null}\n    </>;\n'''
+          if old not in s:
+              raise SystemExit('Delivery Order block not found')
+          s = s.replace(old, new)
+
+          marker = "function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; customerId: string }) {\n"
+          component = r'''function DeliveryOrderDocuments({ claimId, customerId }: { claimId: string; customerId: string }) {
+  const [documents, setDocuments] = useState<DeliveryOrderDocumentRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<DeliveryOrderDocumentKey | null>(null);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      setLoading(true);
+      const { data, error: loadError } = await (supabase as any)
+        .from('claim_documents')
+        .select('id,document_type,file_name,storage_bucket,storage_path')
+        .eq('claim_id', claimId)
+        .in('document_type', [ASSESSMENT_UPLOAD_DOCUMENT_TYPE, ASSESSMENT_REPORT_DOCUMENT_TYPE])
+        .order('created_at', { ascending: false });
+      if (!active) return;
+      if (loadError) setError('We could not load the saved assessment documents. Please try again.');
+      else setDocuments((data ?? []) as DeliveryOrderDocumentRecord[]);
+      setLoading(false);
+    })();
+    return () => { active = false; };
+  }, [claimId]);
+
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(() => setSuccess(''), 2800);
+    return () => clearTimeout(timer);
+  }, [success]);
+
+  const assessmentUpload = documents.find((item) => item.document_type === ASSESSMENT_UPLOAD_DOCUMENT_TYPE) ?? null;
+  const assessmentReport = documents.find((item) => item.document_type === ASSESSMENT_REPORT_DOCUMENT_TYPE) ?? null;
+
+  function documentFor(key: DeliveryOrderDocumentKey) {
+    return key === 'assessment_upload' ? assessmentUpload : assessmentReport;
+  }
+
+  async function uploadFile(documentType: string, file: DocumentPicker.DocumentPickerAsset) {
+    const session = await getCurrentSession();
+    if (!session?.user) return { ok: false, document: null as DeliveryOrderDocumentRecord | null };
+    const response = await fetch(file.uri);
+    const body = await response.arrayBuffer();
+    if (body.byteLength > MAX_DELIVERY_ORDER_DOCUMENT_SIZE_BYTES) return { ok: false, document: null as DeliveryOrderDocumentRecord | null };
+    const extension = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
+    const storagePath = `${customerId}/${claimId}/delivery-order/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+    const uploadResult = await supabase.storage.from('claim-documents').upload(storagePath, body, {
+      contentType: file.mimeType ?? 'application/octet-stream',
+      upsert: false,
+    });
+    if (uploadResult.error) return { ok: false, document: null as DeliveryOrderDocumentRecord | null };
+    const { data, error: insertError } = await supabase.from('claim_documents').insert({
+      claim_id: claimId,
+      customer_id: customerId,
+      document_type: documentType,
+      file_name: file.name,
+      storage_bucket: 'claim-documents',
+      storage_path: storagePath,
+      mime_type: file.mimeType ?? null,
+      file_size: body.byteLength,
+      uploaded_by: session.user.id,
+    }).select('id,document_type,file_name,storage_bucket,storage_path').single();
+    if (insertError || !data) {
+      await supabase.storage.from('claim-documents').remove([storagePath]);
+      return { ok: false, document: null as DeliveryOrderDocumentRecord | null };
+    }
+    return { ok: true, document: data as DeliveryOrderDocumentRecord };
+  }
+
+  async function removeDocument(document: DeliveryOrderDocumentRecord) {
+    const removeRecord = await (supabase as any).from('claim_documents').delete().eq('id', document.id).eq('claim_id', claimId);
+    if (removeRecord.error) return false;
+    if (document.storage_bucket && document.storage_path) await supabase.storage.from(document.storage_bucket).remove([document.storage_path]);
+    return true;
+  }
+
+  async function choose(key: DeliveryOrderDocumentKey) {
+    if (uploading || removing) return;
+    setError('');
+    setSuccess('');
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['application/pdf', 'image/*'],
+      multiple: false,
+      copyToCacheDirectory: true,
+    });
+    if (result.canceled || !result.assets?.length) return;
+    const file = result.assets[0];
+    if (file.size !== null && file.size !== undefined && file.size > MAX_DELIVERY_ORDER_DOCUMENT_SIZE_BYTES) return setError(`${file.name} is larger than 10 MB. Please choose a smaller file.`);
+    const documentType = key === 'assessment_upload' ? ASSESSMENT_UPLOAD_DOCUMENT_TYPE : ASSESSMENT_REPORT_DOCUMENT_TYPE;
+    const previous = documentFor(key);
+    setUploading(true);
+    try {
+      const uploaded = await uploadFile(documentType, file);
+      if (!uploaded.ok || !uploaded.document) return setError(`${file.name} could not be uploaded. Please try again.`);
+      if (previous) await removeDocument(previous);
+      setDocuments((current) => [uploaded.document!, ...current.filter((item) => item.id !== previous?.id)]);
+      setSuccess(`${documentType} ${previous ? 'replaced' : 'uploaded'} successfully.`);
+    } catch {
+      setError(`${file.name} could not be uploaded. Please try again.`);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget || uploading || removing) return;
+    const current = documentFor(deleteTarget);
+    setDeleteTarget(null);
+    if (!current) return;
+    setRemoving(true);
+    setError('');
+    setSuccess('');
+    try {
+      const removed = await removeDocument(current);
+      if (!removed) return setError('We could not remove the document. Please try again.');
+      setDocuments((items) => items.filter((item) => item.id !== current.id));
+      setSuccess('Document deleted successfully.');
+    } finally {
+      setRemoving(false);
+    }
+  }
+
+  const tiles: Array<{ key: DeliveryOrderDocumentKey; title: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }> = [
+    { key: 'assessment_upload', title: 'Assessment Upload', icon: 'file-upload-outline' },
+    { key: 'assessment_report', title: 'Assessment Report', icon: 'file-document-check-outline' },
+  ];
+
+  return <View style={styles.approvalDocumentsCard}>
+    <View style={styles.approvalDocumentsHeader}>
+      <View style={styles.approvalDocumentsHeaderIcon}><MaterialCommunityIcons name="folder-upload-outline" size={21} color="#0A43A3" /></View>
+      <View style={styles.approvalDocumentsHeaderCopy}>
+        <Text style={styles.approvalDocumentsTitle}>Documents</Text>
+        <Text style={styles.approvalDocumentsSubtitle}>Upload Delivery Order assessment documents</Text>
+      </View>
+      <View style={styles.approvalDocumentsBadge}><Text style={styles.approvalDocumentsBadgeText}>2 ITEMS</Text></View>
+    </View>
+
+    <View style={styles.approvalDocumentGrid}>
+      {tiles.map((tile) => {
+        const document = documentFor(tile.key);
+        return <Pressable key={tile.key} accessibilityRole="button" disabled={uploading || removing} onPress={() => void choose(tile.key)} style={[styles.approvalDocumentTile, document && styles.approvalDocumentTileSaved]}>
+          {document ? <View style={styles.approvalDocumentCheck}><MaterialCommunityIcons name="check" size={14} color="#168161" /></View> : null}
+          {document ? <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${tile.title}`} disabled={uploading || removing} onPress={(event) => { event.stopPropagation(); setDeleteTarget(tile.key); }} style={styles.approvalDocumentRemove}><MaterialCommunityIcons name="close" size={14} color="#C43232" /></Pressable> : null}
+          <View style={styles.approvalDocumentIcon}><MaterialCommunityIcons name={tile.icon} size={23} color={document ? '#168161' : '#0A43A3'} /></View>
+          <Text style={styles.approvalDocumentTitle}>{tile.title}</Text>
+          <Text style={styles.approvalDocumentSubtitle}>{document ? 'Tap to replace' : 'PDF or image'}</Text>
+          {document ? <Text numberOfLines={2} style={styles.approvalDocumentFile}>{document.file_name}</Text> : null}
+          <Text style={[styles.approvalDocumentStatus, document && styles.approvalDocumentStatusSaved]}>{loading ? 'Checking...' : document ? 'Uploaded' : uploading ? 'Uploading...' : 'Upload'}</Text>
+        </Pressable>;
+      })}
+    </View>
+
+    <Text style={styles.approvalDocumentsNote}>PDF and image files up to 10 MB each. Selected files upload immediately to Claim Documents.</Text>
+    {success ? <View style={styles.approvalFeedbackSuccess}><MaterialCommunityIcons name="check-circle-outline" size={14} color="#168161" /><Text style={styles.approvalFeedbackSuccessText}>{success}</Text></View> : null}
+    {error ? <View style={styles.approvalFeedbackError}><MaterialCommunityIcons name="alert-circle-outline" size={14} color="#B42318" /><Text style={styles.approvalFeedbackErrorText}>{error}</Text></View> : null}
+
+    <Modal visible={Boolean(deleteTarget)} transparent animationType="fade" onRequestClose={() => setDeleteTarget(null)}>
+      <View style={styles.approvalModalBackdrop}>
+        <View accessibilityRole="alert" style={styles.approvalModalCard}>
+          <View style={styles.approvalModalIcon}><MaterialCommunityIcons name="trash-can-outline" size={20} color="#C43232" /></View>
+          <Text style={styles.approvalModalTitle}>Delete document?</Text>
+          <Text style={styles.approvalModalBody}>Are you sure you want to remove this assessment document from the claim?</Text>
+          <View style={styles.approvalModalActions}>
+            <Pressable accessibilityRole="button" onPress={() => setDeleteTarget(null)} style={styles.approvalModalCancel}><Text style={styles.approvalModalCancelText}>Cancel</Text></Pressable>
+            <Pressable accessibilityRole="button" disabled={removing} onPress={() => void confirmDelete()} style={styles.approvalModalDelete}><Text style={styles.approvalModalDeleteText}>{removing ? 'Deleting...' : 'Delete'}</Text></Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  </View>;
+}
+
+'''
+          if marker not in s:
+              raise SystemExit('WorkApproval marker not found')
+          s = s.replace(marker, component + marker)
+          p.write_text(s)
+          PY
+      - name: Commit change and remove temporary workflow
+        shell: bash
+        run: |
+          git rm .github/workflows/tmp-delivery-order-documents.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/mobile-app/app/customer/self-managed-milestone.tsx
+          git commit -m "Add Delivery Order assessment document uploads"
+          git push origin HEAD:ui/delivery-order-assessment-documents
