@@ -1,6 +1,8 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CompactDocumentActionBar, CompactDocumentStageHeader } from '@/components/compact-document-upload-navigation';
 import { AppDatePicker } from '@/components/design-system';
@@ -24,6 +26,10 @@ type FieldKey =
 
 type Values = Partial<Record<FieldKey, string>>;
 type ClaimIdentity = { claim_no?: string | null; vehicle_id?: string | null; customer_id?: string | null; external_policy_id?: string | null };
+type ApprovalDocumentRecord = { id: string; file_name: string; storage_bucket?: string | null; storage_path?: string | null };
+
+const APPROVAL_DOCUMENT_TYPE = 'Approval PDF';
+const MAX_APPROVAL_PDF_SIZE_BYTES = 5 * 1024 * 1024;
 
 export default function SelfManagedMilestoneScreen() {
   const router = useRouter();
@@ -237,6 +243,7 @@ function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldK
   if (key === 'work_approval') return <ClaimFormSection title="Stage Details" subtitle="Record approval and surveyor details" icon="clipboard-check-outline">
     <DateField label="Approval Received Date *" value={values.approval_received_date ?? ''} onChange={(v) => set('approval_received_date', v)} />
     <Gap /><ClaimChoice label="Cashless Claim *" value={values.cashless} options={[{ value: 'true', label: 'Yes' }, { value: 'false', label: 'No' }]} onChange={(v) => set('cashless', v)} />
+    {claimId && customerId ? <><Gap /><WorkApprovalPdfUpload claimId={claimId} customerId={customerId} /></> : null}
     <Gap /><TextField label="Surveyor Name (Optional)" value={values.surveyor_name ?? ''} onChangeText={(v) => set('surveyor_name', v)} />
     <Gap /><TextField label="Surveyor Phone (Optional)" value={values.surveyor_phone ?? ''} onChangeText={(v) => set('surveyor_phone', v)} keyboardType="phone-pad" />
     <Gap /><TextField label="Surveyor Email (Optional)" value={values.surveyor_email ?? ''} onChangeText={(v) => set('surveyor_email', v)} keyboardType="email-address" autoCapitalize="none" />
@@ -294,6 +301,199 @@ function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldK
   }
 
   return <ClaimInlineNote>This milestone is handled by its dedicated screen.</ClaimInlineNote>;
+}
+
+function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; customerId: string }) {
+  const [document, setDocument] = useState<ApprovalDocumentRecord | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      setLoading(true);
+      const { data, error: loadError } = await (supabase as any)
+        .from('claim_documents')
+        .select('id,file_name,storage_bucket,storage_path')
+        .eq('claim_id', claimId)
+        .eq('document_type', APPROVAL_DOCUMENT_TYPE)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!active) return;
+      if (loadError) setError('We could not load the saved approval PDF. Please try again.');
+      else setDocument((data ?? null) as ApprovalDocumentRecord | null);
+      setLoading(false);
+    })();
+    return () => { active = false; };
+  }, [claimId]);
+
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(() => setSuccess(''), 2800);
+    return () => clearTimeout(timer);
+  }, [success]);
+
+  async function chooseAndUpload() {
+    if (uploading || removing) return;
+    setError('');
+    setSuccess('');
+    const result = await DocumentPicker.getDocumentAsync({
+      type: 'application/pdf',
+      multiple: false,
+      copyToCacheDirectory: true,
+    });
+    if (result.canceled || !result.assets?.length) return;
+    const file = result.assets[0];
+    const isPdf = file.mimeType === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (!isPdf) return setError('Please select a PDF file.');
+    if (file.size !== null && file.size !== undefined && file.size > MAX_APPROVAL_PDF_SIZE_BYTES) return setError('Approval PDF must be 5 MB or smaller.');
+
+    const session = await getCurrentSession();
+    if (!session?.user) return setError('Please sign in again before uploading the approval PDF.');
+
+    setUploading(true);
+    let newStoragePath = '';
+    try {
+      const response = await fetch(file.uri);
+      const body = await response.arrayBuffer();
+      if (body.byteLength > MAX_APPROVAL_PDF_SIZE_BYTES) {
+        setError('Approval PDF must be 5 MB or smaller.');
+        return;
+      }
+
+      newStoragePath = `${customerId}/${claimId}/work-approval/${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`;
+      const uploadResult = await supabase.storage.from('claim-documents').upload(newStoragePath, body, {
+        contentType: 'application/pdf',
+        upsert: false,
+      });
+      if (uploadResult.error) {
+        setError('The approval PDF could not be uploaded. Please try again.');
+        return;
+      }
+
+      const { data: inserted, error: insertError } = await supabase.from('claim_documents').insert({
+        claim_id: claimId,
+        customer_id: customerId,
+        document_type: APPROVAL_DOCUMENT_TYPE,
+        file_name: file.name,
+        storage_bucket: 'claim-documents',
+        storage_path: newStoragePath,
+        mime_type: 'application/pdf',
+        file_size: file.size ?? body.byteLength,
+        uploaded_by: session.user.id,
+      }).select('id,file_name,storage_bucket,storage_path').single();
+
+      if (insertError || !inserted) {
+        await supabase.storage.from('claim-documents').remove([newStoragePath]);
+        setError('The approval PDF uploaded, but its claim document record could not be saved.');
+        return;
+      }
+
+      const previous = document;
+      setDocument(inserted as ApprovalDocumentRecord);
+      setSuccess(previous ? 'Approval PDF replaced successfully.' : 'Approval PDF uploaded successfully.');
+
+      if (previous) {
+        const removeOldRecord = await (supabase as any).from('claim_documents').delete().eq('id', previous.id).eq('claim_id', claimId);
+        if (!removeOldRecord.error && previous.storage_bucket && previous.storage_path) {
+          await supabase.storage.from(previous.storage_bucket).remove([previous.storage_path]);
+        } else if (removeOldRecord.error) {
+          setError('The new approval PDF is saved, but the previous document record could not be cleaned up.');
+        }
+      }
+    } catch {
+      if (newStoragePath) await supabase.storage.from('claim-documents').remove([newStoragePath]);
+      setError('The approval PDF could not be uploaded. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function removeApprovalPdf() {
+    if (!document || uploading || removing) return;
+    setConfirmRemove(false);
+    setError('');
+    setSuccess('');
+    setRemoving(true);
+    const current = document;
+    try {
+      const removeRecord = await (supabase as any).from('claim_documents').delete().eq('id', current.id).eq('claim_id', claimId);
+      if (removeRecord.error) {
+        setError('We could not remove the approval PDF. Please try again.');
+        return;
+      }
+      if (current.storage_bucket && current.storage_path) {
+        const storageResult = await supabase.storage.from(current.storage_bucket).remove([current.storage_path]);
+        if (storageResult.error) setError('The approval PDF was removed from the claim, but storage cleanup could not be completed.');
+      }
+      setDocument(null);
+      setSuccess('Approval PDF deleted successfully.');
+    } finally {
+      setRemoving(false);
+    }
+  }
+
+  return <View style={styles.approvalUploadSection}>
+    <View style={styles.approvalUploadHeadingRow}>
+      <View style={styles.approvalUploadIcon}>
+        <MaterialCommunityIcons name="file-pdf-box" size={22} color="#0A43A3" />
+      </View>
+      <View style={styles.approvalUploadHeadingCopy}>
+        <Text style={styles.approvalUploadTitle}>Approval Document</Text>
+        <Text style={styles.approvalUploadSubtitle}>Upload insurer approval in PDF format · Max 5 MB</Text>
+      </View>
+    </View>
+
+    {loading ? <Text style={styles.approvalUploadLoading}>Checking saved approval PDF...</Text> : document ? <>
+      <View style={styles.approvalUploadedCard}>
+        <View style={styles.approvalUploadedFileIcon}>
+          <MaterialCommunityIcons name="file-pdf-box" size={24} color="#168161" />
+        </View>
+        <View style={styles.approvalUploadedCopy}>
+          <Text style={styles.approvalUploadedName} numberOfLines={1}>{document.file_name}</Text>
+          <View style={styles.approvalUploadedStatusRow}>
+            <MaterialCommunityIcons name="check-circle" size={13} color="#168161" />
+            <Text style={styles.approvalUploadedStatus}>Uploaded</Text>
+          </View>
+        </View>
+      </View>
+      <View style={styles.approvalUploadActions}>
+        <Pressable accessibilityRole="button" disabled={uploading || removing} onPress={() => void chooseAndUpload()} style={styles.approvalReplaceButton}>
+          <MaterialCommunityIcons name="refresh" size={17} color="#0A43A3" />
+          <Text style={styles.approvalReplaceText}>{uploading ? 'Uploading...' : 'Replace'}</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" disabled={uploading || removing} onPress={() => setConfirmRemove(true)} style={styles.approvalRemoveButton}>
+          <MaterialCommunityIcons name="trash-can-outline" size={16} color="#C43232" />
+          <Text style={styles.approvalRemoveText}>{removing ? 'Removing...' : 'Remove'}</Text>
+        </Pressable>
+      </View>
+    </> : <Pressable accessibilityRole="button" disabled={uploading || removing} onPress={() => void chooseAndUpload()} style={styles.approvalUploadButton}>
+      <MaterialCommunityIcons name="upload" size={19} color="#FFFFFF" />
+      <Text style={styles.approvalUploadButtonText}>{uploading ? 'Uploading PDF...' : 'Upload Approval PDF'}</Text>
+    </Pressable>}
+
+    {success ? <View style={styles.approvalFeedbackSuccess}><MaterialCommunityIcons name="check-circle-outline" size={14} color="#168161" /><Text style={styles.approvalFeedbackSuccessText}>{success}</Text></View> : null}
+    {error ? <View style={styles.approvalFeedbackError}><MaterialCommunityIcons name="alert-circle-outline" size={14} color="#B42318" /><Text style={styles.approvalFeedbackErrorText}>{error}</Text></View> : null}
+
+    <Modal visible={confirmRemove} transparent animationType="fade" onRequestClose={() => setConfirmRemove(false)}>
+      <View style={styles.approvalModalBackdrop}>
+        <View accessibilityRole="alert" style={styles.approvalModalCard}>
+          <View style={styles.approvalModalIcon}><MaterialCommunityIcons name="trash-can-outline" size={20} color="#C43232" /></View>
+          <Text style={styles.approvalModalTitle}>Delete approval PDF?</Text>
+          <Text style={styles.approvalModalBody}>Are you sure you want to remove {document?.file_name ?? 'this approval PDF'} from the claim?</Text>
+          <View style={styles.approvalModalActions}>
+            <Pressable accessibilityRole="button" onPress={() => setConfirmRemove(false)} style={styles.approvalModalCancel}><Text style={styles.approvalModalCancelText}>Cancel</Text></Pressable>
+            <Pressable accessibilityRole="button" disabled={removing} onPress={() => void removeApprovalPdf()} style={styles.approvalModalDelete}><Text style={styles.approvalModalDeleteText}>{removing ? 'Deleting...' : 'Delete'}</Text></Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  </View>;
 }
 
 function validate(key: ClaimMilestoneKey, v: Values, milestones: ClaimMilestone[]) {
@@ -404,4 +604,38 @@ const styles = StyleSheet.create({
   subsectionHeader: { marginTop: 17, marginBottom: 10, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E5EAF0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   subsectionTitle: { color: palette.navy, fontSize: 13, fontWeight: '900' },
   subsectionMeta: { color: '#145ED7', fontSize: 9.5, fontWeight: '800', backgroundColor: '#EEF4FF', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 },
+  approvalUploadSection: { borderRadius: 14, borderWidth: 1, borderColor: '#D9E4F0', backgroundColor: '#F8FBFF', padding: 11 },
+  approvalUploadHeadingRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  approvalUploadIcon: { width: 38, height: 38, borderRadius: 11, backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center' },
+  approvalUploadHeadingCopy: { flex: 1, minWidth: 0 },
+  approvalUploadTitle: { color: palette.navy, fontSize: 11.5, fontWeight: '900' },
+  approvalUploadSubtitle: { color: '#718198', fontSize: 8.7, lineHeight: 12, fontWeight: '600', marginTop: 2 },
+  approvalUploadLoading: { color: '#718198', fontSize: 9.5, fontWeight: '700', marginTop: 10 },
+  approvalUploadButton: { minHeight: 44, marginTop: 10, borderRadius: 12, backgroundColor: '#0A43A3', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
+  approvalUploadButtonText: { color: '#FFFFFF', fontSize: 10.5, fontWeight: '900' },
+  approvalUploadedCard: { minHeight: 54, marginTop: 10, borderRadius: 12, borderWidth: 1, borderColor: '#A9DCC0', backgroundColor: '#EFFAF4', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  approvalUploadedFileIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#DDF4E7', alignItems: 'center', justifyContent: 'center' },
+  approvalUploadedCopy: { flex: 1, minWidth: 0 },
+  approvalUploadedName: { color: palette.navy, fontSize: 10, fontWeight: '900' },
+  approvalUploadedStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
+  approvalUploadedStatus: { color: '#168161', fontSize: 8.5, fontWeight: '900' },
+  approvalUploadActions: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  approvalReplaceButton: { flex: 1, minHeight: 39, borderRadius: 11, borderWidth: 1, borderColor: '#AFC8E8', backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  approvalReplaceText: { color: '#0A43A3', fontSize: 9.5, fontWeight: '900' },
+  approvalRemoveButton: { flex: 1, minHeight: 39, borderRadius: 11, borderWidth: 1, borderColor: '#F1B5B5', backgroundColor: '#FFF5F5', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  approvalRemoveText: { color: '#C43232', fontSize: 9.5, fontWeight: '900' },
+  approvalFeedbackSuccess: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  approvalFeedbackSuccessText: { flex: 1, color: '#168161', fontSize: 8.5, lineHeight: 12, fontWeight: '800' },
+  approvalFeedbackError: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  approvalFeedbackErrorText: { flex: 1, color: '#B42318', fontSize: 8.5, lineHeight: 12, fontWeight: '800' },
+  approvalModalBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(7, 24, 50, 0.48)', paddingHorizontal: 24 },
+  approvalModalCard: { width: '100%', maxWidth: 340, borderRadius: 20, backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingTop: 18, paddingBottom: 16, alignItems: 'center', shadowColor: '#071D49', shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: 10 }, elevation: 10 },
+  approvalModalIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFF0F0', alignItems: 'center', justifyContent: 'center', marginBottom: 9 },
+  approvalModalTitle: { color: '#172033', fontSize: 17, lineHeight: 21, fontWeight: '900', textAlign: 'center' },
+  approvalModalBody: { color: '#667085', fontSize: 12, lineHeight: 17, fontWeight: '600', textAlign: 'center', marginTop: 7, paddingHorizontal: 4 },
+  approvalModalActions: { width: '100%', flexDirection: 'row', gap: 8, marginTop: 14 },
+  approvalModalCancel: { flex: 1, minHeight: 43, borderRadius: 12, borderWidth: 1, borderColor: '#CBD5E1', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  approvalModalCancelText: { color: palette.navy, fontSize: 10.5, fontWeight: '900' },
+  approvalModalDelete: { flex: 1, minHeight: 43, borderRadius: 12, backgroundColor: '#C43232', alignItems: 'center', justifyContent: 'center' },
+  approvalModalDeleteText: { color: '#FFFFFF', fontSize: 10.5, fontWeight: '900' },
 });
