@@ -289,8 +289,8 @@ function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldK
           ...(currentDo !== null ? [{ label: 'DO Amount', value: currency(currentDo) }] : []),
           ...(contribution !== null ? [{ label: 'Customer Contribution', value: currency(contribution), emphasis: true }] : []),
         ]} />
+        {claimId && customerId ? <><Gap /><DeliveryOrderDocuments claimId={claimId} customerId={customerId} /></> : null}
       </ClaimFormSection>
-      {claimId && customerId ? <DeliveryOrderDocuments claimId={claimId} customerId={customerId} /> : null}
     </>;
   }
 
@@ -422,37 +422,31 @@ function DeliveryOrderDocuments({ claimId, customerId }: { claimId: string; cust
     { key: 'assessment_report', title: 'Assessment Report', icon: 'file-document-check-outline' },
   ];
 
-  return <View style={styles.approvalDocumentsCard}>
-    <View style={styles.approvalDocumentsHeader}>
-      <View style={styles.approvalDocumentsHeaderIcon}><MaterialCommunityIcons name="folder-upload-outline" size={21} color="#0A43A3" /></View>
-      <View style={styles.approvalDocumentsHeaderCopy}><Text style={styles.approvalDocumentsTitle}>Documents</Text><Text style={styles.approvalDocumentsSubtitle}>Upload the Delivery Order assessment report</Text></View>
-      <View style={styles.approvalDocumentsBadge}><Text style={styles.approvalDocumentsBadgeText}>1 ITEM</Text></View>
+  return <>
+    <View style={[styles.deliveryReportRow, assessmentReport && styles.deliveryReportRowSaved]}>
+      <View style={styles.deliveryReportLeading}>
+        <View style={styles.deliveryReportIcon}><MaterialCommunityIcons name="file-document-outline" size={17} color="#0A43A3" /></View>
+        <View style={styles.deliveryReportCopy}>
+          <Text style={styles.deliveryReportLabel}>Assessment Report <Text style={styles.deliveryReportOptional}>(Optional)</Text></Text>
+          {assessmentReport ? <Text style={styles.deliveryReportFile} numberOfLines={1}>{assessmentReport.file_name}</Text> : null}
+        </View>
+      </View>
+      <Pressable accessibilityRole="button" disabled={loading || uploading || removing} onPress={() => void choose('assessment_report')} style={styles.deliveryReportUploadButton}>
+        <MaterialCommunityIcons name={assessmentReport ? 'refresh' : 'upload-outline'} size={13} color="#FFFFFF" />
+        <Text style={styles.deliveryReportUploadText}>{loading ? 'Checking' : uploading ? 'Uploading' : assessmentReport ? 'Replace' : 'Upload'}</Text>
+      </Pressable>
+      {assessmentReport ? <Pressable accessibilityRole="button" accessibilityLabel="Remove Assessment Report" disabled={uploading || removing} onPress={() => setDeleteTarget('assessment_report')} style={styles.deliveryReportRemove}><MaterialCommunityIcons name="close" size={12} color="#C43232" /></Pressable> : null}
     </View>
-    <View style={styles.approvalDocumentGrid}>
-      {tiles.map((tile) => {
-        const document = documentFor(tile.key);
-        return <Pressable key={tile.key} accessibilityRole="button" disabled={uploading || removing} onPress={() => void choose(tile.key)} style={[styles.approvalDocumentTile, document && styles.approvalDocumentTileSaved]}>
-          {document ? <View style={styles.approvalDocumentCheck}><MaterialCommunityIcons name="check" size={14} color="#168161" /></View> : null}
-          {document ? <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${tile.title}`} disabled={uploading || removing} onPress={(event) => { event.stopPropagation(); setDeleteTarget(tile.key); }} style={styles.approvalDocumentRemove}><MaterialCommunityIcons name="close" size={14} color="#C43232" /></Pressable> : null}
-          <View style={styles.approvalDocumentIcon}><MaterialCommunityIcons name={tile.icon} size={23} color={document ? '#168161' : '#0A43A3'} /></View>
-          <Text style={styles.approvalDocumentTitle}>{tile.title}</Text>
-          <Text style={styles.approvalDocumentSubtitle}>{document ? 'Tap to replace' : 'PDF or image'}</Text>
-          {document ? <Text numberOfLines={2} style={styles.approvalDocumentFile}>{document.file_name}</Text> : null}
-          <Text style={[styles.approvalDocumentStatus, document && styles.approvalDocumentStatusSaved]}>{loading ? 'Checking...' : document ? 'Uploaded' : uploading ? 'Uploading...' : 'Upload'}</Text>
-        </Pressable>;
-      })}
-    </View>
-    <Text style={styles.approvalDocumentsNote}>PDF or image up to 10 MB. The selected Assessment Report uploads immediately to Claim Documents.</Text>
     {success ? <View style={styles.approvalFeedbackSuccess}><MaterialCommunityIcons name="check-circle-outline" size={14} color="#168161" /><Text style={styles.approvalFeedbackSuccessText}>{success}</Text></View> : null}
     {error ? <View style={styles.approvalFeedbackError}><MaterialCommunityIcons name="alert-circle-outline" size={14} color="#B42318" /><Text style={styles.approvalFeedbackErrorText}>{error}</Text></View> : null}
     <Modal visible={Boolean(deleteTarget)} transparent animationType="fade" onRequestClose={() => setDeleteTarget(null)}>
       <View style={styles.approvalModalBackdrop}><View accessibilityRole="alert" style={styles.approvalModalCard}>
         <View style={styles.approvalModalIcon}><MaterialCommunityIcons name="trash-can-outline" size={20} color="#C43232" /></View>
-        <Text style={styles.approvalModalTitle}>Delete document?</Text><Text style={styles.approvalModalBody}>Are you sure you want to remove this assessment document from the claim?</Text>
+        <Text style={styles.approvalModalTitle}>Delete document?</Text><Text style={styles.approvalModalBody}>Are you sure you want to remove the Assessment Report from the claim?</Text>
         <View style={styles.approvalModalActions}><Pressable accessibilityRole="button" onPress={() => setDeleteTarget(null)} style={styles.approvalModalCancel}><Text style={styles.approvalModalCancelText}>Cancel</Text></Pressable><Pressable accessibilityRole="button" disabled={removing} onPress={() => void confirmDelete()} style={styles.approvalModalDelete}><Text style={styles.approvalModalDeleteText}>{removing ? 'Deleting...' : 'Delete'}</Text></Pressable></View>
       </View></View>
     </Modal>
-  </View>;
+  </>;
 }
 
 function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; customerId: string }) {
@@ -993,6 +987,17 @@ const styles = StyleSheet.create({
   approvalBulkText: { color: '#718198', fontSize: 8.5, lineHeight: 12, fontWeight: '600', marginTop: 2 },
   approvalBulkRemove: { position: 'absolute', top: 15, right: 7, zIndex: 3, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
   approvalDocumentsNote: { color: '#7A8799', fontSize: 8, lineHeight: 11, fontWeight: '600', marginTop: 8 },
+  deliveryReportRow: { minHeight: 44, borderRadius: 10, borderWidth: 1, borderColor: '#DDE5EF', backgroundColor: '#FFFFFF', paddingLeft: 8, paddingRight: 7, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  deliveryReportRowSaved: { borderColor: '#B9DCC9', backgroundColor: '#FBFFFD' },
+  deliveryReportLeading: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  deliveryReportIcon: { width: 25, height: 25, borderRadius: 7, backgroundColor: '#EEF4FF', alignItems: 'center', justifyContent: 'center' },
+  deliveryReportCopy: { flex: 1, minWidth: 0 },
+  deliveryReportLabel: { color: palette.navy, fontSize: 9.5, lineHeight: 12, fontWeight: '800' },
+  deliveryReportOptional: { color: '#718198', fontWeight: '600' },
+  deliveryReportFile: { color: '#65758A', fontSize: 7.8, lineHeight: 10, fontWeight: '600', marginTop: 1 },
+  deliveryReportUploadButton: { minHeight: 28, borderRadius: 7, backgroundColor: '#073C91', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  deliveryReportUploadText: { color: '#FFFFFF', fontSize: 8.3, fontWeight: '900' },
+  deliveryReportRemove: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
   billUploadLabel: { color: palette.navy, fontSize: 11, fontWeight: '800', marginBottom: 5 },
   billUploadBox: { minHeight: 58, borderRadius: 13, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#7EA8E8', backgroundColor: '#F9FBFF', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 9 },
   billUploadBoxSaved: { borderStyle: 'solid', borderColor: '#52B57F', backgroundColor: '#EFFAF4' },
