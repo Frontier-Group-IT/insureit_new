@@ -61,6 +61,12 @@
           "iCloudContainerEnvironment": "Production"
         }
       ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow InsureIt to use your current location to help record the incident location."
+        }
+      ],
       "expo-secure-store",
       "expo-font"
     ],
