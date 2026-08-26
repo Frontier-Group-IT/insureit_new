@@ -5,6 +5,8 @@ import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-source";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
+export type NonMotorCommercialBasis = "NET_PREMIUM_PERCENT" | "FIXED_AMOUNT";
+
 export type NonMotorPolicyPayload = {
   source: {
     issuanceDate: string;
@@ -36,6 +38,15 @@ export type NonMotorPolicyPayload = {
     grossPremium: string;
     deductible?: string;
   };
+  commercial: {
+    payinBasis: NonMotorCommercialBasis;
+    payinPercent: string;
+    payinFixedAmount: string;
+    insurerSchemeAmount: string;
+    payoutBasis: NonMotorCommercialBasis;
+    payoutPercent: string;
+    payoutFixedAmount: string;
+  };
   risk: Record<string, string>;
   additional: Record<string, string>;
 };
@@ -53,6 +64,10 @@ function numberOrNull(value: unknown) {
   if (!normalized) return null;
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function moneyOrZero(value: unknown) {
+  return numberOrNull(value) ?? 0;
 }
 
 function validDate(value: string) {
@@ -104,6 +119,20 @@ export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Prom
   const netPremium = enteredNetPremium ?? Math.max(0, (grossPremium ?? 0) - (enteredGst ?? 0));
   const gstAmount = enteredGst ?? Math.max(0, (grossPremium ?? 0) - netPremium);
 
+  const payinPercentEntered = clean(payload.commercial.payinPercent) !== "";
+  const payinFixedEntered = clean(payload.commercial.payinFixedAmount) !== "";
+  const schemeEntered = clean(payload.commercial.insurerSchemeAmount) !== "";
+  const payoutPercentEntered = clean(payload.commercial.payoutPercent) !== "";
+  const payoutFixedEntered = clean(payload.commercial.payoutFixedAmount) !== "";
+  const payinEntered = payinPercentEntered || payinFixedEntered || schemeEntered;
+  const payoutEntered = payoutPercentEntered || payoutFixedEntered;
+
+  const payinPercent = moneyOrZero(payload.commercial.payinPercent);
+  const payinFixedAmount = moneyOrZero(payload.commercial.payinFixedAmount);
+  const schemeAmount = moneyOrZero(payload.commercial.insurerSchemeAmount);
+  const payoutPercent = moneyOrZero(payload.commercial.payoutPercent);
+  const payoutFixedAmount = moneyOrZero(payload.commercial.payoutFixedAmount);
+
   if (!policyNumber) return { ok: false, error: "Enter the policy number." };
   if (!insurerId) return { ok: false, error: "Select an insurance company." };
   if (!productName) return { ok: false, error: "Enter the product or policy name." };
@@ -112,6 +141,21 @@ export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Prom
   if (endDate < startDate) return { ok: false, error: "Policy expiry cannot be before the start date." };
   if (sumInsured === null || sumInsured <= 0) return { ok: false, error: "Enter a valid sum insured or liability limit." };
   if (grossPremium === null || grossPremium < 0) return { ok: false, error: "Enter a valid gross premium." };
+  if (netPremium < 0 || gstAmount < 0) return { ok: false, error: "Premium values cannot be negative." };
+  if (payinPercent < 0 || payinPercent > 100 || payoutPercent < 0 || payoutPercent > 100) return { ok: false, error: "Pay-in and payout percentages must be between 0 and 100." };
+  if (payinFixedAmount < 0 || schemeAmount < 0 || payoutFixedAmount < 0) return { ok: false, error: "Commercial amounts cannot be negative." };
+
+  const payinBaseAmount = payload.commercial.payinBasis === "FIXED_AMOUNT"
+    ? payinFixedAmount
+    : netPremium * payinPercent / 100;
+  const totalProjectedPayin = payinBaseAmount + schemeAmount;
+  const tdsPercent = 10;
+  const tdsAmount = totalProjectedPayin * tdsPercent / 100;
+  const payinAfterTds = totalProjectedPayin - tdsAmount;
+  const partnerPayoutAmount = payload.commercial.payoutBasis === "FIXED_AMOUNT"
+    ? payoutFixedAmount
+    : netPremium * payoutPercent / 100;
+  const retentionAmount = payinAfterTds - partnerPayoutAmount;
 
   const sourceResolution = await resolvePolicyIntermediarySource(payload.source);
   if (!sourceResolution.ok) return { ok: false, error: sourceResolution.error };
@@ -192,7 +236,7 @@ export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Prom
       lead_source: sourceResolution.source.leadSource,
       rm_name: clean(payload.source.rmName) || null,
       remarks: clean(payload.additional.remarks) || null,
-      calculation_version: "non_motor_manual_v1",
+      calculation_version: "non_motor_commercial_v1",
       created_by: profile.id,
     }).select("id").single<{ id: string }>();
 
@@ -244,10 +288,62 @@ export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Prom
       gst_amount: gstAmount,
       gross_premium: grossPremium,
       gst_rule: "Manual Non-Motor entry",
-      calculation_version: "non_motor_manual_v1",
+      calculation_version: "non_motor_commercial_v1",
       calculation_overridden: false,
     });
     if (premiumError) throw new Error(premiumError.message);
+
+    const { error: payinError } = await admin.from("policy_payin_details").insert({
+      policy_id: policy.id,
+      payout_basis: null,
+      projected_od_percent: 0,
+      projected_od_amount: 0,
+      projected_tp_percent: 0,
+      projected_tp_amount: 0,
+      commercial_basis: payinEntered ? payload.commercial.payinBasis : null,
+      projected_commission_percent: payinEntered && payload.commercial.payinBasis === "NET_PREMIUM_PERCENT" ? payinPercent : null,
+      projected_commission_amount: payinEntered ? payinBaseAmount : null,
+      insurer_scheme_amount: schemeAmount,
+      total_projected_payin: totalProjectedPayin,
+      tds_percent: tdsPercent,
+      tds_amount: tdsAmount,
+      payin_after_tds: payinAfterTds,
+      calculation_version: "non_motor_commercial_v1",
+      commercial_status: payinEntered ? "entered" : "needs_review",
+    });
+    if (payinError) throw new Error(payinError.message);
+
+    const { error: billError } = await admin.from("policy_payin_bills").insert({
+      policy_id: policy.id,
+      bill_number: null,
+      billed_amount: 0,
+      bill_date: null,
+      status: "Unbilled",
+      short_payout_amount: totalProjectedPayin,
+    });
+    if (billError) throw new Error(billError.message);
+
+    const { error: payoutError } = await admin.from("policy_intermediary_payouts").insert({
+      policy_id: policy.id,
+      intermediary_type: sourceResolution.source.intermediaryType,
+      intermediary_code: sourceResolution.source.intermediaryCode,
+      payout_basis: payoutEntered ? payload.commercial.payoutBasis : null,
+      partner_payout_percent: payoutEntered && payload.commercial.payoutBasis === "NET_PREMIUM_PERCENT" ? payoutPercent : null,
+      partner_payout_amount: payoutEntered ? partnerPayoutAmount : null,
+      retention_amount: retentionAmount,
+      od_payout_percent: 0,
+      od_payout_amount: 0,
+      tp_payout_percent: 0,
+      tp_payout_amount: 0,
+      gross_payout: partnerPayoutAmount,
+      status: "Pending",
+      payout_date: null,
+      voucher_number: null,
+      remarks: clean(payload.additional.remarks) || null,
+      calculation_version: "non_motor_commercial_v1",
+      commercial_status: payoutEntered ? "entered" : "needs_review",
+    });
+    if (payoutError) throw new Error(payoutError.message);
 
     revalidatePath("/policies");
     revalidatePath("/customers");
