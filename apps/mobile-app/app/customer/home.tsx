@@ -416,11 +416,11 @@ function ClaimsSummaryCard({ totalCount, openCount, settledCount, totalAmount, o
           <Pressable accessibilityRole="button" accessibilityLabel="View all claims" onPress={onOpenAll} style={({ pressed }) => [styles.claimOpenLink, pressed && styles.cardPressed]}><Text style={styles.claimOpenLinkText}>View all</Text><MaterialCommunityIcons name="arrow-right" size={15} color="#BFD4F7" /></Pressable>
         </View>
         <View style={styles.claimMetricRow}>
-          <ClaimMetric label="Total" value={totalCount} amount={moneyCompact(totalAmount)} accent="#6FA8FF" onPress={onOpenAll} />
+          <ClaimMetric label="Total" value={totalCount} amount={formatClaimAmount(totalAmount)} accent="#6FA8FF" onPress={onOpenAll} />
           <View style={styles.claimMetricDivider} />
-          <ClaimMetric label="Open" value={openCount} amount={moneyCompact(openAmount)} accent="#F5B94C" onPress={onOpenOpen} />
+          <ClaimMetric label="Open" value={openCount} amount={formatClaimAmount(openAmount)} accent="#F5B94C" onPress={onOpenOpen} />
           <View style={styles.claimMetricDivider} />
-          <ClaimMetric label="Settled" value={settledCount} amount={moneyCompact(settledAmount)} accent="#4FD79B" onPress={onOpenCompleted} />
+          <ClaimMetric label="Settled" value={settledCount} amount={formatClaimAmount(settledAmount)} accent="#4FD79B" onPress={onOpenCompleted} />
         </View>
       </View>
       <Pressable onPress={hasPendingAction ? onPendingAction : onOpenAll} style={({ pressed }) => [styles.claimTicker, hasPendingAction && styles.claimTickerHot, pressed && styles.cardPressed]}>
@@ -495,16 +495,9 @@ function KycRequiredModal({ visible, application, reviewNotes, onStart, onDismis
   );
 }
 
-function moneyCompact(value: number) {
+function formatClaimAmount(value: number) {
   const amount = Math.max(Math.round(value || 0), 0);
-  if (amount >= 10000000) return `INR ${trimDecimal(amount / 10000000)}Cr`;
-  if (amount >= 100000) return `INR ${trimDecimal(amount / 100000)}L`;
-  if (amount >= 1000) return `INR ${Math.round(amount / 1000)}k`;
-  return `INR ${amount.toLocaleString('en-IN')}`;
-}
-
-function trimDecimal(value: number) {
-  return value.toFixed(1).replace(/\.0$/, '');
+  return `₹ : ${amount.toLocaleString('en-IN')}`;
 }
 
 function externalToPolicy(policy: ExternalPolicyRow): Policy {
@@ -662,7 +655,7 @@ const styles = StyleSheet.create({
   claimMetricDivider: { width: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.18)', marginVertical: 9 },
   claimMetricValue: { fontSize: 24, lineHeight: 28, fontWeight: '900' },
   claimMetricLabel: { color: '#AAB9D6', fontSize: 10, fontWeight: '900', marginTop: 1 },
-  claimMetricAmount: { color: '#7C8FB0', fontSize: 9, fontWeight: '800', marginTop: 2 },
+  claimMetricAmount: { color: '#4FD79B', fontSize: 11, lineHeight: 14, fontWeight: '900', marginTop: 3 },
   claimTicker: { minHeight: 31, marginHorizontal: 10, marginTop: 4, marginBottom: 7, paddingHorizontal: 1, flexDirection: 'row', alignItems: 'center', gap: 7 },
   claimTickerHot: { borderRadius: 10, backgroundColor: '#FFF8EA', paddingHorizontal: 8 },
   claimTickerText: { flex: 1, color: palette.navy, fontSize: 11.5, fontWeight: '900' },
