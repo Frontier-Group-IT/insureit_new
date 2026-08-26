@@ -46,6 +46,10 @@ const DOCUMENT_TYPE_BY_KEY: Record<Exclude<DocumentKey, 'bulk'>, string> = {
 };
 const BULK_DOCUMENT_TYPE = 'Spot Intimation Attachment';
 
+function isMultiMediaKey(key: Exclude<DocumentKey, 'bulk'>): key is 'accident_photo' | 'accident_video' {
+  return key === 'accident_photo' || key === 'accident_video';
+}
+
 export default function SelfManagedClaimScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ externalPolicyId?: string; id?: string }>();
@@ -160,27 +164,34 @@ export default function SelfManagedClaimScreen() {
 
   async function pickDocument(key: Exclude<DocumentKey, 'bulk'>) {
     setMessage('');
+    const multiMedia = isMultiMediaKey(key);
     const pickerTypes = key === 'accident_video' ? ['video/*'] : key === 'accident_photo' ? ['image/*'] : ['application/pdf', 'image/*'];
-    const result = await DocumentPicker.getDocumentAsync({ type: pickerTypes, multiple: false, copyToCacheDirectory: true });
+    const result = await DocumentPicker.getDocumentAsync({ type: pickerTypes, multiple: multiMedia, copyToCacheDirectory: true });
     if (result.canceled || !result.assets?.length) return;
-    const asset = result.assets[0];
-    const picked: PickedDocument = { name: asset.name, uri: asset.uri, mimeType: asset.mimeType, size: asset.size ?? null };
-    if (picked.size !== null && picked.size !== undefined && picked.size > MAX_UPLOAD_SIZE_BYTES) return setMessage(`${picked.name} is larger than 5 MB. Please choose a smaller file.`);
+    const pickedFiles: PickedDocument[] = result.assets.map((asset) => ({ name: asset.name, uri: asset.uri, mimeType: asset.mimeType, size: asset.size ?? null }));
+    const tooLarge = pickedFiles.find((file) => file.size !== null && file.size !== undefined && file.size > MAX_UPLOAD_SIZE_BYTES);
+    if (tooLarge) return setMessage(`${tooLarge.name} is larger than 5 MB. Please choose smaller files.`);
 
     if (editing && policy) {
       setUploadingDocuments(true);
-      const uploaded = await uploadClaimDocument(claimId, policy.customer_id, DOCUMENT_TYPE_BY_KEY[key], picked);
-      setUploadingDocuments(false);
-      if (!uploaded.ok) return setMessage(uploaded.message);
-      if (uploaded.document) {
-        setSavedDocuments((current) => [uploaded.document!, ...current]);
+      const uploadedDocuments: ClaimDocument[] = [];
+      let failed = 0;
+      for (const picked of pickedFiles) {
+        const uploaded = await uploadClaimDocument(claimId, policy.customer_id, DOCUMENT_TYPE_BY_KEY[key], picked);
+        if (uploaded.ok && uploaded.document) uploadedDocuments.push(uploaded.document);
+        else failed += 1;
       }
-      setSavedDocumentTypes((current) => [...current.filter((type) => type !== DOCUMENT_TYPE_BY_KEY[key]), DOCUMENT_TYPE_BY_KEY[key]]);
+      setUploadingDocuments(false);
+      if (uploadedDocuments.length) {
+        setSavedDocuments((current) => [...uploadedDocuments, ...current]);
+        setSavedDocumentTypes((current) => [...current.filter((type) => type !== DOCUMENT_TYPE_BY_KEY[key]), DOCUMENT_TYPE_BY_KEY[key]]);
+      }
+      if (failed) setMessage(`${uploadedDocuments.length} of ${pickedFiles.length} files were saved. Please retry the remaining ${failed}.`);
       setDocuments((current) => ({ ...current, [key]: [] }));
       return;
     }
 
-    setDocuments((current) => ({ ...current, [key]: [picked] }));
+    setDocuments((current) => ({ ...current, [key]: multiMedia ? [...current[key], ...pickedFiles] : [pickedFiles[0]] }));
   }
 
   async function pickBulkDocuments() {
@@ -269,6 +280,21 @@ export default function SelfManagedClaimScreen() {
   async function removeDocument(key: Exclude<DocumentKey, 'bulk'>) {
     if (uploadingDocuments) return;
     const type = DOCUMENT_TYPE_BY_KEY[key];
+
+    if (isMultiMediaKey(key)) {
+      const queuedCount = documents[key].length;
+      const savedCount = savedDocuments.filter((item) => item.document_type === type).length;
+      if (queuedCount) setDocuments((current) => ({ ...current, [key]: [] }));
+      if (savedCount) {
+        const removed = await removeSavedDocuments(type);
+        if (!removed) return;
+        setSavedDocuments((current) => current.filter((item) => item.document_type !== type));
+        setSavedDocumentTypes((current) => current.filter((item) => item !== type));
+      }
+      if (queuedCount || savedCount) setSuccessMessage(`${key === 'accident_photo' ? 'Accident photos' : 'Accident videos'} deleted successfully`);
+      return;
+    }
+
     if (documents[key].length) {
       setDocuments((current) => ({ ...current, [key]: [] }));
       setSavedDocumentTypes((current) => current.filter((item) => item !== type));
@@ -320,6 +346,19 @@ export default function SelfManagedClaimScreen() {
   function savedDocumentFor(key: Exclude<DocumentKey, 'bulk'>) {
     const type = DOCUMENT_TYPE_BY_KEY[key];
     return savedDocuments.find((item) => item.document_type === type) ?? null;
+  }
+
+  function mediaCount(key: 'accident_photo' | 'accident_video') {
+    const type = DOCUMENT_TYPE_BY_KEY[key];
+    return savedDocuments.filter((item) => item.document_type === type).length + documents[key].length;
+  }
+
+  function mediaStatusLabel(key: 'accident_photo' | 'accident_video') {
+    const count = mediaCount(key);
+    if (!count) return undefined;
+    const noun = key === 'accident_photo' ? 'photo' : 'video';
+    const status = savedDocuments.some((item) => item.document_type === DOCUMENT_TYPE_BY_KEY[key]) ? 'saved' : 'ready';
+    return `${count} ${noun}${count === 1 ? '' : 's'} ${status}`;
   }
 
   async function uploadClaimDocument(targetClaimId: string, customerId: string, documentType: string, pickedFile: PickedDocument) {
@@ -583,8 +622,8 @@ export default function SelfManagedClaimScreen() {
           <DocumentReadyTile title="Insurance Copy" fileName={savedDocumentFor('insurance')?.file_name ?? documents.insurance[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} state={tileState('insurance')} onPress={() => void pickDocument('insurance')} onRemove={() => requestDelete('insurance', savedDocumentFor('insurance')?.file_name ?? documents.insurance[0]?.name ?? 'Insurance Copy')} />
           <DocumentReadyTile title="Driver Licence" fileName={savedDocumentFor('licence')?.file_name ?? documents.licence[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} state={tileState('licence')} onPress={() => void pickDocument('licence')} onRemove={() => requestDelete('licence', savedDocumentFor('licence')?.file_name ?? documents.licence[0]?.name ?? 'Driver Licence')} />
           <DocumentReadyTile title="GR / Load Bill" fileName={savedDocumentFor('gr')?.file_name ?? documents.gr[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} state={tileState('gr')} onPress={() => void pickDocument('gr')} onRemove={() => requestDelete('gr', savedDocumentFor('gr')?.file_name ?? documents.gr[0]?.name ?? 'GR / Load Bill')} />
-          <DocumentReadyTile title="Accident Photo" fileName={savedDocumentFor('accident_photo')?.file_name ?? documents.accident_photo[0]?.name ?? ''} iconName="camera-outline" iconColor="#7B3FC6" iconBackground="#F1E8FF" state={tileState('accident_photo')} onPress={() => void pickDocument('accident_photo')} onRemove={() => requestDelete('accident_photo', savedDocumentFor('accident_photo')?.file_name ?? documents.accident_photo[0]?.name ?? 'Accident Photo')} />
-          <DocumentReadyTile title="Accident Video" fileName={savedDocumentFor('accident_video')?.file_name ?? documents.accident_video[0]?.name ?? ''} iconName="video-outline" iconColor="#D55A2A" iconBackground="#FFF0E8" state={tileState('accident_video')} onPress={() => void pickDocument('accident_video')} onRemove={() => requestDelete('accident_video', savedDocumentFor('accident_video')?.file_name ?? documents.accident_video[0]?.name ?? 'Accident Video')} />
+          <DocumentReadyTile title="Accident Photo" statusText={mediaStatusLabel('accident_photo')} iconName="camera-outline" iconColor="#7B3FC6" iconBackground="#F1E8FF" state={tileState('accident_photo')} onPress={() => void pickDocument('accident_photo')} onRemove={() => requestDelete('accident_photo', `${mediaCount('accident_photo')} accident photo${mediaCount('accident_photo') === 1 ? '' : 's'}`)} />
+          <DocumentReadyTile title="Accident Video" statusText={mediaStatusLabel('accident_video')} iconName="video-outline" iconColor="#D55A2A" iconBackground="#FFF0E8" state={tileState('accident_video')} onPress={() => void pickDocument('accident_video')} onRemove={() => requestDelete('accident_video', `${mediaCount('accident_video')} accident video${mediaCount('accident_video') === 1 ? '' : 's'}`)} />
         </View>
         <View style={styles.bulkUploadShell}>
           <Pressable accessibilityRole="button" disabled={uploadingDocuments} onPress={() => void pickBulkDocuments()} style={[styles.bulkUpload, (documents.bulk.length > 0 || savedBulkCount > 0) && styles.bulkUploadSelected]}>
@@ -676,7 +715,7 @@ export default function SelfManagedClaimScreen() {
   );
 }
 
-function DocumentReadyTile({ title, fileName, source, iconName, iconColor, iconBackground, state, onPress, onRemove }: { title: string; fileName?: string; source?: any; iconName?: DocumentTileIconName; iconColor?: string; iconBackground?: string; state: DocumentTileState; onPress: () => void; onRemove: () => void }) {
+function DocumentReadyTile({ title, fileName, statusText, source, iconName, iconColor, iconBackground, state, onPress, onRemove }: { title: string; fileName?: string; statusText?: string; source?: any; iconName?: DocumentTileIconName; iconColor?: string; iconBackground?: string; state: DocumentTileState; onPress: () => void; onRemove: () => void }) {
   const saved = state === 'saved';
   const ready = state === 'ready';
   return <Pressable accessibilityRole="button" accessibilityState={{ selected: state !== 'idle' }} onPress={onPress} style={[styles.documentReadyTile, ready && styles.documentReadyTileReady, saved && styles.documentReadyTileSelected]}>
@@ -687,7 +726,7 @@ function DocumentReadyTile({ title, fileName, source, iconName, iconColor, iconB
     </View>
     <Text style={styles.documentReadyTileText} numberOfLines={2}>{title}</Text>
     {fileName ? <Text style={styles.documentReadyFileName} numberOfLines={1}>{fileName}</Text> : null}
-    <Text style={[styles.documentReadyStatus, ready && styles.documentReadyStatusReady, saved && styles.documentReadyStatusSelected]}>{saved ? 'Saved' : ready ? 'Ready' : 'Tap to upload'}</Text>
+    <Text style={[styles.documentReadyStatus, ready && styles.documentReadyStatusReady, saved && styles.documentReadyStatusSelected]}>{statusText ?? (saved ? 'Saved' : ready ? 'Ready' : 'Tap to upload')}</Text>
   </Pressable>;
 }
 
