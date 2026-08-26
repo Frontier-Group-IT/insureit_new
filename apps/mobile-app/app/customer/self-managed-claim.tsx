@@ -14,6 +14,7 @@ import { type ClaimMilestone } from '@/lib/claim-service-mode';
 import { detailRecord, stringValue, validateStageChronology } from '@/lib/self-managed-claim-timeline';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
+import { prepareVideoForUpload } from '@/lib/video-compression';
 import type { ClaimDocument, Vehicle } from '@/lib/types';
 
 type ExternalPolicy = {
@@ -76,6 +77,7 @@ export default function SelfManagedClaimScreen() {
   const [savedDocuments, setSavedDocuments] = useState<ClaimDocument[]>([]);
   const [savedBulkCount, setSavedBulkCount] = useState(0);
   const [uploadingDocuments, setUploadingDocuments] = useState(false);
+  const [videoProcessingStatus, setVideoProcessingStatus] = useState('');
   const [message, setMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
@@ -365,14 +367,23 @@ export default function SelfManagedClaimScreen() {
   }
 
   async function uploadClaimDocument(targetClaimId: string, customerId: string, documentType: string, pickedFile: PickedDocument) {
+    const isAccidentVideo = documentType === DOCUMENT_TYPE_BY_KEY.accident_video;
     try {
       const session = await getCurrentSession();
       if (!session?.user) return { ok: false, message: 'Please sign in again before uploading documents.', document: null };
       const extension = pickedFile.name.includes('.') ? pickedFile.name.split('.').pop() : 'bin';
       const storagePath = `${customerId}/${targetClaimId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-      const response = await fetch(pickedFile.uri);
+      let uploadUri = pickedFile.uri;
+      if (isAccidentVideo) {
+        setVideoProcessingStatus(pickedFile.size && pickedFile.size > 10 * 1024 * 1024 ? 'Preparing video for compression…' : 'Preparing video…');
+        const prepared = await prepareVideoForUpload(pickedFile.uri, pickedFile.size, (progress) => {
+          setVideoProcessingStatus(`Compressing video… ${Math.round(progress * 100)}%`);
+        });
+        uploadUri = prepared.uri;
+        setVideoProcessingStatus(prepared.compressed ? 'Uploading compressed video…' : 'Uploading video…');
+      }
+      const response = await fetch(uploadUri);
       const body = await response.arrayBuffer();
-      const isAccidentVideo = documentType === DOCUMENT_TYPE_BY_KEY.accident_video;
       const maxUploadSizeBytes = isAccidentVideo ? MAX_VIDEO_UPLOAD_SIZE_BYTES : MAX_UPLOAD_SIZE_BYTES;
       const maxUploadSizeLabel = isAccidentVideo ? '50 MB' : '5 MB';
       if (body.byteLength > maxUploadSizeBytes) return { ok: false, message: `${pickedFile.name} is larger than ${maxUploadSizeLabel}. Please choose a smaller file.`, document: null };
@@ -391,13 +402,15 @@ export default function SelfManagedClaimScreen() {
         storage_bucket: 'claim-documents',
         storage_path: storagePath,
         mime_type: pickedFile.mimeType ?? null,
-        file_size: pickedFile.size ?? body.byteLength,
+        file_size: body.byteLength,
         uploaded_by: session.user.id,
       }).select('*').single();
       if (error) return { ok: false, message: `${pickedFile.name} uploaded, but its claim document record could not be saved.`, document: null };
       return { ok: true, message: '', document: data as ClaimDocument };
     } catch {
       return { ok: false, message: `${pickedFile.name} could not be uploaded.`, document: null };
+    } finally {
+      if (isAccidentVideo) setVideoProcessingStatus('');
     }
   }
 
@@ -629,7 +642,7 @@ export default function SelfManagedClaimScreen() {
           <DocumentReadyTile title="Driver Licence" fileName={savedDocumentFor('licence')?.file_name ?? documents.licence[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} state={tileState('licence')} onPress={() => void pickDocument('licence')} onRemove={() => requestDelete('licence', savedDocumentFor('licence')?.file_name ?? documents.licence[0]?.name ?? 'Driver Licence')} />
           <DocumentReadyTile title="GR / Load Bill" fileName={savedDocumentFor('gr')?.file_name ?? documents.gr[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} state={tileState('gr')} onPress={() => void pickDocument('gr')} onRemove={() => requestDelete('gr', savedDocumentFor('gr')?.file_name ?? documents.gr[0]?.name ?? 'GR / Load Bill')} />
           <DocumentReadyTile title="Accident Photo" statusText={mediaStatusLabel('accident_photo')} iconName="camera-outline" iconColor="#7B3FC6" iconBackground="#F1E8FF" state={tileState('accident_photo')} onPress={() => void pickDocument('accident_photo')} onRemove={() => requestDelete('accident_photo', `${mediaCount('accident_photo')} accident photo${mediaCount('accident_photo') === 1 ? '' : 's'}`)} />
-          <DocumentReadyTile title="Accident Video" statusText={mediaStatusLabel('accident_video')} iconName="video-outline" iconColor="#D55A2A" iconBackground="#FFF0E8" state={tileState('accident_video')} onPress={() => void pickDocument('accident_video')} onRemove={() => requestDelete('accident_video', `${mediaCount('accident_video')} accident video${mediaCount('accident_video') === 1 ? '' : 's'}`)} />
+          <DocumentReadyTile title="Accident Video" statusText={videoProcessingStatus || mediaStatusLabel('accident_video')} iconName="video-outline" iconColor="#D55A2A" iconBackground="#FFF0E8" state={tileState('accident_video')} onPress={() => void pickDocument('accident_video')} onRemove={() => requestDelete('accident_video', `${mediaCount('accident_video')} accident video${mediaCount('accident_video') === 1 ? '' : 's'}`)} />
         </View>
         <View style={styles.bulkUploadShell}>
           <Pressable accessibilityRole="button" disabled={uploadingDocuments} onPress={() => void pickBulkDocuments()} style={[styles.bulkUpload, (documents.bulk.length > 0 || savedBulkCount > 0) && styles.bulkUploadSelected]}>
