@@ -30,6 +30,8 @@ type ApprovalDocumentRecord = { id: string; file_name: string; storage_bucket?: 
 
 const APPROVAL_DOCUMENT_TYPE = 'Approval PDF';
 const MAX_APPROVAL_PDF_SIZE_BYTES = 5 * 1024 * 1024;
+const FINAL_BILL_DOCUMENT_TYPE = 'Final Workshop Bill';
+const MAX_FINAL_BILL_SIZE_BYTES = 10 * 1024 * 1024;
 
 export default function SelfManagedMilestoneScreen() {
   const router = useRouter();
@@ -259,6 +261,7 @@ function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldK
   if (key === 'billing') return <ClaimFormSection title="Stage Details" subtitle="Record the final workshop bill" icon="receipt-text-outline">
     <DateField label="Bill Date *" value={values.bill_date ?? ''} onChange={(v) => set('bill_date', v)} />
     <Gap /><MoneyField label="Bill Amount *" value={values.bill_amount ?? ''} onChange={(v) => set('bill_amount', v)} />
+    {claimId && customerId ? <><Gap /><FinalBillUpload claimId={claimId} customerId={customerId} /></> : null}
   </ClaimFormSection>;
 
   if (key === 'delivery_order') {
@@ -514,6 +517,229 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
           <View style={styles.approvalModalActions}>
             <Pressable accessibilityRole="button" onPress={() => setConfirmRemove(false)} style={styles.approvalModalCancel}><Text style={styles.approvalModalCancelText}>Cancel</Text></Pressable>
             <Pressable accessibilityRole="button" disabled={removing} onPress={() => void removeApprovalPdf()} style={styles.approvalModalDelete}><Text style={styles.approvalModalDeleteText}>{removing ? 'Deleting...' : 'Delete'}</Text></Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  </View>;
+}
+
+function FinalBillUpload({ claimId, customerId }: { claimId: string; customerId: string }) {
+  const [document, setDocument] = useState<ApprovalDocumentRecord | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      setLoading(true);
+      const { data, error: loadError } = await (supabase as any)
+        .from('claim_documents')
+        .select('id,file_name,storage_bucket,storage_path')
+        .eq('claim_id', claimId)
+        .eq('document_type', FINAL_BILL_DOCUMENT_TYPE)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!active) return;
+      if (loadError) setError('We could not load the saved bill. Please try again.');
+      else setDocument((data ?? null) as ApprovalDocumentRecord | null);
+      setLoading(false);
+    })();
+    return () => { active = false; };
+  }, [claimId]);
+
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(() => setSuccess(''), 2800);
+    return () => clearTimeout(timer);
+  }, [success]);
+
+  async function viewBill() {
+    if (!document?.storage_bucket || !document.storage_path || uploading || removing) return;
+    setError('');
+    try {
+      const { data, error: signedUrlError } = await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 600);
+      if (signedUrlError || !data?.signedUrl) {
+        setError('We could not open the bill. Please try again.');
+        return;
+      }
+      const supported = await Linking.canOpenURL(data.signedUrl);
+      if (!supported) {
+        setError('This bill could not be opened on this device.');
+        return;
+      }
+      await Linking.openURL(data.signedUrl);
+    } catch {
+      setError('We could not open the bill. Please try again.');
+    }
+  }
+
+  async function chooseAndUpload() {
+    if (uploading || removing) return;
+    setError('');
+    setSuccess('');
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['application/pdf', 'image/jpeg', 'image/png'],
+      multiple: false,
+      copyToCacheDirectory: true,
+    });
+    if (result.canceled || !result.assets?.length) return;
+    const file = result.assets[0];
+    const lowerName = file.name.toLowerCase();
+    const extension = lowerName.includes('.') ? lowerName.split('.').pop() ?? '' : '';
+    const allowedExtension = ['pdf', 'jpg', 'jpeg', 'png'].includes(extension);
+    const allowedMime = ['application/pdf', 'image/jpeg', 'image/png'].includes(file.mimeType ?? '');
+    if (!allowedExtension && !allowedMime) return setError('Please select a PDF, JPG or PNG file.');
+    if (file.size !== null && file.size !== undefined && file.size > MAX_FINAL_BILL_SIZE_BYTES) return setError('Selected bill file is too large. Please choose a smaller file.');
+    const normalizedExtension = extension === 'jpeg' ? 'jpg' : extension || (file.mimeType === 'application/pdf' ? 'pdf' : file.mimeType === 'image/png' ? 'png' : 'jpg');
+    const contentType = normalizedExtension === 'pdf' ? 'application/pdf' : normalizedExtension === 'png' ? 'image/png' : 'image/jpeg';
+
+    const session = await getCurrentSession();
+    if (!session?.user) return setError('Please sign in again before uploading the bill.');
+
+    setUploading(true);
+    let newStoragePath = '';
+    try {
+      const response = await fetch(file.uri);
+      const body = await response.arrayBuffer();
+      if (body.byteLength > MAX_FINAL_BILL_SIZE_BYTES) {
+        setError('Selected bill file is too large. Please choose a smaller file.');
+        return;
+      }
+
+      newStoragePath = `${customerId}/${claimId}/billing/${Date.now()}-${Math.random().toString(36).slice(2)}.${normalizedExtension}`;
+      const uploadResult = await supabase.storage.from('claim-documents').upload(newStoragePath, body, {
+        contentType,
+        upsert: false,
+      });
+      if (uploadResult.error) {
+        setError('The bill could not be uploaded. Please try again.');
+        return;
+      }
+
+      const { data: inserted, error: insertError } = await supabase.from('claim_documents').insert({
+        claim_id: claimId,
+        customer_id: customerId,
+        document_type: FINAL_BILL_DOCUMENT_TYPE,
+        file_name: file.name,
+        storage_bucket: 'claim-documents',
+        storage_path: newStoragePath,
+        mime_type: ['application/pdf', 'image/jpeg', 'image/png'],
+        file_size: file.size ?? body.byteLength,
+        uploaded_by: session.user.id,
+      }).select('id,file_name,storage_bucket,storage_path').single();
+
+      if (insertError || !inserted) {
+        await supabase.storage.from('claim-documents').remove([newStoragePath]);
+        setError('The bill uploaded, but its claim document record could not be saved.');
+        return;
+      }
+
+      const previous = document;
+      setDocument(inserted as ApprovalDocumentRecord);
+      setSuccess(previous ? 'Bill replaced successfully.' : 'Bill uploaded successfully.');
+
+      if (previous) {
+        const removeOldRecord = await (supabase as any).from('claim_documents').delete().eq('id', previous.id).eq('claim_id', claimId);
+        if (!removeOldRecord.error && previous.storage_bucket && previous.storage_path) {
+          await supabase.storage.from(previous.storage_bucket).remove([previous.storage_path]);
+        } else if (removeOldRecord.error) {
+          setError('The new bill is saved, but the previous document record could not be cleaned up.');
+        }
+      }
+    } catch {
+      if (newStoragePath) await supabase.storage.from('claim-documents').remove([newStoragePath]);
+      setError('The bill could not be uploaded. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function removeBill() {
+    if (!document || uploading || removing) return;
+    setConfirmRemove(false);
+    setError('');
+    setSuccess('');
+    setRemoving(true);
+    const current = document;
+    try {
+      const removeRecord = await (supabase as any).from('claim_documents').delete().eq('id', current.id).eq('claim_id', claimId);
+      if (removeRecord.error) {
+        setError('We could not remove the bill. Please try again.');
+        return;
+      }
+      if (current.storage_bucket && current.storage_path) {
+        const storageResult = await supabase.storage.from(current.storage_bucket).remove([current.storage_path]);
+        if (storageResult.error) setError('The bill was removed from the claim, but storage cleanup could not be completed.');
+      }
+      setDocument(null);
+      setSuccess('Bill deleted successfully.');
+    } finally {
+      setRemoving(false);
+    }
+  }
+
+  return <View style={styles.approvalUploadSection}>
+    <View style={styles.approvalUploadHeadingRow}>
+      <View style={styles.approvalUploadIcon}>
+        <MaterialCommunityIcons name="cloud-upload-outline" size={22} color="#0A43A3" />
+      </View>
+      <View style={styles.approvalUploadHeadingCopy}>
+        <Text style={styles.approvalUploadTitle}>Bill Upload</Text>
+        <Text style={styles.approvalUploadSubtitle}>Upload final workshop bill · PDF, JPG or PNG</Text>
+      </View>
+      {!loading && !document ? <Pressable accessibilityRole="button" disabled={uploading || removing} onPress={() => void chooseAndUpload()} style={styles.approvalUploadButton}>
+        <MaterialCommunityIcons name="upload" size={19} color="#FFFFFF" />
+        <Text style={styles.approvalUploadButtonText}>{uploading ? 'Uploading...' : 'Choose File'}</Text>
+      </Pressable> : null}
+    </View>
+
+    {loading ? <Text style={styles.approvalUploadLoading}>Checking saved bill...</Text> : document ? <>
+      <View style={styles.approvalUploadedCard}>
+        <View style={styles.approvalUploadedFileIcon}>
+          <MaterialCommunityIcons name="file-document-check-outline" size={24} color="#168161" />
+        </View>
+        <View style={styles.approvalUploadedCopy}>
+          <Text style={styles.approvalUploadedName} numberOfLines={1}>{document.file_name}</Text>
+          <View style={styles.approvalUploadedStatusRow}>
+            <MaterialCommunityIcons name="check-circle" size={13} color="#168161" />
+            <Text style={styles.approvalUploadedStatus}>Uploaded</Text>
+          </View>
+        </View>
+      </View>
+      <View style={styles.approvalUploadActions}>
+        <Pressable accessibilityRole="button" disabled={uploading || removing} onPress={() => void viewBill()} style={styles.approvalReplaceButton}>
+          <MaterialCommunityIcons name="eye-outline" size={17} color="#0A43A3" />
+          <Text style={styles.approvalReplaceText}>View</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" disabled={uploading || removing} onPress={() => void chooseAndUpload()} style={styles.approvalReplaceButton}>
+          <MaterialCommunityIcons name="refresh" size={17} color="#0A43A3" />
+          <Text style={styles.approvalReplaceText}>{uploading ? 'Uploading...' : 'Replace'}</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" disabled={uploading || removing} onPress={() => setConfirmRemove(true)} style={styles.approvalRemoveButton}>
+          <MaterialCommunityIcons name="trash-can-outline" size={16} color="#C43232" />
+          <Text style={styles.approvalRemoveText}>{removing ? 'Removing...' : 'Remove'}</Text>
+        </Pressable>
+      </View>
+    </> : null}
+
+    {success ? <View style={styles.approvalFeedbackSuccess}><MaterialCommunityIcons name="check-circle-outline" size={14} color="#168161" /><Text style={styles.approvalFeedbackSuccessText}>{success}</Text></View> : null}
+    {error ? <View style={styles.approvalFeedbackError}><MaterialCommunityIcons name="alert-circle-outline" size={14} color="#B42318" /><Text style={styles.approvalFeedbackErrorText}>{error}</Text></View> : null}
+
+    <Modal visible={confirmRemove} transparent animationType="fade" onRequestClose={() => setConfirmRemove(false)}>
+      <View style={styles.approvalModalBackdrop}>
+        <View accessibilityRole="alert" style={styles.approvalModalCard}>
+          <View style={styles.approvalModalIcon}><MaterialCommunityIcons name="trash-can-outline" size={20} color="#C43232" /></View>
+          <Text style={styles.approvalModalTitle}>Delete bill?</Text>
+          <Text style={styles.approvalModalBody}>Are you sure you want to remove {document?.file_name ?? 'this bill'} from the claim?</Text>
+          <View style={styles.approvalModalActions}>
+            <Pressable accessibilityRole="button" onPress={() => setConfirmRemove(false)} style={styles.approvalModalCancel}><Text style={styles.approvalModalCancelText}>Cancel</Text></Pressable>
+            <Pressable accessibilityRole="button" disabled={removing} onPress={() => void removeBill()} style={styles.approvalModalDelete}><Text style={styles.approvalModalDeleteText}>{removing ? 'Deleting...' : 'Delete'}</Text></Pressable>
           </View>
         </View>
       </View>
