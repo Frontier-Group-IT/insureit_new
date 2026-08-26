@@ -629,7 +629,7 @@ function FinalBillUpload({ claimId, customerId }: { claimId: string; customerId:
         file_name: file.name,
         storage_bucket: 'claim-documents',
         storage_path: newStoragePath,
-        mime_type: ['application/pdf', 'image/jpeg', 'image/png'],
+        mime_type: contentType,
         file_size: file.size ?? body.byteLength,
         uploaded_by: session.user.id,
       }).select('id,file_name,storage_bucket,storage_path').single();
