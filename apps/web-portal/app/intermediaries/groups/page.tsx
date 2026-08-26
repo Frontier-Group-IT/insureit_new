@@ -27,8 +27,9 @@ type Employee = { id: string; employee_code: string; full_name: string; designat
 type Group = { id: string; group_code: string; group_name: string; owner_employee_id: string; status: string; description: string | null; created_at: string };
 type Membership = { id: string; group_id: string; partner_id: string; effective_from: string };
 type ParentIntermediary = { id: string; application_id: string | null; intermediary_code: string | null; display_name: string; associate_employee_id: string | null };
+type OnboardingOwner = { application_id: string; associate_employee_id: string | null };
 type Partner = { id: string; partner_code: string; partner_kind: string; display_name: string; source_application_id: string | null };
-type PartnerView = Partner & { parentIntermediary: ParentIntermediary };
+type PartnerView = Partner & { parentIntermediary: ParentIntermediary | null; ownerEmployeeId: string };
 
 const successMessages: Record<string, string> = {
   group_created: "Intermediary Group created.",
@@ -62,17 +63,6 @@ export default async function IntermediaryGroupsPage({ searchParams }: { searchP
       : employeeRequest.in("id", ["00000000-0000-0000-0000-000000000000"]);
   }
 
-  let intermediaryRequest = admin
-    .from("intermediaries")
-    .select("id,application_id,intermediary_code,display_name,associate_employee_id")
-    .eq("intermediary_type", "partner")
-    .order("display_name");
-  if (scope.mode !== "organization") {
-    intermediaryRequest = scope.employeeIds.length
-      ? intermediaryRequest.in("associate_employee_id", scope.employeeIds)
-      : intermediaryRequest.in("associate_employee_id", ["00000000-0000-0000-0000-000000000000"]);
-  }
-
   let groupRequest = admin
     .from("intermediary_groups")
     .select("id,group_code,group_name,owner_employee_id,status,description,created_at")
@@ -84,30 +74,54 @@ export default async function IntermediaryGroupsPage({ searchParams }: { searchP
       : groupRequest.in("owner_employee_id", ["00000000-0000-0000-0000-000000000000"]);
   }
 
-  const [{ data: employees }, { data: parentIntermediaries }, { data: groups, error: groupLoadError }] = await Promise.all([
+  const [
+    { data: employees },
+    { data: parentIntermediaries },
+    { data: onboardingOwners },
+    { data: partnerRows, error: partnerLoadError },
+    { data: groups, error: groupLoadError },
+  ] = await Promise.all([
     employeeRequest.returns<Employee[]>(),
-    intermediaryRequest.returns<ParentIntermediary[]>(),
+    admin
+      .from("intermediaries")
+      .select("id,application_id,intermediary_code,display_name,associate_employee_id")
+      .eq("intermediary_type", "partner")
+      .order("display_name")
+      .returns<ParentIntermediary[]>(),
+    admin
+      .from("posp_misp_onboarding_profiles")
+      .select("application_id,associate_employee_id")
+      .returns<OnboardingOwner[]>(),
+    admin
+      .from("partners")
+      .select("id,partner_code,partner_kind,display_name,source_application_id")
+      .order("display_name")
+      .returns<Partner[]>(),
     groupRequest.returns<Group[]>(),
   ]);
 
-  const sourceApplicationIds = (parentIntermediaries ?? [])
-    .map((row) => row.application_id)
-    .filter((value): value is string => Boolean(value));
-  const { data: partnerRows } = sourceApplicationIds.length
-    ? await admin
-        .from("partners")
-        .select("id,partner_code,partner_kind,display_name,source_application_id")
-        .in("source_application_id", sourceApplicationIds)
-        .returns<Partner[]>()
-    : { data: [] as Partner[] };
+  const parentByApplication = new Map(
+    (parentIntermediaries ?? [])
+      .filter((row): row is ParentIntermediary & { application_id: string } => Boolean(row.application_id))
+      .map((row) => [row.application_id, row]),
+  );
+  const onboardingOwnerByApplication = new Map(
+    (onboardingOwners ?? []).map((row) => [row.application_id, row.associate_employee_id]),
+  );
+  const scopedEmployeeIds = new Set(scope.employeeIds);
+  const partnerViews: PartnerView[] = (partnerRows ?? []).flatMap((partner) => {
+    const sourceApplicationId = partner.source_application_id;
+    if (!sourceApplicationId) return [];
 
-  const parentByApplication = new Map((parentIntermediaries ?? []).map((row) => [row.application_id, row]));
-  const partnerViews: PartnerView[] = (partnerRows ?? [])
-    .map((partner) => {
-      const parentIntermediary = partner.source_application_id ? parentByApplication.get(partner.source_application_id) : undefined;
-      return parentIntermediary ? { ...partner, parentIntermediary } : null;
-    })
-    .filter((value): value is PartnerView => Boolean(value?.parentIntermediary.associate_employee_id));
+    const parentIntermediary = parentByApplication.get(sourceApplicationId) ?? null;
+    const ownerEmployeeId = parentIntermediary?.associate_employee_id
+      ?? onboardingOwnerByApplication.get(sourceApplicationId)
+      ?? null;
+    if (!ownerEmployeeId) return [];
+    if (scope.mode !== "organization" && !scopedEmployeeIds.has(ownerEmployeeId)) return [];
+
+    return [{ ...partner, parentIntermediary, ownerEmployeeId }];
+  });
 
   const groupIds = (groups ?? []).map((group) => group.id);
   const partnerIds = partnerViews.map((partner) => partner.id);
@@ -125,10 +139,9 @@ export default async function IntermediaryGroupsPage({ searchParams }: { searchP
   const membershipByPartner = new Map((memberships ?? []).map((membership) => [membership.partner_id, membership]));
   const partnersByEmployee = new Map<string, PartnerView[]>();
   for (const partner of partnerViews) {
-    const ownerId = partner.parentIntermediary.associate_employee_id as string;
-    const list = partnersByEmployee.get(ownerId) ?? [];
+    const list = partnersByEmployee.get(partner.ownerEmployeeId) ?? [];
     list.push(partner);
-    partnersByEmployee.set(ownerId, list);
+    partnersByEmployee.set(partner.ownerEmployeeId, list);
   }
   const groupsByEmployee = new Map<string, Group[]>();
   for (const group of groups ?? []) {
@@ -152,7 +165,7 @@ export default async function IntermediaryGroupsPage({ searchParams }: { searchP
                 <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white/12 ring-1 ring-white/15"><FolderTree className="h-5 w-5" /></span>
                 <div>
                   <h1 className="text-xl font-semibold tracking-[-0.02em]">Intermediary Groups</h1>
-                  <p className="mt-1 max-w-3xl text-[10.5px] leading-5 text-white/75">Organize each sales employee&apos;s permanent Partner families into optional Groups. Linked POSP/MISP accounts inherit their Partner&apos;s Group automatically.</p>
+                  <p className="mt-1 max-w-3xl text-[10.5px] leading-5 text-white/75">Organize each sales employee&apos;s permanent Partner families into optional Groups. Standalone Partners remain first-class business relationships, and linked POSP/MISP accounts inherit their Partner&apos;s Group automatically.</p>
                 </div>
               </div>
             </div>
@@ -167,6 +180,7 @@ export default async function IntermediaryGroupsPage({ searchParams }: { searchP
         {query.success ? <Notice tone="success" text={successMessages[query.success] ?? "Action completed."} /> : null}
         {query.error ? <Notice tone="error" text={decodeURIComponent(query.error)} /> : null}
         {groupLoadError ? <Notice tone="error" text="The Intermediary Group register could not be loaded. The database migration may not be applied in this environment yet." /> : null}
+        {partnerLoadError ? <Notice tone="error" text="The permanent Partner register could not be loaded. Please refresh the page and try again." /> : null}
 
         {canManage ? (
           <section className="rounded-2xl border border-[#D9E3EF] bg-white p-4 shadow-sm">
@@ -184,7 +198,7 @@ export default async function IntermediaryGroupsPage({ searchParams }: { searchP
         ) : null}
 
         <section className="space-y-3">
-          <div className="flex items-end justify-between px-1"><div><h2 className="text-[13px] font-semibold text-[#172B44]">Sales hierarchy</h2><p className="mt-1 text-[9.5px] text-[#64748B]">Employee → Intermediary Group → permanent Partner family. “Ungrouped” is virtual and does not create a database Group.</p></div></div>
+          <div className="flex items-end justify-between px-1"><div><h2 className="text-[13px] font-semibold text-[#172B44]">Sales hierarchy</h2><p className="mt-1 text-[9.5px] text-[#64748B]">Employee → Intermediary Group → permanent Partner family. Every permanent Partner appears whether or not it currently has a linked POSP/MISP. “Ungrouped” is virtual and does not create a database Group.</p></div></div>
 
           {visibleEmployees.length ? visibleEmployees.map((employee) => {
             const employeePartners = partnersByEmployee.get(employee.id) ?? [];
@@ -263,10 +277,11 @@ function EmployeeTree({ employee, partners, groups, memberships, membershipByPar
 }
 
 function PartnerRow({ partner, currentGroup, alternatives, canManage }: { partner: PartnerView; currentGroup: Group | null; alternatives: Group[]; canManage: boolean }) {
+  const registrationCode = partner.parentIntermediary?.intermediary_code;
   return (
     <div className="px-3.5 py-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="truncate text-[10.5px] font-semibold text-[#263F5D]">{partner.display_name}</p><span className="rounded-full bg-[#F0F4F8] px-2 py-0.5 text-[7.5px] font-bold uppercase text-[#617286]">{partner.partner_kind === "business" ? "Business Partner" : "Individual Partner"}</span></div><p className="mt-1 text-[8.5px] text-[#718096]">{partner.partner_code} · {partner.parentIntermediary.intermediary_code ?? "registration pending"}</p></div>
+        <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="truncate text-[10.5px] font-semibold text-[#263F5D]">{partner.display_name}</p><span className="rounded-full bg-[#F0F4F8] px-2 py-0.5 text-[7.5px] font-bold uppercase text-[#617286]">{partner.partner_kind === "business" ? "Business Partner" : "Individual Partner"}</span></div><p className="mt-1 text-[8.5px] text-[#718096]">{partner.partner_code}{registrationCode && registrationCode !== partner.partner_code ? ` · ${registrationCode}` : ""}</p></div>
         {canManage ? <div className="flex flex-wrap items-center gap-1.5">{alternatives.length ? <form action={assignIntermediaryGroupMembers} className="flex items-center gap-1.5"><input type="hidden" name="partner_id" value={partner.id} /><select name="group_id" defaultValue="" required className="h-8 min-w-[130px] rounded-lg border border-[#D5DFEA] bg-white px-2 text-[8.5px] text-[#44576D]"><option value="">Move to Group…</option>{alternatives.map((group) => <option key={group.id} value={group.id}>{group.group_name}</option>)}</select><button type="submit" className="grid h-8 w-8 place-items-center rounded-lg border border-[#D5DFEA] bg-white text-[#3156B8] hover:bg-[#F4F7FB]" title="Move Partner"><MoveRight className="h-3.5 w-3.5" /></button></form> : null}{currentGroup ? <form action={removeIntermediaryGroupMembers}><input type="hidden" name="partner_id" value={partner.id} /><button type="submit" className="h-8 rounded-lg border border-[#D5DFEA] bg-white px-2.5 text-[8px] font-semibold text-[#5F7082] hover:bg-[#F4F7FB]">Ungroup</button></form> : null}</div> : null}
       </div>
     </div>
