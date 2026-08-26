@@ -1,6 +1,5 @@
 "use client";
 
-import { NonMotorInlineSections } from "@/components/non-motor-inline-sections";
 import type { NonMotorCustomerOption } from "@/components/non-motor-policy-form";
 import { PolicyIntakeOnboardingContextCard } from "@/components/policy-intake-onboarding-context";
 import {
@@ -27,13 +26,13 @@ export function PolicyCommercialShell(props: PolicyCommercialShellProps) {
       <PolicyUnifiedForm
         mode={props.mode}
         insurers={props.insurers}
+        customers={props.customers}
         rms={props.rms}
         sources={props.sources}
         manufacturers={props.manufacturers}
         initialValues={props.initialValues}
         commercialAccess={props.commercialAccess}
       />
-      {props.mode === "create" ? <NonMotorInlineSections insurers={props.insurers} customers={props.customers ?? []} sources={props.sources} /> : null}
       {props.mode === "create" ? <PolicyIntakeOnboardingContextCard /> : null}
     </>
   );

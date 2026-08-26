@@ -21,6 +21,8 @@ import {
   type PolicyOcrApplyOutcome,
   type PolicyOcrImportContext,
 } from "@/components/policy-ocr-import-panel";
+import { NonMotorUnifiedMode, type NonMotorProgress } from "@/components/non-motor-unified-mode";
+import type { NonMotorCustomerOption } from "@/components/non-motor-policy-form";
 import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-apply";
 import type { PolicyBusinessConflict } from "@/app/policies/policy-onboarding-conflicts";
 
@@ -70,8 +72,6 @@ export type PolicyUnifiedInitialValues = {
   projectedOdPercent?: string;
   projectedTpPercent?: string;
   insurerScheme?: string;
-  // Legacy billing fields remain in the input type only so existing edit loaders
-  // do not break. Policy onboarding/edit no longer reads or writes them.
   payinBillNo?: string;
   payinBilledAmount?: string;
   payinBillDate?: string;
@@ -89,6 +89,7 @@ type SelectOption = { label: string; value: string };
 type Props = {
   mode: PolicyFormMode;
   insurers: SelectOption[];
+  customers?: NonMotorCustomerOption[];
   rms: PolicyRmOption[];
   sources: PolicySourceOption[];
   manufacturers?: string[];
@@ -100,12 +101,14 @@ type FormState = Required<Omit<PolicyUnifiedInitialValues, "policyId" | "policyC
 type ApplyGroups = { ownerIdentity: boolean; ownerAddress: boolean; vehicleIdentity: boolean; technical: boolean; compliance: boolean; finance: boolean };
 type VehicleRegistrationMode = "registered" | "unregistered";
 type CommercialModal = "payin" | "payout" | null;
+type SectionProgress = { filled: number; total: number; complete: boolean; empty: boolean; remaining: number };
 
 const defaultGroups: ApplyGroups = { ownerIdentity: true, ownerAddress: true, vehicleIdentity: true, technical: true, compliance: true, finance: true };
 const inputClass = "h-10 w-full rounded-xl border border-[#D8DEE9] bg-white px-3 text-[11px] font-medium text-[#17203A] outline-none transition placeholder:text-[#98A2B3] hover:border-[#B8C2D1] focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA] disabled:cursor-not-allowed disabled:border-[#E3E8EF] disabled:bg-[#F8FAFC] disabled:text-[#64748B]";
 const labelClass = "mb-1.5 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.055em] text-[#475467]";
 const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
-const sections = ["Source", "Customer & Vehicle", "Policy & Premium"];
+const MOTOR_SECTIONS = ["Source", "Customer & Vehicle", "Policy & Premium"];
+const NON_MOTOR_SECTIONS = ["Source", "Customer & Policy", "Risk", "Cover & Premium", "Additional Details", "Documents"];
 const POLICY_DRAFT_KEY = "insureit:policy-onboarding:draft:v2";
 const POLICY_INTAKE_PENDING_KEY = "insureit:policy-intake:pending:v1";
 const POLICY_ONBOARDING_RESET_EVENT = "insureit:policy-onboarding:reset";
@@ -144,12 +147,13 @@ function normalizeRegistrationInput(value:string){return value.toUpperCase().rep
 function isValidRegisteredVehicleNumber(value:string){const normalized=normalizeRegistrationInput(value);const standard=/^[A-Z]{2}[A-Z0-9]*[0-9]{2}$/.test(normalized);const bharatSeries=/^\d{2}BH\d{4}[A-HJ-NP-Z]{1,2}$/.test(normalized);return standard||bharatSeries;}
 const registrationValidationMessage="Enter a valid Registration number.";
 
-export function PolicyUnifiedForm({ mode, insurers, rms, sources, manufacturers = [], initialValues, commercialAccess = true }: Props) {
+export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources, manufacturers = [], initialValues, commercialAccess = true }: Props) {
   const router = useRouter();
   const [form,setForm]=useState<FormState>(()=>stateFrom(initialValues));
   const [vehicleRegistrationMode,setVehicleRegistrationMode]=useState<VehicleRegistrationMode>("registered");
   const [commercialModal,setCommercialModal]=useState<CommercialModal>(null);
   const [activeSection,setActiveSection]=useState(0);
+  const [nonMotorProgress,setNonMotorProgress]=useState<NonMotorProgress[]>([]);
   const [rcReview,setRcReview]=useState<PolicyRcReview|null>(null);
   const [appliedRc,setAppliedRc]=useState<PolicyRcReview|null>(null);
   const [applyGroups,setApplyGroups]=useState<ApplyGroups>(defaultGroups);
@@ -164,10 +168,12 @@ export function PolicyUnifiedForm({ mode, insurers, rms, sources, manufacturers 
   const [isLookingUp,startLookup]=useTransition();
   const [isSubmitting,startSubmit]=useTransition();
   const isEdit=mode==="edit";
+  const isMotorPolicy=form.businessLine==="Motor";
+  const isNonMotorPolicy=!isEdit&&form.businessLine==="Non Motor";
   const registrationNoValid=vehicleRegistrationMode==="registered"&&isValidRegisteredVehicleNumber(form.registrationNo);
   const registrationNoError=vehicleRegistrationMode==="registered"&&registrationTouched&&!registrationNoValid?registrationValidationMessage:null;
 
-  const sectionProgress=useMemo(()=>{
+  const motorSectionProgress=useMemo<SectionProgress[]>(()=>{
     const vehicleIdentityFields = vehicleRegistrationMode === "registered"
       ? [form.registrationNo,form.insuredName,form.phoneNo,form.vehicleClass,form.make,form.model,form.fuelType,form.manufacturingYear,form.capacity,form.rtoState,form.rtoName]
       : [form.insuredName,form.phoneNo,form.vehicleClass,form.make,form.model,form.fuelType,form.manufacturingYear,form.capacity,form.chassisNo,form.engineNo,form.rtoState,form.rtoName];
@@ -179,11 +185,23 @@ export function PolicyUnifiedForm({ mode, insurers, rms, sources, manufacturers 
     return groups.map(values=>{const filled=values.filter(value=>String(value??"").trim()!=="").length;return{filled,total:values.length,complete:filled===values.length,empty:filled===0,remaining:values.length-filled};});
   },[form,vehicleRegistrationMode]);
 
+  const sectionLabels=isNonMotorPolicy?NON_MOTOR_SECTIONS:MOTOR_SECTIONS;
+  const sectionProgress:SectionProgress[]=isNonMotorPolicy?[motorSectionProgress[0],...nonMotorProgress]:motorSectionProgress;
+
   function goToSection(index:number){setActiveSection(index);document.getElementById(`policy-section-${index+1}`)?.scrollIntoView({behavior:"smooth",block:"start"});}
 
   useEffect(()=>{
     if(isEdit||typeof window==="undefined"){draftHydrated.current=true;return;}
-    try{const raw=sessionStorage.getItem(POLICY_DRAFT_KEY);if(raw){const saved=JSON.parse(raw) as {savedAt?:number;form?:FormState;registrationMode?:VehicleRegistrationMode};if(saved.form&&saved.savedAt&&Date.now()-saved.savedAt<8*60*60*1000){setForm(saved.form);setVehicleRegistrationMode(saved.registrationMode==="unregistered"?"unregistered":"registered");}}}catch{}
+    try{
+      const raw=sessionStorage.getItem(POLICY_DRAFT_KEY);
+      if(raw){
+        const saved=JSON.parse(raw) as {savedAt?:number;form?:FormState;registrationMode?:VehicleRegistrationMode};
+        if(saved.form&&saved.savedAt&&Date.now()-saved.savedAt<8*60*60*1000){
+          setForm({...saved.form,businessLine:"Motor"});
+          setVehicleRegistrationMode(saved.registrationMode==="unregistered"?"unregistered":"registered");
+        }
+      }
+    }catch{}
     draftHydrated.current=true;
   },[isEdit]);
   useEffect(()=>{
@@ -191,9 +209,10 @@ export function PolicyUnifiedForm({ mode, insurers, rms, sources, manufacturers 
     const timer=window.setTimeout(()=>{try{sessionStorage.setItem(POLICY_DRAFT_KEY,JSON.stringify({savedAt:Date.now(),form,registrationMode:vehicleRegistrationMode}));}catch{}},250);
     return()=>window.clearTimeout(timer);
   },[form,vehicleRegistrationMode,isEdit]);
+  useEffect(()=>{setActiveSection(0);},[form.businessLine]);
 
   useEffect(()=>{
-    const elements=sections.map((_,index)=>document.getElementById(`policy-section-${index+1}`)).filter((item):item is HTMLElement=>Boolean(item));
+    const elements=sectionLabels.map((_,index)=>document.getElementById(`policy-section-${index+1}`)).filter((item):item is HTMLElement=>Boolean(item));
     if(!elements.length)return;
     const observer=new IntersectionObserver(entries=>{
       const visible=entries.filter(entry=>entry.isIntersecting).sort((a,b)=>a.boundingClientRect.top-b.boundingClientRect.top);
@@ -201,7 +220,7 @@ export function PolicyUnifiedForm({ mode, insurers, rms, sources, manufacturers 
     },{rootMargin:"-145px 0px -58% 0px",threshold:[0,.05,.2]});
     elements.forEach(element=>observer.observe(element));
     return()=>observer.disconnect();
-  },[]);
+  },[sectionLabels]);
 
   useEffect(()=>{ if(!rcReview&&!customerCandidates&&!ownershipConflict&&!businessConflict&&!commercialModal)return; const previous=document.body.style.overflow; document.body.style.overflow="hidden"; const close=(event:KeyboardEvent)=>{if(event.key==="Escape"){setRcReview(null);setCustomerCandidates(null);setOwnershipConflict(null);setBusinessConflict(null);setCommercialModal(null);}}; window.addEventListener("keydown",close); return()=>{document.body.style.overflow=previous;window.removeEventListener("keydown",close);}; },[rcReview,customerCandidates,ownershipConflict,businessConflict,commercialModal]);
 
@@ -239,10 +258,11 @@ export function PolicyUnifiedForm({ mode, insurers, rms, sources, manufacturers 
   function clearPolicyForm(){
     if(isEdit)return;
     try{sessionStorage.removeItem(POLICY_DRAFT_KEY);sessionStorage.removeItem(POLICY_INTAKE_PENDING_KEY);window.dispatchEvent(new Event(POLICY_ONBOARDING_RESET_EVENT));}catch{}
-    setForm(stateFrom(initialValues));
+    setForm({...stateFrom(initialValues),businessLine:"Motor"});
     setVehicleRegistrationMode("registered");
     setCommercialModal(null);
     setActiveSection(0);
+    setNonMotorProgress([]);
     setRcReview(null);
     setAppliedRc(null);
     setApplyGroups(defaultGroups);
@@ -275,13 +295,12 @@ export function PolicyUnifiedForm({ mode, insurers, rms, sources, manufacturers 
 
   const vehicleMeta=vehicleClassMap[form.vehicleClass];
   const policyProducts=form.vehicleClass==="PCP"||form.vehicleClass==="TWP"?["Package","Third Party","SAOD","Bundled","Long Term Package","Long Term Third Party"]:["Package","Third Party","SAOD"];
-  const policyTypeOptions=["Motor","Health","Life","Travel","Personal Accident","Fire","Marine","Engineering","Liability","Cyber","Property","Agriculture / Crop","Other / Miscellaneous"];
-  const isMotorPolicy=form.businessLine==="Motor";
+  const policyTypeOptions=["Motor","Life","Non Motor","Health"];
   const headerTitle=isEdit?"Edit Policy":"Policy Onboarding";
   const submitText=isEdit?"Save Policy Changes":"Book Active Policy";
   const pendingText=isEdit?"Saving changes…":"Booking policy…";
   const currentInsurerLabel=insurers.find(item=>item.value===form.insurerId)?.label??"";
-  const completion=Math.round(sectionProgress.reduce((sum,item)=>sum+item.filled,0)/Math.max(1,sectionProgress.reduce((sum,item)=>sum+item.total,0))*100);
+  const completion=Math.round(motorSectionProgress.reduce((sum,item)=>sum+item.filled,0)/Math.max(1,motorSectionProgress.reduce((sum,item)=>sum+item.total,0))*100);
   const payinEntered=form.projectedOdPercent.trim()!==""||form.projectedTpPercent.trim()!==""||form.insurerScheme.trim()!=="";
   const payoutEntered=form.payoutOdPercent.trim()!==""||form.payoutTpPercent.trim()!=="";
   const ocrImportContext:PolicyOcrImportContext={
@@ -313,59 +332,64 @@ export function PolicyUnifiedForm({ mode, insurers, rms, sources, manufacturers 
     protectedKeys:appliedRc?[...SECTION_02_OCR_FIELDS]:[],
   };
 
+  const sourceSection=<Section number="01" title="Policy source & ownership">
+    <div><DateField label="Policy issuance date" value={form.issuanceDate} onChange={value=>update("issuanceDate",value)} required/><CompactSourceMeta label="Month" value={form.issuanceDate?new Date(`${form.issuanceDate}T00:00:00`).toLocaleDateString("en-US",{month:"short",year:"2-digit"}):"—"}/></div>
+    <div><Select label="Policy type" value={form.businessLine} onChange={e=>update("businessLine",e.target.value)} options={policyTypeOptions} placeholder="Select policy type" required/></div>
+    <div><Select label="Intermediary type" value={form.intermediaryType} onChange={e=>changeIntermediaryType(e.target.value)} options={["POSP","MISP","SIBL / Partner"]} placeholder="Select type" required/><CompactSourceMeta label="RM" value={form.rmName||"Select lead source"}/><input type="hidden" aria-label="RM name" value={form.rmName} readOnly/></div>
+    <div><label className={labelClass}>Lead source <Required/></label><select className={inputClass} value={selectedSourceId} onChange={e=>changeLeadSource(e.target.value)} disabled={!form.intermediaryType} required><option value="">{form.intermediaryType?"Select registered source":"Select intermediary type first"}</option>{availableSources.map(item=><option key={item.value} value={item.value}>{item.label} · {item.code}</option>)}</select><CompactSourceMeta label="ID" value={form.intermediaryCode||"Select lead source"}/><input type="hidden" aria-label="Intermediary code" value={form.intermediaryCode} readOnly/></div>
+  </Section>;
+
+  const progressAt=(index:number):SectionProgress=>sectionProgress[index]??{filled:0,total:1,complete:false,empty:true,remaining:1};
+  const showSectionNav=isMotorPolicy||isNonMotorPolicy;
+
   return <div className="mx-auto max-w-[1480px] pb-24">
     <div className="overflow-hidden rounded-t-xl border border-b-0 border-[#D9E2F0] bg-white shadow-[0_8px_22px_rgba(15,23,42,.05)]">
       <div className="flex min-h-[52px] items-center bg-[linear-gradient(135deg,#071D49_0%,#123B75_60%,#315B9A_100%)] px-4 py-2 text-white sm:px-5">
         <div className="flex w-full items-center justify-between gap-3"><h1 className="text-[15px] font-semibold tracking-[-0.01em]">{headerTitle}</h1>{isMotorPolicy?<PolicyOcrImportPanel variant="header" context={ocrImportContext} onApply={applyPolicyOcrFields} onClearForm={clearPolicyForm}/>:null}</div>
       </div>
     </div>
-    <nav aria-label="Policy sections" className={`${isMotorPolicy?"sticky top-[72px] z-50 mb-3 flex":"hidden"} min-h-[36px] items-stretch gap-4 overflow-x-auto rounded-b-xl border border-t-0 border-[#D9E2F0] bg-white/96 px-4 shadow-[0_5px_14px_rgba(15,23,42,.06)] backdrop-blur`}>{sections.map((section,index)=>{const progress=sectionProgress[index];const active=activeSection===index;return <button key={section} type="button" onClick={()=>goToSection(index)} title={progress.complete?`${section} complete`:`${progress.remaining} required item${progress.remaining===1?"":"s"} remaining`} aria-current={active?"step":undefined} className={`group relative flex min-w-fit items-center gap-1.5 border-b-2 px-0.5 py-2 text-[9px] font-semibold transition ${active?"border-[#4F46E5] text-[#3346B8]":"border-transparent text-[#667085] hover:border-[#CBD5E1] hover:text-[#344054]"}`}>{progress.complete?<svg aria-hidden="true" viewBox="0 0 20 20" className="h-3 w-3 shrink-0 text-[#159566]" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 10 3 3 7-7"/></svg>:<span className={`text-[8px] font-bold tabular-nums ${active?"text-[#4F46E5]":"text-[#98A2B3]"}`}>{String(index+1).padStart(2,"0")}</span>}<span>{section}</span></button>})}</nav>
+    <nav aria-label="Policy sections" className={`${showSectionNav?"sticky top-[72px] z-50 mb-3 flex":"hidden"} min-h-[36px] items-stretch gap-4 overflow-x-auto rounded-b-xl border border-t-0 border-[#D9E2F0] bg-white/96 px-4 shadow-[0_5px_14px_rgba(15,23,42,.06)] backdrop-blur`}>{sectionLabels.map((section,index)=>{const progress=progressAt(index);const active=activeSection===index;return <button key={section} type="button" onClick={()=>goToSection(index)} title={progress.complete?`${section} complete`:`${progress.remaining} required item${progress.remaining===1?"":"s"} remaining`} aria-current={active?"step":undefined} className={`group relative flex min-w-fit items-center gap-1.5 border-b-2 px-0.5 py-2 text-[9px] font-semibold transition ${active?"border-[#4F46E5] text-[#3346B8]":"border-transparent text-[#667085] hover:border-[#CBD5E1] hover:text-[#344054]"}`}>{progress.complete?<svg aria-hidden="true" viewBox="0 0 20 20" className="h-3 w-3 shrink-0 text-[#159566]" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 10 3 3 7-7"/></svg>:<span className={`text-[8px] font-bold tabular-nums ${active?"text-[#4F46E5]":"text-[#98A2B3]"}`}>{String(index+1).padStart(2,"0")}</span>}<span>{section}</span></button>})}</nav>
 
-    <div className={`grid gap-4 ${isMotorPolicy?"xl:grid-cols-[minmax(0,1fr)_336px]":""}`}><div className={`space-y-4 ${isMotorPolicy?"":"[&>#policy-section-2]:hidden [&>#policy-section-3]:hidden"}`}>
-      <Section number="01" title="Policy source & ownership">
-        <div><DateField label="Policy issuance date" value={form.issuanceDate} onChange={value=>update("issuanceDate",value)} required/><CompactSourceMeta label="Month" value={form.issuanceDate?new Date(`${form.issuanceDate}T00:00:00`).toLocaleDateString("en-US",{month:"short",year:"2-digit"}):"—"}/></div>
-        <div><Select label="Policy type" value={form.businessLine} onChange={e=>update("businessLine",e.target.value)} options={policyTypeOptions} placeholder="Select policy type" required/></div>
-        <div><Select label="Intermediary type" value={form.intermediaryType} onChange={e=>changeIntermediaryType(e.target.value)} options={["POSP","MISP","SIBL / Partner"]} placeholder="Select type" required/><CompactSourceMeta label="RM" value={form.rmName||"Select lead source"}/><input type="hidden" aria-label="RM name" value={form.rmName} readOnly/></div>
-        <div><label className={labelClass}>Lead source <Required/></label><select className={inputClass} value={selectedSourceId} onChange={e=>changeLeadSource(e.target.value)} disabled={!form.intermediaryType} required><option value="">{form.intermediaryType?"Select registered source":"Select intermediary type first"}</option>{availableSources.map(item=><option key={item.value} value={item.value}>{item.label} · {item.code}</option>)}</select><CompactSourceMeta label="ID" value={form.intermediaryCode||"Select lead source"}/><input type="hidden" aria-label="Intermediary code" value={form.intermediaryCode} readOnly/></div>
-      </Section>
-
-      <Section number="02" title="Insured & vehicle identification" subtitle={isEdit?"Linked customer and vehicle details are protected from policy-level edits.":undefined} action={!isEdit?<VehicleRegistrationModeToggle mode={vehicleRegistrationMode} onChange={changeRegistrationMode}/>:null}>
-        <div>
-          <label className={labelClass}>Registration No. {vehicleRegistrationMode==="registered"?<Required/>:null}<RcStatusIcon state={vehicleRegistrationMode==="unregistered"?"pending":lookupError?"error":isLookingUp?"checking":appliedRc||isEdit?"verified":"idle"}/></label>
-          <div className="flex">
-            <input className={`${inputClass} min-w-0 rounded-r-none border-r-0 uppercase focus:z-10`} value={form.registrationNo} onChange={e=>{if(!isEdit&&vehicleRegistrationMode==="registered"){update("registrationNo",normalizeRegistrationInput(e.target.value));setAppliedRc(null);setLookupError(null);}}} onBlur={()=>{if(!isEdit&&vehicleRegistrationMode==="registered")setRegistrationTouched(true);}} aria-invalid={registrationNoError?true:undefined} readOnly={isEdit||vehicleRegistrationMode==="unregistered"} disabled={isEdit||vehicleRegistrationMode==="unregistered"} placeholder={vehicleRegistrationMode==="registered"?"MP20AB1234":"Pending after RTO registration"} required={vehicleRegistrationMode==="registered"}/>
-            {!isEdit?<button type="button" onClick={fetchRcDetails} disabled={vehicleRegistrationMode==="unregistered"||isLookingUp||!registrationNoValid} aria-label={vehicleRegistrationMode==="unregistered"?"RC lookup unavailable for unregistered vehicles":isLookingUp?"Fetching RC details":"Fetch RC details"} title={vehicleRegistrationMode==="unregistered"?"Available after permanent registration number is issued":isLookingUp?"Fetching RC details":"Fetch RC details"} className="group grid h-10 w-11 shrink-0 place-items-center rounded-l-none rounded-r-xl border border-[#17365D] bg-[#17365D] text-white transition hover:bg-[#214A7A] focus:outline-none focus:ring-2 focus:ring-[#DCE8FA] disabled:cursor-not-allowed disabled:border-[#A8B4C3] disabled:bg-[#A8B4C3] disabled:opacity-70">{isLookingUp?<RcFetchSpinner/>:<RcFetchIcon/>}</button>:null}
+    {isNonMotorPolicy?<NonMotorUnifiedMode sourceSection={sourceSection} source={{issuanceDate:form.issuanceDate,intermediaryType:form.intermediaryType,sourceId:selectedSourceId,leadSource:form.leadSource,intermediaryCode:form.intermediaryCode,rmName:form.rmName}} insurers={insurers} customers={customers} sources={sources} onProgressChange={setNonMotorProgress}/>:isMotorPolicy?<>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_336px]"><div className="space-y-4">
+        {sourceSection}
+        <Section number="02" title="Insured & vehicle identification" subtitle={isEdit?"Linked customer and vehicle details are protected from policy-level edits.":undefined} action={!isEdit?<VehicleRegistrationModeToggle mode={vehicleRegistrationMode} onChange={changeRegistrationMode}/>:null}>
+          <div>
+            <label className={labelClass}>Registration No. {vehicleRegistrationMode==="registered"?<Required/>:null}<RcStatusIcon state={vehicleRegistrationMode==="unregistered"?"pending":lookupError?"error":isLookingUp?"checking":appliedRc||isEdit?"verified":"idle"}/></label>
+            <div className="flex">
+              <input className={`${inputClass} min-w-0 rounded-r-none border-r-0 uppercase focus:z-10`} value={form.registrationNo} onChange={e=>{if(!isEdit&&vehicleRegistrationMode==="registered"){update("registrationNo",normalizeRegistrationInput(e.target.value));setAppliedRc(null);setLookupError(null);}}} onBlur={()=>{if(!isEdit&&vehicleRegistrationMode==="registered")setRegistrationTouched(true);}} aria-invalid={registrationNoError?true:undefined} readOnly={isEdit||vehicleRegistrationMode==="unregistered"} disabled={isEdit||vehicleRegistrationMode==="unregistered"} placeholder={vehicleRegistrationMode==="registered"?"MP20AB1234":"Pending after RTO registration"} required={vehicleRegistrationMode==="registered"}/>
+              {!isEdit?<button type="button" onClick={fetchRcDetails} disabled={vehicleRegistrationMode==="unregistered"||isLookingUp||!registrationNoValid} aria-label={vehicleRegistrationMode==="unregistered"?"RC lookup unavailable for unregistered vehicles":isLookingUp?"Fetching RC details":"Fetch RC details"} title={vehicleRegistrationMode==="unregistered"?"Available after permanent registration number is issued":isLookingUp?"Fetching RC details":"Fetch RC details"} className="group grid h-10 w-11 shrink-0 place-items-center rounded-l-none rounded-r-xl border border-[#17365D] bg-[#17365D] text-white transition hover:bg-[#214A7A] focus:outline-none focus:ring-2 focus:ring-[#DCE8FA] disabled:cursor-not-allowed disabled:border-[#A8B4C3] disabled:bg-[#A8B4C3] disabled:opacity-70">{isLookingUp?<RcFetchSpinner/>:<RcFetchIcon/>}</button>:null}
+            </div>
+            {lookupError?<p className="mt-1 text-[8.5px] font-semibold text-red-600">{lookupError}</p>:null}
           </div>
-          {lookupError?<p className="mt-1 text-[8.5px] font-semibold text-red-600">{lookupError}</p>:null}
-        </div>
-        <Field label="Insured name" value={form.insuredName} onChange={e=>update("insuredName",e.target.value.toUpperCase())} placeholder="Customer / insured name" required disabled={isEdit}/>
-        <Field label="Phone number" value={form.phoneNo} onChange={e=>update("phoneNo",e.target.value.replace(/\D/g,"").slice(0,10))} placeholder="Mandatory 10 digit mobile" inputMode="numeric" required disabled={isEdit}/>
-        <div><label className={labelClass}>Class <Required/>{vehicleMeta?<span className="ml-1 truncate text-[8.5px] font-semibold normal-case tracking-normal text-[#315B6B]">{vehicleMeta.description}</span>:null}</label><select className={inputClass} value={form.vehicleClass} onChange={e=>changeVehicleClass(e.target.value)} required disabled={isEdit}><option value="">Select class</option>{Object.keys(vehicleClassMap).map(option=><option key={option} value={option}>{option}</option>)}</select></div>
-        {isEdit?<Field label="Make" value={form.make} onChange={e=>update("make",e.target.value)} placeholder="Manufacturer" disabled/>:<Select label="Make" value={form.make} onChange={e=>update("make",e.target.value)} options={manufacturers} placeholder="Select manufacturer"/>}
-        <Field label="Model" value={form.model} onChange={e=>update("model",e.target.value)} placeholder="Model / variant" disabled={isEdit}/>
-        <Select label="Fuel type" value={form.fuelType} onChange={e=>update("fuelType",e.target.value)} options={["Petrol","Diesel","CNG","Electric","Hybrid","Bi-Fuel","Other"]} placeholder="Select fuel" disabled={isEdit}/>
-        <Select label="Year of manufacturing" value={form.manufacturingYear} onChange={e=>update("manufacturingYear",e.target.value)} options={Array.from({length:40},(_,i)=>String(new Date().getFullYear()-i))} placeholder="Select year" disabled={isEdit}/>
-        <div><label className={labelClass}>RTO</label><div className="grid grid-cols-[.9fr_1.1fr] gap-2"><input aria-label="RTO state" className={inputClass} value={form.rtoState} onChange={e=>update("rtoState",e.target.value)} placeholder="State" disabled={isEdit}/><input aria-label="RTO name" className={inputClass} value={form.rtoName} onChange={e=>update("rtoName",e.target.value)} placeholder="Name / code" disabled={isEdit}/></div></div>
-        <Field label={vehicleMeta?`Capacity (${vehicleMeta.capacityLabel})`:"Capacity"} value={form.capacity} onChange={e=>update("capacity",e.target.value)} placeholder={vehicleMeta?`Enter ${vehicleMeta.capacityLabel.toLowerCase()}`:"Select class first"} disabled={isEdit||!form.vehicleClass}/>
-        <Field label="Chassis number" value={form.chassisNo} onChange={e=>update("chassisNo",e.target.value.toUpperCase())} placeholder={vehicleRegistrationMode==="unregistered"?"Mandatory for new vehicle":"Fetched from RC or enter manually"} disabled={isEdit} required={vehicleRegistrationMode==="unregistered"}/>
-        <Field label="Engine number" value={form.engineNo} onChange={e=>update("engineNo",e.target.value.toUpperCase())} placeholder={vehicleRegistrationMode==="unregistered"?"Mandatory for new vehicle":"Fetched from RC or enter manually"} disabled={isEdit} required={vehicleRegistrationMode==="unregistered"}/>
-      </Section>
+          <Field label="Insured name" value={form.insuredName} onChange={e=>update("insuredName",e.target.value.toUpperCase())} placeholder="Customer / insured name" required disabled={isEdit}/>
+          <Field label="Phone number" value={form.phoneNo} onChange={e=>update("phoneNo",e.target.value.replace(/\D/g,"").slice(0,10))} placeholder="Mandatory 10 digit mobile" inputMode="numeric" required disabled={isEdit}/>
+          <div><label className={labelClass}>Class <Required/>{vehicleMeta?<span className="ml-1 truncate text-[8.5px] font-semibold normal-case tracking-normal text-[#315B6B]">{vehicleMeta.description}</span>:null}</label><select className={inputClass} value={form.vehicleClass} onChange={e=>changeVehicleClass(e.target.value)} required disabled={isEdit}><option value="">Select class</option>{Object.keys(vehicleClassMap).map(option=><option key={option} value={option}>{option}</option>)}</select></div>
+          {isEdit?<Field label="Make" value={form.make} onChange={e=>update("make",e.target.value)} placeholder="Manufacturer" disabled/>:<Select label="Make" value={form.make} onChange={e=>update("make",e.target.value)} options={manufacturers} placeholder="Select manufacturer"/>}
+          <Field label="Model" value={form.model} onChange={e=>update("model",e.target.value)} placeholder="Model / variant" disabled={isEdit}/>
+          <Select label="Fuel type" value={form.fuelType} onChange={e=>update("fuelType",e.target.value)} options={["Petrol","Diesel","CNG","Electric","Hybrid","Bi-Fuel","Other"]} placeholder="Select fuel" disabled={isEdit}/>
+          <Select label="Year of manufacturing" value={form.manufacturingYear} onChange={e=>update("manufacturingYear",e.target.value)} options={Array.from({length:40},(_,i)=>String(new Date().getFullYear()-i))} placeholder="Select year" disabled={isEdit}/>
+          <div><label className={labelClass}>RTO</label><div className="grid grid-cols-[.9fr_1.1fr] gap-2"><input aria-label="RTO state" className={inputClass} value={form.rtoState} onChange={e=>update("rtoState",e.target.value)} placeholder="State" disabled={isEdit}/><input aria-label="RTO name" className={inputClass} value={form.rtoName} onChange={e=>update("rtoName",e.target.value)} placeholder="Name / code" disabled={isEdit}/></div></div>
+          <Field label={vehicleMeta?`Capacity (${vehicleMeta.capacityLabel})`:"Capacity"} value={form.capacity} onChange={e=>update("capacity",e.target.value)} placeholder={vehicleMeta?`Enter ${vehicleMeta.capacityLabel.toLowerCase()}`:"Select class first"} disabled={isEdit||!form.vehicleClass}/>
+          <Field label="Chassis number" value={form.chassisNo} onChange={e=>update("chassisNo",e.target.value.toUpperCase())} placeholder={vehicleRegistrationMode==="unregistered"?"Mandatory for new vehicle":"Fetched from RC or enter manually"} disabled={isEdit} required={vehicleRegistrationMode==="unregistered"}/>
+          <Field label="Engine number" value={form.engineNo} onChange={e=>update("engineNo",e.target.value.toUpperCase())} placeholder={vehicleRegistrationMode==="unregistered"?"Mandatory for new vehicle":"Fetched from RC or enter manually"} disabled={isEdit} required={vehicleRegistrationMode==="unregistered"}/>
+        </Section>
 
-      <Section number="03" title="Policy product, premium & validity">
-        <Select label="Policy product" value={form.policyProduct} onChange={e=>update("policyProduct",e.target.value)} options={policyProducts} placeholder="Select product" disabled={!form.vehicleClass} required/>
-        <Field label="Policy number" value={form.policyNo} onChange={e=>update("policyNo",e.target.value.toUpperCase())} placeholder="Policy number" required/>
-        <div><label className={labelClass}>Insurance company <Required/></label><select className={inputClass} value={form.insurerId} onChange={e=>update("insurerId",e.target.value)} required><option value="">Select insurer</option>{insurers.map(i=><option key={i.value} value={i.value}>{i.label}</option>)}</select></div>
-        <Field label="IDV" type="number" min="0" value={form.idv} onChange={e=>update("idv",e.target.value)} placeholder="₹ 0.00" required/>
-        <Field label="OD premium" type="number" min="0" value={form.od} onChange={e=>update("od",e.target.value)} placeholder="₹ 0.00" required/>
-        <Field label="TP premium" type="number" min="0" value={form.tp} onChange={e=>update("tp",e.target.value)} placeholder="₹ 0.00" required/>
-        <Field label="CPA amount" type="number" min={form.vehicleClass==="GCV"?"0.01":"0"} step="0.01" value={form.cpa} onChange={e=>{const value=e.target.value;setForm(current=>({...current,cpa:value,cpaOpted:Number(value||0)>0?"Yes":"No"}));}} placeholder="₹ 0.00" required={form.vehicleClass==="GCV"}/>
-        <PolicyValidityField validFrom={form.validFrom} validUpto={form.validUpto} onFromChange={value=>setForm(current=>({...current,validFrom:value,validUpto:policyExpiryFrom(value)}))} onUptoChange={value=>update("validUpto",value)}/>
-      </Section>
+        <Section number="03" title="Policy product, premium & validity">
+          <Select label="Policy product" value={form.policyProduct} onChange={e=>update("policyProduct",e.target.value)} options={policyProducts} placeholder="Select product" disabled={!form.vehicleClass} required/>
+          <Field label="Policy number" value={form.policyNo} onChange={e=>update("policyNo",e.target.value.toUpperCase())} placeholder="Policy number" required/>
+          <div><label className={labelClass}>Insurance company <Required/></label><select className={inputClass} value={form.insurerId} onChange={e=>update("insurerId",e.target.value)} required><option value="">Select insurer</option>{insurers.map(i=><option key={i.value} value={i.value}>{i.label}</option>)}</select></div>
+          <Field label="IDV" type="number" min="0" value={form.idv} onChange={e=>update("idv",e.target.value)} placeholder="₹ 0.00" required/>
+          <Field label="OD premium" type="number" min="0" value={form.od} onChange={e=>update("od",e.target.value)} placeholder="₹ 0.00" required/>
+          <Field label="TP premium" type="number" min="0" value={form.tp} onChange={e=>update("tp",e.target.value)} placeholder="₹ 0.00" required/>
+          <Field label="CPA amount" type="number" min={form.vehicleClass==="GCV"?"0.01":"0"} step="0.01" value={form.cpa} onChange={e=>{const value=e.target.value;setForm(current=>({...current,cpa:value,cpaOpted:Number(value||0)>0?"Yes":"No"}));}} placeholder="₹ 0.00" required={form.vehicleClass==="GCV"}/>
+          <PolicyValidityField validFrom={form.validFrom} validUpto={form.validUpto} onFromChange={value=>setForm(current=>({...current,validFrom:value,validUpto:policyExpiryFrom(value)}))} onUptoChange={value=>update("validUpto",value)}/>
+        </Section>
+      </div><LiveSummary completion={completion} net={calculations.net} gst={calculations.gst} gross={calculations.gross} access={commercialAccess} payinEntered={payinEntered} payoutEntered={payoutEntered} totalPayin={calculations.totalPayin} totalPayout={calculations.grossPayout} payinOd={form.projectedOdPercent} payinTp={form.projectedTpPercent} payoutOd={form.payoutOdPercent} payoutTp={form.payoutTpPercent} onOpen={setCommercialModal}/></div>
 
-      {!isMotorPolicy?<PolicyTypeDevelopmentNotice policyType={form.businessLine}/>:null}
-    </div>{isMotorPolicy?<LiveSummary completion={completion} net={calculations.net} gst={calculations.gst} gross={calculations.gross} access={commercialAccess} payinEntered={payinEntered} payoutEntered={payoutEntered} totalPayin={calculations.totalPayin} totalPayout={calculations.grossPayout} payinOd={form.projectedOdPercent} payinTp={form.projectedTpPercent} payoutOd={form.payoutOdPercent} payoutTp={form.payoutTpPercent} onOpen={setCommercialModal}/>:null}</div>
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#D9E2F0] bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(15,23,42,.08)] backdrop-blur"><div className="mx-auto flex max-w-[1480px] justify-end gap-2"><Link href="/policies" onClick={()=>{if(!isEdit)try{sessionStorage.removeItem(POLICY_DRAFT_KEY);}catch{}}} className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Cancel</Link><button type="button" onClick={submitPolicy} disabled={isSubmitting} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-60">{isSubmitting?pendingText:submitText}</button></div></div>
+    </>:<div className="space-y-4">{sourceSection}<PolicyTypeDevelopmentNotice policyType={form.businessLine}/></div>}
 
-    <div className={isMotorPolicy?"fixed bottom-0 left-0 right-0 z-40 border-t border-[#D9E2F0] bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(15,23,42,.08)] backdrop-blur":"hidden"}><div className="mx-auto flex max-w-[1480px] justify-end gap-2"><Link href="/policies" onClick={()=>{if(!isEdit)try{sessionStorage.removeItem(POLICY_DRAFT_KEY);}catch{}}} className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Cancel</Link><button type="button" onClick={submitPolicy} disabled={isSubmitting} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-60">{isSubmitting?pendingText:submitText}</button></div></div>
     {submitError?<ValidationErrorDialog message={submitError} onClose={()=>setSubmitError(null)}/>:null}
     {commercialModal==="payin"?<ProjectedPayinModal form={form} update={update} calculations={calculations} onClose={()=>setCommercialModal(null)}/>:null}
     {commercialModal==="payout"?<PartnerPayoutModal form={form} update={update} calculations={calculations} onClose={()=>setCommercialModal(null)}/>:null}
