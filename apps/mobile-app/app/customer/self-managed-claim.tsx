@@ -36,6 +36,7 @@ type DocumentTileIconName = keyof typeof MaterialCommunityIcons.glyphMap;
 type LocationNotice = { tone: 'info' | 'error'; text: string } | null;
 
 const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_VIDEO_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024;
 const DOCUMENT_TYPE_BY_KEY: Record<Exclude<DocumentKey, 'bulk'>, string> = {
   rc: 'RC Copy',
   insurance: 'Insurance Copy',
@@ -169,8 +170,10 @@ export default function SelfManagedClaimScreen() {
     const result = await DocumentPicker.getDocumentAsync({ type: pickerTypes, multiple: multiMedia, copyToCacheDirectory: true });
     if (result.canceled || !result.assets?.length) return;
     const pickedFiles: PickedDocument[] = result.assets.map((asset) => ({ name: asset.name, uri: asset.uri, mimeType: asset.mimeType, size: asset.size ?? null }));
-    const tooLarge = pickedFiles.find((file) => file.size !== null && file.size !== undefined && file.size > MAX_UPLOAD_SIZE_BYTES);
-    if (tooLarge) return setMessage(`${tooLarge.name} is larger than 5 MB. Please choose smaller files.`);
+    const maxUploadSizeBytes = key === 'accident_video' ? MAX_VIDEO_UPLOAD_SIZE_BYTES : MAX_UPLOAD_SIZE_BYTES;
+    const maxUploadSizeLabel = key === 'accident_video' ? '50 MB' : '5 MB';
+    const tooLarge = pickedFiles.find((file) => file.size !== null && file.size !== undefined && file.size > maxUploadSizeBytes);
+    if (tooLarge) return setMessage(`${tooLarge.name} is larger than ${maxUploadSizeLabel}. Please choose smaller files.`);
 
     if (editing && policy) {
       setUploadingDocuments(true);
@@ -369,7 +372,10 @@ export default function SelfManagedClaimScreen() {
       const storagePath = `${customerId}/${targetClaimId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
       const response = await fetch(pickedFile.uri);
       const body = await response.arrayBuffer();
-      if (body.byteLength > MAX_UPLOAD_SIZE_BYTES) return { ok: false, message: `${pickedFile.name} is larger than 5 MB. Please choose a smaller file.`, document: null };
+      const isAccidentVideo = documentType === DOCUMENT_TYPE_BY_KEY.accident_video;
+      const maxUploadSizeBytes = isAccidentVideo ? MAX_VIDEO_UPLOAD_SIZE_BYTES : MAX_UPLOAD_SIZE_BYTES;
+      const maxUploadSizeLabel = isAccidentVideo ? '50 MB' : '5 MB';
+      if (body.byteLength > maxUploadSizeBytes) return { ok: false, message: `${pickedFile.name} is larger than ${maxUploadSizeLabel}. Please choose a smaller file.`, document: null };
 
       const uploadResult = await supabase.storage.from('claim-documents').upload(storagePath, body, {
         contentType: pickedFile.mimeType ?? 'application/octet-stream',
