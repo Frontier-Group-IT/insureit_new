@@ -1,9 +1,8 @@
 -- Harden role derivation and privileged RPC caller identity.
 --
--- This migration deliberately keeps trusted service-role server flows working while
--- binding normal authenticated RPC calls to auth.uid(). The service-role compatibility
--- path is required by existing Next.js server actions that already validate the user
--- and then invoke selected RPCs through the server-only Supabase admin client.
+-- Privileged workflow RPCs remain server/service-role-only. Existing Next.js server
+-- actions authenticate and authorize the human actor, then invoke these RPCs through
+-- the server-only Supabase admin client with the actor profile embedded in the call.
 
 create or replace function public.current_app_role()
 returns public.app_role
@@ -172,20 +171,18 @@ declare
   ) = 'service_role';
   v_can_transfer boolean := false;
 begin
-  if auth.uid() is not null then
-    v_actor := auth.uid();
-  elsif v_is_service_role then
-    begin
-      v_actor := nullif(v_payload #>> '{meta,requestedBy}', '')::uuid;
-    exception when invalid_text_representation then
-      raise exception 'A valid requestedBy profile is required for trusted policy onboarding.';
-    end;
-  else
-    raise exception 'Authentication is required for policy onboarding.';
+  if not v_is_service_role then
+    raise exception 'Policy onboarding is available only through the trusted server workflow.';
   end if;
 
+  begin
+    v_actor := nullif(v_payload #>> '{meta,requestedBy}', '')::uuid;
+  exception when invalid_text_representation then
+    raise exception 'A valid requestedBy profile is required for trusted policy onboarding.';
+  end;
+
   if v_actor is null then
-    raise exception 'Authenticated profile is required for policy onboarding.';
+    raise exception 'A requestedBy profile is required for trusted policy onboarding.';
   end if;
 
   select profile.role::text
@@ -199,6 +196,10 @@ begin
   end if;
 
   v_access := public._effective_privileged_rpc_access(v_actor, 'create_policies');
+  if v_access not in ('edit', 'approve') then
+    -- Preserve the supported legacy permission path used by requirePolicyCreator().
+    v_access := public._effective_privileged_rpc_access(v_actor, 'view_policies');
+  end if;
   if v_access not in ('edit', 'approve') then
     raise exception 'Profile is not authorized to create policies.';
   end if;
@@ -223,7 +224,7 @@ $$;
 
 revoke all on function public.onboard_motor_policy(jsonb) from public;
 revoke all on function public.onboard_motor_policy(jsonb) from anon;
-grant execute on function public.onboard_motor_policy(jsonb) to authenticated;
+revoke all on function public.onboard_motor_policy(jsonb) from authenticated;
 grant execute on function public.onboard_motor_policy(jsonb) to service_role;
 
 alter function public.approve_posp_misp_onboarding_application(uuid, uuid, uuid, uuid)
@@ -253,17 +254,11 @@ declare
     ''
   ) = 'service_role';
 begin
-  if auth.uid() is not null then
-    v_actor := auth.uid();
-    if p_reviewer_profile_id is distinct from v_actor then
-      raise exception 'Reviewer identity does not match the authenticated user.';
-    end if;
-  elsif v_is_service_role then
-    v_actor := p_reviewer_profile_id;
-  else
-    raise exception 'Authentication is required to approve POSP/MISP applications.';
+  if not v_is_service_role then
+    raise exception 'POSP/MISP approval is available only through the trusted server workflow.';
   end if;
 
+  v_actor := p_reviewer_profile_id;
   if v_actor is null then
     raise exception 'Reviewer profile is required to approve POSP/MISP applications.';
   end if;
@@ -284,12 +279,12 @@ $$;
 
 revoke all on function public.approve_posp_misp_onboarding_application(uuid, uuid, uuid, uuid) from public;
 revoke all on function public.approve_posp_misp_onboarding_application(uuid, uuid, uuid, uuid) from anon;
-grant execute on function public.approve_posp_misp_onboarding_application(uuid, uuid, uuid, uuid) to authenticated;
+revoke all on function public.approve_posp_misp_onboarding_application(uuid, uuid, uuid, uuid) from authenticated;
 grant execute on function public.approve_posp_misp_onboarding_application(uuid, uuid, uuid, uuid) to service_role;
 
 comment on function public.current_app_role() is
   'Returns the active database profile role for auth.uid(); JWT user metadata is never an authorization source.';
 comment on function public.onboard_motor_policy(jsonb) is
-  'Authenticated policy onboarding boundary that derives actor identity and ownership-transfer authority server-side.';
+  'Server-only policy onboarding boundary that derives and verifies actor permissions before invoking the underlying mutation.';
 comment on function public.approve_posp_misp_onboarding_application(uuid, uuid, uuid, uuid) is
-  'Authenticated POSP/MISP approval boundary that binds reviewer identity and effective approval capability.';
+  'Server-only POSP/MISP approval boundary that verifies reviewer identity and effective approval capability.';
