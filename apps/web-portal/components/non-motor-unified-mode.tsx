@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, ChevronUp, FileText, IndianRupee, MapPin, ShieldCheck } from "lucide-react";
-import { createNonMotorPolicy, type NonMotorPolicyPayload } from "@/app/policies/non-motor-policy-actions";
+import { ChevronDown, ChevronUp, FileText, HandCoins, IndianRupee, MapPin, ShieldCheck } from "lucide-react";
+import { createNonMotorPolicy, type NonMotorCommercialBasis, type NonMotorPolicyPayload } from "@/app/policies/non-motor-policy-actions";
 import type { PolicySourceOption } from "@/components/policy-unified-form";
 import type { NonMotorCustomerOption } from "@/components/non-motor-policy-form";
 
@@ -29,6 +29,7 @@ type Props = {
 };
 
 type CustomerMode = "existing" | "new";
+type CommercialModal = "payin" | "payout" | null;
 type FormState = {
   customerMode: CustomerMode;
   customerId: string;
@@ -65,6 +66,13 @@ type FormState = {
   grossPremium: string;
   startDate: string;
   endDate: string;
+  payinBasis: NonMotorCommercialBasis;
+  payinPercent: string;
+  payinFixedAmount: string;
+  insurerSchemeAmount: string;
+  payoutBasis: NonMotorCommercialBasis;
+  payoutPercent: string;
+  payoutFixedAmount: string;
   proposalNumber: string;
   previousInsurer: string;
   previousPolicyNumber: string;
@@ -74,6 +82,15 @@ type FormState = {
   specialConditions: string;
   endorsements: string;
   remarks: string;
+};
+
+type CommercialCalculations = {
+  payinBase: number;
+  totalPayin: number;
+  tds: number;
+  payinAfterTds: number;
+  totalPayout: number;
+  retention: number;
 };
 
 const CATEGORIES = ["Fire & Property", "Marine", "Engineering", "Liability", "Burglary", "Employee Compensation", "Cyber", "Travel", "Personal Accident", "Package Policy", "Other"];
@@ -86,6 +103,8 @@ const emptyForm: FormState = {
   policyNumber: "", insurerId: "", productName: "", category: "", status: "Active",
   riskTitle: "", riskLocation: "", occupancyType: "", cargoDescription: "", transitFrom: "", transitTo: "", transitMode: "", projectName: "", projectValue: "", natureOfBusiness: "", liabilityType: "", employeeCount: "", annualWages: "", businessName: "", annualTurnover: "",
   sumInsured: "", deductible: "", netPremium: "", gstAmount: "", grossPremium: "", startDate: "", endDate: "",
+  payinBasis: "NET_PREMIUM_PERCENT", payinPercent: "", payinFixedAmount: "", insurerSchemeAmount: "",
+  payoutBasis: "NET_PREMIUM_PERCENT", payoutPercent: "", payoutFixedAmount: "",
   proposalNumber: "", previousInsurer: "", previousPolicyNumber: "", previousClaims: "", addOns: "", warranties: "", specialConditions: "", endorsements: "", remarks: "",
 };
 
@@ -93,12 +112,28 @@ export function NonMotorUnifiedMode({ sourceSection, source, insurers, customers
   const router = useRouter();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [additionalOpen, setAdditionalOpen] = useState(false);
+  const [commercialModal, setCommercialModal] = useState<CommercialModal>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((current) => ({ ...current, [key]: value }));
 
   const selectedInsurer = insurers.find((item) => item.value === form.insurerId)?.label ?? "Not selected";
   const riskReference = form.riskLocation || form.transitFrom || form.projectName || form.riskTitle || "Not entered";
+  const payinEntered = form.payinPercent.trim() !== "" || form.payinFixedAmount.trim() !== "" || form.insurerSchemeAmount.trim() !== "";
+  const payoutEntered = form.payoutPercent.trim() !== "" || form.payoutFixedAmount.trim() !== "";
+  const commercialCalculations = useMemo<CommercialCalculations>(() => {
+    const netPremium = Number(form.netPremium || 0);
+    const payinBase = form.payinBasis === "FIXED_AMOUNT"
+      ? Number(form.payinFixedAmount || 0)
+      : netPremium * Number(form.payinPercent || 0) / 100;
+    const totalPayin = payinBase + Number(form.insurerSchemeAmount || 0);
+    const tds = totalPayin * 0.10;
+    const payinAfterTds = totalPayin - tds;
+    const totalPayout = form.payoutBasis === "FIXED_AMOUNT"
+      ? Number(form.payoutFixedAmount || 0)
+      : netPremium * Number(form.payoutPercent || 0) / 100;
+    return { payinBase, totalPayin, tds, payinAfterTds, totalPayout, retention: payinAfterTds - totalPayout };
+  }, [form]);
 
   const sectionProgress = useMemo(() => {
     const groups = [
@@ -116,6 +151,14 @@ export function NonMotorUnifiedMode({ sourceSection, source, insurers, customers
   }, [form]);
 
   useEffect(() => { onProgressChange?.(sectionProgress); }, [onProgressChange, sectionProgress]);
+  useEffect(() => {
+    if (!commercialModal) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setCommercialModal(null); };
+    window.addEventListener("keydown", close);
+    return () => { document.body.style.overflow = previous; window.removeEventListener("keydown", close); };
+  }, [commercialModal]);
 
   const completionValues = useMemo(() => [
     source.issuanceDate, source.intermediaryType, source.sourceId, source.rmName, source.intermediaryCode,
@@ -130,6 +173,14 @@ export function NonMotorUnifiedMode({ sourceSection, source, insurers, customers
     setForm((current) => ({ ...current, customerId: value, insuredName: customer?.name ?? "", contactName: customer?.contactName ?? "", phone: customer?.phone ?? "", email: customer?.email ?? "" }));
   }
 
+  function changeCommercialBasis(side: "payin" | "payout", basis: NonMotorCommercialBasis) {
+    if (side === "payin") {
+      setForm((current) => ({ ...current, payinBasis: basis, payinPercent: basis === "FIXED_AMOUNT" ? "" : current.payinPercent, payinFixedAmount: basis === "NET_PREMIUM_PERCENT" ? "" : current.payinFixedAmount }));
+    } else {
+      setForm((current) => ({ ...current, payoutBasis: basis, payoutPercent: basis === "FIXED_AMOUNT" ? "" : current.payoutPercent, payoutFixedAmount: basis === "NET_PREMIUM_PERCENT" ? "" : current.payoutFixedAmount }));
+    }
+  }
+
   function submit() {
     setError(null);
     const selectedSource = sources.find((item) => item.value === source.sourceId);
@@ -142,12 +193,15 @@ export function NonMotorUnifiedMode({ sourceSection, source, insurers, customers
     if (!form.policyNumber || !form.insurerId || !form.productName || !form.category) { setError("Complete the required Customer & policy fields in Section 02."); return; }
     if (riskCoreValues(form).some((value) => !String(value ?? "").trim())) { setError("Complete the required Risk details in Section 03."); return; }
     if (!form.sumInsured || !form.grossPremium || !form.startDate || !form.endDate) { setError("Complete the required Cover, premium & validity fields in Section 04."); return; }
+    if (form.payinBasis === "NET_PREMIUM_PERCENT" && Number(form.payinPercent || 0) > 100) { setError("Projected insurer Pay-in percentage cannot exceed 100%."); return; }
+    if (form.payoutBasis === "NET_PREMIUM_PERCENT" && Number(form.payoutPercent || 0) > 100) { setError("Partner Payout percentage cannot exceed 100%."); return; }
 
     const payload: NonMotorPolicyPayload = {
       source: { issuanceDate: source.issuanceDate, intermediaryType: source.intermediaryType, intermediaryCode: selectedSource.code, leadSource: selectedSource.label, rmName: selectedSource.rmName },
       customerId: form.customerMode === "existing" ? form.customerId : undefined,
       customer: { customerType: form.customerType, insuredName: form.insuredName, contactName: form.contactName, phone: form.phone, email: form.email, address: form.address },
       policy: { policyNumber: form.policyNumber, insurerId: form.insurerId, productName: form.productName, category: form.category, status: form.status, startDate: form.startDate, endDate: form.endDate, sumInsured: form.sumInsured, netPremium: form.netPremium, gstAmount: form.gstAmount, grossPremium: form.grossPremium, deductible: form.deductible },
+      commercial: { payinBasis: form.payinBasis, payinPercent: form.payinPercent, payinFixedAmount: form.payinFixedAmount, insurerSchemeAmount: form.insurerSchemeAmount, payoutBasis: form.payoutBasis, payoutPercent: form.payoutPercent, payoutFixedAmount: form.payoutFixedAmount },
       risk: buildRiskPayload(form),
       additional: { proposalNumber: form.proposalNumber, previousInsurer: form.previousInsurer, previousPolicyNumber: form.previousPolicyNumber, previousClaims: form.previousClaims, addOns: form.addOns, warranties: form.warranties, specialConditions: form.specialConditions, endorsements: form.endorsements, remarks: form.remarks },
     };
@@ -216,9 +270,11 @@ export function NonMotorUnifiedMode({ sourceSection, source, insurers, customers
           {["Policy Copy", "Proposal Form", "KYC", "Other Document"].map((document) => <div key={document} className="flex h-14 items-center gap-3 rounded-xl border border-dashed border-[#CDD6E3] bg-[#FAFBFD] px-3"><FileText className="h-4 w-4 text-[#315B9A]" /><div><p className="text-[10px] font-semibold text-[#344054]">{document}</p><p className="text-[8.5px] text-[#98A2B3]">Attach from Policy Register after saving</p></div></div>)}
         </Section>
       </div>
-      <NonMotorLiveSummary completion={completion} category={form.category || "Non Motor"} sumInsured={Number(form.sumInsured || 0)} grossPremium={Number(form.grossPremium || 0)} riskReference={riskReference} insurer={selectedInsurer} expiry={form.endDate || "Not entered"} />
+      <NonMotorLiveSummary completion={completion} category={form.category || "Non Motor"} sumInsured={Number(form.sumInsured || 0)} grossPremium={Number(form.grossPremium || 0)} riskReference={riskReference} insurer={selectedInsurer} expiry={form.endDate || "Not entered"} payinEntered={payinEntered} payoutEntered={payoutEntered} payinBasis={form.payinBasis} payoutBasis={form.payoutBasis} payinPercent={form.payinPercent} payoutPercent={form.payoutPercent} calculations={commercialCalculations} onOpen={setCommercialModal} />
     </div>
 
+    {commercialModal === "payin" ? <ProjectedPayinModal form={form} update={update} calculations={commercialCalculations} onBasisChange={(basis) => changeCommercialBasis("payin", basis)} onClose={() => setCommercialModal(null)} /> : null}
+    {commercialModal === "payout" ? <PartnerPayoutModal form={form} update={update} calculations={commercialCalculations} onBasisChange={(basis) => changeCommercialBasis("payout", basis)} onClose={() => setCommercialModal(null)} /> : null}
     {error ? <ValidationErrorDialog message={error} onClose={() => setError(null)} /> : null}
     <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#D9E2F0] bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(15,23,42,.08)] backdrop-blur"><div className="mx-auto flex max-w-[1480px] justify-end gap-2"><Link href="/policies" className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Cancel</Link><button type="button" onClick={submit} disabled={isPending} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-60">{isPending ? "Saving policy…" : "Book Active Policy"}</button></div></div>
   </>;
@@ -260,7 +316,13 @@ function Segmented({ label, value, options, labels, onChange }: { label: string;
 
 function CompletionRing({value}:{value:number}){const clamped=Math.max(0,Math.min(100,value));const radius=19,circumference=2*Math.PI*radius,offset=circumference-(clamped/100)*circumference;return <div className="relative h-12 w-12 shrink-0" aria-label={`${clamped}% complete`} title={`${clamped}% complete`}><svg viewBox="0 0 48 48" className="h-12 w-12 -rotate-90"><circle cx="24" cy="24" r={radius} fill="none" stroke="#E3EAF2" strokeWidth="5"/><circle cx="24" cy="24" r={radius} fill="none" stroke="url(#nonMotorCompletionGradient)" strokeWidth="5" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset}/><defs><linearGradient id="nonMotorCompletionGradient" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse"><stop stopColor="#315B9A"/><stop offset="1" stopColor="#19B5A5"/></linearGradient></defs></svg><span className="absolute inset-0 grid place-items-center text-[9px] font-bold text-[#17365D]">{clamped}%</span></div>;}
 
-function NonMotorLiveSummary({completion,category,sumInsured,grossPremium,riskReference,insurer,expiry}:{completion:number;category:string;sumInsured:number;grossPremium:number;riskReference:string;insurer:string;expiry:string}){const anchorRef=useRef<HTMLDivElement>(null);const boundaryRef=useRef<HTMLElement>(null);const[position,setPosition]=useState<{left:number;width:number;top:number}|null>(null);useEffect(()=>{let frame=0;const boundaryElement=boundaryRef.current;if(!boundaryElement){setPosition(null);return;}const updatePosition=()=>{if(window.innerWidth<1280||!anchorRef.current){setPosition(null);return;}const anchorRect=anchorRef.current.getBoundingClientRect();const boundaryRect=boundaryElement.getBoundingClientRect();const fixedCard=document.getElementById("non-motor-summary-fixed-card");const cardHeight=fixedCard?.getBoundingClientRect().height??0;const preferredTop=Math.max(anchorRect.top,172);const boundaryTop=cardHeight>0?boundaryRect.bottom-cardHeight:preferredTop;setPosition({left:anchorRect.left,width:anchorRect.width,top:Math.min(preferredTop,boundaryTop)});};const scheduleUpdate=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(updatePosition);};updatePosition();frame=requestAnimationFrame(updatePosition);window.addEventListener("resize",scheduleUpdate);window.addEventListener("scroll",scheduleUpdate,true);const observer=new ResizeObserver(scheduleUpdate);observer.observe(boundaryElement);observer.observe(document.documentElement);return()=>{cancelAnimationFrame(frame);window.removeEventListener("resize",scheduleUpdate);window.removeEventListener("scroll",scheduleUpdate,true);observer.disconnect();};},[]);const complete=completion>=100;const card=<div className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-[0_10px_30px_rgba(15,23,42,.10)]"><div className="flex items-center gap-3 border-b bg-[#F8FAFC] px-4 py-3"><div className="min-w-0 flex-1"><p className="text-[8px] font-bold uppercase tracking-[.11em] text-[#64748B]">Policy status</p><h3 className="mt-0.5 truncate text-[13px] font-semibold text-[#17365D]">Onboarding summary</h3></div><CompletionRing value={completion}/><span className={`shrink-0 rounded-full px-2.5 py-1 text-[8px] font-bold ${complete?"bg-[#E8F7EF] text-[#14845B]":"bg-[#FFF3CD] text-[#A96A00]"}`}>{complete?"Complete":"In progress"}</span></div><div className="px-4 py-3"><SummaryItem icon={<ShieldCheck className="h-3.5 w-3.5"/>} label="Category" value={category}/><SummaryItem icon={<IndianRupee className="h-3.5 w-3.5"/>} label="Sum insured / limit" value={sumInsured?money.format(sumInsured):"₹0"}/><SummaryItem icon={<IndianRupee className="h-3.5 w-3.5"/>} label="Gross premium" value={grossPremium?money.format(grossPremium):"₹0"}/><SummaryItem icon={<MapPin className="h-3.5 w-3.5"/>} label="Risk reference" value={riskReference}/><SummaryItem icon={<ShieldCheck className="h-3.5 w-3.5"/>} label="Insurer" value={insurer}/><div className="mt-3 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-3"><p className="text-[8px] font-bold uppercase tracking-[0.09em] text-[#98A2B3]">Policy expiry</p><p className="mt-1 text-[11px] font-semibold text-[#344054]">{expiry}</p></div></div></div>;return <aside ref={boundaryRef} className="xl:self-stretch"><div className="xl:hidden">{card}</div><div ref={anchorRef} className="hidden h-px w-full xl:block" aria-hidden="true"/>{position&&typeof document!=="undefined"?createPortal(<div id="non-motor-summary-fixed-card" className="fixed z-30" style={{left:position.left,width:position.width,top:position.top}}>{card}</div>,document.body):null}</aside>;}
+function NonMotorLiveSummary({completion,category,sumInsured,grossPremium,riskReference,insurer,expiry,payinEntered,payoutEntered,payinBasis,payoutBasis,payinPercent,payoutPercent,calculations,onOpen}:{completion:number;category:string;sumInsured:number;grossPremium:number;riskReference:string;insurer:string;expiry:string;payinEntered:boolean;payoutEntered:boolean;payinBasis:NonMotorCommercialBasis;payoutBasis:NonMotorCommercialBasis;payinPercent:string;payoutPercent:string;calculations:CommercialCalculations;onOpen:(modal:CommercialModal)=>void}){const anchorRef=useRef<HTMLDivElement>(null);const boundaryRef=useRef<HTMLElement>(null);const[position,setPosition]=useState<{left:number;width:number;top:number}|null>(null);useEffect(()=>{let frame=0;const boundaryElement=boundaryRef.current;if(!boundaryElement){setPosition(null);return;}const updatePosition=()=>{if(window.innerWidth<1280||!anchorRef.current){setPosition(null);return;}const anchorRect=anchorRef.current.getBoundingClientRect();const boundaryRect=boundaryElement.getBoundingClientRect();const fixedCard=document.getElementById("non-motor-summary-fixed-card");const cardHeight=fixedCard?.getBoundingClientRect().height??0;const preferredTop=Math.max(anchorRect.top,172);const boundaryTop=cardHeight>0?boundaryRect.bottom-cardHeight:preferredTop;setPosition({left:anchorRect.left,width:anchorRect.width,top:Math.min(preferredTop,boundaryTop)});};const scheduleUpdate=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(updatePosition);};updatePosition();frame=requestAnimationFrame(updatePosition);window.addEventListener("resize",scheduleUpdate);window.addEventListener("scroll",scheduleUpdate,true);const observer=new ResizeObserver(scheduleUpdate);observer.observe(boundaryElement);observer.observe(document.documentElement);return()=>{cancelAnimationFrame(frame);window.removeEventListener("resize",scheduleUpdate);window.removeEventListener("scroll",scheduleUpdate,true);observer.disconnect();};},[]);const complete=completion>=100;const payinDetail=payinBasis==="FIXED_AMOUNT"?"Fixed amount":`${payinPercent||"0"}% of Net Premium`;const payoutDetail=payoutBasis==="FIXED_AMOUNT"?"Fixed amount":`${payoutPercent||"0"}% of Net Premium`;const card=<div className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-[0_10px_30px_rgba(15,23,42,.10)]"><div className="flex items-center gap-3 border-b bg-[#F8FAFC] px-4 py-3"><div className="min-w-0 flex-1"><p className="text-[8px] font-bold uppercase tracking-[.11em] text-[#64748B]">Policy status</p><h3 className="mt-0.5 truncate text-[13px] font-semibold text-[#17365D]">Onboarding summary</h3></div><CompletionRing value={completion}/><span className={`shrink-0 rounded-full px-2.5 py-1 text-[8px] font-bold ${complete?"bg-[#E8F7EF] text-[#14845B]":"bg-[#FFF3CD] text-[#A96A00]"}`}>{complete?"Complete":"In progress"}</span></div><div className="px-4 py-3"><SummaryItem icon={<ShieldCheck className="h-3.5 w-3.5"/>} label="Category" value={category}/><SummaryItem icon={<IndianRupee className="h-3.5 w-3.5"/>} label="Sum insured / limit" value={sumInsured?money.format(sumInsured):"₹0"}/><SummaryItem icon={<IndianRupee className="h-3.5 w-3.5"/>} label="Gross premium" value={grossPremium?money.format(grossPremium):"₹0"}/><SummaryItem icon={<MapPin className="h-3.5 w-3.5"/>} label="Risk reference" value={riskReference}/><SummaryItem icon={<ShieldCheck className="h-3.5 w-3.5"/>} label="Insurer" value={insurer}/><div className="mt-3 overflow-hidden rounded-xl border border-[#DCE6F2] bg-[#F8FAFD]"><div className="flex items-center gap-2 border-b border-[#E3EAF2] px-3 py-2"><HandCoins className="h-3.5 w-3.5 text-[#315B9A]"/><p className="text-[8px] font-bold uppercase tracking-[0.09em] text-[#667085]">Payin–Payout</p></div><CommercialSummaryButton label="Insurer Pay-in" entered={payinEntered} value={calculations.totalPayin} detail={payinDetail} onClick={()=>onOpen("payin")}/><CommercialSummaryButton label="Partner Payout" entered={payoutEntered} value={calculations.totalPayout} detail={payoutDetail} onClick={()=>onOpen("payout")}/><div className="flex items-center justify-between gap-3 border-t border-[#E3EAF2] px-3 py-2.5"><div><p className="text-[7.5px] font-bold uppercase tracking-[0.07em] text-[#98A2B3]">Projected retention</p><p className={`mt-0.5 text-[10.5px] font-bold ${calculations.retention<0?"text-red-600":"text-[#344054]"}`}>{money.format(calculations.retention)}</p></div><span className="text-[7.5px] text-[#98A2B3]">After 10% TDS</span></div></div><div className="mt-3 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-3"><p className="text-[8px] font-bold uppercase tracking-[0.09em] text-[#98A2B3]">Policy expiry</p><p className="mt-1 text-[11px] font-semibold text-[#344054]">{expiry}</p></div></div></div>;return <aside ref={boundaryRef} className="xl:self-stretch"><div className="xl:hidden">{card}</div><div ref={anchorRef} className="hidden h-px w-full xl:block" aria-hidden="true"/>{position&&typeof document!=="undefined"?createPortal(<div id="non-motor-summary-fixed-card" className="fixed z-30" style={{left:position.left,width:position.width,top:position.top}}>{card}</div>,document.body):null}</aside>;}
 function SummaryItem({icon,label,value}:{icon:ReactNode;label:string;value:string}){return <div className="flex items-start gap-2.5 py-2"><span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#EEF4FF] text-[#315B9A]">{icon}</span><div className="min-w-0"><p className="text-[8px] font-bold uppercase tracking-[0.08em] text-[#98A2B3]">{label}</p><p className="mt-0.5 truncate text-[10.5px] font-semibold text-[#344054]" title={value}>{value}</p></div></div>;}
+function CommercialSummaryButton({label,entered,value,detail,onClick}:{label:string;entered:boolean;value:number;detail:string;onClick:()=>void}){return <button type="button" onClick={onClick} className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition hover:bg-white"><div className="min-w-0"><p className="text-[8px] font-bold uppercase tracking-[0.07em] text-[#667085]">{label}</p><p className="mt-0.5 text-[10.5px] font-bold text-[#17365D]">{entered?money.format(value):"Not entered"}</p>{entered?<p className="mt-0.5 truncate text-[7.5px] text-[#98A2B3]">{detail}</p>:null}</div><span className="shrink-0 text-[8px] font-bold text-[#315B9A]">{entered?"Edit":"Add"}</span></button>;}
+
+function ProjectedPayinModal({form,update,calculations,onBasisChange,onClose}:{form:FormState;update:<K extends keyof FormState>(key:K,value:FormState[K])=>void;calculations:CommercialCalculations;onBasisChange:(basis:NonMotorCommercialBasis)=>void;onClose:()=>void}){return <CommercialModalShell title="Projected Insurer Pay-in" subtitle="Expected insurer income for this policy. This does not create billing or confirm the insurer's actual recognized pay-in." onClose={onClose}><div className="grid gap-3 sm:grid-cols-2"><Select label="Pay-in basis" value={form.payinBasis} onChange={(e)=>onBasisChange(e.target.value as NonMotorCommercialBasis)}><option value="NET_PREMIUM_PERCENT">Net Premium %</option><option value="FIXED_AMOUNT">Fixed Amount</option></Select>{form.payinBasis==="NET_PREMIUM_PERCENT"?<Field label="Pay-in %" type="number" min="0" max="100" step="0.01" value={form.payinPercent} onChange={(e)=>update("payinPercent",numeric(e.target.value))} placeholder="0.00"/>:<Field label="Projected pay-in amount" value={form.payinFixedAmount} onChange={(e)=>update("payinFixedAmount",numeric(e.target.value))} inputMode="decimal" placeholder="₹ 0.00"/>}<Field label="Insurer scheme / incentive" value={form.insurerSchemeAmount} onChange={(e)=>update("insurerSchemeAmount",numeric(e.target.value))} inputMode="decimal" placeholder="₹ 0.00"/><CalculatedField label="Base projected pay-in" value={money.format(calculations.payinBase)}/><CalculatedField label="Projected total pay-in" value={money.format(calculations.totalPayin)}/><CalculatedField label="TDS @ 10%" value={money.format(calculations.tds)}/><CalculatedField label="Pay-in after TDS" value={money.format(calculations.payinAfterTds)}/></div><p className="mt-4 rounded-xl border border-[#DCE6F2] bg-[#F8FAFD] px-3 py-2.5 text-[9px] leading-4 text-[#667085]">Blank means projected pay-in has not been entered. Entering 0 explicitly is valid and is preserved as an entered commercial value.</p></CommercialModalShell>;}
+function PartnerPayoutModal({form,update,calculations,onBasisChange,onClose}:{form:FormState;update:<K extends keyof FormState>(key:K,value:FormState[K])=>void;calculations:CommercialCalculations;onBasisChange:(basis:NonMotorCommercialBasis)=>void;onClose:()=>void}){return <CommercialModalShell title="Partner Payout" subtitle="Agreed payout for the Lead Source selected in Section 01. Payment approval, voucher and settlement remain in the partner-payment workflow." onClose={onClose}><div className="grid gap-3 sm:grid-cols-2"><Select label="Payout basis" value={form.payoutBasis} onChange={(e)=>onBasisChange(e.target.value as NonMotorCommercialBasis)}><option value="NET_PREMIUM_PERCENT">Net Premium %</option><option value="FIXED_AMOUNT">Fixed Amount</option></Select>{form.payoutBasis==="NET_PREMIUM_PERCENT"?<Field label="Payout %" type="number" min="0" max="100" step="0.01" value={form.payoutPercent} onChange={(e)=>update("payoutPercent",numeric(e.target.value))} placeholder="0.00"/>:<Field label="Agreed payout amount" value={form.payoutFixedAmount} onChange={(e)=>update("payoutFixedAmount",numeric(e.target.value))} inputMode="decimal" placeholder="₹ 0.00"/>}<CalculatedField label="Total agreed payout" value={money.format(calculations.totalPayout)}/><CalculatedField label="Projected retention" value={money.format(calculations.retention)} negative={calculations.retention<0}/></div><p className="mt-4 rounded-xl border border-[#E4DFF2] bg-[#FAF8FF] px-3 py-2.5 text-[9px] leading-4 text-[#667085]">The payout is tagged automatically to the intermediary type and code selected in Section 01. Negative retention is allowed as a commercial exception and is highlighted for finance review.</p></CommercialModalShell>;}
+function CalculatedField({label,value,negative=false}:{label:string;value:string;negative?:boolean}){return <div><span className={labelClass}>{label}</span><div className={`flex h-10 items-center rounded-xl border bg-[#F8FAFC] px-3 text-[11px] font-bold ${negative?"border-red-200 text-red-600":"border-[#D8DEE9] text-[#344054]"}`}>{value}</div></div>;}
+function CommercialModalShell({title,subtitle,onClose,children}:{title:string;subtitle:string;onClose:()=>void;children:ReactNode}){if(typeof document==="undefined")return null;return createPortal(<div className="fixed inset-0 z-[9999] grid h-[100dvh] w-screen place-items-center overflow-hidden bg-[#071D49]/60 p-3 backdrop-blur-sm sm:p-5" role="dialog" aria-modal="true" aria-label={title}><div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-[560px] flex-col overflow-hidden rounded-2xl border border-white/60 bg-white shadow-[0_24px_80px_rgba(7,29,73,.4)]"><div className="flex shrink-0 items-start justify-between border-b border-[#E6EBF2] bg-[linear-gradient(135deg,#F8FAFD,#EEF4FB)] px-4 py-3.5 sm:px-5"><div className="min-w-0 pr-3"><p className="text-[14px] font-bold text-[#102A4C]">{title}</p><p className="mt-1 text-[9.5px] leading-4 text-[#667085]">{subtitle}</p></div><button type="button" onClick={onClose} aria-label="Close" className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[#D8DEE9] bg-white text-[17px] text-[#475467] transition hover:bg-[#F8FAFC]">×</button></div><div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">{children}</div><div className="shrink-0 border-t border-[#E6EBF2] bg-[#F8FAFC] px-4 py-3 sm:px-5"><div className="flex justify-end"><button type="button" onClick={onClose} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white">Save & Close</button></div></div></div></div>,document.body);}
 
 function ValidationErrorDialog({message,onClose}:{message:string;onClose:()=>void}){const okRef=useRef<HTMLButtonElement>(null);useEffect(()=>{const previous=document.body.style.overflow;document.body.style.overflow="hidden";okRef.current?.focus();return()=>{document.body.style.overflow=previous;};},[]);if(typeof document==="undefined")return null;return createPortal(<div className="fixed inset-0 z-[10000] grid min-h-[100dvh] w-screen place-items-center bg-[#071D49]/60 p-4 backdrop-blur-[2px]" role="alertdialog" aria-modal="true"><div className="w-full max-w-[420px] overflow-hidden rounded-2xl border border-white/70 bg-white shadow-[0_24px_70px_rgba(7,29,73,.38)]"><div className="px-6 pb-5 pt-6 text-center"><div className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-[#FFF3E8] text-[19px] font-bold text-[#D45B16] ring-6 ring-[#FFF8F2]">!</div><h2 className="mt-4 text-[15px] font-bold text-[#102A4C]">Check details</h2><p className="mx-auto mt-2 max-w-sm text-[11px] leading-5 text-[#667085]">{message}</p></div><div className="border-t border-[#E6EBF2] bg-[#F8FAFC] px-5 py-3.5"><button ref={okRef} type="button" onClick={onClose} className="h-10 w-full rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white">OK</button></div></div></div>,document.body);}
