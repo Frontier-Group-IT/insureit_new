@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CompactDocumentActionBar, CompactDocumentStageHeader } from '@/components/compact-document-upload-navigation';
 import { AppDatePicker } from '@/components/design-system';
@@ -338,6 +338,26 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
     return () => clearTimeout(timer);
   }, [success]);
 
+  async function viewApprovalPdf() {
+    if (!document?.storage_bucket || !document.storage_path || uploading || removing) return;
+    setError('');
+    try {
+      const { data, error: signedUrlError } = await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 600);
+      if (signedUrlError || !data?.signedUrl) {
+        setError('We could not open the approval PDF. Please try again.');
+        return;
+      }
+      const supported = await Linking.canOpenURL(data.signedUrl);
+      if (!supported) {
+        setError('This approval PDF could not be opened on this device.');
+        return;
+      }
+      await Linking.openURL(data.signedUrl);
+    } catch {
+      setError('We could not open the approval PDF. Please try again.');
+    }
+  }
+
   async function chooseAndUpload() {
     if (uploading || removing) return;
     setError('');
@@ -463,6 +483,10 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
         </View>
       </View>
       <View style={styles.approvalUploadActions}>
+        <Pressable accessibilityRole="button" disabled={uploading || removing} onPress={() => void viewApprovalPdf()} style={styles.approvalReplaceButton}>
+          <MaterialCommunityIcons name="eye-outline" size={17} color="#0A43A3" />
+          <Text style={styles.approvalReplaceText}>View</Text>
+        </Pressable>
         <Pressable accessibilityRole="button" disabled={uploading || removing} onPress={() => void chooseAndUpload()} style={styles.approvalReplaceButton}>
           <MaterialCommunityIcons name="refresh" size={17} color="#0A43A3" />
           <Text style={styles.approvalReplaceText}>{uploading ? 'Uploading...' : 'Replace'}</Text>
