@@ -12,6 +12,7 @@ import {
 type GroupRow = { id: string; owner_employee_id: string; status: string };
 type PartnerRow = { id: string; source_application_id: string | null };
 type ParentIntermediaryRow = { application_id: string | null; associate_employee_id: string | null };
+type OnboardingOwnerRow = { application_id: string; associate_employee_id: string | null };
 
 const returnPath = "/intermediaries/groups";
 
@@ -20,15 +21,19 @@ export async function createIntermediaryGroup(formData: FormData) {
   const ownerEmployeeId = text(formData, "owner_employee_id") || profile.employee_id || "";
   const groupName = text(formData, "group_name");
   const description = text(formData, "description");
+  const partnerIds = ids(formData, "partner_id");
   if (!ownerEmployeeId || !groupName) return fail("Group owner and Group name are required.");
   if (!(await canAccessIntermediaryGroupOwner(profile, ownerEmployeeId))) return fail("You cannot create a Group for that employee.");
+  if (partnerIds.length && !(await partnersBelongToOwner(partnerIds, ownerEmployeeId))) {
+    return fail("Every selected Partner must belong to the Group owner.");
+  }
 
   const admin = createSupabaseAdminClient();
   const { error } = await admin.rpc("service_create_intermediary_group", {
     p_owner_employee_id: ownerEmployeeId,
     p_group_name: groupName,
     p_description: description || null,
-    p_partner_ids: [],
+    p_partner_ids: partnerIds,
     p_actor_profile_id: profile.id,
   });
   if (error) return fail(groupError(error.message));
@@ -166,14 +171,24 @@ async function partnersBelongToOwner(partnerIds: string[], ownerEmployeeId: stri
   if ((partners ?? []).length !== partnerIds.length) return false;
   const applicationIds = (partners ?? []).map((row) => row.source_application_id).filter((value): value is string => Boolean(value));
   if (applicationIds.length !== partnerIds.length) return false;
-  const { data: intermediaryRows } = await admin
-    .from("intermediaries")
-    .select("application_id,associate_employee_id")
-    .eq("intermediary_type", "partner")
-    .in("application_id", applicationIds)
-    .returns<ParentIntermediaryRow[]>();
-  const ownerByApplication = new Map((intermediaryRows ?? []).map((row) => [row.application_id, row.associate_employee_id]));
-  return applicationIds.every((applicationId) => ownerByApplication.get(applicationId) === ownerEmployeeId);
+  const [{ data: intermediaryRows }, { data: onboardingOwners }] = await Promise.all([
+    admin
+      .from("intermediaries")
+      .select("application_id,associate_employee_id")
+      .eq("intermediary_type", "partner")
+      .in("application_id", applicationIds)
+      .returns<ParentIntermediaryRow[]>(),
+    admin
+      .from("posp_misp_onboarding_profiles")
+      .select("application_id,associate_employee_id")
+      .in("application_id", applicationIds)
+      .returns<OnboardingOwnerRow[]>(),
+  ]);
+  const rootOwnerByApplication = new Map((intermediaryRows ?? []).map((row) => [row.application_id, row.associate_employee_id]));
+  const onboardingOwnerByApplication = new Map((onboardingOwners ?? []).map((row) => [row.application_id, row.associate_employee_id]));
+  return applicationIds.every((applicationId) =>
+    (rootOwnerByApplication.get(applicationId) ?? onboardingOwnerByApplication.get(applicationId) ?? null) === ownerEmployeeId
+  );
 }
 
 function text(formData: FormData, key: string) {
