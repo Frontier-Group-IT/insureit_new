@@ -125,4 +125,8 @@ The app must not create a second Group model, second Partner ownership model, or
 
 ## Rollout status
 
-As of this handoff update, the Intermediary Group implementation is committed in PR #677 but **has not been applied to production Supabase**. Do not claim that Group tables or Group policy snapshots are live until the production migration history and object definitions are directly verified after rollout.
+**VERIFIED / APPLIED 2026-08-26:** the Intermediary Group foundation and subsequent hardening migrations are applied to production Supabase. The web management surface is live, the Group lifecycle was rollback-tested against real production relationship IDs, and Group-specific trigger/mutation ACL hardening was verified.
+
+Production currently supports optional Groups while leaving ungrouped permanent Partner families directly under their Sales Employee. Existing policies were intentionally not backfilled into Group snapshot fields.
+
+The backend prerequisite for INSUREIT Partner has therefore been crossed. Continue with `docs/INSUREIT_PARTNER_APP_ARCHITECTURE.md` for the Partner-app identity, portal-account and commercial-scope contract. Do not auto-create real business Groups or intermediary portal accounts without an explicit business/UAT decision.
