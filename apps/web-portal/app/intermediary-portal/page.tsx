@@ -13,7 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { BrandLockup } from "@/components/brand-lockup";
-import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
+import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { IcallPortalLauncher } from "./icall-portal-launcher";
 import { IntermediaryLogoutButton } from "./logout-button";
@@ -76,11 +76,9 @@ export default async function IntermediaryPortalPage() {
   if (!intermediary) redirect("/access-denied");
 
   if (account.status === "invited") {
-    const now = new Date().toISOString();
-    await Promise.all([
-      admin.from("intermediary_portal_accounts").update({ status: "active", activated_at: now, updated_at: now }).eq("auth_user_id", profile.id),
-      admin.from("intermediaries").update({ portal_access_status: "active", updated_at: now }).eq("id", intermediary.id),
-    ]);
+    const userClient = await createServerSupabaseClient();
+    const { error: activationError } = await userClient.rpc("partner_app_activate_current_account");
+    if (activationError) redirect("/access-denied");
   }
 
   const qualificationApplication = await resolveQualificationApplication(admin, application);
