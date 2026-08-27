@@ -37,7 +37,8 @@ export async function resendIntermediaryPortalInvite(formData: FormData) {
   if (error) redirect(`${returnPath}?error=${encodeURIComponent(error.message)}`);
 
   const now = new Date().toISOString();
-  await admin.from("intermediary_portal_accounts").update({ invited_at: now, invited_by: reviewer.id, updated_by: reviewer.id, updated_at: now }).eq("intermediary_id", intermediary.id).eq("status", "invited");
+  const { data: account } = await admin.from("intermediary_portal_accounts").update({ invited_at: now, invited_by: reviewer.id, updated_by: reviewer.id, updated_at: now }).eq("intermediary_id", intermediary.id).eq("status", "invited").select("id,auth_user_id").maybeSingle<{ id:string; auth_user_id:string|null }>();
+  await admin.from("intermediary_portal_account_audit").insert({ portal_account_id: account?.id ?? null, intermediary_id: intermediary.id, auth_user_id: account?.auth_user_id ?? null, event_type: "invite_resent", actor_profile_id: reviewer.id });
   revalidatePath(returnPath);
   redirect(`${returnPath}?success=portal_invite_resent`);
 }
