@@ -1,0 +1,46 @@
+name: Publish current mobile v0.2 OTA
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: OTA message
+        required: false
+        default: Current mobile v0.2 OTA update
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: release/mobile-v0.2-current
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Confirm current v0.2 runtime
+        run: node -e "const c=require('./apps/mobile-app/app.json');if(c.expo.version!=='0.2.0')process.exit(2)"
+      - name: Confirm no newer native compressor dependency
+        run: node -e "const p=require('./apps/mobile-app/package.json');if(p.dependencies?.['react-native-compressor'])process.exit(3)"
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Typecheck
+        run: npm run typecheck:mobile
+      - name: Lint
+        run: npm run lint:mobile
+      - name: Expo web build
+        run: npm run build:mobile:web
+      - name: Publish OTA
+        working-directory: apps/mobile-app
+        run: npx eas-cli update --channel preview --environment preview --message "${{ inputs.message }}" --non-interactive
