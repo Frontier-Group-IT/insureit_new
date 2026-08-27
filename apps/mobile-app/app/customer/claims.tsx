@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 import { AppSearchBar } from '@/components/design-system';
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
@@ -106,9 +107,11 @@ export default function ClaimsScreen() {
             <View style={[styles.accentBar, { backgroundColor: selfTracked ? selfTrackedStatusColor : tone.accent }]} />
 
             <View style={styles.claimTop}>
-              <View style={[styles.statusIcon, { backgroundColor: selfTracked ? '#EEF5FF' : tone.soft }]}>
-                <MaterialCommunityIcons name={selfTracked ? 'timeline-check-outline' : statusIcon(claim.current_status)} size={22} color={selfTracked ? '#0A43A3' : tone.accent} />
-              </View>
+              {selfTracked
+                ? <SelfTrackedGlossyIcon completed={completed} />
+                : <View style={[styles.statusIcon, { backgroundColor: tone.soft }]}>
+                    <MaterialCommunityIcons name={statusIcon(claim.current_status)} size={22} color={tone.accent} />
+                  </View>}
               <View style={styles.claimTitleCopy}>
                 <Text style={[styles.modeLabel, { color: selfTracked ? selfTrackedStatusColor : tone.accent }]}>{selfTracked ? 'SELF TRACKED' : claimStageLabel(claim.current_status)}</Text>
                 <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle?.vehicle_no ?? 'Vehicle linked'}</Text>
@@ -159,6 +162,31 @@ function matchesFilter(claim: CustomerClaim, filter: ClaimFilter) {
 function countForFilter(filter: ClaimFilter, claims: CustomerClaim[]) { return claims.filter((claim) => matchesFilter(claim, filter)).length; }
 function claimStageLabel(status: ClaimStatus) { if (status.includes('Document') || status.includes('Awaited')) return 'DOCUMENT STAGE'; if (status.includes('Survey') || status.includes('Inspected')) return 'SURVEY STAGE'; if (status.includes('Approval') || status.includes('Estimate')) return 'APPROVAL STAGE'; if (status.includes('Repair') || status.includes('DO') || status.includes('RA')) return 'REPAIR / DO STAGE'; if (status.includes('Payment') || status.includes('Settlement')) return 'PAYMENT STAGE'; if (status === 'Closed' || status === 'Settled' || status === 'Claim Complete') return 'COMPLETED'; return 'CLAIM STAGE'; }
 function claimTone(status: ClaimStatus) { if (status === 'Closed' || status === 'Settled' || status === 'Claim Complete') return { accent: '#12805C', soft: '#E8F8F0', border: '#BFEBD0' }; if (status === 'Rejected') return { accent: '#C43838', soft: '#FDECEC', border: '#F2C6C6' }; if (status.includes('Payment') || status.includes('Settlement')) return { accent: '#B7791F', soft: '#FFF4E2', border: '#F7DCA2' }; if (status.includes('Repair') || status.includes('DO') || status.includes('RA')) return { accent: '#7C3AED', soft: '#F0E9FF', border: '#D8C8FF' }; if (status.includes('Document') || status.includes('Awaited')) return { accent: '#C83272', soft: '#FFF0F6', border: '#F8BFD7' }; return { accent: '#0B63CE', soft: '#EEF5FF', border: '#CFE0FF' }; }
+function SelfTrackedGlossyIcon({ completed }: { completed: boolean }) {
+  const top = completed ? '#77E268' : '#FFC44A';
+  const bottom = completed ? '#10A92F' : '#F47A00';
+  const edge = completed ? '#0E8D29' : '#D95E00';
+
+  return (
+    <Svg width={44} height={44} viewBox="0 0 44 44" accessibilityLabel={completed ? 'Completed self-tracked claim' : 'Active self-tracked claim'}>
+      <Defs>
+        <LinearGradient id={completed ? 'selfTrackGreen' : 'selfTrackOrange'} x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0" stopColor={top} />
+          <Stop offset="1" stopColor={bottom} />
+        </LinearGradient>
+      </Defs>
+      <Rect x="1.25" y="1.25" width="41.5" height="41.5" rx="12" fill={`url(#${completed ? 'selfTrackGreen' : 'selfTrackOrange'})`} stroke={edge} strokeWidth="1.5" />
+      <Path d="M5 8.5 C11 3.5, 28 3, 38 7" stroke="rgba(255,255,255,0.42)" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+      <Circle cx="14.5" cy="14.2" r="4.3" fill="#FFFFFF" />
+      <Path d="M8.6 29.2 C8.6 23.9, 11.1 21.4, 14.6 21.4 C18.3 21.4, 20.7 23.9, 20.7 29.2 Z" fill="#FFFFFF" />
+      <Path d="M29.4 10.2 C25.7 10.2, 23.1 12.7, 23.1 16.1 C23.1 20.4, 29.4 27, 29.4 27 C29.4 27, 35.7 20.4, 35.7 16.1 C35.7 12.7, 33.1 10.2, 29.4 10.2 Z" fill="#FFFFFF" />
+      <Circle cx="29.4" cy="16.1" r="2.25" fill={completed ? '#24B93B' : '#F88A0A'} />
+      <Path d="M15 34.8 C20.2 29.2, 26.4 31.6, 31.6 34.3 C35 36, 35.2 38, 31.8 39" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeDasharray="3.2 3.2" fill="none" />
+      <Path d="M4.8 4.8 C4 9, 4.1 26, 5.3 34" stroke="rgba(255,255,255,0.18)" strokeWidth="1.4" strokeLinecap="round" fill="none" />
+    </Svg>
+  );
+}
+
 function statusIcon(status: ClaimStatus): keyof typeof MaterialCommunityIcons.glyphMap { if (status.includes('Document')) return 'file-document-check-outline'; if (status.includes('Survey')) return 'clipboard-search-outline'; if (status.includes('Repair')) return 'wrench-outline'; if (status.includes('Payment') || status.includes('Settlement')) return 'bank-transfer'; if (status === 'Closed' || status === 'Settled' || status === 'Claim Complete') return 'check-circle-outline'; if (status === 'Rejected') return 'close-circle-outline'; return 'shield-check-outline'; }
 function formatDate(value?: string | null) { if (!value) return '-'; return new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }
 function isIncidentAfterPolicyExpiry(claim: CustomerClaim, policy?: Policy | null) { const incident = claim.accident_at ? new Date(claim.accident_at) : null; const expiry = policyExpiryEndOfDay(policy?.end_date); if (!incident || Number.isNaN(incident.getTime()) || !expiry) return false; return incident.getTime() > expiry.getTime(); }
