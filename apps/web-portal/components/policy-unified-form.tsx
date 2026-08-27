@@ -21,7 +21,7 @@ import {
   type PolicyOcrApplyOutcome,
   type PolicyOcrImportContext,
 } from "@/components/policy-ocr-import-panel";
-import { NonMotorUnifiedMode, type NonMotorProgress } from "@/components/non-motor-unified-mode";
+import { NonMotorUnifiedMode, type NonMotorProgress, type NonMotorUnifiedInitialValues } from "@/components/non-motor-unified-mode";
 import type { NonMotorCustomerOption } from "@/components/non-motor-policy-form";
 import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-apply";
 import {
@@ -98,6 +98,7 @@ type Props = {
   sources: PolicySourceOption[];
   manufacturers?: string[];
   initialValues?: PolicyUnifiedInitialValues;
+  nonMotorInitialValues?: NonMotorUnifiedInitialValues;
   commercialAccess?: boolean;
 };
 
@@ -149,7 +150,7 @@ function shiftedPolicyEnd(newStart:string,oldStart:string,oldEnd:string){if(!/^\
 function boolValue(value: string | null) { return value==="true"||value==="Yes"||value==="YES"; }
 const registrationValidationMessage="Enter a valid Registration number.";
 
-export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources, manufacturers = [], initialValues, commercialAccess = true }: Props) {
+export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources, manufacturers = [], initialValues, nonMotorInitialValues, commercialAccess = true }: Props) {
   const router = useRouter();
   const [form,setForm]=useState<FormState>(()=>stateFrom(initialValues));
   const [vehicleRegistrationMode,setVehicleRegistrationMode]=useState<VehicleRegistrationMode>("registered");
@@ -171,7 +172,7 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
   const [isSubmitting,startSubmit]=useTransition();
   const isEdit=mode==="edit";
   const isMotorPolicy=form.businessLine==="Motor";
-  const isNonMotorPolicy=!isEdit&&form.businessLine==="Non Motor";
+  const isNonMotorPolicy=form.businessLine==="Non Motor";
   const registrationNoValid=vehicleRegistrationMode==="registered"&&isValidRegisteredVehicleNumber(form.registrationNo);
   const registrationNoError=vehicleRegistrationMode==="registered"&&registrationTouched&&!registrationNoValid?registrationValidationMessage:null;
 
@@ -352,7 +353,7 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
     </div>
     <nav aria-label="Policy sections" className={`${showSectionNav?"sticky top-[72px] z-50 mb-3 flex":"hidden"} min-h-[36px] items-stretch gap-4 overflow-x-auto rounded-b-xl border border-t-0 border-[#D9E2F0] bg-white/96 px-4 shadow-[0_5px_14px_rgba(15,23,42,.06)] backdrop-blur`}>{sectionLabels.map((section,index)=>{const progress=progressAt(index);const active=activeSection===index;return <button key={section} type="button" onClick={()=>goToSection(index)} title={progress.complete?`${section} complete`:`${progress.remaining} required item${progress.remaining===1?"":"s"} remaining`} aria-current={active?"step":undefined} className={`group relative flex min-w-fit items-center gap-1.5 border-b-2 px-0.5 py-2 text-[9px] font-semibold transition ${active?"border-[#4F46E5] text-[#3346B8]":"border-transparent text-[#667085] hover:border-[#CBD5E1] hover:text-[#344054]"}`}>{progress.complete?<svg aria-hidden="true" viewBox="0 0 20 20" className="h-3 w-3 shrink-0 text-[#159566]" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 10 3 3 7-7"/></svg>:<span className={`text-[8px] font-bold tabular-nums ${active?"text-[#4F46E5]":"text-[#98A2B3]"}`}>{String(index+1).padStart(2,"0")}</span>}<span>{section}</span></button>})}</nav>
 
-    {isNonMotorPolicy?<NonMotorUnifiedMode sourceSection={sourceSection} source={{issuanceDate:form.issuanceDate,intermediaryType:form.intermediaryType,sourceId:selectedSourceId,leadSource:form.leadSource,intermediaryCode:form.intermediaryCode,rmName:form.rmName}} insurers={insurers} customers={customers} sources={sources} onProgressChange={setNonMotorProgress}/>:isMotorPolicy?<>
+    {isNonMotorPolicy?<NonMotorUnifiedMode mode={mode} policyId={initialValues?.policyId} initialValues={nonMotorInitialValues} sourceSection={sourceSection} source={{issuanceDate:form.issuanceDate,intermediaryType:form.intermediaryType,sourceId:selectedSourceId,leadSource:form.leadSource,intermediaryCode:form.intermediaryCode,rmName:form.rmName}} insurers={insurers} customers={customers} sources={sources} onProgressChange={setNonMotorProgress}/>:isMotorPolicy?<>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_336px]"><div className="space-y-4">
         {sourceSection}
         <Section number="02" title="Insured & vehicle identification" subtitle={isEdit?"Linked customer and vehicle details are protected from policy-level edits.":undefined} action={!isEdit?<VehicleRegistrationModeToggle mode={vehicleRegistrationMode} onChange={changeRegistrationMode}/>:null}>
