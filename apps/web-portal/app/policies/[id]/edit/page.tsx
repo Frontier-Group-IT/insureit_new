@@ -1,9 +1,10 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { PolicyActivityStatus } from "@/components/policy-activity-status";
 import { PolicyCommercialShell } from "@/components/policy-commercial-shell";
 import { PolicyEditActionFooter } from "@/components/policy-edit-action-footer";
 import { PolicyLinkedMasterActions } from "@/components/policy-linked-master-actions";
 import { type PolicyRmOption, type PolicySourceOption, type PolicyUnifiedInitialValues } from "@/components/policy-unified-form";
+import type { NonMotorUnifiedInitialValues } from "@/components/non-motor-unified-mode";
 import { PolicyRemarksActionStyle } from "@/components/policy-remarks-action-style";
 import { AppShell } from "@/components/shell";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
@@ -16,13 +17,13 @@ import { hasEffectiveCapability } from "@/lib/effective-permissions";
 
 type PolicyRow = {
   id: string; customer_id: string; vehicle_id: string | null; insurance_company_id: string;
-  policy_no: string; policy_type: string; insured_declared_value: number | null;
+  policy_no: string; policy_type: string; policy_product: string | null; premium_amount: number | null; insured_declared_value: number | null;
   start_date: string; end_date: string; policy_code: string | null;
   intermediary_type: string | null; intermediary_code: string | null; lead_source: string | null;
   rm_name: string | null; business_line: string | null; issuance_date: string | null; remarks: string | null;
   status: string | null; created_by: string | null; created_at: string | null; updated_at: string | null;
 };
-type CustomerRow = { id: string; contact_name: string; phone: string | null; updated_at: string | null };
+type CustomerRow = { id: string; contact_name: string; company_name: string | null; phone: string | null; email: string | null; address: string | null; customer_type: string | null; updated_at: string | null };
 type VehicleRow = {
   id: string; vehicle_no: string; vehicle_type: string | null; vehicle_class_code: string | null;
   vehicle_class_description: string | null; make: string | null; model: string | null; year: number | null;
@@ -33,6 +34,20 @@ type VehicleRow = {
 type PremiumRow = { od_premium: number | null; tp_premium: number | null; cpa_opted: boolean | null; cpa_amount: number | null };
 type PayinRow = { payout_basis: string | null; projected_od_percent: number | null; projected_tp_percent: number | null; insurer_scheme_amount: number | null };
 type PayoutRow = { retention_amount: number | null; od_payout_percent: number | null; tp_payout_percent: number | null; status: string | null; payout_date: string | null; voucher_number: string | null };
+type NonMotorDetailsRow = {
+  category: string | null; risk_title: string | null; risk_location: string | null; occupancy_type: string | null;
+  transit_from: string | null; transit_to: string | null; transit_mode: string | null; nature_of_business: string | null;
+  liability_type: string | null; employee_count: number | null; annual_wages: number | null; annual_turnover: number | null;
+  sum_insured: number | null; deductible: number | null; proposal_number: string | null; previous_insurer: string | null;
+  previous_policy_number: string | null; previous_claims: string | null; add_ons: string | null; warranties: string | null;
+  special_conditions: string | null; endorsements: string | null; remarks: string | null;
+  risk_details: Record<string, unknown> | null; additional_details: Record<string, unknown> | null;
+};
+type NonMotorPremiumRow = { net_premium: number | null; gst_amount: number | null; gross_premium: number | null };
+type NonMotorPayinRow = { commercial_basis: string | null; projected_commission_percent: number | null; projected_commission_amount: number | null; insurer_scheme_amount: number | null };
+type NonMotorPayoutRow = { payout_basis: string | null; partner_payout_percent: number | null; partner_payout_amount: number | null };
+type CustomerOptionRow = { id: string; contact_name: string; company_name: string | null; phone: string; email: string | null };
+
 type InsurerOption = { id: string; name: string; is_active: boolean };
 type CreatorProfileRow = { full_name: string };
 type IntermediaryOption = {
@@ -67,17 +82,13 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
   const admin = createSupabaseAdminClient();
 
   const policyResult = await admin.from("policies")
-    .select("id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,insured_declared_value,start_date,end_date,policy_code,intermediary_type,intermediary_code,lead_source,rm_name,business_line,issuance_date,remarks,status,created_by,created_at,updated_at")
+    .select("id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,policy_product,premium_amount,insured_declared_value,start_date,end_date,policy_code,intermediary_type,intermediary_code,lead_source,rm_name,business_line,issuance_date,remarks,status,created_by,created_at,updated_at")
     .eq("id", id).maybeSingle<PolicyRow>();
   if (policyResult.error) throw new Error(`Unable to load policy details: ${policyResult.error.message}`);
   if (!policyResult.data) notFound();
   const policy = policyResult.data;
   const vehicleId = policy.vehicle_id;
-
-  // Non-Motor (and any other vehicle-less policy) is a valid policy record.
-  // The current edit surface is Motor-specific, so send these records to the
-  // safe policy detail view instead of querying vehicles.id with a null UUID.
-  if (!vehicleId) redirect(`/policies/${id}`);
+  const isNonMotor = policy.business_line === "Non Motor";
 
   const [customerManager, canEditVehicle] = await Promise.all([
     getCustomerManager(policy.customer_id),
