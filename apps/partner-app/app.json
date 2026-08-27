@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "INSUREIT Partner",
+    "slug": "insureit-partner",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "insureit-partner",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "com.insureit.partner"
+    },
+    "ios": {
+      "bundleIdentifier": "com.insureit.partner",
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
