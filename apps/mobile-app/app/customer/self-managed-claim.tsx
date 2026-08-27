@@ -641,7 +641,7 @@ export default function SelfManagedClaimScreen() {
           <DocumentReadyTile title="Driver Licence" fileName={savedDocumentFor('licence')?.file_name ?? documents.licence[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} state={tileState('licence')} onPress={() => void pickDocument('licence')} onRemove={() => requestDelete('licence', savedDocumentFor('licence')?.file_name ?? documents.licence[0]?.name ?? 'Driver Licence')} />
           <DocumentReadyTile title="GR / Load Bill" fileName={savedDocumentFor('gr')?.file_name ?? documents.gr[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} state={tileState('gr')} onPress={() => void pickDocument('gr')} onRemove={() => requestDelete('gr', savedDocumentFor('gr')?.file_name ?? documents.gr[0]?.name ?? 'GR / Load Bill')} />
           <DocumentReadyTile title="Accident Photo" statusText={mediaStatusLabel('accident_photo')} source={require('../../assets/brand/spot-intimation/glossy_pink_camera_document_icon.png')} state={tileState('accident_photo')} onPress={() => void pickDocument('accident_photo')} onRemove={() => requestDelete('accident_photo', `${mediaCount('accident_photo')} accident photo${mediaCount('accident_photo') === 1 ? '' : 's'}`)} />
-          <DocumentReadyTile title="Accident Video" statusText={videoProcessingStatus || mediaStatusLabel('accident_video')} source={require('../../assets/brand/spot-intimation/glossy_red_video_document_icon.png')} state={tileState('accident_video')} onPress={() => void pickDocument('accident_video')} onRemove={() => requestDelete('accident_video', `${mediaCount('accident_video')} accident video${mediaCount('accident_video') === 1 ? '' : 's'}`)} />
+          <DocumentReadyTile title="Accident Video" statusText={videoProcessingStatus || mediaStatusLabel('accident_video')} artwork="accident-video" state={tileState('accident_video')} onPress={() => void pickDocument('accident_video')} onRemove={() => requestDelete('accident_video', `${mediaCount('accident_video')} accident video${mediaCount('accident_video') === 1 ? '' : 's'}`)} />
         </View>
         <View style={styles.bulkUploadShell}>
           <Pressable accessibilityRole="button" disabled={uploadingDocuments} onPress={() => void pickBulkDocuments()} style={[styles.bulkUpload, (documents.bulk.length > 0 || savedBulkCount > 0) && styles.bulkUploadSelected]}>
@@ -734,19 +734,29 @@ export default function SelfManagedClaimScreen() {
   );
 }
 
-function DocumentReadyTile({ title, fileName, statusText, source, iconName, iconColor, state, onPress, onRemove }: { title: string; fileName?: string; statusText?: string; source?: any; iconName?: DocumentTileIconName; iconColor?: string; state: DocumentTileState; onPress: () => void; onRemove: () => void }) {
+function DocumentReadyTile({ title, fileName, statusText, source, iconName, iconColor, artwork, state, onPress, onRemove }: { title: string; fileName?: string; statusText?: string; source?: any; iconName?: DocumentTileIconName; iconColor?: string; artwork?: 'accident-video'; state: DocumentTileState; onPress: () => void; onRemove: () => void }) {
   const saved = state === 'saved';
   const ready = state === 'ready';
   return <Pressable accessibilityRole="button" accessibilityState={{ selected: state !== 'idle' }} onPress={onPress} style={[styles.documentReadyTile, ready && styles.documentReadyTileReady, saved && styles.documentReadyTileSelected]}>
     {saved ? <View style={styles.documentSelectedCheck}><MaterialCommunityIcons name="check" size={15} color="#18864B" /></View> : null}
     {state !== 'idle' ? <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${title}`} onPress={(event) => { event.stopPropagation(); onRemove(); }} style={styles.documentRemoveButton}><MaterialCommunityIcons name="close" size={13} color="#C43232" /></Pressable> : null}
     <View style={styles.documentReadyArtworkWrap}>
-      {source ? <Image source={source} style={styles.documentReadyArtwork} resizeMode="contain" /> : iconName ? <MaterialCommunityIcons name={iconName} size={32} color={iconColor ?? '#0A43A3'} /> : null}
+      {artwork === 'accident-video' ? <AccidentVideoArtwork /> : source ? <Image source={source} style={styles.documentReadyArtwork} resizeMode="contain" /> : iconName ? <MaterialCommunityIcons name={iconName} size={32} color={iconColor ?? '#0A43A3'} /> : null}
     </View>
     <Text style={styles.documentReadyTileText} numberOfLines={2}>{title}</Text>
     {fileName ? <Text style={styles.documentReadyFileName} numberOfLines={1}>{fileName}</Text> : null}
     <Text style={[styles.documentReadyStatus, ready && styles.documentReadyStatusReady, saved && styles.documentReadyStatusSelected]}>{statusText ?? (saved ? 'Saved' : ready ? 'Ready' : 'Tap to upload')}</Text>
   </Pressable>;
+}
+
+function AccidentVideoArtwork() {
+  return <View style={styles.accidentVideoArtwork}>
+    <View style={styles.accidentVideoGloss} />
+    <View style={styles.accidentVideoFold} />
+    <MaterialCommunityIcons name="video" size={21} color="#FFFFFF" />
+    <View style={styles.accidentVideoLineLong} />
+    <View style={styles.accidentVideoLineShort} />
+  </View>;
 }
 
 function TimePickerField({ label, value, onPress }: { label: string; value: string; onPress: () => void }) {
@@ -799,6 +809,11 @@ const styles = StyleSheet.create({
   documentRemoveButton: { position: 'absolute', top: 5, right: 5, zIndex: 3, width: 23, height: 23, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
   documentReadyArtworkWrap: { width: 45, height: 45, alignItems: 'center', justifyContent: 'center' },
   documentReadyArtwork: { width: 43, height: 43 },
+  accidentVideoArtwork: { width: 43, height: 43, borderRadius: 9, backgroundColor: '#FF1018', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', paddingTop: 1, shadowColor: '#B60000', shadowOpacity: 0.18, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+  accidentVideoGloss: { position: 'absolute', top: 2, left: 3, width: 25, height: 9, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.20)', transform: [{ rotate: '-12deg' }] },
+  accidentVideoFold: { position: 'absolute', top: 0, right: 0, width: 13, height: 13, borderBottomLeftRadius: 8, backgroundColor: '#FFDDE2' },
+  accidentVideoLineLong: { width: 23, height: 2.5, borderRadius: 2, backgroundColor: '#FFFFFF', marginTop: 3 },
+  accidentVideoLineShort: { width: 14, height: 2.5, borderRadius: 2, backgroundColor: '#FFFFFF', marginTop: 2 },
   documentReadyTileText: { color: palette.navy, fontSize: 8.5, lineHeight: 11, fontWeight: '800', textAlign: 'center', marginTop: 3 },
   documentReadyFileName: { maxWidth: '100%', color: '#56657A', fontSize: 7.3, lineHeight: 10, fontWeight: '700', textAlign: 'center', marginTop: 2 },
   documentReadyStatus: { color: '#7A8799', fontSize: 7.5, fontWeight: '800', marginTop: 3 },
