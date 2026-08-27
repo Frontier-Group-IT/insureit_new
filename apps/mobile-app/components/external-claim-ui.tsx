@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import { PropsWithChildren, ReactNode, useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppBadge } from '@/components/design-system';
 import { SELF_MANAGED_MILESTONES, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
@@ -191,7 +191,7 @@ export function ClaimFinancialSummary({ rows }: { rows: Array<{ label: string; v
     <View style={styles.financialBox}>
       <View style={styles.financialOrb} />
       <View style={styles.financialHeader}>
-        <View style={styles.financialIcon}><MaterialCommunityIcons name="finance" size={18} color="#D8E7FF" /></View>
+        <Image source={require('../assets/claims/accounts-finance.png')} style={styles.financialIconImage} resizeMode="contain" />
         <View><Text style={styles.financialEyebrow}>FINANCIAL PROGRESS</Text><Text style={styles.financialSub}>Claim value movement</Text></View>
       </View>
       {rows.map((row, index) => <View key={`${row.label}-${index}`} style={[styles.financialRow, row.emphasis && styles.financialRowEmphasis]}><Text style={[styles.financialLabel, row.emphasis && styles.financialLabelEmphasis]}>{row.label}</Text><Text style={[styles.financialValue, row.emphasis && styles.financialValueEmphasis]}>{row.value}</Text></View>)}
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
   financialBox: { position: 'relative', borderRadius: 16, backgroundColor: '#082E69', padding: 12, marginTop: 11, overflow: 'hidden' },
   financialOrb: { position: 'absolute', width: 100, height: 100, borderRadius: 50, right: -40, top: -55, backgroundColor: '#165DDB', opacity: 0.45 },
   financialHeader: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 7 },
-  financialIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: '#174885', alignItems: 'center', justifyContent: 'center' },
+  financialIconImage: { width: 34, height: 34 },
   financialEyebrow: { color: '#D9E7FA', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.7 },
   financialSub: { color: '#9CB6D5', fontSize: 9, fontWeight: '700', marginTop: 1 },
   financialRow: { minHeight: 35, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.12)' },
