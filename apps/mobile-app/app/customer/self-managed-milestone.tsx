@@ -831,9 +831,7 @@ function FinalBillUpload({ claimId }: { claimId: string }) {
   return <View>
     <Text style={styles.billUploadLabel}>Bill Upload</Text>
     <View style={[styles.billUploadBox, document && styles.billUploadBoxSaved]}>
-      <View style={[styles.billUploadIcon, document && styles.billUploadIconSaved]}>
-        <MaterialCommunityIcons name={document ? 'file-document-check-outline' : 'cloud-upload-outline'} size={22} color={document ? '#168161' : '#0A43A3'} />
-      </View>
+      <Image source={require('../../assets/claims/accounts-finance.png')} style={styles.billUploadIconImage} resizeMode="contain" />
       <View style={styles.billUploadCopy}>
         <Text style={styles.billUploadTitle}>{document ? document.file_name : 'Upload final workshop bill'}</Text>
         <Text style={styles.billUploadFormats}>{document ? 'Uploaded' : 'PDF, JPG, PNG'}</Text>
@@ -1020,8 +1018,7 @@ const styles = StyleSheet.create({
   billUploadLabel: { color: palette.navy, fontSize: 11, fontWeight: '800', marginBottom: 5 },
   billUploadBox: { minHeight: 58, borderRadius: 13, borderWidth: 1.5, borderStyle: 'solid', borderColor: '#DDE5EF', backgroundColor: '#F9FBFF', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 9 },
   billUploadBoxSaved: { borderStyle: 'solid', borderColor: '#52B57F', backgroundColor: '#EFFAF4' },
-  billUploadIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center' },
-  billUploadIconSaved: { backgroundColor: '#DDF4E7' },
+  billUploadIconImage: { width: 34, height: 34 },
   billUploadCopy: { flex: 1, minWidth: 0 },
   billUploadTitle: { color: palette.navy, fontSize: 10.5, lineHeight: 14, fontWeight: '900' },
   billUploadFormats: { color: '#718198', fontSize: 8.5, lineHeight: 12, fontWeight: '600', marginTop: 2 },
