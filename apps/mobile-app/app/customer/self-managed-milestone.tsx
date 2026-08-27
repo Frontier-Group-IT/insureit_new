@@ -621,7 +621,7 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
     return <Pressable accessibilityRole="button" disabled={loading || uploading || removing} onPress={() => void chooseSingle(tileKey)} style={[styles.approvalDocumentTile, document && styles.approvalDocumentTileSaved]}>
       {document ? <View style={styles.approvalDocumentCheck}><MaterialCommunityIcons name="check" size={14} color="#168161" /></View> : null}
       {document ? <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${title}`} onPress={(event) => { event.stopPropagation(); setDeleteTarget({ key: tileKey, label: title }); }} style={styles.approvalDocumentRemove}><MaterialCommunityIcons name="close" size={13} color="#C43232" /></Pressable> : null}
-      <View style={styles.approvalDocumentIcon}><Image source={iconSource} style={styles.approvalDocumentIconImage} resizeMode="contain" /></View>
+      <Image source={iconSource} style={styles.approvalDocumentIconImage} resizeMode="contain" />
       <Text style={styles.approvalDocumentTitle} numberOfLines={2}>{title}</Text>
       {document ? <Text style={styles.approvalDocumentFile} numberOfLines={1}>{document.file_name}</Text> : <Text style={styles.approvalDocumentSubtitle} numberOfLines={2}>{subtitle}</Text>}
       <Text style={[styles.approvalDocumentStatus, document && styles.approvalDocumentStatusSaved]}>{document ? 'Saved · Tap to replace' : 'Tap to upload'}</Text>
@@ -646,7 +646,7 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
 
       <View style={styles.approvalBulkShell}>
         <Pressable accessibilityRole="button" disabled={uploading || removing} onPress={() => void chooseBulk()} style={[styles.approvalBulkUpload, bulkDocuments.length > 0 && styles.approvalBulkUploadSaved]}>
-          <View style={[styles.approvalBulkIcon, bulkDocuments.length > 0 && styles.approvalBulkIconSaved]}><Image source={WORK_APPROVAL_ICONS.documents} style={styles.approvalBulkIconImage} resizeMode="contain" /></View>
+          {bulkDocuments.length > 0 ? <MaterialCommunityIcons name="check-circle-outline" size={29} color="#168161" /> : <Image source={WORK_APPROVAL_ICONS.documents} style={styles.approvalBulkIconImage} resizeMode="contain" />}
           <View style={styles.approvalBulkCopy}>
             <Text style={styles.approvalBulkTitle}>Upload Multiple Documents</Text>
             <Text style={styles.approvalBulkText}>{bulkDocuments.length > 0 ? `${bulkDocuments.length} file${bulkDocuments.length === 1 ? '' : 's'} saved · Tap again to add more` : 'Select several files now, or tap again later to add more.'}</Text>
@@ -990,8 +990,7 @@ const styles = StyleSheet.create({
   approvalDocumentTileSaved: { backgroundColor: '#EFFAF4', borderColor: '#52B57F' },
   approvalDocumentCheck: { position: 'absolute', top: 5, left: 5, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(46,173,99,0.16)', alignItems: 'center', justifyContent: 'center' },
   approvalDocumentRemove: { position: 'absolute', top: 5, right: 5, zIndex: 3, width: 23, height: 23, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
-  approvalDocumentIcon: { width: 45, height: 45, borderRadius: 13, backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center' },
-  approvalDocumentIconImage: { width: 34, height: 34 },
+  approvalDocumentIconImage: { width: 43, height: 43 },
   approvalDocumentTitle: { color: palette.navy, fontSize: 9.2, lineHeight: 12, fontWeight: '900', textAlign: 'center', marginTop: 5 },
   approvalDocumentSubtitle: { color: '#718198', fontSize: 7.7, lineHeight: 10, fontWeight: '600', textAlign: 'center', marginTop: 3 },
   approvalDocumentFile: { maxWidth: '100%', color: '#56657A', fontSize: 7.5, lineHeight: 10, fontWeight: '700', textAlign: 'center', marginTop: 3 },
@@ -1000,9 +999,7 @@ const styles = StyleSheet.create({
   approvalBulkShell: { position: 'relative' },
   approvalBulkUpload: { minHeight: 58, marginTop: 10, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#AFC8E8', backgroundColor: '#F7FAFF', paddingHorizontal: 10, paddingRight: 38, flexDirection: 'row', alignItems: 'center', gap: 9 },
   approvalBulkUploadSaved: { borderStyle: 'solid', borderColor: '#52B57F', backgroundColor: '#EFFAF4' },
-  approvalBulkIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center' },
-  approvalBulkIconSaved: { backgroundColor: 'rgba(46,173,99,0.14)' },
-  approvalBulkIconImage: { width: 27, height: 27 },
+  approvalBulkIconImage: { width: 34, height: 34 },
   approvalBulkCopy: { flex: 1, minWidth: 0 },
   approvalBulkTitle: { color: palette.navy, fontSize: 10.5, fontWeight: '900' },
   approvalBulkText: { color: '#718198', fontSize: 8.5, lineHeight: 12, fontWeight: '600', marginTop: 2 },
