@@ -290,12 +290,16 @@ function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldK
         <ClaimChoice label="Assessment Received? *" value={values.assessment_received} options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]} onChange={(v) => set('assessment_received', v)} />
         <Gap /><DateField label="DO Date *" value={values.do_date ?? ''} onChange={(v) => set('do_date', v)} />
         <Gap /><MoneyField label="DO Amount *" value={values.do_amount ?? ''} onChange={(v) => set('do_amount', v)} />
+        {claimId && customerId ? <>
+          <Gap />
+          <Text style={styles.deliveryReportSectionLabel}>Assistance Upload</Text>
+          <DeliveryOrderDocuments claimId={claimId} customerId={customerId} />
+        </> : null}
         <ClaimFinancialSummary rows={[
           ...(bill !== null ? [{ label: 'Bill Amount', value: currency(bill) }] : []),
           ...(currentDo !== null ? [{ label: 'DO Amount', value: currency(currentDo) }] : []),
           ...(contribution !== null ? [{ label: 'Customer Contribution', value: currency(contribution), emphasis: true }] : []),
         ]} />
-        {claimId && customerId ? <><Gap /><DeliveryOrderDocuments claimId={claimId} customerId={customerId} /></> : null}
       </ClaimFormSection>
     </>;
   }
@@ -1004,6 +1008,7 @@ const styles = StyleSheet.create({
   approvalBulkText: { color: '#718198', fontSize: 8.5, lineHeight: 12, fontWeight: '600', marginTop: 2 },
   approvalBulkRemove: { position: 'absolute', top: 15, right: 7, zIndex: 3, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
   approvalDocumentsNote: { color: '#7A8799', fontSize: 8, lineHeight: 11, fontWeight: '600', marginTop: 8 },
+  deliveryReportSectionLabel: { color: palette.navy, fontSize: 11, fontWeight: '800', marginBottom: 5, textAlign: 'left' },
   deliveryReportRow: { minHeight: 44, borderRadius: 10, borderWidth: 1, borderColor: '#DDE5EF', backgroundColor: '#FFFFFF', paddingLeft: 8, paddingRight: 7, flexDirection: 'row', alignItems: 'center', gap: 7 },
   deliveryReportRowSaved: { borderColor: '#B9DCC9', backgroundColor: '#FBFFFD' },
   deliveryReportLeading: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 7 },
