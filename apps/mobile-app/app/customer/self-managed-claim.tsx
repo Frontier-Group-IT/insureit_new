@@ -753,7 +753,7 @@ function AccidentVideoArtwork() {
   return <View style={styles.accidentVideoArtwork}>
     <View style={styles.accidentVideoGloss} />
     <View style={styles.accidentVideoFold} />
-    <MaterialCommunityIcons name="video" size={21} color="#FFFFFF" />
+    <MaterialCommunityIcons name="video" size={18} color="#FFFFFF" />
     <View style={styles.accidentVideoLineLong} />
     <View style={styles.accidentVideoLineShort} />
   </View>;
@@ -809,11 +809,11 @@ const styles = StyleSheet.create({
   documentRemoveButton: { position: 'absolute', top: 5, right: 5, zIndex: 3, width: 23, height: 23, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
   documentReadyArtworkWrap: { width: 45, height: 45, alignItems: 'center', justifyContent: 'center' },
   documentReadyArtwork: { width: 43, height: 43 },
-  accidentVideoArtwork: { width: 43, height: 43, borderRadius: 9, backgroundColor: '#FF1018', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', paddingTop: 1, shadowColor: '#B60000', shadowOpacity: 0.18, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
-  accidentVideoGloss: { position: 'absolute', top: 2, left: 3, width: 25, height: 9, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.20)', transform: [{ rotate: '-12deg' }] },
-  accidentVideoFold: { position: 'absolute', top: 0, right: 0, width: 13, height: 13, borderBottomLeftRadius: 8, backgroundColor: '#FFDDE2' },
-  accidentVideoLineLong: { width: 23, height: 2.5, borderRadius: 2, backgroundColor: '#FFFFFF', marginTop: 3 },
-  accidentVideoLineShort: { width: 14, height: 2.5, borderRadius: 2, backgroundColor: '#FFFFFF', marginTop: 2 },
+  accidentVideoArtwork: { width: 36, height: 41, borderRadius: 8, backgroundColor: '#FF1018', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', paddingTop: 1, shadowColor: '#B60000', shadowOpacity: 0.18, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+  accidentVideoGloss: { position: 'absolute', top: 2, left: 3, width: 21, height: 8, borderRadius: 7, backgroundColor: 'rgba(255,255,255,0.20)', transform: [{ rotate: '-12deg' }] },
+  accidentVideoFold: { position: 'absolute', top: 0, right: 0, width: 11, height: 12, borderBottomLeftRadius: 7, backgroundColor: '#FFDDE2' },
+  accidentVideoLineLong: { width: 19, height: 2.5, borderRadius: 2, backgroundColor: '#FFFFFF', marginTop: 3 },
+  accidentVideoLineShort: { width: 12, height: 2.5, borderRadius: 2, backgroundColor: '#FFFFFF', marginTop: 2 },
   documentReadyTileText: { color: palette.navy, fontSize: 8.5, lineHeight: 11, fontWeight: '800', textAlign: 'center', marginTop: 3 },
   documentReadyFileName: { maxWidth: '100%', color: '#56657A', fontSize: 7.3, lineHeight: 10, fontWeight: '700', textAlign: 'center', marginTop: 2 },
   documentReadyStatus: { color: '#7A8799', fontSize: 7.5, fontWeight: '800', marginTop: 3 },
