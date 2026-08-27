@@ -49,7 +49,28 @@ const onboardingActions = fs.readFileSync(path.join(portalRoot, "app/policies/po
 assert.match(onboardingActions, /isValidVehicleRegistrationNumber\(rawRegistration\)/);
 assert.doesNotMatch(onboardingActions, /starting with 2 letters and ending with 2 digits/);
 
+
+const vehicleMasterActions = fs.readFileSync(path.join(portalRoot, "app/vehicles/vehicle-master-actions.ts"), "utf8");
+assert.match(vehicleMasterActions, /registration_mode/);
+assert.match(vehicleMasterActions, /registration_status: registrationStatus/);
+assert.match(vehicleMasterActions, /vehicle_no_normalized: vehicleNoNormalized/);
+assert.match(vehicleMasterActions, /registrationStatus = "registration_pending"/);
+assert.match(vehicleMasterActions, /registrationStatus = "ACTIVE"/);
+assert.match(vehicleMasterActions, /findRegistrationConflict/);
+
+const vehicleForm = fs.readFileSync(path.join(portalRoot, "components/forms.tsx"), "utf8");
+assert.match(vehicleForm, /VehicleRegistrationFields/);
+assert.match(vehicleForm, /registration_status === "registration_pending"/);
+
+const transitionMigration = fs.readFileSync(
+  path.join(repoRoot, "supabase/migrations/202608272240_vehicle_registration_state_transition.sql"),
+  "utf8",
+);
+assert.match(transitionMigration, /if new\.registration_status = 'registration_pending'/);
+assert.match(transitionMigration, /new\.vehicle_no_normalized := null/);
+assert.match(transitionMigration, /new\.vehicle_no_normalized := normalized_registration/);
+
 const gateway = fs.readFileSync(path.join(repoRoot, "infrastructure/icall-gateway/server.js"), "utf8");
 assert.match(gateway, /const bharatSeries = \/\^\\d\{2\}BH/);
 
-console.log("Vehicle registration regression passed, including BH-series 24BH3275H.");
+console.log("Vehicle registration regression passed, including BH-series and Vehicle Master registration transitions.");

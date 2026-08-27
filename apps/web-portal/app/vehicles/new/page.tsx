@@ -11,7 +11,7 @@ type BrandOption = { manufacturer_id: string; brand_name: string };
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function NewVehiclePage({ searchParams }: { searchParams: Promise<{ customer_id?: string }> }) {
+export default async function NewVehiclePage({ searchParams }: { searchParams: Promise<{ customer_id?: string; error?: string }> }) {
   await requireAnyCapability([
     { capability: "view_vehicles", minimumAccess: "edit" },
     { capability: "create_vehicles", minimumAccess: "edit" },
@@ -43,6 +43,7 @@ export default async function NewVehiclePage({ searchParams }: { searchParams: P
 
   return (
     <AppShell title="Add Vehicle">
+      {params.error ? <div className="mx-auto mb-3 max-w-[1480px] rounded-xl border border-[#F0C9C5] bg-[#FFF5F4] px-4 py-3 text-[10px] font-semibold text-[#B42318]">{params.error}</div> : null}
       <VehicleForm action={addVehicleMaster} customers={customerOptions} manufacturers={manufacturerOptions} values={{ customer_id: params.customer_id ?? null }} submitLabel="Create Vehicle" />
     </AppShell>
   );

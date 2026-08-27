@@ -12,6 +12,7 @@ type BrandOption = { manufacturer_id: string; brand_name: string };
 type VehicleValues = {
   customer_id: string;
   vehicle_no: string;
+  registration_status: string | null;
   vehicle_type: string;
   make: string | null;
   model: string | null;
@@ -53,7 +54,7 @@ export default async function EditVehiclePage({ params, searchParams }: { params
   const admin = createSupabaseAdminClient();
 
   const [vehicleResult, customersResult, manufacturersResult, brandsResult] = await Promise.all([
-    admin.from("vehicles").select("id, customer_id, vehicle_no, vehicle_type, make, model, chassis_no, engine_no, permit_no, year, engine_capacity_cc, seating_capacity, gvw_kg, fuel_type, registration_date, fitness_expiry_date, puc_expiry_date, road_tax_expiry_date, national_permit_expiry_date, local_permit_expiry_date, created_at, updated_at").eq("id", id).maybeSingle<VehicleRow>(),
+    admin.from("vehicles").select("id, customer_id, vehicle_no, registration_status, vehicle_type, make, model, chassis_no, engine_no, permit_no, year, engine_capacity_cc, seating_capacity, gvw_kg, fuel_type, registration_date, fitness_expiry_date, puc_expiry_date, road_tax_expiry_date, national_permit_expiry_date, local_permit_expiry_date, created_at, updated_at").eq("id", id).maybeSingle<VehicleRow>(),
     admin.from("customers").select("id, company_name, contact_name").order("created_at", { ascending: false }).returns<CustomerOption[]>(),
     admin.from("vehicle_manufacturers").select("id").eq("is_active", true).returns<ManufacturerId[]>(),
     admin.from("vehicle_manufacturer_brands").select("manufacturer_id, brand_name").eq("is_active", true).order("brand_name", { ascending: true }).returns<BrandOption[]>(),
@@ -75,7 +76,7 @@ export default async function EditVehiclePage({ params, searchParams }: { params
 
   const editor = (
     <>
-      {embedded && query.error ? <div className="mx-auto mb-3 max-w-[1480px] rounded-xl border border-[#F0C9C5] bg-[#FFF5F4] px-4 py-3 text-[10px] font-semibold text-[#B42318]">{query.error}</div> : null}
+      {query.error ? <div className="mx-auto mb-3 max-w-[1480px] rounded-xl border border-[#F0C9C5] bg-[#FFF5F4] px-4 py-3 text-[10px] font-semibold text-[#B42318]">{query.error}</div> : null}
       <VehicleForm
         action={saveVehicleMaster.bind(null, id)}
         customers={customerOptions}
