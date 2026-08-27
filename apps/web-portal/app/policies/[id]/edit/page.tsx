@@ -166,7 +166,6 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
   }
 
   const customer = customerResult.data;
-  const vehicle = vehicleResult.data;
   const premium = premiumResult.data;
   const payin = payinResult.data;
   const payout = payoutResult.data;
