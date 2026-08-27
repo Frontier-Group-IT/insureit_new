@@ -55,6 +55,7 @@ export type CommercialReviewRow = {
   partnerUpdatedAt: string | null;
   partnerLastAction: string | null;
   partnerLastActionAt: string | null;
+  vehicleClass: string | null;
 };
 
 type BackfillFilter = "all" | "incomplete" | "complete" | "zero_od" | "zero_tp" | "zero_total";
@@ -69,6 +70,15 @@ const statusLabels: Record<LedgerStatus, string> = {
   not_applicable: "Not applicable",
 };
 const incompleteStatuses = new Set<LedgerStatus>(["not_entered", "needs_review"]);
+const vehicleClassLabels: Record<string, string> = {
+  PCP: "Private Car",
+  TWP: "Two Wheeler",
+  GCV: "Goods Carrying Vehicle",
+  PCV: "Passenger Carrying Vehicle",
+  MISD: "Miscellaneous Vehicle",
+  CPM: "Contractor Plant & Machinery",
+  NON_MOTOR: "Non-Motor",
+};
 
 export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }) {
   const router = useRouter();
@@ -78,6 +88,7 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
   const [insurer, setInsurer] = useState("all");
   const [intermediary, setIntermediary] = useState("all");
   const [intermediaryType, setIntermediaryType] = useState("all");
+  const [vehicleClass, setVehicleClass] = useState("all");
   const [status, setStatus] = useState<LedgerStatus | "all">("all");
   const [backfill, setBackfill] = useState<BackfillFilter>("incomplete");
   const [dateFrom, setDateFrom] = useState("");
@@ -98,6 +109,7 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
     return Array.from(byCode.values()).sort((a, b) => a.intermediaryName.localeCompare(b.intermediaryName));
   }, [rows]);
   const intermediaryTypes = useMemo(() => Array.from(new Set(rows.map((row) => row.intermediaryType).filter((value): value is string => Boolean(value)))).sort(), [rows]);
+  const vehicleClasses = useMemo(() => Array.from(new Set(rows.map((row) => row.vehicleClass).filter((value): value is string => Boolean(value)))).sort((a, b) => (vehicleClassLabels[a] ?? a).localeCompare(vehicleClassLabels[b] ?? b)), [rows]);
   const statusKey = side === "insurer" ? "insurerStatus" : "partnerStatus";
   const counts = useMemo(() => rows.reduce<Record<LedgerStatus, number>>((acc, row) => {
     acc[row[statusKey]] += 1;
@@ -117,6 +129,7 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
       if (insurer !== "all" && row.insurerName !== insurer) return false;
       if (intermediary !== "all" && row.intermediaryCode !== intermediary) return false;
       if (intermediaryType !== "all" && row.intermediaryType !== intermediaryType) return false;
+      if (vehicleClass !== "all" && row.vehicleClass !== vehicleClass) return false;
       if (backfill === "incomplete" && !incompleteStatuses.has(rowStatus)) return false;
       if (backfill === "complete" && incompleteStatuses.has(rowStatus)) return false;
       if (backfill === "zero_od" && odValue !== 0) return false;
@@ -125,9 +138,9 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
       if (dateFrom && row.issuanceDate < dateFrom) return false;
       if (dateTo && row.issuanceDate > dateTo) return false;
       if (!normalizedQuery) return true;
-      return [row.policyNo, row.insurerName, row.intermediaryName, row.intermediaryCode ?? "", row.intermediaryType ?? ""].some((value) => value.toLowerCase().includes(normalizedQuery));
+      return [row.policyNo, row.insurerName, row.intermediaryName, row.intermediaryCode ?? "", row.intermediaryType ?? "", row.vehicleClass ?? "", row.vehicleClass ? (vehicleClassLabels[row.vehicleClass] ?? row.vehicleClass) : ""].some((value) => value.toLowerCase().includes(normalizedQuery));
     });
-  }, [rows, statusKey, status, insurer, intermediary, intermediaryType, backfill, dateFrom, dateTo, query, side]);
+  }, [rows, statusKey, status, insurer, intermediary, intermediaryType, vehicleClass, backfill, dateFrom, dateTo, query, side]);
 
   const allFilteredSelected = filteredRows.length > 0 && filteredRows.every((row) => selected.has(row.id));
   const activeTotal = side === "insurer"
@@ -220,7 +233,7 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
   }
 
   function clearFilters() {
-    setQuery(""); setInsurer("all"); setIntermediary("all"); setIntermediaryType("all"); setStatus("all"); setBackfill("all"); setDateFrom(""); setDateTo("");
+    setQuery(""); setInsurer("all"); setIntermediary("all"); setIntermediaryType("all"); setVehicleClass("all"); setStatus("all"); setBackfill("all"); setDateFrom(""); setDateTo("");
   }
 
   const currentEditIndex = editingId ? filteredRows.findIndex((row) => row.id === editingId) : -1;
@@ -244,10 +257,11 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
         <button type="button" onClick={() => setBackfill(backfill === "complete" ? "all" : "complete")} className={`rounded-lg border px-3 py-2 text-[8.5px] font-bold ${backfill === "complete" ? "border-[#A7D7BE] bg-[#ECF8F1] text-[#137A4A]" : "border-[#D9E2F0] text-[#526277]"}`}>Complete {completeCount}</button>
         <div className="ml-auto flex items-center gap-1.5 text-[8.5px] text-[#667085]"><span>{filteredRows.length.toLocaleString("en-IN")} rows</span><span>·</span><span>{money.format(activeTotal)}</span></div>
       </div>
-      <div className="mt-2 grid gap-2 xl:grid-cols-[minmax(250px,1.2fr)_minmax(165px,.7fr)_minmax(210px,.85fr)_minmax(150px,.6fr)_minmax(170px,.7fr)_auto_auto]">
+      <div className="mt-2 grid gap-2 xl:grid-cols-[minmax(220px,1.1fr)_minmax(150px,.65fr)_minmax(190px,.8fr)_minmax(165px,.68fr)_minmax(140px,.55fr)_minmax(165px,.68fr)_auto_auto]">
         <label className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-[#98A2B3]" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Policy / insurer / intermediary" className="h-9 w-full rounded-xl border border-[#D8DEE9] pl-9 pr-3 text-[9.5px] outline-none focus:border-[#315B9A]" /></label>
         <select value={insurer} onChange={(e) => setInsurer(e.target.value)} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All insurers</option>{insurers.map((name) => <option key={name}>{name}</option>)}</select>
         <select value={intermediary} onChange={(e) => setIntermediary(e.target.value)} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All intermediaries</option>{intermediaries.map((row) => <option key={row.intermediaryCode ?? row.id} value={row.intermediaryCode ?? ""}>{row.intermediaryName} · {row.intermediaryCode}</option>)}</select>
+        <select value={vehicleClass} onChange={(e) => setVehicleClass(e.target.value)} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All vehicle classes</option>{vehicleClasses.map((value) => <option key={value} value={value}>{value === "NON_MOTOR" ? "Non-Motor" : `${value} · ${vehicleClassLabels[value] ?? value}`}</option>)}</select>
         <select value={status} onChange={(e) => setStatus(e.target.value as LedgerStatus | "all")} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All statuses</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
         <select value={backfill} onChange={(e) => setBackfill(e.target.value as BackfillFilter)} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All entries</option><option value="incomplete">Backfill incomplete</option><option value="complete">Complete</option><option value="zero_od">OD = 0%</option><option value="zero_tp">TP = 0%</option><option value="zero_total">Total = ₹0</option></select>
         <IconButton label="More filters" onClick={() => setShowMore((value) => !value)} active={showMore}><Settings2 className="h-4 w-4" /></IconButton>
@@ -291,11 +305,12 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
         </div>
       </div>
       <div className="max-h-[70vh] overflow-auto">
-        <table className="w-full min-w-[1140px] table-auto text-[8.5px]">
+        <table className="w-full min-w-[1265px] table-auto text-[8.5px]">
           <thead className="sticky top-0 z-30 bg-[#F8FAFC] text-[7px] font-black uppercase tracking-[.05em] text-[#7C899B]"><tr>
             <SelectHead checked={allFilteredSelected} onChange={toggleFiltered} />
             <th className="sticky left-[38px] z-40 min-w-[235px] bg-[#F8FAFC] px-2 py-2 text-left">Policy</th>
             <th className="min-w-[170px] px-2 py-2 text-left">Intermediary</th>
+            <th className="min-w-[125px] px-2 py-2 text-left">Vehicle Class</th>
             <th className="px-2 py-2 text-left">Issued</th>
             <th className="px-2 py-2 text-right">OD Premium</th>
             <th className="px-2 py-2 text-right">TP/CPA</th>
@@ -317,6 +332,7 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
               <td className="sticky left-0 z-10 bg-inherit px-2 py-2"><input aria-label={`Select ${row.policyNo}`} type="checkbox" checked={selected.has(row.id)} onChange={() => toggle(row.id)} /></td>
               <td className="sticky left-[38px] z-10 min-w-[235px] max-w-[260px] bg-inherit px-2 py-2"><Link href={`/policies/${row.id}/edit`} className="block truncate font-bold text-[#1E2D49] hover:text-[#315B9A] hover:underline">{row.policyNo}</Link><div className="mt-0.5 truncate text-[7px] font-medium text-[#98A2B3]" title={row.insurerName}>{row.insurerName}</div></td>
               <td className="max-w-[190px] px-2 py-2"><div className="truncate font-semibold text-[#26364F]" title={row.intermediaryName}>{row.intermediaryName}</div><div className="truncate text-[7px] text-[#98A2B3]">{[row.intermediaryType, row.intermediaryCode].filter(Boolean).join(" · ") || "—"}</div></td>
+              <td className="min-w-[125px] px-2 py-2"><div className="font-semibold text-[#344054]">{row.vehicleClass === "NON_MOTOR" ? "Non-Motor" : row.vehicleClass ?? "—"}</div>{row.vehicleClass && row.vehicleClass !== "NON_MOTOR" ? <div className="mt-0.5 truncate text-[7px] text-[#98A2B3]">{vehicleClassLabels[row.vehicleClass] ?? row.vehicleClass}</div> : null}</td>
               <td className="whitespace-nowrap px-2 py-2">{date(row.issuanceDate)}</td>
               <MoneyCell value={row.odPremium} /><MoneyCell value={row.tpCpaPremium} />
               <EditableNumber editing={isEditing} value={isEditing ? edit.od : od.toFixed(2)} onChange={(value) => setEdit((state) => ({ ...state, od: value }))} onEnter={() => saveRow(row, true)} suffix="%" />
