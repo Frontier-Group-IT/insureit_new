@@ -99,10 +99,10 @@ export function IntermediaryGroupWorkspace({
   const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>("all");
   const [openEmployees, setOpenEmployees] = useState<Set<string>>(() => new Set(employees.map((employee) => employee.id)));
   const [createOpen, setCreateOpen] = useState(false);
+  const [createSelectionOwnerId, setCreateSelectionOwnerId] = useState<string | null>(null);
   const [drawerGroupId, setDrawerGroupId] = useState<string | null>(null);
   const [selectedPartnerIds, setSelectedPartnerIds] = useState<Set<string>>(new Set());
   const [selectedOwnerId, setSelectedOwnerId] = useState<string | null>(null);
-  const [bulkGroupId, setBulkGroupId] = useState("");
   const [dragPartnerId, setDragPartnerId] = useState<string | null>(null);
   const [dropGroupId, setDropGroupId] = useState<string | null>(null);
   const [pendingDrop, setPendingDrop] = useState<{ partnerId: string; groupId: string } | null>(null);
@@ -153,9 +153,6 @@ export function IntermediaryGroupWorkspace({
   const drawerMembers = drawerGroup
     ? memberships.filter((membership) => membership.group_id === drawerGroup.id).length
     : 0;
-  const selectedOwnerGroups = selectedOwnerId
-    ? groups.filter((group) => group.owner_employee_id === selectedOwnerId)
-    : [];
 
   function toggleEmployee(employeeId: string) {
     setOpenEmployees((current) => {
@@ -175,7 +172,6 @@ export function IntermediaryGroupWorkspace({
 
       const hasAny = next.size > 0;
       setSelectedOwnerId(hasAny ? partner.owner_employee_id : null);
-      if (!sameOwner) setBulkGroupId("");
       return next;
     });
   }
@@ -183,7 +179,6 @@ export function IntermediaryGroupWorkspace({
   function clearSelection() {
     setSelectedPartnerIds(new Set());
     setSelectedOwnerId(null);
-    setBulkGroupId("");
   }
 
   function beginDrop(partnerId: string, groupId: string) {
@@ -217,7 +212,7 @@ export function IntermediaryGroupWorkspace({
             {canManage ? (
               <button
                 type="button"
-                onClick={() => setCreateOpen(true)}
+                onClick={() => { setCreateSelectionOwnerId(null); setCreateOpen(true); }}
                 className="ml-1 inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#315FEA] px-3.5 text-[9.5px] font-semibold text-white shadow-sm transition hover:bg-[#254DD0]"
               >
                 <Plus className="h-3.5 w-3.5" />
