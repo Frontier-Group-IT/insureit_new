@@ -19,7 +19,23 @@ function documentArtwork(type: string) {
   if (type === 'Insurance copy') return require('../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png');
   if (type === 'Driver Licence') return require('../assets/brand/spot-intimation/glossy_purple_id_card_icon.png');
   if (type === 'GR/Load bill') return require('../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png');
-  return null;
+
+  if (type === 'Fitness copy') return require('../assets/claims/tasks-completed.png');
+  if (type === 'Fasttag report last 15 days') return require('../assets/claims/reports-analytics.png');
+  if (type === 'Spot Report') return require('../assets/claims/claim-survey.png');
+  if (type === 'Estimate Copy' || type === 'Repair estimate') return require('../assets/claims/claim-assessment.png');
+
+  if (type === 'Towing Bill') return require('../assets/claims/fleet-vehicle.png');
+  if (type === 'NCB VERIFICATION') return require('../assets/claims/claim-approval.png');
+  if (type === 'Road Tax') return require('../assets/claims/receipts-posted.png');
+  if (type === 'Local permit A' || type === 'LOCAL PERMIT B' || type === 'National Permit') return require('../assets/claims/policy.png');
+
+  if (type === 'Driver Aadharcard front' || type === 'Driver Aadharcard Back' || type === 'Aadharcard' || type === 'Pancard') return require('../assets/claims/kyc.png');
+  if (type === 'KYC FORM') return require('../assets/claims/kyc-completed.png');
+  if (type === 'GST' || type === 'Cancel Cheque') return require('../assets/claims/accounts-finance.png');
+
+  if (type === 'TP Affidavit') return require('../assets/claims/documents.png');
+  return require('../assets/claims/claim-documents.png');
 }
 
 const orderedGroups: Array<{ key: string; label: string }> = [
@@ -294,7 +310,6 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
       <View style={styles.headerRow}>
         <View>
           <Text style={styles.title}>Document Upload <Text style={styles.optional}>(Optional)</Text></Text>
-          <Text style={styles.subtitle}>All managed-claim document types are available here.</Text>
         </View>
         <View style={styles.optionalBadge}><Text style={styles.optionalBadgeText}>All optional</Text></View>
       </View>
@@ -317,9 +332,7 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
           const artwork = documentArtwork(document.type);
           return <View key={document.type} style={[styles.documentCard, uploaded && styles.documentCardUploaded]}>
             {uploaded ? <Pressable accessibilityRole="button" accessibilityLabel={`Delete ${document.title}`} disabled={Boolean(uploadingType)} onPress={() => requestIndividualDelete(uploaded)} hitSlop={8} style={styles.documentDeleteButton}><MaterialCommunityIcons name="close" size={15} color="#C43232" /></Pressable> : null}
-            <View style={[styles.documentIcon, uploaded && styles.documentIconUploaded]}>
-              {artwork ? <Image source={artwork} style={styles.documentArtwork} resizeMode="contain" /> : <MaterialCommunityIcons name={(document.icon || 'file-document-outline') as keyof typeof MaterialCommunityIcons.glyphMap} size={23} color={uploaded ? '#FFFFFF' : '#0A43A3'} />}
-            </View>
+            <Image source={artwork} style={styles.documentArtwork} resizeMode="contain" />
             <Text style={styles.documentTitle} numberOfLines={2}>{document.title}</Text>
             <Text style={styles.documentBody} numberOfLines={2}>{uploaded ? 'Uploaded' : document.body}</Text>
             <Pressable accessibilityRole="button" disabled={Boolean(uploadingType)} onPress={() => void pickAndUpload(document)} style={[styles.uploadButton, uploaded && styles.replaceButton, Boolean(uploadingType) && !uploading && styles.uploadButtonDisabled]}>
@@ -340,9 +353,7 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
           android_ripple={{ color: '#E6F0FF' }}
           style={({ pressed }) => [styles.bulkHint, bulkUploadedCount > 0 && styles.bulkHintUploaded, pressed && styles.bulkHintPressed, Boolean(uploadingType) && styles.bulkHintDisabled]}
         >
-          <View style={[styles.bulkIcon, bulkUploadedCount > 0 && styles.bulkIconUploaded]}>
-            <MaterialCommunityIcons name={bulkUploadedCount > 0 ? 'check' : 'cloud-upload-outline'} size={22} color={bulkUploadedCount > 0 ? '#18864B' : '#0A43A3'} />
-          </View>
+          <Image source={require('../assets/claims/documents.png')} style={styles.bulkArtwork} resizeMode="contain" />
           <View style={styles.bulkCopy}>
             <Text style={styles.bulkTitle}>{bulkUploading ? 'Uploading selected files…' : 'Need to upload several files?'}</Text>
             <Text style={styles.bulkText}>{bulkUploading ? 'Please keep this page open while the files are saved.' : bulkUploadedCount > 0 ? `${bulkUploadedCount} additional file${bulkUploadedCount === 1 ? '' : 's'} uploaded · Tap to add more.` : 'Tap here to select multiple PDF or image files at once. They will be saved as additional claim documents.'}</Text>
@@ -406,13 +417,13 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
 
 const styles = StyleSheet.create({
   card: { borderRadius: 18, borderWidth: 1, borderColor: '#D7E2EF', backgroundColor: '#FFFFFF', marginBottom: 8, overflow: 'hidden', shadowColor: '#14375F', shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 1 },
-  headerRow: { paddingHorizontal: 11, paddingTop: 10, paddingBottom: 9, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 9 },
-  title: { color: palette.navy, fontSize: 14.5, fontWeight: '900' }, optional: { color: '#62738A', fontWeight: '700' }, subtitle: { color: '#6D7B8F', fontSize: 10, lineHeight: 14, fontWeight: '600', marginTop: 2 },
+  headerRow: { paddingHorizontal: 11, paddingTop: 10, paddingBottom: 9, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 9 },
+  title: { color: palette.navy, fontSize: 14.5, fontWeight: '900' }, optional: { color: '#62738A', fontWeight: '700' },
   optionalBadge: { borderRadius: 999, backgroundColor: '#EEF5FF', paddingHorizontal: 8, paddingVertical: 4 }, optionalBadgeText: { color: '#0A43A3', fontSize: 8.2, fontWeight: '900' },
   tabs: { borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#E6EDF5', backgroundColor: '#F7FAFF' }, tab: { minHeight: 40, justifyContent: 'center', paddingHorizontal: 11, borderBottomWidth: 3, borderBottomColor: 'transparent' }, tabActive: { borderBottomColor: '#165DDB', backgroundColor: '#FFFFFF' }, tabText: { color: '#667085', fontSize: 9.5, fontWeight: '800' }, tabTextActive: { color: '#0A43A3' },
   message: { margin: 10, marginBottom: 0, borderRadius: 11, backgroundColor: '#FFF6E5', padding: 8, flexDirection: 'row', gap: 7, alignItems: 'center' }, messageText: { flex: 1, color: '#855200', fontSize: 10, lineHeight: 14, fontWeight: '700' },
-  grid: { padding: 10, flexDirection: 'row', flexWrap: 'wrap', rowGap: 8, columnGap: 8 }, documentArtwork: { width: 38, height: 38 }, documentCard: { width: '31%', minHeight: 154, borderRadius: 15, borderWidth: 1, borderColor: '#DFE6EE', backgroundColor: '#FCFDFF', padding: 8, alignItems: 'center', position: 'relative' }, documentCardUploaded: { borderColor: '#9FD4B6', backgroundColor: '#F1FBF5' }, documentDeleteButton: { position: 'absolute', top: 6, right: 6, zIndex: 2, width: 23, height: 23, borderRadius: 12, backgroundColor: '#FFF4F4', borderWidth: 1, borderColor: '#F0B7B7', alignItems: 'center', justifyContent: 'center' }, documentIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center', marginBottom: 6 }, documentIconUploaded: { backgroundColor: '#168161' }, documentTitle: { color: palette.navy, fontSize: 10.3, lineHeight: 13.5, fontWeight: '900', textAlign: 'center', minHeight: 27 }, documentBody: { color: '#7A8799', fontSize: 8.6, lineHeight: 11.5, fontWeight: '600', textAlign: 'center', marginTop: 2, flex: 1 }, uploadButton: { minHeight: 32, borderRadius: 10, backgroundColor: '#0A43A3', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, alignSelf: 'stretch', marginTop: 6 }, replaceButton: { backgroundColor: '#168161' }, uploadButtonDisabled: { opacity: 0.55 }, uploadButtonText: { color: '#FFFFFF', fontSize: 9.3, fontWeight: '900' },
-  bulkWrap: { position: 'relative' }, bulkHint: { margin: 10, marginTop: 0, borderRadius: 14, borderWidth: 1, borderStyle: 'dashed', borderColor: '#91A9C8', backgroundColor: '#F8FBFF', padding: 9, flexDirection: 'row', alignItems: 'center', gap: 9 }, bulkHintUploaded: { borderStyle: 'solid', borderColor: '#9FD4B6', backgroundColor: '#F1FBF5', paddingRight: 40 }, bulkHintPressed: { backgroundColor: '#EEF5FF' }, bulkHintDisabled: { opacity: 0.6 }, bulkIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' }, bulkIconUploaded: { backgroundColor: '#E1F5E9' }, bulkCopy: { flex: 1, minWidth: 0 }, bulkTitle: { color: palette.navy, fontSize: 10.3, fontWeight: '900' }, bulkText: { color: '#708097', fontSize: 9.1, lineHeight: 12.5, fontWeight: '600', marginTop: 1 }, bulkDeleteButton: { position: 'absolute', top: 6, right: 18, zIndex: 2, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFF4F4', borderWidth: 1, borderColor: '#F0B7B7', alignItems: 'center', justifyContent: 'center' },
+  grid: { padding: 10, flexDirection: 'row', flexWrap: 'wrap', rowGap: 8, columnGap: 8 }, documentArtwork: { width: 42, height: 42, marginBottom: 6 }, documentCard: { width: '31%', minHeight: 154, borderRadius: 15, borderWidth: 1, borderColor: '#DFE6EE', backgroundColor: '#FCFDFF', padding: 8, alignItems: 'center', position: 'relative' }, documentCardUploaded: { borderColor: '#9FD4B6', backgroundColor: '#F1FBF5' }, documentDeleteButton: { position: 'absolute', top: 6, right: 6, zIndex: 2, width: 23, height: 23, borderRadius: 12, backgroundColor: '#FFF4F4', borderWidth: 1, borderColor: '#F0B7B7', alignItems: 'center', justifyContent: 'center' }, documentTitle: { color: palette.navy, fontSize: 10.3, lineHeight: 13.5, fontWeight: '900', textAlign: 'center', minHeight: 27 }, documentBody: { color: '#7A8799', fontSize: 8.6, lineHeight: 11.5, fontWeight: '600', textAlign: 'center', marginTop: 2, flex: 1 }, uploadButton: { minHeight: 32, borderRadius: 10, backgroundColor: '#0A43A3', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, alignSelf: 'stretch', marginTop: 6 }, replaceButton: { backgroundColor: '#168161' }, uploadButtonDisabled: { opacity: 0.55 }, uploadButtonText: { color: '#FFFFFF', fontSize: 9.3, fontWeight: '900' },
+  bulkWrap: { position: 'relative' }, bulkHint: { margin: 10, marginTop: 0, borderRadius: 14, borderWidth: 1, borderStyle: 'dashed', borderColor: '#91A9C8', backgroundColor: '#F8FBFF', padding: 9, flexDirection: 'row', alignItems: 'center', gap: 9 }, bulkHintUploaded: { borderStyle: 'solid', borderColor: '#9FD4B6', backgroundColor: '#F1FBF5', paddingRight: 40 }, bulkHintPressed: { backgroundColor: '#EEF5FF' }, bulkHintDisabled: { opacity: 0.6 }, bulkArtwork: { width: 40, height: 40, flexShrink: 0 }, bulkCopy: { flex: 1, minWidth: 0 }, bulkTitle: { color: palette.navy, fontSize: 10.3, fontWeight: '900' }, bulkText: { color: '#708097', fontSize: 9.1, lineHeight: 12.5, fontWeight: '600', marginTop: 1 }, bulkDeleteButton: { position: 'absolute', top: 6, right: 18, zIndex: 2, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFF4F4', borderWidth: 1, borderColor: '#F0B7B7', alignItems: 'center', justifyContent: 'center' },
   validationBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(7, 24, 50, 0.48)', paddingHorizontal: 24 },
   deleteSuccessToastOverlay: { flex: 1, justifyContent: 'flex-start', paddingTop: 54, paddingHorizontal: 14 },
   deleteSuccessToast: { minHeight: 48, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#B7E4CC', paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 9, shadowColor: '#0E5C3D', shadowOpacity: 0.16, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 14 },
