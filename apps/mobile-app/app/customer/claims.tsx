@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppSearchBar } from '@/components/design-system';
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
@@ -106,9 +106,17 @@ export default function ClaimsScreen() {
             <View style={[styles.accentBar, { backgroundColor: selfTracked ? selfTrackedStatusColor : tone.accent }]} />
 
             <View style={styles.claimTop}>
-              <View style={[styles.statusIcon, { backgroundColor: selfTracked ? '#EEF5FF' : tone.soft }]}>
-                <MaterialCommunityIcons name={selfTracked ? 'timeline-check-outline' : statusIcon(claim.current_status)} size={22} color={selfTracked ? '#0A43A3' : tone.accent} />
-              </View>
+              {selfTracked
+                ? <Image
+                    source={completed
+                      ? require('../../assets/claims/self-tracked-glossy-green.jpg')
+                      : require('../../assets/claims/self-tracked-glossy-orange.jpg')}
+                    style={styles.selfTrackedGlossyIcon}
+                    resizeMode="contain"
+                  />
+                : <View style={[styles.statusIcon, { backgroundColor: tone.soft }]}>
+                    <MaterialCommunityIcons name={statusIcon(claim.current_status)} size={22} color={tone.accent} />
+                  </View>}
               <View style={styles.claimTitleCopy}>
                 <Text style={[styles.modeLabel, { color: selfTracked ? selfTrackedStatusColor : tone.accent }]}>{selfTracked ? 'SELF TRACKED' : claimStageLabel(claim.current_status)}</Text>
                 <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle?.vehicle_no ?? 'Vehicle linked'}</Text>
@@ -167,5 +175,5 @@ function policyExpiryEndOfDay(value?: string | null) { if (!value || !/^\d{4}-\d
 const styles = StyleSheet.create({
   pageHeader: { marginBottom: 12 }, eyebrow: { color: '#0A43A3', fontSize: 10, fontWeight: '900', letterSpacing: 1 }, pageTitle: { color: palette.navy, fontSize: 24, fontWeight: '900', marginTop: 2 }, pageSubtitle: { color: '#667085', fontSize: 11.5, lineHeight: 16, fontWeight: '600', marginTop: 3 },
   filterScroller: { maxHeight: 44, marginTop: 10, marginBottom: 12 }, filterWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 14 }, filterChip: { minHeight: 36, borderRadius: 999, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center' }, filterChipActive: { backgroundColor: palette.navy, borderColor: palette.navy }, filterText: { color: palette.slate, fontSize: 11, fontWeight: '900' }, filterTextActive: { color: '#FFFFFF' },
-  claimCard: { borderWidth: 1, borderRadius: 17, padding: 12, paddingLeft: 17, marginBottom: 10, overflow: 'hidden', backgroundColor: '#FFFFFF' }, externalCard: { backgroundColor: '#FBFDFF' }, accentBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 }, claimTop: { flexDirection: 'row', alignItems: 'center', gap: 10 }, statusIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }, claimTitleCopy: { flex: 1, minWidth: 0 }, modeLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 0.6 }, vehicleNo: { color: palette.navy, fontSize: 17, fontWeight: '900', marginTop: 1 }, vehicleMeta: { color: '#7A8799', fontSize: 10, fontWeight: '600', marginTop: 2 }, identityRow: { marginTop: 11, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#EEF2F6', flexDirection: 'row', gap: 12 }, identityBlock: { flex: 1, minWidth: 0 }, identityLabel: { color: '#98A2B3', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.4 }, identityValue: { color: '#344054', fontSize: 10.8, fontWeight: '900', marginTop: 2 }, currentRow: { marginTop: 10, borderRadius: 12, backgroundColor: '#F8FAFC', padding: 9, flexDirection: 'row', gap: 10 }, currentCopy: { flex: 1, minWidth: 0 }, incidentCopy: { alignItems: 'flex-end' }, currentLabel: { color: '#98A2B3', fontSize: 8.3, fontWeight: '900', letterSpacing: 0.4 }, currentValue: { color: palette.navy, fontSize: 11.2, fontWeight: '900', marginTop: 2 }, incidentValue: { color: '#344054', fontSize: 10.5, fontWeight: '800', marginTop: 2 }, assistancePill: { alignSelf: 'flex-start', marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, backgroundColor: '#FFF4CC', paddingHorizontal: 9, paddingVertical: 5 }, assistancePillText: { color: '#805700', fontSize: 9, fontWeight: '900' }, expiredClaimWarning: { marginTop: 9, borderRadius: 10, backgroundColor: '#FFF1F0', padding: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }, expiredClaimWarningText: { color: '#B42318', fontSize: 9.5, fontWeight: '900' }, managedMeta: { color: '#7A8799', fontSize: 9.5, fontWeight: '600', marginTop: 8 },
+  claimCard: { borderWidth: 1, borderRadius: 17, padding: 12, paddingLeft: 17, marginBottom: 10, overflow: 'hidden', backgroundColor: '#FFFFFF' }, externalCard: { backgroundColor: '#FBFDFF' }, accentBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 }, claimTop: { flexDirection: 'row', alignItems: 'center', gap: 10 }, selfTrackedGlossyIcon: { width: 44, height: 44, borderRadius: 13, flexShrink: 0 }, statusIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }, claimTitleCopy: { flex: 1, minWidth: 0 }, modeLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 0.6 }, vehicleNo: { color: palette.navy, fontSize: 17, fontWeight: '900', marginTop: 1 }, vehicleMeta: { color: '#7A8799', fontSize: 10, fontWeight: '600', marginTop: 2 }, identityRow: { marginTop: 11, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#EEF2F6', flexDirection: 'row', gap: 12 }, identityBlock: { flex: 1, minWidth: 0 }, identityLabel: { color: '#98A2B3', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.4 }, identityValue: { color: '#344054', fontSize: 10.8, fontWeight: '900', marginTop: 2 }, currentRow: { marginTop: 10, borderRadius: 12, backgroundColor: '#F8FAFC', padding: 9, flexDirection: 'row', gap: 10 }, currentCopy: { flex: 1, minWidth: 0 }, incidentCopy: { alignItems: 'flex-end' }, currentLabel: { color: '#98A2B3', fontSize: 8.3, fontWeight: '900', letterSpacing: 0.4 }, currentValue: { color: palette.navy, fontSize: 11.2, fontWeight: '900', marginTop: 2 }, incidentValue: { color: '#344054', fontSize: 10.5, fontWeight: '800', marginTop: 2 }, assistancePill: { alignSelf: 'flex-start', marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, backgroundColor: '#FFF4CC', paddingHorizontal: 9, paddingVertical: 5 }, assistancePillText: { color: '#805700', fontSize: 9, fontWeight: '900' }, expiredClaimWarning: { marginTop: 9, borderRadius: 10, backgroundColor: '#FFF1F0', padding: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }, expiredClaimWarningText: { color: '#B42318', fontSize: 9.5, fontWeight: '900' }, managedMeta: { color: '#7A8799', fontSize: 9.5, fontWeight: '600', marginTop: 8 },
 });
