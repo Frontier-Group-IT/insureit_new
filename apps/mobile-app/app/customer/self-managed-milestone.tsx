@@ -435,7 +435,7 @@ function DeliveryOrderDocuments({ claimId, customerId }: { claimId: string; cust
   return <>
     <View style={[styles.deliveryReportRow, assessmentReport && styles.deliveryReportRowSaved]}>
       <View style={styles.deliveryReportLeading}>
-        <View style={styles.deliveryReportIcon}><MaterialCommunityIcons name="file-document-outline" size={17} color="#0A43A3" /></View>
+        <Image source={require('../../assets/claims/claim-assessment.png')} style={styles.deliveryReportIconImage} resizeMode="contain" />
         <View style={styles.deliveryReportCopy}>
           <Text style={styles.deliveryReportLabel}>Assessment Report <Text style={styles.deliveryReportOptional}>(Optional)</Text></Text>
           {assessmentReport ? <Text style={styles.deliveryReportFile} numberOfLines={1}>{assessmentReport.file_name}</Text> : null}
@@ -999,15 +999,15 @@ const styles = StyleSheet.create({
   approvalBulkText: { color: '#718198', fontSize: 8.5, lineHeight: 12, fontWeight: '600', marginTop: 2 },
   approvalBulkRemove: { position: 'absolute', top: 15, right: 7, zIndex: 3, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
   deliveryReportSectionLabel: { color: palette.navy, fontSize: 11, fontWeight: '800', marginBottom: 5, textAlign: 'left' },
-  deliveryReportRow: { minHeight: 44, borderRadius: 10, borderWidth: 1, borderColor: '#DDE5EF', backgroundColor: '#FFFFFF', paddingLeft: 8, paddingRight: 7, flexDirection: 'row', alignItems: 'center', gap: 7 },
-  deliveryReportRowSaved: { borderColor: '#B9DCC9', backgroundColor: '#FBFFFD' },
-  deliveryReportLeading: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 7 },
-  deliveryReportIcon: { width: 25, height: 25, borderRadius: 7, backgroundColor: '#EEF4FF', alignItems: 'center', justifyContent: 'center' },
+  deliveryReportRow: { minHeight: 58, borderRadius: 13, borderWidth: 1.5, borderStyle: 'solid', borderColor: '#DDE5EF', backgroundColor: '#F9FBFF', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  deliveryReportRowSaved: { borderStyle: 'solid', borderColor: '#52B57F', backgroundColor: '#EFFAF4' },
+  deliveryReportLeading: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  deliveryReportIconImage: { width: 34, height: 34, flexShrink: 0 },
   deliveryReportCopy: { flex: 1, minWidth: 0 },
   deliveryReportLabel: { color: palette.navy, fontSize: 9.5, lineHeight: 12, fontWeight: '800' },
   deliveryReportOptional: { color: '#718198', fontWeight: '600' },
   deliveryReportFile: { color: '#65758A', fontSize: 7.8, lineHeight: 10, fontWeight: '600', marginTop: 1 },
-  deliveryReportUploadButton: { minHeight: 28, borderRadius: 7, backgroundColor: '#073C91', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  deliveryReportUploadButton: { minHeight: 36, borderRadius: 9, backgroundColor: '#0A43A3', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, flexShrink: 0 },
   deliveryReportUploadText: { color: '#FFFFFF', fontSize: 8.3, fontWeight: '900' },
   deliveryReportRemove: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
   billUploadLabel: { color: palette.navy, fontSize: 11, fontWeight: '800', marginBottom: 5 },
