@@ -8,7 +8,7 @@ type EditorKind = "customer" | "vehicle";
 
 type Props = {
   customerId: string;
-  vehicleId: string;
+  vehicleId: string | null;
   canEditCustomer: boolean;
   canEditVehicle: boolean;
 };
@@ -256,14 +256,14 @@ export function PolicyLinkedMasterActions({ customerId, vehicleId, canEditCustom
   const actions = portalHost && (canEditCustomer || canEditVehicle) ? createPortal(
     <>
       {canEditCustomer ? <button type="button" onClick={() => openEditor("customer")} className="rounded-lg border border-[#B8C7DA] bg-white px-3 py-1.5 text-[9px] font-bold text-[#17365D] shadow-sm transition hover:border-[#7F9CBE] hover:bg-[#F4F8FC]">Edit Customer</button> : null}
-      {canEditVehicle ? <button type="button" onClick={() => openEditor("vehicle")} className="rounded-lg border border-[#17365D] bg-[#17365D] px-3 py-1.5 text-[9px] font-bold text-white shadow-sm transition hover:bg-[#214A7A]">Edit Vehicle</button> : null}
+      {canEditVehicle && vehicleId ? <button type="button" onClick={() => openEditor("vehicle")} className="rounded-lg border border-[#17365D] bg-[#17365D] px-3 py-1.5 text-[9px] font-bold text-white shadow-sm transition hover:bg-[#214A7A]">Edit Vehicle</button> : null}
     </>,
     portalHost,
   ) : null;
 
   const editorUrl = editor === "customer"
     ? `/customers/${customerId}/edit?embedded=1`
-    : editor === "vehicle"
+    : editor === "vehicle" && vehicleId
       ? `/vehicles/${vehicleId}/edit?embedded=1&lock_owner=1`
       : "";
 
