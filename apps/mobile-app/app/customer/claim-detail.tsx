@@ -271,9 +271,9 @@ function buildFinancialRows(milestones: ClaimMilestone[]) {
 }
 
 function currentMilestoneArtwork(key?: ClaimMilestoneKey) {
-  if (key === 'spot_intimation') return require('../../assets/claims/claim-intimation.png');
+  if (key === 'spot_intimation') return require('../../assets/claims/claims.png');
   if (key === 'spot_status') return require('../../assets/claims/claim-survey.png');
-  if (key === 'claim_intimation') return require('../../assets/claims/claim-intimation.png');
+  if (key === 'claim_intimation') return require('../../assets/claims/claims.png');
   if (key === 'work_approval') return require('../../assets/claims/claim-approval.png');
   if (key === 'repair_ri') return require('../../assets/claims/tasks-completed.png');
   if (key === 'billing') return require('../../assets/claims/accounts-finance.png');
