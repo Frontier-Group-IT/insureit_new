@@ -33,6 +33,7 @@ type VehiclePolicyDisplay = {
 };
 
 const truckSketch = require('../../assets/vehicles/gcv-truck.webp');
+const gcvTruckImage = require('../../assets/vehicles/insureit-branded-truck.webp');
 const carSketch = require('../../assets/vehicles/pcp-car.webp');
 const busSketch = require('../../assets/vehicles/pcv-bus.webp');
 const bikeSketch = require('../../assets/vehicles/twp-bike.png');
@@ -998,6 +999,7 @@ function vehicleClassCode(vehicle: Vehicle) {
 
 function vehicleSketchFor(vehicle: Vehicle) {
   switch (vehicleClassCode(vehicle)) {
+    case 'GCV': return gcvTruckImage;
     case 'PCP': return carSketch;
     case 'PCV': return busSketch;
     case 'TWP': return bikeSketch;
