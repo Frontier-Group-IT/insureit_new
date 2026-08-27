@@ -100,12 +100,14 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     : { data: null as CreatorProfileRow | null, error: null };
   if (creatorResult.error) throw new Error(`Unable to load policy creator: ${creatorResult.error.message}`);
 
-  const [customerResult, vehicleResult, premiumResult, payinResult, payoutResult, activeInsurersResult, currentInsurerResult, salesEmployees, intermediariesResult] = await Promise.all([
-    admin.from("customers").select("id,contact_name,phone,updated_at").eq("id", policy.customer_id).maybeSingle<CustomerRow>(),
-    admin.from("vehicles").select("id,vehicle_no,vehicle_type,vehicle_class_code,vehicle_class_description,make,model,year,chassis_no,engine_no,fuel_type,engine_capacity_cc,seating_capacity,gvw_kg,rto_name,rto_state,updated_at").eq("id", vehicleId).maybeSingle<VehicleRow>(),
-    admin.from("policy_premium_details").select("od_premium,tp_premium,cpa_opted,cpa_amount").eq("policy_id", id).maybeSingle<PremiumRow>(),
-    admin.from("policy_payin_details").select("payout_basis,projected_od_percent,projected_tp_percent,insurer_scheme_amount").eq("policy_id", id).maybeSingle<PayinRow>(),
-    admin.from("policy_intermediary_payouts").select("retention_amount,od_payout_percent,tp_payout_percent,status,payout_date,voucher_number").eq("policy_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle<PayoutRow>(),
+  const [customerResult, vehicleResult, premiumResult, payinResult, payoutResult, activeInsurersResult, currentInsurerResult, salesEmployees, intermediariesResult, nonMotorDetailsResult, customersResult] = await Promise.all([
+    admin.from("customers").select("id,contact_name,company_name,phone,email,address,customer_type,updated_at").eq("id", policy.customer_id).maybeSingle<CustomerRow>(),
+    vehicleId
+      ? admin.from("vehicles").select("id,vehicle_no,vehicle_type,vehicle_class_code,vehicle_class_description,make,model,year,chassis_no,engine_no,fuel_type,engine_capacity_cc,seating_capacity,gvw_kg,rto_name,rto_state,updated_at").eq("id", vehicleId).maybeSingle<VehicleRow>()
+      : Promise.resolve({ data: null as VehicleRow | null, error: null }),
+    admin.from("policy_premium_details").select("od_premium,tp_premium,cpa_opted,cpa_amount,net_premium,gst_amount,gross_premium").eq("policy_id", id).maybeSingle<PremiumRow>(),
+    admin.from("policy_payin_details").select("payout_basis,projected_od_percent,projected_tp_percent,insurer_scheme_amount,commercial_basis,projected_commission_percent,projected_commission_amount").eq("policy_id", id).maybeSingle<PayinRow>(),
+    admin.from("policy_intermediary_payouts").select("retention_amount,od_payout_percent,tp_payout_percent,status,payout_date,voucher_number,payout_basis,partner_payout_percent,partner_payout_amount").eq("policy_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle<PayoutRow>(),
     admin.from("insurance_companies").select("id,name,is_active").eq("is_active", true).order("name", { ascending: true }).returns<InsurerOption[]>(),
     admin.from("insurance_companies").select("id,name,is_active").eq("id", policy.insurance_company_id).maybeSingle<InsurerOption>(),
     loadPospMispAssociates(admin),
@@ -115,6 +117,15 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
       .eq("account_status", "active")
       .order("display_name", { ascending: true })
       .returns<IntermediaryOption[]>(),
+    isNonMotor
+      ? admin.from("non_motor_policy_details")
+        .select("category,risk_title,risk_location,occupancy_type,transit_from,transit_to,transit_mode,nature_of_business,liability_type,employee_count,annual_wages,annual_turnover,sum_insured,deductible,proposal_number,previous_insurer,previous_policy_number,previous_claims,add_ons,warranties,special_conditions,endorsements,remarks,risk_details,additional_details")
+        .eq("policy_id", id)
+        .maybeSingle<NonMotorDetailsRow>()
+      : Promise.resolve({ data: null as NonMotorDetailsRow | null, error: null }),
+    isNonMotor
+      ? admin.from("customers").select("id,contact_name,company_name,phone,email").order("contact_name", { ascending: true }).limit(750).returns<CustomerOptionRow[]>()
+      : Promise.resolve({ data: [] as CustomerOptionRow[], error: null }),
   ]);
 
   const billingResult = commercialAccess
@@ -122,9 +133,9 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     : { ok: true as const, billing: { billNumber: "", billedAmount: "", billDate: "", status: "Unbilled" } };
   if (!billingResult.ok) throw new Error(`Unable to load policy PayIn billing: ${billingResult.error}`);
 
-  const errors = [customerResult.error, vehicleResult.error, premiumResult.error, payinResult.error, payoutResult.error, activeInsurersResult.error, currentInsurerResult.error, intermediariesResult.error].filter(Boolean);
+  const errors = [customerResult.error, vehicleResult.error, premiumResult.error, payinResult.error, payoutResult.error, activeInsurersResult.error, currentInsurerResult.error, intermediariesResult.error, nonMotorDetailsResult.error, customersResult.error].filter(Boolean);
   if (errors.length) throw new Error(`Unable to load policy edit data: ${errors[0]?.message}`);
-  if (!customerResult.data || !vehicleResult.data) throw new Error("The linked customer or vehicle record is missing.");
+  if (!customerResult.data || (!isNonMotor && !vehicleResult.data)) throw new Error("The linked customer or vehicle record is missing.");
 
   const intermediaryRows = intermediariesResult.data ?? [];
   const partnerApplicationIds = intermediaryRows
