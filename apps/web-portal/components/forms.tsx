@@ -2,11 +2,12 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { FormSubmitButton } from "./form-submit-button";
 import { VehicleSpecificationFields } from "./vehicle-class-capacity-fields";
+import { VehicleRegistrationFields, type VehicleRegistrationMode } from "./vehicle-registration-fields";
 
 type FormAction = (formData: FormData) => void | Promise<void>;
 type SelectOption = { label: string; value: string };
 type CustomerValues = { contact_name?: string | null; company_name?: string | null; phone?: string | null; email?: string | null; city?: string | null; state?: string | null; address?: string | null; assigned_agent_id?: string | null };
-type VehicleValues = { customer_id?: string | null; vehicle_no?: string | null; vehicle_type?: string | null; make?: string | null; model?: string | null; chassis_no?: string | null; engine_no?: string | null; permit_no?: string | null; year?: number | null; gvw_kg?: number | null; fuel_type?: string | null; registration_date?: string | null; fitness_expiry_date?: string | null; puc_expiry_date?: string | null; road_tax_expiry_date?: string | null; national_permit_expiry_date?: string | null; local_permit_expiry_date?: string | null };
+type VehicleValues = { customer_id?: string | null; vehicle_no?: string | null; registration_status?: string | null; vehicle_type?: string | null; make?: string | null; model?: string | null; chassis_no?: string | null; engine_no?: string | null; permit_no?: string | null; year?: number | null; gvw_kg?: number | null; fuel_type?: string | null; registration_date?: string | null; fitness_expiry_date?: string | null; puc_expiry_date?: string | null; road_tax_expiry_date?: string | null; national_permit_expiry_date?: string | null; local_permit_expiry_date?: string | null };
 type PolicyValues = { customer_id?: string | null; vehicle_id?: string | null; insurance_company_id?: string | null; policy_no?: string | null; policy_type?: string | null; insured_declared_value?: number | null; start_date?: string | null; end_date?: string | null };
 
 const inputClass = "h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
@@ -25,6 +26,7 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
   const defaultYear = values?.year?.toString() ?? "";
   const years = defaultYear && !vehicleYearOptions.includes(defaultYear) ? [defaultYear, ...vehicleYearOptions] : vehicleYearOptions;
   const yearOptions = years.map((year) => ({ value: year, label: year }));
+  const registrationMode: VehicleRegistrationMode = values?.registration_status === "registration_pending" || /^(?:NEW|PENDING)-/i.test(values?.vehicle_no ?? "") ? "unregistered" : "registered";
 
   return <div className="mx-auto max-w-[1480px]">
     <form action={action} className="space-y-3">
@@ -32,8 +34,7 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
 
       <VehicleSection number="01" title="Vehicle Ownership" columns="six">
         <SelectField variant="onboarding" label="Customer" name="customer_id" options={customers} required defaultValue={values?.customer_id ?? ""} emptyLabel="Select customer" />
-        <Field variant="onboarding" label="RC number" name="vehicle_no" placeholder="MH12AB1234" required defaultValue={values?.vehicle_no ?? ""} uppercase />
-        <Field variant="onboarding" label="Registration date" name="registration_date" type="date" defaultValue={values?.registration_date ?? ""} />
+        <VehicleRegistrationFields initialMode={registrationMode} initialVehicleNo={values?.vehicle_no} initialRegistrationDate={values?.registration_date} />
         <SelectField variant="onboarding" label="Manufacturer" name="make" options={manufacturers} required defaultValue={values?.make ?? ""} emptyLabel="Select manufacturer" />
         <SelectField variant="onboarding" label="MFG Year" name="year" options={yearOptions} defaultValue={defaultYear} emptyLabel="Select year" />
         <Field variant="onboarding" label="Model" name="model" placeholder="Model name" defaultValue={values?.model ?? ""} />
