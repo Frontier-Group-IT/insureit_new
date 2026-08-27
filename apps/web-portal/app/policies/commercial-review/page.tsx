@@ -7,13 +7,14 @@ import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import type { CommercialStatus } from "./actions";
 
-type PolicyRow = { id: string; policy_no: string; insurance_company_id: string; issuance_date: string | null; start_date: string; intermediary_type: string | null; intermediary_code: string | null };
+type PolicyRow = { id: string; policy_no: string; insurance_company_id: string; issuance_date: string | null; start_date: string; intermediary_type: string | null; intermediary_code: string | null; vehicle_id: string | null; business_line: string | null };
 type PremiumRow = { policy_id: string; od_premium: number | null; tp_premium: number | null; cpa_amount: number | null };
 type PayinRow = { policy_id: string; projected_od_percent: number | null; projected_tp_percent: number | null; insurer_scheme_amount: number | null; total_projected_payin: number | null; commercial_status: CommercialStatus | null; commercial_note: string | null; commercial_reviewed_at: string | null; updated_at: string | null };
 type PayoutRow = { policy_id: string; intermediary_type: string | null; intermediary_code: string | null; od_payout_percent: number | null; tp_payout_percent: number | null; gross_payout: number | null; commercial_status: CommercialStatus | null; commercial_note: string | null; commercial_reviewed_at: string | null; updated_at: string | null; created_at: string };
 type InsurerRow = { id: string; name: string };
 type IntermediaryRow = { intermediary_code: string; intermediary_type: string | null; display_name: string | null; legal_name: string | null };
 type EventRow = { policy_id: string; commercial_side: "insurer" | "partner"; action: string; note: string | null; created_at: string };
+type VehicleRow = { id: string; vehicle_type: string | null };
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -23,17 +24,18 @@ export default async function PolicyCommercialReviewPage() {
   if (!canAccessPolicyCommercials(profile)) redirect("/access-denied");
 
   const admin = createSupabaseAdminClient();
-  const [policiesResult, premiumResult, payinResult, payoutResult, insurersResult, intermediariesResult, eventsResult] = await Promise.all([
-    admin.from("policies").select("id,policy_no,insurance_company_id,issuance_date,start_date,intermediary_type,intermediary_code").order("issuance_date", { ascending: false }).returns<PolicyRow[]>(),
+  const [policiesResult, premiumResult, payinResult, payoutResult, insurersResult, intermediariesResult, eventsResult, vehiclesResult] = await Promise.all([
+    admin.from("policies").select("id,policy_no,insurance_company_id,issuance_date,start_date,intermediary_type,intermediary_code,vehicle_id,business_line").order("issuance_date", { ascending: false }).returns<PolicyRow[]>(),
     admin.from("policy_premium_details").select("policy_id,od_premium,tp_premium,cpa_amount").returns<PremiumRow[]>(),
     admin.from("policy_payin_details").select("policy_id,projected_od_percent,projected_tp_percent,insurer_scheme_amount,total_projected_payin,commercial_status,commercial_note,commercial_reviewed_at,updated_at").returns<PayinRow[]>(),
     admin.from("policy_intermediary_payouts").select("policy_id,intermediary_type,intermediary_code,od_payout_percent,tp_payout_percent,gross_payout,commercial_status,commercial_note,commercial_reviewed_at,updated_at,created_at").order("created_at", { ascending: false }).returns<PayoutRow[]>(),
     admin.from("insurance_companies").select("id,name").returns<InsurerRow[]>(),
     admin.from("intermediaries").select("intermediary_code,intermediary_type,display_name,legal_name").returns<IntermediaryRow[]>(),
     admin.from("commercial_control_events").select("policy_id,commercial_side,action,note,created_at").order("created_at", { ascending: false }).limit(500).returns<EventRow[]>(),
+    admin.from("vehicles").select("id,vehicle_type").returns<VehicleRow[]>(),
   ]);
 
-  const error = policiesResult.error ?? premiumResult.error ?? payinResult.error ?? payoutResult.error ?? insurersResult.error ?? intermediariesResult.error ?? eventsResult.error;
+  const error = policiesResult.error ?? premiumResult.error ?? payinResult.error ?? payoutResult.error ?? insurersResult.error ?? intermediariesResult.error ?? eventsResult.error ?? vehiclesResult.error;
   if (error) throw new Error(`Unable to load Pay-In / Payout: ${error.message}`);
 
   const premiumByPolicy = new Map((premiumResult.data ?? []).map((row) => [row.policy_id, row]));
@@ -41,6 +43,7 @@ export default async function PolicyCommercialReviewPage() {
   const payoutByPolicy = new Map<string, PayoutRow>();
   for (const row of payoutResult.data ?? []) if (!payoutByPolicy.has(row.policy_id)) payoutByPolicy.set(row.policy_id, row);
   const insurerById = new Map((insurersResult.data ?? []).map((row) => [row.id, row.name]));
+  const vehicleClassById = new Map((vehiclesResult.data ?? []).map((row) => [row.id, row.vehicle_type?.trim().toUpperCase() || null]));
   const intermediaryByCode = new Map((intermediariesResult.data ?? []).map((row) => [row.intermediary_code.trim().toUpperCase(), row]));
   const lastEventByKey = new Map<string, EventRow>();
   for (const event of eventsResult.data ?? []) {
@@ -87,6 +90,11 @@ export default async function PolicyCommercialReviewPage() {
       partnerUpdatedAt: payout?.updated_at ?? null,
       partnerLastAction: lastEventByKey.get(`${policy.id}:partner`)?.action ?? null,
       partnerLastActionAt: lastEventByKey.get(`${policy.id}:partner`)?.created_at ?? null,
+      vehicleClass: policy.vehicle_id
+        ? vehicleClassById.get(policy.vehicle_id) ?? null
+        : policy.business_line?.trim().toLowerCase() === "non motor"
+          ? "NON_MOTOR"
+          : null,
     };
   });
 
