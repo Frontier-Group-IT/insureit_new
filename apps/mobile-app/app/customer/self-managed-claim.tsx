@@ -11,6 +11,7 @@ import { ClaimActionBar, ClaimFormSection, ClaimIdentityCard, ExternalClaimStage
 import { LoadingState, Screen, TextField } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { type ClaimMilestone } from '@/lib/claim-service-mode';
+import { ACCIDENT_VIDEO_ICON_DATA_URI } from '@/lib/accident-video-icon';
 import { detailRecord, stringValue, validateStageChronology } from '@/lib/self-managed-claim-timeline';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
@@ -641,7 +642,7 @@ export default function SelfManagedClaimScreen() {
           <DocumentReadyTile title="Driver Licence" fileName={savedDocumentFor('licence')?.file_name ?? documents.licence[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} state={tileState('licence')} onPress={() => void pickDocument('licence')} onRemove={() => requestDelete('licence', savedDocumentFor('licence')?.file_name ?? documents.licence[0]?.name ?? 'Driver Licence')} />
           <DocumentReadyTile title="GR / Load Bill" fileName={savedDocumentFor('gr')?.file_name ?? documents.gr[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} state={tileState('gr')} onPress={() => void pickDocument('gr')} onRemove={() => requestDelete('gr', savedDocumentFor('gr')?.file_name ?? documents.gr[0]?.name ?? 'GR / Load Bill')} />
           <DocumentReadyTile title="Accident Photo" statusText={mediaStatusLabel('accident_photo')} source={require('../../assets/brand/spot-intimation/glossy_pink_camera_document_icon.png')} state={tileState('accident_photo')} onPress={() => void pickDocument('accident_photo')} onRemove={() => requestDelete('accident_photo', `${mediaCount('accident_photo')} accident photo${mediaCount('accident_photo') === 1 ? '' : 's'}`)} />
-          <DocumentReadyTile title="Accident Video" statusText={videoProcessingStatus || mediaStatusLabel('accident_video')} source={require('../../assets/brand/spot-intimation/glossy_red_video_document_icon.png')} state={tileState('accident_video')} onPress={() => void pickDocument('accident_video')} onRemove={() => requestDelete('accident_video', `${mediaCount('accident_video')} accident video${mediaCount('accident_video') === 1 ? '' : 's'}`)} />
+          <DocumentReadyTile title="Accident Video" statusText={videoProcessingStatus || mediaStatusLabel('accident_video')} source={{ uri: ACCIDENT_VIDEO_ICON_DATA_URI }} state={tileState('accident_video')} onPress={() => void pickDocument('accident_video')} onRemove={() => requestDelete('accident_video', `${mediaCount('accident_video')} accident video${mediaCount('accident_video') === 1 ? '' : 's'}`)} />
         </View>
         <View style={styles.bulkUploadShell}>
           <Pressable accessibilityRole="button" disabled={uploadingDocuments} onPress={() => void pickBulkDocuments()} style={[styles.bulkUpload, (documents.bulk.length > 0 || savedBulkCount > 0) && styles.bulkUploadSelected]}>
