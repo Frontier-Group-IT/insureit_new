@@ -630,10 +630,9 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
 
   return <View style={styles.approvalDocumentsCard}>
     <View style={styles.approvalDocumentsHeader}>
-      <View style={styles.approvalDocumentsHeaderIcon}><Image source={WORK_APPROVAL_ICONS.documents} style={styles.approvalDocumentsHeaderIconImage} resizeMode="contain" /></View>
+      <Image source={WORK_APPROVAL_ICONS.insurer} style={styles.approvalDocumentsHeaderIconImage} resizeMode="contain" />
       <View style={styles.approvalDocumentsHeaderCopy}>
         <Text style={styles.approvalDocumentsTitle}>Approval Documents</Text>
-        <Text style={styles.approvalDocumentsSubtitle}>Upload approval letters, surveyor reports or supporting documents.</Text>
       </View>
       <View style={styles.approvalDocumentsBadge}><Text style={styles.approvalDocumentsBadgeText}>Optional</Text></View>
     </View>
@@ -657,7 +656,6 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
       </View>
     </>}
 
-    <Text style={styles.approvalDocumentsNote}>PDF and image files up to 5 MB each. Selected files upload immediately to Claim Documents.</Text>
     {success ? <View style={styles.approvalFeedbackSuccess}><MaterialCommunityIcons name="check-circle-outline" size={14} color="#168161" /><Text style={styles.approvalFeedbackSuccessText}>{success}</Text></View> : null}
     {error ? <View style={styles.approvalFeedbackError}><MaterialCommunityIcons name="alert-circle-outline" size={14} color="#B42318" /><Text style={styles.approvalFeedbackErrorText}>{error}</Text></View> : null}
 
@@ -976,11 +974,9 @@ const styles = StyleSheet.create({
   subsectionMeta: { color: '#145ED7', fontSize: 9.5, fontWeight: '800', backgroundColor: '#EEF4FF', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 },
   approvalDocumentsCard: { borderRadius: 18, borderWidth: 1, borderColor: '#D7E2EF', backgroundColor: '#FFFFFF', padding: 12, marginBottom: 12, shadowColor: '#14375F', shadowOpacity: 0.05, shadowRadius: 9, shadowOffset: { width: 0, height: 4 }, elevation: 1 },
   approvalDocumentsHeader: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 10 },
-  approvalDocumentsHeaderIcon: { width: 38, height: 38, borderRadius: 11, backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center' },
-  approvalDocumentsHeaderIconImage: { width: 27, height: 27 },
+  approvalDocumentsHeaderIconImage: { width: 36, height: 36 },
   approvalDocumentsHeaderCopy: { flex: 1, minWidth: 0 },
   approvalDocumentsTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
-  approvalDocumentsSubtitle: { color: '#6D7B8F', fontSize: 9.2, lineHeight: 13, fontWeight: '600', marginTop: 2 },
   approvalDocumentsBadge: { borderRadius: 999, backgroundColor: '#EEF5FF', paddingHorizontal: 9, paddingVertical: 5 },
   approvalDocumentsBadgeText: { color: '#0A43A3', fontSize: 8.5, fontWeight: '900' },
   approvalDocumentGrid: { flexDirection: 'row', gap: 8 },
@@ -1002,7 +998,6 @@ const styles = StyleSheet.create({
   approvalBulkTitle: { color: palette.navy, fontSize: 10.5, fontWeight: '900' },
   approvalBulkText: { color: '#718198', fontSize: 8.5, lineHeight: 12, fontWeight: '600', marginTop: 2 },
   approvalBulkRemove: { position: 'absolute', top: 15, right: 7, zIndex: 3, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
-  approvalDocumentsNote: { color: '#7A8799', fontSize: 8, lineHeight: 11, fontWeight: '600', marginTop: 8 },
   deliveryReportSectionLabel: { color: palette.navy, fontSize: 11, fontWeight: '800', marginBottom: 5, textAlign: 'left' },
   deliveryReportRow: { minHeight: 44, borderRadius: 10, borderWidth: 1, borderColor: '#DDE5EF', backgroundColor: '#FFFFFF', paddingLeft: 8, paddingRight: 7, flexDirection: 'row', alignItems: 'center', gap: 7 },
   deliveryReportRowSaved: { borderColor: '#B9DCC9', backgroundColor: '#FBFFFD' },
