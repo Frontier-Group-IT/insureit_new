@@ -39,7 +39,6 @@ const MAX_APPROVAL_PDF_SIZE_BYTES = 5 * 1024 * 1024;
 const FINAL_BILL_DOCUMENT_TYPE = 'Final Workshop Bill';
 const MAX_FINAL_BILL_SIZE_BYTES = 10 * 1024 * 1024;
 const ASSESSMENT_REPORT_DOCUMENT_TYPE = 'Assessment Report';
-const ASSESSMENT_REPORT_ICON = require('../../assets/claims/claim-assessment.png');
 const MAX_DELIVERY_ORDER_DOCUMENT_SIZE_BYTES = 10 * 1024 * 1024;
 
 const WORK_APPROVAL_ICONS = {
@@ -393,7 +392,7 @@ function DeliveryOrderAssessmentReport({ claimId, customerId }: { claimId: strin
 
   return <>
     <View style={[styles.deliveryReportRow, document && styles.deliveryReportRowSaved]}>
-      <View style={styles.deliveryReportLeading}><View style={styles.deliveryReportIcon}><Image source={ASSESSMENT_REPORT_ICON} style={styles.deliveryReportIconImage} resizeMode="contain" /></View><View style={styles.deliveryReportCopy}><Text style={styles.deliveryReportLabel}>Assessment Report <Text style={styles.deliveryReportOptional}>(Optional)</Text></Text>{document ? <Text style={styles.deliveryReportFile} numberOfLines={1}>{document.file_name}</Text> : null}</View></View>
+      <View style={styles.deliveryReportLeading}><View style={styles.deliveryReportIcon}><MaterialCommunityIcons name="file-document-outline" size={17} color="#0A43A3" /></View><View style={styles.deliveryReportCopy}><Text style={styles.deliveryReportLabel}>Assessment Report <Text style={styles.deliveryReportOptional}>(Optional)</Text></Text>{document ? <Text style={styles.deliveryReportFile} numberOfLines={1}>{document.file_name}</Text> : null}</View></View>
       <Pressable accessibilityRole="button" disabled={loading || uploading || removing} onPress={() => void chooseAndUpload()} style={styles.deliveryReportUploadButton}><MaterialCommunityIcons name={document ? 'refresh' : 'upload-outline'} size={13} color="#FFFFFF" /><Text style={styles.deliveryReportUploadText}>{loading ? 'Checking' : uploading ? 'Uploading' : document ? 'Replace' : 'Upload'}</Text></Pressable>
       {document ? <Pressable accessibilityRole="button" accessibilityLabel="Remove Assessment Report" onPress={() => setConfirmRemove(true)} style={styles.deliveryReportRemove}><MaterialCommunityIcons name="close" size={12} color="#C43232" /></Pressable> : null}
     </View>
@@ -974,16 +973,15 @@ const styles = StyleSheet.create({
   approvalModalCancelText: { color: palette.navy, fontSize: 10.5, fontWeight: '900' },
   approvalModalDelete: { flex: 1, minHeight: 43, borderRadius: 12, backgroundColor: '#C43232', alignItems: 'center', justifyContent: 'center' },
   approvalModalDeleteText: { color: '#FFFFFF', fontSize: 10.5, fontWeight: '900' },
-  deliveryReportRow: { minHeight: 58, borderRadius: 13, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#7EA8E8', backgroundColor: '#F9FBFF', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 9 },
-  deliveryReportRowSaved: { borderStyle: 'solid', borderColor: '#52B57F', backgroundColor: '#EFFAF4' },
-  deliveryReportLeading: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 9 },
-  deliveryReportIcon: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  deliveryReportIconImage: { width: 34, height: 34 },
+  deliveryReportRow: { minHeight: 44, borderRadius: 10, borderWidth: 1, borderColor: '#DDE5EF', backgroundColor: '#FFFFFF', paddingLeft: 8, paddingRight: 7, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  deliveryReportRowSaved: { borderColor: '#B9DCC9', backgroundColor: '#FBFFFD' },
+  deliveryReportLeading: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  deliveryReportIcon: { width: 25, height: 25, borderRadius: 7, backgroundColor: '#EEF4FF', alignItems: 'center', justifyContent: 'center' },
   deliveryReportCopy: { flex: 1, minWidth: 0 },
-  deliveryReportLabel: { color: palette.navy, fontSize: 10.5, lineHeight: 14, fontWeight: '900' },
+  deliveryReportLabel: { color: palette.navy, fontSize: 9.5, lineHeight: 12, fontWeight: '800' },
   deliveryReportOptional: { color: '#718198', fontWeight: '600' },
-  deliveryReportFile: { color: '#65758A', fontSize: 8.5, lineHeight: 12, fontWeight: '600', marginTop: 2 },
-  deliveryReportUploadButton: { minHeight: 36, borderRadius: 9, backgroundColor: '#0A43A3', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, flexShrink: 0 },
-  deliveryReportUploadText: { color: '#FFFFFF', fontSize: 9.5, fontWeight: '900' },
-  deliveryReportRemove: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
+  deliveryReportFile: { color: '#65758A', fontSize: 7.8, lineHeight: 10, fontWeight: '600', marginTop: 1 },
+  deliveryReportUploadButton: { minHeight: 28, borderRadius: 7, backgroundColor: '#073C91', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  deliveryReportUploadText: { color: '#FFFFFF', fontSize: 8.3, fontWeight: '900' },
+  deliveryReportRemove: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
 });
