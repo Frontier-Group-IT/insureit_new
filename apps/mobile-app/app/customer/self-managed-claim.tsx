@@ -640,16 +640,14 @@ export default function SelfManagedClaimScreen() {
           <DocumentReadyTile title="Insurance Copy" fileName={savedDocumentFor('insurance')?.file_name ?? documents.insurance[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} state={tileState('insurance')} onPress={() => void pickDocument('insurance')} onRemove={() => requestDelete('insurance', savedDocumentFor('insurance')?.file_name ?? documents.insurance[0]?.name ?? 'Insurance Copy')} />
           <DocumentReadyTile title="Driver Licence" fileName={savedDocumentFor('licence')?.file_name ?? documents.licence[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} state={tileState('licence')} onPress={() => void pickDocument('licence')} onRemove={() => requestDelete('licence', savedDocumentFor('licence')?.file_name ?? documents.licence[0]?.name ?? 'Driver Licence')} />
           <DocumentReadyTile title="GR / Load Bill" fileName={savedDocumentFor('gr')?.file_name ?? documents.gr[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} state={tileState('gr')} onPress={() => void pickDocument('gr')} onRemove={() => requestDelete('gr', savedDocumentFor('gr')?.file_name ?? documents.gr[0]?.name ?? 'GR / Load Bill')} />
-          <DocumentReadyTile title="Accident Photo" statusText={mediaStatusLabel('accident_photo')} iconName="camera-outline" iconColor="#7B3FC6" iconBackground="#F1E8FF" state={tileState('accident_photo')} onPress={() => void pickDocument('accident_photo')} onRemove={() => requestDelete('accident_photo', `${mediaCount('accident_photo')} accident photo${mediaCount('accident_photo') === 1 ? '' : 's'}`)} />
-          <DocumentReadyTile title="Accident Video" statusText={videoProcessingStatus || mediaStatusLabel('accident_video')} iconName="video-outline" iconColor="#D55A2A" iconBackground="#FFF0E8" state={tileState('accident_video')} onPress={() => void pickDocument('accident_video')} onRemove={() => requestDelete('accident_video', `${mediaCount('accident_video')} accident video${mediaCount('accident_video') === 1 ? '' : 's'}`)} />
+          <DocumentReadyTile title="Accident Photo" statusText={mediaStatusLabel('accident_photo')} iconName="camera-outline" iconColor="#7B3FC6" state={tileState('accident_photo')} onPress={() => void pickDocument('accident_photo')} onRemove={() => requestDelete('accident_photo', `${mediaCount('accident_photo')} accident photo${mediaCount('accident_photo') === 1 ? '' : 's'}`)} />
+          <DocumentReadyTile title="Accident Video" statusText={videoProcessingStatus || mediaStatusLabel('accident_video')} iconName="video-outline" iconColor="#D55A2A" state={tileState('accident_video')} onPress={() => void pickDocument('accident_video')} onRemove={() => requestDelete('accident_video', `${mediaCount('accident_video')} accident video${mediaCount('accident_video') === 1 ? '' : 's'}`)} />
         </View>
         <View style={styles.bulkUploadShell}>
           <Pressable accessibilityRole="button" disabled={uploadingDocuments} onPress={() => void pickBulkDocuments()} style={[styles.bulkUpload, (documents.bulk.length > 0 || savedBulkCount > 0) && styles.bulkUploadSelected]}>
-            <View style={[styles.bulkUploadIcon, savedBulkCount > 0 && styles.bulkUploadIconSelected]}>
-              {savedBulkCount > 0
-                ? <MaterialCommunityIcons name="check" size={20} color="#18864B" />
-                : <Image source={require('../../assets/claims/claim-documents.png')} style={styles.bulkUploadIconArtwork} resizeMode="contain" />}
-            </View>
+            {savedBulkCount > 0
+              ? <MaterialCommunityIcons name="check-circle-outline" size={29} color="#18864B" />
+              : <Image source={require('../../assets/claims/claim-documents.png')} style={styles.bulkUploadIconArtwork} resizeMode="contain" />}
             <View style={styles.bulkUploadCopy}>
               <Text style={styles.bulkUploadTitle}>Upload multiple documents</Text>
               <Text style={styles.bulkUploadText}>{savedBulkCount > 0 ? `${savedBulkCount} file${savedBulkCount === 1 ? '' : 's'} saved · Tap again to add more` : documents.bulk.length > 0 ? `${documents.bulk.length} file${documents.bulk.length === 1 ? '' : 's'} ready · They will be saved when the claim starts` : 'Select several files now, or tap again later to add more.'}</Text>
@@ -736,14 +734,14 @@ export default function SelfManagedClaimScreen() {
   );
 }
 
-function DocumentReadyTile({ title, fileName, statusText, source, iconName, iconColor, iconBackground, state, onPress, onRemove }: { title: string; fileName?: string; statusText?: string; source?: any; iconName?: DocumentTileIconName; iconColor?: string; iconBackground?: string; state: DocumentTileState; onPress: () => void; onRemove: () => void }) {
+function DocumentReadyTile({ title, fileName, statusText, source, iconName, iconColor, state, onPress, onRemove }: { title: string; fileName?: string; statusText?: string; source?: any; iconName?: DocumentTileIconName; iconColor?: string; state: DocumentTileState; onPress: () => void; onRemove: () => void }) {
   const saved = state === 'saved';
   const ready = state === 'ready';
   return <Pressable accessibilityRole="button" accessibilityState={{ selected: state !== 'idle' }} onPress={onPress} style={[styles.documentReadyTile, ready && styles.documentReadyTileReady, saved && styles.documentReadyTileSelected]}>
     {saved ? <View style={styles.documentSelectedCheck}><MaterialCommunityIcons name="check" size={15} color="#18864B" /></View> : null}
     {state !== 'idle' ? <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${title}`} onPress={(event) => { event.stopPropagation(); onRemove(); }} style={styles.documentRemoveButton}><MaterialCommunityIcons name="close" size={13} color="#C43232" /></Pressable> : null}
-    <View style={[styles.documentReadyArtworkWrap, iconName && styles.documentReadyIconBadge, iconName ? { backgroundColor: iconBackground ?? '#EEF4FF' } : null]}>
-      {source ? <Image source={source} style={styles.documentReadyArtwork} resizeMode="contain" /> : iconName ? <MaterialCommunityIcons name={iconName} size={26} color={iconColor ?? '#0A43A3'} /> : null}
+    <View style={styles.documentReadyArtworkWrap}>
+      {source ? <Image source={source} style={styles.documentReadyArtwork} resizeMode="contain" /> : iconName ? <MaterialCommunityIcons name={iconName} size={32} color={iconColor ?? '#0A43A3'} /> : null}
     </View>
     <Text style={styles.documentReadyTileText} numberOfLines={2}>{title}</Text>
     {fileName ? <Text style={styles.documentReadyFileName} numberOfLines={1}>{fileName}</Text> : null}
@@ -800,7 +798,6 @@ const styles = StyleSheet.create({
   documentSelectedCheck: { position: 'absolute', top: 5, left: 5, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(46, 173, 99, 0.16)', alignItems: 'center', justifyContent: 'center' },
   documentRemoveButton: { position: 'absolute', top: 5, right: 5, zIndex: 3, width: 23, height: 23, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
   documentReadyArtworkWrap: { width: 45, height: 45, alignItems: 'center', justifyContent: 'center' },
-  documentReadyIconBadge: { borderRadius: 13 },
   documentReadyArtwork: { width: 43, height: 43 },
   documentReadyTileText: { color: palette.navy, fontSize: 8.5, lineHeight: 11, fontWeight: '800', textAlign: 'center', marginTop: 3 },
   documentReadyFileName: { maxWidth: '100%', color: '#56657A', fontSize: 7.3, lineHeight: 10, fontWeight: '700', textAlign: 'center', marginTop: 2 },
@@ -810,9 +807,7 @@ const styles = StyleSheet.create({
   bulkUploadShell: { position: 'relative' },
   bulkUpload: { minHeight: 58, marginTop: 10, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#AFC8E8', backgroundColor: '#F7FAFF', paddingHorizontal: 10, paddingRight: 38, flexDirection: 'row', alignItems: 'center', gap: 9 },
   bulkUploadSelected: { borderStyle: 'solid', borderColor: '#52B57F', backgroundColor: '#EFFAF4' },
-  bulkUploadIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center' },
-  bulkUploadIconSelected: { backgroundColor: 'rgba(46, 173, 99, 0.14)' },
-  bulkUploadIconArtwork: { width: 29, height: 29 },
+  bulkUploadIconArtwork: { width: 34, height: 34 },
   bulkUploadCopy: { flex: 1, minWidth: 0 },
   bulkUploadTitle: { color: palette.navy, fontSize: 10.5, fontWeight: '900' },
   bulkUploadText: { color: '#718198', fontSize: 8.5, lineHeight: 12, fontWeight: '600', marginTop: 2 },
