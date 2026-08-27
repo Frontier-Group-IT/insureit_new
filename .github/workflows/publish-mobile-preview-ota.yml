@@ -2,13 +2,16 @@ name: Publish mobile preview OTA
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read
 
 jobs:
   publish:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[publish-preview-ota]'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -33,6 +36,29 @@ jobs:
             echo "origin/main=$remote_main" >&2
             exit 1
           fi
+
+      - name: Verify current mobile OTA runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const app = require('./apps/mobile-app/app.json');
+          const version = app?.expo?.version;
+          const plugins = app?.expo?.plugins ?? [];
+          const hasNativeCompressorPlugin = plugins.some((plugin) =>
+            plugin === 'react-native-compressor' ||
+            (Array.isArray(plugin) && plugin[0] === 'react-native-compressor')
+          );
+          if (version !== '0.2.0') {
+            console.error(`Refusing preview OTA: expected current production runtime 0.2.0, found ${version ?? 'missing'}.`);
+            process.exit(1);
+          }
+          if (hasNativeCompressorPlugin) {
+            console.error('Refusing preview OTA: current 0.2.0 binary does not include react-native-compressor.');
+            process.exit(1);
+          }
+          console.log('Verified Expo runtime target: 0.2.0');
+          NODE
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
