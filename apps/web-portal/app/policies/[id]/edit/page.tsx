@@ -31,9 +31,9 @@ type VehicleRow = {
   engine_capacity_cc: number | null; seating_capacity: number | null; gvw_kg: number | null;
   rto_name: string | null; rto_state: string | null; updated_at: string | null;
 };
-type PremiumRow = { od_premium: number | null; tp_premium: number | null; cpa_opted: boolean | null; cpa_amount: number | null };
-type PayinRow = { payout_basis: string | null; projected_od_percent: number | null; projected_tp_percent: number | null; insurer_scheme_amount: number | null };
-type PayoutRow = { retention_amount: number | null; od_payout_percent: number | null; tp_payout_percent: number | null; status: string | null; payout_date: string | null; voucher_number: string | null };
+type PremiumRow = { od_premium: number | null; tp_premium: number | null; cpa_opted: boolean | null; cpa_amount: number | null; net_premium: number | null; gst_amount: number | null; gross_premium: number | null };
+type PayinRow = { payout_basis: string | null; projected_od_percent: number | null; projected_tp_percent: number | null; insurer_scheme_amount: number | null; commercial_basis: string | null; projected_commission_percent: number | null; projected_commission_amount: number | null };
+type PayoutRow = { retention_amount: number | null; od_payout_percent: number | null; tp_payout_percent: number | null; status: string | null; payout_date: string | null; voucher_number: string | null; payout_basis: string | null; partner_payout_percent: number | null; partner_payout_amount: number | null };
 type NonMotorDetailsRow = {
   category: string | null; risk_title: string | null; risk_location: string | null; occupancy_type: string | null;
   transit_from: string | null; transit_to: string | null; transit_mode: string | null; nature_of_business: string | null;
