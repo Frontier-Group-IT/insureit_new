@@ -172,7 +172,7 @@ export default function ClaimDetailScreen() {
         <View style={[styles.heroOrbLarge, compactClaimIntimation && styles.heroOrbLargeCompact]} />
         <View style={[styles.heroOrbSmall, compactClaimIntimation && styles.heroOrbSmallCompact]} />
         <View style={[styles.heroTop, compactClaimIntimation && styles.heroTopCompact]}>
-          <Image source={settled ? require('../../assets/claims/claim-settlement.png') : require('../../assets/claims/claim-approval.png')} style={[styles.statusArtwork, compactClaimIntimation && styles.statusArtworkCompact]} resizeMode="contain" />
+          <Image source={settled ? require('../../assets/claims/tasks-completed.png') : require('../../assets/claims/claim-approval.png')} style={[styles.statusArtwork, compactClaimIntimation && styles.statusArtworkCompact]} resizeMode="contain" />
           <View style={styles.heroCopy}>
             <Text style={[styles.stageLabel, compactClaimIntimation && styles.stageLabelCompact]}>{settled ? 'CLAIM COMPLETE' : currentStage?.label ?? claim.current_status}</Text>
             <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={[styles.vehicleNo, compactClaimIntimation && styles.vehicleNoCompact]}>{vehicle?.vehicle_no ?? 'Vehicle linked'}</Text>
