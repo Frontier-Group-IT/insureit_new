@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireAnyCapability, requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { recordVehicleActivity, VEHICLE_ACTIVITY_ACTIONS } from "@/lib/vehicle-activity";
+import { isValidVehicleRegistrationNumber, normalizeVehicleRegistrationNumber } from "@/lib/vehicle-registration";
 
 function requiredText(formData: FormData, name: string) {
   const value = formData.get(name);
@@ -25,6 +26,10 @@ function errorUrl(path: string, message: string) {
   return `${path}${separator}error=${encodeURIComponent(message)}`;
 }
 
+function normalizedVehicleIdentity(value: string | null) {
+  return (value ?? "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
 function capacityColumns(vehicleType: string, capacity: number | null) {
   return {
     engine_capacity_cc: vehicleType === "PCP" || vehicleType === "TWP" || vehicleType === "MISD" ? capacity : null,
@@ -35,29 +40,83 @@ function capacityColumns(vehicleType: string, capacity: number | null) {
 
 function vehiclePayload(formData: FormData) {
   const customerId = requiredText(formData, "customer_id");
-  const vehicleNo = requiredText(formData, "vehicle_no")?.replace(/\s/g, "").toUpperCase() ?? null;
   const vehicleType = requiredText(formData, "vehicle_type");
-  if (!customerId || !vehicleNo || !vehicleType) return null;
+  const registrationMode = requiredText(formData, "registration_mode") === "unregistered" ? "unregistered" : "registered";
+  const chassisNo = normalizedVehicleIdentity(requiredText(formData, "chassis_no"));
+  const engineNo = normalizedVehicleIdentity(requiredText(formData, "engine_no"));
+
+  if (!customerId || !vehicleType) {
+    return { payload: null, error: "Select a customer and vehicle class." };
+  }
+
+  let vehicleNo: string;
+  let vehicleNoNormalized: string | null;
+  let registrationStatus: "ACTIVE" | "registration_pending";
+  let registrationDate: string | null;
+
+  if (registrationMode === "unregistered") {
+    if (!chassisNo || !engineNo) {
+      return { payload: null, error: "Chassis number and engine number are required for an unregistered vehicle." };
+    }
+    vehicleNo = `NEW-${chassisNo}`;
+    vehicleNoNormalized = null;
+    registrationStatus = "registration_pending";
+    registrationDate = null;
+  } else {
+    const rawVehicleNo = requiredText(formData, "vehicle_no") ?? "";
+    if (!isValidVehicleRegistrationNumber(rawVehicleNo)) {
+      return { payload: null, error: "Enter a valid vehicle registration number." };
+    }
+    vehicleNo = normalizeVehicleRegistrationNumber(rawVehicleNo);
+    vehicleNoNormalized = vehicleNo;
+    registrationStatus = "ACTIVE";
+    registrationDate = dateValue(formData, "registration_date");
+  }
 
   const capacity = numberValue(formData, "gvw_kg");
   return {
-    customer_id: customerId,
-    vehicle_no: vehicleNo,
-    vehicle_type: vehicleType,
-    make: requiredText(formData, "make"),
-    model: requiredText(formData, "model"),
-    year: numberValue(formData, "year"),
-    chassis_no: requiredText(formData, "chassis_no")?.toUpperCase() ?? null,
-    engine_no: requiredText(formData, "engine_no")?.toUpperCase() ?? null,
-    fuel_type: requiredText(formData, "fuel_type"),
-    registration_date: dateValue(formData, "registration_date"),
-    fitness_expiry_date: dateValue(formData, "fitness_expiry_date"),
-    puc_expiry_date: dateValue(formData, "puc_expiry_date"),
-    road_tax_expiry_date: dateValue(formData, "road_tax_expiry_date"),
-    national_permit_expiry_date: dateValue(formData, "national_permit_expiry_date"),
-    local_permit_expiry_date: dateValue(formData, "local_permit_expiry_date"),
-    ...capacityColumns(vehicleType, capacity),
+    payload: {
+      customer_id: customerId,
+      vehicle_no: vehicleNo,
+      vehicle_no_normalized: vehicleNoNormalized,
+      registration_status: registrationStatus,
+      vehicle_type: vehicleType,
+      make: requiredText(formData, "make"),
+      model: requiredText(formData, "model"),
+      year: numberValue(formData, "year"),
+      chassis_no: chassisNo || null,
+      engine_no: engineNo || null,
+      fuel_type: requiredText(formData, "fuel_type"),
+      registration_date: registrationDate,
+      fitness_expiry_date: dateValue(formData, "fitness_expiry_date"),
+      puc_expiry_date: dateValue(formData, "puc_expiry_date"),
+      road_tax_expiry_date: dateValue(formData, "road_tax_expiry_date"),
+      national_permit_expiry_date: dateValue(formData, "national_permit_expiry_date"),
+      local_permit_expiry_date: dateValue(formData, "local_permit_expiry_date"),
+      ...capacityColumns(vehicleType, capacity),
+    },
+    error: null,
   };
+}
+
+async function findRegistrationConflict(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  registration: string | null,
+  excludeVehicleId?: string,
+) {
+  if (!registration) return null;
+  let query = admin
+    .from("vehicles")
+    .select("id,vehicle_no")
+    .or(`vehicle_no.eq.${registration},vehicle_no_normalized.eq.${registration}`);
+  if (excludeVehicleId) query = query.neq("id", excludeVehicleId);
+  const { data, error } = await query.limit(1).maybeSingle<{ id: string; vehicle_no: string }>();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+function isPendingVehicle(vehicle: { vehicle_no: string; registration_status: string | null }) {
+  return vehicle.registration_status === "registration_pending" || /^(?:NEW|PENDING)-/i.test(vehicle.vehicle_no);
 }
 
 export async function addVehicleMaster(formData: FormData) {
@@ -66,11 +125,19 @@ export async function addVehicleMaster(formData: FormData) {
     { capability: "create_vehicles", minimumAccess: "edit" },
   ]);
   const admin = createSupabaseAdminClient();
-  const payload = vehiclePayload(formData);
-  if (!payload) redirect(errorUrl("/vehicles/new", "Select a customer and enter the vehicle number and class."));
+  const parsed = vehiclePayload(formData);
+  if (!parsed.payload) redirect(errorUrl("/vehicles/new", parsed.error ?? "Vehicle details are incomplete."));
+  const payload = parsed.payload;
 
   const { data: customer, error: customerError } = await admin.from("customers").select("id").eq("id", payload.customer_id).maybeSingle<{ id: string }>();
   if (customerError || !customer) redirect(errorUrl("/vehicles/new", customerError?.message ?? "The selected customer does not exist."));
+
+  try {
+    const conflict = await findRegistrationConflict(admin, payload.vehicle_no_normalized);
+    if (conflict) redirect(errorUrl("/vehicles/new", `Registration number ${payload.vehicle_no} already belongs to another vehicle.`));
+  } catch (error) {
+    redirect(errorUrl("/vehicles/new", `Unable to validate the registration number: ${error instanceof Error ? error.message : "Unknown error"}`));
+  }
 
   const { data: vehicle, error } = await admin.from("vehicles").insert(payload).select("id").single<{ id: string }>();
   if (error || !vehicle) redirect(errorUrl("/vehicles/new", `Vehicle could not be saved: ${error?.message ?? "Unknown error"}`));
@@ -83,14 +150,41 @@ export async function addVehicleMaster(formData: FormData) {
 export async function saveVehicleMaster(id: string, formData: FormData) {
   const profile = await requireCapability("view_vehicles", "edit");
   const admin = createSupabaseAdminClient();
-  const payload = vehiclePayload(formData);
-  if (!payload) redirect(errorUrl(`/vehicles/${id}/edit`, "Select a customer and enter the vehicle number and class."));
+  const parsed = vehiclePayload(formData);
+  if (!parsed.payload) redirect(errorUrl(`/vehicles/${id}/edit`, parsed.error ?? "Vehicle details are incomplete."));
+  const payload = parsed.payload;
+
+  const { data: currentVehicle, error: currentError } = await admin
+    .from("vehicles")
+    .select("id,vehicle_no,registration_status")
+    .eq("id", id)
+    .maybeSingle<{ id: string; vehicle_no: string; registration_status: string | null }>();
+  if (currentError || !currentVehicle) {
+    redirect(errorUrl(`/vehicles/${id}/edit`, currentError?.message ?? "The vehicle record no longer exists."));
+  }
+
+  try {
+    const conflict = await findRegistrationConflict(admin, payload.vehicle_no_normalized, id);
+    if (conflict) {
+      redirect(errorUrl(`/vehicles/${id}/edit`, `Registration number ${payload.vehicle_no} already belongs to another vehicle.`));
+    }
+  } catch (error) {
+    redirect(errorUrl(`/vehicles/${id}/edit`, `Unable to validate the registration number: ${error instanceof Error ? error.message : "Unknown error"}`));
+  }
+
+  const wasPending = isPendingVehicle(currentVehicle);
+  const willBePending = payload.registration_status === "registration_pending";
 
   const { error } = await admin.from("vehicles").update({ ...payload, updated_at: new Date().toISOString() }).eq("id", id);
   if (error) redirect(errorUrl(`/vehicles/${id}/edit`, `Vehicle could not be updated: ${error.message}`));
 
   await recordVehicleActivity(admin, id, profile.id, VEHICLE_ACTIVITY_ACTIONS.VEHICLE_EDITED);
+  if (wasPending !== willBePending) {
+    await recordVehicleActivity(admin, id, profile.id, VEHICLE_ACTIVITY_ACTIONS.VEHICLE_REGISTRATION_UPDATED);
+  }
+
   revalidatePath("/vehicles");
+  revalidatePath(`/vehicles/${id}`);
   revalidatePath(`/vehicles/${id}/edit`);
   revalidatePath("/policies");
   redirect("/vehicles?success=vehicle_updated");
