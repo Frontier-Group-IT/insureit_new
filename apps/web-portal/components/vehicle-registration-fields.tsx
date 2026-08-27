@@ -14,7 +14,8 @@ export function VehicleRegistrationFields({
   initialRegistrationDate?: string | null;
 }) {
   const [mode, setMode] = useState<VehicleRegistrationMode>(initialMode);
-  const registeredValue = initialMode === "registered" ? initialVehicleNo ?? "" : "";
+  const [vehicleNo, setVehicleNo] = useState(initialMode === "registered" ? initialVehicleNo ?? "" : "");
+  const [registrationDate, setRegistrationDate] = useState(initialRegistrationDate ?? "");
 
   return (
     <>
@@ -49,7 +50,8 @@ export function VehicleRegistrationFields({
           <input
             id="vehicle_no"
             name="vehicle_no"
-            defaultValue={registeredValue}
+            value={vehicleNo}
+            onChange={(event) => setVehicleNo(event.target.value)}
             placeholder="MP20CM6416"
             required
             autoComplete="off"
@@ -73,11 +75,18 @@ export function VehicleRegistrationFields({
           id="registration_date"
           name="registration_date"
           type="date"
-          defaultValue={initialRegistrationDate ?? ""}
+          value={registrationDate}
+          onChange={(event) => setRegistrationDate(event.target.value)}
           disabled={mode === "unregistered"}
           className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition disabled:bg-[#F7F9FC] disabled:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]"
         />
       </div>
+
+      {initialMode === "registered" && mode === "unregistered" ? (
+        <div className="md:col-span-2 lg:col-span-3 xl:col-span-6 rounded-xl border border-[#F5D7A8] bg-[#FFF9EF] px-3 py-2 text-[9.5px] leading-4 text-[#8A5A16]">
+          Saving as Unregistered will replace the current registration number with a temporary chassis-based reference. Linked policies will remain attached to the same vehicle record.
+        </div>
+      ) : null}
     </>
   );
 }
