@@ -76,7 +76,7 @@ export default async function EditVehiclePage({ params, searchParams }: { params
 
   const editor = (
     <>
-      {embedded && query.error ? <div className="mx-auto mb-3 max-w-[1480px] rounded-xl border border-[#F0C9C5] bg-[#FFF5F4] px-4 py-3 text-[10px] font-semibold text-[#B42318]">{query.error}</div> : null}
+      {query.error ? <div className="mx-auto mb-3 max-w-[1480px] rounded-xl border border-[#F0C9C5] bg-[#FFF5F4] px-4 py-3 text-[10px] font-semibold text-[#B42318]">{query.error}</div> : null}
       <VehicleForm
         action={saveVehicleMaster.bind(null, id)}
         customers={customerOptions}
