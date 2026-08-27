@@ -132,11 +132,14 @@ export async function addVehicleMaster(formData: FormData) {
   const { data: customer, error: customerError } = await admin.from("customers").select("id").eq("id", payload.customer_id).maybeSingle<{ id: string }>();
   if (customerError || !customer) redirect(errorUrl("/vehicles/new", customerError?.message ?? "The selected customer does not exist."));
 
+  let registrationConflict: { id: string; vehicle_no: string } | null = null;
   try {
-    const conflict = await findRegistrationConflict(admin, payload.vehicle_no_normalized);
-    if (conflict) redirect(errorUrl("/vehicles/new", `Registration number ${payload.vehicle_no} already belongs to another vehicle.`));
+    registrationConflict = await findRegistrationConflict(admin, payload.vehicle_no_normalized);
   } catch (error) {
     redirect(errorUrl("/vehicles/new", `Unable to validate the registration number: ${error instanceof Error ? error.message : "Unknown error"}`));
+  }
+  if (registrationConflict) {
+    redirect(errorUrl("/vehicles/new", `Registration number ${payload.vehicle_no} already belongs to another vehicle.`));
   }
 
   const { data: vehicle, error } = await admin.from("vehicles").insert(payload).select("id").single<{ id: string }>();
@@ -163,13 +166,14 @@ export async function saveVehicleMaster(id: string, formData: FormData) {
     redirect(errorUrl(`/vehicles/${id}/edit`, currentError?.message ?? "The vehicle record no longer exists."));
   }
 
+  let registrationConflict: { id: string; vehicle_no: string } | null = null;
   try {
-    const conflict = await findRegistrationConflict(admin, payload.vehicle_no_normalized, id);
-    if (conflict) {
-      redirect(errorUrl(`/vehicles/${id}/edit`, `Registration number ${payload.vehicle_no} already belongs to another vehicle.`));
-    }
+    registrationConflict = await findRegistrationConflict(admin, payload.vehicle_no_normalized, id);
   } catch (error) {
     redirect(errorUrl(`/vehicles/${id}/edit`, `Unable to validate the registration number: ${error instanceof Error ? error.message : "Unknown error"}`));
+  }
+  if (registrationConflict) {
+    redirect(errorUrl(`/vehicles/${id}/edit`, `Registration number ${payload.vehicle_no} already belongs to another vehicle.`));
   }
 
   const wasPending = isPendingVehicle(currentVehicle);
