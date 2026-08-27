@@ -68,6 +68,11 @@ function stringValue(value: string | number | null | undefined) {
   return value === null || value === undefined ? "" : String(value);
 }
 
+function recordString(record: Record<string, unknown> | null | undefined, key: string, fallback = "") {
+  const value = record?.[key];
+  return typeof value === "string" || typeof value === "number" ? String(value) : fallback;
+}
+
 function vehicleCapacity(vehicle: VehicleRow, vehicleClass: string) {
   if (vehicleClass === "PCP" || vehicleClass === "TWP") return stringValue(vehicle.engine_capacity_cc);
   if (vehicleClass === "PCV") return stringValue(vehicle.seating_capacity);
@@ -166,7 +171,6 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
   const payin = payinResult.data;
   const payout = payoutResult.data;
   const billing = billingResult.billing;
-  const vehicleClass = vehicle.vehicle_class_code || vehicle.vehicle_type || "MISD";
 
   const insurerById = new Map<string, InsurerOption>();
   for (const insurer of activeInsurersResult.data ?? []) insurerById.set(insurer.id, insurer);
@@ -201,6 +205,137 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
       sourceOptions.push({ type: savedType, value: `saved-${id}`, label: policy.lead_source.trim(), code: policy.intermediary_code.trim(), rmName: policy.rm_name?.trim() || "", rmCode: savedRm?.employee_code?.trim() || "" });
     }
   }
+
+  if (isNonMotor) {
+    const details = nonMotorDetailsResult.data;
+    const risk = details?.risk_details ?? {};
+    const additional = details?.additional_details ?? {};
+    const customerOptions = (customersResult.data ?? []).map((row) => ({
+      id: row.id,
+      name: row.company_name?.trim() || row.contact_name,
+      contactName: row.contact_name,
+      phone: row.phone,
+      email: row.email ?? "",
+    }));
+    if (!customerOptions.some((item) => item.id === customer.id)) {
+      customerOptions.unshift({
+        id: customer.id,
+        name: customer.company_name?.trim() || customer.contact_name,
+        contactName: customer.contact_name,
+        phone: customer.phone ?? "",
+        email: customer.email ?? "",
+      });
+    }
+
+    const nonMotorInitialValues: NonMotorUnifiedInitialValues = {
+      customerMode: "existing",
+      customerId: customer.id,
+      customerType: customer.customer_type === "corporate" ? "Organisation" : "Individual",
+      insuredName: customer.company_name?.trim() || customer.contact_name,
+      contactName: customer.contact_name,
+      phone: customer.phone ?? "",
+      email: customer.email ?? "",
+      address: customer.address ?? "",
+      policyNumber: policy.policy_no,
+      insurerId: policy.insurance_company_id,
+      productName: policy.policy_product ?? policy.policy_type,
+      category: details?.category ?? policy.policy_type,
+      status: policy.status ? policy.status.charAt(0).toUpperCase() + policy.status.slice(1).toLowerCase() : "Active",
+      riskTitle: recordString(risk, "riskTitle", details?.risk_title ?? ""),
+      riskLocation: recordString(risk, "riskLocation", details?.risk_location ?? ""),
+      occupancyType: recordString(risk, "occupancyType", details?.occupancy_type ?? ""),
+      cargoDescription: recordString(risk, "cargoDescription"),
+      transitFrom: recordString(risk, "transitFrom", details?.transit_from ?? ""),
+      transitTo: recordString(risk, "transitTo", details?.transit_to ?? ""),
+      transitMode: recordString(risk, "transitMode", details?.transit_mode ?? ""),
+      projectName: recordString(risk, "projectName"),
+      projectValue: recordString(risk, "projectValue"),
+      natureOfBusiness: recordString(risk, "natureOfBusiness", details?.nature_of_business ?? ""),
+      liabilityType: recordString(risk, "liabilityType", details?.liability_type ?? ""),
+      employeeCount: recordString(risk, "employeeCount", stringValue(details?.employee_count)),
+      annualWages: recordString(risk, "annualWages", stringValue(details?.annual_wages)),
+      businessName: recordString(risk, "businessName"),
+      annualTurnover: recordString(risk, "annualTurnover", stringValue(details?.annual_turnover)),
+      sumInsured: stringValue(details?.sum_insured ?? policy.insured_declared_value),
+      deductible: stringValue(details?.deductible),
+      netPremium: stringValue(premium?.net_premium),
+      gstAmount: stringValue(premium?.gst_amount),
+      grossPremium: stringValue(premium?.gross_premium ?? policy.premium_amount),
+      startDate: policy.start_date,
+      endDate: policy.end_date,
+      payinBasis: payin?.commercial_basis === "FIXED_AMOUNT" ? "FIXED_AMOUNT" : "NET_PREMIUM_PERCENT",
+      payinPercent: payin?.commercial_basis === "FIXED_AMOUNT" ? "" : stringValue(payin?.projected_commission_percent),
+      payinFixedAmount: payin?.commercial_basis === "FIXED_AMOUNT" ? stringValue(payin?.projected_commission_amount) : "",
+      insurerSchemeAmount: stringValue(payin?.insurer_scheme_amount),
+      payoutBasis: payout?.payout_basis === "FIXED_AMOUNT" ? "FIXED_AMOUNT" : "NET_PREMIUM_PERCENT",
+      payoutPercent: payout?.payout_basis === "FIXED_AMOUNT" ? "" : stringValue(payout?.partner_payout_percent),
+      payoutFixedAmount: payout?.payout_basis === "FIXED_AMOUNT" ? stringValue(payout?.partner_payout_amount) : "",
+      proposalNumber: recordString(additional, "proposalNumber", details?.proposal_number ?? ""),
+      previousInsurer: recordString(additional, "previousInsurer", details?.previous_insurer ?? ""),
+      previousPolicyNumber: recordString(additional, "previousPolicyNumber", details?.previous_policy_number ?? ""),
+      previousClaims: recordString(additional, "previousClaims", details?.previous_claims ?? ""),
+      addOns: recordString(additional, "addOns", details?.add_ons ?? ""),
+      warranties: recordString(additional, "warranties", details?.warranties ?? ""),
+      specialConditions: recordString(additional, "specialConditions", details?.special_conditions ?? ""),
+      endorsements: recordString(additional, "endorsements", details?.endorsements ?? ""),
+      remarks: recordString(additional, "remarks", details?.remarks ?? policy.remarks ?? ""),
+    };
+    const initialValues: PolicyUnifiedInitialValues = {
+      policyId: policy.id,
+      policyCode: policy.policy_code ?? "",
+      issuanceDate: policy.issuance_date ?? policy.start_date,
+      rmName: policy.rm_name ?? "",
+      intermediaryType: policy.intermediary_type ?? "",
+      leadSource: policy.lead_source ?? "",
+      intermediaryCode: policy.intermediary_code ?? "",
+      businessLine: "Non Motor",
+      insuredName: customer.company_name?.trim() || customer.contact_name,
+      phoneNo: customer.phone ?? "",
+      policyProduct: policy.policy_type,
+      idv: stringValue(policy.insured_declared_value),
+      policyNo: policy.policy_no,
+      insurerId: policy.insurance_company_id,
+      validFrom: policy.start_date,
+      validUpto: policy.end_date,
+      remarks: policy.remarks ?? "",
+    };
+
+    return (
+      <AppShell title="Edit Policy">
+        <PolicyRemarksActionStyle />
+        <div data-policy-edit-form>
+          <PolicyCommercialShell
+            key={customer.updated_at ?? "customer"}
+            mode="edit"
+            insurers={insurerOptions}
+            customers={customerOptions}
+            rms={rmOptions}
+            sources={sourceOptions}
+            initialValues={initialValues}
+            nonMotorInitialValues={nonMotorInitialValues}
+            commercialAccess={commercialAccess}
+          />
+          <PolicyLinkedMasterActions
+            customerId={policy.customer_id}
+            vehicleId={null}
+            canEditCustomer={Boolean(customerManager)}
+            canEditVehicle={false}
+          />
+        </div>
+        <div className="mx-auto mt-4 max-w-[1480px]">
+          <PolicyActivityStatus
+            policyId={policy.id}
+            createdBy={creatorResult.data?.full_name ?? null}
+            createdAt={policy.created_at}
+            updatedAt={policy.updated_at}
+          />
+        </div>
+      </AppShell>
+    );
+  }
+
+  const vehicle = vehicleResult.data!;
+  const vehicleClass = vehicle.vehicle_class_code || vehicle.vehicle_type || "MISD";
 
   const initialValues: PolicyUnifiedInitialValues = {
     policyId: policy.id,
