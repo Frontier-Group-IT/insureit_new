@@ -99,10 +99,10 @@ export function IntermediaryGroupWorkspace({
   const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>("all");
   const [openEmployees, setOpenEmployees] = useState<Set<string>>(() => new Set(employees.map((employee) => employee.id)));
   const [createOpen, setCreateOpen] = useState(false);
+  const [createSelectionOwnerId, setCreateSelectionOwnerId] = useState<string | null>(null);
   const [drawerGroupId, setDrawerGroupId] = useState<string | null>(null);
   const [selectedPartnerIds, setSelectedPartnerIds] = useState<Set<string>>(new Set());
   const [selectedOwnerId, setSelectedOwnerId] = useState<string | null>(null);
-  const [bulkGroupId, setBulkGroupId] = useState("");
   const [dragPartnerId, setDragPartnerId] = useState<string | null>(null);
   const [dropGroupId, setDropGroupId] = useState<string | null>(null);
   const [pendingDrop, setPendingDrop] = useState<{ partnerId: string; groupId: string } | null>(null);
@@ -153,9 +153,6 @@ export function IntermediaryGroupWorkspace({
   const drawerMembers = drawerGroup
     ? memberships.filter((membership) => membership.group_id === drawerGroup.id).length
     : 0;
-  const selectedOwnerGroups = selectedOwnerId
-    ? groups.filter((group) => group.owner_employee_id === selectedOwnerId)
-    : [];
 
   function toggleEmployee(employeeId: string) {
     setOpenEmployees((current) => {
@@ -175,7 +172,6 @@ export function IntermediaryGroupWorkspace({
 
       const hasAny = next.size > 0;
       setSelectedOwnerId(hasAny ? partner.owner_employee_id : null);
-      if (!sameOwner) setBulkGroupId("");
       return next;
     });
   }
@@ -183,7 +179,6 @@ export function IntermediaryGroupWorkspace({
   function clearSelection() {
     setSelectedPartnerIds(new Set());
     setSelectedOwnerId(null);
-    setBulkGroupId("");
   }
 
   function beginDrop(partnerId: string, groupId: string) {
@@ -217,7 +212,7 @@ export function IntermediaryGroupWorkspace({
             {canManage ? (
               <button
                 type="button"
-                onClick={() => setCreateOpen(true)}
+                onClick={() => { setCreateSelectionOwnerId(null); setCreateOpen(true); }}
                 className="ml-1 inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#315FEA] px-3.5 text-[9.5px] font-semibold text-white shadow-sm transition hover:bg-[#254DD0]"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -295,6 +290,9 @@ export function IntermediaryGroupWorkspace({
                 onToggle={() => toggleEmployee(employee.id)}
                 canManage={canManage}
                 selectedPartnerIds={selectedPartnerIds}
+                activeSelectionCount={selectedOwnerId === employee.id ? selectedPartnerIds.size : 0}
+                onCreateFromSelection={() => { setCreateSelectionOwnerId(employee.id); setCreateOpen(true); }}
+                onClearSelection={clearSelection}
                 onTogglePartner={togglePartner}
                 dragPartnerId={dragPartnerId}
                 onDragStart={setDragPartnerId}
@@ -316,39 +314,6 @@ export function IntermediaryGroupWorkspace({
         </div>
       </section>
 
-      {selectedPartnerIds.size > 0 && canManage ? (
-        <div className="fixed bottom-5 left-1/2 z-40 w-[min(720px,calc(100vw-32px))] -translate-x-1/2 rounded-2xl border border-[#CAD5E3] bg-[#152C4B] p-2.5 text-white shadow-[0_20px_60px_rgba(12,27,50,.28)]">
-          <form action={assignIntermediaryGroupMembers} className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            {Array.from(selectedPartnerIds).map((partnerId) => <input key={partnerId} type="hidden" name="partner_id" value={partnerId} />)}
-            <div className="flex min-w-0 flex-1 items-center gap-2 px-1.5">
-              <span className="grid h-7 min-w-7 place-items-center rounded-lg bg-white/10 text-[10px] font-bold">{selectedPartnerIds.size}</span>
-              <div className="min-w-0">
-                <p className="text-[9.5px] font-semibold">Partner families selected</p>
-                <p className="truncate text-[8px] text-white/60">{selectedOwnerId ? employeeById.get(selectedOwnerId)?.full_name : ""}</p>
-              </div>
-            </div>
-            <select
-              name="group_id"
-              required
-              value={bulkGroupId}
-              onChange={(event) => setBulkGroupId(event.target.value)}
-              className="h-9 min-w-[190px] rounded-lg border border-white/15 bg-white/10 px-2.5 text-[9px] text-white outline-none [&>option]:text-[#263A52]"
-            >
-              <option value="">Move selected to Group…</option>
-              {selectedOwnerGroups.map((group) => <option key={group.id} value={group.id}>{group.group_name}</option>)}
-            </select>
-            <FormSubmitButton
-              label="Move"
-              pendingLabel="Moving…"
-              className="inline-flex h-9 items-center justify-center rounded-lg bg-white px-3.5 text-[9px] font-semibold text-[#17365D] hover:bg-[#F4F7FB]"
-            />
-            <button type="button" onClick={clearSelection} className="grid h-9 w-9 place-items-center rounded-lg border border-white/15 text-white/75 hover:bg-white/10" title="Clear selection">
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </form>
-        </div>
-      ) : null}
-
       <form ref={dropFormRef} action={assignIntermediaryGroupMembers} className="hidden">
         <input name="partner_id" value={pendingDrop?.partnerId ?? ""} readOnly />
         <input name="group_id" value={pendingDrop?.groupId ?? ""} readOnly />
@@ -359,23 +324,33 @@ export function IntermediaryGroupWorkspace({
           <div role="dialog" aria-modal="true" aria-label="Create Intermediary Group" className="w-full max-w-[560px] overflow-hidden rounded-2xl border border-[#D9E2ED] bg-white shadow-[0_28px_80px_rgba(13,31,55,.24)]">
             <div className="flex items-start justify-between border-b border-[#E8EDF3] px-5 py-4">
               <div>
-                <h3 className="text-[14px] font-semibold text-[#17324F]">Create Intermediary Group</h3>
-                <p className="mt-1 text-[9px] text-[#738196]">Create the Group first, then assign Partner families from the hierarchy.</p>
+                <h3 className="text-[14px] font-semibold text-[#17324F]">{createSelectionOwnerId ? "Create Group from selected" : "Create Intermediary Group"}</h3>
+                <p className="mt-1 text-[9px] text-[#738196]">{createSelectionOwnerId ? `${selectedPartnerIds.size} selected Partner ${selectedPartnerIds.size === 1 ? "family will" : "families will"} be added immediately.` : "Create the Group first, then assign Partner families from the hierarchy."}</p>
               </div>
               <button type="button" onClick={() => setCreateOpen(false)} className="grid h-8 w-8 place-items-center rounded-lg text-[#77869A] hover:bg-[#F1F4F8]"><X className="h-4 w-4" /></button>
             </div>
             <form action={createIntermediaryGroup} className="space-y-4 p-5">
+              {createSelectionOwnerId ? Array.from(selectedPartnerIds).map((partnerId) => <input key={partnerId} type="hidden" name="partner_id" value={partnerId} />) : null}
               <Field label="Group name"><input name="group_name" required maxLength={80} placeholder="e.g. Central Fleet Partners" className={inputClass} autoFocus /></Field>
               <Field label="Sales employee">
-                <select name="owner_employee_id" required defaultValue={defaultOwnerEmployeeId} className={inputClass}>
-                  <option value="">Select employee</option>
-                  {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.full_name} · {employee.employee_code}</option>)}
-                </select>
+                {createSelectionOwnerId ? (
+                  <>
+                    <input type="hidden" name="owner_employee_id" value={createSelectionOwnerId} />
+                    <div className="flex h-10 items-center rounded-xl border border-[#D5DFEA] bg-[#F7F9FC] px-3 text-[10px] font-medium text-[#314A66]">
+                      {employeeById.get(createSelectionOwnerId)?.full_name ?? "Selected employee"} · {employeeById.get(createSelectionOwnerId)?.employee_code ?? ""}
+                    </div>
+                  </>
+                ) : (
+                  <select name="owner_employee_id" required defaultValue={defaultOwnerEmployeeId} className={inputClass}>
+                    <option value="">Select employee</option>
+                    {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.full_name} · {employee.employee_code}</option>)}
+                  </select>
+                )}
               </Field>
               <Field label="Description"><textarea name="description" maxLength={500} rows={3} placeholder="Optional internal description" className="w-full resize-none rounded-xl border border-[#D5DFEA] bg-white px-3 py-2.5 text-[10px] text-[#243B55] outline-none focus:border-[#7F92C9] focus:ring-2 focus:ring-[#E8EDFF]" /></Field>
               <div className="flex justify-end gap-2 border-t border-[#EEF2F6] pt-4">
                 <button type="button" onClick={() => setCreateOpen(false)} className="h-9 rounded-lg border border-[#D6DFE9] bg-white px-3.5 text-[9px] font-semibold text-[#53657A] hover:bg-[#F8FAFC]">Cancel</button>
-                <FormSubmitButton label="Create Group" pendingLabel="Creating…" className="inline-flex h-9 items-center justify-center rounded-lg bg-[#315FEA] px-4 text-[9px] font-semibold text-white hover:bg-[#254DD0]" />
+                <FormSubmitButton label={createSelectionOwnerId ? `Create & add ${selectedPartnerIds.size}` : "Create Group"} pendingLabel="Creating…" className="inline-flex h-9 items-center justify-center rounded-lg bg-[#315FEA] px-4 text-[9px] font-semibold text-white hover:bg-[#254DD0]" />
               </div>
             </form>
           </div>
@@ -461,6 +436,9 @@ function EmployeeSection({
   onToggle,
   canManage,
   selectedPartnerIds,
+  activeSelectionCount,
+  onCreateFromSelection,
+  onClearSelection,
   onTogglePartner,
   dragPartnerId,
   onDragStart,
@@ -483,6 +461,9 @@ function EmployeeSection({
   onToggle: () => void;
   canManage: boolean;
   selectedPartnerIds: Set<string>;
+  activeSelectionCount: number;
+  onCreateFromSelection: () => void;
+  onClearSelection: () => void;
   onTogglePartner: (partner: GroupWorkspacePartner) => void;
   dragPartnerId: string | null;
   onDragStart: (partnerId: string) => void;
@@ -525,6 +506,36 @@ function EmployeeSection({
 
       {isOpen ? (
         <div className="bg-white px-3.5 py-3">
+          {canManage && activeSelectionCount > 0 ? (
+            <div className="mb-3 flex flex-col gap-2 rounded-xl border border-[#CCD9F5] bg-[#F5F8FF] px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="grid h-7 min-w-7 place-items-center rounded-lg bg-[#315FEA] px-2 text-[9px] font-bold text-white">{activeSelectionCount}</span>
+                <div>
+                  <p className="text-[9.5px] font-semibold text-[#294766]">Partner {activeSelectionCount === 1 ? "family" : "families"} selected</p>
+                  <p className="mt-0.5 text-[7.5px] text-[#72839A]">Choose an action for {employee.full_name}.</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {groups.length ? (
+                  <form action={assignIntermediaryGroupMembers} className="flex items-center gap-1.5">
+                    {Array.from(selectedPartnerIds).map((partnerId) => <input key={partnerId} type="hidden" name="partner_id" value={partnerId} />)}
+                    <select name="group_id" required defaultValue="" className="h-8 min-w-[170px] rounded-lg border border-[#C9D5E4] bg-white px-2.5 text-[8.5px] text-[#42566E] outline-none">
+                      <option value="">Move to existing Group…</option>
+                      {groups.map((group) => <option key={group.id} value={group.id}>{group.group_name}</option>)}
+                    </select>
+                    <FormSubmitButton label="Move" pendingLabel="Moving…" className="inline-flex h-8 items-center rounded-lg border border-[#C9D5E4] bg-white px-3 text-[8.5px] font-semibold text-[#3156B8] hover:bg-[#F8FAFD]" />
+                  </form>
+                ) : null}
+                <button type="button" onClick={onCreateFromSelection} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#315FEA] px-3 text-[8.5px] font-semibold text-white hover:bg-[#254DD0]">
+                  <Plus className="h-3.5 w-3.5" />
+                  Create Group from selected
+                </button>
+                <button type="button" onClick={onClearSelection} className="grid h-8 w-8 place-items-center rounded-lg border border-[#D2DCE8] bg-white text-[#738298] hover:bg-[#F6F8FB]" title="Clear selection">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          ) : null}
           <div className="space-y-2">
             {showGroups ? visibleGroups.map((group) => {
               const members = memberships
