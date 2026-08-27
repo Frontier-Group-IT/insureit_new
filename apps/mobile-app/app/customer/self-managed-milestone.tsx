@@ -1021,7 +1021,7 @@ const styles = StyleSheet.create({
   deliveryReportUploadText: { color: '#FFFFFF', fontSize: 8.3, fontWeight: '900' },
   deliveryReportRemove: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
   billUploadLabel: { color: palette.navy, fontSize: 11, fontWeight: '800', marginBottom: 5 },
-  billUploadBox: { minHeight: 58, borderRadius: 13, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#7EA8E8', backgroundColor: '#F9FBFF', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  billUploadBox: { minHeight: 58, borderRadius: 13, borderWidth: 1.5, borderStyle: 'solid', borderColor: '#DDE5EF', backgroundColor: '#F9FBFF', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 9 },
   billUploadBoxSaved: { borderStyle: 'solid', borderColor: '#52B57F', backgroundColor: '#EFFAF4' },
   billUploadIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center' },
   billUploadIconSaved: { backgroundColor: '#DDF4E7' },
