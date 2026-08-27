@@ -632,7 +632,6 @@ export default function SelfManagedClaimScreen() {
         <View style={styles.documentReadyHeader}>
           <View style={styles.documentReadyHeaderCopy}>
             <Text style={styles.documentReadyTitle}>Upload claim documents</Text>
-            <Text style={styles.documentReadySubtitle}>Files are saved to this claim and appear in Claim Tracker.</Text>
           </View>
           <View style={styles.documentReadyBadge}><Text style={styles.documentReadyBadgeText}>Optional now</Text></View>
         </View>
@@ -646,7 +645,11 @@ export default function SelfManagedClaimScreen() {
         </View>
         <View style={styles.bulkUploadShell}>
           <Pressable accessibilityRole="button" disabled={uploadingDocuments} onPress={() => void pickBulkDocuments()} style={[styles.bulkUpload, (documents.bulk.length > 0 || savedBulkCount > 0) && styles.bulkUploadSelected]}>
-            <View style={[styles.bulkUploadIcon, savedBulkCount > 0 && styles.bulkUploadIconSelected]}><MaterialCommunityIcons name={savedBulkCount > 0 ? 'check' : 'file-multiple-outline'} size={20} color={savedBulkCount > 0 ? '#18864B' : '#0A43A3'} /></View>
+            <View style={[styles.bulkUploadIcon, savedBulkCount > 0 && styles.bulkUploadIconSelected]}>
+              {savedBulkCount > 0
+                ? <MaterialCommunityIcons name="check" size={20} color="#18864B" />
+                : <Image source={require('../../assets/claims/claim-documents.png')} style={styles.bulkUploadIconArtwork} resizeMode="contain" />}
+            </View>
             <View style={styles.bulkUploadCopy}>
               <Text style={styles.bulkUploadTitle}>Upload multiple documents</Text>
               <Text style={styles.bulkUploadText}>{savedBulkCount > 0 ? `${savedBulkCount} file${savedBulkCount === 1 ? '' : 's'} saved · Tap again to add more` : documents.bulk.length > 0 ? `${documents.bulk.length} file${documents.bulk.length === 1 ? '' : 's'} ready · They will be saved when the claim starts` : 'Select several files now, or tap again later to add more.'}</Text>
@@ -655,7 +658,6 @@ export default function SelfManagedClaimScreen() {
           </Pressable>
           {documents.bulk.length > 0 || savedBulkCount > 0 ? <Pressable accessibilityRole="button" accessibilityLabel="Remove all bulk documents" disabled={uploadingDocuments} onPress={() => requestDelete('bulk', 'uploaded documents')} style={styles.bulkRemoveButton}><MaterialCommunityIcons name="close" size={14} color="#C43232" /></Pressable> : null}
         </View>
-        <Text style={styles.documentUploadNote}>{editing ? 'Selected files upload immediately to Claim Documents.' : 'Before the claim exists, selected files are queued and automatically saved to Claim Documents when you tap Start Claim & Continue.'}</Text>
       </View>
 
       <View style={styles.voicePlaceholder}>
@@ -740,7 +742,7 @@ function DocumentReadyTile({ title, fileName, statusText, source, iconName, icon
   return <Pressable accessibilityRole="button" accessibilityState={{ selected: state !== 'idle' }} onPress={onPress} style={[styles.documentReadyTile, ready && styles.documentReadyTileReady, saved && styles.documentReadyTileSelected]}>
     {saved ? <View style={styles.documentSelectedCheck}><MaterialCommunityIcons name="check" size={15} color="#18864B" /></View> : null}
     {state !== 'idle' ? <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${title}`} onPress={(event) => { event.stopPropagation(); onRemove(); }} style={styles.documentRemoveButton}><MaterialCommunityIcons name="close" size={13} color="#C43232" /></Pressable> : null}
-    <View style={[styles.documentReadyArtworkWrap, iconName ? { backgroundColor: iconBackground ?? '#EEF4FF', borderRadius: 13 } : null]}>
+    <View style={[styles.documentReadyArtworkWrap, iconName && styles.documentReadyIconBadge, iconName ? { backgroundColor: iconBackground ?? '#EEF4FF' } : null]}>
       {source ? <Image source={source} style={styles.documentReadyArtwork} resizeMode="contain" /> : iconName ? <MaterialCommunityIcons name={iconName} size={26} color={iconColor ?? '#0A43A3'} /> : null}
     </View>
     <Text style={styles.documentReadyTileText} numberOfLines={2}>{title}</Text>
@@ -789,7 +791,6 @@ const styles = StyleSheet.create({
   documentReadyHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 10 },
   documentReadyHeaderCopy: { flex: 1, minWidth: 0 },
   documentReadyTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
-  documentReadySubtitle: { color: '#6D7B8F', fontSize: 9.5, lineHeight: 13, fontWeight: '600', marginTop: 2 },
   documentReadyBadge: { borderRadius: 999, backgroundColor: '#EEF5FF', paddingHorizontal: 9, paddingVertical: 5 },
   documentReadyBadgeText: { color: '#0A43A3', fontSize: 8.5, fontWeight: '900' },
   documentReadyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -799,6 +800,7 @@ const styles = StyleSheet.create({
   documentSelectedCheck: { position: 'absolute', top: 5, left: 5, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(46, 173, 99, 0.16)', alignItems: 'center', justifyContent: 'center' },
   documentRemoveButton: { position: 'absolute', top: 5, right: 5, zIndex: 3, width: 23, height: 23, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
   documentReadyArtworkWrap: { width: 45, height: 45, alignItems: 'center', justifyContent: 'center' },
+  documentReadyIconBadge: { borderRadius: 13 },
   documentReadyArtwork: { width: 43, height: 43 },
   documentReadyTileText: { color: palette.navy, fontSize: 8.5, lineHeight: 11, fontWeight: '800', textAlign: 'center', marginTop: 3 },
   documentReadyFileName: { maxWidth: '100%', color: '#56657A', fontSize: 7.3, lineHeight: 10, fontWeight: '700', textAlign: 'center', marginTop: 2 },
@@ -810,11 +812,11 @@ const styles = StyleSheet.create({
   bulkUploadSelected: { borderStyle: 'solid', borderColor: '#52B57F', backgroundColor: '#EFFAF4' },
   bulkUploadIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: '#E8F1FF', alignItems: 'center', justifyContent: 'center' },
   bulkUploadIconSelected: { backgroundColor: 'rgba(46, 173, 99, 0.14)' },
+  bulkUploadIconArtwork: { width: 29, height: 29 },
   bulkUploadCopy: { flex: 1, minWidth: 0 },
   bulkUploadTitle: { color: palette.navy, fontSize: 10.5, fontWeight: '900' },
   bulkUploadText: { color: '#718198', fontSize: 8.5, lineHeight: 12, fontWeight: '600', marginTop: 2 },
   bulkRemoveButton: { position: 'absolute', top: 15, right: 7, zIndex: 3, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
-  documentUploadNote: { color: '#7A8799', fontSize: 8, lineHeight: 11, fontWeight: '600', marginTop: 8 },
   voicePlaceholder: { borderRadius: 18, borderWidth: 1, borderColor: '#CADAF0', backgroundColor: '#F5F9FF', padding: 13, marginBottom: 12 },
   voiceHeadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   voiceIcon: { width: 48, height: 48, borderRadius: 15, backgroundColor: '#E6F0FF', alignItems: 'center', justifyContent: 'center' },
