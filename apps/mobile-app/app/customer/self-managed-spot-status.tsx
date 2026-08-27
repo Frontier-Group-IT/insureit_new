@@ -152,11 +152,11 @@ export default function SelfManagedSpotStatusScreen() {
         vehicleMeta={vehicleMeta}
       />
 
-      <ClaimFormSection title="Spot Survey" subtitle="Survey completion date is mandatory" icon="clipboard-check-outline">
+      <ClaimFormSection title="Spot Survey" icon="clipboard-check-outline">
         <AppDatePicker label="Spot Survey Done Date *" value={surveyDate} onChange={setSurveyDate} maxDate={todayIsoDate()} formatDisplay={formatDisplayDate} />
       </ClaimFormSection>
 
-      <ClaimFormSection title="Surveyor Details" subtitle="Optional details for this claim stage" optional icon="account-tie-outline">
+      <ClaimFormSection title="Surveyor Details" optional icon="account-tie-outline">
         <TextField label="Surveyor Name (Optional)" value={surveyorName} onChangeText={setSurveyorName} />
         <View style={styles.gap} />
         <TextField label="Surveyor Email (Optional)" value={surveyorEmail} onChangeText={setSurveyorEmail} keyboardType="email-address" autoCapitalize="none" />
