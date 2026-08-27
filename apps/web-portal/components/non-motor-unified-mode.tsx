@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, ChevronUp, HandCoins, IndianRupee, MapPin, ShieldCheck } from "lucide-react";
 import { uploadNonMotorPolicyDocument } from "@/app/policies/non-motor-policy-document-actions";
-import { createNonMotorPolicy, type NonMotorCommercialBasis, type NonMotorPolicyPayload } from "@/app/policies/non-motor-policy-actions";
+import { createNonMotorPolicy, updateNonMotorPolicy, type NonMotorCommercialBasis, type NonMotorPolicyPayload } from "@/app/policies/non-motor-policy-actions";
 import { usePolicyCommercialAccess } from "@/components/policy-commercial-access-context";
 import {
   NonMotorDocumentPicker,
@@ -18,7 +18,12 @@ import type { NonMotorCustomerOption } from "@/components/non-motor-policy-form"
 
 export type NonMotorProgress = { filled: number; total: number; complete: boolean; empty: boolean; remaining: number };
 
+export type NonMotorUnifiedInitialValues = Partial<FormState>;
+
 type Props = {
+  mode?: "create" | "edit";
+  policyId?: string;
+  initialValues?: NonMotorUnifiedInitialValues;
   sourceSection: ReactNode;
   source: {
     issuanceDate: string;
@@ -114,10 +119,11 @@ const emptyForm: FormState = {
   proposalNumber: "", previousInsurer: "", previousPolicyNumber: "", previousClaims: "", addOns: "", warranties: "", specialConditions: "", endorsements: "", remarks: "",
 };
 
-export function NonMotorUnifiedMode({ sourceSection, source, insurers, customers, sources, onProgressChange }: Props) {
+export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, sourceSection, source, insurers, customers, sources, onProgressChange }: Props) {
   const router = useRouter();
   const commercialAccess = usePolicyCommercialAccess();
-  const [form, setForm] = useState<FormState>(emptyForm);
+  const isEdit = mode === "edit";
+  const [form, setForm] = useState<FormState>(() => ({ ...emptyForm, ...initialValues, ...(mode === "edit" ? { customerMode: "existing" as const } : {}) }));
   const [documents, setDocuments] = useState<NonMotorStagedDocuments>({});
   const [additionalOpen, setAdditionalOpen] = useState(false);
   const [commercialModal, setCommercialModal] = useState<CommercialModal>(null);
@@ -214,7 +220,9 @@ export function NonMotorUnifiedMode({ sourceSection, source, insurers, customers
     };
 
     startTransition(async () => {
-      const result = await createNonMotorPolicy(payload);
+      const result = isEdit
+        ? (policyId ? await updateNonMotorPolicy(policyId, payload) : { ok:false as const, error:"Policy reference is missing." })
+        : await createNonMotorPolicy(payload);
       if (!result.ok) { setError(result.error); return; }
 
       const selectedDocuments = Object.entries(documents).filter((entry): entry is [keyof NonMotorStagedDocuments, File] => entry[1] instanceof File);
@@ -226,18 +234,20 @@ export function NonMotorUnifiedMode({ sourceSection, source, insurers, customers
         const uploadResult = await uploadNonMotorPolicyDocument(data);
         if (!uploadResult.ok) {
           setSavedPolicyCode(result.policyCode);
-          setError(`${uploadResult.error} Policy ${result.policyCode} has already been saved. Open it from the Policy Register to attach any remaining documents.`);
+          setError(isEdit
+            ? `${uploadResult.error} Policy changes were saved, but this document was not uploaded. Reopen the policy to retry the document upload.`
+            : `${uploadResult.error} Policy ${result.policyCode} has already been saved. Open it from the Policy Register to attach any remaining documents.`);
           router.refresh();
           return;
         }
       }
 
-      router.push(`/policies?success=policy_created&policy=${encodeURIComponent(result.policyCode)}`);
+      router.push(`/policies?success=${isEdit ? "policy_updated" : "policy_created"}&policy=${encodeURIComponent(result.policyCode)}`);
       router.refresh();
     });
   }
 
-  const customerModeControl = <Segmented label="Customer record" value={form.customerMode} options={["existing", "new"]} labels={["Existing", "New"]} onChange={(value) => {
+  const customerModeControl = isEdit ? <div><span className={labelClass}>Customer record</span><div className="flex h-10 items-center rounded-xl border border-[#D8DEE9] bg-[#F8FAFC] px-3 text-[10px] font-semibold text-[#667085]">Existing customer · locked in Policy Edit</div></div> : <Segmented label="Customer record" value={form.customerMode} options={["existing", "new"]} labels={["Existing", "New"]} onChange={(value) => {
     const mode = value as CustomerMode;
     setForm((current) => ({ ...current, customerMode: mode, ...(mode === "new" ? { customerId: "", insuredName: "", contactName: "", phone: "", email: "" } : {}) }));
   }} />;
@@ -257,7 +267,7 @@ export function NonMotorUnifiedMode({ sourceSection, source, insurers, customers
         <Section number="02" title="Customer & policy">
           {form.customerMode === "existing" ? <>
             <div>{customerModeControl}</div>
-            <div className="md:col-span-1 xl:col-span-2"><Select label="Customer / organisation" value={form.customerId} onChange={(e) => changeCustomer(e.target.value)} required><option value="">Select customer</option>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name} · {customer.phone}</option>)}</Select></div>
+            <div className="md:col-span-1 xl:col-span-2"><Select label="Customer / organisation" value={form.customerId} onChange={(e) => changeCustomer(e.target.value)} required disabled={isEdit}><option value="">Select customer</option>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name} · {customer.phone}</option>)}</Select></div>
             <div>{categoryControl}</div>
             {policyRow}
           </> : <>
@@ -319,7 +329,7 @@ export function NonMotorUnifiedMode({ sourceSection, source, insurers, customers
     <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#D9E2F0] bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(15,23,42,.08)] backdrop-blur">
       <div className="mx-auto flex max-w-[1480px] justify-end gap-2">
         <Link href="/policies" className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Cancel</Link>
-        <button type="button" onClick={submit} disabled={isPending} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-60">{isPending ? "Saving policy…" : savedPolicyCode ? "Open Policy Register" : "Book Active Policy"}</button>
+        <button type="button" onClick={submit} disabled={isPending} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-60">{isPending ? "Saving policy…" : savedPolicyCode ? "Open Policy Register" : isEdit ? "Save Policy Changes" : "Book Active Policy"}</button>
       </div>
     </div>
   </>;
