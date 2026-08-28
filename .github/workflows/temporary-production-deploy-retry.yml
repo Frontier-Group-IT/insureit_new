@@ -1,0 +1,29 @@
+name: Temporary production deploy retry
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: insureit-temporary-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Trigger verified Vercel production deploy hook
+        env:
+          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_DEPLOY_HOOK_URL:-}" ]; then
+            echo "::error::VERCEL_DEPLOY_HOOK_URL is not configured."
+            exit 1
+          fi
+          curl --fail-with-body --silent --show-error --request POST "$VERCEL_DEPLOY_HOOK_URL"
+          echo
