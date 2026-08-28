@@ -27,7 +27,7 @@ export default function MoreScreen() {
       </View>
 
       <View style={styles.menu}>
-        <MenuRow icon="refresh-outline" title="Renewals" subtitle="Scoped renewal workspace will be connected next." />
+        <MenuRow icon="refresh-outline" title="Renewals" subtitle="Policies due in the next 30 days and expired policies." onPress={() => router.push("/renewals")} />
         <MenuRow icon="people-outline" title="Customers" subtitle="Customer access will follow commercial relationship scope." />
         <MenuRow icon="notifications-outline" title="Notifications" subtitle="Partner-specific alerts and follow-ups are planned." />
       </View>
@@ -40,8 +40,8 @@ export default function MoreScreen() {
   );
 }
 
-function MenuRow({ icon, title, subtitle }: { icon: 'refresh-outline' | 'people-outline' | 'notifications-outline'; title: string; subtitle: string }) {
-  return (
+function MenuRow({ icon, title, subtitle, onPress }: { icon: 'refresh-outline' | 'people-outline' | 'notifications-outline'; title: string; subtitle: string; onPress?: () => void }) {
+  const content = (
     <View style={styles.row}>
       <View style={styles.rowIcon}><Ionicons name={icon} size={18} color={partnerTheme.colors.brand} /></View>
       <View style={styles.rowBody}>
@@ -51,6 +51,7 @@ function MenuRow({ icon, title, subtitle }: { icon: 'refresh-outline' | 'people-
       <Ionicons name="chevron-forward" size={16} color="#A0A8B6" />
     </View>
   );
+  return onPress ? <Pressable onPress={onPress}>{content}</Pressable> : content;
 }
 
 function initials(value: string) {
