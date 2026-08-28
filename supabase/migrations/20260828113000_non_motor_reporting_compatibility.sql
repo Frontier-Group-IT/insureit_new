@@ -101,11 +101,11 @@ summary as (
   from filtered
 ),
 trend_ranked as (
-  select date_trunc('month',business_date)::date month,count(*)::bigint policy_count,coalesce(sum(gross_premium),0)::numeric gross_premium
+  select date_trunc('month',business_date)::date as trend_month,count(*)::bigint policy_count,coalesce(sum(gross_premium),0)::numeric gross_premium
   from filtered group by 1 order by 1 desc limit 24
 ),
 trend as (
-  select coalesce(jsonb_agg(jsonb_build_object('month',month,'policy_count',policy_count,'gross_premium',gross_premium) order by month),'[]'::jsonb) rows
+  select coalesce(jsonb_agg(jsonb_build_object('month',trend_month,'policy_count',policy_count,'gross_premium',gross_premium) order by trend_month),'[]'::jsonb) rows
   from trend_ranked
 ),
 category_ranked as (
