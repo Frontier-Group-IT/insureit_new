@@ -169,8 +169,8 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
               <input
                 value={query}
                 onChange={(event) => { setQuery(event.target.value); setPage(1); }}
-                placeholder="Search policy, insurer, vehicle, source or customer"
-                aria-label="Search policy, insurer, vehicle, source or customer"
+                placeholder="Search policy, customer, insurer, vehicle, risk or source"
+                aria-label="Search policy, customer, insurer, vehicle, risk or source"
                 className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white pl-10 pr-3 text-[12px] text-[#0F172A] outline-none transition focus:border-[#17365D] focus:ring-2 focus:ring-[#17365D]/10"
               />
             </label>
@@ -189,21 +189,38 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
       </div>
 
       <div className="border-b border-[#E5ECF5] bg-white px-3 py-2 sm:px-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:grid xl:grid-cols-[minmax(140px,0.9fr)_minmax(160px,1fr)_minmax(132px,0.72fr)_minmax(132px,0.72fr)_minmax(330px,auto)] xl:gap-1.5">
-          <div className="[&>label]:block [&>label]:w-full [&_select]:min-w-[180px] [&_select]:w-[180px] xl:[&_select]:min-w-0 xl:[&_select]:w-full">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:grid xl:grid-cols-[minmax(150px,0.86fr)_minmax(150px,0.9fr)_minmax(160px,1fr)_minmax(170px,0.9fr)_minmax(330px,auto)] xl:gap-1.5">
+          <PolicyBusinessFilter
+            business={business}
+            category={category}
+            categories={categories}
+            onBusinessChange={(value) => {
+              setBusiness(value);
+              if (value !== "Non Motor") setCategory("all");
+              if (value === "Non Motor" && view === "claims") setView("all");
+              setPage(1);
+            }}
+            onCategoryChange={(value) => { setCategory(value); setPage(1); }}
+          />
+          <div className="[&>label]:block [&>label]:w-full [&_select]:min-w-[170px] [&_select]:w-full">
             <RegisterSelect value={source} onChange={(value) => { setSource(value); setPage(1); }} label="Lead source">
               <option value="all">All Sources</option>
               {sourceOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </RegisterSelect>
           </div>
-          <div className="[&>label]:block [&>label]:w-full [&_select]:min-w-[200px] [&_select]:w-[200px] xl:[&_select]:min-w-0 xl:[&_select]:w-full">
+          <div className="[&>label]:block [&>label]:w-full [&_select]:min-w-[180px] [&_select]:w-full">
             <RegisterSelect value={insurer} onChange={(value) => { setInsurer(value); setPage(1); }} label="Insurance company">
               <option value="all">All insurers</option>
               {insurers.map((item) => <option key={item} value={item}>{item}</option>)}
             </RegisterSelect>
           </div>
-          <PolicyDateFilter label="From Date" value={fromDate} max={toDate || undefined} onChange={(value) => { setFromDate(value); setPage(1); }} />
-          <PolicyDateFilter label="To Date" value={toDate} min={fromDate || undefined} onChange={(value) => { setToDate(value); setPage(1); }} />
+          <PolicyDateRangeFilter
+            fromDate={fromDate}
+            toDate={toDate}
+            onFromDateChange={(value) => { setFromDate(value); setPage(1); }}
+            onToDateChange={(value) => { setToDate(value); setPage(1); }}
+            onClear={() => { setFromDate(""); setToDate(""); setPage(1); }}
+          />
           <div className="min-w-0 max-w-full xl:min-w-[330px] xl:[&>div]:w-full xl:[&>div]:justify-between xl:[&>div]:gap-0.5 xl:[&_button]:px-2.5 xl:[&_button]:text-[10px]">
             <RegisterViewTabs
               value={view}
@@ -213,7 +230,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
                 { value: "active", label: "Active", count: stats.active },
                 { value: "expiring", label: "Renewal due", count: stats.expiring },
                 { value: "expired", label: "Expired", count: stats.expired },
-                { value: "claims", label: "Claims", count: stats.claims }
+                { value: "claims", label: "Claims", count: business === "Non Motor" ? undefined : stats.claims, disabled: business === "Non Motor", title: business === "Non Motor" ? "Non-Motor claim workflow is not enabled yet." : undefined }
               ]}
             />
           </div>
@@ -229,14 +246,14 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
         <table className="w-full min-w-[1098px] table-fixed text-left text-[11px] text-[#252944]">
           <thead className="sticky top-0 z-10 border-b border-[#E2E8F0] bg-[#F8FAFC] text-[9px] font-bold uppercase tracking-[0.06em] text-[#64748B]">
             <tr>
-              <th className="w-[190px] px-3 py-2">Policy Type</th>
+              <th className="w-[190px] px-3 py-2">Policy / Product</th>
               <th className="w-[188px] px-2.5 py-2">Customer</th>
-              <th className="w-[142px] px-2.5 py-2">Vehicle</th>
+              <th className="w-[142px] px-2.5 py-2">Risk / Asset</th>
               <th className="w-[178px] px-2.5 py-2">Insurer</th>
               <th className="w-[156px] px-2.5 py-2">Validity</th>
               <th className="w-[118px] px-2.5 py-2">Status</th>
-              <th className="w-[108px] px-2.5 py-2 text-right">IDV</th>
-              <th className="w-[108px] px-2.5 py-2 text-right">Premium</th>
+              <th className="w-[108px] px-2.5 py-2 text-right">Insured Value</th>
+              <th className="w-[108px] px-2.5 py-2 text-right">Gross Premium</th>
               <th className="w-[132px] px-2.5 py-2">Source</th>
             </tr>
           </thead>
@@ -245,11 +262,11 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
               <tr key={policy.id} className="h-12 transition hover:bg-[#FAFCFF]">
                 <td className="px-3"><PolicyTypeLink policy={policy} openingDocumentId={openingDocumentId} onOpenDocument={openDocument} /></td>
                 <td className="px-2.5"><p className="truncate font-semibold text-[#334155]">{policy.customers?.contact_name ?? "-"}</p><p className="truncate text-[9px] leading-4 text-[#64748B]">{policy.customers?.company_name ?? "Individual account"}</p></td>
-                <td className="px-2.5 font-mono">{policy.vehicles?.vehicle_no ?? "-"}</td>
+                <td className="px-2.5"><RiskAssetCell policy={policy} /></td>
                 <td className="px-2.5"><span className="block truncate">{policy.insurance_companies?.name ?? "-"}</span></td>
                 <td className="px-2.5"><p className="font-semibold">{formatDate(policy.start_date)} - {formatDate(policy.end_date)}</p><p className="text-[9px] leading-4 text-[#64748B]">{validityHint(policy)}</p></td>
                 <td className="px-2.5"><PolicyStatus policy={policy} /></td>
-                <td className="px-2.5 text-right font-semibold tabular-nums">{formatCurrency(policy.insured_declared_value)}</td>
+                <td className="px-2.5 text-right"><InsuredValueCell policy={policy} /></td>
                 <td className="px-2.5 text-right font-semibold tabular-nums">{formatCurrency(policy.gross_premium)}</td>
                 <td className="px-2.5"><p className="truncate font-semibold capitalize">{policy.source_name ?? policy.intermediary_type?.replaceAll("_", " ") ?? "Direct"}</p><p className="truncate text-[9px] leading-4 text-[#64748B]">{policy.intermediary_code ?? "Sankalp"}</p></td>
               </tr>
