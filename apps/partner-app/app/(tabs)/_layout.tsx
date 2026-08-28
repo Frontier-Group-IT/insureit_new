@@ -38,9 +38,9 @@ export default function PartnerTabsLayout() {
 }
 
 function tabIcon(inactive: IconName, active: IconName) {
-  return ({ color, size, focused }: { color: string; size: number; focused: boolean }) => (
-    <Ionicons name={focused ? active : inactive} color={color} size={size} />
-  );
+  return function PartnerTabIcon({ color, size, focused }: { color: string; size: number; focused: boolean }) {
+    return <Ionicons name={focused ? active : inactive} color={color} size={size} />;
+  };
 }
 
 const styles = StyleSheet.create({
