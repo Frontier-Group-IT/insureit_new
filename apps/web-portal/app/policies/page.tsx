@@ -12,6 +12,7 @@ type PolicyRow = {
   id: string;
   policy_no: string;
   policy_type: string;
+  policy_product: string | null;
   business_line: string | null;
   start_date: string;
   end_date: string;
@@ -24,6 +25,7 @@ type PolicyRow = {
   customers: { company_name: string | null; contact_name: string; created_by: string | null } | null;
   vehicles: { vehicle_no: string } | null;
   insurance_companies: { name: string } | null;
+  non_motor_policy_details: { category: string | null; risk_title: string | null; risk_location: string | null; transit_from: string | null; transit_to: string | null; nature_of_business: string | null; liability_type: string | null; risk_details: Record<string, unknown> | null } | null;
   claims: { count: number }[];
 };
 
@@ -76,7 +78,7 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
 
   if (accessibleCustomerIds !== null && !accessibleCustomerIds.length) return <AppShell title="Policies">{completionBridge}<PolicyWorkspace rows={[]} sourceOptions={sourceOptions} /></AppShell>;
 
-  let query = admin.from("policies").select("id, policy_no, policy_type, business_line, start_date, end_date, insured_declared_value, premium_amount, intermediary_type, intermediary_code, policy_premium_details(gross_premium), policy_documents(id, document_type, file_name, mime_type), customers!inner(company_name, contact_name, created_by), vehicles(vehicle_no), insurance_companies(name), claims(count)").order("created_at", { ascending: false });
+  let query = admin.from("policies").select("id, policy_no, policy_type, policy_product, business_line, start_date, end_date, insured_declared_value, premium_amount, intermediary_type, intermediary_code, policy_premium_details(gross_premium), policy_documents(id, document_type, file_name, mime_type), customers!inner(company_name, contact_name, created_by), vehicles(vehicle_no), insurance_companies(name), non_motor_policy_details(category, risk_title, risk_location, transit_from, transit_to, nature_of_business, liability_type, risk_details), claims(count)").order("created_at", { ascending: false });
   if (accessibleCustomerIds !== null) query = query.in("customer_id", accessibleCustomerIds);
   const { data, error } = await query.returns<PolicyRow[]>();
   const rows = data ?? [];

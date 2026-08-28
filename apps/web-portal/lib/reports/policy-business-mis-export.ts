@@ -149,6 +149,8 @@ export async function loadPolicyBusinessMisExport(profile: ViewerProfile, query:
     if (filters.insurerId) request = request.eq("insurance_company_id", filters.insurerId);
     if (filters.rmEmployeeId) request = request.eq("rm_employee_id", filters.rmEmployeeId);
     if (filters.intermediaryCode) request = request.eq("intermediary_code", filters.intermediaryCode);
+    if (filters.businessLine) request = request.eq("business_line", filters.businessLine);
+    if (filters.category) request = request.eq("policy_type", filters.category);
 
     const { data, error } = await request.returns<PolicyRow[]>();
     if (error) throw new Error(`Detailed policy MIS query failed: ${error.message}`);

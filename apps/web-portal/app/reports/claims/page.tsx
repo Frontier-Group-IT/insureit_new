@@ -18,7 +18,7 @@ export default async function ClaimsReportsPage({searchParams}:Props){
   const pages=Math.max(1,Math.ceil(report.register.total_count/Math.max(report.register.page_size,1)));
   const exportHref=href("/reports/export/claims",filters);
   return <AppShell title="Reports"><ReportPageShell
-    title="Claims portfolio & aging"
+    title="Motor claims portfolio & aging"
     loadError={loadError}
     actions={<ReportExportLink href={exportHref}/>} 
     controls={<>

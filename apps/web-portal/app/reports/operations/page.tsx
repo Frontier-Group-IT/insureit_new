@@ -20,7 +20,7 @@ export default async function OperationsReportsPage({searchParams}:Props){
  const pages=Math.max(1,Math.ceil(report.register.total_count/Math.max(report.register.page_size,1)));
  const exportHref=href("/reports/export/operations",filters);
  return <AppShell title="Reports"><ReportPageShell
-  title="Operations & compliance"
+  title="Motor vehicle operations & compliance"
   loadError={loadError}
   actions={<ReportExportLink href={exportHref}/>} 
   controls={<>

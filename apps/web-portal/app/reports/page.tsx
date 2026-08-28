@@ -10,7 +10,7 @@ import { loadPolicyBusinessReport, reportScopeLabel } from "@/lib/reports/policy
 type Query = Record<string, string | string[] | undefined>;
 type Props = { searchParams: Promise<Query> };
 
-const BUSINESS_QUERY_KEYS = ["period", "from", "to", "insurer", "rm", "intermediary", "page"];
+const BUSINESS_QUERY_KEYS = ["period", "from", "to", "insurer", "rm", "intermediary", "business", "category", "page"];
 
 export default async function ReportsOverviewPage({ searchParams }: Props) {
   const profile = await requireCapability("view_reports");
@@ -76,7 +76,7 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
         ) : (
           <>
             <section className="r2-panel r2-kpis" aria-label="Broker performance summary">
-              <Kpi label="Gross Premium" value={money(pack.business.summary.gross_premium)} note="Month to date" />
+              <Kpi label="Gross Premium" value={money(pack.business.summary.gross_premium)} note={`Motor ${compactMoney(pack.business.summary.motor_gross_premium)} · Non-Motor ${compactMoney(pack.business.summary.non_motor_gross_premium)}`} />
               <Kpi label="Policies" value={number(pack.business.summary.policy_count)} note="Month to date" />
               <Kpi label={commercialAccess ? "Projected PayIn" : "Commercials"} value={commercialAccess ? money(pack.finance.summary.projected_payin) : "Restricted"} note={commercialAccess ? "Expectation only" : "Authorized users only"} />
               <Kpi label="Open Claims" value={number(pack.claims.summary.open_claim_count)} note="Current open book" />
@@ -123,8 +123,8 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
               <article className="r2-panel overflow-hidden">
                 <div className="r2-section-head"><h2>Upcoming Renewals</h2><Link href="/reports/renewals" className="r2-section-link">View portfolio</Link></div>
                 {renewals.length ? (
-                  <div className="r2-table-wrap"><table className="r2-table"><thead><tr><th>Customer</th><th>Vehicle</th><th>Insurer</th><th className="r2-num">Days</th><th className="r2-num">Premium</th></tr></thead><tbody>
-                    {renewals.map((row) => <tr key={row.id}><td><strong>{row.customer_name}</strong></td><td>{row.vehicle_no || "—"}</td><td>{row.insurer_name || "—"}</td><td className="r2-num">{number(row.days_to_expiry)}</td><td className="r2-num">{compactMoney(row.gross_premium)}</td></tr>)}
+                  <div className="r2-table-wrap"><table className="r2-table"><thead><tr><th>Customer</th><th>Risk / Asset</th><th>Insurer</th><th className="r2-num">Days</th><th className="r2-num">Premium</th></tr></thead><tbody>
+                    {renewals.map((row) => <tr key={row.id}><td><strong>{row.customer_name}</strong></td><td>{row.risk_reference || row.vehicle_no || "—"}</td><td>{row.insurer_name || "—"}</td><td className="r2-num">{number(row.days_to_expiry)}</td><td className="r2-num">{compactMoney(row.gross_premium)}</td></tr>)}
                   </tbody></table></div>
                 ) : <div className="r2-empty">No upcoming renewals in the current horizon</div>}
               </article>

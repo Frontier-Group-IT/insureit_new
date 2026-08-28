@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 export type ReportShortcut = { value: string; label: string };
@@ -11,11 +11,15 @@ export function ReportQueryShortcuts({
   param,
   activeValue,
   options,
+  showActiveFilterCount = true,
+  trailing,
 }: {
   label: string;
   param: "period" | "horizon";
   activeValue: string;
   options: readonly ReportShortcut[];
+  showActiveFilterCount?: boolean;
+  trailing?: ReactNode;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -44,11 +48,14 @@ export function ReportQueryShortcuts({
           </Link>
         ))}
       </div>
-      {activeFilterCount > 0 ? (
-        <span className="shrink-0 rounded-full border border-[#dfe5ee] bg-[#f8fafc] px-2.5 py-1 text-[8.5px] font-bold text-[#607087]">
-          {activeFilterCount} active {activeFilterCount === 1 ? "filter" : "filters"}
-        </span>
-      ) : null}
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
+        {showActiveFilterCount && activeFilterCount > 0 ? (
+          <span className="rounded-full border border-[#dfe5ee] bg-[#f8fafc] px-2.5 py-1 text-[8.5px] font-bold text-[#607087]">
+            {activeFilterCount} active {activeFilterCount === 1 ? "filter" : "filters"}
+          </span>
+        ) : null}
+        {trailing}
+      </div>
     </div>
   );
 }
