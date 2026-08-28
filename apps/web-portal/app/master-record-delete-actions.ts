@@ -8,8 +8,8 @@ export type DeletableMasterEntity = "customer" | "customer_onboarding_applicatio
 export type MasterRecordDeleteResult = { ok: true } | { ok: false; error: string };
 
 type Dependency = {
-  table: "vehicles" | "policies" | "claims";
-  column: "customer_id" | "vehicle_id" | "policy_id" | "external_policy_id";
+  table: "vehicles" | "policies" | "claims" | "reconciliation_lines" | "accounts_invoice_lines" | "partner_payables" | "policy_intake_requests";
+  column: "customer_id" | "vehicle_id" | "policy_id" | "external_policy_id" | "final_policy_id";
   label: string;
 };
 
@@ -47,9 +47,13 @@ const entityConfig: Record<DeletableMasterEntity, {
   policy: {
     table: "policies",
     label: "policy",
-    revalidate: ["/policies", "/claims"],
+    revalidate: ["/policies", "/claims", "/accounts"],
     dependencies: [
-      { table: "claims", column: "policy_id", label: "claim" }
+      { table: "claims", column: "policy_id", label: "claim" },
+      { table: "reconciliation_lines", column: "policy_id", label: "reconciliation record" },
+      { table: "accounts_invoice_lines", column: "policy_id", label: "invoice line" },
+      { table: "partner_payables", column: "policy_id", label: "partner payable" },
+      { table: "policy_intake_requests", column: "final_policy_id", label: "policy intake" }
     ]
   },
   external_policy: {
@@ -74,6 +78,12 @@ function isUuid(value: string) {
 
 function pluralize(label: string, count: number) {
   return count === 1 ? label : `${label}s`;
+}
+
+function joinDependencyLabels(labels: string[]) {
+  if (labels.length <= 1) return labels[0] ?? "";
+  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
+  return `${labels.slice(0, -1).join(", ")}, and ${labels.at(-1)}`;
 }
 
 type StorageFile = { storage_bucket: string; storage_path: string };
@@ -128,6 +138,7 @@ export async function deleteMasterRecord(entity: DeletableMasterEntity, id: stri
     if (!existing) return { ok: false, error: `This ${config.label} no longer exists.` };
   }
 
+  const dependencyBlocks: string[] = [];
   for (const dependency of config.dependencies) {
     const { count, error } = await admin
       .from(dependency.table)
@@ -136,11 +147,15 @@ export async function deleteMasterRecord(entity: DeletableMasterEntity, id: stri
 
     if (error) return { ok: false, error: `Unable to check linked ${pluralize(dependency.label, 2)}: ${error.message}` };
     if ((count ?? 0) > 0) {
-      return {
-        ok: false,
-        error: `Cannot delete this ${config.label}. It is linked to ${count} ${pluralize(dependency.label, count ?? 0)}. Remove the linked record(s) first.`
-      };
+      dependencyBlocks.push(`${count} ${pluralize(dependency.label, count ?? 0)}`);
     }
+  }
+
+  if (dependencyBlocks.length > 0) {
+    return {
+      ok: false,
+      error: `Cannot delete this ${config.label}. It is linked to ${joinDependencyLabels(dependencyBlocks)}. Remove the linked record(s) first.`
+    };
   }
 
   const storageFiles: StorageFile[] = [];
