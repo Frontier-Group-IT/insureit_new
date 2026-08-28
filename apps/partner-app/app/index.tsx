@@ -1,33 +1,20 @@
-import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { Redirect } from 'expo-router';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { getCurrentSession, resolvePartnerSession } from '@/lib/partner-session';
+import { partnerTheme } from '@/lib/theme';
+import { usePartnerSession } from '@/providers/partner-session-provider';
 
 export default function IndexScreen() {
-  const router = useRouter();
+  const { status } = usePartnerSession();
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function boot() {
-      try {
-        const session = await getCurrentSession();
-        if (!session?.user) {
-          if (!cancelled) router.replace('/login');
-          return;
-        }
-        await resolvePartnerSession();
-        if (!cancelled) router.replace('/home');
-      } catch {
-        if (!cancelled) router.replace('/access-denied');
-      }
-    }
-
-    void boot();
-    return () => {
-      cancelled = true;
-    };
-  }, [router]);
-
-  return null;
+  if (status === 'loading') {
+    return <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand} /></View>;
+  }
+  if (status === 'ready') return <Redirect href="/(tabs)" />;
+  if (status === 'denied') return <Redirect href="/access-denied" />;
+  return <Redirect href="/login" />;
 }
+
+const styles = StyleSheet.create({
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.canvas },
+});

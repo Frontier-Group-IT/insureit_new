@@ -11,10 +11,12 @@ import {
   View,
 } from 'react-native';
 
-import { resolvePartnerSession, signIn } from '@/lib/partner-session';
+import { signIn } from '@/lib/partner-session';
+import { usePartnerSession } from '@/providers/partner-session-provider';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { refresh } = usePartnerSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -30,8 +32,9 @@ export default function LoginScreen() {
     setMessage('');
     try {
       await signIn(email, password);
-      await resolvePartnerSession();
-      router.replace('/home');
+      const context = await refresh();
+      if (!context) throw new Error('Partner access unavailable.');
+      router.replace('/(tabs)');
     } catch {
       setMessage('We could not open your Partner account. Check your credentials or contact INSUREIT support.');
     } finally {
