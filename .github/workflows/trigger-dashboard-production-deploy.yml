@@ -1,0 +1,25 @@
+name: Trigger production deploy
+
+on:
+  push:
+    branches:
+      - ops/trigger-dashboard-production-deploy
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel production deploy hook
+        env:
+          VERCEL_PRODUCTION_DEPLOY_HOOK: ${{ secrets.VERCEL_PRODUCTION_DEPLOY_HOOK }}
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_PRODUCTION_DEPLOY_HOOK:-}" ]; then
+            echo "VERCEL_PRODUCTION_DEPLOY_HOOK is not configured."
+            exit 1
+          fi
+          response="$(curl --fail-with-body --silent --show-error --request POST "$VERCEL_PRODUCTION_DEPLOY_HOOK")"
+          echo "$response"
