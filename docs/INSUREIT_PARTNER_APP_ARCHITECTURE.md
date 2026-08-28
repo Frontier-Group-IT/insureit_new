@@ -246,7 +246,8 @@ The foundation sequence in Section 12 is now implemented through the repository 
 - Claims: merged with authenticated scoped RPCs;
 - Activity: merged from scoped Policy + Claim data;
 - Profile / registration identity surface: merged;
-- release hardening: EAS profiles and guarded preview build/OTA workflows prepared.
+- release hardening: EAS profiles and guarded preview build/OTA workflows prepared;
+- Partner-originated Policy Intake: live through the existing Operations Policy Intake queue, signed `policy-documents` upload, shared Document AI/OCR service, Operations review, replacement-document response and final Policy Onboarding handoff.
 
 Production intermediary portal accounts intentionally remain at zero until an approved UAT Partner/POSP/MISP identity is selected.
 
@@ -269,3 +270,59 @@ The guarded Partner build/OTA workflows will then become executable.
 - 4 claims whose customers have no commercial intermediary attribution.
 
 These records are not silently reassigned by the Partner app.
+
+
+## 15. Partner Policy Intake implementation — production baseline
+
+Merged PR: **#757 — Complete Partner Policy Intake workflow**.
+
+Production merge commit: `ade210a3c2da111230eacf70acfa9bee8d301dfb`.
+
+Production schema now supports two explicit submitter identities on `policy_intake_requests`:
+
+~~~text
+submitted_by_profile_id
+submitted_by_portal_account_id
+~~~
+
+The database constraint requires **exactly one** to be present. Existing employee/web intakes remain profile submissions; Partner/POSP/MISP submissions use the portal-account identity.
+
+The mobile workflow is:
+
+~~~text
+INSUREIT Partner
+  -> authorized lead source
+  -> customer mobile
+  -> PDF/JPG/PNG/WebP policy copy (max 15 MB)
+  -> signed upload into policy-documents
+  -> existing policy_intake_requests queue
+  -> shared Document AI/OCR parser stack
+  -> Operations review
+  -> needs-attention replacement response when required
+  -> existing Policy Onboarding
+  -> final policy link and intake completion
+~~~
+
+Security rules:
+
+- intermediary users cannot choose another intermediary as the lead source;
+- employee users can choose only an intermediary returned by their existing commercial-scope contract;
+- mobile users can list/respond only to their own submitted intakes;
+- Partner mobile receives no direct policy-booking RPC;
+- no service-role credential is present in the Partner app;
+- Operations review/finalization remains web-portal controlled;
+- no peer Partner/POSP/MISP intake data is exposed.
+
+Production verification after migration:
+
+- 42 existing intakes preserved;
+- 42 employee/profile submissions;
+- 0 portal submissions before UAT;
+- 0 rows violate the exactly-one-submitter invariant;
+- intermediary portal accounts remain 0 until an approved UAT account is intentionally activated.
+
+The web/API deployment for the merge is READY on `portal.insureit.in`.
+
+### Remaining external release prerequisite
+
+The app foundation itself is complete. The only external release prerequisite is linking `apps/partner-app` to a **new, dedicated Expo/EAS project** under the approved Expo account and committing its generated Partner-only `projectId` and `updates.url`. The guarded workflows refuse to build/publish if these values are absent or reuse the Customer app identity.
