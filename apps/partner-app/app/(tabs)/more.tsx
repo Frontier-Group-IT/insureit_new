@@ -28,8 +28,9 @@ export default function MoreScreen() {
 
       <View style={styles.menu}>
         <MenuRow icon="refresh-outline" title="Renewals" subtitle="Policies due in the next 30 days and expired policies." onPress={() => router.push("/renewals")} />
-        <MenuRow icon="people-outline" title="Customers" subtitle="Customer access will follow commercial relationship scope." />
-        <MenuRow icon="notifications-outline" title="Notifications" subtitle="Partner-specific alerts and follow-ups are planned." />
+        <MenuRow icon="people-outline" title="Customers" subtitle="Authorized customer book for your commercial scope." onPress={() => router.push("/customers")} />
+        <MenuRow icon="notifications-outline" title="Activity" subtitle="Recent policy and claim activity in one timeline." onPress={() => router.push("/activity")} />
+        <MenuRow icon="person-outline" title="Profile & registration" subtitle="Your resolved Partner or employee identity and scope." onPress={() => router.push("/profile")} />
       </View>
 
       <Pressable onPress={logout} style={styles.logout}>
@@ -40,7 +41,7 @@ export default function MoreScreen() {
   );
 }
 
-function MenuRow({ icon, title, subtitle, onPress }: { icon: 'refresh-outline' | 'people-outline' | 'notifications-outline'; title: string; subtitle: string; onPress?: () => void }) {
+function MenuRow({ icon, title, subtitle, onPress }: { icon: 'refresh-outline' | 'people-outline' | 'notifications-outline' | 'person-outline'; title: string; subtitle: string; onPress?: () => void }) {
   const content = (
     <View style={styles.row}>
       <View style={styles.rowIcon}><Ionicons name={icon} size={18} color={partnerTheme.colors.brand} /></View>
