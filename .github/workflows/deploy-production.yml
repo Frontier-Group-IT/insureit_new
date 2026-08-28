@@ -56,9 +56,7 @@ jobs:
             VERIFIED_COMMIT="$INPUT_VERIFIED_COMMIT"
             VERIFICATION_RUN_ID="$INPUT_VERIFICATION_RUN_ID"
           else
-            merged_pr_json=$(gh api -H "Accept: application/vnd.github+json" \
-              "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" \
-              --jq '[.[] | select(.base.ref == "main" and .merged_at != null)] | first')
+            merged_pr_json=$(gh api -H "Accept: application/vnd.github+json"               "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls"               --jq '[.[] | select(.base.ref == "main" and .merged_at != null)] | first')
 
             if [[ -z "$merged_pr_json" || "$merged_pr_json" == "null" ]]; then
               echo "::error::Automatic production deployment requires a merged pull request into main. Direct pushes are not deployed automatically."
@@ -71,8 +69,7 @@ jobs:
               exit 1
             fi
 
-            runs_json=$(gh api \
-              "repos/$GITHUB_REPOSITORY/actions/workflows/verify-web-portal.yml/runs?event=pull_request&status=completed&head_sha=$VERIFIED_COMMIT&per_page=20")
+            runs_json=$(gh api               "repos/$GITHUB_REPOSITORY/actions/workflows/verify-web-portal.yml/runs?event=pull_request&status=completed&head_sha=$VERIFIED_COMMIT&per_page=20")
             VERIFICATION_RUN_ID=$(jq -r '.workflow_runs[] | select(.conclusion == "success") | .id' <<<"$runs_json" | head -n 1)
 
             if [[ -z "$VERIFICATION_RUN_ID" || "$VERIFICATION_RUN_ID" == "null" ]]; then
@@ -89,9 +86,17 @@ jobs:
             echo "::error::verification_run_id must be numeric."
             exit 1
           fi
-          if ! git merge-base --is-ancestor "$VERIFIED_COMMIT" "$GITHUB_SHA"; then
-            echo "::error::The verified commit is not contained in the selected main snapshot."
-            exit 1
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            if ! git merge-base --is-ancestor "$VERIFIED_COMMIT" "$GITHUB_SHA"; then
+              echo "::error::The verified commit is not contained in the selected main snapshot."
+              exit 1
+            fi
+          else
+            merge_commit_sha=$(jq -r '.merge_commit_sha' <<<"$merged_pr_json")
+            if [[ "$merge_commit_sha" != "$GITHUB_SHA" ]]; then
+              echo "::error::The selected main snapshot is not the merge result of the verified pull request."
+              exit 1
+            fi
           fi
 
           run_json=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$VERIFICATION_RUN_ID")
@@ -104,9 +109,7 @@ jobs:
             exit 1
           fi
 
-          merged_pr_count=$(gh api -H "Accept: application/vnd.github+json" \
-            "repos/$GITHUB_REPOSITORY/commits/$VERIFIED_COMMIT/pulls" \
-            --jq '[.[] | select(.base.ref == "main" and .merged_at != null)] | length')
+          merged_pr_count=$(gh api -H "Accept: application/vnd.github+json"             "repos/$GITHUB_REPOSITORY/commits/$VERIFIED_COMMIT/pulls"             --jq '[.[] | select(.base.ref == "main" and .merged_at != null)] | length')
           if [[ "$merged_pr_count" -lt 1 ]]; then
             echo "::error::The verified commit is not associated with a merged pull request into main."
             exit 1
@@ -134,13 +137,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          http_status=$(curl \
-            --silent \
-            --show-error \
-            --output vercel-response.json \
-            --write-out "%{http_code}" \
-            --request POST \
-            "$VERCEL_DEPLOY_HOOK_URL")
+          http_status=$(curl             --silent             --show-error             --output vercel-response.json             --write-out "%{http_code}"             --request POST             "$VERCEL_DEPLOY_HOOK_URL")
 
           echo "Vercel response status: $http_status"
           cat vercel-response.json
@@ -157,12 +154,12 @@ jobs:
           {
             echo "## Vercel production deployment requested"
             echo
-            echo "- Branch: \`main\`"
-            echo "- Trigger commit: \`${GITHUB_SHA}\`"
-            echo "- Trigger: \`${GITHUB_EVENT_NAME}\`"
-            echo "- Requested by: \`${GITHUB_ACTOR}\`"
-            echo "- Full verification run reused: \`${VERIFICATION_RUN_ID}\`"
-            echo "- Verified feature commit: \`${VERIFIED_COMMIT}\`"
+            echo "- Branch: `main`"
+            echo "- Trigger commit: `${GITHUB_SHA}`"
+            echo "- Trigger: `${GITHUB_EVENT_NAME}`"
+            echo "- Requested by: `${GITHUB_ACTOR}`"
+            echo "- Full verification run reused: `${VERIFICATION_RUN_ID}`"
+            echo "- Verified feature commit: `${VERIFIED_COMMIT}`"
             echo "- Release provenance: successful PR gate, merged into the exact current main snapshot"
             echo
             echo "Vercel Git auto-deployments are disabled for every branch. This workflow is the only automatic production path and invokes the production deploy hook only after verified merge provenance is established. Check Vercel for the final build and deployment result."
