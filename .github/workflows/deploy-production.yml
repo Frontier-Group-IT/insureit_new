@@ -89,11 +89,6 @@ jobs:
             echo "::error::verification_run_id must be numeric."
             exit 1
           fi
-          if ! git merge-base --is-ancestor "$VERIFIED_COMMIT" "$GITHUB_SHA"; then
-            echo "::error::The verified commit is not contained in the selected main snapshot."
-            exit 1
-          fi
-
           run_json=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$VERIFICATION_RUN_ID")
           run_name=$(jq -r '.name' <<<"$run_json")
           run_event=$(jq -r '.event' <<<"$run_json")
@@ -104,11 +99,21 @@ jobs:
             exit 1
           fi
 
-          merged_pr_count=$(gh api -H "Accept: application/vnd.github+json" \
+          merged_pr_json=$(gh api -H "Accept: application/vnd.github+json" \
             "repos/$GITHUB_REPOSITORY/commits/$VERIFIED_COMMIT/pulls" \
-            --jq '[.[] | select(.base.ref == "main" and .merged_at != null)] | length')
-          if [[ "$merged_pr_count" -lt 1 ]]; then
+            --jq '[.[] | select(.base.ref == "main" and .merged_at != null)] | first')
+          if [[ -z "$merged_pr_json" || "$merged_pr_json" == "null" ]]; then
             echo "::error::The verified commit is not associated with a merged pull request into main."
+            exit 1
+          fi
+
+          merged_main_commit=$(jq -r '.merge_commit_sha' <<<"$merged_pr_json")
+          if [[ -z "$merged_main_commit" || "$merged_main_commit" == "null" ]]; then
+            echo "::error::Could not resolve the merged pull request main commit."
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$merged_main_commit" "$GITHUB_SHA"; then
+            echo "::error::The verified pull request merge is not contained in the selected main snapshot."
             exit 1
           fi
 
