@@ -23,7 +23,7 @@ export default async function BillingPage() {
   return <AppShell title="Brokerage Billing">
     <div className="mx-auto max-w-[1720px] space-y-4 pb-10">
       {profile.role === "it_super_user" ? <ItSuperUserFinancialDeletePanel entity="accounts_invoice" title="Delete Accounts draft invoice" records={deleteOptions} /> : null}
-      <BillingWorkbench initialData={data} embedded />
+      <BillingWorkbench initialData={data} />
     </div>
   </AppShell>;
 }
