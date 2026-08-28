@@ -2,6 +2,9 @@ name: Build Partner preview APK
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'apps/partner-app/.trigger-preview-build'
   push:
     branches:
       - main
