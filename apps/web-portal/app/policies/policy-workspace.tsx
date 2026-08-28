@@ -331,30 +331,31 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
 }
 
 function PolicyMobileCard({ policy }: { policy: PolicyRow & { status: string; daysLeft: number } }) {
+  const isNonMotor = policyBusinessLine(policy) === "Non Motor";
   return (
     <article className="mobile-record-card">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <Link href={`/policies/${policy.id}/edit`} className="block truncate text-[15px] font-extrabold text-[#12203B]">{policy.policy_no}</Link>
-          <p className="mt-0.5 truncate text-[12px] text-[#66748A]">{policy.insurance_companies?.name ?? "Insurer not set"}</p>
+          <p className="mt-0.5 truncate text-[12px] text-[#66748A]">{policyBusinessLine(policy)} · {policyCategory(policy)}</p>
         </div>
         <PolicyStatus policy={policy} />
       </div>
       <div className="mt-3 grid gap-2 text-[12px] text-[#53627A]">
         <span className="rounded-xl bg-[#F7F9FC] px-3 py-2 font-semibold">{policy.customers?.contact_name ?? "Customer not linked"}</span>
         <div className="grid grid-cols-2 gap-2">
-          <span className="rounded-xl bg-[#F7F9FC] px-3 py-2 font-semibold">{policy.vehicles?.vehicle_no ?? "Vehicle not linked"}</span>
+          <span className="min-w-0 rounded-xl bg-[#F7F9FC] px-3 py-2 font-semibold"><span className="block truncate">{riskAssetPrimary(policy)}</span>{riskAssetSecondary(policy) ? <span className="mt-0.5 block truncate text-[9px] font-medium text-[#8490A1]">{riskAssetSecondary(policy)}</span> : null}</span>
           <span className="rounded-xl bg-[#F7F9FC] px-3 py-2 font-semibold">{validityHint(policy)}</span>
         </div>
-        <div className="grid grid-cols-3 gap-2">
-          <span className="rounded-xl bg-[#F7F9FC] px-3 py-2 text-center font-semibold">{formatCurrency(policy.insured_declared_value)}</span>
+        <div className={`grid gap-2 ${isNonMotor ? "grid-cols-2" : "grid-cols-3"}`}>
+          <span className="rounded-xl bg-[#F7F9FC] px-3 py-2 text-center font-semibold">{insuredValuePrefix(policy)} {formatCurrency(policy.insured_declared_value)}</span>
           <span className="rounded-xl bg-[#F7F9FC] px-3 py-2 text-center font-semibold">{formatCurrency(policy.gross_premium)}</span>
-          <span className="rounded-xl bg-[#F7F9FC] px-3 py-2 text-center font-semibold">{claimCount(policy)} claims</span>
+          {!isNonMotor ? <span className="rounded-xl bg-[#F7F9FC] px-3 py-2 text-center font-semibold">{claimCount(policy)} claims</span> : null}
         </div>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className={`mt-3 grid gap-2 ${isNonMotor ? "grid-cols-1" : "grid-cols-2"}`}>
         <Link href={`/policies/${policy.id}/edit`} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#111A35] px-3 text-[12px] font-bold text-white">Open policy</Link>
-        <Link href="/claims/new" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#BFD3F7] bg-[#F0F6FF] px-3 text-[12px] font-bold text-[#174EA6]">Report claim</Link>
+        {!isNonMotor ? <Link href="/claims/new" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#BFD3F7] bg-[#F0F6FF] px-3 text-[12px] font-bold text-[#174EA6]">Report claim</Link> : null}
       </div>
     </article>
   );
@@ -368,16 +369,15 @@ function PolicyStatus({ policy }: { policy: PolicyRow & { status?: string; daysL
 }
 
 function PolicyTypeLink({ policy, openingDocumentId, onOpenDocument }: { policy: PolicyRow; openingDocumentId: string | null; onOpenDocument: (document: PolicyDocument) => void; }) {
-  const businessLine = policy.business_line?.trim();
-  const product = policy.policy_type?.trim();
+  const businessLine = policyBusinessLine(policy);
+  const category = policyCategory(policy);
+  const product = policy.policy_product?.trim();
   const policyCopy = policy.policy_documents?.find((document) => document.document_type === "policy_copy") ?? null;
   return (
     <div className="flex min-w-0 items-center gap-1.5">
-      <Link href={`/policies/${policy.id}/edit`} title={policy.policy_no} className="min-w-0 truncate text-[12px] text-[#0F172A] hover:text-[#17365D] hover:underline">
-        {businessLine ? <span className="font-bold">{businessLine}</span> : null}
-        {businessLine && product ? <span aria-hidden="true" className="mx-1 inline-block text-[11px] font-normal leading-none">•</span> : null}
-        {product ? <span className="font-normal">{product}</span> : null}
-        {!businessLine && !product ? <span className="font-normal">-</span> : null}
+      <Link href={`/policies/${policy.id}/edit`} title={policy.policy_no} className="min-w-0 text-[12px] text-[#0F172A] hover:text-[#17365D] hover:underline">
+        <span className="block truncate"><span className="font-bold">{businessLine}</span><span aria-hidden="true" className="mx-1 text-[11px] font-normal">•</span><span className="font-normal">{category || "-"}</span></span>
+        {product && product.toLowerCase() !== category.toLowerCase() ? <span className="block truncate text-[8.5px] leading-3.5 text-[#7C899B]">{product}</span> : null}
       </Link>
       {policyCopy ? (
         <button type="button" onClick={() => onOpenDocument(policyCopy)} disabled={openingDocumentId === policyCopy.id} aria-label={`Open policy copy for ${policy.policy_no}`} title={policyCopy.file_name ? `Open policy copy: ${policyCopy.file_name}` : "Open policy copy"} className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#F3E8FF] text-[#7c3aed] transition hover:bg-[#E9D5FF] hover:text-[#6D28D9] disabled:cursor-wait disabled:opacity-50">
@@ -386,6 +386,66 @@ function PolicyTypeLink({ policy, openingDocumentId, onOpenDocument }: { policy:
       ) : null}
     </div>
   );
+}
+
+function RiskAssetCell({ policy }: { policy: PolicyRow }) {
+  return <div className="min-w-0"><p className={`truncate font-semibold text-[#334155] ${policyBusinessLine(policy) === "Motor" ? "font-mono" : ""}`}>{riskAssetPrimary(policy)}</p>{riskAssetSecondary(policy) ? <p className="truncate text-[8.5px] leading-3.5 text-[#7C899B]">{riskAssetSecondary(policy)}</p> : null}</div>;
+}
+
+function InsuredValueCell({ policy }: { policy: PolicyRow }) {
+  return <div className="text-right tabular-nums"><p className="font-semibold text-[#334155]">{formatCurrency(policy.insured_declared_value)}</p><p className="text-[8px] font-bold uppercase tracking-[.06em] text-[#8A96A7]">{insuredValuePrefix(policy)}</p></div>;
+}
+
+function policyBusinessLine(policy: PolicyRow) {
+  return policy.business_line?.trim() || "Motor";
+}
+
+function policyCategory(policy: PolicyRow) {
+  if (policyBusinessLine(policy) === "Non Motor") return policy.non_motor_policy_details?.category?.trim() || policy.policy_type?.trim() || "Other";
+  return policy.policy_type?.trim() || "Other";
+}
+
+function riskAssetPrimary(policy: PolicyRow) {
+  if (policyBusinessLine(policy) !== "Non Motor") return policy.vehicles?.vehicle_no?.trim() || "Vehicle not linked";
+  const detail = policy.non_motor_policy_details;
+  const risk = detail?.risk_details ?? {};
+  return firstText(
+    detail?.risk_title,
+    risk.cargoDescription,
+    risk.projectName,
+    risk.businessName,
+    detail?.transit_from && detail?.transit_to ? `${detail.transit_from} → ${detail.transit_to}` : null,
+    detail?.nature_of_business,
+    detail?.liability_type,
+    detail?.risk_location,
+    "Non-Motor risk"
+  );
+}
+
+function riskAssetSecondary(policy: PolicyRow) {
+  if (policyBusinessLine(policy) !== "Non Motor") return "";
+  const detail = policy.non_motor_policy_details;
+  const primary = riskAssetPrimary(policy);
+  const location = detail?.risk_location?.trim();
+  if (location && location !== primary) return location;
+  if (detail?.transit_from && detail?.transit_to) {
+    const route = `${detail.transit_from} → ${detail.transit_to}`;
+    if (route !== primary) return route;
+  }
+  return "";
+}
+
+function insuredValuePrefix(policy: PolicyRow) {
+  if (policyBusinessLine(policy) !== "Non Motor") return "IDV";
+  return /liability/i.test(policyCategory(policy)) ? "Limit" : "SI";
+}
+
+function firstText(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  }
+  return "—";
 }
 
 function validityHint(policy: PolicyRow & { daysLeft?: number }) {
@@ -404,9 +464,9 @@ function daysUntil(endDate: string) {
   if (Number.isNaN(end.getTime())) return 0;
   return Math.ceil((end.getTime() - now.getTime()) / 86400000);
 }
-function formatDateFilterValue(value: string) {
-  const [year, month, day] = value.split("-");
-  return year && month && day ? `${day}-${month}-${year}` : value;
+function shortFilterDate(value: string) {
+  const [, month, day] = value.split("-");
+  return month && day ? `${day}/${month}` : value;
 }
 function formatDate(value: string) {
   const date = new Date(`${value}T00:00:00`);
