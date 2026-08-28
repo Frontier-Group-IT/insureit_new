@@ -11,11 +11,13 @@ export function ReportQueryShortcuts({
   param,
   activeValue,
   options,
+  showActiveFilterCount = true,
 }: {
   label: string;
   param: "period" | "horizon";
   activeValue: string;
   options: readonly ReportShortcut[];
+  showActiveFilterCount?: boolean;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -44,7 +46,7 @@ export function ReportQueryShortcuts({
           </Link>
         ))}
       </div>
-      {activeFilterCount > 0 ? (
+      {showActiveFilterCount && activeFilterCount > 0 ? (
         <span className="shrink-0 rounded-full border border-[#dfe5ee] bg-[#f8fafc] px-2.5 py-1 text-[8.5px] font-bold text-[#607087]">
           {activeFilterCount} active {activeFilterCount === 1 ? "filter" : "filters"}
         </span>
