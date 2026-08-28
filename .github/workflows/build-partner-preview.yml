@@ -1,0 +1,105 @@
+name: Build Partner preview APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Require exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || {
+            echo "Refusing Partner preview build: checkout is not current origin/main." >&2
+            exit 1
+          }
+
+      - name: Validate Partner EAS linkage and native identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const app = require('./apps/partner-app/app.json');
+          const customer = require('./apps/mobile-app/app.json');
+          const expo = app.expo || {};
+          const projectId = expo?.extra?.eas?.projectId;
+          if (!projectId) {
+            console.error('Refusing Partner preview build: apps/partner-app is not linked to a dedicated EAS project yet.');
+            process.exit(1);
+          }
+          if (projectId === customer?.expo?.extra?.eas?.projectId) {
+            console.error('Refusing Partner preview build: Partner app cannot share the Customer EAS project ID.');
+            process.exit(1);
+          }
+          if (expo.android?.package !== 'com.insureit.partner' || expo.ios?.bundleIdentifier !== 'com.insureit.partner') {
+            console.error('Refusing Partner preview build: unexpected native package identity.');
+            process.exit(1);
+          }
+          if (expo.android?.package === customer?.expo?.android?.package || expo.ios?.bundleIdentifier === customer?.expo?.ios?.bundleIdentifier) {
+            console.error('Refusing Partner preview build: native identity overlaps Customer app.');
+            process.exit(1);
+          }
+          console.log(`Partner EAS project: ${projectId}`);
+          NODE
+
+      - name: Require Expo and Supabase secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "${EXPO_TOKEN:-}" ] || { echo "EXPO_TOKEN is missing." >&2; exit 1; }
+          [ -n "${EXPO_PUBLIC_SUPABASE_URL:-}" ] || { echo "EXPO_PUBLIC_SUPABASE_URL is missing." >&2; exit 1; }
+          [ -n "${EXPO_PUBLIC_SUPABASE_ANON_KEY:-}" ] || { echo "EXPO_PUBLIC_SUPABASE_ANON_KEY is missing." >&2; exit 1; }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify Partner app
+        run: |
+          npm run typecheck:partner
+          npm run lint:partner
+
+      - name: Build internal Android APK
+        working-directory: apps/partner-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx eas-cli build --platform android --profile preview --non-interactive --json > partner-preview-build.json
+          cat partner-preview-build.json
+
+      - name: Build summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## INSUREIT Partner preview build"
+            echo
+            echo "- Source: current \`main\` only"
+            echo "- Android package: \`com.insureit.partner\`"
+            echo "- EAS profile: \`preview\`"
+            echo "- Distribution: internal APK"
+            echo "- Customer app identity reuse: blocked"
+          } >> "$GITHUB_STEP_SUMMARY"
