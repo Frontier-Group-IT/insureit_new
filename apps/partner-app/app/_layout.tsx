@@ -16,6 +16,9 @@ export default function RootLayout() {
         <Stack.Screen name="customers" />
         <Stack.Screen name="activity" />
         <Stack.Screen name="profile" />
+        <Stack.Screen name="policy-intakes" />
+        <Stack.Screen name="policy-intake-new" />
+        <Stack.Screen name="policy-intakes/[id]" />
         <Stack.Screen name="access-denied" />
       </Stack>
     </PartnerSessionProvider>
