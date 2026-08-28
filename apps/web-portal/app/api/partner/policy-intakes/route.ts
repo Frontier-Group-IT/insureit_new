@@ -52,7 +52,19 @@ export async function GET(request: Request) {
     return json({ ok: false, error: "Policy intakes could not be loaded." }, 500);
   }
 
-  return json({ ok: true, intakes: data ?? [] });
+  const sourceIds = auth.identity.actor_kind === "intermediary"
+    ? [auth.identity.intermediary_id]
+    : (auth.scope.intermediary_ids ?? []);
+  const { data: sources } = sourceIds.length
+    ? await admin
+        .from("intermediaries")
+        .select("id,intermediary_type,display_name,intermediary_code,account_status")
+        .in("id", sourceIds)
+        .eq("account_status", "active")
+        .order("display_name")
+    : { data: [] };
+
+  return json({ ok: true, intakes: data ?? [], sources: sources ?? [] });
 }
 
 export async function POST(request: Request) {
