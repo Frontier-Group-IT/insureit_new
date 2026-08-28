@@ -7,6 +7,8 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/verify-partner-app.yml'
+      - '.github/workflows/build-partner-preview.yml'
+      - '.github/workflows/publish-partner-preview-ota.yml'
   workflow_dispatch:
 
 permissions:
@@ -48,6 +50,37 @@ jobs:
             git diff -- package-lock.json
             exit 1
           fi
+
+      - name: Verify Partner release identity
+        shell: bash
+        run: |
+          node <<'NODE'
+          const app = require('./apps/partner-app/app.json');
+          const customer = require('./apps/mobile-app/app.json');
+          const eas = require('./apps/partner-app/eas.json');
+          const expo = app.expo || {};
+          if (expo.name !== 'INSUREIT Partner' || expo.slug !== 'insureit-partner') {
+            throw new Error('Unexpected Partner Expo name/slug.');
+          }
+          if (expo.android?.package !== 'com.insureit.partner' || expo.ios?.bundleIdentifier !== 'com.insureit.partner') {
+            throw new Error('Unexpected Partner native package identity.');
+          }
+          if (expo.android?.package === customer?.expo?.android?.package || expo.ios?.bundleIdentifier === customer?.expo?.ios?.bundleIdentifier) {
+            throw new Error('Partner native identity overlaps the Customer app.');
+          }
+          if (expo.scheme === customer?.expo?.scheme) throw new Error('Partner URL scheme overlaps Customer app.');
+          if (expo.runtimeVersion?.policy !== 'appVersion') throw new Error('Partner runtimeVersion must use appVersion policy.');
+          if (eas?.build?.preview?.distribution !== 'internal' || eas?.build?.preview?.android?.buildType !== 'apk') {
+            throw new Error('Partner preview profile must produce an internal APK.');
+          }
+          if (eas?.build?.preview?.channel !== 'preview' || eas?.build?.production?.channel !== 'production') {
+            throw new Error('Partner EAS channels are misconfigured.');
+          }
+          const projectId = expo?.extra?.eas?.projectId;
+          if (projectId && projectId === customer?.expo?.extra?.eas?.projectId) {
+            throw new Error('Partner EAS project ID must never equal the Customer project ID.');
+          }
+          NODE
 
       - name: Partner app typecheck
         run: npm run typecheck:partner

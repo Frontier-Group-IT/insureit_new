@@ -227,3 +227,45 @@ Customer app emphasis: policyholder, fleet, protection, claims.
 Partner app emphasis: business production, portfolio, hierarchy, renewals, pipeline and action.
 
 Do not directly copy the customer dashboard, customer bottom navigation, customer onboarding flow or customer role-routing implementation.
+
+
+## 14. Implementation status — 2026-08-28
+
+The foundation sequence in Section 12 is now implemented through the repository and production backend:
+
+- identity resolver: live;
+- commercial scope resolver: live;
+- portal-account invite / activation / disable lifecycle: live;
+- separate `apps/partner-app`: merged;
+- Partner-specific auth/session layer: merged;
+- role-aware navigation shell: merged;
+- Home and My Business: merged;
+- Customers: merged with authenticated scoped RPCs;
+- Policies: merged with authenticated scoped RPCs;
+- Renewals: derived from the scoped policy contract;
+- Claims: merged with authenticated scoped RPCs;
+- Activity: merged from scoped Policy + Claim data;
+- Profile / registration identity surface: merged;
+- release hardening: EAS profiles and guarded preview build/OTA workflows prepared.
+
+Production intermediary portal accounts intentionally remain at zero until an approved UAT Partner/POSP/MISP identity is selected.
+
+### Outstanding external setup
+
+The repository cannot create the Expo/EAS project without Expo account authorization. The Partner app must be linked to a **new** EAS project under the approved Expo owner. It must never reuse the Customer app project ID or update URL.
+
+After linking, commit the generated Partner-only:
+
+- `expo.extra.eas.projectId`;
+- `expo.updates.url`.
+
+The guarded Partner build/OTA workflows will then become executable.
+
+### Known data gaps kept fail-closed
+
+- the known legacy intermediary row that does not resolve to one active permanent Partner family;
+- 21 customers attributed to that unresolved legacy Partner representation;
+- 7 customers with no lead-source intermediary;
+- 4 claims whose customers have no commercial intermediary attribution.
+
+These records are not silently reassigned by the Partner app.
