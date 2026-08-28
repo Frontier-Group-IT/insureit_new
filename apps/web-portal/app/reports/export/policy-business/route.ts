@@ -189,6 +189,8 @@ function toQuery(search: URLSearchParams): PolicyBusinessQuery {
     insurer: search.get("insurer") ?? undefined,
     rm: search.get("rm") ?? undefined,
     intermediary: search.get("intermediary") ?? undefined,
+    business: search.get("business") ?? undefined,
+    category: search.get("category") ?? undefined,
   };
 }
 
