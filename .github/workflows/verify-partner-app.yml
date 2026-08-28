@@ -1,0 +1,81 @@
+name: Verify Partner app
+
+on:
+  pull_request:
+    paths:
+      - 'apps/partner-app/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/verify-partner-app.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-partner-app-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ci-placeholder.supabase.co' }}
+  EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'ci-placeholder-public-anon-key' }}
+
+jobs:
+  verify:
+    name: typecheck, lint and Expo web review build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Require synchronized dependency lockfile
+        shell: bash
+        run: |
+          if ! git diff --quiet -- package-lock.json; then
+            echo "::error::package-lock.json is out of sync with package.json."
+            git diff -- package-lock.json
+            exit 1
+          fi
+
+      - name: Partner app typecheck
+        run: npm run typecheck:partner
+
+      - name: Partner app lint
+        run: npm run lint:partner
+
+      - name: Build Expo web review export
+        run: npm run build:partner:web
+
+      - name: Upload browser review build
+        uses: actions/upload-artifact@v4
+        with:
+          name: partner-app-web-review-${{ github.sha }}
+          path: apps/partner-app/dist-web
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Verification summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## INSUREIT Partner app review gate"
+            echo
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Dependency lockfile: synchronized"
+            echo "- Static checks: TypeScript typecheck and Expo lint"
+            echo "- Review build: Expo web export"
+            echo "- Production deployment: not triggered by this workflow"
+          } >> "$GITHUB_STEP_SUMMARY"

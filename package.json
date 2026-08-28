@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "workspaces": [
     "apps/web-portal",
-    "apps/mobile-app"
+    "apps/mobile-app",
+    "apps/partner-app"
   ],
   "overrides": {
     "expo-constants": "18.0.13",
@@ -28,7 +29,12 @@
     "dev:mobile:web": "npm --workspace apps/mobile-app run web",
     "build:mobile:web": "npm --workspace apps/mobile-app run build:web",
     "lint:mobile": "npm --workspace apps/mobile-app run lint",
-    "typecheck:mobile": "npm --workspace apps/mobile-app run typecheck"
+    "typecheck:mobile": "npm --workspace apps/mobile-app run typecheck",
+    "dev:partner": "npm --workspace apps/partner-app run start",
+    "dev:partner:web": "npm --workspace apps/partner-app run web",
+    "lint:partner": "npm --workspace apps/partner-app run lint",
+    "typecheck:partner": "npm --workspace apps/partner-app run typecheck",
+    "build:partner:web": "npm --workspace apps/partner-app run build:web"
   },
   "dependencies": {
     "expo-font": "14.0.12"
