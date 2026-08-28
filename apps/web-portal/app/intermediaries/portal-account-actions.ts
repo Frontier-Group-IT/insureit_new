@@ -24,6 +24,8 @@ export async function createIntermediaryPortalLogin(formData: FormData) {
     .maybeSingle<{ id:string; application_id:string|null; intermediary_type:"posp"|"misp"|"partner"; display_name:string; email:string|null; account_status:string; portal_access_status:string }>();
 
   if (!intermediary) redirect(`${returnPath}?error=portal_login_not_available`);
+  const { data: partnerFamilyId, error: familyError } = await admin.rpc("partner_app_resolve_partner_family", { p_intermediary_id: intermediary.id });
+  if (familyError || !partnerFamilyId) redirect(`${returnPath}?error=portal_login_partner_family_unresolved`);
   if (!intermediary.email) redirect(`${returnPath}?error=portal_login_email_required`);
   if (intermediary.portal_access_status !== "not_created") redirect(`${returnPath}?error=portal_login_exists`);
 
@@ -45,6 +47,13 @@ export async function createIntermediaryPortalLogin(formData: FormData) {
   const { error: accountError } = await admin.from("intermediary_portal_accounts").insert({ intermediary_id: intermediary.id, application_id: intermediary.application_id, auth_user_id: invite.user.id, email: intermediary.email, status: "invited", invited_at: now, invited_by: reviewer.id, updated_by: reviewer.id, updated_at: now });
   if (accountError) { await admin.from("profiles").delete().eq("id", invite.user.id); await admin.auth.admin.deleteUser(invite.user.id); redirect(`${returnPath}?error=${encodeURIComponent(accountError.message)}`); }
   await admin.from("intermediaries").update({ portal_access_status: "invited", updated_at: now }).eq("id", intermediary.id);
+  await admin.from("intermediary_portal_account_audit").insert({
+    intermediary_id: intermediary.id,
+    auth_user_id: invite.user.id,
+    event_type: "invited",
+    actor_profile_id: reviewer.id,
+    details: { partner_family_id: partnerFamilyId, email: intermediary.email },
+  });
   revalidatePath(returnPath);redirect(`${returnPath}?success=portal_login_invited`);
 }
 function text(formData: FormData, key: string) { const value = formData.get(key); return typeof value === "string" && value.trim() ? value.trim() : null; }
