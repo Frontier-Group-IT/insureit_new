@@ -3,13 +3,13 @@ import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessTok
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { getOperationsDashboardData } from "@/lib/operations-dashboard";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
-import { getDashboardCurrentData, type DashboardAccess } from "../dashboard-v2/dashboard-data";
-import { DashboardFullyLoaded } from "../dashboard-v2/dashboard-view";
+import { getDashboardCurrentData, type DashboardAccess } from "./dashboard-data";
+import { DashboardFullyLoaded } from "./dashboard-view";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function DashboardPage() {
+export default async function DashboardV2Page() {
   const supabase = await createServerSupabaseClient();
   const accessToken = await getServerAccessToken();
   const [{ profile }, base] = await Promise.all([
