@@ -61,27 +61,76 @@ function policySourceKey(row: Pick<PolicyRow, "intermediary_type" | "intermediar
   return type && code ? `${type}:${code}` : "";
 }
 
-function PolicyDateFilter({ label, value, min, max, onChange }: { label: string; value: string; min?: string; max?: string; onChange: (value: string) => void }) {
+function PolicyBusinessFilter({
+  business,
+  category,
+  categories,
+  onBusinessChange,
+  onCategoryChange,
+}: {
+  business: BusinessFilter;
+  category: string;
+  categories: string[];
+  onBusinessChange: (value: BusinessFilter) => void;
+  onCategoryChange: (value: string) => void;
+}) {
+  const label = business === "all" ? "All Policies" : business === "Motor" ? "Motor" : category === "all" ? "Non Motor" : `Non Motor · ${category}`;
   return (
-    <label className="relative block h-10 w-[148px] shrink-0 xl:w-full xl:min-w-0">
-      <span className={`pointer-events-none absolute inset-y-0 left-3 right-9 z-10 flex items-center text-[10.5px] font-semibold ${value ? "text-[#334155]" : "text-[#64748B]"}`}>
-        {value ? formatDateFilterValue(value) : label}
-      </span>
-      <CalendarDays className="pointer-events-none absolute right-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-[#334155]" />
-      <input
-        type="date"
-        value={value}
-        min={min}
-        max={max}
-        onChange={(event) => onChange(event.target.value)}
-        onClick={(event) => {
-          const input = event.currentTarget as HTMLInputElement & { showPicker?: () => void };
-          input.showPicker?.();
-        }}
-        aria-label={label}
-        className="absolute inset-0 h-10 w-full cursor-pointer rounded-xl border border-[#CBD5E1] bg-white px-3 text-transparent caret-transparent outline-none transition focus:border-[#17365D] focus:ring-2 focus:ring-[#17365D]/10 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-datetime-edit]:opacity-0"
-      />
-    </label>
+    <details className="group relative">
+      <summary className="flex h-10 min-w-[150px] cursor-pointer list-none items-center justify-between gap-2 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[11px] font-semibold text-[#334155] outline-none transition hover:border-[#9FB2C8] focus-visible:ring-2 focus-visible:ring-[#17365D]/10 [&::-webkit-details-marker]:hidden">
+        <span className="truncate">{label}</span><ChevronDown className="h-3.5 w-3.5 shrink-0 text-[#64748B] transition group-open:rotate-180" />
+      </summary>
+      <div className="absolute left-0 top-11 z-30 w-[250px] rounded-xl border border-[#D7E0EA] bg-white p-2 shadow-[0_18px_45px_rgba(15,23,42,.16)]">
+        <p className="px-2 pb-1.5 pt-1 text-[8px] font-black uppercase tracking-[.1em] text-[#8A96A7]">Business line</p>
+        {([["all","All Policies"],["Motor","Motor"],["Non Motor","Non Motor"]] as const).map(([value, text]) => (
+          <button key={value} type="button" onClick={() => onBusinessChange(value)} className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[10.5px] font-semibold transition ${business === value ? "bg-[#EEF4FB] text-[#17365D]" : "text-[#475569] hover:bg-[#F8FAFC]"}`}>
+            {text}<span className={`h-2 w-2 rounded-full border ${business === value ? "border-[#17365D] bg-[#17365D]" : "border-[#CBD5E1]"}`} />
+          </button>
+        ))}
+        {business === "Non Motor" ? (
+          <div className="mt-2 border-t border-[#EEF2F6] px-2 pt-2">
+            <label className="block text-[8px] font-black uppercase tracking-[.08em] text-[#8A96A7]">Category</label>
+            <select value={category} onChange={(event) => onCategoryChange(event.target.value)} className="mt-1.5 h-9 w-full rounded-lg border border-[#D7E0EA] bg-white px-2.5 text-[10px] font-semibold text-[#334155] outline-none focus:border-[#17365D]">
+              <option value="all">All categories</option>
+              {categories.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+          </div>
+        ) : null}
+      </div>
+    </details>
+  );
+}
+
+function PolicyDateRangeFilter({
+  fromDate,
+  toDate,
+  onFromDateChange,
+  onToDateChange,
+  onClear,
+}: {
+  fromDate: string;
+  toDate: string;
+  onFromDateChange: (value: string) => void;
+  onToDateChange: (value: string) => void;
+  onClear: () => void;
+}) {
+  const label = fromDate || toDate
+    ? `${fromDate ? shortFilterDate(fromDate) : "Any"} – ${toDate ? shortFilterDate(toDate) : "Any"}`
+    : "Date Range";
+  return (
+    <details className="group relative">
+      <summary className="flex h-10 min-w-[170px] cursor-pointer list-none items-center justify-between gap-2 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10.5px] font-semibold text-[#334155] outline-none transition hover:border-[#9FB2C8] focus-visible:ring-2 focus-visible:ring-[#17365D]/10 [&::-webkit-details-marker]:hidden">
+        <span className="flex min-w-0 items-center gap-2"><CalendarDays className="h-3.5 w-3.5 shrink-0 text-[#64748B]" /><span className="truncate">{label}</span></span>
+        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[#64748B] transition group-open:rotate-180" />
+      </summary>
+      <div className="absolute right-0 top-11 z-30 w-[292px] rounded-xl border border-[#D7E0EA] bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,.16)]">
+        <div className="grid grid-cols-2 gap-2">
+          <label><span className="mb-1 block text-[8px] font-bold text-[#7C899B]">From</span><input type="date" value={fromDate} max={toDate || undefined} onChange={(event) => onFromDateChange(event.target.value)} className="h-9 w-full rounded-lg border border-[#D7E0EA] px-2 text-[9.5px] font-semibold text-[#334155] outline-none focus:border-[#17365D]" /></label>
+          <label><span className="mb-1 block text-[8px] font-bold text-[#7C899B]">To</span><input type="date" value={toDate} min={fromDate || undefined} onChange={(event) => onToDateChange(event.target.value)} className="h-9 w-full rounded-lg border border-[#D7E0EA] px-2 text-[9.5px] font-semibold text-[#334155] outline-none focus:border-[#17365D]" /></label>
+        </div>
+        <div className="mt-2 flex justify-end"><button type="button" onClick={onClear} className="rounded-lg px-2.5 py-1.5 text-[9px] font-bold text-[#64748B] hover:bg-[#F8FAFC]">Clear dates</button></div>
+      </div>
+    </details>
   );
 }
 
