@@ -897,3 +897,14 @@ This is parser training through reviewed code and regression evidence, not an au
 6. **Phase 5 — independent remaining work.** Handle unrelated PRs separately, refreshed against current `main` with their own CI. Web-only merges need no mobile OTA; mobile-affecting merges follow the same main-only preview rule.
 
 At this handoff update, `main` had advanced beyond the original #612 base, so #612 must be refreshed before any merge. No direct production-data, Supabase schema/RLS/auth, Expo runtime/version/build-profile, or APK change is part of this plan.
+
+
+## IT Super User financial deletion controls — 2026-08-28
+
+**IMPLEMENTED, NOT MERGED / NOT DEPLOYED:** PR #750 (`feat/it-super-user-financial-delete-control`) adds a separate, dependency-aware financial deletion path for IT Super User cleanup.
+
+- Reconciliation History exposes an IT Super User-only cycle delete control. It previews line/event cascades and blocks deletion whenever an Accounts invoice directly references the cycle or an Accounts invoice line uses one of its reconciliation lines.
+- Accounts > Billing exposes an IT Super User-only invoice delete control. Only unchanged Draft invoices are deletable; receipt allocations, TDS entries, receivable ledger entries, and all non-Draft statuses block deletion.
+- Deletion is rechecked server-side immediately before the destructive operation and successful deletes write an `audit_logs` entry with `deletion_source = it_super_user_financial_data_control`.
+- Existing database foreign keys and cascade rules are unchanged. Reconciliation lines/events and draft invoice lines/events are the only intended child cascades. Posted accounting history is never silently removed.
+- Receipt, TDS, partner-payment, partner-payable and posted-invoice cleanup remains outside this first phase because those flows require reversal-aware accounting semantics rather than generic deletion.
