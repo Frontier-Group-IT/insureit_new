@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { ReportQueryShortcuts } from "@/components/reports/report-query-shortcuts";
-import { ReportApplyButton, ReportEmptyState, ReportExportLink, ReportFilterField, ReportPageShell, ReportResetLink, reportInputClass } from "@/components/reports/report-page-shell";
+import { ReportCompactFilters } from "@/components/reports/report-compact-filters";
+import { ReportEmptyState, ReportExportLink, ReportPageShell } from "@/components/reports/report-page-shell";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { requireCapability } from "@/lib/master-data-server";
 import { loadFinanceReport, type FinanceFilters, type FinanceQuery, type FinanceReport } from "@/lib/reports/finance";
@@ -56,19 +57,32 @@ export default async function FinanceReportsPage({ searchParams }: Props) {
         title="Commercial performance"
         loadError={loadError}
         actions={<div className="flex flex-wrap gap-2"><Link href="/policies/commercial-review" className="rounded-lg border border-[#D9E2F0] bg-white px-3 py-2 text-[9px] font-bold text-[#315B9A]">Commercial Review</Link><ReportExportLink href={exportHref} /></div>}
-        controls={<>
-          <ReportQueryShortcuts label="Period" param="period" activeValue={filters.period} options={PERIODS} />
-          <form action="/reports/finance" method="get" className="grid gap-2 md:grid-cols-2 xl:grid-cols-[145px_145px_minmax(180px,1fr)_minmax(160px,1fr)_minmax(180px,1fr)_auto_auto]">
-            <input type="hidden" name="period" value="custom" />
-            <ReportFilterField label="From"><input name="from" type="date" defaultValue={filters.fromDate ?? ""} className={reportInputClass} /></ReportFilterField>
-            <ReportFilterField label="To"><input name="to" type="date" defaultValue={filters.toDate ?? ""} className={reportInputClass} /></ReportFilterField>
-            <ReportFilterField label="Insurance company"><select name="insurer" defaultValue={filters.insurerId ?? ""} className={reportInputClass}><option value="">All insurers</option>{report.filters.insurers.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select></ReportFilterField>
-            <ReportFilterField label="Relationship manager"><select name="rm" defaultValue={filters.rmEmployeeId ?? ""} className={reportInputClass}><option value="">All RMs</option>{report.filters.rms.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select></ReportFilterField>
-            <ReportFilterField label="Partner / intermediary"><select name="intermediary" defaultValue={filters.intermediaryCode ?? ""} className={reportInputClass}><option value="">All intermediaries</option>{report.filters.intermediaries.map((x) => <option key={x.code} value={x.code}>{x.name} · {x.code}</option>)}</select></ReportFilterField>
-            <ReportApplyButton />
-            <ReportResetLink href="/reports/finance" />
-          </form>
-        </>}
+        controls={
+          <ReportQueryShortcuts
+            label="Period"
+            param="period"
+            activeValue={filters.period}
+            options={PERIODS}
+            showActiveFilterCount={false}
+            trailing={<ReportCompactFilters
+              path="/reports/finance"
+              businessLine={filters.businessLine}
+              category={filters.category}
+              categories={report.filters.categories}
+              period={filters.period}
+              fromDate={filters.fromDate}
+              toDate={filters.toDate}
+              fields={[
+                { name:"insurer", label:"Insurance company", value:filters.insurerId ?? "", options:report.filters.insurers.map((x)=>({value:x.id,label:x.name})) },
+                { name:"rm", label:"Relationship manager", value:filters.rmEmployeeId ?? "", options:report.filters.rms.map((x)=>({value:x.id,label:x.name})) },
+                { name:"intermediary", label:"Partner / intermediary", value:filters.intermediaryCode ?? "", options:report.filters.intermediaries.map((x)=>({value:x.code,label:`${x.name} · ${x.code}`})) },
+                { name:"billing", label:"Billing status", value:filters.billingStatus ?? "", options:report.filters.billing_statuses.map((x)=>({value:x,label:x})) },
+                { name:"from", label:"From", value:filters.fromDate ?? "", type:"date" },
+                { name:"to", label:"To", value:filters.toDate ?? "", type:"date" },
+              ]}
+            />}
+          />
+        }
       >
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <Metric label="Policies" value={integer(report.summary.policy_count)} />
@@ -115,7 +129,7 @@ function RmTable({ rows }: { rows: FinanceReport["rms"] }) {
 
 function Register({ rows }: { rows: FinanceReport["register"]["rows"] }) {
   if (!rows.length) return <Empty />;
-  return <div className="overflow-x-auto"><table className="w-full min-w-[1160px]"><thead><tr className="bg-[#f8fafc] text-[8px] font-black uppercase tracking-[.07em] text-[#7c899b]"><th className="px-5 py-3 text-left">Business date</th><th className="px-3 py-3 text-left">Policy</th><th className="px-3 py-3 text-left">Customer / vehicle</th><th className="px-3 py-3 text-left">Insurer</th><th className="px-3 py-3 text-left">RM / intermediary</th><th className="px-3 py-3 text-right">Gross Premium</th><th className="px-3 py-3 text-right">Projected Pay-in</th><th className="px-3 py-3 text-right">Partner Payout</th><th className="px-3 py-3 text-right">Projected Margin</th><th className="px-5 py-3 text-center">Open</th></tr></thead><tbody className="divide-y divide-[#edf0f4]">{rows.map((x) => <tr key={x.id} className="text-[9.5px] hover:bg-[#fbfcfe]"><td className="px-5 py-3.5 font-semibold">{date(x.business_date)}</td><td className="px-3 py-3.5"><p className="font-bold">{x.policy_no}</p><p className="text-[8px] text-[#8490a1]">{x.policy_type}</p></td><td className="px-3 py-3.5"><p className="font-semibold">{x.customer_name}</p><p className="text-[8px] text-[#8490a1]">{x.vehicle_no}</p></td><td className="px-3 py-3.5">{x.insurer_name}</td><td className="px-3 py-3.5"><p className="font-semibold">{x.rm_name ?? "Unassigned"}</p><p className="text-[8px] text-[#8490a1]">{x.intermediary_code ?? "—"}</p></td><td className="px-3 py-3.5 text-right">{currency(x.gross_premium)}</td><td className="px-3 py-3.5 text-right">{currency(x.projected_payin)}</td><td className="px-3 py-3.5 text-right">{currency(x.gross_payout)}</td><td className="px-3 py-3.5 text-right font-bold">{currency(x.projected_payin - x.gross_payout)}</td><td className="px-5 py-3.5 text-center"><Link href={`/policies/${x.id}`} className="inline-grid h-8 w-8 place-items-center rounded-lg border border-[#d9e1ec] text-[#425b8f]"><ExternalLink className="h-3.5 w-3.5" /></Link></td></tr>)}</tbody></table></div>;
+  return <div className="overflow-x-auto"><table className="w-full min-w-[1160px]"><thead><tr className="bg-[#f8fafc] text-[8px] font-black uppercase tracking-[.07em] text-[#7c899b]"><th className="px-5 py-3 text-left">Business date</th><th className="px-3 py-3 text-left">Policy</th><th className="px-3 py-3 text-left">Customer / risk</th><th className="px-3 py-3 text-left">Insurer</th><th className="px-3 py-3 text-left">RM / intermediary</th><th className="px-3 py-3 text-right">Gross Premium</th><th className="px-3 py-3 text-right">Projected Pay-in</th><th className="px-3 py-3 text-right">Partner Payout</th><th className="px-3 py-3 text-right">Projected Margin</th><th className="px-5 py-3 text-center">Open</th></tr></thead><tbody className="divide-y divide-[#edf0f4]">{rows.map((x) => <tr key={x.id} className="text-[9.5px] hover:bg-[#fbfcfe]"><td className="px-5 py-3.5 font-semibold">{date(x.business_date)}</td><td className="px-3 py-3.5"><p className="font-bold">{x.policy_no}</p><p className="text-[8px] text-[#8490a1]">{x.business_line} · {x.category}</p></td><td className="px-3 py-3.5"><p className="font-semibold">{x.customer_name}</p><p className="text-[8px] text-[#8490a1]">{x.risk_reference || x.vehicle_no || "—"}</p></td><td className="px-3 py-3.5">{x.insurer_name}</td><td className="px-3 py-3.5"><p className="font-semibold">{x.rm_name ?? "Unassigned"}</p><p className="text-[8px] text-[#8490a1]">{x.intermediary_code ?? "—"}</p></td><td className="px-3 py-3.5 text-right">{currency(x.gross_premium)}</td><td className="px-3 py-3.5 text-right">{currency(x.projected_payin)}</td><td className="px-3 py-3.5 text-right">{currency(x.gross_payout)}</td><td className="px-3 py-3.5 text-right font-bold">{currency(x.projected_payin - x.gross_payout)}</td><td className="px-5 py-3.5 text-center"><Link href={`/policies/${x.id}`} className="inline-grid h-8 w-8 place-items-center rounded-lg border border-[#d9e1ec] text-[#425b8f]"><ExternalLink className="h-3.5 w-3.5" /></Link></td></tr>)}</tbody></table></div>;
 }
 
 function Pagination({ page, pages, total, prev, next }: { page: number; pages: number; total: number; prev: string; next: string }) {
@@ -124,12 +138,15 @@ function Pagination({ page, pages, total, prev, next }: { page: number; pages: n
 
 function href(path: string, f: FinanceFilters, page?: number) {
   const q = new URLSearchParams();
-  q.set("period", "custom");
-  if (f.fromDate) q.set("from", f.fromDate);
-  if (f.toDate) q.set("to", f.toDate);
+  q.set("period", f.period);
+  if (f.period === "custom" && f.fromDate) q.set("from", f.fromDate);
+  if (f.period === "custom" && f.toDate) q.set("to", f.toDate);
   if (f.insurerId) q.set("insurer", f.insurerId);
   if (f.rmEmployeeId) q.set("rm", f.rmEmployeeId);
   if (f.intermediaryCode) q.set("intermediary", f.intermediaryCode);
+  if (f.businessLine) q.set("business", f.businessLine);
+  if (f.category) q.set("category", f.category);
+  if (f.billingStatus) q.set("billing", f.billingStatus);
   if (page) q.set("page", String(page));
   return `${path}?${q.toString()}`;
 }
@@ -139,10 +156,10 @@ function emptyReport(): FinanceReport {
     summary: { policy_count: 0, gross_premium: 0, projected_payin: 0, payin_after_tds: 0, billed_amount: 0, gross_payout: 0, retention_amount: 0, unbilled_count: 0, billing_incomplete_count: 0, billed_count: 0, pending_payout_count: 0 },
     insurers: [], rms: [], billing: [],
     register: { rows: [], total_count: 0, page: 1, page_size: 50 },
-    filters: { insurers: [], rms: [], intermediaries: [], billing_statuses: [] },
+    filters: { insurers: [], rms: [], intermediaries: [], billing_statuses: [], categories: [] },
   };
 }
-function fallbackFilters(): FinanceFilters { return { period: "90d", fromDate: null, toDate: null, insurerId: null, rmEmployeeId: null, intermediaryCode: null, billingStatus: null, page: 1 }; }
+function fallbackFilters(): FinanceFilters { return { period: "90d", fromDate: null, toDate: null, insurerId: null, rmEmployeeId: null, intermediaryCode: null, businessLine: null, category: null, billingStatus: null, page: 1 }; }
 function currency(value: number) { return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0); }
 function integer(value: number) { return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value || 0); }
 function date(value: string | null) { if (!value) return "—"; const d = new Date(`${value}T00:00:00Z`); return Number.isNaN(d.getTime()) ? value : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }).format(d); }
