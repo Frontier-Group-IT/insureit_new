@@ -1,0 +1,33 @@
+export const partnerTheme = {
+  colors: {
+    canvas: '#F5F7FB',
+    surface: '#FFFFFF',
+    surfaceMuted: '#F0F3F8',
+    ink: '#17203A',
+    inkMuted: '#69758A',
+    line: '#E0E6EF',
+    brand: '#4F46C8',
+    brandStrong: '#2D2A73',
+    brandSoft: '#ECEBFF',
+    accent: '#0F8B8D',
+    accentSoft: '#E6F5F4',
+    success: '#18794E',
+    warning: '#B66A14',
+    danger: '#B42318',
+    nav: '#111827',
+    white: '#FFFFFF',
+  },
+  radius: {
+    sm: 10,
+    md: 14,
+    lg: 20,
+    xl: 26,
+  },
+  shadow: {
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 7 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    elevation: 2,
+  },
+} as const;
