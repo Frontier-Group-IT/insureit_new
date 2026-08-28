@@ -153,9 +153,10 @@ filter_categories as (
   from (select distinct category from scope_base where business_line='Non Motor' and category is not null)x
 ),
 row_page as (
-  select f.* from filtered f,params p
+  select f.* from filtered f
   order by f.business_date desc,f.created_at desc,f.policy_no
-  offset ((p.page_no-1)*p.page_size) limit p.page_size
+  offset ((greatest(coalesce(p_page,1),1)-1)*least(greatest(coalesce(p_page_size,25),1),200))
+  limit least(greatest(coalesce(p_page_size,25),1),200)
 ),
 register_rows as (
   select coalesce(jsonb_agg(jsonb_build_object(
@@ -354,7 +355,9 @@ filter_options as (select jsonb_build_object(
 ) obj),
 register_total as(select count(*)::int total_count from filtered),
 register_rows as(select coalesce(jsonb_agg(to_jsonb(x) order by x.business_date desc nulls last,x.policy_no),'[]'::jsonb) arr from(
-  select f.* from filtered f,params p order by business_date desc nulls last,policy_no limit p.page_size offset((p.page_no-1)*p.page_size))x)
+  select f.* from filtered f order by business_date desc nulls last,policy_no
+  limit least(greatest(coalesce(p_page_size,25),1),100)
+  offset((greatest(coalesce(p_page,1),1)-1)*least(greatest(coalesce(p_page_size,25),1),100)))x)
 select jsonb_build_object('summary',(select obj from summary),'insurers',(select arr from insurers),'rms',(select arr from rms),'billing',(select arr from billing),
   'filters',(select obj from filter_options),'register',jsonb_build_object('rows',(select arr from register_rows),'total_count',(select total_count from register_total),
   'page',(select page_no from params),'page_size',(select page_size from params)));
