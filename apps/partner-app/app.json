@@ -7,14 +7,17 @@
     "scheme": "insureit-partner",
     "userInterfaceStyle": "light",
     "android": {
-      "package": "com.insureit.partner"
+      "package": "com.insureit.partner",
+      "softwareKeyboardLayoutMode": "pan",
+      "versionCode": 1
     },
     "ios": {
       "bundleIdentifier": "com.insureit.partner",
       "supportsTablet": false,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "buildNumber": "1"
     },
     "web": {
       "bundler": "metro"
@@ -25,6 +28,10 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "owner": "antnish"
   }
 }
