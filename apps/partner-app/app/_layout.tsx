@@ -13,6 +13,9 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="home" />
         <Stack.Screen name="renewals" />
+        <Stack.Screen name="customers" />
+        <Stack.Screen name="activity" />
+        <Stack.Screen name="profile" />
         <Stack.Screen name="access-denied" />
       </Stack>
     </PartnerSessionProvider>
