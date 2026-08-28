@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, Files, FileText, Plus, RotateCcw, Search } from "lucide-react";
+import { CalendarDays, ChevronDown, Files, FileText, Plus, RotateCcw, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   RegisterEmpty,
@@ -18,10 +18,13 @@ type PolicyDocument = {
   mime_type: string | null;
 };
 
+type NonMotorDetails = { category: string | null; risk_title: string | null; risk_location: string | null; transit_from: string | null; transit_to: string | null; nature_of_business: string | null; liability_type: string | null; risk_details: Record<string, unknown> | null };
+
 type PolicyRow = {
   id: string;
   policy_no: string;
   policy_type: string;
+  policy_product: string | null;
   business_line: string | null;
   start_date: string;
   end_date: string;
@@ -35,11 +38,13 @@ type PolicyRow = {
   customers: { company_name: string | null; contact_name: string } | null;
   vehicles: { vehicle_no: string } | null;
   insurance_companies: { name: string } | null;
+  non_motor_policy_details: NonMotorDetails | null;
   claims: { count: number }[];
 };
 
 type SourceOption = { value: string; label: string };
 type ViewKey = "all" | "active" | "expiring" | "expired" | "claims";
+type BusinessFilter = "all" | "Motor" | "Non Motor";
 const PAGE_SIZE = 10;
 
 function policySourceDatabaseType(value: string | null) {
@@ -83,6 +88,8 @@ function PolicyDateFilter({ label, value, min, max, onChange }: { label: string;
 export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[]; sourceOptions?: SourceOption[] }) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewKey>("all");
+  const [business, setBusiness] = useState<BusinessFilter>("all");
+  const [category, setCategory] = useState("all");
   const [source, setSource] = useState("all");
   const [insurer, setInsurer] = useState("all");
   const [fromDate, setFromDate] = useState("");
@@ -92,16 +99,19 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
 
   const enriched = useMemo(() => rows.map((row) => ({ ...row, status: policyStatus(row.end_date), daysLeft: daysUntil(row.end_date) })), [rows]);
   const insurers = useMemo(() => Array.from(new Set(rows.map((row) => row.insurance_companies?.name).filter(Boolean))).sort() as string[], [rows]);
+  const categories = useMemo(() => Array.from(new Set(rows.filter((row) => policyBusinessLine(row) === "Non Motor").map((row) => policyCategory(row)).filter(Boolean))).sort(), [rows]);
 
   const baseFiltered = useMemo(() => enriched.filter((row) => {
-    const haystack = [row.policy_no, row.business_line, row.policy_type, row.insurance_companies?.name, row.vehicles?.vehicle_no, row.customers?.company_name, row.customers?.contact_name, row.intermediary_type, row.intermediary_code, row.source_name].filter(Boolean).join(" ").toLowerCase();
+    const haystack = [row.policy_no, row.business_line, row.policy_type, row.policy_product, row.insurance_companies?.name, row.vehicles?.vehicle_no, row.customers?.company_name, row.customers?.contact_name, row.intermediary_type, row.intermediary_code, row.source_name, policyCategory(row), riskAssetPrimary(row), riskAssetSecondary(row)].filter(Boolean).join(" ").toLowerCase();
+    const matchesBusiness = business === "all" || policyBusinessLine(row) === business;
+    const matchesCategory = business !== "Non Motor" || category === "all" || policyCategory(row) === category;
     const matchesSource = source === "all" || policySourceKey(row) === source;
     const matchesInsurer = insurer === "all" || row.insurance_companies?.name === insurer;
     const matchesFromDate = !fromDate || row.start_date >= fromDate;
     const matchesToDate = !toDate || row.start_date <= toDate;
     const matchesQuery = !query.trim() || haystack.includes(query.trim().toLowerCase());
-    return matchesSource && matchesInsurer && matchesFromDate && matchesToDate && matchesQuery;
-  }), [enriched, fromDate, insurer, query, source, toDate]);
+    return matchesBusiness && matchesCategory && matchesSource && matchesInsurer && matchesFromDate && matchesToDate && matchesQuery;
+  }), [business, category, enriched, fromDate, insurer, query, source, toDate]);
 
   const stats = useMemo(() => {
     const active = baseFiltered.filter((row) => row.status === "Active").length;
@@ -130,6 +140,8 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
 
   function resetFilters() {
     setQuery("");
+    setBusiness("all");
+    setCategory("all");
     setSource("all");
     setInsurer("all");
     setFromDate("");
