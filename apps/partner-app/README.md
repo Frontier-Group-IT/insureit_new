@@ -8,6 +8,7 @@ Set:
 
 - `EXPO_PUBLIC_SUPABASE_URL`
 - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+- `EXPO_PUBLIC_PORTAL_URL` (optional; defaults to `https://portal.insureit.in` for the Policy Intake API)
 
 The app never uses a service-role key.
 
@@ -41,3 +42,14 @@ GitHub workflows:
 - `Publish Partner preview OTA`: workflow-dispatch only; current-main guard; preview OTA
 - both require `EXPO_TOKEN`, `EXPO_PUBLIC_SUPABASE_URL`, and `EXPO_PUBLIC_SUPABASE_ANON_KEY`
 - neither workflow can target the Customer EAS project
+
+
+## Partner Policy Intake
+
+The Partner app submits policy copies into the same controlled Operations workflow used by the web portal:
+
+`Partner/POSP/MISP or commercial employee → signed policy-document upload → policy_intake_requests → Document AI/OCR → Operations review → Policy Onboarding → final policy`.
+
+Partner/POSP/MISP submissions use `submitted_by_portal_account_id`; employee/web submissions continue using `submitted_by_profile_id`. The database enforces exactly one submitter identity per intake.
+
+The mobile app does not call `onboard_motor_policy` and cannot directly book or alter policies through this feature.

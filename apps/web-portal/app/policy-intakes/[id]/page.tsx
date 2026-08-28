@@ -26,7 +26,8 @@ type Intake = {
   ocr_warnings: string[];
   attention_reason: string | null;
   created_at: string;
-  submitted_by_profile_id: string;
+  submitted_by_profile_id: string | null;
+  submitted_by_portal_account_id: string | null;
   assigned_to_profile_id: string | null;
   final_policy_id: string | null;
 };
@@ -81,7 +82,7 @@ export default async function PolicyIntakeDetail({ params }: { params: Promise<{
     hasEffectiveCapability(profile, "finalize_policy_intakes", "approve"),
   ]);
   const admin = createSupabaseAdminClient();
-  const { data } = await admin.from("policy_intake_requests").select("id,intake_number,status,lead_source_name,lead_source_type,lead_source_code,customer_mobile,matched_customer_id,file_name,ocr_status,ocr_fields,ocr_warnings,attention_reason,created_at,submitted_by_profile_id,assigned_to_profile_id,final_policy_id").eq("id", id).maybeSingle<Intake>();
+  const { data } = await admin.from("policy_intake_requests").select("id,intake_number,status,lead_source_name,lead_source_type,lead_source_code,customer_mobile,matched_customer_id,file_name,ocr_status,ocr_fields,ocr_warnings,attention_reason,created_at,submitted_by_profile_id,submitted_by_portal_account_id,assigned_to_profile_id,final_policy_id").eq("id", id).maybeSingle<Intake>();
   if (!data) return <AppShell title="Policy Intake" backHref="/policy-intakes"><div className="rounded-xl bg-white p-5 text-[11px]">Intake not found.</div></AppShell>;
   const owner = data.submitted_by_profile_id === profile.id;
   if (!reviewer && !finalizer && !owner) return <AppShell title="Policy Intake" backHref="/policy-intakes"><div className="rounded-xl bg-white p-5 text-[11px]">You do not have access to this intake.</div></AppShell>;
@@ -89,7 +90,24 @@ export default async function PolicyIntakeDetail({ params }: { params: Promise<{
   const profileIds = Array.from(new Set([data.submitted_by_profile_id, data.assigned_to_profile_id].filter(Boolean) as string[]));
   const { data: profileRows } = profileIds.length ? await admin.from("profiles").select("id,full_name").in("id", profileIds).returns<ProfileName[]>() : { data: [] as ProfileName[] };
   const nameById = new Map((profileRows ?? []).map((item) => [item.id, item.full_name]));
-  const submittedBy = nameById.get(data.submitted_by_profile_id) || "Sales user";
+  let submittedBy = data.submitted_by_profile_id ? nameById.get(data.submitted_by_profile_id) || "Sales user" : "INSUREIT Partner user";
+  if (data.submitted_by_portal_account_id) {
+    const { data: portalAccount } = await admin
+      .from("intermediary_portal_accounts")
+      .select("intermediary_id")
+      .eq("id", data.submitted_by_portal_account_id)
+      .maybeSingle<{ intermediary_id: string }>();
+    if (portalAccount?.intermediary_id) {
+      const { data: intermediary } = await admin
+        .from("intermediaries")
+        .select("display_name,intermediary_type,intermediary_code")
+        .eq("id", portalAccount.intermediary_id)
+        .maybeSingle<{ display_name: string; intermediary_type: string; intermediary_code: string | null }>();
+      if (intermediary) {
+        submittedBy = `${intermediary.display_name} · ${intermediary.intermediary_type.toUpperCase()}${intermediary.intermediary_code ? ` · ${intermediary.intermediary_code}` : ""}`;
+      }
+    }
+  }
   const reviewerName = data.assigned_to_profile_id ? nameById.get(data.assigned_to_profile_id) || "Operations user" : "Not claimed";
   const manualReview = data.status === "processing" && data.ocr_status === "failed";
   const fields = data.ocr_fields ?? [];

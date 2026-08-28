@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import {
@@ -20,6 +21,7 @@ const filters: Array<{ value: PartnerPolicyLifecycle; label: string }> = [
 ];
 
 export default function PoliciesScreen() {
+  const router = useRouter();
   const [summary, setSummary] = useState<PartnerPolicySummary | null>(null);
   const [rows, setRows] = useState<PartnerPolicyRow[]>([]);
   const [lifecycle, setLifecycle] = useState<PartnerPolicyLifecycle>('all');
@@ -77,7 +79,16 @@ export default function PoliciesScreen() {
   }
 
   return (
-    <PartnerScreen eyebrow="BUSINESS" title="Policies">
+    <PartnerScreen
+      eyebrow="BUSINESS"
+      title="Policies"
+      action={
+        <Pressable onPress={() => router.push('/policy-intakes')} style={styles.intakeAction}>
+          <Ionicons name="cloud-upload-outline" size={15} color="#FFFFFF" />
+          <Text style={styles.intakeActionText}>Intake</Text>
+        </Pressable>
+      }
+    >
       {loading ? (
         <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand} /></View>
       ) : (
@@ -227,6 +238,8 @@ function formatMoney(value: number | string | null) {
 }
 
 const styles = StyleSheet.create({
+  intakeAction: { minHeight: 38, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 12, paddingHorizontal: 11, backgroundColor: partnerTheme.colors.brandStrong },
+  intakeActionText: { color: '#FFFFFF', fontSize: 9.5, fontWeight: '800' },
   loading: { minHeight: 260, alignItems: 'center', justifyContent: 'center' },
   summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   summaryCard: {

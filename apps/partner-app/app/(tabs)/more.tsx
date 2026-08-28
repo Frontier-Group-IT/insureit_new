@@ -27,6 +27,7 @@ export default function MoreScreen() {
       </View>
 
       <View style={styles.menu}>
+        <MenuRow icon="document-text-outline" title="Policy Intake" subtitle="Submit policy copies to the existing Operations review queue." onPress={() => router.push("/policy-intakes")} />
         <MenuRow icon="refresh-outline" title="Renewals" subtitle="Policies due in the next 30 days and expired policies." onPress={() => router.push("/renewals")} />
         <MenuRow icon="people-outline" title="Customers" subtitle="Authorized customer book for your commercial scope." onPress={() => router.push("/customers")} />
         <MenuRow icon="notifications-outline" title="Activity" subtitle="Recent policy and claim activity in one timeline." onPress={() => router.push("/activity")} />
@@ -41,7 +42,7 @@ export default function MoreScreen() {
   );
 }
 
-function MenuRow({ icon, title, subtitle, onPress }: { icon: 'refresh-outline' | 'people-outline' | 'notifications-outline' | 'person-outline'; title: string; subtitle: string; onPress?: () => void }) {
+function MenuRow({ icon, title, subtitle, onPress }: { icon: 'document-text-outline' | 'refresh-outline' | 'people-outline' | 'notifications-outline' | 'person-outline'; title: string; subtitle: string; onPress?: () => void }) {
   const content = (
     <View style={styles.row}>
       <View style={styles.rowIcon}><Ionicons name={icon} size={18} color={partnerTheme.colors.brand} /></View>
