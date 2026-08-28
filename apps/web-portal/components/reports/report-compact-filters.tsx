@@ -2,7 +2,7 @@
 
 import { SlidersHorizontal, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 export type ReportCompactFilterOption = { value: string; label: string };
 export type ReportCompactFilterField = {
@@ -199,11 +199,11 @@ export function ReportCompactFilters({
 
 const inputClass = "h-10 w-full rounded-lg border border-[#d9e0e8] bg-white px-2.5 text-[10.5px] font-semibold text-[#344054] outline-none transition focus:border-[#7692b6] focus:ring-2 focus:ring-[#e9f0f7]";
 
-function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
+function FilterGroup({ title, children }: { title: string; children: ReactNode }) {
   return <section className="mb-6"><h3 className="mb-3 text-[9px] font-black uppercase tracking-[.09em] text-[#7c899b]">{title}</h3>{children}</section>;
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return <label className="block"><span className="mb-1 block text-[9px] font-bold text-[#667085]">{label}</span>{children}</label>;
 }
 
