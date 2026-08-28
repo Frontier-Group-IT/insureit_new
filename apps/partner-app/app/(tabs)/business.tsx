@@ -42,7 +42,7 @@ export default function BusinessScreen() {
 
       <View style={styles.infoCard}>
         <Text style={styles.infoTitle}>How this structure works</Text>
-        <Text style={styles.infoText}>Permanent Partners remain the commercial family root. Linked POSP/MISP accounts inherit that Partner family's business relationship and Group context.</Text>
+        <Text style={styles.infoText}>Permanent Partners remain the commercial family root. Linked POSP/MISP accounts inherit the Partner family business relationship and Group context.</Text>
       </View>
     </PartnerScreen>
   );
