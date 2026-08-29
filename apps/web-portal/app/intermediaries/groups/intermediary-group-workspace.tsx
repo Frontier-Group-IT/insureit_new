@@ -161,10 +161,6 @@ export function IntermediaryGroupWorkspace({
   const drawerMembers = drawerGroup
     ? memberships.filter((membership) => membership.group_id === drawerGroup.id).length
     : 0;
-  const selectedOwnerGroups = selectedOwnerId
-    ? groups.filter((group) => group.owner_employee_id === selectedOwnerId)
-    : [];
-  const selectedOwner = selectedOwnerId ? employeeById.get(selectedOwnerId) ?? null : null;
   const creatingFromSelection = Boolean(createSelectionOwnerId && selectedPartnerIds.size > 0);
 
   function toggleEmployee(employeeId: string) {
@@ -309,47 +305,6 @@ export function IntermediaryGroupWorkspace({
             </div>
           </div>
 
-          {canManage && selectedPartnerIds.size > 0 && selectedOwner ? (
-            <div className="sticky top-3 z-30 mb-3 rounded-2xl border border-[#C9D8FF] bg-[linear-gradient(90deg,#F7FAFF,#FFFFFF_48%,#FFF8ED)] p-3 shadow-[0_14px_34px_rgba(49,95,234,.14)]">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-                <div className="flex min-w-0 items-center gap-3 lg:flex-1">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#315FEA] text-white shadow-sm">
-                    <CheckCircle2 className="h-4.5 w-4.5" />
-                  </span>
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-[10.5px] font-bold text-[#203C5B]">{selectedPartnerIds.size} partner {selectedPartnerIds.size === 1 ? "family" : "families"} selected</p>
-                      <span className="rounded-full bg-[#EAF0FF] px-2 py-1 text-[7px] font-bold uppercase tracking-[0.05em] text-[#315FEA]">Choose next action</span>
-                    </div>
-                    <p className="mt-0.5 truncate text-[8px] text-[#718198]">{selectedOwner.full_name} · {selectedOwner.employee_code}</p>
-                  </div>
-                  <button type="button" onClick={clearSelection} className="ml-auto shrink-0 rounded-lg px-2 py-1 text-[8px] font-bold text-[#315FEA] hover:bg-[#EEF3FF] lg:ml-2">Clear</button>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => { setCreateSelectionOwnerId(selectedOwner.id); setCreateOpen(true); }}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#F39800] px-4 text-[9px] font-bold text-white shadow-[0_8px_18px_rgba(243,152,0,.18)] hover:bg-[#DD8600]"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Create group from selected
-                  </button>
-                  {selectedOwnerGroups.length ? (
-                    <form action={assignIntermediaryGroupMembers} className="flex items-center gap-1.5">
-                      {Array.from(selectedPartnerIds).map((partnerId) => <input key={partnerId} type="hidden" name="partner_id" value={partnerId} />)}
-                      <select name="group_id" required defaultValue="" className="h-10 min-w-[185px] rounded-xl border border-[#CCD7E4] bg-white px-3 text-[8.5px] font-semibold text-[#56697F] outline-none">
-                        <option value="">Move to existing group</option>
-                        {selectedOwnerGroups.map((group) => <option key={group.id} value={group.id}>{group.group_name}</option>)}
-                      </select>
-                      <FormSubmitButton label="Move" pendingLabel="Moving…" className="inline-flex h-10 items-center rounded-xl border border-[#CCD7E4] bg-white px-3 text-[8.5px] font-bold text-[#3156B8] hover:bg-[#F5F8FC]" />
-                    </form>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          ) : null}
-
           <div className="space-y-2.5">
             {visibleEmployees.length ? visibleEmployees.map((employee) => (
               <EmployeeSection
@@ -375,6 +330,8 @@ export function IntermediaryGroupWorkspace({
                 onDropTarget={setDropGroupId}
                 onManageGroup={setDrawerGroupId}
                 onCreateGroup={() => { setCreateSelectionOwnerId(employee.id); setCreateOpen(true); }}
+                onCreateGroupFromSelection={() => { setCreateSelectionOwnerId(employee.id); setCreateOpen(true); }}
+                onClearSelection={clearSelection}
                 viewMode={viewMode}
               />
             )) : (
@@ -432,65 +389,93 @@ export function IntermediaryGroupWorkspace({
       ) : null}
 
       {drawerGroup ? (
-        <div className="fixed inset-0 z-50 bg-[#10233D]/20" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDrawerGroupId(null); }}>
-          <aside className="absolute inset-y-0 right-0 w-full max-w-[430px] overflow-y-auto border-l border-[#D7E1EC] bg-white shadow-[-20px_0_60px_rgba(15,34,58,.15)]">
-            <div className="sticky top-0 z-10 flex items-start justify-between border-b border-[#E8EDF3] bg-white/95 px-5 py-4 backdrop-blur">
-              <div>
-                <p className="text-[8px] font-bold uppercase tracking-[0.08em] text-[#7A8AA0]">{drawerGroup.group_code}</p>
-                <h3 className="mt-1 text-[15px] font-semibold text-[#17324F]">{drawerGroup.group_name}</h3>
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-[#10233D]/35 p-4 backdrop-blur-[2px]"
+          role="presentation"
+          onMouseDown={(event) => { if (event.target === event.currentTarget) setDrawerGroupId(null); }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Manage ${drawerGroup.group_name}`}
+            className="w-full max-w-[760px] overflow-hidden rounded-3xl border border-[#D7E1EC] bg-white shadow-[0_30px_90px_rgba(15,34,58,.22)]"
+          >
+            <div className="flex items-start justify-between border-b border-[#E8EDF3] bg-[linear-gradient(180deg,#FFFFFF,#FBFCFE)] px-5 py-4">
+              <div className="min-w-0">
+                <p className="text-[7.5px] font-bold uppercase tracking-[0.08em] text-[#7A8AA0]">{drawerGroup.group_code}</p>
+                <h3 className="mt-1 truncate text-[15px] font-semibold text-[#17324F]">{drawerGroup.group_name}</h3>
+                <p className="mt-1 text-[8px] text-[#7D8B9D]">Manage group details, ownership and archive status.</p>
               </div>
-              <button type="button" onClick={() => setDrawerGroupId(null)} className="grid h-8 w-8 place-items-center rounded-lg text-[#77869A] hover:bg-[#F1F4F8]"><X className="h-4 w-4" /></button>
+              <button type="button" onClick={() => setDrawerGroupId(null)} className="grid h-8 w-8 place-items-center rounded-lg text-[#77869A] hover:bg-[#F1F4F8]" aria-label="Close manage group"><X className="h-4 w-4" /></button>
             </div>
-            <div className="space-y-5 p-5">
-              <div className="grid grid-cols-2 gap-2">
+
+            <div className="max-h-[74vh] overflow-y-auto p-5">
+              <div className="mb-4 grid grid-cols-2 gap-2">
                 <InfoCard label="Sales owner" value={employeeById.get(drawerGroup.owner_employee_id)?.full_name ?? "Unknown"} />
                 <InfoCard label="Partner families" value={String(drawerMembers)} />
               </div>
 
-              {drawerGroup.description ? <div className="rounded-xl bg-[#F7F9FC] p-3"><p className="text-[8px] font-bold uppercase tracking-[0.06em] text-[#8290A3]">Description</p><p className="mt-1 text-[9.5px] leading-5 text-[#53667D]">{drawerGroup.description}</p></div> : null}
-
-              {canManage ? (
-                <section className="space-y-3">
-                  <div className="flex items-center gap-2"><Pencil className="h-3.5 w-3.5 text-[#315FEA]" /><h4 className="text-[10px] font-semibold text-[#253F5C]">Edit group</h4></div>
-                  <form action={renameIntermediaryGroup} className="space-y-2">
-                    <input type="hidden" name="group_id" value={drawerGroup.id} />
-                    <Field label="Group name"><input name="group_name" defaultValue={drawerGroup.group_name} required maxLength={80} className={inputClass} /></Field>
-                    <Field label="Description"><input name="description" defaultValue={drawerGroup.description ?? ""} className={inputClass} /></Field>
-                    <FormSubmitButton label="Save changes" pendingLabel="Saving…" className="inline-flex h-9 items-center rounded-lg border border-[#CAD7E7] bg-white px-3.5 text-[9px] font-semibold text-[#3156B8] hover:bg-[#F5F8FC]" />
-                  </form>
-                </section>
+              {drawerGroup.description ? (
+                <div className="mb-4 rounded-xl bg-[#F7F9FC] p-3">
+                  <p className="text-[7.5px] font-bold uppercase tracking-[0.06em] text-[#8290A3]">Description</p>
+                  <p className="mt-1 text-[9px] leading-5 text-[#53667D]">{drawerGroup.description}</p>
+                </div>
               ) : null}
 
-              {canTransfer ? (
-                <section className="space-y-3 border-t border-[#EDF1F5] pt-5">
-                  <div className="flex items-center gap-2"><ArrowRightLeft className="h-3.5 w-3.5 text-[#7B5BE7]" /><h4 className="text-[10px] font-semibold text-[#253F5C]">Transfer group</h4></div>
-                  <form action={transferIntermediaryGroup} className="space-y-2">
-                    <input type="hidden" name="group_id" value={drawerGroup.id} />
-                    <select name="new_owner_employee_id" defaultValue="" required className={inputClass}>
-                      <option value="">Select new sales employee</option>
-                      {employees.filter((employee) => employee.id !== drawerGroup.owner_employee_id).map((employee) => <option key={employee.id} value={employee.id}>{employee.full_name} · {employee.employee_code}</option>)}
-                    </select>
-                    <input name="reason" placeholder="Transfer reason" className={inputClass} />
-                    <FormSubmitButton label="Transfer Group" pendingLabel="Transferring…" className="inline-flex h-9 items-center rounded-lg border border-[#D9D0FB] bg-[#F8F6FF] px-3.5 text-[9px] font-semibold text-[#6847C7] hover:bg-[#F2EEFF]" />
-                  </form>
-                </section>
-              ) : null}
-
-              {canManage ? (
-                <section className="border-t border-[#EDF1F5] pt-5">
-                  <div className="flex items-center gap-2"><Archive className="h-3.5 w-3.5 text-[#C04C4C]" /><h4 className="text-[10px] font-semibold text-[#253F5C]">Archive</h4></div>
-                  {drawerMembers === 0 ? (
-                    <form action={archiveIntermediaryGroup} className="mt-3">
+              <div className="grid gap-4 lg:grid-cols-2">
+                {canManage ? (
+                  <section className="rounded-2xl border border-[#E1E8F1] bg-[#FBFCFE] p-4">
+                    <div className="mb-3 flex items-center gap-2">
+                      <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#EEF3FF] text-[#315FEA]"><Pencil className="h-3.5 w-3.5" /></span>
+                      <h4 className="text-[9.5px] font-semibold text-[#253F5C]">Edit group</h4>
+                    </div>
+                    <form action={renameIntermediaryGroup} className="space-y-2.5">
                       <input type="hidden" name="group_id" value={drawerGroup.id} />
-                      <FormSubmitButton label="Archive empty Group" pendingLabel="Archiving…" className="inline-flex h-9 items-center rounded-lg border border-red-200 bg-red-50 px-3.5 text-[9px] font-semibold text-red-700 hover:bg-red-100" />
+                      <Field label="Group name"><input name="group_name" defaultValue={drawerGroup.group_name} required maxLength={80} className={inputClass} /></Field>
+                      <Field label="Description"><input name="description" defaultValue={drawerGroup.description ?? ""} className={inputClass} /></Field>
+                      <FormSubmitButton label="Save changes" pendingLabel="Saving…" className="inline-flex h-9 items-center rounded-lg bg-[#315FEA] px-3.5 text-[8.5px] font-semibold text-white hover:bg-[#254DD0]" />
                     </form>
-                  ) : (
-                    <p className="mt-2 text-[9px] leading-5 text-[#7C8999]">Move or ungroup all Partner families before archiving this Group.</p>
-                  )}
+                  </section>
+                ) : null}
+
+                {canTransfer ? (
+                  <section className="rounded-2xl border border-[#E8E0FA] bg-[#FCFAFF] p-4">
+                    <div className="mb-3 flex items-center gap-2">
+                      <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#F1ECFF] text-[#7B5BE7]"><ArrowRightLeft className="h-3.5 w-3.5" /></span>
+                      <h4 className="text-[9.5px] font-semibold text-[#253F5C]">Transfer group</h4>
+                    </div>
+                    <form action={transferIntermediaryGroup} className="space-y-2.5">
+                      <input type="hidden" name="group_id" value={drawerGroup.id} />
+                      <select name="new_owner_employee_id" defaultValue="" required className={inputClass}>
+                        <option value="">Select new sales employee</option>
+                        {employees.filter((employee) => employee.id !== drawerGroup.owner_employee_id).map((employee) => <option key={employee.id} value={employee.id}>{employee.full_name} · {employee.employee_code}</option>)}
+                      </select>
+                      <input name="reason" placeholder="Transfer reason" className={inputClass} />
+                      <FormSubmitButton label="Transfer Group" pendingLabel="Transferring…" className="inline-flex h-9 items-center rounded-lg border border-[#D9D0FB] bg-[#F8F6FF] px-3.5 text-[8.5px] font-semibold text-[#6847C7] hover:bg-[#F2EEFF]" />
+                    </form>
+                  </section>
+                ) : null}
+              </div>
+
+              {canManage ? (
+                <section className="mt-4 flex flex-col gap-3 rounded-2xl border border-red-100 bg-red-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-2">
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white text-[#C04C4C] ring-1 ring-red-100"><Archive className="h-3.5 w-3.5" /></span>
+                    <div>
+                      <h4 className="text-[9.5px] font-semibold text-[#7C2D2D]">Archive group</h4>
+                      <p className="mt-0.5 text-[7.8px] leading-4 text-[#9A6666]">{drawerMembers === 0 ? "This empty Group can be archived safely." : "Move or ungroup all Partner families before archiving this Group."}</p>
+                    </div>
+                  </div>
+                  {drawerMembers === 0 ? (
+                    <form action={archiveIntermediaryGroup}>
+                      <input type="hidden" name="group_id" value={drawerGroup.id} />
+                      <FormSubmitButton label="Archive empty Group" pendingLabel="Archiving…" className="inline-flex h-9 items-center rounded-lg border border-red-200 bg-white px-3.5 text-[8.5px] font-semibold text-red-700 hover:bg-red-100" />
+                    </form>
+                  ) : null}
                 </section>
               ) : null}
             </div>
-          </aside>
+          </div>
         </div>
       ) : null}
     </div>
@@ -519,6 +504,8 @@ function EmployeeSection({
   onDropTarget,
   onManageGroup,
   onCreateGroup,
+  onCreateGroupFromSelection,
+  onClearSelection,
   viewMode,
 }: {
   employee: GroupWorkspaceEmployee;
@@ -542,6 +529,8 @@ function EmployeeSection({
   onDropTarget: (groupId: string | null) => void;
   onManageGroup: (groupId: string) => void;
   onCreateGroup: () => void;
+  onCreateGroupFromSelection: () => void;
+  onClearSelection: () => void;
   viewMode: WorkspaceView;
 }) {
   const ungrouped = partners.filter((partner) => !membershipByPartner.has(partner.id));
@@ -555,6 +544,7 @@ function EmployeeSection({
   const visibleUngrouped = ungrouped.filter((partner) => !normalizedQuery || partnerMatches(partner, normalizedQuery));
   const showGroups = assignmentFilter !== "ungrouped";
   const showUngrouped = assignmentFilter !== "grouped";
+  const selectedForEmployee = partners.filter((partner) => selectedPartnerIds.has(partner.id));
 
   return (
     <article className="overflow-hidden rounded-2xl border border-[#D7E2F0] bg-white shadow-[0_6px_18px_rgba(23,54,93,.045)]">
@@ -576,6 +566,47 @@ function EmployeeSection({
 
       {isOpen ? (
         <div className="p-3">
+          {canManage && selectedForEmployee.length > 0 ? (
+            <div className="mb-3 rounded-2xl border border-[#C9D8FF] bg-[linear-gradient(90deg,#F7FAFF,#FFFFFF_48%,#FFF8ED)] p-3 shadow-[0_10px_28px_rgba(49,95,234,.12)]">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                <div className="flex min-w-0 items-center gap-3 lg:flex-1">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#315FEA] text-white shadow-sm">
+                    <CheckCircle2 className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-[10px] font-bold text-[#203C5B]">{selectedForEmployee.length} partner {selectedForEmployee.length === 1 ? "family" : "families"} selected</p>
+                      <span className="rounded-full bg-[#EAF0FF] px-2 py-1 text-[6.8px] font-bold uppercase tracking-[0.05em] text-[#315FEA]">Choose next action</span>
+                    </div>
+                    <p className="mt-0.5 text-[7.8px] text-[#718198]">{employee.full_name} · {employee.employee_code}</p>
+                  </div>
+                  <button type="button" onClick={onClearSelection} className="ml-auto shrink-0 rounded-lg px-2 py-1 text-[8px] font-bold text-[#315FEA] hover:bg-[#EEF3FF] lg:ml-2">Clear</button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={onCreateGroupFromSelection}
+                    className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-[#F39800] px-4 text-[8.5px] font-bold text-white shadow-[0_8px_18px_rgba(243,152,0,.18)] hover:bg-[#DD8600]"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Create group from selected
+                  </button>
+                  {groups.length ? (
+                    <form action={assignIntermediaryGroupMembers} className="flex items-center gap-1.5">
+                      {selectedForEmployee.map((partner) => <input key={partner.id} type="hidden" name="partner_id" value={partner.id} />)}
+                      <select name="group_id" required defaultValue="" className="h-9 min-w-[180px] rounded-xl border border-[#CCD7E4] bg-white px-3 text-[8.2px] font-semibold text-[#56697F] outline-none">
+                        <option value="">Move to existing group</option>
+                        {groups.map((group) => <option key={group.id} value={group.id}>{group.group_name}</option>)}
+                      </select>
+                      <FormSubmitButton label="Move" pendingLabel="Moving…" className="inline-flex h-9 items-center rounded-xl border border-[#CCD7E4] bg-white px-3 text-[8.2px] font-bold text-[#3156B8] hover:bg-[#F5F8FC]" />
+                    </form>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           <div className={viewMode === "board" ? "grid gap-3 lg:grid-cols-[minmax(255px,.85fr)_minmax(0,2fr)]" : "grid gap-3"}>
             {showUngrouped ? (
               <section className="overflow-hidden rounded-2xl border border-[#FFDCA5] bg-[linear-gradient(180deg,#FFF9EF,#FFFDF9)]">
