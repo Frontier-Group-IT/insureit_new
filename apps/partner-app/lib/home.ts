@@ -36,13 +36,13 @@ export type PartnerHomeData = {
     service_status: 'steady' | 'attention';
     action_status: 'clear' | 'attention';
   };
-  today: Array<{
+  today: {
     kind: 'intake_attention' | 'renewal' | 'claim';
     title: string;
     subtitle: string;
     count: number;
     route: string;
-  }>;
+  }[];
 };
 
 export async function getPartnerHome() {
