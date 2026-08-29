@@ -22,5 +22,8 @@
         "EXPO_PUBLIC_PORTAL_URL": "https://portal.insureit.in"
       }
     }
+  },
+  "cli": {
+    "appVersionSource": "remote"
   }
 }
