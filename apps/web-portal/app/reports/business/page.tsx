@@ -39,6 +39,7 @@ export default async function ReportsPage({ searchParams }: Props) {
         fromDate={filters.fromDate}
         toDate={filters.toDate}
         compactDrawer
+        clearAppliedFilters
         fields={[
           { name:"insurer", label:"Insurance company", value:filters.insurerId ?? "", options:report.filters.insurers.map((x)=>({value:x.id,label:x.name})) },
           { name:"rm", label:"Relationship manager", value:filters.rmEmployeeId ?? "", options:report.filters.rms.map((x)=>({value:x.id,label:x.name})) },

@@ -24,6 +24,7 @@ export function ReportCompactFilters({
   toDate,
   fields,
   compactDrawer = false,
+  clearAppliedFilters = false,
 }: {
   path: string;
   businessLine: "Motor" | "Non Motor" | null;
@@ -34,6 +35,7 @@ export function ReportCompactFilters({
   toDate: string | null;
   fields: ReportCompactFilterField[];
   compactDrawer?: boolean;
+  clearAppliedFilters?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -105,6 +107,20 @@ export function ReportCompactFilters({
   }
 
   function clearAdvanced() {
+    if (clearAppliedFilters) {
+      const next = new URLSearchParams(searchParams.toString());
+      next.delete("category");
+      for (const field of fields) next.delete(field.name);
+      if (period === "custom") next.set("period", "90d");
+      clearPages(next);
+
+      setDraft(Object.fromEntries(fields.map((field) => [field.name, ""])));
+      setDraftCategory("");
+      setOpen(false);
+      router.push(next.size ? `${path}?${next.toString()}` : path);
+      return;
+    }
+
     const nextDraft: Record<string, string> = {};
     for (const field of fields) nextDraft[field.name] = field.type === "date" ? field.value : "";
     setDraft(nextDraft);
