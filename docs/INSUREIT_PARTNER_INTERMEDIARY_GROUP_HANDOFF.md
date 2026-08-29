@@ -160,3 +160,16 @@ No database migration or hierarchy/business-rule change is part of this UI redes
 - The create modal now distinguishes between an employee-level Group creation and **Create Group from selected**, so employee-context creation does not show misleading “selected” text when no Partner is selected.
 
 No hierarchy, database, permission or mutation-rule change is included.
+
+
+## Manage Group modal + employee-local selection actions — 2026-08-29
+
+**IMPLEMENTED IN FEATURE BRANCH, NOT YET MERGED:** `fix/intermediary-group-manage-modal-actions`.
+
+- The Group management surface now opens as a centered, compact modal instead of a full-height right-side drawer.
+- Edit Group and Transfer Group are arranged in compact cards within the modal; archive remains a separate guarded action.
+- Selecting Partner families now shows the action bar immediately above the **respective employee's own Relationship Board section**, keeping the action in the same visual context as the selected Partner families.
+- Employee-local actions include **Create group from selected**, **Move to existing group**, and **Clear**.
+- The previous global selection bar above the entire employee list is removed.
+
+No database, hierarchy, permission, or server mutation changes are included.
