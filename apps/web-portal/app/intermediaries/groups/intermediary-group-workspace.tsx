@@ -4,14 +4,20 @@ import { useMemo, useRef, useState } from "react";
 import {
   Archive,
   ArrowRightLeft,
+  CheckCircle2,
   ChevronDown,
+  CircleUserRound,
   Folder,
   GripVertical,
+  LayoutGrid,
+  List,
   MoreHorizontal,
   Pencil,
   Plus,
+  RefreshCw,
   Search,
   SlidersHorizontal,
+  Sparkles,
   UserRound,
   UsersRound,
   X,
@@ -61,6 +67,7 @@ export type GroupWorkspacePartner = {
 };
 
 type AssignmentFilter = "all" | "grouped" | "ungrouped";
+type WorkspaceView = "board" | "list";
 
 const successMessages: Record<string, string> = {
   group_created: "Intermediary Group created.",
@@ -97,6 +104,7 @@ export function IntermediaryGroupWorkspace({
   const [query, setQuery] = useState("");
   const [employeeFilter, setEmployeeFilter] = useState("all");
   const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>("all");
+  const [viewMode, setViewMode] = useState<WorkspaceView>("board");
   const [openEmployees, setOpenEmployees] = useState<Set<string>>(() => new Set(employees.map((employee) => employee.id)));
   const [createOpen, setCreateOpen] = useState(false);
   const [createSelectionOwnerId, setCreateSelectionOwnerId] = useState<string | null>(null);
@@ -153,6 +161,10 @@ export function IntermediaryGroupWorkspace({
   const drawerMembers = drawerGroup
     ? memberships.filter((membership) => membership.group_id === drawerGroup.id).length
     : 0;
+  const selectedOwnerGroups = selectedOwnerId
+    ? groups.filter((group) => group.owner_employee_id === selectedOwnerId)
+    : [];
+  const selectedOwner = selectedOwnerId ? employeeById.get(selectedOwnerId) ?? null : null;
 
   function toggleEmployee(employeeId: string) {
     setOpenEmployees((current) => {
@@ -187,38 +199,39 @@ export function IntermediaryGroupWorkspace({
   }
 
   return (
-    <div className="mx-auto max-w-[1480px] space-y-4 pb-10">
-      <section className="rounded-2xl border border-[#DCE4EE] bg-white px-5 py-4 shadow-[0_8px_24px_rgba(15,35,65,.05)]">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div className="min-w-0">
-            <div className="flex items-center gap-3">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEF3FF] text-[#315FEA]">
-                <UsersRound className="h-4.5 w-4.5" />
+    <div className="mx-auto max-w-[1540px] space-y-4 pb-24">
+      <section className="overflow-hidden rounded-[22px] border border-[#DCE5F1] bg-white shadow-[0_18px_50px_rgba(24,59,102,.08)]">
+        <div className="grid gap-3 p-4 xl:grid-cols-[1.05fr_2.2fr]">
+          <div className="relative overflow-hidden rounded-2xl border border-[#DCE6F5] bg-[linear-gradient(135deg,#FFFFFF_0%,#F5F8FF_62%,#EEF3FF_100%)] px-5 py-4">
+            <div className="absolute -right-8 -top-10 h-28 w-28 rounded-full bg-[#315FEA]/10 blur-2xl" />
+            <div className="relative flex items-start gap-4">
+              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[linear-gradient(145deg,#F1F5FF,#FFFFFF)] text-[#315FEA] shadow-[0_8px_20px_rgba(49,95,234,.14)] ring-1 ring-[#D9E4FF]">
+                <UsersRound className="h-6 w-6" />
               </span>
-              <div className="min-w-0">
-                <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-[#142B4A]">Intermediary Groups</h1>
-                <p className="mt-0.5 max-w-3xl text-[10px] leading-5 text-[#6B7A90]">
-                  Organize permanent Partner families under their Sales Employee. Linked POSP/MISP relationships inherit the Partner&apos;s Group.
+              <div className="min-w-0 flex-1">
+                <h1 className="text-[19px] font-bold tracking-[-0.025em] text-[#142B4A]">Intermediary Groups</h1>
+                <p className="mt-1 max-w-xl text-[10px] leading-5 text-[#61738A]">
+                  Organize permanent Partner families under their Sales Employees. Linked POSP/MISP relationships inherit the Partner&apos;s Group.
                 </p>
+                {canManage ? (
+                  <button
+                    type="button"
+                    onClick={() => { setCreateSelectionOwnerId(null); setCreateOpen(true); }}
+                    className="mt-3 inline-flex h-9 items-center gap-2 rounded-xl bg-[#315FEA] px-4 text-[9.5px] font-bold text-white shadow-[0_8px_20px_rgba(49,95,234,.22)] transition hover:-translate-y-0.5 hover:bg-[#254DD0]"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Create Group
+                  </button>
+                ) : null}
               </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Metric label="Partners" value={partners.length} />
-            <Metric label="Groups" value={groups.length} />
-            <Metric label="Grouped" value={groupedCount} />
-            <Metric label="Ungrouped" value={ungroupedCount} />
-            {canManage ? (
-              <button
-                type="button"
-                onClick={() => { setCreateSelectionOwnerId(null); setCreateOpen(true); }}
-                className="ml-1 inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#315FEA] px-3.5 text-[9.5px] font-semibold text-white shadow-sm transition hover:bg-[#254DD0]"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Create Group
-              </button>
-            ) : null}
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <Metric label="Total Partners" value={partners.length} tone="blue" icon={<UsersRound className="h-5 w-5" />} />
+            <Metric label="Total Groups" value={groups.length} tone="violet" icon={<Folder className="h-5 w-5" />} />
+            <Metric label="Grouped Partners" value={groupedCount} tone="green" icon={<CheckCircle2 className="h-5 w-5" />} />
+            <Metric label="Ungrouped Partners" value={ungroupedCount} tone="amber" icon={<CircleUserRound className="h-5 w-5" />} />
           </div>
         </div>
       </section>
@@ -227,55 +240,76 @@ export function IntermediaryGroupWorkspace({
       {error ? <Notice tone="error" text={decodeURIComponent(error)} /> : null}
       {loadError ? <Notice tone="error" text="The hierarchy could not be fully loaded. Refresh the page and try again." /> : null}
 
-      <section className="overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white shadow-[0_8px_24px_rgba(15,35,65,.05)]">
-        <div className="border-b border-[#E7ECF3] bg-[#FBFCFE] px-4 py-3">
-          <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+      <section className="overflow-hidden rounded-[22px] border border-[#DCE5F1] bg-white shadow-[0_14px_40px_rgba(24,59,102,.06)]">
+        <div className="border-b border-[#E7ECF3] bg-[linear-gradient(180deg,#FBFDFF,#F8FAFD)] px-4 py-3">
+          <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
             <div className="relative min-w-0 flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#8B9AAF]" />
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B9AAF]" />
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search Partner, Partner ID, Group or Employee"
-                className="h-9 w-full rounded-lg border border-[#D7E0EA] bg-white pl-9 pr-3 text-[10px] text-[#1E344F] outline-none transition focus:border-[#7D94E6] focus:ring-2 focus:ring-[#E8EDFF]"
+                placeholder="Search partner, partner ID, group or employee"
+                className="h-10 w-full rounded-xl border border-[#D7E0EA] bg-white pl-10 pr-3 text-[10px] text-[#1E344F] shadow-sm outline-none transition focus:border-[#7D94E6] focus:ring-2 focus:ring-[#E8EDFF]"
               />
             </div>
+
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1 text-[8.5px] font-semibold uppercase tracking-[0.06em] text-[#78879B]">
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-                Filters
-              </span>
               <select
                 value={employeeFilter}
                 onChange={(event) => setEmployeeFilter(event.target.value)}
-                className="h-9 min-w-[170px] rounded-lg border border-[#D7E0EA] bg-white px-2.5 text-[9px] text-[#42566E] outline-none"
+                className="h-10 min-w-[190px] rounded-xl border border-[#D7E0EA] bg-white px-3 text-[9px] font-medium text-[#42566E] shadow-sm outline-none"
               >
-                <option value="all">All employees</option>
+                <option value="all">All Sales Employees</option>
                 {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.full_name} · {employee.employee_code}</option>)}
               </select>
               <select
                 value={assignmentFilter}
                 onChange={(event) => setAssignmentFilter(event.target.value as AssignmentFilter)}
-                className="h-9 min-w-[130px] rounded-lg border border-[#D7E0EA] bg-white px-2.5 text-[9px] text-[#42566E] outline-none"
+                className="h-10 min-w-[150px] rounded-xl border border-[#D7E0EA] bg-white px-3 text-[9px] font-medium text-[#42566E] shadow-sm outline-none"
               >
-                <option value="all">All assignments</option>
+                <option value="all">All Assignments</option>
                 <option value="grouped">Grouped</option>
                 <option value="ungrouped">Ungrouped</option>
               </select>
+              <span className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-[#D8E1ED] bg-white px-3 text-[8.5px] font-bold text-[#50657D] shadow-sm">
+                <SlidersHorizontal className="h-3.5 w-3.5 text-[#315FEA]" />
+                Filters
+              </span>
+              <div className="flex h-10 items-center rounded-xl border border-[#D8E1ED] bg-white p-1 shadow-sm">
+                <button type="button" onClick={() => setViewMode("board")} className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[8.5px] font-bold transition ${viewMode === "board" ? "bg-[#315FEA] text-white shadow-sm" : "text-[#718198] hover:bg-[#F5F7FA]"}`}>
+                  <LayoutGrid className="h-3.5 w-3.5" /> Board
+                </button>
+                <button type="button" onClick={() => setViewMode("list")} className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[8.5px] font-bold transition ${viewMode === "list" ? "bg-[#315FEA] text-white shadow-sm" : "text-[#718198] hover:bg-[#F5F7FA]"}`}>
+                  <List className="h-3.5 w-3.5" /> List
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setQuery(""); setEmployeeFilter("all"); setAssignmentFilter("all"); }}
+                className="grid h-10 w-10 place-items-center rounded-xl border border-[#D8E1ED] bg-white text-[#718198] shadow-sm transition hover:bg-[#F5F7FA] hover:text-[#315FEA]"
+                title="Reset filters"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </button>
             </div>
           </div>
         </div>
 
-        <div className="px-4 py-3">
-          <div className="mb-2 flex items-center justify-between">
+        <div className="px-4 pb-4 pt-3">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h2 className="text-[11.5px] font-semibold text-[#1B3555]">Sales hierarchy</h2>
-              <p className="mt-0.5 text-[8.5px] text-[#7B899B]">Employee → optional Group → permanent Partner family</p>
+              <h2 className="text-[13px] font-bold tracking-[-0.01em] text-[#1B3555]">Relationship Board</h2>
+              <p className="mt-0.5 text-[8.5px] font-medium text-[#7B899B]">Employee → Groups → Partners</p>
             </div>
-            <span className="text-[8.5px] font-medium text-[#8A98A9]">{visibleEmployees.length} employees shown</span>
+            <div className="flex items-center gap-3 text-[8.5px]">
+              <span className="font-medium text-[#8A98A9]">{openEmployees.size} of {visibleEmployees.length} employees expanded</span>
+              <button type="button" onClick={() => setOpenEmployees(new Set(visibleEmployees.map((employee) => employee.id)))} className="font-bold text-[#315FEA] hover:text-[#244ED0]">Expand all</button>
+              <button type="button" onClick={() => setOpenEmployees(new Set())} className="font-bold text-[#7A8797] hover:text-[#334A64]">Collapse all</button>
+            </div>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-[#E0E7EF]">
-            {visibleEmployees.length ? visibleEmployees.map((employee, index) => (
+          <div className="space-y-2.5">
+            {visibleEmployees.length ? visibleEmployees.map((employee) => (
               <EmployeeSection
                 key={employee.id}
                 employee={employee}
@@ -290,9 +324,6 @@ export function IntermediaryGroupWorkspace({
                 onToggle={() => toggleEmployee(employee.id)}
                 canManage={canManage}
                 selectedPartnerIds={selectedPartnerIds}
-                activeSelectionCount={selectedOwnerId === employee.id ? selectedPartnerIds.size : 0}
-                onCreateFromSelection={() => { setCreateSelectionOwnerId(employee.id); setCreateOpen(true); }}
-                onClearSelection={clearSelection}
                 onTogglePartner={togglePartner}
                 dragPartnerId={dragPartnerId}
                 onDragStart={setDragPartnerId}
@@ -301,18 +332,48 @@ export function IntermediaryGroupWorkspace({
                 onDropGroup={beginDrop}
                 onDropTarget={setDropGroupId}
                 onManageGroup={setDrawerGroupId}
-                last={index === visibleEmployees.length - 1}
+                viewMode={viewMode}
               />
             )) : (
-              <div className="px-6 py-16 text-center">
-                <UserRound className="mx-auto h-6 w-6 text-[#A0ADBC]" />
+              <div className="rounded-2xl border border-dashed border-[#D6E0EA] bg-[#FAFCFE] px-6 py-16 text-center">
+                <UserRound className="mx-auto h-7 w-7 text-[#A0ADBC]" />
                 <p className="mt-3 text-[11px] font-semibold text-[#334A64]">No hierarchy results</p>
-                <p className="mt-1 text-[9px] text-[#8794A5]">Try changing the search or filters.</p>
+                <p className="mt-1 text-[9px] text-[#8794A5]">Try changing the search or assignment filters.</p>
               </div>
             )}
           </div>
         </div>
       </section>
+
+      {canManage && selectedPartnerIds.size > 0 && selectedOwner ? (
+        <div className="fixed bottom-5 left-1/2 z-40 w-[min(760px,calc(100vw-32px))] -translate-x-1/2 rounded-2xl border border-[#D7E1EC] bg-white/95 p-2.5 shadow-[0_20px_60px_rgba(15,35,65,.22)] backdrop-blur">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex min-w-0 items-center gap-2.5 px-2 sm:flex-1">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#FFF4DF] text-[#EA8B00]">
+                <CheckCircle2 className="h-4 w-4" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[9.5px] font-bold text-[#203C5B]">{selectedPartnerIds.size} partner {selectedPartnerIds.size === 1 ? "family" : "families"} selected</p>
+                <p className="truncate text-[7.5px] text-[#7B8A9C]">{selectedOwner.full_name} · {selectedOwner.employee_code}</p>
+              </div>
+              <button type="button" onClick={clearSelection} className="ml-1 text-[8px] font-bold text-[#315FEA]">Clear</button>
+            </div>
+            <button type="button" onClick={() => { setCreateSelectionOwnerId(selectedOwner.id); setCreateOpen(true); }} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-[#F39800] px-4 text-[8.5px] font-bold text-white shadow-sm hover:bg-[#DD8600]">
+              <Plus className="h-3.5 w-3.5" /> Create group from selected
+            </button>
+            {selectedOwnerGroups.length ? (
+              <form action={assignIntermediaryGroupMembers} className="flex items-center gap-1.5">
+                {Array.from(selectedPartnerIds).map((partnerId) => <input key={partnerId} type="hidden" name="partner_id" value={partnerId} />)}
+                <select name="group_id" required defaultValue="" className="h-9 min-w-[170px] rounded-xl border border-[#CCD7E4] bg-white px-3 text-[8.5px] font-semibold text-[#56697F] outline-none">
+                  <option value="">Move to existing group</option>
+                  {selectedOwnerGroups.map((group) => <option key={group.id} value={group.id}>{group.group_name}</option>)}
+                </select>
+                <FormSubmitButton label="Move" pendingLabel="Moving…" className="inline-flex h-9 items-center rounded-xl border border-[#CCD7E4] bg-white px-3 text-[8.5px] font-bold text-[#3156B8] hover:bg-[#F5F8FC]" />
+              </form>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       <form ref={dropFormRef} action={assignIntermediaryGroupMembers} className="hidden">
         <input name="partner_id" value={pendingDrop?.partnerId ?? ""} readOnly />
@@ -436,9 +497,6 @@ function EmployeeSection({
   onToggle,
   canManage,
   selectedPartnerIds,
-  activeSelectionCount,
-  onCreateFromSelection,
-  onClearSelection,
   onTogglePartner,
   dragPartnerId,
   onDragStart,
@@ -447,7 +505,7 @@ function EmployeeSection({
   onDropGroup,
   onDropTarget,
   onManageGroup,
-  last,
+  viewMode,
 }: {
   employee: GroupWorkspaceEmployee;
   partners: GroupWorkspacePartner[];
@@ -461,9 +519,6 @@ function EmployeeSection({
   onToggle: () => void;
   canManage: boolean;
   selectedPartnerIds: Set<string>;
-  activeSelectionCount: number;
-  onCreateFromSelection: () => void;
-  onClearSelection: () => void;
   onTogglePartner: (partner: GroupWorkspacePartner) => void;
   dragPartnerId: string | null;
   onDragStart: (partnerId: string) => void;
@@ -472,7 +527,7 @@ function EmployeeSection({
   onDropGroup: (partnerId: string, groupId: string) => void;
   onDropTarget: (groupId: string | null) => void;
   onManageGroup: (groupId: string) => void;
-  last: boolean;
+  viewMode: WorkspaceView;
 }) {
   const ungrouped = partners.filter((partner) => !membershipByPartner.has(partner.id));
   const visibleGroups = groups.filter((group) => {
@@ -483,124 +538,45 @@ function EmployeeSection({
       .some((membership) => partnerMatches(partners.find((partner) => partner.id === membership.partner_id), normalizedQuery));
   });
   const visibleUngrouped = ungrouped.filter((partner) => !normalizedQuery || partnerMatches(partner, normalizedQuery));
-
-  const groupedPartnerCount = partners.length - ungrouped.length;
   const showGroups = assignmentFilter !== "ungrouped";
   const showUngrouped = assignmentFilter !== "grouped";
 
   return (
-    <div className={last ? "" : "border-b border-[#E5EBF2]"}>
-      <button type="button" onClick={onToggle} className="flex w-full items-center gap-3 bg-[#FAFBFD] px-3.5 py-3 text-left transition hover:bg-[#F5F8FC]">
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#183B66] text-[9px] font-bold text-white">{initials(employee.full_name)}</span>
+    <article className="overflow-hidden rounded-2xl border border-[#D7E2F0] bg-white shadow-[0_6px_18px_rgba(23,54,93,.045)]">
+      <button type="button" onClick={onToggle} className="flex w-full items-center gap-3 bg-[linear-gradient(90deg,#F8FBFF,#F2F6FF_55%,#FBFCFF)] px-4 py-3 text-left transition hover:brightness-[.99]">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[linear-gradient(145deg,#1D4D80,#15365E)] text-[9px] font-bold text-white shadow-sm">{initials(employee.full_name)}</span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[10.5px] font-semibold text-[#1D3858]">{employee.full_name}</span>
-          <span className="mt-0.5 block text-[8px] text-[#7D8B9D]">{employee.designation ?? "Sales employee"} · {employee.employee_code}</span>
+          <span className="block truncate text-[11px] font-bold text-[#1D3858]">{employee.full_name}</span>
+          <span className="mt-0.5 block text-[8px] font-medium text-[#7D8B9D]">{employee.designation ?? "Sales employee"} · {employee.employee_code}</span>
         </span>
-        <span className="hidden items-center gap-1.5 sm:flex">
-          <Stat label="Partners" value={partners.length} />
-          <Stat label="Groups" value={groups.length} />
-          <Stat label="Ungrouped" value={ungrouped.length} />
+        <span className="hidden items-center gap-2 sm:flex">
+          <Stat label="Partners" value={partners.length} tone="blue" />
+          <Stat label="Groups" value={groups.length} tone="violet" />
+          <Stat label="Ungrouped" value={ungrouped.length} tone={ungrouped.length ? "amber" : "green"} />
         </span>
-        <ChevronDown className={`h-4 w-4 shrink-0 text-[#7A8A9D] transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        <span className="grid h-8 w-8 place-items-center rounded-full bg-white text-[#60748B] shadow-sm ring-1 ring-[#E3E9F1]">
+          <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        </span>
       </button>
 
       {isOpen ? (
-        <div className="bg-white px-3.5 py-3">
-          {canManage && activeSelectionCount > 0 ? (
-            <div className="mb-3 flex flex-col gap-2 rounded-xl border border-[#CCD9F5] bg-[#F5F8FF] px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2.5">
-                <span className="grid h-7 min-w-7 place-items-center rounded-lg bg-[#315FEA] px-2 text-[9px] font-bold text-white">{activeSelectionCount}</span>
-                <div>
-                  <p className="text-[9.5px] font-semibold text-[#294766]">Partner {activeSelectionCount === 1 ? "family" : "families"} selected</p>
-                  <p className="mt-0.5 text-[7.5px] text-[#72839A]">Choose an action for {employee.full_name}.</p>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                {groups.length ? (
-                  <form action={assignIntermediaryGroupMembers} className="flex items-center gap-1.5">
-                    {Array.from(selectedPartnerIds).map((partnerId) => <input key={partnerId} type="hidden" name="partner_id" value={partnerId} />)}
-                    <select name="group_id" required defaultValue="" className="h-8 min-w-[170px] rounded-lg border border-[#C9D5E4] bg-white px-2.5 text-[8.5px] text-[#42566E] outline-none">
-                      <option value="">Move to existing Group…</option>
-                      {groups.map((group) => <option key={group.id} value={group.id}>{group.group_name}</option>)}
-                    </select>
-                    <FormSubmitButton label="Move" pendingLabel="Moving…" className="inline-flex h-8 items-center rounded-lg border border-[#C9D5E4] bg-white px-3 text-[8.5px] font-semibold text-[#3156B8] hover:bg-[#F8FAFD]" />
-                  </form>
-                ) : null}
-                <button type="button" onClick={onCreateFromSelection} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#315FEA] px-3 text-[8.5px] font-semibold text-white hover:bg-[#254DD0]">
-                  <Plus className="h-3.5 w-3.5" />
-                  Create Group from selected
-                </button>
-                <button type="button" onClick={onClearSelection} className="grid h-8 w-8 place-items-center rounded-lg border border-[#D2DCE8] bg-white text-[#738298] hover:bg-[#F6F8FB]" title="Clear selection">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-          ) : null}
-          <div className="space-y-2">
-            {showGroups ? visibleGroups.map((group) => {
-              const members = memberships
-                .filter((membership) => membership.group_id === group.id)
-                .map((membership) => partners.find((partner) => partner.id === membership.partner_id))
-                .filter((partner): partner is GroupWorkspacePartner => Boolean(partner))
-                .filter((partner) => !normalizedQuery || partnerMatches(partner, normalizedQuery) || group.group_name.toLowerCase().includes(normalizedQuery) || group.group_code.toLowerCase().includes(normalizedQuery));
-              const isDropTarget = dropGroupId === group.id && Boolean(dragPartnerId);
-              return (
-                <div
-                  key={group.id}
-                  onDragOver={(event) => { if (!canManage || !dragPartnerId) return; event.preventDefault(); onDropTarget(group.id); }}
-                  onDragLeave={() => onDropTarget(null)}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    if (canManage && dragPartnerId) onDropGroup(dragPartnerId, group.id);
-                    onDropTarget(null);
-                  }}
-                  className={`overflow-hidden rounded-lg border transition ${isDropTarget ? "border-[#315FEA] bg-[#F1F5FF] ring-2 ring-[#DDE5FF]" : "border-[#DFE6EE] bg-white"}`}
-                >
-                  <div className="flex items-center gap-2 border-b border-[#EDF1F5] bg-[#F8FAFC] px-3 py-2.5">
-                    <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#EEF3FF] text-[#315FEA]"><Folder className="h-3.5 w-3.5" /></span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="truncate text-[9.5px] font-semibold text-[#24405F]">{group.group_name}</p>
-                        <span className="text-[7.5px] font-semibold uppercase tracking-[0.06em] text-[#8A98A9]">{group.group_code}</span>
-                      </div>
-                      <p className="mt-0.5 text-[7.5px] text-[#8996A6]">{members.length} Partner {members.length === 1 ? "family" : "families"}{isDropTarget ? " · Drop to move here" : ""}</p>
-                    </div>
-                    {canManage ? <button type="button" onClick={() => onManageGroup(group.id)} className="grid h-7 w-7 place-items-center rounded-lg text-[#718198] hover:bg-white hover:text-[#315FEA]" title="Manage Group"><MoreHorizontal className="h-4 w-4" /></button> : null}
-                  </div>
-                  {members.length ? (
-                    <div className="divide-y divide-[#EEF2F6]">
-                      {members.map((partner) => (
-                        <PartnerRow
-                          key={partner.id}
-                          partner={partner}
-                          currentGroup={groupById.get(membershipByPartner.get(partner.id)?.group_id ?? "") ?? null}
-                          groups={groups}
-                          canManage={canManage}
-                          selected={selectedPartnerIds.has(partner.id)}
-                          onToggle={() => onTogglePartner(partner)}
-                          onDragStart={() => onDragStart(partner.id)}
-                          onDragEnd={onDragEnd}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="px-3 py-4 text-center text-[8.5px] text-[#93A0AF]">{isDropTarget ? "Release to move Partner into this Group" : "No Partner families in this Group."}</div>
-                  )}
-                </div>
-              );
-            }) : null}
-
+        <div className="p-3">
+          <div className={viewMode === "board" ? "grid gap-3 lg:grid-cols-[minmax(255px,.85fr)_minmax(0,2fr)]" : "grid gap-3"}>
             {showUngrouped ? (
-              <div className="overflow-hidden rounded-lg border border-dashed border-[#C8D3E0] bg-[#FCFDFE]">
-                <div className="flex items-center gap-2 border-b border-dashed border-[#D9E1E9] px-3 py-2.5">
-                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#F1F4F7] text-[#68798C]"><UsersRound className="h-3.5 w-3.5" /></span>
+              <section className="overflow-hidden rounded-2xl border border-[#FFDCA5] bg-[linear-gradient(180deg,#FFF9EF,#FFFDF9)]">
+                <div className="flex items-center gap-2 border-b border-[#FFE6BE] bg-[#FFF8EA] px-3 py-2.5">
+                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#FFF0D5] text-[#E98A00]"><CircleUserRound className="h-3.5 w-3.5" /></span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[9.5px] font-semibold text-[#52657B]">Ungrouped</p>
-                    <p className="mt-0.5 text-[7.5px] text-[#8B98A7]">Virtual bucket · {ungrouped.length} Partner {ungrouped.length === 1 ? "family" : "families"}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-[9.5px] font-bold text-[#C96F00]">Ungrouped Partners</p>
+                      {ungrouped.length ? <span className="rounded-full bg-[#FFE8C1] px-2 py-0.5 text-[7px] font-bold text-[#C96F00]">Pending assignment</span> : null}
+                    </div>
+                    <p className="mt-0.5 text-[7.5px] text-[#A78352]">{ungrouped.length} Partner {ungrouped.length === 1 ? "family" : "families"}</p>
                   </div>
+                  <span className="grid h-6 min-w-6 place-items-center rounded-full bg-[#FFE8C1] px-1.5 text-[8px] font-bold text-[#D77E00]">{ungrouped.length}</span>
                 </div>
                 {visibleUngrouped.length ? (
-                  <div className="divide-y divide-[#EEF2F6]">
+                  <div className="space-y-1.5 p-2">
                     {visibleUngrouped.map((partner) => (
                       <PartnerRow
                         key={partner.id}
@@ -612,31 +588,112 @@ function EmployeeSection({
                         onToggle={() => onTogglePartner(partner)}
                         onDragStart={() => onDragStart(partner.id)}
                         onDragEnd={onDragEnd}
+                        compact
                       />
                     ))}
                   </div>
+                ) : ungrouped.length ? (
+                  <div className="px-3 py-8 text-center text-[8.5px] text-[#A18B70]">No ungrouped Partners match the current search.</div>
                 ) : (
-                  <div className="px-3 py-4 text-center text-[8.5px] text-[#93A0AF]">
-                    {ungrouped.length ? "No ungrouped Partners match the current search." : "Every Partner family is assigned to a Group."}
+                  <div className="flex min-h-[112px] flex-col items-center justify-center px-4 py-6 text-center">
+                    <span className="grid h-9 w-9 place-items-center rounded-full bg-[#EAF8EF] text-[#2E9B59]"><Sparkles className="h-4 w-4" /></span>
+                    <p className="mt-2 text-[9px] font-bold text-[#2E7E4B]">Great! All partners are organized.</p>
+                    <p className="mt-1 text-[7.5px] text-[#789180]">There is nothing pending for this employee.</p>
                   </div>
                 )}
-              </div>
+              </section>
             ) : null}
 
-            {!groups.length && !ungrouped.length ? (
-              <div className="rounded-lg border border-dashed border-[#D4DDE7] px-4 py-8 text-center">
-                <p className="text-[9.5px] font-semibold text-[#53677C]">No Partner families under this employee</p>
-              </div>
-            ) : null}
-          </div>
+            {showGroups ? (
+              <section className="overflow-hidden rounded-2xl border border-[#E5DDFC] bg-[linear-gradient(180deg,#FBF9FF,#FEFDFF)]">
+                <div className="flex items-center gap-2 border-b border-[#EEE8FA] bg-[#FAF7FF] px-3 py-2.5">
+                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#EEE7FF] text-[#7753D5]"><Folder className="h-3.5 w-3.5" /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[9.5px] font-bold text-[#6346B7]">Partner Groups</p>
+                    <p className="mt-0.5 text-[7.5px] text-[#9686B8]">{groups.length} active {groups.length === 1 ? "group" : "groups"}</p>
+                  </div>
+                  <span className="grid h-6 min-w-6 place-items-center rounded-full bg-[#EEE7FF] px-1.5 text-[8px] font-bold text-[#7753D5]">{groups.length}</span>
+                </div>
 
-          <div className="mt-2 flex items-center justify-end gap-3 px-1 text-[7.5px] text-[#99A5B3]">
-            <span>{groupedPartnerCount} grouped</span>
-            <span>{ungrouped.length} ungrouped</span>
+                {visibleGroups.length ? (
+                  <div className={`grid gap-2.5 p-2.5 ${viewMode === "board" ? "md:grid-cols-2" : "grid-cols-1"}`}>
+                    {visibleGroups.map((group) => {
+                      const members = memberships
+                        .filter((membership) => membership.group_id === group.id)
+                        .map((membership) => partners.find((partner) => partner.id === membership.partner_id))
+                        .filter((partner): partner is GroupWorkspacePartner => Boolean(partner))
+                        .filter((partner) => !normalizedQuery || partnerMatches(partner, normalizedQuery) || group.group_name.toLowerCase().includes(normalizedQuery) || group.group_code.toLowerCase().includes(normalizedQuery));
+                      const isDropTarget = dropGroupId === group.id && Boolean(dragPartnerId);
+
+                      return (
+                        <div
+                          key={group.id}
+                          onDragOver={(event) => { if (!canManage || !dragPartnerId) return; event.preventDefault(); onDropTarget(group.id); }}
+                          onDragLeave={() => onDropTarget(null)}
+                          onDrop={(event) => {
+                            event.preventDefault();
+                            if (canManage && dragPartnerId) onDropGroup(dragPartnerId, group.id);
+                            onDropTarget(null);
+                          }}
+                          className={`overflow-hidden rounded-xl border bg-white shadow-[0_4px_14px_rgba(83,57,145,.06)] transition ${isDropTarget ? "border-[#7753D5] ring-2 ring-[#E6DEFA]" : "border-[#E4DDF3]"}`}
+                        >
+                          <div className="flex items-start gap-2 border-b border-[#F0ECF7] px-3 py-2.5">
+                            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#F1ECFF] text-[#7753D5]"><UsersRound className="h-3.5 w-3.5" /></span>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <p className="truncate text-[9.5px] font-bold text-[#563A9A]">{group.group_name}</p>
+                                <span className="rounded-md bg-[#EEF8F0] px-1.5 py-0.5 text-[6.5px] font-bold uppercase text-[#3C8D58]">Active</span>
+                              </div>
+                              <p className="mt-0.5 text-[7.5px] text-[#8C7FA7]">{members.length} Partner {members.length === 1 ? "family" : "families"} · {group.group_code}</p>
+                            </div>
+                            {canManage ? (
+                              <button type="button" onClick={() => onManageGroup(group.id)} className="grid h-7 w-7 place-items-center rounded-lg text-[#7E7395] hover:bg-[#F6F2FF] hover:text-[#6847C7]" title="Manage Group">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </button>
+                            ) : null}
+                          </div>
+
+                          {members.length ? (
+                            <div className="grid gap-1.5 p-2 sm:grid-cols-2">
+                              {members.map((partner) => (
+                                <PartnerRow
+                                  key={partner.id}
+                                  partner={partner}
+                                  currentGroup={groupById.get(membershipByPartner.get(partner.id)?.group_id ?? "") ?? null}
+                                  groups={groups}
+                                  canManage={canManage}
+                                  selected={selectedPartnerIds.has(partner.id)}
+                                  onToggle={() => onTogglePartner(partner)}
+                                  onDragStart={() => onDragStart(partner.id)}
+                                  onDragEnd={onDragEnd}
+                                  compact
+                                />
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="px-3 py-7 text-center text-[8.5px] text-[#9D91B3]">{isDropTarget ? "Release to move Partner into this Group" : "No Partner families in this Group."}</div>
+                          )}
+
+                          <div className="flex items-center justify-between border-t border-[#F0ECF7] px-3 py-2 text-[7.5px] font-bold">
+                            <span className="text-[#7753D5]">{isDropTarget ? "Drop partner here" : "Permanent Partner family group"}</span>
+                            {canManage ? <button type="button" onClick={() => onManageGroup(group.id)} className="text-[#7753D5] hover:text-[#563A9A]">Manage</button> : null}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="px-4 py-10 text-center">
+                    <Folder className="mx-auto h-5 w-5 text-[#B2A6C8]" />
+                    <p className="mt-2 text-[9px] font-semibold text-[#766A8B]">{groups.length ? "No groups match the current search." : "No groups created yet."}</p>
+                  </div>
+                )}
+              </section>
+            ) : null}
           </div>
         </div>
       ) : null}
-    </div>
+    </article>
   );
 }
 
@@ -649,6 +706,7 @@ function PartnerRow({
   onToggle,
   onDragStart,
   onDragEnd,
+  compact = false,
 }: {
   partner: GroupWorkspacePartner;
   currentGroup: GroupWorkspaceGroup | null;
@@ -658,6 +716,7 @@ function PartnerRow({
   onToggle: () => void;
   onDragStart: () => void;
   onDragEnd: () => void;
+  compact?: boolean;
 }) {
   const alternatives = groups.filter((group) => group.id !== currentGroup?.id);
   return (
@@ -669,28 +728,28 @@ function PartnerRow({
         onDragStart();
       }}
       onDragEnd={onDragEnd}
-      className={`group flex items-center gap-2.5 px-3 py-2.5 transition ${selected ? "bg-[#F4F7FF]" : "hover:bg-[#FAFBFD]"}`}
+      className={`group flex items-center gap-2 rounded-lg border px-2.5 py-2 transition ${selected ? "border-[#9EB4FF] bg-[#F2F6FF]" : currentGroup ? "border-[#E8E2F1] bg-[#FCFBFE] hover:border-[#D8CDEA]" : "border-[#F3D7AC] bg-white hover:border-[#EFC27F]"} ${compact ? "min-h-[48px]" : ""}`}
     >
       {canManage ? (
-        <>
-          <input type="checkbox" checked={selected} onChange={onToggle} className="h-3.5 w-3.5 rounded border-[#B9C6D5] accent-[#315FEA]" aria-label={`Select ${partner.display_name}`} />
-          <GripVertical className="h-3.5 w-3.5 cursor-grab text-[#B2BDCA] opacity-0 transition group-hover:opacity-100" />
-        </>
+        <input type="checkbox" checked={selected} onChange={onToggle} className="h-3.5 w-3.5 shrink-0 rounded border-[#B9C6D5] accent-[#315FEA]" aria-label={`Select ${partner.display_name}`} />
       ) : null}
+      <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${currentGroup ? "bg-[#F0ECFA] text-[#7356C5]" : "bg-[#FFF3DF] text-[#DA8100]"}`}>
+        <UserRound className="h-3.5 w-3.5" />
+      </span>
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p className="truncate text-[9.5px] font-semibold text-[#2A405B]">{partner.display_name}</p>
-          <span className="rounded-md bg-[#F1F4F7] px-1.5 py-0.5 text-[7px] font-semibold uppercase text-[#6B7B8C]">{partner.partner_kind === "business" ? "Business Partner" : "Individual Partner"}</span>
+        <p className="truncate text-[8.5px] font-bold text-[#2A405B]">{partner.display_name}</p>
+        <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+          <span className="text-[7px] font-medium text-[#8593A4]">{partner.partner_code}</span>
+          <span className={`rounded-full px-1.5 py-0.5 text-[6px] font-bold uppercase ${currentGroup ? "bg-[#F1ECFA] text-[#6E58A8]" : "bg-[#FFF1D9] text-[#C87900]"}`}>{partner.partner_kind === "business" ? "Business" : "Individual"}</span>
         </div>
-        <p className="mt-0.5 text-[7.5px] text-[#8593A4]">{partner.partner_code}{partner.registration_code && partner.registration_code !== partner.partner_code ? ` · ${partner.registration_code}` : ""}</p>
       </div>
-      <div className="hidden min-w-[110px] text-right text-[8px] font-medium text-[#718197] md:block">{currentGroup?.group_name ?? "Ungrouped"}</div>
       {canManage ? (
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-0.5">
+          <GripVertical className="h-3.5 w-3.5 cursor-grab text-[#B2BDCA] opacity-0 transition group-hover:opacity-100" />
           {alternatives.length ? (
-            <form action={assignIntermediaryGroupMembers} className="flex items-center gap-1">
+            <form action={assignIntermediaryGroupMembers} className="flex items-center">
               <input type="hidden" name="partner_id" value={partner.id} />
-              <select name="group_id" defaultValue="" required className="h-7 max-w-[150px] rounded-md border border-transparent bg-transparent px-1.5 text-[7.5px] text-[#718197] opacity-0 outline-none transition hover:border-[#D7E0EA] hover:bg-white group-hover:opacity-100 focus:opacity-100">
+              <select name="group_id" defaultValue="" required className="h-7 max-w-[105px] rounded-md border border-transparent bg-transparent px-1 text-[7px] text-[#718197] opacity-0 outline-none transition hover:border-[#D7E0EA] hover:bg-white group-hover:opacity-100 focus:opacity-100">
                 <option value="">Move to…</option>
                 {alternatives.map((group) => <option key={group.id} value={group.id}>{group.group_name}</option>)}
               </select>
@@ -711,17 +770,42 @@ function PartnerRow({
   );
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
+function Metric({
+  label,
+  value,
+  tone,
+  icon,
+}: {
+  label: string;
+  value: number;
+  tone: "blue" | "violet" | "green" | "amber";
+  icon: React.ReactNode;
+}) {
+  const styles = {
+    blue: "border-[#DCE9FF] bg-[linear-gradient(135deg,#F4F8FF,#EDF5FF)] text-[#2E77D0]",
+    violet: "border-[#E8DDFC] bg-[linear-gradient(135deg,#FAF6FF,#F4EEFF)] text-[#7753D5]",
+    green: "border-[#DDF1E4] bg-[linear-gradient(135deg,#F5FBF7,#EDF9F1)] text-[#3E9A5E]",
+    amber: "border-[#F8E8C8] bg-[linear-gradient(135deg,#FFF9EF,#FFF3DE)] text-[#E59800]",
+  } as const;
   return (
-    <div className="min-w-[76px] rounded-lg border border-[#DEE6EF] bg-[#FAFBFD] px-2.5 py-2 text-center">
-      <p className="text-[13px] font-semibold text-[#17365D]">{value}</p>
-      <p className="mt-0.5 text-[7px] font-semibold uppercase tracking-[0.06em] text-[#8390A1]">{label}</p>
+    <div className={`flex min-h-[112px] items-center gap-3 rounded-2xl border px-4 py-3 ${styles[tone]}`}>
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/75 shadow-sm ring-1 ring-black/5">{icon}</span>
+      <div>
+        <p className="text-[8px] font-bold uppercase tracking-[0.055em] opacity-80">{label}</p>
+        <p className="mt-1 text-[20px] font-extrabold tracking-[-0.03em] text-[#17365D]">{value}</p>
+      </div>
     </div>
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
-  return <span className="rounded-md border border-[#DFE6EE] bg-white px-2 py-1 text-[7.5px] text-[#748499]"><b className="text-[#294766]">{value}</b> {label}</span>;
+function Stat({ label, value, tone }: { label: string; value: number; tone: "blue" | "violet" | "amber" | "green" }) {
+  const styles = {
+    blue: "border-[#DDE8FF] bg-[#F3F7FF] text-[#315FEA]",
+    violet: "border-[#E9E0FA] bg-[#F7F3FF] text-[#7753D5]",
+    amber: "border-[#F6E2BE] bg-[#FFF7E9] text-[#D98100]",
+    green: "border-[#DDEFE3] bg-[#F1FAF4] text-[#398C57]",
+  } as const;
+  return <span className={`rounded-lg border px-2.5 py-1.5 text-[7.5px] font-semibold ${styles[tone]}`}><b>{value}</b> {label}</span>;
 }
 
 function Notice({ tone, text }: { tone: "success" | "error"; text: string }) {
