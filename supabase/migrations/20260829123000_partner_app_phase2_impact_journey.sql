@@ -279,7 +279,7 @@ begin
     union all
     select customer_25_date,'customers_25','25 customers','25 customers reached in your authorized book.',45 from stats where customer_25_date is not null
     union all
-    select premium_5l_month,'premium_5l','₹5L month','First month crossing ₹5L gross premium.',50 from stats where premium_5l_month is not null
+    select greatest(premium_5l_month,v_joined_at::date),'premium_5l','₹5L month','First tracked month crossing ₹5L gross premium.',50 from stats where premium_5l_month is not null
     union all
     select policy_50_date,'policies_50','50 policies','50 attributable policies completed.',60 from stats where policy_50_date is not null
     union all
@@ -287,7 +287,7 @@ begin
     union all
     select first_claim_date,'first_claim','First claim assisted','The first attributable claim recorded after journey tracking began.',70 from stats where first_claim_date is not null
     union all
-    select premium_10l_month,'premium_10l','₹10L month','First month crossing ₹10L gross premium.',80 from stats where premium_10l_month is not null
+    select greatest(premium_10l_month,v_joined_at::date),'premium_10l','₹10L month','First tracked month crossing ₹10L gross premium.',80 from stats where premium_10l_month is not null
     union all
     select policy_100_date,'policies_100','100 policies','100 attributable policies completed.',90 from stats where policy_100_date is not null
     union all
