@@ -580,6 +580,33 @@ begin
       and public.partner_app_claim_in_scope(cl.id)
     order by cl.created_at desc
     limit 25
+  ),
+  counts as (
+    select
+      (
+        select count(*)::int
+        from public.policies p
+        where p.customer_id=p_customer_id
+          and public.partner_app_policy_in_scope(p.id)
+      ) as policies,
+      (
+        select count(*)::int
+        from public.vehicles v
+        where v.customer_id=p_customer_id
+      ) as vehicles,
+      (
+        select count(*)::int
+        from public.claims cl
+        where cl.customer_id=p_customer_id
+          and public.partner_app_claim_in_scope(cl.id)
+      ) as claims,
+      (
+        select count(*)::int
+        from public.policies p
+        where p.customer_id=p_customer_id
+          and p.end_date between current_date and current_date+30
+          and public.partner_app_policy_in_scope(p.id)
+      ) as renewals_30_days
   )
   select jsonb_build_object(
     'customer',jsonb_build_object(
@@ -600,10 +627,10 @@ begin
       'intermediary_code',b.intermediary_code
     ),
     'summary',jsonb_build_object(
-      'policies',(select count(*) from policy_rows),
-      'vehicles',(select count(*) from vehicle_rows),
-      'claims',(select count(*) from claim_rows),
-      'renewals_30_days',(select count(*) from policy_rows where end_date between current_date and current_date+30)
+      'policies',cnt.policies,
+      'vehicles',cnt.vehicles,
+      'claims',cnt.claims,
+      'renewals_30_days',cnt.renewals_30_days
     ),
     'policies',coalesce((
       select jsonb_agg(jsonb_build_object(
@@ -648,11 +675,12 @@ begin
     ),'[]'::jsonb)
   )
   into v_result
-  from base b;
+  from base b
+  cross join counts cnt;
 
   return v_result;
 end;
-$$;
+$;
 
 create or replace function public.partner_app_policy_detail(p_policy_id uuid)
 returns jsonb
