@@ -130,3 +130,21 @@ The app must not create a second Group model, second Partner ownership model, or
 Production currently supports optional Groups while leaving ungrouped permanent Partner families directly under their Sales Employee. Existing policies were intentionally not backfilled into Group snapshot fields.
 
 The backend prerequisite for INSUREIT Partner has therefore been crossed. Continue with `docs/INSUREIT_PARTNER_APP_ARCHITECTURE.md` for the Partner-app identity, portal-account and commercial-scope contract. Do not auto-create real business Groups or intermediary portal accounts without an explicit business/UAT decision.
+
+
+## Relationship Board visual redesign — 2026-08-29
+
+**IMPLEMENTED IN FEATURE BRANCH, NOT YET MERGED:** `ui/intermediary-groups-relationship-board-v2` redesigns `/intermediaries/groups` as the approved INSUREIT visual-first Relationship Board without changing the hierarchy model or mutation rules.
+
+The redesign keeps the canonical hierarchy and existing server actions intact while improving the management surface with:
+
+- a visual header and semantic KPI cards for Partners, Groups, Grouped and Ungrouped Partner families;
+- a stronger search/filter toolbar with Board/List view controls and reset action;
+- employee cards with visual portfolio status chips;
+- a two-zone employee workspace: amber **Ungrouped Partners** attention area and violet **Partner Groups** area;
+- compact Partner identity cards that retain selection, drag/move and ungroup actions;
+- a global sticky selection action bar for creating a Group from selected Partner families or moving them into an existing Group;
+- empty-success states when an employee has no ungrouped Partner families;
+- the existing create-group modal, manage-group drawer, transfer, archive, drag/drop and effective-dated membership actions remain authoritative and unchanged.
+
+No database migration or hierarchy/business-rule change is part of this UI redesign.
