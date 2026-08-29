@@ -150,7 +150,7 @@ export default function PoliciesScreen() {
             <View style={styles.listLoading}><ActivityIndicator color={partnerTheme.colors.brand} /></View>
           ) : rows.length ? (
             <View style={styles.list}>
-              {rows.map((row) => <PolicyRow key={row.policy_id} row={row} />)}
+              {rows.map((row) => <PolicyRow key={row.policy_id} row={row} onPress={() => router.push(`/policy/${row.policy_id}` as never)} />)}
             </View>
           ) : (
             <View style={styles.empty}>
@@ -174,9 +174,9 @@ function SummaryCard({ label, value, compact = false }: { label: string; value: 
   );
 }
 
-function PolicyRow({ row }: { row: PartnerPolicyRow }) {
+function PolicyRow({ row, onPress }: { row: PartnerPolicyRow; onPress: () => void }) {
   return (
-    <View style={styles.policyRow}>
+    <Pressable onPress={onPress} style={styles.policyRow}>
       <View style={styles.policyTop}>
         <View style={styles.policyIdentity}>
           <Text style={styles.policyNo}>{row.policy_no || row.policy_code || 'Policy'}</Text>
@@ -194,9 +194,9 @@ function PolicyRow({ row }: { row: PartnerPolicyRow }) {
 
       <View style={styles.policyFooter}>
         <Text style={styles.policyDates}>{formatDate(row.start_date)} → {formatDate(row.end_date)}</Text>
-        <Text style={styles.policyIntermediary}>{row.intermediary_code || 'Direct'}</Text>
+        <View style={styles.policyOpen}><Text style={styles.policyIntermediary}>{row.intermediary_code || 'Direct'}</Text><Ionicons name="chevron-forward" size={14} color={partnerTheme.colors.brand} /></View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -301,6 +301,7 @@ const styles = StyleSheet.create({
   metaValue: { marginTop: 3, color: partnerTheme.colors.ink, fontSize: 9.5, fontWeight: '600' },
   policyFooter: { marginTop: 14, paddingTop: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
   policyDates: { color: partnerTheme.colors.inkMuted, fontSize: 8.5 },
+  policyOpen: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   policyIntermediary: { color: partnerTheme.colors.brand, fontSize: 8.5, fontWeight: '700' },
   empty: { minHeight: 180, alignItems: 'center', justifyContent: 'center', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface },
   emptyTitle: { marginTop: 10, color: partnerTheme.colors.ink, fontSize: 12, fontWeight: '700' },
