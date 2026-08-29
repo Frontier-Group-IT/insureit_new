@@ -3,6 +3,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Image, Linking, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LoadingState, Message, Screen } from '@/components/ui';
 import { ensureCustomerForUser, getCurrentSession, getOnboardingApplicationForUser, getProfile, signOut } from '@/lib/auth';
@@ -15,6 +16,7 @@ const kycDocumentTypes = ['PAN Card', 'Aadhaar Card', 'GST Certificate', 'RC Cop
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [onboarding, setOnboarding] = useState<CustomerOnboardingApplication | null>(null);
@@ -29,6 +31,8 @@ export default function ProfileScreen() {
   const [documentUploading, setDocumentUploading] = useState(false);
   const [documentsOpen, setDocumentsOpen] = useState(false);
   const float = useRef(new Animated.Value(0)).current;
+  const successToastOpacity = useRef(new Animated.Value(0)).current;
+  const successToastLift = useRef(new Animated.Value(-8)).current;
 
   useEffect(() => {
     const loop = Animated.loop(Animated.sequence([
@@ -38,6 +42,33 @@ export default function ProfileScreen() {
     loop.start();
     return () => loop.stop();
   }, [float]);
+
+  useEffect(() => {
+    if (message?.type !== 'success') {
+      successToastOpacity.setValue(0);
+      successToastLift.setValue(-8);
+      return;
+    }
+
+    successToastOpacity.setValue(0);
+    successToastLift.setValue(-8);
+
+    Animated.parallel([
+      Animated.timing(successToastOpacity, { toValue: 1, duration: 220, useNativeDriver: true }),
+      Animated.timing(successToastLift, { toValue: 0, duration: 220, useNativeDriver: true }),
+    ]).start();
+
+    const timer = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(successToastOpacity, { toValue: 0, duration: 220, useNativeDriver: true }),
+        Animated.timing(successToastLift, { toValue: -8, duration: 220, useNativeDriver: true }),
+      ]).start(({ finished }) => {
+        if (finished) setMessage((current) => current?.type === 'success' ? null : current);
+      });
+    }, 4300);
+
+    return () => clearTimeout(timer);
+  }, [message, successToastLift, successToastOpacity]);
 
   useEffect(() => {
     let active = true;
@@ -225,9 +256,10 @@ export default function ProfileScreen() {
   if (loading) return <Screen title="Profile"><LoadingState /></Screen>;
 
   return (
-    <Screen title="Profile" showTitleHeader={false} topSpacing="compact">
+    <View style={styles.profileRoot}>
+      <Screen title="Profile" showTitleHeader={false} topSpacing="compact">
       <View style={styles.pageHeading}><Text style={styles.pageTitle}>Profile</Text></View>
-      {message ? <Message type={message.type}>{message.text}</Message> : null}
+      {message?.type === 'error' ? <Message type="error">{message.text}</Message> : null}
 
       <View style={styles.hero}>
         <View style={styles.heroShield}><MaterialCommunityIcons name="shield-check-outline" size={72} color="rgba(255,255,255,0.13)" /></View>
@@ -308,7 +340,31 @@ export default function ProfileScreen() {
       <Section title="Preferences" icon="cog-outline"><ActionRow icon="bell-outline" label="Notifications" value="All notifications" onPress={() => router.push('/customer/notifications')} /><ActionRow icon="translate" label="Language" value="English" onPress={() => setMessage({ text: 'English is currently selected.', type: 'success' })} /><View style={styles.preferenceToggle}><View style={styles.preferenceLeft}><View style={styles.rowIcon}><MaterialCommunityIcons name="weather-night" size={19} color={roleTheme.customer.accent} /></View><Text style={styles.rowLabel}>Dark Mode</Text></View><Switch value={darkMode} onValueChange={setDarkMode} trackColor={{ false: '#DCE4ED', true: '#8ACDB7' }} thumbColor={darkMode ? roleTheme.customer.accent : '#FFFFFF'} /></View></Section>
 
       <Pressable accessibilityRole="button" onPress={() => void signOut(router)} style={styles.signOut}><MaterialCommunityIcons name="logout" size={18} color="#C43838" /><Text style={styles.signOutText}>Sign out securely</Text></Pressable>
-    </Screen>
+      </Screen>
+
+      {message?.type === 'success' ? (
+        <Animated.View
+          pointerEvents="none"
+          accessibilityLiveRegion="polite"
+          style={[
+            styles.successToast,
+            {
+              top: insets.top + 78,
+              opacity: successToastOpacity,
+              transform: [{ translateY: successToastLift }],
+            },
+          ]}
+        >
+          <View style={styles.successToastIcon}>
+            <MaterialCommunityIcons name="check-circle" size={22} color="#067647" />
+          </View>
+          <View style={styles.successToastCopy}>
+            <Text style={styles.successToastTitle}>Success</Text>
+            <Text style={styles.successToastText}>{message.text}</Text>
+          </View>
+        </Animated.View>
+      ) : null}
+    </View>
   );
 }
 
@@ -322,6 +378,12 @@ async function email(address?: string | null) { if (address) await Linking.openU
 async function openMap(address?: string) { if (address) await Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`); }
 
 const styles = StyleSheet.create({
+  profileRoot: { flex: 1, position: 'relative' },
+  successToast: { position: 'absolute', left: 18, right: 18, zIndex: 30, elevation: 12, minHeight: 68, borderRadius: 18, borderWidth: 1, borderColor: '#B7E4CF', backgroundColor: '#F0FBF5', paddingHorizontal: 14, paddingVertical: 11, flexDirection: 'row', alignItems: 'center', gap: 11, shadowColor: '#0B3D2E', shadowOpacity: 0.16, shadowRadius: 14, shadowOffset: { width: 0, height: 6 } },
+  successToastIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
+  successToastCopy: { flex: 1, gap: 2 },
+  successToastTitle: { color: '#05603A', fontSize: 13, lineHeight: 17, fontWeight: '900' },
+  successToastText: { color: '#067647', fontSize: 13, lineHeight: 18, fontWeight: '700' },
   pageHeading: { marginTop: 0, marginBottom: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, pageTitle: { color: palette.ink, fontSize: 18, lineHeight: 23, fontWeight: '900' },
   hero: { minHeight: 177, marginHorizontal: -14, marginTop: 0, paddingHorizontal: 22, paddingTop: 28, paddingBottom: 16, backgroundColor: '#061D43', overflow: 'hidden', flexDirection: 'row', alignItems: 'center', gap: 14 }, heroShield: { position: 'absolute', right: 18, top: 23 }, avatarShell: { width: 112, height: 112, borderRadius: 56, backgroundColor: '#FFFFFF', borderWidth: 3, borderColor: '#EAF2FF', overflow: 'hidden', shadowColor: '#000000', shadowOpacity: .3, shadowRadius: 12, elevation: 5 }, avatarImage: { width: '100%', height: '100%', transform: [{ scale: 1.24 }, { translateY: 11 }] }, identity: { flex: 1, minWidth: 0 }, customerName: { color: '#FFFFFF', fontSize: 21, fontWeight: '900' }, customerId: { color: '#BDD2F2', fontSize: 11.5, fontWeight: '700', marginTop: 4 }, verified: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10, borderRadius: 99, backgroundColor: 'rgba(52,183,139,.16)', paddingHorizontal: 8, paddingVertical: 5 }, verifiedText: { color: '#A5E5CD', fontSize: 10.5, fontWeight: '900' }, pendingVerification: { backgroundColor: 'rgba(238,172,55,.17)' }, pendingVerificationText: { color: '#FFDFA0' },
   kycActionCard: { minHeight: 74, marginTop: 10, borderRadius: 16, backgroundColor: '#F1F7FF', borderWidth: 1, borderColor: '#CFE1F7', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }, kycActionIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D4E6FA', alignItems: 'center', justifyContent: 'center' }, kycActionCopy: { flex: 1, minWidth: 0 }, kycActionTitle: { color: palette.navy, fontSize: 13.5, fontWeight: '800' }, kycActionText: { color: '#5E6E82', fontSize: 9.8, lineHeight: 14, marginTop: 3 }, reviewPill: { borderRadius: 99, backgroundColor: '#FFF3D6', paddingHorizontal: 8, paddingVertical: 5 }, reviewPillText: { color: '#875B0E', fontSize: 8.8, fontWeight: '700' },
