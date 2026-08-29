@@ -70,9 +70,27 @@ function displayNameForControl(control: RequiredControl) {
   return "This field";
 }
 
+function selectedVehicleClass(section: HTMLElement) {
+  const labels = Array.from(section.querySelectorAll("label"));
+  const classLabel = labels.find((label) => normalizedLabel(label.textContent).startsWith("CLASS"));
+  const classSelect = classLabel?.parentElement?.querySelector("select") as HTMLSelectElement | null;
+  return classSelect?.value.trim().toUpperCase() ?? "";
+}
+
+function clearHelperRequired(control: RequiredControl) {
+  if (control.dataset.policyHelperRequired === "true") {
+    control.required = false;
+    control.removeAttribute("aria-required");
+    delete control.dataset.policyHelperRequired;
+  }
+  delete control.dataset.policyRequiredDisplayName;
+  control.setCustomValidity("");
+}
+
 function findRequiredFields(section: HTMLElement) {
   const fields: RequiredField[] = [];
   const labels = Array.from(section.querySelectorAll("label"));
+  const crmClassSelected = selectedVehicleClass(section) === "CRM";
 
   for (const label of labels) {
     const text = normalizedLabel(label.textContent);
@@ -80,6 +98,12 @@ function findRequiredFields(section: HTMLElement) {
     if (!requiredLabel) continue;
 
     const helperMarker = label.querySelector<HTMLElement>("[data-policy-required-marker]");
+    if (requiredLabel === "RTO" && crmClassSelected) {
+      helperMarker?.remove();
+      const container = label.parentElement;
+      container?.querySelectorAll<RequiredControl>("input, select").forEach(clearHelperRequired);
+      continue;
+    }
     const hasNativeVisibleRequiredMarker = Array.from(label.childNodes).some(
       (node) => node !== helperMarker && (node.textContent ?? "").includes("*"),
     );
@@ -245,15 +269,7 @@ export function PolicyVehicleRequiredFields() {
     return () => {
       observer.disconnect();
       document.removeEventListener("click", validateRequiredFieldsSequentially, true);
-      for (const { control } of fields) {
-        if (control.dataset.policyHelperRequired === "true") {
-          control.required = false;
-          control.removeAttribute("aria-required");
-          delete control.dataset.policyHelperRequired;
-        }
-        delete control.dataset.policyRequiredDisplayName;
-        control.setCustomValidity("");
-      }
+      for (const { control } of fields) clearHelperRequired(control);
       section?.querySelectorAll("[data-policy-required-marker]").forEach((marker) => marker.remove());
     };
   }, []);
