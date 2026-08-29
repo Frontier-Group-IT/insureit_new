@@ -20,6 +20,8 @@ export default function RootLayout() {
         <Stack.Screen name="impact" />
         <Stack.Screen name="journey" />
         <Stack.Screen name="network" />
+        <Stack.Screen name="learn" />
+        <Stack.Screen name="stories" />
         <Stack.Screen name="policy-intakes" />
         <Stack.Screen name="policy-intake-new" />
         <Stack.Screen name="policy-intakes/[id]" />
