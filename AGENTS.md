@@ -113,6 +113,18 @@ If the answer to either of the first two questions is no, do not save it.
 
 ### Current working agreement
 
+### Compulsory Partner APK / Expo build authorization
+
+**MANDATORY FOR ALL AGENTS:** never trigger a new INSUREIT Partner APK/native binary build in Expo/EAS without the user's explicit permission for that build.
+
+- This includes Expo/EAS preview, internal-distribution, production, rebuild, retry, or replacement Android APK/AAB builds.
+- Do **not** treat general instructions such as "continue", "move forward", "finish the release", "test it", or approval of code changes as permission to consume another Expo/EAS build.
+- Explicit permission must specifically authorize creating another Partner APK/native build.
+- For ordinary JavaScript/TypeScript/UI/business-logic changes, prefer the established Partner OTA path once the installed binary is OTA-capable; do not rebuild the APK merely to deliver normal app changes.
+- If a native dependency/configuration change makes a new binary genuinely necessary, explain the exact native reason and stop for explicit user approval before starting any Expo/EAS build.
+- Protect the user's Expo build quota. Never trigger speculative, duplicate, convenience, or diagnostic cloud builds.
+- A previous successful APK build does not authorize another one.
+
 ### Compulsory GitHub CI verification protocol
 
 **MANDATORY FOR ALL AGENTS:** do not ask the user to run routine repository verification commands on their local PC/WSL when the same checks can run in GitHub Actions.
