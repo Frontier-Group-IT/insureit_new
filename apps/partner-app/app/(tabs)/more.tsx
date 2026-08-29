@@ -27,15 +27,18 @@ export default function MoreScreen() {
       </View>
 
       <View style={styles.menu}>
-        <MenuRow icon="document-text-outline" title="Policy Intake" subtitle="Submit policy copies to the existing Operations review queue." onPress={() => router.push("/policy-intakes")} />
-        <MenuRow icon="refresh-outline" title="Renewals" subtitle="Policies due in the next 30 days and expired policies." onPress={() => router.push("/renewals")} />
-        <MenuRow icon="people-outline" title="Customers" subtitle="Authorized customer book for your commercial scope." onPress={() => router.push("/customers")} />
-        <MenuRow icon="bulb-outline" title="60-Second Learn" subtitle="One short interactive insurance learning card each day." onPress={() => router.push("/learn")} />
-        <MenuRow icon="play-circle-outline" title="INSUREIT Stories" subtitle="Your Today, Impact, Journey and Business in an interactive format." onPress={() => router.push("/stories")} />
-        <MenuRow icon="heart-outline" title="My Impact" subtitle="Protection footprint, customers served and claims assisted." onPress={() => router.push("/impact")} />
-        <MenuRow icon="trail-sign-outline" title="My Journey" subtitle="A real timeline of your recorded business milestones." onPress={() => router.push("/journey")} />
-        <MenuRow icon="notifications-outline" title="Activity" subtitle="Recent policy and claim activity in one timeline." onPress={() => router.push("/activity")} />
-        <MenuRow icon="person-outline" title="Profile & registration" subtitle="Your resolved Partner or employee identity and scope." onPress={() => router.push("/profile")} />
+        <MenuRow icon="document-text-outline" title="Policy Intake" subtitle="Submit policy copies to the existing Operations review queue." onPress={() => router.push('/policy-intakes')} />
+        <MenuRow icon="refresh-outline" title="Renewals" subtitle="Policies due in the next 30 days and expired policies." onPress={() => router.push('/renewals')} />
+        <MenuRow icon="people-outline" title="Customers" subtitle="Authorized customer book for your commercial scope." onPress={() => router.push('/customers')} />
+        <MenuRow icon="calendar-outline" title="Your Week" subtitle="A visual recap of premium, policies, customers, claims and what comes next." onPress={() => router.push('/weekly-story')} />
+        <MenuRow icon="sparkles-outline" title="Recognition" subtitle="Real milestones, learning rhythm and renewal readiness—without public ranking." onPress={() => router.push('/recognition')} />
+        <MenuRow icon="bulb-outline" title="60-Second Learn" subtitle="One short interactive insurance learning card each day." onPress={() => router.push('/learn')} />
+        <MenuRow icon="play-circle-outline" title="INSUREIT Stories" subtitle="Your Today, Impact, Journey and Business in an interactive format." onPress={() => router.push('/stories')} />
+        <MenuRow icon="heart-outline" title="My Impact" subtitle="Protection footprint, customers served and claims assisted." onPress={() => router.push('/impact')} />
+        <MenuRow icon="trail-sign-outline" title="My Journey" subtitle="A real timeline of your recorded business milestones." onPress={() => router.push('/journey')} />
+        <MenuRow icon="notifications-outline" title="Activity" subtitle="Policies, claims, Operations and learning activity in one smart timeline." onPress={() => router.push('/activity')} />
+        <MenuRow icon="headset-outline" title="Support" subtitle="Your relationship contact and current Operations work queues." onPress={() => router.push('/support')} />
+        <MenuRow icon="person-outline" title="Profile & registration" subtitle="Your resolved Partner or employee identity and scope." onPress={() => router.push('/profile')} />
       </View>
 
       <Pressable onPress={logout} style={styles.logout}>
@@ -46,7 +49,7 @@ export default function MoreScreen() {
   );
 }
 
-function MenuRow({ icon, title, subtitle, onPress }: { icon: 'document-text-outline' | 'refresh-outline' | 'people-outline' | 'bulb-outline' | 'play-circle-outline' | 'heart-outline' | 'trail-sign-outline' | 'notifications-outline' | 'person-outline'; title: string; subtitle: string; onPress?: () => void }) {
+function MenuRow({ icon, title, subtitle, onPress }: { icon: 'document-text-outline' | 'refresh-outline' | 'people-outline' | 'calendar-outline' | 'sparkles-outline' | 'bulb-outline' | 'play-circle-outline' | 'heart-outline' | 'trail-sign-outline' | 'notifications-outline' | 'headset-outline' | 'person-outline'; title: string; subtitle: string; onPress?: () => void }) {
   const content = (
     <View style={styles.row}>
       <View style={styles.rowIcon}><Ionicons name={icon} size={18} color={partnerTheme.colors.brand} /></View>
