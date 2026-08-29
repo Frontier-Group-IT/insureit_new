@@ -47,8 +47,9 @@ begin
   from jsonb_array_elements_text(coalesce(v_scope -> 'group_ids','[]'::jsonb)) value;
 
   with scoped_policies as (
-    select p.*, i.id as scoped_intermediary_id
+    select p.*, coalesce(ppd.gross_premium,p.premium_amount,0) as effective_premium, i.id as scoped_intermediary_id
     from public.policies p
+    left join public.policy_premium_details ppd on ppd.policy_id=p.id
     left join public.intermediaries i on i.intermediary_code=p.intermediary_code
     where
       case
@@ -97,13 +98,13 @@ begin
     select
       count(*) filter(where coalesce(start_date,current_date)<=current_date and (end_date is null or end_date>=current_date))::int as active_policies,
       count(*) filter(where coalesce(issuance_date,created_at::date)>=v_month_start and coalesce(issuance_date,created_at::date)<v_next_month_start)::int as policies_this_month,
-      coalesce(sum(premium_amount) filter(where coalesce(issuance_date,created_at::date)>=v_month_start and coalesce(issuance_date,created_at::date)<v_next_month_start),0) as premium_this_month,
-      coalesce(sum(premium_amount) filter(where coalesce(issuance_date,created_at::date)>=v_prev_month_start and coalesce(issuance_date,created_at::date)<v_month_start),0) as premium_last_month,
+      coalesce(sum(effective_premium) filter(where coalesce(issuance_date,created_at::date)>=v_month_start and coalesce(issuance_date,created_at::date)<v_next_month_start),0) as premium_this_month,
+      coalesce(sum(effective_premium) filter(where coalesce(issuance_date,created_at::date)>=v_prev_month_start and coalesce(issuance_date,created_at::date)<v_month_start),0) as premium_last_month,
       count(*) filter(where end_date between current_date and current_date+7)::int as renewals_7_days,
       count(*) filter(where end_date between current_date and current_date+30)::int as renewals_30_days,
       count(*) filter(where end_date<current_date)::int as overdue_policies,
-      coalesce(sum(premium_amount) filter(where end_date between current_date and current_date+7),0) as renewal_premium_7_days,
-      coalesce(sum(premium_amount) filter(where end_date between current_date and current_date+30),0) as renewal_premium_30_days,
+      coalesce(sum(effective_premium) filter(where end_date between current_date and current_date+7),0) as renewal_premium_7_days,
+      coalesce(sum(effective_premium) filter(where end_date between current_date and current_date+30),0) as renewal_premium_30_days,
       count(distinct vehicle_id) filter(where vehicle_id is not null and coalesce(start_date,current_date)<=current_date and (end_date is null or end_date>=current_date))::int as active_vehicles,
       count(distinct customer_id) filter(where customer_id is not null)::int as policy_customers,
       coalesce(sum(insured_declared_value) filter(
