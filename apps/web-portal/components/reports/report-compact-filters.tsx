@@ -23,6 +23,7 @@ export function ReportCompactFilters({
   fromDate,
   toDate,
   fields,
+  compactDrawer = false,
 }: {
   path: string;
   businessLine: "Motor" | "Non Motor" | null;
@@ -32,6 +33,7 @@ export function ReportCompactFilters({
   fromDate: string | null;
   toDate: string | null;
   fields: ReportCompactFilterField[];
+  compactDrawer?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -138,7 +140,7 @@ export function ReportCompactFilters({
       {open ? (
         <div className="fixed inset-0 z-[90]">
           <button type="button" aria-label="Close report filters" onClick={() => setOpen(false)} className="absolute inset-0 bg-[#0f172a]/25 backdrop-blur-[1px]" />
-          <aside className="absolute inset-y-0 right-0 flex w-full max-w-[410px] flex-col border-l border-[#dbe3ec] bg-white shadow-[-20px_0_60px_rgba(15,23,42,.15)]">
+          <aside className={`absolute right-0 flex w-full max-w-[410px] flex-col border-l border-[#dbe3ec] bg-white shadow-[-20px_0_60px_rgba(15,23,42,.15)] ${compactDrawer ? "inset-y-0 sm:bottom-auto sm:max-h-full" : "inset-y-0"}`}>
             <div className="flex items-center justify-between border-b border-[#e8ecf1] px-5 py-4">
               <div>
                 <h2 className="text-[15px] font-bold text-[#1b2943]">Filter report</h2>
@@ -147,7 +149,7 @@ export function ReportCompactFilters({
               <button type="button" onClick={() => setOpen(false)} className="grid h-8 w-8 place-items-center rounded-lg border border-[#e0e6ee] text-[#667085] hover:bg-[#f8fafc]"><X className="h-4 w-4" /></button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-5 py-5">
+            <div className={`${compactDrawer ? "min-h-0 flex-1 sm:flex-initial" : "flex-1"} overflow-y-auto px-5 py-5`}>
               {businessLine === "Non Motor" ? (
                 <FilterGroup title="Business">
                   <Field label="Non-Motor category">
@@ -186,7 +188,7 @@ export function ReportCompactFilters({
               ) : null}
             </div>
 
-            <div className="flex items-center justify-between gap-3 border-t border-[#e8ecf1] bg-[#fbfcfd] px-5 py-4">
+            <div className={`flex shrink-0 items-center justify-between gap-3 border-t border-[#e8ecf1] bg-[#fbfcfd] px-5 py-4 ${compactDrawer ? "sticky bottom-0 z-10" : ""}`}>
               <button type="button" onClick={clearAdvanced} className="h-9 rounded-lg border border-[#d9e0e8] bg-white px-3 text-[10px] font-bold text-[#667085] hover:bg-[#f8fafc]">Clear filters</button>
               <button type="button" onClick={applyAdvanced} className="h-9 rounded-lg bg-[#214f80] px-4 text-[10.5px] font-bold text-white hover:bg-[#183f69]">Apply filters</button>
             </div>
