@@ -151,14 +151,15 @@ export default function PartnerHomeScreen() {
             </View>
           </View>
 
-          <View style={styles.characterCard}>
+          <Pressable onPress={() => router.push('/impact')} style={styles.characterCard}>
             <View style={styles.characterIcon}><Ionicons name="heart-outline" size={20} color={partnerTheme.colors.accent} /></View>
             <View style={styles.characterBody}>
               <Text style={styles.characterEyebrow}>YOUR IMPACT</Text>
               <Text style={styles.characterTitle}>{impactTitle(data)}</Text>
               <Text style={styles.characterText}>{impactText(data)}</Text>
             </View>
-          </View>
+            <Ionicons name="chevron-forward" size={16} color="#7F9896" />
+          </Pressable>
         </>
       )}
     </PartnerScreen>
