@@ -148,3 +148,15 @@ The redesign keeps the canonical hierarchy and existing server actions intact wh
 - the existing create-group modal, manage-group drawer, transfer, archive, drag/drop and effective-dated membership actions remain authoritative and unchanged.
 
 No database migration or hierarchy/business-rule change is part of this UI redesign.
+
+
+## Relationship Board usability fixes — 2026-08-29
+
+**IMPLEMENTED IN FEATURE BRANCH, NOT YET MERGED:** `fix/intermediary-group-selection-ux` refines the visual Relationship Board after production review.
+
+- Sales Employee filter is widened so full employee names/codes are readable in the native dropdown.
+- An empty **Partner Groups** panel now includes an in-context **Create new group** action for that employee.
+- Selecting Partner families now surfaces the bulk action bar directly below the Relationship Board heading as a sticky, highly visible action area instead of only at the bottom of the viewport.
+- The create modal now distinguishes between an employee-level Group creation and **Create Group from selected**, so employee-context creation does not show misleading “selected” text when no Partner is selected.
+
+No hierarchy, database, permission or mutation-rule change is included.
