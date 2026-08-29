@@ -680,7 +680,7 @@ begin
 
   return v_result;
 end;
-$;
+$$;
 
 create or replace function public.partner_app_policy_detail(p_policy_id uuid)
 returns jsonb
