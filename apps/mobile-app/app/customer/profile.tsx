@@ -71,22 +71,81 @@ export default function ProfileScreen() {
   const kycRoute = onboarding?.partner_type === 'individual_proprietor' ? '/customer/kyc/individual' : '/customer/kyc/partner-type';
 
   async function saveContactDetails() {
-    if (!profile) return;
-    setSaving(true); setMessage('');
-    if (!customer) {
-      const profileResult = await supabase.from('profiles').update({ full_name: draft.name.trim(), phone: draft.phone.trim() || null, email: draft.email.trim() || null }).eq('id', profile.id).select('*').single();
-      if (profileResult.error) setMessage('Your contact details could not be saved.');
-      else { setProfile(profileResult.data); setEditing(false); setMessage('Contact details saved.'); }
+    if (!profile || saving) return;
+
+    setSaving(true);
+    setMessage('');
+
+    try {
+      const name = draft.name.trim();
+      const phone = draft.phone.trim();
+      const email = draft.email.trim();
+      const address = draft.address.trim();
+
+      if (!customer) {
+        const profileResult = await supabase
+          .from('profiles')
+          .update({
+            full_name: name,
+            phone: phone || null,
+            email: email || null,
+          })
+          .eq('id', profile.id)
+          .select('*')
+          .single();
+
+        if (profileResult.error || !profileResult.data) {
+          setMessage('Your contact details could not be saved.');
+          return;
+        }
+
+        setProfile(profileResult.data);
+        setEditing(false);
+        setMessage('Contact details saved successfully.');
+        return;
+      }
+
+      const customerResult = await supabase
+        .from('customers')
+        .update({
+          contact_name: name,
+          phone,
+          email: email || null,
+          address: address || null,
+        })
+        .eq('id', customer.id)
+        .select('*')
+        .single();
+
+      if (customerResult.error || !customerResult.data) {
+        setMessage('Your contact details could not be saved.');
+        return;
+      }
+
+      setCustomer(customerResult.data);
+      setEditing(false);
+      setMessage('Contact details saved successfully.');
+
+      const profileResult = await supabase
+        .from('profiles')
+        .update({
+          full_name: name,
+          phone: phone || null,
+          email: email || null,
+        })
+        .eq('id', profile.id)
+        .select('*')
+        .single();
+
+      if (!profileResult.error && profileResult.data) {
+        setProfile(profileResult.data);
+      }
+    } catch (error) {
+      console.error('Contact save failed', error);
+      setMessage('Your contact details could not be saved.');
+    } finally {
       setSaving(false);
-      return;
     }
-    const [customerResult, profileResult] = await Promise.all([
-      supabase.from('customers').update({ contact_name: draft.name.trim(), phone: draft.phone.trim(), email: draft.email.trim() || null, address: draft.address.trim() || null }).eq('id', customer.id).select('*').single(),
-      supabase.from('profiles').update({ full_name: draft.name.trim(), phone: draft.phone.trim() || null, email: draft.email.trim() || null }).eq('id', profile.id).select('*').single(),
-    ]);
-    if (customerResult.error || profileResult.error) setMessage('Your contact details could not be saved.');
-    else { setCustomer(customerResult.data); setProfile(profileResult.data); setEditing(false); setMessage('Contact details saved.'); }
-    setSaving(false);
   }
 
   async function uploadCustomerDocument() {
