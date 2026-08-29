@@ -56,6 +56,7 @@ begin
         or (p.intermediary_group_id is not null and p.intermediary_group_id=any(v_group_ids))
       else false
     end
+      and (v_joined_at is null or coalesce(p.issuance_date,p.created_at::date)>=v_joined_at::date)
   ),
   scoped_customers as (
     select c.*
@@ -65,6 +66,7 @@ begin
       when v_actor_kind='employee' and v_scope_mode='organization' then true
       else c.lead_source_intermediary_id=any(v_intermediary_ids)
     end
+      and (v_joined_at is null or c.created_at::date>=v_joined_at::date)
   ),
   scoped_claims as (
     select cl.*
@@ -170,12 +172,17 @@ begin
   v_portal_account_id := nullif(v_identity->>'portal_account_id','')::uuid;
 
   if v_actor_kind='employee' then
-    select p.created_at into v_joined_at from public.profiles p where p.id=v_profile_id;
-  elsif v_actor_kind='intermediary' then
-    select coalesce(activated_at,invited_at,created_at)
+    select e.created_at
     into v_joined_at
-    from public.intermediary_portal_accounts
-    where id=v_portal_account_id;
+    from public.profiles p
+    join public.employees e on e.id=p.employee_id
+    where p.id=v_profile_id;
+  elsif v_actor_kind='intermediary' then
+    select coalesce(i.activated_at,i.created_at)
+    into v_joined_at
+    from public.intermediary_portal_accounts pa
+    join public.intermediaries i on i.id=pa.intermediary_id
+    where pa.id=v_portal_account_id;
   end if;
 
   select coalesce(array_agg(value::uuid),array[]::uuid[])
@@ -228,6 +235,7 @@ begin
       when v_actor_kind='employee' and v_scope_mode='organization' then true
       else c.lead_source_intermediary_id=any(v_intermediary_ids)
     end
+      and (v_joined_at is null or cl.created_at::date>=v_joined_at::date)
   ),
   policy_ranked as (
     select event_date,row_number() over(order by event_date,id) as rn
@@ -260,12 +268,12 @@ begin
       (select min(month_start) from monthly_premium where premium>=1000000) as premium_10l_month
   ),
   milestone_rows as (
-    select v_joined_at::date as event_date,'joined'::text as kind,'Joined INSUREIT'::text as title,'Your INSUREIT journey started.'::text as subtitle,10 as sort_rank
+    select v_joined_at::date as event_date,'tracking_started'::text as kind,'Journey tracking started'::text as title,'Your INSUREIT digital journey is recorded from this date.'::text as subtitle,10 as sort_rank
     where v_joined_at is not null
     union all
-    select first_customer_date,'first_customer','First customer','Your first customer entered this commercial book.',20 from stats where first_customer_date is not null
+    select first_customer_date,'first_customer','First customer in your journey','The first customer recorded after journey tracking began.',20 from stats where first_customer_date is not null
     union all
-    select first_policy_date,'first_policy','First policy','Your first attributable policy was issued.',30 from stats where first_policy_date is not null
+    select first_policy_date,'first_policy','First policy in your journey','The first attributable policy recorded after journey tracking began.',30 from stats where first_policy_date is not null
     union all
     select policy_25_date,'policies_25','25 policies','25 attributable policies completed.',40 from stats where policy_25_date is not null
     union all
@@ -277,7 +285,7 @@ begin
     union all
     select customer_50_date,'customers_50','50 customers','50 customers reached in your authorized book.',65 from stats where customer_50_date is not null
     union all
-    select first_claim_date,'first_claim','First claim assisted','Your first attributable claim entered service.',70 from stats where first_claim_date is not null
+    select first_claim_date,'first_claim','First claim assisted','The first attributable claim recorded after journey tracking began.',70 from stats where first_claim_date is not null
     union all
     select premium_10l_month,'premium_10l','₹10L month','First month crossing ₹10L gross premium.',80 from stats where premium_10l_month is not null
     union all
