@@ -56,7 +56,6 @@ begin
         or (p.intermediary_group_id is not null and p.intermediary_group_id=any(v_group_ids))
       else false
     end
-      and (v_joined_at is null or coalesce(p.issuance_date,p.created_at::date)>=v_joined_at::date)
   ),
   scoped_customers as (
     select c.*
@@ -66,7 +65,6 @@ begin
       when v_actor_kind='employee' and v_scope_mode='organization' then true
       else c.lead_source_intermediary_id=any(v_intermediary_ids)
     end
-      and (v_joined_at is null or c.created_at::date>=v_joined_at::date)
   ),
   scoped_claims as (
     select cl.*
@@ -216,6 +214,7 @@ begin
         or (p.intermediary_group_id is not null and p.intermediary_group_id=any(v_group_ids))
       else false
     end
+      and (v_joined_at is null or coalesce(p.issuance_date,p.created_at::date)>=v_joined_at::date)
   ),
   scoped_customers as (
     select c.*
@@ -225,6 +224,7 @@ begin
       when v_actor_kind='employee' and v_scope_mode='organization' then true
       else c.lead_source_intermediary_id=any(v_intermediary_ids)
     end
+      and (v_joined_at is null or c.created_at::date>=v_joined_at::date)
   ),
   scoped_claims as (
     select cl.*
