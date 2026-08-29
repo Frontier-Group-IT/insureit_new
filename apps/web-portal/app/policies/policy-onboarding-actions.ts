@@ -136,7 +136,7 @@ function validatePayload(payload: PolicyOnboardingPayload) {
   if (!capacity) return "Enter the vehicle capacity.";
   if (!chassis) return "Enter the chassis number.";
   if (!engine) return "Enter the engine number.";
-  if (!rtoState || !rtoName) return "Enter the RTO state and RTO name/code.";
+  if (vehicleClass !== "CRM" && (!rtoState || !rtoName)) return "Enter the RTO state and RTO name/code.";
   if (vehicleClass === "GCV" && (!payload.premium.cpaOpted || !Number.isFinite(cpaAmount) || cpaAmount <= 0)) return "CPA amount is mandatory for GCV policies and must be greater than 0.";
   if (!payload.policy.insuranceCompanyId) return "Select an insurance company.";
   if (!payload.policy.policyNumber) return "Enter the policy number.";
