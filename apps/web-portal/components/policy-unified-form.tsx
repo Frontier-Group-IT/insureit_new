@@ -173,6 +173,7 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
   const isEdit=mode==="edit";
   const isMotorPolicy=form.businessLine==="Motor";
   const isNonMotorPolicy=form.businessLine==="Non Motor";
+  const isThirdPartyPolicy=!isEdit&&form.policyProduct==="Third Party";
   const registrationNoValid=vehicleRegistrationMode==="registered"&&isValidRegisteredVehicleNumber(form.registrationNo);
   const registrationNoError=vehicleRegistrationMode==="registered"&&registrationTouched&&!registrationNoValid?registrationValidationMessage:null;
 
@@ -230,6 +231,12 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
   const numeric=(value:string)=>Number(value||0);
   const calculations=useMemo(()=>{ const od=numeric(form.od),tp=numeric(form.tp),cpa=form.cpaOpted==="Yes"?numeric(form.cpa):0,tpWithCpa=tp+cpa; const net=od+tpWithCpa,gst=form.vehicleClass==="GCV"?((od+cpa)*.18)+(tp*.05):net*.18,gross=net+gst; const projectedOd=od*numeric(form.projectedOdPercent)/100,projectedTp=tpWithCpa*numeric(form.projectedTpPercent)/100; const totalPayin=projectedOd+projectedTp+numeric(form.insurerScheme); const payoutOd=od*numeric(form.payoutOdPercent)/100,payoutTp=form.payoutBasis==="OD"?0:tpWithCpa*numeric(form.payoutTpPercent)/100; const grossPayout=Math.max(0,payoutOd+payoutTp); return{net,gst,gross,projectedOd,projectedTp,totalPayin,payoutOd,payoutTp,grossPayout}; },[form]);
   function update<K extends keyof FormState>(key:K,value:FormState[K]){setForm(current=>({...current,[key]:value}));}
+  function changePolicyProduct(value:string){
+    if(isEdit){update("policyProduct",value);return;}
+    setForm(current=>value==="Third Party"
+      ? {...current,policyProduct:value,idv:"0",od:"0"}
+      : {...current,policyProduct:value});
+  }
   function changeVehicleClass(value:string){if(isEdit)return;setForm(current=>({...current,vehicleClass:value,capacity:"",policyProduct:""}));}
 
   const availableSources=useMemo(()=>sources.filter(item=>item.type===form.intermediaryType),[sources,form.intermediaryType]);
@@ -379,11 +386,11 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
         </Section>
 
         <Section number="03" title="Policy product, premium & validity">
-          <Select label="Policy product" value={form.policyProduct} onChange={e=>update("policyProduct",e.target.value)} options={policyProducts} placeholder="Select product" disabled={!form.vehicleClass} required/>
+          <Select label="Policy product" value={form.policyProduct} onChange={e=>changePolicyProduct(e.target.value)} options={policyProducts} placeholder="Select product" disabled={!form.vehicleClass} required/>
           <Field label="Policy number" value={form.policyNo} onChange={e=>update("policyNo",e.target.value.toUpperCase())} placeholder="Policy number" required/>
           <div><label className={labelClass}>Insurance company <Required/></label><select className={inputClass} value={form.insurerId} onChange={e=>update("insurerId",e.target.value)} required><option value="">Select insurer</option>{insurers.map(i=><option key={i.value} value={i.value}>{i.label}</option>)}</select></div>
-          <Field label="IDV" type="number" min="0" value={form.idv} onChange={e=>update("idv",e.target.value)} placeholder="₹ 0.00" required/>
-          <Field label="OD premium" type="number" min="0" value={form.od} onChange={e=>update("od",e.target.value)} placeholder="₹ 0.00" required/>
+          <Field label="IDV" type="number" min="0" value={isThirdPartyPolicy?"0":form.idv} onChange={e=>update("idv",e.target.value)} placeholder="₹ 0.00" disabled={isThirdPartyPolicy} required/>
+          <Field label="OD premium" type="number" min="0" value={isThirdPartyPolicy?"0":form.od} onChange={e=>update("od",e.target.value)} placeholder="₹ 0.00" disabled={isThirdPartyPolicy} required/>
           <Field label="TP premium" type="number" min="0" value={form.tp} onChange={e=>update("tp",e.target.value)} placeholder="₹ 0.00" required/>
           <Field label="CPA amount" type="number" min={form.vehicleClass==="GCV"?"0.01":"0"} step="0.01" value={form.cpa} onChange={e=>{const value=e.target.value;setForm(current=>({...current,cpa:value,cpaOpted:Number(value||0)>0?"Yes":"No"}));}} placeholder="₹ 0.00" required={form.vehicleClass==="GCV"}/>
           <PolicyValidityField validFrom={form.validFrom} validUpto={form.validUpto} onFromChange={value=>setForm(current=>({...current,validFrom:value,validUpto:policyExpiryFrom(value)}))} onUptoChange={value=>update("validUpto",value)}/>

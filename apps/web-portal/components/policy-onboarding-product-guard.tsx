@@ -33,8 +33,10 @@ export function PolicyOnboardingProductGuard() {
 
       const classSelect = fieldControl("Class") as HTMLSelectElement | null;
       const productSelect = fieldControl("Policy product") as HTMLSelectElement | null;
+      const idvInput = fieldControl("IDV") as HTMLInputElement | null;
+      const odInput = fieldControl("OD premium") as HTMLInputElement | null;
       const tpInput = fieldControl("TP premium") as HTMLInputElement | null;
-      if (!classSelect || !productSelect || !tpInput) return;
+      if (!classSelect || !productSelect || !idvInput || !odInput || !tpInput) return;
 
       const vehicleClass = classSelect.value.trim().toUpperCase();
       const product = productSelect.value.trim().toUpperCase();
@@ -49,6 +51,14 @@ export function PolicyOnboardingProductGuard() {
           productSelect.dispatchEvent(new Event("change", { bubbles: true }));
         }
       }
+
+      const isThirdParty = product === "THIRD PARTY";
+      idvInput.disabled = isThirdParty;
+      idvInput.setAttribute("aria-disabled", isThirdParty ? "true" : "false");
+      odInput.disabled = isThirdParty;
+      odInput.setAttribute("aria-disabled", isThirdParty ? "true" : "false");
+      if (isThirdParty && idvInput.value !== "0") setReactValue(idvInput, "0");
+      if (isThirdParty && odInput.value !== "0") setReactValue(odInput, "0");
 
       const isSaod = product === "SAOD" && !SAOD_BLOCKED_CLASSES.has(vehicleClass);
       tpInput.disabled = isSaod;

@@ -73,11 +73,12 @@ function sanitizeVehicleNumbers(vehicle: PolicyOnboardingPayload["vehicle"]) {
 
 function sanitizeFinancialNumbers(payload: PolicyOnboardingPayload) {
   const numberOrZero = (value: unknown) => numericPayloadValue(value, false, "0");
+  const isThirdParty = String(payload.policy.policyType ?? "").trim().toUpperCase() === "THIRD PARTY";
   return {
-    policy: { ...payload.policy, idv: numberOrZero(payload.policy.idv) },
+    policy: { ...payload.policy, idv: isThirdParty ? "0" : numberOrZero(payload.policy.idv) },
     premium: {
       ...payload.premium,
-      od: numberOrZero(payload.premium.od),
+      od: isThirdParty ? "0" : numberOrZero(payload.premium.od),
       tp: numberOrZero(payload.premium.tp),
       cpa: numberOrZero(payload.premium.cpa),
     },
