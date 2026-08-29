@@ -1,143 +1,67 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
-import { listPartnerClaims, type PartnerClaimRow } from '@/lib/claims';
-import { listPartnerPolicies, type PartnerPolicyRow } from '@/lib/policies';
+import { getPartnerActivity, type PartnerActivityData } from '@/lib/engagement';
 import { partnerTheme } from '@/lib/theme';
-
-type ActivityItem =
-  | { kind: 'policy'; id: string; date: string; title: string; subtitle: string; meta: string }
-  | { kind: 'claim'; id: string; date: string; title: string; subtitle: string; meta: string };
 
 export default function ActivityScreen() {
   const router = useRouter();
-  const [policies, setPolicies] = useState<PartnerPolicyRow[]>([]);
-  const [claims, setClaims] = useState<PartnerClaimRow[]>([]);
+  const [data, setData] = useState<PartnerActivityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      setError('');
-      try {
-        const [nextPolicies, nextClaims] = await Promise.all([
-          listPartnerPolicies({ limit: 12 }),
-          listPartnerClaims({ limit: 12 }),
-        ]);
-        if (cancelled) return;
-        setPolicies(nextPolicies);
-        setClaims(nextClaims);
-      } catch {
-        if (!cancelled) setError('Recent activity could not be loaded.');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    void load();
-    return () => {
-      cancelled = true;
-    };
+    getPartnerActivity(40)
+      .then(setData)
+      .catch(() => setError('Recent activity could not be loaded.'))
+      .finally(() => setLoading(false));
   }, []);
 
-  const activity = useMemo(() => combineActivity(policies, claims), [claims, policies]);
-
   return (
-    <PartnerScreen
-      eyebrow="ACTIVITY"
-      title="Recent business activity"
-      action={
-        <Pressable onPress={() => router.back()} style={styles.back}>
-          <Ionicons name="close" size={18} color={partnerTheme.colors.ink} />
-        </Pressable>
-      }
-    >
-      <Text style={styles.intro}>A combined timeline of recent authorized policy and claim activity.</Text>
-
+    <PartnerScreen eyebrow="ACTIVITY" title="What changed" action={<Pressable onPress={() => router.back()} style={styles.close}><Ionicons name="close" size={18} color={partnerTheme.colors.ink} /></Pressable>}>
       {error ? <Text style={styles.error}>{error}</Text> : null}
+      {loading || !data ? <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand} /></View> : <>
+        {data.attention.length ? <>
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Needs attention</Text></View>
+          <View style={styles.attentionList}>
+            {data.attention.slice(0,3).map((item) => <Pressable key={`${item.kind}-${item.title}`} onPress={() => router.push(item.route as never)} style={styles.attentionCard}>
+              <View style={styles.attentionIcon}><Ionicons name="flash-outline" size={18} color={partnerTheme.colors.warning} /></View>
+              <View style={styles.attentionBody}><Text style={styles.attentionTitle}>{item.title}</Text><Text style={styles.attentionText}>{item.subtitle}</Text></View>
+              <Ionicons name="chevron-forward" size={16} color="#9AA3B2" />
+            </Pressable>)}
+          </View>
+        </> : null}
 
-      {loading ? (
-        <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand} /></View>
-      ) : activity.length ? (
-        <View style={styles.timeline}>
-          {activity.map((item, index) => (
-            <View key={`${item.kind}-${item.id}`} style={styles.item}>
-              <View style={styles.rail}>
-                <View style={[styles.dot, item.kind === 'claim' && styles.dotClaim]} />
-                {index < activity.length - 1 ? <View style={styles.line} /> : null}
-              </View>
-              <View style={styles.itemBody}>
-                <View style={styles.itemTop}>
-                  <Text style={styles.itemKind}>{item.kind === 'policy' ? 'POLICY' : 'CLAIM'}</Text>
-                  <Text style={styles.itemDate}>{formatDate(item.date)}</Text>
-                </View>
-                <Text style={styles.itemTitle}>{item.title}</Text>
-                <Text style={styles.itemSubtitle}>{item.subtitle}</Text>
-                <Text style={styles.itemMeta}>{item.meta}</Text>
-              </View>
+        <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Recent timeline</Text><Text style={styles.sectionHint}>Authorized activity only</Text></View>
+        {data.items.length ? <View style={styles.timeline}>
+          {data.items.map((item,index) => <Pressable key={`${item.kind}-${item.entity_id}-${item.event_at}`} onPress={() => router.push(item.route as never)} style={styles.item}>
+            <View style={styles.rail}><View style={[styles.dot,toneDot(item.tone)]} />{index < data.items.length - 1 ? <View style={styles.line} /> : null}</View>
+            <View style={styles.itemBody}>
+              <View style={styles.itemTop}><Text style={[styles.kind,toneText(item.tone)]}>{labelFor(item.kind)}</Text><Text style={styles.date}>{formatDate(item.event_at)}</Text></View>
+              <Text style={styles.title}>{item.title}</Text>
+              <Text style={styles.subtitle}>{item.subtitle}</Text>
+              <Text style={styles.meta}>{item.meta}</Text>
             </View>
-          ))}
-        </View>
-      ) : (
-        <View style={styles.empty}><Text style={styles.emptyText}>No recent activity in this scope.</Text></View>
-      )}
+            <Ionicons name="chevron-forward" size={14} color="#B2B8C2" />
+          </Pressable>)}
+        </View> : <View style={styles.empty}><Text style={styles.emptyText}>No recent activity in this scope.</Text></View>}
+      </>}
     </PartnerScreen>
   );
 }
 
-function combineActivity(policies: PartnerPolicyRow[], claims: PartnerClaimRow[]): ActivityItem[] {
-  const items: ActivityItem[] = [
-    ...policies.map((row) => ({
-      kind: 'policy' as const,
-      id: row.policy_id,
-      date: row.issuance_date || row.start_date || row.end_date || new Date(0).toISOString(),
-      title: row.policy_no || row.policy_code || 'Policy',
-      subtitle: row.customer_name,
-      meta: [row.insurer_name, row.vehicle_no].filter(Boolean).join(' · ') || 'Policy activity',
-    })),
-    ...claims.map((row) => ({
-      kind: 'claim' as const,
-      id: row.claim_id,
-      date: row.accident_at || row.created_at,
-      title: row.claim_no || 'Claim',
-      subtitle: row.customer_name,
-      meta: [row.current_status, row.vehicle_no].filter(Boolean).join(' · ') || 'Claim activity',
-    })),
-  ];
+function labelFor(kind: PartnerActivityData['items'][number]['kind']) { if (kind === 'policy') return 'POLICY'; if (kind === 'claim') return 'CLAIM'; if (kind === 'intake') return 'OPERATIONS'; return 'LEARN'; }
+function toneDot(tone: PartnerActivityData['items'][number]['tone']) { if (tone === 'service') return styles.dotService; if (tone === 'attention') return styles.dotAttention; if (tone === 'learn') return styles.dotLearn; if (tone === 'operations') return styles.dotOps; return styles.dotBusiness; }
+function toneText(tone: PartnerActivityData['items'][number]['tone']) { if (tone === 'service') return styles.textService; if (tone === 'attention') return styles.textAttention; if (tone === 'learn') return styles.textLearn; if (tone === 'operations') return styles.textOps; return styles.textBusiness; }
+function formatDate(value:string){const d=new Date(value);if(Number.isNaN(d.getTime()))return value;return new Intl.DateTimeFormat('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}).format(d);}
 
-  return items
-    .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0,20);
-}
-
-function formatDate(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }).format(date);
-}
-
-const styles = StyleSheet.create({
-  back: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  intro: { color: partnerTheme.colors.inkMuted, fontSize: 10.5, lineHeight: 16 },
-  error: { marginTop: 12, color: partnerTheme.colors.danger, fontSize: 10 },
-  loading: { minHeight: 220, alignItems: 'center', justifyContent: 'center' },
-  timeline: { marginTop: 20 },
-  item: { flexDirection: 'row', minHeight: 94 },
-  rail: { width: 26, alignItems: 'center' },
-  dot: { width: 10, height: 10, borderRadius: 5, marginTop: 5, backgroundColor: partnerTheme.colors.brand },
-  dotClaim: { backgroundColor: partnerTheme.colors.accent },
-  line: { width: 1, flex: 1, marginTop: 4, backgroundColor: partnerTheme.colors.line },
-  itemBody: { flex: 1, paddingBottom: 18 },
-  itemTop: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
-  itemKind: { color: partnerTheme.colors.brand, fontSize: 7.5, fontWeight: '800', letterSpacing: 0.9 },
-  itemDate: { color: partnerTheme.colors.inkMuted, fontSize: 8.5 },
-  itemTitle: { marginTop: 5, color: partnerTheme.colors.ink, fontSize: 12, fontWeight: '800' },
-  itemSubtitle: { marginTop: 3, color: partnerTheme.colors.inkMuted, fontSize: 9.5 },
-  itemMeta: { marginTop: 4, color: '#8A94A6', fontSize: 8.5 },
-  empty: { minHeight: 180, alignItems: 'center', justifyContent: 'center' },
-  emptyText: { color: partnerTheme.colors.inkMuted, fontSize: 10 },
+const styles=StyleSheet.create({
+  close:{width:38,height:38,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:partnerTheme.colors.surface,borderWidth:1,borderColor:partnerTheme.colors.line},error:{color:partnerTheme.colors.danger,fontSize:10},loading:{minHeight:240,alignItems:'center',justifyContent:'center'},
+  sectionHeader:{marginTop:18,marginBottom:10,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},sectionTitle:{color:partnerTheme.colors.ink,fontSize:14,fontWeight:'800'},sectionHint:{color:partnerTheme.colors.inkMuted,fontSize:8},
+  attentionList:{gap:8},attentionCard:{minHeight:72,flexDirection:'row',alignItems:'center',gap:10,borderRadius:16,paddingHorizontal:13,backgroundColor:'#FFF9EE',borderWidth:1,borderColor:'#F5DFC1'},attentionIcon:{width:38,height:38,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:'#FFF0D5'},attentionBody:{flex:1},attentionTitle:{color:partnerTheme.colors.ink,fontSize:10.5,fontWeight:'800'},attentionText:{marginTop:3,color:'#806B52',fontSize:8.5,lineHeight:13},
+  timeline:{marginTop:2},item:{minHeight:96,flexDirection:'row',gap:8},rail:{width:24,alignItems:'center'},dot:{width:10,height:10,borderRadius:5,marginTop:6},dotBusiness:{backgroundColor:partnerTheme.colors.brand},dotService:{backgroundColor:partnerTheme.colors.accent},dotAttention:{backgroundColor:partnerTheme.colors.warning},dotLearn:{backgroundColor:'#C17B18'},dotOps:{backgroundColor:'#667085'},line:{width:1,flex:1,marginTop:4,backgroundColor:partnerTheme.colors.line},
+  itemBody:{flex:1,paddingBottom:17},itemTop:{flexDirection:'row',justifyContent:'space-between',gap:8},kind:{fontSize:7.2,fontWeight:'800',letterSpacing:.8},textBusiness:{color:partnerTheme.colors.brand},textService:{color:partnerTheme.colors.accent},textAttention:{color:partnerTheme.colors.warning},textLearn:{color:'#A3630D'},textOps:{color:'#667085'},date:{color:partnerTheme.colors.inkMuted,fontSize:7.5},title:{marginTop:5,color:partnerTheme.colors.ink,fontSize:11,fontWeight:'800'},subtitle:{marginTop:3,color:partnerTheme.colors.inkMuted,fontSize:8.5},meta:{marginTop:4,color:'#8A94A6',fontSize:8},empty:{minHeight:160,alignItems:'center',justifyContent:'center'},emptyText:{color:partnerTheme.colors.inkMuted,fontSize:9}
 });
