@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import {
@@ -19,6 +20,7 @@ const filters: Array<{ value: PartnerClaimState; label: string }> = [
 ];
 
 export default function ClaimsScreen() {
+  const router = useRouter();
   const [summary, setSummary] = useState<PartnerClaimSummary | null>(null);
   const [rows, setRows] = useState<PartnerClaimRow[]>([]);
   const [state, setState] = useState<PartnerClaimState>('all');
@@ -127,7 +129,7 @@ export default function ClaimsScreen() {
           {listLoading ? (
             <View style={styles.listLoading}><ActivityIndicator color={partnerTheme.colors.brand} /></View>
           ) : rows.length ? (
-            <View style={styles.list}>{rows.map((row) => <ClaimRow key={row.claim_id} row={row} />)}</View>
+            <View style={styles.list}>{rows.map((row) => <ClaimRow key={row.claim_id} row={row} onPress={() => router.push(`/claim/${row.claim_id}` as never)} />)}</View>
           ) : (
             <View style={styles.empty}>
               <Ionicons name="shield-checkmark-outline" size={30} color={partnerTheme.colors.success} />
@@ -150,9 +152,9 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
   );
 }
 
-function ClaimRow({ row }: { row: PartnerClaimRow }) {
+function ClaimRow({ row, onPress }: { row: PartnerClaimRow; onPress: () => void }) {
   return (
-    <View style={styles.claimRow}>
+    <Pressable onPress={onPress} style={styles.claimRow}>
       <View style={styles.claimTop}>
         <View style={styles.claimIdentity}>
           <Text style={styles.claimNo}>{row.claim_no || 'Claim'}</Text>
@@ -170,9 +172,9 @@ function ClaimRow({ row }: { row: PartnerClaimRow }) {
 
       <View style={styles.footer}>
         <Text style={styles.date}>{row.accident_at ? `Accident ${formatDateTime(row.accident_at)}` : `Created ${formatDateTime(row.created_at)}`}</Text>
-        <Text style={styles.amount}>{claimAmount(row)}</Text>
+        <View style={styles.claimOpen}><Text style={styles.amount}>{claimAmount(row)}</Text><Ionicons name="chevron-forward" size={14} color={partnerTheme.colors.brand} /></View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -240,6 +242,7 @@ const styles = StyleSheet.create({
   metaValue: { marginTop: 3, color: partnerTheme.colors.ink, fontSize: 9.5, fontWeight: '600' },
   footer: { marginTop: 14, paddingTop: 11, flexDirection: 'row', justifyContent: 'space-between', gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
   date: { color: partnerTheme.colors.inkMuted, fontSize: 8.5 },
+  claimOpen: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   amount: { color: partnerTheme.colors.brandStrong, fontSize: 8.5, fontWeight: '700' },
   empty: { minHeight: 180, alignItems: 'center', justifyContent: 'center', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface },
   emptyTitle: { marginTop: 10, color: partnerTheme.colors.ink, fontSize: 12, fontWeight: '700' },

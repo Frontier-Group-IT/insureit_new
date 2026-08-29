@@ -46,9 +46,20 @@ export default function PolicyIntakesScreen() {
         </Pressable>
       }
     >
-      <View style={styles.info}>
-        <Ionicons name="git-network-outline" size={18} color={partnerTheme.colors.brand} />
-        <Text style={styles.infoText}>Upload the policy copy once. Operations reviews the same intake, confirms the extracted details and completes final onboarding.</Text>
+      <View style={styles.hero}>
+        <View style={styles.heroTop}>
+          <View>
+            <Text style={styles.heroEyebrow}>OPERATIONS PIPELINE</Text>
+            <Text style={styles.heroTitle}>{rows.filter((row) => row.status !== 'completed' && row.status !== 'rejected').length} active submissions</Text>
+            <Text style={styles.heroText}>Upload once. Track extraction, Operations review and final policy creation from the same intake.</Text>
+          </View>
+          <View style={styles.heroIcon}><Ionicons name="git-network-outline" size={22} color="#FFFFFF" /></View>
+        </View>
+        <View style={styles.heroStats}>
+          <PipelineStat value={rows.filter((row) => row.status === 'needs_attention').length} label="Need you" warn />
+          <PipelineStat value={rows.filter((row) => ['processing','ready_for_review','in_review'].includes(row.status)).length} label="In progress" />
+          <PipelineStat value={rows.filter((row) => row.status === 'completed').length} label="Completed" />
+        </View>
       </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -71,6 +82,8 @@ export default function PolicyIntakesScreen() {
                 <Meta label="Policy" value={field(row, 'policy_number') || 'Fetching / review pending'} />
                 <Meta label="Vehicle" value={field(row, 'vehicle_registration_number') || 'Fetching / review pending'} />
               </View>
+
+              <IntakeProgress row={row} />
 
               {row.attention_reason ? (
                 <View style={styles.attention}>
@@ -100,6 +113,46 @@ export default function PolicyIntakesScreen() {
         </View>
       )}
     </PartnerScreen>
+  );
+}
+
+function PipelineStat({ value, label, warn = false }: { value: number; label: string; warn?: boolean }) {
+  return (
+    <View style={styles.pipelineStat}>
+      <Text style={[styles.pipelineValue, warn && value > 0 && styles.pipelineValueWarn]}>{value}</Text>
+      <Text style={styles.pipelineLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function IntakeProgress({ row }: { row: PartnerPolicyIntake }) {
+  const manual = row.status === 'processing' && row.ocr_status === 'failed';
+  const activeStep = row.status === 'completed'
+    ? 4
+    : row.status === 'in_review'
+      ? 3
+      : row.status === 'ready_for_review' || row.status === 'needs_attention' || manual
+        ? 2
+        : 1;
+  const rejected = row.status === 'rejected';
+
+  return (
+    <View style={styles.progressWrap}>
+      {['Uploaded','Read','Review','Done'].map((label,index) => {
+        const step=index+1;
+        const complete=!rejected && step<=activeStep;
+        const current=!rejected && step===activeStep;
+        return (
+          <View key={label} style={styles.progressStep}>
+            <View style={styles.progressLineWrap}>
+              <View style={[styles.progressDot,complete&&styles.progressDotComplete,current&&styles.progressDotCurrent,rejected&&step===activeStep&&styles.progressDotRejected]} />
+              {index<3?<View style={[styles.progressLine,step<activeStep&&!rejected&&styles.progressLineComplete]} />:null}
+            </View>
+            <Text style={[styles.progressLabel,complete&&styles.progressLabelActive]}>{label}</Text>
+          </View>
+        );
+      })}
+    </View>
   );
 }
 
@@ -144,8 +197,17 @@ function formatDate(value: string) {
 const styles = StyleSheet.create({
   newButton: { minHeight: 38, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 12, paddingHorizontal: 12, backgroundColor: partnerTheme.colors.brandStrong },
   newButtonText: { color: '#FFFFFF', fontSize: 10, fontWeight: '800' },
-  info: { flexDirection: 'row', gap: 10, borderRadius: partnerTheme.radius.md, padding: 13, backgroundColor: partnerTheme.colors.brandSoft },
-  infoText: { flex: 1, color: '#5D5A80', fontSize: 9.5, lineHeight: 14 },
+  hero: { borderRadius: partnerTheme.radius.xl, padding: 17, backgroundColor: partnerTheme.colors.nav },
+  heroTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
+  heroEyebrow: { color: '#AAA5FF', fontSize: 8, fontWeight: '800', letterSpacing: 1.1 },
+  heroTitle: { marginTop: 5, color: '#FFFFFF', fontSize: 18, fontWeight: '900' },
+  heroText: { marginTop: 5, maxWidth: 290, color: '#BFC8D5', fontSize: 8.5, lineHeight: 13 },
+  heroIcon: { width: 44, height: 44, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#343D52' },
+  heroStats: { marginTop: 15, paddingTop: 12, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#3B4658' },
+  pipelineStat: { flex: 1, alignItems: 'center' },
+  pipelineValue: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
+  pipelineValueWarn: { color: '#F1C687' },
+  pipelineLabel: { marginTop: 3, color: '#96A2B4', fontSize: 7 },
   error: { marginTop: 12, color: partnerTheme.colors.danger, fontSize: 10 },
   loading: { minHeight: 240, alignItems: 'center', justifyContent: 'center' },
   list: { marginTop: 14, gap: 10 },
@@ -163,6 +225,17 @@ const styles = StyleSheet.create({
   meta: { width: '50%', paddingRight: 8 },
   metaLabel: { color: '#8A94A6', fontSize: 7.5, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6 },
   metaValue: { marginTop: 3, color: partnerTheme.colors.ink, fontSize: 9.5, fontWeight: '600' },
+  progressWrap: { marginTop: 13, paddingTop: 11, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
+  progressStep: { flex: 1, alignItems: 'center' },
+  progressLineWrap: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  progressDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: '#D6DCE6' },
+  progressDotComplete: { backgroundColor: partnerTheme.colors.brand },
+  progressDotCurrent: { borderWidth: 2, borderColor: '#CFCBFF' },
+  progressDotRejected: { backgroundColor: partnerTheme.colors.danger, borderColor: '#F4B8B1' },
+  progressLine: { position: 'absolute', left: '58%', width: '84%', height: 1, backgroundColor: '#DCE1E9' },
+  progressLineComplete: { backgroundColor: '#AAA5FF' },
+  progressLabel: { marginTop: 5, color: '#98A2B3', fontSize: 6.5, fontWeight: '700' },
+  progressLabelActive: { color: partnerTheme.colors.ink },
   attention: { marginTop: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 7, borderRadius: 10, padding: 10, backgroundColor: '#FFF8EA' },
   attentionText: { flex: 1, color: '#80511A', fontSize: 8.5, lineHeight: 13 },
   footer: { marginTop: 13, paddingTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
