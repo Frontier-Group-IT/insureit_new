@@ -90,7 +90,7 @@ function clearHelperRequired(control: RequiredControl) {
 function findRequiredFields(section: HTMLElement) {
   const fields: RequiredField[] = [];
   const labels = Array.from(section.querySelectorAll("label"));
-  const crmClassSelected = selectedVehicleClass(section) === "CRM";
+  const cpmClassSelected = selectedVehicleClass(section) === "CPM";
 
   for (const label of labels) {
     const text = normalizedLabel(label.textContent);
@@ -98,7 +98,7 @@ function findRequiredFields(section: HTMLElement) {
     if (!requiredLabel) continue;
 
     const helperMarker = label.querySelector<HTMLElement>("[data-policy-required-marker]");
-    if (requiredLabel === "RTO" && crmClassSelected) {
+    if (requiredLabel === "RTO" && cpmClassSelected) {
       helperMarker?.remove();
       const container = label.parentElement;
       container?.querySelectorAll<RequiredControl>("input, select").forEach(clearHelperRequired);
