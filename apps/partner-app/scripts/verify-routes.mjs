@@ -23,6 +23,12 @@ function fileToRoute(file) {
   return '/' + pieces.join('/');
 }
 
+function normalizeRoute(route) {
+  const clean = route.split('?')[0].split('#')[0];
+  const pieces = clean.split('/').filter(Boolean).filter((part) => !/^\(.+\)$/.test(part));
+  return '/' + pieces.join('/');
+}
+
 const routes = new Set(routeFiles.map(fileToRoute));
 routes.add('/');
 
@@ -39,7 +45,7 @@ walkSource(partnerRoot);
 
 const dynamicRoutes = [...routes].filter((route) => route.includes('['));
 function routeExists(route) {
-  const clean = route.split('?')[0].split('#')[0];
+  const clean = normalizeRoute(route);
   if (routes.has(clean)) return true;
   return dynamicRoutes.some((pattern) => {
     const regex = new RegExp('^' + pattern.replace(/\[\[\.\.\..+?\]\]|\[\.\.\..+?\]/g, '.+').replace(/\[[^/]+?\]/g, '[^/]+') + '$');
@@ -64,7 +70,7 @@ const required = [
   '/policy-intakes', '/policy-intake-new', '/customer/[id]', '/policy/[id]', '/claim/[id]'
 ];
 
-const missingRequired = required.filter((route) => !routes.has(route));
+const missingRequired = required.filter((route) => !routeExists(route));
 if (!fs.existsSync(path.join(root, '(tabs)'))) missingRequired.push('/(tabs)');
 
 if (missing.length || missingRequired.length) {
