@@ -22,6 +22,9 @@ export default function RootLayout() {
         <Stack.Screen name="network" />
         <Stack.Screen name="learn" />
         <Stack.Screen name="stories" />
+        <Stack.Screen name="weekly-story" />
+        <Stack.Screen name="recognition" />
+        <Stack.Screen name="support" />
         <Stack.Screen name="customer/[id]" />
         <Stack.Screen name="policy/[id]" />
         <Stack.Screen name="claim/[id]" />
