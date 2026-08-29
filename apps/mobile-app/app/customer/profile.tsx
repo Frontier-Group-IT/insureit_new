@@ -23,7 +23,7 @@ export default function ProfileScreen() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [draft, setDraft] = useState({ name: '', phone: '', email: '', address: '' });
   const [selectedDocType, setSelectedDocType] = useState('PAN Card');
   const [documentUploading, setDocumentUploading] = useState(false);
@@ -54,7 +54,7 @@ export default function ProfileScreen() {
         setProfile(nextProfile); setCustomer(nextCustomer); setOnboarding(nextOnboarding); setDocuments(documentResult.data ?? []);
         setDraft({ name: nextCustomer?.contact_name ?? nextProfile?.full_name ?? '', phone: nextCustomer?.phone ?? nextProfile?.phone ?? '', email: nextCustomer?.email ?? nextProfile?.email ?? '', address: formatAddress(nextCustomer) });
       } catch {
-        if (active) setMessage('We could not load your profile. Please try again.');
+        if (active) setMessage({ text: 'We could not load your profile. Please try again.', type: 'error' });
       } finally {
         if (active) setLoading(false);
       }
@@ -74,7 +74,7 @@ export default function ProfileScreen() {
     if (!profile || saving) return;
 
     setSaving(true);
-    setMessage('');
+    setMessage(null);
 
     try {
       const name = draft.name.trim();
@@ -95,13 +95,13 @@ export default function ProfileScreen() {
           .single();
 
         if (profileResult.error || !profileResult.data) {
-          setMessage('Your contact details could not be saved.');
+          setMessage({ text: 'Your contact details could not be saved.', type: 'error' });
           return;
         }
 
         setProfile(profileResult.data);
         setEditing(false);
-        setMessage('Contact details saved successfully.');
+        setMessage({ text: 'Contact details saved successfully.', type: 'success' });
         return;
       }
 
@@ -118,13 +118,13 @@ export default function ProfileScreen() {
         .single();
 
       if (customerResult.error || !customerResult.data) {
-        setMessage('Your contact details could not be saved.');
+        setMessage({ text: 'Your contact details could not be saved.', type: 'error' });
         return;
       }
 
       setCustomer(customerResult.data);
       setEditing(false);
-      setMessage('Contact details saved successfully.');
+      setMessage({ text: 'Contact details saved successfully.', type: 'success' });
 
       const profileResult = await supabase
         .from('profiles')
@@ -142,7 +142,7 @@ export default function ProfileScreen() {
       }
     } catch (error) {
       console.error('Contact save failed', error);
-      setMessage('Your contact details could not be saved.');
+      setMessage({ text: 'Your contact details could not be saved.', type: 'error' });
     } finally {
       setSaving(false);
     }
@@ -150,7 +150,7 @@ export default function ProfileScreen() {
 
   async function uploadCustomerDocument() {
     if (!customer || !profile || documentUploading) return;
-    setMessage('');
+    setMessage(null);
     const result = await DocumentPicker.getDocumentAsync({
       type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
       copyToCacheDirectory: true,
@@ -159,7 +159,7 @@ export default function ProfileScreen() {
 
     const asset = result.assets[0];
     if (asset.size && asset.size > 5 * 1024 * 1024) {
-      setMessage('Please upload a document below 5 MB.');
+      setMessage({ text: 'Please upload a document below 5 MB.', type: 'error' });
       return;
     }
 
@@ -170,7 +170,7 @@ export default function ProfileScreen() {
       const response = await fetch(asset.uri);
       const body = await response.arrayBuffer();
       if (body.byteLength > 5 * 1024 * 1024) {
-        setMessage('Please upload a document below 5 MB.');
+        setMessage({ text: 'Please upload a document below 5 MB.', type: 'error' });
         return;
       }
       const uploadResult = await supabase.storage.from('customer-documents').upload(storagePath, body, {
@@ -178,7 +178,7 @@ export default function ProfileScreen() {
         upsert: false,
       });
       if (uploadResult.error) {
-        setMessage('Document upload failed. Please try again.');
+        setMessage({ text: 'Document upload failed. Please try again.', type: 'error' });
         return;
       }
       const { data, error } = await supabase.from('customer_documents').insert({
@@ -191,35 +191,35 @@ export default function ProfileScreen() {
         file_size: asset.size ?? null,
         uploaded_by: profile.id,
       }).select('*').single();
-      if (error || !data) setMessage('Document uploaded, but record could not be saved.');
+      if (error || !data) setMessage({ text: 'Document uploaded, but record could not be saved.', type: 'error' });
       else {
         setDocuments((current) => [data, ...current]);
-        setMessage('Document uploaded.');
+        setMessage({ text: 'Document uploaded.', type: 'success' });
       }
     } catch {
-      setMessage('Document upload failed. Please try again.');
+      setMessage({ text: 'Document upload failed. Please try again.', type: 'error' });
     } finally {
       setDocumentUploading(false);
     }
   }
 
   async function openCustomerDocument(document: CustomerDocument) {
-    setMessage('');
+    setMessage(null);
     const { data, error } = await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 300);
-    if (error || !data?.signedUrl) return setMessage('Could not open this document.');
+    if (error || !data?.signedUrl) return setMessage({ text: 'Could not open this document.', type: 'error' });
     await Linking.openURL(data.signedUrl);
   }
 
   async function deleteCustomerDocument(document: CustomerDocument) {
-    setMessage('');
+    setMessage(null);
     const { error } = await supabase.from('customer_documents').delete().eq('id', document.id);
     if (error) {
-      setMessage('Could not delete this document.');
+      setMessage({ text: 'Could not delete this document.', type: 'error' });
       return;
     }
     await supabase.storage.from(document.storage_bucket).remove([document.storage_path]);
     setDocuments((current) => current.filter((item) => item.id !== document.id));
-    setMessage('Document deleted.');
+    setMessage({ text: 'Document deleted.', type: 'success' });
   }
 
   if (loading) return <Screen title="Profile"><LoadingState /></Screen>;
@@ -227,7 +227,7 @@ export default function ProfileScreen() {
   return (
     <Screen title="Profile" showTitleHeader={false} topSpacing="compact">
       <View style={styles.pageHeading}><Text style={styles.pageTitle}>Profile</Text></View>
-      {message ? <Message type={/saved|uploaded|deleted/i.test(message) ? 'success' : 'error'}>{message}</Message> : null}
+      {message ? <Message type={message.type}>{message.text}</Message> : null}
 
       <View style={styles.hero}>
         <View style={styles.heroShield}><MaterialCommunityIcons name="shield-check-outline" size={72} color="rgba(255,255,255,0.13)" /></View>
@@ -305,7 +305,7 @@ export default function ProfileScreen() {
         </> : null}
       </View> : null}
 
-      <Section title="Preferences" icon="cog-outline"><ActionRow icon="bell-outline" label="Notifications" value="All notifications" onPress={() => router.push('/customer/notifications')} /><ActionRow icon="translate" label="Language" value="English" onPress={() => setMessage('English is currently selected.')} /><View style={styles.preferenceToggle}><View style={styles.preferenceLeft}><View style={styles.rowIcon}><MaterialCommunityIcons name="weather-night" size={19} color={roleTheme.customer.accent} /></View><Text style={styles.rowLabel}>Dark Mode</Text></View><Switch value={darkMode} onValueChange={setDarkMode} trackColor={{ false: '#DCE4ED', true: '#8ACDB7' }} thumbColor={darkMode ? roleTheme.customer.accent : '#FFFFFF'} /></View></Section>
+      <Section title="Preferences" icon="cog-outline"><ActionRow icon="bell-outline" label="Notifications" value="All notifications" onPress={() => router.push('/customer/notifications')} /><ActionRow icon="translate" label="Language" value="English" onPress={() => setMessage({ text: 'English is currently selected.', type: 'success' })} /><View style={styles.preferenceToggle}><View style={styles.preferenceLeft}><View style={styles.rowIcon}><MaterialCommunityIcons name="weather-night" size={19} color={roleTheme.customer.accent} /></View><Text style={styles.rowLabel}>Dark Mode</Text></View><Switch value={darkMode} onValueChange={setDarkMode} trackColor={{ false: '#DCE4ED', true: '#8ACDB7' }} thumbColor={darkMode ? roleTheme.customer.accent : '#FFFFFF'} /></View></Section>
 
       <Pressable accessibilityRole="button" onPress={() => void signOut(router)} style={styles.signOut}><MaterialCommunityIcons name="logout" size={18} color="#C43838" /><Text style={styles.signOutText}>Sign out securely</Text></Pressable>
     </Screen>
