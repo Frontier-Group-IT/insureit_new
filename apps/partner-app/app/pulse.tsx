@@ -49,7 +49,7 @@ export default function PulseScreen() {
       ) : (
         <>
           <View style={styles.hero}>
-            <Text style={styles.heroLabel}>TODAY'S PULSE</Text>
+            <Text style={styles.heroLabel}>TODAY’S PULSE</Text>
             <Text style={styles.heroTitle}>{pulseTitle(data)}</Text>
             <Text style={styles.heroText}>{pulseSummary(data)}</Text>
           </View>
