@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { StoryRail } from '@/components/story-rail';
 import { getPartnerHome, type PartnerHomeData } from '@/lib/home';
+import { getPartnerStories, type PartnerStory } from '@/lib/stories';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
@@ -12,6 +14,7 @@ export default function PartnerHomeScreen() {
   const router = useRouter();
   const { context } = usePartnerSession();
   const [data, setData] = useState<PartnerHomeData | null>(null);
+  const [stories, setStories] = useState<PartnerStory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -19,17 +22,20 @@ export default function PartnerHomeScreen() {
     setLoading(true);
     setError('');
     try {
-      setData(await getPartnerHome());
+      const [homeResult, storiesResult] = await Promise.allSettled([
+        getPartnerHome(),
+        getPartnerStories(),
+      ]);
+
+      if (homeResult.status === 'rejected') throw homeResult.reason;
+      setData(homeResult.value);
+      setStories(storiesResult.status === 'fulfilled' ? storiesResult.value.items : []);
     } catch {
       setError('Your business Home could not be loaded.');
     } finally {
       setLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   useFocusEffect(useCallback(() => {
     void load();
@@ -87,6 +93,8 @@ export default function PartnerHomeScreen() {
               <Ionicons name="arrow-forward" size={14} color="#D8D6FF" />
             </View>
           </Pressable>
+
+          <StoryRail stories={stories} />
 
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Today</Text>
