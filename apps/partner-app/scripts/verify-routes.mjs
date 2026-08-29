@@ -1,7 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(process.cwd(), 'apps/partner-app/app');
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const partnerRoot = path.resolve(scriptDir, '..');
+const root = path.join(partnerRoot, 'app');
 const routeFiles = [];
 
 function walk(dir) {
@@ -16,7 +19,6 @@ walk(root);
 function fileToRoute(file) {
   let rel = path.relative(root, file).replaceAll('\\', '/').replace(/\.(tsx|ts)$/, '');
   rel = rel.replace(/(^|\/)index$/, '$1');
-  rel = rel.replace(/\/(index)$/, '');
   const pieces = rel.split('/').filter(Boolean).filter((part) => !/^\(.+\)$/.test(part));
   return '/' + pieces.join('/');
 }
@@ -33,7 +35,7 @@ function walkSource(dir) {
     else if (/\.(tsx|ts)$/.test(entry.name)) sourceFiles.push(full);
   }
 }
-walkSource(path.resolve(process.cwd(), 'apps/partner-app'));
+walkSource(partnerRoot);
 
 const dynamicRoutes = [...routes].filter((route) => route.includes('['));
 function routeExists(route) {
@@ -52,20 +54,18 @@ for (const file of sourceFiles) {
   for (const match of text.matchAll(routeLiteral)) {
     const route = match[1];
     if (!route.startsWith('/') || route.includes('${')) continue;
-    if (!routeExists(route)) missing.push({ file: path.relative(process.cwd(), file), route });
+    if (!routeExists(route)) missing.push({ file: path.relative(partnerRoot, file), route });
   }
 }
 
 const required = [
-  '/login', '/(tabs)', '/pulse', '/impact', '/journey', '/network', '/learn', '/stories',
+  '/login', '/pulse', '/impact', '/journey', '/network', '/learn', '/stories',
   '/weekly-story', '/recognition', '/support', '/renewals', '/customers', '/activity', '/profile',
   '/policy-intakes', '/policy-intake-new', '/customer/[id]', '/policy/[id]', '/claim/[id]'
 ];
 
-const missingRequired = required.filter((route) => {
-  const normalized = route.replace('/(tabs)', '/');
-  return route === '/(tabs)' ? fs.existsSync(path.join(root, '(tabs)')) : !routes.has(normalized) && !routes.has(route);
-});
+const missingRequired = required.filter((route) => !routes.has(route));
+if (!fs.existsSync(path.join(root, '(tabs)'))) missingRequired.push('/(tabs)');
 
 if (missing.length || missingRequired.length) {
   if (missing.length) {
