@@ -174,12 +174,12 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
   const isMotorPolicy=form.businessLine==="Motor";
   const isNonMotorPolicy=form.businessLine==="Non Motor";
   const isThirdPartyPolicy=!isEdit&&form.policyProduct==="Third Party";
-  const isCrmClass=form.vehicleClass.trim().toUpperCase()==="CRM";
+  const isCpmClass=form.vehicleClass.trim().toUpperCase()==="CPM";
   const registrationNoValid=vehicleRegistrationMode==="registered"&&isValidRegisteredVehicleNumber(form.registrationNo);
   const registrationNoError=vehicleRegistrationMode==="registered"&&registrationTouched&&!registrationNoValid?registrationValidationMessage:null;
 
   const motorSectionProgress=useMemo<SectionProgress[]>(()=>{
-    const rtoFields = isCrmClass ? [] : [form.rtoState,form.rtoName];
+    const rtoFields = isCpmClass ? [] : [form.rtoState,form.rtoName];
     const vehicleIdentityFields = vehicleRegistrationMode === "registered"
       ? [form.registrationNo,form.insuredName,form.phoneNo,form.vehicleClass,form.make,form.model,form.fuelType,form.manufacturingYear,form.capacity,...rtoFields]
       : [form.insuredName,form.phoneNo,form.vehicleClass,form.make,form.model,form.fuelType,form.manufacturingYear,form.capacity,form.chassisNo,form.engineNo,...rtoFields];
@@ -189,7 +189,7 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
       [form.policyProduct,form.policyNo,form.insurerId,form.idv,form.od,form.tp,...(form.vehicleClass==="GCV"?[form.cpa]:[]),form.validFrom,form.validUpto],
     ];
     return groups.map(values=>{const filled=values.filter(value=>String(value??"").trim()!=="").length;return{filled,total:values.length,complete:filled===values.length,empty:filled===0,remaining:values.length-filled};});
-  },[form,vehicleRegistrationMode,isCrmClass]);
+  },[form,vehicleRegistrationMode,isCpmClass]);
 
   const sectionLabels=isNonMotorPolicy?NON_MOTOR_SECTIONS:MOTOR_SECTIONS;
   const sectionProgress:SectionProgress[]=isNonMotorPolicy?[motorSectionProgress[0],...nonMotorProgress]:motorSectionProgress;
@@ -381,7 +381,7 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
           <Field label="Model" value={form.model} onChange={e=>update("model",e.target.value)} placeholder="Model / variant" disabled={isEdit}/>
           <Select label="Fuel type" value={form.fuelType} onChange={e=>update("fuelType",e.target.value)} options={["Petrol","Diesel","CNG","Electric","Hybrid","Bi-Fuel","Other"]} placeholder="Select fuel" disabled={isEdit}/>
           <Select label="Year of manufacturing" value={form.manufacturingYear} onChange={e=>update("manufacturingYear",e.target.value)} options={Array.from({length:40},(_,i)=>String(new Date().getFullYear()-i))} placeholder="Select year" disabled={isEdit}/>
-          <div><label className={labelClass}>RTO {!isCrmClass?<Required/>:null}</label><div className="grid grid-cols-[.9fr_1.1fr] gap-2"><input aria-label="RTO state" className={inputClass} value={form.rtoState} onChange={e=>update("rtoState",e.target.value)} placeholder={isCrmClass?"Not required for CRM":"State"} disabled={isEdit||isCrmClass} required={!isCrmClass}/><input aria-label="RTO name" className={inputClass} value={form.rtoName} onChange={e=>update("rtoName",e.target.value)} placeholder={isCrmClass?"Not required for CRM":"Name / code"} disabled={isEdit||isCrmClass} required={!isCrmClass}/></div></div>
+          <div><label className={labelClass}>RTO {!isCpmClass?<Required/>:null}</label><div className="grid grid-cols-[.9fr_1.1fr] gap-2"><input aria-label="RTO state" className={inputClass} value={form.rtoState} onChange={e=>update("rtoState",e.target.value)} placeholder={isCpmClass?"Not required for CPM":"State"} disabled={isEdit||isCpmClass} required={!isCpmClass}/><input aria-label="RTO name" className={inputClass} value={form.rtoName} onChange={e=>update("rtoName",e.target.value)} placeholder={isCpmClass?"Not required for CPM":"Name / code"} disabled={isEdit||isCpmClass} required={!isCpmClass}/></div></div>
           <Field label={vehicleMeta?`Capacity (${vehicleMeta.capacityLabel})`:"Capacity"} value={form.capacity} onChange={e=>update("capacity",e.target.value)} placeholder={vehicleMeta?`Enter ${vehicleMeta.capacityLabel.toLowerCase()}`:"Select class first"} disabled={isEdit||!form.vehicleClass}/>
           <Field label="Chassis number" value={form.chassisNo} onChange={e=>update("chassisNo",e.target.value.toUpperCase())} placeholder={vehicleRegistrationMode==="unregistered"?"Mandatory for new vehicle":"Fetched from RC or enter manually"} disabled={isEdit} required={vehicleRegistrationMode==="unregistered"}/>
           <Field label="Engine number" value={form.engineNo} onChange={e=>update("engineNo",e.target.value.toUpperCase())} placeholder={vehicleRegistrationMode==="unregistered"?"Mandatory for new vehicle":"Fetched from RC or enter manually"} disabled={isEdit} required={vehicleRegistrationMode==="unregistered"}/>
