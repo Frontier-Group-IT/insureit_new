@@ -93,7 +93,7 @@ export default function CustomersScreen() {
           </View>
 
           {rows.length ? (
-            <View style={styles.list}>{rows.map((row) => <CustomerRow key={row.customer_id} row={row} />)}</View>
+            <View style={styles.list}>{rows.map((row) => <CustomerRow key={row.customer_id} row={row} onPress={() => router.push(`/customer/${row.customer_id}` as never)} />)}</View>
           ) : (
             <View style={styles.empty}>
               <Ionicons name="people-outline" size={30} color="#9AA3B2" />
@@ -115,9 +115,9 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
   );
 }
 
-function CustomerRow({ row }: { row: PartnerCustomerRow }) {
+function CustomerRow({ row, onPress }: { row: PartnerCustomerRow; onPress: () => void }) {
   return (
-    <View style={styles.customerRow}>
+    <Pressable onPress={onPress} style={styles.customerRow}>
       <View style={styles.customerTop}>
         <View style={styles.avatar}><Text style={styles.avatarText}>{initials(row.customer_name)}</Text></View>
         <View style={styles.customerIdentity}>
@@ -133,7 +133,8 @@ function CustomerRow({ row }: { row: PartnerCustomerRow }) {
         <Meta label="Location" value={[row.city, row.state].filter(Boolean).join(', ') || 'Not recorded'} />
         <Meta label="Intermediary" value={row.intermediary_code || 'Organization / unassigned'} />
       </View>
-    </View>
+      <View style={styles.openRow}><Text style={styles.openText}>Open customer story</Text><Ionicons name="chevron-forward" size={14} color={partnerTheme.colors.brand} /></View>
+    </Pressable>
   );
 }
 
@@ -180,6 +181,8 @@ const styles = StyleSheet.create({
   meta: { width: '50%', paddingRight: 8 },
   metaLabel: { color: '#8A94A6', fontSize: 7.5, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6 },
   metaValue: { marginTop: 3, color: partnerTheme.colors.ink, fontSize: 9.5, fontWeight: '600' },
+  openRow: { marginTop: 12, paddingTop: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 3, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
+  openText: { color: partnerTheme.colors.brand, fontSize: 8, fontWeight: '800' },
   empty: { minHeight: 180, alignItems: 'center', justifyContent: 'center', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface },
   emptyTitle: { marginTop: 10, color: partnerTheme.colors.ink, fontSize: 12, fontWeight: '700' },
 });
