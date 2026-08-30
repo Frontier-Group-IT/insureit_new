@@ -24,6 +24,16 @@ Update the durable project context after material workflow, schema, constraint, 
 
 Never store secrets, API keys, passwords, tokens, cookies, private keys, full sensitive identity values or MCP credentials in repository context files.
 
+## INSUREIT Partner production-refinement scope control
+
+For INSUREIT Partner refinement work, `docs/PARTNER_APP_PRODUCTION_REFINEMENT_MASTER_PLAN.md` is the user-approved controlling roadmap.
+
+- Execute the plan phase-by-phase and do not silently mix later-phase work into the active phase.
+- Treat newly proposed work outside the plan as a change request unless it is a verified P0 defect, security issue, production blocker, or unavoidable dependency.
+- Do not modify the master plan's scope without explicit user approval.
+- Preserve the Partner native-build authorization rule below: OTA-first for normal JS/TS/UI/business-logic work, and no new Partner APK/AAB without explicit permission for that exact build.
+- At phase completion, update the master plan only with concise evidence: phase status, PR/commit, checks, device/OTA evidence, unresolved risk, and next unlocked phase.
+
 ## Smart context retention and learning policy
 
 Repository context is a curated operational memory, not a transcript archive. **Do not update `AGENTS.md` or a context/handoff file after every chat.** Save information only when it materially improves the correctness, safety or continuity of future work.
