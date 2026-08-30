@@ -189,7 +189,7 @@ function MiniStat({ label, value, badge }: { label: string; value: string; badge
 
 function DetailCell({ icon, label, value, status = 'ok' }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; value?: string | null; status?: 'expired' | 'due' | 'ok' }) {
   const showDateDot = status === 'expired' || status === 'due';
-  return <View style={styles.detailCell}><MaterialCommunityIcons name={icon} size={15} color={showDateDot ? status === 'expired' ? '#C43D2D' : '#B7791F' : '#7A8799'} /><View style={styles.detailCopy}><Text style={styles.detailLabel}>{label}</Text><View style={styles.detailValueRow}>{showDateDot ? <PulseDot tone={status === 'expired' ? 'red' : 'yellow'} /> : null}<Text style={[styles.detailValue, status === 'expired' && styles.detailValueExpired, status === 'due' && styles.detailValueDue]} numberOfLines={2}>{value || '-'}</Text></View></View></View>;
+  return <View style={styles.detailCell}><MaterialCommunityIcons name={icon} size={15} color={showDateDot ? status === 'expired' ? '#C43D2D' : '#B7791F' : palette.navy} /><View style={styles.detailCopy}><Text style={styles.detailLabel}>{label}</Text><View style={styles.detailValueRow}>{showDateDot ? <PulseDot tone={status === 'expired' ? 'red' : 'yellow'} /> : null}<Text style={[styles.detailValue, status === 'expired' && styles.detailValueExpired, status === 'due' && styles.detailValueDue]} numberOfLines={2}>{value || '-'}</Text></View></View></View>;
 }
 
 function selectVehiclePolicy(policies: VehiclePolicyDisplay[]) {
