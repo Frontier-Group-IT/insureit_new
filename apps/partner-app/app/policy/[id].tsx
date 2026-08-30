@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { getPartnerPolicyDetail, type PartnerPolicyDetail } from '@/lib/policies';
 import { partnerTheme } from '@/lib/theme';
 
@@ -26,7 +27,7 @@ export default function PolicyDetailScreen() {
 
   return (
     <PartnerScreen eyebrow="POLICY" title={data?.policy.policy_no||data?.policy.policy_code||'Policy'} action={
-      <Pressable onPress={()=>router.back()} style={styles.close}><Ionicons name="close" size={18} color={partnerTheme.colors.ink}/></Pressable>
+      <PartnerIconButton icon="close" label="Close policy detail" onPress={() => router.back()} />
     }>
       {loading?<View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand}/></View>:error||!data?(
         <View style={styles.errorCard}><Text style={styles.errorText}>{error||'Policy unavailable.'}</Text><Pressable onPress={load}><Text style={styles.retry}>Try again</Text></Pressable></View>
