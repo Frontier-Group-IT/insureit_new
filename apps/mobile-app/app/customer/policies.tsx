@@ -112,18 +112,18 @@ export default function PoliciesScreen() {
             key={`${policy.source}-${policy.id}`}
             accessibilityRole="button"
             onPress={() => router.push({ pathname: '/customer/policy-detail', params: { id: policy.id, source: policy.source } } as any)}
-            style={({ pressed }) => [styles.policyCard, { backgroundColor: colors.background, borderColor: colors.border }, pressed && styles.policyCardPressed]}
+            style={({ pressed }) => [styles.policyCard, pressed && styles.policyCardPressed]}
           >
-            <View style={[styles.accentBar, { backgroundColor: colors.accent }]} />
+            <View style={styles.accentBar} />
 
             <View style={styles.policyTop}>
-              <View style={[styles.statusIcon, { backgroundColor: colors.soft }]}>
-                <MaterialCommunityIcons name={policyIcon(policy.source, tone)} size={23} color={colors.accent} />
+              <View style={styles.statusIcon}>
+                <MaterialCommunityIcons name={policyIcon(policy.source, tone)} size={23} color={palette.navy} />
               </View>
 
               <View style={styles.policyTitleCopy}>
                 <View style={styles.stageRow}>
-                  <Text style={[styles.stageLabel, { color: colors.accent }]}>{policyStageLabel(policy, tone)}</Text>
+                  <Text style={styles.stageLabel}>{policyStageLabel(policy, tone)}</Text>
                   {policy.source === 'external' ? <View style={styles.sourcePill}><Text style={styles.sourceText}>EXTERNAL</Text></View> : null}
                 </View>
                 <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle?.vehicle_no ?? 'Vehicle unavailable'}</Text>
@@ -202,9 +202,9 @@ function policyTone(endDate: string): PolicyTone {
 }
 
 function policyToneColors(tone: PolicyTone) {
-  if (tone === 'expired') return { accent: '#C43838', soft: '#FDECEC', background: '#FFF7F7', border: '#F2C6C6' };
-  if (tone === 'due') return { accent: '#B7791F', soft: '#FFF4E2', background: '#FFFCF5', border: '#F7DCA2' };
-  return { accent: '#12805C', soft: '#E8F8F0', background: '#F7FFFB', border: '#BFEBD0' };
+  if (tone === 'expired') return { accent: '#D7262E', soft: '#FFF0F0', border: '#F3CCCC' };
+  if (tone === 'due') return { accent: '#B7791F', soft: '#FFF6E8', border: '#F2D8A5' };
+  return { accent: '#0F8A61', soft: '#EAF8F2', border: '#C7EAD9' };
 }
 
 function policyStatusLabel(tone: PolicyTone) {
@@ -241,21 +241,21 @@ const styles = StyleSheet.create({
   filterChipActive: { backgroundColor: palette.navy, borderColor: palette.navy },
   filterText: { color: palette.slate, fontSize: 11.5, fontWeight: '900' },
   filterTextActive: { color: '#FFFFFF' },
-  policyCard: { borderWidth: 1, borderRadius: 18, padding: 12, paddingLeft: 17, marginBottom: 10, overflow: 'hidden', shadowColor: palette.ink, shadowOpacity: 0.055, shadowRadius: 10, elevation: 2 },
+  policyCard: { backgroundColor: '#FBFCFE', borderWidth: 1, borderColor: '#D8E3EE', borderRadius: 18, padding: 12, paddingLeft: 17, marginBottom: 10, overflow: 'hidden', shadowColor: palette.ink, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 },
   policyCardPressed: { opacity: 0.9, transform: [{ scale: 0.985 }] },
-  accentBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5 },
+  accentBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, backgroundColor: palette.navy },
   policyTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  statusIcon: { width: 46, height: 46, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  statusIcon: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#F1F5FB', alignItems: 'center', justifyContent: 'center' },
   policyTitleCopy: { flex: 1, minWidth: 0 },
   stageRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  stageLabel: { fontSize: 9.8, fontWeight: '900', letterSpacing: 0.6 },
+  stageLabel: { color: palette.navy, fontSize: 9.8, fontWeight: '900', letterSpacing: 0.6 },
   vehicleNo: { color: palette.ink, fontSize: 17, fontWeight: '900', marginTop: 1 },
   sourcePill: { borderRadius: 999, backgroundColor: '#EAF2FF', paddingHorizontal: 6, paddingVertical: 3 },
   sourceText: { color: '#0A43A3', fontSize: 7.8, fontWeight: '900' },
   statusBadge: { maxWidth: 126, minHeight: 34, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
   statusBadgeText: { color: '#FFFFFF', fontSize: 10.2, lineHeight: 13, fontWeight: '900', textAlign: 'center' },
   numberRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  numberBox: { flex: 1, backgroundColor: 'rgba(255,255,255,0.82)', borderWidth: 1, borderColor: '#DCE8F4', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 7 },
+  numberBox: { flex: 1, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE6EF', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 7 },
   numberLabel: { color: palette.slate, fontSize: 9.3, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.4 },
   numberValue: { color: palette.ink, fontSize: 11.7, lineHeight: 15, fontWeight: '900', marginTop: 2 },
   infoBox: { marginTop: 10, paddingTop: 9, borderTopWidth: 1, borderTopColor: '#E5ECF5', gap: 5 },
