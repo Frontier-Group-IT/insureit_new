@@ -14,6 +14,7 @@ export function PartnerFilterChip({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={`${label} filter`}
       accessibilityState={{ selected: active }}
       onPress={onPress}
       style={({ pressed }) => [styles.base, active && styles.active, pressed && styles.pressed]}
@@ -25,7 +26,7 @@ export function PartnerFilterChip({
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 40,
+    minHeight: partnerTheme.control.minTouchTarget,
     justifyContent: 'center',
     borderRadius: partnerTheme.radius.pill,
     paddingHorizontal: 13,
