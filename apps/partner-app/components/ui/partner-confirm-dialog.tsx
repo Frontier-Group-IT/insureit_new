@@ -27,13 +27,27 @@ export function PartnerConfirmDialog({
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onCancel}>
       <View style={styles.backdrop}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Close dialog" onPress={onCancel} style={StyleSheet.absoluteFill} />
-        <View accessibilityViewIsModal style={styles.dialog}>
-          <Text style={styles.title}>{title}</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close dialog"
+          accessibilityHint="Dismisses this dialog without continuing"
+          disabled={busy}
+          onPress={onCancel}
+          style={StyleSheet.absoluteFill}
+        />
+        <View
+          accessible
+          accessibilityRole="alert"
+          accessibilityViewIsModal
+          accessibilityLabel={title}
+          accessibilityHint={message}
+          style={styles.dialog}
+        >
+          <Text accessibilityRole="header" style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
           <View style={styles.actions}>
             <View style={styles.action}>
-              <PartnerButton label={cancelLabel} onPress={onCancel} variant="secondary" />
+              <PartnerButton label={cancelLabel} onPress={onCancel} variant="secondary" disabled={busy} />
             </View>
             <View style={styles.action}>
               <PartnerButton label={confirmLabel} onPress={onConfirm} variant={destructive ? 'danger' : 'primary'} loading={busy} />

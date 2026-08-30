@@ -13,16 +13,30 @@ export function PartnerField({
   error?: string;
   helper?: string;
 }) {
+  const accessibilityHint = error || helper || inputProps.accessibilityHint;
+  const accessibilityState = {
+    ...inputProps.accessibilityState,
+    disabled: inputProps.editable === false,
+  };
+
   return (
     <View>
       <Text style={styles.label}>{label}</Text>
       <TextInput
         {...inputProps}
         accessibilityLabel={inputProps.accessibilityLabel || label}
+        accessibilityHint={accessibilityHint}
+        accessibilityState={accessibilityState}
         style={[styles.input, inputProps.editable === false && styles.disabled, error && styles.inputError, inputProps.style]}
         placeholderTextColor={inputProps.placeholderTextColor || '#9AA3B2'}
       />
-      {error ? <Text accessibilityLiveRegion="polite" style={styles.error}>{error}</Text> : helper ? <Text style={styles.helper}>{helper}</Text> : null}
+      {error ? (
+        <Text accessibilityLiveRegion="assertive" accessibilityRole="alert" style={styles.error}>
+          {error}
+        </Text>
+      ) : helper ? (
+        <Text style={styles.helper}>{helper}</Text>
+      ) : null}
     </View>
   );
 }
