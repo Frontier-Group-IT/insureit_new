@@ -6,6 +6,7 @@ import { BackofficeCustomerRegister } from "@/components/backoffice-customer-reg
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { logPortalRoutePerformance } from "@/lib/performance-observability";
 import { CustomerWorkspace } from "./customer-workspace";
 import { DealershipEntryActivator } from "./dealership-entry-activator";
 
@@ -28,13 +29,23 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function CustomersPage() {
+  const startedAt = performance.now();
   const profile = await requireCapability("view_customers");
+  const afterAuth = performance.now();
   if (!profile?.id) redirect("/access-denied");
 
   const accessibleIds = await getAccessibleCustomerIds(profile.id, profile.role);
+  const afterScope = performance.now();
   const admin = createSupabaseAdminClient();
 
   if (accessibleIds !== null && !accessibleIds.length) {
+    const finishedAt = performance.now();
+    logPortalRoutePerformance("/customers", {
+      auth_ms: afterAuth - startedAt,
+      scope_ms: afterScope - afterAuth,
+      data_ms: 0,
+      total_ms: finishedAt - startedAt,
+    });
     return (
       <AppShell title="Customers">
         {profile.role === "backoffice_executive" ? <div className="mx-auto max-w-[1480px]"><BackofficeCustomerRegister rows={[]} /></div> : <><DealershipEntryActivator /><div className="mx-auto max-w-[1480px]"><CustomerWorkspace rows={[]} /></div></>}
@@ -48,6 +59,13 @@ export default async function CustomersPage() {
     .order("created_at", { ascending: false });
   if (accessibleIds !== null) request = request.in("id", accessibleIds);
   const customersResult = await request.returns<CustomerRow[]>();
+  const finishedAt = performance.now();
+  logPortalRoutePerformance("/customers", {
+    auth_ms: afterAuth - startedAt,
+    scope_ms: afterScope - afterAuth,
+    data_ms: finishedAt - afterScope,
+    total_ms: finishedAt - startedAt,
+  });
   const rows: CustomerRow[] = customersResult.data ?? [];
 
   return (
