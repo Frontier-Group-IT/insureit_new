@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { getPartnerRecognition, type PartnerRecognition } from '@/lib/engagement';
 import { partnerTheme } from '@/lib/theme';
 
@@ -15,7 +16,7 @@ export default function RecognitionScreen() {
   useEffect(()=>{getPartnerRecognition().then(setData).finally(()=>setLoading(false));},[]);
 
   return (
-    <PartnerScreen eyebrow="RECOGNITION" title="Progress worth noticing" action={<Pressable onPress={()=>router.back()} style={styles.close}><Ionicons name="close" size={18} color={partnerTheme.colors.ink}/></Pressable>}>
+    <PartnerScreen eyebrow="RECOGNITION" title="Progress worth noticing" action={<PartnerIconButton icon="close" label="Close recognition" onPress={() => router.back()} />}>
       {loading || !data ? <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand}/></View> : (
         <>
           <View style={styles.hero}>
