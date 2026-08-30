@@ -64,8 +64,7 @@ export async function getOperationsDashboardData(supabase: SupabaseClient, acces
   const { profile } = await getAuthenticatedProfile(accessToken);
   if (profile?.id) {
     const admin = createSupabaseAdminClient();
-    {
-      const customerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_customers");
+    const customerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_customers");
       if (customerIds !== null) return getScopedOperationsDashboardData(customerIds);
 
       // `null` means the effective customer scope is organization-wide. Do not
@@ -80,8 +79,7 @@ export async function getOperationsDashboardData(supabase: SupabaseClient, acces
         : !organizationRpcResult.error
           ? "The optimized organization dashboard service returned an invalid response; live fallback data is shown."
           : null;
-      return getOperationsDashboardFallback(admin, organizationWarning);
-    }
+    return getOperationsDashboardFallback(admin, organizationWarning);
   }
 
   const rpcResult = await supabase.rpc("get_operations_dashboard");
