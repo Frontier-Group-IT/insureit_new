@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerBanner } from '@/components/ui/partner-banner';
+import { PartnerContactActions } from '@/components/ui/partner-contact-actions';
 import { PartnerIconButton } from '@/components/ui/partner-icon-button';
+import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
+import { PartnerStateView } from '@/components/ui/partner-state-view';
+import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
 import { getPartnerCustomerDetail, type PartnerCustomerDetail } from '@/lib/customers';
 import { partnerTheme } from '@/lib/theme';
 
@@ -34,53 +39,50 @@ export default function CustomerDetailScreen() {
 
   return (
     <PartnerScreen
-      eyebrow="CUSTOMER STORY"
+      eyebrow="CUSTOMER"
       title={data?.customer.customer_name || 'Customer'}
-      action={
-        <PartnerIconButton icon="close" label="Close customer detail" onPress={() => router.back()} />
-      }
+      action={<PartnerIconButton icon="close" label="Close customer detail" onPress={() => router.back()} />}
     >
       {loading ? (
-        <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand} /></View>
+        <PartnerStateView state="loading" title="Loading customer" />
       ) : error || !data ? (
-        <View style={styles.errorCard}>
-          <Text style={styles.errorText}>{error || 'Customer unavailable.'}</Text>
-          <Pressable onPress={load}><Text style={styles.retry}>Try again</Text></Pressable>
-        </View>
+        <PartnerStateView
+          state="error"
+          title="Customer unavailable"
+          message={error || 'This customer could not be loaded.'}
+          actionLabel="Try again"
+          onAction={() => void load()}
+        />
       ) : (
         <>
           <View style={styles.hero}>
-            <View style={styles.avatar}><Text style={styles.avatarText}>{initials(data.customer.customer_name)}</Text></View>
-            <View style={styles.heroBody}>
-              <Text style={styles.heroName}>{data.customer.customer_name}</Text>
-              <Text style={styles.heroMeta}>
-                {[data.customer.city, data.customer.state].filter(Boolean).join(', ') || 'Location not recorded'}
-                {data.customer.customer_code ? ` · ${data.customer.customer_code}` : ''}
-              </Text>
-              <Text style={styles.heroSince}>Customer record since {formatMonthYear(data.customer.created_at)}</Text>
+            <View style={styles.heroTop}>
+              <View style={styles.avatar}><Text style={styles.avatarText}>{initials(data.customer.customer_name)}</Text></View>
+              <View style={styles.heroBody}>
+                <Text style={styles.heroName}>{data.customer.customer_name}</Text>
+                <Text style={styles.heroMeta}>
+                  {[data.customer.city, data.customer.state].filter(Boolean).join(', ') || 'Location not recorded'}
+                  {data.customer.customer_code ? ` · ${data.customer.customer_code}` : ''}
+                </Text>
+              </View>
+              <PartnerStatusBadge label={humanize(data.customer.status || 'active')} tone={customerTone(data.customer.status)} />
             </View>
+            <Text style={styles.heroSince}>Customer record since {formatMonthYear(data.customer.created_at)}</Text>
           </View>
 
-          <View style={styles.actions}>
-            <ContactAction
-              icon="call-outline"
-              label="Call"
-              disabled={!data.customer.phone}
-              onPress={() => data.customer.phone ? void Linking.openURL(`tel:${sanitizePhone(data.customer.phone)}`) : undefined}
-            />
-            <ContactAction
-              icon="logo-whatsapp"
-              label="WhatsApp"
-              disabled={!data.customer.phone}
-              onPress={() => data.customer.phone ? void Linking.openURL(`https://wa.me/91${lastTen(data.customer.phone)}`) : undefined}
-            />
-            <ContactAction
-              icon="mail-outline"
-              label="Email"
-              disabled={!data.customer.email}
-              onPress={() => data.customer.email ? void Linking.openURL(`mailto:${data.customer.email}`) : undefined}
-            />
+          <View style={styles.contactActions}>
+            <PartnerContactActions phone={data.customer.phone} email={data.customer.email} />
           </View>
+
+          {data.summary.renewals_30_days > 0 ? (
+            <View style={styles.attention}>
+              <PartnerBanner
+                tone="warning"
+                title="Renewal attention"
+                message={`${data.summary.renewals_30_days} ${data.summary.renewals_30_days === 1 ? 'policy is' : 'policies are'} due within 30 days.`}
+              />
+            </View>
+          ) : null}
 
           <View style={styles.summary}>
             <Summary value={data.summary.policies} label="Policies" />
@@ -89,9 +91,7 @@ export default function CustomerDetailScreen() {
             <Summary value={data.summary.renewals_30_days} label="Renewals" />
           </View>
 
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Relationship</Text>
-          </View>
+          <PartnerSectionHeader title="Relationship" />
           <View style={styles.relationshipCard}>
             <Info label="Phone" value={data.customer.phone || 'Not recorded'} />
             <Info label="Email" value={data.customer.email || 'Not recorded'} />
@@ -101,17 +101,23 @@ export default function CustomerDetailScreen() {
             <Info label="Status" value={humanize(data.customer.status || 'not recorded')} />
           </View>
 
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Policies</Text>
-            <Text style={styles.sectionHint}>{data.summary.policies} total</Text>
-          </View>
+          <PartnerSectionHeader title="Policies" meta={`${data.summary.policies} total`} />
           {data.policies.length ? (
             <View style={styles.stack}>
               {data.policies.map((policy) => (
-                <Pressable key={policy.policy_id} onPress={() => router.push(`/policy/${policy.policy_id}` as never)} style={styles.itemCard}>
-                  <View style={styles.itemIcon}><Ionicons name="document-text-outline" size={17} color={partnerTheme.colors.brand} /></View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open policy ${policy.policy_no || policy.policy_code || ''}`}
+                  key={policy.policy_id}
+                  onPress={() => router.push(`/policy/${policy.policy_id}` as never)}
+                  style={({ pressed }) => [styles.itemCard, pressed && styles.pressed]}
+                >
+                  <View style={styles.itemIcon}><Ionicons name="document-text-outline" size={18} color={partnerTheme.colors.brand} /></View>
                   <View style={styles.itemBody}>
-                    <Text style={styles.itemTitle}>{policy.policy_no || policy.policy_code || 'Policy'}</Text>
+                    <View style={styles.itemHeading}>
+                      <Text style={styles.itemTitle}>{policy.policy_no || policy.policy_code || 'Policy'}</Text>
+                      <PartnerStatusBadge label={policyCategory(policy)} tone="brand" />
+                    </View>
                     <Text style={styles.itemText}>
                       {[policy.insurer_name, policy.vehicle_no].filter(Boolean).join(' · ') || 'Policy details'}
                     </Text>
@@ -123,10 +129,7 @@ export default function CustomerDetailScreen() {
             </View>
           ) : <EmptyLine text="No scoped policies recorded." />}
 
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Vehicles</Text>
-            <Text style={styles.sectionHint}>{data.summary.vehicles} total</Text>
-          </View>
+          <PartnerSectionHeader title="Vehicles" meta={`${data.summary.vehicles} total`} />
           {data.vehicles.length ? (
             <View style={styles.stack}>
               {data.vehicles.map((vehicle) => (
@@ -139,6 +142,8 @@ export default function CustomerDetailScreen() {
                       <Expiry label="PUC" date={vehicle.puc_expiry_date} />
                       <Expiry label="Fitness" date={vehicle.fitness_expiry_date} />
                       <Expiry label="Road tax" date={vehicle.road_tax_expiry_date} />
+                      <Expiry label="National permit" date={vehicle.national_permit_expiry_date} />
+                      <Expiry label="Local permit" date={vehicle.local_permit_expiry_date} />
                     </View>
                   </View>
                 </View>
@@ -146,19 +151,24 @@ export default function CustomerDetailScreen() {
             </View>
           ) : <EmptyLine text="No vehicles recorded." />}
 
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Claims</Text>
-            <Text style={styles.sectionHint}>{data.summary.claims} total</Text>
-          </View>
+          <PartnerSectionHeader title="Claims" meta={`${data.summary.claims} total`} />
           {data.claims.length ? (
             <View style={styles.stack}>
               {data.claims.map((claim) => (
-                <Pressable key={claim.claim_id} onPress={() => router.push(`/claim/${claim.claim_id}` as never)} style={styles.itemCard}>
-                  <View style={styles.itemIcon}><Ionicons name="shield-outline" size={17} color={partnerTheme.colors.warning} /></View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open claim ${claim.claim_no || ''}`}
+                  key={claim.claim_id}
+                  onPress={() => router.push(`/claim/${claim.claim_id}` as never)}
+                  style={({ pressed }) => [styles.itemCard, pressed && styles.pressed]}
+                >
+                  <View style={styles.itemIcon}><Ionicons name="shield-outline" size={18} color={partnerTheme.colors.warning} /></View>
                   <View style={styles.itemBody}>
-                    <Text style={styles.itemTitle}>{claim.claim_no || 'Claim'}</Text>
-                    <Text style={styles.itemText}>{claim.current_status || 'Status unavailable'}</Text>
-                    <Text style={styles.itemMeta}>{[claim.vehicle_no, claim.insurer_name].filter(Boolean).join(' · ')}</Text>
+                    <View style={styles.itemHeading}>
+                      <Text style={styles.itemTitle}>{claim.claim_no || 'Claim'}</Text>
+                      <PartnerStatusBadge label={humanize(claim.current_status || 'active')} tone={claimTone(claim.current_status)} />
+                    </View>
+                    <Text style={styles.itemText}>{[claim.vehicle_no, claim.insurer_name].filter(Boolean).join(' · ') || 'Claim details'}</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color="#9AA3B2" />
                 </Pressable>
@@ -171,22 +181,13 @@ export default function CustomerDetailScreen() {
   );
 }
 
-function ContactAction({ icon, label, disabled, onPress }: {
-  icon: 'call-outline' | 'logo-whatsapp' | 'mail-outline';
-  label: string;
-  disabled: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable disabled={disabled} onPress={onPress} style={[styles.action, disabled && styles.actionDisabled]}>
-      <Ionicons name={icon} size={18} color={disabled ? '#AAB2C0' : partnerTheme.colors.brand} />
-      <Text style={[styles.actionText, disabled && styles.actionTextDisabled]}>{label}</Text>
-    </Pressable>
-  );
-}
-
 function Summary({ value, label }: { value: number; label: string }) {
-  return <View style={styles.summaryItem}><Text style={styles.summaryValue}>{value}</Text><Text style={styles.summaryLabel}>{label}</Text></View>;
+  return (
+    <View style={styles.summaryItem}>
+      <Text style={styles.summaryValue}>{value}</Text>
+      <Text style={styles.summaryLabel}>{label}</Text>
+    </View>
+  );
 }
 
 function Info({ label, value }: { label: string; value: string }) {
@@ -195,67 +196,103 @@ function Info({ label, value }: { label: string; value: string }) {
 
 function Expiry({ label, date }: { label: string; date: string | null }) {
   if (!date) return null;
-  const days=daysUntil(date);
-  const tone=days<0?styles.expiryBad:days<=30?styles.expiryWarn:styles.expiryGood;
-  return <View style={[styles.expiry,tone]}><Text style={styles.expiryText}>{label} · {days<0?`${Math.abs(days)}d overdue`:`${days}d`}</Text></View>;
+  const days = daysUntil(date);
+  const tone = days < 0 ? styles.expiryBad : days <= 30 ? styles.expiryWarn : styles.expiryGood;
+  return <View style={[styles.expiry, tone]}><Text style={styles.expiryText}>{label} · {days < 0 ? `${Math.abs(days)}d overdue` : `${days}d`}</Text></View>;
 }
 
 function EmptyLine({ text }: { text: string }) {
   return <View style={styles.emptyLine}><Text style={styles.emptyLineText}>{text}</Text></View>;
 }
 
-function sanitizePhone(value:string){return value.replace(/[^+\d]/g,'');}
-function lastTen(value:string){return value.replace(/\D/g,'').slice(-10);}
-function initials(value:string){return value.split(/\s+/).filter(Boolean).slice(0,2).map((part)=>part[0]?.toUpperCase()).join('')||'CU';}
-function humanize(value:string){return value.replaceAll('_',' ').replace(/\b\w/g,(letter)=>letter.toUpperCase());}
-function formatDate(value:string|null){if(!value)return '—';const d=new Date(`${value}T00:00:00`);return Number.isNaN(d.getTime())?value:new Intl.DateTimeFormat('en-IN',{day:'2-digit',month:'short',year:'2-digit'}).format(d);}
-function formatMonthYear(value:string){const d=new Date(value);return Number.isNaN(d.getTime())?'recorded date':new Intl.DateTimeFormat('en-IN',{month:'short',year:'numeric'}).format(d);}
-function formatMoney(value:number|string|null){const amount=Number(value??0);return `₹${new Intl.NumberFormat('en-IN',{maximumFractionDigits:0}).format(Number.isFinite(amount)?amount:0)}`;}
-function daysUntil(value:string){const end=new Date(`${value}T00:00:00`);const today=new Date();today.setHours(0,0,0,0);return Math.ceil((end.getTime()-today.getTime())/86400000);}
+function customerTone(value: string | null): 'success' | 'warning' | 'neutral' {
+  const normalized = (value || '').toLowerCase();
+  if (!normalized || normalized.includes('active')) return 'success';
+  if (normalized.includes('pending') || normalized.includes('hold')) return 'warning';
+  return 'neutral';
+}
 
-const styles=StyleSheet.create({
-  close:{width:38,height:38,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:partnerTheme.colors.surface,borderWidth:1,borderColor:partnerTheme.colors.line},
-  loading:{minHeight:280,alignItems:'center',justifyContent:'center'},
-  errorCard:{minHeight:190,alignItems:'center',justifyContent:'center',borderRadius:partnerTheme.radius.lg,backgroundColor:partnerTheme.colors.surface},
-  errorText:{color:partnerTheme.colors.inkMuted,fontSize:10,textAlign:'center'},
-  retry:{marginTop:10,color:partnerTheme.colors.brand,fontSize:10,fontWeight:'800'},
-  hero:{flexDirection:'row',alignItems:'center',gap:13,borderRadius:partnerTheme.radius.xl,padding:17,backgroundColor:partnerTheme.colors.nav},
-  avatar:{width:52,height:52,borderRadius:18,alignItems:'center',justifyContent:'center',backgroundColor:'#343D52'},
-  avatarText:{color:'#FFFFFF',fontSize:14,fontWeight:'900'},
-  heroBody:{flex:1},
-  heroName:{color:'#FFFFFF',fontSize:16,fontWeight:'800'},
-  heroMeta:{marginTop:4,color:'#C2CAD7',fontSize:8.5,lineHeight:13},
-  heroSince:{marginTop:6,color:'#8F9BAD',fontSize:7.5},
-  actions:{marginTop:12,flexDirection:'row',gap:8},
-  action:{flex:1,minHeight:50,alignItems:'center',justifyContent:'center',gap:4,borderRadius:14,backgroundColor:partnerTheme.colors.surface,borderWidth:1,borderColor:partnerTheme.colors.line},
-  actionDisabled:{backgroundColor:'#F2F4F7'},
-  actionText:{color:partnerTheme.colors.ink,fontSize:8,fontWeight:'800'},
-  actionTextDisabled:{color:'#AAB2C0'},
-  summary:{marginTop:12,flexDirection:'row',borderRadius:17,paddingVertical:14,backgroundColor:partnerTheme.colors.surface,borderWidth:1,borderColor:partnerTheme.colors.line},
-  summaryItem:{flex:1,alignItems:'center'},
-  summaryValue:{color:partnerTheme.colors.ink,fontSize:16,fontWeight:'800'},
-  summaryLabel:{marginTop:3,color:partnerTheme.colors.inkMuted,fontSize:7},
-  sectionHeader:{marginTop:20,marginBottom:9,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
-  sectionTitle:{color:partnerTheme.colors.ink,fontSize:13.5,fontWeight:'800'},
-  sectionHint:{color:partnerTheme.colors.inkMuted,fontSize:8},
-  relationshipCard:{flexDirection:'row',flexWrap:'wrap',rowGap:13,borderRadius:17,padding:15,backgroundColor:partnerTheme.colors.surface,borderWidth:1,borderColor:partnerTheme.colors.line},
-  info:{width:'50%',paddingRight:8},
-  infoLabel:{color:'#8A94A6',fontSize:7,fontWeight:'800',textTransform:'uppercase',letterSpacing:0.5},
-  infoValue:{marginTop:3,color:partnerTheme.colors.ink,fontSize:9,fontWeight:'600',lineHeight:13},
-  stack:{gap:8},
-  itemCard:{minHeight:72,flexDirection:'row',alignItems:'center',gap:10,borderRadius:16,padding:12,backgroundColor:partnerTheme.colors.surface,borderWidth:1,borderColor:partnerTheme.colors.line},
-  vehicleCard:{minHeight:72,flexDirection:'row',alignItems:'flex-start',gap:10,borderRadius:16,padding:12,backgroundColor:partnerTheme.colors.surface,borderWidth:1,borderColor:partnerTheme.colors.line},
-  itemIcon:{width:38,height:38,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:partnerTheme.colors.surfaceMuted},
-  itemBody:{flex:1},
-  itemTitle:{color:partnerTheme.colors.ink,fontSize:10.5,fontWeight:'800'},
-  itemText:{marginTop:3,color:partnerTheme.colors.inkMuted,fontSize:8.5},
-  itemMeta:{marginTop:4,color:'#7A8495',fontSize:7.5},
-  expiryRow:{marginTop:7,flexDirection:'row',flexWrap:'wrap',gap:5},
-  expiry:{borderRadius:999,paddingHorizontal:6,paddingVertical:3},
-  expiryGood:{backgroundColor:'#EAF7EF'},
-  expiryWarn:{backgroundColor:'#FFF2DD'},
-  expiryBad:{backgroundColor:'#FCEDEC'},
-  expiryText:{color:'#596579',fontSize:6.8,fontWeight:'700'},
-  emptyLine:{minHeight:70,alignItems:'center',justifyContent:'center',borderRadius:15,backgroundColor:partnerTheme.colors.surface},
-  emptyLineText:{color:partnerTheme.colors.inkMuted,fontSize:8.5},
+function claimTone(value: string | null): 'success' | 'warning' | 'info' {
+  const normalized = (value || '').toLowerCase();
+  if (normalized.includes('complete') || normalized.includes('settled') || normalized.includes('closed')) return 'success';
+  if (normalized.includes('pending') || normalized.includes('attention')) return 'warning';
+  return 'info';
+}
+
+function policyCategory(policy: PartnerCustomerDetail['policies'][number]) {
+  const value = [policy.policy_type, policy.policy_product].filter(Boolean).join(' ').toLowerCase();
+  if (value.includes('motor') || policy.vehicle_no) return 'Motor';
+  if (value.includes('health')) return 'Health';
+  if (value.includes('life')) return 'Life';
+  return 'Non-Motor';
+}
+
+function initials(value: string) {
+  return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'CU';
+}
+
+function humanize(value: string) {
+  return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatDate(value: string | null) {
+  if (!value) return '—';
+  const d = new Date(`${value}T00:00:00`);
+  return Number.isNaN(d.getTime()) ? value : new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }).format(d);
+}
+
+function formatMonthYear(value: string) {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? 'recorded date' : new Intl.DateTimeFormat('en-IN', { month: 'short', year: 'numeric' }).format(d);
+}
+
+function formatMoney(value: number | string | null) {
+  const amount = Number(value ?? 0);
+  return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Number.isFinite(amount) ? amount : 0)}`;
+}
+
+function daysUntil(value: string) {
+  const end = new Date(`${value}T00:00:00`);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.ceil((end.getTime() - today.getTime()) / 86400000);
+}
+
+const styles = StyleSheet.create({
+  hero: { borderRadius: partnerTheme.radius.xl, padding: 18, backgroundColor: partnerTheme.colors.nav },
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  avatar: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#373F53' },
+  avatarText: { color: '#FFFFFF', ...partnerTheme.typography.bodyStrong },
+  heroBody: { flex: 1 },
+  heroName: { color: '#FFFFFF', ...partnerTheme.typography.sectionTitle },
+  heroMeta: { marginTop: 4, color: '#C0C8D4', ...partnerTheme.typography.caption },
+  heroSince: { marginTop: 12, paddingTop: 11, color: '#8F9BAD', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#3B4658', ...partnerTheme.typography.meta },
+  contactActions: { marginTop: 10 },
+  attention: { marginTop: 10 },
+  summary: { marginTop: 12, flexDirection: 'row', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  summaryItem: { flex: 1, minHeight: 76, alignItems: 'center', justifyContent: 'center' },
+  summaryValue: { color: partnerTheme.colors.ink, fontSize: 18, lineHeight: 23, fontWeight: '800' },
+  summaryLabel: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
+  relationshipCard: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 13, borderRadius: partnerTheme.radius.lg, padding: 15, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  info: { width: '50%', paddingRight: 8 },
+  infoLabel: { color: '#8A94A6', textTransform: 'uppercase', letterSpacing: 0.5, ...partnerTheme.typography.meta },
+  infoValue: { marginTop: 3, color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
+  stack: { gap: 8 },
+  itemCard: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: partnerTheme.radius.lg, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  vehicleCard: { minHeight: 76, flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderRadius: partnerTheme.radius.lg, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  itemIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surfaceMuted },
+  itemBody: { flex: 1 },
+  itemHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 7 },
+  itemTitle: { flex: 1, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  itemText: { marginTop: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  itemMeta: { marginTop: 4, color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.meta },
+  expiryRow: { marginTop: 7, flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
+  expiry: { borderRadius: partnerTheme.radius.pill, paddingHorizontal: 7, paddingVertical: 4 },
+  expiryGood: { backgroundColor: partnerTheme.colors.successSoft },
+  expiryWarn: { backgroundColor: partnerTheme.colors.warningSoft },
+  expiryBad: { backgroundColor: partnerTheme.colors.dangerSoft },
+  expiryText: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
+  emptyLine: { minHeight: 70, alignItems: 'center', justifyContent: 'center', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface },
+  emptyLineText: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  pressed: { opacity: 0.8 },
 });
