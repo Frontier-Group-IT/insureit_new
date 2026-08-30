@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { getPartnerSupport, type PartnerSupport } from '@/lib/engagement';
 import { partnerTheme } from '@/lib/theme';
 
@@ -14,7 +15,7 @@ export default function SupportScreen() {
 
   useEffect(()=>{getPartnerSupport().then(setData).finally(()=>setLoading(false));},[]);
 
-  return <PartnerScreen eyebrow="SUPPORT" title="Your INSUREIT team" action={<Pressable onPress={()=>router.back()} style={styles.close}><Ionicons name="close" size={18} color={partnerTheme.colors.ink}/></Pressable>}>
+  return <PartnerScreen eyebrow="SUPPORT" title="Your INSUREIT team" action={<PartnerIconButton icon="close" label="Close support" onPress={() => router.back()} />}>
     {loading || !data ? <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand}/></View> : <>
       {data.relationship_contact ? <View style={styles.personCard}>
         <View style={styles.avatar}><Text style={styles.avatarText}>{initials(data.relationship_contact.name)}</Text></View>
