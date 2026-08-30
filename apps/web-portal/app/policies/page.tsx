@@ -43,6 +43,15 @@ function policySourceDatabaseType(value: string | null): IntermediarySourceRow["
   return null;
 }
 function sourceLookupKey(type: IntermediarySourceRow["intermediary_type"], code: string) { return `${type}:${code}`; }
+function buildPolicySourceOptions(sourceRows: IntermediarySourceRow[]) {
+  const sourceNameByKey = new Map<string, string>();
+  const sourceOptions = sourceRows.map((source) => {
+    const code = source.intermediary_code?.trim(); const name = source.display_name?.trim();
+    if (!code || !name) return null;
+    const value = sourceLookupKey(source.intermediary_type, code); sourceNameByKey.set(value, name); return { value, label: `${name} · ${code}` };
+  }).filter((option): option is { value: string; label: string } => Boolean(option));
+  return { sourceNameByKey, sourceOptions };
+}
 
 export default async function PoliciesPage({ searchParams }: { searchParams?: Promise<{ success?: string; policy?: string }> }) {
   const profile = await requireCapability("view_policies");
@@ -60,7 +69,7 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
     return <AppShell title="Policies">{completionBridge}{error ? <RegisterError /> : <BackofficePolicyRegister rows={data ?? []} />}</AppShell>;
   }
 
-  const { data: activeSources, error: sourceError } = await admin
+  const activeSourcesPromise = admin
     .from("intermediaries")
     .select("intermediary_type, intermediary_code, display_name")
     .in("intermediary_type", ["partner", "posp", "misp"])
@@ -68,19 +77,17 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
     .order("display_name", { ascending: true })
     .returns<IntermediarySourceRow[]>();
 
-  const sourceRows = sourceError ? [] : (activeSources ?? []);
-  const sourceNameByKey = new Map<string, string>();
-  const sourceOptions = sourceRows.map((source) => {
-    const code = source.intermediary_code?.trim(); const name = source.display_name?.trim();
-    if (!code || !name) return null;
-    const value = sourceLookupKey(source.intermediary_type, code); sourceNameByKey.set(value, name); return { value, label: `${name} · ${code}` };
-  }).filter((option): option is { value: string; label: string } => Boolean(option));
-
-  if (accessibleCustomerIds !== null && !accessibleCustomerIds.length) return <AppShell title="Policies">{completionBridge}<PolicyWorkspace rows={[]} sourceOptions={sourceOptions} /></AppShell>;
+  if (accessibleCustomerIds !== null && !accessibleCustomerIds.length) {
+    const sourceResult = await activeSourcesPromise;
+    const { sourceOptions } = buildPolicySourceOptions(sourceResult.error ? [] : (sourceResult.data ?? []));
+    return <AppShell title="Policies">{completionBridge}<PolicyWorkspace rows={[]} sourceOptions={sourceOptions} /></AppShell>;
+  }
 
   let query = admin.from("policies").select("id, policy_no, policy_type, policy_product, business_line, start_date, end_date, insured_declared_value, premium_amount, intermediary_type, intermediary_code, policy_premium_details(gross_premium), policy_documents(id, document_type, file_name, mime_type), customers!inner(company_name, contact_name, created_by), vehicles(vehicle_no), insurance_companies(name), non_motor_policy_details(category, risk_title, risk_location, transit_from, transit_to, nature_of_business, liability_type, risk_details), claims(count)").order("created_at", { ascending: false });
   if (accessibleCustomerIds !== null) query = query.in("customer_id", accessibleCustomerIds);
-  const { data, error } = await query.returns<PolicyRow[]>();
+  const [sourceResult, policyResult] = await Promise.all([activeSourcesPromise, query.returns<PolicyRow[]>()]);
+  const { sourceNameByKey, sourceOptions } = buildPolicySourceOptions(sourceResult.error ? [] : (sourceResult.data ?? []));
+  const { data, error } = policyResult;
   const rows = data ?? [];
   const workspaceRows = rows.map((policy) => { const sourceType = policySourceDatabaseType(policy.intermediary_type); const sourceCode = policy.intermediary_code?.trim() ?? ""; return { ...policy, policy_documents: (policy.policy_documents ?? []).filter((document) => document.document_type === "policy_copy"), gross_premium: policy.policy_premium_details?.gross_premium ?? null, source_name: sourceType && sourceCode ? sourceNameByKey.get(sourceLookupKey(sourceType, sourceCode)) ?? null : null }; });
 
