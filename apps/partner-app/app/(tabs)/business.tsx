@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -14,23 +14,21 @@ import { getPartnerNetwork, type PartnerNetworkData } from '@/lib/network';
 import { getPartnerPayoutSummary, type PartnerPayoutSummary } from '@/lib/payout';
 import { getPartnerRenewalSummary, type PartnerRenewalSummary } from '@/lib/policies';
 import { partnerTheme } from '@/lib/theme';
+import { usePartnerQuery } from '@/lib/use-partner-query';
+import { usePartnerSession } from '@/providers/partner-session-provider';
 
 export default function BusinessScreen() {
   const router = useRouter();
-  const [performance, setPerformance] = useState<PartnerBusinessPerformance | null>(null);
-  const [network, setNetwork] = useState<PartnerNetworkData | null>(null);
-  const [renewals, setRenewals] = useState<PartnerRenewalSummary | null>(null);
-  const [claims, setClaims] = useState<PartnerClaimSummary | null>(null);
-  const [payout, setPayout] = useState<PartnerPayoutSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState('');
+  const { cacheScopeKey } = usePartnerSession();
 
-  const load = useCallback(async (manual = false) => {
-    if (manual) setRefreshing(true);
-    else setLoading(true);
-    setError('');
-
+  const fetchBusinessWorkspace = useCallback(async (): Promise<{
+    performance: PartnerBusinessPerformance;
+    network: PartnerNetworkData;
+    renewals: PartnerRenewalSummary | null;
+    claims: PartnerClaimSummary | null;
+    payout: PartnerPayoutSummary | null;
+    secondaryWarning: boolean;
+  }> => {
     const [performanceResult, networkResult, renewalResult, claimResult, payoutResult] = await Promise.allSettled([
       getPartnerBusinessPerformance(),
       getPartnerNetwork(),
@@ -39,29 +37,37 @@ export default function BusinessScreen() {
       getPartnerPayoutSummary(),
     ]);
 
-    if (performanceResult.status === 'fulfilled') setPerformance(performanceResult.value);
-    if (networkResult.status === 'fulfilled') setNetwork(networkResult.value);
-    if (renewalResult.status === 'fulfilled') setRenewals(renewalResult.value);
-    if (claimResult.status === 'fulfilled') setClaims(claimResult.value);
-    if (payoutResult.status === 'fulfilled') setPayout(payoutResult.value);
+    if (performanceResult.status === 'rejected') throw performanceResult.reason;
+    if (networkResult.status === 'rejected') throw networkResult.reason;
 
-    if (performanceResult.status === 'rejected' || networkResult.status === 'rejected') {
-      setError('Your business workspace could not be refreshed.');
-    } else if (
-      renewalResult.status === 'rejected'
-      || claimResult.status === 'rejected'
-      || payoutResult.status === 'rejected'
-    ) {
-      setError('Some secondary business information could not be refreshed.');
-    }
-
-    setLoading(false);
-    setRefreshing(false);
+    return {
+      performance: performanceResult.value,
+      network: networkResult.value,
+      renewals: renewalResult.status === 'fulfilled' ? renewalResult.value : null,
+      claims: claimResult.status === 'fulfilled' ? claimResult.value : null,
+      payout: payoutResult.status === 'fulfilled' ? payoutResult.value : null,
+      secondaryWarning: renewalResult.status === 'rejected'
+        || claimResult.status === 'rejected'
+        || payoutResult.status === 'rejected',
+    };
   }, []);
 
+  const workspace = usePartnerQuery({
+    scopeKey: cacheScopeKey,
+    key: 'business:workspace',
+    fetcher: fetchBusinessWorkspace,
+    staleTimeMs: 90_000,
+  });
+
   useFocusEffect(useCallback(() => {
-    void load(false);
-  }, [load]));
+    void workspace.ensureFresh();
+  }, [workspace.ensureFresh]));
+
+  const performance = workspace.data?.performance ?? null;
+  const network = workspace.data?.network ?? null;
+  const renewals = workspace.data?.renewals ?? null;
+  const claims = workspace.data?.claims ?? null;
+  const payout = workspace.data?.payout ?? null;
 
   const topPartners = useMemo(() => {
     if (!network) return [];
@@ -77,23 +83,23 @@ export default function BusinessScreen() {
       scrollProps={{
         refreshControl: (
           <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => void load(true)}
+            refreshing={workspace.refreshing}
+            onRefresh={() => void workspace.refresh()}
             tintColor={partnerTheme.colors.brand}
             colors={[partnerTheme.colors.brand]}
           />
         ),
       }}
     >
-      {loading && (!performance || !network) ? (
+      {workspace.loading && (!performance || !network) ? (
         <PartnerStateView state="loading" title="Loading business workspace" />
       ) : !performance || !network ? (
         <PartnerStateView
           state="error"
           title="Business workspace unavailable"
-          message={error || 'Business data could not be loaded.'}
+          message={workspace.error || 'Business data could not be loaded.'}
           actionLabel="Try again"
-          onAction={() => void load(true)}
+          onAction={() => void workspace.refresh()}
         />
       ) : (
         <>
@@ -102,9 +108,15 @@ export default function BusinessScreen() {
             <Text style={styles.updated}>{formatUpdatedAt(performance.generated_at)}</Text>
           </View>
 
-          {error ? (
+          {workspace.stale || workspace.error || workspace.data?.secondaryWarning ? (
             <View style={styles.feedback}>
-              <PartnerBanner tone="warning" message={error} />
+              <PartnerBanner
+                tone="warning"
+                title={workspace.offline ? "You're offline" : workspace.stale ? 'Showing cached information' : undefined}
+                message={workspace.stale
+                  ? `Last refreshed ${formatCacheTime(workspace.updatedAt)}. Pull down to try again.`
+                  : workspace.error || 'Some secondary business information could not be refreshed.'}
+              />
             </View>
           ) : null}
 
@@ -395,6 +407,11 @@ function shortMonth(value: string) {
 
 function humanize(value: string) {
   return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatCacheTime(value: number | null) {
+  if (!value) return 'earlier';
+  return new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
 }
 
 function formatUpdatedAt(value: string) {

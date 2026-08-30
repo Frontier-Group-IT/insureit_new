@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
-import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerListScreen } from '@/components/partner-list-screen';
+import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerContactActions } from '@/components/ui/partner-contact-actions';
-import { PartnerButton } from '@/components/ui/partner-button';
 import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
@@ -19,166 +19,153 @@ import {
 } from '@/lib/customers';
 import { partnerTheme } from '@/lib/theme';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
+import { usePartnerPagedQuery } from '@/lib/use-partner-paged-query';
+import { usePartnerQuery } from '@/lib/use-partner-query';
+import { usePartnerSession } from '@/providers/partner-session-provider';
 
 const PAGE_SIZE = 25;
 let savedCustomerQuery = '';
 
 export default function CustomersScreen() {
   const router = useRouter();
-  const [summary, setSummary] = useState<PartnerCustomerSummary | null>(null);
-  const [rows, setRows] = useState<PartnerCustomerRow[]>([]);
+  const { cacheScopeKey } = usePartnerSession();
   const [query, setQuery] = useState(savedCustomerQuery);
   const debouncedSearch = useDebouncedValue(query.trim(), 350);
-  const [loading, setLoading] = useState(true);
-  const [listLoading, setListLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState('');
-  const [total, setTotal] = useState(0);
-  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     savedCustomerQuery = query;
   }, [query]);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function loadSummary() {
-      try {
-        const nextSummary = await getPartnerCustomerSummary();
-        if (!cancelled) setSummary(nextSummary);
-      } catch {
-        if (!cancelled) setError('Customer summary could not be loaded for this account.');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    void loadSummary();
-    return () => { cancelled = true; };
-  }, [reloadKey]);
+  const fetchSummary = useCallback(() => getPartnerCustomerSummary(), []);
+  const summary = usePartnerQuery<PartnerCustomerSummary>({
+    scopeKey: cacheScopeKey,
+    key: 'customers:summary',
+    fetcher: fetchSummary,
+    staleTimeMs: 2 * 60_000,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    async function loadFirstPage() {
-      setListLoading(true);
-      setError('');
-      try {
-        const nextRows = await listPartnerCustomers({ limit: PAGE_SIZE, offset: 0, search: debouncedSearch });
-        if (cancelled) return;
-        setRows(nextRows);
-        setTotal(nextRows[0]?.total_count ?? 0);
-      } catch {
-        if (!cancelled) {
-          setRows([]);
-          setTotal(0);
-          setError('Customer data could not be loaded for this account.');
-        }
-      } finally {
-        if (!cancelled) setListLoading(false);
-      }
-    }
-    void loadFirstPage();
-    return () => { cancelled = true; };
-  }, [debouncedSearch, reloadKey]);
+  const fetchPage = useCallback(async ({ limit, offset }: { limit: number; offset: number }) => {
+    const nextRows = await listPartnerCustomers({ limit, offset, search: debouncedSearch });
+    return {
+      rows: nextRows,
+      total: nextRows[0]?.total_count ?? 0,
+    };
+  }, [debouncedSearch]);
 
-  async function loadMore() {
-    if (loadingMore || rows.length >= total) return;
-    setLoadingMore(true);
-    setError('');
-    try {
-      const nextRows = await listPartnerCustomers({
-        limit: PAGE_SIZE,
-        offset: rows.length,
-        search: debouncedSearch,
-      });
-      setRows((current) => [...current, ...nextRows]);
-      if (nextRows[0]?.total_count != null) setTotal(nextRows[0].total_count);
-    } catch {
-      setError('More customers could not be loaded. Please try again.');
-    } finally {
-      setLoadingMore(false);
-    }
-  }
+  const collection = usePartnerPagedQuery<PartnerCustomerRow>({
+    scopeKey: cacheScopeKey,
+    key: `customers:list:${debouncedSearch || 'all'}`,
+    pageSize: PAGE_SIZE,
+    fetchPage,
+    staleTimeMs: 60_000,
+  });
+
+  const refreshAll = useCallback(async () => {
+    await Promise.all([summary.refresh(), collection.refresh()]);
+  }, [collection, summary]);
+
+  const header = (
+    <View>
+      {summary.loading && !summary.data ? (
+        <PartnerStateView state="loading" title="Loading customer summary" />
+      ) : (
+        <View style={styles.summaryGrid}>
+          <SummaryCard label="Customers" value={summary.data?.total_customers ?? 0} />
+          <SummaryCard label="Active" value={summary.data?.active_customers ?? 0} />
+          <SummaryCard label="With phone" value={summary.data?.with_phone ?? 0} />
+          <SummaryCard label="With email" value={summary.data?.with_email ?? 0} />
+        </View>
+      )}
+
+      {(collection.stale || summary.stale) ? (
+        <View style={styles.banner}>
+          <PartnerBanner
+            tone="warning"
+            title={collection.offline || summary.offline ? "You're offline" : 'Showing cached information'}
+            message={`Last refreshed ${formatUpdatedAt(collection.updatedAt || summary.updatedAt)}. Pull down to try again.`}
+          />
+        </View>
+      ) : null}
+
+      <View style={styles.search}>
+        <PartnerSearchField
+          value={query}
+          onChangeText={setQuery}
+          onClear={() => setQuery('')}
+          placeholder="Search name, code, phone, email or city"
+        />
+        <Text style={styles.searchHint}>Search updates automatically as you type.</Text>
+      </View>
+
+      <PartnerSectionHeader
+        title="Customer book"
+        meta={collection.loading ? 'Searching…' : `${collection.total} records`}
+      />
+
+      {collection.error && collection.rows.length ? (
+        <View style={styles.inlineBanner}>
+          <PartnerBanner
+            tone="warning"
+            message={collection.error}
+          />
+        </View>
+      ) : null}
+    </View>
+  );
+
+  const empty = collection.loading ? (
+    <PartnerStateView state="loading" title="Finding customers" />
+  ) : collection.error ? (
+    <PartnerStateView
+      state="error"
+      title="Customers could not be loaded"
+      message={collection.error}
+      actionLabel="Try again"
+      onAction={() => void refreshAll()}
+    />
+  ) : (
+    <PartnerStateView
+      state="empty"
+      icon="people-outline"
+      title="No customers found"
+      message={debouncedSearch ? 'Try a different name, code, phone, email or city.' : 'Customers in your authorized business scope will appear here.'}
+    />
+  );
+
+  const footer = collection.rows.length ? (
+    <View style={styles.listFooter}>
+      {collection.loadingMore ? (
+        <View style={styles.loadingMore}>
+          <ActivityIndicator color={partnerTheme.colors.brand} />
+          <Text style={styles.loadingMoreText}>Loading more customers…</Text>
+        </View>
+      ) : collection.rows.length >= collection.total ? (
+        <Text style={styles.endText}>End of customer book</Text>
+      ) : null}
+    </View>
+  ) : null;
 
   return (
-    <PartnerScreen
+    <PartnerListScreen
       eyebrow="BUSINESS"
       title="Customers"
       action={<PartnerIconButton icon="close" label="Close customers" onPress={() => router.back()} />}
-    >
-      {loading ? (
-        <PartnerStateView state="loading" title="Loading customer book" />
-      ) : (
-        <>
-          <View style={styles.summaryGrid}>
-            <SummaryCard label="Customers" value={summary?.total_customers ?? 0} />
-            <SummaryCard label="Active" value={summary?.active_customers ?? 0} />
-            <SummaryCard label="With phone" value={summary?.with_phone ?? 0} />
-            <SummaryCard label="With email" value={summary?.with_email ?? 0} />
-          </View>
-
-          <View style={styles.search}>
-            <PartnerSearchField
-              value={query}
-              onChangeText={setQuery}
-              onClear={() => setQuery('')}
-              placeholder="Search name, code, phone, email or city"
-            />
-            <Text style={styles.searchHint}>Search updates automatically as you type.</Text>
-          </View>
-
-          <PartnerSectionHeader
-            title="Customer book"
-            meta={listLoading ? 'Searching…' : `${total} records`}
-          />
-
-          {error && !rows.length ? (
-            <PartnerStateView
-              state="error"
-              title="Customers could not be loaded"
-              message={error}
-              actionLabel="Try again"
-              onAction={() => setReloadKey((value) => value + 1)}
-            />
-          ) : listLoading ? (
-            <PartnerStateView state="loading" title="Finding customers" />
-          ) : rows.length ? (
-            <>
-              <View style={styles.list}>
-                {rows.map((row) => (
-                  <CustomerRow
-                    key={row.customer_id}
-                    row={row}
-                    onPress={() => router.push(`/customer/${row.customer_id}` as never)}
-                  />
-                ))}
-              </View>
-
-              {error ? <Text style={styles.inlineError}>{error}</Text> : null}
-
-              {rows.length < total ? (
-                <View style={styles.loadMore}>
-                  <PartnerButton
-                    label={loadingMore ? 'Loading…' : `Load more · ${total - rows.length} remaining`}
-                    variant="secondary"
-                    loading={loadingMore}
-                    onPress={() => void loadMore()}
-                  />
-                </View>
-              ) : (
-                <Text style={styles.endText}>{rows.length ? 'End of customer book' : ''}</Text>
-              )}
-            </>
-          ) : (
-            <PartnerStateView
-              state="empty"
-              icon="people-outline"
-              title="No customers found"
-              message={debouncedSearch ? 'Try a different name, code, phone, email or city.' : 'Customers in your authorized business scope will appear here.'}
-            />
-          )}
-        </>
+      data={collection.rows}
+      keyExtractor={(row) => row.customer_id}
+      renderItem={({ item }) => (
+        <CustomerRow
+          row={item}
+          onPress={() => router.push(`/customer/${item.customer_id}` as never)}
+        />
       )}
-    </PartnerScreen>
+      header={header}
+      empty={empty}
+      footer={footer}
+      refreshing={collection.refreshing || summary.refreshing}
+      onRefresh={() => void refreshAll()}
+      onEndReached={() => void collection.loadMore()}
+      ItemSeparatorComponent={() => <View style={styles.separator} />}
+    />
   );
 }
 
@@ -250,6 +237,11 @@ function humanize(value: string) {
   return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function formatUpdatedAt(value: number | null) {
+  if (!value) return 'earlier';
+  return new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
+}
+
 const styles = StyleSheet.create({
   summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   summaryCard: {
@@ -264,9 +256,11 @@ const styles = StyleSheet.create({
   },
   summaryValue: { color: partnerTheme.colors.ink, ...partnerTheme.typography.display },
   summaryLabel: { marginTop: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  banner: { marginTop: 10 },
+  inlineBanner: { marginBottom: 10 },
   search: { marginTop: partnerTheme.spacing.lg },
   searchHint: { marginTop: 6, marginLeft: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  list: { gap: 10 },
+  separator: { height: 10 },
   customerRow: {
     borderRadius: partnerTheme.radius.lg,
     padding: partnerTheme.spacing.lg,
@@ -310,7 +304,8 @@ const styles = StyleSheet.create({
   },
   openRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   openText: { color: partnerTheme.colors.brand, ...partnerTheme.typography.caption },
-  loadMore: { marginTop: partnerTheme.spacing.md },
-  endText: { marginTop: 12, color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.meta },
-  inlineError: { marginTop: 10, color: partnerTheme.colors.danger, textAlign: 'center', ...partnerTheme.typography.caption },
+  listFooter: { minHeight: 58, alignItems: 'center', justifyContent: 'center' },
+  loadingMore: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  loadingMoreText: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  endText: { color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.meta },
 });

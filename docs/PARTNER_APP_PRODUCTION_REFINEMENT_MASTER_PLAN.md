@@ -1099,8 +1099,8 @@ Use this section as the compact source of progress.
 | 0 — Shared mobile foundation | VERIFIED COMPLETE | No | PR #800 merged; OTA applied; Customers + New Policy Intake visually verified on installed Android app |
 | 1 — Navigation / Home / global states | VERIFIED COMPLETE | No | PR #808 merged; OTA applied; Home + More visually verified on installed Android app |
 | 2 — Customers / Policies / Renewals / Claims | VERIFIED COMPLETE | No | PR #811 merged; OTA applied; list + policy detail + claim detail visually verified on installed Android app |
-| 3 — Policy Intake / Business / Payout / Support | READY FOR REVIEW | No | PR #814 merged; payout RPC applied; preview OTA published; installed-device Phase 3 review pending |
-| 4 — Data/cache/offline/auth lifecycle | LOCKED | Mostly No | |
+| 3 — Policy Intake / Business / Payout / Support | VERIFIED COMPLETE | No | PR #814 merged; payout RPC applied; Phase 3 UI verified; SecureStore hotfix PR #816 applied and OTA-published |
+| 4 — Data/cache/offline/auth lifecycle | IN PROGRESS | No | Branch: `feat/partner-phase-4-data-offline-auth` |
 | 5 — Accessibility/resilience/testing | LOCKED | No | |
 | 6 — Batched native capabilities | LOCKED | **Yes, explicit approval required** | |
 | 7 — Full UAT/security audit | LOCKED | No | |
@@ -1137,7 +1137,7 @@ The user has approved freezing this plan and executing it phase-by-phase.
 
 The next implementation work is therefore:
 
-> **Phase 3 — Policy Intake, Business, payout and Support**
+> **Phase 4 — Data layer, caching, performance, offline and auth lifecycle**
 
 **VERIFIED COMPLETE:** Phase 0 implementation merged in PR #800 as `5841fe44ed9e049aa39b1524e6e34337ed523236`. Canonical Partner verification run #38 passed route integrity, release identity, TypeScript, lint and Expo web review export. The deliberate main-only OTA trigger path was added in PR #801 and merged as `12908201517d0689dfac635ca56f2273c7670ccf`. Partner preview OTA run `33300628248` succeeded on project `8ade82c1-4c96-4f09-b90b-802270fb406d`, branch `preview`, runtime `0.1.0`, update group `536b65c6-a13a-4c6a-b794-506a4222ae1a`, exact Git commit `12908201517d0689dfac635ca56f2273c7670ccf`. On 2026-08-30, user-provided installed-device screenshots directly verified the refined Customers screen and New Policy Intake screen rendering correctly after OTA. Phase 0 is complete and Phase 1 is unlocked/in progress.
 
@@ -1145,7 +1145,7 @@ The next implementation work is therefore:
 
 **VERIFIED COMPLETE:** Phase 2 implementation merged in PR #811 as `526dfa0c944edd1ca2a75af1c837c22687d9140e`. Canonical Partner verification run #43 passed release identity, route integrity, TypeScript, lint and Expo web review export on exact head `71848a262d4eec7fd4ee2dced403bd7e6901f89d`. Partner preview OTA run `33304718833` succeeded on project `8ade82c1-4c96-4f09-b90b-802270fb406d`, branch `preview`, runtime `0.1.0`, update group `f38b2264-0215-4ca8-a3ab-f3444ff188ae`, exact Git commit `526dfa0c944edd1ca2a75af1c837c22687d9140e`. On 2026-08-30, user-provided installed-device screenshots directly verified Customers, Policies, Renewals and Claims plus representative Motor policy detail and active claim detail/journey screens after OTA. Phase 2 is complete and Phase 3 is unlocked/in progress.
 
-**READY FOR REVIEW:** Phase 3 implementation merged in PR #814 as `6848907727d7b1a1a86833a71826a7bb80f6f077`. Canonical Partner verification run #45 (`33306719499`) passed release identity, route integrity, TypeScript, lint and Expo web review export on exact head `73367f6804b7f4cf2e1862c1c9afca21ceb48dc3`. Web portal verification run `33306719498` also passed regressions, typecheck, lint and production build. Production Supabase migration `partner_app_refinement_phase3_payout` was APPLIED successfully; `partner_app_payout_summary()` denies anonymous execution, allows authenticated/service-role execution, fails closed for employee identities and restricts intermediary results to the authenticated intermediary code. Partner preview OTA run `33306829054` succeeded on project `8ade82c1-4c96-4f09-b90b-802270fb406d`, branch `preview`, runtime `0.1.0`, update group `0692d1db-62e5-4b8b-8b80-63364ff8fd15`, exact Git commit `6848907727d7b1a1a86833a71826a7bb80f6f077`. Remaining gate: visually verify Business, Policy Intake list/new/detail and Support on the installed Partner preview APK after OTA application. For employee/RM identities, the Payout section is expected to show a restricted state rather than payout amounts. Phase 4 remains locked until this installed-device review is confirmed.
+**VERIFIED COMPLETE:** Phase 3 implementation merged in PR #814 as `6848907727d7b1a1a86833a71826a7bb80f6f077`. Canonical Partner verification run #45 (`33306719499`) passed release identity, route integrity, TypeScript, lint and Expo web review export. Production Supabase migration `partner_app_refinement_phase3_payout` was APPLIED and its payout RPC privilege boundary was verified. Partner preview OTA run `33306829054` published the Phase 3 implementation. On 2026-08-30, user-provided installed-device screenshots directly verified Business, employee/RM restricted payout visibility, Policy Intake submission history and Support. The screenshots also exposed one P0 SecureStore key defect in New Policy Intake; PR #816 fixed the invalid key characters, Partner Verify #47 passed, and Partner preview OTA run `33307619084` published hotfix commit `8019006045e0e757b7ace9c8fffd937ad6b5adb6` as update group `fbbd9412-13b4-4656-ac4d-f4a261d39b61`. The user then authorized continuation. Phase 3 is complete and Phase 4 is unlocked/in progress.
 
-No later phase is authorized to be mixed into Phase 3 merely for convenience.
+No later phase is authorized to be mixed into Phase 4 merely for convenience.
 

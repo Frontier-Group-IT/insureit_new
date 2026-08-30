@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
-import { PartnerScreen } from '@/components/partner-screen';
-import { PartnerButton } from '@/components/ui/partner-button';
+import { PartnerListScreen } from '@/components/partner-list-screen';
+import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerFilterChip } from '@/components/ui/partner-filter-chip';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
@@ -19,6 +19,9 @@ import {
 } from '@/lib/claims';
 import { partnerTheme } from '@/lib/theme';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
+import { usePartnerPagedQuery } from '@/lib/use-partner-paged-query';
+import { usePartnerQuery } from '@/lib/use-partner-query';
+import { usePartnerSession } from '@/providers/partner-session-provider';
 
 const PAGE_SIZE = 25;
 const filters: Array<{ value: PartnerClaimState; label: string }> = [
@@ -32,173 +35,163 @@ let savedClaimState: PartnerClaimState = 'all';
 
 export default function ClaimsScreen() {
   const router = useRouter();
-  const [summary, setSummary] = useState<PartnerClaimSummary | null>(null);
-  const [rows, setRows] = useState<PartnerClaimRow[]>([]);
+  const { cacheScopeKey } = usePartnerSession();
   const [state, setState] = useState<PartnerClaimState>(savedClaimState);
   const [query, setQuery] = useState(savedClaimQuery);
   const debouncedSearch = useDebouncedValue(query.trim(), 350);
-  const [loading, setLoading] = useState(true);
-  const [listLoading, setListLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState('');
-  const [total, setTotal] = useState(0);
-  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     savedClaimQuery = query;
     savedClaimState = state;
   }, [query, state]);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function loadSummary() {
-      try {
-        const nextSummary = await getPartnerClaimSummary();
-        if (!cancelled) setSummary(nextSummary);
-      } catch {
-        if (!cancelled) setError('Claim summary could not be loaded for this account.');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    void loadSummary();
-    return () => { cancelled = true; };
-  }, [reloadKey]);
+  const fetchSummary = useCallback(() => getPartnerClaimSummary(), []);
+  const summary = usePartnerQuery<PartnerClaimSummary>({
+    scopeKey: cacheScopeKey,
+    key: 'claims:summary',
+    fetcher: fetchSummary,
+    staleTimeMs: 90_000,
+  });
 
-  const loadFirstPage = useCallback(async () => {
-    setListLoading(true);
-    setError('');
-    try {
-      const nextRows = await listPartnerClaims({
-        state,
-        search: debouncedSearch,
-        limit: PAGE_SIZE,
-        offset: 0,
-      });
-      setRows(nextRows);
-      setTotal(nextRows[0]?.total_count ?? 0);
-    } catch {
-      setRows([]);
-      setTotal(0);
-      setError('Claim data could not be loaded for this account.');
-    } finally {
-      setListLoading(false);
-    }
+  const fetchPage = useCallback(async ({ limit, offset }: { limit: number; offset: number }) => {
+    const nextRows = await listPartnerClaims({
+      state,
+      search: debouncedSearch,
+      limit,
+      offset,
+    });
+    return {
+      rows: nextRows,
+      total: nextRows[0]?.total_count ?? 0,
+    };
   }, [debouncedSearch, state]);
 
-  useEffect(() => {
-    void loadFirstPage();
-  }, [loadFirstPage, reloadKey]);
+  const collection = usePartnerPagedQuery<PartnerClaimRow>({
+    scopeKey: cacheScopeKey,
+    key: `claims:list:${state}:${debouncedSearch || 'all'}`,
+    pageSize: PAGE_SIZE,
+    fetchPage,
+    staleTimeMs: 60_000,
+  });
 
-  async function loadMore() {
-    if (loadingMore || rows.length >= total) return;
-    setLoadingMore(true);
-    setError('');
-    try {
-      const nextRows = await listPartnerClaims({
-        state,
-        search: debouncedSearch,
-        limit: PAGE_SIZE,
-        offset: rows.length,
-      });
-      setRows((current) => [...current, ...nextRows]);
-      if (nextRows[0]?.total_count != null) setTotal(nextRows[0].total_count);
-    } catch {
-      setError('More claims could not be loaded. Please try again.');
-    } finally {
-      setLoadingMore(false);
-    }
-  }
+  const refreshAll = useCallback(async () => {
+    await Promise.all([summary.refresh(), collection.refresh()]);
+  }, [collection, summary]);
+
+  const header = (
+    <View>
+      {summary.loading && !summary.data ? (
+        <PartnerStateView state="loading" title="Loading claim summary" />
+      ) : (
+        <View style={styles.summaryGrid}>
+          <SummaryCard label="Total claims" value={summary.data?.total_claims ?? 0} />
+          <SummaryCard label="Active" value={summary.data?.active_claims ?? 0} />
+          <SummaryCard label="Completed" value={summary.data?.completed_claims ?? 0} />
+          <SummaryCard label="Assistance open" value={summary.data?.assistance_requested ?? 0} />
+        </View>
+      )}
+
+      {(collection.stale || summary.stale) ? (
+        <View style={styles.banner}>
+          <PartnerBanner
+            tone="warning"
+            title={collection.offline || summary.offline ? "You're offline" : 'Showing cached information'}
+            message={`Last refreshed ${formatUpdatedAt(collection.updatedAt || summary.updatedAt)}. Pull down to try again.`}
+          />
+        </View>
+      ) : null}
+
+      <View style={styles.notice}>
+        <Ionicons name="shield-checkmark-outline" size={18} color={partnerTheme.colors.accent} />
+        <Text style={styles.noticeText}>Only claims within your authorized Partner scope are shown here.</Text>
+      </View>
+
+      <View style={styles.search}>
+        <PartnerSearchField
+          value={query}
+          onChangeText={setQuery}
+          onClear={() => setQuery('')}
+          placeholder="Search claim, customer, vehicle or policy"
+        />
+        <Text style={styles.searchHint}>Search updates automatically as you type.</Text>
+      </View>
+
+      <View style={styles.filters}>
+        {filters.map((filter) => (
+          <PartnerFilterChip
+            key={filter.value}
+            label={filter.label}
+            active={state === filter.value}
+            onPress={() => setState(filter.value)}
+          />
+        ))}
+      </View>
+
+      <PartnerSectionHeader
+        title="Claim book"
+        meta={collection.loading ? 'Searching…' : `${collection.total} records`}
+      />
+
+      {collection.error && collection.rows.length ? (
+        <View style={styles.inlineBanner}>
+          <PartnerBanner tone="warning" message={collection.error} />
+        </View>
+      ) : null}
+    </View>
+  );
+
+  const empty = collection.loading ? (
+    <PartnerStateView state="loading" title="Finding claims" />
+  ) : collection.error ? (
+    <PartnerStateView
+      state="error"
+      title="Claims could not be loaded"
+      message={collection.error}
+      actionLabel="Try again"
+      onAction={() => void refreshAll()}
+    />
+  ) : (
+    <PartnerStateView
+      state="empty"
+      icon="shield-checkmark-outline"
+      title="No claims found"
+      message="There are no claims matching this authorized scope and filter."
+    />
+  );
+
+  const footer = collection.rows.length ? (
+    <View style={styles.listFooter}>
+      {collection.loadingMore ? (
+        <View style={styles.loadingMore}>
+          <ActivityIndicator color={partnerTheme.colors.brand} />
+          <Text style={styles.loadingMoreText}>Loading more claims…</Text>
+        </View>
+      ) : collection.rows.length >= collection.total ? (
+        <Text style={styles.endText}>End of claim book</Text>
+      ) : null}
+    </View>
+  ) : null;
 
   return (
-    <PartnerScreen eyebrow="SERVICE" title="Claims">
-      {loading ? (
-        <PartnerStateView state="loading" title="Loading claim book" />
-      ) : (
-        <>
-          <View style={styles.summaryGrid}>
-            <SummaryCard label="Total claims" value={summary?.total_claims ?? 0} />
-            <SummaryCard label="Active" value={summary?.active_claims ?? 0} />
-            <SummaryCard label="Completed" value={summary?.completed_claims ?? 0} />
-            <SummaryCard label="Assistance open" value={summary?.assistance_requested ?? 0} />
-          </View>
-
-          <View style={styles.notice}>
-            <Ionicons name="shield-checkmark-outline" size={18} color={partnerTheme.colors.accent} />
-            <Text style={styles.noticeText}>Only claims within your authorized Partner scope are shown here.</Text>
-          </View>
-
-          <View style={styles.search}>
-            <PartnerSearchField
-              value={query}
-              onChangeText={setQuery}
-              onClear={() => setQuery('')}
-              placeholder="Search claim, customer, vehicle or policy"
-            />
-            <Text style={styles.searchHint}>Search updates automatically as you type.</Text>
-          </View>
-
-          <View style={styles.filters}>
-            {filters.map((filter) => (
-              <PartnerFilterChip
-                key={filter.value}
-                label={filter.label}
-                active={state === filter.value}
-                onPress={() => setState(filter.value)}
-              />
-            ))}
-          </View>
-
-          <PartnerSectionHeader title="Claim book" meta={listLoading ? 'Searching…' : `${total} records`} />
-
-          {error && !rows.length ? (
-            <PartnerStateView
-              state="error"
-              title="Claims could not be loaded"
-              message={error}
-              actionLabel="Try again"
-              onAction={() => setReloadKey((value) => value + 1)}
-            />
-          ) : listLoading ? (
-            <PartnerStateView state="loading" title="Finding claims" />
-          ) : rows.length ? (
-            <>
-              <View style={styles.list}>
-                {rows.map((row) => (
-                  <ClaimRow
-                    key={row.claim_id}
-                    row={row}
-                    onPress={() => router.push(`/claim/${row.claim_id}` as never)}
-                  />
-                ))}
-              </View>
-
-              {error ? <Text style={styles.inlineError}>{error}</Text> : null}
-
-              {rows.length < total ? (
-                <View style={styles.loadMore}>
-                  <PartnerButton
-                    label={loadingMore ? 'Loading…' : `Load more · ${total - rows.length} remaining`}
-                    variant="secondary"
-                    loading={loadingMore}
-                    onPress={() => void loadMore()}
-                  />
-                </View>
-              ) : (
-                <Text style={styles.endText}>End of claim book</Text>
-              )}
-            </>
-          ) : (
-            <PartnerStateView
-              state="empty"
-              icon="shield-checkmark-outline"
-              title="No claims found"
-              message="There are no claims matching this authorized scope and filter."
-            />
-          )}
-        </>
+    <PartnerListScreen
+      eyebrow="SERVICE"
+      title="Claims"
+      data={collection.rows}
+      keyExtractor={(row) => row.claim_id}
+      renderItem={({ item }) => (
+        <ClaimRow
+          row={item}
+          onPress={() => router.push(`/claim/${item.claim_id}` as never)}
+        />
       )}
-    </PartnerScreen>
+      header={header}
+      empty={empty}
+      footer={footer}
+      refreshing={collection.refreshing || summary.refreshing}
+      onRefresh={() => void refreshAll()}
+      onEndReached={() => void collection.loadMore()}
+      ItemSeparatorComponent={() => <View style={styles.separator} />}
+    />
   );
 }
 
@@ -283,17 +276,24 @@ function humanize(value: string) {
   return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function formatUpdatedAt(value: number | null) {
+  if (!value) return 'earlier';
+  return new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
+}
+
 const styles = StyleSheet.create({
   summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   summaryCard: { width: '48%', minHeight: 88, justifyContent: 'center', borderRadius: partnerTheme.radius.lg, padding: 15, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   summaryValue: { color: partnerTheme.colors.ink, fontSize: 22, lineHeight: 28, fontWeight: '800' },
   summaryLabel: { marginTop: 5, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  banner: { marginTop: 10 },
+  inlineBanner: { marginBottom: 10 },
   notice: { marginTop: 14, flexDirection: 'row', alignItems: 'flex-start', gap: 9, borderRadius: partnerTheme.radius.md, padding: 12, backgroundColor: partnerTheme.colors.accentSoft },
   noticeText: { flex: 1, color: '#56716F', ...partnerTheme.typography.caption },
   search: { marginTop: 14 },
   searchHint: { marginTop: 6, marginLeft: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   filters: { marginTop: 12, flexDirection: 'row', gap: 7 },
-  list: { gap: 10 },
+  separator: { height: 10 },
   claimRow: { borderRadius: partnerTheme.radius.lg, padding: 16, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   claimTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   claimIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.accentSoft },
@@ -310,7 +310,8 @@ const styles = StyleSheet.create({
   date: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   claimOpen: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   amount: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.caption },
-  loadMore: { marginTop: partnerTheme.spacing.md },
-  endText: { marginTop: 12, color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.meta },
-  inlineError: { marginTop: 10, color: partnerTheme.colors.danger, textAlign: 'center', ...partnerTheme.typography.caption },
+  listFooter: { minHeight: 58, alignItems: 'center', justifyContent: 'center' },
+  loadingMore: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  loadingMoreText: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  endText: { color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.meta },
 });
