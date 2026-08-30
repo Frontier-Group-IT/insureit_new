@@ -14,10 +14,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const query = await searchParams;
   const supabase = await createServerSupabaseClient();
   const accessToken = await getServerAccessToken();
-  const [{ profile }, base] = await Promise.all([
-    getAuthenticatedProfile(accessToken),
-    getOperationsDashboardData(supabase, accessToken),
-  ]);
+  const { profile } = await getAuthenticatedProfile(accessToken);
+  const base = await getOperationsDashboardData(supabase, profile);
 
   const permissionMap = await getEffectivePermissionAccessMap(profile);
   const can = (
