@@ -9,6 +9,10 @@ type QueryResult<T> = {
   updatedAt: number;
   fromCache: boolean;
   stale: boolean;
+  fallbackError?: {
+    message: string;
+    offline: boolean;
+  };
 };
 
 const cache = new Map<string, QueryCacheEntry<unknown>>();
@@ -64,6 +68,10 @@ export async function fetchPartnerQuery<T>({
           updatedAt: existing.updatedAt,
           fromCache: true,
           stale: true,
+          fallbackError: {
+            message: error instanceof Error ? error.message : 'Refresh failed.',
+            offline: isLikelyConnectivityError(error),
+          },
         };
       }
       throw error;
