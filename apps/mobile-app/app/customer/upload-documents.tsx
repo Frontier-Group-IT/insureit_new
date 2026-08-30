@@ -126,16 +126,20 @@ export default function UploadDocumentsScreen() {
 
   async function choosePhoto(documentType: string) {
     setMessage('');
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.8,
+      allowsMultipleSelection: true,
+      selectionLimit: 0,
+    });
 
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
-      await handlePickedFile(documentType, {
+    if (!result.canceled && result.assets.length) {
+      await handlePickedFiles(documentType, result.assets.map((asset, index) => ({
         uri: asset.uri,
-        name: asset.fileName ?? `${slug(documentType)}-${Date.now()}.jpg`,
+        name: asset.fileName ?? `${slug(documentType)}-${Date.now()}-${index + 1}.jpg`,
         mimeType: asset.mimeType ?? 'image/jpeg',
         size: asset.fileSize ?? null,
-      });
+      })));
     }
   }
 
@@ -144,64 +148,106 @@ export default function UploadDocumentsScreen() {
     const result = await DocumentPicker.getDocumentAsync({
       type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
       copyToCacheDirectory: true,
+      multiple: true,
     });
 
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
-      await handlePickedFile(documentType, {
+    if (!result.canceled && result.assets.length) {
+      await handlePickedFiles(documentType, result.assets.map((asset) => ({
         uri: asset.uri,
         name: asset.name,
         mimeType: asset.mimeType ?? null,
         size: asset.size ?? null,
-      });
+      })));
     }
   }
 
   async function handlePickedFile(documentType: string, file: PickedFile) {
+    await handlePickedFiles(documentType, [file]);
+  }
+
+  async function handlePickedFiles(documentType: string, pickedFiles: PickedFile[]) {
+    setMessage('');
     setSuccess('');
 
     if (!selectedClaim) {
       setMessage('Select a claim before attaching a document.');
       return;
     }
+    if (!pickedFiles.length || uploadingType) return;
 
-    if (file.size !== null && file.size > MAX_UPLOAD_SIZE_BYTES) {
-      setMessage(`${file.name} is larger than 5 MB. Please choose a smaller file.`);
+    const oversized = pickedFiles.filter((file) => file.size !== null && file.size > MAX_UPLOAD_SIZE_BYTES);
+    const validFiles = pickedFiles.filter((file) => file.size === null || file.size <= MAX_UPLOAD_SIZE_BYTES);
+    if (!validFiles.length) {
+      setMessage(oversized.length === 1
+        ? `${oversized[0].name} is larger than 5 MB. Please choose a smaller file.`
+        : `${oversized.length} selected files are larger than 5 MB each and were not uploaded.`);
       return;
     }
 
-    setFiles((current) => ({ ...current, [documentType]: file }));
-    await upload(documentType, file);
-  }
-
-  async function upload(documentType: string, pickedFile: PickedFile) {
-    setMessage('');
-    setSuccess('');
+    setFiles((current) => ({ ...current, [documentType]: validFiles[0] }));
     setUploadingType(documentType);
 
     try {
       const session = await getCurrentSession();
       if (!session?.user) return router.replace('/login');
 
-      if (!selectedClaim) return setMessage('Select a claim and attach a file.');
+      const uploadedRows: ClaimDocument[] = [];
+      const failedNames: string[] = [];
 
+      for (const pickedFile of validFiles) {
+        setFiles((current) => ({ ...current, [documentType]: pickedFile }));
+        const uploaded = await uploadSingleDocument(documentType, pickedFile, session.user.id);
+        if (uploaded) uploadedRows.push(uploaded);
+        else failedNames.push(pickedFile.name);
+      }
+
+      if (uploadedRows.length) {
+        const nextDocuments = [...uploadedRows.reverse(), ...documents];
+        setDocuments(nextDocuments);
+
+        const nextStatus = await advanceAfterUpload(selectedClaim, nextDocuments, session.user.id, effectiveRequestedFinalDocumentTypes);
+        if (nextStatus) {
+          setClaims((current) => current.map((claim) => claim.id === selectedClaim.id ? { ...claim, current_status: nextStatus } : claim));
+        }
+      }
+
+      const skippedCount = oversized.length;
+      const failedCount = failedNames.length;
+      if (failedCount || skippedCount) {
+        const parts = [];
+        if (uploadedRows.length) parts.push(`${uploadedRows.length} uploaded`);
+        if (failedCount) parts.push(`${failedCount} failed`);
+        if (skippedCount) parts.push(`${skippedCount} over 5 MB skipped`);
+        setMessage(parts.join(' · '));
+      } else {
+        setSuccess(uploadedRows.length === 1
+          ? `${documentType} uploaded successfully.`
+          : `${uploadedRows.length} files uploaded successfully.`);
+      }
+    } catch {
+      setMessage('The selected files could not be uploaded.');
+    } finally {
+      setFiles((current) => ({ ...current, [documentType]: null }));
+      setUploadingType('');
+    }
+  }
+
+  async function uploadSingleDocument(documentType: string, pickedFile: PickedFile, userId: string) {
+    if (!selectedClaim) return null;
+
+    try {
       const extension = pickedFile.name.includes('.') ? pickedFile.name.split('.').pop() : 'bin';
       const storagePath = `${selectedClaim.customer_id}/${selectedClaim.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-
       const response = await fetch(pickedFile.uri);
       const body = await response.arrayBuffer();
 
-      if (body.byteLength > MAX_UPLOAD_SIZE_BYTES) {
-        setMessage(`${pickedFile.name} is larger than 5 MB. Please choose a smaller file.`);
-        return;
-      }
+      if (body.byteLength > MAX_UPLOAD_SIZE_BYTES) return null;
 
       const uploadResult = await supabase.storage.from('claim-documents').upload(storagePath, body, {
         contentType: pickedFile.mimeType ?? 'application/octet-stream',
         upsert: false,
       });
-
-      if (uploadResult.error) return setMessage('This file could not be uploaded.');
+      if (uploadResult.error) return null;
 
       const { data, error } = await supabase.from('claim_documents').insert({
         claim_id: selectedClaim.id,
@@ -212,30 +258,16 @@ export default function UploadDocumentsScreen() {
         storage_path: storagePath,
         mime_type: pickedFile.mimeType,
         file_size: pickedFile.size,
-        uploaded_by: session.user.id,
+        uploaded_by: userId,
       }).select('*').single();
 
-      if (error) {
-        setMessage('The file uploaded, but the document record could not be saved.');
-      } else {
-        setSuccess(`${documentType} uploaded successfully.`);
-
-        if (data) {
-          const nextDocuments = [data, ...documents];
-          setDocuments(nextDocuments);
-
-          const nextStatus = await advanceAfterUpload(selectedClaim, nextDocuments, session.user.id, effectiveRequestedFinalDocumentTypes);
-          if (nextStatus) {
-            setClaims((current) => current.map((claim) => claim.id === selectedClaim.id ? { ...claim, current_status: nextStatus } : claim));
-          }
-        }
-
-        setFiles((current) => ({ ...current, [documentType]: null }));
+      if (error || !data) {
+        await supabase.storage.from('claim-documents').remove([storagePath]);
+        return null;
       }
+      return data as ClaimDocument;
     } catch {
-      setMessage('This file could not be uploaded.');
-    } finally {
-      setUploadingType('');
+      return null;
     }
   }
 
