@@ -33,7 +33,7 @@
     "runtimeVersion": {
       "policy": "appVersion"
     },
-    "owner": "antnish",
+    "owner": "insureitapp",
     "updates": {
       "url": "https://u.expo.dev/8ade82c1-4c96-4f09-b90b-802270fb406d",
       "checkAutomatically": "ON_LOAD",
