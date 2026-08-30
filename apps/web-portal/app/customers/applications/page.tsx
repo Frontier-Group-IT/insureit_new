@@ -146,7 +146,7 @@ export default async function CustomerApplicationsPage({ searchParams }: { searc
                       <td className="px-3 py-3"><AgePill days={application.age_days} /></td>
                       <td className="px-3 py-3"><StatusPill status={application.status} /></td>
                       <td className="px-3 py-3 text-[#64748B]">{formatDateTime(application.updated_at)}</td>
-                      <td className="px-3 py-3">{application.customer_id ? <Link href={`/customers/${application.customer_id}/edit`} className="font-semibold text-[#4F46E5] hover:underline">Open customer</Link> : <Link href={`/customers/applications/${application.id}`} className="font-semibold text-[#4F46E5] hover:underline">Review</Link>}</td>
+                      <td className="px-3 py-3">{application.customer_id ? <Link prefetch={false} href={`/customers/${application.customer_id}/edit`} className="font-semibold text-[#4F46E5] hover:underline">Open customer</Link> : <Link prefetch={false} href={`/customers/applications/${application.id}`} className="font-semibold text-[#4F46E5] hover:underline">Review</Link>}</td>
                     </tr>
                   ))}
                 </tbody>
