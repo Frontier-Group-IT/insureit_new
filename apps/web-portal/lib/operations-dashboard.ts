@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { getScopedOperationsDashboardData } from "@/lib/scoped-operations-dashboard";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { getAuthenticatedProfile } from "@/lib/auth-server";
 
 type RecentApplication = {
   id: string;
@@ -59,17 +60,11 @@ const closedClaimStatuses = ["Claim Complete", "Settled", "Closed"];
 const openTaskStatuses = ["open", "in_progress"];
 const activeOnboardingStatuses = ["submitted", "under_review", "changes_requested"];
 
-export async function getOperationsDashboardData(supabase: SupabaseClient): Promise<OperationsDashboardData> {
-  const { data: authData } = await supabase.auth.getUser();
-  const authUserId = authData.user?.id;
-  if (authUserId) {
+export async function getOperationsDashboardData(supabase: SupabaseClient, accessToken?: string): Promise<OperationsDashboardData> {
+  const { profile } = await getAuthenticatedProfile(accessToken);
+  if (profile?.id) {
     const admin = createSupabaseAdminClient();
-    const { data: profile } = await admin
-      .from("profiles")
-      .select("id,role")
-      .eq("id", authUserId)
-      .maybeSingle<{ id: string; role: string | null }>();
-    if (profile?.id) {
+    {
       const customerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_customers");
       if (customerIds !== null) return getScopedOperationsDashboardData(customerIds);
 
