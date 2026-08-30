@@ -35,4 +35,12 @@ assert.doesNotMatch(
   "Operations dashboard should not perform a second direct Auth user lookup.",
 );
 
+
+const dashboardView = await readFile(new URL("../app/dashboard-v2/dashboard-view.tsx", import.meta.url), "utf8");
+const dashboardLinks = dashboardView.match(/<Link\b[^>]*>/gs) ?? [];
+assert.ok(dashboardLinks.length > 0, "Dashboard should contain navigational links.");
+for (const link of dashboardLinks) {
+  assert.match(link, /prefetch=\{false\}/, "Dashboard links must not auto-prefetch heavy authenticated routes.");
+}
+
 console.log("Dashboard performance regression passed.");
