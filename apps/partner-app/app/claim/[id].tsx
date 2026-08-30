@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { getPartnerClaimDetail, type PartnerClaimDetail } from '@/lib/claims';
 import { partnerTheme } from '@/lib/theme';
 
@@ -35,7 +36,7 @@ export default function ClaimDetailScreen(){
   },[data]);
 
   return <PartnerScreen eyebrow="CLAIM JOURNEY" title={data?.claim.claim_no||'Claim'} action={
-    <Pressable onPress={()=>router.back()} style={styles.close}><Ionicons name="close" size={18} color={partnerTheme.colors.ink}/></Pressable>
+    <PartnerIconButton icon="close" label="Close claim detail" onPress={() => router.back()} />
   }>
     {loading?<View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand}/></View>:error||!data?(
       <View style={styles.errorCard}><Text style={styles.errorText}>{error||'Claim unavailable.'}</Text><Pressable onPress={load}><Text style={styles.retry}>Try again</Text></Pressable></View>
