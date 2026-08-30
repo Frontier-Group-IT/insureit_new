@@ -44,6 +44,11 @@ type PreparedUpload = {
   signed_url: string;
 };
 
+export type PartnerPolicyIntakeUploadProgress = {
+  stage: 'preparing' | 'uploading' | 'submitting';
+  percent?: number;
+};
+
 export async function listPartnerPolicyIntakes(): Promise<IntakeListResponse> {
   return apiRequest<IntakeListResponse>('/api/partner/policy-intakes');
 }
@@ -52,8 +57,11 @@ export async function submitPartnerPolicyIntake(input: {
   leadSourceId?: string;
   customerMobile: string;
   file: DocumentPickerAsset;
+  onProgress?: (progress: PartnerPolicyIntakeUploadProgress) => void;
 }) {
   const meta = fileMeta(input.file);
+  input.onProgress?.({ stage: 'preparing' });
+
   const prepared = await apiRequest<PreparedUpload>('/api/partner/policy-intakes', {
     method: 'POST',
     body: JSON.stringify({
@@ -64,8 +72,12 @@ export async function submitPartnerPolicyIntake(input: {
     }),
   });
 
-  await uploadSigned(prepared.signed_url, input.file);
+  input.onProgress?.({ stage: 'uploading', percent: 0 });
+  await uploadSigned(prepared.signed_url, input.file, (percent) => {
+    input.onProgress?.({ stage: 'uploading', percent });
+  });
 
+  input.onProgress?.({ stage: 'submitting' });
   return apiRequest<{ ok: true; id: string; number: string; status: 'processing' }>('/api/partner/policy-intakes', {
     method: 'POST',
     body: JSON.stringify({
@@ -83,8 +95,11 @@ export async function submitPartnerPolicyIntake(input: {
 export async function submitPartnerPolicyIntakeReplacement(input: {
   intakeId: string;
   file: DocumentPickerAsset;
+  onProgress?: (progress: PartnerPolicyIntakeUploadProgress) => void;
 }) {
   const meta = fileMeta(input.file);
+  input.onProgress?.({ stage: 'preparing' });
+
   const prepared = await apiRequest<PreparedUpload>('/api/partner/policy-intakes', {
     method: 'POST',
     body: JSON.stringify({
@@ -94,8 +109,12 @@ export async function submitPartnerPolicyIntakeReplacement(input: {
     }),
   });
 
-  await uploadSigned(prepared.signed_url, input.file);
+  input.onProgress?.({ stage: 'uploading', percent: 0 });
+  await uploadSigned(prepared.signed_url, input.file, (percent) => {
+    input.onProgress?.({ stage: 'uploading', percent });
+  });
 
+  input.onProgress?.({ stage: 'submitting' });
   return apiRequest<{ ok: true; id: string; number: string; status: 'processing' }>('/api/partner/policy-intakes', {
     method: 'POST',
     body: JSON.stringify({
@@ -135,7 +154,11 @@ function fileMeta(file: DocumentPickerAsset) {
   };
 }
 
-async function uploadSigned(signedUrl: string, file: DocumentPickerAsset) {
+async function uploadSigned(
+  signedUrl: string,
+  file: DocumentPickerAsset,
+  onProgress?: (percent: number) => void,
+) {
   const formData = new FormData();
   formData.append('cacheControl', '3600');
 
@@ -150,10 +173,28 @@ async function uploadSigned(signedUrl: string, file: DocumentPickerAsset) {
     } as unknown as Blob);
   }
 
-  const response = await fetch(signedUrl, {
-    method: 'PUT',
-    headers: { 'x-upsert': 'false' },
-    body: formData,
+  await new Promise<void>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open('PUT', signedUrl);
+    request.setRequestHeader('x-upsert', 'false');
+
+    request.upload.onprogress = (event) => {
+      if (!event.lengthComputable || event.total <= 0) return;
+      onProgress?.(Math.min(100, Math.max(0, Math.round((event.loaded / event.total) * 100))));
+    };
+
+    request.onerror = () => reject(new Error('The policy copy could not be uploaded. Check your connection and try again.'));
+    request.ontimeout = () => reject(new Error('The policy copy upload timed out. Please try again.'));
+    request.onload = () => {
+      if (request.status >= 200 && request.status < 300) {
+        onProgress?.(100);
+        resolve();
+      } else {
+        reject(new Error('The policy copy could not be uploaded.'));
+      }
+    };
+
+    request.timeout = 120000;
+    request.send(formData);
   });
-  if (!response.ok) throw new Error('The policy copy could not be uploaded.');
 }
