@@ -9,6 +9,7 @@ import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerButton } from '@/components/ui/partner-button';
 import { PartnerField } from '@/components/ui/partner-field';
 import { PartnerIconButton } from '@/components/ui/partner-icon-button';
+import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import {
   clearPartnerPolicyIntakeDraft,
@@ -37,6 +38,7 @@ export default function NewPolicyIntakeScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState<PartnerPolicyIntakeUploadProgress | null>(null);
   const [error, setError] = useState('');
+  const [closeConfirmVisible, setCloseConfirmVisible] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,6 +112,15 @@ export default function NewPolicyIntakeScreen() {
     setFile(asset);
   }
 
+  function requestClose() {
+    if (submitting) return;
+    if (file) {
+      setCloseConfirmVisible(true);
+      return;
+    }
+    router.back();
+  }
+
   async function submit() {
     if (!file || !canSubmit) return;
     setSubmitting(true);
@@ -137,8 +148,21 @@ export default function NewPolicyIntakeScreen() {
     <PartnerScreen
       eyebrow="NEW POLICY INTAKE"
       title="Send policy to Operations"
-      action={<PartnerIconButton icon="close" label="Close Policy Intake" onPress={() => router.back()} />}
+      action={<PartnerIconButton icon="close" label="Close Policy Intake" disabled={submitting} onPress={requestClose} />}
     >
+      <PartnerConfirmDialog
+        visible={closeConfirmVisible}
+        title="Leave Policy Intake?"
+        message="Your lead source and mobile number are saved as a draft, but the selected policy file will need to be chosen again."
+        confirmLabel="Leave"
+        cancelLabel="Stay"
+        onCancel={() => setCloseConfirmVisible(false)}
+        onConfirm={() => {
+          setCloseConfirmVisible(false);
+          router.back();
+        }}
+      />
+
       {loading ? (
         <PartnerStateView state="loading" title="Preparing Policy Intake" />
       ) : (
