@@ -5,6 +5,7 @@ for (const file of [
   "../app/policies/commercial-review/commercial-review-client.tsx",
   "../app/reports/page.tsx",
   "../app/accounts/page.tsx",
+  "../components/reports/report-navigation.tsx",
 ]) {
   const source = await readFile(new URL(file, import.meta.url), "utf8");
   const links = source.match(/<Link\b[^>]*>/gs) ?? [];
