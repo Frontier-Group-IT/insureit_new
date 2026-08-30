@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerButton } from '@/components/ui/partner-button';
+import { PartnerFilterChip } from '@/components/ui/partner-filter-chip';
 import { PartnerIconButton } from '@/components/ui/partner-icon-button';
+import { PartnerSearchField } from '@/components/ui/partner-search-field';
+import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
+import { PartnerStateView } from '@/components/ui/partner-state-view';
+import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
 import {
   getPartnerRenewalSummary,
   listPartnerPolicies,
@@ -12,40 +18,97 @@ import {
   type PartnerRenewalSummary,
 } from '@/lib/policies';
 import { partnerTheme } from '@/lib/theme';
+import { useDebouncedValue } from '@/lib/use-debounced-value';
 
 type RenewalMode = 'expiring' | 'expired';
 type RenewalWindow = 'all' | '0_7' | '8_15' | '16_30';
+
+const PAGE_SIZE = 25;
+let savedRenewalMode: RenewalMode = 'expiring';
+let savedRenewalWindow: RenewalWindow = 'all';
+let savedRenewalQuery = '';
 
 export default function RenewalsScreen() {
   const router = useRouter();
   const [rows, setRows] = useState<PartnerPolicyRow[]>([]);
   const [summary, setSummary] = useState<PartnerRenewalSummary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [mode, setMode] = useState<RenewalMode>('expiring');
-  const [window, setWindow] = useState<RenewalWindow>('all');
+  const [listLoading, setListLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [mode, setMode] = useState<RenewalMode>(savedRenewalMode);
+  const [window, setWindow] = useState<RenewalWindow>(savedRenewalWindow);
+  const [query, setQuery] = useState(savedRenewalQuery);
+  const debouncedSearch = useDebouncedValue(query.trim(), 350);
   const [error, setError] = useState('');
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const [nextSummary, nextRows] = await Promise.all([
-        getPartnerRenewalSummary(),
-        listPartnerPolicies({ lifecycle: mode, limit: 100 }),
-      ]);
-      setSummary(nextSummary);
-      setRows(nextRows);
-    } catch {
-      setRows([]);
-      setError('Renewal data could not be loaded for this account.');
-    } finally {
-      setLoading(false);
-    }
-  }, [mode]);
+  const [total, setTotal] = useState(0);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    savedRenewalMode = mode;
+    savedRenewalWindow = window;
+    savedRenewalQuery = query;
+  }, [mode, query, window]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadSummary() {
+      try {
+        const nextSummary = await getPartnerRenewalSummary();
+        if (!cancelled) setSummary(nextSummary);
+      } catch {
+        if (!cancelled) setError('Renewal summary could not be loaded for this account.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void loadSummary();
+    return () => { cancelled = true; };
+  }, [reloadKey]);
+
+  const loadFirstPage = useCallback(async () => {
+    setListLoading(true);
+    setError('');
+    try {
+      const nextRows = await listPartnerPolicies({
+        lifecycle: mode,
+        search: debouncedSearch,
+        limit: PAGE_SIZE,
+        offset: 0,
+      });
+      setRows(nextRows);
+      setTotal(nextRows[0]?.total_count ?? 0);
+    } catch {
+      setRows([]);
+      setTotal(0);
+      setError('Renewal data could not be loaded for this account.');
+    } finally {
+      setListLoading(false);
+    }
+  }, [debouncedSearch, mode]);
+
+  useEffect(() => {
+    void loadFirstPage();
+  }, [loadFirstPage, reloadKey]);
+
+  async function loadMore() {
+    if (loadingMore || rows.length >= total) return;
+    setLoadingMore(true);
+    setError('');
+    try {
+      const nextRows = await listPartnerPolicies({
+        lifecycle: mode,
+        search: debouncedSearch,
+        limit: PAGE_SIZE,
+        offset: rows.length,
+      });
+      setRows((current) => [...current, ...nextRows]);
+      if (nextRows[0]?.total_count != null) setTotal(nextRows[0].total_count);
+    } catch {
+      setError('More renewal records could not be loaded.');
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   const visibleRows = useMemo(() => {
     if (mode === 'expired' || window === 'all') return rows;
@@ -61,17 +124,15 @@ export default function RenewalsScreen() {
     <PartnerScreen
       eyebrow="RENEWALS"
       title="Renewal work queue"
-      action={
-        <PartnerIconButton icon="close" label="Close renewals" onPress={() => router.back()} />
-      }
+      action={<PartnerIconButton icon="close" label="Close renewals" onPress={() => router.back()} />}
     >
       {loading ? (
-        <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand} /></View>
+        <PartnerStateView state="loading" title="Loading renewals" />
       ) : (
         <>
           <View style={styles.hero}>
             <View style={styles.heroTop}>
-              <View>
+              <View style={styles.heroMain}>
                 <Text style={styles.heroEyebrow}>NEXT 30 DAYS</Text>
                 <Text style={styles.heroPremium}>{formatMoney(summary?.due_30_premium ?? 0)}</Text>
                 <Text style={styles.heroLabel}>gross premium in renewal window</Text>
@@ -91,75 +152,141 @@ export default function RenewalsScreen() {
           </View>
 
           <View style={styles.modeTabs}>
-            <Pressable onPress={() => { setMode('expiring'); setWindow('all'); }} style={[styles.modeTab, mode === 'expiring' && styles.modeTabActive]}>
-              <Text style={[styles.modeText, mode === 'expiring' && styles.modeTextActive]}>Upcoming</Text>
-            </Pressable>
-            <Pressable onPress={() => { setMode('expired'); setWindow('all'); }} style={[styles.modeTab, mode === 'expired' && styles.modeTabActive]}>
-              <Text style={[styles.modeText, mode === 'expired' && styles.modeTextActive]}>Overdue</Text>
-            </Pressable>
+            <PartnerFilterChip label="Upcoming" active={mode === 'expiring'} onPress={() => { setMode('expiring'); setWindow('all'); }} />
+            <PartnerFilterChip label="Overdue" active={mode === 'expired'} onPress={() => { setMode('expired'); setWindow('all'); }} />
           </View>
 
           {mode === 'expiring' ? (
             <View style={styles.windowRow}>
-              <WindowChip label="All 30d" active={window === 'all'} onPress={() => setWindow('all')} />
-              <WindowChip label="0–7d" active={window === '0_7'} onPress={() => setWindow('0_7')} />
-              <WindowChip label="8–15d" active={window === '8_15'} onPress={() => setWindow('8_15')} />
-              <WindowChip label="16–30d" active={window === '16_30'} onPress={() => setWindow('16_30')} />
+              <PartnerFilterChip label="All 30d" active={window === 'all'} onPress={() => setWindow('all')} />
+              <PartnerFilterChip label="0–7d" active={window === '0_7'} onPress={() => setWindow('0_7')} />
+              <PartnerFilterChip label="8–15d" active={window === '8_15'} onPress={() => setWindow('8_15')} />
+              <PartnerFilterChip label="16–30d" active={window === '16_30'} onPress={() => setWindow('16_30')} />
             </View>
           ) : null}
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          <View style={styles.listHeader}>
-            <Text style={styles.listTitle}>{mode === 'expired' ? 'Overdue policies' : 'Renewal opportunities'}</Text>
-            <Text style={styles.listCount}>{visibleRows.length} shown</Text>
+          <View style={styles.search}>
+            <PartnerSearchField
+              value={query}
+              onChangeText={setQuery}
+              onClear={() => setQuery('')}
+              placeholder="Search policy, customer, vehicle or insurer"
+            />
           </View>
 
-          {visibleRows.length ? (
-            <View style={styles.list}>
-              {visibleRows.map((row) => (
-                <Pressable key={row.policy_id} onPress={() => router.push(`/policy/${row.policy_id}` as never)} style={styles.card}>
-                  <View style={styles.cardTop}>
-                    <View style={styles.cardIdentity}>
-                      <Text style={styles.customer}>{row.customer_name}</Text>
-                      <Text style={styles.policyNo}>{row.policy_no || row.policy_code || 'Policy'}</Text>
-                    </View>
-                    <Text style={[styles.days, mode === 'expired' && styles.daysExpired]}>{renewalLabel(row.end_date)}</Text>
-                  </View>
+          <PartnerSectionHeader
+            title={mode === 'expired' ? 'Overdue policies' : 'Renewal opportunities'}
+            meta={listLoading ? 'Loading…' : `${visibleRows.length} shown · ${total} total`}
+          />
 
-                  <View style={styles.vehicleLine}>
-                    <Ionicons name={row.vehicle_no ? 'car-outline' : 'document-text-outline'} size={15} color={partnerTheme.colors.brand} />
-                    <Text style={styles.vehicleText}>{row.vehicle_no || 'Non-motor / vehicle not linked'}</Text>
-                  </View>
+          {error && !rows.length ? (
+            <PartnerStateView
+              state="error"
+              title="Renewals could not be loaded"
+              message={error}
+              actionLabel="Try again"
+              onAction={() => setReloadKey((value) => value + 1)}
+            />
+          ) : listLoading ? (
+            <PartnerStateView state="loading" title="Finding renewal opportunities" />
+          ) : visibleRows.length ? (
+            <>
+              <View style={styles.list}>
+                {visibleRows.map((row) => (
+                  <RenewalCard
+                    key={row.policy_id}
+                    row={row}
+                    mode={mode}
+                    onOpenPolicy={() => router.push(`/policy/${row.policy_id}` as never)}
+                    onOpenCustomer={() => row.customer_id ? router.push(`/customer/${row.customer_id}` as never) : undefined}
+                  />
+                ))}
+              </View>
 
-                  <View style={styles.metaRow}>
-                    <Meta label="Insurer" value={row.insurer_name || 'Not recorded'} />
-                    <Meta label="Current premium" value={formatMoney(row.premium_amount)} />
-                  </View>
+              {error ? <Text style={styles.inlineError}>{error}</Text> : null}
 
-                  <View style={styles.footer}>
-                    <View>
-                      <Text style={styles.footerLabel}>EXPIRY</Text>
-                      <Text style={styles.date}>{formatDate(row.end_date)}</Text>
-                    </View>
-                    <View style={styles.open}>
-                      <Text style={styles.openText}>Open policy</Text>
-                      <Ionicons name="chevron-forward" size={14} color={partnerTheme.colors.brand} />
-                    </View>
-                  </View>
-                </Pressable>
-              ))}
-            </View>
+              {rows.length < total ? (
+                <View style={styles.loadMore}>
+                  <PartnerButton
+                    label={loadingMore ? 'Loading…' : `Load more · ${total - rows.length} remaining`}
+                    variant="secondary"
+                    loading={loadingMore}
+                    onPress={() => void loadMore()}
+                  />
+                </View>
+              ) : null}
+            </>
           ) : (
-            <View style={styles.empty}>
-              <Ionicons name="checkmark-circle-outline" size={32} color={partnerTheme.colors.success} />
-              <Text style={styles.emptyTitle}>{mode === 'expiring' ? 'No policies in this renewal window' : 'No overdue policies found'}</Text>
-              <Text style={styles.emptyText}>The queue is derived from your authorized policy book and updates with policy expiry dates.</Text>
-            </View>
+            <PartnerStateView
+              state="empty"
+              icon="checkmark-circle-outline"
+              title={mode === 'expiring' ? 'No policies in this renewal window' : 'No overdue policies found'}
+              message="The queue is derived from your authorized policy book and policy expiry dates."
+            />
           )}
         </>
       )}
     </PartnerScreen>
+  );
+}
+
+function RenewalCard({
+  row,
+  mode,
+  onOpenPolicy,
+  onOpenCustomer,
+}: {
+  row: PartnerPolicyRow;
+  mode: RenewalMode;
+  onOpenPolicy: () => void;
+  onOpenCustomer?: () => void;
+}) {
+  return (
+    <View style={styles.card}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Open renewal policy ${row.policy_no || row.policy_code || ''} for ${row.customer_name}`}
+        onPress={onOpenPolicy}
+        style={({ pressed }) => [pressed && styles.pressed]}
+      >
+        <View style={styles.cardTop}>
+          <View style={styles.cardIdentity}>
+            <Text style={styles.customer}>{row.customer_name}</Text>
+            <Text style={styles.policyNo}>{row.policy_no || row.policy_code || 'Policy'}</Text>
+          </View>
+          <PartnerStatusBadge label={renewalLabel(row.end_date)} tone={mode === 'expired' ? 'danger' : renewalTone(row.end_date)} />
+        </View>
+
+        <View style={styles.vehicleLine}>
+          <Ionicons name={row.vehicle_no ? 'car-outline' : 'document-text-outline'} size={16} color={partnerTheme.colors.brand} />
+          <Text style={styles.vehicleText}>{row.vehicle_no || row.policy_product || 'Non-motor / vehicle not linked'}</Text>
+        </View>
+
+        <View style={styles.metaRow}>
+          <Meta label="Insurer" value={row.insurer_name || 'Not recorded'} />
+          <Meta label="Current premium" value={formatMoney(row.premium_amount)} />
+        </View>
+      </Pressable>
+
+      <View style={styles.footer}>
+        <View>
+          <Text style={styles.footerLabel}>EXPIRY</Text>
+          <Text style={styles.date}>{formatDate(row.end_date)}</Text>
+        </View>
+        <View style={styles.actions}>
+          {onOpenCustomer ? (
+            <Pressable accessibilityRole="button" accessibilityLabel={`Open customer ${row.customer_name}`} onPress={onOpenCustomer} style={({ pressed }) => [styles.smallAction, pressed && styles.pressed]}>
+              <Ionicons name="person-outline" size={16} color={partnerTheme.colors.brand} />
+              <Text style={styles.smallActionText}>Customer</Text>
+            </Pressable>
+          ) : null}
+          <Pressable accessibilityRole="button" accessibilityLabel="Open policy" onPress={onOpenPolicy} style={({ pressed }) => [styles.smallAction, pressed && styles.pressed]}>
+            <Text style={styles.smallActionText}>Policy</Text>
+            <Ionicons name="chevron-forward" size={15} color={partnerTheme.colors.brand} />
+          </Pressable>
+        </View>
+      </View>
+    </View>
   );
 }
 
@@ -169,14 +296,6 @@ function HeroBin({ label, count, danger = false }: { label: string; count: numbe
       <Text style={[styles.heroBinValue, danger && styles.heroBinDanger]}>{count}</Text>
       <Text style={styles.heroBinLabel}>{label}</Text>
     </View>
-  );
-}
-
-function WindowChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return (
-    <Pressable onPress={onPress} style={[styles.windowChip, active && styles.windowChipActive]}>
-      <Text style={[styles.windowText, active && styles.windowTextActive]}>{label}</Text>
-    </Pressable>
   );
 }
 
@@ -205,6 +324,11 @@ function renewalLabel(value: string | null) {
   return `${days}d left`;
 }
 
+function renewalTone(value: string | null): 'warning' | 'info' {
+  const days = daysUntil(value);
+  return days <= 7 ? 'warning' : 'info';
+}
+
 function formatDate(value: string | null) {
   if (!value) return '—';
   const date = new Date(`${value}T00:00:00`);
@@ -219,55 +343,42 @@ function formatMoney(value: number | string | null) {
 }
 
 const styles = StyleSheet.create({
-  back: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  loading: { minHeight: 260, alignItems: 'center', justifyContent: 'center' },
   hero: { borderRadius: partnerTheme.radius.xl, padding: 18, backgroundColor: partnerTheme.colors.nav },
   heroTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
-  heroEyebrow: { color: '#AAA5FF', fontSize: 8, fontWeight: '800', letterSpacing: 1.1 },
-  heroPremium: { marginTop: 6, color: '#FFFFFF', fontSize: 27, fontWeight: '900' },
-  heroLabel: { marginTop: 2, color: '#AEB7C5', fontSize: 8 },
-  heroCount: { minWidth: 58, alignItems: 'center', borderRadius: 15, paddingVertical: 10, paddingHorizontal: 9, backgroundColor: '#263246' },
-  heroCountValue: { color: '#FFFFFF', fontSize: 18, fontWeight: '900' },
-  heroCountLabel: { marginTop: 2, color: '#99A5B7', fontSize: 7 },
+  heroMain: { flex: 1 },
+  heroEyebrow: { color: '#AAA5FF', letterSpacing: 1.1, ...partnerTheme.typography.meta },
+  heroPremium: { marginTop: 6, color: '#FFFFFF', fontSize: 27, lineHeight: 33, fontWeight: '900' },
+  heroLabel: { marginTop: 2, color: '#AEB7C5', ...partnerTheme.typography.meta },
+  heroCount: { minWidth: 64, alignItems: 'center', borderRadius: 15, paddingVertical: 10, paddingHorizontal: 9, backgroundColor: '#263246' },
+  heroCountValue: { color: '#FFFFFF', fontSize: 18, lineHeight: 23, fontWeight: '900' },
+  heroCountLabel: { marginTop: 2, color: '#99A5B7', ...partnerTheme.typography.meta },
   heroBins: { marginTop: 16, paddingTop: 13, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#3B4658' },
   heroBin: { flex: 1, alignItems: 'center' },
-  heroBinValue: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
+  heroBinValue: { color: '#FFFFFF', fontSize: 14, lineHeight: 19, fontWeight: '800' },
   heroBinDanger: { color: '#F2B6AF' },
-  heroBinLabel: { marginTop: 3, color: '#97A3B5', fontSize: 7 },
+  heroBinLabel: { marginTop: 3, color: '#97A3B5', ...partnerTheme.typography.meta },
   modeTabs: { marginTop: 13, flexDirection: 'row', gap: 8 },
-  modeTab: { flex: 1, minHeight: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 13, backgroundColor: partnerTheme.colors.surfaceMuted },
-  modeTabActive: { backgroundColor: partnerTheme.colors.brandStrong },
-  modeText: { color: partnerTheme.colors.inkMuted, fontSize: 9.5, fontWeight: '800' },
-  modeTextActive: { color: '#FFFFFF' },
   windowRow: { marginTop: 10, flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  windowChip: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 7, backgroundColor: partnerTheme.colors.surface },
-  windowChipActive: { backgroundColor: partnerTheme.colors.brandSoft },
-  windowText: { color: partnerTheme.colors.inkMuted, fontSize: 8, fontWeight: '700' },
-  windowTextActive: { color: partnerTheme.colors.brandStrong },
-  error: { marginTop: 12, color: partnerTheme.colors.danger, fontSize: 10 },
-  listHeader: { marginTop: 20, marginBottom: 9, flexDirection: 'row', justifyContent: 'space-between' },
-  listTitle: { color: partnerTheme.colors.ink, fontSize: 13.5, fontWeight: '800' },
-  listCount: { color: partnerTheme.colors.inkMuted, fontSize: 8.5 },
+  search: { marginTop: 12 },
   list: { gap: 9 },
   card: { borderRadius: 17, padding: 15, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   cardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
   cardIdentity: { flex: 1 },
-  customer: { color: partnerTheme.colors.ink, fontSize: 11, fontWeight: '800' },
-  policyNo: { marginTop: 3, color: partnerTheme.colors.inkMuted, fontSize: 8.5 },
-  days: { overflow: 'hidden', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 5, color: '#9A5B12', backgroundColor: '#FFF2DD', fontSize: 8, fontWeight: '800' },
-  daysExpired: { color: '#A7372D', backgroundColor: '#FCEDEC' },
+  customer: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  policyNo: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   vehicleLine: { marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  vehicleText: { color: partnerTheme.colors.ink, fontSize: 9.5, fontWeight: '700' },
+  vehicleText: { color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
   metaRow: { marginTop: 12, flexDirection: 'row' },
   meta: { width: '50%', paddingRight: 8 },
-  metaLabel: { color: '#8A94A6', fontSize: 7, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
-  metaValue: { marginTop: 3, color: partnerTheme.colors.ink, fontSize: 9, fontWeight: '600' },
-  footer: { marginTop: 13, paddingTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
-  footerLabel: { color: '#9AA3B2', fontSize: 6.5, fontWeight: '800', letterSpacing: 0.5 },
-  date: { marginTop: 2, color: partnerTheme.colors.inkMuted, fontSize: 8 },
-  open: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  openText: { color: partnerTheme.colors.brand, fontSize: 8.5, fontWeight: '800' },
-  empty: { minHeight: 190, alignItems: 'center', justifyContent: 'center', borderRadius: 17, padding: 20, backgroundColor: partnerTheme.colors.surface },
-  emptyTitle: { marginTop: 10, color: partnerTheme.colors.ink, fontSize: 11.5, fontWeight: '800' },
-  emptyText: { marginTop: 4, maxWidth: 280, color: partnerTheme.colors.inkMuted, fontSize: 8.5, lineHeight: 13, textAlign: 'center' },
+  metaLabel: { color: '#8A94A6', textTransform: 'uppercase', letterSpacing: 0.5, ...partnerTheme.typography.meta },
+  metaValue: { marginTop: 3, color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
+  footer: { marginTop: 13, paddingTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
+  footerLabel: { color: '#9AA3B2', letterSpacing: 0.5, ...partnerTheme.typography.meta },
+  date: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
+  actions: { flexDirection: 'row', gap: 6 },
+  smallAction: { minHeight: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 12, paddingHorizontal: 10, backgroundColor: partnerTheme.colors.brandSoft },
+  smallActionText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.meta },
+  pressed: { opacity: 0.78 },
+  loadMore: { marginTop: partnerTheme.spacing.md },
+  inlineError: { marginTop: 10, color: partnerTheme.colors.danger, textAlign: 'center', ...partnerTheme.typography.caption },
 });

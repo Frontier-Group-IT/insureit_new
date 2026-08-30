@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerContactActions } from '@/components/ui/partner-contact-actions';
+import { PartnerButton } from '@/components/ui/partner-button';
 import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
@@ -16,41 +18,86 @@ import {
   type PartnerCustomerSummary,
 } from '@/lib/customers';
 import { partnerTheme } from '@/lib/theme';
+import { useDebouncedValue } from '@/lib/use-debounced-value';
+
+const PAGE_SIZE = 25;
+let savedCustomerQuery = '';
 
 export default function CustomersScreen() {
   const router = useRouter();
   const [summary, setSummary] = useState<PartnerCustomerSummary | null>(null);
   const [rows, setRows] = useState<PartnerCustomerRow[]>([]);
-  const [query, setQuery] = useState('');
-  const [appliedSearch, setAppliedSearch] = useState('');
+  const [query, setQuery] = useState(savedCustomerQuery);
+  const debouncedSearch = useDebouncedValue(query.trim(), 350);
   const [loading, setLoading] = useState(true);
+  const [listLoading, setListLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
+  const [total, setTotal] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    savedCustomerQuery = query;
+  }, [query]);
+
+  useEffect(() => {
     let cancelled = false;
-    async function load() {
-      setLoading(true);
-      setError('');
+    async function loadSummary() {
       try {
-        const [nextSummary, nextRows] = await Promise.all([
-          getPartnerCustomerSummary(),
-          listPartnerCustomers({ limit: 50, search: appliedSearch }),
-        ]);
-        if (cancelled) return;
-        setSummary(nextSummary);
-        setRows(nextRows);
+        const nextSummary = await getPartnerCustomerSummary();
+        if (!cancelled) setSummary(nextSummary);
       } catch {
-        if (!cancelled) setError('Customer data could not be loaded for this account.');
+        if (!cancelled) setError('Customer summary could not be loaded for this account.');
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [appliedSearch, reloadKey]);
+    void loadSummary();
+    return () => { cancelled = true; };
+  }, [reloadKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadFirstPage() {
+      setListLoading(true);
+      setError('');
+      try {
+        const nextRows = await listPartnerCustomers({ limit: PAGE_SIZE, offset: 0, search: debouncedSearch });
+        if (cancelled) return;
+        setRows(nextRows);
+        setTotal(nextRows[0]?.total_count ?? 0);
+      } catch {
+        if (!cancelled) {
+          setRows([]);
+          setTotal(0);
+          setError('Customer data could not be loaded for this account.');
+        }
+      } finally {
+        if (!cancelled) setListLoading(false);
+      }
+    }
+    void loadFirstPage();
+    return () => { cancelled = true; };
+  }, [debouncedSearch, reloadKey]);
+
+  async function loadMore() {
+    if (loadingMore || rows.length >= total) return;
+    setLoadingMore(true);
+    setError('');
+    try {
+      const nextRows = await listPartnerCustomers({
+        limit: PAGE_SIZE,
+        offset: rows.length,
+        search: debouncedSearch,
+      });
+      setRows((current) => [...current, ...nextRows]);
+      if (nextRows[0]?.total_count != null) setTotal(nextRows[0].total_count);
+    } catch {
+      setError('More customers could not be loaded. Please try again.');
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   return (
     <PartnerScreen
@@ -59,7 +106,7 @@ export default function CustomersScreen() {
       action={<PartnerIconButton icon="close" label="Close customers" onPress={() => router.back()} />}
     >
       {loading ? (
-        <PartnerStateView state="loading" title="Loading customers" />
+        <PartnerStateView state="loading" title="Loading customer book" />
       ) : (
         <>
           <View style={styles.summaryGrid}>
@@ -73,13 +120,18 @@ export default function CustomersScreen() {
             <PartnerSearchField
               value={query}
               onChangeText={setQuery}
-              onSubmit={() => setAppliedSearch(query.trim())}
-              onClear={() => { setQuery(''); setAppliedSearch(''); }}
+              onClear={() => setQuery('')}
               placeholder="Search name, code, phone, email or city"
             />
+            <Text style={styles.searchHint}>Search updates automatically as you type.</Text>
           </View>
 
-          {error ? (
+          <PartnerSectionHeader
+            title="Customer book"
+            meta={listLoading ? 'Searching…' : `${total} records`}
+          />
+
+          {error && !rows.length ? (
             <PartnerStateView
               state="error"
               title="Customers could not be loaded"
@@ -87,32 +139,42 @@ export default function CustomersScreen() {
               actionLabel="Try again"
               onAction={() => setReloadKey((value) => value + 1)}
             />
-          ) : (
+          ) : listLoading ? (
+            <PartnerStateView state="loading" title="Finding customers" />
+          ) : rows.length ? (
             <>
-              <PartnerSectionHeader
-                title="Customer book"
-                meta={`${rows[0]?.total_count ?? 0} records`}
-              />
+              <View style={styles.list}>
+                {rows.map((row) => (
+                  <CustomerRow
+                    key={row.customer_id}
+                    row={row}
+                    onPress={() => router.push(`/customer/${row.customer_id}` as never)}
+                  />
+                ))}
+              </View>
 
-              {rows.length ? (
-                <View style={styles.list}>
-                  {rows.map((row) => (
-                    <CustomerRow
-                      key={row.customer_id}
-                      row={row}
-                      onPress={() => router.push(`/customer/${row.customer_id}` as never)}
-                    />
-                  ))}
+              {error ? <Text style={styles.inlineError}>{error}</Text> : null}
+
+              {rows.length < total ? (
+                <View style={styles.loadMore}>
+                  <PartnerButton
+                    label={loadingMore ? 'Loading…' : `Load more · ${total - rows.length} remaining`}
+                    variant="secondary"
+                    loading={loadingMore}
+                    onPress={() => void loadMore()}
+                  />
                 </View>
               ) : (
-                <PartnerStateView
-                  state="empty"
-                  icon="people-outline"
-                  title="No customers found"
-                  message={appliedSearch ? 'Try a different search term.' : 'Customers in your authorized business scope will appear here.'}
-                />
+                <Text style={styles.endText}>{rows.length ? 'End of customer book' : ''}</Text>
               )}
             </>
+          ) : (
+            <PartnerStateView
+              state="empty"
+              icon="people-outline"
+              title="No customers found"
+              message={debouncedSearch ? 'Try a different name, code, phone, email or city.' : 'Customers in your authorized business scope will appear here.'}
+            />
           )}
         </>
       )}
@@ -143,7 +205,7 @@ function CustomerRow({ row, onPress }: { row: PartnerCustomerRow; onPress: () =>
           <Text style={styles.customerName}>{row.customer_name}</Text>
           <Text style={styles.customerCode}>{row.customer_code || 'No customer code'}</Text>
         </View>
-        {row.customer_status ? <PartnerStatusBadge label={humanize(row.customer_status)} tone="success" /> : null}
+        {row.customer_status ? <PartnerStatusBadge label={humanize(row.customer_status)} tone={statusTone(row.customer_status)} /> : null}
       </View>
 
       <View style={styles.metaGrid}>
@@ -152,9 +214,13 @@ function CustomerRow({ row, onPress }: { row: PartnerCustomerRow; onPress: () =>
         <Meta label="Location" value={[row.city, row.state].filter(Boolean).join(', ') || 'Not recorded'} />
         <Meta label="Intermediary" value={row.intermediary_code || 'Organization / unassigned'} />
       </View>
-      <View style={styles.openRow}>
-        <Text style={styles.openText}>Open customer story</Text>
-        <Ionicons name="chevron-forward" size={15} color={partnerTheme.colors.brand} />
+
+      <View style={styles.footer}>
+        <PartnerContactActions phone={row.phone} email={row.email} compact />
+        <View style={styles.openRow}>
+          <Text style={styles.openText}>Open customer</Text>
+          <Ionicons name="chevron-forward" size={16} color={partnerTheme.colors.brand} />
+        </View>
       </View>
     </Pressable>
   );
@@ -167,6 +233,13 @@ function Meta({ label, value }: { label: string; value: string }) {
       <Text numberOfLines={1} style={styles.metaValue}>{value}</Text>
     </View>
   );
+}
+
+function statusTone(value: string): 'success' | 'warning' | 'neutral' {
+  const normalized = value.toLowerCase();
+  if (normalized.includes('active')) return 'success';
+  if (normalized.includes('pending') || normalized.includes('hold')) return 'warning';
+  return 'neutral';
 }
 
 function initials(value: string) {
@@ -192,6 +265,7 @@ const styles = StyleSheet.create({
   summaryValue: { color: partnerTheme.colors.ink, ...partnerTheme.typography.display },
   summaryLabel: { marginTop: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   search: { marginTop: partnerTheme.spacing.lg },
+  searchHint: { marginTop: 6, marginLeft: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   list: { gap: 10 },
   customerRow: {
     borderRadius: partnerTheme.radius.lg,
@@ -223,16 +297,20 @@ const styles = StyleSheet.create({
     ...partnerTheme.typography.meta,
   },
   metaValue: { marginTop: 3, color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
-  openRow: {
+  footer: {
     minHeight: partnerTheme.control.minTouchTarget,
     marginTop: 10,
     paddingTop: 9,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 4,
+    justifyContent: 'space-between',
+    gap: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: partnerTheme.colors.line,
   },
+  openRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   openText: { color: partnerTheme.colors.brand, ...partnerTheme.typography.caption },
+  loadMore: { marginTop: partnerTheme.spacing.md },
+  endText: { marginTop: 12, color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.meta },
+  inlineError: { marginTop: 10, color: partnerTheme.colors.danger, textAlign: 'center', ...partnerTheme.typography.caption },
 });

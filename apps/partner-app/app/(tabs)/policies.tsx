@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerButton } from '@/components/ui/partner-button';
+import { PartnerFilterChip } from '@/components/ui/partner-filter-chip';
+import { PartnerSearchField } from '@/components/ui/partner-search-field';
+import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
+import { PartnerStateView } from '@/components/ui/partner-state-view';
+import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
 import {
   getPartnerPolicySummary,
   listPartnerPolicies,
@@ -12,70 +18,98 @@ import {
   type PartnerPolicySummary,
 } from '@/lib/policies';
 import { partnerTheme } from '@/lib/theme';
+import { useDebouncedValue } from '@/lib/use-debounced-value';
 
+const PAGE_SIZE = 25;
 const filters: Array<{ value: PartnerPolicyLifecycle; label: string }> = [
   { value: 'all', label: 'All' },
   { value: 'in_force', label: 'In force' },
   { value: 'expiring', label: 'Expiring' },
   { value: 'expired', label: 'Expired' },
+  { value: 'upcoming', label: 'Upcoming' },
 ];
+
+let savedPolicyQuery = '';
+let savedPolicyLifecycle: PartnerPolicyLifecycle = 'all';
 
 export default function PoliciesScreen() {
   const router = useRouter();
   const [summary, setSummary] = useState<PartnerPolicySummary | null>(null);
   const [rows, setRows] = useState<PartnerPolicyRow[]>([]);
-  const [lifecycle, setLifecycle] = useState<PartnerPolicyLifecycle>('all');
-  const [query, setQuery] = useState('');
-  const [appliedSearch, setAppliedSearch] = useState('');
+  const [lifecycle, setLifecycle] = useState<PartnerPolicyLifecycle>(savedPolicyLifecycle);
+  const [query, setQuery] = useState(savedPolicyQuery);
+  const debouncedSearch = useDebouncedValue(query.trim(), 350);
   const [loading, setLoading] = useState(true);
-  const [listLoading, setListLoading] = useState(false);
+  const [listLoading, setListLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
+  const [total, setTotal] = useState(0);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const loadList = useCallback(async () => {
-    setListLoading(true);
-    setError('');
-    try {
-      const nextRows = await listPartnerPolicies({ lifecycle, search: appliedSearch, limit: 25 });
-      setRows(nextRows);
-    } catch {
-      setRows([]);
-      setError('Policy data could not be loaded for this account.');
-    } finally {
-      setListLoading(false);
-    }
-  }, [appliedSearch, lifecycle]);
+  useEffect(() => {
+    savedPolicyQuery = query;
+    savedPolicyLifecycle = lifecycle;
+  }, [lifecycle, query]);
 
   useEffect(() => {
     let cancelled = false;
-    async function load() {
-      setLoading(true);
-      setError('');
+    async function loadSummary() {
       try {
-        const [nextSummary, nextRows] = await Promise.all([
-          getPartnerPolicySummary(),
-          listPartnerPolicies({ lifecycle: 'all', limit: 25 }),
-        ]);
-        if (cancelled) return;
-        setSummary(nextSummary);
-        setRows(nextRows);
+        const nextSummary = await getPartnerPolicySummary();
+        if (!cancelled) setSummary(nextSummary);
       } catch {
-        if (!cancelled) setError('Policy data could not be loaded for this account.');
+        if (!cancelled) setError('Policy summary could not be loaded for this account.');
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    void loadSummary();
+    return () => { cancelled = true; };
+  }, [reloadKey]);
+
+  const loadFirstPage = useCallback(async () => {
+    setListLoading(true);
+    setError('');
+    try {
+      const nextRows = await listPartnerPolicies({
+        lifecycle,
+        search: debouncedSearch,
+        limit: PAGE_SIZE,
+        offset: 0,
+      });
+      setRows(nextRows);
+      setTotal(nextRows[0]?.total_count ?? 0);
+    } catch {
+      setRows([]);
+      setTotal(0);
+      setError('Policy data could not be loaded for this account.');
+    } finally {
+      setListLoading(false);
+    }
+  }, [debouncedSearch, lifecycle]);
 
   useEffect(() => {
-    if (!loading) void loadList();
-  }, [lifecycle, appliedSearch, loadList, loading]);
+    void loadFirstPage();
+  }, [loadFirstPage, reloadKey]);
 
-  function applySearch() {
-    setAppliedSearch(query.trim());
+  async function loadMore() {
+    if (loadingMore || rows.length >= total) return;
+    setLoadingMore(true);
+    setError('');
+    try {
+      const nextRows = await listPartnerPolicies({
+        lifecycle,
+        search: debouncedSearch,
+        limit: PAGE_SIZE,
+        offset: rows.length,
+      });
+      setRows((current) => [...current, ...nextRows]);
+      if (nextRows[0]?.total_count != null) setTotal(nextRows[0].total_count);
+    } catch {
+      setError('More policies could not be loaded. Please try again.');
+    } finally {
+      setLoadingMore(false);
+    }
   }
 
   return (
@@ -83,14 +117,16 @@ export default function PoliciesScreen() {
       eyebrow="BUSINESS"
       title="Policies"
       action={
-        <Pressable onPress={() => router.push('/policy-intakes')} style={styles.intakeAction}>
-          <Ionicons name="cloud-upload-outline" size={15} color="#FFFFFF" />
-          <Text style={styles.intakeActionText}>Intake</Text>
-        </Pressable>
+        <PartnerButton
+          label="Intake"
+          icon="cloud-upload-outline"
+          fullWidth={false}
+          onPress={() => router.push('/policy-intakes')}
+        />
       }
     >
       {loading ? (
-        <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand} /></View>
+        <PartnerStateView state="loading" title="Loading policy book" />
       ) : (
         <>
           <View style={styles.summaryGrid}>
@@ -100,64 +136,73 @@ export default function PoliciesScreen() {
             <SummaryCard label="Premium booked" value={formatMoney(summary?.total_premium ?? 0)} compact />
           </View>
 
-          <View style={styles.searchWrap}>
-            <Ionicons name="search-outline" size={17} color="#8A94A6" />
-            <TextInput
+          <View style={styles.search}>
+            <PartnerSearchField
               value={query}
               onChangeText={setQuery}
-              onSubmitEditing={applySearch}
+              onClear={() => setQuery('')}
               placeholder="Search policy, customer, vehicle or insurer"
-              placeholderTextColor="#9AA3B2"
-              returnKeyType="search"
-              style={styles.searchInput}
             />
-            {query || appliedSearch ? (
-              <Pressable
-                onPress={() => {
-                  setQuery('');
-                  setAppliedSearch('');
-                }}
-                hitSlop={8}
-              >
-                <Ionicons name="close-circle" size={18} color="#9AA3B2" />
-              </Pressable>
-            ) : null}
+            <Text style={styles.searchHint}>Search updates automatically as you type.</Text>
           </View>
 
           <View style={styles.filters}>
-            {filters.map((filter) => {
-              const active = lifecycle === filter.value;
-              return (
-                <Pressable
-                  key={filter.value}
-                  onPress={() => setLifecycle(filter.value)}
-                  style={[styles.filter, active && styles.filterActive]}
-                >
-                  <Text style={[styles.filterText, active && styles.filterTextActive]}>{filter.label}</Text>
-                </Pressable>
-              );
-            })}
+            {filters.map((filter) => (
+              <PartnerFilterChip
+                key={filter.value}
+                label={filter.label}
+                active={lifecycle === filter.value}
+                onPress={() => setLifecycle(filter.value)}
+              />
+            ))}
           </View>
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          <PartnerSectionHeader title="Policy book" meta={listLoading ? 'Searching…' : `${total} records`} />
 
-          <View style={styles.listHeader}>
-            <Text style={styles.listTitle}>Policy book</Text>
-            <Text style={styles.listCount}>{rows[0]?.total_count ?? 0} records</Text>
-          </View>
-
-          {listLoading ? (
-            <View style={styles.listLoading}><ActivityIndicator color={partnerTheme.colors.brand} /></View>
+          {error && !rows.length ? (
+            <PartnerStateView
+              state="error"
+              title="Policies could not be loaded"
+              message={error}
+              actionLabel="Try again"
+              onAction={() => setReloadKey((value) => value + 1)}
+            />
+          ) : listLoading ? (
+            <PartnerStateView state="loading" title="Finding policies" />
           ) : rows.length ? (
-            <View style={styles.list}>
-              {rows.map((row) => <PolicyRow key={row.policy_id} row={row} onPress={() => router.push(`/policy/${row.policy_id}` as never)} />)}
-            </View>
+            <>
+              <View style={styles.list}>
+                {rows.map((row) => (
+                  <PolicyRow
+                    key={row.policy_id}
+                    row={row}
+                    onPress={() => router.push(`/policy/${row.policy_id}` as never)}
+                  />
+                ))}
+              </View>
+
+              {error ? <Text style={styles.inlineError}>{error}</Text> : null}
+
+              {rows.length < total ? (
+                <View style={styles.loadMore}>
+                  <PartnerButton
+                    label={loadingMore ? 'Loading…' : `Load more · ${total - rows.length} remaining`}
+                    variant="secondary"
+                    loading={loadingMore}
+                    onPress={() => void loadMore()}
+                  />
+                </View>
+              ) : (
+                <Text style={styles.endText}>End of policy book</Text>
+              )}
+            </>
           ) : (
-            <View style={styles.empty}>
-              <Ionicons name="document-text-outline" size={28} color="#9AA3B2" />
-              <Text style={styles.emptyTitle}>No policies found</Text>
-              <Text style={styles.emptyText}>Try another search or lifecycle filter.</Text>
-            </View>
+            <PartnerStateView
+              state="empty"
+              icon="document-text-outline"
+              title="No policies found"
+              message="Try another search term or policy lifecycle filter."
+            />
           )}
         </>
       )}
@@ -175,26 +220,44 @@ function SummaryCard({ label, value, compact = false }: { label: string; value: 
 }
 
 function PolicyRow({ row, onPress }: { row: PartnerPolicyRow; onPress: () => void }) {
+  const category = policyCategory(row);
   return (
-    <Pressable onPress={onPress} style={styles.policyRow}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${category} policy ${row.policy_no || row.policy_code || ''} for ${row.customer_name}`}
+      onPress={onPress}
+      style={({ pressed }) => [styles.policyRow, pressed && styles.pressed]}
+    >
       <View style={styles.policyTop}>
+        <View style={styles.policyIcon}>
+          <Ionicons name={category === 'Motor' ? 'car-outline' : category === 'Health' ? 'medkit-outline' : category === 'Life' ? 'heart-outline' : 'business-outline'} size={19} color={partnerTheme.colors.brand} />
+        </View>
         <View style={styles.policyIdentity}>
           <Text style={styles.policyNo}>{row.policy_no || row.policy_code || 'Policy'}</Text>
           <Text style={styles.policyCustomer}>{row.customer_name}</Text>
         </View>
-        <LifecycleBadge value={row.lifecycle_status} />
+        <View style={styles.badges}>
+          <PartnerStatusBadge label={category} tone="brand" />
+          <PartnerStatusBadge label={humanize(row.lifecycle_status)} tone={lifecycleTone(row.lifecycle_status)} />
+        </View>
       </View>
 
       <View style={styles.policyMetaGrid}>
         <Meta label="Insurer" value={row.insurer_name || 'Not recorded'} />
-        <Meta label="Vehicle" value={row.vehicle_no || 'Non-motor / not linked'} />
-        <Meta label="Policy type" value={row.policy_product || row.policy_type || row.business_line || 'Not recorded'} />
+        <Meta label="Risk / vehicle" value={row.vehicle_no || row.policy_product || 'Non-motor / not linked'} />
+        <Meta label="Product" value={row.policy_product || row.policy_type || row.business_line || 'Not recorded'} />
         <Meta label="Premium" value={formatMoney(row.premium_amount)} />
       </View>
 
       <View style={styles.policyFooter}>
-        <Text style={styles.policyDates}>{formatDate(row.start_date)} → {formatDate(row.end_date)}</Text>
-        <View style={styles.policyOpen}><Text style={styles.policyIntermediary}>{row.intermediary_code || 'Direct'}</Text><Ionicons name="chevron-forward" size={14} color={partnerTheme.colors.brand} /></View>
+        <View>
+          <Text style={styles.footerLabel}>TERM</Text>
+          <Text style={styles.policyDates}>{formatDate(row.start_date)} → {formatDate(row.end_date)}</Text>
+        </View>
+        <View style={styles.policyOpen}>
+          <Text style={styles.policyIntermediary}>{row.intermediary_code || 'Direct'}</Text>
+          <Ionicons name="chevron-forward" size={16} color={partnerTheme.colors.brand} />
+        </View>
       </View>
     </Pressable>
   );
@@ -209,15 +272,19 @@ function Meta({ label, value }: { label: string; value: string }) {
   );
 }
 
-function LifecycleBadge({ value }: { value: PartnerPolicyRow['lifecycle_status'] }) {
-  const tone = value === 'expired'
-    ? styles.badgeExpired
-    : value === 'expiring'
-      ? styles.badgeExpiring
-      : value === 'upcoming'
-        ? styles.badgeUpcoming
-        : styles.badgeActive;
-  return <Text style={[styles.badge, tone]}>{humanize(value)}</Text>;
+function policyCategory(row: PartnerPolicyRow) {
+  const value = [row.policy_type, row.policy_product, row.business_line].filter(Boolean).join(' ').toLowerCase();
+  if (value.includes('health')) return 'Health';
+  if (value.includes('life')) return 'Life';
+  if (value.includes('motor') || row.vehicle_id || row.vehicle_no) return 'Motor';
+  return 'Non-Motor';
+}
+
+function lifecycleTone(value: PartnerPolicyRow['lifecycle_status']): 'success' | 'warning' | 'danger' | 'info' {
+  if (value === 'expired') return 'danger';
+  if (value === 'expiring') return 'warning';
+  if (value === 'upcoming') return 'info';
+  return 'success';
 }
 
 function humanize(value: string) {
@@ -238,9 +305,6 @@ function formatMoney(value: number | string | null) {
 }
 
 const styles = StyleSheet.create({
-  intakeAction: { minHeight: 38, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 12, paddingHorizontal: 11, backgroundColor: partnerTheme.colors.brandStrong },
-  intakeActionText: { color: '#FFFFFF', fontSize: 9.5, fontWeight: '800' },
-  loading: { minHeight: 260, alignItems: 'center', justifyContent: 'center' },
   summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   summaryCard: {
     width: '48%',
@@ -252,32 +316,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: partnerTheme.colors.line,
   },
-  summaryValue: { color: partnerTheme.colors.ink, fontSize: 22, fontWeight: '700' },
+  summaryValue: { color: partnerTheme.colors.ink, fontSize: 22, lineHeight: 28, fontWeight: '800' },
   summaryValueCompact: { fontSize: 18 },
-  summaryLabel: { marginTop: 5, color: partnerTheme.colors.inkMuted, fontSize: 9.5, lineHeight: 14 },
-  searchWrap: {
-    height: 48,
-    marginTop: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 9,
-    borderRadius: partnerTheme.radius.md,
-    paddingHorizontal: 13,
-    backgroundColor: partnerTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: partnerTheme.colors.line,
-  },
-  searchInput: { flex: 1, color: partnerTheme.colors.ink, fontSize: 11 },
+  summaryLabel: { marginTop: 5, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  search: { marginTop: 18 },
+  searchHint: { marginTop: 6, marginLeft: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   filters: { marginTop: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-  filter: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: partnerTheme.colors.surfaceMuted },
-  filterActive: { backgroundColor: partnerTheme.colors.brandStrong },
-  filterText: { color: partnerTheme.colors.inkMuted, fontSize: 9.5, fontWeight: '700' },
-  filterTextActive: { color: partnerTheme.colors.white },
-  error: { marginTop: 12, color: partnerTheme.colors.danger, fontSize: 10, lineHeight: 15 },
-  listHeader: { marginTop: 22, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  listTitle: { color: partnerTheme.colors.ink, fontSize: 14, fontWeight: '700' },
-  listCount: { color: partnerTheme.colors.inkMuted, fontSize: 9.5, fontWeight: '600' },
-  listLoading: { minHeight: 120, alignItems: 'center', justifyContent: 'center' },
   list: { gap: 10 },
   policyRow: {
     borderRadius: partnerTheme.radius.lg,
@@ -286,24 +330,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: partnerTheme.colors.line,
   },
-  policyTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
+  pressed: { opacity: 0.82 },
+  policyTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  policyIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
   policyIdentity: { flex: 1 },
-  policyNo: { color: partnerTheme.colors.ink, fontSize: 12, fontWeight: '800' },
-  policyCustomer: { marginTop: 3, color: partnerTheme.colors.inkMuted, fontSize: 9.5 },
-  badge: { overflow: 'hidden', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 5, fontSize: 8, fontWeight: '800' },
-  badgeActive: { color: '#18794E', backgroundColor: '#E9F7EF' },
-  badgeExpiring: { color: '#9A5B12', backgroundColor: '#FFF2DD' },
-  badgeExpired: { color: '#A7372D', backgroundColor: '#FCEDEC' },
-  badgeUpcoming: { color: '#315E9C', backgroundColor: '#EAF1FB' },
+  policyNo: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  policyCustomer: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  badges: { alignItems: 'flex-end', gap: 5 },
   policyMetaGrid: { marginTop: 14, flexDirection: 'row', flexWrap: 'wrap', rowGap: 11 },
   meta: { width: '50%', paddingRight: 8 },
-  metaLabel: { color: '#8A94A6', fontSize: 7.5, fontWeight: '800', letterSpacing: 0.65, textTransform: 'uppercase' },
-  metaValue: { marginTop: 3, color: partnerTheme.colors.ink, fontSize: 9.5, fontWeight: '600' },
+  metaLabel: { color: '#8A94A6', letterSpacing: 0.65, textTransform: 'uppercase', ...partnerTheme.typography.meta },
+  metaValue: { marginTop: 3, color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
   policyFooter: { marginTop: 14, paddingTop: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
-  policyDates: { color: partnerTheme.colors.inkMuted, fontSize: 8.5 },
-  policyOpen: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  policyIntermediary: { color: partnerTheme.colors.brand, fontSize: 8.5, fontWeight: '700' },
-  empty: { minHeight: 180, alignItems: 'center', justifyContent: 'center', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface },
-  emptyTitle: { marginTop: 10, color: partnerTheme.colors.ink, fontSize: 12, fontWeight: '700' },
-  emptyText: { marginTop: 4, color: partnerTheme.colors.inkMuted, fontSize: 9.5 },
+  footerLabel: { color: '#9AA3B2', letterSpacing: 0.5, ...partnerTheme.typography.meta },
+  policyDates: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
+  policyOpen: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  policyIntermediary: { color: partnerTheme.colors.brand, ...partnerTheme.typography.caption },
+  loadMore: { marginTop: partnerTheme.spacing.md },
+  endText: { marginTop: 12, color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.meta },
+  inlineError: { marginTop: 10, color: partnerTheme.colors.danger, textAlign: 'center', ...partnerTheme.typography.caption },
 });

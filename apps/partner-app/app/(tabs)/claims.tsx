@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerButton } from '@/components/ui/partner-button';
+import { PartnerFilterChip } from '@/components/ui/partner-filter-chip';
+import { PartnerSearchField } from '@/components/ui/partner-search-field';
+import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
+import { PartnerStateView } from '@/components/ui/partner-state-view';
+import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
 import {
   getPartnerClaimSummary,
   listPartnerClaims,
@@ -12,70 +18,102 @@ import {
   type PartnerClaimSummary,
 } from '@/lib/claims';
 import { partnerTheme } from '@/lib/theme';
+import { useDebouncedValue } from '@/lib/use-debounced-value';
 
+const PAGE_SIZE = 25;
 const filters: Array<{ value: PartnerClaimState; label: string }> = [
   { value: 'all', label: 'All' },
   { value: 'active', label: 'Active' },
   { value: 'completed', label: 'Completed' },
 ];
 
+let savedClaimQuery = '';
+let savedClaimState: PartnerClaimState = 'all';
+
 export default function ClaimsScreen() {
   const router = useRouter();
   const [summary, setSummary] = useState<PartnerClaimSummary | null>(null);
   const [rows, setRows] = useState<PartnerClaimRow[]>([]);
-  const [state, setState] = useState<PartnerClaimState>('all');
-  const [query, setQuery] = useState('');
-  const [appliedSearch, setAppliedSearch] = useState('');
+  const [state, setState] = useState<PartnerClaimState>(savedClaimState);
+  const [query, setQuery] = useState(savedClaimQuery);
+  const debouncedSearch = useDebouncedValue(query.trim(), 350);
   const [loading, setLoading] = useState(true);
-  const [listLoading, setListLoading] = useState(false);
+  const [listLoading, setListLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
+  const [total, setTotal] = useState(0);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const loadList = useCallback(async () => {
-    setListLoading(true);
-    setError('');
-    try {
-      setRows(await listPartnerClaims({ state, search: appliedSearch, limit: 25 }));
-    } catch {
-      setRows([]);
-      setError('Claim data could not be loaded for this account.');
-    } finally {
-      setListLoading(false);
-    }
-  }, [appliedSearch, state]);
+  useEffect(() => {
+    savedClaimQuery = query;
+    savedClaimState = state;
+  }, [query, state]);
 
   useEffect(() => {
     let cancelled = false;
-    async function load() {
-      setLoading(true);
-      setError('');
+    async function loadSummary() {
       try {
-        const [nextSummary, nextRows] = await Promise.all([
-          getPartnerClaimSummary(),
-          listPartnerClaims({ limit: 25 }),
-        ]);
-        if (cancelled) return;
-        setSummary(nextSummary);
-        setRows(nextRows);
+        const nextSummary = await getPartnerClaimSummary();
+        if (!cancelled) setSummary(nextSummary);
       } catch {
-        if (!cancelled) setError('Claim data could not be loaded for this account.');
+        if (!cancelled) setError('Claim summary could not be loaded for this account.');
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    void loadSummary();
+    return () => { cancelled = true; };
+  }, [reloadKey]);
+
+  const loadFirstPage = useCallback(async () => {
+    setListLoading(true);
+    setError('');
+    try {
+      const nextRows = await listPartnerClaims({
+        state,
+        search: debouncedSearch,
+        limit: PAGE_SIZE,
+        offset: 0,
+      });
+      setRows(nextRows);
+      setTotal(nextRows[0]?.total_count ?? 0);
+    } catch {
+      setRows([]);
+      setTotal(0);
+      setError('Claim data could not be loaded for this account.');
+    } finally {
+      setListLoading(false);
+    }
+  }, [debouncedSearch, state]);
 
   useEffect(() => {
-    if (!loading) void loadList();
-  }, [loading, loadList]);
+    void loadFirstPage();
+  }, [loadFirstPage, reloadKey]);
+
+  async function loadMore() {
+    if (loadingMore || rows.length >= total) return;
+    setLoadingMore(true);
+    setError('');
+    try {
+      const nextRows = await listPartnerClaims({
+        state,
+        search: debouncedSearch,
+        limit: PAGE_SIZE,
+        offset: rows.length,
+      });
+      setRows((current) => [...current, ...nextRows]);
+      if (nextRows[0]?.total_count != null) setTotal(nextRows[0].total_count);
+    } catch {
+      setError('More claims could not be loaded. Please try again.');
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   return (
     <PartnerScreen eyebrow="SERVICE" title="Claims">
       {loading ? (
-        <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand} /></View>
+        <PartnerStateView state="loading" title="Loading claim book" />
       ) : (
         <>
           <View style={styles.summaryGrid}>
@@ -86,56 +124,77 @@ export default function ClaimsScreen() {
           </View>
 
           <View style={styles.notice}>
-            <Ionicons name="shield-checkmark-outline" size={17} color={partnerTheme.colors.accent} />
-            <Text style={styles.noticeText}>Claims appear only when the customer is commercially attributed inside your authorized Partner scope.</Text>
+            <Ionicons name="shield-checkmark-outline" size={18} color={partnerTheme.colors.accent} />
+            <Text style={styles.noticeText}>Only claims within your authorized Partner scope are shown here.</Text>
           </View>
 
-          <View style={styles.searchWrap}>
-            <Ionicons name="search-outline" size={17} color="#8A94A6" />
-            <TextInput
+          <View style={styles.search}>
+            <PartnerSearchField
               value={query}
               onChangeText={setQuery}
-              onSubmitEditing={() => setAppliedSearch(query.trim())}
+              onClear={() => setQuery('')}
               placeholder="Search claim, customer, vehicle or policy"
-              placeholderTextColor="#9AA3B2"
-              returnKeyType="search"
-              style={styles.searchInput}
             />
-            {query || appliedSearch ? (
-              <Pressable onPress={() => { setQuery(''); setAppliedSearch(''); }} hitSlop={8}>
-                <Ionicons name="close-circle" size={18} color="#9AA3B2" />
-              </Pressable>
-            ) : null}
+            <Text style={styles.searchHint}>Search updates automatically as you type.</Text>
           </View>
 
           <View style={styles.filters}>
-            {filters.map((filter) => {
-              const active = state === filter.value;
-              return (
-                <Pressable key={filter.value} onPress={() => setState(filter.value)} style={[styles.filter, active && styles.filterActive]}>
-                  <Text style={[styles.filterText, active && styles.filterTextActive]}>{filter.label}</Text>
-                </Pressable>
-              );
-            })}
+            {filters.map((filter) => (
+              <PartnerFilterChip
+                key={filter.value}
+                label={filter.label}
+                active={state === filter.value}
+                onPress={() => setState(filter.value)}
+              />
+            ))}
           </View>
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          <PartnerSectionHeader title="Claim book" meta={listLoading ? 'Searching…' : `${total} records`} />
 
-          <View style={styles.listHeader}>
-            <Text style={styles.listTitle}>Claim book</Text>
-            <Text style={styles.listCount}>{rows[0]?.total_count ?? 0} records</Text>
-          </View>
-
-          {listLoading ? (
-            <View style={styles.listLoading}><ActivityIndicator color={partnerTheme.colors.brand} /></View>
+          {error && !rows.length ? (
+            <PartnerStateView
+              state="error"
+              title="Claims could not be loaded"
+              message={error}
+              actionLabel="Try again"
+              onAction={() => setReloadKey((value) => value + 1)}
+            />
+          ) : listLoading ? (
+            <PartnerStateView state="loading" title="Finding claims" />
           ) : rows.length ? (
-            <View style={styles.list}>{rows.map((row) => <ClaimRow key={row.claim_id} row={row} onPress={() => router.push(`/claim/${row.claim_id}` as never)} />)}</View>
+            <>
+              <View style={styles.list}>
+                {rows.map((row) => (
+                  <ClaimRow
+                    key={row.claim_id}
+                    row={row}
+                    onPress={() => router.push(`/claim/${row.claim_id}` as never)}
+                  />
+                ))}
+              </View>
+
+              {error ? <Text style={styles.inlineError}>{error}</Text> : null}
+
+              {rows.length < total ? (
+                <View style={styles.loadMore}>
+                  <PartnerButton
+                    label={loadingMore ? 'Loading…' : `Load more · ${total - rows.length} remaining`}
+                    variant="secondary"
+                    loading={loadingMore}
+                    onPress={() => void loadMore()}
+                  />
+                </View>
+              ) : (
+                <Text style={styles.endText}>End of claim book</Text>
+              )}
+            </>
           ) : (
-            <View style={styles.empty}>
-              <Ionicons name="shield-checkmark-outline" size={30} color={partnerTheme.colors.success} />
-              <Text style={styles.emptyTitle}>No claims found</Text>
-              <Text style={styles.emptyText}>There are no claims matching this authorized scope and filter.</Text>
-            </View>
+            <PartnerStateView
+              state="empty"
+              icon="shield-checkmark-outline"
+              title="No claims found"
+              message="There are no claims matching this authorized scope and filter."
+            />
           )}
         </>
       )}
@@ -154,13 +213,24 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
 
 function ClaimRow({ row, onPress }: { row: PartnerClaimRow; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={styles.claimRow}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Open claim ${row.claim_no || ''} for ${row.customer_name}`}
+      onPress={onPress}
+      style={({ pressed }) => [styles.claimRow, pressed && styles.pressed]}
+    >
       <View style={styles.claimTop}>
+        <View style={styles.claimIcon}>
+          <Ionicons name="shield-outline" size={19} color={partnerTheme.colors.accent} />
+        </View>
         <View style={styles.claimIdentity}>
           <Text style={styles.claimNo}>{row.claim_no || 'Claim'}</Text>
           <Text style={styles.customer}>{row.customer_name}</Text>
         </View>
-        <Text style={[styles.badge, row.claim_state === 'completed' ? styles.badgeCompleted : styles.badgeActive]}>{row.current_status || humanize(row.claim_state)}</Text>
+        <PartnerStatusBadge
+          label={humanize(row.current_status || row.claim_state)}
+          tone={row.claim_state === 'completed' ? 'success' : 'warning'}
+        />
       </View>
 
       <View style={styles.metaGrid}>
@@ -171,8 +241,14 @@ function ClaimRow({ row, onPress }: { row: PartnerClaimRow; onPress: () => void 
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.date}>{row.accident_at ? `Accident ${formatDateTime(row.accident_at)}` : `Created ${formatDateTime(row.created_at)}`}</Text>
-        <View style={styles.claimOpen}><Text style={styles.amount}>{claimAmount(row)}</Text><Ionicons name="chevron-forward" size={14} color={partnerTheme.colors.brand} /></View>
+        <View>
+          <Text style={styles.footerLabel}>{row.accident_at ? 'ACCIDENT' : 'CREATED'}</Text>
+          <Text style={styles.date}>{formatDate(row.accident_at || row.created_at)}</Text>
+        </View>
+        <View style={styles.claimOpen}>
+          <Text style={styles.amount}>{claimAmount(row)}</Text>
+          <Ionicons name="chevron-forward" size={16} color={partnerTheme.colors.brand} />
+        </View>
       </View>
     </Pressable>
   );
@@ -197,7 +273,7 @@ function formatMoney(value: number | string) {
   return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Number.isFinite(amount) ? amount : 0)}`;
 }
 
-function formatDateTime(value: string) {
+function formatDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }).format(date);
@@ -208,43 +284,33 @@ function humanize(value: string) {
 }
 
 const styles = StyleSheet.create({
-  loading: { minHeight: 260, alignItems: 'center', justifyContent: 'center' },
   summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   summaryCard: { width: '48%', minHeight: 88, justifyContent: 'center', borderRadius: partnerTheme.radius.lg, padding: 15, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  summaryValue: { color: partnerTheme.colors.ink, fontSize: 22, fontWeight: '700' },
-  summaryLabel: { marginTop: 5, color: partnerTheme.colors.inkMuted, fontSize: 9.5 },
+  summaryValue: { color: partnerTheme.colors.ink, fontSize: 22, lineHeight: 28, fontWeight: '800' },
+  summaryLabel: { marginTop: 5, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   notice: { marginTop: 14, flexDirection: 'row', alignItems: 'flex-start', gap: 9, borderRadius: partnerTheme.radius.md, padding: 12, backgroundColor: partnerTheme.colors.accentSoft },
-  noticeText: { flex: 1, color: '#56716F', fontSize: 9.5, lineHeight: 14 },
-  searchWrap: { height: 48, marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 9, borderRadius: partnerTheme.radius.md, paddingHorizontal: 13, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  searchInput: { flex: 1, color: partnerTheme.colors.ink, fontSize: 11 },
+  noticeText: { flex: 1, color: '#56716F', ...partnerTheme.typography.caption },
+  search: { marginTop: 14 },
+  searchHint: { marginTop: 6, marginLeft: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   filters: { marginTop: 12, flexDirection: 'row', gap: 7 },
-  filter: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: partnerTheme.colors.surfaceMuted },
-  filterActive: { backgroundColor: partnerTheme.colors.brandStrong },
-  filterText: { color: partnerTheme.colors.inkMuted, fontSize: 9.5, fontWeight: '700' },
-  filterTextActive: { color: partnerTheme.colors.white },
-  error: { marginTop: 12, color: partnerTheme.colors.danger, fontSize: 10 },
-  listHeader: { marginTop: 22, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between' },
-  listTitle: { color: partnerTheme.colors.ink, fontSize: 14, fontWeight: '700' },
-  listCount: { color: partnerTheme.colors.inkMuted, fontSize: 9.5, fontWeight: '600' },
-  listLoading: { minHeight: 120, alignItems: 'center', justifyContent: 'center' },
   list: { gap: 10 },
   claimRow: { borderRadius: partnerTheme.radius.lg, padding: 16, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  claimTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
+  claimTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  claimIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.accentSoft },
   claimIdentity: { flex: 1 },
-  claimNo: { color: partnerTheme.colors.ink, fontSize: 12, fontWeight: '800' },
-  customer: { marginTop: 3, color: partnerTheme.colors.inkMuted, fontSize: 9.5 },
-  badge: { overflow: 'hidden', maxWidth: 135, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 5, fontSize: 8, fontWeight: '800' },
-  badgeActive: { color: '#9A5B12', backgroundColor: '#FFF2DD' },
-  badgeCompleted: { color: '#18794E', backgroundColor: '#E9F7EF' },
+  claimNo: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  customer: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  pressed: { opacity: 0.82 },
   metaGrid: { marginTop: 14, flexDirection: 'row', flexWrap: 'wrap', rowGap: 11 },
   meta: { width: '50%', paddingRight: 8 },
-  metaLabel: { color: '#8A94A6', fontSize: 7.5, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6 },
-  metaValue: { marginTop: 3, color: partnerTheme.colors.ink, fontSize: 9.5, fontWeight: '600' },
-  footer: { marginTop: 14, paddingTop: 11, flexDirection: 'row', justifyContent: 'space-between', gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
-  date: { color: partnerTheme.colors.inkMuted, fontSize: 8.5 },
-  claimOpen: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  amount: { color: partnerTheme.colors.brandStrong, fontSize: 8.5, fontWeight: '700' },
-  empty: { minHeight: 180, alignItems: 'center', justifyContent: 'center', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface },
-  emptyTitle: { marginTop: 10, color: partnerTheme.colors.ink, fontSize: 12, fontWeight: '700' },
-  emptyText: { marginTop: 4, maxWidth: 260, color: partnerTheme.colors.inkMuted, fontSize: 9.5, textAlign: 'center', lineHeight: 14 },
+  metaLabel: { color: '#8A94A6', textTransform: 'uppercase', letterSpacing: 0.6, ...partnerTheme.typography.meta },
+  metaValue: { marginTop: 3, color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
+  footer: { marginTop: 14, paddingTop: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
+  footerLabel: { color: '#9AA3B2', letterSpacing: 0.5, ...partnerTheme.typography.meta },
+  date: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
+  claimOpen: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  amount: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.caption },
+  loadMore: { marginTop: partnerTheme.spacing.md },
+  endText: { marginTop: 12, color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.meta },
+  inlineError: { marginTop: 10, color: partnerTheme.colors.danger, textAlign: 'center', ...partnerTheme.typography.caption },
 });
