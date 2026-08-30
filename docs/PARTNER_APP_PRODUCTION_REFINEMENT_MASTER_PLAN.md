@@ -1097,7 +1097,7 @@ Use this section as the compact source of progress.
 | Phase | Status | Native build? | Notes |
 | --- | --- | ---: | --- |
 | 0 — Shared mobile foundation | VERIFIED COMPLETE | No | PR #800 merged; OTA applied; Customers + New Policy Intake visually verified on installed Android app |
-| 1 — Navigation / Home / global states | IN PROGRESS | No | Branch: `feat/partner-phase-1-navigation-home` |
+| 1 — Navigation / Home / global states | READY FOR REVIEW | No | PR #808 merged; preview OTA published; installed-device Home + More review pending |
 | 2 — Customers / Policies / Renewals / Claims | LOCKED | No | |
 | 3 — Policy Intake / Business / Payout / Support | LOCKED | No | |
 | 4 — Data/cache/offline/auth lifecycle | LOCKED | Mostly No | |
@@ -1140,6 +1140,8 @@ The next implementation work is therefore:
 > **Phase 1 — Navigation, Home and global interaction states**
 
 **VERIFIED COMPLETE:** Phase 0 implementation merged in PR #800 as `5841fe44ed9e049aa39b1524e6e34337ed523236`. Canonical Partner verification run #38 passed route integrity, release identity, TypeScript, lint and Expo web review export. The deliberate main-only OTA trigger path was added in PR #801 and merged as `12908201517d0689dfac635ca56f2273c7670ccf`. Partner preview OTA run `33300628248` succeeded on project `8ade82c1-4c96-4f09-b90b-802270fb406d`, branch `preview`, runtime `0.1.0`, update group `536b65c6-a13a-4c6a-b794-506a4222ae1a`, exact Git commit `12908201517d0689dfac635ca56f2273c7670ccf`. On 2026-08-30, user-provided installed-device screenshots directly verified the refined Customers screen and New Policy Intake screen rendering correctly after OTA. Phase 0 is complete and Phase 1 is unlocked/in progress.
+
+**READY FOR REVIEW:** Phase 1 implementation merged in PR #808 as `06434354955b12efffbf885fb7b05bdd82e5ec09`. Canonical Partner verification run #41 passed release identity, route integrity, TypeScript, lint and Expo web review export on exact head `bb692e52be714e86dd6f4f06fb16f8034dc0ab4c`. Partner preview OTA run `33303417106` succeeded on project `8ade82c1-4c96-4f09-b90b-802270fb406d`, branch `preview`, runtime `0.1.0`, update group `779ffe96-ca13-4df9-8478-d4e736f56f83`, exact Git commit `06434354955b12efffbf885fb7b05bdd82e5ec09`. Remaining gate: visually verify the action-first Home, grouped More screen and bottom-tab behavior on the installed Partner preview APK after OTA application. Phase 2 remains locked until that installed-device check is confirmed.
 
 No later phase is authorized to be mixed into Phase 1 merely for convenience.
 
