@@ -35,9 +35,11 @@ expectAll('app/_layout.tsx', [
 expectAll('components/partner-error-boundary.tsx', [
   [/getDerivedStateFromError/, 'error boundary must enter a recovery state after render errors'],
   [/componentDidCatch/, 'error boundary must capture error details for observability readiness'],
+  [/reportPartnerError/, 'error boundary must use the centralized sanitized reporting seam'],
   [/accessibilityRole="alert"/, 'recovery UI must announce itself as an alert'],
   [/accessibilityLiveRegion="assertive"/, 'recovery UI must be announced immediately'],
   [/label="Try again"/, 'recovery UI must expose an in-app retry action'],
+  [/label="Return to Home"/, 'recovery UI must expose a safe Home recovery route'],
 ]);
 
 // Shared form accessibility and focus contract.
@@ -121,3 +123,41 @@ if (failures.length) {
 
 console.log(`Partner Phase 5 resilience/accessibility contracts OK: ${checks} checks passed.`);
 console.log('Smoke contracts covered: Login -> Customers -> Customer detail -> Policy -> Back; Login -> New Policy Intake -> Submit -> Track status.');
+
+
+// Final Phase 5 hardening contracts.
+expectAll('lib/partner-observability.ts', [
+  [/SENSITIVE_KEY/, 'observability seam must redact known sensitive metadata keys'],
+  [/\[REDACTED\]/, 'observability seam must replace sensitive values'],
+  [/reportPartnerError/, 'observability seam must expose a single reporting integration point'],
+]);
+
+expectAll('app/policy-intake-new.tsx', [
+  [/PartnerConfirmDialog/, 'Policy Intake must protect transient selected-file state on close'],
+  [/selected policy file will need to be chosen again/, 'close warning must explain exactly what would be lost'],
+  [/disabled=\{submitting\}/, 'Policy Intake close action must be disabled during submission'],
+]);
+
+expectAll('components/ui/partner-filter-chip.tsx', [
+  [/minHeight: partnerTheme\.control\.minTouchTarget/, 'filter chips must meet the shared minimum touch target'],
+  [/accessibilityState=\{\{ selected: active \}\}/, 'filter chips must announce selected state'],
+  [/accessibilityLabel=\{\`\$\{label\} filter\`\}/, 'filter chips must expose a clear accessible label'],
+]);
+
+expectAll('lib/partner-query-cache.ts', [
+  [/fallbackError/, 'cached fallback must preserve refresh failure details'],
+  [/isLikelyConnectivityError/, 'cached fallback must distinguish likely offline/network failure'],
+  [/clearPartnerQueryCache/, 'protected cache must expose identity/sign-out clearing'],
+]);
+
+expectAll('providers/partner-session-provider.tsx', [
+  [/AppState\.addEventListener\('change'/, 'session lifecycle must react to foreground/background changes'],
+  [/startAutoRefresh/, 'foreground session lifecycle must resume auth refresh'],
+  [/stopAutoRefresh/, 'background session lifecycle must pause auth refresh'],
+  [/clearPartnerQueryCache/, 'identity/sign-out transitions must clear protected query cache'],
+]);
+
+expectAll('app.json', [
+  [/"runtimeVersion"\s*:\s*\{\s*"policy"\s*:\s*"appVersion"/s, 'OTA runtime must remain pinned to app version compatibility'],
+  [/"checkAutomatically"\s*:\s*"ON_LOAD"/, 'preview binary must continue checking OTA updates on launch'],
+]);
