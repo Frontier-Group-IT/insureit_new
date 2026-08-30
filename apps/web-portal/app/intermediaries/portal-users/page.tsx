@@ -56,7 +56,6 @@ export default async function IntermediaryPortalUsersPage({
       .from("intermediaries")
       .select("id,display_name,intermediary_code,intermediary_type,portal_access_status,email,application_id,updated_at")
       .eq("intermediary_type", "partner")
-      .not("application_id", "is", null)
       .order("updated_at", { ascending: false })
       .limit(500)
       .returns<Intermediary[]>(),
