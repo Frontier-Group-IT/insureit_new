@@ -142,7 +142,7 @@ function buildMetricRail(data: DashboardCurrentData, access: DashboardAccess, _b
     metrics.push({
       label: "Open claims",
       value: data.claims.open.toLocaleString("en-IN"),
-      meta: data.claims.estimateExposure > 0 ? `${formatMoneyCompact(data.claims.estimateExposure)} estimate exposure` : `${data.claims.mtd} MTD`,
+      meta: data.claims.estimateExposure > 0 ? `${formatMoney(data.claims.estimateExposure)} estimate exposure` : `${data.claims.mtd} MTD`,
       href: "/claims",
       icon: DASHBOARD_ICON_ASSETS.claims,
     });
@@ -466,8 +466,8 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
   const headline = [
     { label: `Policies · ${business.periodShortLabel}`, value: business.policyCount.toLocaleString("en-IN") },
     ...(commercial ? [
-      { label: `Net premium · ${business.periodShortLabel}`, value: formatMoneyCompact(business.netPremium ?? 0) },
-      { label: "Avg. net / policy", value: formatMoneyCompact(business.averageNetPremium ?? 0) },
+      { label: `Net premium · ${business.periodShortLabel}`, value: formatMoney(business.netPremium ?? 0) },
+      { label: "Avg. net / policy", value: formatMoney(business.averageNetPremium ?? 0) },
     ] : []),
     { label: "Active producers", value: business.activeProducerCount.toLocaleString("en-IN") },
   ];
@@ -548,11 +548,11 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
 function CommercialOperations({ business }: { business: DashboardBusinessData }) {
   const commercial = business.commercial!;
   const metrics = [
-    { label: "Projected Pay-In", value: formatMoneyCompact(commercial.projectedPayin) },
-    { label: "TDS", value: formatMoneyCompact(commercial.tdsAmount) },
-    { label: "Pay-In after TDS", value: formatMoneyCompact(commercial.payinAfterTds) },
-    { label: "Partner Payout", value: formatMoneyCompact(commercial.partnerPayout) },
-    { label: "Retention", value: formatMoneyCompact(commercial.retention) },
+    { label: "Projected Pay-In", value: formatMoney(commercial.projectedPayin) },
+    { label: "TDS", value: formatMoney(commercial.tdsAmount) },
+    { label: "Pay-In after TDS", value: formatMoney(commercial.payinAfterTds) },
+    { label: "Partner Payout", value: formatMoney(commercial.partnerPayout) },
+    { label: "Retention", value: formatMoney(commercial.retention) },
   ];
 
   return (
@@ -629,7 +629,7 @@ function ClaimHealth({ claims }: { claims: NonNullable<DashboardCurrentData["cla
         </div>
         {claims.estimateExposure > 0 ? (
           <div className="min-w-0 text-right">
-            <p className="portal-display text-[17px] font-semibold text-[#1F5B56]">{formatMoneyCompact(claims.estimateExposure)}</p>
+            <p className="portal-display text-[17px] font-semibold text-[#1F5B56]">{formatMoney(claims.estimateExposure)}</p>
             <p className="mt-0.5 text-[7px] font-bold uppercase tracking-[.08em] text-[#8995A7]">Estimate exposure</p>
           </div>
         ) : null}
@@ -651,7 +651,7 @@ function ClaimHealth({ claims }: { claims: NonNullable<DashboardCurrentData["cla
       <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 border-t border-[#EEF2F6] pt-3 text-[7.5px] font-semibold text-[#758297]">
         {claims.assistanceRequested ? <span><b className="text-[#D15A52]">{claims.assistanceRequested}</b> assistance requested</span> : null}
         {claims.pendingDocuments ? <span><b className="text-[#31415D]">{claims.pendingDocuments}</b> documents pending</span> : null}
-        {claims.billExposure ? <span>Bill exposure <b className="text-[#31415D]">{formatMoneyCompact(claims.billExposure)}</b></span> : null}
+        {claims.billExposure ? <span>Bill exposure <b className="text-[#31415D]">{formatMoney(claims.billExposure)}</b></span> : null}
       </div>
     </div>
   );
@@ -791,7 +791,7 @@ function MixColumn({ title, rows, divided }: { title: string; rows: DashboardBus
               <div className="flex items-start justify-between gap-3">
                 <span className="min-w-0 flex-1 whitespace-normal break-words text-[8.5px] font-semibold leading-relaxed text-[#435169]">{row.label || "Incomplete"}</span>
                 <span className="max-w-[44%] shrink-0 whitespace-normal break-words text-right text-[8px] font-bold leading-relaxed text-[#28364F]">
-                  {amountMode ? formatMoneyCompact(value) : row.policies}
+                  {amountMode ? formatMoney(value) : row.policies}
                   <span className="ml-1 font-semibold text-[#99A3B2]">· {share}%</span>
                 </span>
               </div>
@@ -822,7 +822,7 @@ function TopColumn({ title, rows, totalAmount, divided }: { title: string; rows:
               <p className="mt-0.5 text-[7px] font-semibold text-[#96A1B1]">{row.policies} policies</p>
             </div>
             <div className="min-w-0 text-right">
-              <p className="whitespace-normal break-words text-[9px] font-bold leading-snug text-[#26354F]">{formatMoneyCompact(row.netPremium)}</p>
+              <p className="whitespace-normal break-words text-[9px] font-bold leading-snug text-[#26354F]">{formatMoney(row.netPremium)}</p>
               <p className="mt-0.5 text-[7px] font-semibold text-[#96A1B1]">{amountShare(row.netPremium, totalAmount)}%</p>
             </div>
           </div>
@@ -853,7 +853,7 @@ function Leaderboard({ title, rows, totalAmount, href, divided = false, compact 
               </p>
             </div>
             <div className="min-w-0 text-right">
-              <p className="portal-display whitespace-normal break-words text-[14px] font-semibold leading-snug text-[#17365D]">{formatMoneyCompact(row.netPremium)}</p>
+              <p className="portal-display whitespace-normal break-words text-[14px] font-semibold leading-snug text-[#17365D]">{formatMoney(row.netPremium)}</p>
               <p className="mt-0.5 text-[7px] font-semibold text-[#8D99AA]">{amountShare(row.netPremium, totalAmount)}% of period</p>
             </div>
           </Link>
@@ -963,12 +963,13 @@ function formatAge(value: string) {
   return hours < 24 ? `${hours}h ago` : `${Math.round(hours / 24)}d ago`;
 }
 
-function formatMoneyCompact(value: number) {
-  const absolute = Math.abs(value);
-  if (absolute >= 10000000) return `₹${(value / 10000000).toFixed(1)} Cr`;
-  if (absolute >= 100000) return `₹${(value / 100000).toFixed(1)} L`;
-  if (absolute >= 1000) return `₹${(value / 1000).toFixed(1)} K`;
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
+function formatMoney(value: number) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    currencyDisplay: "symbol",
+    maximumFractionDigits: 0,
+  }).format(value);
 }
 
 function railGrid(count: number) {
