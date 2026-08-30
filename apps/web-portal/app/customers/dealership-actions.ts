@@ -40,7 +40,7 @@ export async function createDealershipOnboarding(_state: DealershipOnboardingSta
   const locationId = text(formData, "india_location_id");
   const oemName = text(formData, "oem_name");
   const yearlySalesBand = text(formData, "yearly_sales_band");
-  const isGstRegistered = formData.get("is_gst_registered") === "true";
+  const isGstRegistered = true;
   const gstNumber = text(formData, "gst_number")?.replace(/\s/g, "").toUpperCase() ?? null;
   const representativeName = text(formData, "representative_name");
   const representativePhone = normalizePhone(text(formData, "representative_mobile"));
@@ -52,20 +52,23 @@ export async function createDealershipOnboarding(_state: DealershipOnboardingSta
   if (!dealershipName) return fail("Enter the dealership name.", "dealership_name");
   if (!ownerName) return fail("Enter the owner name.", "owner_name");
   if (!phone) return fail("Enter a valid 10-digit mobile number.", "phone");
+  if (!text(formData, "address_street")) return fail("Enter the street address.", "address_street");
   if (!locationId || !city || !state || !postalCode) return fail("Select a city and confirm State and PIN Code.", "city_search");
   if (!oemName) return fail("Select the dealership OEM.", "oem_name");
   if (!yearlySalesBand) return fail("Select yearly sales.", "yearly_sales_band");
-  if (isGstRegistered && (!gstNumber || !GSTIN_PATTERN.test(gstNumber))) return fail("Enter a valid 15-character GSTIN.", "gst_number");
+  if (!gstNumber || !GSTIN_PATTERN.test(gstNumber)) return fail("Enter a valid 15-character GSTIN.", "gst_number");
   if (!representativeName) return fail(`Enter the ${dealershipType === "posp" ? "POSP" : "DP"} name.`, "representative_name");
   if (!representativePhone) return fail("Enter a valid representative mobile number.", "representative_mobile");
   if (!aadhaarNumber || !/^[0-9]{12}$/.test(aadhaarNumber)) return fail("Enter a valid 12-digit Aadhaar number.", "representative_aadhaar");
   if (!panNumber || !PAN_PATTERN.test(panNumber)) return fail("Enter a valid PAN number.", "representative_pan");
 
   const requiredFiles: Array<[string, string, boolean]> = [
-    ["gst_copy", "GST certificate", isGstRegistered],
+    ["gst_copy", "GST certificate", true],
+    ["company_cheque_copy", "Company cheque copy", true],
     ["representative_aadhaar_front", "Aadhaar front", true],
     ["representative_aadhaar_back", "Aadhaar back", true],
-    ["representative_pan_copy", "PAN copy", true]
+    ["representative_pan_copy", "PAN copy", true],
+    ["representative_marksheet", "DP marksheet", dealershipType === "misp"]
   ];
   for (const [field, label, required] of requiredFiles) { const error = validateFile(file(formData, field), label, required); if (error) return fail(error, field); }
 
@@ -81,7 +84,7 @@ export async function createDealershipOnboarding(_state: DealershipOnboardingSta
       partnerType: "dealership",
       phone,
       email,
-      draftData: { dealership_type: dealershipType, dealership_name: dealershipName, owner_name: ownerName, city, state, postal_code: postalCode, oem_name: oemName, yearly_sales_band: yearlySalesBand, is_gst_registered: isGstRegistered }
+      draftData: { dealership_type: dealershipType, dealership_name: dealershipName, owner_name: ownerName, city, state, postal_code: postalCode, oem_name: oemName, yearly_sales_band: yearlySalesBand, is_gst_registered: true }
     });
   } catch (error) {
     return fail(`Onboarding application could not be prepared: ${error instanceof Error ? error.message : "Unknown error"}`);
@@ -103,8 +106,8 @@ export async function createDealershipOnboarding(_state: DealershipOnboardingSta
     city,
     state,
     postal_code: postalCode,
-    is_gst_registered: isGstRegistered,
-    gst_number: isGstRegistered ? gstNumber : null,
+    is_gst_registered: true,
+    gst_number: gstNumber,
     onboarding_status: "active",
     created_by: profile.id,
     updated_by: profile.id
@@ -134,9 +137,11 @@ export async function createDealershipOnboarding(_state: DealershipOnboardingSta
 
   const documentMap: Array<[string, string]> = [
     ["gst_copy", "gst_copy"],
+    ["company_cheque_copy", "company_cheque_copy"],
     ["representative_aadhaar_front", "aadhaar_front"],
     ["representative_aadhaar_back", "aadhaar_back"],
-    ["representative_pan_copy", "pan_copy"]
+    ["representative_pan_copy", "pan_copy"],
+    ...(dealershipType === "misp" ? [["representative_marksheet", "dp_marksheet"] as [string, string]] : [])
   ];
   const uploaded: string[] = [];
   for (const [field, documentType] of documentMap) {
