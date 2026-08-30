@@ -16,13 +16,18 @@ assert.doesNotMatch(
 );
 assert.match(
   dashboardPage,
-  /getOperationsDashboardData\(supabase, accessToken\)/,
-  "Dashboard base data should reuse the existing authenticated access token.",
+  /const \[base, permissionMap\] = await Promise\.all\(\[/,
+  "Dashboard base data and permission map should load in parallel after authentication.",
 );
 assert.match(
+  dashboardPage,
+  /getOperationsDashboardData\(supabase, profile\)/,
+  "Dashboard base data should reuse the already-authenticated profile.",
+);
+assert.doesNotMatch(
   dashboardData,
-  /getAuthenticatedProfile\(accessToken\)/,
-  "Operations dashboard should reuse the request-cached authentication helper.",
+  /getAuthenticatedProfile\(/,
+  "Operations dashboard should not perform another authentication lookup.",
 );
 assert.doesNotMatch(
   dashboardData,
