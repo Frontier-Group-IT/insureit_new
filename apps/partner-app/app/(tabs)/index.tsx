@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback } from 'react';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -12,45 +12,40 @@ import { PartnerSkeleton } from '@/components/ui/partner-skeleton';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerHome, type PartnerHomeData } from '@/lib/home';
 import { getPartnerStories, type PartnerStory } from '@/lib/stories';
+import { usePartnerQuery } from '@/lib/use-partner-query';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 export default function PartnerHomeScreen() {
   const router = useRouter();
-  const { context } = usePartnerSession();
-  const hasLoaded = useRef(false);
-  const [data, setData] = useState<PartnerHomeData | null>(null);
-  const [stories, setStories] = useState<PartnerStory[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState('');
+  const { context, cacheScopeKey } = usePartnerSession();
 
-  const load = useCallback(async (manualRefresh = false) => {
-    if (manualRefresh) setRefreshing(true);
-    else if (!hasLoaded.current) setLoading(true);
-    setError('');
+  const fetchHomeWorkspace = useCallback(async (): Promise<{ home: PartnerHomeData; stories: PartnerStory[] }> => {
+    const [homeResult, storiesResult] = await Promise.allSettled([
+      getPartnerHome(),
+      getPartnerStories(),
+    ]);
 
-    try {
-      const [homeResult, storiesResult] = await Promise.allSettled([
-        getPartnerHome(),
-        getPartnerStories(),
-      ]);
-
-      if (homeResult.status === 'rejected') throw homeResult.reason;
-      setData(homeResult.value);
-      setStories(storiesResult.status === 'fulfilled' ? storiesResult.value.items : []);
-    } catch {
-      setError('Your business Home could not be refreshed.');
-    } finally {
-      hasLoaded.current = true;
-      setLoading(false);
-      setRefreshing(false);
-    }
+    if (homeResult.status === 'rejected') throw homeResult.reason;
+    return {
+      home: homeResult.value,
+      stories: storiesResult.status === 'fulfilled' ? storiesResult.value.items : [],
+    };
   }, []);
 
+  const workspace = usePartnerQuery({
+    scopeKey: cacheScopeKey,
+    key: 'home:workspace',
+    fetcher: fetchHomeWorkspace,
+    staleTimeMs: 60_000,
+  });
+
   useFocusEffect(useCallback(() => {
-    void load(false);
-  }, [load]));
+    void workspace.ensureFresh();
+  }, [workspace.ensureFresh]));
+
+  const data = workspace.data?.home ?? null;
+  const stories = workspace.data?.stories ?? [];
 
   if (!context) return null;
 
@@ -83,8 +78,8 @@ export default function PartnerHomeScreen() {
       scrollProps={{
         refreshControl: (
           <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => void load(true)}
+            refreshing={workspace.refreshing}
+            onRefresh={() => void workspace.refresh()}
             tintColor={partnerTheme.colors.brand}
             colors={[partnerTheme.colors.brand]}
           />
@@ -96,23 +91,26 @@ export default function PartnerHomeScreen() {
         {data ? <Text style={styles.updated}>{formatUpdatedAt(data.generated_at)}</Text> : null}
       </View>
 
-      {loading ? (
+      {workspace.loading && !data ? (
         <HomeSkeleton />
       ) : !data ? (
         <PartnerStateView
           state="error"
           title="Home is unavailable"
-          message={error || 'We could not load your Partner workspace.'}
+          message={workspace.error || 'We could not load your Partner workspace.'}
           actionLabel="Try again"
-          onAction={() => void load(true)}
+          onAction={() => void workspace.refresh()}
         />
       ) : (
         <>
-          {error ? (
+          {workspace.stale || workspace.error ? (
             <View style={styles.refreshWarning}>
               <PartnerBanner
                 tone="warning"
-                message="We could not refresh just now. The information below is the last successfully loaded snapshot."
+                title={workspace.offline ? "You're offline" : 'Showing cached information'}
+                message={workspace.stale
+                  ? `Last refreshed ${formatCacheTime(workspace.updatedAt)}. Pull down to try again.`
+                  : workspace.error}
               />
             </View>
           ) : null}
@@ -396,6 +394,11 @@ function formatMoney(value: number | string) {
   if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
   if (amount >= 1000) return `₹${(amount / 1000).toFixed(1)}K`;
   return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(amount)}`;
+}
+
+function formatCacheTime(value: number | null) {
+  if (!value) return 'earlier';
+  return new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
 }
 
 function formatUpdatedAt(value: string) {
