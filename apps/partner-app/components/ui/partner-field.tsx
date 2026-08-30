@@ -1,18 +1,23 @@
-import type { ComponentProps } from 'react';
+import { forwardRef, type ComponentProps } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { partnerTheme } from '@/lib/theme';
 
-export function PartnerField({
-  label,
-  error,
-  helper,
-  ...inputProps
-}: ComponentProps<typeof TextInput> & {
+type PartnerFieldProps = ComponentProps<typeof TextInput> & {
   label: string;
   error?: string;
   helper?: string;
-}) {
+};
+
+export const PartnerField = forwardRef<TextInput, PartnerFieldProps>(function PartnerField(
+  {
+    label,
+    error,
+    helper,
+    ...inputProps
+  },
+  ref,
+) {
   const accessibilityHint = error || helper || inputProps.accessibilityHint;
   const accessibilityState = {
     ...inputProps.accessibilityState,
@@ -24,6 +29,7 @@ export function PartnerField({
       <Text style={styles.label}>{label}</Text>
       <TextInput
         {...inputProps}
+        ref={ref}
         accessibilityLabel={inputProps.accessibilityLabel || label}
         accessibilityHint={accessibilityHint}
         accessibilityState={accessibilityState}
@@ -39,7 +45,7 @@ export function PartnerField({
       ) : null}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   label: { marginBottom: 7, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.label },
