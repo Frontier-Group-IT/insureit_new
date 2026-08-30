@@ -14,12 +14,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const query = await searchParams;
   const supabase = await createServerSupabaseClient();
   const accessToken = await getServerAccessToken();
-  const [{ profile }, base] = await Promise.all([
-    getAuthenticatedProfile(accessToken),
-    getOperationsDashboardData(supabase, accessToken),
+  const { profile } = await getAuthenticatedProfile(accessToken);
+  const [base, permissionMap] = await Promise.all([
+    getOperationsDashboardData(supabase, profile),
+    getEffectivePermissionAccessMap(profile),
   ]);
-
-  const permissionMap = await getEffectivePermissionAccessMap(profile);
   const can = (
     capability: keyof typeof permissionMap,
     minimum: "view" | "edit" | "approve" = "view",

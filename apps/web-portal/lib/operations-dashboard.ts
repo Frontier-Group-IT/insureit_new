@@ -2,7 +2,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { getScopedOperationsDashboardData } from "@/lib/scoped-operations-dashboard";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { getAuthenticatedProfile } from "@/lib/auth-server";
 
 type RecentApplication = {
   id: string;
@@ -60,8 +59,10 @@ const closedClaimStatuses = ["Claim Complete", "Settled", "Closed"];
 const openTaskStatuses = ["open", "in_progress"];
 const activeOnboardingStatuses = ["submitted", "under_review", "changes_requested"];
 
-export async function getOperationsDashboardData(supabase: SupabaseClient, accessToken?: string): Promise<OperationsDashboardData> {
-  const { profile } = await getAuthenticatedProfile(accessToken);
+export async function getOperationsDashboardData(
+  supabase: SupabaseClient,
+  profile?: { id: string; role: string | null } | null,
+): Promise<OperationsDashboardData> {
   if (profile?.id) {
     const admin = createSupabaseAdminClient();
     const customerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_customers");
