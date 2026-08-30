@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: partnerTheme.spacing.xl,
-    backgroundColor: partnerTheme.colors.background,
+    backgroundColor: partnerTheme.colors.canvas,
   },
   card: {
     borderRadius: partnerTheme.radius.xl,
