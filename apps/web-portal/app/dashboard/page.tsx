@@ -4,12 +4,14 @@ import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { getOperationsDashboardData } from "@/lib/operations-dashboard";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { getDashboardCurrentData, type DashboardAccess } from "../dashboard-v2/dashboard-data";
+import { getDashboardBusinessData, type DashboardBusinessQuery } from "../dashboard-v2/dashboard-business";
 import { DashboardFullyLoaded } from "../dashboard-v2/dashboard-view";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<DashboardBusinessQuery> }) {
+  const query = await searchParams;
   const supabase = await createServerSupabaseClient();
   const accessToken = await getServerAccessToken();
   const [{ profile }, base] = await Promise.all([
@@ -62,13 +64,17 @@ export default async function DashboardPage() {
     commercial,
   };
 
-  const data = await getDashboardCurrentData(profile, access, base);
+  const [data, business] = await Promise.all([
+    getDashboardCurrentData(profile, access, base),
+    getDashboardBusinessData(profile, query, commercial, accountsCapability && commercial),
+  ]);
 
   return (
     <ClaimManagerShell title="Operations Overview" activeNav="dashboard">
       <DashboardFullyLoaded
         data={data}
         access={access}
+        business={business}
         canCreatePolicy={createPolicies || editPolicies}
         canCreatePolicyIntake={createPolicyIntakes}
       />

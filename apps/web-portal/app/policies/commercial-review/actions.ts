@@ -27,6 +27,9 @@ type PayinRow = {
   projected_tp_percent: number | null;
   insurer_scheme_amount: number | null;
   total_projected_payin: number | null;
+  tds_percent: number | null;
+  tds_amount: number | null;
+  payin_after_tds: number | null;
   commercial_status: CommercialStatus | null;
   commercial_note: string | null;
 };
@@ -36,6 +39,8 @@ type PayoutRow = {
   od_payout_percent: number | null;
   tp_payout_percent: number | null;
   gross_payout: number | null;
+  partner_payout_amount: number | null;
+  retention_amount: number | null;
   commercial_status: CommercialStatus | null;
   commercial_note: string | null;
 };
@@ -87,8 +92,8 @@ export async function bulkSavePolicyCommercials(input: BulkCommercialInput) {
   const admin = createSupabaseAdminClient();
   const [premiumResult, payinResult, payoutResult] = await Promise.all([
     admin.from("policy_premium_details").select("policy_id,od_premium,tp_premium,cpa_amount").in("policy_id", policyIds).returns<PremiumRow[]>(),
-    admin.from("policy_payin_details").select("id,policy_id,payout_basis,projected_od_percent,projected_tp_percent,insurer_scheme_amount,total_projected_payin,commercial_status,commercial_note").in("policy_id", policyIds).returns<PayinRow[]>(),
-    admin.from("policy_intermediary_payouts").select("id,policy_id,od_payout_percent,tp_payout_percent,gross_payout,commercial_status,commercial_note").in("policy_id", policyIds).order("created_at", { ascending: false }).returns<PayoutRow[]>(),
+    admin.from("policy_payin_details").select("id,policy_id,payout_basis,projected_od_percent,projected_tp_percent,insurer_scheme_amount,total_projected_payin,tds_percent,tds_amount,payin_after_tds,commercial_status,commercial_note").in("policy_id", policyIds).returns<PayinRow[]>(),
+    admin.from("policy_intermediary_payouts").select("id,policy_id,od_payout_percent,tp_payout_percent,gross_payout,partner_payout_amount,retention_amount,commercial_status,commercial_note").in("policy_id", policyIds).order("created_at", { ascending: false }).returns<PayoutRow[]>(),
   ]);
 
   const loadError = premiumResult.error ?? payinResult.error ?? payoutResult.error;
@@ -116,6 +121,9 @@ export async function bulkSavePolicyCommercials(input: BulkCommercialInput) {
       const projectedOdAmount = odPremium * nextOd / 100;
       const projectedTpAmount = tpCpaPremium * nextTp / 100;
       const totalProjectedPayin = projectedOdAmount + projectedTpAmount + nextScheme;
+      const tdsPercent = Number(current?.tds_percent ?? 10);
+      const tdsAmount = totalProjectedPayin * tdsPercent / 100;
+      const payinAfterTds = totalProjectedPayin - tdsAmount;
       const nextStatus: CommercialStatus = input.status ?? (hasValues ? "entered" : current?.commercial_status ?? "needs_review");
       const values = {
         payout_basis: current?.payout_basis ?? "NET",
@@ -125,17 +133,30 @@ export async function bulkSavePolicyCommercials(input: BulkCommercialInput) {
         projected_tp_amount: projectedTpAmount,
         insurer_scheme_amount: nextScheme,
         total_projected_payin: totalProjectedPayin,
+        tds_percent: tdsPercent,
+        tds_amount: tdsAmount,
+        payin_after_tds: payinAfterTds,
         commercial_status: nextStatus,
         commercial_note: note ?? current?.commercial_note ?? null,
         commercial_reviewed_at: nextStatus === "reviewed" ? reviewedAt : null,
         commercial_reviewed_by: nextStatus === "reviewed" ? reviewedBy : null,
-        calculation_version: "commercial_control_v2",
+        calculation_version: "commercial_control_v3",
         updated_at: new Date().toISOString(),
       };
       const result = current
         ? await admin.from("policy_payin_details").update(values).eq("id", current.id)
         : await admin.from("policy_payin_details").insert({ policy_id: policyId, ...values });
       if (result.error) return { ok: false as const, error: result.error.message };
+
+      const currentPayout = payoutByPolicy.get(policyId);
+      if (currentPayout) {
+        const effectivePayout = currentPayout.partner_payout_amount ?? currentPayout.gross_payout ?? 0;
+        const retentionResult = await admin
+          .from("policy_intermediary_payouts")
+          .update({ retention_amount: payinAfterTds - Number(effectivePayout), updated_at: new Date().toISOString() })
+          .eq("id", currentPayout.id);
+        if (retentionResult.error) return { ok: false as const, error: retentionResult.error.message };
+      }
 
       const event = await admin.from("commercial_control_events").insert({
         policy_id: policyId,
@@ -154,6 +175,8 @@ export async function bulkSavePolicyCommercials(input: BulkCommercialInput) {
       const odAmount = odPremium * nextOd / 100;
       const tpAmount = tpCpaPremium * nextTp / 100;
       const grossPayout = odAmount + tpAmount;
+      const payinAfterTds = Number(payinByPolicy.get(policyId)?.payin_after_tds ?? 0);
+      const retentionAmount = payinAfterTds - grossPayout;
       const nextStatus: CommercialStatus = input.status ?? (hasValues ? "entered" : current?.commercial_status ?? "needs_review");
       const values = {
         od_payout_percent: nextOd,
@@ -161,16 +184,17 @@ export async function bulkSavePolicyCommercials(input: BulkCommercialInput) {
         tp_payout_percent: nextTp,
         tp_payout_amount: tpAmount,
         gross_payout: grossPayout,
+        retention_amount: retentionAmount,
         commercial_status: nextStatus,
         commercial_note: note ?? current?.commercial_note ?? null,
         commercial_reviewed_at: nextStatus === "reviewed" ? reviewedAt : null,
         commercial_reviewed_by: nextStatus === "reviewed" ? reviewedBy : null,
-        calculation_version: "commercial_control_v2",
+        calculation_version: "commercial_control_v3",
         updated_at: new Date().toISOString(),
       };
       const result = current
         ? await admin.from("policy_intermediary_payouts").update(values).eq("id", current.id)
-        : await admin.from("policy_intermediary_payouts").insert({ policy_id: policyId, retention_amount: 0, status: "Pending", ...values });
+        : await admin.from("policy_intermediary_payouts").insert({ policy_id: policyId, status: "Pending", ...values });
       if (result.error) return { ok: false as const, error: result.error.message };
 
       const event = await admin.from("commercial_control_events").insert({
@@ -190,5 +214,6 @@ export async function bulkSavePolicyCommercials(input: BulkCommercialInput) {
   revalidatePath("/accounts");
   revalidatePath("/policies/commercial-review");
   revalidatePath("/reports/finance");
+  revalidatePath("/dashboard");
   return { ok: true as const, updated };
 }

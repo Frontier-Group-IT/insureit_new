@@ -1,18 +1,23 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight, ChevronRight, Plus } from "lucide-react";
+import { ArrowUpRight, Check, ChevronRight, Filter, Plus, RotateCcw } from "lucide-react";
 import { DASHBOARD_ICON_ASSETS } from "@/lib/dashboard-icon-assets";
 import type {
-  AmountMixRow,
   DashboardAccess,
   DashboardCurrentData,
   DashboardIntakeRow,
-  RankedBusinessRow,
 } from "./dashboard-data";
+import type {
+  DashboardBusinessData,
+  DashboardBusinessMixRow,
+  DashboardBusinessRankRow,
+  DashboardFilterOption,
+} from "./dashboard-business";
 
 type Props = {
   data: DashboardCurrentData;
   access: DashboardAccess;
+  business: DashboardBusinessData;
   canCreatePolicy: boolean;
   canCreatePolicyIntake: boolean;
 };
@@ -34,9 +39,9 @@ type RailMetric = {
   icon: string;
 };
 
-export function DashboardFullyLoaded({ data, access, canCreatePolicy, canCreatePolicyIntake }: Props) {
-  const attention = buildAttention(data, access);
-  const rail = buildMetricRail(data, access);
+export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, canCreatePolicyIntake }: Props) {
+  const attention = buildAttention(data, access, business);
+  const rail = buildMetricRail(data, access, business);
   const renewalTotal = data.renewals
     ? data.renewals.expired + data.renewals.due0to7 + data.renewals.due8to15 + data.renewals.due16to30 + data.renewals.due31to45
     : 0;
@@ -83,11 +88,12 @@ export function DashboardFullyLoaded({ data, access, canCreatePolicy, canCreateP
         </div>
       </header>
 
-      {data.warnings.length ? (
+      {[...data.warnings, ...business.warnings].length ? (
         <div className="mt-4 border-l-2 border-amber-400 bg-amber-50 px-4 py-2.5 text-[9px] font-semibold text-amber-900">
-          {data.warnings.join(" ")}
+          {[...data.warnings, ...business.warnings].join(" ")}
         </div>
       ) : null}
+
 
       {rail.length ? (
         <section className={`mt-5 grid border-y border-[#D8E0EA] bg-white ${railGrid(rail.length)}`}>
@@ -99,9 +105,9 @@ export function DashboardFullyLoaded({ data, access, canCreatePolicy, canCreateP
 
       {attention.length ? <NeedsAttention items={attention} /> : null}
 
-      {data.mtd ? <MtdBusiness data={data} /> : null}
+      {access.viewPolicies ? <BusinessPerformance business={business} /> : null}
 
-      {data.commercial ? <CommercialOperations data={data} /> : null}
+      {business.commercial ? <CommercialOperations business={business} /> : null}
 
       {showHealth ? <PortfolioHealth data={data} renewalTotal={renewalTotal} /> : null}
 
@@ -110,7 +116,7 @@ export function DashboardFullyLoaded({ data, access, canCreatePolicy, canCreateP
   );
 }
 
-function buildMetricRail(data: DashboardCurrentData, access: DashboardAccess): RailMetric[] {
+function buildMetricRail(data: DashboardCurrentData, access: DashboardAccess, _business: DashboardBusinessData): RailMetric[] {
   const metrics: RailMetric[] = [];
 
   if (access.viewPolicies) {
@@ -129,16 +135,6 @@ function buildMetricRail(data: DashboardCurrentData, access: DashboardAccess): R
       meta: composition || undefined,
       href: "/policies",
       icon: DASHBOARD_ICON_ASSETS.policy,
-    });
-  }
-
-  if (data.mtd) {
-    metrics.push({
-      label: data.mtd.grossPremium !== null ? "Gross premium MTD" : "Policies MTD",
-      value: data.mtd.grossPremium !== null ? formatMoneyCompact(data.mtd.grossPremium) : data.mtd.policies.toLocaleString("en-IN"),
-      meta: data.mtd.grossPremium !== null ? `${data.mtd.policies} policies` : `${data.mtd.activeProducers} active producers`,
-      href: "/reports",
-      icon: DASHBOARD_ICON_ASSETS.reportsAnalytics,
     });
   }
 
@@ -185,7 +181,7 @@ function buildMetricRail(data: DashboardCurrentData, access: DashboardAccess): R
   return metrics.slice(0, 6);
 }
 
-function buildAttention(data: DashboardCurrentData, access: DashboardAccess): AttentionSignal[] {
+function buildAttention(data: DashboardCurrentData, access: DashboardAccess, business: DashboardBusinessData): AttentionSignal[] {
   const rows: AttentionSignal[] = [];
   if (data.policyIntakes?.ready) {
     rows.push({
@@ -239,10 +235,19 @@ function buildAttention(data: DashboardCurrentData, access: DashboardAccess): At
     });
   }
 
-  if (data.commercial?.needsReviewMtd) {
+  if (business.commercial?.reconciliationExceptions) {
     rows.push({
-      label: "Commercial review MTD",
-      value: data.commercial.needsReviewMtd,
+      label: "Commercial reconciliation",
+      value: business.commercial.reconciliationExceptions,
+      detail: "Pay-In / TDS mismatch",
+      href: "/policies/commercial-review",
+      icon: DASHBOARD_ICON_ASSETS.reconciliationException,
+      tone: "red",
+    });
+  } else if (business.commercial?.needsReview) {
+    rows.push({
+      label: "Commercial review",
+      value: business.commercial.needsReview,
       href: "/policies/commercial-review",
       icon: DASHBOARD_ICON_ASSETS.reconciliationException,
       tone: "amber",
@@ -290,91 +295,265 @@ function NeedsAttention({ items }: { items: AttentionSignal[] }) {
   );
 }
 
-function MtdBusiness({ data }: { data: DashboardCurrentData }) {
-  const mtd = data.mtd!;
-  const commercial = mtd.grossPremium !== null;
-  const headline = [
-    { label: "Policies MTD", value: mtd.policies.toLocaleString("en-IN") },
-    ...(commercial ? [
-      { label: "Gross premium MTD", value: formatMoneyCompact(mtd.grossPremium ?? 0) },
-      { label: "Net premium MTD", value: formatMoneyCompact(mtd.netPremium ?? 0) },
-      { label: "Avg. gross / policy", value: formatMoneyCompact(mtd.averageGrossPremium ?? 0) },
-    ] : []),
-    { label: "Active producers MTD", value: mtd.activeProducers.toLocaleString("en-IN") },
-  ];
+function BusinessFilterPopover({ business }: { business: DashboardBusinessData }) {
+  const filters = business.filters;
+  const activeCount = business.appliedFilterCount + (filters.period !== "mtd" ? 1 : 0);
 
-  const totalAmount = mtd.grossPremium ?? 0;
+  return (
+    <details className="group relative">
+      <summary
+        className="relative flex h-9 w-9 cursor-pointer list-none items-center justify-center border border-[#CBD5E1] bg-white text-[#42516A] transition hover:border-[#879AB4] hover:bg-[#F8FAFC] [&::-webkit-details-marker]:hidden"
+        title="Filter business performance"
+        aria-label="Filter business performance"
+      >
+        <Filter className="h-4 w-4" strokeWidth={1.8} />
+        {activeCount ? (
+          <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center bg-[#203A63] px-1 text-[7px] font-black text-white">
+            {activeCount}
+          </span>
+        ) : null}
+      </summary>
+
+      <div className="absolute right-0 z-30 mt-2 w-[min(720px,calc(100vw-3rem))] border border-[#D5DEE9] bg-white shadow-[0_22px_55px_rgba(15,35,65,.16)]">
+        <form action="/dashboard" method="get">
+          <div className="flex items-start justify-between gap-4 border-b border-[#E5EAF1] px-5 py-4">
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold text-[#182A47]">Business filters</p>
+              <p className="mt-1 whitespace-normal break-words text-[7.5px] font-semibold leading-relaxed text-[#8794A7]">
+                Filters apply only to Business Performance and Commercial Operations.
+              </p>
+            </div>
+            <div className="shrink-0 text-right">
+              <p className="text-[7px] font-black uppercase tracking-[.1em] text-[#94A0B1]">Current view</p>
+              <p className="mt-1 max-w-[220px] whitespace-normal break-words text-[8.5px] font-semibold leading-relaxed text-[#34445F]">
+                {business.periodLabel}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
+            <FilterSelect
+              name="period"
+              label="Period"
+              value={filters.period}
+              options={[
+                { value: "mtd", label: "Month to date" },
+                { value: "today", label: "Today" },
+                { value: "yesterday", label: "Yesterday" },
+                { value: "7d", label: "Last 7 days" },
+                { value: "30d", label: "Last 30 days" },
+                { value: "fy", label: "This FY" },
+                { value: "custom", label: "Custom date range" },
+              ]}
+            />
+            <FilterSelect
+              name="rm"
+              label="Relationship Manager"
+              value={filters.rmEmployeeId ?? ""}
+              options={business.options.rms}
+              allLabel="All RMs"
+            />
+            <FilterSelect
+              name="insurer"
+              label="Insurer"
+              value={filters.insurerId ?? ""}
+              options={business.options.insurers}
+              allLabel="All insurers"
+            />
+            <FilterSelect
+              name="partner"
+              label="Partner"
+              value={filters.intermediaryCode ?? ""}
+              options={business.options.partners}
+              allLabel="All partners"
+            />
+
+            {filters.period === "custom" ? (
+              <>
+                <DateField name="from" label="From date" value={filters.fromDate} />
+                <DateField name="to" label="To date" value={filters.toDate} />
+              </>
+            ) : null}
+          </div>
+
+          <details className="border-t border-[#EDF1F5]">
+            <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-3 text-[8px] font-bold text-[#596A82] [&::-webkit-details-marker]:hidden">
+              <span>Additional filters</span>
+              <span className="font-semibold text-[#97A2B2]">Partner type · Business line · Vehicle class</span>
+            </summary>
+            <div className="grid gap-4 border-t border-[#EDF1F5] bg-[#FBFCFE] px-5 py-4 sm:grid-cols-3">
+              <FilterSelect
+                name="partnerType"
+                label="Partner type"
+                value={filters.intermediaryType ?? ""}
+                options={business.options.partnerTypes}
+                allLabel="All partner types"
+              />
+              <FilterSelect
+                name="business"
+                label="Business line"
+                value={filters.businessLine ?? ""}
+                options={business.options.businessLines}
+                allLabel="All business lines"
+              />
+              <FilterSelect
+                name="vehicleClass"
+                label="Vehicle class"
+                value={filters.vehicleClass ?? ""}
+                options={business.options.vehicleClasses}
+                allLabel="All vehicle classes"
+              />
+            </div>
+          </details>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E5EAF1] bg-[#FBFCFE] px-5 py-3">
+            <Link
+              href="/dashboard"
+              className="inline-flex h-8 items-center gap-1.5 px-1 text-[8px] font-bold text-[#718096] hover:text-[#203A63]"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Reset business filters
+            </Link>
+            <button
+              type="submit"
+              className="inline-flex h-8 items-center gap-1.5 bg-[#203A63] px-4 text-[8px] font-bold text-white transition hover:bg-[#173157]"
+            >
+              <Check className="h-3.5 w-3.5" />
+              Apply filters
+            </button>
+          </div>
+        </form>
+      </div>
+    </details>
+  );
+}
+
+function FilterSelect({
+  name,
+  label,
+  value,
+  options,
+  allLabel,
+}: {
+  name: string;
+  label: string;
+  value: string;
+  options: DashboardFilterOption[];
+  allLabel?: string;
+}) {
+  return (
+    <label className="block min-w-0">
+      <span className="mb-1 block text-[7px] font-black uppercase tracking-[.08em] text-[#8995A7]">{label}</span>
+      <select name={name} defaultValue={value} className="min-h-[38px] w-full border border-[#CBD5E1] bg-white px-2.5 py-2 text-[8.5px] font-semibold leading-relaxed text-[#2D3D58] outline-none focus:border-[#607DA9]">
+        {allLabel ? <option value="">{allLabel}</option> : null}
+        {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+      </select>
+    </label>
+  );
+}
+
+function DateField({ name, label, value }: { name: string; label: string; value: string }) {
+  return (
+    <label className="block min-w-0">
+      <span className="mb-1 block text-[7px] font-black uppercase tracking-[.08em] text-[#8995A7]">{label}</span>
+      <input type="date" name={name} defaultValue={value} className="min-h-[38px] w-full border border-[#CBD5E1] bg-white px-2.5 py-2 text-[8.5px] font-semibold text-[#2D3D58] outline-none focus:border-[#607DA9]" />
+    </label>
+  );
+}
+
+function BusinessPerformance({ business }: { business: DashboardBusinessData }) {
+  const commercial = business.netPremium !== null;
+  const headline = [
+    { label: `Policies · ${business.periodShortLabel}`, value: business.policyCount.toLocaleString("en-IN") },
+    ...(commercial ? [
+      { label: `Net premium · ${business.periodShortLabel}`, value: formatMoneyCompact(business.netPremium ?? 0) },
+      { label: "Avg. net / policy", value: formatMoneyCompact(business.averageNetPremium ?? 0) },
+    ] : []),
+    { label: "Active producers", value: business.activeProducerCount.toLocaleString("en-IN") },
+  ];
+  const totalAmount = business.netPremium ?? 0;
 
   return (
     <section className="mt-6 border-y border-[#D5DEE9] bg-white">
-      <div className="flex items-center justify-between px-4 py-3.5 sm:px-5">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-5">
+        <div className="flex min-w-0 items-center gap-3">
           <Icon src={DASHBOARD_ICON_ASSETS.reportsAnalytics} size={30} />
-          <div>
-            <h2 className="text-[12px] font-bold text-[#172844]">Month-to-date business</h2>
-            <p className="mt-0.5 text-[7.5px] font-bold uppercase tracking-[.11em] text-[#8A96A8]">{data.monthLabel}</p>
+          <div className="min-w-0">
+            <h2 className="whitespace-normal break-words text-[12px] font-bold leading-snug text-[#172844]">Business performance</h2>
+            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <p className="whitespace-normal break-words text-[7.5px] font-bold uppercase tracking-[.11em] text-[#8A96A8]">
+                {business.periodLabel}
+              </p>
+              {business.appliedFilterCount ? (
+                <span className="whitespace-normal break-words text-[7px] font-bold leading-relaxed text-[#52657F]">
+                  · {business.appliedFilterCount} additional {business.appliedFilterCount === 1 ? "filter" : "filters"}
+                </span>
+              ) : null}
+              {business.incompletePolicies ? (
+                <span className="whitespace-normal break-words text-[7px] font-bold leading-relaxed text-[#B66B1D]">
+                  · {business.incompletePolicies} incomplete
+                </span>
+              ) : null}
+            </div>
           </div>
         </div>
-        <Link href="/reports" className="text-[8.5px] font-bold text-[#65758B] hover:text-[#203A63]">Business reports ↗</Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <BusinessFilterPopover business={business} />
+          <Link
+            href="/reports/business"
+            className="inline-flex h-9 items-center px-2 text-[8.5px] font-bold text-[#65758B] hover:text-[#203A63]"
+          >
+            Business reports ↗
+          </Link>
+        </div>
       </div>
 
       <div className={`grid border-t border-[#E7ECF2] bg-[linear-gradient(90deg,#FBFCFF,#F8FAFD,#FAFFFE)] ${headlineGrid(headline.length)}`}>
         {headline.map((item, index) => (
           <div key={item.label} className={`${index ? "border-t sm:border-l sm:border-t-0" : ""} border-[#E5EAF1] px-4 py-4 sm:px-5`}>
-            <p className="portal-display text-[25px] font-semibold leading-none tracking-[-.02em] text-[#10213D]">{item.value}</p>
-            <p className="mt-2 text-[7.5px] font-bold uppercase tracking-[.095em] text-[#77869A]">{item.label}</p>
+            <p className="portal-display whitespace-normal break-words text-[25px] font-semibold leading-tight tracking-[-.02em] text-[#10213D]">{item.value}</p>
+            <p className="mt-2 whitespace-normal break-words text-[7.5px] font-bold uppercase leading-relaxed tracking-[.095em] text-[#77869A]">{item.label}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid border-t border-[#E7ECF2] xl:grid-cols-4">
-        <MixColumn title="Channel contribution" rows={mtd.channelMix} divided={false} />
-        <MixColumn title="Vehicle class" rows={mtd.vehicleClassMix} divided />
-        <MixColumn title="Coverage mix" rows={mtd.coverageMix} divided />
-        {commercial && mtd.topInsurers.length ? (
-          <TopColumn title="Top insurers" rows={mtd.topInsurers} totalAmount={totalAmount} divided />
-        ) : (
-          <MixColumn title={mtd.businessLineMix.length > 1 ? "Business line" : "Business mix"} rows={mtd.businessLineMix} divided />
-        )}
-      </div>
-
-      {commercial && mtd.topProducers.length ? (
-        <div className={`grid border-t border-[#DDE4EC] ${mtd.topGroups.length ? "xl:grid-cols-[1.35fr_.65fr]" : "grid-cols-1"}`}>
-          <Leaderboard
-            title="Top producers MTD"
-            rows={mtd.topProducers}
-            totalAmount={totalAmount}
-            href="/intermediaries/partner"
-          />
-          {mtd.topGroups.length ? (
-            <Leaderboard
-              title="Top Intermediary Groups MTD"
-              rows={mtd.topGroups}
-              totalAmount={totalAmount}
-              href="/intermediaries/groups"
-              divided
-              compact
-            />
-          ) : null}
+      <details className="group border-t border-[#E7ECF2]">
+        <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2.5 text-[8px] font-bold text-[#64748B] sm:px-5">
+          <span className="whitespace-normal break-words">Business mix & ranking</span><span className="whitespace-normal break-words text-right">Show / hide details</span>
+        </summary>
+        <div className="grid border-t border-[#EEF2F6] xl:grid-cols-4">
+          <MixColumn title="Channel contribution" rows={business.channelMix} divided={false} />
+          <MixColumn title="Vehicle class" rows={business.vehicleClassMix} divided />
+          <MixColumn title="Coverage mix" rows={business.coverageMix} divided />
+          {commercial && business.topInsurers.length ? (
+            <TopColumn title="Top insurers" rows={business.topInsurers} totalAmount={totalAmount} divided />
+          ) : (
+            <MixColumn title={business.businessLineMix.length > 1 ? "Business line" : "Business mix"} rows={business.businessLineMix} divided />
+          )}
         </div>
-      ) : null}
+
+        {commercial && business.topProducers.length ? (
+          <div className={`grid border-t border-[#DDE4EC] ${business.topGroups.length ? "xl:grid-cols-[1.35fr_.65fr]" : "grid-cols-1"}`}>
+            <Leaderboard title="Top producers" rows={business.topProducers} totalAmount={totalAmount} href="/intermediaries/partner" />
+            {business.topGroups.length ? (
+              <Leaderboard title="Top Intermediary Groups" rows={business.topGroups} totalAmount={totalAmount} href="/intermediaries/groups" divided compact />
+            ) : null}
+          </div>
+        ) : null}
+      </details>
     </section>
   );
 }
 
-function CommercialOperations({ data }: { data: DashboardCurrentData }) {
-  const commercial = data.commercial!;
+function CommercialOperations({ business }: { business: DashboardBusinessData }) {
+  const commercial = business.commercial!;
   const metrics = [
-    { label: "Projected Pay-In MTD", value: formatMoneyCompact(commercial.projectedPayinMtd) },
-    { label: "Pay-In after TDS", value: formatMoneyCompact(commercial.payinAfterTdsMtd) },
-    { label: "Partner Payout MTD", value: formatMoneyCompact(commercial.partnerPayoutMtd) },
-    { label: "Retention MTD", value: formatMoneyCompact(commercial.retentionMtd) },
-    { label: "Retention rate", value: `${commercial.retentionRate.toFixed(1)}%` },
+    { label: "Projected Pay-In", value: formatMoneyCompact(commercial.projectedPayin) },
+    { label: "TDS", value: formatMoneyCompact(commercial.tdsAmount) },
+    { label: "Pay-In after TDS", value: formatMoneyCompact(commercial.payinAfterTds) },
+    { label: "Partner Payout", value: formatMoneyCompact(commercial.partnerPayout) },
+    { label: "Retention", value: formatMoneyCompact(commercial.retention) },
   ];
-  const accountSignals = [
-    commercial.overdueReceivable > 0 ? { label: "Past-due receivable", value: formatMoneyCompact(commercial.overdueReceivable), href: "/accounts/receivables" } : null,
-    commercial.partnerPayableOutstanding > 0 ? { label: "Partner payable", value: formatMoneyCompact(commercial.partnerPayableOutstanding), href: "/accounts/partner-payables" } : null,
-  ].filter(Boolean) as Array<{ label: string; value: string; href: string }>;
 
   return (
     <section className="mt-6 border-y border-[#D5DEE9] bg-white">
@@ -383,7 +562,7 @@ function CommercialOperations({ data }: { data: DashboardCurrentData }) {
           <Icon src={DASHBOARD_ICON_ASSETS.accountsFinance} size={30} />
           <div>
             <h2 className="text-[12px] font-bold text-[#172844]">Commercial operations</h2>
-            <p className="mt-0.5 text-[7.5px] font-bold uppercase tracking-[.11em] text-[#8A96A8]">Month to date</p>
+            <p className="mt-0.5 text-[7.5px] font-bold uppercase tracking-[.11em] text-[#8A96A8]">{business.periodLabel}</p>
           </div>
         </div>
         <Link href="/policies/commercial-review" className="text-[8.5px] font-bold text-[#65758B] hover:text-[#203A63]">Open control ↗</Link>
@@ -399,14 +578,15 @@ function CommercialOperations({ data }: { data: DashboardCurrentData }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-[#E7ECF2] px-4 py-3 text-[8px] font-semibold text-[#6E7C90] sm:px-5">
-        <span><b className="text-[#24344F]">{commercial.payinPoliciesMtd}</b> policies with Pay-In MTD</span>
-        <span><b className="text-[#24344F]">{commercial.payoutPoliciesMtd}</b> policies with Payout MTD</span>
-        {commercial.needsReviewMtd ? <span><b className="text-[#C27C20]">{commercial.needsReviewMtd}</b> commercial entries need review</span> : null}
-        {accountSignals.map((item) => (
-          <Link key={item.label} href={item.href} className="ml-auto font-bold text-[#315F65] hover:text-[#0F766E]">
-            {item.label} {item.value} ↗
-          </Link>
-        ))}
+        <span><b className="text-[#24344F]">{commercial.payinPolicies}</b> policies with Pay-In</span>
+        <span><b className="text-[#24344F]">{commercial.payoutPolicies}</b> policies with Payout</span>
+        <span>Retention rate <b className="text-[#24344F]">{commercial.retentionRate.toFixed(1)}%</b></span>
+        {commercial.needsReview ? <span><b className="text-[#C27C20]">{commercial.needsReview}</b> entries need review</span> : null}
+        {commercial.reconciliationExceptions ? (
+          <span className="font-bold text-[#C44F48]">{commercial.reconciliationExceptions} Pay-In / TDS reconciliation exceptions</span>
+        ) : (
+          <span className="font-bold text-[#1F766D]">Commercial data reconciled</span>
+        )}
       </div>
     </section>
   );
@@ -448,7 +628,7 @@ function ClaimHealth({ claims }: { claims: NonNullable<DashboardCurrentData["cla
           </div>
         </div>
         {claims.estimateExposure > 0 ? (
-          <div className="text-right">
+          <div className="min-w-0 text-right">
             <p className="portal-display text-[17px] font-semibold text-[#1F5B56]">{formatMoneyCompact(claims.estimateExposure)}</p>
             <p className="mt-0.5 text-[7px] font-bold uppercase tracking-[.08em] text-[#8995A7]">Estimate exposure</p>
           </div>
@@ -496,7 +676,7 @@ function FleetHealth({ fleet, divided }: { fleet: NonNullable<DashboardCurrentDa
           </div>
         </div>
         {fleet.authbridgeVerified ? (
-          <div className="text-right">
+          <div className="min-w-0 text-right">
             <p className="portal-display text-[17px] font-semibold text-[#315E8B]">{fleet.authbridgeVerified}</p>
             <p className="mt-0.5 text-[7px] font-bold uppercase tracking-[.08em] text-[#8995A7]">RC verified</p>
           </div>
@@ -575,12 +755,12 @@ function WorkMovement({ data, access }: { data: DashboardCurrentData; access: Da
             <Link key={row.id} href={`/claims/${row.id}`} className="group flex items-center gap-3 border-t border-[#EEF2F6] px-4 py-3.5 first:border-t-0 sm:px-5">
               <Icon src={DASHBOARD_ICON_ASSETS.claims} size={27} />
               <div className="min-w-0 flex-1">
-                <div className="flex min-w-0 items-center gap-2">
-                  <p className="truncate text-[10.5px] font-bold text-[#21304D]">{row.vehicleNo ?? row.claim_no}</p>
-                  <span className="shrink-0 text-[7px] font-black uppercase tracking-[.05em] text-[#D35A52]">{row.current_status}</span>
+                <div className="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-1">
+                  <p className="whitespace-normal break-words text-[10.5px] font-bold text-[#21304D]">{row.vehicleNo ?? row.claim_no}</p>
+                  <span className="whitespace-normal break-words text-[7px] font-black uppercase leading-relaxed tracking-[.05em] text-[#D35A52]">{row.current_status}</span>
                 </div>
-                <p className="mt-1 truncate text-[8.5px] text-[#7F8CA0]">
-                  {row.customerName} · {row.claim_no} · {formatAge(row.updated_at)}
+                <p className="mt-1 whitespace-normal break-words text-[8.5px] text-[#7F8CA0]">
+                  {row.customerName || "Incomplete"} · {row.claim_no} · {formatAge(row.updated_at)}
                 </p>
               </div>
               <ChevronRight className="h-3.5 w-3.5 text-[#A6B0BF] group-hover:text-[#203A63]" />
@@ -592,25 +772,25 @@ function WorkMovement({ data, access }: { data: DashboardCurrentData; access: Da
   );
 }
 
-function MixColumn({ title, rows, divided }: { title: string; rows: AmountMixRow[]; divided: boolean }) {
-  const amountMode = rows.some((row) => row.amount !== null);
-  const total = Math.max(rows.reduce((sum, row) => sum + (amountMode ? row.amount ?? 0 : row.policies), 0), 1);
+function MixColumn({ title, rows, divided }: { title: string; rows: DashboardBusinessMixRow[]; divided: boolean }) {
+  const amountMode = rows.some((row) => row.netPremium !== null);
+  const total = Math.max(rows.reduce((sum, row) => sum + (amountMode ? row.netPremium ?? 0 : row.policies), 0), 1);
 
   return (
     <div className={`${divided ? "border-t xl:border-l xl:border-t-0" : ""} border-[#E7ECF2] px-4 py-4 sm:px-5`}>
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="text-[8px] font-black uppercase tracking-[.11em] text-[#7B899D]">{title}</h3>
-        <span className="text-[7px] font-semibold text-[#99A3B2]">{amountMode ? "By premium" : "By policies"}</span>
+        <span className="text-[7px] font-semibold text-[#99A3B2]">{amountMode ? "By net premium" : "By policies"}</span>
       </div>
       <div className="mt-3 space-y-3">
         {rows.slice(0, 5).map((row) => {
-          const value = amountMode ? row.amount ?? 0 : row.policies;
+          const value = amountMode ? row.netPremium ?? 0 : row.policies;
           const share = Math.round((value / total) * 100);
           return (
             <div key={row.key}>
-              <div className="flex items-center justify-between gap-3">
-                <span className="min-w-0 truncate text-[8.5px] font-semibold text-[#435169]">{row.label}</span>
-                <span className="shrink-0 text-[8px] font-bold text-[#28364F]">
+              <div className="flex items-start justify-between gap-3">
+                <span className="min-w-0 flex-1 whitespace-normal break-words text-[8.5px] font-semibold leading-relaxed text-[#435169]">{row.label || "Incomplete"}</span>
+                <span className="max-w-[44%] shrink-0 whitespace-normal break-words text-right text-[8px] font-bold leading-relaxed text-[#28364F]">
                   {amountMode ? formatMoneyCompact(value) : row.policies}
                   <span className="ml-1 font-semibold text-[#99A3B2]">· {share}%</span>
                 </span>
@@ -626,24 +806,24 @@ function MixColumn({ title, rows, divided }: { title: string; rows: AmountMixRow
   );
 }
 
-function TopColumn({ title, rows, totalAmount, divided }: { title: string; rows: RankedBusinessRow[]; totalAmount: number; divided: boolean }) {
+function TopColumn({ title, rows, totalAmount, divided }: { title: string; rows: DashboardBusinessRankRow[]; totalAmount: number; divided: boolean }) {
   return (
     <div className={`${divided ? "border-t xl:border-l xl:border-t-0" : ""} border-[#E7ECF2] px-4 py-4 sm:px-5`}>
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="text-[8px] font-black uppercase tracking-[.11em] text-[#7B899D]">{title}</h3>
-        <span className="text-[7px] font-semibold text-[#99A3B2]">Ranked by gross premium</span>
+        <span className="text-[7px] font-semibold text-[#99A3B2]">Ranked by net premium</span>
       </div>
       <div className="mt-2 divide-y divide-[#EEF2F6]">
         {rows.slice(0, 5).map((row, index) => (
-          <div key={row.key} className="grid grid-cols-[24px_minmax(0,1fr)_auto] items-center gap-2 py-2.5">
+          <div key={row.key} className="grid grid-cols-[24px_minmax(0,1fr)_minmax(72px,auto)] items-center gap-2 py-2.5">
             <span className="portal-display text-[12px] font-semibold text-[#A0AABB]">{String(index + 1).padStart(2, "0")}</span>
             <div className="min-w-0">
-              <p className="truncate text-[8.5px] font-semibold text-[#394760]">{row.label}</p>
+              <p className="whitespace-normal break-words text-[8.5px] font-semibold leading-relaxed text-[#394760]">{row.label || "Incomplete"}</p>
               <p className="mt-0.5 text-[7px] font-semibold text-[#96A1B1]">{row.policies} policies</p>
             </div>
-            <div className="text-right">
-              <p className="text-[9px] font-bold text-[#26354F]">{formatMoneyCompact(row.amount)}</p>
-              <p className="mt-0.5 text-[7px] font-semibold text-[#96A1B1]">{amountShare(row.amount, totalAmount)}%</p>
+            <div className="min-w-0 text-right">
+              <p className="whitespace-normal break-words text-[9px] font-bold leading-snug text-[#26354F]">{formatMoneyCompact(row.netPremium)}</p>
+              <p className="mt-0.5 text-[7px] font-semibold text-[#96A1B1]">{amountShare(row.netPremium, totalAmount)}%</p>
             </div>
           </div>
         ))}
@@ -652,29 +832,29 @@ function TopColumn({ title, rows, totalAmount, divided }: { title: string; rows:
   );
 }
 
-function Leaderboard({ title, rows, totalAmount, href, divided = false, compact = false }: { title: string; rows: RankedBusinessRow[]; totalAmount: number; href: string; divided?: boolean; compact?: boolean }) {
+function Leaderboard({ title, rows, totalAmount, href, divided = false, compact = false }: { title: string; rows: DashboardBusinessRankRow[]; totalAmount: number; href: string; divided?: boolean; compact?: boolean }) {
   return (
     <div className={`${divided ? "border-t xl:border-l xl:border-t-0" : ""} border-[#DDE4EC] px-4 py-4 sm:px-5`}>
       <div className="flex items-end justify-between gap-4">
         <div>
-          <p className="text-[7.5px] font-black uppercase tracking-[.11em] text-[#8290A3]">Ranked by gross premium</p>
+          <p className="text-[7.5px] font-black uppercase tracking-[.11em] text-[#8290A3]">Ranked by net premium</p>
           <h3 className="mt-1 text-[11px] font-bold text-[#1A2A46]">{title}</h3>
         </div>
         <Link href={href} className="text-[8px] font-bold text-[#65758B] hover:text-[#203A63]">View all ↗</Link>
       </div>
       <div className="mt-3 divide-y divide-[#EEF2F6] border-t border-[#E7ECF2]">
         {rows.slice(0, compact ? 5 : 6).map((row, index) => (
-          <Link key={row.key} href={href} className="group grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-3 py-3 hover:bg-[#FAFBFD] sm:px-1">
+          <Link key={row.key} href={href} className="group grid grid-cols-[34px_minmax(0,1fr)_minmax(86px,auto)] items-center gap-3 py-3 hover:bg-[#FAFBFD] sm:px-1">
             <span className="portal-display text-[14px] font-semibold text-[#A2ACBB]">{String(index + 1).padStart(2, "0")}</span>
             <div className="min-w-0">
-              <p className="truncate text-[9.5px] font-bold text-[#26344E]">{row.label}</p>
+              <p className="whitespace-normal break-words text-[9.5px] font-bold leading-relaxed text-[#26344E]">{row.label || "Incomplete"}</p>
               <p className="mt-0.5 text-[7px] font-semibold uppercase tracking-[.05em] text-[#96A1B1]">
                 {row.detail ? `${row.detail} · ` : ""}{row.policies} policies
               </p>
             </div>
-            <div className="text-right">
-              <p className="portal-display text-[14px] font-semibold text-[#17365D]">{formatMoneyCompact(row.amount)}</p>
-              <p className="mt-0.5 text-[7px] font-semibold text-[#8D99AA]">{amountShare(row.amount, totalAmount)}% of MTD</p>
+            <div className="min-w-0 text-right">
+              <p className="portal-display whitespace-normal break-words text-[14px] font-semibold leading-snug text-[#17365D]">{formatMoneyCompact(row.netPremium)}</p>
+              <p className="mt-0.5 text-[7px] font-semibold text-[#8D99AA]">{amountShare(row.netPremium, totalAmount)}% of period</p>
             </div>
           </Link>
         ))}
@@ -701,13 +881,13 @@ function PolicyIntakeRow({ row }: { row: DashboardIntakeRow }) {
     <Link href={`/policy-intakes/${row.id}`} className="group flex items-center gap-3 border-t border-[#EEF2F6] px-4 py-3.5 first:border-t-0 sm:px-5">
       <Icon src={manual ? DASHBOARD_ICON_ASSETS.ocrManualReview : DASHBOARD_ICON_ASSETS.policyIntake} size={27} />
       <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-2">
-          <p className="truncate text-[10.5px] font-bold text-[#21304D]">{row.intake_number}</p>
-          <span className={`${manual ? "text-[#C27A20]" : "text-[#6257D9]"} shrink-0 text-[7px] font-black uppercase tracking-[.05em]`}>
+        <div className="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-1">
+          <p className="whitespace-normal break-words text-[10.5px] font-bold text-[#21304D]">{row.intake_number}</p>
+          <span className={`${manual ? "text-[#C27A20]" : "text-[#6257D9]"} whitespace-normal break-words text-[7px] font-black uppercase leading-relaxed tracking-[.05em]`}>
             {manual ? "Manual OCR" : intakeStatus(row.status)}
           </span>
         </div>
-        <p className="mt-1 truncate text-[8.5px] text-[#7F8CA0]">{row.lead_source_name} · {formatAge(row.created_at)}</p>
+        <p className="mt-1 whitespace-normal break-words text-[8.5px] text-[#7F8CA0]">{row.lead_source_name || "Incomplete"} · {formatAge(row.created_at)}</p>
       </div>
       <ChevronRight className="h-3.5 w-3.5 text-[#A6B0BF] group-hover:text-[#203A63]" />
     </Link>
@@ -719,10 +899,10 @@ function MetricRail({ item, divided }: { item: RailMetric; divided: boolean }) {
     <Link href={item.href} className={`${divided ? "border-t md:border-l md:border-t-0" : ""} group flex min-h-[94px] items-center gap-3 border-[#E3E9F0] px-4 py-3.5 transition hover:bg-[#FAFBFD]`}>
       <Icon src={item.icon} size={35} />
       <div className="min-w-0 flex-1">
-        <p className="portal-display text-[25px] font-semibold leading-none tracking-[-.02em] text-[#10213D]">{item.value}</p>
+        <p className="portal-display whitespace-normal break-words text-[25px] font-semibold leading-tight tracking-[-.02em] text-[#10213D]">{item.value}</p>
         <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="text-[7.5px] font-black uppercase tracking-[.085em] text-[#5D6C83]">{item.label}</span>
-          {item.meta ? <span className="text-[7px] font-semibold text-[#8B97A8]">{item.meta}</span> : null}
+          <span className="whitespace-normal break-words text-[7.5px] font-black uppercase leading-relaxed tracking-[.085em] text-[#5D6C83]">{item.label}</span>
+          {item.meta ? <span className="whitespace-normal break-words text-[7px] font-semibold leading-relaxed text-[#8B97A8]">{item.meta}</span> : null}
         </div>
       </div>
       <ArrowUpRight className="h-3.5 w-3.5 text-[#A3ADBC] group-hover:text-[#203A63]" />
@@ -743,10 +923,10 @@ function AttentionItem({ item, divided }: { item: AttentionSignal; divided: bool
       <span className={`h-8 w-[3px] shrink-0 ${tone}`} />
       <Icon src={item.icon} size={27} />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[9px] font-bold text-[#26344F]">{item.label}</p>
-        {item.detail ? <p className="mt-0.5 truncate text-[7.2px] font-semibold text-[#8D98A9]">{item.detail}</p> : null}
+        <p className="whitespace-normal break-words text-[9px] font-bold text-[#26344F]">{item.label}</p>
+        {item.detail ? <p className="mt-0.5 whitespace-normal break-words text-[7.2px] font-semibold text-[#8D98A9]">{item.detail}</p> : null}
       </div>
-      <span className="portal-display text-[19px] font-semibold text-[#10213D]">{item.value}</span>
+      <span className="portal-display max-w-[30%] whitespace-normal break-words text-right text-[19px] font-semibold leading-tight text-[#10213D]">{item.value}</span>
       <ChevronRight className="h-3.5 w-3.5 text-[#A6B0BF] group-hover:text-[#203A63]" />
     </Link>
   );
