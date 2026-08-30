@@ -74,6 +74,14 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      - name: Verify Expo token can access the linked Partner project
+        working-directory: apps/partner-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx eas-cli whoami
+          npx eas-cli project:info --non-interactive
+
       - name: Publish Partner preview OTA
         working-directory: apps/partner-app
         shell: bash
