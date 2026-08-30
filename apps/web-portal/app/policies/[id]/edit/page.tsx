@@ -32,8 +32,8 @@ type VehicleRow = {
   rto_name: string | null; rto_state: string | null; updated_at: string | null;
 };
 type PremiumRow = { od_premium: number | null; tp_premium: number | null; cpa_opted: boolean | null; cpa_amount: number | null; net_premium: number | null; gst_amount: number | null; gross_premium: number | null };
-type PayinRow = { payout_basis: string | null; projected_od_percent: number | null; projected_tp_percent: number | null; insurer_scheme_amount: number | null; commercial_basis: string | null; projected_commission_percent: number | null; projected_commission_amount: number | null };
-type PayoutRow = { retention_amount: number | null; od_payout_percent: number | null; tp_payout_percent: number | null; status: string | null; payout_date: string | null; voucher_number: string | null; payout_basis: string | null; partner_payout_percent: number | null; partner_payout_amount: number | null };
+type PayinRow = { payout_basis: string | null; projected_od_percent: number | null; projected_tp_percent: number | null; insurer_scheme_amount: number | null; commercial_basis: string | null; projected_commission_percent: number | null; projected_commission_amount: number | null; commercial_status: string | null };
+type PayoutRow = { retention_amount: number | null; od_payout_percent: number | null; tp_payout_percent: number | null; status: string | null; payout_date: string | null; voucher_number: string | null; payout_basis: string | null; partner_payout_percent: number | null; partner_payout_amount: number | null; gross_payout: number | null; commercial_status: string | null };
 type NonMotorDetailsRow = {
   category: string | null; risk_title: string | null; risk_location: string | null; occupancy_type: string | null;
   transit_from: string | null; transit_to: string | null; transit_mode: string | null; nature_of_business: string | null;
@@ -111,8 +111,8 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
       ? admin.from("vehicles").select("id,vehicle_no,vehicle_type,vehicle_class_code,vehicle_class_description,make,model,year,chassis_no,engine_no,fuel_type,engine_capacity_cc,seating_capacity,gvw_kg,rto_name,rto_state,updated_at").eq("id", vehicleId).maybeSingle<VehicleRow>()
       : Promise.resolve({ data: null as VehicleRow | null, error: null }),
     admin.from("policy_premium_details").select("od_premium,tp_premium,cpa_opted,cpa_amount,net_premium,gst_amount,gross_premium").eq("policy_id", id).maybeSingle<PremiumRow>(),
-    admin.from("policy_payin_details").select("payout_basis,projected_od_percent,projected_tp_percent,insurer_scheme_amount,commercial_basis,projected_commission_percent,projected_commission_amount").eq("policy_id", id).maybeSingle<PayinRow>(),
-    admin.from("policy_intermediary_payouts").select("retention_amount,od_payout_percent,tp_payout_percent,status,payout_date,voucher_number,payout_basis,partner_payout_percent,partner_payout_amount").eq("policy_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle<PayoutRow>(),
+    admin.from("policy_payin_details").select("payout_basis,projected_od_percent,projected_tp_percent,insurer_scheme_amount,commercial_basis,projected_commission_percent,projected_commission_amount,commercial_status").eq("policy_id", id).maybeSingle<PayinRow>(),
+    admin.from("policy_intermediary_payouts").select("retention_amount,od_payout_percent,tp_payout_percent,status,payout_date,voucher_number,payout_basis,partner_payout_percent,partner_payout_amount,gross_payout,commercial_status").eq("policy_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle<PayoutRow>(),
     admin.from("insurance_companies").select("id,name,is_active").eq("is_active", true).order("name", { ascending: true }).returns<InsurerOption[]>(),
     admin.from("insurance_companies").select("id,name,is_active").eq("id", policy.insurance_company_id).maybeSingle<InsurerOption>(),
     loadPospMispAssociates(admin),
@@ -170,6 +170,24 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
   const payin = payinResult.data;
   const payout = payoutResult.data;
   const billing = billingResult.billing;
+
+  const payinHasConfirmedEntry = Boolean(payin) && (
+    payin?.commercial_status === "entered"
+    || payin?.commercial_status === "reviewed"
+    || payin?.commercial_status === "not_applicable"
+    || Number(payin?.projected_od_percent ?? 0) !== 0
+    || Number(payin?.projected_tp_percent ?? 0) !== 0
+    || Number(payin?.insurer_scheme_amount ?? 0) !== 0
+  );
+  const payoutHasConfirmedEntry = Boolean(payout) && (
+    payout?.commercial_status === "entered"
+    || payout?.commercial_status === "reviewed"
+    || payout?.commercial_status === "not_applicable"
+    || Number(payout?.od_payout_percent ?? 0) !== 0
+    || Number(payout?.tp_payout_percent ?? 0) !== 0
+    || Number(payout?.partner_payout_amount ?? 0) !== 0
+    || Number(payout?.gross_payout ?? 0) !== 0
+  );
 
   const insurerById = new Map<string, InsurerOption>();
   for (const insurer of activeInsurersResult.data ?? []) insurerById.set(insurer.id, insurer);
@@ -369,16 +387,16 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     validFrom: policy.start_date,
     validUpto: policy.end_date,
     payoutBasis: commercialAccess ? (payin?.payout_basis ?? "NET") : "",
-    projectedOdPercent: commercialAccess ? stringValue(payin?.projected_od_percent) : "",
-    projectedTpPercent: commercialAccess ? stringValue(payin?.projected_tp_percent) : "",
-    insurerScheme: commercialAccess ? stringValue(payin?.insurer_scheme_amount) : "",
+    projectedOdPercent: commercialAccess && payinHasConfirmedEntry ? stringValue(payin?.projected_od_percent) : "",
+    projectedTpPercent: commercialAccess && payinHasConfirmedEntry ? stringValue(payin?.projected_tp_percent) : "",
+    insurerScheme: commercialAccess && payinHasConfirmedEntry ? stringValue(payin?.insurer_scheme_amount) : "",
     payinBillNo: commercialAccess ? billing.billNumber : "",
     payinBilledAmount: commercialAccess ? billing.billedAmount : "",
     payinBillDate: commercialAccess ? billing.billDate : "",
     payinStatus: commercialAccess ? billing.status : "Unbilled",
     retention: commercialAccess ? stringValue(payout?.retention_amount) : "",
-    payoutOdPercent: commercialAccess ? stringValue(payout?.od_payout_percent) : "",
-    payoutTpPercent: commercialAccess ? stringValue(payout?.tp_payout_percent) : "",
+    payoutOdPercent: commercialAccess && payoutHasConfirmedEntry ? stringValue(payout?.od_payout_percent) : "",
+    payoutTpPercent: commercialAccess && payoutHasConfirmedEntry ? stringValue(payout?.tp_payout_percent) : "",
     payoutStatus: commercialAccess ? (payout?.status ?? "Pending") : "Pending",
     payoutDate: commercialAccess ? (payout?.payout_date ?? "") : "",
     payoutVoucherNo: commercialAccess ? (payout?.voucher_number ?? "") : "",

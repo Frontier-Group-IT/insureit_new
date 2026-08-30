@@ -25,8 +25,8 @@ export type PolicyEditPayload = {
     remarks: string;
   };
   premium: { od: string; tp: string; cpaOpted: boolean; cpa: string };
-  payin: { basis: string; odPercent: string; tpPercent: string; scheme: string };
-  payout: { retention: string; odPercent: string; tpPercent: string; status: string; date: string; voucherNumber: string };
+  payin: { basis: string; odPercent: string; tpPercent: string; scheme: string; provided: boolean };
+  payout: { retention: string; odPercent: string; tpPercent: string; status: string; date: string; voucherNumber: string; provided: boolean };
 };
 
 export type PolicyEditResult =
@@ -111,6 +111,7 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
         odPercent: textNumber(payin?.projected_od_percent),
         tpPercent: textNumber(payin?.projected_tp_percent),
         scheme: textNumber(payin?.insurer_scheme_amount),
+        provided: false,
       };
       protectedPayout = {
         retention: textNumber(payout?.retention_amount),
@@ -119,6 +120,7 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
         status: payout?.status ?? "Pending",
         date: payout?.payout_date ?? "",
         voucherNumber: payout?.voucher_number ?? "",
+        provided: false,
       };
     }
 
@@ -128,7 +130,7 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
       payin: protectedPayin,
       payout: protectedPayout,
     };
-    const { data, error } = await admin.rpc("update_motor_policy", {
+    const { data, error } = await admin.rpc("update_motor_policy_commercial_status_v2", {
       p_policy_id: policyId,
       p_payload: normalizedPayload,
     });

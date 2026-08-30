@@ -15,9 +15,9 @@ export type PolicyOnboardingPayload = {
   vehicle: Record<string, string | boolean | null | undefined>;
   policy: Record<string, string | null | undefined>;
   premium: Record<string, string | number | boolean | null | undefined>;
-  payin: Record<string, string | number | null | undefined>;
+  payin: Record<string, string | number | boolean | null | undefined>;
   billing: Record<string, string | number | null | undefined>;
-  payout: Record<string, string | number | null | undefined>;
+  payout: Record<string, string | number | boolean | null | undefined>;
   authbridge: Record<string, string | boolean | null | undefined>;
   resolution?: { selectedCustomerId?: string | null; createNewCustomer?: boolean; ownershipDecision?: "keep_existing" | "transfer" | null; transferReason?: string; acceptCoverageGap?: boolean };
 };
@@ -102,9 +102,9 @@ function operationalEntryPayload(payload: PolicyOnboardingPayload, role: string 
   if (role !== "backoffice_executive") return payload;
   return {
     ...payload,
-    payin: { basis: "NET", odPercent: "0", tpPercent: "0", scheme: "0" },
+    payin: { basis: "NET", odPercent: "0", tpPercent: "0", scheme: "0", provided: false },
     billing: { billNumber: "", billedAmount: "0", billDate: "", status: "Unbilled" },
-    payout: { retention: "0", odPercent: "0", tpPercent: "0", status: "Pending", date: "", voucherNumber: "" },
+    payout: { retention: "0", odPercent: "0", tpPercent: "0", status: "Pending", date: "", voucherNumber: "", provided: false },
   };
 }
 
@@ -257,7 +257,7 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
     };
 
     const admin = createSupabaseAdminClient();
-    const { data, error } = await admin.rpc("onboard_motor_policy", { p_payload: rpcPayload });
+    const { data, error } = await admin.rpc("onboard_motor_policy_commercial_status_v2", { p_payload: rpcPayload });
     if (error) {
       const message = error.message ?? "";
       const lowerMessage = message.toLowerCase();
